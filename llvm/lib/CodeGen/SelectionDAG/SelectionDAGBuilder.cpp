@@ -6778,14 +6778,13 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   const char *RenameFn = nullptr;
   if (Function *F = I.getCalledFunction()) {
     if (F->isDeclaration()) {
-      if (const TargetIntrinsicInfo *II = TM.getIntrinsicInfo()) {
-        if (unsigned IID = II->getIntrinsicID(F)) {
-          RenameFn = visitIntrinsicCall(I, IID);
-          if (!RenameFn)
-            return;
-        }
-      }
-      if (Intrinsic::ID IID = F->getIntrinsicID()) {
+      // Is this an LLVM intrinsic or a target-specific intrinsic?
+      unsigned IID = F->getIntrinsicID();
+      if (!IID)
+        if (const TargetIntrinsicInfo *II = TM.getIntrinsicInfo())
+          IID = II->getIntrinsicID(F);
+
+      if (IID) {
         RenameFn = visitIntrinsicCall(I, IID);
         if (!RenameFn)
           return;

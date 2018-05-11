@@ -38,6 +38,8 @@ protected:
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputePythonDirectory(FileSpec &file_spec);
   static bool ComputeClangDirectory(FileSpec &file_spec);
+  static bool ComputeClangDirectory(FileSpec &lldb_shlib_spec,
+                                    FileSpec &file_spec, bool verify);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
   static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
 };

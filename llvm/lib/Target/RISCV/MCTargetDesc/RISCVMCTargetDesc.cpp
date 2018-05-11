@@ -74,7 +74,14 @@ createRISCVObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSBinFormatELF())
     return new RISCVTargetELFStreamer(S, STI);
-  return new RISCVTargetStreamer(S);
+  return nullptr;
+}
+
+static MCTargetStreamer *createRISCVAsmTargetStreamer(MCStreamer &S,
+                                                      formatted_raw_ostream &OS,
+                                                      MCInstPrinter *InstPrint,
+                                                      bool isVerboseAsm) {
+  return new RISCVTargetAsmStreamer(S, OS);
 }
 
 extern "C" void LLVMInitializeRISCVTargetMC() {
@@ -88,5 +95,8 @@ extern "C" void LLVMInitializeRISCVTargetMC() {
     TargetRegistry::RegisterMCSubtargetInfo(*T, createRISCVMCSubtargetInfo);
     TargetRegistry::RegisterObjectTargetStreamer(
         *T, createRISCVObjectTargetStreamer);
+
+    // Register the asm target streamer.
+    TargetRegistry::RegisterAsmTargetStreamer(*T, createRISCVAsmTargetStreamer);
   }
 }

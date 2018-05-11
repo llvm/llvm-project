@@ -67,14 +67,14 @@ define i32 @ldur_int(i32* %a) nounwind {
 ; Test sext + zext clustering.
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: ldp_half_sext_zext_int:%bb.0
-; CHECK: Cluster ld/st SU(4) - SU(3)
-; CHECK: SU(3):   undef %{{[0-9]+}}.sub_32:gpr64 = LDRWui
-; CHECK: SU(4):   %{{[0-9]+}}:gpr64 = LDRSWui
+; CHECK: Cluster ld/st SU(3) - SU(4)
+; CHECK: SU(3):   %{{[0-9]+}}:gpr64 = LDRSWui
+; CHECK: SU(4):   undef %{{[0-9]+}}.sub_32:gpr64 = LDRWui
 ; EXYNOSM1: ********** MI Scheduling **********
 ; EXYNOSM1-LABEL: ldp_half_sext_zext_int:%bb.0
-; EXYNOSM1: Cluster ld/st SU(4) - SU(3)
-; EXYNOSM1: SU(3):   undef %{{[0-9]+}}.sub_32:gpr64 = LDRWui
-; EXYNOSM1: SU(4):   %{{[0-9]+}}:gpr64 = LDRSWui
+; EXYNOSM1: Cluster ld/st SU(3) - SU(4)
+; EXYNOSM1: SU(3):   %{{[0-9]+}}:gpr64 = LDRSWui
+; EXYNOSM1: SU(4):   undef %{{[0-9]+}}.sub_32:gpr64 = LDRWui
 define i64 @ldp_half_sext_zext_int(i64* %q, i32* %p) nounwind {
   %tmp0 = load i64, i64* %q, align 4
   %tmp = load i32, i32* %p, align 4

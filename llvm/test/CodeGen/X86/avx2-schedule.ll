@@ -573,7 +573,7 @@ define <8 x i32> @test_inserti128(<8 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) 
 define <4 x i64> @test_movntdqa(i8* %a0) {
 ; GENERIC-LABEL: test_movntdqa:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmovntdqa (%rdi), %ymm0 # sched: [6:0.50]
+; GENERIC-NEXT:    vmovntdqa (%rdi), %ymm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movntdqa:

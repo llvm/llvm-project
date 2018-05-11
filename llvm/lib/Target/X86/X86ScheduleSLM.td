@@ -133,12 +133,18 @@ defm : SLMWriteResPair<WriteIDiv64, [SLM_IEC_RSV01, SLMDivider], 25, [1,25], 1, 
 
 // Scalar and vector floating point.
 def  : WriteRes<WriteFLoad,         [SLM_MEC_RSV]> { let Latency = 3; }
+def  : WriteRes<WriteFLoadX,        [SLM_MEC_RSV]> { let Latency = 3; }
+def  : WriteRes<WriteFLoadY,        [SLM_MEC_RSV]> { let Latency = 3; }
 def  : WriteRes<WriteFMaskedLoad,   [SLM_MEC_RSV]> { let Latency = 3; }
 def  : WriteRes<WriteFMaskedLoadY,  [SLM_MEC_RSV]> { let Latency = 3; }
-def  : WriteRes<WriteFStore,        [SLM_FPC_RSV01, SLM_MEC_RSV]>;
-def  : WriteRes<WriteFMaskedStore,  [SLM_FPC_RSV01, SLM_MEC_RSV]>;
-def  : WriteRes<WriteFMaskedStoreY, [SLM_FPC_RSV01, SLM_MEC_RSV]>;
+def  : WriteRes<WriteFStore,        [SLM_MEC_RSV]>;
+def  : WriteRes<WriteFStoreX,       [SLM_MEC_RSV]>;
+def  : WriteRes<WriteFStoreY,       [SLM_MEC_RSV]>;
+def  : WriteRes<WriteFMaskedStore,  [SLM_MEC_RSV]>;
+def  : WriteRes<WriteFMaskedStoreY, [SLM_MEC_RSV]>;
 def  : WriteRes<WriteFMove,         [SLM_FPC_RSV01]>;
+def  : WriteRes<WriteFMoveX,        [SLM_FPC_RSV01]>;
+def  : WriteRes<WriteFMoveY,        [SLM_FPC_RSV01]>;
 defm : X86WriteRes<WriteEMMS,       [SLM_FPC_RSV01], 10, [10], 9>;
 
 defm : SLMWriteResPair<WriteFAdd,     [SLM_FPC_RSV1], 3>;
@@ -205,12 +211,18 @@ def  : WriteRes<WriteCvtF2FSt, [SLM_FPC_RSV01, SLM_MEC_RSV]>;
 
 // Vector integer operations.
 def  : WriteRes<WriteVecLoad,         [SLM_MEC_RSV]> { let Latency = 3; }
+def  : WriteRes<WriteVecLoadX,        [SLM_MEC_RSV]> { let Latency = 3; }
+def  : WriteRes<WriteVecLoadY,        [SLM_MEC_RSV]> { let Latency = 3; }
 def  : WriteRes<WriteVecMaskedLoad,   [SLM_MEC_RSV]> { let Latency = 3; }
 def  : WriteRes<WriteVecMaskedLoadY,  [SLM_MEC_RSV]> { let Latency = 3; }
-def  : WriteRes<WriteVecStore,        [SLM_FPC_RSV01, SLM_MEC_RSV]>;
-def  : WriteRes<WriteVecMaskedStore,  [SLM_FPC_RSV01, SLM_MEC_RSV]>;
-def  : WriteRes<WriteVecMaskedStoreY, [SLM_FPC_RSV01, SLM_MEC_RSV]>;
+def  : WriteRes<WriteVecStore,        [SLM_MEC_RSV]>;
+def  : WriteRes<WriteVecStoreX,       [SLM_MEC_RSV]>;
+def  : WriteRes<WriteVecStoreY,       [SLM_MEC_RSV]>;
+def  : WriteRes<WriteVecMaskedStore,  [SLM_MEC_RSV]>;
+def  : WriteRes<WriteVecMaskedStoreY, [SLM_MEC_RSV]>;
 def  : WriteRes<WriteVecMove,         [SLM_FPC_RSV01]>;
+def  : WriteRes<WriteVecMoveX,        [SLM_FPC_RSV01]>;
+def  : WriteRes<WriteVecMoveY,        [SLM_FPC_RSV01]>;
 
 defm : SLMWriteResPair<WriteVecShift,    [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecShiftX,   [SLM_FPC_RSV0],  1>;

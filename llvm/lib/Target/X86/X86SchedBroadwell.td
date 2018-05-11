@@ -162,12 +162,18 @@ defm : BWWriteResPair<WriteJump,  [BWPort06],   1>;
 
 // Floating point. This covers both scalar and vector operations.
 defm : X86WriteRes<WriteFLoad,         [BWPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteFLoadX,        [BWPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteFLoadY,        [BWPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteFMaskedLoad,   [BWPort23,BWPort5], 7, [1,2], 3>;
 defm : X86WriteRes<WriteFMaskedLoadY,  [BWPort23,BWPort5], 8, [1,2], 3>;
 defm : X86WriteRes<WriteFStore,        [BWPort237,BWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreX,       [BWPort237,BWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreY,       [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStore,  [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMaskedStoreY, [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMove,         [BWPort5], 1, [1], 1>;
+defm : X86WriteRes<WriteFMoveX,        [BWPort5], 1, [1], 1>;
+defm : X86WriteRes<WriteFMoveY,        [BWPort5], 1, [1], 1>;
 
 defm : BWWriteResPair<WriteFAdd,    [BWPort1],  3, [1], 1, 5>; // Floating point add/sub.
 defm : BWWriteResPair<WriteFAddX,   [BWPort1],  3, [1], 1, 5>; // Floating point add/sub (XMM).
@@ -256,12 +262,18 @@ def  : WriteRes<WriteCvtF2FSt, [BWPort1,BWPort4,BWPort237]> {
 
 // Vector integer operations.
 defm : X86WriteRes<WriteVecLoad,         [BWPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteVecLoadX,        [BWPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteVecLoadY,        [BWPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [BWPort23,BWPort5], 7, [1,2], 3>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [BWPort23,BWPort5], 8, [1,2], 3>;
 defm : X86WriteRes<WriteVecStore,        [BWPort237,BWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreX,       [BWPort237,BWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreY,       [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStore,  [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMove,         [BWPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveX,        [BWPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveY,        [BWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteEMMS,            [BWPort01,BWPort15,BWPort015,BWPort0156], 31, [8,1,21,1], 31>;
 
 defm : BWWriteResPair<WriteVecALU,   [BWPort15], 1, [1], 1, 5>; // Vector integer ALU op, no logicals.
@@ -563,10 +575,7 @@ def BWWriteResGroup10 : SchedWriteRes<[BWPort4,BWPort237]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[BWWriteResGroup10], (instregex "FBSTPm",
-                                            "MMX_MOVD64from64rm",
                                             "MMX_MOVD64mr",
-                                            "MMX_MOVNTQmr",
-                                            "MMX_MOVQ64mr",
                                             "MOVNTI_64mr",
                                             "MOVNTImr",
                                             "ST_FP(32|64|80)m",
@@ -935,17 +944,9 @@ def: InstRW<[BWWriteResGroup58], (instregex "LD_F(32|64|80)m",
                                             "VBROADCASTI128",
                                             "VBROADCASTSDYrm",
                                             "VBROADCASTSSYrm",
-                                            "VLDDQUYrm",
-                                            "VMOVAPDYrm",
-                                            "VMOVAPSYrm",
                                             "VMOVDDUPYrm",
-                                            "VMOVDQAYrm",
-                                            "VMOVDQUYrm",
-                                            "VMOVNTDQAYrm",
                                             "VMOVSHDUPYrm",
                                             "VMOVSLDUPYrm",
-                                            "VMOVUPDYrm",
-                                            "VMOVUPSYrm",
                                             "VPBROADCASTDYrm",
                                             "VPBROADCASTQYrm")>;
 
