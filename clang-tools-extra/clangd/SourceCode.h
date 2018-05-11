@@ -15,6 +15,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SOURCECODE_H
 #include "Protocol.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Tooling/Core/Replacement.h"
 
 namespace clang {
 class SourceManager;
@@ -54,6 +55,11 @@ std::pair<size_t, size_t> offsetToClangLineColumn(llvm::StringRef Code,
 /// qualifier.
 std::pair<llvm::StringRef, llvm::StringRef>
 splitQualifiedName(llvm::StringRef QName);
+
+TextEdit replacementToEdit(StringRef Code, const tooling::Replacement &R);
+
+std::vector<TextEdit> replacementsToEdits(StringRef Code,
+                                          const tooling::Replacements &Repls);
 
 } // namespace clangd
 } // namespace clang

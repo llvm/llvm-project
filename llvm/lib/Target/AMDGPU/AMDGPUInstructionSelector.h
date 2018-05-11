@@ -73,6 +73,9 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVSRC0(MachineOperand &Root) const;
 
+  InstructionSelector::ComplexRendererFns
+  selectVOP3Mods0(MachineOperand &Root) const;
+
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   const AMDGPURegisterBankInfo &RBI;
