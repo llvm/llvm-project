@@ -581,7 +581,6 @@ namespace {
 
     void ExtendSetCCUses(const SmallVectorImpl<SDNode *> &SetCCs,
                          SDValue OrigLoad, SDValue ExtLoad,
-                         const SDLoc &DL,
                          ISD::NodeType ExtType);
   };
 
@@ -7301,10 +7300,10 @@ static bool ExtendUsesToFormExtLoad(SDNode *N, SDValue N0,
 
 void DAGCombiner::ExtendSetCCUses(const SmallVectorImpl<SDNode *> &SetCCs,
                                   SDValue OrigLoad, SDValue ExtLoad,
-                                  const SDLoc &DL, ISD::NodeType ExtType) {
+                                  ISD::NodeType ExtType) {
   // Extend SetCC uses if necessary.
-  for (unsigned i = 0, e = SetCCs.size(); i != e; ++i) {
-    SDNode *SetCC = SetCCs[i];
+  SDLoc DL(ExtLoad);
+  for (SDNode *SetCC : SetCCs) {
     SmallVector<SDValue, 4> Ops;
 
     for (unsigned j = 0; j != 2; ++j) {
@@ -7412,8 +7411,7 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
   // with a truncate of the concatenated sextloaded vectors.
   SDValue Trunc =
       DAG.getNode(ISD::TRUNCATE, SDLoc(N0), N0.getValueType(), NewValue);
-  ExtendSetCCUses(SetCCs, N0, NewValue, DL,
-                  (ISD::NodeType)N->getOpcode());
+  ExtendSetCCUses(SetCCs, N0, NewValue, (ISD::NodeType)N->getOpcode());
   CombineTo(N0.getNode(), Trunc, NewChain);
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }
@@ -7496,7 +7494,7 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
 static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                                   const TargetLowering &TLI, EVT VT,
                                   bool LegalOperations, SDNode *N, SDValue N0,
-                                  SDLoc DL, ISD::LoadExtType ExtLoadType,
+                                  ISD::LoadExtType ExtLoadType,
                                   ISD::NodeType ExtOpc) {
   if (!ISD::isNON_EXTLoad(N0.getNode()) ||
       !ISD::isUNINDEXEDLoad(N0.getNode()) ||
@@ -7518,7 +7516,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
   SDValue ExtLoad = DAG.getExtLoad(ExtLoadType, SDLoc(LN0), VT, LN0->getChain(),
                                    LN0->getBasePtr(), N0.getValueType(),
                                    LN0->getMemOperand());
-  Combiner.ExtendSetCCUses(SetCCs, N0, ExtLoad, DL, ExtOpc);
+  Combiner.ExtendSetCCUses(SetCCs, N0, ExtLoad, ExtOpc);
   // If the load value is used only by N, replace it via CombineTo N.
   bool NoReplaceTrunc = SDValue(LN0, 0).hasOneUse();
   Combiner.CombineTo(N, ExtLoad);
@@ -7596,9 +7594,9 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     }
   }
 
-  // Try to fold (sext (load x)) to a smaller sextload.
+  // Try to simplify (sext (load x)).
   if (SDValue foldedExt =
-          tryToFoldExtOfLoad(DAG, *this, TLI, VT, LegalOperations, N, N0, DL,
+          tryToFoldExtOfLoad(DAG, *this, TLI, VT, LegalOperations, N, N0,
                              ISD::SEXTLOAD, ISD::SIGN_EXTEND))
     return foldedExt;
 
@@ -7639,7 +7637,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
         SDValue Trunc = DAG.getNode(ISD::TRUNCATE,
                                     SDLoc(N0.getOperand(0)),
                                     N0.getOperand(0).getValueType(), ExtLoad);
-        ExtendSetCCUses(SetCCs, N0, ExtLoad, DL, ISD::SIGN_EXTEND);
+        ExtendSetCCUses(SetCCs, N0, ExtLoad, ISD::SIGN_EXTEND);
         bool NoReplaceTruncAnd = !N0.hasOneUse();
         bool NoReplaceTrunc = SDValue(LN0, 0).hasOneUse();
         CombineTo(N, And);
@@ -7866,7 +7864,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   // Try to simplify (zext (load x)).
   if (SDValue foldedExt =
           tryToFoldExtOfLoad(DAG, *this, TLI, VT, LegalOperations, N, N0,
-                             SDLoc(N), ISD::ZEXTLOAD, ISD::ZERO_EXTEND))
+                             ISD::ZEXTLOAD, ISD::ZERO_EXTEND))
     return foldedExt;
 
   // fold (zext (load x)) to multiple smaller zextloads.
@@ -7913,7 +7911,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
         SDValue Trunc = DAG.getNode(ISD::TRUNCATE,
                                     SDLoc(N0.getOperand(0)),
                                     N0.getOperand(0).getValueType(), ExtLoad);
-        ExtendSetCCUses(SetCCs, N0, ExtLoad, DL, ISD::ZERO_EXTEND);
+        ExtendSetCCUses(SetCCs, N0, ExtLoad, ISD::ZERO_EXTEND);
         bool NoReplaceTruncAnd = !N0.hasOneUse();
         bool NoReplaceTrunc = SDValue(LN0, 0).hasOneUse();
         CombineTo(N, And);
@@ -8082,8 +8080,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
                                        LN0->getMemOperand());
       SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(N0),
                                   N0.getValueType(), ExtLoad);
-      ExtendSetCCUses(SetCCs, N0, ExtLoad, SDLoc(N),
-                      ISD::ANY_EXTEND);
+      ExtendSetCCUses(SetCCs, N0, ExtLoad, ISD::ANY_EXTEND);
       // If the load value is used only by N, replace it via CombineTo N.
       bool NoReplaceTrunc = N0.hasOneUse();
       CombineTo(N, ExtLoad);
