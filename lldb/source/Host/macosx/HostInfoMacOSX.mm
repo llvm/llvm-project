@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 // C++ Includes
@@ -231,41 +232,67 @@ bool HostInfoMacOSX::ComputePythonDirectory(FileSpec &file_spec) {
 #endif
 }
 
+static bool VerifyClangPath(const llvm::Twine &clang_path) {
+  if (llvm::sys::fs::is_directory(clang_path))
+    return true;
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  if (log)
+    log->Printf("HostInfoMacOSX::ComputeClangDirectory(): "
+                "failed to stat clang resource directory at \"%s\"",
+                clang_path.str().c_str());
+  return false;
+}
+
 bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &file_spec) {
   FileSpec lldb_file_spec;
   if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
     return false;
-
-  std::string raw_path = lldb_file_spec.GetPath();
-
-  size_t framework_pos = raw_path.find("LLDB.framework");
-  if (framework_pos == std::string::npos)
-    return HostInfoPosix::ComputeClangDirectory(file_spec);
-  
-  framework_pos += strlen("LLDB.framework");
-  raw_path.resize(framework_pos);
-  raw_path.append("/Resources/Clang");
-  
-  file_spec.SetFile(raw_path.c_str(), true);
-  return true;
+  return ComputeClangDirectory(lldb_file_spec, file_spec, true);
 }
 
-bool HostInfoMacOSX::ComputeSwiftDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
-    return false;
+bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
+                                           FileSpec &file_spec, bool verify) {
+  std::string raw_path = lldb_shlib_spec.GetPath();
 
-  std::string raw_path = lldb_file_spec.GetPath();
+  auto rev_it = llvm::sys::path::rbegin(raw_path);
+  auto r_end = llvm::sys::path::rend(raw_path);
 
-  size_t framework_pos = raw_path.find("LLDB.framework");
-  if (framework_pos == std::string::npos)
-    return HostInfoPosix::ComputeSwiftDirectory(file_spec);
+  // Check for a Posix-style build of LLDB.
+  if (rev_it == r_end || *rev_it != "LLDB.framework")
+    return HostInfoPosix::ComputeClangDirectory(file_spec);
 
-  if (framework_pos != std::string::npos) {
-    framework_pos += strlen("LLDB.framework");
-    raw_path.resize(framework_pos);
-    raw_path.append("/Resources/Swift");
+  // Inside Xcode and in Xcode toolchains LLDB is always in lockstep
+  // with the Swift compiler, so it can reuse its Clang resource
+  // directory. This allows LLDB and the Swift compiler to share the
+  // same Clang module cache.
+  llvm::SmallString<256> clang_path;
+  const char *swift_clang_resource_dir = "usr/lib/swift/clang";
+  ++rev_it;
+  if (rev_it != r_end && *rev_it == "SharedFrameworks") {
+    // This is the top-level LLDB in the Xcode.app bundle.
+    raw_path.resize(rev_it - r_end);
+    llvm::sys::path::append(clang_path, raw_path,
+                            "Developer/Toolchains/XcodeDefault.xctoolchain",
+                            swift_clang_resource_dir);
+    if (!verify || VerifyClangPath(clang_path)) {
+      file_spec.SetFile(clang_path.c_str(), true);
+      return true;
+    }
+  } else if (rev_it != r_end && *rev_it == "PrivateFrameworks" &&
+             ++rev_it != r_end && ++rev_it != r_end) {
+    // This is LLDB inside an Xcode toolchain.
+    raw_path.resize(rev_it - r_end);
+    llvm::sys::path::append(clang_path, raw_path, swift_clang_resource_dir);
+    if (!verify || VerifyClangPath(clang_path)) {
+      file_spec.SetFile(clang_path.c_str(), true);
+      return true;
+    }
+  } else {
+    raw_path.resize(rev_it - r_end);
   }
+
+  // Fall back to the Clang resource directory inside the framework.
+  raw_path.append("/Resources/Clang");
   file_spec.SetFile(raw_path.c_str(), true);
   return true;
 }
@@ -359,4 +386,26 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
       arch_64.Clear();
     }
   }
+}
+
+// Swift additions.
+
+bool HostInfoMacOSX::ComputeSwiftDirectory(FileSpec &file_spec) {
+  FileSpec lldb_file_spec;
+  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+    return false;
+
+  std::string raw_path = lldb_file_spec.GetPath();
+
+  size_t framework_pos = raw_path.find("LLDB.framework");
+  if (framework_pos == std::string::npos)
+    return HostInfoPosix::ComputeSwiftDirectory(file_spec);
+
+  if (framework_pos != std::string::npos) {
+    framework_pos += strlen("LLDB.framework");
+    raw_path.resize(framework_pos);
+    raw_path.append("/Resources/Swift");
+  }
+  file_spec.SetFile(raw_path.c_str(), true);
+  return true;
 }

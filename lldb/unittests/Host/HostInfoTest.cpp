@@ -8,7 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/lldb-defines.h"
+#include "TestingSupport/TestUtilities.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -42,4 +44,42 @@ TEST_F(HostInfoTest, GetAugmentedArchSpec) {
   // Test LLDB_ARCH_DEFAULT
   EXPECT_EQ(HostInfo::GetAugmentedArchSpec(LLDB_ARCH_DEFAULT).GetTriple(),
             HostInfo::GetArchitecture(HostInfo::eArchKindDefault).GetTriple());
+}
+
+
+struct HostInfoMacOSXTest : public HostInfoMacOSX {
+  static std::string ComputeClangDir(std::string lldb_shlib_path,
+                                     bool verify = false) {
+    FileSpec clang_dir;
+    FileSpec lldb_shlib_spec(lldb_shlib_path, false);
+    ComputeClangDirectory(lldb_shlib_spec, clang_dir, verify);
+    return clang_dir.GetPath();
+  }
+};
+
+
+TEST_F(HostInfoTest, MacOSX) {
+  // This returns whatever the POSIX fallback returns.
+  std::string posix = "/usr/lib/liblldb.dylib";
+  EXPECT_FALSE(HostInfoMacOSXTest::ComputeClangDir(posix).empty());
+
+  std::string xcode =
+    "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework";
+  std::string xcode_clang =
+    "/Applications/Xcode.app/Contents/Developer/Toolchains/"
+    "XcodeDefault.xctoolchain/usr/lib/swift/clang";
+  EXPECT_EQ(HostInfoMacOSXTest::ComputeClangDir(xcode), xcode_clang);
+
+  std::string toolchain =
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/"
+      "Swift-4.1-development-snapshot.xctoolchain/System/Library/"
+      "PrivateFrameworks/LLDB.framework";
+  std::string toolchain_clang =
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/"
+      "Swift-4.1-development-snapshot.xctoolchain/usr/lib/swift/clang";
+  EXPECT_EQ(HostInfoMacOSXTest::ComputeClangDir(toolchain), toolchain_clang);
+
+  // Test that a bogus path is detected.
+  EXPECT_NE(HostInfoMacOSXTest::ComputeClangDir(GetInputFilePath(xcode), true),
+            HostInfoMacOSXTest::ComputeClangDir(GetInputFilePath(xcode)));
 }
