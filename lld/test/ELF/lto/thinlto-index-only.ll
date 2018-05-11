@@ -8,7 +8,7 @@
 ; RUN: ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only -shared %t1.o %t2.o -o %t3
 ; RUN: ls %t2.o.thinlto.bc
 ; RUN: not test -e %t3
-; RUN: ld.lld -m elf_x86_64 -shared %t.o %t2.o -o %t3
+; RUN: ld.lld -m elf_x86_64 -shared %t1.o %t2.o -o %t3
 ; RUN: llvm-nm %t3 | FileCheck %s --check-prefix=NM
 
 ; Basic ThinLTO tests.
@@ -24,9 +24,10 @@
 ; RUN: not test -e %t4
 
 ; Ensure lld generates an index even if the file is wrapped in --start-lib/--end-lib
-; RUN: rm -f %t2.o.thinlto.bc
-; RUN: ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only -shared %t1.o %t3.o --start-lib %t2.o --end-lib -o %t
+; RUN: rm -f %t2.o.thinlto.bc %t4
+; RUN: ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only -shared %t1.o %t3.o --start-lib %t2.o --end-lib -o %t4
 ; RUN: ls %t2.o.thinlto.bc
+; RUN: not test -e %t4
 
 ; NM: T f
 
