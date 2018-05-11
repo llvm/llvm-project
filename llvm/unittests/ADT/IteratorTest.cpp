@@ -365,4 +365,12 @@ TEST(ZipIteratorTest, Reverse) {
   EXPECT_TRUE(all_of(ascending, [](unsigned n) { return (n & 0x01) == 0; }));
 }
 
+TEST(RangeTest, Distance) {
+  std::vector<int> v1;
+  std::vector<int> v2{1, 2, 3};
+
+  EXPECT_EQ(std::distance(v1.begin(), v1.end()), distance(v1));
+  EXPECT_EQ(std::distance(v2.begin(), v2.end()), distance(v2));
+}
+
 } // anonymous namespace

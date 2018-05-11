@@ -50,10 +50,13 @@ int llvm_test_dibuilder(void) {
 
   LLVMMetadataRef Int64Ty =
     LLVMDIBuilderCreateBasicType(DIB, "Int64", 5, 64, 0);
+  LLVMMetadataRef Int64TypeDef =
+    LLVMDIBuilderCreateTypedef(DIB, Int64Ty, "int64_t", 7, File, 42, File);
+
   LLVMMetadataRef GlobalVarValueExpr =
     LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
   LLVMDIBuilderCreateGlobalVariableExpression(DIB, Module, "global", 6,
-                                              "", 0, File, 1, Int64Ty,
+                                              "", 0, File, 1, Int64TypeDef,
                                               true, GlobalVarValueExpr,
                                               NULL, 0);
 

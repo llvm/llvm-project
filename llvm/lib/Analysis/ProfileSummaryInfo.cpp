@@ -223,6 +223,18 @@ bool ProfileSummaryInfo::isColdCount(uint64_t C) {
   return ColdCountThreshold && C <= ColdCountThreshold.getValue();
 }
 
+uint64_t ProfileSummaryInfo::getOrCompHotCountThreshold() {
+  if (!HotCountThreshold)
+    computeThresholds();
+  return HotCountThreshold && HotCountThreshold.getValue();
+}
+
+uint64_t ProfileSummaryInfo::getOrCompColdCountThreshold() {
+  if (!ColdCountThreshold)
+    computeThresholds();
+  return ColdCountThreshold && ColdCountThreshold.getValue();
+}
+
 bool ProfileSummaryInfo::isHotBB(const BasicBlock *B, BlockFrequencyInfo *BFI) {
   auto Count = BFI->getBlockProfileCount(B);
   return Count && isHotCount(*Count);

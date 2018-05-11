@@ -4168,147 +4168,6 @@ template <class _Tp> struct __is_reference_wrapper
 
 #ifndef _LIBCPP_CXX03_LANG
 
-// Check for complete types
-
-template <class ..._Tp> struct __check_complete;
-
-template <>
-struct __check_complete<>
-{
-};
-
-template <class _Hp, class _T0, class ..._Tp>
-struct __check_complete<_Hp, _T0, _Tp...>
-    : private __check_complete<_Hp>,
-      private __check_complete<_T0, _Tp...>
-{
-};
-
-template <class _Hp>
-struct __check_complete<_Hp, _Hp>
-    : private __check_complete<_Hp>
-{
-};
-
-template <class _Tp>
-struct __check_complete<_Tp>
-{
-    static_assert(sizeof(_Tp) > 0, "Type must be complete.");
-};
-
-template <class _Tp>
-struct __check_complete<_Tp&>
-    : private __check_complete<_Tp>
-{
-};
-
-template <class _Tp>
-struct __check_complete<_Tp&&>
-    : private __check_complete<_Tp>
-{
-};
-
-template <class _Rp, class ..._Param>
-struct __check_complete<_Rp (*)(_Param...)>
-    : private __check_complete<_Rp>
-{
-};
-
-template <class ..._Param>
-struct __check_complete<void (*)(_Param...)>
-{
-};
-
-template <class _Rp, class ..._Param>
-struct __check_complete<_Rp (_Param...)>
-    : private __check_complete<_Rp>
-{
-};
-
-template <class ..._Param>
-struct __check_complete<void (_Param...)>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...)>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...) const>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...) volatile>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...) const volatile>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...) &>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...) const&>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...) volatile&>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...) const volatile&>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...) &&>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...) const&&>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...) volatile&&>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class, class ..._Param>
-struct __check_complete<_Rp (_Class::*)(_Param...) const volatile&&>
-    : private __check_complete<_Class>
-{
-};
-
-template <class _Rp, class _Class>
-struct __check_complete<_Rp _Class::*>
-    : private __check_complete<_Class>
-{
-};
-
-
 template <class _Fp, class _A0,
          class _DecayFp = typename decay<_Fp>::type,
          class _DecayA0 = typename decay<_A0>::type,
@@ -4491,8 +4350,9 @@ _LIBCPP_INVOKE_RETURN(_VSTD::forward<_Fp>(__f)(_VSTD::forward<_Args>(__args)...)
 
 template <class _Ret, class _Fp, class ..._Args>
 struct __invokable_r
-    : private __check_complete<_Fp>
 {
+    // FIXME: Check that _Ret, _Fp, and _Args... are all complete types, cv void,
+    // or incomplete array types as required by the standard.
     using _Result = decltype(
         _VSTD::__invoke(_VSTD::declval<_Fp>(), _VSTD::declval<_Args>()...));
 

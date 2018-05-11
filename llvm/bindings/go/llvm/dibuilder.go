@@ -14,7 +14,7 @@
 package llvm
 
 /*
-#include "DIBuilderBindings.h"
+#include "IRBindings.h"
 #include <stdlib.h>
 */
 import "C"
@@ -514,6 +514,7 @@ func (d *DIBuilder) CreateTypedef(t DITypedef) Metadata {
 		d.ref,
 		t.Type.C,
 		name,
+		C.size_t(len(t.Name)),
 		t.File.C,
 		C.unsigned(t.Line),
 		t.Context.C,

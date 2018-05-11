@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTarget.h"
+#include "WebAssemblyDisassemblerEmitter.h"
 #include "X86DisassemblerTables.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/TableGen/Error.h"
@@ -122,6 +123,14 @@ void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
     }
 
     Tables.emit(OS);
+    return;
+  }
+
+  // WebAssembly has variable length opcodes, so can't use EmitFixedLenDecoder
+  // below (which depends on a Size table-gen Record), and also uses a custom
+  // disassembler.
+  if (Target.getName() == "WebAssembly") {
+    emitWebAssemblyDisassemblerTables(OS, Target.getInstructionsByEnumValue());
     return;
   }
 

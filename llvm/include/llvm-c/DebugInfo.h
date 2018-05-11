@@ -674,6 +674,21 @@ LLVMMetadataRef
 LLVMDIBuilderCreateNullPtrType(LLVMDIBuilderRef Builder);
 
 /**
+ * Create debugging information entry for a typedef.
+ * \param Builder    The DIBuilder.
+ * \param Type       Original type.
+ * \param Name       Typedef name.
+ * \param File       File where this type is defined.
+ * \param LineNo     Line number.
+ * \param Scope      The surrounding context for the typedef.
+*/
+LLVMMetadataRef
+LLVMDIBuilderCreateTypedef(LLVMDIBuilderRef Builder, LLVMMetadataRef Type,
+                           const char *Name, size_t NameLen,
+                           LLVMMetadataRef File, unsigned LineNo,
+                           LLVMMetadataRef Scope);
+
+/**
  * Create a permanent forward-declared type.
  * \param Builder             The DIBuilder.
  * \param Tag                 A unique tag for this type.

@@ -58,6 +58,20 @@ void test_result_of_imp()
 
 int main()
 {
+    { // Function types with noexcept
+    typedef bool (&RF0)(int) noexcept;
+    typedef bool (&RF1)(int, ...) noexcept;
+    typedef bool (*PF0)(int) noexcept;
+    typedef bool (*PF1)(int, ...) noexcept;
+    typedef bool (*&PRF0)(int) noexcept;
+    typedef bool (*&PRF1)(int, ...) noexcept;
+    test_result_of_imp<RF0(int), bool>();
+    test_result_of_imp<PF0(int), bool>();
+    test_result_of_imp<PRF0(int), bool>();
+    test_result_of_imp<RF1(int, int), bool>();
+    test_result_of_imp<PF1(int, int), bool>();
+    test_result_of_imp<PRF1(int, int), bool>();
+    }
     {
     typedef char F::*PMD;
     test_result_of_imp<PMD(F                &), char                &>();

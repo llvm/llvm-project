@@ -417,7 +417,7 @@ void Loop::getUniqueExitBlocks(
       // If a terminator has more then two successors, for example SwitchInst,
       // then it is possible that there are multiple edges from current block
       // to one exit block.
-      if (std::distance(succ_begin(BB), succ_end(BB)) <= 2) {
+      if (succ_size(BB) <= 2) {
         ExitBlocks.push_back(Successor);
         continue;
       }

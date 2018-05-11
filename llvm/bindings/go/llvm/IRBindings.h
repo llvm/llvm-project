@@ -15,6 +15,7 @@
 #define LLVM_BINDINGS_GO_LLVM_IRBINDINGS_H
 
 #include "llvm-c/Core.h"
+#include "llvm-c/DebugInfo.h"
 #ifdef __cplusplus
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/CBindingWrapping.h"

@@ -72,6 +72,7 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_stacktrace.cc
   sanitizer_stacktrace_libcdep.cc
   sanitizer_stacktrace_printer.cc
+  sanitizer_stacktrace_sparc.cc
   sanitizer_symbolizer.cc
   sanitizer_symbolizer_fuchsia.cc
   sanitizer_symbolizer_libbacktrace.cc
