@@ -29,7 +29,7 @@
 
 # CHECK:      Name: end
 # 0x19E = begin + sizeof(.foo) = 0x190 + 0xE
-# CHECK-NEXT: Value: 0x1F2
+# CHECK-NEXT: Value: 0x19E
 
 # Check that we don't crash with --gc-sections
 # RUN: ld.lld --gc-sections -o %t2 --script %t.script %t -shared

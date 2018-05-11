@@ -166,5 +166,20 @@ splitQualifiedName(llvm::StringRef QName) {
   return {QName.substr(0, Pos + 2), QName.substr(Pos + 2)};
 }
 
+TextEdit replacementToEdit(StringRef Code, const tooling::Replacement &R) {
+  Range ReplacementRange = {
+      offsetToPosition(Code, R.getOffset()),
+      offsetToPosition(Code, R.getOffset() + R.getLength())};
+  return {ReplacementRange, R.getReplacementText()};
+}
+
+std::vector<TextEdit> replacementsToEdits(StringRef Code,
+                                          const tooling::Replacements &Repls) {
+  std::vector<TextEdit> Edits;
+  for (const auto &R : Repls)
+    Edits.push_back(replacementToEdit(Code, R));
+  return Edits;
+}
+
 } // namespace clangd
 } // namespace clang
