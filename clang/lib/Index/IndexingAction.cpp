@@ -325,7 +325,8 @@ private:
                                   const FileEntry *File,
                                   StringRef SearchPath,
                                   StringRef RelativePath,
-                                  const Module *Imported) override {
+                                  const Module *Imported,
+                                  SrcMgr::CharacteristicKind FileType) override {
     if (HashLoc.isFileID() && File && File->isValid())
       addInclude(HashLoc, File);
   }
