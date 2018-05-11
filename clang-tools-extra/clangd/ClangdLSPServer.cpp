@@ -60,32 +60,6 @@ public:
 static URISchemeRegistry::Add<TestScheme>
     X("test", "Test scheme for clangd lit tests.");
 
-TextEdit replacementToEdit(StringRef Code, const tooling::Replacement &R) {
-  Range ReplacementRange = {
-      offsetToPosition(Code, R.getOffset()),
-      offsetToPosition(Code, R.getOffset() + R.getLength())};
-  return {ReplacementRange, R.getReplacementText()};
-}
-
-std::vector<TextEdit>
-replacementsToEdits(StringRef Code,
-                    const std::vector<tooling::Replacement> &Replacements) {
-  // Turn the replacements into the format specified by the Language Server
-  // Protocol. Fuse them into one big JSON array.
-  std::vector<TextEdit> Edits;
-  for (const auto &R : Replacements)
-    Edits.push_back(replacementToEdit(Code, R));
-  return Edits;
-}
-
-std::vector<TextEdit> replacementsToEdits(StringRef Code,
-                                          const tooling::Replacements &Repls) {
-  std::vector<TextEdit> Edits;
-  for (const auto &R : Repls)
-    Edits.push_back(replacementToEdit(Code, R));
-  return Edits;
-}
-
 SymbolKindBitset defaultSymbolKinds() {
   SymbolKindBitset Defaults;
   for (size_t I = SymbolKindMin; I <= static_cast<size_t>(SymbolKind::Array);
@@ -291,7 +265,11 @@ void ClangdLSPServer::onRename(RenameParams &Params) {
           return replyError(ErrorCode::InternalError,
                             llvm::toString(Replacements.takeError()));
 
-        std::vector<TextEdit> Edits = replacementsToEdits(*Code, *Replacements);
+        // Turn the replacements into the format specified by the Language
+        // Server Protocol. Fuse them into one big JSON array.
+        std::vector<TextEdit> Edits;
+        for (const auto &R : *Replacements)
+          Edits.push_back(replacementToEdit(*Code, R));
         WorkspaceEdit WE;
         WE.changes = {{Params.textDocument.uri.uri(), Edits}};
         reply(WE);
