@@ -248,6 +248,7 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &file_spec) {
   if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
     return false;
   return ComputeClangDirectory(lldb_file_spec, file_spec, true);
+<<<<<<< HEAD
 }
 
 bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
@@ -306,6 +307,8 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
   raw_path.append("LLDB.framework/Resources/Clang");
   file_spec.SetFile(raw_path.c_str(), true);
   return true;
+=======
+>>>>>>> b58812bb92f6832519b26158b3f359bd1f619e43
 }
 
 bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
@@ -316,19 +319,39 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
   auto r_end = llvm::sys::path::rend(raw_path);
 
   // Check for a Posix-style build of LLDB.
+<<<<<<< HEAD
   if (rev_it == r_end || *rev_it != "LLDB.framework")
     return HostInfoPosix::ComputeClangDirectory(file_spec);
 
+=======
+  while (rev_it != r_end) {
+    if (*rev_it == "LLDB.framework")
+      break;
+    ++rev_it;
+  }
+
+  if (rev_it == r_end)
+    return HostInfoPosix::ComputeClangDirectory(file_spec);
+
+>>>>>>> b58812bb92f6832519b26158b3f359bd1f619e43
   // Inside Xcode and in Xcode toolchains LLDB is always in lockstep
   // with the Swift compiler, so it can reuse its Clang resource
   // directory. This allows LLDB and the Swift compiler to share the
   // same Clang module cache.
   llvm::SmallString<256> clang_path;
   const char *swift_clang_resource_dir = "usr/lib/swift/clang";
+<<<<<<< HEAD
   ++rev_it;
   if (rev_it != r_end && *rev_it == "SharedFrameworks") {
     // This is the top-level LLDB in the Xcode.app bundle.
     raw_path.resize(rev_it - r_end);
+=======
+  auto parent = std::next(rev_it);
+  if (parent != r_end && *parent == "SharedFrameworks") {
+    // This is the top-level LLDB in the Xcode.app bundle.
+    // e.g., "Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A"
+    raw_path.resize(parent - r_end);
+>>>>>>> b58812bb92f6832519b26158b3f359bd1f619e43
     llvm::sys::path::append(clang_path, raw_path,
                             "Developer/Toolchains/XcodeDefault.xctoolchain",
                             swift_clang_resource_dir);
@@ -336,10 +359,21 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
       file_spec.SetFile(clang_path.c_str(), true);
       return true;
     }
+<<<<<<< HEAD
   } else if (rev_it != r_end && *rev_it == "PrivateFrameworks" &&
              ++rev_it != r_end && ++rev_it != r_end) {
     // This is LLDB inside an Xcode toolchain.
     raw_path.resize(rev_it - r_end);
+=======
+  } else if (parent != r_end && *parent == "PrivateFrameworks" &&
+             std::distance(parent, r_end) > 2) {
+    // This is LLDB inside an Xcode toolchain.
+    // e.g., "Xcode.app/Contents/Developer/Toolchains/" \
+    //       "My.xctoolchain/System/Library/PrivateFrameworks/LLDB.framework"
+    ++parent;
+    ++parent;
+    raw_path.resize(parent - r_end);
+>>>>>>> b58812bb92f6832519b26158b3f359bd1f619e43
     llvm::sys::path::append(clang_path, raw_path, swift_clang_resource_dir);
     if (!verify || VerifyClangPath(clang_path)) {
       file_spec.SetFile(clang_path.c_str(), true);
@@ -350,7 +384,13 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
   }
 
   // Fall back to the Clang resource directory inside the framework.
+<<<<<<< HEAD
   raw_path.append("/Resources/Clang");
+=======
+  raw_path.append("LLDB.framework/Resources/Clang");
+  file_spec.SetFile(raw_path.c_str(), true);
+  return true;
+>>>>>>> b58812bb92f6832519b26158b3f359bd1f619e43
 }
 
 bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
@@ -450,6 +490,8 @@ bool HostInfoMacOSX::ComputeSwiftDirectory(FileSpec &file_spec) {
   FileSpec lldb_file_spec;
   if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
     return false;
+
+  std::string raw_path = lldb_file_spec.GetPath();
   size_t framework_pos = raw_path.find("LLDB.framework");
   if (framework_pos == std::string::npos)
     return HostInfoPosix::ComputeSwiftDirectory(file_spec);
