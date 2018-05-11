@@ -8,17 +8,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Index/IndexingAction.h"
-#include "FileIndexRecord.h"
-#include "IndexingContext.h"
 #include "ClangIndexRecordWriter.h"
+#include "FileIndexRecord.h"
 #include "IndexDataStoreUtils.h"
-#include "clang/Index/IndexUnitWriter.h"
+#include "IndexingContext.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Index/IndexDataConsumer.h"
+#include "clang/Index/IndexUnitWriter.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 
@@ -76,8 +76,7 @@ protected:
     IndexCtx.indexDeclGroupRef(DG);
   }
 
-  void HandleTranslationUnit(ASTContext &Ctx) override {
-  }
+  void HandleTranslationUnit(ASTContext &Ctx) override {}
 };
 
 class IndexActionBase {
@@ -87,8 +86,7 @@ protected:
 
   IndexActionBase(std::shared_ptr<IndexDataConsumer> dataConsumer,
                   IndexingOptions Opts)
-    : DataConsumer(std::move(dataConsumer)),
-      IndexCtx(Opts, *DataConsumer) {}
+      : DataConsumer(std::move(dataConsumer)), IndexCtx(Opts, *DataConsumer) {}
 
   std::unique_ptr<IndexASTConsumer>
   createIndexASTConsumer(CompilerInstance &CI) {
@@ -97,16 +95,14 @@ protected:
                                                IndexCtx);
   }
 
-  void finish() {
-    DataConsumer->finish();
-  }
+  void finish() { DataConsumer->finish(); }
 };
 
 class IndexAction : public ASTFrontendAction, IndexActionBase {
 public:
   IndexAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
               IndexingOptions Opts)
-    : IndexActionBase(std::move(DataConsumer), Opts) {}
+      : IndexActionBase(std::move(DataConsumer), Opts) {}
 
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -127,8 +123,8 @@ public:
   WrappingIndexAction(std::unique_ptr<FrontendAction> WrappedAction,
                       std::shared_ptr<IndexDataConsumer> DataConsumer,
                       IndexingOptions Opts)
-    : WrapperFrontendAction(std::move(WrappedAction)),
-      IndexActionBase(std::move(DataConsumer), Opts) {}
+      : WrapperFrontendAction(std::move(WrappedAction)),
+        IndexActionBase(std::move(DataConsumer), Opts) {}
 
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -163,15 +159,13 @@ index::createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
                             IndexingOptions Opts,
                             std::unique_ptr<FrontendAction> WrappedAction) {
   if (WrappedAction)
-    return llvm::make_unique<WrappingIndexAction>(std::move(WrappedAction),
-                                                  std::move(DataConsumer),
-                                                  Opts);
+    return llvm::make_unique<WrappingIndexAction>(
+        std::move(WrappedAction), std::move(DataConsumer), Opts);
   return llvm::make_unique<IndexAction>(std::move(DataConsumer), Opts);
 }
 
-
 static bool topLevelDeclVisitor(void *context, const Decl *D) {
-  IndexingContext &IndexCtx = *static_cast<IndexingContext*>(context);
+  IndexingContext &IndexCtx = *static_cast<IndexingContext *>(context);
   return IndexCtx.indexTopLevelDecl(D);
 }
 
@@ -224,7 +218,8 @@ namespace {
 class IndexDataRecorder : public IndexDataConsumer {
   IndexingContext *IndexCtx = nullptr;
   const Preprocessor *PP = nullptr;
-  typedef llvm::DenseMap<FileID, std::unique_ptr<FileIndexRecord>> RecordByFileTy;
+  typedef llvm::DenseMap<FileID, std::unique_ptr<FileIndexRecord>>
+      RecordByFileTy;
   RecordByFileTy RecordByFile;
 
 public:
@@ -234,26 +229,29 @@ public:
     initialize(CI.getASTContext());
   }
 
-  RecordByFileTy::const_iterator record_begin() const { return RecordByFile.begin(); }
-  RecordByFileTy::const_iterator record_end() const { return RecordByFile.end(); }
+  RecordByFileTy::const_iterator record_begin() const {
+    return RecordByFile.begin();
+  }
+  RecordByFileTy::const_iterator record_end() const {
+    return RecordByFile.end();
+  }
   bool record_empty() const { return RecordByFile.empty(); }
 
 private:
   bool handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
                            ArrayRef<SymbolRelation> Relations,
-                           SourceLocation Loc,
-                           ASTNodeInfo ASTNode) override {
+                           SourceLocation Loc, ASTNodeInfo ASTNode) override {
     SourceManager &SM = PP->getSourceManager();
     Loc = SM.getFileLoc(Loc);
     if (Loc.isInvalid())
       return true;
-  
+
     FileID FID;
     unsigned Offset;
     std::tie(FID, Offset) = SM.getDecomposedLoc(Loc);
 
     if (FID.isInvalid())
-     return true;
+      return true;
 
     // Ignore the predefines buffer.
     const FileEntry *FE = PP->getSourceManager().getFileEntryForID(FID);
@@ -289,26 +287,28 @@ class IncludePPCallbacks : public PPCallbacks {
 public:
   IncludePPCallbacks(IndexingContext &indexCtx, RecordingOptions recordOpts,
                      std::vector<IncludeLocation> &IncludesForFile,
-                     SourceManager &SourceMgr) :
-    IndexCtx(indexCtx), RecordOpts(recordOpts),
-    Includes(IncludesForFile), SourceMgr(SourceMgr) {}
+                     SourceManager &SourceMgr)
+      : IndexCtx(indexCtx), RecordOpts(recordOpts), Includes(IncludesForFile),
+        SourceMgr(SourceMgr) {}
 
 private:
   void addInclude(SourceLocation From, const FileEntry *To) {
     assert(To);
-    if (RecordOpts.RecordIncludes == RecordingOptions::IncludesRecordingKind::None)
+    if (RecordOpts.RecordIncludes ==
+        RecordingOptions::IncludesRecordingKind::None)
       return;
 
-    std::pair<FileID, unsigned> LocInfo = SourceMgr.getDecomposedExpansionLoc(From);
+    std::pair<FileID, unsigned> LocInfo =
+        SourceMgr.getDecomposedExpansionLoc(From);
     switch (RecordOpts.RecordIncludes) {
-      case RecordingOptions::IncludesRecordingKind::None:
-        llvm_unreachable("should have already checked in the beginning");
-      case RecordingOptions::IncludesRecordingKind::UserOnly:
-        if (IndexCtx.isSystemFile(LocInfo.first))
-          return; // Ignore includes of system headers.
-        break;
-      case RecordingOptions::IncludesRecordingKind::All:
-        break;
+    case RecordingOptions::IncludesRecordingKind::None:
+      llvm_unreachable("should have already checked in the beginning");
+    case RecordingOptions::IncludesRecordingKind::UserOnly:
+      if (IndexCtx.isSystemFile(LocInfo.first))
+        return; // Ignore includes of system headers.
+      break;
+    case RecordingOptions::IncludesRecordingKind::All:
+      break;
     }
     auto *FE = SourceMgr.getFileEntryForID(LocInfo.first);
     if (!FE)
@@ -317,16 +317,11 @@ private:
     Includes.push_back({FE, To, lineNo});
   }
 
-  virtual void InclusionDirective(SourceLocation HashLoc,
-                                  const Token &IncludeTok,
-                                  StringRef FileName,
-                                  bool IsAngled,
-                                  CharSourceRange FilenameRange,
-                                  const FileEntry *File,
-                                  StringRef SearchPath,
-                                  StringRef RelativePath,
-                                  const Module *Imported,
-                                  SrcMgr::CharacteristicKind FileType) override {
+  virtual void InclusionDirective(
+      SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
+      bool IsAngled, CharSourceRange FilenameRange, const FileEntry *File,
+      StringRef SearchPath, StringRef RelativePath, const Module *Imported,
+      SrcMgr::CharacteristicKind FileType) override {
     if (HashLoc.isFileID() && File && File->isValid())
       addInclude(HashLoc, File);
   }
@@ -336,17 +331,21 @@ class IndexDependencyProvider {
 public:
   virtual ~IndexDependencyProvider() {}
 
-  virtual void visitFileDependencies(const CompilerInstance &CI,
+  virtual void visitFileDependencies(
+      const CompilerInstance &CI,
       llvm::function_ref<void(const FileEntry *FE, bool isSystem)> visitor) = 0;
-  virtual void visitIncludes(
-                 llvm::function_ref<void(const FileEntry *Source, unsigned Line,
-                                         const FileEntry *Target)> visitor) = 0;
-  virtual void visitModuleImports(const CompilerInstance &CI,
-                 llvm::function_ref<void(serialization::ModuleFile &Mod,
-                                         bool isSystem)> visitor) = 0;
+  virtual void
+  visitIncludes(llvm::function_ref<void(const FileEntry *Source, unsigned Line,
+                                        const FileEntry *Target)>
+                    visitor) = 0;
+  virtual void visitModuleImports(
+      const CompilerInstance &CI,
+      llvm::function_ref<void(serialization::ModuleFile &Mod, bool isSystem)>
+          visitor) = 0;
 };
 
-class SourceFilesIndexDependencyCollector : public DependencyCollector, public IndexDependencyProvider {
+class SourceFilesIndexDependencyCollector : public DependencyCollector,
+                                            public IndexDependencyProvider {
   IndexingContext &IndexCtx;
   RecordingOptions RecordOpts;
   llvm::SetVector<const FileEntry *> Entries;
@@ -356,15 +355,14 @@ class SourceFilesIndexDependencyCollector : public DependencyCollector, public I
   std::string SysrootPath;
 
 public:
-  SourceFilesIndexDependencyCollector(IndexingContext &indexCtx, RecordingOptions recordOpts)
-    : IndexCtx(indexCtx), RecordOpts(recordOpts) {}
+  SourceFilesIndexDependencyCollector(IndexingContext &indexCtx,
+                                      RecordingOptions recordOpts)
+      : IndexCtx(indexCtx), RecordOpts(recordOpts) {}
 
   virtual void attachToPreprocessor(Preprocessor &PP) override {
     DependencyCollector::attachToPreprocessor(PP);
-    PP.addPPCallbacks(llvm::make_unique<IncludePPCallbacks>(IndexCtx,
-                                                            RecordOpts,
-                                                            Includes,
-                                                            PP.getSourceManager()));
+    PP.addPPCallbacks(llvm::make_unique<IncludePPCallbacks>(
+        IndexCtx, RecordOpts, Includes, PP.getSourceManager()));
   }
 
   void setSourceManager(SourceManager *SourceMgr) {
@@ -372,37 +370,43 @@ public:
   }
   void setSysrootPath(StringRef sysroot) { SysrootPath = sysroot; }
 
-  void visitFileDependencies(const CompilerInstance &CI,
-      llvm::function_ref<void(const FileEntry *FE, bool isSystem)> visitor) override {
+  void visitFileDependencies(
+      const CompilerInstance &CI,
+      llvm::function_ref<void(const FileEntry *FE, bool isSystem)> visitor)
+      override {
     for (auto *FE : getEntries()) {
       visitor(FE, isSystemFile(FE));
     }
   }
 
-  void visitIncludes(
-                 llvm::function_ref<void(const FileEntry *Source, unsigned Line,
-                                         const FileEntry *Target)> visitor) override {
+  void
+  visitIncludes(llvm::function_ref<void(const FileEntry *Source, unsigned Line,
+                                        const FileEntry *Target)>
+                    visitor) override {
     for (auto &Include : Includes) {
       visitor(Include.Source, Include.Line, Include.Target);
     }
   }
 
-  void visitModuleImports(const CompilerInstance &CI,
-                 llvm::function_ref<void(serialization::ModuleFile &Mod,
-                                         bool isSystem)> visitor) override {
+  void visitModuleImports(
+      const CompilerInstance &CI,
+      llvm::function_ref<void(serialization::ModuleFile &Mod, bool isSystem)>
+          visitor) override {
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
 
     if (auto Reader = CI.getModuleManager()) {
-      Reader->getModuleManager().visit([&](serialization::ModuleFile &Mod) -> bool {
-        bool isSystemMod = false;
-        if (Mod.isModule()) {
-          if (auto *M = HS.lookupModule(Mod.ModuleName, /*AllowSearch=*/false))
-            isSystemMod = M->IsSystem;
-        }
-        if (!isSystemMod || needSystemDependencies())
-          visitor(Mod, isSystemMod);
-        return true; // skip module dependencies.
-      });
+      Reader->getModuleManager().visit(
+          [&](serialization::ModuleFile &Mod) -> bool {
+            bool isSystemMod = false;
+            if (Mod.isModule()) {
+              if (auto *M =
+                      HS.lookupModule(Mod.ModuleName, /*AllowSearch=*/false))
+                isSystemMod = M->IsSystem;
+            }
+            if (!isSystemMod || needSystemDependencies())
+              visitor(Mod, isSystemMod);
+            return true; // skip module dependencies.
+          });
     }
   }
 
@@ -420,18 +424,17 @@ private:
     return RecordOpts.RecordSystemDependencies;
   }
 
-  bool sawDependency(StringRef Filename, bool FromModule,
-                     bool IsSystem, bool IsModuleFile, bool IsMissing) override {
-    bool sawIt = DependencyCollector::sawDependency(Filename, FromModule,
-                                                    IsSystem, IsModuleFile,
-                                                    IsMissing);
+  bool sawDependency(StringRef Filename, bool FromModule, bool IsSystem,
+                     bool IsModuleFile, bool IsMissing) override {
+    bool sawIt = DependencyCollector::sawDependency(
+        Filename, FromModule, IsSystem, IsModuleFile, IsMissing);
     if (auto *FE = SourceMgr->getFileManager().getFile(Filename)) {
       if (sawIt)
         Entries.insert(FE);
       // Record system-ness for all files that we pass through.
-      if (IsSystemByUID.size() < FE->getUID()+1)
-        IsSystemByUID.resize(FE->getUID()+1);
-        IsSystemByUID[FE->getUID()] = IsSystem || isInSysroot(Filename);
+      if (IsSystemByUID.size() < FE->getUID() + 1)
+        IsSystemByUID.resize(FE->getUID() + 1);
+      IsSystemByUID[FE->getUID()] = IsSystem || isInSysroot(Filename);
     }
     return sawIt;
   }
@@ -449,10 +452,8 @@ protected:
   SourceFilesIndexDependencyCollector DepCollector;
 
   IndexRecordActionBase(IndexingOptions IndexOpts, RecordingOptions recordOpts)
-    : RecordOpts(std::move(recordOpts)),
-      IndexCtx(IndexOpts, Recorder),
-      DepCollector(IndexCtx, RecordOpts) {
-  }
+      : RecordOpts(std::move(recordOpts)), IndexCtx(IndexOpts, Recorder),
+        DepCollector(IndexCtx, RecordOpts) {}
 
   std::unique_ptr<IndexASTConsumer>
   createIndexASTConsumer(CompilerInstance &CI) {
@@ -474,7 +475,7 @@ protected:
 class IndexRecordAction : public ASTFrontendAction, IndexRecordActionBase {
 public:
   IndexRecordAction(IndexingOptions IndexOpts, RecordingOptions RecordOpts)
-    : IndexRecordActionBase(std::move(IndexOpts), std::move(RecordOpts)) {}
+      : IndexRecordActionBase(std::move(IndexOpts), std::move(RecordOpts)) {}
 
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -488,15 +489,16 @@ protected:
   }
 };
 
-class WrappingIndexRecordAction : public WrapperFrontendAction, IndexRecordActionBase {
+class WrappingIndexRecordAction : public WrapperFrontendAction,
+                                  IndexRecordActionBase {
   bool CreatedASTConsumer = false;
 
 public:
   WrappingIndexRecordAction(std::unique_ptr<FrontendAction> WrappedAction,
                             IndexingOptions IndexOpts,
                             RecordingOptions RecordOpts)
-    : WrapperFrontendAction(std::move(WrappedAction)),
-      IndexRecordActionBase(std::move(IndexOpts), std::move(RecordOpts)) {}
+      : WrapperFrontendAction(std::move(WrappedAction)),
+        IndexRecordActionBase(std::move(IndexOpts), std::move(RecordOpts)) {}
 
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -539,10 +541,8 @@ static void writeUnitData(const CompilerInstance &CI,
                           IndexDataRecorder &Recorder,
                           IndexDependencyProvider &DepProvider,
                           IndexingOptions IndexOpts,
-                          RecordingOptions RecordOpts,
-                          StringRef OutputFile,
-                          const FileEntry *RootFile,
-                          Module *UnitModule,
+                          RecordingOptions RecordOpts, StringRef OutputFile,
+                          const FileEntry *RootFile, Module *UnitModule,
                           StringRef SysrootPath);
 
 void IndexRecordActionBase::finish(CompilerInstance &CI) {
@@ -550,16 +550,15 @@ void IndexRecordActionBase::finish(CompilerInstance &CI) {
   // on the diagnostic client.
   // FIXME: FrontendAction::EndSourceFile() should probably not call
   // CI.getDiagnosticClient().EndSourceFile()' until after it has called
-  // 'EndSourceFileAction()', so that code executing during EndSourceFileAction()
-  // can emit diagnostics. If this is fixed, DiagClientBeginEndRAII can go away.
+  // 'EndSourceFileAction()', so that code executing during
+  // EndSourceFileAction() can emit diagnostics. If this is fixed,
+  // DiagClientBeginEndRAII can go away.
   struct DiagClientBeginEndRAII {
     CompilerInstance &CI;
     DiagClientBeginEndRAII(CompilerInstance &CI) : CI(CI) {
       CI.getDiagnosticClient().BeginSourceFile(CI.getLangOpts());
     }
-    ~DiagClientBeginEndRAII() {
-      CI.getDiagnosticClient().EndSourceFile();
-    }
+    ~DiagClientBeginEndRAII() { CI.getDiagnosticClient().EndSourceFile(); }
   } diagClientBeginEndRAII(CI);
 
   SourceManager &SM = CI.getSourceManager();
@@ -594,27 +593,23 @@ void IndexRecordActionBase::finish(CompilerInstance &CI) {
   }
 
   writeUnitData(CI, Recorder, DepCollector, IndexCtx.getIndexOpts(), RecordOpts,
-                OutputFile, RootFile, UnitMod,
-                IndexCtx.getSysrootPath());
+                OutputFile, RootFile, UnitMod, IndexCtx.getSysrootPath());
 }
 
 /// Checks if the unit file exists for module file, if it doesn't it generates
 /// index data for it.
-static bool produceIndexDataForModuleFile(
-                                      serialization::ModuleFile &Mod,
-                                      const CompilerInstance &CI,
-                                      IndexingOptions IndexOpts,
-                                      RecordingOptions RecordOpts,
-                                      IndexUnitWriter &ParentUnitWriter);
+static bool produceIndexDataForModuleFile(serialization::ModuleFile &Mod,
+                                          const CompilerInstance &CI,
+                                          IndexingOptions IndexOpts,
+                                          RecordingOptions RecordOpts,
+                                          IndexUnitWriter &ParentUnitWriter);
 
 static void writeUnitData(const CompilerInstance &CI,
                           IndexDataRecorder &Recorder,
                           IndexDependencyProvider &DepProvider,
                           IndexingOptions IndexOpts,
-                          RecordingOptions RecordOpts,
-                          StringRef OutputFile,
-                          const FileEntry *RootFile,
-                          Module *UnitModule,
+                          RecordingOptions RecordOpts, StringRef OutputFile,
+                          const FileEntry *RootFile, Module *UnitModule,
                           StringRef SysrootPath) {
 
   SourceManager &SM = CI.getSourceManager();
@@ -624,15 +619,19 @@ static void writeUnitData(const CompilerInstance &CI,
   bool IsSystemUnit = UnitModule ? UnitModule->IsSystem : false;
   bool IsModuleUnit = UnitModule != nullptr;
   bool IsDebugCompilation = CI.getCodeGenOpts().OptimizationLevel == 0;
-  std::string ModuleName = UnitModule ? UnitModule->getFullModuleName() : std::string();
+  std::string ModuleName =
+      UnitModule ? UnitModule->getFullModuleName() : std::string();
 
-  auto getModuleInfo = [](writer::OpaqueModule mod, SmallVectorImpl<char> &Scratch) -> writer::ModuleInfo {
+  auto getModuleInfo =
+      [](writer::OpaqueModule mod,
+         SmallVectorImpl<char> &Scratch) -> writer::ModuleInfo {
     assert(mod);
     writer::ModuleInfo info;
-    std::string fullName = static_cast<const Module*>(mod)->getFullModuleName();
+    std::string fullName =
+        static_cast<const Module *>(mod)->getFullModuleName();
     unsigned offset = Scratch.size();
     Scratch.append(fullName.begin(), fullName.end());
-    info.Name = StringRef(Scratch.data()+offset, fullName.size());
+    info.Name = StringRef(Scratch.data() + offset, fullName.size());
     return info;
   };
 
@@ -645,26 +644,21 @@ static void writeUnitData(const CompilerInstance &CI,
     return nullptr;
   };
 
-  IndexUnitWriter UnitWriter(CI.getFileManager(),
-                             DataPath,
-                             "clang", getClangVersion(),
-                             OutputFile,
-                             ModuleName,
-                             RootFile,
-                             IsSystemUnit,
-                             IsModuleUnit,
-                             IsDebugCompilation,
-                             CI.getTargetOpts().Triple,
-                             SysrootPath,
-                             getModuleInfo);
+  IndexUnitWriter UnitWriter(
+      CI.getFileManager(), DataPath, "clang", getClangVersion(), OutputFile,
+      ModuleName, RootFile, IsSystemUnit, IsModuleUnit, IsDebugCompilation,
+      CI.getTargetOpts().Triple, SysrootPath, getModuleInfo);
 
-  DepProvider.visitFileDependencies(CI, [&](const FileEntry *FE, bool isSystemFile) {
-    UnitWriter.addFileDependency(FE, isSystemFile, findModuleForHeader(FE));
-  });
-  DepProvider.visitIncludes([&](const FileEntry *Source, unsigned Line, const FileEntry *Target) {
-    UnitWriter.addInclude(Source, Line, Target);
-  });
-  DepProvider.visitModuleImports(CI, [&](serialization::ModuleFile &Mod, bool isSystemMod) {
+  DepProvider.visitFileDependencies(
+      CI, [&](const FileEntry *FE, bool isSystemFile) {
+        UnitWriter.addFileDependency(FE, isSystemFile, findModuleForHeader(FE));
+      });
+  DepProvider.visitIncludes(
+      [&](const FileEntry *Source, unsigned Line, const FileEntry *Target) {
+        UnitWriter.addInclude(Source, Line, Target);
+      });
+  DepProvider.visitModuleImports(CI, [&](serialization::ModuleFile &Mod,
+                                         bool isSystemMod) {
     Module *UnitMod = HS.lookupModule(Mod.ModuleName, /*AllowSearch=*/false);
     UnitWriter.addASTFileDependency(Mod.File, isSystemMod, UnitMod);
     if (Mod.isModule()) {
@@ -673,7 +667,8 @@ static void writeUnitData(const CompilerInstance &CI,
   });
 
   ClangIndexRecordWriter RecordWriter(CI.getASTContext(), RecordOpts);
-  for (auto I = Recorder.record_begin(), E = Recorder.record_end(); I != E; ++I) {
+  for (auto I = Recorder.record_begin(), E = Recorder.record_end(); I != E;
+       ++I) {
     FileID FID = I->first;
     const FileIndexRecord &Rec = *I->second;
     const FileEntry *FE = SM.getFileEntryForID(FID);
@@ -707,37 +702,43 @@ class ModuleFileIndexDependencyCollector : public IndexDependencyProvider {
 public:
   ModuleFileIndexDependencyCollector(serialization::ModuleFile &Mod,
                                      RecordingOptions recordOpts)
-  : ModFile(Mod), RecordOpts(recordOpts) {}
+      : ModFile(Mod), RecordOpts(recordOpts) {}
 
-  void visitFileDependencies(const CompilerInstance &CI,
-      llvm::function_ref<void(const FileEntry *FE, bool isSystem)> visitor) override {
+  void visitFileDependencies(
+      const CompilerInstance &CI,
+      llvm::function_ref<void(const FileEntry *FE, bool isSystem)> visitor)
+      override {
     auto Reader = CI.getModuleManager();
-    Reader->visitInputFiles(ModFile, RecordOpts.RecordSystemDependencies,
-                            /*Complain=*/false,
-                        [&](const serialization::InputFile &IF, bool isSystem) {
-      auto *FE = IF.getFile();
-      if (!FE)
-        return;
-      // Ignore module map files, they are not as important to track as source
-      // files and they may be auto-generated which would create an undesirable
-      // dependency on an intermediate build byproduct.
-      if (FE->getName().endswith("module.modulemap"))
-        return;
+    Reader->visitInputFiles(
+        ModFile, RecordOpts.RecordSystemDependencies,
+        /*Complain=*/false,
+        [&](const serialization::InputFile &IF, bool isSystem) {
+          auto *FE = IF.getFile();
+          if (!FE)
+            return;
+          // Ignore module map files, they are not as important to track as
+          // source files and they may be auto-generated which would create an
+          // undesirable dependency on an intermediate build byproduct.
+          if (FE->getName().endswith("module.modulemap"))
+            return;
 
-      visitor(FE, isSystem);
-    });
+          visitor(FE, isSystem);
+        });
   }
 
-  void visitIncludes(
-           llvm::function_ref<void(const FileEntry *Source, unsigned Line,
-                                   const FileEntry *Target)> visitor) override {
-   // FIXME: Module files without a preprocessing record do not have info about
-   // include locations. Serialize enough data to be able to retrieve such info.
+  void
+  visitIncludes(llvm::function_ref<void(const FileEntry *Source, unsigned Line,
+                                        const FileEntry *Target)>
+                    visitor) override {
+    // FIXME: Module files without a preprocessing record do not have info about
+    // include locations. Serialize enough data to be able to retrieve such
+    // info.
   }
 
-  void visitModuleImports(const CompilerInstance &CI,
-                 llvm::function_ref<void(serialization::ModuleFile &Mod,
-                                         bool isSystem)> visitor) override {
+  void visitModuleImports(
+      const CompilerInstance &CI,
+      llvm::function_ref<void(serialization::ModuleFile &Mod, bool isSystem)>
+          visitor) override {
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
     for (auto *Mod : ModFile.Imports) {
       bool isSystemMod = false;
@@ -751,12 +752,11 @@ public:
 } // anonymous namespace.
 
 static void indexModule(serialization::ModuleFile &Mod,
-                        const CompilerInstance &CI,
-                        IndexingOptions IndexOpts,
+                        const CompilerInstance &CI, IndexingOptions IndexOpts,
                         RecordingOptions RecordOpts) {
   DiagnosticsEngine &Diag = CI.getDiagnostics();
   Diag.Report(Mod.ImportLoc, diag::remark_index_producing_module_file_data)
-    << Mod.FileName;
+      << Mod.FileName;
 
   StringRef SysrootPath = CI.getHeaderSearchOpts().Sysroot;
   HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
@@ -775,17 +775,15 @@ static void indexModule(serialization::ModuleFile &Mod,
   Recorder.finish();
 
   ModuleFileIndexDependencyCollector DepCollector(Mod, RecordOpts);
-  writeUnitData(CI, Recorder, DepCollector, IndexOpts, RecordOpts,
-                Mod.FileName, /*RootFile=*/nullptr, UnitMod, SysrootPath);
-
+  writeUnitData(CI, Recorder, DepCollector, IndexOpts, RecordOpts, Mod.FileName,
+                /*RootFile=*/nullptr, UnitMod, SysrootPath);
 }
 
-static bool produceIndexDataForModuleFile(
-                                      serialization::ModuleFile &Mod,
-                                      const CompilerInstance &CI,
-                                      IndexingOptions IndexOpts,
-                                      RecordingOptions RecordOpts,
-                                      IndexUnitWriter &ParentUnitWriter) {
+static bool produceIndexDataForModuleFile(serialization::ModuleFile &Mod,
+                                          const CompilerInstance &CI,
+                                          IndexingOptions IndexOpts,
+                                          RecordingOptions RecordOpts,
+                                          IndexUnitWriter &ParentUnitWriter) {
   DiagnosticsEngine &Diag = CI.getDiagnostics();
   std::string Error;
   // We don't do timestamp check with the PCM file, on purpose. The PCM may get
@@ -793,7 +791,8 @@ static bool produceIndexDataForModuleFile(
   // index data. User modules normally will get rebuilt and their index data
   // re-emitted, and system modules are generally stable (and they can also can
   // get rebuilt along with their index data).
-  auto IsUptodateOpt = ParentUnitWriter.isUnitUpToDateForOutputFile(Mod.FileName, None, Error);
+  auto IsUptodateOpt =
+      ParentUnitWriter.isUnitUpToDateForOutputFile(Mod.FileName, None, Error);
   if (!IsUptodateOpt.hasValue()) {
     unsigned DiagID = Diag.getCustomDiagID(DiagnosticsEngine::Error,
                                            "failed file status check: %0");
@@ -812,9 +811,8 @@ createIndexDataRecordingAction(IndexingOptions IndexOpts,
                                RecordingOptions RecordOpts,
                                std::unique_ptr<FrontendAction> WrappedAction) {
   if (WrappedAction)
-    return llvm::make_unique<WrappingIndexRecordAction>(std::move(WrappedAction),
-                                                        std::move(IndexOpts),
-                                                        std::move(RecordOpts));
+    return llvm::make_unique<WrappingIndexRecordAction>(
+        std::move(WrappedAction), std::move(IndexOpts), std::move(RecordOpts));
   return llvm::make_unique<IndexRecordAction>(std::move(IndexOpts),
                                               std::move(RecordOpts));
 }
@@ -826,15 +824,15 @@ getIndexOptionsFromFrontendOptions(const FrontendOptions &FEOpts) {
   RecordOpts.DataDirPath = FEOpts.IndexStorePath;
   if (FEOpts.IndexIgnoreSystemSymbols) {
     IndexOpts.SystemSymbolFilter =
-    index::IndexingOptions::SystemSymbolFilterKind::None;
+        index::IndexingOptions::SystemSymbolFilterKind::None;
   }
   RecordOpts.RecordSymbolCodeGenName = FEOpts.IndexRecordCodegenName;
-  return { IndexOpts, RecordOpts };
+  return {IndexOpts, RecordOpts};
 }
 
-std::unique_ptr<FrontendAction>
-index::createIndexDataRecordingAction(const FrontendOptions &FEOpts,
-                                std::unique_ptr<FrontendAction> WrappedAction) {
+std::unique_ptr<FrontendAction> index::createIndexDataRecordingAction(
+    const FrontendOptions &FEOpts,
+    std::unique_ptr<FrontendAction> WrappedAction) {
   index::IndexingOptions IndexOpts;
   index::RecordingOptions RecordOpts;
   std::tie(IndexOpts, RecordOpts) = getIndexOptionsFromFrontendOptions(FEOpts);
@@ -847,10 +845,13 @@ bool index::emitIndexDataForModuleFile(const Module *Mod,
                                        IndexUnitWriter &ParentUnitWriter) {
   index::IndexingOptions IndexOpts;
   index::RecordingOptions RecordOpts;
-  std::tie(IndexOpts, RecordOpts) = getIndexOptionsFromFrontendOptions(CI.getFrontendOpts());
+  std::tie(IndexOpts, RecordOpts) =
+      getIndexOptionsFromFrontendOptions(CI.getFrontendOpts());
 
   auto astReader = CI.getModuleManager();
-  serialization::ModuleFile *ModFile = astReader->getModuleManager().lookup(Mod->getASTFile());
+  serialization::ModuleFile *ModFile =
+      astReader->getModuleManager().lookup(Mod->getASTFile());
   assert(ModFile && "no module file loaded for module ?");
-  return produceIndexDataForModuleFile(*ModFile, CI, IndexOpts, RecordOpts, ParentUnitWriter);
+  return produceIndexDataForModuleFile(*ModFile, CI, IndexOpts, RecordOpts,
+                                       ParentUnitWriter);
 }
