@@ -273,10 +273,11 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
   // same Clang module cache.
   llvm::SmallString<256> clang_path;
   const char *swift_clang_resource_dir = "usr/lib/swift/clang";
-  ++rev_it;
-  if (rev_it != r_end && *rev_it == "SharedFrameworks") {
+  auto parent = std::next(rev_it);
+  if (parent != r_end && *parent == "SharedFrameworks") {
     // This is the top-level LLDB in the Xcode.app bundle.
-    raw_path.resize(rev_it - r_end);
+    // e.g., "Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A"
+    raw_path.resize(parent - r_end);
     llvm::sys::path::append(clang_path, raw_path,
                             "Developer/Toolchains/XcodeDefault.xctoolchain",
                             swift_clang_resource_dir);
@@ -284,10 +285,14 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
       file_spec.SetFile(clang_path.c_str(), true);
       return true;
     }
-  } else if (rev_it != r_end && *rev_it == "PrivateFrameworks" &&
-             ++rev_it != r_end && ++rev_it != r_end) {
+  } else if (parent != r_end && *parent == "PrivateFrameworks" &&
+             std::distance(parent, r_end) > 2) {
     // This is LLDB inside an Xcode toolchain.
-    raw_path.resize(rev_it - r_end);
+    // e.g., "Xcode.app/Contents/Developer/Toolchains/" \
+    //       "My.xctoolchain/System/Library/PrivateFrameworks/LLDB.framework"
+    ++parent;
+    ++parent;
+    raw_path.resize(parent - r_end);
     llvm::sys::path::append(clang_path, raw_path, swift_clang_resource_dir);
     if (!verify || VerifyClangPath(clang_path)) {
       file_spec.SetFile(clang_path.c_str(), true);
@@ -298,7 +303,7 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
   }
 
   // Fall back to the Clang resource directory inside the framework.
-  raw_path.append("/Resources/Clang");
+  raw_path.append("LLDB.framework/Resources/Clang");
   file_spec.SetFile(raw_path.c_str(), true);
   return true;
 }

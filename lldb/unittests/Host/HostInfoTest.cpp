@@ -63,11 +63,11 @@ TEST_F(HostInfoTest, MacOSX) {
   std::string posix = "/usr/lib/liblldb.dylib";
   EXPECT_FALSE(HostInfoMacOSXTest::ComputeClangDir(posix).empty());
 
-  std::string framework =
-    "/SharedFrameworks/LLDB.framework";
-  std::string framework_clang =
-    "/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/clang";
-  EXPECT_EQ(HostInfoMacOSXTest::ComputeClangDir(framework), framework_clang);
+  std::string build =
+    "/lldb-macosx-x86_64/Library/Frameworks/LLDB.framework/Versions/A";
+  std::string build_clang =
+    "/lldb-macosx-x86_64/Library/Frameworks/LLDB.framework/Resources/Clang";
+  EXPECT_EQ(HostInfoMacOSXTest::ComputeClangDir(build), build_clang);
 
   std::string xcode =
     "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A";
