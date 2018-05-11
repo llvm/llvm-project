@@ -200,31 +200,31 @@ define void @f1() {
 ; 686-O0-NEXT:    setne {{[0-9]+}}(%esp)
 ; 686-O0-NEXT:    movl var_5, %ecx
 ; 686-O0-NEXT:    movl %ecx, %edx
-; 686-O0-NEXT:    subl $-1, %edx
+; 686-O0-NEXT:    sarl $31, %edx
+; 686-O0-NEXT:    movl %ecx, %esi
+; 686-O0-NEXT:    subl $-1, %esi
 ; 686-O0-NEXT:    sete %bl
-; 686-O0-NEXT:    movzbl %bl, %esi
-; 686-O0-NEXT:    movl %ecx, %edi
-; 686-O0-NEXT:    sarl $31, %edi
+; 686-O0-NEXT:    movzbl %bl, %edi
 ; 686-O0-NEXT:    xorl %ebp, %ebp
 ; 686-O0-NEXT:    addl $7093, %ecx # imm = 0x1BB5
-; 686-O0-NEXT:    adcxl %ebp, %edi
-; 686-O0-NEXT:    subl %esi, %ecx
-; 686-O0-NEXT:    sbbl $0, %edi
+; 686-O0-NEXT:    adcxl %ebp, %edx
+; 686-O0-NEXT:    subl %edi, %ecx
+; 686-O0-NEXT:    sbbl $0, %edx
 ; 686-O0-NEXT:    setl %bl
-; 686-O0-NEXT:    movzbl %bl, %esi
-; 686-O0-NEXT:    movl %esi, var_57
+; 686-O0-NEXT:    movzbl %bl, %edi
+; 686-O0-NEXT:    movl %edi, var_57
 ; 686-O0-NEXT:    movl $0, var_57+4
-; 686-O0-NEXT:    movl var_5, %esi
-; 686-O0-NEXT:    subl $-1, %esi
+; 686-O0-NEXT:    movl var_5, %edi
+; 686-O0-NEXT:    subl $-1, %edi
 ; 686-O0-NEXT:    sete %bl
 ; 686-O0-NEXT:    movzbl %bl, %ebp
 ; 686-O0-NEXT:    movl %ebp, _ZN8struct_210member_2_0E
 ; 686-O0-NEXT:    movl $0, _ZN8struct_210member_2_0E+4
-; 686-O0-NEXT:    movl %eax, {{[0-9]+}}(%esp) # 4-byte Spill
-; 686-O0-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; 686-O0-NEXT:    movl %edx, {{[0-9]+}}(%esp) # 4-byte Spill
-; 686-O0-NEXT:    movl %edi, {{[0-9]+}}(%esp) # 4-byte Spill
-; 686-O0-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; 686-O0-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; 686-O0-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; 686-O0-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; 686-O0-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; 686-O0-NEXT:    movl %edi, (%esp) # 4-byte Spill
 ; 686-O0-NEXT:    addl $24, %esp
 ; 686-O0-NEXT:    popl %esi
 ; 686-O0-NEXT:    popl %edi

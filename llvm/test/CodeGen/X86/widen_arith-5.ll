@@ -18,15 +18,15 @@ define void @update(<3 x i32>* %dst, <3 x i32>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %forbody
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movslq -{{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    shlq $4, %rcx
+; CHECK-NEXT:    movslq -{{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    shlq $4, %rax
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
-; CHECK-NEXT:    movdqa (%rdx,%rcx), %xmm1
+; CHECK-NEXT:    movdqa (%rdx,%rax), %xmm1
 ; CHECK-NEXT:    pslld $2, %xmm1
 ; CHECK-NEXT:    psubd %xmm0, %xmm1
-; CHECK-NEXT:    pextrd $2, %xmm1, 8(%rax,%rcx)
-; CHECK-NEXT:    movq %xmm1, (%rax,%rcx)
+; CHECK-NEXT:    pextrd $2, %xmm1, 8(%rcx,%rax)
+; CHECK-NEXT:    movq %xmm1, (%rcx,%rax)
 ; CHECK-NEXT:    incl -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:  .LBB0_1: # %forcond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

@@ -7515,9 +7515,9 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
     return {};
 
   LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-  SDValue ExtLoad =
-      DAG.getExtLoad(ExtLoadType, DL, VT, LN0->getChain(), LN0->getBasePtr(),
-                     N0.getValueType(), LN0->getMemOperand());
+  SDValue ExtLoad = DAG.getExtLoad(ExtLoadType, SDLoc(LN0), VT, LN0->getChain(),
+                                   LN0->getBasePtr(), N0.getValueType(),
+                                   LN0->getMemOperand());
   Combiner.ExtendSetCCUses(SetCCs, N0, ExtLoad, DL, ExtOpc);
   // If the load value is used only by N, replace it via CombineTo N.
   bool NoReplaceTrunc = SDValue(LN0, 0).hasOneUse();
@@ -7863,39 +7863,11 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
                        X, DAG.getConstant(Mask, DL, VT));
   }
 
-  // fold (zext (load x)) -> (zext (truncate (zextload x)))
-  // Only generate vector extloads when 1) they're legal, and 2) they are
-  // deemed desirable by the target.
-  if (ISD::isNON_EXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode()) &&
-      ((!LegalOperations && !VT.isVector() &&
-        !cast<LoadSDNode>(N0)->isVolatile()) ||
-       TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, N0.getValueType()))) {
-    bool DoXform = true;
-    SmallVector<SDNode*, 4> SetCCs;
-    if (!N0.hasOneUse())
-      DoXform = ExtendUsesToFormExtLoad(N, N0, ISD::ZERO_EXTEND, SetCCs, TLI);
-    if (VT.isVector())
-      DoXform &= TLI.isVectorLoadExtDesirable(SDValue(N, 0));
-    if (DoXform) {
-      LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-      SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(LN0), VT,
-                                       LN0->getChain(),
-                                       LN0->getBasePtr(), N0.getValueType(),
-                                       LN0->getMemOperand());
-
-      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(N0),
-                                  N0.getValueType(), ExtLoad);
-      ExtendSetCCUses(SetCCs, N0, ExtLoad, SDLoc(N), ISD::ZERO_EXTEND);
-      // If the load value is used only by N, replace it via CombineTo N.
-      bool NoReplaceTrunc = SDValue(LN0, 0).hasOneUse();
-      CombineTo(N, ExtLoad);
-      if (NoReplaceTrunc)
-        DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
-      else
-        CombineTo(LN0, Trunc, ExtLoad.getValue(1));
-      return SDValue(N, 0); // Return N so it doesn't get rechecked!
-    }
-  }
+  // Try to simplify (zext (load x)).
+  if (SDValue foldedExt =
+          tryToFoldExtOfLoad(DAG, *this, TLI, VT, LegalOperations, N, N0,
+                             SDLoc(N), ISD::ZEXTLOAD, ISD::ZERO_EXTEND))
+    return foldedExt;
 
   // fold (zext (load x)) to multiple smaller zextloads.
   // Only on illegal but splittable vectors.
