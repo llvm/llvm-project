@@ -22,4 +22,5 @@ add_lldb_unittest(HostTests
   LINK_LIBS
     lldbCore
     lldbHost
+    lldbUtilityHelpers
   )
