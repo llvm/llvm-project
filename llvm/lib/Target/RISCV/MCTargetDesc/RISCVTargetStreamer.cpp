@@ -12,7 +12,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetStreamer.h"
+#include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
 
 RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
+
+// This part is for ascii assembly output
+RISCVTargetAsmStreamer::RISCVTargetAsmStreamer(MCStreamer &S,
+                                               formatted_raw_ostream &OS)
+    : RISCVTargetStreamer(S), OS(OS) {}
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionRVC() {
+  OS << "\t.option\trvc\n";
+}
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionNoRVC() {
+  OS << "\t.option\tnorvc\n";
+}

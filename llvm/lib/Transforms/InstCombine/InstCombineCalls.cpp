@@ -73,18 +73,11 @@ using namespace PatternMatch;
 
 STATISTIC(NumSimplified, "Number of library calls simplified");
 
-static cl::opt<unsigned> UnfoldElementAtomicMemcpyMaxElements(
-    "unfold-element-atomic-memcpy-max-elements",
-    cl::init(16),
-    cl::desc("Maximum number of elements in atomic memcpy the optimizer is "
-             "allowed to unfold"));
-
 static cl::opt<unsigned> GuardWideningWindow(
     "instcombine-guard-widening-window",
     cl::init(3),
     cl::desc("How wide an instruction window to bypass looking for "
              "another guard"));
-
 
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
@@ -113,84 +106,7 @@ static Constant *getNegativeIsTrueBoolVec(ConstantDataVector *V) {
   return ConstantVector::get(BoolVec);
 }
 
-Instruction *
-InstCombiner::SimplifyElementUnorderedAtomicMemCpy(AtomicMemCpyInst *AMI) {
-  // Try to unfold this intrinsic into sequence of explicit atomic loads and
-  // stores.
-  // First check that number of elements is compile time constant.
-  auto *LengthCI = dyn_cast<ConstantInt>(AMI->getLength());
-  if (!LengthCI)
-    return nullptr;
-
-  // Check that there are not too many elements.
-  uint64_t LengthInBytes = LengthCI->getZExtValue();
-  uint32_t ElementSizeInBytes = AMI->getElementSizeInBytes();
-  uint64_t NumElements = LengthInBytes / ElementSizeInBytes;
-  if (NumElements >= UnfoldElementAtomicMemcpyMaxElements)
-    return nullptr;
-
-  // Only expand if there are elements to copy.
-  if (NumElements > 0) {
-    // Don't unfold into illegal integers
-    uint64_t ElementSizeInBits = ElementSizeInBytes * 8;
-    if (!getDataLayout().isLegalInteger(ElementSizeInBits))
-      return nullptr;
-
-    // Cast source and destination to the correct type. Intrinsic input
-    // arguments are usually represented as i8*. Often operands will be
-    // explicitly casted to i8* and we can just strip those casts instead of
-    // inserting new ones. However it's easier to rely on other InstCombine
-    // rules which will cover trivial cases anyway.
-    Value *Src = AMI->getRawSource();
-    Value *Dst = AMI->getRawDest();
-    Type *ElementPointerType =
-        Type::getIntNPtrTy(AMI->getContext(), ElementSizeInBits,
-                           Src->getType()->getPointerAddressSpace());
-
-    Value *SrcCasted = Builder.CreatePointerCast(Src, ElementPointerType,
-                                                 "memcpy_unfold.src_casted");
-    Value *DstCasted = Builder.CreatePointerCast(Dst, ElementPointerType,
-                                                 "memcpy_unfold.dst_casted");
-
-    for (uint64_t i = 0; i < NumElements; ++i) {
-      // Get current element addresses
-      ConstantInt *ElementIdxCI =
-          ConstantInt::get(AMI->getContext(), APInt(64, i));
-      Value *SrcElementAddr =
-          Builder.CreateGEP(SrcCasted, ElementIdxCI, "memcpy_unfold.src_addr");
-      Value *DstElementAddr =
-          Builder.CreateGEP(DstCasted, ElementIdxCI, "memcpy_unfold.dst_addr");
-
-      // Load from the source. Transfer alignment information and mark load as
-      // unordered atomic.
-      LoadInst *Load = Builder.CreateLoad(SrcElementAddr, "memcpy_unfold.val");
-      Load->setOrdering(AtomicOrdering::Unordered);
-      // We know alignment of the first element. It is also guaranteed by the
-      // verifier that element size is less or equal than first element
-      // alignment and both of this values are powers of two. This means that
-      // all subsequent accesses are at least element size aligned.
-      // TODO: We can infer better alignment but there is no evidence that this
-      // will matter.
-      Load->setAlignment(i == 0 ? AMI->getParamAlignment(1)
-                                : ElementSizeInBytes);
-      Load->setDebugLoc(AMI->getDebugLoc());
-
-      // Store loaded value via unordered atomic store.
-      StoreInst *Store = Builder.CreateStore(Load, DstElementAddr);
-      Store->setOrdering(AtomicOrdering::Unordered);
-      Store->setAlignment(i == 0 ? AMI->getParamAlignment(0)
-                                 : ElementSizeInBytes);
-      Store->setDebugLoc(AMI->getDebugLoc());
-    }
-  }
-
-  // Set the number of elements of the copy to 0, it will be deleted on the
-  // next iteration.
-  AMI->setLength(Constant::getNullValue(LengthCI->getType()));
-  return AMI;
-}
-
-Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
+Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   unsigned DstAlign = getKnownAlignment(MI->getRawDest(), DL, MI, &AC, &DT);
   unsigned CopyDstAlign = MI->getDestAlignment();
   if (CopyDstAlign < DstAlign){
@@ -198,17 +114,16 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
     return MI;
   }
 
-  auto* MTI = cast<MemTransferInst>(MI);
-  unsigned SrcAlign = getKnownAlignment(MTI->getRawSource(), DL, MI, &AC, &DT);
-  unsigned CopySrcAlign = MTI->getSourceAlignment();
+  unsigned SrcAlign = getKnownAlignment(MI->getRawSource(), DL, MI, &AC, &DT);
+  unsigned CopySrcAlign = MI->getSourceAlignment();
   if (CopySrcAlign < SrcAlign) {
-    MTI->setSourceAlignment(SrcAlign);
+    MI->setSourceAlignment(SrcAlign);
     return MI;
   }
 
   // If MemCpyInst length is 1/2/4/8 bytes then replace memcpy with
   // load/store.
-  ConstantInt *MemOpLength = dyn_cast<ConstantInt>(MI->getArgOperand(2));
+  ConstantInt *MemOpLength = dyn_cast<ConstantInt>(MI->getLength());
   if (!MemOpLength) return nullptr;
 
   // Source and destination pointer types are always "i8*" for intrinsic.  See
@@ -250,7 +165,7 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
 
   Value *Src = Builder.CreateBitCast(MI->getArgOperand(1), NewSrcPtrTy);
   Value *Dest = Builder.CreateBitCast(MI->getArgOperand(0), NewDstPtrTy);
-  LoadInst *L = Builder.CreateLoad(Src, MI->isVolatile());
+  LoadInst *L = Builder.CreateLoad(Src);
   // Alignment from the mem intrinsic will be better, so use it.
   L->setAlignment(CopySrcAlign);
   if (CopyMD)
@@ -260,7 +175,7 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
   if (LoopMemParallelMD)
     L->setMetadata(LLVMContext::MD_mem_parallel_loop_access, LoopMemParallelMD);
 
-  StoreInst *S = Builder.CreateStore(L, Dest, MI->isVolatile());
+  StoreInst *S = Builder.CreateStore(L, Dest);
   // Alignment from the mem intrinsic will be better, so use it.
   S->setAlignment(CopyDstAlign);
   if (CopyMD)
@@ -268,12 +183,23 @@ Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
   if (LoopMemParallelMD)
     S->setMetadata(LLVMContext::MD_mem_parallel_loop_access, LoopMemParallelMD);
 
+  if (auto *MT = dyn_cast<MemTransferInst>(MI)) {
+    // non-atomics can be volatile
+    L->setVolatile(MT->isVolatile());
+    S->setVolatile(MT->isVolatile());
+  }
+  if (isa<AtomicMemTransferInst>(MI)) {
+    // atomics have to be unordered
+    L->setOrdering(AtomicOrdering::Unordered);
+    S->setOrdering(AtomicOrdering::Unordered);
+  }
+
   // Set the size of the copy to 0, it will be deleted on the next iteration.
-  MI->setArgOperand(2, Constant::getNullValue(MemOpLength->getType()));
+  MI->setLength(Constant::getNullValue(MemOpLength->getType()));
   return MI;
 }
 
-Instruction *InstCombiner::SimplifyMemSet(MemSetInst *MI) {
+Instruction *InstCombiner::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   unsigned Alignment = getKnownAlignment(MI->getDest(), DL, MI, &AC, &DT);
   if (MI->getDestAlignment() < Alignment) {
     MI->setDestAlignment(Alignment);
@@ -306,6 +232,8 @@ Instruction *InstCombiner::SimplifyMemSet(MemSetInst *MI) {
     StoreInst *S = Builder.CreateStore(ConstantInt::get(ITy, Fill), Dest,
                                        MI->isVolatile());
     S->setAlignment(Alignment);
+    if (isa<AtomicMemSetInst>(MI))
+      S->setOrdering(AtomicOrdering::Unordered);
 
     // Set the size of the copy to 0, it will be deleted on the next iteration.
     MI->setLength(Constant::getNullValue(LenC->getType()));
@@ -1781,7 +1709,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
   // Intrinsics cannot occur in an invoke, so handle them here instead of in
   // visitCallSite.
-  if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(II)) {
+  if (auto *MI = dyn_cast<AnyMemIntrinsic>(II)) {
     bool Changed = false;
 
     // memmove/cpy/set of zero bytes is a noop.
@@ -1798,17 +1726,21 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     }
 
     // No other transformations apply to volatile transfers.
-    if (MI->isVolatile())
-      return nullptr;
+    if (auto *M = dyn_cast<MemIntrinsic>(MI))
+      if (M->isVolatile())
+        return nullptr;
 
     // If we have a memmove and the source operation is a constant global,
     // then the source and dest pointers can't alias, so we can change this
     // into a call to memcpy.
-    if (MemMoveInst *MMI = dyn_cast<MemMoveInst>(MI)) {
+    if (auto *MMI = dyn_cast<AnyMemMoveInst>(MI)) {
       if (GlobalVariable *GVSrc = dyn_cast<GlobalVariable>(MMI->getSource()))
         if (GVSrc->isConstant()) {
           Module *M = CI.getModule();
-          Intrinsic::ID MemCpyID = Intrinsic::memcpy;
+          Intrinsic::ID MemCpyID =
+              isa<AtomicMemMoveInst>(MMI)
+                  ? Intrinsic::memcpy_element_unordered_atomic
+                  : Intrinsic::memcpy;
           Type *Tys[3] = { CI.getArgOperand(0)->getType(),
                            CI.getArgOperand(1)->getType(),
                            CI.getArgOperand(2)->getType() };
@@ -1817,7 +1749,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         }
     }
 
-    if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
+    if (AnyMemTransferInst *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
       // memmove(x,x,size) -> noop.
       if (MTI->getSource() == MTI->getDest())
         return eraseInstFromFunction(CI);
@@ -1825,24 +1757,15 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     // If we can determine a pointer alignment that is bigger than currently
     // set, update the alignment.
-    if (isa<MemTransferInst>(MI)) {
-      if (Instruction *I = SimplifyMemTransfer(MI))
+    if (auto *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
+      if (Instruction *I = SimplifyAnyMemTransfer(MTI))
         return I;
-    } else if (MemSetInst *MSI = dyn_cast<MemSetInst>(MI)) {
-      if (Instruction *I = SimplifyMemSet(MSI))
+    } else if (auto *MSI = dyn_cast<AnyMemSetInst>(MI)) {
+      if (Instruction *I = SimplifyAnyMemSet(MSI))
         return I;
     }
 
     if (Changed) return II;
-  }
-
-  if (auto *AMI = dyn_cast<AtomicMemCpyInst>(II)) {
-    if (Constant *C = dyn_cast<Constant>(AMI->getLength()))
-      if (C->isNullValue())
-        return eraseInstFromFunction(*AMI);
-
-    if (Instruction *I = SimplifyElementUnorderedAtomicMemCpy(AMI))
-      return I;
   }
 
   if (Instruction *I = SimplifyNVVMIntrinsic(II, *this))

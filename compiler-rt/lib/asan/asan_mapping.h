@@ -329,12 +329,12 @@ static inline uptr MemToShadow(uptr p) {
 
 static inline bool AddrIsInHighShadow(uptr a) {
   PROFILE_ASAN_MAPPING();
-  return a >= kHighShadowBeg && a <= kHighMemEnd;
+  return a >= kHighShadowBeg && a <= kHighShadowEnd;
 }
 
 static inline bool AddrIsInMidShadow(uptr a) {
   PROFILE_ASAN_MAPPING();
-  return kMidMemBeg && a >= kMidShadowBeg && a <= kMidMemEnd;
+  return kMidMemBeg && a >= kMidShadowBeg && a <= kMidShadowEnd;
 }
 
 static inline bool AddrIsInShadow(uptr a) {

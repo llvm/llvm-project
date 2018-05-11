@@ -9935,6 +9935,15 @@ static SDValue performPostLD1Combine(SDNode *N,
   if (LD->getOpcode() != ISD::LOAD)
     return SDValue();
 
+  // The vector lane must be a constant in the LD1LANE opcode.
+  SDValue Lane;
+  if (IsLaneOp) {
+    Lane = N->getOperand(2);
+    auto *LaneC = dyn_cast<ConstantSDNode>(Lane);
+    if (!LaneC || LaneC->getZExtValue() >= VT.getVectorNumElements())
+      return SDValue();
+  }
+
   LoadSDNode *LoadSDN = cast<LoadSDNode>(LD);
   EVT MemVT = LoadSDN->getMemoryVT();
   // Check if memory operand is the same type as the vector element.
@@ -9991,7 +10000,7 @@ static SDValue performPostLD1Combine(SDNode *N,
     Ops.push_back(LD->getOperand(0));  // Chain
     if (IsLaneOp) {
       Ops.push_back(Vector);           // The vector to be inserted
-      Ops.push_back(N->getOperand(2)); // The lane to be inserted in the vector
+      Ops.push_back(Lane);             // The lane to be inserted in the vector
     }
     Ops.push_back(Addr);
     Ops.push_back(Inc);

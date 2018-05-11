@@ -9,6 +9,9 @@
 
 #include "llvm/Support/Parallel.h"
 #include "llvm/Config/llvm-config.h"
+
+#if LLVM_ENABLE_THREADS
+
 #include "llvm/Support/Threading.h"
 
 #include <atomic>
@@ -28,18 +31,7 @@ public:
   static Executor *getDefaultExecutor();
 };
 
-#if !LLVM_ENABLE_THREADS
-class SyncExecutor : public Executor {
-public:
-  virtual void add(std::function<void()> F) { F(); }
-};
-
-Executor *Executor::getDefaultExecutor() {
-  static SyncExecutor Exec;
-  return &Exec;
-}
-
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER)
 /// An Executor that runs tasks via ConcRT.
 class ConcRTExecutor : public Executor {
   struct Taskish {
@@ -127,7 +119,6 @@ Executor *Executor::getDefaultExecutor() {
 #endif
 }
 
-#if LLVM_ENABLE_THREADS
 void parallel::detail::TaskGroup::spawn(std::function<void()> F) {
   L.inc();
   Executor::getDefaultExecutor()->add([&, F] {
@@ -135,4 +126,4 @@ void parallel::detail::TaskGroup::spawn(std::function<void()> F) {
     L.dec();
   });
 }
-#endif
+#endif // LLVM_ENABLE_THREADS

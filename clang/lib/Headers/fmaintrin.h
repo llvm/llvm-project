@@ -1,4 +1,4 @@
-/*===---- fma4intrin.h - FMA4 intrinsics -----------------------------------===
+/*===---- fmaintrin.h - FMA intrinsics -------------------------------------===
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal

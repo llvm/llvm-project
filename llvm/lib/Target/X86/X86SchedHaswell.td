@@ -153,12 +153,18 @@ defm : HWWriteResPair<WriteIDiv64, [HWPort0, HWDivider], 25, [1,10], 1, 4>;
 
 // Scalar and vector floating point.
 defm : X86WriteRes<WriteFLoad,         [HWPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteFLoadX,        [HWPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteFLoadY,        [HWPort23], 7, [1], 1>;
 defm : X86WriteRes<WriteFMaskedLoad,   [HWPort23,HWPort5], 8, [1,2], 3>;
 defm : X86WriteRes<WriteFMaskedLoadY,  [HWPort23,HWPort5], 9, [1,2], 3>;
 defm : X86WriteRes<WriteFStore,        [HWPort237,HWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreX,       [HWPort237,HWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreY,       [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStore,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMaskedStoreY, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMove,         [HWPort5], 1, [1], 1>;
+defm : X86WriteRes<WriteFMoveX,        [HWPort5], 1, [1], 1>;
+defm : X86WriteRes<WriteFMoveY,        [HWPort5], 1, [1], 1>;
 defm : X86WriteRes<WriteEMMS,          [HWPort01,HWPort15,HWPort015,HWPort0156], 31, [8,1,21,1], 31>;
 
 defm : HWWriteResPair<WriteFAdd,    [HWPort1],  3, [1], 1, 5>;
@@ -248,12 +254,18 @@ def  : WriteRes<WriteCvtF2FSt, [HWPort1,HWPort4,HWPort5,HWPort237]> {
 
 // Vector integer operations.
 defm : X86WriteRes<WriteVecLoad,         [HWPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteVecLoadX,        [HWPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteVecLoadY,        [HWPort23], 7, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [HWPort23,HWPort5], 8, [1,2], 3>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [HWPort23,HWPort5], 9, [1,2], 3>;
 defm : X86WriteRes<WriteVecStore,        [HWPort237,HWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreX,       [HWPort237,HWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreY,       [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStore,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMove,         [HWPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveX,        [HWPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveY,        [HWPort015], 1, [1], 1>;
 
 defm : HWWriteResPair<WriteVecLogic, [HWPort015], 1, [1], 1, 5>;
 defm : HWWriteResPair<WriteVecLogicX,[HWPort015], 1, [1], 1, 6>;
@@ -703,16 +715,8 @@ def HWWriteResGroup0 : SchedWriteRes<[HWPort23]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[HWWriteResGroup0], (instregex "VBROADCASTSSrm",
-                                           "(V?)LDDQUrm",
-                                           "(V?)MOVAPDrm",
-                                           "(V?)MOVAPSrm",
-                                           "(V?)MOVDQArm",
-                                           "(V?)MOVDQUrm",
-                                           "(V?)MOVNTDQArm",
                                            "(V?)MOVSHDUPrm",
                                            "(V?)MOVSLDUPrm",
-                                           "(V?)MOVUPDrm",
-                                           "(V?)MOVUPSrm",
                                            "VPBROADCAST(D|Q)rm")>;
 
 def HWWriteResGroup0_1 : SchedWriteRes<[HWPort23]> {
@@ -725,17 +729,9 @@ def: InstRW<[HWWriteResGroup0_1], (instregex "LD_F(32|64|80)m",
                                              "VBROADCASTI128",
                                              "VBROADCASTSDYrm",
                                              "VBROADCASTSSYrm",
-                                             "VLDDQUYrm",
-                                             "VMOVAPDYrm",
-                                             "VMOVAPSYrm",
                                              "VMOVDDUPYrm",
-                                             "VMOVDQAYrm",
-                                             "VMOVDQUYrm",
-                                             "VMOVNTDQAYrm",
                                              "VMOVSHDUPYrm",
                                              "VMOVSLDUPYrm",
-                                             "VMOVUPDYrm",
-                                             "VMOVUPSYrm",
                                              "VPBROADCAST(D|Q)Yrm")>;
 
 def HWWriteResGroup0_2 : SchedWriteRes<[HWPort23]> {
@@ -756,10 +752,7 @@ def HWWriteResGroup1 : SchedWriteRes<[HWPort4,HWPort237]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[HWWriteResGroup1], (instregex "FBSTPm",
-                                           "MMX_MOVD64from64rm",
                                            "MMX_MOVD64mr",
-                                           "MMX_MOVNTQmr",
-                                           "MMX_MOVQ64mr",
                                            "MOVNTI_64mr",
                                            "MOVNTImr",
                                            "ST_FP(32|64|80)m",

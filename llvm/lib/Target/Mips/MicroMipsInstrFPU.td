@@ -197,24 +197,31 @@ def MFC1_MM : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd,
 def MTC1_MM : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd,
                              II_MTC1, bitconvert>, MFC1_FM_MM<0xa0>,
               ISA_MICROMIPS;
+}
 
-def MADD_S_MM : MMRel, MADDS_FT<"madd.s", FGR32Opnd, II_MADD_S, fadd>,
-                MADDS_FM_MM<0x1>, ISA_MICROMIPS32_NOT_MIPS32R6;
-def MSUB_S_MM : MMRel, MADDS_FT<"msub.s", FGR32Opnd, II_MSUB_S, fsub>,
-                MADDS_FM_MM<0x21>, ISA_MICROMIPS32_NOT_MIPS32R6;
-def NMADD_S_MM : MMRel, NMADDS_FT<"nmadd.s", FGR32Opnd, II_NMADD_S, fadd>,
-                 MADDS_FM_MM<0x2>, ISA_MICROMIPS32_NOT_MIPS32R6;
-def NMSUB_S_MM : MMRel, NMADDS_FT<"nmsub.s", FGR32Opnd, II_NMSUB_S, fsub>,
-                 MADDS_FM_MM<0x22>, ISA_MICROMIPS32_NOT_MIPS32R6;
-
-def MADD_D32_MM  : MMRel, MADDS_FT<"madd.d", AFGR64Opnd, II_MADD_D, fadd>,
-                   MADDS_FM_MM<0x9>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
-def MSUB_D32_MM  : MMRel, MADDS_FT<"msub.d", AFGR64Opnd, II_MSUB_D, fsub>,
-                   MADDS_FM_MM<0x29>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
-def NMADD_D32_MM : MMRel, NMADDS_FT<"nmadd.d", AFGR64Opnd, II_NMADD_D, fadd>,
-                   MADDS_FM_MM<0xa>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
-def NMSUB_D32_MM : MMRel, NMADDS_FT<"nmsub.d", AFGR64Opnd, II_NMSUB_D, fsub>,
-                   MADDS_FM_MM<0x2a>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+let DecoderNamespace = "MicroMips" in {
+  def MADD_S_MM : MMRel, MADDS_FT<"madd.s", FGR32Opnd, II_MADD_S>,
+                  MADDS_FM_MM<0x1>, ISA_MICROMIPS32_NOT_MIPS32R6, MADD4;
+  def MSUB_S_MM : MMRel, MADDS_FT<"msub.s", FGR32Opnd, II_MSUB_S>,
+                  MADDS_FM_MM<0x21>, ISA_MICROMIPS32_NOT_MIPS32R6, MADD4;
+  let AdditionalPredicates = [NoNaNsFPMath, HasMadd4] in {
+    def NMADD_S_MM : MMRel, NMADDS_FT<"nmadd.s", FGR32Opnd, II_NMADD_S>,
+                     MADDS_FM_MM<0x2>, ISA_MICROMIPS32_NOT_MIPS32R6;
+    def NMSUB_S_MM : MMRel, NMADDS_FT<"nmsub.s", FGR32Opnd, II_NMSUB_S>,
+                     MADDS_FM_MM<0x22>, ISA_MICROMIPS32_NOT_MIPS32R6;
+  }
+  def MADD_D32_MM  : MMRel, MADDS_FT<"madd.d", AFGR64Opnd, II_MADD_D>,
+                     MADDS_FM_MM<0x9>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32,
+                     MADD4;
+  def MSUB_D32_MM  : MMRel, MADDS_FT<"msub.d", AFGR64Opnd, II_MSUB_D>,
+                     MADDS_FM_MM<0x29>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32,
+                     MADD4;
+  let AdditionalPredicates = [NoNaNsFPMath, HasMadd4] in {
+    def NMADD_D32_MM : MMRel, NMADDS_FT<"nmadd.d", AFGR64Opnd, II_NMADD_D>,
+                       MADDS_FM_MM<0xa>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+    def NMSUB_D32_MM : MMRel, NMADDS_FT<"nmsub.d", AFGR64Opnd, II_NMSUB_D>,
+                       MADDS_FM_MM<0x2a>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+  }
 }
 
 def FLOOR_W_S_MM : MMRel, ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd,
