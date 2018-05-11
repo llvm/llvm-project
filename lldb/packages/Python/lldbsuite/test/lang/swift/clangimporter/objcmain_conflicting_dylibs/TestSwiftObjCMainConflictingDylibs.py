@@ -47,19 +47,23 @@ class TestSwiftObjCMainConflictingDylibs(TestBase):
         # Set the breakpoints
         bar_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('Bar.swift'))
+        foo_breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', lldb.SBFileSpec('Foo.swift'))
 
         process = target.LaunchSimple(None, None, os.getcwd())
+        process.Continue()
+        # Prime the module cache with the Foo variant.
+        self.expect("fr var baz", "correct baz", substrs=["i_am_from_Foo"])
+        self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
 
+        # Restart.
+        process = target.LaunchSimple(None, None, os.getcwd())
         # This is failing because the Target-SwiftASTContext uses the
         # amalgamated target header search options from all dylibs.
         self.expect("p baz", "wrong baz", substrs=["i_am_from_Foo"])
-        # This works because it is using the Module-SwiftASTContext
-        # with only this the dylib's search paths.
-        self.expect("fr var baz", "correct baz", substrs=["i_am_from_Bar"])
-        self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
+        self.expect("fr var baz", "wrong baz", substrs=["i_am_from_Foo"])
 
-        foo_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('Foo.swift'))
+
         process.Continue()
         self.expect("p baz", "correct baz", substrs=["i_am_from_Foo"])
         self.expect("fr var baz", "correct baz", substrs=["i_am_from_Foo"])
