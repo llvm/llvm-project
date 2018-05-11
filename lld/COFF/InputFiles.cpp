@@ -190,8 +190,8 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
     GuardLJmpChunks.push_back(C);
   else if (Name == ".sxdata")
     SXDataChunks.push_back(C);
-  else if (Config->DoICF && Sec->NumberOfRelocations == 0 && Name == ".rdata" &&
-           LeaderName.startswith("??_C@"))
+  else if (Config->TailMerge && Sec->NumberOfRelocations == 0 &&
+           Name == ".rdata" && LeaderName.startswith("??_C@"))
     // COFF sections that look like string literal sections (i.e. no
     // relocations, in .rdata, leader symbol name matches the MSVC name mangling
     // for string literals) are subject to string tail merging.

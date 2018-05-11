@@ -10,12 +10,12 @@
 
 // transitive.h includes <r.h> and <t.h>
 #include <transitive.h>
-// CHECK-MESSAGES: :1:1: warning: system include r.h not allowed, transitively included from {{(.*\/)*}}Headers/fuchsia-restrict-system-includes/system/transitive.h
-// CHECK-MESSAGES: :2:1: warning: system include t.h not allowed, transitively included from {{(.*\/)*}}Headers/fuchsia-restrict-system-includes/system/transitive.h
+// CHECK-MESSAGES: :1:1: warning: system include r.h not allowed, transitively included from {{.*}}
+// CHECK-MESSAGES: :2:1: warning: system include t.h not allowed, transitively included from {{.*}}
 
 // transitive.h includes <s.h> and <t.h>
 #include "transitive2.h"
-// CHECK-MESSAGES: :2:1: warning: system include t.h not allowed, transitively included from {{(.*\/)*}}Headers/fuchsia-restrict-system-includes/transitive2.h
+// CHECK-MESSAGES: :2:1: warning: system include t.h not allowed, transitively included from {{.*}}
 // CHECK-FIXES-NOT: #include <t.h>
 
 int main() {
