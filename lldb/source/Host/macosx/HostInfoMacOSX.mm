@@ -258,7 +258,13 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
   auto r_end = llvm::sys::path::rend(raw_path);
 
   // Check for a Posix-style build of LLDB.
-  if (rev_it == r_end || *rev_it != "LLDB.framework")
+  while (rev_it != r_end) {
+    if (*rev_it == "LLDB.framework")
+      break;
+    ++rev_it;
+  }
+
+  if (rev_it == r_end)
     return HostInfoPosix::ComputeClangDirectory(file_spec);
 
   // Inside Xcode and in Xcode toolchains LLDB is always in lockstep
