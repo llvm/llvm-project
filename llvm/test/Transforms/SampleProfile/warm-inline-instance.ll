@@ -1,34 +1,30 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -S | FileCheck %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof -S | FileCheck %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/warm-inline-instance.prof -S | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/warm-inline-instance.prof -S | FileCheck %s
 
-; Original C++ test case
-;
-; #include <stdio.h>
-;
-; int sum(int x, int y) {
-;   return x + y;
-; }
-;
-; int main() {
-;   int s, i = 0;
-;   while (i++ < 20000 * 20000)
-;     if (i != 100) s = sum(i, s); else s = 30;
-;   printf("sum is %d\n", s);
-;   return 0;
-; }
-;
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
 ; Function Attrs: nounwind uwtable
-define i32 @_Z3sumii(i32 %x, i32 %y) !dbg !4 {
+define i32 @foo(i32 %x, i32 %y) !dbg !4 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
   store i32 %x, i32* %x.addr, align 4
   store i32 %y, i32* %y.addr, align 4
-  %0 = load i32, i32* %x.addr, align 4, !dbg !11
-  %1 = load i32, i32* %y.addr, align 4, !dbg !11
-  %add = add nsw i32 %0, %1, !dbg !11
+  %t0 = load i32, i32* %x.addr, align 4, !dbg !11
+  %t1 = load i32, i32* %y.addr, align 4, !dbg !11
+  %add = add nsw i32 %t0, %t1, !dbg !11
+  ret i32 %add, !dbg !11
+}
+
+define i32 @goo(i32 %x, i32 %y) {
+entry:
+  %x.addr = alloca i32, align 4
+  %y.addr = alloca i32, align 4
+  store i32 %x, i32* %x.addr, align 4
+  store i32 %y, i32* %y.addr, align 4
+  %t0 = load i32, i32* %x.addr, align 4, !dbg !11
+  %t1 = load i32, i32* %y.addr, align 4, !dbg !11
+  %add = add nsw i32 %t0, %t1, !dbg !11
   ret i32 %add, !dbg !11
 }
 
@@ -43,36 +39,45 @@ entry:
   br label %while.cond, !dbg !13
 
 while.cond:                                       ; preds = %if.end, %entry
-  %0 = load i32, i32* %i, align 4, !dbg !14
-  %inc = add nsw i32 %0, 1, !dbg !14
+  %t0 = load i32, i32* %i, align 4, !dbg !14
+  %inc = add nsw i32 %t0, 1, !dbg !14
   store i32 %inc, i32* %i, align 4, !dbg !14
-  %cmp = icmp slt i32 %0, 400000000, !dbg !14
+  %cmp = icmp slt i32 %t0, 400000000, !dbg !14
   br i1 %cmp, label %while.body, label %while.end, !dbg !14
 
 while.body:                                       ; preds = %while.cond
-  %1 = load i32, i32* %i, align 4, !dbg !16
-  %cmp1 = icmp ne i32 %1, 100, !dbg !16
+  %t1 = load i32, i32* %i, align 4, !dbg !16
+  %cmp1 = icmp ne i32 %t1, 100, !dbg !16
   br i1 %cmp1, label %if.then, label %if.else, !dbg !16
 
-
 if.then:                                          ; preds = %while.body
-  %2 = load i32, i32* %i, align 4, !dbg !18
-  %3 = load i32, i32* %s, align 4, !dbg !18
-  %call = call i32 @_Z3sumii(i32 %2, i32 %3), !dbg !18
-; CHECK-NOT: call i32 @_Z3sumii
-  store i32 %call, i32* %s, align 4, !dbg !18
+  %t2 = load i32, i32* %i, align 4, !dbg !18
+  %t3 = load i32, i32* %s, align 4, !dbg !18
+; Although the ratio of total samples of @foo vs total samples of @main is
+; small, since the total samples count is larger than hot cutoff computed by
+; ProfileSummaryInfo, we will still regard the callsite of foo as hot and
+; early inlining will inline it.
+; CHECK-LABEL: @main(
+; CHECK-NOT: call i32 @foo(i32 %t2, i32 %t3)
+  %call1 = call i32 @foo(i32 %t2, i32 %t3), !dbg !18
+  store i32 %call1, i32* %s, align 4, !dbg !18
   br label %if.end, !dbg !18
 
 if.else:                                          ; preds = %while.body
-  store i32 30, i32* %s, align 4, !dbg !20
+; call @goo 's basicblock doesn't get any sample, so no profile will be annotated.
+; CHECK: call i32 @goo(i32 2, i32 3), !dbg !{{[0-9]+}}
+; CHECK-NOT: !prof
+; CHECK-SAME: {{$}}
+  %call2 = call i32 @goo(i32 2, i32 3), !dbg !26
+  store i32 %call2, i32* %s, align 4, !dbg !20
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
   br label %while.cond, !dbg !22
 
 while.end:                                        ; preds = %while.cond
-  %4 = load i32, i32* %s, align 4, !dbg !24
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i32 %4), !dbg !24
+  %t4 = load i32, i32* %s, align 4, !dbg !24
+  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i32 %t4), !dbg !24
   ret i32 0, !dbg !25
 }
 
@@ -85,7 +90,7 @@ declare i32 @printf(i8*, ...) #2
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: NoDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "calls.cc", directory: ".")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "sum", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, retainedNodes: !2)
+!4 = distinct !DISubprogram(name: "foo", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, retainedNodes: !2)
 !5 = !DIFile(filename: "calls.cc", directory: ".")
 !6 = !DISubroutineType(types: !2)
 !7 = distinct !DISubprogram(name: "main", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !5, type: !6, retainedNodes: !2)
@@ -107,3 +112,4 @@ declare i32 @printf(i8*, ...) #2
 !23 = !DILexicalBlockFile(discriminator: 6, file: !1, scope: !17)
 !24 = !DILocation(line: 11, scope: !7)
 !25 = !DILocation(line: 12, scope: !7)
+!26 = !DILocation(line: 11, scope: !19)

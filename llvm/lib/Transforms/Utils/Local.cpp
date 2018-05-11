@@ -669,8 +669,7 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB, DominatorTree *DT,
   // dominator edges will be redirected to DestBB.
   std::vector <DominatorTree::UpdateType> Updates;
   if (DDT && !ReplaceEntryBB) {
-    Updates.reserve(1 +
-                    (2 * std::distance(pred_begin(PredBB), pred_end(PredBB))));
+    Updates.reserve(1 + (2 * pred_size(PredBB)));
     Updates.push_back({DominatorTree::Delete, PredBB, DestBB});
     for (auto I = pred_begin(PredBB), E = pred_end(PredBB); I != E; ++I) {
       Updates.push_back({DominatorTree::Delete, *I, PredBB});
@@ -975,7 +974,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   std::vector<DominatorTree::UpdateType> Updates;
   if (DDT) {
-    Updates.reserve(1 + (2 * std::distance(pred_begin(BB), pred_end(BB))));
+    Updates.reserve(1 + (2 * pred_size(BB)));
     Updates.push_back({DominatorTree::Delete, BB, Succ});
     // All predecessors of BB will be moved to Succ.
     for (auto I = pred_begin(BB), E = pred_end(BB); I != E; ++I) {

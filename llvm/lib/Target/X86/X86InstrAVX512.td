@@ -4088,10 +4088,6 @@ def : Pat<(f64 (X86selects VK1WM:$mask, (f64 FR64X:$src1), (f64 FR64X:$src2))),
            VK1WM:$mask, (v2f64 (IMPLICIT_DEF)),
            (COPY_TO_REGCLASS FR64X:$src1, VR128X)), FR64X)>;
 
-def : Pat<(int_x86_avx512_mask_store_ss addr:$dst, VR128X:$src, GR8:$mask),
-          (VMOVSSZmrk addr:$dst, (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), GR8:$mask, sub_8bit)), VK1WM),
-           (COPY_TO_REGCLASS VR128X:$src, FR32X))>;
-
 let hasSideEffects = 0 in {
   def VMOVSSZrr_REV: AVX512<0x11, MRMDestReg, (outs VR128X:$dst),
                            (ins VR128X:$src1, VR128X:$src2),

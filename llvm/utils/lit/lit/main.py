@@ -597,10 +597,13 @@ def main_with_tmp(builtinParameters):
                 by_suite[suite] = {
                                    'passes'   : 0,
                                    'failures' : 0,
+                                   'skipped': 0,
                                    'tests'    : [] }
             by_suite[suite]['tests'].append(result_test)
             if result_test.result.code.isFailure:
                 by_suite[suite]['failures'] += 1
+            elif result_test.result.code == lit.Test.UNSUPPORTED:
+                by_suite[suite]['skipped'] += 1
             else:
                 by_suite[suite]['passes'] += 1
         xunit_output_file = open(opts.xunit_output_file, "w")
@@ -610,11 +613,14 @@ def main_with_tmp(builtinParameters):
             safe_suite_name = suite_name.replace(".", "-")
             xunit_output_file.write("<testsuite name='" + safe_suite_name + "'")
             xunit_output_file.write(" tests='" + str(suite['passes'] + 
-              suite['failures']) + "'")
-            xunit_output_file.write(" failures='" + str(suite['failures']) + 
+              suite['failures'] + suite['skipped']) + "'")
+            xunit_output_file.write(" failures='" + str(suite['failures']) + "'")
+            xunit_output_file.write(" skipped='" + str(suite['skipped']) +
               "'>\n")
+
             for result_test in suite['tests']:
-                xunit_output_file.write(result_test.getJUnitXML() + "\n")
+                result_test.writeJUnitXML(xunit_output_file)
+                xunit_output_file.write("\n")
             xunit_output_file.write("</testsuite>\n")
         xunit_output_file.write("</testsuites>")
         xunit_output_file.close()

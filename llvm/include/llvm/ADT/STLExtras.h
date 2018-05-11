@@ -1026,6 +1026,13 @@ void erase_if(Container &C, UnaryPredicate P) {
   C.erase(remove_if(C, P), C.end());
 }
 
+/// Wrapper function around std::distance which works with ranges.
+template <typename R>
+auto distance(R &&Range)
+    -> decltype(std::distance(Range.begin(), Range.end())) {
+  return std::distance(Range.begin(), Range.end());
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <memory>
 //===----------------------------------------------------------------------===//

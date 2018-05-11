@@ -817,9 +817,38 @@ inline OpenFlags &operator|=(OpenFlags &A, OpenFlags B) {
   return A;
 }
 
+/// @brief Opens the file with the given name in a write-only or read-write
+/// mode, returning its open file descriptor. If the file does not exist, it
+/// is created.
+///
+/// The caller is responsible for closing the file descriptor once they are
+/// finished with it.
+///
+/// @param Name The path of the file to open, relative or absolute.
+/// @param ResultFD If the file could be opened successfully, its descriptor
+///                 is stored in this location. Otherwise, this is set to -1.
+/// @param Flags Additional flags used to determine whether the file should be
+///              opened in, for example, read-write or in write-only mode.
+/// @param Mode The access permissions of the file, represented in octal.
+/// @returns errc::success if \a Name has been opened, otherwise a
+///          platform-specific error_code.
 std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
                                  OpenFlags Flags, unsigned Mode = 0666);
 
+/// @brief Opens the file with the given name in a read-only mode, returning
+/// its open file descriptor.
+///
+/// The caller is responsible for closing the file descriptor once they are
+/// finished with it.
+///
+/// @param Name The path of the file to open, relative or absolute.
+/// @param ResultFD If the file could be opened successfully, its descriptor
+///                 is stored in this location. Otherwise, this is set to -1.
+/// @param RealPath If nonnull, extra work is done to determine the real path
+///                 of the opened file, and that path is stored in this
+///                 location.
+/// @returns errc::success if \a Name has been opened, otherwise a
+///          platform-specific error_code.
 std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 SmallVectorImpl<char> *RealPath = nullptr);
 

@@ -597,8 +597,7 @@ MachineInstr *ImplicitNullChecks::insertFaultingInstr(
   unsigned DefReg = NoRegister;
   if (NumDefs != 0) {
     DefReg = MI->defs().begin()->getReg();
-    assert(std::distance(MI->defs().begin(), MI->defs().end()) == 1 &&
-           "expected exactly one def!");
+    assert(distance(MI->defs()) == 1 && "expected exactly one def!");
   }
 
   FaultMaps::FaultKind FK;
