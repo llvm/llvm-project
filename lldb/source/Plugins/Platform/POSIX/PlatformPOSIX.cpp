@@ -929,10 +929,9 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
   return Status();
 }
 
-UtilityFunction *
-PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx, 
-                                            Status &error)
-{
+std::unique_ptr<UtilityFunction>
+PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
+                                            Status &error) {
   // Remember to prepend this with the prefix from
   // GetLibdlFunctionDeclarations. The returned values are all in
   // __lldb_dlopen_result for consistency. The wrapper returns a void * but
@@ -982,7 +981,6 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   Value value;
   ValueList arguments;
   FunctionCaller *do_dlopen_function = nullptr;
-  UtilityFunction *dlopen_utility_func = nullptr;
 
   // Fetch the clang types we will need:
   ClangASTContext *ast = process->GetTarget().GetScratchClangASTContext();
@@ -1015,9 +1013,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   }
   
   // We made a good utility function, so cache it in the process:
-  dlopen_utility_func = dlopen_utility_func_up.get();
-  process->SetLoadImageUtilityFunction(std::move(dlopen_utility_func_up));
-  return dlopen_utility_func;
+  return dlopen_utility_func_up;
 }
 
 uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
@@ -1038,18 +1034,16 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   thread_sp->CalculateExecutionContext(exe_ctx);
 
   Status utility_error;
-  
-  // The UtilityFunction is held in the Process.  Platforms don't track the
-  // lifespan of the Targets that use them, we can't put this in the Platform.
-  UtilityFunction *dlopen_utility_func 
-      = process->GetLoadImageUtilityFunction(this);
+  UtilityFunction *dlopen_utility_func;
   ValueList arguments;
   FunctionCaller *do_dlopen_function = nullptr;
-  
-  if (!dlopen_utility_func) {
-    // Make the UtilityFunction:
-    dlopen_utility_func = MakeLoadImageUtilityFunction(exe_ctx, error);
-  }
+
+  // The UtilityFunction is held in the Process.  Platforms don't track the
+  // lifespan of the Targets that use them, we can't put this in the Platform.
+  dlopen_utility_func = process->GetLoadImageUtilityFunction(
+      this, [&]() -> std::unique_ptr<UtilityFunction> {
+        return MakeLoadImageUtilityFunction(exe_ctx, error);
+      });
   // If we couldn't make it, the error will be in error, so we can exit here.
   if (!dlopen_utility_func)
     return LLDB_INVALID_IMAGE_TOKEN;
