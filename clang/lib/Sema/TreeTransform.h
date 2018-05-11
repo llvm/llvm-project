@@ -957,6 +957,7 @@ public:
   QualType RebuildDependentTemplateSpecializationType(
                                           ElaboratedTypeKeyword Keyword,
                                           NestedNameSpecifierLoc QualifierLoc,
+                                          SourceLocation TemplateKWLoc,
                                           const IdentifierInfo *Name,
                                           SourceLocation NameLoc,
                                           TemplateArgumentListInfo &Args,
@@ -965,9 +966,9 @@ public:
     // TODO: avoid TemplateName abstraction
     CXXScopeSpec SS;
     SS.Adopt(QualifierLoc);
-    TemplateName InstName
-      = getDerived().RebuildTemplateName(SS, *Name, NameLoc, QualType(),
-                                         nullptr, AllowInjectedClassName);
+    TemplateName InstName = getDerived().RebuildTemplateName(
+        SS, TemplateKWLoc, *Name, NameLoc, QualType(), nullptr,
+        AllowInjectedClassName);
 
     if (InstName.isNull())
       return QualType();
@@ -1146,9 +1147,9 @@ public:
   /// template name. Subclasses may override this routine to provide different
   /// behavior.
   TemplateName RebuildTemplateName(CXXScopeSpec &SS,
+                                   SourceLocation TemplateKWLoc,
                                    const IdentifierInfo &Name,
-                                   SourceLocation NameLoc,
-                                   QualType ObjectType,
+                                   SourceLocation NameLoc, QualType ObjectType,
                                    NamedDecl *FirstQualifierInScope,
                                    bool AllowInjectedClassName);
 
@@ -1160,9 +1161,9 @@ public:
   /// template name. Subclasses may override this routine to provide different
   /// behavior.
   TemplateName RebuildTemplateName(CXXScopeSpec &SS,
+                                   SourceLocation TemplateKWLoc,
                                    OverloadedOperatorKind Operator,
-                                   SourceLocation NameLoc,
-                                   QualType ObjectType,
+                                   SourceLocation NameLoc, QualType ObjectType,
                                    bool AllowInjectedClassName);
 
   /// Build a new template name given a template template parameter pack
@@ -3752,8 +3753,12 @@ TreeTransform<Derived>::TransformTemplateName(CXXScopeSpec &SS,
         ObjectType.isNull())
       return Name;
 
+    // FIXME: Preserve the location of the "template" keyword.
+    SourceLocation TemplateKWLoc = NameLoc;
+
     if (DTN->isIdentifier()) {
       return getDerived().RebuildTemplateName(SS,
+                                              TemplateKWLoc,
                                               *DTN->getIdentifier(),
                                               NameLoc,
                                               ObjectType,
@@ -3761,7 +3766,8 @@ TreeTransform<Derived>::TransformTemplateName(CXXScopeSpec &SS,
                                               AllowInjectedClassName);
     }
 
-    return getDerived().RebuildTemplateName(SS, DTN->getOperator(), NameLoc,
+    return getDerived().RebuildTemplateName(SS, TemplateKWLoc,
+                                            DTN->getOperator(), NameLoc,
                                             ObjectType, AllowInjectedClassName);
   }
 
@@ -4340,6 +4346,7 @@ TypeSourceInfo *TreeTransform<Derived>::TransformTSIInObjectScope(
 
     TemplateName Template
       = getDerived().RebuildTemplateName(SS,
+                                         SpecTL.getTemplateKeywordLoc(),
                                          *SpecTL.getTypePtr()->getIdentifier(),
                                          SpecTL.getTemplateNameLoc(),
                                          ObjectType, UnqualLookup,
@@ -6138,8 +6145,8 @@ TransformDependentTemplateSpecializationType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = getDerived().RebuildDependentTemplateSpecializationType(
-      T->getKeyword(), QualifierLoc, T->getIdentifier(),
-      TL.getTemplateNameLoc(), NewTemplateArgs,
+      T->getKeyword(), QualifierLoc, TL.getTemplateKeywordLoc(),
+      T->getIdentifier(), TL.getTemplateNameLoc(), NewTemplateArgs,
       /*AllowInjectedClassName*/ false);
   if (Result.isNull())
     return QualType();
@@ -12510,6 +12517,7 @@ TreeTransform<Derived>::RebuildTemplateName(CXXScopeSpec &SS,
 template<typename Derived>
 TemplateName
 TreeTransform<Derived>::RebuildTemplateName(CXXScopeSpec &SS,
+                                            SourceLocation TemplateKWLoc,
                                             const IdentifierInfo &Name,
                                             SourceLocation NameLoc,
                                             QualType ObjectType,
@@ -12518,7 +12526,6 @@ TreeTransform<Derived>::RebuildTemplateName(CXXScopeSpec &SS,
   UnqualifiedId TemplateName;
   TemplateName.setIdentifier(&Name, NameLoc);
   Sema::TemplateTy Template;
-  SourceLocation TemplateKWLoc; // FIXME: retrieve it from caller.
   getSema().ActOnDependentTemplateName(/*Scope=*/nullptr,
                                        SS, TemplateKWLoc, TemplateName,
                                        ParsedType::make(ObjectType),
@@ -12530,6 +12537,7 @@ TreeTransform<Derived>::RebuildTemplateName(CXXScopeSpec &SS,
 template<typename Derived>
 TemplateName
 TreeTransform<Derived>::RebuildTemplateName(CXXScopeSpec &SS,
+                                            SourceLocation TemplateKWLoc,
                                             OverloadedOperatorKind Operator,
                                             SourceLocation NameLoc,
                                             QualType ObjectType,
@@ -12538,7 +12546,6 @@ TreeTransform<Derived>::RebuildTemplateName(CXXScopeSpec &SS,
   // FIXME: Bogus location information.
   SourceLocation SymbolLocations[3] = { NameLoc, NameLoc, NameLoc };
   Name.setOperatorFunctionId(NameLoc, Operator, SymbolLocations);
-  SourceLocation TemplateKWLoc; // FIXME: retrieve it from caller.
   Sema::TemplateTy Template;
   getSema().ActOnDependentTemplateName(/*Scope=*/nullptr,
                                        SS, TemplateKWLoc, Name,

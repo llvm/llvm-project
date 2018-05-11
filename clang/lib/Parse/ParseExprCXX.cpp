@@ -515,7 +515,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
           << FixItHint::CreateInsertion(Tok.getLocation(), "template ");
 
         if (TemplateNameKind TNK = Actions.ActOnDependentTemplateName(
-                getCurScope(), SS, SourceLocation(), TemplateName, ObjectType,
+                getCurScope(), SS, Tok.getLocation(), TemplateName, ObjectType,
                 EnteringContext, Template, /*AllowInjectedClassName*/ true)) {
           // Consume the identifier.
           ConsumeToken();
