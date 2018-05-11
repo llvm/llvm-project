@@ -37,6 +37,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -109,11 +110,6 @@ static cl::opt<unsigned> SampleProfileSampleCoverage(
     cl::desc("Emit a warning if less than N% of samples in the input profile "
              "are matched to the IR."));
 
-static cl::opt<double> SampleProfileHotThreshold(
-    "sample-profile-inline-hot-threshold", cl::init(0.1), cl::value_desc("N"),
-    cl::desc("Inlined functions that account for more than N% of all samples "
-             "collected in the parent function, will be inlined again."));
-
 namespace {
 
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
@@ -130,10 +126,13 @@ public:
   bool markSamplesUsed(const FunctionSamples *FS, uint32_t LineOffset,
                        uint32_t Discriminator, uint64_t Samples);
   unsigned computeCoverage(unsigned Used, unsigned Total) const;
-  unsigned countUsedRecords(const FunctionSamples *FS) const;
-  unsigned countBodyRecords(const FunctionSamples *FS) const;
+  unsigned countUsedRecords(const FunctionSamples *FS,
+                            ProfileSummaryInfo *PSI) const;
+  unsigned countBodyRecords(const FunctionSamples *FS,
+                            ProfileSummaryInfo *PSI) const;
   uint64_t getTotalUsedSamples() const { return TotalUsedSamples; }
-  uint64_t countBodySamples(const FunctionSamples *FS) const;
+  uint64_t countBodySamples(const FunctionSamples *FS,
+                            ProfileSummaryInfo *PSI) const;
 
   void clear() {
     SampleCoverage.clear();
@@ -186,7 +185,8 @@ public:
         IsThinLTOPreLink(IsThinLTOPreLink) {}
 
   bool doInitialization(Module &M);
-  bool runOnModule(Module &M, ModuleAnalysisManager *AM);
+  bool runOnModule(Module &M, ModuleAnalysisManager *AM,
+                   ProfileSummaryInfo *_PSI);
 
   void dump() { Reader->dump(); }
 
@@ -285,6 +285,9 @@ protected:
   /// Instead, we will mark GUIDs that needs to be annotated to the function.
   bool IsThinLTOPreLink;
 
+  /// Profile Summary Info computed from sample profile.
+  ProfileSummaryInfo *PSI = nullptr;
+
   /// Total number of samples collected in this profile.
   ///
   /// This is the sum of all the samples collected in all the functions executed
@@ -325,6 +328,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
   }
 
 private:
@@ -335,7 +339,7 @@ private:
 
 } // end anonymous namespace
 
-/// Return true if the given callsite is hot wrt to its caller.
+/// Return true if the given callsite is hot wrt to hot cutoff threshold.
 ///
 /// Functions that were inlined in the original binary will be represented
 /// in the inline stack in the sample profile. If the profile shows that
@@ -343,28 +347,17 @@ private:
 /// frequently), then we will recreate the inline decision and apply the
 /// profile from the inlined callsite.
 ///
-/// To decide whether an inlined callsite is hot, we compute the fraction
-/// of samples used by the callsite with respect to the total number of samples
-/// collected in the caller.
-///
-/// If that fraction is larger than the default given by
-/// SampleProfileHotThreshold, the callsite will be inlined again.
-static bool callsiteIsHot(const FunctionSamples *CallerFS,
-                          const FunctionSamples *CallsiteFS) {
+/// To decide whether an inlined callsite is hot, we compare the callsite
+/// sample count with the hot cutoff computed by ProfileSummaryInfo, it is
+/// regarded as hot if the count is above the cutoff value.
+static bool callsiteIsHot(const FunctionSamples *CallsiteFS,
+                          ProfileSummaryInfo *PSI) {
   if (!CallsiteFS)
     return false; // The callsite was not inlined in the original binary.
 
-  uint64_t ParentTotalSamples = CallerFS->getTotalSamples();
-  if (ParentTotalSamples == 0)
-    return false; // Avoid division by zero.
-
+  assert(PSI && "PSI is expected to be non null");
   uint64_t CallsiteTotalSamples = CallsiteFS->getTotalSamples();
-  if (CallsiteTotalSamples == 0)
-    return false; // Callsite is trivially cold.
-
-  double PercentSamples =
-      (double)CallsiteTotalSamples / (double)ParentTotalSamples * 100.0;
-  return PercentSamples >= SampleProfileHotThreshold;
+  return PSI->isHotCount(CallsiteTotalSamples);
 }
 
 /// Mark as used the sample record for the given function samples at
@@ -387,7 +380,8 @@ bool SampleCoverageTracker::markSamplesUsed(const FunctionSamples *FS,
 ///
 /// This count does not include records from cold inlined callsites.
 unsigned
-SampleCoverageTracker::countUsedRecords(const FunctionSamples *FS) const {
+SampleCoverageTracker::countUsedRecords(const FunctionSamples *FS,
+                                        ProfileSummaryInfo *PSI) const {
   auto I = SampleCoverage.find(FS);
 
   // The size of the coverage map for FS represents the number of records
@@ -400,8 +394,8 @@ SampleCoverageTracker::countUsedRecords(const FunctionSamples *FS) const {
   for (const auto &I : FS->getCallsiteSamples())
     for (const auto &J : I.second) {
       const FunctionSamples *CalleeSamples = &J.second;
-      if (callsiteIsHot(FS, CalleeSamples))
-        Count += countUsedRecords(CalleeSamples);
+      if (callsiteIsHot(CalleeSamples, PSI))
+        Count += countUsedRecords(CalleeSamples, PSI);
     }
 
   return Count;
@@ -411,15 +405,16 @@ SampleCoverageTracker::countUsedRecords(const FunctionSamples *FS) const {
 ///
 /// This count does not include records from cold inlined callsites.
 unsigned
-SampleCoverageTracker::countBodyRecords(const FunctionSamples *FS) const {
+SampleCoverageTracker::countBodyRecords(const FunctionSamples *FS,
+                                        ProfileSummaryInfo *PSI) const {
   unsigned Count = FS->getBodySamples().size();
 
   // Only count records in hot callsites.
   for (const auto &I : FS->getCallsiteSamples())
     for (const auto &J : I.second) {
       const FunctionSamples *CalleeSamples = &J.second;
-      if (callsiteIsHot(FS, CalleeSamples))
-        Count += countBodyRecords(CalleeSamples);
+      if (callsiteIsHot(CalleeSamples, PSI))
+        Count += countBodyRecords(CalleeSamples, PSI);
     }
 
   return Count;
@@ -429,7 +424,8 @@ SampleCoverageTracker::countBodyRecords(const FunctionSamples *FS) const {
 ///
 /// This count does not include samples from cold inlined callsites.
 uint64_t
-SampleCoverageTracker::countBodySamples(const FunctionSamples *FS) const {
+SampleCoverageTracker::countBodySamples(const FunctionSamples *FS,
+                                        ProfileSummaryInfo *PSI) const {
   uint64_t Total = 0;
   for (const auto &I : FS->getBodySamples())
     Total += I.second.getSamples();
@@ -438,8 +434,8 @@ SampleCoverageTracker::countBodySamples(const FunctionSamples *FS) const {
   for (const auto &I : FS->getCallsiteSamples())
     for (const auto &J : I.second) {
       const FunctionSamples *CalleeSamples = &J.second;
-      if (callsiteIsHot(FS, CalleeSamples))
-        Total += countBodySamples(CalleeSamples);
+      if (callsiteIsHot(CalleeSamples, PSI))
+        Total += countBodySamples(CalleeSamples, PSI);
     }
 
   return Total;
@@ -767,7 +763,7 @@ bool SampleProfileLoader::inlineHotFunctions(
         if ((isa<CallInst>(I) || isa<InvokeInst>(I)) &&
             !isa<IntrinsicInst>(I) && (FS = findCalleeFunctionSamples(I))) {
           Candidates.push_back(&I);
-          if (callsiteIsHot(Samples, FS))
+          if (callsiteIsHot(FS, PSI))
             Hot = true;
         }
       }
@@ -787,8 +783,7 @@ bool SampleProfileLoader::inlineHotFunctions(
         for (const auto *FS : findIndirectCallFunctionSamples(*I, Sum)) {
           if (IsThinLTOPreLink) {
             FS->findInlinedFunctions(InlinedGUIDs, F.getParent(),
-                                     Samples->getTotalSamples() *
-                                         SampleProfileHotThreshold / 100);
+                                     PSI->getOrCompHotCountThreshold());
             continue;
           }
           auto CalleeFunctionName = FS->getName();
@@ -827,8 +822,7 @@ bool SampleProfileLoader::inlineHotFunctions(
           LocalChanged = true;
       } else if (IsThinLTOPreLink) {
         findCalleeFunctionSamples(*I)->findInlinedFunctions(
-            InlinedGUIDs, F.getParent(),
-            Samples->getTotalSamples() * SampleProfileHotThreshold / 100);
+            InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold());
       }
     }
     if (LocalChanged) {
@@ -1463,8 +1457,8 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
 
   // If coverage checking was requested, compute it now.
   if (SampleProfileRecordCoverage) {
-    unsigned Used = CoverageTracker.countUsedRecords(Samples);
-    unsigned Total = CoverageTracker.countBodyRecords(Samples);
+    unsigned Used = CoverageTracker.countUsedRecords(Samples, PSI);
+    unsigned Total = CoverageTracker.countBodyRecords(Samples, PSI);
     unsigned Coverage = CoverageTracker.computeCoverage(Used, Total);
     if (Coverage < SampleProfileRecordCoverage) {
       F.getContext().diagnose(DiagnosticInfoSampleProfile(
@@ -1477,7 +1471,7 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
 
   if (SampleProfileSampleCoverage) {
     uint64_t Used = CoverageTracker.getTotalUsedSamples();
-    uint64_t Total = CoverageTracker.countBodySamples(Samples);
+    uint64_t Total = CoverageTracker.countBodySamples(Samples, PSI);
     unsigned Coverage = CoverageTracker.computeCoverage(Used, Total);
     if (Coverage < SampleProfileSampleCoverage) {
       F.getContext().diagnose(DiagnosticInfoSampleProfile(
@@ -1496,6 +1490,7 @@ INITIALIZE_PASS_BEGIN(SampleProfileLoaderLegacyPass, "sample-profile",
                       "Sample Profile loader", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(SampleProfileLoaderLegacyPass, "sample-profile",
                     "Sample Profile loader", false, false)
 
@@ -1520,9 +1515,14 @@ ModulePass *llvm::createSampleProfileLoaderPass(StringRef Name) {
   return new SampleProfileLoaderLegacyPass(Name);
 }
 
-bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM) {
+bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
+                                      ProfileSummaryInfo *_PSI) {
   if (!ProfileIsValid)
     return false;
+
+  PSI = _PSI;
+  if (M.getProfileSummary() == nullptr)
+    M.setProfileSummary(Reader->getSummary().getMD(M.getContext()));
 
   // Compute the total number of samples collected in this profile.
   for (const auto &I : Reader->getProfiles())
@@ -1554,15 +1554,15 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM) {
       clearFunctionData();
       retval |= runOnFunction(F, AM);
     }
-  if (M.getProfileSummary() == nullptr)
-    M.setProfileSummary(Reader->getSummary().getMD(M.getContext()));
   return retval;
 }
 
 bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
   ACT = &getAnalysis<AssumptionCacheTracker>();
   TTIWP = &getAnalysis<TargetTransformInfoWrapperPass>();
-  return SampleLoader.runOnModule(M, nullptr);
+  ProfileSummaryInfo *PSI =
+      getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  return SampleLoader.runOnModule(M, nullptr, PSI);
 }
 
 bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
@@ -1604,7 +1604,8 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
 
   SampleLoader.doInitialization(M);
 
-  if (!SampleLoader.runOnModule(M, &AM))
+  ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
+  if (!SampleLoader.runOnModule(M, &AM, PSI))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

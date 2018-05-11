@@ -3094,8 +3094,7 @@ private:
       Instruction *CurrentI = cast<Instruction>(CurrentValue);
       bool IsDefinedInThisBB = CurrentI->getParent() == CurrentBlock;
 
-      unsigned PredCount =
-          std::distance(pred_begin(CurrentBlock), pred_end(CurrentBlock));
+      unsigned PredCount = pred_size(CurrentBlock);
       // if Current Value is not defined in this basic block we are interested
       // in values in predecessors.
       if (!IsDefinedInThisBB) {

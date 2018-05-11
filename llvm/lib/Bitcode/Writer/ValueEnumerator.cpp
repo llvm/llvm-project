@@ -489,7 +489,7 @@ void ValueEnumerator::print(raw_ostream &OS, const ValueMapType &Map,
     V->print(errs());
     errs() << '\n';
 
-    OS << " Uses(" << std::distance(V->use_begin(),V->use_end()) << "):";
+    OS << " Uses(" << V->getNumUses() << "):";
     for (const Use &U : V->uses()) {
       if (&U != &*V->use_begin())
         OS << ",";

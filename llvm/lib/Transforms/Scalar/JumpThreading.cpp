@@ -945,10 +945,10 @@ static unsigned GetBestDestForJumpOnUndef(BasicBlock *BB) {
   unsigned MinSucc = 0;
   BasicBlock *TestBB = BBTerm->getSuccessor(MinSucc);
   // Compute the successor with the minimum number of predecessors.
-  unsigned MinNumPreds = std::distance(pred_begin(TestBB), pred_end(TestBB));
+  unsigned MinNumPreds = pred_size(TestBB);
   for (unsigned i = 1, e = BBTerm->getNumSuccessors(); i != e; ++i) {
     TestBB = BBTerm->getSuccessor(i);
-    unsigned NumPreds = std::distance(pred_begin(TestBB), pred_end(TestBB));
+    unsigned NumPreds = pred_size(TestBB);
     if (NumPreds < MinNumPreds) {
       MinSucc = i;
       MinNumPreds = NumPreds;
@@ -1648,8 +1648,7 @@ bool JumpThreadingPass::ProcessThreadableEdges(Value *Cond, BasicBlock *BB,
   // not thread. By doing so, we do not need to duplicate the current block and
   // also miss potential opportunities in case we dont/cant duplicate.
   if (OnlyDest && OnlyDest != MultipleDestSentinel) {
-    if (PredWithKnownDest ==
-        (size_t)std::distance(pred_begin(BB), pred_end(BB))) {
+    if (PredWithKnownDest == (size_t)pred_size(BB)) {
       bool SeenFirstBranchToOnlyDest = false;
       std::vector <DominatorTree::UpdateType> Updates;
       Updates.reserve(BB->getTerminator()->getNumSuccessors() - 1);

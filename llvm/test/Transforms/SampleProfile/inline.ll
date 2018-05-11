@@ -1,5 +1,5 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -sample-profile-inline-hot-threshold=1 -S | FileCheck %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof -sample-profile-inline-hot-threshold=1 -S | FileCheck %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -S | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline.prof -S | FileCheck %s
 
 ; Original C++ test case
 ;

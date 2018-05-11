@@ -2087,8 +2087,9 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // this becomes a performance hit, we can work harder to preserve those
     // results until we get here but it's likely not worth it.
     bool MemberOfUnknownSpecialization;
-    LookupTemplateName(R, S, SS, QualType(), /*EnteringContext=*/false,
-                       MemberOfUnknownSpecialization);
+    if (LookupTemplateName(R, S, SS, QualType(), /*EnteringContext=*/false,
+                           MemberOfUnknownSpecialization, TemplateKWLoc))
+      return ExprError();
 
     if (MemberOfUnknownSpecialization ||
         (R.getResultKind() == LookupResult::NotFoundInCurrentInstantiation))

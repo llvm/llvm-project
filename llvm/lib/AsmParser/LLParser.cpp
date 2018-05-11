@@ -6756,8 +6756,8 @@ bool LLParser::sortUseListOrder(Value *V, ArrayRef<unsigned> Indexes,
   if (NumUses < 2)
     return Error(Loc, "value only has one use");
   if (Order.size() != Indexes.size() || NumUses > Indexes.size())
-    return Error(Loc, "wrong number of indexes, expected " +
-                          Twine(std::distance(V->use_begin(), V->use_end())));
+    return Error(Loc,
+                 "wrong number of indexes, expected " + Twine(V->getNumUses()));
 
   V->sortUseList([&](const Use &L, const Use &R) {
     return Order.lookup(&L) < Order.lookup(&R);

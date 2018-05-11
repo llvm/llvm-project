@@ -403,8 +403,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(Function *F,
 
   auto IsSingleEntry = [](SmallVectorImpl<BasicBlock *> &BlockList) {
     BasicBlock *Dom = BlockList.front();
-    return BlockList.size() > 1 &&
-           std::distance(pred_begin(Dom), pred_end(Dom)) == 1;
+    return BlockList.size() > 1 && pred_size(Dom) == 1;
   };
 
   auto IsSingleExit =
@@ -556,10 +555,6 @@ PartialInlinerImpl::computeOutliningInfo(Function *F) {
     return is_contained(successors(BB), Succ);
   };
 
-  auto SuccSize = [](BasicBlock *BB) {
-    return std::distance(succ_begin(BB), succ_end(BB));
-  };
-
   auto IsReturnBlock = [](BasicBlock *BB) {
     TerminatorInst *TI = BB->getTerminator();
     return isa<ReturnInst>(TI);
@@ -596,7 +591,7 @@ PartialInlinerImpl::computeOutliningInfo(Function *F) {
     if (OutliningInfo->GetNumInlinedBlocks() >= MaxNumInlineBlocks)
       break;
 
-    if (SuccSize(CurrEntry) != 2)
+    if (succ_size(CurrEntry) != 2)
       break;
 
     BasicBlock *Succ1 = *succ_begin(CurrEntry);
@@ -670,7 +665,7 @@ PartialInlinerImpl::computeOutliningInfo(Function *F) {
   // peeling off dominating blocks from the outlining region:
   while (OutliningInfo->GetNumInlinedBlocks() < MaxNumInlineBlocks) {
     BasicBlock *Cand = OutliningInfo->NonReturnBlock;
-    if (SuccSize(Cand) != 2)
+    if (succ_size(Cand) != 2)
       break;
 
     if (HasNonEntryPred(Cand))

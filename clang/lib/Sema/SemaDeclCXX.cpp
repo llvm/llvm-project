@@ -5626,6 +5626,13 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   // The class is either imported or exported.
   const bool ClassExported = ClassAttr->getKind() == attr::DLLExport;
 
+  // Check if this was a dllimport attribute propagated from a derived class to
+  // a base class template specialization. We don't apply these attributes to
+  // static data members.
+  const bool PropagatedImport =
+      !ClassExported &&
+      cast<DLLImportAttr>(ClassAttr)->wasPropagatedToBaseTemplate();
+
   TemplateSpecializationKind TSK = Class->getTemplateSpecializationKind();
 
   // Ignore explicit dllexport on explicit class template instantiation declarations.
@@ -5676,6 +5683,11 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
           continue;
       }
     }
+
+    // Don't apply dllimport attributes to static data members of class template
+    // instantiations when the attribute is propagated from a derived class.
+    if (VD && PropagatedImport)
+      continue;
 
     if (!cast<NamedDecl>(Member)->isExternallyVisible())
       continue;
@@ -5728,6 +5740,11 @@ void Sema::propagateDLLAttrToBaseClassTemplate(
     auto *NewAttr = cast<InheritableAttr>(ClassAttr->clone(getASTContext()));
     NewAttr->setInherited(true);
     BaseTemplateSpec->addAttr(NewAttr);
+
+    // If this was an import, mark that we propagated it from a derived class to
+    // a base class template specialization.
+    if (auto *ImportAttr = dyn_cast<DLLImportAttr>(NewAttr))
+      ImportAttr->setPropagatedToBaseTemplate();
 
     // If the template is already instantiated, checkDLLAttributeRedeclaration()
     // needs to be run again to work see the new attribute. Otherwise this will

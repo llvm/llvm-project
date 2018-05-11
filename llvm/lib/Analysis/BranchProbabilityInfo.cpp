@@ -873,8 +873,7 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
   if (I != Probs.end())
     return I->second;
 
-  return {1,
-          static_cast<uint32_t>(std::distance(succ_begin(Src), succ_end(Src)))};
+  return {1, static_cast<uint32_t>(succ_size(Src))};
 }
 
 BranchProbability
