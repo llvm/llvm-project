@@ -1045,21 +1045,10 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
       = process->GetLoadImageUtilityFunction(this);
   ValueList arguments;
   FunctionCaller *do_dlopen_function = nullptr;
-
-  // Multiple threads could be calling into DoLoadImage concurrently,
-  // only one should be allowed to create the UtilityFunction.
-  {
-    static std::mutex do_dlopen_mutex;
-    std::lock_guard<std::mutex> lock(do_dlopen_mutex);
-
-    // The UtilityFunction is held in the Process.  Platforms don't track the
-    // lifespan of the Targets that use them, we can't put this in the Platform.
-    dlopen_utility_func
-        = process->GetLoadImageUtilityFunction(this);
-    if (!dlopen_utility_func) {
-      // Make the UtilityFunction:
-      dlopen_utility_func = MakeLoadImageUtilityFunction(exe_ctx, error);
-    }
+  
+  if (!dlopen_utility_func) {
+    // Make the UtilityFunction:
+    dlopen_utility_func = MakeLoadImageUtilityFunction(exe_ctx, error);
   }
   // If we couldn't make it, the error will be in error, so we can exit here.
   if (!dlopen_utility_func)
