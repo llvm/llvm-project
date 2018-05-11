@@ -172,6 +172,15 @@ bool types::isCuda(ID Id) {
   case TY_CUDA:
   case TY_PP_CUDA:
   case TY_CUDA_DEVICE:
+    return true;
+  }
+}
+
+bool types::isHIP(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+
   case TY_HIP:
   case TY_PP_HIP:
   case TY_HIP_DEVICE:
@@ -230,6 +239,7 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
            .Case("fpp", TY_Fortran)
            .Case("FPP", TY_Fortran)
            .Case("gch", TY_PCH)
+           .Case("hip", TY_HIP)
            .Case("hpp", TY_CXXHeader)
            .Case("iim", TY_PP_CXXModule)
            .Case("lib", TY_Object)
