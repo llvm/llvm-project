@@ -1052,6 +1052,7 @@ static std::error_code directoryRealPath(const Twine &Name,
 
 std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 SmallVectorImpl<char> *RealPath) {
+  ResultFD = -1;
   SmallVector<wchar_t, 128> PathUTF16;
 
   if (std::error_code EC = widenPath(Name, PathUTF16))
@@ -1074,8 +1075,8 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
     return EC;
   }
 
-  int FD = ::_open_osfhandle(intptr_t(H), 0);
-  if (FD == -1) {
+  ResultFD = ::_open_osfhandle(intptr_t(H), 0);
+  if (ResultFD == -1) {
     ::CloseHandle(H);
     return mapWindowsError(ERROR_INVALID_HANDLE);
   }
@@ -1084,7 +1085,6 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
   if (RealPath)
     realPathFromHandle(H, *RealPath);
 
-  ResultFD = FD;
   return std::error_code();
 }
 
@@ -1094,6 +1094,7 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
   assert((!(Flags & sys::fs::F_Excl) || !(Flags & sys::fs::F_Append)) &&
          "Cannot specify both 'excl' and 'append' file creation flags!");
 
+  ResultFD = -1;
   SmallVector<wchar_t, 128> PathUTF16;
 
   if (std::error_code EC = widenPath(Name, PathUTF16))
@@ -1141,13 +1142,12 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
   if (Flags & F_Text)
     OpenFlags |= _O_TEXT;
 
-  int FD = ::_open_osfhandle(intptr_t(H), OpenFlags);
-  if (FD == -1) {
+  ResultFD = ::_open_osfhandle(intptr_t(H), OpenFlags);
+  if (ResultFD == -1) {
     ::CloseHandle(H);
     return mapWindowsError(ERROR_INVALID_HANDLE);
   }
 
-  ResultFD = FD;
   return std::error_code();
 }
 

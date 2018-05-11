@@ -123,8 +123,7 @@ namespace dr305 { // dr305: no
     template<typename T> using T2 = T;
   };
   void k(Z *z) {
-    // FIXME: This diagnostic is terrible.
-    z->~T1<int>(); // expected-error {{'T1' following the 'template' keyword does not refer to a template}} expected-error +{{}}
+    z->~T1<int>(); // expected-error {{no member named 'T1' in 'dr305::Z'}} expected-error +{{}}
     z->~T2<int>(); // expected-error {{no member named '~int'}}
     z->~T2<Z>();
   }

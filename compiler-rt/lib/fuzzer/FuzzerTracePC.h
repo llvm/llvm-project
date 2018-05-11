@@ -103,6 +103,9 @@ class TracePC {
 
   void PrintCoverage();
 
+  template<class CallBack>
+  void IterateCoveredFunctions(CallBack CB);
+
   void AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
                          size_t n, bool StopAtZero);
 

@@ -267,6 +267,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.store.w.") || // Added in 3.9
       Name.startswith("avx512.mask.store.d.") || // Added in 3.9
       Name.startswith("avx512.mask.store.q.") || // Added in 3.9
+      Name == "avx512.mask.store.ss" || // Added in 7.0
       Name.startswith("avx512.mask.loadu.") || // Added in 3.9
       Name.startswith("avx512.mask.load.") || // Added in 3.9
       Name == "sse42.crc32.64.8" || // Added in 3.4
@@ -1294,6 +1295,16 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                    PointerType::getUnqual(Arg1->getType()),
                                    "cast");
       Builder.CreateAlignedStore(Arg1, Arg0, 1);
+
+      // Remove intrinsic.
+      CI->eraseFromParent();
+      return;
+    }
+
+    if (IsX86 && Name == "avx512.mask.store.ss") {
+      Value *Mask = Builder.CreateAnd(CI->getArgOperand(2), Builder.getInt8(1));
+      UpgradeMaskedStore(Builder, CI->getArgOperand(0), CI->getArgOperand(1),
+                         Mask, false);
 
       // Remove intrinsic.
       CI->eraseFromParent();

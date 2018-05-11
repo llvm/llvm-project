@@ -90,4 +90,4 @@ _start:
 
 // RODATA: Contents of section .rodata:
 // S(z) = 0x40014
-// RODATA-NEXT:  10293 14000400
+// RODATA-NEXT:  101c8 14000400

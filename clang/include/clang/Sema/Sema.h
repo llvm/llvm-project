@@ -6090,9 +6090,10 @@ public:
   bool hasAnyAcceptableTemplateNames(LookupResult &R,
                                      bool AllowFunctionTemplates = true);
 
-  void LookupTemplateName(LookupResult &R, Scope *S, CXXScopeSpec &SS,
+  bool LookupTemplateName(LookupResult &R, Scope *S, CXXScopeSpec &SS,
                           QualType ObjectType, bool EnteringContext,
-                          bool &MemberOfUnknownSpecialization);
+                          bool &MemberOfUnknownSpecialization,
+                          SourceLocation TemplateKWLoc = SourceLocation());
 
   TemplateNameKind isTemplateName(Scope *S,
                                   CXXScopeSpec &SS,

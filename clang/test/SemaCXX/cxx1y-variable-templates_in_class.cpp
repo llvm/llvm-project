@@ -296,17 +296,17 @@ namespace in_class_template {
     };
 
     template<typename T> void f() {
-      typename T::template A<int> a; // expected-error {{template name refers to non-type template 'S::A'}}
+      typename T::template A<int> a; // expected-error {{template name refers to non-type template 'S::template A'}}
     }
     template<typename T> void g() {
-      T::template A<int>::B = 0; // expected-error {{template name refers to non-type template 'S::A'}}
+      T::template A<int>::B = 0; // expected-error {{template name refers to non-type template 'S::template A'}}
     }
     template<typename T> void h() {
-      class T::template A<int> c; // expected-error {{template name refers to non-type template 'S::A'}}
+      class T::template A<int> c; // expected-error {{template name refers to non-type template 'S::template A'}}
     }
 
     template<typename T>
-    struct X : T::template A<int> {}; // expected-error {{template name refers to non-type template 'S::A'}}
+    struct X : T::template A<int> {}; // expected-error {{template name refers to non-type template 'S::template A'}}
 
     template void f<S>(); // expected-note {{in instantiation of}}
     template void g<S>(); // expected-note {{in instantiation of}}

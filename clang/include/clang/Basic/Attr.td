@@ -2566,6 +2566,16 @@ def DLLImport : InheritableAttr, TargetSpecificAttr<TargetWindows> {
   let Spellings = [Declspec<"dllimport">, GCC<"dllimport">];
   let Subjects = SubjectList<[Function, Var, CXXRecord, ObjCInterface]>;
   let Documentation = [DLLImportDocs];
+
+
+  let AdditionalMembers = [{
+private:
+  bool PropagatedToBaseTemplate = false;
+
+public:
+  void setPropagatedToBaseTemplate() { PropagatedToBaseTemplate = true; }
+  bool wasPropagatedToBaseTemplate() { return PropagatedToBaseTemplate; }
+  }];
 }
 
 def SelectAny : InheritableAttr {

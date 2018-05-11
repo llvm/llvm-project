@@ -107,6 +107,7 @@ static const uint64_t kMIPS64_ShadowOffset64 = 1ULL << 37;
 static const uint64_t kAArch64_ShadowOffset64 = 1ULL << 36;
 static const uint64_t kFreeBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kFreeBSD_ShadowOffset64 = 1ULL << 46;
+static const uint64_t kNetBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kNetBSD_ShadowOffset64 = 1ULL << 46;
 static const uint64_t kPS4CPU_ShadowOffset64 = 1ULL << 40;
 static const uint64_t kWindowsShadowOffset32 = 3ULL << 28;
@@ -508,6 +509,8 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
       Mapping.Offset = kMIPS32_ShadowOffset32;
     else if (IsFreeBSD)
       Mapping.Offset = kFreeBSD_ShadowOffset32;
+    else if (IsNetBSD)
+      Mapping.Offset = kNetBSD_ShadowOffset32;
     else if (IsIOS)
       // If we're targeting iOS and x86, the binary is built for iOS simulator.
       Mapping.Offset = IsX86 ? kIOSSimShadowOffset32 : kIOSShadowOffset32;
