@@ -39,6 +39,10 @@
 # RUN: echo ".globl foo; foo: call bar" | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t4.o
 # RUN: ld.lld --fatal-warnings --warn-backrefs %t1.o --start-lib %t3.o %t4.o --end-lib -o %t.exe
 
+# We don't report backward references to weak symbols as they can be overriden later.
+# RUN: echo ".weak foo; foo:" | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t5.o
+# RUN: ld.lld --fatal-warnings --warn-backrefs --start-lib %t5.o --end-lib %t1.o %t2.o -o %t.exe
+
 .globl _start, foo
 _start:
   call foo
