@@ -58,6 +58,7 @@ struct HostInfoMacOSXTest : public HostInfoMacOSX {
 };
 
 
+#ifdef __APPLE__
 TEST_F(HostInfoTest, MacOSX) {
   // This returns whatever the POSIX fallback returns.
   std::string posix = "/usr/lib/liblldb.dylib";
@@ -89,3 +90,4 @@ TEST_F(HostInfoTest, MacOSX) {
   EXPECT_NE(HostInfoMacOSXTest::ComputeClangDir(GetInputFilePath(xcode), true),
             HostInfoMacOSXTest::ComputeClangDir(GetInputFilePath(xcode)));
 }
+#endif
