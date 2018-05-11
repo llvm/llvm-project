@@ -1301,7 +1301,7 @@ static const char *const sdk_strings[] = {
 
 static FileSpec CheckPathForXcode(const FileSpec &fspec) {
   if (fspec.Exists()) {
-    const char substr[] = ".app/Contents/";
+    const char substr[] = ".app/Contents";
 
     std::string path_to_shlib = fspec.GetPath();
     size_t pos = path_to_shlib.rfind(substr);

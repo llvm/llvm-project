@@ -167,9 +167,7 @@ bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
   return false;
 }
 
-unsigned Value::getNumUses() const {
-  return (unsigned)std::distance(use_begin(), use_end());
-}
+unsigned Value::getNumUses() const { return (unsigned)distance(uses()); }
 
 static bool getSymTab(Value *V, ValueSymbolTable *&ST) {
   ST = nullptr;

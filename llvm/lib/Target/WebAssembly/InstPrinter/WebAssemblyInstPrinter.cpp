@@ -46,7 +46,7 @@ void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
 
 void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
                                        StringRef Annot,
-                                       const MCSubtargetInfo & /*STI*/) {
+                                       const MCSubtargetInfo &STI) {
   // Print the instruction (this uses the AsmStrings from the .td files).
   printInstruction(MI, OS);
 
@@ -194,20 +194,16 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void
-WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(const MCInst *MI,
-                                                       unsigned OpNo,
-                                                       raw_ostream &O) {
+void WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(
+    const MCInst *MI, unsigned OpNo, raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm == WebAssembly::GetDefaultP2Align(MI->getOpcode()))
     return;
   O << ":p2align=" << Imm;
 }
 
-void
-WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
-                                                         unsigned OpNo,
-                                                         raw_ostream &O) {
+void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(
+    const MCInst *MI, unsigned OpNo, raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
   switch (WebAssembly::ExprType(Imm)) {
   case WebAssembly::ExprType::Void: break;

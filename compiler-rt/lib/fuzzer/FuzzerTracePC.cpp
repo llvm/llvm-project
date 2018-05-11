@@ -211,6 +211,24 @@ static std::string GetModuleName(uintptr_t PC) {
   return ModulePathRaw;
 }
 
+template<class CallBack>
+void TracePC::IterateCoveredFunctions(CallBack CB) {
+  for (size_t i = 0; i < NumPCTables; i++) {
+    auto &M = ModulePCTable[i];
+    assert(M.Start < M.Stop);
+    auto ModuleName = GetModuleName(M.Start->PC);
+    for (auto NextFE = M.Start; NextFE < M.Stop; ) {
+      auto FE = NextFE;
+      assert((FE->PCFlags & 1) && "Not a function entry point");
+      do {
+        NextFE++;
+      } while (NextFE < M.Stop && !(NextFE->PCFlags & 1));
+      if (ObservedFuncs.count(FE->PC))
+        CB(FE, NextFE);
+    }
+  }
+}
+
 void TracePC::PrintCoverage() {
   if (!EF->__sanitizer_symbolize_pc ||
       !EF->__sanitizer_get_module_and_offset_for_pc) {
@@ -220,53 +238,31 @@ void TracePC::PrintCoverage() {
     return;
   }
   Printf("COVERAGE:\n");
-  std::string LastFunctionName = "";
-  std::string LastFileStr = "";
-  Set<size_t> UncoveredLines;
-  Set<size_t> CoveredLines;
-
-  auto FunctionEndCallback = [&](const std::string &CurrentFunc,
-                                 const std::string &CurrentFile) {
-    if (LastFunctionName != CurrentFunc) {
-      if (CoveredLines.empty() && !UncoveredLines.empty()) {
-        Printf("UNCOVERED_FUNC: %s\n", LastFunctionName.c_str());
-      } else {
-        for (auto Line : UncoveredLines) {
-          if (!CoveredLines.count(Line))
-            Printf("UNCOVERED_LINE: %s %s:%zd\n", LastFunctionName.c_str(),
-                   LastFileStr.c_str(), Line);
-        }
-      }
-
-      UncoveredLines.clear();
-      CoveredLines.clear();
-      LastFunctionName = CurrentFunc;
-      LastFileStr = CurrentFile;
+  auto CoveredFunctionCallback = [&](const PCTableEntry *First, const PCTableEntry *Last) {
+    assert(First < Last);
+    auto VisualizePC = GetNextInstructionPc(First->PC);
+    std::string FileStr = DescribePC("%s", VisualizePC);
+    if (!IsInterestingCoverageFile(FileStr)) return;
+    std::string FunctionStr = DescribePC("%F", VisualizePC);
+    std::string LineStr = DescribePC("%l", VisualizePC);
+    size_t Line = std::stoul(LineStr);
+    std::vector<uintptr_t> UncoveredPCs;
+    for (auto TE = First; TE < Last; TE++)
+      if (!ObservedPCs.count(TE->PC))
+        UncoveredPCs.push_back(TE->PC);
+    Printf("COVERED_FUNC: ");
+    UncoveredPCs.empty()
+        ? Printf("all")
+        : Printf("%zd/%zd", (Last - First) - UncoveredPCs.size(), Last - First);
+    Printf(" PCs covered %s %s:%zd\n", FunctionStr.c_str(), FileStr.c_str(),
+           Line);
+    for (auto PC: UncoveredPCs) {
+      Printf("  UNCOVERED_PC: %s\n",
+             DescribePC("%s:%l", GetNextInstructionPc(PC)).c_str());
     }
   };
 
-  for (size_t i = 0; i < NumPCTables; i++) {
-    auto &M = ModulePCTable[i];
-    assert(M.Start < M.Stop);
-    auto ModuleName = GetModuleName(M.Start->PC);
-    for (auto Ptr = M.Start; Ptr < M.Stop; Ptr++) {
-      auto PC = Ptr->PC;
-      auto VisualizePC = GetNextInstructionPc(PC);
-      bool IsObserved = ObservedPCs.count(PC);
-      std::string FileStr = DescribePC("%s", VisualizePC);
-      if (!IsInterestingCoverageFile(FileStr)) continue;
-      std::string FunctionStr = DescribePC("%F", VisualizePC);
-      FunctionEndCallback(FunctionStr, FileStr);
-      std::string LineStr = DescribePC("%l", VisualizePC);
-      size_t Line = std::stoul(LineStr);
-      if (IsObserved && CoveredLines.insert(Line).second)
-        Printf("COVERED: %s %s:%zd\n", FunctionStr.c_str(), FileStr.c_str(),
-               Line);
-      else
-        UncoveredLines.insert(Line);
-    }
-  }
-  FunctionEndCallback("", "");
+  IterateCoveredFunctions(CoveredFunctionCallback);
 }
 
 // Value profile.

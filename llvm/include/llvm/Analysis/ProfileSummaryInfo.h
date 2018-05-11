@@ -110,6 +110,12 @@ public:
   bool isHotCallSite(const CallSite &CS, BlockFrequencyInfo *BFI);
   /// Returns true if Callsite \p CS is considered cold.
   bool isColdCallSite(const CallSite &CS, BlockFrequencyInfo *BFI);
+  /// Returns HotCountThreshold if set. Recompute HotCountThreshold
+  /// if not set.
+  uint64_t getOrCompHotCountThreshold();
+  /// Returns ColdCountThreshold if set. Recompute HotCountThreshold
+  /// if not set.
+  uint64_t getOrCompColdCountThreshold();
   /// Returns HotCountThreshold if set.
   uint64_t getHotCountThreshold() {
     return HotCountThreshold ? HotCountThreshold.getValue() : 0;

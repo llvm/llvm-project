@@ -108,6 +108,18 @@ int SOME_DEFINE;
         for i in zip(inc, tu.get_includes()):
             eq(i[0], i[1])
 
+    def test_inclusion_directive(self):
+        src = os.path.join(kInputsDir, 'include.cpp')
+        h1 = os.path.join(kInputsDir, "header1.h")
+        h2 = os.path.join(kInputsDir, "header2.h")
+        h3 = os.path.join(kInputsDir, "header3.h")
+        inc = [h1, h3, h2, h3, h1]
+
+        tu = TranslationUnit.from_source(src, options=TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD)
+        inclusion_directive_files = [c.get_included_file().name for c in tu.cursor.get_children() if c.kind == CursorKind.INCLUSION_DIRECTIVE]
+        for i in zip(inc, inclusion_directive_files):
+            self.assert_normpaths_equal(i[0], i[1])
+
     def test_save(self):
         """Ensure TranslationUnit.save() works."""
 

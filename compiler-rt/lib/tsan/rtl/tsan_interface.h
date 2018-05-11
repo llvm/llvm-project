@@ -117,6 +117,19 @@ int __tsan_get_report_data(void *report, const char **description, int *count,
                            int *unique_tid_count, void **sleep_trace,
                            uptr trace_size);
 
+/// Retrieves the "tag" from a report (for external-race report types). External
+/// races can be associated with a tag which give them more meaning. For example
+/// tag value '1' means "Swift access race". Tag value '0' indicated a plain
+/// external race.
+///
+/// \param report opaque pointer to the current report (obtained as argument in
+///               __tsan_on_report, or from __tsan_get_current_report)
+/// \param [out] tag points to storage that will be filled with the tag value
+///
+/// \returns non-zero value on success, zero on failure
+SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_get_report_tag(void *report, uptr *tag);
+
 // Returns information about stack traces included in the report.
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_get_report_stack(void *report, uptr idx, void **trace,

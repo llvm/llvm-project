@@ -82,7 +82,15 @@ def WebAssemblyAsmParser : AsmParser {
   let ShouldEmitMatchRegisterName = 0;
 }
 
+def WebAssemblyAsmWriter : AsmWriter {
+  string AsmWriterClassName  = "InstPrinter";
+  int PassSubtarget = 0;
+  int Variant = 0;
+  bit isMCAsmWriter = 1;
+}
+
 def WebAssembly : Target {
   let InstructionSet = WebAssemblyInstrInfo;
   let AssemblyParsers  = [WebAssemblyAsmParser];
+  let AssemblyWriters = [WebAssemblyAsmWriter];
 }

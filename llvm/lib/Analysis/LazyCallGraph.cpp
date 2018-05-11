@@ -1272,8 +1272,7 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN,
       // the removal hasn't changed the structure at all. This is an important
       // special case and we can directly exit the entire routine more
       // efficiently as soon as we discover it.
-      if (std::distance(RefSCCNodes.begin(), RefSCCNodes.end()) ==
-          NumRefSCCNodes) {
+      if (distance(RefSCCNodes) == NumRefSCCNodes) {
         // Clear out the low link field as we won't need it.
         for (Node *N : RefSCCNodes)
           N->LowLink = -1;
@@ -1739,7 +1738,7 @@ static void printNode(raw_ostream &OS, LazyCallGraph::Node &N) {
 }
 
 static void printSCC(raw_ostream &OS, LazyCallGraph::SCC &C) {
-  ptrdiff_t Size = std::distance(C.begin(), C.end());
+  ptrdiff_t Size = distance(C);
   OS << "    SCC with " << Size << " functions:\n";
 
   for (LazyCallGraph::Node &N : C)
@@ -1747,7 +1746,7 @@ static void printSCC(raw_ostream &OS, LazyCallGraph::SCC &C) {
 }
 
 static void printRefSCC(raw_ostream &OS, LazyCallGraph::RefSCC &C) {
-  ptrdiff_t Size = std::distance(C.begin(), C.end());
+  ptrdiff_t Size = distance(C);
   OS << "  RefSCC with " << Size << " call SCCs:\n";
 
   for (LazyCallGraph::SCC &InnerC : C)

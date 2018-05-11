@@ -480,6 +480,8 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
   if (F.getName() == "__local_stdio_printf_options" ||
       F.getName() == "__local_stdio_scanf_options")
     return false;
+  if (isa<UnreachableInst>(F.getEntryBlock().getTerminator()))
+    return false;
   // Don't instrument functions using SEH for now. Splitting basic blocks like
   // we do for coverage breaks WinEHPrepare.
   // FIXME: Remove this when SEH no longer uses landingpad pattern matching.

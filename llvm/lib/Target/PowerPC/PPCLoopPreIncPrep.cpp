@@ -254,8 +254,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
   const PPCSubtarget *ST =
     TM ? TM->getSubtargetImpl(*Header->getParent()) : nullptr;
 
-  unsigned HeaderLoopPredCount =
-    std::distance(pred_begin(Header), pred_end(Header));
+  unsigned HeaderLoopPredCount = pred_size(Header);
 
   // Collect buckets of comparable addresses used by loads and stores.
   SmallVector<Bucket, 16> Buckets;

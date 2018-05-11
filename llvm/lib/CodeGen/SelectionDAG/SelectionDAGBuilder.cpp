@@ -1700,8 +1700,7 @@ SelectionDAGBuilder::getEdgeProbability(const MachineBasicBlock *Src,
   if (!BPI) {
     // If BPI is not available, set the default probability as 1 / N, where N is
     // the number of successors.
-    auto SuccSize = std::max<uint32_t>(
-        std::distance(succ_begin(SrcBB), succ_end(SrcBB)), 1);
+    auto SuccSize = std::max<uint32_t>(succ_size(SrcBB), 1);
     return BranchProbability(1, SuccSize);
   }
   return BPI->getEdgeProbability(SrcBB, DstBB);

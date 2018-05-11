@@ -1511,6 +1511,12 @@ class Cursor(Structure):
         another translation unit."""
         return conf.lib.clang_getCursorUSR(self)
 
+    def get_included_file(self):
+        """Returns the File that is included by the current inclusion cursor."""
+        assert self.kind == CursorKind.INCLUSION_DIRECTIVE
+
+        return conf.lib.clang_getIncludedFile(self)
+
     @property
     def kind(self):
         """Return the kind of this cursor."""
@@ -3085,8 +3091,9 @@ class File(ClangObject):
         return "<File: %s>" % (self.name)
 
     @staticmethod
-    def from_cursor_result(res, fn, args):
-        assert isinstance(res, File)
+    def from_result(res, fn, args):
+        assert isinstance(res, c_object_p)
+        res = File(res)
 
         # Copy a reference to the TranslationUnit to prevent premature GC.
         res._tu = args[0]._tu
@@ -3701,8 +3708,8 @@ functionList = [
 
   ("clang_getIncludedFile",
    [Cursor],
-   File,
-   File.from_cursor_result),
+   c_object_p,
+   File.from_result),
 
   ("clang_getInclusions",
    [TranslationUnit, callbacks['translation_unit_includes'], py_object]),
