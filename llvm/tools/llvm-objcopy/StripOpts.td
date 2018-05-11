@@ -10,3 +10,9 @@ def help : Flag<["-", "--"], "help">;
 def strip_debug : Flag<["-", "--"], "strip-debug">,
                   HelpText<"Remove debugging symbols only">;
 
+defm remove_section : Eq<"remove-section">,
+                      MetaVarName<"section">,
+                      HelpText<"Remove <section>">;
+
+def R : JoinedOrSeparate<["-"], "R">,
+        Alias<remove_section>;

@@ -528,6 +528,10 @@ CopyConfig ParseStripOptions(ArrayRef<const char *> ArgsArr) {
   Config.StripDebug = InputArgs.hasArg(STRIP_strip_debug);
   if (!Config.StripDebug)
     Config.StripAll = true;
+  
+  for (auto Arg : InputArgs.filtered(STRIP_remove_section))
+    Config.ToRemove.push_back(Arg->getValue());
+
   return Config;
 }
 

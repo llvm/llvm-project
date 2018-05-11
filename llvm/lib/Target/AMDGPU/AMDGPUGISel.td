@@ -18,6 +18,10 @@ def gi_vsrc0 :
     GIComplexOperandMatcher<s32, "selectVSRC0">,
     GIComplexPatternEquiv<sd_vsrc0>;
 
+def gi_vop3mods0 :
+    GIComplexOperandMatcher<s32, "selectVOP3Mods0">,
+    GIComplexPatternEquiv<VOP3Mods0>;
+
 class GISelSop2Pat <
   SDPatternOperator node,
   Instruction inst,

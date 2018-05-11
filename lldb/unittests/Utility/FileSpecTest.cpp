@@ -195,8 +195,7 @@ TEST(FileSpecTest, GetNormalizedPath) {
       {"/foo//bar/./baz", "/foo/bar/baz"},
       {"/./foo", "/foo"},
       {"/", "/"},
-      // TODO: fix llvm::sys::path::remove_dots() to return "//" below.
-      //{"//", "//"},
+      {"//", "/"},
       {"//net", "//net"},
       {"/..", "/"},
       {"/.", "/"},
@@ -212,6 +211,7 @@ TEST(FileSpecTest, GetNormalizedPath) {
       {"../../foo", "../../foo"},
   };
   for (auto test : posix_tests) {
+    SCOPED_TRACE(llvm::Twine("test.first = ") + test.first);
     EXPECT_EQ(test.second,
               FileSpec(test.first, false, FileSpec::ePathSyntaxPosix)
                   .GetPath());
@@ -224,8 +224,8 @@ TEST(FileSpecTest, GetNormalizedPath) {
       {R"(c:\bar\.)", R"(c:\bar)"},
       {R"(c:\.\bar)", R"(c:\bar)"},
       {R"(\)", R"(\)"},
-      //      {R"(\\)", R"(\\)"},
-      //      {R"(\\net)", R"(\\net)"},
+      {R"(\\)", R"(\)"},
+      {R"(\\net)", R"(\\net)"},
       {R"(c:\..)", R"(c:\)"},
       {R"(c:\.)", R"(c:\)"},
       // TODO: fix llvm::sys::path::remove_dots() to return "\" below.
