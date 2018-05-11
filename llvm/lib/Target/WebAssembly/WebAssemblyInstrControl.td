@@ -57,6 +57,10 @@ def BR_TABLE_I64 : I<(outs), (ins I64:$index, variable_ops),
 }
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
+// This is technically a control-flow instruction, since all it affects is the
+// IP.
+def NOP : I<(outs), (ins), [], "nop", 0x01>;
+
 // Placemarkers to indicate the start or end of a block or loop scope.
 // These use/clobber VALUE_STACK to prevent them from being moved into the
 // middle of an expression tree.

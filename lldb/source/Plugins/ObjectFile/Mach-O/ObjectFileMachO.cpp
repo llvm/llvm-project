@@ -4819,7 +4819,7 @@ void ObjectFileMachO::Dump(Stream *s) {
     GetArchitecture(header_arch);
 
     *s << ", file = '" << m_file
-       << "', arch = " << header_arch.GetArchitectureName() << "\n";
+       << "', triple = " << header_arch.GetTriple().getTriple() << "\n";
 
     SectionList *sections = GetSectionList();
     if (sections)
@@ -4867,6 +4867,21 @@ bool ObjectFileMachO::GetUUID(const llvm::MachO::mach_header &header,
   return false;
 }
 
+static const char *GetOSName(uint32_t cmd) {
+  switch (cmd) {
+  case llvm::MachO::LC_VERSION_MIN_IPHONEOS:
+    return "ios";
+  case llvm::MachO::LC_VERSION_MIN_MACOSX:
+    return "macosx";
+  case llvm::MachO::LC_VERSION_MIN_TVOS:
+    return "tvos";
+  case llvm::MachO::LC_VERSION_MIN_WATCHOS:
+    return "watchos";
+  default:
+    llvm_unreachable("unexpected LC_VERSION load command");
+  }
+}
+
 bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
                                       const lldb_private::DataExtractor &data,
                                       lldb::offset_t lc_offset,
@@ -4905,23 +4920,29 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
         if (data.GetU32(&offset, &load_cmd, 2) == NULL)
           break;
 
+        uint32_t major, minor, patch;
+        struct version_min_command version_min;
+
+        llvm::SmallString<16> os_name;
+        llvm::raw_svector_ostream os(os_name);
+
         switch (load_cmd.cmd) {
         case llvm::MachO::LC_VERSION_MIN_IPHONEOS:
-          triple.setOS(llvm::Triple::IOS);
-          return true;
-
         case llvm::MachO::LC_VERSION_MIN_MACOSX:
-          triple.setOS(llvm::Triple::MacOSX);
-          return true;
-
         case llvm::MachO::LC_VERSION_MIN_TVOS:
-          triple.setOS(llvm::Triple::TvOS);
-          return true;
-
         case llvm::MachO::LC_VERSION_MIN_WATCHOS:
-          triple.setOS(llvm::Triple::WatchOS);
+          if (load_cmd.cmdsize != sizeof(version_min))
+            break;
+          data.ExtractBytes(cmd_offset,
+                            sizeof(version_min), data.GetByteOrder(),
+                            &version_min);
+          major = version_min.version >> 16;
+          minor = (version_min.version >> 8) & 0xffu;
+          patch = version_min.version & 0xffu;
+          os << GetOSName(load_cmd.cmd) << major << '.' << minor << '.'
+             << patch;
+          triple.setOSName(os.str());
           return true;
-
         default:
           break;
         }

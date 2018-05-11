@@ -7,7 +7,7 @@
 
 # DUMP:       Disassembly of section .text:
 # DUMP-NEXT:  foo:
-# DUMP-NEXT:   0: {{.*}} -21(%rip), %eax
+# DUMP-NEXT:   50: {{.*}} -101(%rip), %eax
 
 # SYMBOL:     Symbol {
 # SYMBOL:        Name: B
@@ -18,7 +18,7 @@
 # SYMBOL-NEXT:   Other [
 # SYMBOL-NEXT:     STV_HIDDEN
 # SYMBOL-NEXT:   ]
-# SYMBOL-NEXT:   Section: .text
+# SYMBOL-NEXT:   Section: .dynsym
 # SYMBOL-NEXT: }
 
 .text

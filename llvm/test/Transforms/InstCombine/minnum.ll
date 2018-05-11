@@ -277,9 +277,8 @@ define float @fold_minnum_f32_minf_val(float %x) {
 
 define double @neg_neg(double %x, double %y) {
 ; CHECK-LABEL: @neg_neg(
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub double -0.000000e+00, [[X:%.*]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fsub double -0.000000e+00, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call double @llvm.minnum.f64(double [[NEGX]], double [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fsub double -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %negx = fsub double -0.0, %x
@@ -293,9 +292,8 @@ define double @neg_neg(double %x, double %y) {
 
 define <2 x double> @neg_neg_vec_fmf(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @neg_neg_vec_fmf(
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub reassoc <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[X:%.*]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fsub fast <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call nnan ninf <2 x double> @llvm.minnum.v2f64(<2 x double> [[NEGX]], <2 x double> [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf <2 x double> @llvm.maxnum.v2f64(<2 x double> [[X:%.*]], <2 x double> [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan ninf <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %negx = fsub reassoc <2 x double> <double -0.0, double -0.0>, %x
@@ -311,8 +309,8 @@ declare void @use(double)
 define double @neg_neg_extra_use_x(double %x, double %y) {
 ; CHECK-LABEL: @neg_neg_extra_use_x(
 ; CHECK-NEXT:    [[NEGX:%.*]] = fsub double -0.000000e+00, [[X:%.*]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fsub double -0.000000e+00, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call double @llvm.minnum.f64(double [[NEGX]], double [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.maxnum.f64(double [[X]], double [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fsub double -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    call void @use(double [[NEGX]])
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -325,9 +323,9 @@ define double @neg_neg_extra_use_x(double %x, double %y) {
 
 define double @neg_neg_extra_use_y(double %x, double %y) {
 ; CHECK-LABEL: @neg_neg_extra_use_y(
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub double -0.000000e+00, [[X:%.*]]
 ; CHECK-NEXT:    [[NEGY:%.*]] = fsub double -0.000000e+00, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call double @llvm.minnum.f64(double [[NEGX]], double [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.maxnum.f64(double [[X:%.*]], double [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fsub double -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    call void @use(double [[NEGY]])
 ; CHECK-NEXT:    ret double [[R]]
 ;

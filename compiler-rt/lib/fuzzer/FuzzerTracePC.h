@@ -80,7 +80,6 @@ class TracePC {
   template <class T> void HandleCmp(uintptr_t PC, T Arg1, T Arg2);
   size_t GetTotalPCCoverage();
   void SetUseCounters(bool UC) { UseCounters = UC; }
-  void SetUseClangCoverage(bool UCC) { UseClangCoverage = UCC; }
   void SetUseValueProfile(bool VP) { UseValueProfile = VP; }
   void SetPrintNewPCs(bool P) { DoPrintNewPCs = P; }
   void SetPrintNewFuncs(size_t P) { NumPrintNewFuncs = P; }
@@ -93,8 +92,6 @@ class TracePC {
       memset(Counters(), 0, GetNumPCs());
     ClearExtraCounters();
     ClearInlineCounters();
-    if (UseClangCoverage)
-      ClearClangCounters();
   }
 
   void ClearInlineCounters();
@@ -105,7 +102,9 @@ class TracePC {
   void PrintModuleInfo();
 
   void PrintCoverage();
-  void DumpCoverage();
+
+  template<class CallBack>
+  void IterateCoveredFunctions(CallBack CB);
 
   void AddValueForMemcmp(void *caller_pc, const void *s1, const void *s2,
                          size_t n, bool StopAtZero);
@@ -135,7 +134,6 @@ class TracePC {
 private:
   bool UseCounters = false;
   bool UseValueProfile = false;
-  bool UseClangCoverage = false;
   bool DoPrintNewPCs = false;
   size_t NumPrintNewFuncs = 0;
 
@@ -249,18 +247,6 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
                          FirstFeature, Handle8bitCounter);
       FirstFeature += 8 * (ModuleCounters[i].Stop - ModuleCounters[i].Start);
     }
-  }
-
-  if (size_t NumClangCounters = ClangCountersEnd() - ClangCountersBegin()) {
-    auto P = ClangCountersBegin();
-    for (size_t Idx = 0; Idx < NumClangCounters; Idx++)
-      if (auto Cnt = P[Idx]) {
-        if (UseCounters)
-          HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Cnt));
-        else
-          HandleFeature(FirstFeature + Idx);
-      }
-    FirstFeature += NumClangCounters;
   }
 
   ForEachNonZeroByte(ExtraCountersBegin(), ExtraCountersEnd(), FirstFeature,

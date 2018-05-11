@@ -189,8 +189,9 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
   QualType ObjectType = ObjectTypePtr.get();
 
   LookupResult R(*this, TName, Name.getLocStart(), LookupOrdinaryName);
-  LookupTemplateName(R, S, SS, ObjectType, EnteringContext,
-                     MemberOfUnknownSpecialization);
+  if (LookupTemplateName(R, S, SS, ObjectType, EnteringContext,
+                         MemberOfUnknownSpecialization))
+    return TNK_Non_template;
   if (R.empty()) return TNK_Non_template;
   if (R.isAmbiguous()) {
     // Suppress diagnostics;  we'll redo this lookup later.
@@ -252,8 +253,10 @@ bool Sema::isDeductionGuideName(Scope *S, const IdentifierInfo &Name,
   // syntactic form of a deduction guide is enough to identify it even
   // if we can't look up the template name at all.
   LookupResult R(*this, DeclarationName(&Name), NameLoc, LookupOrdinaryName);
-  LookupTemplateName(R, S, SS, /*ObjectType*/QualType(),
-                     /*EnteringContext*/false, MemberOfUnknownSpecialization);
+  if (LookupTemplateName(R, S, SS, /*ObjectType*/ QualType(),
+                         /*EnteringContext*/ false,
+                         MemberOfUnknownSpecialization))
+    return false;
 
   if (R.empty()) return false;
   if (R.isAmbiguous()) {
@@ -298,39 +301,40 @@ bool Sema::DiagnoseUnknownTemplateName(const IdentifierInfo &II,
   return true;
 }
 
-void Sema::LookupTemplateName(LookupResult &Found,
+bool Sema::LookupTemplateName(LookupResult &Found,
                               Scope *S, CXXScopeSpec &SS,
                               QualType ObjectType,
                               bool EnteringContext,
-                              bool &MemberOfUnknownSpecialization) {
+                              bool &MemberOfUnknownSpecialization,
+                              SourceLocation TemplateKWLoc) {
   // Determine where to perform name lookup
   MemberOfUnknownSpecialization = false;
   DeclContext *LookupCtx = nullptr;
-  bool isDependent = false;
+  bool IsDependent = false;
   if (!ObjectType.isNull()) {
     // This nested-name-specifier occurs in a member access expression, e.g.,
     // x->B::f, and we are looking into the type of the object.
     assert(!SS.isSet() && "ObjectType and scope specifier cannot coexist");
     LookupCtx = computeDeclContext(ObjectType);
-    isDependent = ObjectType->isDependentType();
-    assert((isDependent || !ObjectType->isIncompleteType() ||
+    IsDependent = !LookupCtx;
+    assert((IsDependent || !ObjectType->isIncompleteType() ||
             ObjectType->castAs<TagType>()->isBeingDefined()) &&
            "Caller should have completed object type");
 
     // Template names cannot appear inside an Objective-C class or object type.
     if (ObjectType->isObjCObjectOrInterfaceType()) {
       Found.clear();
-      return;
+      return false;
     }
   } else if (SS.isSet()) {
     // This nested-name-specifier occurs after another nested-name-specifier,
     // so long into the context associated with the prior nested-name-specifier.
     LookupCtx = computeDeclContext(SS, EnteringContext);
-    isDependent = isDependentScopeSpecifier(SS);
+    IsDependent = !LookupCtx;
 
     // The declaration context must be complete.
     if (LookupCtx && RequireCompleteDeclContext(SS, LookupCtx))
-      return;
+      return true;
   }
 
   bool ObjectTypeSearchedInScope = false;
@@ -341,34 +345,43 @@ void Sema::LookupTemplateName(LookupResult &Found,
     // expression or the declaration context associated with a prior
     // nested-name-specifier.
     LookupQualifiedName(Found, LookupCtx);
-    if (!ObjectType.isNull() && Found.empty()) {
-      // C++ [basic.lookup.classref]p1:
-      //   In a class member access expression (5.2.5), if the . or -> token is
-      //   immediately followed by an identifier followed by a <, the
-      //   identifier must be looked up to determine whether the < is the
-      //   beginning of a template argument list (14.2) or a less-than operator.
-      //   The identifier is first looked up in the class of the object
-      //   expression. If the identifier is not found, it is then looked up in
-      //   the context of the entire postfix-expression and shall name a class
-      //   or function template.
-      if (S) LookupName(Found, S);
-      ObjectTypeSearchedInScope = true;
-      AllowFunctionTemplatesInLookup = false;
-    }
-  } else if (isDependent && (!S || ObjectType.isNull())) {
-    // We cannot look into a dependent object type or nested nme
-    // specifier.
-    MemberOfUnknownSpecialization = true;
-    return;
-  } else {
-    // Perform unqualified name lookup in the current scope.
-    LookupName(Found, S);
 
-    if (!ObjectType.isNull())
-      AllowFunctionTemplatesInLookup = false;
+    // FIXME: The C++ standard does not clearly specify what happens in the
+    // case where the object type is dependent, and implementations vary. In
+    // Clang, we treat a name after a . or -> as a template-name if lookup
+    // finds a non-dependent member or member of the current instantiation that
+    // is a type template, or finds no such members and lookup in the context
+    // of the postfix-expression finds a type template. In the latter case, the
+    // name is nonetheless dependent, and we may resolve it to a member of an
+    // unknown specialization when we come to instantiate the template.
+    IsDependent |= Found.wasNotFoundInCurrentInstantiation();
   }
 
-  if (Found.empty() && !isDependent) {
+  if (!SS.isSet() && (ObjectType.isNull() || Found.empty())) {
+    // C++ [basic.lookup.classref]p1:
+    //   In a class member access expression (5.2.5), if the . or -> token is
+    //   immediately followed by an identifier followed by a <, the
+    //   identifier must be looked up to determine whether the < is the
+    //   beginning of a template argument list (14.2) or a less-than operator.
+    //   The identifier is first looked up in the class of the object
+    //   expression. If the identifier is not found, it is then looked up in
+    //   the context of the entire postfix-expression and shall name a class
+    //   template.
+    if (S)
+      LookupName(Found, S);
+
+    if (!ObjectType.isNull()) {
+      //  FIXME: We should filter out all non-type templates here, particularly
+      //  variable templates and concepts. But the exclusion of alias templates
+      //  and template template parameters is a wording defect.
+      AllowFunctionTemplatesInLookup = false;
+      ObjectTypeSearchedInScope = true;
+    }
+
+    IsDependent |= Found.wasNotFoundInCurrentInstantiation();
+  }
+
+  if (Found.empty() && !IsDependent) {
     // If we did not find any names, attempt to correct any typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
@@ -402,11 +415,27 @@ void Sema::LookupTemplateName(LookupResult &Found,
     }
   }
 
+  NamedDecl *ExampleLookupResult =
+      Found.empty() ? nullptr : Found.getRepresentativeDecl();
   FilterAcceptableTemplateNames(Found, AllowFunctionTemplatesInLookup);
   if (Found.empty()) {
-    if (isDependent)
+    if (IsDependent) {
       MemberOfUnknownSpecialization = true;
-    return;
+      return false;
+    }
+
+    // If a 'template' keyword was used, a lookup that finds only non-template
+    // names is an error.
+    if (ExampleLookupResult && TemplateKWLoc.isValid()) {
+      Diag(Found.getNameLoc(), diag::err_template_kw_refers_to_non_template)
+        << Found.getLookupName() << SS.getRange();
+      Diag(ExampleLookupResult->getLocation(),
+           diag::note_template_kw_refers_to_non_template)
+          << Found.getLookupName();
+      return true;
+    }
+
+    return false;
   }
 
   if (S && !ObjectType.isNull() && !ObjectTypeSearchedInScope &&
@@ -453,6 +482,8 @@ void Sema::LookupTemplateName(LookupResult &Found,
       }
     }
   }
+
+  return false;
 }
 
 void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
@@ -4069,15 +4100,17 @@ Sema::BuildQualifiedTemplateIdExpr(CXXScopeSpec &SS,
 
   bool MemberOfUnknownSpecialization;
   LookupResult R(*this, NameInfo, LookupOrdinaryName);
-  LookupTemplateName(R, (Scope*)nullptr, SS, QualType(), /*Entering*/ false,
-                     MemberOfUnknownSpecialization);
+  if (LookupTemplateName(R, (Scope *)nullptr, SS, QualType(),
+                         /*Entering*/false, MemberOfUnknownSpecialization,
+                         TemplateKWLoc))
+    return ExprError();
 
   if (R.isAmbiguous())
     return ExprError();
 
   if (R.empty()) {
-    Diag(NameInfo.getLoc(), diag::err_template_kw_refers_to_non_template)
-      << NameInfo.getName() << SS.getRange();
+    Diag(NameInfo.getLoc(), diag::err_no_member)
+      << NameInfo.getName() << DC << SS.getRange();
     return ExprError();
   }
 
@@ -4140,17 +4173,20 @@ TemplateNameKind Sema::ActOnDependentTemplateName(Scope *S,
     TemplateNameKind TNK = isTemplateName(S, SS, TemplateKWLoc.isValid(), Name,
                                           ObjectType, EnteringContext, Result,
                                           MemberOfUnknownSpecialization);
-    if (TNK == TNK_Non_template && LookupCtx->isDependentContext() &&
-        isa<CXXRecordDecl>(LookupCtx) &&
-        (!cast<CXXRecordDecl>(LookupCtx)->hasDefinition() ||
-         cast<CXXRecordDecl>(LookupCtx)->hasAnyDependentBases())) {
+    if (TNK == TNK_Non_template && MemberOfUnknownSpecialization) {
       // This is a dependent template. Handle it below.
     } else if (TNK == TNK_Non_template) {
-      Diag(Name.getLocStart(),
-           diag::err_template_kw_refers_to_non_template)
-        << GetNameFromUnqualifiedId(Name).getName()
-        << Name.getSourceRange()
-        << TemplateKWLoc;
+      // Do the lookup again to determine if this is a "nothing found" case or
+      // a "not a template" case. FIXME: Refactor isTemplateName so we don't
+      // need to do this.
+      DeclarationNameInfo DNI = GetNameFromUnqualifiedId(Name);
+      LookupResult R(*this, DNI.getName(), Name.getLocStart(),
+                     LookupOrdinaryName);
+      bool MOUS;
+      if (!LookupTemplateName(R, S, SS, ObjectType.get(), EnteringContext,
+                              MOUS, TemplateKWLoc))
+        Diag(Name.getLocStart(), diag::err_no_member)
+            << DNI.getName() << LookupCtx << SS.getRange();
       return TNK_Non_template;
     } else {
       // We found something; return it.

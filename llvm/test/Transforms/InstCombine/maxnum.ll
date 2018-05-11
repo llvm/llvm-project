@@ -253,9 +253,8 @@ define float @fold_maxnum_f32_neginf_val(float %x) {
 
 define <2 x float> @neg_neg(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @neg_neg(
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.maxnum.v2f32(<2 x float> [[NEGX]], <2 x float> [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.minnum.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negx = fsub <2 x float> <float -0.0, float -0.0>, %x
@@ -265,13 +264,11 @@ define <2 x float> @neg_neg(<2 x float> %x, <2 x float> %y) {
 }
 
 ; FMF is not required, but it should be propagated from the intrinsic (not the fnegs).
-; Also, make sure this works with vectors.
 
 define float @neg_neg_vec_fmf(float %x, float %y) {
 ; CHECK-LABEL: @neg_neg_vec_fmf(
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub arcp float -0.000000e+00, [[X:%.*]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fsub afn float -0.000000e+00, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call fast float @llvm.maxnum.f32(float [[NEGX]], float [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fsub fast float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %negx = fsub arcp float -0.0, %x
@@ -287,8 +284,8 @@ declare void @use(float)
 define float @neg_neg_extra_use_x(float %x, float %y) {
 ; CHECK-LABEL: @neg_neg_extra_use_x(
 ; CHECK-NEXT:    [[NEGX:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fsub float -0.000000e+00, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maxnum.f32(float [[NEGX]], float [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -301,9 +298,9 @@ define float @neg_neg_extra_use_x(float %x, float %y) {
 
 define float @neg_neg_extra_use_y(float %x, float %y) {
 ; CHECK-LABEL: @neg_neg_extra_use_y(
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
 ; CHECK-NEXT:    [[NEGY:%.*]] = fsub float -0.000000e+00, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maxnum.f32(float [[NEGX]], float [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    call void @use(float [[NEGY]])
 ; CHECK-NEXT:    ret float [[R]]
 ;

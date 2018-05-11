@@ -44,7 +44,7 @@
 ; Verify that the .debug_str_offsets section is there and that it starts
 ; with an 8-byte header, followed by offsets into the .debug_str section.
 ; MONOLITHIC:          .debug_str_offsets contents:
-; MONOLITHIC-NEXT:     Contribution size = 32, Format = DWARF32, Version = 5
+; MONOLITHIC-NEXT:     Contribution size = 36, Format = DWARF32, Version = 5
 ; MONOLITHIC-NEXT:     0x00000008: 00000000
 ; MONOLITHIC-NEXT:     0x0000000c: [[STRING2]]
 ; MONOLITHIC-NEXT:     0x00000010: [[STRING3]]
@@ -91,11 +91,11 @@
 ; Check the string offsets sections in both the main and the .dwo files and
 ; verify that the extracted string offsets are referenced correctly.
 ; SPLIT:      .debug_str_offsets contents:
-; SPLIT-NEXT: 0x00000000: Contribution size = 8, Format = DWARF32, Version = 5
+; SPLIT-NEXT: 0x00000000: Contribution size = 12, Format = DWARF32, Version = 5
 ; SPLIT-NEXT: 0x00000008: 00000000{{.*}}
 ; SPLIT-NEXT: 0x0000000c: [[STRING2SPLIT]]
 ; SPLIT:      .debug_str_offsets.dwo contents:
-; SPLIT-NEXT: 0x00000000: Contribution size = 32, Format = DWARF32, Version = 5
+; SPLIT-NEXT: 0x00000000: Contribution size = 36, Format = DWARF32, Version = 5
 ; SPLIT-NEXT: 0x00000008: 00000000{{.*}}
 ; SPLIT-NEXT: 0x0000000c: [[STRING2DWO]]{{.*}}
 ; SPLIT-NEXT: 0x00000010: [[STRING3DWO]]

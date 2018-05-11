@@ -1,3 +1,3 @@
-RUN: %cpp_compiler %S/SimpleTest.cpp -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters,trace-pc-guard -fsanitize-coverage=trace-pc -o %t-SimpleTest-TracePC
+RUN: %cpp_compiler %S/SimpleTest.cpp -fsanitize-coverage=0 -fsanitize-coverage=trace-pc -o %t-SimpleTest-TracePC
 CHECK: BINGO
 RUN: not %t-SimpleTest-TracePC -runs=1000000 -seed=1 2>&1 | FileCheck %s

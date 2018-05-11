@@ -295,7 +295,7 @@ private:
   unsigned getNumPreds(const BasicBlock *BB) {
     unsigned &NP = BBNumPreds[BB];
     if (NP == 0)
-      NP = std::distance(pred_begin(BB), pred_end(BB)) + 1;
+      NP = pred_size(BB) + 1;
     return NP - 1;
   }
 

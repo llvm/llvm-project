@@ -121,3 +121,110 @@ define i8 @rotate8_not_safe(i8 %v, i32 %shamt) {
   ret i8 %ret
 }
 
+; The next two tests mask sure we narrower (x << (x & 15)) | (x >> (-x & 15))
+; when types have been promoted.
+; FIXME: We should be able to narrow this.
+
+define i16 @rotate16_neg_mask(i16 %v, i16 %shamt) {
+; CHECK-LABEL: @rotate16_neg_mask(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[V:%.*]] to i32
+; CHECK-NEXT:    [[RSHAMT:%.*]] = and i16 [[SHAMT:%.*]], 15
+; CHECK-NEXT:    [[RSHAMTCONV:%.*]] = zext i16 [[RSHAMT]] to i32
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[CONV]], [[RSHAMTCONV]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i16 0, [[SHAMT]]
+; CHECK-NEXT:    [[LSHAMT:%.*]] = and i16 [[NEG]], 15
+; CHECK-NEXT:    [[LSHAMTCONV:%.*]] = zext i16 [[LSHAMT]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV]], [[LSHAMTCONV]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[OR]] to i16
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %conv = zext i16 %v to i32
+  %rshamt = and i16 %shamt, 15
+  %rshamtconv = zext i16 %rshamt to i32
+  %shr = lshr i32 %conv, %rshamtconv
+  %neg = sub i16 0, %shamt
+  %lshamt = and i16 %neg, 15
+  %lshamtconv = zext i16 %lshamt to i32
+  %shl = shl i32 %conv, %lshamtconv
+  %or = or i32 %shr, %shl
+  %ret = trunc i32 %or to i16
+  ret i16 %ret
+}
+
+define i8 @rotate8_neg_mask(i8 %v, i8 %shamt) {
+; CHECK-LABEL: @rotate8_neg_mask(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[V:%.*]] to i32
+; CHECK-NEXT:    [[RSHAMT:%.*]] = and i8 [[SHAMT:%.*]], 7
+; CHECK-NEXT:    [[RSHAMTCONV:%.*]] = zext i8 [[RSHAMT]] to i32
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[CONV]], [[RSHAMTCONV]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[SHAMT]]
+; CHECK-NEXT:    [[LSHAMT:%.*]] = and i8 [[NEG]], 7
+; CHECK-NEXT:    [[LSHAMTCONV:%.*]] = zext i8 [[LSHAMT]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV]], [[LSHAMTCONV]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[OR]] to i8
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %conv = zext i8 %v to i32
+  %rshamt = and i8 %shamt, 7
+  %rshamtconv = zext i8 %rshamt to i32
+  %shr = lshr i32 %conv, %rshamtconv
+  %neg = sub i8 0, %shamt
+  %lshamt = and i8 %neg, 7
+  %lshamtconv = zext i8 %lshamt to i32
+  %shl = shl i32 %conv, %lshamtconv
+  %or = or i32 %shr, %shl
+  %ret = trunc i32 %or to i8
+  ret i8 %ret
+}
+
+; The next two types have a shift amount that is already i32 so we would still
+; need a truncate for it going into the rotate pattern.
+; FIXME: We can narrow this, but we would still need a trunc on the shift amt.
+
+define i16 @rotate16_neg_mask_wide_amount(i16 %v, i32 %shamt) {
+; CHECK-LABEL: @rotate16_neg_mask_wide_amount(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[V:%.*]] to i32
+; CHECK-NEXT:    [[RSHAMT:%.*]] = and i32 [[SHAMT:%.*]], 15
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[CONV]], [[RSHAMT]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[SHAMT]]
+; CHECK-NEXT:    [[LSHAMT:%.*]] = and i32 [[NEG]], 15
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV]], [[LSHAMT]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[OR]] to i16
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %conv = zext i16 %v to i32
+  %rshamt = and i32 %shamt, 15
+  %shr = lshr i32 %conv, %rshamt
+  %neg = sub i32 0, %shamt
+  %lshamt = and i32 %neg, 15
+  %shl = shl i32 %conv, %lshamt
+  %or = or i32 %shr, %shl
+  %ret = trunc i32 %or to i16
+  ret i16 %ret
+}
+
+define i8 @rotate8_neg_mask_wide_amount(i8 %v, i32 %shamt) {
+; CHECK-LABEL: @rotate8_neg_mask_wide_amount(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[V:%.*]] to i32
+; CHECK-NEXT:    [[RSHAMT:%.*]] = and i32 [[SHAMT:%.*]], 7
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[CONV]], [[RSHAMT]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[SHAMT]]
+; CHECK-NEXT:    [[LSHAMT:%.*]] = and i32 [[NEG]], 7
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV]], [[LSHAMT]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[OR]] to i8
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %conv = zext i8 %v to i32
+  %rshamt = and i32 %shamt, 7
+  %shr = lshr i32 %conv, %rshamt
+  %neg = sub i32 0, %shamt
+  %lshamt = and i32 %neg, 7
+  %shl = shl i32 %conv, %lshamt
+  %or = or i32 %shr, %shl
+  %ret = trunc i32 %or to i8
+  ret i8 %ret
+}

@@ -718,10 +718,10 @@ def fprofile_instr_use_EQ : Joined<["-"], "fprofile-instr-use=">,
     Group<f_Group>, Flags<[CoreOption]>,
     HelpText<"Use instrumentation data for profile-guided optimization">;
 def fcoverage_mapping : Flag<["-"], "fcoverage-mapping">,
-    Group<f_Group>, Flags<[CC1Option]>,
+    Group<f_Group>, Flags<[CC1Option, CoreOption]>,
     HelpText<"Generate coverage mapping to enable code coverage analysis">;
 def fno_coverage_mapping : Flag<["-"], "fno-coverage-mapping">,
-    Group<f_Group>, Flags<[DriverOption]>,
+    Group<f_Group>, Flags<[DriverOption, CoreOption]>,
     HelpText<"Disable code coverage analysis">;
 def fprofile_generate : Flag<["-"], "fprofile-generate">,
     Group<f_Group>, Flags<[DriverOption]>,

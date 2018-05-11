@@ -364,13 +364,12 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombiner &IC,
     // UDiv and URem can be truncated if all the truncated bits are zero.
     uint32_t OrigBitWidth = OrigTy->getScalarSizeInBits();
     uint32_t BitWidth = Ty->getScalarSizeInBits();
-    if (BitWidth < OrigBitWidth) {
-      APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
-      if (IC.MaskedValueIsZero(I->getOperand(0), Mask, 0, CxtI) &&
-          IC.MaskedValueIsZero(I->getOperand(1), Mask, 0, CxtI)) {
-        return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
-               canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
-      }
+    assert(BitWidth < OrigBitWidth && "Unexpected bitwidths!");
+    APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+    if (IC.MaskedValueIsZero(I->getOperand(0), Mask, 0, CxtI) &&
+        IC.MaskedValueIsZero(I->getOperand(1), Mask, 0, CxtI)) {
+      return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
+             canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
     }
     break;
   }

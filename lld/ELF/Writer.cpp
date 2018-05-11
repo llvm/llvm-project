@@ -697,11 +697,12 @@ enum RankFlags {
   RF_NOT_INTERP = 1 << 17,
   RF_NOT_ALLOC = 1 << 16,
   RF_WRITE = 1 << 15,
-  RF_EXEC_WRITE = 1 << 13,
-  RF_EXEC = 1 << 12,
-  RF_NON_TLS_BSS = 1 << 11,
-  RF_NON_TLS_BSS_RO = 1 << 10,
-  RF_NOT_TLS = 1 << 9,
+  RF_EXEC_WRITE = 1 << 14,
+  RF_EXEC = 1 << 13,
+  RF_NON_TLS_BSS = 1 << 12,
+  RF_NON_TLS_BSS_RO = 1 << 11,
+  RF_NOT_TLS = 1 << 10,
+  RF_ALLOC_FIRST = 1 << 9,
   RF_BSS = 1 << 8,
   RF_NOTE = 1 << 7,
   RF_PPC_NOT_TOCBSS = 1 << 6,
@@ -731,6 +732,16 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   // so debug info doesn't change addresses in actual code.
   if (!(Sec->Flags & SHF_ALLOC))
     return Rank | RF_NOT_ALLOC;
+
+  // Place .dynsym and .dynstr at the beginning of SHF_ALLOC
+  // sections. We want to do this to mitigate the possibility that
+  // huge .dynsym and .dynstr sections placed between text sections
+  // cause relocation overflow.  Note: .dynstr has SHT_STRTAB type and
+  // SHF_ALLOC attribute, whereas sections that only have SHT_STRTAB
+  // but without SHF_ALLOC is placed at the end. All "Sec" reaching
+  // here has SHF_ALLOC bit set.
+  if (Sec->Type == SHT_DYNSYM || Sec->Type == SHT_STRTAB)
+    return Rank | RF_ALLOC_FIRST;
 
   // Sort sections based on their access permission in the following
   // order: R, RX, RWX, RW.  This order is based on the following

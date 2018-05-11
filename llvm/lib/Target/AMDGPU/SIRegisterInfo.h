@@ -227,6 +227,9 @@ public:
     // Not a callee saved register.
     return AMDGPU::SGPR30_SGPR31;
   }
+  const TargetRegisterClass *
+  getConstrainedRegClassForOperand(const MachineOperand &MO,
+                                 const MachineRegisterInfo &MRI) const override;
 
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,

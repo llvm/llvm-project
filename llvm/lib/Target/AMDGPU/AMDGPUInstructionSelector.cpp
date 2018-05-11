@@ -17,6 +17,9 @@
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
+#include "AMDGPUTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -31,10 +34,46 @@
 
 using namespace llvm;
 
+#define GET_GLOBALISEL_IMPL
+#include "AMDGPUGenGlobalISel.inc"
+#undef GET_GLOBALISEL_IMPL
+
 AMDGPUInstructionSelector::AMDGPUInstructionSelector(
-    const SISubtarget &STI, const AMDGPURegisterBankInfo &RBI)
+    const SISubtarget &STI, const AMDGPURegisterBankInfo &RBI,
+    const AMDGPUTargetMachine &TM)
     : InstructionSelector(), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI), AMDGPUASI(STI.getAMDGPUAS()) {}
+      TRI(*STI.getRegisterInfo()), RBI(RBI), TM(TM),
+      STI(STI),
+      EnableLateStructurizeCFG(AMDGPUTargetMachine::EnableLateStructurizeCFG),
+#define GET_GLOBALISEL_PREDICATES_INIT
+#include "AMDGPUGenGlobalISel.inc"
+#undef GET_GLOBALISEL_PREDICATES_INIT
+#define GET_GLOBALISEL_TEMPORARIES_INIT
+#include "AMDGPUGenGlobalISel.inc"
+#undef GET_GLOBALISEL_TEMPORARIES_INIT
+      ,AMDGPUASI(STI.getAMDGPUAS())
+{
+}
+
+const char *AMDGPUInstructionSelector::getName() { return DEBUG_TYPE; }
+
+bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
+  MachineBasicBlock *BB = I.getParent();
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  I.setDesc(TII.get(TargetOpcode::COPY));
+  for (const MachineOperand &MO : I.operands()) {
+    if (TargetRegisterInfo::isPhysicalRegister(MO.getReg()))
+      continue;
+
+    const TargetRegisterClass *RC =
+            TRI.getConstrainedRegClassForOperand(MO, MRI);
+    if (!RC)
+      continue;
+    RBI.constrainGenericRegister(MO.getReg(), *RC, MRI);
+  }
+  return true;
+}
 
 MachineOperand
 AMDGPUInstructionSelector::getSubOperand64(MachineOperand &MO,
@@ -416,8 +455,12 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
   switch (I.getOpcode()) {
   default:
     break;
+  case TargetOpcode::G_OR:
+    return selectImpl(I, CoverageInfo);
   case TargetOpcode::G_ADD:
     return selectG_ADD(I);
+  case TargetOpcode::G_BITCAST:
+    return selectCOPY(I);
   case TargetOpcode::G_CONSTANT:
     return selectG_CONSTANT(I);
   case TargetOpcode::G_GEP:
@@ -428,4 +471,14 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
     return selectG_STORE(I);
   }
   return false;
+}
+
+///
+/// This will select either an SGPR or VGPR operand and will save us from
+/// having to write an extra tablegen pattern.
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVSRC0(MachineOperand &Root) const {
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.add(Root); }
+  }};
 }

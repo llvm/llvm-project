@@ -3876,6 +3876,31 @@ def : Pat<(masked_store addr:$dst, Mask,
 
 }
 
+// This matches the more recent codegen from clang that avoids emitting a 512
+// bit masked store directly. Codegen will widen 128-bit masked store to 512
+// bits on AVX512F only targets.
+multiclass avx512_store_scalar_lowering_subreg2<string InstrStr,
+                                               AVX512VLVectorVTInfo _,
+                                               dag Mask512, dag Mask128,
+                                               RegisterClass MaskRC,
+                                               SubRegIndex subreg> {
+
+// AVX512F pattern.
+def : Pat<(masked_store addr:$dst, Mask512,
+             (_.info512.VT (insert_subvector undef,
+                               (_.info128.VT _.info128.RC:$src),
+                               (iPTR 0)))),
+          (!cast<Instruction>(InstrStr#mrk) addr:$dst,
+                      (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
+                      (COPY_TO_REGCLASS _.info128.RC:$src, _.info128.FRC))>;
+
+// AVX512VL pattern.
+def : Pat<(masked_store addr:$dst, Mask128, (_.info128.VT _.info128.RC:$src)),
+          (!cast<Instruction>(InstrStr#mrk) addr:$dst,
+                      (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
+                      (COPY_TO_REGCLASS _.info128.RC:$src, _.info128.FRC))>;
+}
+
 multiclass avx512_load_scalar_lowering<string InstrStr, AVX512VLVectorVTInfo _,
                                        dag Mask, RegisterClass MaskRC> {
 
@@ -3926,6 +3951,48 @@ def : Pat<(_.info128.VT (extract_subvector
 
 }
 
+// This matches the more recent codegen from clang that avoids emitting a 512
+// bit masked load directly. Codegen will widen 128-bit masked load to 512
+// bits on AVX512F only targets.
+multiclass avx512_load_scalar_lowering_subreg2<string InstrStr,
+                                              AVX512VLVectorVTInfo _,
+                                              dag Mask512, dag Mask128,
+                                              RegisterClass MaskRC,
+                                              SubRegIndex subreg> {
+// AVX512F patterns.
+def : Pat<(_.info128.VT (extract_subvector
+                         (_.info512.VT (masked_load addr:$srcAddr, Mask512,
+                                        (_.info512.VT (bitconvert
+                                                       (v16i32 immAllZerosV))))),
+                           (iPTR 0))),
+          (!cast<Instruction>(InstrStr#rmkz)
+                      (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
+                      addr:$srcAddr)>;
+
+def : Pat<(_.info128.VT (extract_subvector
+                (_.info512.VT (masked_load addr:$srcAddr, Mask512,
+                      (_.info512.VT (insert_subvector undef,
+                            (_.info128.VT (X86vzmovl _.info128.RC:$src)),
+                            (iPTR 0))))),
+                (iPTR 0))),
+          (!cast<Instruction>(InstrStr#rmk) _.info128.RC:$src,
+                      (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
+                      addr:$srcAddr)>;
+
+// AVX512Vl patterns.
+def : Pat<(_.info128.VT (masked_load addr:$srcAddr, Mask128,
+                         (_.info128.VT (bitconvert (v4i32 immAllZerosV))))),
+          (!cast<Instruction>(InstrStr#rmkz)
+                      (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
+                      addr:$srcAddr)>;
+
+def : Pat<(_.info128.VT (masked_load addr:$srcAddr, Mask128,
+                         (_.info128.VT (X86vzmovl _.info128.RC:$src)))),
+          (!cast<Instruction>(InstrStr#rmk) _.info128.RC:$src,
+                      (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF), MaskRC:$mask, subreg)), VK1WM),
+                      addr:$srcAddr)>;
+}
+
 defm : avx512_move_scalar_lowering<"VMOVSSZ", X86Movss, fp32imm0, v4f32x_info>;
 defm : avx512_move_scalar_lowering<"VMOVSDZ", X86Movsd, fp64imm0, v2f64x_info>;
 
@@ -3936,12 +4003,62 @@ defm : avx512_store_scalar_lowering_subreg<"VMOVSSZ", avx512vl_f32_info,
 defm : avx512_store_scalar_lowering_subreg<"VMOVSDZ", avx512vl_f64_info,
                    (v8i1 (bitconvert (i8 (and GR8:$mask, (i8 1))))), GR8, sub_8bit>;
 
+defm : avx512_store_scalar_lowering_subreg2<"VMOVSSZ", avx512vl_f32_info,
+                   (v16i1 (insert_subvector
+                           (v16i1 immAllZerosV),
+                           (v4i1 (extract_subvector
+                                  (v8i1 (bitconvert (and GR8:$mask, (i8 1)))),
+                                  (iPTR 0))),
+                           (iPTR 0))),
+                   (v4i1 (extract_subvector
+                          (v8i1 (bitconvert (and GR8:$mask, (i8 1)))),
+                          (iPTR 0))), GR8, sub_8bit>;
+defm : avx512_store_scalar_lowering_subreg2<"VMOVSDZ", avx512vl_f64_info,
+                   (v8i1
+                    (extract_subvector
+                     (v16i1
+                      (insert_subvector
+                       (v16i1 immAllZerosV),
+                       (v2i1 (extract_subvector
+                              (v8i1 (bitconvert (i8 (and GR8:$mask, (i8 1))))),
+                              (iPTR 0))),
+                       (iPTR 0))),
+                     (iPTR 0))),
+                   (v2i1 (extract_subvector
+                          (v8i1 (bitconvert (i8 (and GR8:$mask, (i8 1))))),
+                          (iPTR 0))), GR8, sub_8bit>;
+
 defm : avx512_load_scalar_lowering<"VMOVSSZ", avx512vl_f32_info,
                    (v16i1 (bitconvert (i16 (trunc (and GR32:$mask, (i32 1)))))), GR32>;
 defm : avx512_load_scalar_lowering_subreg<"VMOVSSZ", avx512vl_f32_info,
                    (v16i1 (bitconvert (i16 (and GR16:$mask, (i16 1))))), GR16, sub_16bit>;
 defm : avx512_load_scalar_lowering_subreg<"VMOVSDZ", avx512vl_f64_info,
                    (v8i1 (bitconvert (i8 (and GR8:$mask, (i8 1))))), GR8, sub_8bit>;
+
+defm : avx512_load_scalar_lowering_subreg2<"VMOVSSZ", avx512vl_f32_info,
+                   (v16i1 (insert_subvector
+                           (v16i1 immAllZerosV),
+                           (v4i1 (extract_subvector
+                                  (v8i1 (bitconvert (and GR8:$mask, (i8 1)))),
+                                  (iPTR 0))),
+                           (iPTR 0))),
+                   (v4i1 (extract_subvector
+                          (v8i1 (bitconvert (and GR8:$mask, (i8 1)))),
+                          (iPTR 0))), GR8, sub_8bit>;
+defm : avx512_load_scalar_lowering_subreg2<"VMOVSDZ", avx512vl_f64_info,
+                   (v8i1
+                    (extract_subvector
+                     (v16i1
+                      (insert_subvector
+                       (v16i1 immAllZerosV),
+                       (v2i1 (extract_subvector
+                              (v8i1 (bitconvert (i8 (and GR8:$mask, (i8 1))))),
+                              (iPTR 0))),
+                       (iPTR 0))),
+                     (iPTR 0))),
+                   (v2i1 (extract_subvector
+                          (v8i1 (bitconvert (i8 (and GR8:$mask, (i8 1))))),
+                          (iPTR 0))), GR8, sub_8bit>;
 
 def : Pat<(f32 (X86selects (scalar_to_vector GR8:$mask),
                            (f32 FR32X:$src1), (f32 FR32X:$src2))),

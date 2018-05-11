@@ -360,7 +360,8 @@ class Test:
         """
         return self.suite.config.is_early
 
-    def getJUnitXML(self):
+    def writeJUnitXML(self, fil):
+        """Write the test's report xml representation to a file handle."""
         test_name = escape(self.path_in_suite[-1])
         test_path = self.path_in_suite[:-1]
         safe_test_path = [x.replace(".","_") for x in test_path]
@@ -370,14 +371,15 @@ class Test:
             class_name = safe_name + "." + "/".join(safe_test_path) 
         else:
             class_name = safe_name + "." + safe_name
-
-        xml = "<testcase classname='" + class_name + "' name='" + \
-            test_name + "'"
-        xml += " time='{:.2f}'".format(
-            self.result.elapsed if self.result.elapsed is not None else 0.0)
+        testcase_template = u"<testcase classname='{class_name}' name='{test_name}' time='{time:.2f}'"
+        elapsed_time = self.result.elapsed if self.result.elapsed is not None else 0.0
+        testcase_xml = testcase_template.format(class_name=class_name, test_name=test_name, time=elapsed_time)
+        fil.write(testcase_xml)
         if self.result.code.isFailure:
-            xml += ">\n\t<failure >\n" + escape(self.result.output)
-            xml += "\n\t</failure>\n</testcase>"
+            fil.write(u">\n\t<failure >\n")
+            fil.write(escape(self.result.output))
+            fil.write(u"\n\t</failure>\n</testcase>")
+        elif self.result.code == UNSUPPORTED:
+            fil.write(u">\n\t<skipped />\n</testcase>\n")
         else:
-            xml += "/>"
-        return xml
+            fil.write(u"/>")
