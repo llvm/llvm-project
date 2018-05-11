@@ -443,10 +443,14 @@ void __csan_large_store(csi_id_t store_id, void *addr, size_t size,
 
 CILKSAN_API
 void __csi_after_alloca(const csi_id_t alloca_id, const void *addr, uint64_t total_size, uint64_t isStaticAlloca) {
-  if (!alloca_pc[alloca_id])
-    alloca_pc[alloca_id] = CALLERPC;
-  cilksan_record_alloc((size_t) addr, total_size, alloca_id + 1);
-  cilksan_clear_shadow_memory((size_t)addr, total_size);
+  if (TOOL_INITIALIZED && should_check()) {
+    disable_checking();
+    if (!alloca_pc[alloca_id])
+      alloca_pc[alloca_id] = CALLERPC;
+    cilksan_record_alloc((size_t) addr, total_size, alloca_id + 1);
+    cilksan_clear_shadow_memory((size_t)addr, total_size);
+    enable_checking();
+  }
 }
 
 static std::unordered_map<uintptr_t, size_t> malloc_sizes;
