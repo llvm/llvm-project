@@ -970,6 +970,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Args.hasArg(OPT_lldsavetemps))
     Config->SaveTemps = true;
 
+  // Handle /kill-at
+  if (Args.hasArg(OPT_kill_at))
+    Config->KillAt = true;
+
   // Handle /lldltocache
   if (auto *Arg = Args.getLastArg(OPT_lldltocache))
     Config->LTOCache = Arg->getValue();
