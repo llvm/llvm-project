@@ -77,8 +77,9 @@ namespace {
   public:
     static char ID;
 
-    MipsLongBranch()
-        : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {}
+    MipsLongBranch() : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {
+      initializeMipsLongBranchPass(*PassRegistry::getPassRegistry());
+    }
 
     StringRef getPassName() const override { return "Mips Long Branch"; }
 
@@ -107,6 +108,9 @@ namespace {
 } // end anonymous namespace
 
 char MipsLongBranch::ID = 0;
+
+INITIALIZE_PASS(MipsLongBranch, DEBUG_TYPE,
+                "Expand out of range branch instructions", false, false)
 
 /// Iterate over list of Br's operands and search for a MachineBasicBlock
 /// operand.
