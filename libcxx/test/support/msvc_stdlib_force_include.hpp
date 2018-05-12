@@ -55,10 +55,6 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
     #define __has_attribute(X) _MSVC_HAS_ATTRIBUTE_ ## X
     #define _MSVC_HAS_ATTRIBUTE_vector_size     0
 
-    #ifdef _NOEXCEPT_TYPES_SUPPORTED
-        #define __cpp_noexcept_function_type    201510
-    #endif // _NOEXCEPT_TYPES_SUPPORTED
-
     // Silence compiler warnings.
     #pragma warning(disable: 4180) // qualifier applied to function type has no meaning; ignored
     #pragma warning(disable: 4324) // structure was padded due to alignment specifier

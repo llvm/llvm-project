@@ -1,5 +1,5 @@
 REQUIRES: lsan
 RUN: %cpp_compiler %S/AccumulateAllocationsTest.cpp -o %t-AccumulateAllocationsTest
-RUN: %t-AccumulateAllocationsTest -detect_leaks=1 -runs=100000 2>&1 | FileCheck %s --check-prefix=ACCUMULATE_ALLOCS
+RUN: %run %t-AccumulateAllocationsTest -detect_leaks=1 -runs=100000 2>&1 | FileCheck %s --check-prefix=ACCUMULATE_ALLOCS
 ACCUMULATE_ALLOCS: INFO: libFuzzer disabled leak detection after every mutation
 

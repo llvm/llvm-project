@@ -847,7 +847,7 @@ private:
   void visitInvoke(const InvokeInst &I);
   void visitResume(const ResumeInst &I);
 
-  void visitBinary(const User &I, unsigned OpCode);
+  void visitBinary(const User &I, unsigned Opcode);
   void visitShift(const User &I, unsigned Opcode);
   void visitAdd(const User &I)  { visitBinary(I, ISD::ADD); }
   void visitFAdd(const User &I) { visitBinary(I, ISD::FADD); }

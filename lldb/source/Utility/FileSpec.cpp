@@ -82,67 +82,6 @@ void Denormalize(llvm::SmallVectorImpl<char> &path,
 
   std::replace(path.begin(), path.end(), '/', '\\');
 }
-
-size_t FilenamePos(llvm::StringRef str, FileSpec::PathSyntax syntax) {
-  if (str.size() == 2 && IsPathSeparator(str[0], syntax) && str[0] == str[1])
-    return 0;
-
-  if (str.size() > 0 && IsPathSeparator(str.back(), syntax))
-    return str.size() - 1;
-
-  size_t pos = str.find_last_of(GetPathSeparators(syntax), str.size() - 1);
-
-  if (!PathSyntaxIsPosix(syntax) && pos == llvm::StringRef::npos)
-    pos = str.find_last_of(':', str.size() - 2);
-
-  if (pos == llvm::StringRef::npos ||
-      (pos == 1 && IsPathSeparator(str[0], syntax)))
-    return 0;
-
-  return pos + 1;
-}
-
-size_t RootDirStart(llvm::StringRef str, FileSpec::PathSyntax syntax) {
-  // case "c:/"
-  if (!PathSyntaxIsPosix(syntax) &&
-      (str.size() > 2 && str[1] == ':' && IsPathSeparator(str[2], syntax)))
-    return 2;
-
-  // case "//"
-  if (str.size() == 2 && IsPathSeparator(str[0], syntax) && str[0] == str[1])
-    return llvm::StringRef::npos;
-
-  // case "//net"
-  if (str.size() > 3 && IsPathSeparator(str[0], syntax) && str[0] == str[1] &&
-      !IsPathSeparator(str[2], syntax))
-    return str.find_first_of(GetPathSeparators(syntax), 2);
-
-  // case "/"
-  if (str.size() > 0 && IsPathSeparator(str[0], syntax))
-    return 0;
-
-  return llvm::StringRef::npos;
-}
-
-size_t ParentPathEnd(llvm::StringRef path, FileSpec::PathSyntax syntax) {
-  size_t end_pos = FilenamePos(path, syntax);
-
-  bool filename_was_sep =
-      path.size() > 0 && IsPathSeparator(path[end_pos], syntax);
-
-  // Skip separators except for root dir.
-  size_t root_dir_pos = RootDirStart(path.substr(0, end_pos), syntax);
-
-  while (end_pos > 0 && (end_pos - 1) != root_dir_pos &&
-         IsPathSeparator(path[end_pos - 1], syntax))
-    --end_pos;
-
-  if (end_pos == 1 && root_dir_pos == 0 && filename_was_sep)
-    return llvm::StringRef::npos;
-
-  return end_pos;
-}
-
 } // end anonymous namespace
 
 void FileSpec::Resolve(llvm::SmallVectorImpl<char> &path) {
@@ -312,10 +251,6 @@ const FileSpec &FileSpec::operator=(const FileSpec &rhs) {
 //------------------------------------------------------------------
 void FileSpec::SetFile(llvm::StringRef pathname, bool resolve,
                        PathSyntax syntax) {
-  // CLEANUP: Use StringRef for string handling.  This function is kind of a
-  // mess and the unclear semantics of RootDirStart and ParentPathEnd make it
-  // very difficult to understand this function.  There's no reason this
-  // function should be particularly complicated or difficult to understand.
   m_filename.Clear();
   m_directory.Clear();
   m_is_resolved = false;
@@ -339,26 +274,11 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve,
   if (m_syntax == FileSpec::ePathSyntaxWindows)
     std::replace(resolved.begin(), resolved.end(), '\\', '/');
 
-  llvm::StringRef resolve_path_ref(resolved.c_str());
-  size_t dir_end = ParentPathEnd(resolve_path_ref, m_syntax);
-  if (dir_end == 0) {
-    m_filename.SetString(resolve_path_ref);
-    return;
-  }
-
-  m_directory.SetString(resolve_path_ref.substr(0, dir_end));
-
-  size_t filename_begin = dir_end;
-  size_t root_dir_start = RootDirStart(resolve_path_ref, m_syntax);
-  while (filename_begin != llvm::StringRef::npos &&
-         filename_begin < resolve_path_ref.size() &&
-         filename_begin != root_dir_start &&
-         IsPathSeparator(resolve_path_ref[filename_begin], m_syntax))
-    ++filename_begin;
-  m_filename.SetString((filename_begin == llvm::StringRef::npos ||
-                        filename_begin >= resolve_path_ref.size())
-                           ? "."
-                           : resolve_path_ref.substr(filename_begin));
+  auto style = LLVMPathSyntax(syntax);
+  m_filename.SetString(llvm::sys::path::filename(resolved, style));
+  llvm::StringRef dir = llvm::sys::path::parent_path(resolved, style);
+  if (!dir.empty())
+    m_directory.SetString(dir);
 }
 
 void FileSpec::SetFile(llvm::StringRef path, bool resolve,

@@ -204,4 +204,11 @@ BOOL writeToErrorWithIterator(NSError *__autoreleasing* error, NSArray *a, NSSet
     }];
   return 0;
 }
+
+void writeToErrorWithIteratorNonnull(NSError *__autoreleasing* _Nonnull error, NSDictionary *a) {
+  [a enumerateKeysAndObjectsUsingBlock:^{
+     *error = [NSError errorWithDomain:1]; // expected-warning{{Write to autoreleasing out parameter}}
+  }];
+}
 #endif
+

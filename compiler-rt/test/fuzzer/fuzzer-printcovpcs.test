@@ -1,5 +1,5 @@
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
-RUN: not %t-SimpleTest -print_pcs=1 -seed=1 2>&1 | FileCheck %s --check-prefix=PCS
+RUN: not %run %t-SimpleTest -print_pcs=1 -seed=1 2>&1 | FileCheck %s --check-prefix=PCS
 PCS-NOT: NEW_PC
 PCS:INITED
 PCS:NEW_PC: {{0x[a-f0-9]+}}

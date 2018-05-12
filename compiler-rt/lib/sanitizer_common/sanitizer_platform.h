@@ -329,4 +329,11 @@
 # define SANITIZER_CACHE_LINE_SIZE 64
 #endif
 
+// Enable offline markup symbolizer for Fuchsia and RTEMS.
+#if SANITIZER_FUCHSIA || SANITIZER_RTEMS
+#define SANITIZER_SYMBOLIZER_MARKUP 1
+#else
+#define SANITIZER_SYMBOLIZER_MARKUP 0
+#endif
+
 #endif // SANITIZER_PLATFORM_H

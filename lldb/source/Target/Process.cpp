@@ -6164,14 +6164,12 @@ Status Process::UpdateAutomaticSignalFiltering() {
   return Status();
 }
 
-UtilityFunction *Process::GetLoadImageUtilityFunction(Platform *platform) {
+UtilityFunction *Process::GetLoadImageUtilityFunction(
+    Platform *platform,
+    llvm::function_ref<std::unique_ptr<UtilityFunction>()> factory) {
   if (platform != GetTarget().GetPlatform().get())
     return nullptr;
+  std::call_once(m_dlopen_utility_func_flag_once,
+                 [&] { m_dlopen_utility_func_up = factory(); });
   return m_dlopen_utility_func_up.get();
 }
-
-void Process::SetLoadImageUtilityFunction(std::unique_ptr<UtilityFunction> 
-                                          utility_func_up) {
-  m_dlopen_utility_func_up.swap(utility_func_up);
-}
-

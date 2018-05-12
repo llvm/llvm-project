@@ -1295,6 +1295,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
         if (CheckAArch64BuiltinFunctionCall(BuiltinID, TheCall))
           return ExprError();
         break;
+      case llvm::Triple::hexagon:
+        if (CheckHexagonBuiltinFunctionCall(BuiltinID, TheCall))
+          return ExprError();
+        break;
       case llvm::Triple::mips:
       case llvm::Triple::mipsel:
       case llvm::Triple::mips64:
@@ -1669,6 +1673,225 @@ bool Sema::CheckAArch64BuiltinFunctionCall(unsigned BuiltinID,
   }
 
   return SemaBuiltinConstantArgRange(TheCall, i, l, u + l);
+}
+
+bool Sema::CheckHexagonBuiltinFunctionCall(unsigned BuiltinID,
+                                           CallExpr *TheCall) {
+  struct ArgInfo {
+    ArgInfo(unsigned O, bool S, unsigned W, unsigned A)
+      : OpNum(O), IsSigned(S), BitWidth(W), Align(A) {}
+    unsigned OpNum = 0;
+    bool IsSigned = false;
+    unsigned BitWidth = 0;
+    unsigned Align = 0;
+  };
+
+  static const std::map<unsigned, std::vector<ArgInfo>> Infos = {
+    { Hexagon::BI__builtin_circ_ldd,                  {{ 3, true,  4,  3 }} },
+    { Hexagon::BI__builtin_circ_ldw,                  {{ 3, true,  4,  2 }} },
+    { Hexagon::BI__builtin_circ_ldh,                  {{ 3, true,  4,  1 }} },
+    { Hexagon::BI__builtin_circ_lduh,                 {{ 3, true,  4,  0 }} },
+    { Hexagon::BI__builtin_circ_ldb,                  {{ 3, true,  4,  0 }} },
+    { Hexagon::BI__builtin_circ_ldub,                 {{ 3, true,  4,  0 }} },
+    { Hexagon::BI__builtin_circ_std,                  {{ 3, true,  4,  3 }} },
+    { Hexagon::BI__builtin_circ_stw,                  {{ 3, true,  4,  2 }} },
+    { Hexagon::BI__builtin_circ_sth,                  {{ 3, true,  4,  1 }} },
+    { Hexagon::BI__builtin_circ_sthhi,                {{ 3, true,  4,  1 }} },
+    { Hexagon::BI__builtin_circ_stb,                  {{ 3, true,  4,  0 }} },
+
+    { Hexagon::BI__builtin_HEXAGON_L2_loadrub_pci,    {{ 1, true,  4,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_L2_loadrb_pci,     {{ 1, true,  4,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_L2_loadruh_pci,    {{ 1, true,  4,  1 }} },
+    { Hexagon::BI__builtin_HEXAGON_L2_loadrh_pci,     {{ 1, true,  4,  1 }} },
+    { Hexagon::BI__builtin_HEXAGON_L2_loadri_pci,     {{ 1, true,  4,  2 }} },
+    { Hexagon::BI__builtin_HEXAGON_L2_loadrd_pci,     {{ 1, true,  4,  3 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_storerb_pci,    {{ 1, true,  4,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_storerh_pci,    {{ 1, true,  4,  1 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_storerf_pci,    {{ 1, true,  4,  1 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_storeri_pci,    {{ 1, true,  4,  2 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_storerd_pci,    {{ 1, true,  4,  3 }} },
+
+    { Hexagon::BI__builtin_HEXAGON_A2_combineii,      {{ 1, true,  8,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A2_tfrih,          {{ 1, false, 16, 0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A2_tfril,          {{ 1, false, 16, 0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A2_tfrpi,          {{ 0, true,  8,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_bitspliti,      {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_cmpbeqi,        {{ 1, false, 8,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_cmpbgti,        {{ 1, true,  8,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_cround_ri,      {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_round_ri,       {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_round_ri_sat,   {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_vcmpbeqi,       {{ 1, false, 8,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_vcmpbgti,       {{ 1, true,  8,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_vcmpbgtui,      {{ 1, false, 7,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_vcmpheqi,       {{ 1, true,  8,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_vcmphgti,       {{ 1, true,  8,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_vcmphgtui,      {{ 1, false, 7,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_vcmpweqi,       {{ 1, true,  8,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_vcmpwgti,       {{ 1, true,  8,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_A4_vcmpwgtui,      {{ 1, false, 7,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_C2_bitsclri,       {{ 1, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_C2_muxii,          {{ 2, true,  8,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_C4_nbitsclri,      {{ 1, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_F2_dfclass,        {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_F2_dfimm_n,        {{ 0, false, 10, 0 }} },
+    { Hexagon::BI__builtin_HEXAGON_F2_dfimm_p,        {{ 0, false, 10, 0 }} },
+    { Hexagon::BI__builtin_HEXAGON_F2_sfclass,        {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_F2_sfimm_n,        {{ 0, false, 10, 0 }} },
+    { Hexagon::BI__builtin_HEXAGON_F2_sfimm_p,        {{ 0, false, 10, 0 }} },
+    { Hexagon::BI__builtin_HEXAGON_M4_mpyri_addi,     {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_M4_mpyri_addr_u2,  {{ 1, false, 6,  2 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_addasl_rrri,    {{ 2, false, 3,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_p_acc,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_p_and,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_p,        {{ 1, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_p_nac,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_p_or,     {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_p_xacc,   {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_r_acc,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_r_and,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_r,        {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_r_nac,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_r_or,     {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_r_sat,    {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_r_xacc,   {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_vh,       {{ 1, false, 4,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asl_i_vw,       {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_p_acc,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_p_and,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_p,        {{ 1, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_p_nac,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_p_or,     {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_p_rnd_goodsyntax,
+                                                      {{ 1, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_p_rnd,    {{ 1, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_r_acc,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_r_and,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_r,        {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_r_nac,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_r_or,     {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_r_rnd_goodsyntax,
+                                                      {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_r_rnd,    {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_svw_trun, {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_vh,       {{ 1, false, 4,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_asr_i_vw,       {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_clrbit_i,       {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_extractu,       {{ 1, false, 5,  0 },
+                                                       { 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_extractup,      {{ 1, false, 6,  0 },
+                                                       { 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_insert,         {{ 2, false, 5,  0 },
+                                                       { 3, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_insertp,        {{ 2, false, 6,  0 },
+                                                       { 3, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_p_acc,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_p_and,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_p,        {{ 1, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_p_nac,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_p_or,     {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_p_xacc,   {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_r_acc,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_r_and,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_r,        {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_r_nac,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_r_or,     {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_r_xacc,   {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_vh,       {{ 1, false, 4,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_lsr_i_vw,       {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_setbit_i,       {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_tableidxb_goodsyntax,
+                                                      {{ 2, false, 4,  0 },
+                                                       { 3, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_tableidxd_goodsyntax,
+                                                      {{ 2, false, 4,  0 },
+                                                       { 3, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_tableidxh_goodsyntax,
+                                                      {{ 2, false, 4,  0 },
+                                                       { 3, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_tableidxw_goodsyntax,
+                                                      {{ 2, false, 4,  0 },
+                                                       { 3, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_togglebit_i,    {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_tstbit_i,       {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_valignib,       {{ 2, false, 3,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S2_vspliceib,      {{ 2, false, 3,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_addi_asl_ri,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_addi_lsr_ri,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_andi_asl_ri,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_andi_lsr_ri,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_clbaddi,        {{ 1, true , 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_clbpaddi,       {{ 1, true,  6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_extract,        {{ 1, false, 5,  0 },
+                                                       { 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_extractp,       {{ 1, false, 6,  0 },
+                                                       { 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_lsli,           {{ 0, true,  6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_ntstbit_i,      {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_ori_asl_ri,     {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_ori_lsr_ri,     {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_subi_asl_ri,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_subi_lsr_ri,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_vrcrotate_acc,  {{ 3, false, 2,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S4_vrcrotate,      {{ 2, false, 2,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S5_asrhub_rnd_sat_goodsyntax,
+                                                      {{ 1, false, 4,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S5_asrhub_sat,     {{ 1, false, 4,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S5_vasrhrnd_goodsyntax,
+                                                      {{ 1, false, 4,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_p,        {{ 1, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_p_acc,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_p_and,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_p_nac,    {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_p_or,     {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_p_xacc,   {{ 2, false, 6,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_r,        {{ 1, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_r_acc,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_r_and,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_r_nac,    {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_r_or,     {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_S6_rol_i_r_xacc,   {{ 2, false, 5,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_valignbi,       {{ 2, false, 3,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_valignbi_128B,  {{ 2, false, 3,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vlalignbi,      {{ 2, false, 3,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vlalignbi_128B, {{ 2, false, 3,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrmpybusi,      {{ 2, false, 1,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrmpybusi_128B, {{ 2, false, 1,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrmpybusi_acc,  {{ 3, false, 1,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrmpybusi_acc_128B,
+                                                      {{ 3, false, 1,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrmpyubi,       {{ 2, false, 1,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrmpyubi_128B,  {{ 2, false, 1,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrmpyubi_acc,   {{ 3, false, 1,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrmpyubi_acc_128B,
+                                                      {{ 3, false, 1,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrsadubi,       {{ 2, false, 1,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrsadubi_128B,  {{ 2, false, 1,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrsadubi_acc,   {{ 3, false, 1,  0 }} },
+    { Hexagon::BI__builtin_HEXAGON_V6_vrsadubi_acc_128B,
+                                                      {{ 3, false, 1,  0 }} },
+  };
+
+  auto F = Infos.find(BuiltinID);
+  if (F == Infos.end())
+    return false;
+
+  bool Error = false;
+
+  for (const ArgInfo &A : F->second) {
+    int32_t Min = A.IsSigned ? -(1 << (A.BitWidth-1)) : 0;
+    int32_t Max = (1 << (A.IsSigned ? A.BitWidth-1 : A.BitWidth)) - 1;
+    if (!A.Align) {
+      Error |= SemaBuiltinConstantArgRange(TheCall, A.OpNum, Min, Max);
+    } else {
+      unsigned M = 1 << A.Align;
+      Min *= M;
+      Max *= M;
+      Error |= SemaBuiltinConstantArgRange(TheCall, A.OpNum, Min, Max) |
+               SemaBuiltinConstantArgMultiple(TheCall, A.OpNum, M);
+    }
+  }
+  return Error;
 }
 
 // CheckMipsBuiltinFunctionCall - Checks the constant value passed to the

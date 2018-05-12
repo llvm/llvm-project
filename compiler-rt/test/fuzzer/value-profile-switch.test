@@ -1,5 +1,5 @@
 CHECK: BINGO
 RUN: %cpp_compiler %S/SwitchTest.cpp -o %t-SwitchTest
 RUN: %cpp_compiler %S/Switch2Test.cpp -o %t-Switch2Test
-RUN: not %t-SwitchTest  -use_cmp=0 -use_value_profile=1 -runs=100000000 -seed=1 2>&1 | FileCheck %s
-RUN: not %t-Switch2Test -use_cmp=0 -use_value_profile=1 -runs=100000000 -seed=1 2>&1 | FileCheck %s
+RUN: not %run %t-SwitchTest  -use_cmp=0 -use_value_profile=1 -runs=100000000 -seed=1 2>&1 | FileCheck %s
+RUN: not %run %t-Switch2Test -use_cmp=0 -use_value_profile=1 -runs=100000000 -seed=1 2>&1 | FileCheck %s

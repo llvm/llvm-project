@@ -1949,6 +1949,8 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) {
 ; KNL-NEXT:    vpinsrb $14, 208(%rbp), %xmm3, %xmm3
 ; KNL-NEXT:    vpinsrb $15, 216(%rbp), %xmm3, %xmm3
 ; KNL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; KNL-NEXT:    movl 744(%rbp), %eax
+; KNL-NEXT:    andl $127, %eax
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
 ; KNL-NEXT:    vpternlogq $15, %zmm2, %zmm2, %zmm2
@@ -1956,8 +1958,6 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) {
 ; KNL-NEXT:    vpternlogq $15, %zmm1, %zmm1, %zmm1
 ; KNL-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    movl 744(%rbp), %eax
-; KNL-NEXT:    andl $127, %eax
 ; KNL-NEXT:    cmpb $0, 736(%rbp)
 ; KNL-NEXT:    vmovdqa %ymm3, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
@@ -2130,10 +2130,10 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) {
 ; SKX-NEXT:    vpinsrb $14, 720(%rbp), %xmm2, %xmm2
 ; SKX-NEXT:    vpinsrb $15, 728(%rbp), %xmm2, %xmm2
 ; SKX-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; SKX-NEXT:    vptestmb %zmm0, %zmm0, %k0
-; SKX-NEXT:    vptestmb %zmm1, %zmm1, %k1
 ; SKX-NEXT:    movl 744(%rbp), %eax
 ; SKX-NEXT:    andl $127, %eax
+; SKX-NEXT:    vptestmb %zmm0, %zmm0, %k0
+; SKX-NEXT:    vptestmb %zmm1, %zmm1, %k1
 ; SKX-NEXT:    cmpb $0, 736(%rbp)
 ; SKX-NEXT:    vpmovm2b %k1, %zmm0
 ; SKX-NEXT:    vmovdqa64 %zmm0, {{[0-9]+}}(%rsp)

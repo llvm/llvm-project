@@ -151,7 +151,6 @@ void CFIInstrInserter::calculateCFAInfo(MachineFunction &MF) {
   // information.
   for (MachineBasicBlock &MBB : MF) {
     if (MBBVector[MBB.getNumber()].Processed) continue;
-    calculateOutgoingCFAInfo(MBBVector[MBB.getNumber()]);
     updateSuccCFAInfo(MBBVector[MBB.getNumber()]);
   }
 }
@@ -222,14 +221,25 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
 }
 
 void CFIInstrInserter::updateSuccCFAInfo(MBBCFAInfo &MBBInfo) {
-  for (MachineBasicBlock *Succ : MBBInfo.MBB->successors()) {
-    MBBCFAInfo &SuccInfo = MBBVector[Succ->getNumber()];
-    if (SuccInfo.Processed) continue;
-    SuccInfo.IncomingCFAOffset = MBBInfo.OutgoingCFAOffset;
-    SuccInfo.IncomingCFARegister = MBBInfo.OutgoingCFARegister;
-    calculateOutgoingCFAInfo(SuccInfo);
-    updateSuccCFAInfo(SuccInfo);
-  }
+  SmallVector<MachineBasicBlock *, 4> Stack;
+  Stack.push_back(MBBInfo.MBB);
+
+  do {
+    MachineBasicBlock *Current = Stack.pop_back_val();
+    MBBCFAInfo &CurrentInfo = MBBVector[Current->getNumber()];
+    if (CurrentInfo.Processed)
+      continue;
+
+    calculateOutgoingCFAInfo(CurrentInfo);
+    for (auto *Succ : CurrentInfo.MBB->successors()) {
+      MBBCFAInfo &SuccInfo = MBBVector[Succ->getNumber()];
+      if (!SuccInfo.Processed) {
+        SuccInfo.IncomingCFAOffset = CurrentInfo.OutgoingCFAOffset;
+        SuccInfo.IncomingCFARegister = CurrentInfo.OutgoingCFARegister;
+        Stack.push_back(Succ);
+      }
+    }
+  } while (!Stack.empty());
 }
 
 bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
@@ -282,17 +292,18 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
   return InsertedCFIInstr;
 }
 
-void CFIInstrInserter::report(const MBBCFAInfo &Pred,
-                              const MBBCFAInfo &Succ) {
+void CFIInstrInserter::report(const MBBCFAInfo &Pred, const MBBCFAInfo &Succ) {
   errs() << "*** Inconsistent CFA register and/or offset between pred and succ "
             "***\n";
-  errs() << "Pred: " << Pred.MBB->getName()
+  errs() << "Pred: " << Pred.MBB->getName() << " #" << Pred.MBB->getNumber()
+         << " in " << Pred.MBB->getParent()->getName()
          << " outgoing CFA Reg:" << Pred.OutgoingCFARegister << "\n";
-  errs() << "Pred: " << Pred.MBB->getName()
+  errs() << "Pred: " << Pred.MBB->getName() << " #" << Pred.MBB->getNumber()
+         << " in " << Pred.MBB->getParent()->getName()
          << " outgoing CFA Offset:" << Pred.OutgoingCFAOffset << "\n";
-  errs() << "Succ: " << Succ.MBB->getName()
+  errs() << "Succ: " << Succ.MBB->getName() << " #" << Succ.MBB->getNumber()
          << " incoming CFA Reg:" << Succ.IncomingCFARegister << "\n";
-  errs() << "Succ: " << Succ.MBB->getName()
+  errs() << "Succ: " << Succ.MBB->getName() << " #" << Succ.MBB->getNumber()
          << " incoming CFA Offset:" << Succ.IncomingCFAOffset << "\n";
 }
 

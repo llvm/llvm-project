@@ -628,9 +628,8 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     OpenMPDirectiveKind DKind = NestedDir->getDirectiveKind();
     switch (D.getDirectiveKind()) {
     case OMPD_target:
-      if ((isOpenMPParallelDirective(DKind) &&
-           !hasParallelIfClause(Ctx, *NestedDir)) ||
-          isOpenMPSimdDirective(DKind))
+      if (isOpenMPParallelDirective(DKind) &&
+          !hasParallelIfClause(Ctx, *NestedDir))
         return true;
       if (DKind == OMPD_teams || DKind == OMPD_teams_distribute) {
         Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
@@ -639,9 +638,8 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
         ChildStmt = getSingleCompoundChild(Body);
         if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
           DKind = NND->getDirectiveKind();
-          if ((isOpenMPParallelDirective(DKind) &&
-               !hasParallelIfClause(Ctx, *NND)) ||
-              isOpenMPSimdDirective(DKind))
+          if (isOpenMPParallelDirective(DKind) &&
+              !hasParallelIfClause(Ctx, *NND))
             return true;
           if (DKind == OMPD_distribute) {
             Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
@@ -652,18 +650,16 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
               return false;
             if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
               DKind = NND->getDirectiveKind();
-              return (isOpenMPParallelDirective(DKind) &&
-                      !hasParallelIfClause(Ctx, *NND)) ||
-                     isOpenMPSimdDirective(DKind);
+              return isOpenMPParallelDirective(DKind) &&
+                     !hasParallelIfClause(Ctx, *NND);
             }
           }
         }
       }
       return false;
     case OMPD_target_teams:
-      if ((isOpenMPParallelDirective(DKind) &&
-           !hasParallelIfClause(Ctx, *NestedDir)) ||
-          isOpenMPSimdDirective(DKind))
+      if (isOpenMPParallelDirective(DKind) &&
+          !hasParallelIfClause(Ctx, *NestedDir))
         return true;
       if (DKind == OMPD_distribute) {
         Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
@@ -672,16 +668,14 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
         ChildStmt = getSingleCompoundChild(Body);
         if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
           DKind = NND->getDirectiveKind();
-          return (isOpenMPParallelDirective(DKind) &&
-                  !hasParallelIfClause(Ctx, *NND)) ||
-                 isOpenMPSimdDirective(DKind);
+          return isOpenMPParallelDirective(DKind) &&
+                 !hasParallelIfClause(Ctx, *NND);
         }
       }
       return false;
     case OMPD_target_teams_distribute:
-      return (isOpenMPParallelDirective(DKind) &&
-              !hasParallelIfClause(Ctx, *NestedDir)) ||
-             isOpenMPSimdDirective(DKind);
+      return isOpenMPParallelDirective(DKind) &&
+             !hasParallelIfClause(Ctx, *NestedDir);
     case OMPD_target_simd:
     case OMPD_target_parallel:
     case OMPD_target_parallel_for:
@@ -755,7 +749,7 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
     return !hasParallelIfClause(Ctx, D);
   case OMPD_target_simd:
   case OMPD_target_teams_distribute_simd:
-    return true;
+    return false;
   case OMPD_parallel:
   case OMPD_for:
   case OMPD_parallel_for:

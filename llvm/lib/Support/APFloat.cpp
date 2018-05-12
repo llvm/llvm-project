@@ -4443,8 +4443,10 @@ APFloat::APFloat(const fltSemantics &Semantics, StringRef S)
 
 APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
                                    roundingMode RM, bool *losesInfo) {
-  if (&getSemantics() == &ToSemantics)
+  if (&getSemantics() == &ToSemantics) {
+    *losesInfo = false;
     return opOK;
+  }
   if (usesLayout<IEEEFloat>(getSemantics()) &&
       usesLayout<IEEEFloat>(ToSemantics))
     return U.IEEE.convert(ToSemantics, RM, losesInfo);

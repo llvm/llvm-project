@@ -8,11 +8,11 @@
 #ifndef HEADER
 #define HEADER
 
-// Check that the execution mode of all 2 target regions on the gpu is set to SPMD Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l30}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l36}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l41}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l46}}_exec_mode = weak constant i8 0
+// Check that the execution mode of all 2 target regions on the gpu is set to NonSPMD Mode.
+// CHECK-DAG: {{@__omp_offloading_.+l30}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l36}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l41}}_exec_mode = weak constant i8 1
+// CHECK-DAG: {{@__omp_offloading_.+l46}}_exec_mode = weak constant i8 1
 
 #define N 1000
 #define M 10
@@ -62,38 +62,34 @@ int bar(int n){
   return a;
 }
 
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
-// CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l30(
+// CHECK: call void @__kmpc_kernel_init(i32 %{{.+}}, i16 1)
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_spmd_kernel_deinit()
+// CHECK: call void @__kmpc_kernel_deinit(i16 1)
 // CHECK: ret void
 
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
-// CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l36(
+// CHECK: call void @__kmpc_kernel_init(i32 %{{.+}}, i16 1)
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 92,
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_spmd_kernel_deinit()
+// CHECK: call void @__kmpc_kernel_deinit(i16 1)
 // CHECK: ret void
 
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
-// CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l41(
+// CHECK: call void @__kmpc_kernel_init(i32 %{{.+}}, i16 1)
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 92,
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_spmd_kernel_deinit()
+// CHECK: call void @__kmpc_kernel_deinit(i16 1)
 // CHECK: ret void
 
-// CHECK: define {{.*}}void {{@__omp_offloading_.+}}({{.+}}, i{{32|64}} [[F_IN:%.+]])
+// CHECK: define {{.*}}void {{@__omp_offloading_.+}}_l46({{.+}}, i{{32|64}} [[F_IN:%.+]])
 // CHECK: store {{.+}} [[F_IN]], {{.+}}* {{.+}},
-// CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+// CHECK: call void @__kmpc_kernel_init(i32 %{{.+}}, i16 1)
 // CHECK: store {{.+}} 99, {{.+}}* [[COMB_UB:%.+]], align
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 92, {{.+}}, {{.+}}, {{.+}}* [[COMB_UB]],
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_spmd_kernel_deinit()
+// CHECK: call void @__kmpc_kernel_deinit(i16 1)
 // CHECK: ret void
 
 #endif

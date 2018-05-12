@@ -72,11 +72,13 @@ class Value;
     /// sequence out into its new function. When a DominatorTree is also given,
     /// extra checking and transformations are enabled. If AllowVarArgs is true,
     /// vararg functions can be extracted. This is safe, if all vararg handling
-    /// code is extracted, including vastart.
+    /// code is extracted, including vastart. If AllowAlloca is true, then
+    /// extraction of blocks containing alloca instructions would be possible,
+    /// however code extractor won't validate whether extraction is legal. 
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
-                  bool AllowVarArgs = false);
+                  bool AllowVarArgs = false, bool AllowAlloca = false);
 
     /// Create a code extractor for a loop body.
     ///
@@ -85,14 +87,6 @@ class Value;
     CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs = false,
                   BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr);
-
-    /// Check to see if a block is valid for extraction.
-    ///
-    /// Blocks containing EHPads, allocas and invokes are not valid. If
-    /// AllowVarArgs is true, blocks with vastart can be extracted. This is
-    /// safe, if all vararg handling code is extracted, including vastart.
-    static bool isBlockValidForExtraction(const BasicBlock &BB,
-                                          bool AllowVarArgs);
 
     /// Perform the extraction, returning the new function.
     ///

@@ -28,6 +28,28 @@ return:                                           ; preds = %if.then172, %cond.e
   ret void
 }
 
+; Avoid an assert/bad codegen in LD1LANEPOST lowering by not forming
+; LD1LANEPOST ISD nodes with a non-constant lane index.
+define <4 x i32> @f2(i32 *%p, <4 x i1> %m, <4 x i32> %v1, <4 x i32> %v2, i32 %idx) {
+  %L0 = load i32, i32* %p
+  %p1 = getelementptr i32, i32* %p, i64 1
+  %L1 = load i32, i32* %p1
+  %v = select <4 x i1> %m, <4 x i32> %v1, <4 x i32> %v2
+  %vret = insertelement <4 x i32> %v, i32 %L0, i32 %idx
+  store i32 %L1, i32 *%p
+  ret <4 x i32> %vret
+}
+
+; Check that a cycle is avoided during isel between the LD1LANEPOST instruction and the load of %L1.
+define <4 x i32> @f3(i32 *%p, <4 x i1> %m, <4 x i32> %v1, <4 x i32> %v2) {
+  %L0 = load i32, i32* %p
+  %p1 = getelementptr i32, i32* %p, i64 1
+  %L1 = load i32, i32* %p1
+  %v = select <4 x i1> %m, <4 x i32> %v1, <4 x i32> %v2
+  %vret = insertelement <4 x i32> %v, i32 %L0, i32 %L1
+  ret <4 x i32> %vret
+}
+
 ; Function Attrs: nounwind readnone
 declare i64 @llvm.objectsize.i64.p0i8(i8*, i1) #1
 

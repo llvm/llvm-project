@@ -189,6 +189,10 @@ define <8 x float> @var_shuffle_v8f32_v8f32_xxxxxxxx_i32(<8 x float> %x, i32 %i0
 ; ALL-NEXT:    # kill: def $edx killed $edx def $rdx
 ; ALL-NEXT:    # kill: def $esi killed $esi def $rsi
 ; ALL-NEXT:    # kill: def $edi killed $edi def $rdi
+; ALL-NEXT:    movl 24(%rbp), %r10d
+; ALL-NEXT:    andl $7, %r10d
+; ALL-NEXT:    movl 16(%rbp), %eax
+; ALL-NEXT:    andl $7, %eax
 ; ALL-NEXT:    andl $7, %edi
 ; ALL-NEXT:    andl $7, %esi
 ; ALL-NEXT:    andl $7, %edx
@@ -196,10 +200,6 @@ define <8 x float> @var_shuffle_v8f32_v8f32_xxxxxxxx_i32(<8 x float> %x, i32 %i0
 ; ALL-NEXT:    andl $7, %r8d
 ; ALL-NEXT:    vmovaps %ymm0, (%rsp)
 ; ALL-NEXT:    andl $7, %r9d
-; ALL-NEXT:    movl 16(%rbp), %r10d
-; ALL-NEXT:    andl $7, %r10d
-; ALL-NEXT:    movl 24(%rbp), %eax
-; ALL-NEXT:    andl $7, %eax
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
@@ -240,6 +240,10 @@ define <8 x float> @var_shuffle_v8f32_v4f32_xxxxxxxx_i32(<4 x float> %x, i32 %i0
 ; ALL-NEXT:    # kill: def $edx killed $edx def $rdx
 ; ALL-NEXT:    # kill: def $esi killed $esi def $rsi
 ; ALL-NEXT:    # kill: def $edi killed $edi def $rdi
+; ALL-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
+; ALL-NEXT:    andl $3, %r10d
+; ALL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; ALL-NEXT:    andl $3, %eax
 ; ALL-NEXT:    andl $3, %edi
 ; ALL-NEXT:    andl $3, %esi
 ; ALL-NEXT:    andl $3, %edx
@@ -247,10 +251,6 @@ define <8 x float> @var_shuffle_v8f32_v4f32_xxxxxxxx_i32(<4 x float> %x, i32 %i0
 ; ALL-NEXT:    andl $3, %r8d
 ; ALL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; ALL-NEXT:    andl $3, %r9d
-; ALL-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
-; ALL-NEXT:    andl $3, %r10d
-; ALL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; ALL-NEXT:    andl $3, %eax
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]

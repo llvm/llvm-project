@@ -40,7 +40,8 @@ def err_drv_cuda_version_unsupported : Error<
   "but installation at %3 is %4.  Use --cuda-path to specify a different CUDA "
   "install, pass a different GPU arch with --cuda-gpu-arch, or pass "
   "--no-cuda-version-check.">;
-def err_drv_cuda_nvptx_host : Error<"unsupported use of NVPTX for host compilation.">;
+def err_drv_cuda_host_arch : Error<"unsupported architecture '%0' for host compilation.">;
+def err_drv_mix_cuda_hip : Error<"Mixed Cuda and HIP compilation is not supported.">;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
@@ -149,6 +150,9 @@ def warn_drv_unknown_argument_clang_cl : Warning<
 def warn_drv_unknown_argument_clang_cl_with_suggestion : Warning<
   "unknown argument ignored in clang-cl '%0' (did you mean '%1'?)">,
   InGroup<UnknownArgument>;
+def warn_drv_ignored_clang_abi_version : Warning<
+  "target requires clang ABI version %0, ignoring requested version">,
+  InGroup<UnusedCommandLineArgument>;
 
 def warn_drv_ycyu_no_arg_clang_cl : Warning<
   "support for '%0' without a filename not implemented yet; flag ignored">,
