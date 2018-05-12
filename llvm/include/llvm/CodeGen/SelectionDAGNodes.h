@@ -37,6 +37,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
@@ -374,7 +375,19 @@ public:
       : AnyDefined(false), NoUnsignedWrap(false), NoSignedWrap(false),
         Exact(false), NoNaNs(false), NoInfs(false),
         NoSignedZeros(false), AllowReciprocal(false), VectorReduction(false),
-        AllowContract(false),  ApproximateFuncs(false), AllowReassociation(false) {}
+        AllowContract(false), ApproximateFuncs(false),
+        AllowReassociation(false) {}
+
+  /// Propagate the fast-math-flags from an IR FPMathOperator.
+  void copyFMF(const FPMathOperator &FPMO) {
+    setNoNaNs(FPMO.hasNoNaNs());
+    setNoInfs(FPMO.hasNoInfs());
+    setNoSignedZeros(FPMO.hasNoSignedZeros());
+    setAllowReciprocal(FPMO.hasAllowReciprocal());
+    setAllowContract(FPMO.hasAllowContract());
+    setApproximateFuncs(FPMO.hasApproxFunc());
+    setAllowReassociation(FPMO.hasAllowReassoc());
+  }
 
   /// Sets the state of the flags to the defined state.
   void setDefined() { AnyDefined = true; }

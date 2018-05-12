@@ -2739,46 +2739,26 @@ static bool isVectorReductionOp(const User *I) {
   return ReduxExtracted;
 }
 
-void SelectionDAGBuilder::visitBinary(const User &I, unsigned OpCode) {
-  SDValue Op1 = getValue(I.getOperand(0));
-  SDValue Op2 = getValue(I.getOperand(1));
-
-  bool nuw = false;
-  bool nsw = false;
-  bool exact = false;
-  bool vec_redux = false;
-  FastMathFlags FMF;
-
-  if (const OverflowingBinaryOperator *OFBinOp =
-          dyn_cast<const OverflowingBinaryOperator>(&I)) {
-    nuw = OFBinOp->hasNoUnsignedWrap();
-    nsw = OFBinOp->hasNoSignedWrap();
+void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
+  SDNodeFlags Flags;
+  if (auto *OFBinOp = dyn_cast<OverflowingBinaryOperator>(&I)) {
+    Flags.setNoSignedWrap(OFBinOp->hasNoSignedWrap());
+    Flags.setNoUnsignedWrap(OFBinOp->hasNoUnsignedWrap());
   }
-  if (const PossiblyExactOperator *ExactOp =
-          dyn_cast<const PossiblyExactOperator>(&I))
-    exact = ExactOp->isExact();
-  if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(&I))
-    FMF = FPOp->getFastMathFlags();
-
+  if (auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I)) {
+    Flags.setExact(ExactOp->isExact());
+  }
   if (isVectorReductionOp(&I)) {
-    vec_redux = true;
+    Flags.setVectorReduction(true);
     DEBUG(dbgs() << "Detected a reduction operation:" << I << "\n");
   }
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
+    Flags.copyFMF(*FPOp);
+  }
 
-  SDNodeFlags Flags;
-  Flags.setExact(exact);
-  Flags.setNoSignedWrap(nsw);
-  Flags.setNoUnsignedWrap(nuw);
-  Flags.setVectorReduction(vec_redux);
-  Flags.setAllowReciprocal(FMF.allowReciprocal());
-  Flags.setAllowContract(FMF.allowContract());
-  Flags.setNoInfs(FMF.noInfs());
-  Flags.setNoNaNs(FMF.noNaNs());
-  Flags.setNoSignedZeros(FMF.noSignedZeros());
-  Flags.setApproximateFuncs(FMF.approxFunc());
-  Flags.setAllowReassociation(FMF.allowReassoc());
-
-  SDValue BinNodeValue = DAG.getNode(OpCode, getCurSDLoc(), Op1.getValueType(),
+  SDValue Op1 = getValue(I.getOperand(0));
+  SDValue Op2 = getValue(I.getOperand(1));
+  SDValue BinNodeValue = DAG.getNode(Opcode, getCurSDLoc(), Op1.getValueType(),
                                      Op1, Op2, Flags);
   setValue(&I, BinNodeValue);
 }

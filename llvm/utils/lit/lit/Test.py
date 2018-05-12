@@ -371,15 +371,25 @@ class Test:
             class_name = safe_name + "." + "/".join(safe_test_path) 
         else:
             class_name = safe_name + "." + safe_name
-        testcase_template = u"<testcase classname='{class_name}' name='{test_name}' time='{time:.2f}'"
+        testcase_template = "<testcase classname='{class_name}' name='{test_name}' time='{time:.2f}'"
         elapsed_time = self.result.elapsed if self.result.elapsed is not None else 0.0
         testcase_xml = testcase_template.format(class_name=class_name, test_name=test_name, time=elapsed_time)
         fil.write(testcase_xml)
         if self.result.code.isFailure:
-            fil.write(u">\n\t<failure ><![CDATA[")
-            fil.write(self.result.output)
-            fil.write(u"]]></failure>\n</testcase>")
+            fil.write(">\n\t<failure ><![CDATA[")
+            if type(self.result.output) == unicode:
+                encoded_output = self.result.output.encode("utf-8", 'ignore')
+            else:
+                encoded_output = self.result.output
+            fil.write(encoded_output)
+            fil.write("]]></failure>\n</testcase>")
         elif self.result.code == UNSUPPORTED:
-            fil.write(u">\n\t<skipped />\n</testcase>\n")
+            unsupported_features = self.getMissingRequiredFeatures()
+            if unsupported_features:
+                skip_message = escape("Skipping because of: " + ", ".join(unsupported_features))
+            else:
+                skip_message = "Skipping because of configuration."
+
+            fil.write(">\n\t<skipped message=\"{}\" />\n</testcase>\n".format(skip_message))
         else:
-            fil.write(u"/>")
+            fil.write("/>")

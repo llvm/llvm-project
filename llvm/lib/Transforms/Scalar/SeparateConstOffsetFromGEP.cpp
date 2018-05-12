@@ -587,6 +587,10 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
     // Trace into subexpressions for more hoisting opportunities.
     if (CanTraceInto(SignExtended, ZeroExtended, BO, NonNegative))
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
+  } else if (isa<TruncInst>(V)) {
+    ConstantOffset =
+        find(U->getOperand(0), SignExtended, ZeroExtended, NonNegative)
+            .trunc(BitWidth);
   } else if (isa<SExtInst>(V)) {
     ConstantOffset = find(U->getOperand(0), /* SignExtended */ true,
                           ZeroExtended, NonNegative).sext(BitWidth);
@@ -651,8 +655,9 @@ ConstantOffsetExtractor::distributeExtsAndCloneChain(unsigned ChainIndex) {
   }
 
   if (CastInst *Cast = dyn_cast<CastInst>(U)) {
-    assert((isa<SExtInst>(Cast) || isa<ZExtInst>(Cast)) &&
-           "We only traced into two types of CastInst: sext and zext");
+    assert(
+        (isa<SExtInst>(Cast) || isa<ZExtInst>(Cast) || isa<TruncInst>(Cast)) &&
+        "Only following instructions can be traced: sext, zext & trunc");
     ExtInsts.push_back(Cast);
     UserChain[ChainIndex] = nullptr;
     return distributeExtsAndCloneChain(ChainIndex - 1);

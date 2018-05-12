@@ -328,7 +328,6 @@ static bool canVectorizeInst(Instruction *Inst, User *User) {
     return isa<GetElementPtrInst>(LI->getPointerOperand()) && !LI->isVolatile();
   }
   case Instruction::BitCast:
-  case Instruction::AddrSpaceCast:
     return true;
   case Instruction::Store: {
     // Must be the stored pointer operand, not a stored value, plus

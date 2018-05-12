@@ -1579,6 +1579,12 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
   case 64:
     return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_64RegClass :
                                                    &AMDGPU::SReg_64_XEXECRegClass;
+  case 96:
+    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_96RegClass :
+                                                  nullptr;
+  case 128:
+    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_128RegClass :
+                                                  &AMDGPU::SReg_128RegClass;
   default:
     llvm_unreachable("not implemented");
   }
