@@ -384,7 +384,7 @@ multiclass FPCMov<PatLeaf cc> {
 }
 
 let Defs = [FPSW] in {
-let SchedRW = [WriteFAdd] in {
+let SchedRW = [WriteFCMOV] in {
 let Uses = [EFLAGS], Constraints = "$src1 = $dst" in {
 defm CMOVB  : FPCMov<X86_COND_B>;
 defm CMOVBE : FPCMov<X86_COND_BE>;
