@@ -1905,7 +1905,14 @@ void ReassociatePass::EraseInst(Instruction *I) {
       while (Op->hasOneUse() && Op->user_back()->getOpcode() == Opcode &&
              Visited.insert(Op).second)
         Op = Op->user_back();
-      RedoInsts.insert(Op);
+
+      // The instruction we're going to push may be coming from a
+      // dead block, and Reassociate skips the processing of unreachable
+      // blocks because it's a waste of time and also because it can
+      // lead to infinite loop due to LLVM's non-standard definition
+      // of dominance.
+      if (ValueRankMap.find(Op) != ValueRankMap.end())
+        RedoInsts.insert(Op);
     }
 
   MadeChange = true;

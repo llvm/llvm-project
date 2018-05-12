@@ -5,7 +5,7 @@ UNSUPPORTED: darwin
 RUN: %cpp_compiler %S/TraceMallocThreadedTest.cpp -o \
 RUN:   %t-TraceMallocThreadedTest
 
-RUN: %t-TraceMallocThreadedTest -trace_malloc=2 -runs=1 2>&1 | FileCheck %s
+RUN: %run %t-TraceMallocThreadedTest -trace_malloc=2 -runs=1 2>&1 | FileCheck %s
 CHECK: {{MALLOC\[[0-9]+] +0x[0-9]+ 5639}}
 CHECK-NEXT: {{ +\#0 +}}
 CHECK-NEXT: {{ +\#1 +}}

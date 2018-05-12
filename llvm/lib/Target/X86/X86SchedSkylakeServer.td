@@ -158,12 +158,18 @@ defm : SKXWriteResPair<WriteJump,  [SKXPort06],   1>;
 
 // Floating point. This covers both scalar and vector operations.
 defm : X86WriteRes<WriteFLoad,         [SKXPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteFLoadX,        [SKXPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteFLoadY,        [SKXPort23], 7, [1], 1>;
 defm : X86WriteRes<WriteFMaskedLoad,   [SKXPort23,SKXPort015], 7, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedLoadY,  [SKXPort23,SKXPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteFStore,        [SKXPort237,SKXPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreX,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreY,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStore,  [SKXPort237,SKXPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStoreY, [SKXPort237,SKXPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteFMove,         [SKXPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteFMoveX,        [SKXPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteFMoveY,        [SKXPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteEMMS,          [SKXPort05,SKXPort0156], 10, [9,1], 10>;
 
 defm : SKXWriteResPair<WriteFAdd,     [SKXPort015],  4, [1], 1, 5>; // Floating point add/sub.
@@ -249,12 +255,18 @@ def  : WriteRes<WriteCvtF2FSt, [SKXPort4,SKXPort5,SKXPort237,SKXPort015]> {
 
 // Vector integer operations.
 defm : X86WriteRes<WriteVecLoad,         [SKXPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteVecLoadX,        [SKXPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteVecLoadY,        [SKXPort23], 7, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [SKXPort23,SKXPort015], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [SKXPort23,SKXPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecStore,        [SKXPort237,SKXPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreX,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreY,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStore,  [SKXPort237,SKXPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [SKXPort237,SKXPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteVecMove,         [SKXPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveX,        [SKXPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveY,        [SKXPort015], 1, [1], 1>;
 
 defm : SKXWriteResPair<WriteVecALU,   [SKXPort05], 1, [1], 1, 5>; // Vector integer ALU op, no logicals.
 defm : SKXWriteResPair<WriteVecALUX,  [SKXPort01], 1, [1], 1, 6>; // Vector integer ALU op, no logicals (XMM).
@@ -591,10 +603,7 @@ def SKXWriteResGroup11 : SchedWriteRes<[SKXPort4,SKXPort237]> {
 }
 def: InstRW<[SKXWriteResGroup11], (instregex "FBSTPm",
                                              "KMOV(B|D|Q|W)mk",
-                                             "MMX_MOVD64from64rm",
                                              "MMX_MOVD64mr",
-                                             "MMX_MOVNTQmr",
-                                             "MMX_MOVQ64mr",
                                              "MOVNTI_64mr",
                                              "MOVNTImr",
                                              "ST_FP(32|64|80)m",
@@ -1139,27 +1148,9 @@ def SKXWriteResGroup71 : SchedWriteRes<[SKXPort23]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup71], (instregex "LDDQUrm",
-                                             "MOVAPDrm",
-                                             "MOVAPSrm",
-                                             "MOVDQArm",
-                                             "MOVDQUrm",
-                                             "MOVNTDQArm",
-                                             "MOVSHDUPrm",
-                                             "MOVSLDUPrm",
-                                             "MOVUPDrm",
-                                             "MOVUPSrm",
-                                             "VBROADCASTSSrm",
-                                             "VLDDQUrm",
-                                             "VMOVAPDrm",
-                                             "VMOVAPSrm",
-                                             "VMOVDQArm",
-                                             "VMOVDQUrm",
-                                             "VMOVNTDQArm",
-                                             "VMOVSHDUPrm",
-                                             "VMOVSLDUPrm",
-                                             "VMOVUPDrm",
-                                             "VMOVUPSrm",
+def: InstRW<[SKXWriteResGroup71], (instregex "VBROADCASTSSrm",
+                                             "(V?)MOVSHDUPrm",
+                                             "(V?)MOVSLDUPrm",
                                              "VPBROADCASTDrm",
                                              "VPBROADCASTQrm")>;
 
@@ -1331,18 +1322,9 @@ def: InstRW<[SKXWriteResGroup89], (instregex "LD_F(32|64|80)m",
                                              "VBROADCASTI128",
                                              "VBROADCASTSDYrm",
                                              "VBROADCASTSSYrm",
-                                             "VLDDQUYrm",
-                                             "VMOVAPDYrm",
-                                             "VMOVAPSYrm",
                                              "VMOVDDUPYrm",
-                                             "VMOVDQAYrm",
-                                             "VMOVDQUYrm",
-                                             "VMOVNTDQAYrm",
-                                             "VMOVNTDQAZrm(b?)",
                                              "VMOVSHDUPYrm",
                                              "VMOVSLDUPYrm",
-                                             "VMOVUPDYrm",
-                                             "VMOVUPSYrm",
                                              "VPBROADCASTDYrm",
                                              "VPBROADCASTQYrm")>;
 

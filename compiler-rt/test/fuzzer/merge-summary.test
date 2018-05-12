@@ -9,9 +9,9 @@ RUN: echo F..... > %t/T2/a
 RUN: echo .U.... > %t/T2/b
 RUN: echo ..Z... > %t/T2/c
 
-RUN: %t-FullCoverageSetTest -merge=1 %t/T1 %t/T2 -save_coverage_summary=%t/SUMMARY 2>&1 | FileCheck %s --check-prefix=SAVE_SUMMARY
+RUN: %run %t-FullCoverageSetTest -merge=1 %t/T1 %t/T2 -save_coverage_summary=%t/SUMMARY 2>&1 | FileCheck %s --check-prefix=SAVE_SUMMARY
 SAVE_SUMMARY: MERGE-OUTER: writing coverage summary for 6 files to {{.*}}SUMMARY
 RUN: rm %t/T1/*
-RUN: %t-FullCoverageSetTest -merge=1 %t/T1 %t/T2 -load_coverage_summary=%t/SUMMARY 2>&1 | FileCheck %s --check-prefix=LOAD_SUMMARY
+RUN: %run %t-FullCoverageSetTest -merge=1 %t/T1 %t/T2 -load_coverage_summary=%t/SUMMARY 2>&1 | FileCheck %s --check-prefix=LOAD_SUMMARY
 LOAD_SUMMARY: MERGE-OUTER: coverage summary loaded from {{.*}}SUMMAR
 LOAD_SUMMARY: MERGE-OUTER: 0 new files with 0 new features added

@@ -92,6 +92,7 @@ struct Configuration {
   std::string ImportName;
   bool DoGC = true;
   bool DoICF = true;
+  bool TailMerge;
   bool Relocatable = true;
   bool Force = false;
   bool Debug = false;

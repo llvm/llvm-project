@@ -197,8 +197,6 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
   amd_kernel_code_t KernelCode;
   if (STM.isAmdCodeObjectV2(*MF)) {
     getAmdKernelCode(KernelCode, CurrentProgramInfo, *MF);
-
-    OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
     getTargetStreamer()->EmitAMDKernelCodeT(KernelCode);
   }
 

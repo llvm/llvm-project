@@ -314,8 +314,9 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(MachineSchedContext *C,
   ScheduleDAGMILive(C, std::move(S)),
   ST(MF.getSubtarget<SISubtarget>()),
   MFI(*MF.getInfo<SIMachineFunctionInfo>()),
-  StartingOccupancy(ST.getOccupancyWithLocalMemSize(MFI.getLDSSize(),
-                                                    MF.getFunction())),
+  StartingOccupancy(std::min(ST.getOccupancyWithLocalMemSize(MFI.getLDSSize(),
+                                                             MF.getFunction()),
+                             MFI.getMaxWavesPerEU())),
   MinOccupancy(StartingOccupancy), Stage(0), RegionIdx(0) {
 
   DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");
@@ -368,6 +369,8 @@ void GCNScheduleDAGMILive::schedule() {
                                     PressureAfter.getVGPRNum(), MF);
   unsigned WavesBefore = getMaxWaves(PressureBefore.getSGPRNum(),
                                      PressureBefore.getVGPRNum(), MF);
+  WavesAfter = std::min(WavesAfter, MFI.getMaxWavesPerEU());
+  WavesBefore = std::min(WavesBefore, MFI.getMaxWavesPerEU());
   DEBUG(dbgs() << "Occupancy before scheduling: " << WavesBefore <<
                   ", after " << WavesAfter << ".\n");
 

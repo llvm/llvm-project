@@ -692,10 +692,12 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_siprintf:
   case LibFunc_sprintf:
     return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
+            FTy.getParamType(1)->isPointerTy() &&
+            FTy.getReturnType()->isIntegerTy(32));
   case LibFunc_snprintf:
     return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(2)->isPointerTy());
+            FTy.getParamType(2)->isPointerTy() &&
+            FTy.getReturnType()->isIntegerTy(32));
   case LibFunc_setitimer:
     return (NumParams == 3 && FTy.getParamType(1)->isPointerTy() &&
             FTy.getParamType(2)->isPointerTy());

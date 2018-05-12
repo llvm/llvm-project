@@ -95,6 +95,7 @@ Clang-Tidy Checks
    fuchsia-default-arguments
    fuchsia-multiple-inheritance
    fuchsia-overloaded-operator
+   fuchsia-restrict-system-includes
    fuchsia-statically-constructed-objects
    fuchsia-trailing-return
    fuchsia-virtual-inheritance

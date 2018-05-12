@@ -267,8 +267,6 @@ void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
   switch (GetCXXStdlibType(Args)) {
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back("-lc++");
-    CmdArgs.push_back("-lc++abi");
-    CmdArgs.push_back("-lunwind");
     break;
 
   case ToolChain::CST_Libstdcxx:

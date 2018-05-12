@@ -10,6 +10,7 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "MCTargetDesc/RISCVTargetStreamer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCContext.h"
@@ -36,6 +37,11 @@ struct RISCVOperand;
 class RISCVAsmParser : public MCTargetAsmParser {
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
   bool isRV64() const { return getSTI().hasFeature(RISCV::Feature64Bit); }
+
+  RISCVTargetStreamer &getTargetStreamer() {
+    MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
+    return static_cast<RISCVTargetStreamer &>(TS);
+  }
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
@@ -67,6 +73,23 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   bool parseOperand(OperandVector &Operands, bool ForceImmediate);
 
+  bool parseDirectiveOption();
+
+  void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
+    if (!(getSTI().getFeatureBits()[Feature])) {
+      MCSubtargetInfo &STI = copySTI();
+      setAvailableFeatures(
+          ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
+    }
+  }
+
+  void clearFeatureBits(uint64_t Feature, StringRef FeatureString) {
+    if (getSTI().getFeatureBits()[Feature]) {
+      MCSubtargetInfo &STI = copySTI();
+      setAvailableFeatures(
+          ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
+    }
+  }
 public:
   enum RISCVMatchResultTy {
     Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
@@ -984,7 +1007,60 @@ bool RISCVAsmParser::classifySymbolRef(const MCExpr *Expr,
   return Kind != RISCVMCExpr::VK_RISCV_Invalid;
 }
 
-bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) { return true; }
+bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
+  // This returns false if this function recognizes the directive
+  // regardless of whether it is successfully handles or reports an
+  // error. Otherwise it returns true to give the generic parser a
+  // chance at recognizing it.
+  StringRef IDVal = DirectiveID.getString();
+
+  if (IDVal == ".option")
+    return parseDirectiveOption();
+
+  return true;
+}
+
+bool RISCVAsmParser::parseDirectiveOption() {
+  MCAsmParser &Parser = getParser();
+  // Get the option token.
+  AsmToken Tok = Parser.getTok();
+  // At the moment only identifiers are supported.
+  if (Tok.isNot(AsmToken::Identifier))
+    return Error(Parser.getTok().getLoc(),
+                 "unexpected token, expected identifier");
+
+  StringRef Option = Tok.getIdentifier();
+
+  if (Option == "rvc") {
+    getTargetStreamer().emitDirectiveOptionRVC();
+
+    Parser.Lex();
+    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
+      return Error(Parser.getTok().getLoc(),
+                   "unexpected token, expected end of statement");
+
+    setFeatureBits(RISCV::FeatureStdExtC, "c");
+    return false;
+  }
+
+  if (Option == "norvc") {
+    getTargetStreamer().emitDirectiveOptionNoRVC();
+
+    Parser.Lex();
+    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
+      return Error(Parser.getTok().getLoc(),
+                   "unexpected token, expected end of statement");
+
+    clearFeatureBits(RISCV::FeatureStdExtC, "c");
+    return false;
+  }
+
+  // Unknown option.
+  Warning(Parser.getTok().getLoc(),
+          "unknown option, expected 'rvc' or 'norvc'");
+  Parser.eatToEndOfStatement();
+  return false;
+}
 
 extern "C" void LLVMInitializeRISCVAsmParser() {
   RegisterMCAsmParser<RISCVAsmParser> X(getTheRISCV32Target());

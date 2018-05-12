@@ -137,12 +137,18 @@ defm WriteJump : X86SchedWritePair;
 
 // Floating point. This covers both scalar and vector operations.
 def  WriteFLoad         : SchedWrite;
+def  WriteFLoadX        : SchedWrite;
+def  WriteFLoadY        : SchedWrite;
 def  WriteFMaskedLoad   : SchedWrite;
 def  WriteFMaskedLoadY  : SchedWrite;
 def  WriteFStore        : SchedWrite;
+def  WriteFStoreX       : SchedWrite;
+def  WriteFStoreY       : SchedWrite;
 def  WriteFMaskedStore  : SchedWrite;
 def  WriteFMaskedStoreY : SchedWrite;
 def  WriteFMove         : SchedWrite;
+def  WriteFMoveX        : SchedWrite;
+def  WriteFMoveY        : SchedWrite;
 
 defm WriteFAdd    : X86SchedWritePair; // Floating point add/sub.
 defm WriteFAddX   : X86SchedWritePair; // Floating point add/sub (XMM).
@@ -220,12 +226,18 @@ defm WritePHAddY : X86SchedWritePair; // YMM/ZMM.
 
 // Vector integer operations.
 def  WriteVecLoad         : SchedWrite;
+def  WriteVecLoadX        : SchedWrite;
+def  WriteVecLoadY        : SchedWrite;
 def  WriteVecMaskedLoad   : SchedWrite;
 def  WriteVecMaskedLoadY  : SchedWrite;
 def  WriteVecStore        : SchedWrite;
+def  WriteVecStoreX       : SchedWrite;
+def  WriteVecStoreY       : SchedWrite;
 def  WriteVecMaskedStore  : SchedWrite;
 def  WriteVecMaskedStoreY : SchedWrite;
 def  WriteVecMove         : SchedWrite;
+def  WriteVecMoveX        : SchedWrite;
+def  WriteVecMoveY        : SchedWrite;
 
 defm WriteVecALU    : X86SchedWritePair; // Vector integer ALU op, no logicals.
 defm WriteVecALUX   : X86SchedWritePair; // Vector integer ALU op, no logicals (XMM).
@@ -332,9 +344,9 @@ def WriteNop : SchedWrite;
 def WriteFMoveLS
  : X86SchedWriteMoveLS<WriteFMove, WriteFLoad, WriteFStore>;
 def WriteFMoveLSX
- : X86SchedWriteMoveLS<WriteFMove, WriteFLoad, WriteFStore>;
+ : X86SchedWriteMoveLS<WriteFMoveX, WriteFLoadX, WriteFStoreX>;
 def WriteFMoveLSY
- : X86SchedWriteMoveLS<WriteFMove, WriteFLoad, WriteFStore>;
+ : X86SchedWriteMoveLS<WriteFMoveY, WriteFLoadY, WriteFStoreY>;
 def SchedWriteFMoveLS
   : X86SchedWriteMoveLSWidths<WriteFMoveLS, WriteFMoveLSX,
                               WriteFMoveLSY, WriteFMoveLSY>;
@@ -342,9 +354,9 @@ def SchedWriteFMoveLS
 def WriteVecMoveLS
  : X86SchedWriteMoveLS<WriteVecMove, WriteVecLoad, WriteVecStore>;
 def WriteVecMoveLSX
- : X86SchedWriteMoveLS<WriteVecMove, WriteVecLoad, WriteVecStore>;
+ : X86SchedWriteMoveLS<WriteVecMoveX, WriteVecLoadX, WriteVecStoreX>;
 def WriteVecMoveLSY
- : X86SchedWriteMoveLS<WriteVecMove, WriteVecLoad, WriteVecStore>;
+ : X86SchedWriteMoveLS<WriteVecMoveY, WriteVecLoadY, WriteVecStoreY>;
 def SchedWriteVecMoveLS
   : X86SchedWriteMoveLSWidths<WriteVecMoveLS, WriteVecMoveLSX,
                               WriteVecMoveLSY, WriteVecMoveLSY>;

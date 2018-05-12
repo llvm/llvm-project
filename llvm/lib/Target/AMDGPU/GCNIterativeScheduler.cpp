@@ -566,8 +566,9 @@ void GCNIterativeScheduler::scheduleMinReg(bool force) {
 void GCNIterativeScheduler::scheduleILP(
   bool TryMaximizeOccupancy) {
   const auto &ST = MF.getSubtarget<SISubtarget>();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   auto TgtOcc = std::min(ST.getOccupancyWithLocalMemSize(MF),
-                         ST.getWavesPerEU(MF.getFunction()).second);
+                         MFI->getMaxWavesPerEU());
 
   sortRegionsByPressure(TgtOcc);
   auto Occ = Regions.front()->MaxPressure.getOccupancy(ST);

@@ -151,6 +151,8 @@ template <class T> void f_computed_noexcept(T t) noexcept(noexcept(t+t));
 void f_dynamic_noexcept_none() throw();
 void f_dynamic_noexcept() throw(int);
 void f_dynamic_noexcept_any() throw(...);
+void f_computed_noexcept_true() noexcept(true);
+void f_computed_noexcept_false() noexcept(false);
 
 enum EnumType { Enumerator };
 struct Z {
@@ -221,7 +223,7 @@ struct Z {
 // RUN: c-index-test -cursor-at=%s:66:23 %s | FileCheck -check-prefix=CHECK-TEMPLSPEC %s
 // CHECK-TEMPLSPEC: 66:23 ClassDecl=TC:66:23 (Definition) [Specialization of TC:59:7] Extent=[66:1 - 66:31] Spelling=TC ([66:23 - 66:25])
 
-// RUN: c-index-test -cursor-at=%s:69:3 -cursor-at=%s:70:11 -cursor-at=%s:73:6 -cursor-at=%s:74:6 -cursor-at=%s:77:8 -cursor-at=%s:78:8 -cursor-at=%s:79:8 -cursor-at=%s:80:8 -cursor-at=%s:81:8 -cursor-at=%s:82:8 -cursor-at=%s:85:6 -cursor-at=%s:86:6 -cursor-at=%s:87:6 -cursor-at=%s:88:6 -cursor-at=%s:91:5 -cursor-at=%s:92:5 -cursor-at=%s:93:5 -cursor-at=%s:94:5 -cursor-at=%s:95:5 -cursor-at=%s:96:5 -cursor-at=%s:97:5 -cursor-at=%s:98:5 -cursor-at=%s:100:5 -cursor-at=%s:101:5 -cursor-at=%s:104:6 -cursor-at=%s:105:6 -cursor-at=%s:106:6 -cursor-at=%s:107:6 -cursor-at=%s:108:6 -cursor-at=%s:109:6 -cursor-at=%s:110:6 -cursor-at=%s:111:6 -cursor-at=%s:113:6 -cursor-at=%s:114:6 -cursor-at=%s:117:8 -cursor-at=%s:118:8 -cursor-at=%s:120:8 -cursor-at=%s:121:8 -cursor-at=%s:122:8 -cursor-at=%s:123:8 -cursor-at=%s:124:8 -cursor-at=%s:125:8 -cursor-at=%s:128:6 -cursor-at=%s:129:6 -cursor-at=%s:130:6 -cursor-at=%s:132:3 -cursor-at=%s:146:15 -cursor-at=%s:149:6 -cursor-at=%s:150:25 -cursor-at=%s:151:6 -cursor-at=%s:152:6 -cursor-at=%s:153:6 -std=c++11 %s | FileCheck -check-prefix=CHECK-SPELLING %s
+// RUN: c-index-test -cursor-at=%s:69:3 -cursor-at=%s:70:11 -cursor-at=%s:73:6 -cursor-at=%s:74:6 -cursor-at=%s:77:8 -cursor-at=%s:78:8 -cursor-at=%s:79:8 -cursor-at=%s:80:8 -cursor-at=%s:81:8 -cursor-at=%s:82:8 -cursor-at=%s:85:6 -cursor-at=%s:86:6 -cursor-at=%s:87:6 -cursor-at=%s:88:6 -cursor-at=%s:91:5 -cursor-at=%s:92:5 -cursor-at=%s:93:5 -cursor-at=%s:94:5 -cursor-at=%s:95:5 -cursor-at=%s:96:5 -cursor-at=%s:97:5 -cursor-at=%s:98:5 -cursor-at=%s:100:5 -cursor-at=%s:101:5 -cursor-at=%s:104:6 -cursor-at=%s:105:6 -cursor-at=%s:106:6 -cursor-at=%s:107:6 -cursor-at=%s:108:6 -cursor-at=%s:109:6 -cursor-at=%s:110:6 -cursor-at=%s:111:6 -cursor-at=%s:113:6 -cursor-at=%s:114:6 -cursor-at=%s:117:8 -cursor-at=%s:118:8 -cursor-at=%s:120:8 -cursor-at=%s:121:8 -cursor-at=%s:122:8 -cursor-at=%s:123:8 -cursor-at=%s:124:8 -cursor-at=%s:125:8 -cursor-at=%s:128:6 -cursor-at=%s:129:6 -cursor-at=%s:130:6 -cursor-at=%s:132:3 -cursor-at=%s:146:15 -cursor-at=%s:149:6 -cursor-at=%s:150:25 -cursor-at=%s:151:6 -cursor-at=%s:152:6 -cursor-at=%s:153:6 -cursor-at=%s:154:6 -cursor-at=%s:155:6 -std=c++11 %s | FileCheck -check-prefix=CHECK-SPELLING %s
 // CHECK-SPELLING: 69:3 CXXConstructor=A:69:3 (default constructor) Extent=[69:3 - 69:6] Spelling=A ([69:3 - 69:4])
 // CHECK-SPELLING: 70:11 CXXDestructor=~A:70:11 (virtual) Extent=[70:3 - 70:15] Spelling=~A ([70:11 - 70:13])
 // CHECK-SPELLING: 73:6 CXXMethod=operator=:73:6 Extent=[73:3 - 73:25] Spelling=operator= ([73:6 - 73:15])
@@ -274,12 +276,14 @@ struct Z {
 // CHECK-SPELLING: 151:6 FunctionDecl=f_dynamic_noexcept_none:151:6 (noexcept dynamic none) Extent=[151:1 - 151:39] Spelling=f_dynamic_noexcept_none ([151:6 - 151:29])
 // CHECK-SPELLING: 152:6 FunctionDecl=f_dynamic_noexcept:152:6 (noexcept dynamic) Extent=[152:1 - 152:37] Spelling=f_dynamic_noexcept ([152:6 - 152:24])
 // CHECK-SPELLING: 153:6 FunctionDecl=f_dynamic_noexcept_any:153:6 (noexcept dynamic any) Extent=[153:1 - 153:41] Spelling=f_dynamic_noexcept_any ([153:6 - 153:28])
+// CHECK-SPELLING: 154:6 FunctionDecl=f_computed_noexcept_true:154:6 (computed-noexcept) Extent=[154:1 - 154:47] Spelling=f_computed_noexcept_true ([154:6 - 154:30])
+// CHECK-SPELLING: 155:6 FunctionDecl=f_computed_noexcept_false:155:6 (computed-noexcept) Extent=[155:1 - 155:49] Spelling=f_computed_noexcept_false ([155:6 - 155:31])
 
 // RUN: c-index-test -cursor-at=%s:141:13 -cursor-at=%s:141:18 -cursor-at=%s:142:11 -std=c++11 %s | FileCheck -check-prefix=CHECK-FORRANGE %s
 // CHECK-FORRANGE: 141:13 VarDecl=lv:141:13 (Definition) Extent=[141:8 - 141:17] Spelling=lv ([141:13 - 141:15])
 // CHECK-FORRANGE: 141:18 DeclRefExpr=coll:140:20 Extent=[141:18 - 141:22] Spelling=coll ([141:18 - 141:22])
 // CHECK-FORRANGE: 142:11 DeclRefExpr=lv:141:13 Extent=[142:11 - 142:13] Spelling=lv ([142:11 - 142:13])
 
-// RUN: c-index-test -cursor-at=%s:157:18 -std=c++11 %s | FileCheck -check-prefix=CHECK-INCLASSINITIALIZER %s
-// CHECK-INCLASSINITIALIZER: 157:18 DeclRefExpr=Enumerator:155:17 Extent=[157:18 - 157:28] Spelling=Enumerator ([157:18 - 157:28])
+// RUN: c-index-test -cursor-at=%s:159:18 -std=c++11 %s | FileCheck -check-prefix=CHECK-INCLASSINITIALIZER %s
+// CHECK-INCLASSINITIALIZER: 159:18 DeclRefExpr=Enumerator:157:17 Extent=[159:18 - 159:28] Spelling=Enumerator ([159:18 - 159:28])
 

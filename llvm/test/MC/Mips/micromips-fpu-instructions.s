@@ -153,12 +153,19 @@
 # CHECK-EB: movf.d  $f4, $f6, $fcc0     # encoding: [0x54,0x86,0x02,0x20]
 # CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MOVF_D32_MM
 # CHECK-EB: madd.s  $f2, $f4, $f6, $f8  # encoding: [0x55,0x06,0x11,0x01]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MADD_S_MM
 # CHECK-EB: madd.d  $f2, $f4, $f6, $f8  # encoding: [0x55,0x06,0x11,0x09]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MADD_D32_MM
 # CHECK-EB: msub.s  $f2, $f4, $f6, $f8  # encoding: [0x55,0x06,0x11,0x21]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MSUB_S_MM
 # CHECK-EB: msub.d  $f2, $f4, $f6, $f8  # encoding: [0x55,0x06,0x11,0x29]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} MSUB_D32_MM
 # CHECK-EB: nmadd.s $f2, $f4, $f6, $f8  # encoding: [0x55,0x06,0x11,0x02]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} NMADD_S_MM
 # CHECK-EB: nmadd.d $f2, $f4, $f6, $f8  # encoding: [0x55,0x06,0x11,0x0a]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} NMADD_D32_MM
 # CHECK-EB: nmsub.s $f2, $f4, $f6, $f8  # encoding: [0x55,0x06,0x11,0x22]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} NMSUB_S_MM
 # CHECK-EB: nmsub.d $f2, $f4, $f6, $f8  # encoding: [0x55,0x06,0x11,0x2a]
 
     add.s      $f4, $f6, $f8
