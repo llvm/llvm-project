@@ -190,12 +190,18 @@ def  : WriteRes<WriteIMulH, [ZnALU1, ZnMultiplier]>{
 
 // Floating point operations
 defm : X86WriteRes<WriteFLoad,         [ZnAGU], 8, [1], 1>;
+defm : X86WriteRes<WriteFLoadX,        [ZnAGU], 8, [1], 1>;
+defm : X86WriteRes<WriteFLoadY,        [ZnAGU], 8, [1], 1>;
 defm : X86WriteRes<WriteFMaskedLoad,   [ZnAGU,ZnFPU01], 8, [1,1], 1>;
 defm : X86WriteRes<WriteFMaskedLoadY,  [ZnAGU,ZnFPU01], 8, [1,2], 2>;
 defm : X86WriteRes<WriteFStore,        [ZnAGU], 1, [1,1], 1>;
+defm : X86WriteRes<WriteFStoreX,       [ZnAGU], 1, [1,1], 1>;
+defm : X86WriteRes<WriteFStoreY,       [ZnAGU], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFMaskedStore,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
 defm : X86WriteRes<WriteFMaskedStoreY, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
 defm : X86WriteRes<WriteFMove,         [ZnFPU], 1, [1], 1>;
+defm : X86WriteRes<WriteFMoveX,        [ZnFPU], 1, [1], 1>;
+defm : X86WriteRes<WriteFMoveY,        [ZnFPU], 1, [1], 1>;
 
 defm : ZnWriteResFpuPair<WriteFAdd,      [ZnFPU0],  3>;
 defm : ZnWriteResFpuPair<WriteFAddX,     [ZnFPU0],  3>;
@@ -266,12 +272,18 @@ def  : WriteRes<WriteCvtF2FSt, [ZnFPU3, ZnAGU]>;
 
 // Vector integer operations which uses FPU units
 defm : X86WriteRes<WriteVecLoad,         [ZnAGU], 8, [1], 1>;
+defm : X86WriteRes<WriteVecLoadX,        [ZnAGU], 8, [1], 1>;
+defm : X86WriteRes<WriteVecLoadY,        [ZnAGU], 8, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [ZnAGU,ZnFPU01], 8, [1,2], 2>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [ZnAGU,ZnFPU01], 9, [1,3], 2>;
 defm : X86WriteRes<WriteVecStore,        [ZnAGU], 1, [1,1], 1>;
+defm : X86WriteRes<WriteVecStoreX,       [ZnAGU], 1, [1,1], 1>;
+defm : X86WriteRes<WriteVecStoreY,       [ZnAGU], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecMaskedStore,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
 defm : X86WriteRes<WriteVecMove,         [ZnFPU], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveX,        [ZnFPU], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveY,        [ZnFPU], 1, [1], 1>;
 defm : X86WriteRes<WriteEMMS,            [ZnFPU], 2, [1], 1>;
 
 defm : ZnWriteResFpuPair<WriteVecShift,   [ZnFPU],   1>;

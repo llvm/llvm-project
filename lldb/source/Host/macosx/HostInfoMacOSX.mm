@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 // C++ Includes
@@ -226,21 +227,78 @@ bool HostInfoMacOSX::ComputePythonDirectory(FileSpec &file_spec) {
 #endif
 }
 
+static bool VerifyClangPath(const llvm::Twine &clang_path) {
+  if (llvm::sys::fs::is_directory(clang_path))
+    return true;
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  if (log)
+    log->Printf("HostInfoMacOSX::ComputeClangDirectory(): "
+                "failed to stat clang resource directory at \"%s\"",
+                clang_path.str().c_str());
+  return false;
+}
+
 bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &file_spec) {
   FileSpec lldb_file_spec;
   if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
     return false;
+  return ComputeClangDirectory(lldb_file_spec, file_spec, true);
+}
 
-  std::string raw_path = lldb_file_spec.GetPath();
+bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
+                                           FileSpec &file_spec, bool verify) {
+  std::string raw_path = lldb_shlib_spec.GetPath();
 
-  size_t framework_pos = raw_path.find("LLDB.framework");
-  if (framework_pos == std::string::npos)
+  auto rev_it = llvm::sys::path::rbegin(raw_path);
+  auto r_end = llvm::sys::path::rend(raw_path);
+
+  // Check for a Posix-style build of LLDB.
+  while (rev_it != r_end) {
+    if (*rev_it == "LLDB.framework")
+      break;
+    ++rev_it;
+  }
+
+  if (rev_it == r_end)
     return HostInfoPosix::ComputeClangDirectory(file_spec);
-  
-  framework_pos += strlen("LLDB.framework");
-  raw_path.resize(framework_pos);
-  raw_path.append("/Resources/Clang");
-  
+
+  // Inside Xcode and in Xcode toolchains LLDB is always in lockstep
+  // with the Swift compiler, so it can reuse its Clang resource
+  // directory. This allows LLDB and the Swift compiler to share the
+  // same Clang module cache.
+  llvm::SmallString<256> clang_path;
+  const char *swift_clang_resource_dir = "usr/lib/swift/clang";
+  auto parent = std::next(rev_it);
+  if (parent != r_end && *parent == "SharedFrameworks") {
+    // This is the top-level LLDB in the Xcode.app bundle.
+    // e.g., "Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A"
+    raw_path.resize(parent - r_end);
+    llvm::sys::path::append(clang_path, raw_path,
+                            "Developer/Toolchains/XcodeDefault.xctoolchain",
+                            swift_clang_resource_dir);
+    if (!verify || VerifyClangPath(clang_path)) {
+      file_spec.SetFile(clang_path.c_str(), true);
+      return true;
+    }
+  } else if (parent != r_end && *parent == "PrivateFrameworks" &&
+             std::distance(parent, r_end) > 2) {
+    // This is LLDB inside an Xcode toolchain.
+    // e.g., "Xcode.app/Contents/Developer/Toolchains/" \
+    //       "My.xctoolchain/System/Library/PrivateFrameworks/LLDB.framework"
+    ++parent;
+    ++parent;
+    raw_path.resize(parent - r_end);
+    llvm::sys::path::append(clang_path, raw_path, swift_clang_resource_dir);
+    if (!verify || VerifyClangPath(clang_path)) {
+      file_spec.SetFile(clang_path.c_str(), true);
+      return true;
+    }
+  } else {
+    raw_path.resize(rev_it - r_end);
+  }
+
+  // Fall back to the Clang resource directory inside the framework.
+  raw_path.append("LLDB.framework/Resources/Clang");
   file_spec.SetFile(raw_path.c_str(), true);
   return true;
 }

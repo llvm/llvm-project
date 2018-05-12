@@ -1437,6 +1437,8 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
   //    } __attribute__((__packed__));
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  bool should_log = log && log->GetVerbose();
+
   uint32_t num_parsed = 0;
 
   // Iterate through all ClassInfo structures
@@ -1445,7 +1447,7 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
     ObjCISA isa = data.GetPointer(&offset);
 
     if (isa == 0) {
-      if (log && log->GetVerbose())
+      if (should_log)
         log->Printf(
             "AppleObjCRuntimeV2 found NULL isa, ignoring this class info");
       continue;
@@ -1453,7 +1455,7 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
     // Check if we already know about this ISA, if we do, the info will never
     // change, so we can just skip it.
     if (ISAIsCached(isa)) {
-      if (log)
+      if (should_log)
         log->Printf("AppleObjCRuntimeV2 found cached isa=0x%" PRIx64
                     ", ignoring this class info",
                     isa);
@@ -1464,14 +1466,14 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
       ClassDescriptorSP descriptor_sp(new ClassDescriptorV2(*this, isa, NULL));
       AddClass(isa, descriptor_sp, name_hash);
       num_parsed++;
-      if (log)
+      if (should_log)
         log->Printf("AppleObjCRuntimeV2 added isa=0x%" PRIx64
                     ", hash=0x%8.8x, name=%s",
                     isa, name_hash,
                     descriptor_sp->GetClassName().AsCString("<unknown>"));
     }
   }
-  if (log)
+  if (should_log)
     log->Printf("AppleObjCRuntimeV2 parsed %" PRIu32 " class infos",
                 num_parsed);
   return num_parsed;

@@ -1,0 +1,7 @@
+CHECK: BINGO
+RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
+
+RUN: not %run %t-SimpleTest 2>&1 | FileCheck %s
+
+# only_ascii mode. Will perform some minimal self-validation.
+RUN: not %run %t-SimpleTest -only_ascii=1 2>&1

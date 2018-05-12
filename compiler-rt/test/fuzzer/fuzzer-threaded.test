@@ -1,8 +1,8 @@
 CHECK: Done 1000 runs in
 RUN: %cpp_compiler %S/ThreadedTest.cpp -o %t-ThreadedTest
 
-RUN: %t-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
-RUN: %t-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
-RUN: %t-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
-RUN: %t-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
+RUN: %run %t-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
+RUN: %run %t-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
+RUN: %run %t-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
+RUN: %run %t-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
 

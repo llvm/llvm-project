@@ -1049,6 +1049,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   bool DoGC = !Args.hasArg(OPT_debug) || Args.hasArg(OPT_profile);
   unsigned ICFLevel =
       Args.hasArg(OPT_profile) ? 0 : 1; // 0: off, 1: limited, 2: on
+  unsigned TailMerge = 1;
   for (auto *Arg : Args.filtered(OPT_opt)) {
     std::string Str = StringRef(Arg->getValue()).lower();
     SmallVector<StringRef, 1> Vec;
@@ -1062,6 +1063,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         ICFLevel = 2;
       } else if (S == "noicf") {
         ICFLevel = 0;
+      } else if (S == "lldtailmerge") {
+        TailMerge = 2;
+      } else if (S == "nolldtailmerge") {
+        TailMerge = 0;
       } else if (S.startswith("lldlto=")) {
         StringRef OptLevel = S.substr(7);
         if (OptLevel.getAsInteger(10, Config->LTOOptLevel) ||
@@ -1090,6 +1095,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     ICFLevel = 0;
   Config->DoGC = DoGC;
   Config->DoICF = ICFLevel > 0;
+  Config->TailMerge = (TailMerge == 1 && Config->DoICF) || TailMerge == 2;
 
   // Handle /lldsavetemps
   if (Args.hasArg(OPT_lldsavetemps))

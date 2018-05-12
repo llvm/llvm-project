@@ -33,12 +33,12 @@
 # CHECK: <testcase classname='shtest-format.shtest-format' name='pass.txt' time='{{[0-9]+\.[0-9]+}}'/>
 
 # CHECK: <testcase classname='shtest-format.shtest-format' name='requires-any-missing.txt' time='{{[0-9]+\.[0-9]+}}'>
-# CHECK-NEXT:<skipped />
+# CHECK-NEXT:<skipped message="Skipping because of: a-missing-feature || a-missing-feature-2" />
 
 # CHECK: <testcase classname='shtest-format.shtest-format' name='requires-any-present.txt' time='{{[0-9]+\.[0-9]+}}'/>
 
 # CHECK: <testcase classname='shtest-format.shtest-format' name='requires-missing.txt' time='{{[0-9]+\.[0-9]+}}'>
-# CHECK-NEXT:<skipped />
+# CHECK-NEXT:<skipped message="Skipping because of: a-missing-feature" />
 
 # CHECK: <testcase classname='shtest-format.shtest-format' name='requires-present.txt' time='{{[0-9]+\.[0-9]+}}'/>
 
@@ -49,12 +49,12 @@
 
 
 # CHECK: <testcase classname='shtest-format.shtest-format' name='requires-triple.txt' time='{{[0-9]+\.[0-9]+}}'>
-# CHECK-NEXT:<skipped />
+# CHECK-NEXT:<skipped message="Skipping because of: x86_64" />
 
 # CHECK: <testcase classname='shtest-format.shtest-format' name='unsupported-expr-false.txt' time='{{[0-9]+\.[0-9]+}}'/>
 
 # CHECK: <testcase classname='shtest-format.shtest-format' name='unsupported-expr-true.txt' time='{{[0-9]+\.[0-9]+}}'>
-# CHECK-NEXT:<skipped />
+# CHECK-NEXT:<skipped message="Skipping because of configuration." />
 
 # CHECK: <testcase classname='shtest-format.shtest-format' name='unsupported-star.txt' time='{{[0-9]+\.[0-9]+}}'>
 # CHECK-NEXT: <failure{{[ ]*}}>
@@ -62,7 +62,7 @@
 # CHECK-NEXT: </testcase>
 
 # CHECK: <testcase classname='shtest-format.unsupported_dir' name='some-test.txt' time='{{[0-9]+\.[0-9]+}}'>
-# CHECK-NEXT:<skipped />
+# CHECK-NEXT:<skipped message="Skipping because of configuration." />
 
 # CHECK: <testcase classname='shtest-format.shtest-format' name='xfail-expr-false.txt' time='{{[0-9]+\.[0-9]+}}'/>
 

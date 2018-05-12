@@ -3,7 +3,7 @@ RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/LFSIGUSR
 
-RUN: %t/LFSIGUSR 2> %t/log & export PID=$!
+RUN: %run %t/LFSIGUSR 2> %t/log & export PID=$!
 RUN: sleep 2
 RUN: kill -SIGUSR1 $PID
 RUN: sleep 3

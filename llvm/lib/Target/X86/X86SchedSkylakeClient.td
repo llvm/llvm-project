@@ -157,13 +157,19 @@ def : WriteRes<WriteZero,  []>;
 defm : SKLWriteResPair<WriteJump,  [SKLPort06],   1>;
 
 // Floating point. This covers both scalar and vector operations.
-defm : X86WriteRes<WriteFLoad,         [SKLPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteFLoad,         [SKLPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteFLoadX,        [SKLPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteFLoadY,        [SKLPort23], 7, [1], 1>;
 defm : X86WriteRes<WriteFMaskedLoad,   [SKLPort23,SKLPort015], 7, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedLoadY,  [SKLPort23,SKLPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteFStore,        [SKLPort237,SKLPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreX,       [SKLPort237,SKLPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreY,       [SKLPort237,SKLPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStore,  [SKLPort237,SKLPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStoreY, [SKLPort237,SKLPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteFMove,         [SKLPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteFMoveX,        [SKLPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteFMoveY,        [SKLPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteEMMS,          [SKLPort05,SKLPort0156], 10, [9,1], 10>;
 
 defm : SKLWriteResPair<WriteFAdd,     [SKLPort01],  4, [1], 1, 5>; // Floating point add/sub.
@@ -248,13 +254,19 @@ def  : WriteRes<WriteCvtF2FSt, [SKLPort4,SKLPort5,SKLPort237,SKLPort01]> {
 // class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
 
 // Vector integer operations.
-defm : X86WriteRes<WriteVecLoad,         [SKLPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteVecLoad,         [SKLPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteVecLoadX,        [SKLPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteVecLoadY,        [SKLPort23], 7, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [SKLPort23,SKLPort015], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [SKLPort23,SKLPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecStore,        [SKLPort237,SKLPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreX,       [SKLPort237,SKLPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreY,       [SKLPort237,SKLPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStore,  [SKLPort237,SKLPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [SKLPort237,SKLPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteVecMove,         [SKLPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveX,        [SKLPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveY,        [SKLPort015], 1, [1], 1>;
 
 defm : SKLWriteResPair<WriteVecALU,   [SKLPort05], 1, [1], 1, 5>; // Vector integer ALU op, no logicals.
 defm : SKLWriteResPair<WriteVecALUX,  [SKLPort01], 1, [1], 1, 6>; // Vector integer ALU op, no logicals (XMM).
@@ -566,10 +578,7 @@ def SKLWriteResGroup11 : SchedWriteRes<[SKLPort4,SKLPort237]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[SKLWriteResGroup11], (instregex "FBSTPm",
-                                             "MMX_MOVD64from64rm",
                                              "MMX_MOVD64mr",
-                                             "MMX_MOVNTQmr",
-                                             "MMX_MOVQ64mr",
                                              "MOVNTI_64mr",
                                              "MOVNTImr",
                                              "ST_FP(32|64|80)m",
@@ -1111,17 +1120,9 @@ def: InstRW<[SKLWriteResGroup85], (instregex "LD_F(32|64|80)m",
                                              "VBROADCASTI128",
                                              "VBROADCASTSDYrm",
                                              "VBROADCASTSSYrm",
-                                             "VLDDQUYrm",
-                                             "VMOVAPDYrm",
-                                             "VMOVAPSYrm",
                                              "VMOVDDUPYrm",
-                                             "VMOVDQAYrm",
-                                             "VMOVDQUYrm",
-                                             "VMOVNTDQAYrm",
                                              "VMOVSHDUPYrm",
                                              "VMOVSLDUPYrm",
-                                             "VMOVUPDYrm",
-                                             "VMOVUPSYrm",
                                              "VPBROADCASTDYrm",
                                              "VPBROADCASTQYrm")>;
 

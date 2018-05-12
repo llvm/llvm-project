@@ -160,10 +160,31 @@ bool AMDGPUInstructionSelector::selectG_GEP(MachineInstr &I) const {
 
 bool AMDGPUInstructionSelector::selectG_STORE(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
   DebugLoc DL = I.getDebugLoc();
+  unsigned StoreSize = RBI.getSizeInBits(I.getOperand(0).getReg(), MRI, TRI);
+  unsigned Opcode;
 
   // FIXME: Select store instruction based on address space
-  MachineInstr *Flat = BuildMI(*BB, &I, DL, TII.get(AMDGPU::FLAT_STORE_DWORD))
+  switch (StoreSize) {
+  default:
+    return false;
+  case 32:
+    Opcode = AMDGPU::FLAT_STORE_DWORD;
+    break;
+  case 64:
+    Opcode = AMDGPU::FLAT_STORE_DWORDX2;
+    break;
+  case 96:
+    Opcode = AMDGPU::FLAT_STORE_DWORDX3;
+    break;
+  case 128:
+    Opcode = AMDGPU::FLAT_STORE_DWORDX4;
+    break;
+  }
+
+  MachineInstr *Flat = BuildMI(*BB, &I, DL, TII.get(Opcode))
           .add(I.getOperand(1))
           .add(I.getOperand(0))
           .addImm(0)  // offset
@@ -455,6 +476,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
   switch (I.getOpcode()) {
   default:
     break;
+  case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_OR:
     return selectImpl(I, CoverageInfo);
   case TargetOpcode::G_ADD:
@@ -480,5 +502,15 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVSRC0(MachineOperand &Root) const {
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.add(Root); }
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3Mods0(MachineOperand &Root) const {
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }, // src0_mods
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }, // clamp
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }  // omod
   }};
 }

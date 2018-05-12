@@ -22,5 +22,7 @@ set(LLVM_LINK_COMPONENTS
   Passes
 )
 
-add_llvm_fuzzer(llvm-opt-fuzzer llvm-opt-fuzzer.cpp
-  DUMMY_MAIN DummyOptFuzzer.cpp)
+add_llvm_fuzzer(llvm-opt-fuzzer
+  llvm-opt-fuzzer.cpp
+  DUMMY_MAIN DummyOptFuzzer.cpp
+  )

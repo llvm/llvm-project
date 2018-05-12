@@ -101,7 +101,7 @@ TEST(DominatorTreeBatchUpdates, SingleInsertion) {
   DominatorTree DT(*Holder.F);
   EXPECT_TRUE(DT.verify());
   PostDomTree PDT(*Holder.F);
-  EXPECT_TRUE(DT.verify());
+  EXPECT_TRUE(PDT.verify());
 
   BasicBlock *B = Builder.getOrAddBlock("B");
   BasicBlock *C = Builder.getOrAddBlock("C");
@@ -123,7 +123,7 @@ TEST(DominatorTreeBatchUpdates, SingleDeletion) {
   DominatorTree DT(*Holder.F);
   EXPECT_TRUE(DT.verify());
   PostDomTree PDT(*Holder.F);
-  EXPECT_TRUE(DT.verify());
+  EXPECT_TRUE(PDT.verify());
 
   BasicBlock *B = Builder.getOrAddBlock("B");
   BasicBlock *C = Builder.getOrAddBlock("C");

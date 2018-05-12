@@ -3586,6 +3586,7 @@ CINDEX_LINKAGE CXType clang_getResultType(CXType T);
 
 /**
  * Retrieve the exception specification type associated with a function type.
+ * This is a value of type CXCursor_ExceptionSpecificationKind.
  *
  * If a non-function type is passed in, an error code of -1 is returned.
  */
@@ -3621,6 +3622,7 @@ CINDEX_LINKAGE CXType clang_getCursorResultType(CXCursor C);
 
 /**
  * Retrieve the exception specification type associated with a given cursor.
+ * This is a value of type CXCursor_ExceptionSpecificationKind.
  *
  * This only returns a valid result if the cursor refers to a function or method.
  */

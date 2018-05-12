@@ -17,6 +17,21 @@ namespace llvm {
 class RISCVTargetStreamer : public MCTargetStreamer {
 public:
   RISCVTargetStreamer(MCStreamer &S);
+
+  virtual void emitDirectiveOptionRVC() = 0;
+  virtual void emitDirectiveOptionNoRVC() = 0;
 };
+
+// This part is for ascii assembly output
+class RISCVTargetAsmStreamer : public RISCVTargetStreamer {
+  formatted_raw_ostream &OS;
+
+public:
+  RISCVTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
+
+  void emitDirectiveOptionRVC() override;
+  void emitDirectiveOptionNoRVC() override;
+};
+
 }
 #endif
