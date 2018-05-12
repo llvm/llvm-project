@@ -4,7 +4,10 @@
 # REQUIRES: global-isel
 
 --- |
-  define amdgpu_kernel void @global_addrspace(i32 addrspace(1)* %global0) { ret void }
+  define amdgpu_kernel void @global_addrspace(i32 addrspace(1)* %global0,
+                                              i64 addrspace(1)* %global1,
+                                              i96 addrspace(1)* %global2,
+                                              i128 addrspace(1)* %global3) { ret void }
 ...
 ---
 
@@ -14,16 +17,28 @@ regBankSelected: true
 
 # GCN: global_addrspace
 # GCN: [[PTR:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-# GCN: [[VAL:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-# GCN: FLAT_STORE_DWORD [[PTR]], [[VAL]], 0, 0, 0
+# GCN: [[VAL4:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+# GCN: [[VAL8:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+# GCN: [[VAL12:%[0-9]+]]:vreg_96 = COPY $vgpr5_vgpr6_vgpr7
+# GCN: [[VAL16:%[0-9]+]]:vreg_128 = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+# GCN: FLAT_STORE_DWORD [[PTR]], [[VAL4]], 0, 0, 0
+# GCN: FLAT_STORE_DWORDX2 [[PTR]], [[VAL8]], 0, 0, 0
+# GCN: FLAT_STORE_DWORDX3 [[PTR]], [[VAL12]], 0, 0, 0
+# GCN: FLAT_STORE_DWORDX4 [[PTR]], [[VAL16]], 0, 0, 0
 
 body: |
   bb.0:
-    liveins:  $vgpr0_vgpr1, $vgpr2
+    liveins:  $vgpr0_vgpr1, $vgpr2, $vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
 
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
+    %2:vgpr(s64) = COPY $vgpr3_vgpr4
+    %3:vgpr(s96) = COPY $vgpr5_vgpr6_vgpr7
+    %4:vgpr(s128) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
     G_STORE %1, %0 :: (store 4 into %ir.global0)
+    G_STORE %2, %0 :: (store 8 into %ir.global1)
+    G_STORE %3, %0 :: (store 12 into %ir.global2, align 16)
+    G_STORE %4, %0 :: (store 16 into %ir.global3)
 
 ...
 ---

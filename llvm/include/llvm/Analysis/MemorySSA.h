@@ -557,7 +557,7 @@ public:
     return -1;
   }
 
-  Value *getIncomingValueForBlock(const BasicBlock *BB) const {
+  MemoryAccess *getIncomingValueForBlock(const BasicBlock *BB) const {
     int Idx = getBasicBlockIndex(BB);
     assert(Idx >= 0 && "Invalid basic block argument!");
     return getIncomingValue(Idx);

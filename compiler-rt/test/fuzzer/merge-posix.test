@@ -15,9 +15,9 @@ RUN: echo ....E. > %tmp/T2/5
 RUN: echo .....R > %tmp/T2/6
 
 # Check that we can report an error if file size exceeded
-RUN: (ulimit -f 1; not %t-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=SIGXFSZ)
+RUN: (ulimit -f 1; not %run %t-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=SIGXFSZ)
 SIGXFSZ: ERROR: libFuzzer: file size exceeded
 
 # Check that we honor TMPDIR
-RUN: TMPDIR=DIR_DOES_NOT_EXIST not %t-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=TMPDIR
+RUN: TMPDIR=DIR_DOES_NOT_EXIST not %run %t-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=TMPDIR
 TMPDIR: MERGE-OUTER: failed to write to the control file: DIR_DOES_NOT_EXIST/libFuzzerTemp
