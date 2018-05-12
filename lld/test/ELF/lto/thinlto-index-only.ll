@@ -8,7 +8,7 @@
 ; RUN: ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only -shared %t1.o %t2.o -o %t3
 ; RUN: ls %t2.o.thinlto.bc
 ; RUN: not test -e %t3
-; RUN: ld.lld -m elf_x86_64 -shared %t.o %t2.o -o %t3
+; RUN: ld.lld -m elf_x86_64 -shared %t1.o %t2.o -o %t3
 ; RUN: llvm-nm %t3 | FileCheck %s --check-prefix=NM
 
 ; Basic ThinLTO tests.
