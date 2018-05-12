@@ -175,6 +175,7 @@ struct Configuration {
   bool AppContainer = false;
   bool MinGW = false;
   bool WarnLocallyDefinedImported = true;
+  bool KillAt = false;
 };
 
 extern Configuration *Config;
