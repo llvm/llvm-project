@@ -1,8 +1,7 @@
 REQUIRES: linux
 
 RUN: %cpp_compiler %S/TableLookupTest.cpp -o %t-TableLookupTest
-RUN: not %t-TableLookupTest -print_final_stats=1 2>&1 | FileCheck %s
+RUN: not %run %t-TableLookupTest -print_final_stats=1 2>&1 | FileCheck %s
 CHECK: INFO: {{[0-9]+}} Extra Counters
-CHECK: BINGO
 // Expecting >= 4096 new_units_added
 CHECK: stat::new_units_added:{{.*[4][0-9][0-9][0-9]}}

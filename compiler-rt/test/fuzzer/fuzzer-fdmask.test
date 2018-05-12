@@ -1,10 +1,10 @@
 RUN: %cpp_compiler %S/SpamyTest.cpp -o %t-SpamyTest
 
-RUN: %t-SpamyTest -runs=1                  2>&1 | FileCheck %s --check-prefix=FD_MASK_0
-RUN: %t-SpamyTest -runs=1 -close_fd_mask=0 2>&1 | FileCheck %s --check-prefix=FD_MASK_0
-RUN: %t-SpamyTest -runs=1 -close_fd_mask=1 2>&1 | FileCheck %s --check-prefix=FD_MASK_1
-RUN: %t-SpamyTest -runs=1 -close_fd_mask=2 2>&1 | FileCheck %s --check-prefix=FD_MASK_2
-RUN: %t-SpamyTest -runs=1 -close_fd_mask=3 2>&1 | FileCheck %s --check-prefix=FD_MASK_3
+RUN: %run %t-SpamyTest -runs=1                  2>&1 | FileCheck %s --check-prefix=FD_MASK_0
+RUN: %run %t-SpamyTest -runs=1 -close_fd_mask=0 2>&1 | FileCheck %s --check-prefix=FD_MASK_0
+RUN: %run %t-SpamyTest -runs=1 -close_fd_mask=1 2>&1 | FileCheck %s --check-prefix=FD_MASK_1
+RUN: %run %t-SpamyTest -runs=1 -close_fd_mask=2 2>&1 | FileCheck %s --check-prefix=FD_MASK_2
+RUN: %run %t-SpamyTest -runs=1 -close_fd_mask=3 2>&1 | FileCheck %s --check-prefix=FD_MASK_3
 
 FD_MASK_0: PRINTF_STDOUT
 FD_MASK_0: PRINTF_STDERR

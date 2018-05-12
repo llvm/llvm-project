@@ -1,6 +1,6 @@
 UNSUPPORTED: freebsd
 RUN: %cpp_compiler %S/RepeatedMemcmp.cpp -o %t-RepeatedMemcmp
-RUN: %t-RepeatedMemcmp -seed=11 -runs=100000 -max_len=20 2>&1 | FileCheck %s --check-prefix=RECOMMENDED_DICT
+RUN: %run %t-RepeatedMemcmp -seed=11 -runs=100000 -max_len=20 2>&1 | FileCheck %s --check-prefix=RECOMMENDED_DICT
 RECOMMENDED_DICT:###### Recommended dictionary. ######
 RECOMMENDED_DICT-DAG: "foo"
 RECOMMENDED_DICT-DAG: "bar"

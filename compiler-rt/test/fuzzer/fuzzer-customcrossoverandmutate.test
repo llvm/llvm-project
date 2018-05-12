@@ -1,2 +1,2 @@
 RUN: %cpp_compiler %S/CustomCrossOverAndMutateTest.cpp -o %t-CustomCrossOverAndMutateTest
-RUN: %t-CustomCrossOverAndMutateTest -seed=1 -runs=100000
+RUN: %run %t-CustomCrossOverAndMutateTest -seed=1 -runs=100000
