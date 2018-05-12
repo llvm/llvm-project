@@ -124,3 +124,7 @@ ICF-NONE: -opt:noicf
 RUN: ld.lld -### -m i386pep foo.o --icf=all | FileCheck -check-prefix ICF %s
 RUN: ld.lld -### -m i386pep foo.o -icf=all | FileCheck -check-prefix ICF %s
 ICF: -opt:icf
+
+RUN: ld.lld -### foo.o -m i386pe -shared --kill-at | FileCheck -check-prefix=KILL-AT %s
+RUN: ld.lld -### foo.o -m i386pe -shared -kill-at | FileCheck -check-prefix=KILL-AT %s
+KILL-AT: -kill-at

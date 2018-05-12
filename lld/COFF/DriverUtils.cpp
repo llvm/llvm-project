@@ -561,6 +561,26 @@ static StringRef undecorate(StringRef Sym) {
   return Sym.startswith("_") ? Sym.substr(1) : Sym;
 }
 
+// Convert stdcall/fastcall style symbols into unsuffixed symbols,
+// with or without a leading underscore. (MinGW specific.)
+static StringRef killAt(StringRef Sym, bool Prefix) {
+  if (Sym.empty())
+    return Sym;
+  // Strip any trailing stdcall suffix
+  Sym = Sym.substr(0, Sym.find('@', 1));
+  if (!Sym.startswith("@")) {
+    if (Prefix && !Sym.startswith("_"))
+      return Saver.save("_" + Sym);
+    return Sym;
+  }
+  // For fastcall, remove the leading @ and replace it with an
+  // underscore, if prefixes are used.
+  Sym = Sym.substr(1);
+  if (Prefix)
+    Sym = Saver.save("_" + Sym);
+  return Sym;
+}
+
 // Performs error checking on all /export arguments.
 // It also sets ordinals.
 void fixupExports() {
@@ -590,6 +610,15 @@ void fixupExports() {
       E.ExportName = undecorate(E.Name);
     } else {
       E.ExportName = undecorate(E.ExtName.empty() ? E.Name : E.ExtName);
+    }
+  }
+
+  if (Config->KillAt && Config->Machine == I386) {
+    for (Export &E : Config->Exports) {
+      E.Name = killAt(E.Name, true);
+      E.ExportName = killAt(E.ExportName, false);
+      E.ExtName = killAt(E.ExtName, true);
+      E.SymbolName = killAt(E.SymbolName, true);
     }
   }
 
