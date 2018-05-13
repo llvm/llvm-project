@@ -173,6 +173,9 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __atomic_fetch_sub(P, 3, memory_order_seq_cst);
   __atomic_fetch_sub(D, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer or pointer}}
   __atomic_fetch_sub(s1, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer or pointer}}
+  __atomic_fetch_min(D, 3, memory_order_seq_cst); // expected-error {{must be a pointer to signed or unsigned 32-bit integer}}
+  __atomic_fetch_max(P, 3, memory_order_seq_cst); // expected-error {{must be a pointer to signed or unsigned 32-bit integer}}
+  __atomic_fetch_max(p, 3);                       // expected-error {{too few arguments to function call, expected 3, have 2}}
 
   __c11_atomic_fetch_and(i, 1, memory_order_seq_cst);
   __c11_atomic_fetch_and(p, 1, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer}}
@@ -455,6 +458,20 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__atomic_fetch_nand(p, val, memory_order_release);
   (void)__atomic_fetch_nand(p, val, memory_order_acq_rel);
   (void)__atomic_fetch_nand(p, val, memory_order_seq_cst);
+
+  (void)__atomic_fetch_min(p, val, memory_order_relaxed);
+  (void)__atomic_fetch_min(p, val, memory_order_acquire);
+  (void)__atomic_fetch_min(p, val, memory_order_consume);
+  (void)__atomic_fetch_min(p, val, memory_order_release);
+  (void)__atomic_fetch_min(p, val, memory_order_acq_rel);
+  (void)__atomic_fetch_min(p, val, memory_order_seq_cst);
+
+  (void)__atomic_fetch_max(p, val, memory_order_relaxed);
+  (void)__atomic_fetch_max(p, val, memory_order_acquire);
+  (void)__atomic_fetch_max(p, val, memory_order_consume);
+  (void)__atomic_fetch_max(p, val, memory_order_release);
+  (void)__atomic_fetch_max(p, val, memory_order_acq_rel);
+  (void)__atomic_fetch_max(p, val, memory_order_seq_cst);
 
   (void)__atomic_and_fetch(p, val, memory_order_relaxed);
   (void)__atomic_and_fetch(p, val, memory_order_acquire);

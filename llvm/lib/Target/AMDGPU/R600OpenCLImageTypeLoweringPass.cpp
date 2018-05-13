@@ -1,4 +1,4 @@
-//===- AMDGPUOpenCLImageTypeLoweringPass.cpp ------------------------------===//
+//===- R600OpenCLImageTypeLoweringPass.cpp ------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -153,7 +153,7 @@ PushArgMD(KernelArgMD &MD, const MDVector &V) {
 
 namespace {
 
-class AMDGPUOpenCLImageTypeLoweringPass : public ModulePass {
+class R600OpenCLImageTypeLoweringPass : public ModulePass {
   static char ID;
 
   LLVMContext *Context;
@@ -364,7 +364,7 @@ class AMDGPUOpenCLImageTypeLoweringPass : public ModulePass {
   }
 
 public:
-  AMDGPUOpenCLImageTypeLoweringPass() : ModulePass(ID) {}
+  R600OpenCLImageTypeLoweringPass() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override {
     Context = &M.getContext();
@@ -376,14 +376,14 @@ public:
   }
 
   StringRef getPassName() const override {
-    return "AMDGPU OpenCL Image Type Pass";
+    return "R600 OpenCL Image Type Pass";
   }
 };
 
 } // end anonymous namespace
 
-char AMDGPUOpenCLImageTypeLoweringPass::ID = 0;
+char R600OpenCLImageTypeLoweringPass::ID = 0;
 
-ModulePass *llvm::createAMDGPUOpenCLImageTypeLoweringPass() {
-  return new AMDGPUOpenCLImageTypeLoweringPass();
+ModulePass *llvm::createR600OpenCLImageTypeLoweringPass() {
+  return new R600OpenCLImageTypeLoweringPass();
 }
