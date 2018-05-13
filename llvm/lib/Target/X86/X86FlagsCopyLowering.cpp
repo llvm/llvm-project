@@ -630,11 +630,6 @@ std::pair<unsigned, bool> X86FlagsCopyLoweringPass::getCondOrInverseInReg(
 void X86FlagsCopyLoweringPass::insertTest(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator Pos,
                                           DebugLoc Loc, unsigned Reg) {
-  // We emit test instructions as register/immediate test against -1. This
-  // allows register allocation to fold a memory operand if needed (that will
-  // happen often due to the places this code is emitted). But hopefully will
-  // also allow us to select a shorter encoding of `testb %reg, %reg` when that
-  // would be equivalent.
   auto TestI =
       BuildMI(MBB, Pos, Loc, TII->get(X86::TEST8rr)).addReg(Reg).addReg(Reg);
   (void)TestI;

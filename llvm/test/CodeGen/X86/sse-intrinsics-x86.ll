@@ -209,30 +209,6 @@ define i32 @test_x86_sse_comineq_ss(<4 x float> %a0, <4 x float> %a1) {
 declare i32 @llvm.x86.sse.comineq.ss(<4 x float>, <4 x float>) nounwind readnone
 
 
-define <4 x float> @test_x86_sse_cvtsi2ss(<4 x float> %a0) {
-; SSE-LABEL: test_x86_sse_cvtsi2ss:
-; SSE:       ## %bb.0:
-; SSE-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
-; SSE-NEXT:    cvtsi2ssl %eax, %xmm0 ## encoding: [0xf3,0x0f,0x2a,0xc0]
-; SSE-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX2-LABEL: test_x86_sse_cvtsi2ss:
-; AVX2:       ## %bb.0:
-; AVX2-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
-; AVX2-NEXT:    vcvtsi2ssl %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x2a,0xc0]
-; AVX2-NEXT:    retl ## encoding: [0xc3]
-;
-; SKX-LABEL: test_x86_sse_cvtsi2ss:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
-; SKX-NEXT:    vcvtsi2ssl %eax, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x2a,0xc0]
-; SKX-NEXT:    retl ## encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.sse.cvtsi2ss(<4 x float> %a0, i32 7) ; <<4 x float>> [#uses=1]
-  ret <4 x float> %res
-}
-declare <4 x float> @llvm.x86.sse.cvtsi2ss(<4 x float>, i32) nounwind readnone
-
-
 define i32 @test_x86_sse_cvtss2si(<4 x float> %a0) {
 ; SSE-LABEL: test_x86_sse_cvtss2si:
 ; SSE:       ## %bb.0:
