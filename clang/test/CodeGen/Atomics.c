@@ -291,3 +291,10 @@ void test_lock (void)
   __sync_lock_release (&sll); // CHECK: store atomic {{.*}} release, align 8
   __sync_lock_release (&ull); // CHECK: store atomic {{.*}} release, align 8
 }
+
+void test_atomic(void) {
+  ui = __atomic_fetch_min(&ui, 5, __ATOMIC_RELAXED); // CHECK: atomicrmw umin {{.*}} monotonic
+  si = __atomic_fetch_min(&si, 5, __ATOMIC_SEQ_CST); // CHECK: atomicrmw min {{.*}} seq_cst
+  ui = __atomic_fetch_max(&ui, 5, __ATOMIC_ACQUIRE); // CHECK: atomicrmw umax {{.*}} acquire
+  si = __atomic_fetch_max(&si, 5, __ATOMIC_RELEASE); // CHECK: atomicrmw max {{.*}} release
+}
