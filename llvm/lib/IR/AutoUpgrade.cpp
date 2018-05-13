@@ -181,6 +181,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "avx512.mask.cvttps2dq.256" || // Added in 7.0
       Name == "avx512.mask.cvtps2pd.128" || // Added in 7.0
       Name == "avx512.mask.cvtps2pd.256" || // Added in 7.0
+      Name == "avx512.mask.permvar.sf.256" || // Added in 7.0
+      Name == "avx512.mask.permvar.si.256" || // Added in 7.0
       Name == "sse2.pmulu.dq" || // Added in 7.0
       Name == "sse41.pmuldq" || // Added in 7.0
       Name == "avx2.pmulu.dq" || // Added in 7.0
@@ -1190,19 +1192,23 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
     else
       llvm_unreachable("Unexpected intrinsic");
   } else if (Name == "cvtdq2ps.128") {
-      IID = Intrinsic::x86_sse2_cvtdq2ps;
+    IID = Intrinsic::x86_sse2_cvtdq2ps;
   } else if (Name == "cvtdq2ps.256") {
-      IID = Intrinsic::x86_avx_cvtdq2_ps_256;
+    IID = Intrinsic::x86_avx_cvtdq2_ps_256;
   } else if (Name == "cvtpd2dq.256") {
-      IID = Intrinsic::x86_avx_cvt_pd2dq_256;
+    IID = Intrinsic::x86_avx_cvt_pd2dq_256;
   } else if (Name == "cvtpd2ps.256") {
-      IID = Intrinsic::x86_avx_cvt_pd2_ps_256;
+    IID = Intrinsic::x86_avx_cvt_pd2_ps_256;
   } else if (Name == "cvttpd2dq.256") {
-      IID = Intrinsic::x86_avx_cvtt_pd2dq_256;
+    IID = Intrinsic::x86_avx_cvtt_pd2dq_256;
   } else if (Name == "cvttps2dq.128") {
-      IID = Intrinsic::x86_sse2_cvttps2dq;
+    IID = Intrinsic::x86_sse2_cvttps2dq;
   } else if (Name == "cvttps2dq.256") {
-      IID = Intrinsic::x86_avx_cvtt_ps2dq_256;
+    IID = Intrinsic::x86_avx_cvtt_ps2dq_256;
+  } else if (Name == "permvar.sf.256") {
+    IID = Intrinsic::x86_avx2_permps;
+  } else if (Name == "permvar.si.256") {
+    IID = Intrinsic::x86_avx2_permd;
   } else
     return false;
 

@@ -2796,9 +2796,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx512_mask_permvar_qi_128:
   case Intrinsic::x86_avx512_mask_permvar_qi_256:
   case Intrinsic::x86_avx512_mask_permvar_qi_512:
-  case Intrinsic::x86_avx512_mask_permvar_sf_256:
   case Intrinsic::x86_avx512_mask_permvar_sf_512:
-  case Intrinsic::x86_avx512_mask_permvar_si_256:
   case Intrinsic::x86_avx512_mask_permvar_si_512:
     if (Value *V = simplifyX86vpermv(*II, Builder)) {
       // We simplified the permuting, now create a select for the masking.
