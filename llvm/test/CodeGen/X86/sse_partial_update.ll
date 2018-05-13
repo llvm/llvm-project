@@ -98,8 +98,9 @@ declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
 define <2 x double> @load_fold_cvtss2sd_int(<4 x float> *%a) {
 ; CHECK-LABEL: load_fold_cvtss2sd_int:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    cvtss2sd (%rdi), %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    retq
   %ld = load <4 x float>, <4 x float> *%a
   %x = call <2 x double> @llvm.x86.sse2.cvtss2sd(<2 x double> <double 0x0, double 0x0>, <4 x float> %ld)
@@ -109,8 +110,8 @@ define <2 x double> @load_fold_cvtss2sd_int(<4 x float> *%a) {
 define <2 x double> @load_fold_cvtss2sd_int_optsize(<4 x float> *%a) optsize {
 ; CHECK-LABEL: load_fold_cvtss2sd_int_optsize:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtss2sd (%rdi), %xmm0
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    retq
   %ld = load <4 x float>, <4 x float> *%a
   %x = call <2 x double> @llvm.x86.sse2.cvtss2sd(<2 x double> <double 0x0, double 0x0>, <4 x float> %ld)
@@ -120,8 +121,8 @@ define <2 x double> @load_fold_cvtss2sd_int_optsize(<4 x float> *%a) optsize {
 define <2 x double> @load_fold_cvtss2sd_int_minsize(<4 x float> *%a) minsize {
 ; CHECK-LABEL: load_fold_cvtss2sd_int_minsize:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtss2sd (%rdi), %xmm0
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    retq
   %ld = load <4 x float>, <4 x float> *%a
   %x = call <2 x double> @llvm.x86.sse2.cvtss2sd(<2 x double> <double 0x0, double 0x0>, <4 x float> %ld)
