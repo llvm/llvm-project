@@ -56,3 +56,13 @@ define <4 x float> @test_x86_sse_div_ss(<4 x float> %a0, <4 x float> %a1) {
 }
 declare <4 x float> @llvm.x86.sse.div.ss(<4 x float>, <4 x float>) nounwind readnone
 
+
+define <4 x float> @test_x86_sse_cvtsi2ss(<4 x float> %a0, i32 %a1) {
+; CHECK-LABEL: test_x86_sse_cvtsi2ss:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    cvtsi2ssl {{[0-9]+}}(%esp), %xmm0
+; CHECK-NEXT:    retl
+  %res = call <4 x float> @llvm.x86.sse.cvtsi2ss(<4 x float> %a0, i32 %a1) ; <<4 x float>> [#uses=1]
+  ret <4 x float> %res
+}
+declare <4 x float> @llvm.x86.sse.cvtsi2ss(<4 x float>, i32) nounwind readnone
