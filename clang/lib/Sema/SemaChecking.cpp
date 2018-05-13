@@ -3260,6 +3260,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
              Op == AtomicExpr::AO__atomic_exchange_n ||
              Op == AtomicExpr::AO__atomic_compare_exchange_n;
   bool IsAddSub = false;
+  bool IsMinMax = false;
 
   switch (Op) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -3310,6 +3311,12 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   case AtomicExpr::AO__atomic_or_fetch:
   case AtomicExpr::AO__atomic_xor_fetch:
   case AtomicExpr::AO__atomic_nand_fetch:
+    Form = Arithmetic;
+    break;
+
+  case AtomicExpr::AO__atomic_fetch_min:
+  case AtomicExpr::AO__atomic_fetch_max:
+    IsMinMax = true;
     Form = Arithmetic;
     break;
 
@@ -3395,12 +3402,21 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   // For an arithmetic operation, the implied arithmetic must be well-formed.
   if (Form == Arithmetic) {
     // gcc does not enforce these rules for GNU atomics, but we do so for sanity.
-    if (IsAddSub && !ValType->isIntegerType() && !ValType->isPointerType()) {
+    if (IsAddSub && !ValType->isIntegerType()
+        && !ValType->isPointerType()) {
       Diag(DRE->getLocStart(), diag::err_atomic_op_needs_atomic_int_or_ptr)
         << IsC11 << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
-    if (!IsAddSub && !ValType->isIntegerType()) {
+    if (IsMinMax) {
+      const BuiltinType *BT = ValType->getAs<BuiltinType>();
+      if (!BT || (BT->getKind() != BuiltinType::Int &&
+                  BT->getKind() != BuiltinType::UInt)) {
+        Diag(DRE->getLocStart(), diag::err_atomic_op_needs_int32_or_ptr);
+        return ExprError();
+      }
+    }
+    if (!IsAddSub && !IsMinMax && !ValType->isIntegerType()) {
       Diag(DRE->getLocStart(), diag::err_atomic_op_bitwise_needs_atomic_int)
         << IsC11 << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
