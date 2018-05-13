@@ -54,6 +54,7 @@ extern "C" void LLVMInitializeMipsTarget() {
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeMipsDelaySlotFillerPass(*PR);
+  initializeMipsLongBranchPass(*PR);
 }
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,

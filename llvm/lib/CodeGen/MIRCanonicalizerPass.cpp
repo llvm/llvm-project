@@ -120,7 +120,8 @@ rescheduleLexographically(std::vector<MachineInstr *> instructions,
                           std::function<MachineBasicBlock::iterator()> getPos) {
 
   bool Changed = false;
-  std::map<std::string, MachineInstr *> StringInstrMap;
+  using StringInstrPair = std::pair<std::string, MachineInstr *>;
+  std::vector<StringInstrPair> StringInstrMap;
 
   for (auto *II : instructions) {
     std::string S;
@@ -130,8 +131,13 @@ rescheduleLexographically(std::vector<MachineInstr *> instructions,
 
     // Trim the assignment, or start from the begining in the case of a store.
     const size_t i = S.find("=");
-    StringInstrMap.insert({(i == std::string::npos) ? S : S.substr(i), II});
+    StringInstrMap.push_back({(i == std::string::npos) ? S : S.substr(i), II});
   }
+
+  std::sort(StringInstrMap.begin(), StringInstrMap.end(),
+            [](const StringInstrPair &a, const StringInstrPair &b) -> bool {
+              return (a.first < b.first);
+            });
 
   for (auto &II : StringInstrMap) {
 

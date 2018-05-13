@@ -43,6 +43,7 @@ namespace llvm {
                                                      MipsRegisterBankInfo &);
 
   void initializeMipsDelaySlotFillerPass(PassRegistry &);
+  void initializeMipsLongBranchPass(PassRegistry &);
 } // end namespace llvm;
 
 #endif

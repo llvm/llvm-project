@@ -121,6 +121,7 @@ defm : SBWriteResPair<WriteJump,  [SBPort5],   1>;
 defm : SBWriteResPair<WriteCRC32, [SBPort1],   3, [1], 1, 5>;
 
 defm : SBWriteResPair<WriteCMOV,  [SBPort05,SBPort015], 2, [1,1], 2>; // Conditional move.
+defm : X86WriteRes<WriteFCMOV, [SBPort5,SBPort05], 3, [2,1], 3>; // x87 conditional move.
 def  : WriteRes<WriteSETCC, [SBPort05]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [SBPort05,SBPort4,SBPort23]> {
   let Latency = 2;
@@ -639,13 +640,6 @@ def SBWriteResGroup25_1 : SchedWriteRes<[SBPort23,SBPort015]> {
   let ResourceCycles = [1,2];
 }
 def: InstRW<[SBWriteResGroup25_1], (instrs LEAVE, LEAVE64)>;
-
-def SBWriteResGroup25_2 : SchedWriteRes<[SBPort5,SBPort05]> {
-  let Latency = 3;
-  let NumMicroOps = 3;
-  let ResourceCycles = [2,1];
-}
-def: InstRW<[SBWriteResGroup25_2], (instregex "CMOV(N?)(B|BE|E|P)_F")>;
 
 def SBWriteResGroup26 : SchedWriteRes<[SBPort05,SBPort015]> {
   let Latency = 3;

@@ -6922,22 +6922,6 @@ let Predicates = [HasAVX512] in {
 } // HasAVX512
 
 let Predicates = [HasAVX512] in {
-  def : Pat<(int_x86_sse_cvtsi2ss VR128X:$src1, GR32:$src2),
-            (VCVTSI2SSZrr_Int VR128X:$src1, GR32:$src2)>;
-  def : Pat<(int_x86_sse_cvtsi2ss VR128X:$src1, (loadi32 addr:$src2)),
-            (VCVTSI2SSZrm_Int VR128X:$src1, addr:$src2)>;
-  def : Pat<(int_x86_sse_cvtsi642ss VR128X:$src1, GR64:$src2),
-            (VCVTSI642SSZrr_Int VR128X:$src1, GR64:$src2)>;
-  def : Pat<(int_x86_sse_cvtsi642ss VR128X:$src1, (loadi64 addr:$src2)),
-            (VCVTSI642SSZrm_Int VR128X:$src1, addr:$src2)>;
-  def : Pat<(int_x86_sse2_cvtsi2sd VR128X:$src1, GR32:$src2),
-            (VCVTSI2SDZrr_Int VR128X:$src1, GR32:$src2)>;
-  def : Pat<(int_x86_sse2_cvtsi2sd VR128X:$src1, (loadi32 addr:$src2)),
-            (VCVTSI2SDZrm_Int VR128X:$src1, addr:$src2)>;
-  def : Pat<(int_x86_sse2_cvtsi642sd VR128X:$src1, GR64:$src2),
-            (VCVTSI642SDZrr_Int VR128X:$src1, GR64:$src2)>;
-  def : Pat<(int_x86_sse2_cvtsi642sd VR128X:$src1, (loadi64 addr:$src2)),
-            (VCVTSI642SDZrm_Int VR128X:$src1, addr:$src2)>;
   def : Pat<(int_x86_avx512_cvtusi2sd VR128X:$src1, GR32:$src2),
             (VCVTUSI2SDZrr_Int VR128X:$src1, GR32:$src2)>;
   def : Pat<(int_x86_avx512_cvtusi2sd VR128X:$src1, (loadi32 addr:$src2)),
@@ -6954,8 +6938,18 @@ def : Pat<(v4f32 (X86Movss
 
 def : Pat<(v4f32 (X86Movss
                    (v4f32 VR128X:$dst),
+                   (v4f32 (scalar_to_vector (f32 (sint_to_fp (loadi64 addr:$src))))))),
+          (VCVTSI642SSZrm_Int VR128X:$dst, addr:$src)>;
+
+def : Pat<(v4f32 (X86Movss
+                   (v4f32 VR128X:$dst),
                    (v4f32 (scalar_to_vector (f32 (sint_to_fp GR32:$src)))))),
           (VCVTSI2SSZrr_Int VR128X:$dst, GR32:$src)>;
+
+def : Pat<(v4f32 (X86Movss
+                   (v4f32 VR128X:$dst),
+                   (v4f32 (scalar_to_vector (f32 (sint_to_fp (loadi32 addr:$src))))))),
+          (VCVTSI2SSZrm_Int VR128X:$dst, addr:$src)>;
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128X:$dst),
@@ -6964,8 +6958,18 @@ def : Pat<(v2f64 (X86Movsd
 
 def : Pat<(v2f64 (X86Movsd
                    (v2f64 VR128X:$dst),
+                   (v2f64 (scalar_to_vector (f64 (sint_to_fp (loadi64 addr:$src))))))),
+          (VCVTSI642SDZrm_Int VR128X:$dst, addr:$src)>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128X:$dst),
                    (v2f64 (scalar_to_vector (f64 (sint_to_fp GR32:$src)))))),
           (VCVTSI2SDZrr_Int VR128X:$dst, GR32:$src)>;
+
+def : Pat<(v2f64 (X86Movsd
+                   (v2f64 VR128X:$dst),
+                   (v2f64 (scalar_to_vector (f64 (sint_to_fp (loadi32 addr:$src))))))),
+          (VCVTSI2SDZrm_Int VR128X:$dst, addr:$src)>;
 } // Predicates = [HasAVX512]
 
 // Convert float/double to signed/unsigned int 32/64 with truncation

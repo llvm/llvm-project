@@ -9,6 +9,7 @@
 
 #include <random>
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
@@ -595,6 +596,75 @@ TEST(DominatorTree, DeletingEdgesIntroducesInfiniteLoop2) {
 
         PostDomTree NPDT(F);
         EXPECT_EQ(PDT->compare(NPDT), 0);
+      });
+}
+
+// Verify that the IDF returns blocks in a deterministic way.
+//
+// Test case:
+//
+//          CFG
+//
+//          (A)
+//          / \
+//         /   \
+//       (B)   (C)
+//        |\   /|
+//        |  X  |
+//        |/   \|
+//       (D)   (E)
+//
+// IDF for block B is {D, E}, and the order of blocks in this list is defined by
+// their 1) level in dom-tree and 2) DFSIn number if the level is the same.
+//
+TEST(DominatorTree, IDFDeterminismTest) {
+  StringRef ModuleString =
+      "define void @f() {\n"
+      "A:\n"
+      "  br i1 undef, label %B, label %C\n"
+      "B:\n"
+      "  br i1 undef, label %D, label %E\n"
+      "C:\n"
+      "  br i1 undef, label %D, label %E\n"
+      "D:\n"
+      "  ret void\n"
+      "E:\n"
+      "  ret void\n"
+      "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  runWithDomTree(
+      *M, "f", [&](Function &F, DominatorTree *DT, PostDomTree *PDT) {
+        Function::iterator FI = F.begin();
+
+        BasicBlock *A = &*FI++;
+        BasicBlock *B = &*FI++;
+        BasicBlock *C = &*FI++;
+        BasicBlock *D = &*FI++;
+        BasicBlock *E = &*FI++;
+        (void)C;
+
+        DT->updateDFSNumbers();
+        ForwardIDFCalculator IDF(*DT);
+        SmallPtrSet<BasicBlock *, 1> DefBlocks;
+        DefBlocks.insert(B);
+        IDF.setDefiningBlocks(DefBlocks);
+
+        SmallVector<BasicBlock *, 32> IDFBlocks;
+        SmallPtrSet<BasicBlock *, 32> LiveInBlocks;
+        IDF.resetLiveInBlocks();
+        IDF.calculate(IDFBlocks);
+
+
+        EXPECT_EQ(IDFBlocks.size(), 2UL);
+        EXPECT_EQ(DT->getNode(A)->getDFSNumIn(), 0UL);
+        EXPECT_EQ(IDFBlocks[0], D);
+        EXPECT_EQ(IDFBlocks[1], E);
+        EXPECT_TRUE(DT->getNode(IDFBlocks[0])->getDFSNumIn() <
+                    DT->getNode(IDFBlocks[1])->getDFSNumIn());
       });
 }
 

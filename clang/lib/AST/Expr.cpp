@@ -4052,6 +4052,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_or_fetch:
   case AO__atomic_xor_fetch:
   case AO__atomic_nand_fetch:
+  case AO__atomic_fetch_min:
+  case AO__atomic_fetch_max:
     return 3;
 
   case AO__opencl_atomic_store:
