@@ -12,6 +12,7 @@
 
 #include "Diagnostics.h"
 #include "Function.h"
+#include "Headers.h"
 #include "Path.h"
 #include "Protocol.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -40,18 +41,18 @@ struct CompileCommand;
 
 namespace clangd {
 
-using InclusionLocations = std::vector<std::pair<Range, Path>>;
-
 // Stores Preamble and associated data.
 struct PreambleData {
   PreambleData(PrecompiledPreamble Preamble,
                std::vector<serialization::DeclID> TopLevelDeclIDs,
-               std::vector<Diag> Diags, InclusionLocations IncLocations);
+               std::vector<Diag> Diags, std::vector<Inclusion> Inclusions);
 
   PrecompiledPreamble Preamble;
   std::vector<serialization::DeclID> TopLevelDeclIDs;
   std::vector<Diag> Diags;
-  InclusionLocations IncLocations;
+  // Processes like code completions and go-to-definitions will need #include
+  // information, and their compile action skips preamble range.
+  std::vector<Inclusion> Inclusions;
 };
 
 /// Information required to run clang, e.g. to parse AST or do code completion.
@@ -95,14 +96,14 @@ public:
   /// Returns the esitmated size of the AST and the accessory structures, in
   /// bytes. Does not include the size of the preamble.
   std::size_t getUsedBytes() const;
-  const InclusionLocations &getInclusionLocations() const;
+  const std::vector<Inclusion> &getInclusions() const;
 
 private:
   ParsedAST(std::shared_ptr<const PreambleData> Preamble,
             std::unique_ptr<CompilerInstance> Clang,
             std::unique_ptr<FrontendAction> Action,
             std::vector<const Decl *> TopLevelDecls, std::vector<Diag> Diags,
-            InclusionLocations IncLocations);
+            std::vector<Inclusion> Inclusions);
 
 private:
   void ensurePreambleDeclsDeserialized();
@@ -122,7 +123,7 @@ private:
   std::vector<Diag> Diags;
   std::vector<const Decl *> TopLevelDecls;
   bool PreambleDeclsDeserialized;
-  InclusionLocations IncLocations;
+  std::vector<Inclusion> Inclusions;
 };
 
 using ASTParsedCallback = std::function<void(PathRef Path, ParsedAST *)>;
