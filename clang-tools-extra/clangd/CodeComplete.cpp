@@ -828,6 +828,7 @@ bool allowIndex(CodeCompletionContext &CC) {
   case NestedNameSpecifier::Identifier:
     return false;
   }
+  llvm_unreachable("invalid NestedNameSpecifier kind");
 }
 
 } // namespace
