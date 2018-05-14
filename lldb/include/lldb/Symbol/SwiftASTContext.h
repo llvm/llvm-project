@@ -175,7 +175,7 @@ public:
 
   bool AddFrameworkSearchPath(const char *path);
 
-  bool AddClangArgument(const char *arg, bool force = false);
+  bool AddClangArgument(std::string arg, bool force = false);
 
   bool AddClangArgumentPair(const char *arg1, const char *arg2);
 
