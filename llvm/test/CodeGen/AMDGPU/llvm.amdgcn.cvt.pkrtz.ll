@@ -23,12 +23,9 @@ define amdgpu_kernel void @s_cvt_pkrtz_samereg_v2f16_f32(<2 x half> addrspace(1)
   ret void
 }
 
-; FIXME: Folds to 0 on gfx9
 ; GCN-LABEL: {{^}}s_cvt_pkrtz_undef_undef:
 ; GCN-NEXT: ; %bb.0
-; SI-NEXT: s_endpgm
-; VI-NEXT: s_endpgm
-; GFX9: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @s_cvt_pkrtz_undef_undef(<2 x half> addrspace(1)* %out) #0 {
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float undef)
   store <2 x half> %result, <2 x half> addrspace(1)* %out

@@ -1954,17 +1954,6 @@ define <4 x float> @_mm_cvtu64_ss(<4 x float> %a, i64 %b)
 }
 declare <4 x float> @llvm.x86.avx512.cvtusi642ss(<4 x float>, i64, i32) nounwind readnone
 
-define <2 x double> @test_x86_avx512_mm_cvtu32_sd(<2 x double> %a, i32 %b)
-; CHECK-LABEL: test_x86_avx512_mm_cvtu32_sd:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtusi2sdl %edi, %xmm0, %xmm0
-; CHECK-NEXT:    retq
-{
-  %res = call <2 x double> @llvm.x86.avx512.cvtusi2sd(<2 x double> %a, i32 %b) ; <<<2 x double>> [#uses=1]
-  ret <2 x double> %res
-}
-declare <2 x double> @llvm.x86.avx512.cvtusi2sd(<2 x double>, i32) nounwind readnone
-
 define <2 x double> @test_x86_avx512_mm_cvtu64_sd(<2 x double> %a, i64 %b)
 ; CHECK-LABEL: test_x86_avx512_mm_cvtu64_sd:
 ; CHECK:       ## %bb.0:
