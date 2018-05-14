@@ -1294,6 +1294,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   std::shared_ptr<SwiftASTContextForExpressions> swift_ast_sp(
       new SwiftASTContextForExpressions(target));
 
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  if (log)
+    log->Printf("SwiftASTContext::CreateInstance(Target)");
+  
   if (!arch.IsValid())
     return TypeSystemSP();
 
@@ -1404,8 +1408,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       exe_module_sp = unit_test_module;
     }
   }
-
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
   // Attempt to deserialize the compiler flags from the AST.
   if (exe_module_sp) {
@@ -1561,11 +1563,22 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                   swift_ast_sp->AddFrameworkSearchPath(search_path);
                 }
 
+                std::string clang_argument;
                 for (size_t osi = 0, ose = ast_context->GetNumClangArguments();
                      osi < ose; ++osi) {
-                  const char *clang_argument =
-                      ast_context->GetClangArgumentAtIndex(osi);
-                  swift_ast_sp->AddClangArgument(clang_argument, true);
+                  // Join multi-arg -D and -U options for uniquing.
+                  clang_argument += ast_context->GetClangArgumentAtIndex(osi);
+                  if (clang_argument == "-D" || clang_argument == "-U")
+                    continue;
+
+                  // Enable uniquing for -D and -U options.
+                  bool force = true;
+                  if (clang_argument.size() >= 2 && clang_argument[0] == '-' &&
+                      (clang_argument[1] == 'D' || clang_argument[1] == 'U'))
+                    force = false;
+
+                  swift_ast_sp->AddClangArgument(clang_argument, force);
+                  clang_argument.clear();
                 }
               }
 
@@ -2949,8 +2962,8 @@ bool SwiftASTContext::AddFrameworkSearchPath(const char *path) {
   return false;
 }
 
-bool SwiftASTContext::AddClangArgument(const char *clang_arg, bool force) {
-  if (clang_arg && clang_arg[0]) {
+bool SwiftASTContext::AddClangArgument(std::string clang_arg, bool force) {
+  if (!clang_arg.empty()) {
     swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
 
     bool add_hmap = true;
