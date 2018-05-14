@@ -6630,33 +6630,36 @@ __m512d test_mm512_maskz_cvt_roundps_pd(__mmask8 __U, __m256 __A) {
 
 __m512d test_mm512_cvtps_pd(__m256 __A) {
   // CHECK-LABEL: @test_mm512_cvtps_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtps2pd.512
+  // CHECK: fpext <8 x float> %{{.*}} to <8 x double>
   return _mm512_cvtps_pd(__A); 
 }
 
 __m512d test_mm512_cvtpslo_pd(__m512 __A) {
   // CHECK-LABEL: @test_mm512_cvtpslo_pd
   // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  // CHECK: @llvm.x86.avx512.mask.cvtps2pd.512
+  // CHECK: fpext <8 x float> %{{.*}} to <8 x double>
   return _mm512_cvtpslo_pd(__A);
 }
 
 __m512d test_mm512_mask_cvtps_pd(__m512d __W, __mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtps_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtps2pd.512
+  // CHECK: fpext <8 x float> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_cvtps_pd(__W, __U, __A); 
 }
 
 __m512d test_mm512_mask_cvtpslo_pd(__m512d __W, __mmask8 __U, __m512 __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtpslo_pd
   // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  // CHECK: @llvm.x86.avx512.mask.cvtps2pd.512
+  // CHECK: fpext <8 x float> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_cvtpslo_pd(__W, __U, __A);
 }
 
 __m512d test_mm512_maskz_cvtps_pd(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm512_maskz_cvtps_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtps2pd.512
+  // CHECK: fpext <8 x float> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_maskz_cvtps_pd(__U, __A); 
 }
 __m512d test_mm512_mask_mov_pd(__m512d __W, __mmask8 __U, __m512d __A) {
@@ -7007,7 +7010,8 @@ __m128d test_mm_maskz_cvt_roundss_sd( __mmask8 __U, __m128d __A, __m128 __B) {
 
 __m128d test_mm_cvtu32_sd(__m128d __A, unsigned __B) {
   // CHECK-LABEL: @test_mm_cvtu32_sd
-  // CHECK: @llvm.x86.avx512.cvtusi2sd
+  // CHECK: uitofp i32 %{{.*}} to double
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_cvtu32_sd(__A, __B); 
 }
 
@@ -7020,7 +7024,8 @@ __m128d test_mm_cvt_roundu64_sd(__m128d __A, unsigned long long __B) {
 
 __m128d test_mm_cvtu64_sd(__m128d __A, unsigned long long __B) {
   // CHECK-LABEL: @test_mm_cvtu64_sd
-  // CHECK: @llvm.x86.avx512.cvtusi642sd
+  // CHECK: uitofp i64 %{{.*}} to double
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_cvtu64_sd(__A, __B); 
 }
 #endif
@@ -7033,7 +7038,8 @@ __m128 test_mm_cvt_roundu32_ss(__m128 __A, unsigned __B) {
 
 __m128 test_mm_cvtu32_ss(__m128 __A, unsigned __B) {
   // CHECK-LABEL: @test_mm_cvtu32_ss
-  // CHECK: @llvm.x86.avx512.cvtusi2ss
+  // CHECK: uitofp i32 %{{.*}} to float
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_cvtu32_ss(__A, __B); 
 }
 
@@ -7046,7 +7052,8 @@ __m128 test_mm_cvt_roundu64_ss(__m128 __A, unsigned long long __B) {
 
 __m128 test_mm_cvtu64_ss(__m128 __A, unsigned long long __B) {
   // CHECK-LABEL: @test_mm_cvtu64_ss
-  // CHECK: @llvm.x86.avx512.cvtusi642ss
+  // CHECK: uitofp i64 %{{.*}} to float
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_cvtu64_ss(__A, __B); 
 }
 #endif

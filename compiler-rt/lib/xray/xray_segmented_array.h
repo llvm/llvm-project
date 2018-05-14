@@ -143,9 +143,10 @@ private:
     Iterator(Chunk *IC, size_t Off) : C(IC), Offset(Off) {}
 
     Iterator &operator++() {
-      DCHECK_NE(C, &SentinelChunk);
       if (++Offset % N)
         return *this;
+
+      DCHECK_NE(C, &SentinelChunk);
 
       // At this point, we know that Offset % N == 0, so we must advance the
       // chunk pointer.

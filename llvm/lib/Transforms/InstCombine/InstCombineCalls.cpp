@@ -2553,7 +2553,9 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(*II, V);
     break;
 
-  case Intrinsic::x86_pclmulqdq: {
+  case Intrinsic::x86_pclmulqdq:
+  case Intrinsic::x86_pclmulqdq_256:
+  case Intrinsic::x86_pclmulqdq_512: {
     if (auto *C = dyn_cast<ConstantInt>(II->getArgOperand(2))) {
       unsigned Imm = C->getZExtValue();
 
@@ -2561,27 +2563,28 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       Value *Arg0 = II->getArgOperand(0);
       Value *Arg1 = II->getArgOperand(1);
       unsigned VWidth = Arg0->getType()->getVectorNumElements();
-      APInt DemandedElts(VWidth, 0);
 
       APInt UndefElts1(VWidth, 0);
-      DemandedElts = (Imm & 0x01) ? 2 : 1;
-      if (Value *V = SimplifyDemandedVectorElts(Arg0, DemandedElts,
+      APInt DemandedElts1 = APInt::getSplat(VWidth,
+                                            APInt(2, (Imm & 0x01) ? 2 : 1));
+      if (Value *V = SimplifyDemandedVectorElts(Arg0, DemandedElts1,
                                                 UndefElts1)) {
         II->setArgOperand(0, V);
         MadeChange = true;
       }
 
       APInt UndefElts2(VWidth, 0);
-      DemandedElts = (Imm & 0x10) ? 2 : 1;
-      if (Value *V = SimplifyDemandedVectorElts(Arg1, DemandedElts,
+      APInt DemandedElts2 = APInt::getSplat(VWidth,
+                                            APInt(2, (Imm & 0x10) ? 2 : 1));
+      if (Value *V = SimplifyDemandedVectorElts(Arg1, DemandedElts2,
                                                 UndefElts2)) {
         II->setArgOperand(1, V);
         MadeChange = true;
       }
 
-      // If both input elements are undef, the result is undef.
-      if (UndefElts1[(Imm & 0x01) ? 1 : 0] ||
-          UndefElts2[(Imm & 0x10) ? 1 : 0])
+      // If either input elements are undef, the result is zero.
+      if (DemandedElts1.isSubsetOf(UndefElts1) ||
+          DemandedElts2.isSubsetOf(UndefElts2))
         return replaceInstUsesWith(*II,
                                    ConstantAggregateZero::get(II->getType()));
 
