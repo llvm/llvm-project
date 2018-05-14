@@ -11,7 +11,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEADERS_H
 
 #include "Path.h"
+#include "Protocol.h"
 #include "clang/Basic/VirtualFileSystem.h"
+#include "clang/Lex/PPCallbacks.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -31,6 +33,18 @@ struct HeaderFile {
 
   bool valid() const;
 };
+
+// An #include directive that we found in the main file.
+struct Inclusion {
+  Range R;             // Inclusion range.
+  std::string Written; // Inclusion name as written e.g. <vector>.
+  Path Resolved;       // Resolved path of included file. Empty if not resolved.
+};
+
+/// Returns a PPCallback that visits all inclusions in the main file.
+std::unique_ptr<PPCallbacks>
+collectInclusionsInMainFileCallback(const SourceManager &SM,
+                                    std::function<void(Inclusion)> Callback);
 
 /// Determines the preferred way to #include a file, taking into account the
 /// search path. Usually this will prefer a shorter representation like

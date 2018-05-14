@@ -65,7 +65,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
           MachineFunctionProperties::Property::FailedISel))
     return false;
 
-  DEBUG(dbgs() << "Selecting function: " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "Selecting function: " << MF.getName() << '\n');
 
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const InstructionSelector *ISel = MF.getSubtarget().getInstructionSelector();
@@ -116,12 +116,12 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       else
         --MII;
 
-      DEBUG(dbgs() << "Selecting: \n  " << MI);
+      LLVM_DEBUG(dbgs() << "Selecting: \n  " << MI);
 
       // We could have folded this instruction away already, making it dead.
       // If so, erase it.
       if (isTriviallyDead(MI, MRI)) {
-        DEBUG(dbgs() << "Is dead; erasing.\n");
+        LLVM_DEBUG(dbgs() << "Is dead; erasing.\n");
         MI.eraseFromParentAndMarkDBGValuesForRemoval();
         continue;
       }
@@ -134,7 +134,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // Dump the range of instructions that MI expanded into.
-      DEBUG({
+      LLVM_DEBUG({
         auto InsertedBegin = ReachedBegin ? MBB->begin() : std::next(MII);
         dbgs() << "Into:\n";
         for (auto &InsertedMI : make_range(InsertedBegin, AfterIt))
@@ -218,7 +218,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   auto &TLI = *MF.getSubtarget().getTargetLowering();
   TLI.finalizeLowering(MF);
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Rules covered by selecting function: " << MF.getName() << ":";
     for (auto RuleID : CoverageInfo.covered())
       dbgs() << " id" << RuleID;

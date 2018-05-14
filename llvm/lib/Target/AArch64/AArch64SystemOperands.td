@@ -175,6 +175,35 @@ def : PRFM<"pstl3keep", 0x14>;
 def : PRFM<"pstl3strm", 0x15>;
 
 //===----------------------------------------------------------------------===//
+// SVE Prefetch instruction options.
+//===----------------------------------------------------------------------===//
+
+class SVEPRFM<string name, bits<4> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<4> Encoding;
+  let Encoding = encoding;
+  code Requires = [{ {} }];
+}
+
+let Requires = [{ {AArch64::FeatureSVE} }] in {
+def : SVEPRFM<"pldl1keep", 0x00>;
+def : SVEPRFM<"pldl1strm", 0x01>;
+def : SVEPRFM<"pldl2keep", 0x02>;
+def : SVEPRFM<"pldl2strm", 0x03>;
+def : SVEPRFM<"pldl3keep", 0x04>;
+def : SVEPRFM<"pldl3strm", 0x05>;
+def : SVEPRFM<"pstl1keep", 0x08>;
+def : SVEPRFM<"pstl1strm", 0x09>;
+def : SVEPRFM<"pstl2keep", 0x0a>;
+def : SVEPRFM<"pstl2strm", 0x0b>;
+def : SVEPRFM<"pstl3keep", 0x0c>;
+def : SVEPRFM<"pstl3strm", 0x0d>;
+}
+
+//===----------------------------------------------------------------------===//
 // SVE Predicate patterns
 //===----------------------------------------------------------------------===//
 

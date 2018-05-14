@@ -161,8 +161,8 @@ static bool isWrapperOnlyCall(CallSite CS) {
       return false;
     }
     if (isa<ReturnInst>(*std::next(I->getIterator()))) {
-      DEBUG(dbgs() << "    Wrapper only call detected: "
-                   << Callee->getName() << '\n');
+      LLVM_DEBUG(dbgs() << "    Wrapper only call detected: "
+                        << Callee->getName() << '\n');
       return true;
     }
   }

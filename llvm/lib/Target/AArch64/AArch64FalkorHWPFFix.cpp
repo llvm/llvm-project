@@ -169,7 +169,7 @@ bool FalkorMarkStridedAccesses::runOnLoop(Loop &L) {
       LoadI->setMetadata(FALKOR_STRIDED_ACCESS_MD,
                          MDNode::get(LoadI->getContext(), {}));
       ++NumStridedLoadsMarked;
-      DEBUG(dbgs() << "Load: " << I << " marked as strided\n");
+      LLVM_DEBUG(dbgs() << "Load: " << I << " marked as strided\n");
       MadeChange = true;
     }
   }
@@ -731,10 +731,10 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
         continue;
 
       bool Fixed = false;
-      DEBUG(dbgs() << "Attempting to fix tag collision: " << MI);
+      LLVM_DEBUG(dbgs() << "Attempting to fix tag collision: " << MI);
 
       if (!DebugCounter::shouldExecute(FixCounter)) {
-        DEBUG(dbgs() << "Skipping fix due to debug counter:\n  " << MI);
+        LLVM_DEBUG(dbgs() << "Skipping fix due to debug counter:\n  " << MI);
         continue;
       }
 
@@ -759,8 +759,8 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
         if (TagMap.count(NewTag))
           continue;
 
-        DEBUG(dbgs() << "Changing base reg to: " << printReg(ScratchReg, TRI)
-                     << '\n');
+        LLVM_DEBUG(dbgs() << "Changing base reg to: "
+                          << printReg(ScratchReg, TRI) << '\n');
 
         // Rewrite:
         //   Xd = LOAD Xb, off
@@ -778,8 +778,8 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
         // If the load does a pre/post increment, then insert a MOV after as
         // well to update the real base register.
         if (LdI.IsPrePost) {
-          DEBUG(dbgs() << "Doing post MOV of incremented reg: "
-                       << printReg(ScratchReg, TRI) << '\n');
+          LLVM_DEBUG(dbgs() << "Doing post MOV of incremented reg: "
+                            << printReg(ScratchReg, TRI) << '\n');
           MI.getOperand(0).setReg(
               ScratchReg); // Change tied operand pre/post update dest.
           BuildMI(*MBB, std::next(MachineBasicBlock::iterator(MI)), DL,

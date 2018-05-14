@@ -921,14 +921,14 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
     BlockFrequencyInfo *CallerBFI = GetBFI ? &((*GetBFI)(*Caller)) : nullptr;
     auto HotCallSiteThreshold = getHotCallSiteThreshold(CS, CallerBFI);
     if (!Caller->optForSize() && HotCallSiteThreshold) {
-      DEBUG(dbgs() << "Hot callsite.\n");
+      LLVM_DEBUG(dbgs() << "Hot callsite.\n");
       // FIXME: This should update the threshold only if it exceeds the
       // current threshold, but AutoFDO + ThinLTO currently relies on this
       // behavior to prevent inlining of hot callsites during ThinLTO
       // compile phase.
       Threshold = HotCallSiteThreshold.getValue();
     } else if (isColdCallSite(CS, CallerBFI)) {
-      DEBUG(dbgs() << "Cold callsite.\n");
+      LLVM_DEBUG(dbgs() << "Cold callsite.\n");
       // Do not apply bonuses for a cold callsite including the
       // LastCallToStatic bonus. While this bonus might result in code size
       // reduction, it can cause the size of a non-cold caller to increase
@@ -939,13 +939,13 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
       // Use callee's global profile information only if we have no way of
       // determining this via callsite information.
       if (PSI->isFunctionEntryHot(&Callee)) {
-        DEBUG(dbgs() << "Hot callee.\n");
+        LLVM_DEBUG(dbgs() << "Hot callee.\n");
         // If callsite hotness can not be determined, we may still know
         // that the callee is hot and treat it as a weaker hint for threshold
         // increase.
         Threshold = MaxIfValid(Threshold, Params.HintThreshold);
       } else if (PSI->isFunctionEntryCold(&Callee)) {
-        DEBUG(dbgs() << "Cold callee.\n");
+        LLVM_DEBUG(dbgs() << "Cold callee.\n");
         // Do not apply bonuses for a cold callee including the
         // LastCallToStatic bonus. While this bonus might result in code size
         // reduction, it can cause the size of a non-cold caller to increase
@@ -2002,14 +2002,14 @@ InlineCost llvm::getInlineCost(
       CS.isNoInline())
     return llvm::InlineCost::getNever();
 
-  DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
-                     << "... (caller:" << Caller->getName() << ")\n");
+  LLVM_DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
+                          << "... (caller:" << Caller->getName() << ")\n");
 
   CallAnalyzer CA(CalleeTTI, GetAssumptionCache, GetBFI, PSI, ORE, *Callee, CS,
                   Params);
   bool ShouldInline = CA.analyzeCall(CS);
 
-  DEBUG(CA.dump());
+  LLVM_DEBUG(CA.dump());
 
   // Check if there was a reason to force inlining or no inlining.
   if (!ShouldInline && CA.getCost() < CA.getThreshold())

@@ -535,16 +535,16 @@ bool GCPtrTracker::removeValidUnrelocatedDefs(const BasicBlock *BB,
       Contribution.erase(&I);
       PoisonedDefs.erase(&I);
       ValidUnrelocatedDefs.insert(&I);
-      DEBUG(dbgs() << "Removing urelocated " << I << " from Contribution of "
-                   << BB->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "Removing urelocated " << I
+                        << " from Contribution of " << BB->getName() << "\n");
       ContributionChanged = true;
     } else if (PoisonedPointerDef) {
       // Mark pointer as poisoned, remove its def from Contribution and trigger
       // update of all successors.
       Contribution.erase(&I);
       PoisonedDefs.insert(&I);
-      DEBUG(dbgs() << "Removing poisoned " << I << " from Contribution of "
-                   << BB->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "Removing poisoned " << I << " from Contribution of "
+                        << BB->getName() << "\n");
       ContributionChanged = true;
     } else {
       bool Cleared = false;
@@ -594,11 +594,11 @@ void GCPtrTracker::transferBlock(const BasicBlock *BB, BasicBlockState &BBS,
     AvailableOut = std::move(Temp);
   }
 
-  DEBUG(dbgs() << "Transfered block " << BB->getName() << " from ";
-        PrintValueSet(dbgs(), AvailableIn.begin(), AvailableIn.end());
-        dbgs() << " to ";
-        PrintValueSet(dbgs(), AvailableOut.begin(), AvailableOut.end());
-        dbgs() << "\n";);
+  LLVM_DEBUG(dbgs() << "Transfered block " << BB->getName() << " from ";
+             PrintValueSet(dbgs(), AvailableIn.begin(), AvailableIn.end());
+             dbgs() << " to ";
+             PrintValueSet(dbgs(), AvailableOut.begin(), AvailableOut.end());
+             dbgs() << "\n";);
 }
 
 void GCPtrTracker::transferInstruction(const Instruction &I, bool &Cleared,
@@ -698,7 +698,8 @@ void InstructionVerifier::reportInvalidUse(const Value &V,
 }
 
 static void Verify(const Function &F, const DominatorTree &DT) {
-  DEBUG(dbgs() << "Verifying gc pointers in function: " << F.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Verifying gc pointers in function: " << F.getName()
+                    << "\n");
   if (PrintOnly)
     dbgs() << "Verifying gc pointers in function: " << F.getName() << "\n";
 

@@ -228,7 +228,7 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI,
         V = SI->getTrueValue();
       }
 
-      DEBUG(dbgs() << "CVP: Threading PHI over " << *SI << '\n');
+      LLVM_DEBUG(dbgs() << "CVP: Threading PHI over " << *SI << '\n');
     }
 
     P->setIncomingValue(i, V);

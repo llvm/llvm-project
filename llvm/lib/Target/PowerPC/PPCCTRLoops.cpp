@@ -507,7 +507,7 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   // Process nested loops first.
   for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I) {
     MadeChange |= convertToCTRLoop(*I);
-    DEBUG(dbgs() << "Nested loop converted\n");
+    LLVM_DEBUG(dbgs() << "Nested loop converted\n");
   }
 
   // If a nested loop has been converted, then we can't convert this loop.
@@ -567,8 +567,8 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   for (SmallVectorImpl<BasicBlock *>::iterator I = ExitingBlocks.begin(),
        IE = ExitingBlocks.end(); I != IE; ++I) {
     const SCEV *EC = SE->getExitCount(L, *I);
-    DEBUG(dbgs() << "Exit Count for " << *L << " from block " <<
-                    (*I)->getName() << ": " << *EC << "\n");
+    LLVM_DEBUG(dbgs() << "Exit Count for " << *L << " from block "
+                      << (*I)->getName() << ": " << *EC << "\n");
     if (isa<SCEVCouldNotCompute>(EC))
       continue;
     if (const SCEVConstant *ConstEC = dyn_cast<SCEVConstant>(EC)) {
@@ -642,7 +642,8 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   if (!Preheader)
     return MadeChange;
 
-  DEBUG(dbgs() << "Preheader for exit count: " << Preheader->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Preheader for exit count: " << Preheader->getName()
+                    << "\n");
 
   // Insert the count into the preheader and replace the condition used by the
   // selected branch.
@@ -730,11 +731,12 @@ check_block:
     }
 
     if (I != BI && clobbersCTR(*I)) {
-      DEBUG(dbgs() << printMBBReference(*MBB) << " (" << MBB->getFullName()
-                   << ") instruction " << *I << " clobbers CTR, invalidating "
-                   << printMBBReference(*BI->getParent()) << " ("
-                   << BI->getParent()->getFullName() << ") instruction " << *BI
-                   << "\n");
+      LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " (" << MBB->getFullName()
+                        << ") instruction " << *I
+                        << " clobbers CTR, invalidating "
+                        << printMBBReference(*BI->getParent()) << " ("
+                        << BI->getParent()->getFullName() << ") instruction "
+                        << *BI << "\n");
       return false;
     }
 
@@ -748,10 +750,10 @@ check_block:
   if (CheckPreds) {
 queue_preds:
     if (MachineFunction::iterator(MBB) == MBB->getParent()->begin()) {
-      DEBUG(dbgs() << "Unable to find a MTCTR instruction for "
-                   << printMBBReference(*BI->getParent()) << " ("
-                   << BI->getParent()->getFullName() << ") instruction " << *BI
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "Unable to find a MTCTR instruction for "
+                        << printMBBReference(*BI->getParent()) << " ("
+                        << BI->getParent()->getFullName() << ") instruction "
+                        << *BI << "\n");
       return false;
     }
 

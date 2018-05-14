@@ -246,7 +246,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
     if (FixedRegs[x])
       continue;
     unsigned R = TargetRegisterInfo::index2VirtReg(x);
-    DEBUG(dbgs() << printReg(R, TRI) << " ~~");
+    LLVM_DEBUG(dbgs() << printReg(R, TRI) << " ~~");
     USet &Asc = AssocMap[R];
     for (auto U = MRI->use_nodbg_begin(R), Z = MRI->use_nodbg_end();
          U != Z; ++U) {
@@ -269,13 +269,13 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
         unsigned u = TargetRegisterInfo::virtReg2Index(T);
         if (FixedRegs[u])
           continue;
-        DEBUG(dbgs() << ' ' << printReg(T, TRI));
+        LLVM_DEBUG(dbgs() << ' ' << printReg(T, TRI));
         Asc.insert(T);
         // Make it symmetric.
         AssocMap[T].insert(R);
       }
     }
-    DEBUG(dbgs() << '\n');
+    LLVM_DEBUG(dbgs() << '\n');
   }
 
   UUMap R2P;
@@ -468,7 +468,7 @@ bool HexagonSplitDoubleRegs::isProfitable(const USet &Part, LoopRegMap &IRM)
   if (FixedNum > 0 && LoopPhiNum > 0)
     TotalP -= 20*LoopPhiNum;
 
-  DEBUG(dbgs() << "Partition profit: " << TotalP << '\n');
+  LLVM_DEBUG(dbgs() << "Partition profit: " << TotalP << '\n');
   if (SplitAll)
     return true;
   return TotalP > 0;
@@ -563,7 +563,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
   Rs.insert(CmpR1);
   Rs.insert(CmpR2);
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "For loop at " << printMBBReference(*HB) << " ind regs: ";
     dump_partition(dbgs(), Rs, *TRI);
     dbgs() << '\n';
@@ -996,7 +996,7 @@ bool HexagonSplitDoubleRegs::splitInstr(MachineInstr *MI,
       const UUPairMap &PairMap) {
   using namespace Hexagon;
 
-  DEBUG(dbgs() << "Splitting: " << *MI);
+  LLVM_DEBUG(dbgs() << "Splitting: " << *MI);
   bool Split = false;
   unsigned Opc = MI->getOpcode();
 
@@ -1130,8 +1130,8 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
   const TargetRegisterClass *IntRC = &Hexagon::IntRegsRegClass;
   bool Changed = false;
 
-  DEBUG(dbgs() << "Splitting partition: "; dump_partition(dbgs(), Part, *TRI);
-        dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << "Splitting partition: ";
+             dump_partition(dbgs(), Part, *TRI); dbgs() << '\n');
 
   UUPairMap PairMap;
 
@@ -1148,8 +1148,9 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
 
     unsigned LoR = MRI->createVirtualRegister(IntRC);
     unsigned HiR = MRI->createVirtualRegister(IntRC);
-    DEBUG(dbgs() << "Created mapping: " << printReg(DR, TRI) << " -> "
-                 << printReg(HiR, TRI) << ':' << printReg(LoR, TRI) << '\n');
+    LLVM_DEBUG(dbgs() << "Created mapping: " << printReg(DR, TRI) << " -> "
+                      << printReg(HiR, TRI) << ':' << printReg(LoR, TRI)
+                      << '\n');
     PairMap.insert(std::make_pair(DR, UUPair(LoR, HiR)));
   }
 
@@ -1189,8 +1190,8 @@ bool HexagonSplitDoubleRegs::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  DEBUG(dbgs() << "Splitting double registers in function: "
-        << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "Splitting double registers in function: "
+                    << MF.getName() << '\n');
 
   auto &ST = MF.getSubtarget<HexagonSubtarget>();
   TRI = ST.getRegisterInfo();
@@ -1204,7 +1205,7 @@ bool HexagonSplitDoubleRegs::runOnMachineFunction(MachineFunction &MF) {
   collectIndRegs(IRM);
   partitionRegisters(P2Rs);
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Register partitioning: (partition #0 is fixed)\n";
     for (UUSetMap::iterator I = P2Rs.begin(), E = P2Rs.end(); I != E; ++I) {
       dbgs() << '#' << I->first << " -> ";
@@ -1222,7 +1223,8 @@ bool HexagonSplitDoubleRegs::runOnMachineFunction(MachineFunction &MF) {
     if (Limit >= 0 && Counter >= Limit)
       break;
     USet &Part = I->second;
-    DEBUG(dbgs() << "Calculating profit for partition #" << I->first << '\n');
+    LLVM_DEBUG(dbgs() << "Calculating profit for partition #" << I->first
+                      << '\n');
     if (!isProfitable(Part, IRM))
       continue;
     Counter++;

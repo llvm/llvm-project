@@ -906,7 +906,7 @@ public:
       // We currently don't hoist the record of instruction properly.
       // Therefore we can only work on the orig instruction (InsnVarID
       // == 0).
-      DEBUG(dbgs() << "Non-zero instr ID not supported yet\n");
+      LLVM_DEBUG(dbgs() << "Non-zero instr ID not supported yet\n");
       return false;
     }
     return B.getKind() == getKind() && InsnVarID == B.InsnVarID &&
@@ -3806,7 +3806,7 @@ std::vector<Matcher *> GlobalISelEmitter::optimizeRules(
     OptRules.push_back(CurrentGroup.get());
     StorageGroupMatcher.emplace_back(std::move(CurrentGroup));
   }
-  DEBUG(dbgs() << "NbGroup: " << NbGroup << "\n");
+  LLVM_DEBUG(dbgs() << "NbGroup: " << NbGroup << "\n");
   return OptRules;
 }
 

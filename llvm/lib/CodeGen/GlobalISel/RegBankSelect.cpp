@@ -76,7 +76,7 @@ RegBankSelect::RegBankSelect(Mode RunningMode)
   if (RegBankSelectMode.getNumOccurrences() != 0) {
     OptMode = RegBankSelectMode;
     if (RegBankSelectMode != RunningMode)
-      DEBUG(dbgs() << "RegBankSelect mode overrided by command line\n");
+      LLVM_DEBUG(dbgs() << "RegBankSelect mode overrided by command line\n");
   }
 }
 
@@ -123,11 +123,11 @@ bool RegBankSelect::assignmentMatch(
   // Reg is free of assignment, a simple assignment will make the
   // register bank to match.
   OnlyAssign = CurRegBank == nullptr;
-  DEBUG(dbgs() << "Does assignment already match: ";
-        if (CurRegBank) dbgs() << *CurRegBank; else dbgs() << "none";
-        dbgs() << " against ";
-        assert(DesiredRegBrank && "The mapping must be valid");
-        dbgs() << *DesiredRegBrank << '\n';);
+  LLVM_DEBUG(dbgs() << "Does assignment already match: ";
+             if (CurRegBank) dbgs() << *CurRegBank; else dbgs() << "none";
+             dbgs() << " against ";
+             assert(DesiredRegBrank && "The mapping must be valid");
+             dbgs() << *DesiredRegBrank << '\n';);
   return CurRegBank == DesiredRegBrank;
 }
 
@@ -160,8 +160,8 @@ bool RegBankSelect::repairReg(
   // same types because the type is a placeholder when this function is called.
   MachineInstr *MI =
       MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY).addDef(Dst).addUse(Src);
-  DEBUG(dbgs() << "Copy: " << printReg(Src) << " to: " << printReg(Dst)
-               << '\n');
+  LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << " to: " << printReg(Dst)
+                    << '\n');
   // TODO:
   // Check if MI is legal. if not, we need to legalize all the
   // instructions we are going to insert.
@@ -246,7 +246,7 @@ const RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
     MappingCost CurCost =
         computeMapping(MI, *CurMapping, LocalRepairPts, &Cost);
     if (CurCost < Cost) {
-      DEBUG(dbgs() << "New best: " << CurCost << '\n');
+      LLVM_DEBUG(dbgs() << "New best: " << CurCost << '\n');
       Cost = CurCost;
       BestMapping = CurMapping;
       RepairPts.clear();
@@ -398,11 +398,11 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
   MappingCost Cost(MBFI ? MBFI->getBlockFreq(MI.getParent()) : 1);
   bool Saturated = Cost.addLocalCost(InstrMapping.getCost());
   assert(!Saturated && "Possible mapping saturated the cost");
-  DEBUG(dbgs() << "Evaluating mapping cost for: " << MI);
-  DEBUG(dbgs() << "With: " << InstrMapping << '\n');
+  LLVM_DEBUG(dbgs() << "Evaluating mapping cost for: " << MI);
+  LLVM_DEBUG(dbgs() << "With: " << InstrMapping << '\n');
   RepairPts.clear();
   if (BestCost && Cost > *BestCost) {
-    DEBUG(dbgs() << "Mapping is too expensive from the start\n");
+    LLVM_DEBUG(dbgs() << "Mapping is too expensive from the start\n");
     return Cost;
   }
 
@@ -418,17 +418,17 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
     unsigned Reg = MO.getReg();
     if (!Reg)
       continue;
-    DEBUG(dbgs() << "Opd" << OpIdx << '\n');
+    LLVM_DEBUG(dbgs() << "Opd" << OpIdx << '\n');
     const RegisterBankInfo::ValueMapping &ValMapping =
         InstrMapping.getOperandMapping(OpIdx);
     // If Reg is already properly mapped, this is free.
     bool Assign;
     if (assignmentMatch(Reg, ValMapping, Assign)) {
-      DEBUG(dbgs() << "=> is free (match).\n");
+      LLVM_DEBUG(dbgs() << "=> is free (match).\n");
       continue;
     }
     if (Assign) {
-      DEBUG(dbgs() << "=> is free (simple assignment).\n");
+      LLVM_DEBUG(dbgs() << "=> is free (simple assignment).\n");
       RepairPts.emplace_back(RepairingPlacement(MI, OpIdx, *TRI, *this,
                                                 RepairingPlacement::Reassign));
       continue;
@@ -447,7 +447,7 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
 
     // Check that the materialization of the repairing is possible.
     if (!RepairPt.canMaterialize()) {
-      DEBUG(dbgs() << "Mapping involves impossible repairing\n");
+      LLVM_DEBUG(dbgs() << "Mapping involves impossible repairing\n");
       return MappingCost::ImpossibleCost();
     }
 
@@ -510,7 +510,7 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
       // Stop looking into what it takes to repair, this is already
       // too expensive.
       if (BestCost && Cost > *BestCost) {
-        DEBUG(dbgs() << "Mapping is too expensive, stop processing\n");
+        LLVM_DEBUG(dbgs() << "Mapping is too expensive, stop processing\n");
         return Cost;
       }
 
@@ -520,7 +520,7 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
         break;
     }
   }
-  DEBUG(dbgs() << "Total cost is: " << Cost << "\n");
+  LLVM_DEBUG(dbgs() << "Total cost is: " << Cost << "\n");
   return Cost;
 }
 
@@ -560,14 +560,14 @@ bool RegBankSelect::applyMapping(
   }
 
   // Second, rewrite the instruction.
-  DEBUG(dbgs() << "Actual mapping of the operands: " << OpdMapper << '\n');
+  LLVM_DEBUG(dbgs() << "Actual mapping of the operands: " << OpdMapper << '\n');
   RBI->applyMapping(OpdMapper);
 
   return true;
 }
 
 bool RegBankSelect::assignInstr(MachineInstr &MI) {
-  DEBUG(dbgs() << "Assign: " << MI);
+  LLVM_DEBUG(dbgs() << "Assign: " << MI);
   // Remember the repairing placement for all the operands.
   SmallVector<RepairingPlacement, 4> RepairPts;
 
@@ -588,7 +588,7 @@ bool RegBankSelect::assignInstr(MachineInstr &MI) {
   // Make sure the mapping is valid for MI.
   assert(BestMapping->verify(MI) && "Invalid instruction mapping");
 
-  DEBUG(dbgs() << "Best Mapping: " << *BestMapping << '\n');
+  LLVM_DEBUG(dbgs() << "Best Mapping: " << *BestMapping << '\n');
 
   // After this call, MI may not be valid anymore.
   // Do not use it.
@@ -601,7 +601,7 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
           MachineFunctionProperties::Property::FailedISel))
     return false;
 
-  DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
   const Function &F = MF.getFunction();
   Mode SaveOptMode = OptMode;
   if (F.hasFnAttribute(Attribute::OptimizeNone))

@@ -2291,7 +2291,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
               MIB.addReg(0);
             MIB.addImm(Offset).addImm(Pred).addReg(PredReg);
             MIB.setMemRefs(Op0->mergeMemRefsWith(*Op1));
-            DEBUG(dbgs() << "Formed " << *MIB << "\n");
+            LLVM_DEBUG(dbgs() << "Formed " << *MIB << "\n");
             ++NumLDRDFormed;
           } else {
             MachineInstrBuilder MIB = BuildMI(*MBB, InsertPos, dl, MCID)
@@ -2305,7 +2305,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(MachineBasicBlock *MBB,
               MIB.addReg(0);
             MIB.addImm(Offset).addImm(Pred).addReg(PredReg);
             MIB.setMemRefs(Op0->mergeMemRefsWith(*Op1));
-            DEBUG(dbgs() << "Formed " << *MIB << "\n");
+            LLVM_DEBUG(dbgs() << "Formed " << *MIB << "\n");
             ++NumSTRDFormed;
           }
           MBB->erase(Op0);

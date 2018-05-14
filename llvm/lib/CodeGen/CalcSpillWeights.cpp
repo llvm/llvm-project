@@ -35,8 +35,8 @@ void llvm::calculateSpillWeightsAndHints(LiveIntervals &LIS,
                            const MachineLoopInfo &MLI,
                            const MachineBlockFrequencyInfo &MBFI,
                            VirtRegAuxInfo::NormalizingFn norm) {
-  DEBUG(dbgs() << "********** Compute Spill Weights **********\n"
-               << "********** Function: " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** Compute Spill Weights **********\n"
+                    << "********** Function: " << MF.getName() << '\n');
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   VirtRegAuxInfo VRAI(MF, LIS, VRM, MLI, MBFI, norm);

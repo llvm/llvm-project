@@ -207,7 +207,7 @@ MipsTargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 void MipsTargetMachine::resetSubtarget(MachineFunction *MF) {
-  DEBUG(dbgs() << "resetSubtarget\n");
+  LLVM_DEBUG(dbgs() << "resetSubtarget\n");
 
   Subtarget = const_cast<MipsSubtarget *>(getSubtargetImpl(MF->getFunction()));
   MF->setSubtarget(Subtarget);
@@ -275,12 +275,12 @@ void MipsPassConfig::addPreRegAlloc() {
 TargetTransformInfo
 MipsTargetMachine::getTargetTransformInfo(const Function &F) {
   if (Subtarget->allowMixed16_32()) {
-    DEBUG(errs() << "No Target Transform Info Pass Added\n");
+    LLVM_DEBUG(errs() << "No Target Transform Info Pass Added\n");
     // FIXME: This is no longer necessary as the TTI returned is per-function.
     return TargetTransformInfo(F.getParent()->getDataLayout());
   }
 
-  DEBUG(errs() << "Target Transform Info Pass Added\n");
+  LLVM_DEBUG(errs() << "Target Transform Info Pass Added\n");
   return TargetTransformInfo(BasicTTIImpl(this, F));
 }
 

@@ -337,7 +337,7 @@ public:
   /// Helper function for DWARFDebugLine parse functions, to report issues that
   /// prevent parsing the remainder of the table as warnings.
   ///
-  /// \param Error The Error to report.
+  /// \param Err The Error to report.
   static void warnForError(Error Err);
 
 private:

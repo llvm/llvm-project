@@ -716,12 +716,13 @@ static bool isSafeDecreasingBound(const SCEV *Start,
 
   assert(SE.isKnownNegative(Step) && "expecting negative step");
 
-  DEBUG(dbgs() << "irce: isSafeDecreasingBound with:\n");
-  DEBUG(dbgs() << "irce: Start: " << *Start << "\n");
-  DEBUG(dbgs() << "irce: Step: " << *Step << "\n");
-  DEBUG(dbgs() << "irce: BoundSCEV: " << *BoundSCEV << "\n");
-  DEBUG(dbgs() << "irce: Pred: " << ICmpInst::getPredicateName(Pred) << "\n");
-  DEBUG(dbgs() << "irce: LatchExitBrIdx: " << LatchBrExitIdx << "\n");
+  LLVM_DEBUG(dbgs() << "irce: isSafeDecreasingBound with:\n");
+  LLVM_DEBUG(dbgs() << "irce: Start: " << *Start << "\n");
+  LLVM_DEBUG(dbgs() << "irce: Step: " << *Step << "\n");
+  LLVM_DEBUG(dbgs() << "irce: BoundSCEV: " << *BoundSCEV << "\n");
+  LLVM_DEBUG(dbgs() << "irce: Pred: " << ICmpInst::getPredicateName(Pred)
+                    << "\n");
+  LLVM_DEBUG(dbgs() << "irce: LatchExitBrIdx: " << LatchBrExitIdx << "\n");
 
   bool IsSigned = ICmpInst::isSigned(Pred);
   // The predicate that we need to check that the induction variable lies
@@ -763,12 +764,13 @@ static bool isSafeIncreasingBound(const SCEV *Start,
   if (!SE.isAvailableAtLoopEntry(BoundSCEV, L))
     return false;
 
-  DEBUG(dbgs() << "irce: isSafeIncreasingBound with:\n");
-  DEBUG(dbgs() << "irce: Start: " << *Start << "\n");
-  DEBUG(dbgs() << "irce: Step: " << *Step << "\n");
-  DEBUG(dbgs() << "irce: BoundSCEV: " << *BoundSCEV << "\n");
-  DEBUG(dbgs() << "irce: Pred: " << ICmpInst::getPredicateName(Pred) << "\n");
-  DEBUG(dbgs() << "irce: LatchExitBrIdx: " << LatchBrExitIdx << "\n");
+  LLVM_DEBUG(dbgs() << "irce: isSafeIncreasingBound with:\n");
+  LLVM_DEBUG(dbgs() << "irce: Start: " << *Start << "\n");
+  LLVM_DEBUG(dbgs() << "irce: Step: " << *Step << "\n");
+  LLVM_DEBUG(dbgs() << "irce: BoundSCEV: " << *BoundSCEV << "\n");
+  LLVM_DEBUG(dbgs() << "irce: Pred: " << ICmpInst::getPredicateName(Pred)
+                    << "\n");
+  LLVM_DEBUG(dbgs() << "irce: LatchExitBrIdx: " << LatchBrExitIdx << "\n");
 
   bool IsSigned = ICmpInst::isSigned(Pred);
   // The predicate that we need to check that the induction variable lies
@@ -1473,7 +1475,7 @@ bool LoopConstrainer::run() {
   bool IsSignedPredicate = MainLoopStructure.IsSignedPredicate;
   Optional<SubRanges> MaybeSR = calculateSubRanges(IsSignedPredicate);
   if (!MaybeSR.hasValue()) {
-    DEBUG(dbgs() << "irce: could not compute subranges\n");
+    LLVM_DEBUG(dbgs() << "irce: could not compute subranges\n");
     return false;
   }
 
@@ -1509,17 +1511,18 @@ bool LoopConstrainer::run() {
                             IsSignedPredicate))
         ExitPreLoopAtSCEV = SE.getAddExpr(*SR.HighLimit, MinusOneS);
       else {
-        DEBUG(dbgs() << "irce: could not prove no-overflow when computing "
-                     << "preloop exit limit.  HighLimit = " << *(*SR.HighLimit)
-                     << "\n");
+        LLVM_DEBUG(dbgs() << "irce: could not prove no-overflow when computing "
+                          << "preloop exit limit.  HighLimit = "
+                          << *(*SR.HighLimit) << "\n");
         return false;
       }
     }
 
     if (!isSafeToExpandAt(ExitPreLoopAtSCEV, InsertPt, SE)) {
-      DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
-                   << " preloop exit limit " << *ExitPreLoopAtSCEV
-                   << " at block " << InsertPt->getParent()->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
+                        << " preloop exit limit " << *ExitPreLoopAtSCEV
+                        << " at block " << InsertPt->getParent()->getName()
+                        << "\n");
       return false;
     }
 
@@ -1537,17 +1540,18 @@ bool LoopConstrainer::run() {
                             IsSignedPredicate))
         ExitMainLoopAtSCEV = SE.getAddExpr(*SR.LowLimit, MinusOneS);
       else {
-        DEBUG(dbgs() << "irce: could not prove no-overflow when computing "
-                     << "mainloop exit limit.  LowLimit = " << *(*SR.LowLimit)
-                     << "\n");
+        LLVM_DEBUG(dbgs() << "irce: could not prove no-overflow when computing "
+                          << "mainloop exit limit.  LowLimit = "
+                          << *(*SR.LowLimit) << "\n");
         return false;
       }
     }
 
     if (!isSafeToExpandAt(ExitMainLoopAtSCEV, InsertPt, SE)) {
-      DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
-                   << " main loop exit limit " << *ExitMainLoopAtSCEV
-                   << " at block " << InsertPt->getParent()->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
+                        << " main loop exit limit " << *ExitMainLoopAtSCEV
+                        << " at block " << InsertPt->getParent()->getName()
+                        << "\n");
       return false;
     }
 
@@ -1826,13 +1830,13 @@ bool IRCELegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
 bool InductiveRangeCheckElimination::run(
     Loop *L, function_ref<void(Loop *, bool)> LPMAddNewLoop) {
   if (L->getBlocks().size() >= LoopSizeCutoff) {
-    DEBUG(dbgs() << "irce: giving up constraining loop, too large\n");
+    LLVM_DEBUG(dbgs() << "irce: giving up constraining loop, too large\n");
     return false;
   }
 
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
-    DEBUG(dbgs() << "irce: loop has no preheader, leaving\n");
+    LLVM_DEBUG(dbgs() << "irce: loop has no preheader, leaving\n");
     return false;
   }
 
@@ -1855,7 +1859,7 @@ bool InductiveRangeCheckElimination::run(
       IRC.print(OS);
   };
 
-  DEBUG(PrintRecognizedRangeChecks(dbgs()));
+  LLVM_DEBUG(PrintRecognizedRangeChecks(dbgs()));
 
   if (PrintRangeChecks)
     PrintRecognizedRangeChecks(errs());
@@ -1864,8 +1868,8 @@ bool InductiveRangeCheckElimination::run(
   Optional<LoopStructure> MaybeLoopStructure =
       LoopStructure::parseLoopStructure(SE, BPI, *L, FailureReason);
   if (!MaybeLoopStructure.hasValue()) {
-    DEBUG(dbgs() << "irce: could not parse loop structure: " << FailureReason
-                 << "\n";);
+    LLVM_DEBUG(dbgs() << "irce: could not parse loop structure: "
+                      << FailureReason << "\n";);
     return false;
   }
   LoopStructure LS = MaybeLoopStructure.getValue();
@@ -1915,7 +1919,7 @@ bool InductiveRangeCheckElimination::run(
       L->print(dbgs());
     };
 
-    DEBUG(PrintConstrainedLoopInfo());
+    LLVM_DEBUG(PrintConstrainedLoopInfo());
 
     if (PrintChangedLoops)
       PrintConstrainedLoopInfo();

@@ -212,26 +212,27 @@ namespace llvm {
         return;
       IS.OptLevel = NewOptLevel;
       IS.TM.setOptLevel(NewOptLevel);
-      DEBUG(dbgs() << "\nChanging optimization level for Function "
-            << IS.MF->getFunction().getName() << "\n");
-      DEBUG(dbgs() << "\tBefore: -O" << SavedOptLevel
-            << " ; After: -O" << NewOptLevel << "\n");
+      LLVM_DEBUG(dbgs() << "\nChanging optimization level for Function "
+                        << IS.MF->getFunction().getName() << "\n");
+      LLVM_DEBUG(dbgs() << "\tBefore: -O" << SavedOptLevel << " ; After: -O"
+                        << NewOptLevel << "\n");
       SavedFastISel = IS.TM.Options.EnableFastISel;
       if (NewOptLevel == CodeGenOpt::None) {
         IS.TM.setFastISel(IS.TM.getO0WantsFastISel());
-        DEBUG(dbgs() << "\tFastISel is "
-              << (IS.TM.Options.EnableFastISel ? "enabled" : "disabled")
-              << "\n");
+        LLVM_DEBUG(
+            dbgs() << "\tFastISel is "
+                   << (IS.TM.Options.EnableFastISel ? "enabled" : "disabled")
+                   << "\n");
       }
     }
 
     ~OptLevelChanger() {
       if (IS.OptLevel == SavedOptLevel)
         return;
-      DEBUG(dbgs() << "\nRestoring optimization level for Function "
-            << IS.MF->getFunction().getName() << "\n");
-      DEBUG(dbgs() << "\tBefore: -O" << IS.OptLevel
-            << " ; After: -O" << SavedOptLevel << "\n");
+      LLVM_DEBUG(dbgs() << "\nRestoring optimization level for Function "
+                        << IS.MF->getFunction().getName() << "\n");
+      LLVM_DEBUG(dbgs() << "\tBefore: -O" << IS.OptLevel << " ; After: -O"
+                        << SavedOptLevel << "\n");
       IS.OptLevel = SavedOptLevel;
       IS.TM.setOptLevel(SavedOptLevel);
       IS.TM.setFastISel(SavedFastISel);
@@ -412,7 +413,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
   LoopInfo *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
 
-  DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
 
   SplitCriticalSideEffectEdges(const_cast<Function &>(Fn), DT, LI);
 
@@ -516,8 +517,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
         // FIXME: VR def may not be in entry block.
         Def->getParent()->insert(std::next(InsertPos), MI);
       } else
-        DEBUG(dbgs() << "Dropping debug info for dead vreg"
-              << TargetRegisterInfo::virtReg2Index(Reg) << "\n");
+        LLVM_DEBUG(dbgs() << "Dropping debug info for dead vreg"
+                          << TargetRegisterInfo::virtReg2Index(Reg) << "\n");
     }
 
     // If Reg is live-in then update debug info to track its copy in a vreg.
@@ -624,8 +625,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   // at this point.
   FuncInfo->clear();
 
-  DEBUG(dbgs() << "*** MachineFunction at end of ISel ***\n");
-  DEBUG(MF->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "*** MachineFunction at end of ISel ***\n");
+  LLVM_DEBUG(MF->print(dbgs()));
 
   return true;
 }
@@ -735,9 +736,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     BlockName =
         (MF->getName() + ":" + FuncInfo->MBB->getBasicBlock()->getName()).str();
   }
-  DEBUG(dbgs() << "Initial selection DAG: " << printMBBReference(*FuncInfo->MBB)
-               << " '" << BlockName << "'\n";
-        CurDAG->dump());
+  LLVM_DEBUG(dbgs() << "Initial selection DAG: "
+                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                    << "'\n";
+             CurDAG->dump());
 
   if (ViewDAGCombine1 && MatchFilterBB)
     CurDAG->viewGraph("dag-combine1 input for " + BlockName);
@@ -752,10 +754,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   if (TTI.hasBranchDivergence())
     CurDAG->VerifyDAGDiverence();
 
-  DEBUG(dbgs() << "Optimized lowered selection DAG: "
-               << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-               << "'\n";
-        CurDAG->dump());
+  LLVM_DEBUG(dbgs() << "Optimized lowered selection DAG: "
+                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                    << "'\n";
+             CurDAG->dump());
 
   // Second step, hack on the DAG until it only uses operations and types that
   // the target supports.
@@ -772,10 +774,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   if (TTI.hasBranchDivergence())
     CurDAG->VerifyDAGDiverence();
 
-  DEBUG(dbgs() << "Type-legalized selection DAG: "
-               << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-               << "'\n";
-        CurDAG->dump());
+  LLVM_DEBUG(dbgs() << "Type-legalized selection DAG: "
+                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                    << "'\n";
+             CurDAG->dump());
 
   // Only allow creation of legal node types.
   CurDAG->NewNodesMustHaveLegalTypes = true;
@@ -794,10 +796,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     if (TTI.hasBranchDivergence())
       CurDAG->VerifyDAGDiverence();
 
-    DEBUG(dbgs() << "Optimized type-legalized selection DAG: "
-                 << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                 << "'\n";
-          CurDAG->dump());
+    LLVM_DEBUG(dbgs() << "Optimized type-legalized selection DAG: "
+                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                      << "'\n";
+               CurDAG->dump());
   }
 
   {
@@ -807,10 +809,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   }
 
   if (Changed) {
-    DEBUG(dbgs() << "Vector-legalized selection DAG: "
-                 << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                 << "'\n";
-          CurDAG->dump());
+    LLVM_DEBUG(dbgs() << "Vector-legalized selection DAG: "
+                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                      << "'\n";
+               CurDAG->dump());
 
     {
       NamedRegionTimer T("legalize_types2", "Type Legalization 2", GroupName,
@@ -818,10 +820,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       CurDAG->LegalizeTypes();
     }
 
-    DEBUG(dbgs() << "Vector/type-legalized selection DAG: "
-                 << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                 << "'\n";
-          CurDAG->dump());
+    LLVM_DEBUG(dbgs() << "Vector/type-legalized selection DAG: "
+                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                      << "'\n";
+               CurDAG->dump());
 
     if (ViewDAGCombineLT && MatchFilterBB)
       CurDAG->viewGraph("dag-combine-lv input for " + BlockName);
@@ -833,10 +835,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       CurDAG->Combine(AfterLegalizeVectorOps, AA, OptLevel);
     }
 
-    DEBUG(dbgs() << "Optimized vector-legalized selection DAG: "
-                 << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                 << "'\n";
-          CurDAG->dump());
+    LLVM_DEBUG(dbgs() << "Optimized vector-legalized selection DAG: "
+                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                      << "'\n";
+               CurDAG->dump());
 
     if (TTI.hasBranchDivergence())
       CurDAG->VerifyDAGDiverence();
@@ -854,10 +856,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   if (TTI.hasBranchDivergence())
     CurDAG->VerifyDAGDiverence();
 
-  DEBUG(dbgs() << "Legalized selection DAG: "
-               << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-               << "'\n";
-        CurDAG->dump());
+  LLVM_DEBUG(dbgs() << "Legalized selection DAG: "
+                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                    << "'\n";
+             CurDAG->dump());
 
   if (ViewDAGCombine2 && MatchFilterBB)
     CurDAG->viewGraph("dag-combine2 input for " + BlockName);
@@ -872,10 +874,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   if (TTI.hasBranchDivergence())
     CurDAG->VerifyDAGDiverence();
 
-  DEBUG(dbgs() << "Optimized legalized selection DAG: "
-               << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-               << "'\n";
-        CurDAG->dump());
+  LLVM_DEBUG(dbgs() << "Optimized legalized selection DAG: "
+                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                    << "'\n";
+             CurDAG->dump());
 
   if (OptLevel != CodeGenOpt::None)
     ComputeLiveOutVRegInfo();
@@ -891,10 +893,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     DoInstructionSelection();
   }
 
-  DEBUG(dbgs() << "Selected selection DAG: "
-               << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-               << "'\n";
-        CurDAG->dump());
+  LLVM_DEBUG(dbgs() << "Selected selection DAG: "
+                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                    << "'\n";
+             CurDAG->dump());
 
   if (ViewSchedDAGs && MatchFilterBB)
     CurDAG->viewGraph("scheduler input for " + BlockName);
@@ -1013,9 +1015,9 @@ int SelectionDAGISel::getUninvalidatedNodeId(SDNode *N) {
 }
 
 void SelectionDAGISel::DoInstructionSelection() {
-  DEBUG(dbgs() << "===== Instruction selection begins: "
-               << printMBBReference(*FuncInfo->MBB) << " '"
-               << FuncInfo->MBB->getName() << "'\n");
+  LLVM_DEBUG(dbgs() << "===== Instruction selection begins: "
+                    << printMBBReference(*FuncInfo->MBB) << " '"
+                    << FuncInfo->MBB->getName() << "'\n");
 
   PreprocessISelDAG();
 
@@ -1087,8 +1089,8 @@ void SelectionDAGISel::DoInstructionSelection() {
       if (Node->isStrictFPOpcode())
         Node = CurDAG->mutateStrictFPToFP(Node);
 
-      DEBUG(dbgs() << "\nISEL: Starting selection on root node: ";
-            Node->dump(CurDAG));
+      LLVM_DEBUG(dbgs() << "\nISEL: Starting selection on root node: ";
+                 Node->dump(CurDAG));
 
       Select(Node);
     }
@@ -1096,7 +1098,7 @@ void SelectionDAGISel::DoInstructionSelection() {
     CurDAG->setRoot(Dummy.getValue());
   }
 
-  DEBUG(dbgs() << "\n===== Instruction selection ends:\n");
+  LLVM_DEBUG(dbgs() << "\n===== Instruction selection ends:\n");
 
   PostprocessISelDAG();
 }
@@ -1486,7 +1488,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   // Initialize the Fast-ISel state, if needed.
   FastISel *FastIS = nullptr;
   if (TM.Options.EnableFastISel) {
-    DEBUG(dbgs() << "Enabling fast-isel\n");
+    LLVM_DEBUG(dbgs() << "Enabling fast-isel\n");
     FastIS = TLI->createFastISel(*FuncInfo, LibInfo);
   }
 
@@ -1837,12 +1839,12 @@ FindSplitPointForStackProtector(MachineBasicBlock *BB) {
 
 void
 SelectionDAGISel::FinishBasicBlock() {
-  DEBUG(dbgs() << "Total amount of phi nodes to update: "
-               << FuncInfo->PHINodesToUpdate.size() << "\n";
-        for (unsigned i = 0, e = FuncInfo->PHINodesToUpdate.size(); i != e; ++i)
-          dbgs() << "Node " << i << " : ("
-                 << FuncInfo->PHINodesToUpdate[i].first
-                 << ", " << FuncInfo->PHINodesToUpdate[i].second << ")\n");
+  LLVM_DEBUG(dbgs() << "Total amount of phi nodes to update: "
+                    << FuncInfo->PHINodesToUpdate.size() << "\n";
+             for (unsigned i = 0, e = FuncInfo->PHINodesToUpdate.size(); i != e;
+                  ++i) dbgs()
+             << "Node " << i << " : (" << FuncInfo->PHINodesToUpdate[i].first
+             << ", " << FuncInfo->PHINodesToUpdate[i].second << ")\n");
 
   // Next, now that we know what the last MBB the LLVM BB expanded is, update
   // PHI nodes in successors.
@@ -2473,7 +2475,7 @@ void SelectionDAGISel::UpdateChains(
   if (!NowDeadNodes.empty())
     CurDAG->RemoveDeadNodes(NowDeadNodes);
 
-  DEBUG(dbgs() << "ISEL: Match complete!\n");
+  LLVM_DEBUG(dbgs() << "ISEL: Match complete!\n");
 }
 
 /// HandleMergeInputChains - This implements the OPC_EmitMergeInputChains
@@ -2961,7 +2963,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
   // update the chain results when the pattern is complete.
   SmallVector<SDNode*, 3> ChainNodesMatched;
 
-  DEBUG(dbgs() << "ISEL: Starting pattern match\n");
+  LLVM_DEBUG(dbgs() << "ISEL: Starting pattern match\n");
 
   // Determine where to start the interpreter.  Normally we start at opcode #0,
   // but if the state machine starts with an OPC_SwitchOpcode, then we
@@ -2973,7 +2975,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     // Already computed the OpcodeOffset table, just index into it.
     if (N.getOpcode() < OpcodeOffset.size())
       MatcherIndex = OpcodeOffset[N.getOpcode()];
-    DEBUG(dbgs() << "  Initial Opcode index to " << MatcherIndex << "\n");
+    LLVM_DEBUG(dbgs() << "  Initial Opcode index to " << MatcherIndex << "\n");
 
   } else if (MatcherTable[0] == OPC_SwitchOpcode) {
     // Otherwise, the table isn't computed, but the state machine does start
@@ -3040,9 +3042,10 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         if (!Result)
           break;
 
-        DEBUG(dbgs() << "  Skipped scope entry (due to false predicate) at "
-                     << "index " << MatcherIndexOfPredicate
-                     << ", continuing at " << FailIndex << "\n");
+        LLVM_DEBUG(
+            dbgs() << "  Skipped scope entry (due to false predicate) at "
+                   << "index " << MatcherIndexOfPredicate << ", continuing at "
+                   << FailIndex << "\n");
         ++NumDAGIselRetries;
 
         // Otherwise, we know that this case of the Scope is guaranteed to fail,
@@ -3091,11 +3094,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (auto *MN = dyn_cast<MemSDNode>(N))
         MatchedMemRefs.push_back(MN->getMemOperand());
       else {
-        DEBUG(
-          dbgs() << "Expected MemSDNode ";
-          N->dump(CurDAG);
-          dbgs() << '\n'
-        );
+        LLVM_DEBUG(dbgs() << "Expected MemSDNode "; N->dump(CurDAG);
+                   dbgs() << '\n');
       }
 
       continue;
@@ -3216,8 +3216,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (CaseSize == 0) break;
 
       // Otherwise, execute the case we found.
-      DEBUG(dbgs() << "  OpcodeSwitch from " << SwitchStart
-                   << " to " << MatcherIndex << "\n");
+      LLVM_DEBUG(dbgs() << "  OpcodeSwitch from " << SwitchStart << " to "
+                        << MatcherIndex << "\n");
       continue;
     }
 
@@ -3248,8 +3248,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (CaseSize == 0) break;
 
       // Otherwise, execute the case we found.
-      DEBUG(dbgs() << "  TypeSwitch[" << EVT(CurNodeVT).getEVTString()
-                   << "] from " << SwitchStart << " to " << MatcherIndex<<'\n');
+      LLVM_DEBUG(dbgs() << "  TypeSwitch[" << EVT(CurNodeVT).getEVTString()
+                        << "] from " << SwitchStart << " to " << MatcherIndex
+                        << '\n');
       continue;
     }
     case OPC_CheckChild0Type: case OPC_CheckChild1Type:
@@ -3629,14 +3630,11 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         Res->setMemRefs(MemRefs, MemRefs + NumMemRefs);
       }
 
-      DEBUG(
-        if (!MatchedMemRefs.empty() && Res->memoperands_empty())
-          dbgs() << "  Dropping mem operands\n";
-        dbgs() << "  "
-               << (IsMorphNodeTo ? "Morphed" : "Created")
-               << " node: ";
-        Res->dump(CurDAG);
-      );
+      LLVM_DEBUG(if (!MatchedMemRefs.empty() && Res->memoperands_empty()) dbgs()
+                     << "  Dropping mem operands\n";
+                 dbgs() << "  " << (IsMorphNodeTo ? "Morphed" : "Created")
+                        << " node: ";
+                 Res->dump(CurDAG););
 
       // If this was a MorphNodeTo then we're completely done!
       if (IsMorphNodeTo) {
@@ -3698,7 +3696,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     // If the code reached this point, then the match failed.  See if there is
     // another child to try in the current 'Scope', otherwise pop it until we
     // find a case to check.
-    DEBUG(dbgs() << "  Match failed at index " << CurrentOpcodeIndex << "\n");
+    LLVM_DEBUG(dbgs() << "  Match failed at index " << CurrentOpcodeIndex
+                      << "\n");
     ++NumDAGIselRetries;
     while (true) {
       if (MatchScopes.empty()) {
@@ -3718,7 +3717,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         MatchedMemRefs.resize(LastScope.NumMatchedMemRefs);
       MatcherIndex = LastScope.FailIndex;
 
-      DEBUG(dbgs() << "  Continuing at " << MatcherIndex << "\n");
+      LLVM_DEBUG(dbgs() << "  Continuing at " << MatcherIndex << "\n");
 
       InputChain = LastScope.InputChain;
       InputGlue = LastScope.InputGlue;

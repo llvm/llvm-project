@@ -62,9 +62,9 @@ TEST(DominatorTreeBatchUpdates, LegalizeDomUpdates) {
       {Insert, B, D}, {Delete, C, D}, {Delete, A, B}};
   SmallVector<DomUpdate, 4> Legalized;
   DomSNCA::LegalizeUpdates(Updates, Legalized);
-  DEBUG(dbgs() << "Legalized updates:\t");
-  DEBUG(for (auto &U : Legalized) dbgs() << U << ", ");
-  DEBUG(dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Legalized updates:\t");
+  LLVM_DEBUG(for (auto &U : Legalized) dbgs() << U << ", ");
+  LLVM_DEBUG(dbgs() << "\n");
   EXPECT_EQ(Legalized.size(), 3UL);
   EXPECT_NE(llvm::find(Legalized, DomUpdate{Insert, B, C}), Legalized.end());
   EXPECT_NE(llvm::find(Legalized, DomUpdate{Insert, B, D}), Legalized.end());
@@ -85,9 +85,9 @@ TEST(DominatorTreeBatchUpdates, LegalizePostDomUpdates) {
       {Insert, B, D}, {Delete, C, D}, {Delete, A, B}};
   SmallVector<DomUpdate, 4> Legalized;
   PostDomSNCA::LegalizeUpdates(Updates, Legalized);
-  DEBUG(dbgs() << "Legalized postdom updates:\t");
-  DEBUG(for (auto &U : Legalized) dbgs() << U << ", ");
-  DEBUG(dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Legalized postdom updates:\t");
+  LLVM_DEBUG(for (auto &U : Legalized) dbgs() << U << ", ");
+  LLVM_DEBUG(dbgs() << "\n");
   EXPECT_EQ(Legalized.size(), 3UL);
   EXPECT_NE(llvm::find(Legalized, DomUpdate{Insert, C, B}), Legalized.end());
   EXPECT_NE(llvm::find(Legalized, DomUpdate{Insert, D, B}), Legalized.end());

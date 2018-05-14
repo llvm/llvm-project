@@ -85,7 +85,7 @@ void SystemZHazardRecognizer::Reset() {
   GrpCount = 0;
   LastFPdOpCycleIdx = UINT_MAX;
   LastEmittedMI = nullptr;
-  DEBUG(CurGroupDbg = "";);
+  LLVM_DEBUG(CurGroupDbg = "";);
 }
 
 bool
@@ -112,8 +112,8 @@ void SystemZHazardRecognizer::nextGroup() {
   if (CurrGroupSize == 0)
     return;
 
-  DEBUG(dumpCurrGroup("Completed decode group"));
-  DEBUG(CurGroupDbg = "";);
+  LLVM_DEBUG(dumpCurrGroup("Completed decode group"));
+  LLVM_DEBUG(CurGroupDbg = "";);
 
   GrpCount++;
 
@@ -131,7 +131,7 @@ void SystemZHazardRecognizer::nextGroup() {
        ProcResCostLim))
     CriticalResourceIdx = UINT_MAX;
 
-  DEBUG(dumpState(););
+  LLVM_DEBUG(dumpState(););
 }
 
 #ifndef NDEBUG // Debug output
@@ -234,25 +234,23 @@ static inline bool isBranchRetTrap(MachineInstr *MI) {
 void SystemZHazardRecognizer::
 EmitInstruction(SUnit *SU) {
   const MCSchedClassDesc *SC = getSchedClass(SU);
-  DEBUG(dbgs() << "++ HazardRecognizer emitting "; dumpSU(SU, dbgs());
-        dbgs() << "\n";);
-  DEBUG(dumpCurrGroup("Decode group before emission"););
+  LLVM_DEBUG(dbgs() << "++ HazardRecognizer emitting "; dumpSU(SU, dbgs());
+             dbgs() << "\n";);
+  LLVM_DEBUG(dumpCurrGroup("Decode group before emission"););
 
   // If scheduling an SU that must begin a new decoder group, move on
   // to next group.
   if (!fitsIntoCurrentGroup(SU))
     nextGroup();
 
-  DEBUG(raw_string_ostream cgd(CurGroupDbg);
-        if (CurGroupDbg.length())
-          cgd << ", ";
-        dumpSU(SU, cgd););
+  LLVM_DEBUG(raw_string_ostream cgd(CurGroupDbg);
+             if (CurGroupDbg.length()) cgd << ", "; dumpSU(SU, cgd););
 
   LastEmittedMI = SU->getInstr();
 
   // After returning from a call, we don't know much about the state.
   if (SU->isCall) {
-    DEBUG(dbgs() << "++ Clearing state after call.\n";);
+    LLVM_DEBUG(dbgs() << "++ Clearing state after call.\n";);
     Reset();
     LastEmittedMI = SU->getInstr();
     return;
@@ -274,9 +272,10 @@ EmitInstruction(SUnit *SU) {
          (PI->ProcResourceIdx != CriticalResourceIdx &&
           CurrCounter >
           ProcResourceCounters[CriticalResourceIdx]))) {
-      DEBUG(dbgs() << "++ New critical resource: "
-            << SchedModel->getProcResource(PI->ProcResourceIdx)->Name
-            << "\n";);
+      LLVM_DEBUG(
+          dbgs() << "++ New critical resource: "
+                 << SchedModel->getProcResource(PI->ProcResourceIdx)->Name
+                 << "\n";);
       CriticalResourceIdx = PI->ProcResourceIdx;
     }
   }
@@ -284,8 +283,8 @@ EmitInstruction(SUnit *SU) {
   // Make note of an instruction that uses a blocking resource (FPd).
   if (SU->isUnbuffered) {
     LastFPdOpCycleIdx = getCurrCycleIdx(SU);
-    DEBUG(dbgs() << "++ Last FPd cycle index: "
-          << LastFPdOpCycleIdx << "\n";);
+    LLVM_DEBUG(dbgs() << "++ Last FPd cycle index: " << LastFPdOpCycleIdx
+                      << "\n";);
   }
 
   // Insert SU into current group by increasing number of slots used
@@ -409,7 +408,7 @@ void SystemZHazardRecognizer::
 copyState(SystemZHazardRecognizer *Incoming) {
   // Current decoder group
   CurrGroupSize = Incoming->CurrGroupSize;
-  DEBUG(CurGroupDbg = Incoming->CurGroupDbg;);
+  LLVM_DEBUG(CurGroupDbg = Incoming->CurGroupDbg;);
 
   // Processor resources
   ProcResourceCounters = Incoming->ProcResourceCounters;

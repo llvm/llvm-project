@@ -57,9 +57,10 @@ public:
 void OProfileJITEventListener::initialize() {
   if (!Wrapper->op_open_agent()) {
     const std::string err_str = sys::StrError();
-    DEBUG(dbgs() << "Failed to connect to OProfile agent: " << err_str << "\n");
+    LLVM_DEBUG(dbgs() << "Failed to connect to OProfile agent: " << err_str
+                      << "\n");
   } else {
-    DEBUG(dbgs() << "Connected to OProfile agent.\n");
+    LLVM_DEBUG(dbgs() << "Connected to OProfile agent.\n");
   }
 }
 
@@ -67,10 +68,10 @@ OProfileJITEventListener::~OProfileJITEventListener() {
   if (Wrapper->isAgentAvailable()) {
     if (Wrapper->op_close_agent() == -1) {
       const std::string err_str = sys::StrError();
-      DEBUG(dbgs() << "Failed to disconnect from OProfile agent: "
-                   << err_str << "\n");
+      LLVM_DEBUG(dbgs() << "Failed to disconnect from OProfile agent: "
+                        << err_str << "\n");
     } else {
-      DEBUG(dbgs() << "Disconnected from OProfile agent.\n");
+      LLVM_DEBUG(dbgs() << "Disconnected from OProfile agent.\n");
     }
   }
 }
@@ -103,9 +104,9 @@ void OProfileJITEventListener::NotifyObjectEmitted(
 
     if (Wrapper->op_write_native_code(Name.data(), Addr, (void *)Addr, Size) ==
         -1) {
-      DEBUG(dbgs() << "Failed to tell OProfile about native function " << Name
-                   << " at [" << (void *)Addr << "-" << ((char *)Addr + Size)
-                   << "]\n");
+      LLVM_DEBUG(dbgs() << "Failed to tell OProfile about native function "
+                        << Name << " at [" << (void *)Addr << "-"
+                        << ((char *)Addr + Size) << "]\n");
       continue;
     }
     // TODO: support line number info (similar to IntelJITEventListener.cpp)
@@ -135,9 +136,10 @@ void OProfileJITEventListener::NotifyFreeingObject(const ObjectFile &Obj) {
         uint64_t Addr = *AddrOrErr;
 
         if (Wrapper->op_unload_native_code(Addr) == -1) {
-          DEBUG(dbgs()
-                << "Failed to tell OProfile about unload of native function at "
-                << (void*)Addr << "\n");
+          LLVM_DEBUG(
+              dbgs()
+              << "Failed to tell OProfile about unload of native function at "
+              << (void *)Addr << "\n");
           continue;
         }
       }

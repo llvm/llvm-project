@@ -122,10 +122,8 @@ void RuntimeDyldImpl::resolveRelocations() {
   MutexGuard locked(lock);
 
   // Print out the sections prior to relocation.
-  DEBUG(
-    for (int i = 0, e = Sections.size(); i != e; ++i)
-      dumpSectionMemory(Sections[i], "before relocations");
-  );
+  LLVM_DEBUG(for (int i = 0, e = Sections.size(); i != e; ++i)
+                 dumpSectionMemory(Sections[i], "before relocations"););
 
   // First, resolve relocations associated with external symbols.
   if (auto Err = resolveExternalSymbols()) {
@@ -140,18 +138,15 @@ void RuntimeDyldImpl::resolveRelocations() {
     // entry provides the section to which the relocation will be applied.
     int Idx = it->first;
     uint64_t Addr = Sections[Idx].getLoadAddress();
-    DEBUG(dbgs() << "Resolving relocations Section #" << Idx << "\t"
-                 << format("%p", (uintptr_t)Addr) << "\n");
+    LLVM_DEBUG(dbgs() << "Resolving relocations Section #" << Idx << "\t"
+                      << format("%p", (uintptr_t)Addr) << "\n");
     resolveRelocationList(it->second, Addr);
   }
   Relocations.clear();
 
   // Print out sections after relocation.
-  DEBUG(
-    for (int i = 0, e = Sections.size(); i != e; ++i)
-      dumpSectionMemory(Sections[i], "after relocations");
-  );
-
+  LLVM_DEBUG(for (int i = 0, e = Sections.size(); i != e; ++i)
+                 dumpSectionMemory(Sections[i], "after relocations"););
 }
 
 void RuntimeDyldImpl::mapSectionAddress(const void *LocalAddress,
@@ -230,7 +225,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   }
 
   // Parse symbols
-  DEBUG(dbgs() << "Parse symbols:\n");
+  LLVM_DEBUG(dbgs() << "Parse symbols:\n");
   for (symbol_iterator I = Obj.symbol_begin(), E = Obj.symbol_end(); I != E;
        ++I) {
     uint32_t Flags = I->getFlags();
@@ -297,10 +292,10 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
 
       unsigned SectionID = AbsoluteSymbolSection;
 
-      DEBUG(dbgs() << "\tType: " << SymType << " (absolute) Name: " << Name
-                   << " SID: " << SectionID
-                   << " Offset: " << format("%p", (uintptr_t)Addr)
-                   << " flags: " << Flags << "\n");
+      LLVM_DEBUG(dbgs() << "\tType: " << SymType << " (absolute) Name: " << Name
+                        << " SID: " << SectionID
+                        << " Offset: " << format("%p", (uintptr_t)Addr)
+                        << " flags: " << Flags << "\n");
       GlobalSymbolTable[Name] = SymbolTableEntry(SectionID, Addr, JITSymFlags);
     } else if (SymType == object::SymbolRef::ST_Function ||
                SymType == object::SymbolRef::ST_Data ||
@@ -329,10 +324,10 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       else
         return SectionIDOrErr.takeError();
 
-      DEBUG(dbgs() << "\tType: " << SymType << " Name: " << Name
-                   << " SID: " << SectionID
-                   << " Offset: " << format("%p", (uintptr_t)SectOffset)
-                   << " flags: " << Flags << "\n");
+      LLVM_DEBUG(dbgs() << "\tType: " << SymType << " Name: " << Name
+                        << " SID: " << SectionID
+                        << " Offset: " << format("%p", (uintptr_t)SectOffset)
+                        << " flags: " << Flags << "\n");
       GlobalSymbolTable[Name] =
           SymbolTableEntry(SectionID, SectOffset, JITSymFlags);
     }
@@ -344,7 +339,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
     return std::move(Err);
 
   // Parse and process relocations
-  DEBUG(dbgs() << "Parse relocations:\n");
+  LLVM_DEBUG(dbgs() << "Parse relocations:\n");
   for (section_iterator SI = Obj.section_begin(), SE = Obj.section_end();
        SI != SE; ++SI) {
     StubMap Stubs;
@@ -367,7 +362,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
     else
       return SectionIDOrErr.takeError();
 
-    DEBUG(dbgs() << "\tSectionID: " << SectionID << "\n");
+    LLVM_DEBUG(dbgs() << "\tSectionID: " << SectionID << "\n");
 
     for (; I != E;)
       if (auto IOrErr = processRelocationRef(SectionID, I, Obj, LocalSections, Stubs))
@@ -669,8 +664,9 @@ Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
       SectionEntry("<common symbols>", Addr, CommonSize, CommonSize, 0));
   memset(Addr, 0, CommonSize);
 
-  DEBUG(dbgs() << "emitCommonSection SectionID: " << SectionID << " new addr: "
-               << format("%p", Addr) << " DataSize: " << CommonSize << "\n");
+  LLVM_DEBUG(dbgs() << "emitCommonSection SectionID: " << SectionID
+                    << " new addr: " << format("%p", Addr)
+                    << " DataSize: " << CommonSize << "\n");
 
   // Assign the address of each symbol
   for (auto &Sym : SymbolsToAllocate) {
@@ -688,8 +684,8 @@ Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
       Offset += AlignOffset;
     }
     JITSymbolFlags JITSymFlags = getJITSymbolFlags(Sym);
-    DEBUG(dbgs() << "Allocating common symbol " << Name << " address "
-                 << format("%p", Addr) << "\n");
+    LLVM_DEBUG(dbgs() << "Allocating common symbol " << Name << " address "
+                      << format("%p", Addr) << "\n");
     GlobalSymbolTable[Name] =
       SymbolTableEntry(SectionID, Offset, JITSymFlags);
     Offset += Size;
@@ -785,21 +781,22 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
         DataSize &= ~(getStubAlignment() - 1);
     }
 
-    DEBUG(dbgs() << "emitSection SectionID: " << SectionID << " Name: " << Name
-                 << " obj addr: " << format("%p", pData)
-                 << " new addr: " << format("%p", Addr)
-                 << " DataSize: " << DataSize << " StubBufSize: " << StubBufSize
-                 << " Allocate: " << Allocate << "\n");
+    LLVM_DEBUG(dbgs() << "emitSection SectionID: " << SectionID << " Name: "
+                      << Name << " obj addr: " << format("%p", pData)
+                      << " new addr: " << format("%p", Addr) << " DataSize: "
+                      << DataSize << " StubBufSize: " << StubBufSize
+                      << " Allocate: " << Allocate << "\n");
   } else {
     // Even if we didn't load the section, we need to record an entry for it
     // to handle later processing (and by 'handle' I mean don't do anything
     // with these sections).
     Allocate = 0;
     Addr = nullptr;
-    DEBUG(dbgs() << "emitSection SectionID: " << SectionID << " Name: " << Name
-                 << " obj addr: " << format("%p", data.data()) << " new addr: 0"
-                 << " DataSize: " << DataSize << " StubBufSize: " << StubBufSize
-                 << " Allocate: " << Allocate << "\n");
+    LLVM_DEBUG(
+        dbgs() << "emitSection SectionID: " << SectionID << " Name: " << Name
+               << " obj addr: " << format("%p", data.data()) << " new addr: 0"
+               << " DataSize: " << DataSize << " StubBufSize: " << StubBufSize
+               << " Allocate: " << Allocate << "\n");
   }
 
   Sections.push_back(
@@ -976,10 +973,11 @@ void RuntimeDyldImpl::reassignSectionAddress(unsigned SectionID,
   // Addr is a uint64_t because we can't assume the pointer width
   // of the target is the same as that of the host. Just use a generic
   // "big enough" type.
-  DEBUG(dbgs() << "Reassigning address for section " << SectionID << " ("
-               << Sections[SectionID].getName() << "): "
-               << format("0x%016" PRIx64, Sections[SectionID].getLoadAddress())
-               << " -> " << format("0x%016" PRIx64, Addr) << "\n");
+  LLVM_DEBUG(
+      dbgs() << "Reassigning address for section " << SectionID << " ("
+             << Sections[SectionID].getName() << "): "
+             << format("0x%016" PRIx64, Sections[SectionID].getLoadAddress())
+             << " -> " << format("0x%016" PRIx64, Addr) << "\n");
   Sections[SectionID].setLoadAddress(Addr);
 }
 
@@ -1034,8 +1032,8 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
     StringRef Name = i->first();
     if (Name.size() == 0) {
       // This is an absolute symbol, use an address of zero.
-      DEBUG(dbgs() << "Resolving absolute relocations."
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "Resolving absolute relocations."
+                        << "\n");
       RelocationList &Relocs = i->second;
       resolveRelocationList(Relocs, 0);
     } else {
@@ -1077,8 +1075,8 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
         // if the target symbol is Thumb.
         Addr = modifyAddressBasedOnFlags(Addr, Flags);
 
-        DEBUG(dbgs() << "Resolving relocations Name: " << Name << "\t"
-                     << format("0x%lx", Addr) << "\n");
+        LLVM_DEBUG(dbgs() << "Resolving relocations Name: " << Name << "\t"
+                          << format("0x%lx", Addr) << "\n");
         // This list may have been updated when we called getSymbolAddress, so
         // don't change this code to get the list earlier.
         RelocationList &Relocs = i->second;

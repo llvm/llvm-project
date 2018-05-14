@@ -154,8 +154,8 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   // we hit another of its uses or its defs.
   // Copies do not have constraints.
   if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
-    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
-                 << " operand\n");
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                      << " operand\n");
     return false;
   }
   return true;
@@ -399,12 +399,12 @@ bool ARMInstructionSelector::validReg(MachineRegisterInfo &MRI, unsigned Reg,
                                       unsigned ExpectedSize,
                                       unsigned ExpectedRegBankID) const {
   if (MRI.getType(Reg).getSizeInBits() != ExpectedSize) {
-    DEBUG(dbgs() << "Unexpected size for register");
+    LLVM_DEBUG(dbgs() << "Unexpected size for register");
     return false;
   }
 
   if (RBI.getRegBank(Reg, MRI, TRI)->getID() != ExpectedRegBankID) {
-    DEBUG(dbgs() << "Unexpected register bank for register");
+    LLVM_DEBUG(dbgs() << "Unexpected register bank for register");
     return false;
   }
 
@@ -496,13 +496,13 @@ bool ARMInstructionSelector::insertComparison(CmpConstants Helper, InsertInfo I,
 bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
                                           MachineRegisterInfo &MRI) const {
   if ((STI.isROPI() || STI.isRWPI()) && !STI.isTargetELF()) {
-    DEBUG(dbgs() << "ROPI and RWPI only supported for ELF\n");
+    LLVM_DEBUG(dbgs() << "ROPI and RWPI only supported for ELF\n");
     return false;
   }
 
   auto GV = MIB->getOperand(1).getGlobal();
   if (GV->isThreadLocal()) {
-    DEBUG(dbgs() << "TLS variables not supported yet\n");
+    LLVM_DEBUG(dbgs() << "TLS variables not supported yet\n");
     return false;
   }
 
@@ -607,7 +607,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
     else
       MIB->setDesc(TII.get(ARM::LDRLIT_ga_abs));
   } else {
-    DEBUG(dbgs() << "Object format not supported yet\n");
+    LLVM_DEBUG(dbgs() << "Object format not supported yet\n");
     return false;
   }
 
@@ -691,7 +691,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
     // FIXME: Smaller destination sizes coming soon!
     if (DstTy.getSizeInBits() != 32) {
-      DEBUG(dbgs() << "Unsupported destination size for extension");
+      LLVM_DEBUG(dbgs() << "Unsupported destination size for extension");
       return false;
     }
 
@@ -733,7 +733,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
       break;
     }
     default:
-      DEBUG(dbgs() << "Unsupported source size for extension");
+      LLVM_DEBUG(dbgs() << "Unsupported source size for extension");
       return false;
     }
     break;
@@ -774,12 +774,13 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     }
 
     if (SrcRegBank.getID() != DstRegBank.getID()) {
-      DEBUG(dbgs() << "G_TRUNC/G_ANYEXT operands on different register banks\n");
+      LLVM_DEBUG(
+          dbgs() << "G_TRUNC/G_ANYEXT operands on different register banks\n");
       return false;
     }
 
     if (SrcRegBank.getID() != ARM::GPRRegBankID) {
-      DEBUG(dbgs() << "G_TRUNC/G_ANYEXT on non-GPR not supported yet\n");
+      LLVM_DEBUG(dbgs() << "G_TRUNC/G_ANYEXT on non-GPR not supported yet\n");
       return false;
     }
 
@@ -789,21 +790,21 @@ bool ARMInstructionSelector::select(MachineInstr &I,
   case G_CONSTANT: {
     if (!MRI.getType(I.getOperand(0).getReg()).isPointer()) {
       // Non-pointer constants should be handled by TableGen.
-      DEBUG(dbgs() << "Unsupported constant type\n");
+      LLVM_DEBUG(dbgs() << "Unsupported constant type\n");
       return false;
     }
 
     auto &Val = I.getOperand(1);
     if (Val.isCImm()) {
       if (!Val.getCImm()->isZero()) {
-        DEBUG(dbgs() << "Unsupported pointer constant value\n");
+        LLVM_DEBUG(dbgs() << "Unsupported pointer constant value\n");
         return false;
       }
       Val.ChangeToImmediate(0);
     } else {
       assert(Val.isImm() && "Unexpected operand for G_CONSTANT");
       if (Val.getImm() != 0) {
-        DEBUG(dbgs() << "Unsupported pointer constant value\n");
+        LLVM_DEBUG(dbgs() << "Unsupported pointer constant value\n");
         return false;
       }
     }
@@ -821,13 +822,15 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     const auto &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
 
     if (SrcRegBank.getID() != DstRegBank.getID()) {
-      DEBUG(dbgs()
-            << "G_INTTOPTR/G_PTRTOINT operands on different register banks\n");
+      LLVM_DEBUG(
+          dbgs()
+          << "G_INTTOPTR/G_PTRTOINT operands on different register banks\n");
       return false;
     }
 
     if (SrcRegBank.getID() != ARM::GPRRegBankID) {
-      DEBUG(dbgs() << "G_INTTOPTR/G_PTRTOINT on non-GPR not supported yet\n");
+      LLVM_DEBUG(
+          dbgs() << "G_INTTOPTR/G_PTRTOINT on non-GPR not supported yet\n");
       return false;
     }
 
@@ -848,11 +851,11 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     unsigned Size = MRI.getType(OpReg).getSizeInBits();
 
     if (Size == 64 && STI.isFPOnlySP()) {
-      DEBUG(dbgs() << "Subtarget only supports single precision");
+      LLVM_DEBUG(dbgs() << "Subtarget only supports single precision");
       return false;
     }
     if (Size != 32 && Size != 64) {
-      DEBUG(dbgs() << "Unsupported size for G_FCMP operand");
+      LLVM_DEBUG(dbgs() << "Unsupported size for G_FCMP operand");
       return false;
     }
 
@@ -883,7 +886,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
   case G_LOAD: {
     const auto &MemOp = **I.memoperands_begin();
     if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
-      DEBUG(dbgs() << "Atomic load/store not supported yet\n");
+      LLVM_DEBUG(dbgs() << "Atomic load/store not supported yet\n");
       return false;
     }
 
@@ -920,7 +923,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
   }
   case G_BRCOND: {
     if (!validReg(MRI, I.getOperand(0).getReg(), 1, ARM::GPRRegBankID)) {
-      DEBUG(dbgs() << "Unsupported condition register for G_BRCOND");
+      LLVM_DEBUG(dbgs() << "Unsupported condition register for G_BRCOND");
       return false;
     }
 

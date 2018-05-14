@@ -271,10 +271,11 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
     }
     int CatchHigh = FuncInfo.getLastStateNumber();
     addTryBlockMapEntry(FuncInfo, TryLow, TryHigh, CatchHigh, Handlers);
-    DEBUG(dbgs() << "TryLow[" << BB->getName() << "]: " << TryLow << '\n');
-    DEBUG(dbgs() << "TryHigh[" << BB->getName() << "]: " << TryHigh << '\n');
-    DEBUG(dbgs() << "CatchHigh[" << BB->getName() << "]: " << CatchHigh
-                 << '\n');
+    LLVM_DEBUG(dbgs() << "TryLow[" << BB->getName() << "]: " << TryLow << '\n');
+    LLVM_DEBUG(dbgs() << "TryHigh[" << BB->getName() << "]: " << TryHigh
+                      << '\n');
+    LLVM_DEBUG(dbgs() << "CatchHigh[" << BB->getName() << "]: " << CatchHigh
+                      << '\n');
   } else {
     auto *CleanupPad = cast<CleanupPadInst>(FirstNonPHI);
 
@@ -285,8 +286,8 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
 
     int CleanupState = addUnwindMapEntry(FuncInfo, ParentState, BB);
     FuncInfo.EHPadStateMap[CleanupPad] = CleanupState;
-    DEBUG(dbgs() << "Assigning state #" << CleanupState << " to BB "
-                 << BB->getName() << '\n');
+    LLVM_DEBUG(dbgs() << "Assigning state #" << CleanupState << " to BB "
+                      << BB->getName() << '\n');
     for (const BasicBlock *PredBlock : predecessors(BB)) {
       if ((PredBlock = getEHPadFromPredecessor(PredBlock,
                                                CleanupPad->getParentPad()))) {
@@ -351,8 +352,8 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
 
     // Everything in the __try block uses TryState as its parent state.
     FuncInfo.EHPadStateMap[CatchSwitch] = TryState;
-    DEBUG(dbgs() << "Assigning state #" << TryState << " to BB "
-                 << CatchPadBB->getName() << '\n');
+    LLVM_DEBUG(dbgs() << "Assigning state #" << TryState << " to BB "
+                      << CatchPadBB->getName() << '\n');
     for (const BasicBlock *PredBlock : predecessors(BB))
       if ((PredBlock = getEHPadFromPredecessor(PredBlock,
                                                CatchSwitch->getParentPad())))
@@ -387,8 +388,8 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
 
     int CleanupState = addSEHFinally(FuncInfo, ParentState, BB);
     FuncInfo.EHPadStateMap[CleanupPad] = CleanupState;
-    DEBUG(dbgs() << "Assigning state #" << CleanupState << " to BB "
-                 << BB->getName() << '\n');
+    LLVM_DEBUG(dbgs() << "Assigning state #" << CleanupState << " to BB "
+                      << BB->getName() << '\n');
     for (const BasicBlock *PredBlock : predecessors(BB))
       if ((PredBlock =
                getEHPadFromPredecessor(PredBlock, CleanupPad->getParentPad())))
@@ -1034,17 +1035,17 @@ bool WinEHPrepare::prepareExplicitEH(Function &F) {
     demotePHIsOnFunclets(F);
 
   if (!DisableCleanups) {
-    DEBUG(verifyFunction(F));
+    LLVM_DEBUG(verifyFunction(F));
     removeImplausibleInstructions(F);
 
-    DEBUG(verifyFunction(F));
+    LLVM_DEBUG(verifyFunction(F));
     cleanupPreparedFunclets(F);
   }
 
-  DEBUG(verifyPreparedFunclets(F));
+  LLVM_DEBUG(verifyPreparedFunclets(F));
   // Recolor the CFG to verify that all is well.
-  DEBUG(colorFunclets(F));
-  DEBUG(verifyPreparedFunclets(F));
+  LLVM_DEBUG(colorFunclets(F));
+  LLVM_DEBUG(verifyPreparedFunclets(F));
 
   BlockColors.clear();
   FuncletBlocks.clear();

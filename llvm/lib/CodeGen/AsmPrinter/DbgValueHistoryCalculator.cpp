@@ -50,8 +50,8 @@ void DbgValueHistoryMap::startInstrRange(InlinedVariable Var,
   auto &Ranges = VarInstrRanges[Var];
   if (!Ranges.empty() && Ranges.back().second == nullptr &&
       Ranges.back().first->isIdenticalTo(MI)) {
-    DEBUG(dbgs() << "Coalescing identical DBG_VALUE entries:\n"
-                 << "\t" << Ranges.back().first << "\t" << MI << "\n");
+    LLVM_DEBUG(dbgs() << "Coalescing identical DBG_VALUE entries:\n"
+                      << "\t" << Ranges.back().first << "\t" << MI << "\n");
     return;
   }
   Ranges.push_back(std::make_pair(&MI, nullptr));

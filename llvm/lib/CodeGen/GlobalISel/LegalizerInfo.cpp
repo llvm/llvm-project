@@ -58,18 +58,18 @@ raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
 }
 
 LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
-  DEBUG(dbgs() << "Applying legalizer ruleset to: "; Query.print(dbgs());
-        dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Applying legalizer ruleset to: "; Query.print(dbgs());
+             dbgs() << "\n");
   if (Rules.empty()) {
-    DEBUG(dbgs() << ".. fallback to legacy rules (no rules defined)\n");
+    LLVM_DEBUG(dbgs() << ".. fallback to legacy rules (no rules defined)\n");
     return {LegalizeAction::UseLegacyRules, 0, LLT{}};
   }
   for (const auto &Rule : Rules) {
     if (Rule.match(Query)) {
-      DEBUG(dbgs() << ".. match\n");
+      LLVM_DEBUG(dbgs() << ".. match\n");
       std::pair<unsigned, LLT> Mutation = Rule.determineMutation(Query);
-      DEBUG(dbgs() << ".. .. " << (unsigned)Rule.getAction() << ", "
-                   << Mutation.first << ", " << Mutation.second << "\n");
+      LLVM_DEBUG(dbgs() << ".. .. " << (unsigned)Rule.getAction() << ", "
+                        << Mutation.first << ", " << Mutation.second << "\n");
       assert((Query.Types[Mutation.first] != Mutation.second ||
               Rule.getAction() == Lower ||
               Rule.getAction() == MoreElements ||
@@ -77,9 +77,9 @@ LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
              "Simple loop detected");
       return {Rule.getAction(), Mutation.first, Mutation.second};
     } else
-      DEBUG(dbgs() << ".. no match\n");
+      LLVM_DEBUG(dbgs() << ".. no match\n");
   }
-  DEBUG(dbgs() << ".. unsupported\n");
+  LLVM_DEBUG(dbgs() << ".. unsupported\n");
   return {LegalizeAction::Unsupported, 0, LLT{}};
 }
 
@@ -247,11 +247,11 @@ unsigned LegalizerInfo::getOpcodeIdxForOpcode(unsigned Opcode) const {
 unsigned LegalizerInfo::getActionDefinitionsIdx(unsigned Opcode) const {
   unsigned OpcodeIdx = getOpcodeIdxForOpcode(Opcode);
   if (unsigned Alias = RulesForOpcode[OpcodeIdx].getAlias()) {
-    DEBUG(dbgs() << ".. opcode " << Opcode << " is aliased to " << Alias
-                 << "\n");
+    LLVM_DEBUG(dbgs() << ".. opcode " << Opcode << " is aliased to " << Alias
+                      << "\n");
     OpcodeIdx = getOpcodeIdxForOpcode(Alias);
-    DEBUG(dbgs() << ".. opcode " << Alias << " is aliased to "
-                 << RulesForOpcode[OpcodeIdx].getAlias() << "\n");
+    LLVM_DEBUG(dbgs() << ".. opcode " << Alias << " is aliased to "
+                      << RulesForOpcode[OpcodeIdx].getAlias() << "\n");
     assert(RulesForOpcode[OpcodeIdx].getAlias() == 0 && "Cannot chain aliases");
   }
 
@@ -305,13 +305,14 @@ LegalizerInfo::getAction(const LegalityQuery &Query) const {
   for (unsigned i = 0; i < Query.Types.size(); ++i) {
     auto Action = getAspectAction({Query.Opcode, i, Query.Types[i]});
     if (Action.first != Legal) {
-      DEBUG(dbgs() << ".. (legacy) Type " << i << " Action="
-                   << (unsigned)Action.first << ", " << Action.second << "\n");
+      LLVM_DEBUG(dbgs() << ".. (legacy) Type " << i
+                        << " Action=" << (unsigned)Action.first << ", "
+                        << Action.second << "\n");
       return {Action.first, i, Action.second};
     } else
-      DEBUG(dbgs() << ".. (legacy) Type " << i << " Legal\n");
+      LLVM_DEBUG(dbgs() << ".. (legacy) Type " << i << " Legal\n");
   }
-  DEBUG(dbgs() << ".. (legacy) Legal\n");
+  LLVM_DEBUG(dbgs() << ".. (legacy) Legal\n");
   return {Legal, 0, LLT{}};
 }
 

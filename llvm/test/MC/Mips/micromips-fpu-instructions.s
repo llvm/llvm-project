@@ -25,8 +25,6 @@
 # CHECK-EL: nop                         # encoding: [0x00,0x00,0x00,0x00]
 # CHECK-EL: bc1t       1332             # encoding: [0xa0,0x43,0x9a,0x02]
 # CHECK-EL: nop                         # encoding: [0x00,0x00,0x00,0x00]
-# CHECK-EL: luxc1      $f2, $4($6)      # encoding: [0x86,0x54,0x48,0x11]
-# CHECK-EL: suxc1      $f2, $4($6)      # encoding: [0x86,0x54,0x88,0x11]
 # CHECK-EL: ceil.w.s   $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x1b]
 # CHECK-EL: ceil.w.d   $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x5b]
 # CHECK-EL: cvt.w.s    $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x09]
@@ -102,8 +100,6 @@
 # CHECK-EB: nop                         # encoding: [0x00,0x00,0x00,0x00]
 # CHECK-EB: bc1t  1332                  # encoding: [0x43,0xa0,0x02,0x9a]
 # CHECK-EB: nop                         # encoding: [0x00,0x00,0x00,0x00]
-# CHECK-EB: luxc1 $f2, $4($6)           # encoding: [0x54,0x86,0x11,0x48]
-# CHECK-EB: suxc1 $f2, $4($6)           # encoding: [0x54,0x86,0x11,0x88]
 # CHECK-EB: ceil.w.s  $f6, $f8          # encoding: [0x54,0xc8,0x1b,0x3b]
 # CHECK-EB: ceil.w.d  $f6, $f8          # encoding: [0x54,0xc8,0x5b,0x3b]
 # CHECK-EB: cvt.w.s   $f6, $f8          # encoding: [0x54,0xc8,0x09,0x3b]
@@ -182,8 +178,6 @@
     sdc1       $f2, 4($6)
     bc1f       1332
     bc1t       1332
-    luxc1      $f2, $4($6)
-    suxc1      $f2, $4($6)
     ceil.w.s   $f6, $f8
     ceil.w.d   $f6, $f8
     cvt.w.s    $f6, $f8

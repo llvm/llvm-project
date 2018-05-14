@@ -165,13 +165,13 @@ bool BreakFalseDeps::shouldBreakDependence(MachineInstr *MI, unsigned OpIdx,
   unsigned Pref) {
   unsigned reg = MI->getOperand(OpIdx).getReg();
   unsigned Clearance = RDA->getClearance(MI, reg);
-  DEBUG(dbgs() << "Clearance: " << Clearance << ", want " << Pref);
+  LLVM_DEBUG(dbgs() << "Clearance: " << Clearance << ", want " << Pref);
 
   if (Pref > Clearance) {
-    DEBUG(dbgs() << ": Break dependency.\n");
+    LLVM_DEBUG(dbgs() << ": Break dependency.\n");
     return true;
   }
-  DEBUG(dbgs() << ": OK .\n");
+  LLVM_DEBUG(dbgs() << ": OK .\n");
   return false;
 }
 
@@ -260,7 +260,7 @@ bool BreakFalseDeps::runOnMachineFunction(MachineFunction &mf) {
 
   RegClassInfo.runOnMachineFunction(mf);
 
-  DEBUG(dbgs() << "********** BREAK FALSE DEPENDENCIES **********\n");
+  LLVM_DEBUG(dbgs() << "********** BREAK FALSE DEPENDENCIES **********\n");
 
   // Traverse the basic blocks.
   for (MachineBasicBlock &MBB : mf) {

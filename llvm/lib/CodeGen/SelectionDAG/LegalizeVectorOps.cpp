@@ -229,7 +229,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     LoadSDNode *LD = cast<LoadSDNode>(Op.getNode());
     ISD::LoadExtType ExtType = LD->getExtensionType();
     if (LD->getMemoryVT().isVector() && ExtType != ISD::NON_EXTLOAD) {
-      DEBUG(dbgs() << "\nLegalizing extending vector load: "; Node->dump(&DAG));
+      LLVM_DEBUG(dbgs() << "\nLegalizing extending vector load: ";
+                 Node->dump(&DAG));
       switch (TLI.getLoadExtAction(LD->getExtensionType(), LD->getValueType(0),
                                    LD->getMemoryVT())) {
       default: llvm_unreachable("This action is not supported yet!");
@@ -261,8 +262,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     EVT StVT = ST->getMemoryVT();
     MVT ValVT = ST->getValue().getSimpleValueType();
     if (StVT.isVector() && ST->isTruncatingStore()) {
-      DEBUG(dbgs() << "\nLegalizing truncating vector store: ";
-            Node->dump(&DAG));
+      LLVM_DEBUG(dbgs() << "\nLegalizing truncating vector store: ";
+                 Node->dump(&DAG));
       switch (TLI.getTruncStoreAction(ValVT, StVT)) {
       default: llvm_unreachable("This action is not supported yet!");
       case TargetLowering::Legal:
@@ -384,7 +385,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
   }
 
-  DEBUG(dbgs() << "\nLegalizing vector op: "; Node->dump(&DAG));
+  LLVM_DEBUG(dbgs() << "\nLegalizing vector op: "; Node->dump(&DAG));
 
   switch (TLI.getOperationAction(Node->getOpcode(), QueryType)) {
   default: llvm_unreachable("This action is not supported yet!");
@@ -393,16 +394,16 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     Changed = true;
     break;
   case TargetLowering::Legal:
-    DEBUG(dbgs() << "Legal node: nothing to do\n");
+    LLVM_DEBUG(dbgs() << "Legal node: nothing to do\n");
     break;
   case TargetLowering::Custom: {
-    DEBUG(dbgs() << "Trying custom legalization\n");
+    LLVM_DEBUG(dbgs() << "Trying custom legalization\n");
     if (SDValue Tmp1 = TLI.LowerOperation(Op, DAG)) {
-      DEBUG(dbgs() << "Successfully custom legalized node\n");
+      LLVM_DEBUG(dbgs() << "Successfully custom legalized node\n");
       Result = Tmp1;
       break;
     }
-    DEBUG(dbgs() << "Could not custom legalize node\n");
+    LLVM_DEBUG(dbgs() << "Could not custom legalize node\n");
     LLVM_FALLTHROUGH;
   }
   case TargetLowering::Expand:

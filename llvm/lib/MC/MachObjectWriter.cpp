@@ -951,12 +951,11 @@ void MachObjectWriter::writeObject(MCAssembler &Asm,
     else
       report_fatal_error("Data region not terminated");
 
-
-    DEBUG(dbgs() << "data in code region-- kind: " << Data->Kind
-                 << "  start: " << Start << "(" << Data->Start->getName() << ")"
-                 << "  end: " << End << "(" << Data->End->getName() << ")"
-                 << "  size: " << End - Start
-                 << "\n");
+    LLVM_DEBUG(dbgs() << "data in code region-- kind: " << Data->Kind
+                      << "  start: " << Start << "(" << Data->Start->getName()
+                      << ")"
+                      << "  end: " << End << "(" << Data->End->getName() << ")"
+                      << "  size: " << End - Start << "\n");
     write32(Start);
     write16(End - Start);
     write16(Data->Kind);

@@ -147,8 +147,9 @@ bool BlockExtractor::runOnModule(Module &M) {
     // Check if the module contains BB.
     if (BB->getParent()->getParent() != &M)
       report_fatal_error("Invalid basic block");
-    DEBUG(dbgs() << "BlockExtractor: Extracting " << BB->getParent()->getName()
-                 << ":" << BB->getName() << "\n");
+    LLVM_DEBUG(dbgs() << "BlockExtractor: Extracting "
+                      << BB->getParent()->getName() << ":" << BB->getName()
+                      << "\n");
     SmallVector<BasicBlock *, 2> BlocksToExtractVec;
     BlocksToExtractVec.push_back(BB);
     if (const InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator()))
@@ -161,8 +162,8 @@ bool BlockExtractor::runOnModule(Module &M) {
   // Erase the functions.
   if (EraseFunctions || BlockExtractorEraseFuncs) {
     for (Function *F : Functions) {
-      DEBUG(dbgs() << "BlockExtractor: Trying to delete " << F->getName()
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "BlockExtractor: Trying to delete " << F->getName()
+                        << "\n");
       F->deleteBody();
     }
     // Set linkage as ExternalLinkage to avoid erasing unreachable functions.

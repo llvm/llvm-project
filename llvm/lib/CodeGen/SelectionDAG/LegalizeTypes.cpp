@@ -224,9 +224,9 @@ bool DAGTypeLegalizer::run() {
     assert(N->getNodeId() == ReadyToProcess &&
            "Node should be ready if on worklist!");
 
-    DEBUG(dbgs() << "Legalizing node: "; N->dump(&DAG));
+    LLVM_DEBUG(dbgs() << "Legalizing node: "; N->dump(&DAG));
     if (IgnoreNodeResults(N)) {
-      DEBUG(dbgs() << "Ignoring node results\n");
+      LLVM_DEBUG(dbgs() << "Ignoring node results\n");
       goto ScanOperands;
     }
 
@@ -234,11 +234,11 @@ bool DAGTypeLegalizer::run() {
     // types are illegal.
     for (unsigned i = 0, NumResults = N->getNumValues(); i < NumResults; ++i) {
       EVT ResultVT = N->getValueType(i);
-      DEBUG(dbgs() << "Analyzing result type: " <<
-                      ResultVT.getEVTString() << "\n");
+      LLVM_DEBUG(dbgs() << "Analyzing result type: " << ResultVT.getEVTString()
+                        << "\n");
       switch (getTypeAction(ResultVT)) {
       case TargetLowering::TypeLegal:
-        DEBUG(dbgs() << "Legal result type\n");
+        LLVM_DEBUG(dbgs() << "Legal result type\n");
         break;
       // The following calls must take care of *all* of the node's results,
       // not just the illegal result they were passed (this includes results
@@ -296,11 +296,11 @@ ScanOperands:
         continue;
 
       const auto Op = N->getOperand(i);
-      DEBUG(dbgs() << "Analyzing operand: "; Op.dump(&DAG));
+      LLVM_DEBUG(dbgs() << "Analyzing operand: "; Op.dump(&DAG));
       EVT OpVT = Op.getValueType();
       switch (getTypeAction(OpVT)) {
       case TargetLowering::TypeLegal:
-        DEBUG(dbgs() << "Legal operand\n");
+        LLVM_DEBUG(dbgs() << "Legal operand\n");
         continue;
       // The following calls must either replace all of the node's results
       // using ReplaceValueWith, and return "false"; or update the node's
@@ -370,7 +370,8 @@ ScanOperands:
     }
 
     if (i == NumOperands) {
-      DEBUG(dbgs() << "Legally typed node: "; N->dump(&DAG); dbgs() << "\n");
+      LLVM_DEBUG(dbgs() << "Legally typed node: "; N->dump(&DAG);
+                 dbgs() << "\n");
     }
     }
 NodeDone:

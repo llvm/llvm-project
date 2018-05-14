@@ -264,9 +264,9 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
 }
 
 bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "********** CFG Sorting **********\n"
-                  "********** Function: "
-               << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** CFG Sorting **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
 
   const auto &MLI = getAnalysis<MachineLoopInfo>();
   auto &MDT = getAnalysis<MachineDominatorTree>();

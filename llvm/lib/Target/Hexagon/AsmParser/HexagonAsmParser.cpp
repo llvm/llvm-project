@@ -462,9 +462,9 @@ void HexagonOperand::print(raw_ostream &OS) const {
 }
 
 bool HexagonAsmParser::finishBundle(SMLoc IDLoc, MCStreamer &Out) {
-  DEBUG(dbgs() << "Bundle:");
-  DEBUG(MCB.dump_pretty(dbgs()));
-  DEBUG(dbgs() << "--\n");
+  LLVM_DEBUG(dbgs() << "Bundle:");
+  LLVM_DEBUG(MCB.dump_pretty(dbgs()));
+  LLVM_DEBUG(dbgs() << "--\n");
 
   MCB.setLoc(IDLoc);
   // Check the bundle for errors.
@@ -557,9 +557,9 @@ bool HexagonAsmParser::matchOneInstruction(MCInst &MCI, SMLoc IDLoc,
     canonicalizeImmediates(MCI);
     result = processInstruction(MCI, InstOperands, IDLoc);
 
-    DEBUG(dbgs() << "Insn:");
-    DEBUG(MCI.dump_pretty(dbgs()));
-    DEBUG(dbgs() << "\n\n");
+    LLVM_DEBUG(dbgs() << "Insn:");
+    LLVM_DEBUG(MCI.dump_pretty(dbgs()));
+    LLVM_DEBUG(dbgs() << "\n\n");
 
     MCI.setLoc(IDLoc);
   }
@@ -1296,9 +1296,9 @@ unsigned HexagonAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       return Match_Success;
   }
 
-  DEBUG(dbgs() << "Unmatched Operand:");
-  DEBUG(Op->dump());
-  DEBUG(dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Unmatched Operand:");
+  LLVM_DEBUG(Op->dump());
+  LLVM_DEBUG(dbgs() << "\n");
 
   return Match_InvalidOperand;
 }

@@ -71,7 +71,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
   // If we have a custom node, we have already selected
   if (Node->isMachineOpcode()) {
-    DEBUG(dbgs() << "== "; Node->dump(CurDAG); dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "== "; Node->dump(CurDAG); dbgs() << "\n");
     Node->setNodeId(-1);
     return;
   }
@@ -196,11 +196,11 @@ void RISCVDAGToDAGISel::doPeepholeLoadStoreADDI() {
       continue;
     }
 
-    DEBUG(dbgs() << "Folding add-immediate into mem-op:\nBase:    ");
-    DEBUG(Base->dump(CurDAG));
-    DEBUG(dbgs() << "\nN: ");
-    DEBUG(N->dump(CurDAG));
-    DEBUG(dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "Folding add-immediate into mem-op:\nBase:    ");
+    LLVM_DEBUG(Base->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "\nN: ");
+    LLVM_DEBUG(N->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "\n");
 
     // Modify the offset operand of the load/store.
     if (BaseOpIdx == 0) // Load
@@ -237,13 +237,14 @@ void RISCVDAGToDAGISel::doPeepholeBuildPairF64SplitF64() {
     SDValue F64Val = N->getOperand(0);
     if (F64Val.isMachineOpcode() &&
         F64Val.getMachineOpcode() == RISCV::BuildPairF64Pseudo) {
-      DEBUG(dbgs() << "Removing redundant SplitF64Pseudo and replacing uses "
-                      "with BuildPairF64Pseudo operands:\n");
-      DEBUG(dbgs() << "N:    ");
-      DEBUG(N->dump(CurDAG));
-      DEBUG(dbgs() << "F64Val: ");
-      DEBUG(F64Val->dump(CurDAG));
-      DEBUG(dbgs() << "\n");
+      LLVM_DEBUG(
+          dbgs() << "Removing redundant SplitF64Pseudo and replacing uses "
+                    "with BuildPairF64Pseudo operands:\n");
+      LLVM_DEBUG(dbgs() << "N:    ");
+      LLVM_DEBUG(N->dump(CurDAG));
+      LLVM_DEBUG(dbgs() << "F64Val: ");
+      LLVM_DEBUG(F64Val->dump(CurDAG));
+      LLVM_DEBUG(dbgs() << "\n");
       SDValue From[] = {SDValue(N, 0), SDValue(N, 1)};
       SDValue To[] = {F64Val.getOperand(0), F64Val.getOperand(1)};
       CurDAG->ReplaceAllUsesOfValuesWith(From, To, 2);

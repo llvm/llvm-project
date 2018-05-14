@@ -296,8 +296,8 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
   const TargetRegisterClass *OldRC = MRI.getRegClassOrNull(DstReg);
   if (!OldRC || !DstRC->hasSubClassEq(OldRC)) {
     if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-      DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
-                   << " operand\n");
+      LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                        << " operand\n");
       return false;
     }
   }
@@ -333,7 +333,7 @@ bool X86InstructionSelector::select(MachineInstr &I,
   if (selectImpl(I, CoverageInfo))
     return true;
 
-  DEBUG(dbgs() << " C++ instruction selection: "; I.print(dbgs()));
+  LLVM_DEBUG(dbgs() << " C++ instruction selection: "; I.print(dbgs()));
 
   // TODO: This should be implemented by tblgen.
   switch (I.getOpcode()) {
@@ -503,7 +503,7 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
 
   auto &MemOp = **I.memoperands_begin();
   if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
-    DEBUG(dbgs() << "Atomic load/store not supported yet\n");
+    LLVM_DEBUG(dbgs() << "Atomic load/store not supported yet\n");
     return false;
   }
 
@@ -675,8 +675,8 @@ bool X86InstructionSelector::selectTurnIntoCOPY(
 
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
-                 << " operand\n");
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                      << " operand\n");
     return false;
   }
   I.setDesc(TII.get(X86::COPY));
@@ -700,8 +700,8 @@ bool X86InstructionSelector::selectTruncOrPtrToInt(MachineInstr &I,
   const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
 
   if (DstRB.getID() != SrcRB.getID()) {
-    DEBUG(dbgs() << TII.getName(I.getOpcode())
-                 << " input/output on different banks\n");
+    LLVM_DEBUG(dbgs() << TII.getName(I.getOpcode())
+                      << " input/output on different banks\n");
     return false;
   }
 
@@ -738,8 +738,8 @@ bool X86InstructionSelector::selectTruncOrPtrToInt(MachineInstr &I,
 
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
-                 << "\n");
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                      << "\n");
     return false;
   }
 
@@ -792,8 +792,8 @@ bool X86InstructionSelector::selectZext(MachineInstr &I,
 
     if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
         !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-      DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
-                   << " operand\n");
+      LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                        << " operand\n");
       return false;
     }
 
@@ -894,8 +894,8 @@ bool X86InstructionSelector::selectAnyext(MachineInstr &I,
 
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
-                 << " operand\n");
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                      << " operand\n");
     return false;
   }
 
@@ -1111,7 +1111,7 @@ bool X86InstructionSelector::emitExtractSubreg(unsigned DstReg, unsigned SrcReg,
 
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-    DEBUG(dbgs() << "Failed to constrain G_TRUNC\n");
+    LLVM_DEBUG(dbgs() << "Failed to constrain G_TRUNC\n");
     return false;
   }
 
@@ -1148,7 +1148,7 @@ bool X86InstructionSelector::emitInsertSubreg(unsigned DstReg, unsigned SrcReg,
 
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-    DEBUG(dbgs() << "Failed to constrain INSERT_SUBREG\n");
+    LLVM_DEBUG(dbgs() << "Failed to constrain INSERT_SUBREG\n");
     return false;
   }
 
@@ -1392,8 +1392,8 @@ bool X86InstructionSelector::selectImplicitDefOrPHI(
     const TargetRegisterClass *RC = getRegClass(DstTy, DstReg, MRI);
 
     if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
-      DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
-                   << " operand\n");
+      LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                        << " operand\n");
       return false;
     }
   }
@@ -1544,8 +1544,8 @@ bool X86InstructionSelector::selectSDiv(MachineInstr &I,
   if (!RBI.constrainGenericRegister(DividentReg, *RegRC, MRI) ||
       !RBI.constrainGenericRegister(DiviserReg, *RegRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *RegRC, MRI)) {
-    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
-                 << " operand\n");
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                      << " operand\n");
     return false;
   }
 

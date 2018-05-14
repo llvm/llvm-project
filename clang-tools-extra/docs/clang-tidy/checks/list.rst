@@ -49,6 +49,7 @@ Clang-Tidy Checks
    bugprone-suspicious-semicolon
    bugprone-suspicious-string-compare
    bugprone-swapped-arguments
+   bugprone-terminating-continue
    bugprone-throw-keyword-missing
    bugprone-undefined-memory-manipulation
    bugprone-undelegated-constructor

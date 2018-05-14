@@ -706,13 +706,13 @@ AArch64LoadStoreOpt::mergeNarrowZeroStores(MachineBasicBlock::iterator I,
             .setMIFlags(I->mergeFlagsWith(*MergeMI));
   (void)MIB;
 
-  DEBUG(dbgs() << "Creating wider store. Replacing instructions:\n    ");
-  DEBUG(I->print(dbgs()));
-  DEBUG(dbgs() << "    ");
-  DEBUG(MergeMI->print(dbgs()));
-  DEBUG(dbgs() << "  with instruction:\n    ");
-  DEBUG(((MachineInstr *)MIB)->print(dbgs()));
-  DEBUG(dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Creating wider store. Replacing instructions:\n    ");
+  LLVM_DEBUG(I->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "    ");
+  LLVM_DEBUG(MergeMI->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "  with instruction:\n    ");
+  LLVM_DEBUG(((MachineInstr *)MIB)->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "\n");
 
   // Erase the old instructions.
   I->eraseFromParent();
@@ -824,11 +824,12 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
 
   (void)MIB;
 
-  DEBUG(dbgs() << "Creating pair load/store. Replacing instructions:\n    ");
-  DEBUG(I->print(dbgs()));
-  DEBUG(dbgs() << "    ");
-  DEBUG(Paired->print(dbgs()));
-  DEBUG(dbgs() << "  with instruction:\n    ");
+  LLVM_DEBUG(
+      dbgs() << "Creating pair load/store. Replacing instructions:\n    ");
+  LLVM_DEBUG(I->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "    ");
+  LLVM_DEBUG(Paired->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "  with instruction:\n    ");
   if (SExtIdx != -1) {
     // Generate the sign extension for the proper result of the ldp.
     // I.e., with X1, that would be:
@@ -842,8 +843,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     unsigned DstRegW = TRI->getSubReg(DstRegX, AArch64::sub_32);
     // Update the result of LDP to use the W instead of the X variant.
     DstMO.setReg(DstRegW);
-    DEBUG(((MachineInstr *)MIB)->print(dbgs()));
-    DEBUG(dbgs() << "\n");
+    LLVM_DEBUG(((MachineInstr *)MIB)->print(dbgs()));
+    LLVM_DEBUG(dbgs() << "\n");
     // Make the machine verifier happy by providing a definition for
     // the X register.
     // Insert this definition right after the generated LDP, i.e., before
@@ -860,12 +861,12 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
             .addImm(0)
             .addImm(31);
     (void)MIBSXTW;
-    DEBUG(dbgs() << "  Extend operand:\n    ");
-    DEBUG(((MachineInstr *)MIBSXTW)->print(dbgs()));
+    LLVM_DEBUG(dbgs() << "  Extend operand:\n    ");
+    LLVM_DEBUG(((MachineInstr *)MIBSXTW)->print(dbgs()));
   } else {
-    DEBUG(((MachineInstr *)MIB)->print(dbgs()));
+    LLVM_DEBUG(((MachineInstr *)MIB)->print(dbgs()));
   }
-  DEBUG(dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "\n");
 
   // Erase the old instructions.
   I->eraseFromParent();
@@ -903,9 +904,9 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
           break;
         }
       }
-      DEBUG(dbgs() << "Remove load instruction:\n    ");
-      DEBUG(LoadI->print(dbgs()));
-      DEBUG(dbgs() << "\n");
+      LLVM_DEBUG(dbgs() << "Remove load instruction:\n    ");
+      LLVM_DEBUG(LoadI->print(dbgs()));
+      LLVM_DEBUG(dbgs() << "\n");
       LoadI->eraseFromParent();
       return NextI;
     }
@@ -979,15 +980,15 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
       break;
     }
 
-  DEBUG(dbgs() << "Promoting load by replacing :\n    ");
-  DEBUG(StoreI->print(dbgs()));
-  DEBUG(dbgs() << "    ");
-  DEBUG(LoadI->print(dbgs()));
-  DEBUG(dbgs() << "  with instructions:\n    ");
-  DEBUG(StoreI->print(dbgs()));
-  DEBUG(dbgs() << "    ");
-  DEBUG((BitExtMI)->print(dbgs()));
-  DEBUG(dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Promoting load by replacing :\n    ");
+  LLVM_DEBUG(StoreI->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "    ");
+  LLVM_DEBUG(LoadI->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "  with instructions:\n    ");
+  LLVM_DEBUG(StoreI->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "    ");
+  LLVM_DEBUG((BitExtMI)->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "\n");
 
   // Erase the old instructions.
   LoadI->eraseFromParent();
@@ -1355,18 +1356,18 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
 
   if (IsPreIdx) {
     ++NumPreFolded;
-    DEBUG(dbgs() << "Creating pre-indexed load/store.");
+    LLVM_DEBUG(dbgs() << "Creating pre-indexed load/store.");
   } else {
     ++NumPostFolded;
-    DEBUG(dbgs() << "Creating post-indexed load/store.");
+    LLVM_DEBUG(dbgs() << "Creating post-indexed load/store.");
   }
-  DEBUG(dbgs() << "    Replacing instructions:\n    ");
-  DEBUG(I->print(dbgs()));
-  DEBUG(dbgs() << "    ");
-  DEBUG(Update->print(dbgs()));
-  DEBUG(dbgs() << "  with instruction:\n    ");
-  DEBUG(((MachineInstr *)MIB)->print(dbgs()));
-  DEBUG(dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "    Replacing instructions:\n    ");
+  LLVM_DEBUG(I->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "    ");
+  LLVM_DEBUG(Update->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "  with instruction:\n    ");
+  LLVM_DEBUG(((MachineInstr *)MIB)->print(dbgs()));
+  LLVM_DEBUG(dbgs() << "\n");
 
   // Erase the old instructions for the block.
   I->eraseFromParent();

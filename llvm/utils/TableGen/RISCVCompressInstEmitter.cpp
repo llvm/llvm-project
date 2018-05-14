@@ -164,10 +164,11 @@ bool RISCVCompressInstEmitter::validateTypes(Record *DagOpType,
 
   // Let further validation happen when compress()/uncompress() functions are
   // invoked.
-  DEBUG(dbgs() << (IsSourceInst ? "Input" : "Output") << " Dag Operand Type: '"
-               << DagOpType->getName() << "' and "
-               << "Instruction Operand Type: '" << InstOpType->getName()
-               << "' can't be checked at pattern validation time!\n");
+  LLVM_DEBUG(dbgs() << (IsSourceInst ? "Input" : "Output")
+                    << " Dag Operand Type: '" << DagOpType->getName()
+                    << "' and "
+                    << "Instruction Operand Type: '" << InstOpType->getName()
+                    << "' can't be checked at pattern validation time!\n");
   return true;
 }
 
@@ -234,10 +235,11 @@ void RISCVCompressInstEmitter::addDagOperandMapping(
       // No pattern validation check possible for values of fixed immediate.
       OperandMap[i].Kind = OpData::Imm;
       OperandMap[i].Data.Imm = II->getValue();
-      DEBUG(dbgs() << "  Found immediate '" << II->getValue() << "' at "
-                   << (IsSourceInst ? "input " : "output ")
-                   << "Dag. No validation time check possible for values of "
-                      "fixed immediate.\n");
+      LLVM_DEBUG(
+          dbgs() << "  Found immediate '" << II->getValue() << "' at "
+                 << (IsSourceInst ? "input " : "output ")
+                 << "Dag. No validation time check possible for values of "
+                    "fixed immediate.\n");
     } else
       llvm_unreachable("Unhandled CompressPat argument type!");
   }
@@ -338,7 +340,7 @@ void RISCVCompressInstEmitter::createInstOperandMapping(
   // TiedCount keeps track of the number of operands skipped in Inst
   // operands list to get to the corresponding Dag operand.
   unsigned TiedCount = 0;
-  DEBUG(dbgs() << "  Operand mapping:\n  Source   Dest\n");
+  LLVM_DEBUG(dbgs() << "  Operand mapping:\n  Source   Dest\n");
   for (unsigned i = 0, e = DestInst.Operands.size(); i != e; ++i) {
     int TiedInstOpIdx = DestInst.Operands[i].getTiedRegister();
     if (TiedInstOpIdx != -1) {
@@ -348,9 +350,10 @@ void RISCVCompressInstEmitter::createInstOperandMapping(
       if (DestOperandMap[i].Kind == OpData::Operand)
         // No need to fill the SourceOperandMap here since it was mapped to
         // destination operand 'TiedInstOpIdx' in a previous iteration.
-        DEBUG(dbgs() << "    " << DestOperandMap[i].Data.Operand << " ====> "
-                     << i << "  Dest operand tied with operand '"
-                     << TiedInstOpIdx << "'\n");
+        LLVM_DEBUG(dbgs() << "    " << DestOperandMap[i].Data.Operand
+                          << " ====> " << i
+                          << "  Dest operand tied with operand '"
+                          << TiedInstOpIdx << "'\n");
       continue;
     }
     // Skip fixed immediates and registers, they were handled in
@@ -372,7 +375,8 @@ void RISCVCompressInstEmitter::createInstOperandMapping(
            "Incorrect operand mapping detected!\n");
     DestOperandMap[i].Data.Operand = SourceOp->getValue();
     SourceOperandMap[SourceOp->getValue()].Data.Operand = i;
-    DEBUG(dbgs() << "    " << SourceOp->getValue() << " ====> " << i << "\n");
+    LLVM_DEBUG(dbgs() << "    " << SourceOp->getValue() << " ====> " << i
+                      << "\n");
   }
 }
 
@@ -402,7 +406,7 @@ void RISCVCompressInstEmitter::evaluateCompressPat(Record *Rec) {
   // Validate input Dag operands.
   DagInit *SourceDag = Rec->getValueAsDag("Input");
   assert(SourceDag && "Missing 'Input' in compress pattern!");
-  DEBUG(dbgs() << "Input: " << *SourceDag << "\n");
+  LLVM_DEBUG(dbgs() << "Input: " << *SourceDag << "\n");
 
   DefInit *OpDef = dyn_cast<DefInit>(SourceDag->getOperator());
   if (!OpDef)
@@ -419,7 +423,7 @@ void RISCVCompressInstEmitter::evaluateCompressPat(Record *Rec) {
   // Validate output Dag operands.
   DagInit *DestDag = Rec->getValueAsDag("Output");
   assert(DestDag && "Missing 'Output' in compress pattern!");
-  DEBUG(dbgs() << "Output: " << *DestDag << "\n");
+  LLVM_DEBUG(dbgs() << "Output: " << *DestDag << "\n");
 
   DefInit *DestOpDef = dyn_cast<DefInit>(DestDag->getOperator());
   if (!DestOpDef)

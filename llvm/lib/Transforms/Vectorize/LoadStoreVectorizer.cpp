@@ -510,7 +510,7 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
   SmallVector<Instruction *, 16> ChainInstrs;
 
   bool IsLoadChain = isa<LoadInst>(Chain[0]);
-  DEBUG({
+  LLVM_DEBUG({
     for (Instruction *I : Chain) {
       if (IsLoadChain)
         assert(isa<LoadInst>(I) &&
@@ -532,11 +532,12 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
                    Intrinsic::sideeffect) {
       // Ignore llvm.sideeffect calls.
     } else if (IsLoadChain && (I.mayWriteToMemory() || I.mayThrow())) {
-      DEBUG(dbgs() << "LSV: Found may-write/throw operation: " << I << '\n');
+      LLVM_DEBUG(dbgs() << "LSV: Found may-write/throw operation: " << I
+                        << '\n');
       break;
     } else if (!IsLoadChain && (I.mayReadOrWriteMemory() || I.mayThrow())) {
-      DEBUG(dbgs() << "LSV: Found may-read/write/throw operation: " << I
-                   << '\n');
+      LLVM_DEBUG(dbgs() << "LSV: Found may-read/write/throw operation: " << I
+                        << '\n');
       break;
     }
   }
@@ -588,7 +589,7 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
 
       if (!AA.isNoAlias(MemoryLocation::get(MemInstr),
                         MemoryLocation::get(ChainInstr))) {
-        DEBUG({
+        LLVM_DEBUG({
           dbgs() << "LSV: Found alias:\n"
                     "  Aliasing instruction and pointer:\n"
                  << "  " << *MemInstr << '\n'
@@ -744,7 +745,7 @@ bool Vectorizer::vectorizeChains(InstrListMap &Map) {
     if (Size < 2)
       continue;
 
-    DEBUG(dbgs() << "LSV: Analyzing a chain of length " << Size << ".\n");
+    LLVM_DEBUG(dbgs() << "LSV: Analyzing a chain of length " << Size << ".\n");
 
     // Process the stores in chunks of 64.
     for (unsigned CI = 0, CE = Size; CI < CE; CI += 64) {
@@ -758,7 +759,8 @@ bool Vectorizer::vectorizeChains(InstrListMap &Map) {
 }
 
 bool Vectorizer::vectorizeInstructions(ArrayRef<Instruction *> Instrs) {
-  DEBUG(dbgs() << "LSV: Vectorizing " << Instrs.size() << " instructions.\n");
+  LLVM_DEBUG(dbgs() << "LSV: Vectorizing " << Instrs.size()
+                    << " instructions.\n");
   SmallVector<int, 16> Heads, Tails;
   int ConsecutiveChain[64];
 
@@ -894,14 +896,14 @@ bool Vectorizer::vectorizeStoreChain(
   // vector factor, break it into two pieces.
   unsigned TargetVF = TTI.getStoreVectorFactor(VF, Sz, SzInBytes, VecTy);
   if (ChainSize > VF || (VF != TargetVF && TargetVF < ChainSize)) {
-    DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
-                    " Creating two separate arrays.\n");
+    LLVM_DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
+                         " Creating two separate arrays.\n");
     return vectorizeStoreChain(Chain.slice(0, TargetVF),
                                InstructionsProcessed) |
            vectorizeStoreChain(Chain.slice(TargetVF), InstructionsProcessed);
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "LSV: Stores to vectorize:\n";
     for (Instruction *I : Chain)
       dbgs() << "  " << *I << "\n";
@@ -1042,8 +1044,8 @@ bool Vectorizer::vectorizeLoadChain(
   // vector factor, break it into two pieces.
   unsigned TargetVF = TTI.getLoadVectorFactor(VF, Sz, SzInBytes, VecTy);
   if (ChainSize > VF || (VF != TargetVF && TargetVF < ChainSize)) {
-    DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
-                    " Creating two separate arrays.\n");
+    LLVM_DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
+                         " Creating two separate arrays.\n");
     return vectorizeLoadChain(Chain.slice(0, TargetVF), InstructionsProcessed) |
            vectorizeLoadChain(Chain.slice(TargetVF), InstructionsProcessed);
   }
@@ -1066,7 +1068,7 @@ bool Vectorizer::vectorizeLoadChain(
     Alignment = NewAlign;
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "LSV: Loads to vectorize:\n";
     for (Instruction *I : Chain)
       I->dump();
@@ -1149,7 +1151,7 @@ bool Vectorizer::accessIsMisaligned(unsigned SzInBytes, unsigned AddressSpace,
   bool Allows = TTI.allowsMisalignedMemoryAccesses(F.getParent()->getContext(),
                                                    SzInBytes * 8, AddressSpace,
                                                    Alignment, &Fast);
-  DEBUG(dbgs() << "LSV: Target said misaligned is allowed? " << Allows
-               << " and fast? " << Fast << "\n";);
+  LLVM_DEBUG(dbgs() << "LSV: Target said misaligned is allowed? " << Allows
+                    << " and fast? " << Fast << "\n";);
   return !Allows || !Fast;
 }

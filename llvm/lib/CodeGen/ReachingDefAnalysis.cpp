@@ -47,7 +47,7 @@ void ReachingDefAnalysis::enterBasicBlock(
         MBBReachingDefs[MBBNumber][*Unit].push_back(LiveRegs[*Unit]);
       }
     }
-    DEBUG(dbgs() << printMBBReference(*MBB) << ": entry\n");
+    LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << ": entry\n");
     return;
   }
 
@@ -69,9 +69,9 @@ void ReachingDefAnalysis::enterBasicBlock(
     }
   }
 
-  DEBUG(dbgs() << printMBBReference(*MBB)
-               << (!TraversedMBB.IsDone ? ": incomplete\n"
-                                        : ": all preds known\n"));
+  LLVM_DEBUG(dbgs() << printMBBReference(*MBB)
+                    << (!TraversedMBB.IsDone ? ": incomplete\n"
+                                             : ": all preds known\n"));
 }
 
 void ReachingDefAnalysis::leaveBasicBlock(
@@ -109,8 +109,8 @@ void ReachingDefAnalysis::processDefs(MachineInstr *MI) {
       continue;
     for (MCRegUnitIterator Unit(MO.getReg(), TRI); Unit.isValid(); ++Unit) {
       // This instruction explicitly defines the current reg unit.
-      DEBUG(dbgs() << printReg(MO.getReg(), TRI) << ":\t" << CurInstr << '\t'
-                   << *MI);
+      LLVM_DEBUG(dbgs() << printReg(MO.getReg(), TRI) << ":\t" << CurInstr
+                        << '\t' << *MI);
 
       // How many instructions since this reg unit was last written?
       LiveRegs[*Unit] = CurInstr;
@@ -142,7 +142,7 @@ bool ReachingDefAnalysis::runOnMachineFunction(MachineFunction &mf) {
 
   MBBReachingDefs.resize(mf.getNumBlockIDs());
 
-  DEBUG(dbgs() << "********** REACHING DEFINITION ANALYSIS **********\n");
+  LLVM_DEBUG(dbgs() << "********** REACHING DEFINITION ANALYSIS **********\n");
 
   // Initialize the MBBOutRegsInfos
   MBBOutRegsInfos.resize(mf.getNumBlockIDs());

@@ -227,7 +227,7 @@ FunctionPass *llvm::createHWAddressSanitizerPass(bool CompileKernel,
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
 bool HWAddressSanitizer::doInitialization(Module &M) {
-  DEBUG(dbgs() << "Init " << M.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Init " << M.getName() << "\n");
   auto &DL = M.getDataLayout();
 
   TargetTriple = Triple(M.getTargetTriple());
@@ -457,7 +457,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *PtrLong, bool IsWrite,
 }
 
 bool HWAddressSanitizer::instrumentMemAccess(Instruction *I) {
-  DEBUG(dbgs() << "Instrumenting: " << *I << "\n");
+  LLVM_DEBUG(dbgs() << "Instrumenting: " << *I << "\n");
   bool IsWrite = false;
   unsigned Alignment = 0;
   uint64_t TypeSize = 0;
@@ -684,7 +684,7 @@ bool HWAddressSanitizer::runOnFunction(Function &F) {
   if (!F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return false;
 
-  DEBUG(dbgs() << "Function: " << F.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Function: " << F.getName() << "\n");
 
   initializeCallbacks(*F.getParent());
 

@@ -324,9 +324,9 @@ llvm::SplitFunctionsOutOfModule(Module *M, const std::vector<Function *> &F,
   std::set<Function *> TestFunctions;
   for (unsigned i = 0, e = F.size(); i != e; ++i) {
     Function *TNOF = cast<Function>(VMap[F[i]]);
-    DEBUG(errs() << "Removing function ");
-    DEBUG(TNOF->printAsOperand(errs(), false));
-    DEBUG(errs() << "\n");
+    LLVM_DEBUG(errs() << "Removing function ");
+    LLVM_DEBUG(TNOF->printAsOperand(errs(), false));
+    LLVM_DEBUG(errs() << "\n");
     TestFunctions.insert(cast<Function>(NewVMap[TNOF]));
     DeleteFunctionBody(TNOF); // Function is now external in this module!
   }

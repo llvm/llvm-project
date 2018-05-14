@@ -1142,6 +1142,18 @@ TEST_F(FormatTestObjC, ObjCArrayLiterals) {
                "  @\"aaaaaaaaaaaaaaaaaaaaaaaaaa\"\n"
                "];\n");
 }
+
+TEST_F(FormatTestObjC, BreaksCallStatementWhereSemiJustOverTheLimit) {
+  Style.ColumnLimit = 60;
+  // If the statement starting with 'a = ...' is put on a single line, the ';'
+  // is at line 61.
+  verifyFormat("int f(int a) {\n"
+               "  a = [self aaaaaaaaaa:bbbbbbbbb\n"
+               "             ccccccccc:dddddddd\n"
+               "                    ee:fddd];\n"
+               "}");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

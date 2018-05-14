@@ -443,7 +443,8 @@ bool TargetRegisterInfo::needsStackRealignment(
   if (F.hasFnAttribute("stackrealign") || requiresRealignment) {
     if (canRealignStack(MF))
       return true;
-    DEBUG(dbgs() << "Can't realign function's stack: " << F.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Can't realign function's stack: " << F.getName()
+                      << "\n");
   }
   return false;
 }

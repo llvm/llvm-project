@@ -510,17 +510,15 @@ public:
         break;
     }
 
-    DEBUG(dbgs() << "Name=" << getFixupKindInfo(Kind).Name << "(" <<
-          (unsigned)Kind << ")\n");
-    DEBUG(uint32_t OldData = 0;
-          for (unsigned i = 0; i < NumBytes; i++)
-            OldData |= (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
-          dbgs() << "\tBValue=0x"; dbgs().write_hex(Value) <<
-            ": AValue=0x"; dbgs().write_hex(FixupValue) <<
-            ": Offset=" << Offset <<
-            ": Size=" << Data.size() <<
-            ": OInst=0x"; dbgs().write_hex(OldData) <<
-            ": Reloc=0x"; dbgs().write_hex(Reloc););
+    LLVM_DEBUG(dbgs() << "Name=" << getFixupKindInfo(Kind).Name << "("
+                      << (unsigned)Kind << ")\n");
+    LLVM_DEBUG(
+        uint32_t OldData = 0; for (unsigned i = 0; i < NumBytes; i++) OldData |=
+                              (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
+        dbgs() << "\tBValue=0x"; dbgs().write_hex(Value) << ": AValue=0x";
+        dbgs().write_hex(FixupValue)
+        << ": Offset=" << Offset << ": Size=" << Data.size() << ": OInst=0x";
+        dbgs().write_hex(OldData) << ": Reloc=0x"; dbgs().write_hex(Reloc););
 
     // For each byte of the fragment that the fixup touches, mask in the
     // bits from the fixup value. The Value has been "split up" into the
@@ -530,10 +528,10 @@ public:
       InstAddr[i] |= uint8_t(Reloc >> (i * 8)) & 0xff;     // Apply new reloc
     }
 
-    DEBUG(uint32_t NewData = 0;
-          for (unsigned i = 0; i < NumBytes; i++)
-            NewData |= (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
-          dbgs() << ": NInst=0x"; dbgs().write_hex(NewData) << "\n";);
+    LLVM_DEBUG(uint32_t NewData = 0;
+               for (unsigned i = 0; i < NumBytes; i++) NewData |=
+               (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
+               dbgs() << ": NInst=0x"; dbgs().write_hex(NewData) << "\n";);
   }
 
   bool isInstRelaxable(MCInst const &HMI) const {
@@ -689,8 +687,9 @@ public:
                           ParseEnd = 0x0000c000; // End of packet parse-bits.
 
     while(Count % HEXAGON_INSTR_SIZE) {
-      DEBUG(dbgs() << "Alignment not a multiple of the instruction size:" <<
-          Count % HEXAGON_INSTR_SIZE << "/" << HEXAGON_INSTR_SIZE << "\n");
+      LLVM_DEBUG(dbgs() << "Alignment not a multiple of the instruction size:"
+                        << Count % HEXAGON_INSTR_SIZE << "/"
+                        << HEXAGON_INSTR_SIZE << "\n");
       --Count;
       OW->write8(0);
     }

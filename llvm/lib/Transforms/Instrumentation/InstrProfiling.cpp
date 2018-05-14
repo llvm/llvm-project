@@ -271,8 +271,8 @@ public:
         break;
     }
 
-    DEBUG(dbgs() << Promoted << " counters promoted for loop (depth="
-                 << L.getLoopDepth() << ")\n");
+    LLVM_DEBUG(dbgs() << Promoted << " counters promoted for loop (depth="
+                      << L.getLoopDepth() << ")\n");
     return Promoted != 0;
   }
 

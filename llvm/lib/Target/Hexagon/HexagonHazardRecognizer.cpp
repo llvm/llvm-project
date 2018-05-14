@@ -26,7 +26,7 @@ using namespace llvm;
 #define DEBUG_TYPE "post-RA-sched"
 
 void HexagonHazardRecognizer::Reset() {
-  DEBUG(dbgs() << "Reset hazard recognizer\n");
+  LLVM_DEBUG(dbgs() << "Reset hazard recognizer\n");
   Resources->clearResources();
   PacketNum = 0;
   UsesDotCur = nullptr;
@@ -43,7 +43,7 @@ HexagonHazardRecognizer::getHazardType(SUnit *SU, int stalls) {
     return NoHazard;
 
   if (!Resources->canReserveResources(*MI)) {
-    DEBUG(dbgs() << "*** Hazard in cycle " << PacketNum << ", " << *MI);
+    LLVM_DEBUG(dbgs() << "*** Hazard in cycle " << PacketNum << ", " << *MI);
     HazardType RetVal = Hazard;
     if (TII->mayBeNewStore(*MI)) {
       // Make sure the register to be stored is defined by an instruction in the
@@ -59,14 +59,16 @@ HexagonHazardRecognizer::getHazardType(SUnit *SU, int stalls) {
                                MI->getDebugLoc());
       if (Resources->canReserveResources(*NewMI))
         RetVal = NoHazard;
-      DEBUG(dbgs() << "*** Try .new version? " << (RetVal == NoHazard) << "\n");
+      LLVM_DEBUG(dbgs() << "*** Try .new version? " << (RetVal == NoHazard)
+                        << "\n");
       MF->DeleteMachineInstr(NewMI);
     }
     return RetVal;
   }
 
   if (SU == UsesDotCur && DotCurPNum != (int)PacketNum) {
-    DEBUG(dbgs() << "*** .cur Hazard in cycle " << PacketNum << ", " << *MI);
+    LLVM_DEBUG(dbgs() << "*** .cur Hazard in cycle " << PacketNum << ", "
+                      << *MI);
     return Hazard;
   }
 
@@ -74,7 +76,7 @@ HexagonHazardRecognizer::getHazardType(SUnit *SU, int stalls) {
 }
 
 void HexagonHazardRecognizer::AdvanceCycle() {
-  DEBUG(dbgs() << "Advance cycle, clear state\n");
+  LLVM_DEBUG(dbgs() << "Advance cycle, clear state\n");
   Resources->clearResources();
   if (DotCurPNum != -1 && DotCurPNum != (int)PacketNum) {
     UsesDotCur = nullptr;
@@ -132,7 +134,7 @@ void HexagonHazardRecognizer::EmitInstruction(SUnit *SU) {
   }
   else
     Resources->reserveResources(*MI);
-  DEBUG(dbgs() << " Add instruction " << *MI);
+  LLVM_DEBUG(dbgs() << " Add instruction " << *MI);
 
   // When scheduling a dot cur instruction, check if there is an instruction
   // that can use the dot cur in the same packet. If so, we'll attempt to

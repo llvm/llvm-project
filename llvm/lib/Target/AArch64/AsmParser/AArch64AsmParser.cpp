@@ -128,6 +128,7 @@ private:
   OperandMatchResultTy tryParseMRSSystemRegister(OperandVector &Operands);
   OperandMatchResultTy tryParseSysReg(OperandVector &Operands);
   OperandMatchResultTy tryParseSysCROperand(OperandVector &Operands);
+  template <bool IsSVEPrefetch = false>
   OperandMatchResultTy tryParsePrefetch(OperandVector &Operands);
   OperandMatchResultTy tryParsePSBHint(OperandVector &Operands);
   OperandMatchResultTy tryParseAdrpLabel(OperandVector &Operands);
@@ -2033,11 +2034,32 @@ AArch64AsmParser::tryParseSysCROperand(OperandVector &Operands) {
 }
 
 /// tryParsePrefetch - Try to parse a prefetch operand.
+template <bool IsSVEPrefetch>
 OperandMatchResultTy
 AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
   const AsmToken &Tok = Parser.getTok();
+
+  auto LookupByName = [](StringRef N) {
+    if (IsSVEPrefetch) {
+      if (auto Res = AArch64SVEPRFM::lookupSVEPRFMByName(N))
+        return Optional<unsigned>(Res->Encoding);
+    } else if (auto Res = AArch64PRFM::lookupPRFMByName(N))
+      return Optional<unsigned>(Res->Encoding);
+    return Optional<unsigned>();
+  };
+
+  auto LookupByEncoding = [](unsigned E) {
+    if (IsSVEPrefetch) {
+      if (auto Res = AArch64SVEPRFM::lookupSVEPRFMByEncoding(E))
+        return Optional<StringRef>(Res->Name);
+    } else if (auto Res = AArch64PRFM::lookupPRFMByEncoding(E))
+      return Optional<StringRef>(Res->Name);
+    return Optional<StringRef>();
+  };
+  unsigned MaxVal = IsSVEPrefetch ? 15 : 31;
+
   // Either an identifier for named values or a 5-bit immediate.
   // Eat optional hash.
   if (parseOptionalToken(AsmToken::Hash) ||
@@ -2052,14 +2074,15 @@ AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
       return MatchOperand_ParseFail;
     }
     unsigned prfop = MCE->getValue();
-    if (prfop > 31) {
-      TokError("prefetch operand out of range, [0,31] expected");
+    if (prfop > MaxVal) {
+      TokError("prefetch operand out of range, [0," + utostr(MaxVal) +
+               "] expected");
       return MatchOperand_ParseFail;
     }
 
-    auto PRFM = AArch64PRFM::lookupPRFMByEncoding(MCE->getValue());
+    auto PRFM = LookupByEncoding(MCE->getValue());
     Operands.push_back(AArch64Operand::CreatePrefetch(
-        prfop, PRFM ? PRFM->Name : "", S, getContext()));
+        prfop, PRFM.getValueOr(""), S, getContext()));
     return MatchOperand_Success;
   }
 
@@ -2068,7 +2091,7 @@ AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  auto PRFM = AArch64PRFM::lookupPRFMByName(Tok.getString());
+  auto PRFM = LookupByName(Tok.getString());
   if (!PRFM) {
     TokError("pre-fetch hint expected");
     return MatchOperand_ParseFail;
@@ -2076,7 +2099,7 @@ AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
 
   Parser.Lex(); // Eat identifier token.
   Operands.push_back(AArch64Operand::CreatePrefetch(
-      PRFM->Encoding, Tok.getString(), S, getContext()));
+      *PRFM, Tok.getString(), S, getContext()));
   return MatchOperand_Success;
 }
 

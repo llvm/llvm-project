@@ -78,23 +78,18 @@ namespace {
 //
 //===----------------------------------------------------------------------===//
 
-#define SHOWNEWINSTR(i) \
-  DEBUG(dbgs() << "New instr: " << *i << "\n");
+#define SHOWNEWINSTR(i) LLVM_DEBUG(dbgs() << "New instr: " << *i << "\n");
 
-#define SHOWNEWBLK(b, msg) \
-DEBUG( \
-  dbgs() << msg << "BB" << b->getNumber() << "size " << b->size(); \
-  dbgs() << "\n"; \
-);
+#define SHOWNEWBLK(b, msg)                                                     \
+  LLVM_DEBUG(dbgs() << msg << "BB" << b->getNumber() << "size " << b->size();  \
+             dbgs() << "\n";);
 
-#define SHOWBLK_DETAIL(b, msg) \
-DEBUG( \
-  if (b) { \
-  dbgs() << msg << "BB" << b->getNumber() << "size " << b->size(); \
-  b->print(dbgs()); \
-  dbgs() << "\n"; \
-  } \
-);
+#define SHOWBLK_DETAIL(b, msg)                                                 \
+  LLVM_DEBUG(if (b) {                                                          \
+    dbgs() << msg << "BB" << b->getNumber() << "size " << b->size();           \
+    b->print(dbgs());                                                          \
+    dbgs() << "\n";                                                            \
+  });
 
 #define INVALIDSCCNUM -1
 
@@ -158,19 +153,19 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     TII = MF.getSubtarget<R600Subtarget>().getInstrInfo();
     TRI = &TII->getRegisterInfo();
-    DEBUG(MF.dump(););
+    LLVM_DEBUG(MF.dump(););
     OrderedBlks.clear();
     Visited.clear();
     FuncRep = &MF;
     MLI = &getAnalysis<MachineLoopInfo>();
-    DEBUG(dbgs() << "LoopInfo:\n"; PrintLoopinfo(*MLI););
+    LLVM_DEBUG(dbgs() << "LoopInfo:\n"; PrintLoopinfo(*MLI););
     MDT = &getAnalysis<MachineDominatorTree>();
-    DEBUG(MDT->print(dbgs(), (const Module*)nullptr););
+    LLVM_DEBUG(MDT->print(dbgs(), (const Module *)nullptr););
     PDT = &getAnalysis<MachinePostDominatorTree>();
-    DEBUG(PDT->print(dbgs()););
+    LLVM_DEBUG(PDT->print(dbgs()););
     prepare();
     run();
-    DEBUG(MF.dump(););
+    LLVM_DEBUG(MF.dump(););
     return true;
   }
 
@@ -650,9 +645,8 @@ bool AMDGPUCFGStructurizer::isReturnBlock(MachineBasicBlock *MBB) {
   if (MI)
     assert(IsReturn);
   else if (IsReturn)
-    DEBUG(
-      dbgs() << "BB" << MBB->getNumber()
-             <<" is return block without RETURN instr\n";);
+    LLVM_DEBUG(dbgs() << "BB" << MBB->getNumber()
+                      << " is return block without RETURN instr\n";);
   return  IsReturn;
 }
 
@@ -714,7 +708,7 @@ bool AMDGPUCFGStructurizer::prepare() {
 
   //FIXME: if not reducible flow graph, make it so ???
 
-  DEBUG(dbgs() << "AMDGPUCFGStructurizer::prepare\n";);
+  LLVM_DEBUG(dbgs() << "AMDGPUCFGStructurizer::prepare\n";);
 
   orderBlocks(FuncRep);
 
@@ -757,14 +751,14 @@ bool AMDGPUCFGStructurizer::prepare() {
 
 bool AMDGPUCFGStructurizer::run() {
   //Assume reducible CFG...
-  DEBUG(dbgs() << "AMDGPUCFGStructurizer::run\n");
+  LLVM_DEBUG(dbgs() << "AMDGPUCFGStructurizer::run\n");
 
 #ifdef STRESSTEST
   //Use the worse block ordering to test the algorithm.
   ReverseVector(orderedBlks);
 #endif
 
-  DEBUG(dbgs() << "Ordered blocks:\n"; printOrderedBlocks(););
+  LLVM_DEBUG(dbgs() << "Ordered blocks:\n"; printOrderedBlocks(););
   int NumIter = 0;
   bool Finish = false;
   MachineBasicBlock *MBB;
@@ -774,10 +768,8 @@ bool AMDGPUCFGStructurizer::run() {
 
   do {
     ++NumIter;
-    DEBUG(
-      dbgs() << "numIter = " << NumIter
-             << ", numRemaintedBlk = " << NumRemainedBlk << "\n";
-    );
+    LLVM_DEBUG(dbgs() << "numIter = " << NumIter
+                      << ", numRemaintedBlk = " << NumRemainedBlk << "\n";);
 
     SmallVectorImpl<MachineBasicBlock *>::const_iterator It =
         OrderedBlks.begin();
@@ -799,10 +791,8 @@ bool AMDGPUCFGStructurizer::run() {
         SccBeginMBB = MBB;
         SccNumIter = 0;
         SccNumBlk = NumRemainedBlk; // Init to maximum possible number.
-        DEBUG(
-              dbgs() << "start processing SCC" << getSCCNum(SccBeginMBB);
-              dbgs() << "\n";
-        );
+        LLVM_DEBUG(dbgs() << "start processing SCC" << getSCCNum(SccBeginMBB);
+                   dbgs() << "\n";);
       }
 
       if (!isRetiredBlock(MBB))
@@ -817,20 +807,16 @@ bool AMDGPUCFGStructurizer::run() {
         ++SccNumIter;
         int sccRemainedNumBlk = countActiveBlock(SccBeginIter, It);
         if (sccRemainedNumBlk != 1 && sccRemainedNumBlk >= SccNumBlk) {
-          DEBUG(
-            dbgs() << "Can't reduce SCC " << getSCCNum(MBB)
-                   << ", sccNumIter = " << SccNumIter;
-            dbgs() << "doesn't make any progress\n";
-          );
+          LLVM_DEBUG(dbgs() << "Can't reduce SCC " << getSCCNum(MBB)
+                            << ", sccNumIter = " << SccNumIter;
+                     dbgs() << "doesn't make any progress\n";);
           ContNextScc = true;
         } else if (sccRemainedNumBlk != 1 && sccRemainedNumBlk < SccNumBlk) {
           SccNumBlk = sccRemainedNumBlk;
           It = SccBeginIter;
           ContNextScc = false;
-          DEBUG(
-            dbgs() << "repeat processing SCC" << getSCCNum(MBB)
-                   << "sccNumIter = " << SccNumIter << '\n';
-          );
+          LLVM_DEBUG(dbgs() << "repeat processing SCC" << getSCCNum(MBB)
+                            << "sccNumIter = " << SccNumIter << '\n';);
         } else {
           // Finish the current scc.
           ContNextScc = true;
@@ -848,9 +834,7 @@ bool AMDGPUCFGStructurizer::run() {
         *GraphTraits<MachineFunction *>::nodes_begin(FuncRep);
     if (EntryMBB->succ_size() == 0) {
       Finish = true;
-      DEBUG(
-        dbgs() << "Reduce to one block\n";
-      );
+      LLVM_DEBUG(dbgs() << "Reduce to one block\n";);
     } else {
       int NewnumRemainedBlk
         = countActiveBlock(OrderedBlks.begin(), OrderedBlks.end());
@@ -860,9 +844,7 @@ bool AMDGPUCFGStructurizer::run() {
         NumRemainedBlk = NewnumRemainedBlk;
       } else {
         MakeProgress = false;
-        DEBUG(
-          dbgs() << "No progress\n";
-        );
+        LLVM_DEBUG(dbgs() << "No progress\n";);
       }
     }
   } while (!Finish && MakeProgress);
@@ -875,9 +857,7 @@ bool AMDGPUCFGStructurizer::run() {
       It != E; ++It) {
     if ((*It).second && (*It).second->IsRetired) {
       assert(((*It).first)->getNumber() != -1);
-      DEBUG(
-        dbgs() << "Erase BB" << ((*It).first)->getNumber() << "\n";
-      );
+      LLVM_DEBUG(dbgs() << "Erase BB" << ((*It).first)->getNumber() << "\n";);
       (*It).first->eraseFromParent();  //Remove from the parent Function.
     }
     delete (*It).second;
@@ -886,7 +866,7 @@ bool AMDGPUCFGStructurizer::run() {
   LLInfoMap.clear();
 
   if (!Finish) {
-    DEBUG(FuncRep->viewCFG());
+    LLVM_DEBUG(FuncRep->viewCFG());
     report_fatal_error("IRREDUCIBLE_CFG");
   }
 
@@ -920,17 +900,13 @@ int AMDGPUCFGStructurizer::patternMatch(MachineBasicBlock *MBB) {
   int NumMatch = 0;
   int CurMatch;
 
-  DEBUG(
-        dbgs() << "Begin patternMatch BB" << MBB->getNumber() << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "Begin patternMatch BB" << MBB->getNumber() << "\n";);
 
   while ((CurMatch = patternMatchGroup(MBB)) > 0)
     NumMatch += CurMatch;
 
-  DEBUG(
-        dbgs() << "End patternMatch BB" << MBB->getNumber()
-      << ", numMatch = " << NumMatch << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "End patternMatch BB" << MBB->getNumber()
+                    << ", numMatch = " << NumMatch << "\n";);
 
   return NumMatch;
 }
@@ -1050,7 +1026,7 @@ int AMDGPUCFGStructurizer::loopendPatternMatch() {
   for (MachineLoop *ExaminedLoop : NestedLoops) {
     if (ExaminedLoop->getNumBlocks() == 0 || Visited[ExaminedLoop])
       continue;
-    DEBUG(dbgs() << "Processing:\n"; ExaminedLoop->dump(););
+    LLVM_DEBUG(dbgs() << "Processing:\n"; ExaminedLoop->dump(););
     int NumBreak = mergeLoop(ExaminedLoop);
     if (NumBreak == -1)
       break;
@@ -1064,7 +1040,8 @@ int AMDGPUCFGStructurizer::mergeLoop(MachineLoop *LoopRep) {
   MBBVector ExitingMBBs;
   LoopRep->getExitingBlocks(ExitingMBBs);
   assert(!ExitingMBBs.empty() && "Infinite Loop not supported");
-  DEBUG(dbgs() << "Loop has " << ExitingMBBs.size() << " exiting blocks\n";);
+  LLVM_DEBUG(dbgs() << "Loop has " << ExitingMBBs.size()
+                    << " exiting blocks\n";);
   // We assume a single ExitBlk
   MBBVector ExitBlks;
   LoopRep->getExitBlocks(ExitBlks);
@@ -1106,11 +1083,9 @@ bool AMDGPUCFGStructurizer::isSameloopDetachedContbreak(
     if (LoopRep&& LoopRep == MLI->getLoopFor(Src2MBB)) {
       MachineBasicBlock *&TheEntry = LLInfoMap[LoopRep];
       if (TheEntry) {
-        DEBUG(
-          dbgs() << "isLoopContBreakBlock yes src1 = BB"
-                 << Src1MBB->getNumber()
-                 << " src2 = BB" << Src2MBB->getNumber() << "\n";
-        );
+        LLVM_DEBUG(dbgs() << "isLoopContBreakBlock yes src1 = BB"
+                          << Src1MBB->getNumber() << " src2 = BB"
+                          << Src2MBB->getNumber() << "\n";);
         return true;
       }
     }
@@ -1122,9 +1097,8 @@ int AMDGPUCFGStructurizer::handleJumpintoIf(MachineBasicBlock *HeadMBB,
     MachineBasicBlock *TrueMBB, MachineBasicBlock *FalseMBB) {
   int Num = handleJumpintoIfImp(HeadMBB, TrueMBB, FalseMBB);
   if (Num == 0) {
-    DEBUG(
-      dbgs() << "handleJumpintoIf swap trueBlk and FalseBlk" << "\n";
-    );
+    LLVM_DEBUG(dbgs() << "handleJumpintoIf swap trueBlk and FalseBlk"
+                      << "\n";);
     Num = handleJumpintoIfImp(HeadMBB, FalseMBB, TrueMBB);
   }
   return Num;
@@ -1138,22 +1112,16 @@ int AMDGPUCFGStructurizer::handleJumpintoIfImp(MachineBasicBlock *HeadMBB,
   //trueBlk could be the common post dominator
   DownBlk = TrueMBB;
 
-  DEBUG(
-    dbgs() << "handleJumpintoIfImp head = BB" << HeadMBB->getNumber()
-           << " true = BB" << TrueMBB->getNumber()
-           << ", numSucc=" << TrueMBB->succ_size()
-           << " false = BB" << FalseMBB->getNumber() << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "handleJumpintoIfImp head = BB" << HeadMBB->getNumber()
+                    << " true = BB" << TrueMBB->getNumber()
+                    << ", numSucc=" << TrueMBB->succ_size() << " false = BB"
+                    << FalseMBB->getNumber() << "\n";);
 
   while (DownBlk) {
-    DEBUG(
-      dbgs() << "check down = BB" << DownBlk->getNumber();
-    );
+    LLVM_DEBUG(dbgs() << "check down = BB" << DownBlk->getNumber(););
 
     if (singlePathTo(FalseMBB, DownBlk) == SinglePath_InPath) {
-      DEBUG(
-        dbgs() << " working\n";
-      );
+      LLVM_DEBUG(dbgs() << " working\n";);
 
       Num += cloneOnSideEntryTo(HeadMBB, TrueMBB, DownBlk);
       Num += cloneOnSideEntryTo(HeadMBB, FalseMBB, DownBlk);
@@ -1166,9 +1134,7 @@ int AMDGPUCFGStructurizer::handleJumpintoIfImp(MachineBasicBlock *HeadMBB,
 
       break;
     }
-    DEBUG(
-      dbgs() << " not working\n";
-    );
+    LLVM_DEBUG(dbgs() << " not working\n";);
     DownBlk = (DownBlk->succ_size() == 1) ? (*DownBlk->succ_begin()) : nullptr;
   } // walk down the postDomTree
 
@@ -1247,10 +1213,9 @@ int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
   if (!MigrateFalse && FalseMBB && FalseMBB->pred_size() > 1)
     MigrateFalse = true;
 
-  DEBUG(
-    dbgs() << "before improveSimpleJumpintoIf: ";
-    showImproveSimpleJumpintoIf(HeadMBB, TrueMBB, FalseMBB, LandBlk, 0);
-  );
+  LLVM_DEBUG(
+      dbgs() << "before improveSimpleJumpintoIf: ";
+      showImproveSimpleJumpintoIf(HeadMBB, TrueMBB, FalseMBB, LandBlk, 0););
 
   // org: headBlk => if () {trueBlk} else {falseBlk} => landBlk
   //
@@ -1385,10 +1350,9 @@ int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
         report_fatal_error("Extra register needed to handle CFG");
     }
   }
-  DEBUG(
-    dbgs() << "result from improveSimpleJumpintoIf: ";
-    showImproveSimpleJumpintoIf(HeadMBB, TrueMBB, FalseMBB, LandBlk, 0);
-  );
+  LLVM_DEBUG(
+      dbgs() << "result from improveSimpleJumpintoIf: ";
+      showImproveSimpleJumpintoIf(HeadMBB, TrueMBB, FalseMBB, LandBlk, 0););
 
   // update landBlk
   *LandMBBPtr = LandBlk;
@@ -1398,10 +1362,8 @@ int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
 
 void AMDGPUCFGStructurizer::mergeSerialBlock(MachineBasicBlock *DstMBB,
     MachineBasicBlock *SrcMBB) {
-  DEBUG(
-    dbgs() << "serialPattern BB" << DstMBB->getNumber()
-           << " <= BB" << SrcMBB->getNumber() << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "serialPattern BB" << DstMBB->getNumber() << " <= BB"
+                    << SrcMBB->getNumber() << "\n";);
   DstMBB->splice(DstMBB->end(), SrcMBB, SrcMBB->begin(), SrcMBB->end());
 
   DstMBB->removeSuccessor(SrcMBB, true);
@@ -1416,26 +1378,15 @@ void AMDGPUCFGStructurizer::mergeIfthenelseBlock(MachineInstr *BranchMI,
     MachineBasicBlock *MBB, MachineBasicBlock *TrueMBB,
     MachineBasicBlock *FalseMBB, MachineBasicBlock *LandMBB) {
   assert (TrueMBB);
-  DEBUG(
-    dbgs() << "ifPattern BB" << MBB->getNumber();
-    dbgs() << "{  ";
-    if (TrueMBB) {
-      dbgs() << "BB" << TrueMBB->getNumber();
-    }
-    dbgs() << "  } else ";
-    dbgs() << "{  ";
-    if (FalseMBB) {
-      dbgs() << "BB" << FalseMBB->getNumber();
-    }
-    dbgs() << "  }\n ";
-    dbgs() << "landBlock: ";
-    if (!LandMBB) {
-      dbgs() << "NULL";
-    } else {
-      dbgs() << "BB" << LandMBB->getNumber();
-    }
-    dbgs() << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "ifPattern BB" << MBB->getNumber(); dbgs() << "{  ";
+             if (TrueMBB) { dbgs() << "BB" << TrueMBB->getNumber(); } dbgs()
+             << "  } else ";
+             dbgs() << "{  "; if (FalseMBB) {
+               dbgs() << "BB" << FalseMBB->getNumber();
+             } dbgs() << "  }\n ";
+             dbgs() << "landBlock: "; if (!LandMBB) { dbgs() << "NULL"; } else {
+               dbgs() << "BB" << LandMBB->getNumber();
+             } dbgs() << "\n";);
 
   int OldOpcode = BranchMI->getOpcode();
   DebugLoc BranchDL = BranchMI->getDebugLoc();
@@ -1481,8 +1432,8 @@ void AMDGPUCFGStructurizer::mergeIfthenelseBlock(MachineInstr *BranchMI,
 
 void AMDGPUCFGStructurizer::mergeLooplandBlock(MachineBasicBlock *DstBlk,
     MachineBasicBlock *LandMBB) {
-  DEBUG(dbgs() << "loopPattern header = BB" << DstBlk->getNumber()
-               << " land = BB" << LandMBB->getNumber() << "\n";);
+  LLVM_DEBUG(dbgs() << "loopPattern header = BB" << DstBlk->getNumber()
+                    << " land = BB" << LandMBB->getNumber() << "\n";);
 
   insertInstrBefore(DstBlk, AMDGPU::WHILELOOP, DebugLoc());
   insertInstrEnd(DstBlk, AMDGPU::ENDLOOP, DebugLoc());
@@ -1491,8 +1442,9 @@ void AMDGPUCFGStructurizer::mergeLooplandBlock(MachineBasicBlock *DstBlk,
 
 void AMDGPUCFGStructurizer::mergeLoopbreakBlock(MachineBasicBlock *ExitingMBB,
     MachineBasicBlock *LandMBB) {
-  DEBUG(dbgs() << "loopbreakPattern exiting = BB" << ExitingMBB->getNumber()
-               << " land = BB" << LandMBB->getNumber() << "\n";);
+  LLVM_DEBUG(dbgs() << "loopbreakPattern exiting = BB"
+                    << ExitingMBB->getNumber() << " land = BB"
+                    << LandMBB->getNumber() << "\n";);
   MachineInstr *BranchMI = getLoopendBlockBranchInstr(ExitingMBB);
   assert(BranchMI && isCondBranch(BranchMI));
   DebugLoc DL = BranchMI->getDebugLoc();
@@ -1511,9 +1463,9 @@ void AMDGPUCFGStructurizer::mergeLoopbreakBlock(MachineBasicBlock *ExitingMBB,
 
 void AMDGPUCFGStructurizer::settleLoopcontBlock(MachineBasicBlock *ContingMBB,
     MachineBasicBlock *ContMBB) {
-  DEBUG(dbgs() << "settleLoopcontBlock conting = BB"
-               << ContingMBB->getNumber()
-               << ", cont = BB" << ContMBB->getNumber() << "\n";);
+  LLVM_DEBUG(dbgs() << "settleLoopcontBlock conting = BB"
+                    << ContingMBB->getNumber() << ", cont = BB"
+                    << ContMBB->getNumber() << "\n";);
 
   MachineInstr *MI = getLoopendBlockBranchInstr(ContingMBB);
   if (MI) {
@@ -1587,10 +1539,9 @@ AMDGPUCFGStructurizer::cloneBlockForPredecessor(MachineBasicBlock *MBB,
 
   numClonedInstr += MBB->size();
 
-  DEBUG(
-    dbgs() << "Cloned block: " << "BB"
-           << MBB->getNumber() << "size " << MBB->size() << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "Cloned block: "
+                    << "BB" << MBB->getNumber() << "size " << MBB->size()
+                    << "\n";);
 
   SHOWNEWBLK(CloneMBB, "result of Cloned block: ");
 
@@ -1603,26 +1554,22 @@ void AMDGPUCFGStructurizer::migrateInstruction(MachineBasicBlock *SrcMBB,
   //look for the input branchinstr, not the AMDGPU branchinstr
   MachineInstr *BranchMI = getNormalBlockBranchInstr(SrcMBB);
   if (!BranchMI) {
-    DEBUG(
-      dbgs() << "migrateInstruction don't see branch instr\n";
-    );
+    LLVM_DEBUG(dbgs() << "migrateInstruction don't see branch instr\n";);
     SpliceEnd = SrcMBB->end();
   } else {
-    DEBUG(dbgs() << "migrateInstruction see branch instr: " << *BranchMI);
+    LLVM_DEBUG(dbgs() << "migrateInstruction see branch instr: " << *BranchMI);
     SpliceEnd = BranchMI;
   }
-  DEBUG(
-    dbgs() << "migrateInstruction before splice dstSize = " << DstMBB->size()
-      << "srcSize = " << SrcMBB->size() << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "migrateInstruction before splice dstSize = "
+                    << DstMBB->size() << "srcSize = " << SrcMBB->size()
+                    << "\n";);
 
   //splice insert before insertPos
   DstMBB->splice(I, SrcMBB, SrcMBB->begin(), SpliceEnd);
 
-  DEBUG(
-    dbgs() << "migrateInstruction after splice dstSize = " << DstMBB->size()
-      << "srcSize = " << SrcMBB->size() << '\n';
-  );
+  LLVM_DEBUG(dbgs() << "migrateInstruction after splice dstSize = "
+                    << DstMBB->size() << "srcSize = " << SrcMBB->size()
+                    << '\n';);
 }
 
 MachineBasicBlock *
@@ -1640,7 +1587,7 @@ AMDGPUCFGStructurizer::normalizeInfiniteLoopExit(MachineLoop* LoopRep) {
   MachineBasicBlock *DummyExitBlk = FuncRep->CreateMachineBasicBlock();
   FuncRep->push_back(DummyExitBlk);  //insert to function
   SHOWNEWBLK(DummyExitBlk, "DummyExitBlock to normalize infiniteLoop: ");
-  DEBUG(dbgs() << "Old branch instr: " << *BranchMI << "\n";);
+  LLVM_DEBUG(dbgs() << "Old branch instr: " << *BranchMI << "\n";);
   LLVMContext &Ctx = LoopHeader->getParent()->getFunction().getContext();
   Ctx.emitError("Extra register needed to handle CFG");
   return nullptr;
@@ -1653,7 +1600,7 @@ void AMDGPUCFGStructurizer::removeUnconditionalBranch(MachineBasicBlock *MBB) {
   // test_fc_do_while_or.c need to fix the upstream on this to remove the loop.
   while ((BranchMI = getLoopendBlockBranchInstr(MBB))
           && isUncondBranch(BranchMI)) {
-    DEBUG(dbgs() << "Removing uncond branch instr: " << *BranchMI);
+    LLVM_DEBUG(dbgs() << "Removing uncond branch instr: " << *BranchMI);
     BranchMI->eraseFromParent();
   }
 }
@@ -1669,7 +1616,7 @@ void AMDGPUCFGStructurizer::removeRedundantConditionalBranch(
 
   MachineInstr *BranchMI = getNormalBlockBranchInstr(MBB);
   assert(BranchMI && isCondBranch(BranchMI));
-  DEBUG(dbgs() << "Removing unneeded cond branch instr: " << *BranchMI);
+  LLVM_DEBUG(dbgs() << "Removing unneeded cond branch instr: " << *BranchMI);
   BranchMI->eraseFromParent();
   SHOWNEWBLK(MBB1, "Removing redundant successor");
   MBB->removeSuccessor(MBB1, true);
@@ -1688,10 +1635,8 @@ void AMDGPUCFGStructurizer::addDummyExitBlock(
     if (MI)
       MI->eraseFromParent();
     MBB->addSuccessor(DummyExitBlk);
-    DEBUG(
-      dbgs() << "Add dummyExitBlock to BB" << MBB->getNumber()
-             << " successors\n";
-    );
+    LLVM_DEBUG(dbgs() << "Add dummyExitBlock to BB" << MBB->getNumber()
+                      << " successors\n";);
   }
   SHOWNEWBLK(DummyExitBlk, "DummyExitBlock: ");
 }
@@ -1710,9 +1655,7 @@ void AMDGPUCFGStructurizer::recordSccnum(MachineBasicBlock *MBB,
 }
 
 void AMDGPUCFGStructurizer::retireBlock(MachineBasicBlock *MBB) {
-  DEBUG(
-        dbgs() << "Retiring BB" << MBB->getNumber() << "\n";
-  );
+  LLVM_DEBUG(dbgs() << "Retiring BB" << MBB->getNumber() << "\n";);
 
   BlockInformation *&SrcBlkInfo = BlockInfoMap[MBB];
 

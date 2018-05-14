@@ -97,7 +97,7 @@ public:
   // Edges with large weight will be put into MST first so they are less likely
   // to be instrumented.
   void buildEdges() {
-    DEBUG(dbgs() << "Build Edge on " << F.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Build Edge on " << F.getName() << "\n");
 
     const BasicBlock *Entry = &(F.getEntryBlock());
     uint64_t EntryWeight = (BFI != nullptr ? BFI->getEntryFreq() : 2);
@@ -107,8 +107,8 @@ public:
 
     // Add a fake edge to the entry.
     EntryIncoming = &addEdge(nullptr, Entry, EntryWeight);
-    DEBUG(dbgs() << "  Edge: from fake node to " << Entry->getName()
-                     << " w = " << EntryWeight << "\n");
+    LLVM_DEBUG(dbgs() << "  Edge: from fake node to " << Entry->getName()
+                      << " w = " << EntryWeight << "\n");
 
     // Special handling for single BB functions.
     if (succ_empty(Entry)) {
@@ -138,8 +138,8 @@ public:
             Weight = BPI->getEdgeProbability(&*BB, TargetBB).scale(scaleFactor);
           auto *E = &addEdge(&*BB, TargetBB, Weight);
           E->IsCritical = Critical;
-          DEBUG(dbgs() << "  Edge: from " << BB->getName() << " to "
-                       << TargetBB->getName() << "  w=" << Weight << "\n");
+          LLVM_DEBUG(dbgs() << "  Edge: from " << BB->getName() << " to "
+                            << TargetBB->getName() << "  w=" << Weight << "\n");
 
           // Keep track of entry/exit edges:
           if (&*BB == Entry) {
@@ -164,8 +164,8 @@ public:
           MaxExitOutWeight = BBWeight;
           ExitOutgoing = ExitO;
         }
-        DEBUG(dbgs() << "  Edge: from " << BB->getName() << " to fake exit"
-                     << " w = " << BBWeight << "\n");
+        LLVM_DEBUG(dbgs() << "  Edge: from " << BB->getName() << " to fake exit"
+                          << " w = " << BBWeight << "\n");
       }
     }
 

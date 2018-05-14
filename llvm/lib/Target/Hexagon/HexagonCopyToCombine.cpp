@@ -649,7 +649,7 @@ void HexagonCopyToCombine::emitConst64(MachineBasicBlock::iterator &InsertPt,
                                        unsigned DoubleDestReg,
                                        MachineOperand &HiOperand,
                                        MachineOperand &LoOperand) {
-  DEBUG(dbgs() << "Found a CONST64\n");
+  LLVM_DEBUG(dbgs() << "Found a CONST64\n");
 
   DebugLoc DL = InsertPt->getDebugLoc();
   MachineBasicBlock *BB = InsertPt->getParent();

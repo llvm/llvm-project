@@ -32,7 +32,7 @@ concat <simple>,<Check>,<0>
 # Test #3:
 # The altmacro cannot affect the regular less/greater behavior.
 
-# CHECK: addl $1, %eax
+# CHECK: addl $-1, %eax
 # CHECK: addl $0, %eax
 
 .macro fun3 arg1 arg2

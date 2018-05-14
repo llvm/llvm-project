@@ -281,7 +281,7 @@ public:
   dwarfgen::CompileUnit &addCompileUnit();
 
   /// Add a line table unit to be generated.
-  /// \param Format the DWARF format to use (DWARF32 or DWARF64).
+  /// \param DwarfFormat the DWARF format to use (DWARF32 or DWARF64).
   ///
   /// \returns a dwarfgen::LineTable that can be used to customise the contents
   /// of the line table.

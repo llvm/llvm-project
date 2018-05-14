@@ -997,6 +997,18 @@ int llvm_echo(void) {
   LLVMSetSourceFileName(M, SourceFileName, SourceFileLen);
   LLVMSetModuleIdentifier(M, ModuleName, ModuleIdentLen);
 
+  size_t SourceFlagsLen;
+  LLVMModuleFlagEntry *ModuleFlags =
+      LLVMCopyModuleFlagsMetadata(Src, &SourceFlagsLen);
+  for (unsigned i = 0; i < SourceFlagsLen; ++i) {
+    size_t EntryNameLen;
+    const char *EntryName =
+        LLVMModuleFlagEntriesGetKey(ModuleFlags, i, &EntryNameLen);
+    LLVMAddModuleFlag(M, LLVMModuleFlagEntriesGetFlagBehavior(ModuleFlags, i),
+                      EntryName, EntryNameLen,
+                      LLVMModuleFlagEntriesGetMetadata(ModuleFlags, i));
+  }
+
   LLVMSetTarget(M, LLVMGetTarget(Src));
   LLVMSetModuleDataLayout(M, LLVMGetModuleDataLayout(Src));
   if (strcmp(LLVMGetDataLayoutStr(M), LLVMGetDataLayoutStr(Src)))
@@ -1011,6 +1023,7 @@ int llvm_echo(void) {
   char *Str = LLVMPrintModuleToString(M);
   fputs(Str, stdout);
 
+  LLVMDisposeModuleFlagsMetadata(ModuleFlags);
   LLVMDisposeMessage(Str);
   LLVMDisposeModule(Src);
   LLVMDisposeModule(M);
