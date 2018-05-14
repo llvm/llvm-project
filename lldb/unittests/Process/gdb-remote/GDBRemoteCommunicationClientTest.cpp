@@ -169,14 +169,14 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
   llvm::Triple triple("i386-pc-linux");
 
   FileSpec file_specs[] = {
-      FileSpec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix),
-      FileSpec("/foo/baz.so", false, FileSpec::ePathSyntaxPosix),
+      FileSpec("/foo/bar.so", false, FileSpec::Style::posix),
+      FileSpec("/foo/baz.so", false, FileSpec::Style::posix),
 
       // This is a bit dodgy but we currently depend on GetModulesInfo not
       // performing denormalization. It can go away once the users
       // (DynamicLoaderPOSIXDYLD, at least) correctly set the path syntax for
       // the FileSpecs they create.
-      FileSpec("/foo/baw.so", false, FileSpec::ePathSyntaxWindows),
+      FileSpec("/foo/baw.so", false, FileSpec::Style::windows),
   };
   std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
       std::async(std::launch::async,
@@ -202,7 +202,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
 TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
   llvm::Triple triple("i386-pc-linux");
 
-  FileSpec file_spec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix);
+  FileSpec file_spec("/foo/bar.so", false, FileSpec::Style::posix);
   std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
       std::async(std::launch::async,
                  [&] { return client.GetModulesInfo(file_spec, triple); });
@@ -225,7 +225,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
 
 TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
   llvm::Triple triple("i386-pc-linux");
-  FileSpec file_spec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix);
+  FileSpec file_spec("/foo/bar.so", false, FileSpec::Style::posix);
 
   const char *invalid_responses[] = {
       // no UUID

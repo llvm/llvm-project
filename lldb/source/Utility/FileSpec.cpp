@@ -19,7 +19,6 @@
 #include "llvm/ADT/Twine.h"          // for Twine
 #include "llvm/Support/ErrorOr.h"    // for ErrorOr
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h" // for raw_ostream, fs
 
@@ -36,48 +35,34 @@ using namespace lldb_private;
 
 namespace {
 
-static constexpr FileSpec::PathSyntax GetNativeSyntax() {
+static constexpr FileSpec::Style GetNativeStyle() {
 #if defined(_WIN32)
-  return FileSpec::ePathSyntaxWindows;
+  return FileSpec::Style::windows;
 #else
-  return FileSpec::ePathSyntaxPosix;
+  return FileSpec::Style::posix;
 #endif
 }
 
-bool PathSyntaxIsPosix(FileSpec::PathSyntax syntax) {
-  return (syntax == FileSpec::ePathSyntaxPosix ||
-          (syntax == FileSpec::ePathSyntaxHostNative &&
-           GetNativeSyntax() == FileSpec::ePathSyntaxPosix));
+bool PathStyleIsPosix(FileSpec::Style style) {
+  return (style == FileSpec::Style::posix ||
+          (style == FileSpec::Style::native &&
+           GetNativeStyle() == FileSpec::Style::posix));
 }
 
-const char *GetPathSeparators(FileSpec::PathSyntax syntax) {
-  return PathSyntaxIsPosix(syntax) ? "/" : "\\/";
+const char *GetPathSeparators(FileSpec::Style style) {
+  return PathStyleIsPosix(style) ? "/" : "\\/";
 }
 
-char GetPreferredPathSeparator(FileSpec::PathSyntax syntax) {
-  return GetPathSeparators(syntax)[0];
+char GetPreferredPathSeparator(FileSpec::Style style) {
+  return GetPathSeparators(style)[0];
 }
 
-bool IsPathSeparator(char value, FileSpec::PathSyntax syntax) {
-  return value == '/' || (!PathSyntaxIsPosix(syntax) && value == '\\');
+bool IsPathSeparator(char value, FileSpec::Style style) {
+  return value == '/' || (!PathStyleIsPosix(style) && value == '\\');
 }
 
-inline llvm::sys::path::Style
-LLVMPathSyntax(FileSpec::PathSyntax lldb_syntax) {
-  switch (lldb_syntax) {
-    case FileSpec::ePathSyntaxPosix:
-      return llvm::sys::path::Style::posix;
-    case FileSpec::ePathSyntaxWindows:
-      return llvm::sys::path::Style::windows;
-    case FileSpec::ePathSyntaxHostNative:
-      return llvm::sys::path::Style::native;
-  };
-  return llvm::sys::path::Style::native;
-}
-
-void Denormalize(llvm::SmallVectorImpl<char> &path,
-                 FileSpec::PathSyntax syntax) {
-  if (PathSyntaxIsPosix(syntax))
+void Denormalize(llvm::SmallVectorImpl<char> &path, FileSpec::Style style) {
+  if (PathStyleIsPosix(style))
     return;
 
   std::replace(path.begin(), path.end(), '/', '\\');
@@ -102,27 +87,27 @@ void FileSpec::Resolve(llvm::SmallVectorImpl<char> &path) {
   }
 }
 
-FileSpec::FileSpec() : m_syntax(GetNativeSyntax()) {}
+FileSpec::FileSpec() : m_style(GetNativeStyle()) {}
 
 //------------------------------------------------------------------
 // Default constructor that can take an optional full path to a file on disk.
 //------------------------------------------------------------------
-FileSpec::FileSpec(llvm::StringRef path, bool resolve_path, PathSyntax syntax)
-    : m_syntax(syntax) {
-  SetFile(path, resolve_path, syntax);
+FileSpec::FileSpec(llvm::StringRef path, bool resolve_path, Style style)
+    : m_style(style) {
+  SetFile(path, resolve_path, style);
 }
 
 FileSpec::FileSpec(llvm::StringRef path, bool resolve_path,
                    const llvm::Triple &Triple)
     : FileSpec{path, resolve_path,
-               Triple.isOSWindows() ? ePathSyntaxWindows : ePathSyntaxPosix} {}
+               Triple.isOSWindows() ? Style::windows : Style::posix} {}
 
 //------------------------------------------------------------------
 // Copy constructor
 //------------------------------------------------------------------
 FileSpec::FileSpec(const FileSpec &rhs)
     : m_directory(rhs.m_directory), m_filename(rhs.m_filename),
-      m_is_resolved(rhs.m_is_resolved), m_syntax(rhs.m_syntax) {}
+      m_is_resolved(rhs.m_is_resolved), m_style(rhs.m_style) {}
 
 //------------------------------------------------------------------
 // Copy constructor
@@ -239,7 +224,7 @@ const FileSpec &FileSpec::operator=(const FileSpec &rhs) {
     m_directory = rhs.m_directory;
     m_filename = rhs.m_filename;
     m_is_resolved = rhs.m_is_resolved;
-    m_syntax = rhs.m_syntax;
+    m_style = rhs.m_style;
   }
   return *this;
 }
@@ -249,12 +234,11 @@ const FileSpec &FileSpec::operator=(const FileSpec &rhs) {
 // up into a directory and filename and stored as uniqued string values for
 // quick comparison and efficient memory usage.
 //------------------------------------------------------------------
-void FileSpec::SetFile(llvm::StringRef pathname, bool resolve,
-                       PathSyntax syntax) {
+void FileSpec::SetFile(llvm::StringRef pathname, bool resolve, Style style) {
   m_filename.Clear();
   m_directory.Clear();
   m_is_resolved = false;
-  m_syntax = (syntax == ePathSyntaxHostNative) ? GetNativeSyntax() : syntax;
+  m_style = (style == Style::native) ? GetNativeStyle() : style;
 
   if (pathname.empty())
     return;
@@ -268,15 +252,14 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve,
 
   // Normalize the path by removing ".", ".." and other redundant components.
   if (needsNormalization(resolved))
-    llvm::sys::path::remove_dots(resolved, true, LLVMPathSyntax(m_syntax));
+    llvm::sys::path::remove_dots(resolved, true, m_style);
 
   // Normalize back slashes to forward slashes
-  if (m_syntax == FileSpec::ePathSyntaxWindows)
+  if (m_style == Style::windows)
     std::replace(resolved.begin(), resolved.end(), '\\', '/');
 
-  auto style = LLVMPathSyntax(syntax);
-  m_filename.SetString(llvm::sys::path::filename(resolved, style));
-  llvm::StringRef dir = llvm::sys::path::parent_path(resolved, style);
+  m_filename.SetString(llvm::sys::path::filename(resolved, m_style));
+  llvm::StringRef dir = llvm::sys::path::parent_path(resolved, m_style);
   if (!dir.empty())
     m_directory.SetString(dir);
 }
@@ -284,7 +267,7 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve,
 void FileSpec::SetFile(llvm::StringRef path, bool resolve,
                        const llvm::Triple &Triple) {
   return SetFile(path, resolve,
-                 Triple.isOSWindows() ? ePathSyntaxWindows : ePathSyntaxPosix);
+                 Triple.isOSWindows() ? Style::windows : Style::posix);
 }
 
 //----------------------------------------------------------------------
@@ -451,7 +434,7 @@ void FileSpec::Dump(Stream *s) const {
   if (s) {
     std::string path{GetPath(true)};
     s->PutCString(path);
-    char path_separator = GetPreferredPathSeparator(m_syntax);
+    char path_separator = GetPreferredPathSeparator(m_style);
     if (!m_filename && !path.empty() && path.back() != path_separator)
       s->PutChar(path_separator);
   }
@@ -518,7 +501,7 @@ uint64_t FileSpec::GetByteSize() const {
   return Size;
 }
 
-FileSpec::PathSyntax FileSpec::GetPathSyntax() const { return m_syntax; }
+FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
 uint32_t FileSpec::GetPermissions() const {
   namespace fs = llvm::sys::fs;
@@ -586,7 +569,7 @@ void FileSpec::GetPath(llvm::SmallVectorImpl<char> &path,
   path.append(m_filename.GetStringRef().begin(),
               m_filename.GetStringRef().end());
   if (denormalize && !path.empty())
-    Denormalize(path, m_syntax);
+    Denormalize(path, m_style);
 }
 
 ConstString FileSpec::GetFileNameExtension() const {
@@ -716,7 +699,7 @@ ConstString FileSpec::GetLastPathComponent() const {
 }
 
 static std::string
-join_path_components(FileSpec::PathSyntax syntax,
+join_path_components(FileSpec::Style style,
                      const std::vector<llvm::StringRef> components) {
   std::string result;
   for (size_t i = 0; i < components.size(); ++i) {
@@ -724,8 +707,8 @@ join_path_components(FileSpec::PathSyntax syntax,
       continue;
     result += components[i];
     if (i != components.size() - 1 &&
-        !IsPathSeparator(components[i].back(), syntax))
-      result += GetPreferredPathSeparator(syntax);
+        !IsPathSeparator(components[i].back(), style))
+      result += GetPreferredPathSeparator(style);
   }
 
   return result;
@@ -742,9 +725,9 @@ void FileSpec::PrependPathComponent(llvm::StringRef component) {
   }
 
   std::string result =
-      join_path_components(m_syntax, {component, m_directory.GetStringRef(),
-                                      m_filename.GetStringRef()});
-  SetFile(result, resolve, m_syntax);
+      join_path_components(m_style, {component, m_directory.GetStringRef(),
+                                     m_filename.GetStringRef()});
+  SetFile(result, resolve, m_style);
 }
 
 void FileSpec::PrependPathComponent(const FileSpec &new_path) {
@@ -756,13 +739,13 @@ void FileSpec::AppendPathComponent(llvm::StringRef component) {
     return;
 
   component = component.drop_while(
-      [this](char c) { return IsPathSeparator(c, m_syntax); });
+      [this](char c) { return IsPathSeparator(c, m_style); });
 
   std::string result =
-      join_path_components(m_syntax, {m_directory.GetStringRef(),
-                                      m_filename.GetStringRef(), component});
+      join_path_components(m_style, {m_directory.GetStringRef(),
+                                     m_filename.GetStringRef(), component});
 
-  SetFile(result, false, m_syntax);
+  SetFile(result, false, m_style);
 }
 
 void FileSpec::AppendPathComponent(const FileSpec &new_path) {
@@ -827,7 +810,7 @@ bool FileSpec::IsRelative() const {
   llvm::StringRef directory(dir ? dir : "");
 
   if (directory.size() > 0) {
-    if (PathSyntaxIsPosix(m_syntax)) {
+    if (PathStyleIsPosix(m_style)) {
       // If the path doesn't start with '/' or '~', return true
       switch (directory[0]) {
       case '/':
@@ -878,9 +861,9 @@ void llvm::format_provider<FileSpec>::format(const FileSpec &F,
     // preferred form.  In order to handle this, we need to cut off the
     // filename, then denormalize, then write the entire denorm'ed directory.
     llvm::SmallString<64> denormalized_dir = dir;
-    Denormalize(denormalized_dir, F.GetPathSyntax());
+    Denormalize(denormalized_dir, F.GetPathStyle());
     Stream << denormalized_dir;
-    Stream << GetPreferredPathSeparator(F.GetPathSyntax());
+    Stream << GetPreferredPathSeparator(F.GetPathStyle());
   }
 
   if (Style.equals_lower("D")) {

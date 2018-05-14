@@ -193,8 +193,7 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
   if (IsHost() || !m_remote_platform_sp)
     return PlatformLinux::GetFile(source, destination);
 
-  FileSpec source_spec(source.GetPath(false), false,
-                       FileSpec::ePathSyntaxPosix);
+  FileSpec source_spec(source.GetPath(false), false, FileSpec::Style::posix);
   if (source_spec.IsRelative())
     source_spec = GetRemoteWorkingDirectory().CopyByAppendingPathComponent(
         source_spec.GetCString(false));
@@ -239,7 +238,7 @@ Status PlatformAndroid::PutFile(const FileSpec &source,
     return PlatformLinux::PutFile(source, destination, uid, gid);
 
   FileSpec destination_spec(destination.GetPath(false), false,
-                            FileSpec::ePathSyntaxPosix);
+                            FileSpec::Style::posix);
   if (destination_spec.IsRelative())
     destination_spec = GetRemoteWorkingDirectory().CopyByAppendingPathComponent(
         destination_spec.GetCString(false));
