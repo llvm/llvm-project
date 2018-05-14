@@ -74,7 +74,10 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     case MCUnaryExpr::Not:   OS << '~'; break;
     case MCUnaryExpr::Plus:  OS << '+'; break;
     }
+    bool Binary = UE.getSubExpr()->getKind() == MCExpr::Binary;
+    if (Binary) OS << "(";
     UE.getSubExpr()->print(OS, MAI);
+    if (Binary) OS << ")";
     return;
   }
 
@@ -756,7 +759,8 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     // Apple as.
     int64_t LHS = LHSValue.getConstant(), RHS = RHSValue.getConstant();
     int64_t Result = 0;
-    switch (ABE->getOpcode()) {
+    auto Op = ABE->getOpcode();
+    switch (Op) {
     case MCBinaryExpr::AShr: Result = LHS >> RHS; break;
     case MCBinaryExpr::Add:  Result = LHS + RHS; break;
     case MCBinaryExpr::And:  Result = LHS & RHS; break;
@@ -791,7 +795,21 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     case MCBinaryExpr::Xor:  Result = LHS ^ RHS; break;
     }
 
-    Res = MCValue::get(Result);
+    switch (Op) {
+    default:
+      Res = MCValue::get(Result);
+      break;
+    case MCBinaryExpr::EQ:
+    case MCBinaryExpr::GT:
+    case MCBinaryExpr::GTE:
+    case MCBinaryExpr::LT:
+    case MCBinaryExpr::LTE:
+    case MCBinaryExpr::NE:
+      // A comparison operator returns a -1 if true and 0 if false.
+      Res = MCValue::get(Result ? -1 : 0);
+      break;
+    }
+
     return true;
   }
   }

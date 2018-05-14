@@ -44,8 +44,21 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   ToDisk.writeYamlOrDie(Filename);
 
   {
+    // One-element version.
     const auto FromDisk = InstructionBenchmark::readYamlOrDie(Filename);
 
+    EXPECT_EQ(FromDisk.AsmTmpl.Name, ToDisk.AsmTmpl.Name);
+    EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
+    EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
+    EXPECT_EQ(FromDisk.NumRepetitions, ToDisk.NumRepetitions);
+    EXPECT_THAT(FromDisk.Measurements, ToDisk.Measurements);
+    EXPECT_THAT(FromDisk.Error, ToDisk.Error);
+  }
+  {
+    // Vector version.
+    const auto FromDiskVector = InstructionBenchmark::readYamlsOrDie(Filename);
+    ASSERT_EQ(FromDiskVector.size(), 1);
+    const auto FromDisk = FromDiskVector[0];
     EXPECT_EQ(FromDisk.AsmTmpl.Name, ToDisk.AsmTmpl.Name);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
     EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
