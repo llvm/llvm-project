@@ -56,6 +56,7 @@ namespace clang {
 
 class ExtQuals;
 class QualType;
+class TagDecl;
 class Type;
 
 enum {
@@ -4865,14 +4866,18 @@ class ElaboratedType : public TypeWithKeyword, public llvm::FoldingSetNode {
   /// The type that this qualified name refers to.
   QualType NamedType;
 
+  /// The (re)declaration of this tag type owned by this occurrence, or nullptr
+  /// if none.
+  TagDecl *OwnedTagDecl;
+
   ElaboratedType(ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
-                 QualType NamedType, QualType CanonType)
+                 QualType NamedType, QualType CanonType, TagDecl *OwnedTagDecl)
     : TypeWithKeyword(Keyword, Elaborated, CanonType,
                       NamedType->isDependentType(),
                       NamedType->isInstantiationDependentType(),
                       NamedType->isVariablyModifiedType(),
                       NamedType->containsUnexpandedParameterPack()),
-      NNS(NNS), NamedType(NamedType) {
+      NNS(NNS), NamedType(NamedType), OwnedTagDecl(OwnedTagDecl) {
     assert(!(Keyword == ETK_None && NNS == nullptr) &&
            "ElaboratedType cannot have elaborated type keyword "
            "and name qualifier both null.");
@@ -4893,15 +4898,21 @@ public:
   /// Returns whether this type directly provides sugar.
   bool isSugared() const { return true; }
 
+  /// Return the (re)declaration of this type owned by this occurrence of this
+  /// type, or nullptr if none.
+  TagDecl *getOwnedTagDecl() const { return OwnedTagDecl; }
+
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getKeyword(), NNS, NamedType);
+    Profile(ID, getKeyword(), NNS, NamedType, OwnedTagDecl);
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
-                      NestedNameSpecifier *NNS, QualType NamedType) {
+                      NestedNameSpecifier *NNS, QualType NamedType,
+                      TagDecl *OwnedTagDecl) {
     ID.AddInteger(Keyword);
     ID.AddPointer(NNS);
     NamedType.Profile(ID);
+    ID.AddPointer(OwnedTagDecl);
   }
 
   static bool classof(const Type *T) {

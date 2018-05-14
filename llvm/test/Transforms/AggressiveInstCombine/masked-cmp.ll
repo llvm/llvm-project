@@ -217,3 +217,19 @@ define i64 @allset_40_bit_mask(i64 %x) {
   ret i64 %a40
 }
 
+; Verify that unsimplified code doesn't crash:
+; https://bugs.llvm.org/show_bug.cgi?id=37446
+
+define i32 @PR37446(i32 %x) {
+; CHECK-LABEL: @PR37446(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 1, 33
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 15
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[AND]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[AND1]]
+;
+  %shr = lshr i32 1, 33
+  %and = and i32 %shr, 15
+  %and1 = and i32 %and, %x
+  ret i32 %and1
+}
+

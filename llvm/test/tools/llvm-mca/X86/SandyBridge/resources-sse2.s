@@ -128,6 +128,9 @@ movlpd      (%rax), %xmm2
 
 movmskpd    %xmm0, %rcx
 
+movntil     %eax, (%rax)
+movntiq     %rax, (%rax)
+
 movntdq     %xmm0, (%rax)
 movntpd     %xmm0, (%rax)
 
@@ -485,6 +488,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00           *        	movlpd	%xmm0, (%rax)
 # CHECK-NEXT:  2      7     1.00    *               	movlpd	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00                    	movmskpd	%xmm0, %ecx
+# CHECK-NEXT:  1      1     1.00           *        	movntil	%eax, (%rax)
+# CHECK-NEXT:  1      1     1.00           *        	movntiq	%rax, (%rax)
 # CHECK-NEXT:  1      1     1.00           *        	movntdq	%xmm0, (%rax)
 # CHECK-NEXT:  1      1     1.00           *        	movntpd	%xmm0, (%rax)
 # CHECK-NEXT:  1      1     0.33                    	movq	%xmm0, %xmm2
@@ -674,7 +679,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     172.00 75.83  117.33 14.00  98.83  65.00  65.00
+# CHECK-NEXT:  -     172.00 75.83  117.33 16.00  98.83  66.00  66.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  	Instructions:
@@ -764,6 +769,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     1.00    -     0.50   0.50   	movlpd	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   	movlpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     	movmskpd	%xmm0, %ecx
+# CHECK-NEXT:  -      -      -      -     1.00    -     0.50   0.50   	movntil	%eax, (%rax)
+# CHECK-NEXT:  -      -      -      -     1.00    -     0.50   0.50   	movntiq	%rax, (%rax)
 # CHECK-NEXT:  -      -      -      -     1.00    -     0.50   0.50   	movntdq	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -     1.00    -     0.50   0.50   	movntpd	%xmm0, (%rax)
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     	movq	%xmm0, %xmm2

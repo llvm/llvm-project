@@ -3017,7 +3017,7 @@ defm : scalar_unary_math_patterns<int_x86_sse2_sqrt_sd, "SQRTSD", X86Movsd,
 
 let AddedComplexity = 400 in { // Prefer non-temporal versions
 let Predicates = [HasAVX, NoVLX] in {
-let SchedRW = [SchedWriteFMoveLS.XMM.MR] in {
+let SchedRW = [SchedWriteFMoveLSNT.XMM.MR] in {
 def VMOVNTPSmr : VPSI<0x2B, MRMDestMem, (outs),
                      (ins f128mem:$dst, VR128:$src),
                      "movntps\t{$src, $dst|$dst, $src}",
@@ -3030,7 +3030,7 @@ def VMOVNTPDmr : VPDI<0x2B, MRMDestMem, (outs),
                                                addr:$dst)]>, VEX, VEX_WIG;
 } // SchedRW
 
-let SchedRW = [SchedWriteFMoveLS.YMM.MR] in {
+let SchedRW = [SchedWriteFMoveLSNT.YMM.MR] in {
 def VMOVNTPSYmr : VPSI<0x2B, MRMDestMem, (outs),
                      (ins f256mem:$dst, VR256:$src),
                      "movntps\t{$src, $dst|$dst, $src}",
@@ -3049,17 +3049,17 @@ def VMOVNTDQmr    : VPDI<0xE7, MRMDestMem, (outs),
                          "movntdq\t{$src, $dst|$dst, $src}",
                          [(alignednontemporalstore (v2i64 VR128:$src),
                                                    addr:$dst)]>, VEX, VEX_WIG,
-                         Sched<[SchedWriteVecMoveLS.XMM.MR]>;
+                         Sched<[SchedWriteVecMoveLSNT.XMM.MR]>;
 def VMOVNTDQYmr : VPDI<0xE7, MRMDestMem, (outs),
                     (ins i256mem:$dst, VR256:$src),
                     "movntdq\t{$src, $dst|$dst, $src}",
                     [(alignednontemporalstore (v4i64 VR256:$src),
                                               addr:$dst)]>, VEX, VEX_L, VEX_WIG,
-                    Sched<[SchedWriteVecMoveLS.YMM.MR]>;
+                    Sched<[SchedWriteVecMoveLSNT.YMM.MR]>;
 } // ExeDomain
 } // Predicates
 
-let SchedRW = [SchedWriteFMoveLS.XMM.MR] in {
+let SchedRW = [SchedWriteFMoveLSNT.XMM.MR] in {
 def MOVNTPSmr : PSI<0x2B, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                     "movntps\t{$src, $dst|$dst, $src}",
                     [(alignednontemporalstore (v4f32 VR128:$src), addr:$dst)]>;
@@ -3068,12 +3068,12 @@ def MOVNTPDmr : PDI<0x2B, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                     [(alignednontemporalstore(v2f64 VR128:$src), addr:$dst)]>;
 } // SchedRW
 
-let ExeDomain = SSEPackedInt, SchedRW = [SchedWriteVecMoveLS.XMM.MR] in
+let ExeDomain = SSEPackedInt, SchedRW = [SchedWriteVecMoveLSNT.XMM.MR] in
 def MOVNTDQmr : PDI<0xE7, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                     "movntdq\t{$src, $dst|$dst, $src}",
                     [(alignednontemporalstore (v2i64 VR128:$src), addr:$dst)]>;
 
-let SchedRW = [WriteStore] in {
+let SchedRW = [WriteStoreNT] in {
 // There is no AVX form for instructions below this point
 def MOVNTImr : I<0xC3, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
                  "movnti{l}\t{$src, $dst|$dst, $src}",
@@ -6409,14 +6409,14 @@ let AddedComplexity = 400 in { // Prefer non-temporal versions
 let Predicates = [HasAVX, NoVLX] in
 def VMOVNTDQArm : SS48I<0x2A, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                         "vmovntdqa\t{$src, $dst|$dst, $src}", []>,
-                        Sched<[SchedWriteVecMoveLS.XMM.RM]>, VEX, VEX_WIG;
+                        Sched<[SchedWriteVecMoveLSNT.XMM.RM]>, VEX, VEX_WIG;
 let Predicates = [HasAVX2, NoVLX] in
 def VMOVNTDQAYrm : SS48I<0x2A, MRMSrcMem, (outs VR256:$dst), (ins i256mem:$src),
                          "vmovntdqa\t{$src, $dst|$dst, $src}", []>,
-                         Sched<[SchedWriteVecMoveLS.YMM.RM]>, VEX, VEX_L, VEX_WIG;
+                         Sched<[SchedWriteVecMoveLSNT.YMM.RM]>, VEX, VEX_L, VEX_WIG;
 def MOVNTDQArm : SS48I<0x2A, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                        "movntdqa\t{$src, $dst|$dst, $src}", []>,
-                       Sched<[SchedWriteVecMoveLS.XMM.RM]>;
+                       Sched<[SchedWriteVecMoveLSNT.XMM.RM]>;
 
 let Predicates = [HasAVX2, NoVLX] in {
   def : Pat<(v8f32 (alignednontemporalload addr:$src)),
@@ -6935,7 +6935,7 @@ def INSERTQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
 
 // Non-temporal (unaligned) scalar stores.
 let AddedComplexity = 400 in { // Prefer non-temporal versions
-let hasSideEffects = 0, mayStore = 1, SchedRW = [WriteStore] in {
+let hasSideEffects = 0, mayStore = 1, SchedRW = [SchedWriteFMoveLSNT.Scl.MR] in {
 def MOVNTSS : I<0x2B, MRMDestMem, (outs), (ins f32mem:$dst, VR128:$src),
                 "movntss\t{$src, $dst|$dst, $src}", []>, XS;
 

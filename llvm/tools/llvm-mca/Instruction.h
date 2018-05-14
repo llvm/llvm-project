@@ -269,6 +269,9 @@ struct InstrDesc {
   bool MayLoad;
   bool MayStore;
   bool HasSideEffects;
+
+  // A zero latency instruction doesn't consume any scheduler resources.
+  bool isZeroLatency() const { return !MaxLatency && Resources.empty(); }
 };
 
 /// An instruction dispatched to the out-of-order backend.

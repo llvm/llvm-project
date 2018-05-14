@@ -75,8 +75,10 @@ a:
         c.un.s    $fcc1, $f30, $f4     # CHECK: c.un.s    $fcc1, $f30, $f4        # encoding: [0x46,0x04,0xf1,0x31]
         ceil.l.d  $f1,$f3
         ceil.l.s  $f18,$f13
-        ceil.w.d  $f11,$f25
-        ceil.w.s  $f6,$f20
+        ceil.w.d  $f11,$f25            # CHECK: ceil.w.d  $f11, $f25 # encoding: [0x46,0x20,0xca,0xce]
+                                       # CHECK:                      # <MCInst #{{.*}} CEIL_W_D64
+        ceil.w.s  $f6,$f20             # CHECK: ceil.w.s  $f6, $f20  # encoding: [0x46,0x00,0xa1,0x8e]
+                                       # CHECK:                      # <MCInst #{{.*}} CEIL_W_S
         cfc1      $s1,$21
         ctc1      $a2,$26
         cvt.d.l   $f4,$f16             # CHECK: cvt.d.l $f4, $f16   # encoding: [0x46,0xa0,0x81,0x21]
@@ -156,8 +158,10 @@ a:
         eret
         floor.l.d $f26,$f7
         floor.l.s $f12,$f5
-        floor.w.d $f14,$f11
-        floor.w.s $f8,$f9
+        floor.w.d $f14,$f11            # CHECK: floor.w.d $f14, $f11      # encoding: [0x46,0x20,0x5b,0x8f]
+                                       # CHECK:                           # <MCInst #{{.*}} FLOOR_W_D64
+        floor.w.s $f8,$f9              # CHECK: floor.w.s $f8, $f9        # encoding: [0x46,0x00,0x4a,0x0f]
+                                       # CHECK:                           # <MCInst #{{.*}} FLOOR_W_S
         j         1f                   # CHECK: j .Ltmp0 # encoding: [0b000010AA,A,A,A]
                                        # CHECK:          #   fixup A - offset: 0, value: .Ltmp0, kind: fixup_Mips_26
         j         a                    # CHECK: j a     # encoding: [0b000010AA,A,A,A]
@@ -245,8 +249,10 @@ a:
         recip.s   $f3,$f30             # CHECK: recip.s $f3, $f30      # encoding: [0x46,0x00,0xf0,0xd5]
         round.l.d $f12,$f1
         round.l.s $f25,$f5
-        round.w.d $f6,$f4
-        round.w.s $f27,$f28
+        round.w.d $f6, $f4             # CHECK: round.w.d $f6, $f4     # encoding: [0x46,0x20,0x21,0x8c]
+                                       # CHECK:                        # <MCInst #{{.*}} ROUND_W_D64
+        round.w.s $f27,$f28            # CHECK: round.w.s $f27, $f28   # encoding: [0x46,0x00,0xe6,0xcc]
+                                       # CHECK:                        # <MCInst #{{.*}} ROUND_W_S
         rsqrt.s   $f0,$f4              # CHECK: rsqrt.s $f0, $f4       # encoding: [0x46,0x00,0x20,0x16]
         rsqrt.d   $f2,$f6              # CHECK: rsqrt.d $f2, $f6       # encoding: [0x46,0x20,0x30,0x96]
         s.s       $f2, 8($3)           # CHECK: swc1  $f2, 8($3)       # encoding: [0xe4,0x62,0x00,0x08]
@@ -368,7 +374,9 @@ a:
         trunc.l.d $f23,$f23            # CHECK: trunc.l.d $f23, $f23   # encoding: [0x46,0x20,0xbd,0xc9]
         trunc.l.s $f28,$f31            # CHECK: trunc.l.s $f28, $f31   # encoding: [0x46,0x00,0xff,0x09]
         trunc.w.d $f22,$f15            # CHECK: trunc.w.d $f22, $f15   # encoding: [0x46,0x20,0x7d,0x8d]
+                                       # CHECK: <MCInst #{{.*}} TRUNC_W_D64
         trunc.w.s $f28,$f30            # CHECK: trunc.w.s $f28, $f30   # encoding: [0x46,0x00,0xf7,0x0d]
+                                       # CHECK: <MCInst #{{.*}} TRUNC_W_S
         trunc.w.d $f4,$f6,$4           # CHECK: trunc.w.d $f4, $f6     # encoding: [0x46,0x20,0x31,0x0d]
         trunc.w.s $f4,$f6,$4           # CHECK: trunc.w.s $f4, $f6     # encoding: [0x46,0x00,0x31,0x0d]
         xor       $s2,$a0,$s8

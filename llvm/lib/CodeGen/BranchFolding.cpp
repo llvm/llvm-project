@@ -1915,8 +1915,12 @@ MachineBasicBlock::iterator findHoistingInsertPosAndDeps(MachineBasicBlock *MBB,
 
   if (Uses.empty())
     return Loc;
+  // If the terminator is the only instruction in the block and Uses is not
+  // empty (or we would have returned above), we can still safely hoist
+  // instructions just before the terminator as long as the Defs/Uses are not
+  // violated (which is checked in HoistCommonCodeInSuccs).
   if (Loc == MBB->begin())
-    return MBB->end();
+    return Loc;
 
   // The terminator is probably a conditional branch, try not to separate the
   // branch from condition setting instruction.

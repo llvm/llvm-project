@@ -143,9 +143,10 @@ multiclass ZnWriteResFpuPair<X86FoldableSchedWrite SchedRW,
 // operation in codegen
 def : WriteRes<WriteRMW, [ZnAGU]>;
 
-def : WriteRes<WriteStore, [ZnAGU]>;
-def : WriteRes<WriteMove,  [ZnALU]>;
-def : WriteRes<WriteLoad,  [ZnAGU]> { let Latency = 8; }
+def : WriteRes<WriteStore,   [ZnAGU]>;
+def : WriteRes<WriteStoreNT, [ZnAGU]>;
+def : WriteRes<WriteMove,    [ZnALU]>;
+def : WriteRes<WriteLoad,    [ZnAGU]> { let Latency = 8; }
 
 def : WriteRes<WriteZero,  []>;
 def : WriteRes<WriteLEA, [ZnALU]>;
@@ -197,6 +198,9 @@ defm : X86WriteRes<WriteFMaskedLoadY,  [ZnAGU,ZnFPU01], 8, [1,2], 2>;
 defm : X86WriteRes<WriteFStore,        [ZnAGU], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreX,       [ZnAGU], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreY,       [ZnAGU], 1, [1,1], 1>;
+defm : X86WriteRes<WriteFStoreNT,      [ZnAGU,ZnFPU2], 8, [1,1], 1>;
+defm : X86WriteRes<WriteFStoreNTX,     [ZnAGU], 1, [1,1], 1>;
+defm : X86WriteRes<WriteFStoreNTY,     [ZnAGU], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFMaskedStore,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
 defm : X86WriteRes<WriteFMaskedStoreY, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
 defm : X86WriteRes<WriteFMove,         [ZnFPU], 1, [1], 1>;
@@ -274,11 +278,15 @@ def  : WriteRes<WriteCvtF2FSt, [ZnFPU3, ZnAGU]>;
 defm : X86WriteRes<WriteVecLoad,         [ZnAGU], 8, [1], 1>;
 defm : X86WriteRes<WriteVecLoadX,        [ZnAGU], 8, [1], 1>;
 defm : X86WriteRes<WriteVecLoadY,        [ZnAGU], 8, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNT,       [ZnAGU], 8, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNTY,      [ZnAGU], 8, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [ZnAGU,ZnFPU01], 8, [1,2], 2>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [ZnAGU,ZnFPU01], 9, [1,3], 2>;
 defm : X86WriteRes<WriteVecStore,        [ZnAGU], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecStoreX,       [ZnAGU], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecStoreY,       [ZnAGU], 1, [1,1], 1>;
+defm : X86WriteRes<WriteVecStoreNT,      [ZnAGU], 1, [1,1], 1>;
+defm : X86WriteRes<WriteVecStoreNTY,     [ZnAGU], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecMaskedStore,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
 defm : X86WriteRes<WriteVecMove,         [ZnFPU], 1, [1], 1>;
@@ -1343,12 +1351,6 @@ def ZnWriteINSERTQ: SchedWriteRes<[ZnFPU03,ZnFPU1]> {
   let Latency = 4;
 }
 def : InstRW<[ZnWriteINSERTQ], (instregex "INSERTQ")>;
-
-// MOVNTSS/MOVNTSD
-def ZnWriteMOVNT: SchedWriteRes<[ZnAGU,ZnFPU2]> {
-  let Latency = 8;
-}
-def : InstRW<[ZnWriteMOVNT], (instregex "MOVNTS(S|D)")>;
 
 //-- SHA instructions --//
 // SHA256MSG2

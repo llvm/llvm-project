@@ -343,7 +343,7 @@ bool SymbolFilePDB::ParseCompileUnitSupportFiles(
     return false;
 
   while (auto file = files->getNext()) {
-    FileSpec spec(file->getFileName(), false, FileSpec::ePathSyntaxWindows);
+    FileSpec spec(file->getFileName(), false, FileSpec::Style::windows);
     support_files.AppendIfUnique(spec);
   }
   return true;
@@ -630,7 +630,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
         std::string source_file = compiland->getSourceFileFullPath();
         if (source_file.empty())
           continue;
-        FileSpec this_spec(source_file, false, FileSpec::ePathSyntaxWindows);
+        FileSpec this_spec(source_file, false, FileSpec::Style::windows);
         bool need_full_match = !file_spec.GetDirectory().IsEmpty();
         if (FileSpec::Compare(file_spec, this_spec, need_full_match) != 0)
           continue;

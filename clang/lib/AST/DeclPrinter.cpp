@@ -215,6 +215,8 @@ void DeclPrinter::prettyPrintAttributes(Decl *D) {
   if (D->hasAttrs()) {
     AttrVec &Attrs = D->getAttrs();
     for (auto *A : Attrs) {
+      if (A->isInherited())
+        continue;
       switch (A->getKind()) {
 #define ATTR(X)
 #define PRAGMA_SPELLING_ATTR(X) case attr::X:

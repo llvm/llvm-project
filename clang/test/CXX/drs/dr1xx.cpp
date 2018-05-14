@@ -71,8 +71,7 @@ namespace dr109 { // dr109: yes
     using T::template f<int>; // expected-error {{'template' keyword not permitted here}} expected-error {{using declaration cannot refer to a template specialization}}
     // FIXME: We shouldn't suggest using the 'template' keyword in a location where it's not valid.
     using T::f<int>; // expected-error {{use 'template' keyword}} expected-error {{using declaration cannot refer to a template specialization}}
-    // FIXME: The first 'using' above introduces 'f' as a non-template member of 'B', leading to bad recovery:
-    void g() { this->f<int>(123); } // expected-error {{expected '('}}
+    void g() { this->f<int>(123); } // expected-error {{use 'template' keyword}}
   };
 }
 

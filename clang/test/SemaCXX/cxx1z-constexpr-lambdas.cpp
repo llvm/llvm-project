@@ -6,7 +6,7 @@
 namespace test_lambda_is_literal {
 #ifdef CPP14_AND_EARLIER
 //expected-error@+4{{not a literal type}}
-//expected-note@+2{{not an aggregate and has no constexpr constructors}}
+//expected-note@+2{{lambda closure types are non-literal types before C++17}}
 #endif
 auto L = [] { };
 constexpr int foo(decltype(L) l) { return 0; }
