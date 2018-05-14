@@ -200,8 +200,8 @@ public:
   }
 
   void ReplaceNode(SDNode *Old, SDNode *New) {
-    DEBUG(dbgs() << " ... replacing: "; Old->dump(&DAG);
-          dbgs() << "     with:      "; New->dump(&DAG));
+    LLVM_DEBUG(dbgs() << " ... replacing: "; Old->dump(&DAG);
+               dbgs() << "     with:      "; New->dump(&DAG));
 
     assert(Old->getNumValues() == New->getNumValues() &&
            "Replacing one node with another that produces a different number "
@@ -213,8 +213,8 @@ public:
   }
 
   void ReplaceNode(SDValue Old, SDValue New) {
-    DEBUG(dbgs() << " ... replacing: "; Old->dump(&DAG);
-          dbgs() << "     with:      "; New->dump(&DAG));
+    LLVM_DEBUG(dbgs() << " ... replacing: "; Old->dump(&DAG);
+               dbgs() << "     with:      "; New->dump(&DAG));
 
     DAG.ReplaceAllUsesWith(Old, New);
     if (UpdatedNodes)
@@ -223,13 +223,12 @@ public:
   }
 
   void ReplaceNode(SDNode *Old, const SDValue *New) {
-    DEBUG(dbgs() << " ... replacing: "; Old->dump(&DAG));
+    LLVM_DEBUG(dbgs() << " ... replacing: "; Old->dump(&DAG));
 
     DAG.ReplaceAllUsesWith(Old, New);
     for (unsigned i = 0, e = Old->getNumValues(); i != e; ++i) {
-      DEBUG(dbgs() << (i == 0 ? "     with:      "
-                              : "      and:      ");
-            New[i]->dump(&DAG));
+      LLVM_DEBUG(dbgs() << (i == 0 ? "     with:      " : "      and:      ");
+                 New[i]->dump(&DAG));
       if (UpdatedNodes)
         UpdatedNodes->insert(New[i].getNode());
     }
@@ -408,7 +407,7 @@ SDValue SelectionDAGLegalize::ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val,
 }
 
 SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
-  DEBUG(dbgs() << "Optimizing float store operations\n");
+  LLVM_DEBUG(dbgs() << "Optimizing float store operations\n");
   // Turn 'store float 1.0, Ptr' -> 'store int 0x12345678, Ptr'
   // FIXME: We shouldn't do this for TargetConstantFP's.
   // FIXME: move this to the DAG Combiner!  Note that we can't regress due
@@ -477,7 +476,7 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
   AAMDNodes AAInfo = ST->getAAInfo();
 
   if (!ST->isTruncatingStore()) {
-    DEBUG(dbgs() << "Legalizing store operation\n");
+    LLVM_DEBUG(dbgs() << "Legalizing store operation\n");
     if (SDNode *OptStore = OptimizeFloatStore(ST).getNode()) {
       ReplaceNode(ST, OptStore);
       return;
@@ -495,15 +494,15 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
       unsigned Align = ST->getAlignment();
       const DataLayout &DL = DAG.getDataLayout();
       if (!TLI.allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Align)) {
-        DEBUG(dbgs() << "Expanding unsupported unaligned store\n");
+        LLVM_DEBUG(dbgs() << "Expanding unsupported unaligned store\n");
         SDValue Result = TLI.expandUnalignedStore(ST, DAG);
         ReplaceNode(SDValue(ST, 0), Result);
       } else
-        DEBUG(dbgs() << "Legal store\n");
+        LLVM_DEBUG(dbgs() << "Legal store\n");
       break;
     }
     case TargetLowering::Custom: {
-      DEBUG(dbgs() << "Trying custom lowering\n");
+      LLVM_DEBUG(dbgs() << "Trying custom lowering\n");
       SDValue Res = TLI.LowerOperation(SDValue(Node, 0), DAG);
       if (Res && Res != SDValue(Node, 0))
         ReplaceNode(SDValue(Node, 0), Res);
@@ -524,7 +523,7 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
     return;
   }
 
-  DEBUG(dbgs() << "Legalizing truncating store operations\n");
+  LLVM_DEBUG(dbgs() << "Legalizing truncating store operations\n");
   SDValue Value = ST->getValue();
   EVT StVT = ST->getMemoryVT();
   unsigned StWidth = StVT.getSizeInBits();
@@ -656,7 +655,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
   ISD::LoadExtType ExtType = LD->getExtensionType();
   if (ExtType == ISD::NON_EXTLOAD) {
-    DEBUG(dbgs() << "Legalizing non-extending load operation\n");
+    LLVM_DEBUG(dbgs() << "Legalizing non-extending load operation\n");
     MVT VT = Node->getSimpleValueType(0);
     SDValue RVal = SDValue(Node, 0);
     SDValue RChain = SDValue(Node, 1);
@@ -706,7 +705,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
     return;
   }
 
-  DEBUG(dbgs() << "Legalizing extending load operation\n");
+  LLVM_DEBUG(dbgs() << "Legalizing extending load operation\n");
   EVT SrcVT = LD->getMemoryVT();
   unsigned SrcWidth = SrcVT.getSizeInBits();
   unsigned Alignment = LD->getAlignment();
@@ -979,7 +978,7 @@ getStrictFPOpcodeAction(const TargetLowering &TLI, unsigned Opcode, EVT VT) {
 
 /// Return a legal replacement for the given operation, with all legal operands.
 void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
-  DEBUG(dbgs() << "\nLegalizing: "; Node->dump(&DAG));
+  LLVM_DEBUG(dbgs() << "\nLegalizing: "; Node->dump(&DAG));
 
   // Allow illegal target nodes and illegal registers.
   if (Node->getOpcode() == ISD::TargetConstant ||
@@ -1202,10 +1201,10 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     }
     switch (Action) {
     case TargetLowering::Legal:
-      DEBUG(dbgs() << "Legal node: nothing to do\n");
+      LLVM_DEBUG(dbgs() << "Legal node: nothing to do\n");
       return;
     case TargetLowering::Custom:
-      DEBUG(dbgs() << "Trying custom legalization\n");
+      LLVM_DEBUG(dbgs() << "Trying custom legalization\n");
       // FIXME: The handling for custom lowering with multiple results is
       // a complete mess.
       if (SDValue Res = TLI.LowerOperation(SDValue(Node, 0), DAG)) {
@@ -1213,7 +1212,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
           return;
 
         if (Node->getNumValues() == 1) {
-          DEBUG(dbgs() << "Successfully custom legalized node\n");
+          LLVM_DEBUG(dbgs() << "Successfully custom legalized node\n");
           // We can just directly replace this node with the lowered value.
           ReplaceNode(SDValue(Node, 0), Res);
           return;
@@ -1222,11 +1221,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
         SmallVector<SDValue, 8> ResultVals;
         for (unsigned i = 0, e = Node->getNumValues(); i != e; ++i)
           ResultVals.push_back(Res.getValue(i));
-        DEBUG(dbgs() << "Successfully custom legalized node\n");
+        LLVM_DEBUG(dbgs() << "Successfully custom legalized node\n");
         ReplaceNode(Node, ResultVals.data());
         return;
       }
-      DEBUG(dbgs() << "Could not custom legalize node\n");
+      LLVM_DEBUG(dbgs() << "Could not custom legalize node\n");
       LLVM_FALLTHROUGH;
     case TargetLowering::Expand:
       if (ExpandNode(Node))
@@ -2041,12 +2040,12 @@ SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
 
   if (!CallInfo.second.getNode()) {
-    DEBUG(dbgs() << "Created tailcall: "; DAG.getRoot().dump());
+    LLVM_DEBUG(dbgs() << "Created tailcall: "; DAG.getRoot().dump());
     // It's a tailcall, return the chain (which is the DAG root).
     return DAG.getRoot();
   }
 
-  DEBUG(dbgs() << "Created libcall: "; CallInfo.first.dump());
+  LLVM_DEBUG(dbgs() << "Created libcall: "; CallInfo.first.dump());
   return CallInfo.first;
 }
 
@@ -2332,10 +2331,10 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
                                                    EVT DestVT,
                                                    const SDLoc &dl) {
   // TODO: Should any fast-math-flags be set for the created nodes?
-  DEBUG(dbgs() << "Legalizing INT_TO_FP\n");
+  LLVM_DEBUG(dbgs() << "Legalizing INT_TO_FP\n");
   if (Op0.getValueType() == MVT::i32 && TLI.isTypeLegal(MVT::f64)) {
-    DEBUG(dbgs() << "32-bit [signed|unsigned] integer to float/double "
-                    "expansion\n");
+    LLVM_DEBUG(dbgs() << "32-bit [signed|unsigned] integer to float/double "
+                         "expansion\n");
 
     // Get the stack frame index of a 8 byte buffer.
     SDValue StackSlot = DAG.CreateStackTemporary(MVT::f64);
@@ -2400,7 +2399,7 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
   // and in all alternate rounding modes.
   // TODO: Generalize this for use with other types.
   if (Op0.getValueType() == MVT::i64 && DestVT == MVT::f64) {
-    DEBUG(dbgs() << "Converting unsigned i64 to f64\n");
+    LLVM_DEBUG(dbgs() << "Converting unsigned i64 to f64\n");
     SDValue TwoP52 =
       DAG.getConstant(UINT64_C(0x4330000000000000), dl, MVT::i64);
     SDValue TwoP84PlusTwoP52 =
@@ -2423,7 +2422,7 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
 
   // TODO: Generalize this for use with other types.
   if (Op0.getValueType() == MVT::i64 && DestVT == MVT::f32) {
-    DEBUG(dbgs() << "Converting unsigned i64 to f32\n");
+    LLVM_DEBUG(dbgs() << "Converting unsigned i64 to f32\n");
     // For unsigned conversions, convert them to signed conversions using the
     // algorithm from the x86_64 __floatundidf in compiler_rt.
     if (!isSigned) {
@@ -2858,7 +2857,7 @@ SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
 }
 
 bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
-  DEBUG(dbgs() << "Trying to expand node\n");
+  LLVM_DEBUG(dbgs() << "Trying to expand node\n");
   SmallVector<SDValue, 8> Results;
   SDLoc dl(Node);
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;
@@ -3316,7 +3315,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   case ISD::FP_TO_FP16:
-    DEBUG(dbgs() << "Legalizing FP_TO_FP16\n");
+    LLVM_DEBUG(dbgs() << "Legalizing FP_TO_FP16\n");
     if (!TLI.useSoftFloat() && TM.Options.UnsafeFPMath) {
       SDValue Op = Node->getOperand(0);
       MVT SVT = Op.getSimpleValueType();
@@ -3927,17 +3926,17 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
 
   // Replace the original node with the legalized result.
   if (Results.empty()) {
-    DEBUG(dbgs() << "Cannot expand node\n");
+    LLVM_DEBUG(dbgs() << "Cannot expand node\n");
     return false;
   }
 
-  DEBUG(dbgs() << "Succesfully expanded node\n");
+  LLVM_DEBUG(dbgs() << "Succesfully expanded node\n");
   ReplaceNode(Node, Results.data());
   return true;
 }
 
 void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
-  DEBUG(dbgs() << "Trying to convert node to libcall\n");
+  LLVM_DEBUG(dbgs() << "Trying to convert node to libcall\n");
   SmallVector<SDValue, 8> Results;
   SDLoc dl(Node);
   // FIXME: Check flags on the node to see if we can use a finite call.
@@ -4237,10 +4236,10 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
 
   // Replace the original node with the legalized result.
   if (!Results.empty()) {
-    DEBUG(dbgs() << "Successfully converted node to libcall\n");
+    LLVM_DEBUG(dbgs() << "Successfully converted node to libcall\n");
     ReplaceNode(Node, Results.data());
   } else
-    DEBUG(dbgs() << "Could not convert node to libcall\n");
+    LLVM_DEBUG(dbgs() << "Could not convert node to libcall\n");
 }
 
 // Determine the vector type to use in place of an original scalar element when
@@ -4254,7 +4253,7 @@ static MVT getPromotedVectorElementType(const TargetLowering &TLI,
 }
 
 void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
-  DEBUG(dbgs() << "Trying to promote node\n");
+  LLVM_DEBUG(dbgs() << "Trying to promote node\n");
   SmallVector<SDValue, 8> Results;
   MVT OVT = Node->getSimpleValueType(0);
   if (Node->getOpcode() == ISD::UINT_TO_FP ||
@@ -4692,10 +4691,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
 
   // Replace the original node with the legalized result.
   if (!Results.empty()) {
-    DEBUG(dbgs() << "Successfully promoted node\n");
+    LLVM_DEBUG(dbgs() << "Successfully promoted node\n");
     ReplaceNode(Node, Results.data());
   } else
-    DEBUG(dbgs() << "Could not promote node\n");
+    LLVM_DEBUG(dbgs() << "Could not promote node\n");
 }
 
 /// This is the entry point for the file.

@@ -104,14 +104,14 @@ class RegisterFile {
 
   // Allocates register mappings in register file specified by the
   // IndexPlusCostPairTy object. This method is called from addRegisterMapping.
-  void createNewMappings(IndexPlusCostPairTy IPC,
-                         llvm::MutableArrayRef<unsigned> UsedPhysRegs);
+  void allocatePhysRegs(IndexPlusCostPairTy IPC,
+                        llvm::MutableArrayRef<unsigned> UsedPhysRegs);
 
   // Removes a previously allocated mapping from the register file referenced
   // by the IndexPlusCostPairTy object. This method is called from
   // invalidateRegisterMapping.
-  void removeMappings(IndexPlusCostPairTy IPC,
-                      llvm::MutableArrayRef<unsigned> FreedPhysRegs);
+  void freePhysRegs(IndexPlusCostPairTy IPC,
+                    llvm::MutableArrayRef<unsigned> FreedPhysRegs);
 
   // Create an instance of RegisterMappingTracker for every register file
   // specified by the processor model.
@@ -126,17 +126,21 @@ public:
     initialize(SM, NumRegs);
   }
 
-  // Creates a new register mapping for RegID.
-  // This reserves a microarchitectural register in every register file that
-  // contains RegID.
-  void addRegisterMapping(WriteState &WS,
-                          llvm::MutableArrayRef<unsigned> UsedPhysRegs);
+  // This method updates the data dependency graph by inserting a new register
+  // definition. This method is also responsible for updating the number of used
+  // physical registers in the register file(s). The number of physical
+  // registers is updated only if flag ShouldAllocatePhysRegs is set.
+  void addRegisterWrite(WriteState &WS,
+                        llvm::MutableArrayRef<unsigned> UsedPhysRegs,
+                        bool ShouldAllocatePhysRegs = true);
 
-  // Invalidates register mappings associated to the input WriteState object.
-  // This releases previously allocated mappings for the physical register
-  // associated to the WriteState.
-  void invalidateRegisterMapping(const WriteState &WS,
-                                 llvm::MutableArrayRef<unsigned> FreedPhysRegs);
+  // Updates the data dependency graph by removing a write. It also updates the
+  // internal state of the register file(s) by freeing physical registers.
+  // The number of physical registers is updated only if flag ShouldFreePhysRegs
+  // is set.
+  void removeRegisterWrite(const WriteState &WS,
+                           llvm::MutableArrayRef<unsigned> FreedPhysRegs,
+                           bool ShouldFreePhysRegs = true);
 
   // Checks if there are enough microarchitectural registers in the register
   // files.  Returns a "response mask" where each bit is the response from a

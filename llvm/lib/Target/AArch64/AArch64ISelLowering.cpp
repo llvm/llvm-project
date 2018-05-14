@@ -1442,7 +1442,8 @@ static void changeVectorFPCCToAArch64CC(ISD::CondCode CC,
 static bool isLegalArithImmed(uint64_t C) {
   // Matches AArch64DAGToDAGISel::SelectArithImmed().
   bool IsLegal = (C >> 12 == 0) || ((C & 0xFFFULL) == 0 && C >> 24 == 0);
-  DEBUG(dbgs() << "Is imm " << C << " legal: " << (IsLegal ? "yes\n" : "no\n"));
+  LLVM_DEBUG(dbgs() << "Is imm " << C
+                    << " legal: " << (IsLegal ? "yes\n" : "no\n"));
   return IsLegal;
 }
 
@@ -2644,8 +2645,8 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
-  DEBUG(dbgs() << "Custom lowering: ");
-  DEBUG(Op.dump());
+  LLVM_DEBUG(dbgs() << "Custom lowering: ");
+  LLVM_DEBUG(Op.dump());
 
   switch (Op.getOpcode()) {
   default:
@@ -3774,7 +3775,7 @@ SDValue AArch64TargetLowering::getTargetNode(BlockAddressSDNode* N, EVT Ty,
 template <class NodeTy>
 SDValue AArch64TargetLowering::getGOT(NodeTy *N, SelectionDAG &DAG,
                                       unsigned Flags) const {
-  DEBUG(dbgs() << "AArch64TargetLowering::getGOT\n");
+  LLVM_DEBUG(dbgs() << "AArch64TargetLowering::getGOT\n");
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   SDValue GotAddr = getTargetNode(N, Ty, DAG, AArch64II::MO_GOT | Flags);
@@ -3787,7 +3788,7 @@ SDValue AArch64TargetLowering::getGOT(NodeTy *N, SelectionDAG &DAG,
 template <class NodeTy>
 SDValue AArch64TargetLowering::getAddrLarge(NodeTy *N, SelectionDAG &DAG,
                                             unsigned Flags) const {
-  DEBUG(dbgs() << "AArch64TargetLowering::getAddrLarge\n");
+  LLVM_DEBUG(dbgs() << "AArch64TargetLowering::getAddrLarge\n");
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   const unsigned char MO_NC = AArch64II::MO_NC;
@@ -3803,7 +3804,7 @@ SDValue AArch64TargetLowering::getAddrLarge(NodeTy *N, SelectionDAG &DAG,
 template <class NodeTy>
 SDValue AArch64TargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
                                        unsigned Flags) const {
-  DEBUG(dbgs() << "AArch64TargetLowering::getAddr\n");
+  LLVM_DEBUG(dbgs() << "AArch64TargetLowering::getAddr\n");
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   SDValue Hi = getTargetNode(N, Ty, DAG, AArch64II::MO_PAGE | Flags);
@@ -5073,7 +5074,8 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   // FIXME: We should be able to handle f128 as well with a clever lowering.
   if (Imm.isPosZero() && (VT == MVT::f64 || VT == MVT::f32 ||
                           (VT == MVT::f16 && Subtarget->hasFullFP16()))) {
-    DEBUG(dbgs() << "Legal fp imm: materialize 0 using the zero register\n");
+    LLVM_DEBUG(
+        dbgs() << "Legal fp imm: materialize 0 using the zero register\n");
     return true;
   }
 
@@ -5094,14 +5096,17 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   }
 
   if (IsLegal) {
-    DEBUG(dbgs() << "Legal " << FPType << " imm value: " << ImmStrVal << "\n");
+    LLVM_DEBUG(dbgs() << "Legal " << FPType << " imm value: " << ImmStrVal
+                      << "\n");
     return true;
   }
 
   if (!FPType.empty())
-    DEBUG(dbgs() << "Illegal " << FPType << " imm value: " << ImmStrVal << "\n");
+    LLVM_DEBUG(dbgs() << "Illegal " << FPType << " imm value: " << ImmStrVal
+                      << "\n");
   else
-    DEBUG(dbgs() << "Illegal fp imm " << ImmStrVal << ": unsupported fp type\n");
+    LLVM_DEBUG(dbgs() << "Illegal fp imm " << ImmStrVal
+                      << ": unsupported fp type\n");
 
   return false;
 }
@@ -5540,7 +5545,7 @@ static SDValue NarrowVector(SDValue V128Reg, SelectionDAG &DAG) {
 SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
                                                   SelectionDAG &DAG) const {
   assert(Op.getOpcode() == ISD::BUILD_VECTOR && "Unknown opcode!");
-  DEBUG(dbgs() << "AArch64TargetLowering::ReconstructShuffle\n");
+  LLVM_DEBUG(dbgs() << "AArch64TargetLowering::ReconstructShuffle\n");
   SDLoc dl(Op);
   EVT VT = Op.getValueType();
   unsigned NumElts = VT.getVectorNumElements();
@@ -5576,10 +5581,11 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
       continue;
     else if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
              !isa<ConstantSDNode>(V.getOperand(1))) {
-      DEBUG(dbgs() << "Reshuffle failed: "
-                      "a shuffle can only come from building a vector from "
-                      "various elements of other vectors, provided their "
-                      "indices are constant\n");
+      LLVM_DEBUG(
+          dbgs() << "Reshuffle failed: "
+                    "a shuffle can only come from building a vector from "
+                    "various elements of other vectors, provided their "
+                    "indices are constant\n");
       return SDValue();
     }
 
@@ -5596,8 +5602,9 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
   }
 
   if (Sources.size() > 2) {
-    DEBUG(dbgs() << "Reshuffle failed: currently only do something sane when at "
-                    "most two source vectors are involved\n");
+    LLVM_DEBUG(
+        dbgs() << "Reshuffle failed: currently only do something sane when at "
+                  "most two source vectors are involved\n");
     return SDValue();
   }
 
@@ -5643,7 +5650,8 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     assert(SrcVT.getSizeInBits() == 2 * VT.getSizeInBits());
 
     if (Src.MaxElt - Src.MinElt >= NumSrcElts) {
-      DEBUG(dbgs() << "Reshuffle failed: span too large for a VEXT to cope\n");
+      LLVM_DEBUG(
+          dbgs() << "Reshuffle failed: span too large for a VEXT to cope\n");
       return SDValue();
     }
 
@@ -5689,10 +5697,9 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
   }
 
   // Final sanity check before we try to actually produce a shuffle.
-  DEBUG(
-    for (auto Src : Sources)
-      assert(Src.ShuffleVec.getValueType() == ShuffleVT);
-  );
+  LLVM_DEBUG(for (auto Src
+                  : Sources)
+                 assert(Src.ShuffleVec.getValueType() == ShuffleVT););
 
   // The stars all align, our next step is to produce the mask for the shuffle.
   SmallVector<int, 8> Mask(ShuffleVT.getVectorNumElements(), -1);
@@ -5725,7 +5732,7 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
 
   // Final check before we try to produce nonsense...
   if (!isShuffleMaskLegal(Mask, ShuffleVT)) {
-    DEBUG(dbgs() << "Reshuffle failed: illegal shuffle mask\n");
+    LLVM_DEBUG(dbgs() << "Reshuffle failed: illegal shuffle mask\n");
     return SDValue();
   }
 
@@ -5737,12 +5744,8 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
                                          ShuffleOps[1], Mask);
   SDValue V = DAG.getNode(ISD::BITCAST, dl, VT, Shuffle);
 
-  DEBUG(
-    dbgs() << "Reshuffle, creating node: ";
-    Shuffle.dump();
-    dbgs() << "Reshuffle, creating node: ";
-    V.dump();
-  );
+  LLVM_DEBUG(dbgs() << "Reshuffle, creating node: "; Shuffle.dump();
+             dbgs() << "Reshuffle, creating node: "; V.dump(););
 
   return V;
 }
@@ -6699,10 +6702,10 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
                   DAG.getConstant(Intrin, DL, MVT::i32), X, Y,
                   Shift.getOperand(1));
 
-  DEBUG(dbgs() << "aarch64-lower: transformed: \n");
-  DEBUG(N->dump(&DAG));
-  DEBUG(dbgs() << "into: \n");
-  DEBUG(ResultSLI->dump(&DAG));
+  LLVM_DEBUG(dbgs() << "aarch64-lower: transformed: \n");
+  LLVM_DEBUG(N->dump(&DAG));
+  LLVM_DEBUG(dbgs() << "into: \n");
+  LLVM_DEBUG(ResultSLI->dump(&DAG));
 
   ++NumShiftInserts;
   return ResultSLI;
@@ -6889,13 +6892,14 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   }
 
   if (!Value.getNode()) {
-    DEBUG(dbgs() << "LowerBUILD_VECTOR: value undefined, creating undef node\n");
+    LLVM_DEBUG(
+        dbgs() << "LowerBUILD_VECTOR: value undefined, creating undef node\n");
     return DAG.getUNDEF(VT);
   }
 
   if (isOnlyLowElement) {
-    DEBUG(dbgs() << "LowerBUILD_VECTOR: only low element used, creating 1 "
-                    "SCALAR_TO_VECTOR node\n");
+    LLVM_DEBUG(dbgs() << "LowerBUILD_VECTOR: only low element used, creating 1 "
+                         "SCALAR_TO_VECTOR node\n");
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Value);
   }
 
@@ -6966,7 +6970,8 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (!isConstant) {
       if (Value.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
           Value.getValueType() != VT) {
-        DEBUG(dbgs() << "LowerBUILD_VECTOR: use DUP for non-constant splats\n");
+        LLVM_DEBUG(
+            dbgs() << "LowerBUILD_VECTOR: use DUP for non-constant splats\n");
         return DAG.getNode(AArch64ISD::DUP, dl, VT, Value);
       }
 
@@ -6975,8 +6980,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       SDValue Lane = Value.getOperand(1);
       Value = Value.getOperand(0);
       if (Value.getValueSizeInBits() == 64) {
-        DEBUG(dbgs() << "LowerBUILD_VECTOR: DUPLANE works on 128-bit vectors, "
-                        "widening it\n");
+        LLVM_DEBUG(
+            dbgs() << "LowerBUILD_VECTOR: DUPLANE works on 128-bit vectors, "
+                      "widening it\n");
         Value = WidenVector(Value, DAG);
       }
 
@@ -6989,17 +6995,16 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       EVT EltTy = VT.getVectorElementType();
       assert ((EltTy == MVT::f16 || EltTy == MVT::f32 || EltTy == MVT::f64) &&
               "Unsupported floating-point vector type");
-      DEBUG(dbgs() << "LowerBUILD_VECTOR: float constant splats, creating int "
-                      "BITCASTS, and try again\n");
+      LLVM_DEBUG(
+          dbgs() << "LowerBUILD_VECTOR: float constant splats, creating int "
+                    "BITCASTS, and try again\n");
       MVT NewType = MVT::getIntegerVT(EltTy.getSizeInBits());
       for (unsigned i = 0; i < NumElts; ++i)
         Ops.push_back(DAG.getNode(ISD::BITCAST, dl, NewType, Op.getOperand(i)));
       EVT VecVT = EVT::getVectorVT(*DAG.getContext(), NewType, NumElts);
       SDValue Val = DAG.getBuildVector(VecVT, dl, Ops);
-      DEBUG(
-        dbgs() << "LowerBUILD_VECTOR: trying to lower new vector: ";
-        Val.dump();
-      );
+      LLVM_DEBUG(dbgs() << "LowerBUILD_VECTOR: trying to lower new vector: ";
+                 Val.dump(););
       Val = LowerBUILD_VECTOR(Val, DAG);
       if (Val.getNode())
         return DAG.getNode(ISD::BITCAST, dl, VT, Val);
@@ -7034,8 +7039,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
   // This will generate a load from the constant pool.
   if (isConstant) {
-    DEBUG(dbgs() << "LowerBUILD_VECTOR: all elements are constant, use default "
-                    "expansion\n");
+    LLVM_DEBUG(
+        dbgs() << "LowerBUILD_VECTOR: all elements are constant, use default "
+                  "expansion\n");
     return SDValue();
   }
 
@@ -7052,8 +7058,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // shuffle is valid for the target) and materialization element by element
   // on the stack followed by a load for everything else.
   if (!isConstant && !usesOnlyOneValue) {
-    DEBUG(dbgs() << "LowerBUILD_VECTOR: alternatives failed, creating sequence "
-                    "of INSERT_VECTOR_ELT\n");
+    LLVM_DEBUG(
+        dbgs() << "LowerBUILD_VECTOR: alternatives failed, creating sequence "
+                  "of INSERT_VECTOR_ELT\n");
 
     SDValue Vec = DAG.getUNDEF(VT);
     SDValue Op0 = Op.getOperand(0);
@@ -7070,14 +7077,12 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // extended (i32) and it is safe to cast them to the vector type by ignoring
     // the upper bits of the lowest lane (e.g. v8i8, v4i16).
     if (!Op0.isUndef()) {
-      DEBUG(dbgs() << "Creating node for op0, it is not undefined:\n");
+      LLVM_DEBUG(dbgs() << "Creating node for op0, it is not undefined:\n");
       Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op0);
       ++i;
     }
-    DEBUG(
-      if (i < NumElts)
-        dbgs() << "Creating nodes for the other vector elements:\n";
-    );
+    LLVM_DEBUG(if (i < NumElts) dbgs()
+                   << "Creating nodes for the other vector elements:\n";);
     for (; i < NumElts; ++i) {
       SDValue V = Op.getOperand(i);
       if (V.isUndef())
@@ -7088,8 +7093,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     return Vec;
   }
 
-  DEBUG(dbgs() << "LowerBUILD_VECTOR: use default expansion, failed to find "
-                  "better alternative\n");
+  LLVM_DEBUG(
+      dbgs() << "LowerBUILD_VECTOR: use default expansion, failed to find "
+                "better alternative\n");
   return SDValue();
 }
 
@@ -8216,15 +8222,16 @@ EVT AArch64TargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
 // 12-bit optionally shifted immediates are legal for adds.
 bool AArch64TargetLowering::isLegalAddImmediate(int64_t Immed) const {
   if (Immed == std::numeric_limits<int64_t>::min()) {
-    DEBUG(dbgs() << "Illegal add imm " << Immed << ": avoid UB for INT64_MIN\n");
+    LLVM_DEBUG(dbgs() << "Illegal add imm " << Immed
+                      << ": avoid UB for INT64_MIN\n");
     return false;
   }
   // Same encoding for add/sub, just flip the sign.
   Immed = std::abs(Immed);
   bool IsLegal = ((Immed >> 12) == 0 ||
                   ((Immed & 0xfff) == 0 && Immed >> 24 == 0));
-  DEBUG(dbgs() << "Is " << Immed << " legal add imm: " <<
-        (IsLegal ? "yes" : "no") << "\n");
+  LLVM_DEBUG(dbgs() << "Is " << Immed
+                    << " legal add imm: " << (IsLegal ? "yes" : "no") << "\n");
   return IsLegal;
 }
 
@@ -9028,7 +9035,8 @@ static SDValue performBitcastCombine(SDNode *N,
       SVT.getVectorNumElements() != VT.getVectorNumElements() * 2)
     return SDValue();
 
-  DEBUG(dbgs() << "aarch64-lower: bitcast extract_subvector simplification\n");
+  LLVM_DEBUG(
+      dbgs() << "aarch64-lower: bitcast extract_subvector simplification\n");
 
   // Create the simplified form to just extract the low or high half of the
   // vector directly rather than bothering with the bitcasts.
@@ -9116,7 +9124,8 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   if (!RHSTy.isVector())
     return SDValue();
 
-  DEBUG(dbgs() << "aarch64-lower: concat_vectors bitcast simplification\n");
+  LLVM_DEBUG(
+      dbgs() << "aarch64-lower: concat_vectors bitcast simplification\n");
 
   MVT ConcatTy = MVT::getVectorVT(RHSTy.getVectorElementType(),
                                   RHSTy.getVectorNumElements() * 2);
@@ -10758,7 +10767,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   switch (N->getOpcode()) {
   default:
-    DEBUG(dbgs() << "Custom combining: skipping\n");
+    LLVM_DEBUG(dbgs() << "Custom combining: skipping\n");
     break;
   case ISD::ADD:
   case ISD::SUB:

@@ -169,8 +169,8 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   if (!EnableCmovConverter)
     return false;
 
-  DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
-               << "**********\n");
+  LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
+                    << "**********\n");
 
   bool Changed = false;
   MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
@@ -776,7 +776,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     auto *NewCMOV = NewMIs.pop_back_val();
     assert(X86::getCondFromCMovOpc(NewCMOV->getOpcode()) == OppCC &&
            "Last new instruction isn't the expected CMOV!");
-    DEBUG(dbgs() << "\tRewritten cmov: "; NewCMOV->dump());
+    LLVM_DEBUG(dbgs() << "\tRewritten cmov: "; NewCMOV->dump());
     MBB->insert(MachineBasicBlock::iterator(MI), NewCMOV);
     if (&*MIItBegin == &MI)
       MIItBegin = MachineBasicBlock::iterator(NewCMOV);
@@ -784,7 +784,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     // Sink whatever instructions were needed to produce the unfolded operand
     // into the false block.
     for (auto *NewMI : NewMIs) {
-      DEBUG(dbgs() << "\tRewritten load instr: "; NewMI->dump());
+      LLVM_DEBUG(dbgs() << "\tRewritten load instr: "; NewMI->dump());
       FalseMBB->insert(FalseInsertionPoint, NewMI);
       // Re-map any operands that are from other cmovs to the inputs for this block.
       for (auto &MOp : NewMI->uses()) {
@@ -846,8 +846,8 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
               .addReg(Op2Reg)
               .addMBB(MBB);
     (void)MIB;
-    DEBUG(dbgs() << "\tFrom: "; MIIt->dump());
-    DEBUG(dbgs() << "\tTo: "; MIB->dump());
+    LLVM_DEBUG(dbgs() << "\tFrom: "; MIIt->dump());
+    LLVM_DEBUG(dbgs() << "\tTo: "; MIB->dump());
 
     // Add this PHI to the rewrite table.
     RegRewriteTable[DestReg] = std::make_pair(Op1Reg, Op2Reg);

@@ -90,7 +90,7 @@ bool MachineRegionInfoPass::runOnMachineFunction(MachineFunction &F) {
 
   RI.recalculate(F, DT, PDT, DF);
 
-  DEBUG(RI.dump());
+  LLVM_DEBUG(RI.dump());
 
   return false;
 }

@@ -1231,11 +1231,6 @@ defm VBROADCASTSS  : avx512_fp_broadcast_ss<0x18, "vbroadcastss",
 defm VBROADCASTSD  : avx512_fp_broadcast_sd<0x19, "vbroadcastsd",
                                        avx512vl_f64_info>, VEX_W;
 
-def : Pat<(int_x86_avx512_vbroadcast_ss_512 addr:$src),
-          (VBROADCASTSSZm addr:$src)>;
-def : Pat<(int_x86_avx512_vbroadcast_sd_512 addr:$src),
-          (VBROADCASTSDZm addr:$src)>;
-
 multiclass avx512_int_broadcast_reg<bits<8> opc, SchedWrite SchedRR,
                                     X86VectorVTInfo _, SDPatternOperator OpNode,
                                     RegisterClass SrcRC> {
@@ -4378,11 +4373,11 @@ multiclass avx512_movnt_vl<bits<8> opc, string OpcodeStr,
 }
 
 defm VMOVNTDQ : avx512_movnt_vl<0xE7, "vmovntdq", avx512vl_i64_info,
-                                SchedWriteVecMoveLS>, PD;
+                                SchedWriteVecMoveLSNT>, PD;
 defm VMOVNTPD : avx512_movnt_vl<0x2B, "vmovntpd", avx512vl_f64_info,
-                                SchedWriteFMoveLS>, PD, VEX_W;
+                                SchedWriteFMoveLSNT>, PD, VEX_W;
 defm VMOVNTPS : avx512_movnt_vl<0x2B, "vmovntps", avx512vl_f32_info,
-                                SchedWriteFMoveLS>, PS;
+                                SchedWriteFMoveLSNT>, PS;
 
 let Predicates = [HasAVX512], AddedComplexity = 400 in {
   def : Pat<(alignednontemporalstore (v16i32 VR512:$src), addr:$dst),

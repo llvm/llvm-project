@@ -112,7 +112,7 @@ static unsigned getCmpForPseudo(MachineInstr *MI) {
 }
 
 void ARCBranchFinalize::replaceWithBRcc(MachineInstr *MI) const {
-  DEBUG(dbgs() << "Replacing pseudo branch with BRcc\n");
+  LLVM_DEBUG(dbgs() << "Replacing pseudo branch with BRcc\n");
   unsigned CC = getCCForBRcc(MI->getOperand(3).getImm());
   if (CC != -1U) {
     BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
@@ -128,8 +128,8 @@ void ARCBranchFinalize::replaceWithBRcc(MachineInstr *MI) const {
 }
 
 void ARCBranchFinalize::replaceWithCmpBcc(MachineInstr *MI) const {
-  DEBUG(dbgs() << "Branch: " << *MI << "\n");
-  DEBUG(dbgs() << "Replacing pseudo branch with Cmp + Bcc\n");
+  LLVM_DEBUG(dbgs() << "Branch: " << *MI << "\n");
+  LLVM_DEBUG(dbgs() << "Replacing pseudo branch with Cmp + Bcc\n");
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII->get(getCmpForPseudo(MI)))
       .addReg(MI->getOperand(1).getReg())
@@ -141,8 +141,8 @@ void ARCBranchFinalize::replaceWithCmpBcc(MachineInstr *MI) const {
 }
 
 bool ARCBranchFinalize::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "Running ARC Branch Finalize on "
-               << MF.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Running ARC Branch Finalize on " << MF.getName()
+                    << "\n");
   std::vector<MachineInstr *> Branches;
   bool Changed = false;
   unsigned MaxSize = 0;
@@ -156,7 +156,7 @@ bool ARCBranchFinalize::runOnMachineFunction(MachineFunction &MF) {
     for (auto &MI : MBB) {
       unsigned Size = TII->getInstSizeInBytes(MI);
       if (Size > 8 || Size == 0) {
-        DEBUG(dbgs() << "Unknown (or size 0) size for: " << MI << "\n");
+        LLVM_DEBUG(dbgs() << "Unknown (or size 0) size for: " << MI << "\n");
       } else {
         MaxSize += Size;
       }
@@ -172,8 +172,8 @@ bool ARCBranchFinalize::runOnMachineFunction(MachineFunction &MF) {
       isInt<9>(MaxSize) ? replaceWithBRcc(P.first) : replaceWithCmpBcc(P.first);
   }
 
-  DEBUG(dbgs() << "Estimated function size for " << MF.getName()
-               << ": " << MaxSize << "\n");
+  LLVM_DEBUG(dbgs() << "Estimated function size for " << MF.getName() << ": "
+                    << MaxSize << "\n");
 
   return Changed;
 }

@@ -66,9 +66,9 @@ FunctionPass *llvm::createWebAssemblyOptimizeLiveIntervals() {
 }
 
 bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "********** Optimize LiveIntervals **********\n"
-                  "********** Function: "
-               << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** Optimize LiveIntervals **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   LiveIntervals &LIS = getAnalysis<LiveIntervals>();

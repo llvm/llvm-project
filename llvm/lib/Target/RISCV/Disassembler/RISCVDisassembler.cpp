@@ -258,14 +258,15 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   // It's a 32 bit instruction if bit 0 and 1 are 1.
   if ((Bytes[0] & 0x3) == 0x3) {
     Insn = support::endian::read32le(Bytes.data());
-    DEBUG(dbgs() << "Trying RISCV32 table :\n");
+    LLVM_DEBUG(dbgs() << "Trying RISCV32 table :\n");
     Result = decodeInstruction(DecoderTable32, MI, Insn, Address, this, STI);
     Size = 4;
   } else {
     Insn = support::endian::read16le(Bytes.data());
 
     if (!STI.getFeatureBits()[RISCV::Feature64Bit]) {
-      DEBUG(dbgs() << "Trying RISCV32Only_16 table (16-bit Instruction):\n");
+      LLVM_DEBUG(
+          dbgs() << "Trying RISCV32Only_16 table (16-bit Instruction):\n");
       // Calling the auto-generated decoder function.
       Result = decodeInstruction(DecoderTableRISCV32Only_16, MI, Insn, Address,
                                  this, STI);
@@ -275,7 +276,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       }
     }
 
-    DEBUG(dbgs() << "Trying RISCV_C table (16-bit Instruction):\n");
+    LLVM_DEBUG(dbgs() << "Trying RISCV_C table (16-bit Instruction):\n");
     // Calling the auto-generated decoder function.
     Result = decodeInstruction(DecoderTable16, MI, Insn, Address, this, STI);
     Size = 2;

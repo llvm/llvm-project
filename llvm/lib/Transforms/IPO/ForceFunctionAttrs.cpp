@@ -75,8 +75,8 @@ static void addForcedAttributes(Function &F) {
 
     auto Kind = parseAttrKind(KV.second);
     if (Kind == Attribute::None) {
-      DEBUG(dbgs() << "ForcedAttribute: " << KV.second
-                   << " unknown or not handled!\n");
+      LLVM_DEBUG(dbgs() << "ForcedAttribute: " << KV.second
+                        << " unknown or not handled!\n");
       continue;
     }
     if (F.hasFnAttribute(Kind))

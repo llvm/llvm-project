@@ -91,7 +91,7 @@ bool X86RetpolineThunks::doInitialization(Module &M) {
 }
 
 bool X86RetpolineThunks::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << getPassName() << '\n');
+  LLVM_DEBUG(dbgs() << getPassName() << '\n');
 
   TM = &MF.getTarget();;
   STI = &MF.getSubtarget<X86Subtarget>();

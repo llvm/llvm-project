@@ -143,15 +143,16 @@ public:
 
     auto Stub = Stubs.find(OriginalRelValueRef);
     if (Stub == Stubs.end()) {
-      DEBUG(dbgs() << " Create a new stub function for " << TargetName.data()
-                   << "\n");
+      LLVM_DEBUG(dbgs() << " Create a new stub function for "
+                        << TargetName.data() << "\n");
 
       StubOffset = Section.getStubOffset();
       Stubs[OriginalRelValueRef] = StubOffset;
       createStubFunction(Section.getAddressWithOffset(StubOffset));
       Section.advanceStubOffset(getMaxStubSize());
     } else {
-      DEBUG(dbgs() << " Stub function found for " << TargetName.data() << "\n");
+      LLVM_DEBUG(dbgs() << " Stub function found for " << TargetName.data()
+                        << "\n");
       StubOffset = Stub->second;
     }
 
@@ -232,9 +233,9 @@ public:
       break;
     }
 
-    DEBUG(dbgs() << "\t\tIn Section " << SectionID << " Offset " << Offset
-                 << " RelType: " << RelType << " TargetName: " << TargetName
-                 << " Addend " << Addend << "\n");
+    LLVM_DEBUG(dbgs() << "\t\tIn Section " << SectionID << " Offset " << Offset
+                      << " RelType: " << RelType << " TargetName: "
+                      << TargetName << " Addend " << Addend << "\n");
 
     if (IsExtern) {
       RelocationEntry RE(SectionID, Offset, RelType, Addend);

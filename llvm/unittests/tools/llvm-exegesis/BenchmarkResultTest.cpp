@@ -57,7 +57,7 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   {
     // Vector version.
     const auto FromDiskVector = InstructionBenchmark::readYamlsOrDie(Filename);
-    ASSERT_EQ(FromDiskVector.size(), 1);
+    ASSERT_EQ(FromDiskVector.size(), size_t{1});
     const auto FromDisk = FromDiskVector[0];
     EXPECT_EQ(FromDisk.AsmTmpl.Name, ToDisk.AsmTmpl.Name);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);

@@ -405,9 +405,10 @@ bool TruncInstCombine::run(Function &F) {
     CurrentTruncInst = Worklist.pop_back_val();
 
     if (Type *NewDstSclTy = getBestTruncatedType()) {
-      DEBUG(dbgs() << "ICE: TruncInstCombine reducing type of expression dag "
-                      "dominated by: "
-                   << CurrentTruncInst << '\n');
+      LLVM_DEBUG(
+          dbgs() << "ICE: TruncInstCombine reducing type of expression dag "
+                    "dominated by: "
+                 << CurrentTruncInst << '\n');
       ReduceExpressionDag(NewDstSclTy);
       MadeIRChange = true;
     }

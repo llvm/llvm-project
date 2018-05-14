@@ -254,7 +254,7 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
                                  RegScavenger *RS) const {
   if (MI.getOpcode() == FrameSetupOpcode ||
       MI.getOpcode() == FrameDestroyOpcode) {
-    DEBUG(dbgs() << "Frame instruction: " << MI << '\n');
+    LLVM_DEBUG(dbgs() << "Frame instruction: " << MI << '\n');
     return true;
   }
   for (const MachineOperand &MO : MI.operands()) {
@@ -286,8 +286,8 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
     }
     // Skip FrameIndex operands in DBG_VALUE instructions.
     if (UseOrDefCSR || (MO.isFI() && !MI.isDebugValue())) {
-      DEBUG(dbgs() << "Use or define CSR(" << UseOrDefCSR << ") or FI("
-                   << MO.isFI() << "): " << MI << '\n');
+      LLVM_DEBUG(dbgs() << "Use or define CSR(" << UseOrDefCSR << ") or FI("
+                        << MO.isFI() << "): " << MI << '\n');
       return true;
     }
   }
@@ -318,7 +318,7 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
     Save = MDT->findNearestCommonDominator(Save, &MBB);
 
   if (!Save) {
-    DEBUG(dbgs() << "Found a block that is not reachable from Entry\n");
+    LLVM_DEBUG(dbgs() << "Found a block that is not reachable from Entry\n");
     return;
   }
 
@@ -352,7 +352,8 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
   }
 
   if (!Restore) {
-    DEBUG(dbgs() << "Restore point needs to be spanned on several blocks\n");
+    LLVM_DEBUG(
+        dbgs() << "Restore point needs to be spanned on several blocks\n");
     return;
   }
 
@@ -435,7 +436,7 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()) || MF.empty() || !isShrinkWrapEnabled(MF))
     return false;
 
-  DEBUG(dbgs() << "**** Analysing " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "**** Analysing " << MF.getName() << '\n');
 
   init(MF);
 
@@ -447,7 +448,7 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
     // results. Moreover, we may miss that the prologue and
     // epilogue are not in the same loop, leading to unbalanced
     // construction/deconstruction of the stack frame.
-    DEBUG(dbgs() << "Irreducible CFGs are not supported yet\n");
+    LLVM_DEBUG(dbgs() << "Irreducible CFGs are not supported yet\n");
     return false;
   }
 
@@ -456,11 +457,11 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
       TRI->requiresRegisterScavenging(MF) ? new RegScavenger() : nullptr);
 
   for (MachineBasicBlock &MBB : MF) {
-    DEBUG(dbgs() << "Look into: " << MBB.getNumber() << ' ' << MBB.getName()
-                 << '\n');
+    LLVM_DEBUG(dbgs() << "Look into: " << MBB.getNumber() << ' '
+                      << MBB.getName() << '\n');
 
     if (MBB.isEHFuncletEntry()) {
-      DEBUG(dbgs() << "EH Funclets are not supported yet.\n");
+      LLVM_DEBUG(dbgs() << "EH Funclets are not supported yet.\n");
       return false;
     }
 
@@ -474,7 +475,7 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
       // basic block can jump out from the middle.
       updateSaveRestorePoints(MBB, RS.get());
       if (!ArePointsInteresting()) {
-        DEBUG(dbgs() << "EHPad prevents shrink-wrapping\n");
+        LLVM_DEBUG(dbgs() << "EHPad prevents shrink-wrapping\n");
         return false;
       }
       continue;
@@ -489,7 +490,7 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
       // If we are at a point where we cannot improve the placement of
       // save/restore instructions, just give up.
       if (!ArePointsInteresting()) {
-        DEBUG(dbgs() << "No Shrink wrap candidate found\n");
+        LLVM_DEBUG(dbgs() << "No Shrink wrap candidate found\n");
         return false;
       }
       // No need to look for other instructions, this basic block
@@ -502,20 +503,21 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
     // because it means we did not encounter any frame/CSR related code.
     // Otherwise, we would have returned from the previous loop.
     assert(!Save && !Restore && "We miss a shrink-wrap opportunity?!");
-    DEBUG(dbgs() << "Nothing to shrink-wrap\n");
+    LLVM_DEBUG(dbgs() << "Nothing to shrink-wrap\n");
     return false;
   }
 
-  DEBUG(dbgs() << "\n ** Results **\nFrequency of the Entry: " << EntryFreq
-               << '\n');
+  LLVM_DEBUG(dbgs() << "\n ** Results **\nFrequency of the Entry: " << EntryFreq
+                    << '\n');
 
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   do {
-    DEBUG(dbgs() << "Shrink wrap candidates (#, Name, Freq):\nSave: "
-                 << Save->getNumber() << ' ' << Save->getName() << ' '
-                 << MBFI->getBlockFreq(Save).getFrequency() << "\nRestore: "
-                 << Restore->getNumber() << ' ' << Restore->getName() << ' '
-                 << MBFI->getBlockFreq(Restore).getFrequency() << '\n');
+    LLVM_DEBUG(dbgs() << "Shrink wrap candidates (#, Name, Freq):\nSave: "
+                      << Save->getNumber() << ' ' << Save->getName() << ' '
+                      << MBFI->getBlockFreq(Save).getFrequency()
+                      << "\nRestore: " << Restore->getNumber() << ' '
+                      << Restore->getName() << ' '
+                      << MBFI->getBlockFreq(Restore).getFrequency() << '\n');
 
     bool IsSaveCheap, TargetCanUseSaveAsPrologue = false;
     if (((IsSaveCheap = EntryFreq >= MBFI->getBlockFreq(Save).getFrequency()) &&
@@ -523,7 +525,8 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
         ((TargetCanUseSaveAsPrologue = TFI->canUseAsPrologue(*Save)) &&
          TFI->canUseAsEpilogue(*Restore)))
       break;
-    DEBUG(dbgs() << "New points are too expensive or invalid for the target\n");
+    LLVM_DEBUG(
+        dbgs() << "New points are too expensive or invalid for the target\n");
     MachineBasicBlock *NewBB;
     if (!IsSaveCheap || !TargetCanUseSaveAsPrologue) {
       Save = FindIDom<>(*Save, Save->predecessors(), *MDT);
@@ -545,9 +548,10 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
     return false;
   }
 
-  DEBUG(dbgs() << "Final shrink wrap candidates:\nSave: " << Save->getNumber()
-               << ' ' << Save->getName() << "\nRestore: "
-               << Restore->getNumber() << ' ' << Restore->getName() << '\n');
+  LLVM_DEBUG(dbgs() << "Final shrink wrap candidates:\nSave: "
+                    << Save->getNumber() << ' ' << Save->getName()
+                    << "\nRestore: " << Restore->getNumber() << ' '
+                    << Restore->getName() << '\n');
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setSavePoint(Save);

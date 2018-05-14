@@ -696,7 +696,8 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
         // An existent entry with multiple sources is a PHI cycle we must avoid.
         // Otherwise it's an entry with a valid next source we already found.
         if (CurSrcRes.getNumSources() > 1) {
-          DEBUG(dbgs() << "findNextSource: found PHI cycle, aborting...\n");
+          LLVM_DEBUG(dbgs()
+                     << "findNextSource: found PHI cycle, aborting...\n");
           return false;
         }
         break;
@@ -709,7 +710,7 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
       if (NumSrcs > 1) {
         PHICount++;
         if (PHICount >= RewritePHILimit) {
-          DEBUG(dbgs() << "findNextSource: PHI limit reached\n");
+          LLVM_DEBUG(dbgs() << "findNextSource: PHI limit reached\n");
           return false;
         }
 
@@ -1143,9 +1144,9 @@ getNewSource(MachineRegisterInfo *MRI, const TargetInstrInfo *TII,
     // Build the new PHI node and return its def register as the new source.
     MachineInstr &OrigPHI = const_cast<MachineInstr &>(*Res.getInst());
     MachineInstr &NewPHI = insertPHI(*MRI, *TII, NewPHISrcs, OrigPHI);
-    DEBUG(dbgs() << "-- getNewSource\n");
-    DEBUG(dbgs() << "   Replacing: " << OrigPHI);
-    DEBUG(dbgs() << "        With: " << NewPHI);
+    LLVM_DEBUG(dbgs() << "-- getNewSource\n");
+    LLVM_DEBUG(dbgs() << "   Replacing: " << OrigPHI);
+    LLVM_DEBUG(dbgs() << "        With: " << NewPHI);
     const MachineOperand &MODef = NewPHI.getOperand(0);
     return RegSubRegPair(MODef.getReg(), MODef.getSubReg());
   }
@@ -1241,9 +1242,9 @@ PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
     NewCopy->getOperand(0).setIsUndef();
   }
 
-  DEBUG(dbgs() << "-- RewriteSource\n");
-  DEBUG(dbgs() << "   Replacing: " << CopyLike);
-  DEBUG(dbgs() << "        With: " << *NewCopy);
+  LLVM_DEBUG(dbgs() << "-- RewriteSource\n");
+  LLVM_DEBUG(dbgs() << "   Replacing: " << CopyLike);
+  LLVM_DEBUG(dbgs() << "        With: " << *NewCopy);
   MRI->replaceRegWith(Def.Reg, NewVReg);
   MRI->clearKillFlags(NewVReg);
 
@@ -1462,7 +1463,8 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
   if (PrevCopy == NAPhysToVirtMIs.end()) {
     // We can't remove the copy: there was an intervening clobber of the
     // non-allocatable physical register after the copy to virtual.
-    DEBUG(dbgs() << "NAPhysCopy: intervening clobber forbids erasing " << MI);
+    LLVM_DEBUG(dbgs() << "NAPhysCopy: intervening clobber forbids erasing "
+                      << MI);
     return false;
   }
 
@@ -1470,7 +1472,7 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
   if (PrevDstReg == SrcReg) {
     // Remove the virt->phys copy: we saw the virtual register definition, and
     // the non-allocatable physical register's state hasn't changed since then.
-    DEBUG(dbgs() << "NAPhysCopy: erasing " << MI);
+    LLVM_DEBUG(dbgs() << "NAPhysCopy: erasing " << MI);
     ++NumNAPhysCopies;
     return true;
   }
@@ -1479,7 +1481,7 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
   // register get a copy of the non-allocatable physical register, and we only
   // track one such copy. Avoid getting confused by this new non-allocatable
   // physical register definition, and remove it from the tracked copies.
-  DEBUG(dbgs() << "NAPhysCopy: missed opportunity " << MI);
+  LLVM_DEBUG(dbgs() << "NAPhysCopy: missed opportunity " << MI);
   NAPhysToVirtMIs.erase(PrevCopy);
   return false;
 }
@@ -1575,15 +1577,15 @@ bool PeepholeOptimizer::optimizeRecurrence(MachineInstr &PHI) {
   if (findTargetRecurrence(PHI.getOperand(0).getReg(), TargetRegs, RC)) {
     // Commutes operands of instructions in RC if necessary so that the copy to
     // be generated from PHI can be coalesced.
-    DEBUG(dbgs() << "Optimize recurrence chain from " << PHI);
+    LLVM_DEBUG(dbgs() << "Optimize recurrence chain from " << PHI);
     for (auto &RI : RC) {
-      DEBUG(dbgs() << "\tInst: " << *(RI.getMI()));
+      LLVM_DEBUG(dbgs() << "\tInst: " << *(RI.getMI()));
       auto CP = RI.getCommutePair();
       if (CP) {
         Changed = true;
         TII->commuteInstruction(*(RI.getMI()), false, (*CP).first,
                                 (*CP).second);
-        DEBUG(dbgs() << "\t\tCommuted: " << *(RI.getMI()));
+        LLVM_DEBUG(dbgs() << "\t\tCommuted: " << *(RI.getMI()));
       }
     }
   }
@@ -1595,8 +1597,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  DEBUG(dbgs() << "********** PEEPHOLE OPTIMIZER **********\n");
-  DEBUG(dbgs() << "********** Function: " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** PEEPHOLE OPTIMIZER **********\n");
+  LLVM_DEBUG(dbgs() << "********** Function: " << MF.getName() << '\n');
 
   if (DisablePeephole)
     return false;
@@ -1667,7 +1669,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
               if (Def != NAPhysToVirtMIs.end()) {
                 // A new definition of the non-allocatable physical register
                 // invalidates previous copies.
-                DEBUG(dbgs() << "NAPhysCopy: invalidating because of " << *MI);
+                LLVM_DEBUG(dbgs()
+                           << "NAPhysCopy: invalidating because of " << *MI);
                 NAPhysToVirtMIs.erase(Def);
               }
             }
@@ -1676,7 +1679,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
             for (auto &RegMI : NAPhysToVirtMIs) {
               unsigned Def = RegMI.first;
               if (MachineOperand::clobbersPhysReg(RegMask, Def)) {
-                DEBUG(dbgs() << "NAPhysCopy: invalidating because of " << *MI);
+                LLVM_DEBUG(dbgs()
+                           << "NAPhysCopy: invalidating because of " << *MI);
                 NAPhysToVirtMIs.erase(Def);
               }
             }
@@ -1692,7 +1696,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
         // don't know what's correct anymore.
         //
         // FIXME: handle explicit asm clobbers.
-        DEBUG(dbgs() << "NAPhysCopy: blowing away all info due to " << *MI);
+        LLVM_DEBUG(dbgs() << "NAPhysCopy: blowing away all info due to "
+                          << *MI);
         NAPhysToVirtMIs.clear();
       }
 
@@ -1768,8 +1773,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
                     TII->optimizeLoadInstr(*MI, MRI, FoldAsLoadDefReg, DefMI)) {
               // Update LocalMIs since we replaced MI with FoldMI and deleted
               // DefMI.
-              DEBUG(dbgs() << "Replacing: " << *MI);
-              DEBUG(dbgs() << "     With: " << *FoldMI);
+              LLVM_DEBUG(dbgs() << "Replacing: " << *MI);
+              LLVM_DEBUG(dbgs() << "     With: " << *FoldMI);
               LocalMIs.erase(MI);
               LocalMIs.erase(DefMI);
               LocalMIs.insert(FoldMI);
@@ -1791,7 +1796,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
       // the load candidates.  Note: We might be able to fold *into* this
       // instruction, so this needs to be after the folding logic.
       if (MI->isLoadFoldBarrier()) {
-        DEBUG(dbgs() << "Encountered load fold barrier on " << *MI);
+        LLVM_DEBUG(dbgs() << "Encountered load fold barrier on " << *MI);
         FoldAsLoadDefCandidates.clear();
       }
     }

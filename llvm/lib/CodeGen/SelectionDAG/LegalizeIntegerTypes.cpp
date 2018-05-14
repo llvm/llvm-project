@@ -36,12 +36,13 @@ using namespace llvm;
 /// may also have invalid operands or may have other results that need
 /// expansion, we just know that (at least) one result needs promotion.
 void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
-  DEBUG(dbgs() << "Promote integer result: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Promote integer result: "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue Res = SDValue();
 
   // See if the target wants to custom expand this node.
   if (CustomLowerNode(N, N->getValueType(ResNo), true)) {
-    DEBUG(dbgs() << "Node has been custom expanded, done\n");
+    LLVM_DEBUG(dbgs() << "Node has been custom expanded, done\n");
     return;
   }
 
@@ -897,11 +898,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VAARG(SDNode *N) {
 /// result types of the node are known to be legal, but other operands of the
 /// node may need promotion or expansion as well as the specified one.
 bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
-  DEBUG(dbgs() << "Promote integer operand: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Promote integer operand: "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue Res = SDValue();
 
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
-    DEBUG(dbgs() << "Node has been custom lowered, done\n");
+    LLVM_DEBUG(dbgs() << "Node has been custom lowered, done\n");
     return false;
   }
 
@@ -1349,7 +1351,8 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBCARRY(SDNode *N, unsigned OpNo) {
 /// have invalid operands or may have other results that need promotion, we just
 /// know that (at least) one result needs expansion.
 void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
-  DEBUG(dbgs() << "Expand integer result: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Expand integer result: "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue Lo, Hi;
   Lo = Hi = SDValue();
 
@@ -2887,7 +2890,8 @@ void DAGTypeLegalizer::ExpandIntRes_ATOMIC_LOAD(SDNode *N,
 /// result types of the node are known to be legal, but other operands of the
 /// node may need promotion or expansion as well as the specified one.
 bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
-  DEBUG(dbgs() << "Expand integer operand: "; N->dump(&DAG); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Expand integer operand: "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue Res = SDValue();
 
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false))

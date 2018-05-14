@@ -1061,15 +1061,22 @@ void AArch64InstPrinter::printAMIndexedWB(const MCInst *MI, unsigned OpNum,
   O << ']';
 }
 
+template <bool IsSVEPrefetch>
 void AArch64InstPrinter::printPrefetchOp(const MCInst *MI, unsigned OpNum,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
   unsigned prfop = MI->getOperand(OpNum).getImm();
-  auto PRFM = AArch64PRFM::lookupPRFMByEncoding(prfop);
-  if (PRFM)
+  if (IsSVEPrefetch) {
+    if (auto PRFM = AArch64SVEPRFM::lookupSVEPRFMByEncoding(prfop)) {
+      O << PRFM->Name;
+      return;
+    }
+  } else if (auto PRFM = AArch64PRFM::lookupPRFMByEncoding(prfop)) {
     O << PRFM->Name;
-  else
-    O << '#' << formatImm(prfop);
+    return;
+  }
+
+  O << '#' << formatImm(prfop);
 }
 
 void AArch64InstPrinter::printPSBHintOp(const MCInst *MI, unsigned OpNum,

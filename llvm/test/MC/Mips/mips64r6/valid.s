@@ -69,6 +69,10 @@ a:
         class.s $f2, $f4         # CHECK: class.s $f2, $f4       # encoding: [0x46,0x00,0x20,0x9b]
         clo     $11,$a1          # CHECK: clo $11, $5            # encoding: [0x00,0xa0,0x58,0x51]
         clz     $sp,$gp          # CHECK: clz $sp, $gp           # encoding: [0x03,0x80,0xe8,0x50]
+        ceil.w.d  $f11,$f25         # CHECK: ceil.w.d  $f11, $f25 # encoding: [0x46,0x20,0xca,0xce]
+                                    # CHECK:                      # <MCInst #{{.*}} CEIL_W_D64
+        ceil.w.s  $f6,$f20          # CHECK: ceil.w.s  $f6, $f20  # encoding: [0x46,0x00,0xa1,0x8e]
+                                    # CHECK:                      # <MCInst #{{.*}} CEIL_W_S
         cmp.af.d   $f2,$f3,$f4      # CHECK: cmp.af.d $f2, $f3, $f4  # encoding: [0x46,0xa4,0x18,0x80]
         cmp.af.s   $f2,$f3,$f4      # CHECK: cmp.af.s $f2, $f3, $f4  # encoding: [0x46,0x84,0x18,0x80]
         cmp.eq.d   $f2,$f3,$f4      # CHECK: cmp.eq.d $f2, $f3, $f4  # encoding: [0x46,0xa4,0x18,0x82]
@@ -147,6 +151,10 @@ a:
         eretnc                   # CHECK: eretnc                 # encoding: [0x42,0x00,0x00,0x58]
         evp     $5               # CHECK: evp $5           # encoding: [0x41,0x65,0x00,0x04]
         evp                      # CHECK: evp $zero        # encoding: [0x41,0x60,0x00,0x04]
+        floor.w.d $f14,$f11      # CHECK: floor.w.d $f14, $f11      # encoding: [0x46,0x20,0x5b,0x8f]
+                                 # CHECK:                           # <MCInst #{{.*}} FLOOR_W_D64
+        floor.w.s $f8,$f9        # CHECK: floor.w.s $f8, $f9        # encoding: [0x46,0x00,0x4a,0x0f]
+                                 # CHECK:                           # <MCInst #{{.*}} FLOOR_W_S
         j       1f               # CHECK: j $tmp0                # encoding: [0b000010AA,A,A,A]
                                  # CHECK:                        #   fixup A - offset: 0, value: ($tmp0), kind: fixup_Mips_26
         j       a                # CHECK: j a                    # encoding: [0b000010AA,A,A,A]
@@ -218,6 +226,10 @@ a:
         recip.s $f3,$f30         # CHECK: recip.s $f3, $f30      # encoding: [0x46,0x00,0xf0,0xd5]
         rint.d $f2, $f4          # CHECK: rint.d $f2, $f4        # encoding: [0x46,0x20,0x20,0x9a]
         rint.s $f2, $f4          # CHECK: rint.s $f2, $f4        # encoding: [0x46,0x00,0x20,0x9a]
+        round.w.d $f6, $f4       # CHECK: round.w.d $f6, $f4     # encoding: [0x46,0x20,0x21,0x8c]
+                                 # CHECK:                        # <MCInst #{{.*}} ROUND_W_D64
+        round.w.s $f27,$f28      # CHECK: round.w.s $f27, $f28   # encoding: [0x46,0x00,0xe6,0xcc]
+                                 # CHECK:                        # <MCInst #{{.*}} ROUND_W_S
         rsqrt.s $f0,$f4          # CHECK: rsqrt.s $f0, $f4       # encoding: [0x46,0x00,0x20,0x16]
         rsqrt.d $f2,$f6          # CHECK: rsqrt.d $f2, $f6       # encoding: [0x46,0x20,0x30,0x96]
         s.s    $f2, 8($3)        # CHECK: swc1 $f2, 8($3)        # encoding: [0xe4,0x62,0x00,0x08]

@@ -274,16 +274,17 @@ bool DWARFVerifier::handleDebugInfo() {
       if (isUnitDWARF64)
         break;
     } else {
+      DWARFUnitHeader Header;
+      Header.extract(DCtx, DebugInfoData, &OffsetStart);
       std::unique_ptr<DWARFUnit> Unit;
       switch (UnitType) {
       case dwarf::DW_UT_type:
       case dwarf::DW_UT_split_type: {
         Unit.reset(new DWARFTypeUnit(
-            DCtx, DObj.getInfoSection(), DCtx.getDebugAbbrev(),
+            DCtx, DObj.getInfoSection(), Header, DCtx.getDebugAbbrev(),
             &DObj.getRangeSection(), DObj.getStringSection(),
             DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
-            DObj.getLineSection(), DCtx.isLittleEndian(), false, TUSection,
-            nullptr));
+            DObj.getLineSection(), DCtx.isLittleEndian(), false, TUSection));
         break;
       }
       case dwarf::DW_UT_skeleton:
@@ -294,16 +295,14 @@ bool DWARFVerifier::handleDebugInfo() {
       // verifying a compile unit in DWARF v4.
       case 0: {
         Unit.reset(new DWARFCompileUnit(
-            DCtx, DObj.getInfoSection(), DCtx.getDebugAbbrev(),
+            DCtx, DObj.getInfoSection(), Header, DCtx.getDebugAbbrev(),
             &DObj.getRangeSection(), DObj.getStringSection(),
             DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
-            DObj.getLineSection(), DCtx.isLittleEndian(), false, CUSection,
-            nullptr));
+            DObj.getLineSection(), DCtx.isLittleEndian(), false, CUSection));
         break;
       }
       default: { llvm_unreachable("Invalid UnitType."); }
       }
-      Unit->extract(DebugInfoData, &OffsetStart);
       if (!verifyUnitContents(*Unit, UnitType))
         ++NumDebugInfoErrors;
     }
@@ -1122,6 +1121,7 @@ DWARFVerifier::verifyNameIndexEntries(const DWARFDebugNames::NameIndex &NI,
                          "of DIE @ {2:x}: index - {3}; debug_info - {4}.\n",
                          NI.getUnitOffset(), EntryID, DIEOffset, Str,
                          make_range(EntryNames.begin(), EntryNames.end()));
+      ++NumErrors;
     }
   }
   handleAllErrors(EntryOr.takeError(),

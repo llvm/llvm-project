@@ -97,7 +97,7 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
   // Sort the Idx2MBBMap
   llvm::sort(idx2MBBMap.begin(), idx2MBBMap.end(), Idx2MBBCompare());
 
-  DEBUG(mf->print(dbgs(), this));
+  LLVM_DEBUG(mf->print(dbgs(), this));
 
   // And we're done!
   return false;
@@ -147,7 +147,7 @@ void SlotIndexes::removeSingleMachineInstrFromMaps(MachineInstr &MI) {
 
 void SlotIndexes::renumberIndexes() {
   // Renumber updates the index of every element of the index list.
-  DEBUG(dbgs() << "\n*** Renumbering SlotIndexes ***\n");
+  LLVM_DEBUG(dbgs() << "\n*** Renumbering SlotIndexes ***\n");
   ++NumGlobalRenum;
 
   unsigned index = 0;
@@ -174,8 +174,8 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
     // If the next index is bigger, we have caught up.
   } while (curItr != indexList.end() && curItr->getIndex() <= index);
 
-  DEBUG(dbgs() << "\n*** Renumbered SlotIndexes " << startItr->getIndex() << '-'
-               << index << " ***\n");
+  LLVM_DEBUG(dbgs() << "\n*** Renumbered SlotIndexes " << startItr->getIndex()
+                    << '-' << index << " ***\n");
   ++NumLocalRenum;
 }
 

@@ -48,15 +48,15 @@ void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
 }
 
 DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
+                     const DWARFUnitHeader &Header,
                      const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                      StringRef SS, const DWARFSection &SOS,
                      const DWARFSection *AOS, const DWARFSection &LS, bool LE,
-                     bool IsDWO, const DWARFUnitSectionBase &UnitSection,
-                     const DWARFUnitIndex::Entry *IndexEntry)
-    : Context(DC), InfoSection(Section), Abbrev(DA), RangeSection(RS),
-      LineSection(LS), StringSection(SS), StringOffsetSection(SOS),
-      AddrOffsetSection(AOS), isLittleEndian(LE), isDWO(IsDWO),
-      UnitSection(UnitSection), IndexEntry(IndexEntry) {
+                     bool IsDWO, const DWARFUnitSectionBase &UnitSection)
+    : Context(DC), InfoSection(Section), Header(Header), Abbrev(DA),
+      RangeSection(RS), LineSection(LS), StringSection(SS),
+      StringOffsetSection(SOS),  AddrOffsetSection(AOS), isLittleEndian(LE),
+      isDWO(IsDWO), UnitSection(UnitSection) {
   clear();
 }
 
@@ -92,10 +92,16 @@ bool DWARFUnit::getStringOffsetSectionItem(uint32_t Index,
   return true;
 }
 
-bool DWARFUnit::extractImpl(const DWARFDataExtractor &debug_info,
-                            uint32_t *offset_ptr) {
+bool DWARFUnitHeader::extract(DWARFContext &Context,
+                              const DWARFDataExtractor &debug_info,
+                              uint32_t *offset_ptr,
+                              DWARFSectionKind SectionKind,
+                              const DWARFUnitIndex *Index) {
+  Offset = *offset_ptr;
+  IndexEntry = Index ? Index->getFromOffset(*offset_ptr) : nullptr;
   Length = debug_info.getU32(offset_ptr);
   // FIXME: Support DWARF64.
+  unsigned SizeOfLength = 4;
   FormParams.Format = DWARF32;
   FormParams.Version = debug_info.getU16(offset_ptr);
   if (FormParams.Version >= 5) {
@@ -105,6 +111,12 @@ bool DWARFUnit::extractImpl(const DWARFDataExtractor &debug_info,
   } else {
     AbbrOffset = debug_info.getRelocatedValue(4, offset_ptr);
     FormParams.AddrSize = debug_info.getU8(offset_ptr);
+    // Fake a unit type based on the section type.  This isn't perfect,
+    // but distinguishing compile and type units is generally enough.
+    if (SectionKind == DW_SECT_TYPES)
+      UnitType = DW_UT_type;
+    else
+      UnitType = DW_UT_compile;
   }
   if (IndexEntry) {
     if (AbbrOffset)
@@ -117,34 +129,25 @@ bool DWARFUnit::extractImpl(const DWARFDataExtractor &debug_info,
       return false;
     AbbrOffset = AbbrEntry->Offset;
   }
-
+  bool TypeOffsetOK = true;
+  if (isTypeUnit()) {
+    TypeHash = debug_info.getU64(offset_ptr);
+    TypeOffset = debug_info.getU32(offset_ptr);
+    // Type offset is unit-relative; should be after the header and before
+    // the end of the current unit.
+    TypeOffsetOK = TypeOffset >= *offset_ptr - Offset &&
+                   TypeOffset < getLength() + SizeOfLength;
+  }
   bool LengthOK = debug_info.isValidOffset(getNextUnitOffset() - 1);
   bool VersionOK = DWARFContext::isSupportedVersion(getVersion());
   bool AddrSizeOK = getAddressByteSize() == 4 || getAddressByteSize() == 8;
 
-  if (!LengthOK || !VersionOK || !AddrSizeOK)
+  if (!LengthOK || !VersionOK || !AddrSizeOK || !TypeOffsetOK)
     return false;
 
   // Keep track of the highest DWARF version we encounter across all units.
   Context.setMaxVersionIfGreater(getVersion());
   return true;
-}
-
-bool DWARFUnit::extract(const DWARFDataExtractor &debug_info,
-                        uint32_t *offset_ptr) {
-  clear();
-
-  Offset = *offset_ptr;
-
-  if (debug_info.isValidOffset(*offset_ptr)) {
-    if (extractImpl(debug_info, offset_ptr))
-      return true;
-
-    // reset the offset to where we tried to parse from if anything went wrong
-    *offset_ptr = Offset;
-  }
-
-  return false;
 }
 
 bool DWARFUnit::extractRangeList(uint32_t RangeListOffset,
@@ -158,10 +161,7 @@ bool DWARFUnit::extractRangeList(uint32_t RangeListOffset,
 }
 
 void DWARFUnit::clear() {
-  Offset = 0;
-  Length = 0;
   Abbrevs = nullptr;
-  FormParams = dwarf::FormParams({0, 0, DWARF32});
   BaseAddr.reset();
   RangeSectionBase = 0;
   AddrOffsetSectionBase = 0;
@@ -185,7 +185,7 @@ void DWARFUnit::extractDIEsToVector(
 
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.
-  uint32_t DIEOffset = Offset + getHeaderSize();
+  uint32_t DIEOffset = getOffset() + getHeaderSize();
   uint32_t NextCUOffset = getNextUnitOffset();
   DWARFDebugInfoEntry DIE;
   DWARFDataExtractor DebugInfoData = getDebugInfoExtractor();
@@ -266,6 +266,7 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     // which may differ from the unit's format.
     uint64_t StringOffsetsContributionBase =
         isDWO ? 0 : toSectionOffset(UnitDie.find(DW_AT_str_offsets_base), 0);
+    auto IndexEntry = Header.getIndexEntry();
     if (IndexEntry)
       if (const auto *C = IndexEntry->getOffset(DW_SECT_STR_OFFSETS))
         StringOffsetsContributionBase += C->Offset;
@@ -486,7 +487,7 @@ DWARFDie DWARFUnit::getFirstChild(const DWARFDebugInfoEntry *Die) {
 
 const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
   if (!Abbrevs)
-    Abbrevs = Abbrev->getAbbreviationDeclarationSet(AbbrOffset);
+    Abbrevs = Abbrev->getAbbreviationDeclarationSet(Header.getAbbrOffset());
   return Abbrevs;
 }
 
@@ -570,6 +571,7 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA,
   // index table (in a package file). In a .dwo file it is simply
   // the length of the string offsets section.
   uint64_t Size = 0;
+  auto IndexEntry = Header.getIndexEntry();
   if (!IndexEntry)
     Size = StringOffsetSection.Data.size();
   else if (const auto *C = IndexEntry->getOffset(DW_SECT_STR_OFFSETS))

@@ -824,7 +824,7 @@ MemoryDependenceResults::getNonLocalCallDependency(CallSite QueryCS) {
   SmallPtrSet<BasicBlock *, 32> Visited;
 
   unsigned NumSortedEntries = Cache.size();
-  DEBUG(AssertSorted(Cache));
+  LLVM_DEBUG(AssertSorted(Cache));
 
   // Iterate while we still have blocks to update.
   while (!DirtyBlocks.empty()) {
@@ -837,7 +837,7 @@ MemoryDependenceResults::getNonLocalCallDependency(CallSite QueryCS) {
 
     // Do a binary search to see if we already have an entry for this block in
     // the cache set.  If so, find it.
-    DEBUG(AssertSorted(Cache, NumSortedEntries));
+    LLVM_DEBUG(AssertSorted(Cache, NumSortedEntries));
     NonLocalDepInfo::iterator Entry =
         std::upper_bound(Cache.begin(), Cache.begin() + NumSortedEntries,
                          NonLocalDepEntry(DirtyBB));
@@ -1210,7 +1210,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   unsigned NumSortedEntries = Cache->size();
   unsigned WorklistEntries = BlockNumberLimit;
   bool GotWorklistLimit = false;
-  DEBUG(AssertSorted(*Cache));
+  LLVM_DEBUG(AssertSorted(*Cache));
 
   while (!Worklist.empty()) {
     BasicBlock *BB = Worklist.pop_back_val();
@@ -1241,7 +1241,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
       // Get the dependency info for Pointer in BB.  If we have cached
       // information, we will use it, otherwise we compute it.
-      DEBUG(AssertSorted(*Cache, NumSortedEntries));
+      LLVM_DEBUG(AssertSorted(*Cache, NumSortedEntries));
       MemDepResult Dep = GetNonLocalInfoForBlock(QueryInst, Loc, isLoad, BB,
                                                  Cache, NumSortedEntries);
 
@@ -1455,7 +1455,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
   // Okay, we're done now.  If we added new values to the cache, re-sort it.
   SortNonLocalDepInfoCache(*Cache, NumSortedEntries);
-  DEBUG(AssertSorted(*Cache));
+  LLVM_DEBUG(AssertSorted(*Cache));
   return true;
 }
 
@@ -1651,7 +1651,7 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
   }
 
   assert(!NonLocalDeps.count(RemInst) && "RemInst got reinserted?");
-  DEBUG(verifyRemoved(RemInst));
+  LLVM_DEBUG(verifyRemoved(RemInst));
 }
 
 /// Verify that the specified instruction does not occur in our internal data

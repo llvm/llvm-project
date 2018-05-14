@@ -285,9 +285,11 @@ public:
 
     Candidates.remove_if([&](const StoreToLoadForwardingCandidate &Cand) {
       if (LoadToSingleCand[Cand.Load] != &Cand) {
-        DEBUG(dbgs() << "Removing from candidates: \n" << Cand
-                     << "  The load may have multiple stores forwarding to "
-                     << "it\n");
+        LLVM_DEBUG(
+            dbgs() << "Removing from candidates: \n"
+                   << Cand
+                   << "  The load may have multiple stores forwarding to "
+                   << "it\n");
         return true;
       }
       return false;
@@ -395,8 +397,9 @@ public:
               return false;
             });
 
-    DEBUG(dbgs() << "\nPointer Checks (count: " << Checks.size() << "):\n");
-    DEBUG(LAI.getRuntimePointerChecking()->printChecks(dbgs(), Checks));
+    LLVM_DEBUG(dbgs() << "\nPointer Checks (count: " << Checks.size()
+                      << "):\n");
+    LLVM_DEBUG(LAI.getRuntimePointerChecking()->printChecks(dbgs(), Checks));
 
     return Checks;
   }
@@ -440,8 +443,8 @@ public:
   /// Top-level driver for each loop: find store->load forwarding
   /// candidates, add run-time checks and perform transformation.
   bool processLoop() {
-    DEBUG(dbgs() << "\nIn \"" << L->getHeader()->getParent()->getName()
-                 << "\" checking " << *L << "\n");
+    LLVM_DEBUG(dbgs() << "\nIn \"" << L->getHeader()->getParent()->getName()
+                      << "\" checking " << *L << "\n");
 
     // Look for store-to-load forwarding cases across the
     // backedge. E.g.:
@@ -480,7 +483,7 @@ public:
     SmallVector<StoreToLoadForwardingCandidate, 4> Candidates;
     unsigned NumForwarding = 0;
     for (const StoreToLoadForwardingCandidate Cand : StoreToLoadDependences) {
-      DEBUG(dbgs() << "Candidate " << Cand);
+      LLVM_DEBUG(dbgs() << "Candidate " << Cand);
 
       // Make sure that the stored values is available everywhere in the loop in
       // the next iteration.
@@ -499,9 +502,10 @@ public:
         continue;
 
       ++NumForwarding;
-      DEBUG(dbgs()
-            << NumForwarding
-            << ". Valid store-to-load forwarding across the loop backedge\n");
+      LLVM_DEBUG(
+          dbgs()
+          << NumForwarding
+          << ". Valid store-to-load forwarding across the loop backedge\n");
       Candidates.push_back(Cand);
     }
     if (Candidates.empty())
@@ -514,25 +518,26 @@ public:
 
     // Too many checks are likely to outweigh the benefits of forwarding.
     if (Checks.size() > Candidates.size() * CheckPerElim) {
-      DEBUG(dbgs() << "Too many run-time checks needed.\n");
+      LLVM_DEBUG(dbgs() << "Too many run-time checks needed.\n");
       return false;
     }
 
     if (LAI.getPSE().getUnionPredicate().getComplexity() >
         LoadElimSCEVCheckThreshold) {
-      DEBUG(dbgs() << "Too many SCEV run-time checks needed.\n");
+      LLVM_DEBUG(dbgs() << "Too many SCEV run-time checks needed.\n");
       return false;
     }
 
     if (!Checks.empty() || !LAI.getPSE().getUnionPredicate().isAlwaysTrue()) {
       if (L->getHeader()->getParent()->optForSize()) {
-        DEBUG(dbgs() << "Versioning is needed but not allowed when optimizing "
-                        "for size.\n");
+        LLVM_DEBUG(
+            dbgs() << "Versioning is needed but not allowed when optimizing "
+                      "for size.\n");
         return false;
       }
 
       if (!L->isLoopSimplifyForm()) {
-        DEBUG(dbgs() << "Loop is not is loop-simplify form");
+        LLVM_DEBUG(dbgs() << "Loop is not is loop-simplify form");
         return false;
       }
 

@@ -48,7 +48,7 @@ void Backend::runCycle(unsigned Cycle) {
 }
 
 void Backend::notifyCycleBegin(unsigned Cycle) {
-  DEBUG(dbgs() << "[E] Cycle begin: " << Cycle << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Cycle begin: " << Cycle << '\n');
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleBegin();
 
@@ -67,8 +67,8 @@ void Backend::notifyStallEvent(const HWStallEvent &Event) {
 }
 
 void Backend::notifyResourceAvailable(const ResourceRef &RR) {
-  DEBUG(dbgs() << "[E] Resource Available: [" << RR.first << '.' << RR.second
-               << "]\n");
+  LLVM_DEBUG(dbgs() << "[E] Resource Available: [" << RR.first << '.'
+                    << RR.second << "]\n");
   for (HWEventListener *Listener : Listeners)
     Listener->onResourceAvailable(RR);
 }
@@ -84,7 +84,7 @@ void Backend::notifyReleasedBuffers(ArrayRef<unsigned> Buffers) {
 }
 
 void Backend::notifyCycleEnd(unsigned Cycle) {
-  DEBUG(dbgs() << "[E] Cycle end: " << Cycle << "\n\n");
+  LLVM_DEBUG(dbgs() << "[E] Cycle end: " << Cycle << "\n\n");
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleEnd();
 }

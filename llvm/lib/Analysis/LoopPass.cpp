@@ -362,8 +362,8 @@ bool LoopPass::skipLoop(const Loop *L) const {
   // Check for the OptimizeNone attribute.
   if (F->hasFnAttribute(Attribute::OptimizeNone)) {
     // FIXME: Report this to dbgs() only once per function.
-    DEBUG(dbgs() << "Skipping pass '" << getPassName()
-          << "' in function " << F->getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Skipping pass '" << getPassName() << "' in function "
+                      << F->getName() << "\n");
     // FIXME: Delete loop from pass manager's queue?
     return true;
   }

@@ -260,7 +260,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::MarkBlockExecutable(
     BasicBlock *BB) {
   if (!BBExecutable.insert(BB).second)
     return;
-  DEBUG(dbgs() << "Marking Block Executable: " << BB->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Marking Block Executable: " << BB->getName() << "\n");
   BBWorkList.push_back(BB); // Add the block to the work list!
 }
 
@@ -270,8 +270,8 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::markEdgeExecutable(
   if (!KnownFeasibleEdges.insert(Edge(Source, Dest)).second)
     return; // This edge is already known to be executable!
 
-  DEBUG(dbgs() << "Marking Edge Executable: " << Source->getName() << " -> "
-               << Dest->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Marking Edge Executable: " << Source->getName()
+                    << " -> " << Dest->getName() << "\n");
 
   if (BBExecutable.count(Dest)) {
     // The destination is already executable, but we just made an edge
@@ -477,7 +477,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::Solve() {
       Value *V = ValueWorkList.back();
       ValueWorkList.pop_back();
 
-      DEBUG(dbgs() << "\nPopped off V-WL: " << *V << "\n");
+      LLVM_DEBUG(dbgs() << "\nPopped off V-WL: " << *V << "\n");
 
       // "V" got into the work list because it made a transition. See if any
       // users are both live and in need of updating.
@@ -492,7 +492,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::Solve() {
       BasicBlock *BB = BBWorkList.back();
       BBWorkList.pop_back();
 
-      DEBUG(dbgs() << "\nPopped off BBWL: " << *BB);
+      LLVM_DEBUG(dbgs() << "\nPopped off BBWL: " << *BB);
 
       // Notify all instructions in this basic block that they are newly
       // executable.

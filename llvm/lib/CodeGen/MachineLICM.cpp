@@ -319,10 +319,10 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   PreRegAlloc = MRI->isSSA();
 
   if (PreRegAlloc)
-    DEBUG(dbgs() << "******** Pre-regalloc Machine LICM: ");
+    LLVM_DEBUG(dbgs() << "******** Pre-regalloc Machine LICM: ");
   else
-    DEBUG(dbgs() << "******** Post-regalloc Machine LICM: ");
-  DEBUG(dbgs() << MF.getName() << " ********\n");
+    LLVM_DEBUG(dbgs() << "******** Post-regalloc Machine LICM: ");
+  LLVM_DEBUG(dbgs() << MF.getName() << " ********\n");
 
   if (PreRegAlloc) {
     // Estimate register pressure during pre-regalloc pass.
@@ -591,8 +591,9 @@ void MachineLICMBase::HoistPostRA(MachineInstr *MI, unsigned Def) {
 
   // Now move the instructions to the predecessor, inserting it before any
   // terminator instructions.
-  DEBUG(dbgs() << "Hoisting to " << printMBBReference(*Preheader) << " from "
-               << printMBBReference(*MI->getParent()) << ": " << *MI);
+  LLVM_DEBUG(dbgs() << "Hoisting to " << printMBBReference(*Preheader)
+                    << " from " << printMBBReference(*MI->getParent()) << ": "
+                    << *MI);
 
   // Splice the instruction to the preheader.
   MachineBasicBlock *MBB = MI->getParent();
@@ -629,14 +630,14 @@ bool MachineLICMBase::IsGuaranteedToExecute(MachineBasicBlock *BB) {
 }
 
 void MachineLICMBase::EnterScope(MachineBasicBlock *MBB) {
-  DEBUG(dbgs() << "Entering " << printMBBReference(*MBB) << '\n');
+  LLVM_DEBUG(dbgs() << "Entering " << printMBBReference(*MBB) << '\n');
 
   // Remember livein register pressure.
   BackTrace.push_back(RegPressure);
 }
 
 void MachineLICMBase::ExitScope(MachineBasicBlock *MBB) {
-  DEBUG(dbgs() << "Exiting " << printMBBReference(*MBB) << '\n');
+  LLVM_DEBUG(dbgs() << "Exiting " << printMBBReference(*MBB) << '\n');
   BackTrace.pop_back();
 }
 
@@ -1208,7 +1209,7 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI) {
 
   // Don't hoist a cheap instruction if it would create a copy in the loop.
   if (CheapInstr && CreatesCopy) {
-    DEBUG(dbgs() << "Won't hoist cheap instr with loop PHI use: " << MI);
+    LLVM_DEBUG(dbgs() << "Won't hoist cheap instr with loop PHI use: " << MI);
     return false;
   }
 
@@ -1227,7 +1228,7 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI) {
     if (!TargetRegisterInfo::isVirtualRegister(Reg))
       continue;
     if (MO.isDef() && HasHighOperandLatency(MI, i, Reg)) {
-      DEBUG(dbgs() << "Hoist High Latency: " << MI);
+      LLVM_DEBUG(dbgs() << "Hoist High Latency: " << MI);
       ++NumHighLatency;
       return true;
     }
@@ -1245,14 +1246,14 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI) {
   // Visit BBs from header to current BB, if hoisting this doesn't cause
   // high register pressure, then it's safe to proceed.
   if (!CanCauseHighRegPressure(Cost, CheapInstr)) {
-    DEBUG(dbgs() << "Hoist non-reg-pressure: " << MI);
+    LLVM_DEBUG(dbgs() << "Hoist non-reg-pressure: " << MI);
     ++NumLowRP;
     return true;
   }
 
   // Don't risk increasing register pressure if it would create copies.
   if (CreatesCopy) {
-    DEBUG(dbgs() << "Won't hoist instr with loop PHI use: " << MI);
+    LLVM_DEBUG(dbgs() << "Won't hoist instr with loop PHI use: " << MI);
     return false;
   }
 
@@ -1261,7 +1262,7 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI) {
   // conservative.
   if (AvoidSpeculation &&
       (!IsGuaranteedToExecute(MI.getParent()) && !MayCSE(&MI))) {
-    DEBUG(dbgs() << "Won't speculate: " << MI);
+    LLVM_DEBUG(dbgs() << "Won't speculate: " << MI);
     return false;
   }
 
@@ -1269,7 +1270,7 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI) {
   // to be remat'ed.
   if (!TII->isTriviallyReMaterializable(MI, AA) &&
       !MI.isDereferenceableInvariantLoad(AA)) {
-    DEBUG(dbgs() << "Can't remat / high reg-pressure: " << MI);
+    LLVM_DEBUG(dbgs() << "Can't remat / high reg-pressure: " << MI);
     return false;
   }
 
@@ -1366,7 +1367,7 @@ bool MachineLICMBase::EliminateCSE(MachineInstr *MI,
     return false;
 
   if (const MachineInstr *Dup = LookForDuplicate(MI, CI->second)) {
-    DEBUG(dbgs() << "CSEing " << *MI << " with " << *Dup);
+    LLVM_DEBUG(dbgs() << "CSEing " << *MI << " with " << *Dup);
 
     // Replace virtual registers defined by MI by their counterparts defined
     // by Dup.
@@ -1446,14 +1447,14 @@ bool MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader) {
 
   // Now move the instructions to the predecessor, inserting it before any
   // terminator instructions.
-  DEBUG({
-      dbgs() << "Hoisting " << *MI;
-      if (MI->getParent()->getBasicBlock())
-        dbgs() << " from " << printMBBReference(*MI->getParent());
-      if (Preheader->getBasicBlock())
-        dbgs() << " to " << printMBBReference(*Preheader);
-      dbgs() << "\n";
-    });
+  LLVM_DEBUG({
+    dbgs() << "Hoisting " << *MI;
+    if (MI->getParent()->getBasicBlock())
+      dbgs() << " from " << printMBBReference(*MI->getParent());
+    if (Preheader->getBasicBlock())
+      dbgs() << " to " << printMBBReference(*Preheader);
+    dbgs() << "\n";
+  });
 
   // If this is the first instruction being hoisted to the preheader,
   // initialize the CSE map with potential common expressions.

@@ -143,7 +143,8 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
               I->hasUnmodeledSideEffects() || I->hasOrderedMemoryRef())
             break;
 
-          DEBUG(dbgs() << "Removing no effect instruction: " << *I << '\n');
+          LLVM_DEBUG(dbgs()
+                     << "Removing no effect instruction: " << *I << '\n');
 
           for (auto &Op : I->operands()) {
             if (Op.isReg())
@@ -193,7 +194,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
         !getOrExecSource(*NextLead, *TII, MRI))
       continue;
 
-    DEBUG(dbgs() << "Redundant EXEC = S_OR_B64 found: " << *Lead << '\n');
+    LLVM_DEBUG(dbgs() << "Redundant EXEC = S_OR_B64 found: " << *Lead << '\n');
 
     auto SaveExec = getOrExecSource(*Lead, *TII, MRI);
     unsigned SaveExecReg = getOrNonExecReg(*Lead, *TII);
@@ -224,7 +225,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
         break;
       }
 
-      DEBUG(dbgs() << "Redundant EXEC COPY: " << *SaveExec << '\n');
+      LLVM_DEBUG(dbgs() << "Redundant EXEC COPY: " << *SaveExec << '\n');
     }
 
     if (SafeToReplace) {

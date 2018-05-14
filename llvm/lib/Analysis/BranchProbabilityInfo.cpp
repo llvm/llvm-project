@@ -908,8 +908,9 @@ void BranchProbabilityInfo::setEdgeProbability(const BasicBlock *Src,
                                                BranchProbability Prob) {
   Probs[std::make_pair(Src, IndexInSuccessors)] = Prob;
   Handles.insert(BasicBlockCallbackVH(Src, this));
-  DEBUG(dbgs() << "set edge " << Src->getName() << " -> " << IndexInSuccessors
-               << " successor probability to " << Prob << "\n");
+  LLVM_DEBUG(dbgs() << "set edge " << Src->getName() << " -> "
+                    << IndexInSuccessors << " successor probability to " << Prob
+                    << "\n");
 }
 
 raw_ostream &
@@ -934,8 +935,8 @@ void BranchProbabilityInfo::eraseBlock(const BasicBlock *BB) {
 
 void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
                                       const TargetLibraryInfo *TLI) {
-  DEBUG(dbgs() << "---- Branch Probability Info : " << F.getName()
-               << " ----\n\n");
+  LLVM_DEBUG(dbgs() << "---- Branch Probability Info : " << F.getName()
+                    << " ----\n\n");
   LastF = &F; // Store the last function we ran on for printing.
   assert(PostDominatedByUnreachable.empty());
   assert(PostDominatedByColdCall.empty());
@@ -953,18 +954,19 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
     if (Scc.size() == 1)
       continue;
 
-    DEBUG(dbgs() << "BPI: SCC " << SccNum << ":");
+    LLVM_DEBUG(dbgs() << "BPI: SCC " << SccNum << ":");
     for (auto *BB : Scc) {
-      DEBUG(dbgs() << " " << BB->getName());
+      LLVM_DEBUG(dbgs() << " " << BB->getName());
       SccI.SccNums[BB] = SccNum;
     }
-    DEBUG(dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "\n");
   }
 
   // Walk the basic blocks in post-order so that we can build up state about
   // the successors of a block iteratively.
   for (auto BB : post_order(&F.getEntryBlock())) {
-    DEBUG(dbgs() << "Computing probabilities for " << BB->getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Computing probabilities for " << BB->getName()
+                      << "\n");
     updatePostDominatedByUnreachable(BB);
     updatePostDominatedByColdCall(BB);
     // If there is no at least two successors, no sense to set probability.

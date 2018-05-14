@@ -202,7 +202,8 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   Offset = SPOffset + (int64_t)StackSize;
   Offset += MI.getOperand(OpNo + 1).getImm();
 
-  DEBUG(errs() << "Offset     : " << Offset << "\n" << "<--------->\n");
+  LLVM_DEBUG(errs() << "Offset     : " << Offset << "\n"
+                    << "<--------->\n");
 
   if (!MI.isDebugValue()) {
     // Make sure Offset fits within the field available.

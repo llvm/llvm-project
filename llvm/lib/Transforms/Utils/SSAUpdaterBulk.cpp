@@ -40,8 +40,8 @@ static BasicBlock *getUserBB(Use *U) {
 /// AddAvailableValue or AddUse calls.
 unsigned SSAUpdaterBulk::AddVariable(StringRef Name, Type *Ty) {
   unsigned Var = Rewrites.size();
-  DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": initialized with Ty = " << *Ty
-               << ", Name = " << Name << "\n");
+  LLVM_DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": initialized with Ty = "
+                    << *Ty << ", Name = " << Name << "\n");
   RewriteInfo RI(Name, Ty);
   Rewrites.push_back(RI);
   return Var;
@@ -51,8 +51,9 @@ unsigned SSAUpdaterBulk::AddVariable(StringRef Name, Type *Ty) {
 /// specified value.
 void SSAUpdaterBulk::AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V) {
   assert(Var < Rewrites.size() && "Variable not found!");
-  DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added new available value"
-               << *V << " in " << BB->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "SSAUpdater: Var=" << Var
+                    << ": added new available value" << *V << " in "
+                    << BB->getName() << "\n");
   Rewrites[Var].Defines[BB] = V;
 }
 
@@ -60,8 +61,8 @@ void SSAUpdaterBulk::AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V) {
 /// rewritten value when RewriteAllUses is called.
 void SSAUpdaterBulk::AddUse(unsigned Var, Use *U) {
   assert(Var < Rewrites.size() && "Variable not found!");
-  DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added a use" << *U->get()
-               << " in " << getUserBB(U)->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "SSAUpdater: Var=" << Var << ": added a use" << *U->get()
+                    << " in " << getUserBB(U)->getName() << "\n");
   Rewrites[Var].Uses.push_back(U);
 }
 
@@ -134,7 +135,8 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     // this set for computing iterated dominance frontier (IDF).
     // The IDF blocks are the blocks where we need to insert new phi-nodes.
     ForwardIDFCalculator IDF(*DT);
-    DEBUG(dbgs() << "SSAUpdater: rewriting " << R.Uses.size() << " use(s)\n");
+    LLVM_DEBUG(dbgs() << "SSAUpdater: rewriting " << R.Uses.size()
+                      << " use(s)\n");
 
     SmallPtrSet<BasicBlock *, 2> DefBlocks;
     for (auto &Def : R.Defines)
@@ -181,8 +183,8 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       // Notify that users of the existing value that it is being replaced.
       if (OldVal != V && OldVal->hasValueHandle())
         ValueHandleBase::ValueIsRAUWd(OldVal, V);
-      DEBUG(dbgs() << "SSAUpdater: replacing " << *OldVal << " with " << *V
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "SSAUpdater: replacing " << *OldVal << " with " << *V
+                        << "\n");
       U->set(V);
     }
   }

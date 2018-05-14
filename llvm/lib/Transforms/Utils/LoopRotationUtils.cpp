@@ -235,15 +235,16 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     CodeMetrics Metrics;
     Metrics.analyzeBasicBlock(OrigHeader, *TTI, EphValues);
     if (Metrics.notDuplicatable) {
-      DEBUG(dbgs() << "LoopRotation: NOT rotating - contains non-duplicatable"
-                   << " instructions: ";
-            L->dump());
+      LLVM_DEBUG(
+          dbgs() << "LoopRotation: NOT rotating - contains non-duplicatable"
+                 << " instructions: ";
+          L->dump());
       return false;
     }
     if (Metrics.convergent) {
-      DEBUG(dbgs() << "LoopRotation: NOT rotating - contains convergent "
-                      "instructions: ";
-            L->dump());
+      LLVM_DEBUG(dbgs() << "LoopRotation: NOT rotating - contains convergent "
+                           "instructions: ";
+                 L->dump());
       return false;
     }
     if (Metrics.NumInsts > MaxHeaderSize)
@@ -266,7 +267,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   if (SE)
     SE->forgetTopmostLoop(L);
 
-  DEBUG(dbgs() << "LoopRotation: rotating "; L->dump());
+  LLVM_DEBUG(dbgs() << "LoopRotation: rotating "; L->dump());
 
   // Find new Loop header. NewHeader is a Header's one and only successor
   // that is inside loop.  Header's other successor is outside the
@@ -477,7 +478,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // emitted code isn't too gross in this common case.
   MergeBlockIntoPredecessor(OrigHeader, DT, LI);
 
-  DEBUG(dbgs() << "LoopRotation: into "; L->dump());
+  LLVM_DEBUG(dbgs() << "LoopRotation: into "; L->dump());
 
   ++NumRotated;
   return true;
@@ -580,8 +581,8 @@ bool LoopRotate::simplifyLoopLatch(Loop *L) {
   if (!shouldSpeculateInstrs(Latch->begin(), Jmp->getIterator(), L))
     return false;
 
-  DEBUG(dbgs() << "Folding loop latch " << Latch->getName() << " into "
-               << LastExit->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Folding loop latch " << Latch->getName() << " into "
+                    << LastExit->getName() << "\n");
 
   // Hoist the instructions from Latch into LastExit.
   LastExit->getInstList().splice(BI->getIterator(), Latch->getInstList(),

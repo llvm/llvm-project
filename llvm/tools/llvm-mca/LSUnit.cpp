@@ -36,8 +36,8 @@ void LSUnit::assignLQSlot(unsigned Index) {
   assert(!isLQFull());
   assert(LoadQueue.count(Index) == 0);
 
-  DEBUG(dbgs() << "[LSUnit] - AssignLQSlot <Idx=" << Index
-               << ",slot=" << LoadQueue.size() << ">\n");
+  LLVM_DEBUG(dbgs() << "[LSUnit] - AssignLQSlot <Idx=" << Index
+                    << ",slot=" << LoadQueue.size() << ">\n");
   LoadQueue.insert(Index);
 }
 
@@ -45,8 +45,8 @@ void LSUnit::assignSQSlot(unsigned Index) {
   assert(!isSQFull());
   assert(StoreQueue.count(Index) == 0);
 
-  DEBUG(dbgs() << "[LSUnit] - AssignSQSlot <Idx=" << Index
-               << ",slot=" << StoreQueue.size() << ">\n");
+  LLVM_DEBUG(dbgs() << "[LSUnit] - AssignSQSlot <Idx=" << Index
+                    << ",slot=" << StoreQueue.size() << ">\n");
   StoreQueue.insert(Index);
 }
 
@@ -123,15 +123,15 @@ void LSUnit::onInstructionExecuted(const InstRef &IR) {
   const unsigned Index = IR.getSourceIndex();
   std::set<unsigned>::iterator it = LoadQueue.find(Index);
   if (it != LoadQueue.end()) {
-    DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
-                 << " has been removed from the load queue.\n");
+    LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
+                      << " has been removed from the load queue.\n");
     LoadQueue.erase(it);
   }
 
   it = StoreQueue.find(Index);
   if (it != StoreQueue.end()) {
-    DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
-                 << " has been removed from the store queue.\n");
+    LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
+                      << " has been removed from the store queue.\n");
     StoreQueue.erase(it);
   }
 

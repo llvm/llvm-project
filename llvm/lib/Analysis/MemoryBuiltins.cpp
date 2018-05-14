@@ -528,8 +528,8 @@ SizeOffsetType ObjectSizeOffsetVisitor::compute(Value *V) {
       return visitGEPOperator(cast<GEPOperator>(*CE));
   }
 
-  DEBUG(dbgs() << "ObjectSizeOffsetVisitor::compute() unhandled value: " << *V
-        << '\n');
+  LLVM_DEBUG(dbgs() << "ObjectSizeOffsetVisitor::compute() unhandled value: "
+                    << *V << '\n');
   return unknown();
 }
 
@@ -729,7 +729,8 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitUndefValue(UndefValue&) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitInstruction(Instruction &I) {
-  DEBUG(dbgs() << "ObjectSizeOffsetVisitor unknown instruction:" << I << '\n');
+  LLVM_DEBUG(dbgs() << "ObjectSizeOffsetVisitor unknown instruction:" << I
+                    << '\n');
   return unknown();
 }
 
@@ -808,8 +809,9 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::compute_(Value *V) {
     // Ignore values where we cannot do more than ObjectSizeVisitor.
     Result = unknown();
   } else {
-    DEBUG(dbgs() << "ObjectSizeOffsetEvaluator::compute() unhandled value: "
-          << *V << '\n');
+    LLVM_DEBUG(
+        dbgs() << "ObjectSizeOffsetEvaluator::compute() unhandled value: " << *V
+               << '\n');
     Result = unknown();
   }
 
@@ -946,6 +948,7 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitSelectInst(SelectInst &I) {
 }
 
 SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitInstruction(Instruction &I) {
-  DEBUG(dbgs() << "ObjectSizeOffsetEvaluator unknown instruction:" << I <<'\n');
+  LLVM_DEBUG(dbgs() << "ObjectSizeOffsetEvaluator unknown instruction:" << I
+                    << '\n');
   return unknown();
 }

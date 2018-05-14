@@ -62,8 +62,8 @@ static bool instrumentMemAccess(Value *Ptr, Value *InstVal,
                                 BuilderTy &IRB,
                                 GetTrapBBT GetTrapBB) {
   uint64_t NeededSize = DL.getTypeStoreSize(InstVal->getType());
-  DEBUG(dbgs() << "Instrument " << *Ptr << " for " << Twine(NeededSize)
-              << " bytes\n");
+  LLVM_DEBUG(dbgs() << "Instrument " << *Ptr << " for " << Twine(NeededSize)
+                    << " bytes\n");
 
   SizeOffsetEvalType SizeOffset = ObjSizeEval.compute(Ptr);
 

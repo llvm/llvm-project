@@ -77,7 +77,7 @@ protected:
           continue;
         }
 
-        DEBUG(dbgs() << "TLS Dynamic Call Fixup:\n    " << MI);
+        LLVM_DEBUG(dbgs() << "TLS Dynamic Call Fixup:\n    " << MI);
 
         unsigned OutReg = MI.getOperand(0).getReg();
         unsigned InReg = MI.getOperand(1).getReg();

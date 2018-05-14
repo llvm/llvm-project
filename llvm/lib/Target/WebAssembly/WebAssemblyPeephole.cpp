@@ -116,7 +116,7 @@ static bool MaybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
 }
 
 bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "********** Peephole **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });

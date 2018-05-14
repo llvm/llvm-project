@@ -1225,7 +1225,8 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       return MCDisassembler::Fail;
 
     if (hasMips32r6()) {
-      DEBUG(dbgs() << "Trying MicroMipsR616 table (16-bit instructions):\n");
+      LLVM_DEBUG(
+          dbgs() << "Trying MicroMipsR616 table (16-bit instructions):\n");
       // Calling the auto-generated decoder function for microMIPS32R6
       // 16-bit instructions.
       Result = decodeInstruction(DecoderTableMicroMipsR616, Instr, Insn,
@@ -1236,7 +1237,7 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       }
     }
 
-    DEBUG(dbgs() << "Trying MicroMips16 table (16-bit instructions):\n");
+    LLVM_DEBUG(dbgs() << "Trying MicroMips16 table (16-bit instructions):\n");
     // Calling the auto-generated decoder function for microMIPS 16-bit
     // instructions.
     Result = decodeInstruction(DecoderTableMicroMips16, Instr, Insn, Address,
@@ -1251,7 +1252,8 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       return MCDisassembler::Fail;
 
     if (hasMips32r6()) {
-      DEBUG(dbgs() << "Trying MicroMips32r632 table (32-bit instructions):\n");
+      LLVM_DEBUG(
+          dbgs() << "Trying MicroMips32r632 table (32-bit instructions):\n");
       // Calling the auto-generated decoder function.
       Result = decodeInstruction(DecoderTableMicroMipsR632, Instr, Insn, Address,
                                  this, STI);
@@ -1261,7 +1263,7 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       }
     }
 
-    DEBUG(dbgs() << "Trying MicroMips32 table (32-bit instructions):\n");
+    LLVM_DEBUG(dbgs() << "Trying MicroMips32 table (32-bit instructions):\n");
     // Calling the auto-generated decoder function.
     Result = decodeInstruction(DecoderTableMicroMips32, Instr, Insn, Address,
                                this, STI);
@@ -1271,7 +1273,7 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     }
 
     if (isFP64()) {
-      DEBUG(dbgs() << "Trying MicroMipsFP64 table (32-bit opcodes):\n");
+      LLVM_DEBUG(dbgs() << "Trying MicroMipsFP64 table (32-bit opcodes):\n");
       Result = decodeInstruction(DecoderTableMicroMipsFP6432, Instr, Insn,
                                  Address, this, STI);
       if (Result != MCDisassembler::Fail) {
@@ -1300,7 +1302,7 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   Size = 4;
 
   if (hasCOP3()) {
-    DEBUG(dbgs() << "Trying COP3_ table (32-bit opcodes):\n");
+    LLVM_DEBUG(dbgs() << "Trying COP3_ table (32-bit opcodes):\n");
     Result =
         decodeInstruction(DecoderTableCOP3_32, Instr, Insn, Address, this, STI);
     if (Result != MCDisassembler::Fail)
@@ -1308,7 +1310,8 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   }
 
   if (hasMips32r6() && isGP64()) {
-    DEBUG(dbgs() << "Trying Mips32r6_64r6 (GPR64) table (32-bit opcodes):\n");
+    LLVM_DEBUG(
+        dbgs() << "Trying Mips32r6_64r6 (GPR64) table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMips32r6_64r6_GP6432, Instr, Insn,
                                Address, this, STI);
     if (Result != MCDisassembler::Fail)
@@ -1316,7 +1319,8 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   }
 
   if (hasMips32r6() && isPTR64()) {
-    DEBUG(dbgs() << "Trying Mips32r6_64r6 (PTR64) table (32-bit opcodes):\n");
+    LLVM_DEBUG(
+        dbgs() << "Trying Mips32r6_64r6 (PTR64) table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMips32r6_64r6_PTR6432, Instr, Insn,
                                Address, this, STI);
     if (Result != MCDisassembler::Fail)
@@ -1324,7 +1328,7 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   }
 
   if (hasMips32r6()) {
-    DEBUG(dbgs() << "Trying Mips32r6_64r6 table (32-bit opcodes):\n");
+    LLVM_DEBUG(dbgs() << "Trying Mips32r6_64r6 table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMips32r6_64r632, Instr, Insn,
                                Address, this, STI);
     if (Result != MCDisassembler::Fail)
@@ -1332,7 +1336,8 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   }
 
   if (hasMips2() && isPTR64()) {
-    DEBUG(dbgs() << "Trying Mips32r6_64r6 (PTR64) table (32-bit opcodes):\n");
+    LLVM_DEBUG(
+        dbgs() << "Trying Mips32r6_64r6 (PTR64) table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMips32_64_PTR6432, Instr, Insn,
                                Address, this, STI);
     if (Result != MCDisassembler::Fail)
@@ -1340,7 +1345,7 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   }
 
   if (hasCnMips()) {
-    DEBUG(dbgs() << "Trying CnMips table (32-bit opcodes):\n");
+    LLVM_DEBUG(dbgs() << "Trying CnMips table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableCnMips32, Instr, Insn,
                                Address, this, STI);
     if (Result != MCDisassembler::Fail)
@@ -1348,7 +1353,7 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   }
 
   if (isGP64()) {
-    DEBUG(dbgs() << "Trying Mips64 (GPR64) table (32-bit opcodes):\n");
+    LLVM_DEBUG(dbgs() << "Trying Mips64 (GPR64) table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMips6432, Instr, Insn,
                                Address, this, STI);
     if (Result != MCDisassembler::Fail)
@@ -1356,14 +1361,15 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   }
 
   if (isFP64()) {
-    DEBUG(dbgs() << "Trying MipsFP64 (64 bit FPU) table (32-bit opcodes):\n");
+    LLVM_DEBUG(
+        dbgs() << "Trying MipsFP64 (64 bit FPU) table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableMipsFP6432, Instr, Insn,
                                Address, this, STI);
     if (Result != MCDisassembler::Fail)
       return Result;
   }
 
-  DEBUG(dbgs() << "Trying Mips table (32-bit opcodes):\n");
+  LLVM_DEBUG(dbgs() << "Trying Mips table (32-bit opcodes):\n");
   // Calling the auto-generated decoder function.
   Result =
       decodeInstruction(DecoderTableMips32, Instr, Insn, Address, this, STI);

@@ -40,6 +40,54 @@ class DWARFContext;
 class DWARFDebugAbbrev;
 class DWARFUnit;
 
+/// Base class describing the header of any kind of "unit."  Some information
+/// is specific to certain unit types.  We separate this class out so we can
+/// parse the header before deciding what specific kind of unit to construct.
+class DWARFUnitHeader {
+  // Offset within section.
+  uint32_t Offset = 0;
+  // Version, address size, and DWARF format.
+  dwarf::FormParams FormParams;
+  uint32_t Length = 0;
+  uint64_t AbbrOffset = 0;
+
+  // For DWO units only.
+  const DWARFUnitIndex::Entry *IndexEntry = nullptr;
+
+  // For type units only.
+  uint64_t TypeHash = 0;
+  uint32_t TypeOffset = 0;
+
+  // Unit type as parsed, or derived from the section kind.
+  uint8_t UnitType = 0;
+
+public:
+  /// Parse a unit header from \p debug_info starting at \p offset_ptr.
+  bool extract(DWARFContext &Context, const DWARFDataExtractor &debug_info,
+               uint32_t *offset_ptr, DWARFSectionKind Kind = DW_SECT_INFO,
+               const DWARFUnitIndex *Index = nullptr);
+  uint32_t getOffset() const { return Offset; }
+  const dwarf::FormParams &getFormParams() const { return FormParams; }
+  uint16_t getVersion() const { return FormParams.Version; }
+  dwarf::DwarfFormat getFormat() const { return FormParams.Format; }
+  uint8_t getAddressByteSize() const { return FormParams.AddrSize; }
+  uint8_t getRefAddrByteSize() const { return FormParams.getRefAddrByteSize(); }
+  uint8_t getDwarfOffsetByteSize() const {
+    return FormParams.getDwarfOffsetByteSize();
+  }
+  uint32_t getLength() const { return Length; }
+  uint64_t getAbbrOffset() const { return AbbrOffset; }
+  const DWARFUnitIndex::Entry *getIndexEntry() const { return IndexEntry; }
+  uint64_t getTypeHash() const { return TypeHash; }
+  uint32_t getTypeOffset() const { return TypeOffset; }
+  uint8_t getUnitType() const { return UnitType; }
+  bool isTypeUnit() const {
+    return UnitType == dwarf::DW_UT_type || UnitType == dwarf::DW_UT_split_type;
+  }
+  // FIXME: Support DWARF64.
+  uint32_t getNextUnitOffset() const { return Offset + Length + 4; }
+};
+
 /// Base class for all DWARFUnitSection classes. This provides the
 /// functionality common to all unit types.
 class DWARFUnitSectionBase {
@@ -133,11 +181,12 @@ private:
                 &LS](uint32_t Offset) -> std::unique_ptr<UnitType> {
         if (!Data.isValidOffset(Offset))
           return nullptr;
-        auto U = llvm::make_unique<UnitType>(
-            Context, Section, DA, RS, SS, SOS, AOS, LS, LE, IsDWO, *this,
-            Index ? Index->getFromOffset(Offset) : nullptr);
-        if (!U->extract(Data, &Offset))
+        DWARFUnitHeader Header;
+        if (!Header.extract(Context, Data, &Offset, UnitType::Section, Index))
           return nullptr;
+        auto U = llvm::make_unique<UnitType>(
+            Context, Section, Header, DA, RS, SS, SOS, AOS, LS, LE, IsDWO,
+            *this);
         return U;
       };
     }
@@ -195,6 +244,7 @@ class DWARFUnit {
   /// Section containing this DWARFUnit.
   const DWARFSection &InfoSection;
 
+  DWARFUnitHeader Header;
   const DWARFDebugAbbrev *Abbrev;
   const DWARFSection *RangeSection;
   uint32_t RangeSectionBase;
@@ -207,17 +257,11 @@ class DWARFUnit {
   bool isDWO;
   const DWARFUnitSectionBase &UnitSection;
 
-  // Version, address size, and DWARF format.
-  dwarf::FormParams FormParams;
   /// Start, length, and DWARF format of the unit's contribution to the string
   /// offsets table (DWARF v5).
   Optional<StrOffsetsContributionDescriptor> StringOffsetsTableContribution;
 
-  uint32_t Offset;
-  uint32_t Length;
   mutable const DWARFAbbreviationDeclarationSet *Abbrevs;
-  uint64_t AbbrOffset;
-  uint8_t UnitType;
   llvm::Optional<BaseAddress> BaseAddr;
   /// The compile unit debug information entry items.
   std::vector<DWARFDebugInfoEntry> DieArray;
@@ -232,8 +276,6 @@ class DWARFUnit {
 
   std::shared_ptr<DWARFUnit> DWO;
 
-  const DWARFUnitIndex::Entry *IndexEntry;
-
   uint32_t getDIEIndex(const DWARFDebugInfoEntry *Die) {
     auto First = DieArray.data();
     assert(Die >= First && Die < First + DieArray.size());
@@ -241,8 +283,7 @@ class DWARFUnit {
   }
 
 protected:
-  virtual bool extractImpl(const DWARFDataExtractor &debug_info,
-                           uint32_t *offset_ptr);
+  const DWARFUnitHeader &getHeader() const { return Header; }
 
   /// Size in bytes of the unit header.
   virtual uint32_t getHeaderSize() const { return getVersion() <= 4 ? 11 : 12; }
@@ -264,16 +305,28 @@ protected:
 
 public:
   DWARFUnit(DWARFContext &Context, const DWARFSection &Section,
+            const DWARFUnitHeader &Header,
             const DWARFDebugAbbrev *DA, const DWARFSection *RS, StringRef SS,
             const DWARFSection &SOS, const DWARFSection *AOS,
             const DWARFSection &LS, bool LE, bool IsDWO,
-            const DWARFUnitSectionBase &UnitSection,
-            const DWARFUnitIndex::Entry *IndexEntry = nullptr);
+            const DWARFUnitSectionBase &UnitSection);
 
   virtual ~DWARFUnit();
 
   DWARFContext& getContext() const { return Context; }
-
+  uint32_t getOffset() const { return Header.getOffset(); }
+  const dwarf::FormParams &getFormParams() const {
+    return Header.getFormParams();
+  }
+  uint16_t getVersion() const { return Header.getVersion(); }
+  uint8_t getAddressByteSize() const { return Header.getAddressByteSize(); }
+  uint8_t getRefAddrByteSize() const { return Header.getRefAddrByteSize(); }
+  uint8_t getDwarfOffsetByteSize() const {
+    return Header.getDwarfOffsetByteSize();
+  }
+  uint32_t getLength() const { return Header.getLength(); }
+  uint8_t getUnitType() const { return Header.getUnitType(); }
+  uint32_t getNextUnitOffset() const { return Header.getNextUnitOffset(); }
   const DWARFSection &getLineSection() const { return LineSection; }
   StringRef getStringSection() const { return StringSection; }
   const DWARFSection &getStringOffsetSection() const {
@@ -302,29 +355,16 @@ public:
     return DataExtractor(StringSection, false, 0);
   }
 
-  bool extract(const DWARFDataExtractor &debug_info, uint32_t *offset_ptr);
-
   /// extractRangeList - extracts the range list referenced by this compile
   /// unit from .debug_ranges section. Returns true on success.
   /// Requires that compile unit is already extracted.
   bool extractRangeList(uint32_t RangeListOffset,
                         DWARFDebugRangeList &RangeList) const;
   void clear();
-  uint32_t getOffset() const { return Offset; }
-  uint32_t getNextUnitOffset() const { return Offset + Length + 4; }
-  uint32_t getLength() const { return Length; }
 
   const Optional<StrOffsetsContributionDescriptor> &
   getStringOffsetsTableContribution() const {
     return StringOffsetsTableContribution;
-  }
-  const dwarf::FormParams &getFormParams() const { return FormParams; }
-  uint16_t getVersion() const { return FormParams.Version; }
-  dwarf::DwarfFormat getFormat() const { return FormParams.Format; }
-  uint8_t getAddressByteSize() const { return FormParams.AddrSize; }
-  uint8_t getRefAddrByteSize() const { return FormParams.getRefAddrByteSize(); }
-  uint8_t getDwarfOffsetByteSize() const {
-    return FormParams.getDwarfOffsetByteSize();
   }
 
   uint8_t getDwarfStringOffsetsByteSize() const {
@@ -338,8 +378,6 @@ public:
   }
 
   const DWARFAbbreviationDeclarationSet *getAbbreviations() const;
-
-  uint8_t getUnitType() const { return UnitType; }
 
   static bool isMatchingUnitTypeAndTag(uint8_t UnitType, dwarf::Tag Tag) {
     switch (UnitType) {
@@ -453,7 +491,7 @@ public:
   }
 
   uint32_t getLineTableOffset() const {
-    if (IndexEntry)
+    if (auto IndexEntry = Header.getIndexEntry())
       if (const auto *Contrib = IndexEntry->getOffset(DW_SECT_LINE))
         return Contrib->Offset;
     return 0;
@@ -466,7 +504,9 @@ public:
 
 private:
   /// Size in bytes of the .debug_info data associated with this compile unit.
-  size_t getDebugInfoSize() const { return Length + 4 - getHeaderSize(); }
+  size_t getDebugInfoSize() const {
+    return Header.getLength() + 4 - getHeaderSize();
+  }
 
   /// extractDIEsIfNeeded - Parses a compile unit and indexes its DIEs if it
   /// hasn't already been done. Returns the number of DIEs parsed at this call.

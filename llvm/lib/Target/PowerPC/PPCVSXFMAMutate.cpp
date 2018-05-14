@@ -241,7 +241,7 @@ protected:
         assert(OldFMAReg == AddendMI->getOperand(0).getReg() &&
                "Addend copy not tied to old FMA output!");
 
-        DEBUG(dbgs() << "VSX FMA Mutation:\n    " << MI);
+        LLVM_DEBUG(dbgs() << "VSX FMA Mutation:\n    " << MI);
 
         MI.getOperand(0).setReg(KilledProdReg);
         MI.getOperand(1).setReg(KilledProdReg);
@@ -273,7 +273,7 @@ protected:
           MI.getOperand(2).setIsUndef(OtherProdRegUndef);
         }
 
-        DEBUG(dbgs() << " -> " << MI);
+        LLVM_DEBUG(dbgs() << " -> " << MI);
 
         // The killed product operand was killed here, so we can reuse it now
         // for the result of the fma.
@@ -310,7 +310,7 @@ protected:
           NewFMAInt.addSegment(LiveInterval::Segment(AI->start, AI->end,
                                                      NewFMAValNo));
         }
-        DEBUG(dbgs() << "  extended: " << NewFMAInt << '\n');
+        LLVM_DEBUG(dbgs() << "  extended: " << NewFMAInt << '\n');
 
         // Extend the live interval of the addend source (it might end at the
         // copy to be removed, or somewhere in between there and here). This
@@ -323,15 +323,15 @@ protected:
             LiveRange &AddendSrcRange = LIS->getRegUnit(Unit);
             AddendSrcRange.extendInBlock(LIS->getMBBStartIdx(&MBB),
                                          FMAIdx.getRegSlot());
-            DEBUG(dbgs() << "  extended: " << AddendSrcRange << '\n');
+            LLVM_DEBUG(dbgs() << "  extended: " << AddendSrcRange << '\n');
           }
 
         FMAInt.removeValNo(FMAValNo);
-        DEBUG(dbgs() << "  trimmed:  " << FMAInt << '\n');
+        LLVM_DEBUG(dbgs() << "  trimmed:  " << FMAInt << '\n');
 
         // Remove the (now unused) copy.
 
-        DEBUG(dbgs() << "  removing: " << *AddendMI << '\n');
+        LLVM_DEBUG(dbgs() << "  removing: " << *AddendMI << '\n');
         LIS->RemoveMachineInstrFromMaps(*AddendMI);
         AddendMI->eraseFromParent();
 

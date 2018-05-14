@@ -675,7 +675,7 @@ typename Tr::RegionT *RegionInfoBase<Tr>::createRegion(BlockT *entry,
 #ifdef EXPENSIVE_CHECKS
   region->verifyRegion();
 #else
-  DEBUG(region->verifyRegion());
+  LLVM_DEBUG(region->verifyRegion());
 #endif
 
   updateStatistics(region);

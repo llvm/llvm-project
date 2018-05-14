@@ -107,10 +107,11 @@ def : WriteRes<WriteRMW, [HWPort237,HWPort4]>;
 
 // Store_addr on 237.
 // Store_data on 4.
-def : WriteRes<WriteStore, [HWPort237, HWPort4]>;
-def : WriteRes<WriteLoad,  [HWPort23]> { let Latency = 5; }
-def : WriteRes<WriteMove,  [HWPort0156]>;
-def : WriteRes<WriteZero,  []>;
+defm : X86WriteRes<WriteStore,   [HWPort237, HWPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteStoreNT, [HWPort237, HWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteLoad,    [HWPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteMove,    [HWPort0156], 1, [1], 1>;
+def  : WriteRes<WriteZero,       []>;
 
 defm : HWWriteResPair<WriteALU,    [HWPort0156], 1>;
 defm : HWWriteResPair<WriteIMul,   [HWPort1],   3>;
@@ -161,6 +162,9 @@ defm : X86WriteRes<WriteFMaskedLoadY,  [HWPort23,HWPort5], 9, [1,2], 3>;
 defm : X86WriteRes<WriteFStore,        [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreX,       [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreY,       [HWPort237,HWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreNT,      [HWPort237,HWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreNTX,     [HWPort237,HWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreNTY,     [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStore,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMaskedStoreY, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMove,         [HWPort5], 1, [1], 1>;
@@ -257,11 +261,15 @@ def  : WriteRes<WriteCvtF2FSt, [HWPort1,HWPort4,HWPort5,HWPort237]> {
 defm : X86WriteRes<WriteVecLoad,         [HWPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteVecLoadX,        [HWPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteVecLoadY,        [HWPort23], 7, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNT,       [HWPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNTY,      [HWPort23], 7, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [HWPort23,HWPort5], 8, [1,2], 3>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [HWPort23,HWPort5], 9, [1,2], 3>;
 defm : X86WriteRes<WriteVecStore,        [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreX,       [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [HWPort237,HWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreNT,      [HWPort237,HWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreNTY,     [HWPort237,HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStore,  [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [HWPort0,HWPort4,HWPort237,HWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMove,         [HWPort015], 1, [1], 1>;
@@ -754,8 +762,6 @@ def HWWriteResGroup1 : SchedWriteRes<[HWPort4,HWPort237]> {
 }
 def: InstRW<[HWWriteResGroup1], (instregex "FBSTPm",
                                            "MMX_MOVD64mr",
-                                           "MOVNTI_64mr",
-                                           "MOVNTImr",
                                            "ST_FP(32|64|80)m",
                                            "(V?)MOV(H|L)(PD|PS)mr",
                                            "(V?)MOVPDI2DImr",

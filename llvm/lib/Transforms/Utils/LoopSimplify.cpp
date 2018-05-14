@@ -141,8 +141,8 @@ BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
   if (!PreheaderBB)
     return nullptr;
 
-  DEBUG(dbgs() << "LoopSimplify: Creating pre-header "
-               << PreheaderBB->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "LoopSimplify: Creating pre-header "
+                    << PreheaderBB->getName() << "\n");
 
   // Make sure that NewBB is put someplace intelligent, which doesn't mess up
   // code layout too horribly.
@@ -242,7 +242,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
       OuterLoopPreds.push_back(PN->getIncomingBlock(i));
     }
   }
-  DEBUG(dbgs() << "LoopSimplify: Splitting out a new outer loop\n");
+  LLVM_DEBUG(dbgs() << "LoopSimplify: Splitting out a new outer loop\n");
 
   // If ScalarEvolution is around and knows anything about values in
   // this loop, tell it to forget them, because we're about to
@@ -371,8 +371,8 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   BranchInst *BETerminator = BranchInst::Create(Header, BEBlock);
   BETerminator->setDebugLoc(Header->getFirstNonPHI()->getDebugLoc());
 
-  DEBUG(dbgs() << "LoopSimplify: Inserting unique backedge block "
-               << BEBlock->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "LoopSimplify: Inserting unique backedge block "
+                    << BEBlock->getName() << "\n");
 
   // Move the new backedge block to right after the last backedge block.
   Function::iterator InsertPos = ++BackedgeBlocks.back()->getIterator();
@@ -484,8 +484,8 @@ ReprocessLoop:
     // Delete each unique out-of-loop (and thus dead) predecessor.
     for (BasicBlock *P : BadPreds) {
 
-      DEBUG(dbgs() << "LoopSimplify: Deleting edge from dead predecessor "
-                   << P->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "LoopSimplify: Deleting edge from dead predecessor "
+                        << P->getName() << "\n");
 
       // Zap the dead pred's terminator and replace it with unreachable.
       TerminatorInst *TI = P->getTerminator();
@@ -504,8 +504,9 @@ ReprocessLoop:
       if (BI->isConditional()) {
         if (UndefValue *Cond = dyn_cast<UndefValue>(BI->getCondition())) {
 
-          DEBUG(dbgs() << "LoopSimplify: Resolving \"br i1 undef\" to exit in "
-                       << ExitingBlock->getName() << "\n");
+          LLVM_DEBUG(dbgs()
+                     << "LoopSimplify: Resolving \"br i1 undef\" to exit in "
+                     << ExitingBlock->getName() << "\n");
 
           BI->setCondition(ConstantInt::get(Cond->getType(),
                                             !L->contains(BI->getSuccessor(0))));
@@ -641,8 +642,8 @@ ReprocessLoop:
 
       // Success. The block is now dead, so remove it from the loop,
       // update the dominator tree and delete it.
-      DEBUG(dbgs() << "LoopSimplify: Eliminating exiting block "
-                   << ExitingBlock->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "LoopSimplify: Eliminating exiting block "
+                        << ExitingBlock->getName() << "\n");
 
       assert(pred_begin(ExitingBlock) == pred_end(ExitingBlock));
       Changed = true;

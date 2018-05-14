@@ -113,7 +113,7 @@ static void initializeUsedResources(InstrDesc &ID,
     }
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     for (const std::pair<uint64_t, ResourceUsage> &R : ID.Resources)
       dbgs() << "\t\tMask=" << R.first << ", cy=" << R.second.size() << '\n';
     for (const uint64_t R : ID.Buffers)
@@ -259,7 +259,7 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
     }
     Write.FullyUpdatesSuperRegs = FullyUpdatesSuperRegisters;
     Write.IsOptionalDef = false;
-    DEBUG({
+    LLVM_DEBUG({
       dbgs() << "\t\tOpIdx=" << Write.OpIndex << ", Latency=" << Write.Latency
              << ", WriteResourceID=" << Write.SClassOrWriteResourceID << '\n';
     });
@@ -290,10 +290,10 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
 
     Write.IsOptionalDef = false;
     assert(Write.RegisterID != 0 && "Expected a valid phys register!");
-    DEBUG(dbgs() << "\t\tOpIdx=" << Write.OpIndex << ", PhysReg="
-                 << Write.RegisterID << ", Latency=" << Write.Latency
-                 << ", WriteResourceID=" << Write.SClassOrWriteResourceID
-                 << '\n');
+    LLVM_DEBUG(dbgs() << "\t\tOpIdx=" << Write.OpIndex << ", PhysReg="
+                      << Write.RegisterID << ", Latency=" << Write.Latency
+                      << ", WriteResourceID=" << Write.SClassOrWriteResourceID
+                      << '\n');
   }
 
   if (MCDesc.hasOptionalDef()) {
@@ -352,7 +352,7 @@ static void populateReads(InstrDesc &ID, const MCInst &MCI,
     Read.UseIndex = CurrentUse;
     Read.HasReadAdvanceEntries = HasReadAdvanceEntries;
     Read.SchedClassID = SchedClassID;
-    DEBUG(dbgs() << "\t\tOpIdx=" << Read.OpIndex);
+    LLVM_DEBUG(dbgs() << "\t\tOpIdx=" << Read.OpIndex);
   }
 
   for (unsigned CurrentUse = 0; CurrentUse < NumImplicitUses; ++CurrentUse) {
@@ -362,8 +362,8 @@ static void populateReads(InstrDesc &ID, const MCInst &MCI,
     Read.RegisterID = MCDesc.getImplicitUses()[CurrentUse];
     Read.HasReadAdvanceEntries = HasReadAdvanceEntries;
     Read.SchedClassID = SchedClassID;
-    DEBUG(dbgs() << "\t\tOpIdx=" << Read.OpIndex
-                 << ", RegisterID=" << Read.RegisterID << '\n');
+    LLVM_DEBUG(dbgs() << "\t\tOpIdx=" << Read.OpIndex
+                      << ", RegisterID=" << Read.RegisterID << '\n');
   }
 }
 
@@ -413,8 +413,8 @@ const InstrDesc &InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   populateWrites(*ID, MCI, MCDesc, SCDesc, STI);
   populateReads(*ID, MCI, MCDesc, SCDesc, STI);
 
-  DEBUG(dbgs() << "\t\tMaxLatency=" << ID->MaxLatency << '\n');
-  DEBUG(dbgs() << "\t\tNumMicroOps=" << ID->NumMicroOps << '\n');
+  LLVM_DEBUG(dbgs() << "\t\tMaxLatency=" << ID->MaxLatency << '\n');
+  LLVM_DEBUG(dbgs() << "\t\tNumMicroOps=" << ID->NumMicroOps << '\n');
 
   // Now add the new descriptor.
   Descriptors[Opcode] = std::move(ID);

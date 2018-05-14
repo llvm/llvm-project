@@ -273,8 +273,8 @@ void RuntimeDyldELF::resolveX86_64Relocation(const SectionEntry &Section,
   case ELF::R_X86_64_64: {
     support::ulittle64_t::ref(Section.getAddressWithOffset(Offset)) =
         Value + Addend;
-    DEBUG(dbgs() << "Writing " << format("%p", (Value + Addend)) << " at "
-                 << format("%p\n", Section.getAddressWithOffset(Offset)));
+    LLVM_DEBUG(dbgs() << "Writing " << format("%p", (Value + Addend)) << " at "
+                      << format("%p\n", Section.getAddressWithOffset(Offset)));
     break;
   }
   case ELF::R_X86_64_32:
@@ -286,8 +286,8 @@ void RuntimeDyldELF::resolveX86_64Relocation(const SectionEntry &Section,
     uint32_t TruncatedAddr = (Value & 0xFFFFFFFF);
     support::ulittle32_t::ref(Section.getAddressWithOffset(Offset)) =
         TruncatedAddr;
-    DEBUG(dbgs() << "Writing " << format("%p", TruncatedAddr) << " at "
-                 << format("%p\n", Section.getAddressWithOffset(Offset)));
+    LLVM_DEBUG(dbgs() << "Writing " << format("%p", TruncatedAddr) << " at "
+                      << format("%p\n", Section.getAddressWithOffset(Offset)));
     break;
   }
   case ELF::R_X86_64_PC8: {
@@ -354,12 +354,12 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
   // Data should use target endian. Code should always use little endian.
   bool isBE = Arch == Triple::aarch64_be;
 
-  DEBUG(dbgs() << "resolveAArch64Relocation, LocalAddress: 0x"
-               << format("%llx", Section.getAddressWithOffset(Offset))
-               << " FinalAddress: 0x" << format("%llx", FinalAddress)
-               << " Value: 0x" << format("%llx", Value) << " Type: 0x"
-               << format("%x", Type) << " Addend: 0x" << format("%llx", Addend)
-               << "\n");
+  LLVM_DEBUG(dbgs() << "resolveAArch64Relocation, LocalAddress: 0x"
+                    << format("%llx", Section.getAddressWithOffset(Offset))
+                    << " FinalAddress: 0x" << format("%llx", FinalAddress)
+                    << " Value: 0x" << format("%llx", Value) << " Type: 0x"
+                    << format("%x", Type) << " Addend: 0x"
+                    << format("%llx", Addend) << "\n");
 
   switch (Type) {
   default:
@@ -474,11 +474,12 @@ void RuntimeDyldELF::resolveARMRelocation(const SectionEntry &Section,
   uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset) & 0xFFFFFFFF;
   Value += Addend;
 
-  DEBUG(dbgs() << "resolveARMRelocation, LocalAddress: "
-               << Section.getAddressWithOffset(Offset)
-               << " FinalAddress: " << format("%p", FinalAddress) << " Value: "
-               << format("%x", Value) << " Type: " << format("%x", Type)
-               << " Addend: " << format("%x", Addend) << "\n");
+  LLVM_DEBUG(dbgs() << "resolveARMRelocation, LocalAddress: "
+                    << Section.getAddressWithOffset(Offset)
+                    << " FinalAddress: " << format("%p", FinalAddress)
+                    << " Value: " << format("%x", Value)
+                    << " Type: " << format("%x", Type)
+                    << " Addend: " << format("%x", Addend) << "\n");
 
   switch (Type) {
   default:
@@ -859,16 +860,16 @@ void RuntimeDyldELF::resolveBPFRelocation(const SectionEntry &Section,
     break;
   case ELF::R_BPF_64_64: {
     write(isBE, Section.getAddressWithOffset(Offset), Value + Addend);
-    DEBUG(dbgs() << "Writing " << format("%p", (Value + Addend)) << " at "
-                 << format("%p\n", Section.getAddressWithOffset(Offset)));
+    LLVM_DEBUG(dbgs() << "Writing " << format("%p", (Value + Addend)) << " at "
+                      << format("%p\n", Section.getAddressWithOffset(Offset)));
     break;
   }
   case ELF::R_BPF_64_32: {
     Value += Addend;
     assert(Value <= UINT32_MAX);
     write(isBE, Section.getAddressWithOffset(Offset), static_cast<uint32_t>(Value));
-    DEBUG(dbgs() << "Writing " << format("%p", Value) << " at "
-                 << format("%p\n", Section.getAddressWithOffset(Offset)));
+    LLVM_DEBUG(dbgs() << "Writing " << format("%p", Value) << " at "
+                      << format("%p\n", Section.getAddressWithOffset(Offset)));
     break;
   }
   }
@@ -1025,7 +1026,7 @@ void RuntimeDyldELF::resolveAArch64Branch(unsigned SectionID,
                                           relocation_iterator RelI,
                                           StubMap &Stubs) {
 
-  DEBUG(dbgs() << "\t\tThis is an AArch64 branch relocation.");
+  LLVM_DEBUG(dbgs() << "\t\tThis is an AArch64 branch relocation.");
   SectionEntry &Section = Sections[SectionID];
 
   uint64_t Offset = RelI->getOffset();
@@ -1036,10 +1037,10 @@ void RuntimeDyldELF::resolveAArch64Branch(unsigned SectionID,
     resolveRelocation(Section, Offset,
                       (uint64_t)Section.getAddressWithOffset(i->second),
                       RelType, 0);
-    DEBUG(dbgs() << " Stub function found\n");
+    LLVM_DEBUG(dbgs() << " Stub function found\n");
   } else if (!resolveAArch64ShortBranch(SectionID, RelI, Value)) {
     // Create a new stub function.
-    DEBUG(dbgs() << " Create a new stub function\n");
+    LLVM_DEBUG(dbgs() << " Create a new stub function\n");
     Stubs[Value] = Section.getStubOffset();
     uint8_t *StubTargetAddr = createStubFunction(
         Section.getAddressWithOffset(Section.getStubOffset()));
@@ -1096,8 +1097,8 @@ RuntimeDyldELF::processRelocationRef(
     else
       return TargetNameOrErr.takeError();
   }
-  DEBUG(dbgs() << "\t\tRelType: " << RelType << " Addend: " << Addend
-               << " TargetName: " << TargetName << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tRelType: " << RelType << " Addend: " << Addend
+                    << " TargetName: " << TargetName << "\n");
   RelocationValueRef Value;
   // First search for the symbol in the local symbol table
   SymbolRef::Type SymType = SymbolRef::ST_Unknown;
@@ -1138,7 +1139,7 @@ RuntimeDyldELF::processRelocationRef(
       section_iterator si = *SectionOrErr;
       if (si == Obj.section_end())
         llvm_unreachable("Symbol section not found, bad object file format!");
-      DEBUG(dbgs() << "\t\tThis is section symbol\n");
+      LLVM_DEBUG(dbgs() << "\t\tThis is section symbol\n");
       bool isCode = si->isText();
       if (auto SectionIDOrErr = findOrEmitSection(Obj, (*si), isCode,
                                                   ObjSectionToID))
@@ -1170,8 +1171,8 @@ RuntimeDyldELF::processRelocationRef(
 
   uint64_t Offset = RelI->getOffset();
 
-  DEBUG(dbgs() << "\t\tSectionID: " << SectionID << " Offset: " << Offset
-               << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tSectionID: " << SectionID << " Offset: " << Offset
+                    << "\n");
   if ((Arch == Triple::aarch64 || Arch == Triple::aarch64_be)) {
     if (RelType == ELF::R_AARCH64_CALL26 || RelType == ELF::R_AARCH64_JUMP26) {
       resolveAArch64Branch(SectionID, Value, RelI, Stubs);
@@ -1193,7 +1194,7 @@ RuntimeDyldELF::processRelocationRef(
     if (RelType == ELF::R_ARM_PC24 || RelType == ELF::R_ARM_CALL ||
       RelType == ELF::R_ARM_JUMP24) {
       // This is an ARM branch relocation, need to use a stub function.
-      DEBUG(dbgs() << "\t\tThis is an ARM branch relocation.\n");
+      LLVM_DEBUG(dbgs() << "\t\tThis is an ARM branch relocation.\n");
       SectionEntry &Section = Sections[SectionID];
 
       // Look for an existing stub.
@@ -1203,10 +1204,10 @@ RuntimeDyldELF::processRelocationRef(
             Section, Offset,
             reinterpret_cast<uint64_t>(Section.getAddressWithOffset(i->second)),
             RelType, 0);
-        DEBUG(dbgs() << " Stub function found\n");
+        LLVM_DEBUG(dbgs() << " Stub function found\n");
       } else {
         // Create a new stub function.
-        DEBUG(dbgs() << " Create a new stub function\n");
+        LLVM_DEBUG(dbgs() << " Create a new stub function\n");
         Stubs[Value] = Section.getStubOffset();
         uint8_t *StubTargetAddr = createStubFunction(
             Section.getAddressWithOffset(Section.getStubOffset()));
@@ -1241,7 +1242,7 @@ RuntimeDyldELF::processRelocationRef(
     uint32_t Opcode = readBytesUnaligned(Placeholder, 4);
     if (RelType == ELF::R_MIPS_26) {
       // This is an Mips branch relocation, need to use a stub function.
-      DEBUG(dbgs() << "\t\tThis is a Mips branch relocation.");
+      LLVM_DEBUG(dbgs() << "\t\tThis is a Mips branch relocation.");
       SectionEntry &Section = Sections[SectionID];
 
       // Extract the addend from the instruction.
@@ -1256,10 +1257,10 @@ RuntimeDyldELF::processRelocationRef(
       if (i != Stubs.end()) {
         RelocationEntry RE(SectionID, Offset, RelType, i->second);
         addRelocationForSection(RE, SectionID);
-        DEBUG(dbgs() << " Stub function found\n");
+        LLVM_DEBUG(dbgs() << " Stub function found\n");
       } else {
         // Create a new stub function.
-        DEBUG(dbgs() << " Create a new stub function\n");
+        LLVM_DEBUG(dbgs() << " Create a new stub function\n");
         Stubs[Value] = Section.getStubOffset();
 
         unsigned AbiVariant = Obj.getPlatformFlags();
@@ -1343,7 +1344,7 @@ RuntimeDyldELF::processRelocationRef(
         addRelocationForSection(RE, Value.SectionID);
     } else if (RelType == ELF::R_MIPS_26) {
       // This is an Mips branch relocation, need to use a stub function.
-      DEBUG(dbgs() << "\t\tThis is a Mips branch relocation.");
+      LLVM_DEBUG(dbgs() << "\t\tThis is a Mips branch relocation.");
       SectionEntry &Section = Sections[SectionID];
 
       //  Look up for existing stub.
@@ -1351,10 +1352,10 @@ RuntimeDyldELF::processRelocationRef(
       if (i != Stubs.end()) {
         RelocationEntry RE(SectionID, Offset, RelType, i->second);
         addRelocationForSection(RE, SectionID);
-        DEBUG(dbgs() << " Stub function found\n");
+        LLVM_DEBUG(dbgs() << " Stub function found\n");
       } else {
         // Create a new stub function.
-        DEBUG(dbgs() << " Create a new stub function\n");
+        LLVM_DEBUG(dbgs() << " Create a new stub function\n");
         Stubs[Value] = Section.getStubOffset();
 
         unsigned AbiVariant = Obj.getPlatformFlags();
@@ -1462,10 +1463,10 @@ RuntimeDyldELF::processRelocationRef(
                             reinterpret_cast<uint64_t>(
                                 Section.getAddressWithOffset(i->second)),
                             RelType, 0);
-          DEBUG(dbgs() << " Stub function found\n");
+          LLVM_DEBUG(dbgs() << " Stub function found\n");
         } else {
           // Create a new stub function.
-          DEBUG(dbgs() << " Create a new stub function\n");
+          LLVM_DEBUG(dbgs() << " Create a new stub function\n");
           Stubs[Value] = Section.getStubOffset();
           uint8_t *StubTargetAddr = createStubFunction(
               Section.getAddressWithOffset(Section.getStubOffset()),
@@ -1582,7 +1583,7 @@ RuntimeDyldELF::processRelocationRef(
     // parts of the stub separately.  However, as things stand, we allocate
     // a stub for every relocation, so using a GOT in JIT code should be
     // no less space efficient than using an explicit constant pool.
-    DEBUG(dbgs() << "\t\tThis is a SystemZ indirect relocation.");
+    LLVM_DEBUG(dbgs() << "\t\tThis is a SystemZ indirect relocation.");
     SectionEntry &Section = Sections[SectionID];
 
     // Look for an existing stub.
@@ -1590,10 +1591,10 @@ RuntimeDyldELF::processRelocationRef(
     uintptr_t StubAddress;
     if (i != Stubs.end()) {
       StubAddress = uintptr_t(Section.getAddressWithOffset(i->second));
-      DEBUG(dbgs() << " Stub function found\n");
+      LLVM_DEBUG(dbgs() << " Stub function found\n");
     } else {
       // Create a new stub function.
-      DEBUG(dbgs() << " Create a new stub function\n");
+      LLVM_DEBUG(dbgs() << " Create a new stub function\n");
 
       uintptr_t BaseAddress = uintptr_t(Section.getAddress());
       uintptr_t StubAlignment = getStubAlignment();
@@ -1644,10 +1645,10 @@ RuntimeDyldELF::processRelocationRef(
         uintptr_t StubAddress;
         if (i != Stubs.end()) {
           StubAddress = uintptr_t(Section.getAddress()) + i->second;
-          DEBUG(dbgs() << " Stub function found\n");
+          LLVM_DEBUG(dbgs() << " Stub function found\n");
         } else {
           // Create a new stub function (equivalent to a PLT entry).
-          DEBUG(dbgs() << " Create a new stub function\n");
+          LLVM_DEBUG(dbgs() << " Create a new stub function\n");
 
           uintptr_t BaseAddress = uintptr_t(Section.getAddress());
           uintptr_t StubAlignment = getStubAlignment();

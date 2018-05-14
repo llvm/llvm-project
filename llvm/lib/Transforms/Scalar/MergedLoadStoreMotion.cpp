@@ -180,7 +180,7 @@ bool MergedLoadStoreMotion::isStoreSinkBarrierInRange(const Instruction &Start,
 ///
 StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
                                                    StoreInst *Store0) {
-  DEBUG(dbgs() << "can Sink? : "; Store0->dump(); dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "can Sink? : "; Store0->dump(); dbgs() << "\n");
   BasicBlock *BB0 = Store0->getParent();
   for (Instruction &Inst : reverse(*BB1)) {
     auto *Store1 = dyn_cast<StoreInst>(&Inst);
@@ -229,9 +229,9 @@ bool MergedLoadStoreMotion::sinkStore(BasicBlock *BB, StoreInst *S0,
   if (A0 && A1 && A0->isIdenticalTo(A1) && A0->hasOneUse() &&
       (A0->getParent() == S0->getParent()) && A1->hasOneUse() &&
       (A1->getParent() == S1->getParent()) && isa<GetElementPtrInst>(A0)) {
-    DEBUG(dbgs() << "Sink Instruction into BB \n"; BB->dump();
-          dbgs() << "Instruction Left\n"; S0->dump(); dbgs() << "\n";
-          dbgs() << "Instruction Right\n"; S1->dump(); dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "Sink Instruction into BB \n"; BB->dump();
+               dbgs() << "Instruction Left\n"; S0->dump(); dbgs() << "\n";
+               dbgs() << "Instruction Right\n"; S1->dump(); dbgs() << "\n");
     // Hoist the instruction.
     BasicBlock::iterator InsertPt = BB->getFirstInsertionPt();
     // Intersect optional metadata.
@@ -313,7 +313,7 @@ bool MergedLoadStoreMotion::mergeStores(BasicBlock *T) {
         break;
       RBI = Pred0->rbegin();
       RBE = Pred0->rend();
-      DEBUG(dbgs() << "Search again\n"; Instruction *I = &*RBI; I->dump());
+      LLVM_DEBUG(dbgs() << "Search again\n"; Instruction *I = &*RBI; I->dump());
     }
   }
   return MergedStores;
@@ -323,7 +323,7 @@ bool MergedLoadStoreMotion::run(Function &F, AliasAnalysis &AA) {
   this->AA = &AA;
 
   bool Changed = false;
-  DEBUG(dbgs() << "Instruction Merger\n");
+  LLVM_DEBUG(dbgs() << "Instruction Merger\n");
 
   // Merge unconditional branches, allowing PRE to catch more
   // optimization opportunities.

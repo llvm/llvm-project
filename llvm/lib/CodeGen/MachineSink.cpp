@@ -211,8 +211,8 @@ bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
   MachineInstr *DefMI = MRI->getVRegDef(SrcReg);
   if (DefMI->isCopyLike())
     return false;
-  DEBUG(dbgs() << "Coalescing: " << *DefMI);
-  DEBUG(dbgs() << "*** to: " << MI);
+  LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);
+  LLVM_DEBUG(dbgs() << "*** to: " << MI);
   MRI->replaceRegWith(DstReg, SrcReg);
   MI.eraseFromParent();
 
@@ -296,7 +296,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  DEBUG(dbgs() << "******** Machine Sinking ********\n");
+  LLVM_DEBUG(dbgs() << "******** Machine Sinking ********\n");
 
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
@@ -323,14 +323,14 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
     for (auto &Pair : ToSplit) {
       auto NewSucc = Pair.first->SplitCriticalEdge(Pair.second, *this);
       if (NewSucc != nullptr) {
-        DEBUG(dbgs() << " *** Splitting critical edge: "
-                     << printMBBReference(*Pair.first) << " -- "
-                     << printMBBReference(*NewSucc) << " -- "
-                     << printMBBReference(*Pair.second) << '\n');
+        LLVM_DEBUG(dbgs() << " *** Splitting critical edge: "
+                          << printMBBReference(*Pair.first) << " -- "
+                          << printMBBReference(*NewSucc) << " -- "
+                          << printMBBReference(*Pair.second) << '\n');
         MadeChange = true;
         ++NumSplit;
       } else
-        DEBUG(dbgs() << " *** Not legal to break critical edge\n");
+        LLVM_DEBUG(dbgs() << " *** Not legal to break critical edge\n");
     }
     // If this iteration over the code changed anything, keep iterating.
     if (!MadeChange) break;
@@ -804,7 +804,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
       return false;
   }
 
-  DEBUG(dbgs() << "Sink instr " << MI << "\tinto block " << *SuccToSinkTo);
+  LLVM_DEBUG(dbgs() << "Sink instr " << MI << "\tinto block " << *SuccToSinkTo);
 
   // If the block has multiple predecessors, this is a critical edge.
   // Decide if we can sink along it or need to break the edge.
@@ -814,26 +814,26 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     bool TryBreak = false;
     bool store = true;
     if (!MI.isSafeToMove(AA, store)) {
-      DEBUG(dbgs() << " *** NOTE: Won't sink load along critical edge.\n");
+      LLVM_DEBUG(dbgs() << " *** NOTE: Won't sink load along critical edge.\n");
       TryBreak = true;
     }
 
     // We don't want to sink across a critical edge if we don't dominate the
     // successor. We could be introducing calculations to new code paths.
     if (!TryBreak && !DT->dominates(ParentBlock, SuccToSinkTo)) {
-      DEBUG(dbgs() << " *** NOTE: Critical edge found\n");
+      LLVM_DEBUG(dbgs() << " *** NOTE: Critical edge found\n");
       TryBreak = true;
     }
 
     // Don't sink instructions into a loop.
     if (!TryBreak && LI->isLoopHeader(SuccToSinkTo)) {
-      DEBUG(dbgs() << " *** NOTE: Loop header found\n");
+      LLVM_DEBUG(dbgs() << " *** NOTE: Loop header found\n");
       TryBreak = true;
     }
 
     // Otherwise we are OK with sinking along a critical edge.
     if (!TryBreak)
-      DEBUG(dbgs() << "Sinking along critical edge.\n");
+      LLVM_DEBUG(dbgs() << "Sinking along critical edge.\n");
     else {
       // Mark this edge as to be split.
       // If the edge can actually be split, the next iteration of the main loop
@@ -841,8 +841,8 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
       bool Status =
         PostponeSplitCriticalEdge(MI, ParentBlock, SuccToSinkTo, BreakPHIEdge);
       if (!Status)
-        DEBUG(dbgs() << " *** PUNTING: Not legal or profitable to "
-              "break critical edge\n");
+        LLVM_DEBUG(dbgs() << " *** PUNTING: Not legal or profitable to "
+                             "break critical edge\n");
       // The instruction will not be sunk this time.
       return false;
     }
@@ -855,8 +855,8 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     bool Status = PostponeSplitCriticalEdge(MI, ParentBlock,
                                             SuccToSinkTo, BreakPHIEdge);
     if (!Status)
-      DEBUG(dbgs() << " *** PUNTING: Not legal or profitable to "
-            "break critical edge\n");
+      LLVM_DEBUG(dbgs() << " *** PUNTING: Not legal or profitable to "
+                           "break critical edge\n");
     // The instruction will not be sunk this time.
     return false;
   }

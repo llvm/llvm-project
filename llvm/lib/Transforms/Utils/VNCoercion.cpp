@@ -389,8 +389,8 @@ Value *getLoadValueForLoad(LoadInst *SrcVal, unsigned Offset, Type *LoadTy,
     NewLoad->takeName(SrcVal);
     NewLoad->setAlignment(SrcVal->getAlignment());
 
-    DEBUG(dbgs() << "GVN WIDENED LOAD: " << *SrcVal << "\n");
-    DEBUG(dbgs() << "TO: " << *NewLoad << "\n");
+    LLVM_DEBUG(dbgs() << "GVN WIDENED LOAD: " << *SrcVal << "\n");
+    LLVM_DEBUG(dbgs() << "TO: " << *NewLoad << "\n");
 
     // Replace uses of the original load with the wider load.  On a big endian
     // system, we need to shift down to get the relevant bits.

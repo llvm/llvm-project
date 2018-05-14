@@ -644,14 +644,14 @@ void LoopReroll::collectPossibleIVs(Loop *L,
         if (IncSCEV->getValue()->isZero() || AInt.uge(MaxInc))
           continue;
         IVToIncMap[&*I] = IncSCEV->getValue()->getSExtValue();
-        DEBUG(dbgs() << "LRR: Possible IV: " << *I << " = " << *PHISCEV
-                     << "\n");
+        LLVM_DEBUG(dbgs() << "LRR: Possible IV: " << *I << " = " << *PHISCEV
+                          << "\n");
 
         if (isLoopControlIV(L, &*I)) {
           assert(!LoopControlIV && "Found two loop control only IV");
           LoopControlIV = &(*I);
-          DEBUG(dbgs() << "LRR: Possible loop control only IV: " << *I << " = "
-                       << *PHISCEV << "\n");
+          LLVM_DEBUG(dbgs() << "LRR: Possible loop control only IV: " << *I
+                            << " = " << *PHISCEV << "\n");
         } else
           PossibleIVs.push_back(&*I);
       }
@@ -718,8 +718,8 @@ void LoopReroll::collectPossibleReductions(Loop *L,
     if (!SLR.valid())
       continue;
 
-    DEBUG(dbgs() << "LRR: Possible reduction: " << *I << " (with " <<
-          SLR.size() << " chained instructions)\n");
+    LLVM_DEBUG(dbgs() << "LRR: Possible reduction: " << *I << " (with "
+                      << SLR.size() << " chained instructions)\n");
     Reductions.addSLR(SLR);
   }
 }
@@ -857,7 +857,8 @@ collectPossibleRoots(Instruction *Base, std::map<int64_t,Instruction*> &Roots) {
         BaseUsers.push_back(II);
         continue;
       } else {
-        DEBUG(dbgs() << "LRR: Aborting due to non-instruction: " << *I << "\n");
+        LLVM_DEBUG(dbgs() << "LRR: Aborting due to non-instruction: " << *I
+                          << "\n");
         return false;
       }
     }
@@ -879,7 +880,7 @@ collectPossibleRoots(Instruction *Base, std::map<int64_t,Instruction*> &Roots) {
   // away.
   if (BaseUsers.size()) {
     if (Roots.find(0) != Roots.end()) {
-      DEBUG(dbgs() << "LRR: Multiple roots found for base - aborting!\n");
+      LLVM_DEBUG(dbgs() << "LRR: Multiple roots found for base - aborting!\n");
       return false;
     }
     Roots[0] = Base;
@@ -895,9 +896,9 @@ collectPossibleRoots(Instruction *Base, std::map<int64_t,Instruction*> &Roots) {
     if (KV.first == 0)
       continue;
     if (!KV.second->hasNUses(NumBaseUses)) {
-      DEBUG(dbgs() << "LRR: Aborting - Root and Base #users not the same: "
-            << "#Base=" << NumBaseUses << ", #Root=" <<
-            KV.second->getNumUses() << "\n");
+      LLVM_DEBUG(dbgs() << "LRR: Aborting - Root and Base #users not the same: "
+                        << "#Base=" << NumBaseUses
+                        << ", #Root=" << KV.second->getNumUses() << "\n");
       return false;
     }
   }
@@ -1025,13 +1026,14 @@ bool LoopReroll::DAGRootTracker::findRoots() {
 
   // Ensure all sets have the same size.
   if (RootSets.empty()) {
-    DEBUG(dbgs() << "LRR: Aborting because no root sets found!\n");
+    LLVM_DEBUG(dbgs() << "LRR: Aborting because no root sets found!\n");
     return false;
   }
   for (auto &V : RootSets) {
     if (V.Roots.empty() || V.Roots.size() != RootSets[0].Roots.size()) {
-      DEBUG(dbgs()
-            << "LRR: Aborting because not all root sets have the same size\n");
+      LLVM_DEBUG(
+          dbgs()
+          << "LRR: Aborting because not all root sets have the same size\n");
       return false;
     }
   }
@@ -1039,13 +1041,14 @@ bool LoopReroll::DAGRootTracker::findRoots() {
   Scale = RootSets[0].Roots.size() + 1;
 
   if (Scale > IL_MaxRerollIterations) {
-    DEBUG(dbgs() << "LRR: Aborting - too many iterations found. "
-          << "#Found=" << Scale << ", #Max=" << IL_MaxRerollIterations
-          << "\n");
+    LLVM_DEBUG(dbgs() << "LRR: Aborting - too many iterations found. "
+                      << "#Found=" << Scale
+                      << ", #Max=" << IL_MaxRerollIterations << "\n");
     return false;
   }
 
-  DEBUG(dbgs() << "LRR: Successfully found roots: Scale=" << Scale << "\n");
+  LLVM_DEBUG(dbgs() << "LRR: Successfully found roots: Scale=" << Scale
+                    << "\n");
 
   return true;
 }
@@ -1079,7 +1082,7 @@ bool LoopReroll::DAGRootTracker::collectUsedInstructions(SmallInstructionSet &Po
 
       // While we're here, check the use sets are the same size.
       if (V.size() != VBase.size()) {
-        DEBUG(dbgs() << "LRR: Aborting - use sets are different sizes\n");
+        LLVM_DEBUG(dbgs() << "LRR: Aborting - use sets are different sizes\n");
         return false;
       }
 
@@ -1236,17 +1239,17 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
   // set.
   for (auto &KV : Uses) {
     if (KV.second.count() != 1 && !isIgnorableInst(KV.first)) {
-      DEBUG(dbgs() << "LRR: Aborting - instruction is not used in 1 iteration: "
-            << *KV.first << " (#uses=" << KV.second.count() << ")\n");
+      LLVM_DEBUG(
+          dbgs() << "LRR: Aborting - instruction is not used in 1 iteration: "
+                 << *KV.first << " (#uses=" << KV.second.count() << ")\n");
       return false;
     }
   }
 
-  DEBUG(
-    for (auto &KV : Uses) {
-      dbgs() << "LRR: " << KV.second.find_first() << "\t" << *KV.first << "\n";
-    }
-    );
+  LLVM_DEBUG(for (auto &KV
+                  : Uses) {
+    dbgs() << "LRR: " << KV.second.find_first() << "\t" << *KV.first << "\n";
+  });
 
   for (unsigned Iter = 1; Iter < Scale; ++Iter) {
     // In addition to regular aliasing information, we need to look for
@@ -1305,8 +1308,8 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
 
         if (TryIt == Uses.end() || TryIt == RootIt ||
             instrDependsOn(TryIt->first, RootIt, TryIt)) {
-          DEBUG(dbgs() << "LRR: iteration root match failed at " << *BaseInst <<
-                " vs. " << *RootInst << "\n");
+          LLVM_DEBUG(dbgs() << "LRR: iteration root match failed at "
+                            << *BaseInst << " vs. " << *RootInst << "\n");
           return false;
         }
 
@@ -1342,8 +1345,8 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
       // root instruction, does not also belong to the base set or the set of
       // some other root instruction.
       if (RootIt->second.count() > 1) {
-        DEBUG(dbgs() << "LRR: iteration root match failed at " << *BaseInst <<
-                        " vs. " << *RootInst << " (prev. case overlap)\n");
+        LLVM_DEBUG(dbgs() << "LRR: iteration root match failed at " << *BaseInst
+                          << " vs. " << *RootInst << " (prev. case overlap)\n");
         return false;
       }
 
@@ -1353,8 +1356,9 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
       if (RootInst->mayReadFromMemory())
         for (auto &K : AST) {
           if (K.aliasesUnknownInst(RootInst, *AA)) {
-            DEBUG(dbgs() << "LRR: iteration root match failed at " << *BaseInst <<
-                            " vs. " << *RootInst << " (depends on future store)\n");
+            LLVM_DEBUG(dbgs() << "LRR: iteration root match failed at "
+                              << *BaseInst << " vs. " << *RootInst
+                              << " (depends on future store)\n");
             return false;
           }
         }
@@ -1367,9 +1371,9 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
                                  !isSafeToSpeculativelyExecute(BaseInst)) ||
                                 (!isUnorderedLoadStore(RootInst) &&
                                  !isSafeToSpeculativelyExecute(RootInst)))) {
-        DEBUG(dbgs() << "LRR: iteration root match failed at " << *BaseInst <<
-                        " vs. " << *RootInst <<
-                        " (side effects prevent reordering)\n");
+        LLVM_DEBUG(dbgs() << "LRR: iteration root match failed at " << *BaseInst
+                          << " vs. " << *RootInst
+                          << " (side effects prevent reordering)\n");
         return false;
       }
 
@@ -1420,8 +1424,9 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
                 BaseInst->getOperand(!j) == Op2) {
               Swapped = true;
             } else {
-              DEBUG(dbgs() << "LRR: iteration root match failed at " << *BaseInst
-                    << " vs. " << *RootInst << " (operand " << j << ")\n");
+              LLVM_DEBUG(dbgs()
+                         << "LRR: iteration root match failed at " << *BaseInst
+                         << " vs. " << *RootInst << " (operand " << j << ")\n");
               return false;
             }
           }
@@ -1434,8 +1439,8 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
            hasUsesOutsideLoop(BaseInst, L)) ||
           (!PossibleRedLastSet.count(RootInst) &&
            hasUsesOutsideLoop(RootInst, L))) {
-        DEBUG(dbgs() << "LRR: iteration root match failed at " << *BaseInst <<
-                        " vs. " << *RootInst << " (uses outside loop)\n");
+        LLVM_DEBUG(dbgs() << "LRR: iteration root match failed at " << *BaseInst
+                          << " vs. " << *RootInst << " (uses outside loop)\n");
         return false;
       }
 
@@ -1452,8 +1457,8 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
            "Mismatched set sizes!");
   }
 
-  DEBUG(dbgs() << "LRR: Matched all iteration increments for " <<
-                  *IV << "\n");
+  LLVM_DEBUG(dbgs() << "LRR: Matched all iteration increments for " << *IV
+                    << "\n");
 
   return true;
 }
@@ -1465,7 +1470,7 @@ void LoopReroll::DAGRootTracker::replace(const SCEV *IterCount) {
        J != JE;) {
     unsigned I = Uses[&*J].find_first();
     if (I > 0 && I < IL_All) {
-      DEBUG(dbgs() << "LRR: removing: " << *J << "\n");
+      LLVM_DEBUG(dbgs() << "LRR: removing: " << *J << "\n");
       J++->eraseFromParent();
       continue;
     }
@@ -1618,17 +1623,17 @@ bool LoopReroll::ReductionTracker::validateSelected() {
       int Iter = PossibleRedIter[J];
       if (Iter != PrevIter && Iter != PrevIter + 1 &&
           !PossibleReds[i].getReducedValue()->isAssociative()) {
-        DEBUG(dbgs() << "LRR: Out-of-order non-associative reduction: " <<
-                        J << "\n");
+        LLVM_DEBUG(dbgs() << "LRR: Out-of-order non-associative reduction: "
+                          << J << "\n");
         return false;
       }
 
       if (Iter != PrevIter) {
         if (Count != BaseCount) {
-          DEBUG(dbgs() << "LRR: Iteration " << PrevIter <<
-                " reduction use count " << Count <<
-                " is not equal to the base use count " <<
-                BaseCount << "\n");
+          LLVM_DEBUG(dbgs()
+                     << "LRR: Iteration " << PrevIter << " reduction use count "
+                     << Count << " is not equal to the base use count "
+                     << BaseCount << "\n");
           return false;
         }
 
@@ -1724,8 +1729,8 @@ bool LoopReroll::reroll(Instruction *IV, Loop *L, BasicBlock *Header,
 
   if (!DAGRoots.findRoots())
     return false;
-  DEBUG(dbgs() << "LRR: Found all root induction increments for: " <<
-                  *IV << "\n");
+  LLVM_DEBUG(dbgs() << "LRR: Found all root induction increments for: " << *IV
+                    << "\n");
 
   if (!DAGRoots.validate(Reductions))
     return false;
@@ -1753,9 +1758,9 @@ bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
   PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
   BasicBlock *Header = L->getHeader();
-  DEBUG(dbgs() << "LRR: F[" << Header->getParent()->getName() <<
-        "] Loop %" << Header->getName() << " (" <<
-        L->getNumBlocks() << " block(s))\n");
+  LLVM_DEBUG(dbgs() << "LRR: F[" << Header->getParent()->getName() << "] Loop %"
+                    << Header->getName() << " (" << L->getNumBlocks()
+                    << " block(s))\n");
 
   // For now, we'll handle only single BB loops.
   if (L->getNumBlocks() > 1)
@@ -1766,8 +1771,8 @@ bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   const SCEV *LIBETC = SE->getBackedgeTakenCount(L);
   const SCEV *IterCount = SE->getAddExpr(LIBETC, SE->getOne(LIBETC->getType()));
-  DEBUG(dbgs() << "\n Before Reroll:\n" << *(L->getHeader()) << "\n");
-  DEBUG(dbgs() << "LRR: iteration count = " << *IterCount << "\n");
+  LLVM_DEBUG(dbgs() << "\n Before Reroll:\n" << *(L->getHeader()) << "\n");
+  LLVM_DEBUG(dbgs() << "LRR: iteration count = " << *IterCount << "\n");
 
   // First, we need to find the induction variable with respect to which we can
   // reroll (there may be several possible options).
@@ -1777,7 +1782,7 @@ bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
   collectPossibleIVs(L, PossibleIVs);
 
   if (PossibleIVs.empty()) {
-    DEBUG(dbgs() << "LRR: No possible IVs found\n");
+    LLVM_DEBUG(dbgs() << "LRR: No possible IVs found\n");
     return false;
   }
 
@@ -1792,7 +1797,7 @@ bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
       Changed = true;
       break;
     }
-  DEBUG(dbgs() << "\n After Reroll:\n" << *(L->getHeader()) << "\n");
+  LLVM_DEBUG(dbgs() << "\n After Reroll:\n" << *(L->getHeader()) << "\n");
 
   // Trip count of L has changed so SE must be re-evaluated.
   if (Changed)

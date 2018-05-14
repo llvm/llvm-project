@@ -71,7 +71,7 @@ static bool HasArgumentDef(unsigned Reg, const MachineRegisterInfo &MRI) {
 }
 
 bool WebAssemblyPrepareForLiveIntervals::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "********** Prepare For LiveIntervals **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });

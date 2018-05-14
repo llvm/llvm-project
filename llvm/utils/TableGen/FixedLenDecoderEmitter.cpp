@@ -1859,9 +1859,9 @@ static bool populateInstruction(CodeGenTarget &Target,
         CGI.Operands.getSubOperandNumber(OpIdx);
       const std::string &Name = CGI.Operands[SO.first].Name;
 
-      DEBUG(dbgs() << "Numbered operand mapping for " << Def.getName() << ": " <<
-                      Name << "(" << SO.first << ", " << SO.second << ") => " <<
-                      Vals[i].getName() << "\n");
+      LLVM_DEBUG(dbgs() << "Numbered operand mapping for " << Def.getName()
+                        << ": " << Name << "(" << SO.first << ", " << SO.second
+                        << ") => " << Vals[i].getName() << "\n");
 
       std::string Decoder;
       Record *TypeRecord = CGI.Operands[SO.first].Rec;
@@ -2023,7 +2023,7 @@ static bool populateInstruction(CodeGenTarget &Target,
   Operands[Opc] = InsnOperands;
 
 #if 0
-  DEBUG({
+  LLVM_DEBUG({
       // Dumps the instruction encoding bits.
       dumpBits(errs(), Bits);
 
@@ -2065,8 +2065,10 @@ static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
 // decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS) {
   OS << "template<typename InsnType>\n"
-     << "static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,\n"
-     << "                                      InsnType insn, uint64_t Address,\n"
+     << "static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], "
+        "MCInst &MI,\n"
+     << "                                      InsnType insn, uint64_t "
+        "Address,\n"
      << "                                      const void *DisAsm,\n"
      << "                                      const MCSubtargetInfo &STI) {\n"
      << "  const FeatureBitset& Bits = STI.getFeatureBits();\n"
@@ -2085,7 +2087,8 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      unsigned Len = *++Ptr;\n"
      << "      ++Ptr;\n"
      << "      CurFieldValue = fieldFromInstruction(insn, Start, Len);\n"
-     << "      DEBUG(dbgs() << Loc << \": OPC_ExtractField(\" << Start << \", \"\n"
+     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_ExtractField(\" << Start << "
+        "\", \"\n"
      << "                   << Len << \"): \" << CurFieldValue << \"\\n\");\n"
      << "      break;\n"
      << "    }\n"
@@ -2101,9 +2104,12 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      // Perform the filter operation.\n"
      << "      if (Val != CurFieldValue)\n"
      << "        Ptr += NumToSkip;\n"
-     << "      DEBUG(dbgs() << Loc << \": OPC_FilterValue(\" << Val << \", \" << NumToSkip\n"
-     << "                   << \"): \" << ((Val != CurFieldValue) ? \"FAIL:\" : \"PASS:\")\n"
-     << "                   << \" continuing at \" << (Ptr - DecodeTable) << \"\\n\");\n"
+     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_FilterValue(\" << Val << "
+        "\", \" << NumToSkip\n"
+     << "                   << \"): \" << ((Val != CurFieldValue) ? \"FAIL:\" "
+        ": \"PASS:\")\n"
+     << "                   << \" continuing at \" << (Ptr - DecodeTable) << "
+        "\"\\n\");\n"
      << "\n"
      << "      break;\n"
      << "    }\n"
@@ -2121,11 +2127,15 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      // If the actual and expected values don't match, skip.\n"
      << "      if (ExpectedValue != FieldValue)\n"
      << "        Ptr += NumToSkip;\n"
-     << "      DEBUG(dbgs() << Loc << \": OPC_CheckField(\" << Start << \", \"\n"
-     << "                   << Len << \", \" << ExpectedValue << \", \" << NumToSkip\n"
-     << "                   << \"): FieldValue = \" << FieldValue << \", ExpectedValue = \"\n"
+     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_CheckField(\" << Start << "
+        "\", \"\n"
+     << "                   << Len << \", \" << ExpectedValue << \", \" << "
+        "NumToSkip\n"
+     << "                   << \"): FieldValue = \" << FieldValue << \", "
+        "ExpectedValue = \"\n"
      << "                   << ExpectedValue << \": \"\n"
-     << "                   << ((ExpectedValue == FieldValue) ? \"PASS\\n\" : \"FAIL\\n\"));\n"
+     << "                   << ((ExpectedValue == FieldValue) ? \"PASS\\n\" : "
+        "\"FAIL\\n\"));\n"
      << "      break;\n"
      << "    }\n"
      << "    case MCD::OPC_CheckPredicate: {\n"
@@ -2141,7 +2151,8 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      if (!(Pred = checkDecoderPredicate(PIdx, Bits)))\n"
      << "        Ptr += NumToSkip;\n"
      << "      (void)Pred;\n"
-     << "      DEBUG(dbgs() << Loc << \": OPC_CheckPredicate(\" << PIdx << \"): \"\n"
+     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_CheckPredicate(\" << PIdx "
+        "<< \"): \"\n"
      << "            << (Pred ? \"PASS\\n\" : \"FAIL\\n\"));\n"
      << "\n"
      << "      break;\n"
@@ -2157,12 +2168,14 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      MI.clear();\n"
      << "      MI.setOpcode(Opc);\n"
      << "      bool DecodeComplete;\n"
-     << "      S = decodeToMCInst(S, DecodeIdx, insn, MI, Address, DisAsm, DecodeComplete);\n"
+     << "      S = decodeToMCInst(S, DecodeIdx, insn, MI, Address, DisAsm, "
+        "DecodeComplete);\n"
      << "      assert(DecodeComplete);\n"
      << "\n"
-     << "      DEBUG(dbgs() << Loc << \": OPC_Decode: opcode \" << Opc\n"
+     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_Decode: opcode \" << Opc\n"
      << "                   << \", using decoder \" << DecodeIdx << \": \"\n"
-     << "                   << (S != MCDisassembler::Fail ? \"PASS\" : \"FAIL\") << \"\\n\");\n"
+     << "                   << (S != MCDisassembler::Fail ? \"PASS\" : "
+        "\"FAIL\") << \"\\n\");\n"
      << "      return S;\n"
      << "    }\n"
      << "    case MCD::OPC_TryDecode: {\n"
@@ -2180,21 +2193,26 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      MCInst TmpMI;\n"
      << "      TmpMI.setOpcode(Opc);\n"
      << "      bool DecodeComplete;\n"
-     << "      S = decodeToMCInst(S, DecodeIdx, insn, TmpMI, Address, DisAsm, DecodeComplete);\n"
-     << "      DEBUG(dbgs() << Loc << \": OPC_TryDecode: opcode \" << Opc\n"
+     << "      S = decodeToMCInst(S, DecodeIdx, insn, TmpMI, Address, DisAsm, "
+        "DecodeComplete);\n"
+     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_TryDecode: opcode \" << "
+        "Opc\n"
      << "                   << \", using decoder \" << DecodeIdx << \": \");\n"
      << "\n"
      << "      if (DecodeComplete) {\n"
      << "        // Decoding complete.\n"
-     << "        DEBUG(dbgs() << (S != MCDisassembler::Fail ? \"PASS\" : \"FAIL\") << \"\\n\");\n"
+     << "        LLVM_DEBUG(dbgs() << (S != MCDisassembler::Fail ? \"PASS\" : "
+        "\"FAIL\") << \"\\n\");\n"
      << "        MI = TmpMI;\n"
      << "        return S;\n"
      << "      } else {\n"
      << "        assert(S == MCDisassembler::Fail);\n"
      << "        // If the decoding was incomplete, skip.\n"
      << "        Ptr += NumToSkip;\n"
-     << "        DEBUG(dbgs() << \"FAIL: continuing at \" << (Ptr - DecodeTable) << \"\\n\");\n"
-     << "        // Reset decode status. This also drops a SoftFail status that could be\n"
+     << "        LLVM_DEBUG(dbgs() << \"FAIL: continuing at \" << (Ptr - "
+        "DecodeTable) << \"\\n\");\n"
+     << "        // Reset decode status. This also drops a SoftFail status "
+        "that could be\n"
      << "        // set before the decode attempt.\n"
      << "        S = MCDisassembler::Success;\n"
      << "      }\n"
@@ -2210,16 +2228,18 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      bool Fail = (insn & PositiveMask) || (~insn & NegativeMask);\n"
      << "      if (Fail)\n"
      << "        S = MCDisassembler::SoftFail;\n"
-     << "      DEBUG(dbgs() << Loc << \": OPC_SoftFail: \" << (Fail ? \"FAIL\\n\":\"PASS\\n\"));\n"
+     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_SoftFail: \" << (Fail ? "
+        "\"FAIL\\n\":\"PASS\\n\"));\n"
      << "      break;\n"
      << "    }\n"
      << "    case MCD::OPC_Fail: {\n"
-     << "      DEBUG(dbgs() << Loc << \": OPC_Fail\\n\");\n"
+     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_Fail\\n\");\n"
      << "      return MCDisassembler::Fail;\n"
      << "    }\n"
      << "    }\n"
      << "  }\n"
-     << "  llvm_unreachable(\"bogosity detected in disassembler state machine!\");\n"
+     << "  llvm_unreachable(\"bogosity detected in disassembler state "
+        "machine!\");\n"
      << "}\n\n";
 }
 

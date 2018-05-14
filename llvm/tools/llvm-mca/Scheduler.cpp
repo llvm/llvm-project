@@ -245,7 +245,8 @@ void Scheduler::scheduleInstruction(InstRef &IR) {
   // If necessary, reserve queue entries in the load-store unit (LSU).
   bool Reserved = LSU->reserve(IR);
   if (!IR.getInstruction()->isReady() || (Reserved && !LSU->isReady(IR))) {
-    DEBUG(dbgs() << "[SCHEDULER] Adding " << Idx << " to the Wait Queue\n");
+    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding " << Idx
+                      << " to the Wait Queue\n");
     WaitQueue[Idx] = IR.getInstruction();
     return;
   }
@@ -259,19 +260,20 @@ void Scheduler::scheduleInstruction(InstRef &IR) {
   // targets, zero-idiom instructions (for example: a xor that clears the value
   // of a register) are treated speacially, and are often eliminated at register
   // renaming stage.
-  bool IsZeroLatency = !Desc.MaxLatency && Desc.Resources.empty();
 
   // Instructions that use an in-order dispatch/issue processor resource must be
   // issued immediately to the pipeline(s). Any other in-order buffered
   // resources (i.e. BufferSize=1) is consumed.
 
-  if (!IsZeroLatency && !Resources->mustIssueImmediately(Desc)) {
-    DEBUG(dbgs() << "[SCHEDULER] Adding " << IR << " to the Ready Queue\n");
+  if (!Desc.isZeroLatency() && !Resources->mustIssueImmediately(Desc)) {
+    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding " << IR
+                      << " to the Ready Queue\n");
     ReadyQueue[IR.getSourceIndex()] = IR.getInstruction();
     return;
   }
 
-  DEBUG(dbgs() << "[SCHEDULER] Instruction " << IR << " issued immediately\n");
+  LLVM_DEBUG(dbgs() << "[SCHEDULER] Instruction " << IR
+                    << " issued immediately\n");
   // Release buffered resources and issue MCIS to the underlying pipelines.
   issueInstruction(IR);
 }
@@ -441,8 +443,8 @@ void Scheduler::updateIssuedQueue(SmallVectorImpl<InstRef> &Executed) {
       ++I;
       IssuedQueue.erase(ToRemove);
     } else {
-      DEBUG(dbgs() << "[SCHEDULER]: Instruction " << Entry.first
-                   << " is still executing.\n");
+      LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction " << Entry.first
+                        << " is still executing.\n");
       ++I;
     }
   }
@@ -450,7 +452,7 @@ void Scheduler::updateIssuedQueue(SmallVectorImpl<InstRef> &Executed) {
 
 void Scheduler::notifyInstructionIssued(
     const InstRef &IR, ArrayRef<std::pair<ResourceRef, double>> Used) {
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "[E] Instruction Issued: " << IR << '\n';
     for (const std::pair<ResourceRef, unsigned> &Resource : Used) {
       dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
@@ -463,14 +465,14 @@ void Scheduler::notifyInstructionIssued(
 
 void Scheduler::notifyInstructionExecuted(const InstRef &IR) {
   LSU->onInstructionExecuted(IR);
-  DEBUG(dbgs() << "[E] Instruction Executed: " << IR << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Instruction Executed: " << IR << '\n');
   Owner->notifyInstructionEvent(
       HWInstructionEvent(HWInstructionEvent::Executed, IR));
   DU->onInstructionExecuted(IR.getInstruction()->getRCUTokenID());
 }
 
 void Scheduler::notifyInstructionReady(const InstRef &IR) {
-  DEBUG(dbgs() << "[E] Instruction Ready: " << IR << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Instruction Ready: " << IR << '\n');
   Owner->notifyInstructionEvent(
       HWInstructionEvent(HWInstructionEvent::Ready, IR));
 }

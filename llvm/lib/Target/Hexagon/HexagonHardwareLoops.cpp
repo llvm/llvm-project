@@ -376,7 +376,7 @@ FunctionPass *llvm::createHexagonHardwareLoops() {
 }
 
 bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "********* Hexagon Hardware Loops *********\n");
+  LLVM_DEBUG(dbgs() << "********* Hexagon Hardware Loops *********\n");
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -1012,14 +1012,15 @@ bool HexagonHardwareLoops::isInvalidLoopOperation(const MachineInstr *MI,
 bool HexagonHardwareLoops::containsInvalidInstruction(MachineLoop *L,
     bool IsInnerHWLoop) const {
   const std::vector<MachineBasicBlock *> &Blocks = L->getBlocks();
-  DEBUG(dbgs() << "\nhw_loop head, " << printMBBReference(*Blocks[0]));
+  LLVM_DEBUG(dbgs() << "\nhw_loop head, " << printMBBReference(*Blocks[0]));
   for (unsigned i = 0, e = Blocks.size(); i != e; ++i) {
     MachineBasicBlock *MBB = Blocks[i];
     for (MachineBasicBlock::iterator
            MII = MBB->begin(), E = MBB->end(); MII != E; ++MII) {
       const MachineInstr *MI = &*MII;
       if (isInvalidLoopOperation(MI, IsInnerHWLoop)) {
-        DEBUG(dbgs()<< "\nCannot convert to hw_loop due to:"; MI->dump(););
+        LLVM_DEBUG(dbgs() << "\nCannot convert to hw_loop due to:";
+                   MI->dump(););
         return true;
       }
     }
@@ -1084,7 +1085,7 @@ void HexagonHardwareLoops::removeIfDead(MachineInstr *MI) {
 
   SmallVector<MachineInstr*, 1> DeadPhis;
   if (isDead(MI, DeadPhis)) {
-    DEBUG(dbgs() << "HW looping will remove: " << *MI);
+    LLVM_DEBUG(dbgs() << "HW looping will remove: " << *MI);
 
     // It is possible that some DBG_VALUE instructions refer to this
     // instruction.  Examine each def operand for such references;
@@ -1238,7 +1239,7 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
     LoopStart = TopBlock;
 
   // Convert the loop to a hardware loop.
-  DEBUG(dbgs() << "Change to hardware loop at "; L->dump());
+  LLVM_DEBUG(dbgs() << "Change to hardware loop at "; L->dump());
   DebugLoc DL;
   if (InsertPos != Preheader->end())
     DL = InsertPos->getDebugLoc();
@@ -1368,7 +1369,7 @@ bool HexagonHardwareLoops::isLoopFeeder(MachineLoop *L, MachineBasicBlock *A,
                                         LoopFeederMap &LoopFeederPhi) const {
   if (LoopFeederPhi.find(MO->getReg()) == LoopFeederPhi.end()) {
     const std::vector<MachineBasicBlock *> &Blocks = L->getBlocks();
-    DEBUG(dbgs() << "\nhw_loop head, " << printMBBReference(*Blocks[0]));
+    LLVM_DEBUG(dbgs() << "\nhw_loop head, " << printMBBReference(*Blocks[0]));
     // Ignore all BBs that form Loop.
     for (unsigned i = 0, e = Blocks.size(); i != e; ++i) {
       MachineBasicBlock *MBB = Blocks[i];
@@ -1769,16 +1770,16 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
         for (unsigned i = 1, n = PredDef->getNumOperands(); i < n; ++i) {
           MachineOperand &MO = PredDef->getOperand(i);
           if (MO.isReg() && MO.getReg() == RB.first) {
-            DEBUG(dbgs() << "\n DefMI(" << i << ") = "
-                         << *(MRI->getVRegDef(I->first)));
+            LLVM_DEBUG(dbgs() << "\n DefMI(" << i
+                              << ") = " << *(MRI->getVRegDef(I->first)));
             if (IndI)
               return false;
 
             IndI = MRI->getVRegDef(I->first);
             IndMO = &MO;
           } else if (MO.isReg()) {
-            DEBUG(dbgs() << "\n DefMI(" << i << ") = "
-                         << *(MRI->getVRegDef(MO.getReg())));
+            LLVM_DEBUG(dbgs() << "\n DefMI(" << i
+                              << ") = " << *(MRI->getVRegDef(MO.getReg())));
             if (nonIndI)
               return false;
 

@@ -226,10 +226,10 @@ bool BugDriver::runPasses(Module &Program,
     Args.push_back(*ExtraArgs);
   Args.push_back(nullptr);
 
-  DEBUG(errs() << "\nAbout to run:\t";
-        for (unsigned i = 0, e = Args.size() - 1; i != e; ++i) errs()
-        << " " << Args[i];
-        errs() << "\n";);
+  LLVM_DEBUG(errs() << "\nAbout to run:\t";
+             for (unsigned i = 0, e = Args.size() - 1; i != e; ++i) errs()
+             << " " << Args[i];
+             errs() << "\n";);
 
   Optional<StringRef> Redirects[3] = {None, None, None};
   // Redirect stdout and stderr to nowhere if SilencePasses is given.

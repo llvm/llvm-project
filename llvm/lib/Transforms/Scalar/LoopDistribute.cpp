@@ -362,9 +362,11 @@ public:
           std::tie(LoadToPart, NewElt) =
               LoadToPartition.insert(std::make_pair(Inst, PartI));
           if (!NewElt) {
-            DEBUG(dbgs() << "Merging partitions due to this load in multiple "
-                         << "partitions: " << PartI << ", "
-                         << LoadToPart->second << "\n" << *Inst << "\n");
+            LLVM_DEBUG(dbgs()
+                       << "Merging partitions due to this load in multiple "
+                       << "partitions: " << PartI << ", " << LoadToPart->second
+                       << "\n"
+                       << *Inst << "\n");
 
             auto PartJ = I;
             do {
@@ -602,7 +604,7 @@ public:
       const SmallVectorImpl<Dependence> &Dependences) {
     Accesses.append(Instructions.begin(), Instructions.end());
 
-    DEBUG(dbgs() << "Backward dependences:\n");
+    LLVM_DEBUG(dbgs() << "Backward dependences:\n");
     for (auto &Dep : Dependences)
       if (Dep.isPossiblyBackward()) {
         // Note that the designations source and destination follow the program
@@ -611,7 +613,7 @@ public:
         ++Accesses[Dep.Source].NumUnsafeDependencesStartOrEnd;
         --Accesses[Dep.Destination].NumUnsafeDependencesStartOrEnd;
 
-        DEBUG(Dep.print(dbgs(), 2, Instructions));
+        LLVM_DEBUG(Dep.print(dbgs(), 2, Instructions));
       }
   }
 
@@ -632,8 +634,9 @@ public:
   bool processLoop(std::function<const LoopAccessInfo &(Loop &)> &GetLAA) {
     assert(L->empty() && "Only process inner loops.");
 
-    DEBUG(dbgs() << "\nLDist: In \"" << L->getHeader()->getParent()->getName()
-                 << "\" checking " << *L << "\n");
+    LLVM_DEBUG(dbgs() << "\nLDist: In \""
+                      << L->getHeader()->getParent()->getName()
+                      << "\" checking " << *L << "\n");
 
     if (!L->getExitBlock())
       return fail("MultipleExitBlocks", "multiple exit blocks");
@@ -705,7 +708,7 @@ public:
     for (auto *Inst : DefsUsedOutside)
       Partitions.addToNewNonCyclicPartition(Inst);
 
-    DEBUG(dbgs() << "Seeded partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "Seeded partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
       return fail("CantIsolateUnsafeDeps",
                   "cannot isolate unsafe dependencies");
@@ -713,20 +716,20 @@ public:
     // Run the merge heuristics: Merge non-cyclic adjacent partitions since we
     // should be able to vectorize these together.
     Partitions.mergeBeforePopulating();
-    DEBUG(dbgs() << "\nMerged partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "\nMerged partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
       return fail("CantIsolateUnsafeDeps",
                   "cannot isolate unsafe dependencies");
 
     // Now, populate the partitions with non-memory operations.
     Partitions.populateUsedSet();
-    DEBUG(dbgs() << "\nPopulated partitions:\n" << Partitions);
+    LLVM_DEBUG(dbgs() << "\nPopulated partitions:\n" << Partitions);
 
     // In order to preserve original lexical order for loads, keep them in the
     // partition that we set up in the MemoryInstructionDependences loop.
     if (Partitions.mergeToAvoidDuplicatedLoads()) {
-      DEBUG(dbgs() << "\nPartitions merged to ensure unique loads:\n"
-                   << Partitions);
+      LLVM_DEBUG(dbgs() << "\nPartitions merged to ensure unique loads:\n"
+                        << Partitions);
       if (Partitions.getSize() < 2)
         return fail("CantIsolateUnsafeDeps",
                     "cannot isolate unsafe dependencies");
@@ -740,7 +743,7 @@ public:
       return fail("TooManySCEVRuntimeChecks",
                   "too many SCEV run-time checks needed.\n");
 
-    DEBUG(dbgs() << "\nDistributing loop: " << *L << "\n");
+    LLVM_DEBUG(dbgs() << "\nDistributing loop: " << *L << "\n");
     // We're done forming the partitions set up the reverse mapping from
     // instructions to partitions.
     Partitions.setupPartitionIdOnInstructions();
@@ -759,8 +762,8 @@ public:
                                                   RtPtrChecking);
 
     if (!Pred.isAlwaysTrue() || !Checks.empty()) {
-      DEBUG(dbgs() << "\nPointers:\n");
-      DEBUG(LAI->getRuntimePointerChecking()->printChecks(dbgs(), Checks));
+      LLVM_DEBUG(dbgs() << "\nPointers:\n");
+      LLVM_DEBUG(LAI->getRuntimePointerChecking()->printChecks(dbgs(), Checks));
       LoopVersioning LVer(*LAI, L, LI, DT, SE, false);
       LVer.setAliasChecks(std::move(Checks));
       LVer.setSCEVChecks(LAI->getPSE().getUnionPredicate());
@@ -775,8 +778,8 @@ public:
     // Now, we remove the instruction from each loop that don't belong to that
     // partition.
     Partitions.removeUnusedInsts();
-    DEBUG(dbgs() << "\nAfter removing unused Instrs:\n");
-    DEBUG(Partitions.printBlocks());
+    LLVM_DEBUG(dbgs() << "\nAfter removing unused Instrs:\n");
+    LLVM_DEBUG(Partitions.printBlocks());
 
     if (LDistVerify) {
       LI->verify(*DT);
@@ -798,7 +801,7 @@ public:
     LLVMContext &Ctx = F->getContext();
     bool Forced = isForced().getValueOr(false);
 
-    DEBUG(dbgs() << "Skipping; " << Message << "\n");
+    LLVM_DEBUG(dbgs() << "Skipping; " << Message << "\n");
 
     // With Rpass-missed report that distribution failed.
     ORE->emit([&]() {

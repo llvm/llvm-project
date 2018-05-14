@@ -206,11 +206,11 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &Func) {
   TSM.init(&Func.getSubtarget());
   TII = ST.getInstrInfo();
 
-  DEBUG(dbgs() << "Start X86FixupLEAs\n";);
+  LLVM_DEBUG(dbgs() << "Start X86FixupLEAs\n";);
   // Process all basic blocks.
   for (MachineFunction::iterator I = Func.begin(), E = Func.end(); I != E; ++I)
     processBasicBlock(Func, I);
-  DEBUG(dbgs() << "End X86FixupLEAs\n";);
+  LLVM_DEBUG(dbgs() << "End X86FixupLEAs\n";);
 
   return true;
 }
@@ -408,9 +408,9 @@ void FixupLEAPass::seekLEAFixup(MachineOperand &p,
     MachineInstr *NewMI = postRAConvertToLEA(MFI, MBI);
     if (NewMI) {
       ++NumLEAs;
-      DEBUG(dbgs() << "FixLEA: Candidate to replace:"; MBI->dump(););
+      LLVM_DEBUG(dbgs() << "FixLEA: Candidate to replace:"; MBI->dump(););
       // now to replace with an equivalent LEA...
-      DEBUG(dbgs() << "FixLEA: Replaced by: "; NewMI->dump(););
+      LLVM_DEBUG(dbgs() << "FixLEA: Replaced by: "; NewMI->dump(););
       MFI->erase(MBI);
       MachineBasicBlock::iterator J =
           static_cast<MachineBasicBlock::iterator>(NewMI);
@@ -435,8 +435,8 @@ void FixupLEAPass::processInstructionForSLM(MachineBasicBlock::iterator &I,
     return;
   if (MI.getOperand(2).getImm() > 1)
     return;
-  DEBUG(dbgs() << "FixLEA: Candidate to replace:"; I->dump(););
-  DEBUG(dbgs() << "FixLEA: Replaced by: ";);
+  LLVM_DEBUG(dbgs() << "FixLEA: Candidate to replace:"; I->dump(););
+  LLVM_DEBUG(dbgs() << "FixLEA: Replaced by: ";);
   MachineInstr *NewMI = nullptr;
   // Make ADD instruction for two registers writing to LEA's destination
   if (SrcR1 != 0 && SrcR2 != 0) {
@@ -444,7 +444,7 @@ void FixupLEAPass::processInstructionForSLM(MachineBasicBlock::iterator &I,
     const MachineOperand &Src = MI.getOperand(SrcR1 == DstR ? 3 : 1);
     NewMI =
         BuildMI(*MFI, I, MI.getDebugLoc(), ADDrr, DstR).addReg(DstR).add(Src);
-    DEBUG(NewMI->dump(););
+    LLVM_DEBUG(NewMI->dump(););
   }
   // Make ADD instruction for immediate
   if (MI.getOperand(4).getImm() != 0) {
@@ -454,7 +454,7 @@ void FixupLEAPass::processInstructionForSLM(MachineBasicBlock::iterator &I,
     NewMI = BuildMI(*MFI, I, MI.getDebugLoc(), ADDri, DstR)
                 .add(SrcR)
                 .addImm(MI.getOperand(4).getImm());
-    DEBUG(NewMI->dump(););
+    LLVM_DEBUG(NewMI->dump(););
   }
   if (NewMI) {
     MFI->erase(I);
@@ -504,8 +504,8 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
   const MCInstrDesc &ADDrr = TII->get(getADDrrFromLEA(LEAOpcode));
   const MCInstrDesc &ADDri = TII->get(getADDriFromLEA(LEAOpcode, Offset));
 
-  DEBUG(dbgs() << "FixLEA: Candidate to replace:"; MI.dump(););
-  DEBUG(dbgs() << "FixLEA: Replaced by: ";);
+  LLVM_DEBUG(dbgs() << "FixLEA: Candidate to replace:"; MI.dump(););
+  LLVM_DEBUG(dbgs() << "FixLEA: Replaced by: ";);
 
   // First try to replace LEA with one or two (for the 3-op LEA case)
   // add instructions:
@@ -515,11 +515,11 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
     const MachineOperand &Src = DstR == BaseR ? Index : Base;
     MachineInstr *NewMI =
         BuildMI(*MFI, MI, DL, ADDrr, DstR).addReg(DstR).add(Src);
-    DEBUG(NewMI->dump(););
+    LLVM_DEBUG(NewMI->dump(););
     // Create ADD instruction for the Offset in case of 3-Ops LEA.
     if (hasLEAOffset(Offset)) {
       NewMI = BuildMI(*MFI, MI, DL, ADDri, DstR).addReg(DstR).add(Offset);
-      DEBUG(NewMI->dump(););
+      LLVM_DEBUG(NewMI->dump(););
     }
     return NewMI;
   }
@@ -535,11 +535,11 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
                               .add(IsInefficientBase ? Base : Index)
                               .addImm(0)
                               .add(Segment);
-    DEBUG(NewMI->dump(););
+    LLVM_DEBUG(NewMI->dump(););
     // Create ADD instruction for the Offset in case of 3-Ops LEA.
     if (hasLEAOffset(Offset)) {
       NewMI = BuildMI(*MFI, MI, DL, ADDri, DstR).addReg(DstR).add(Offset);
-      DEBUG(NewMI->dump(););
+      LLVM_DEBUG(NewMI->dump(););
     }
     return NewMI;
   }
@@ -551,11 +551,11 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
   if (IsScale1 && !hasLEAOffset(Offset)) {
     bool BIK = Base.isKill() && BaseR != IndexR;
     TII->copyPhysReg(*MFI, MI, DL, DstR, BaseR, BIK);
-    DEBUG(MI.getPrevNode()->dump(););
+    LLVM_DEBUG(MI.getPrevNode()->dump(););
 
     MachineInstr *NewMI =
         BuildMI(*MFI, MI, DL, ADDrr, DstR).addReg(DstR).add(Index);
-    DEBUG(NewMI->dump(););
+    LLVM_DEBUG(NewMI->dump(););
     return NewMI;
   }
   // lea offset(%base,%index,scale), %dst =>
@@ -567,10 +567,10 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
                             .add(Index)
                             .add(Offset)
                             .add(Segment);
-  DEBUG(NewMI->dump(););
+  LLVM_DEBUG(NewMI->dump(););
 
   NewMI = BuildMI(*MFI, MI, DL, ADDrr, DstR).addReg(DstR).add(Base);
-  DEBUG(NewMI->dump(););
+  LLVM_DEBUG(NewMI->dump(););
   return NewMI;
 }
 

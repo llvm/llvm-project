@@ -473,7 +473,7 @@ static MachineInstr *MoveForSingleUse(unsigned Reg, MachineOperand& Op,
                                       MachineInstr *Insert, LiveIntervals &LIS,
                                       WebAssemblyFunctionInfo &MFI,
                                       MachineRegisterInfo &MRI) {
-  DEBUG(dbgs() << "Move for single use: "; Def->dump());
+  LLVM_DEBUG(dbgs() << "Move for single use: "; Def->dump());
 
   MBB.splice(Insert, &MBB, Def);
   LIS.handleMove(*Def);
@@ -500,7 +500,7 @@ static MachineInstr *MoveForSingleUse(unsigned Reg, MachineOperand& Op,
 
     MFI.stackifyVReg(NewReg);
 
-    DEBUG(dbgs() << " - Replaced register: "; Def->dump());
+    LLVM_DEBUG(dbgs() << " - Replaced register: "; Def->dump());
   }
 
   ImposeStackOrdering(Def);
@@ -514,8 +514,8 @@ static MachineInstr *RematerializeCheapDef(
     MachineBasicBlock::instr_iterator Insert, LiveIntervals &LIS,
     WebAssemblyFunctionInfo &MFI, MachineRegisterInfo &MRI,
     const WebAssemblyInstrInfo *TII, const WebAssemblyRegisterInfo *TRI) {
-  DEBUG(dbgs() << "Rematerializing cheap def: "; Def.dump());
-  DEBUG(dbgs() << " - for use in "; Op.getParent()->dump());
+  LLVM_DEBUG(dbgs() << "Rematerializing cheap def: "; Def.dump());
+  LLVM_DEBUG(dbgs() << " - for use in "; Op.getParent()->dump());
 
   unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
   TII->reMaterialize(MBB, Insert, NewReg, 0, Def, *TRI);
@@ -526,7 +526,7 @@ static MachineInstr *RematerializeCheapDef(
   MFI.stackifyVReg(NewReg);
   ImposeStackOrdering(Clone);
 
-  DEBUG(dbgs() << " - Cloned to "; Clone->dump());
+  LLVM_DEBUG(dbgs() << " - Cloned to "; Clone->dump());
 
   // Shrink the interval.
   bool IsDead = MRI.use_empty(Reg);
@@ -538,7 +538,7 @@ static MachineInstr *RematerializeCheapDef(
 
   // If that was the last use of the original, delete the original.
   if (IsDead) {
-    DEBUG(dbgs() << " - Deleting original\n");
+    LLVM_DEBUG(dbgs() << " - Deleting original\n");
     SlotIndex Idx = LIS.getInstructionIndex(Def).getRegSlot();
     LIS.removePhysRegDefAt(WebAssembly::ARGUMENTS, Idx);
     LIS.removeInterval(Reg);
@@ -573,7 +573,7 @@ static MachineInstr *MoveAndTeeForMultiUse(
     unsigned Reg, MachineOperand &Op, MachineInstr *Def, MachineBasicBlock &MBB,
     MachineInstr *Insert, LiveIntervals &LIS, WebAssemblyFunctionInfo &MFI,
     MachineRegisterInfo &MRI, const WebAssemblyInstrInfo *TII) {
-  DEBUG(dbgs() << "Move and tee for multi-use:"; Def->dump());
+  LLVM_DEBUG(dbgs() << "Move and tee for multi-use:"; Def->dump());
 
   // Move Def into place.
   MBB.splice(Insert, &MBB, Def);
@@ -609,8 +609,8 @@ static MachineInstr *MoveAndTeeForMultiUse(
   ImposeStackOrdering(Def);
   ImposeStackOrdering(Tee);
 
-  DEBUG(dbgs() << " - Replaced register: "; Def->dump());
-  DEBUG(dbgs() << " - Tee instruction: "; Tee->dump());
+  LLVM_DEBUG(dbgs() << " - Replaced register: "; Def->dump());
+  LLVM_DEBUG(dbgs() << " - Tee instruction: "; Tee->dump());
   return Def;
 }
 
@@ -737,9 +737,9 @@ public:
 } // end anonymous namespace
 
 bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "********** Register Stackifying **********\n"
-                  "********** Function: "
-               << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** Register Stackifying **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
 
   bool Changed = false;
   MachineRegisterInfo &MRI = MF.getRegInfo();

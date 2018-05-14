@@ -531,7 +531,7 @@ public:
       for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
           I != E;) {
         if (TII->usesTextureCache(*I) || TII->usesVertexCache(*I)) {
-          DEBUG(dbgs() << CfCount << ":"; I->dump(););
+          LLVM_DEBUG(dbgs() << CfCount << ":"; I->dump(););
           FetchClauses.push_back(MakeFetchClause(MBB, I));
           CfCount++;
           LastAlu.back() = nullptr;
@@ -549,7 +549,8 @@ public:
         switch (MI->getOpcode()) {
         case AMDGPU::CF_ALU_PUSH_BEFORE:
           if (RequiresWorkAround) {
-            DEBUG(dbgs() << "Applying bug work-around for ALU_PUSH_BEFORE\n");
+            LLVM_DEBUG(dbgs()
+                       << "Applying bug work-around for ALU_PUSH_BEFORE\n");
             BuildMI(MBB, MI, MBB.findDebugLoc(MI), TII->get(AMDGPU::CF_PUSH_EG))
                 .addImm(CfCount + 1)
                 .addImm(1);
@@ -562,7 +563,7 @@ public:
         case AMDGPU::CF_ALU:
           I = MI;
           AluClauses.push_back(MakeALUClause(MBB, I));
-          DEBUG(dbgs() << CfCount << ":"; MI->dump(););
+          LLVM_DEBUG(dbgs() << CfCount << ":"; MI->dump(););
           CfCount++;
           break;
         case AMDGPU::WHILELOOP: {
@@ -597,7 +598,7 @@ public:
               .addImm(0)
               .addImm(0);
           IfThenElseStack.push_back(MIb);
-          DEBUG(dbgs() << CfCount << ":"; MIb->dump(););
+          LLVM_DEBUG(dbgs() << CfCount << ":"; MIb->dump(););
           MI->eraseFromParent();
           CfCount++;
           break;
@@ -610,7 +611,7 @@ public:
               getHWInstrDesc(CF_ELSE))
               .addImm(0)
               .addImm(0);
-          DEBUG(dbgs() << CfCount << ":"; MIb->dump(););
+          LLVM_DEBUG(dbgs() << CfCount << ":"; MIb->dump(););
           IfThenElseStack.push_back(MIb);
           MI->eraseFromParent();
           CfCount++;
@@ -626,7 +627,7 @@ public:
                 .addImm(CfCount + 1)
                 .addImm(1);
             (void)MIb;
-            DEBUG(dbgs() << CfCount << ":"; MIb->dump(););
+            LLVM_DEBUG(dbgs() << CfCount << ":"; MIb->dump(););
             CfCount++;
           }
 
@@ -673,7 +674,7 @@ public:
         }
         default:
           if (TII->isExport(MI->getOpcode())) {
-            DEBUG(dbgs() << CfCount << ":"; MI->dump(););
+            LLVM_DEBUG(dbgs() << CfCount << ":"; MI->dump(););
             CfCount++;
           }
           break;

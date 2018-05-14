@@ -272,7 +272,7 @@ let Predicates = [HasSSE1] in
 def MMX_MOVNTQmr  : MMXI<0xE7, MRMDestMem, (outs), (ins i64mem:$dst, VR64:$src),
                          "movntq\t{$src, $dst|$dst, $src}",
                          [(int_x86_mmx_movnt_dq addr:$dst, VR64:$src)]>,
-                         Sched<[SchedWriteVecMoveLS.MMX.MR]>;
+                         Sched<[SchedWriteVecMoveLSNT.MMX.MR]>;
 
 let Predicates = [HasMMX] in {
   let AddedComplexity = 15 in

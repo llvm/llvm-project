@@ -1469,7 +1469,7 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return false;
 
   // All clear, widen the COPY.
-  DEBUG(dbgs() << "widening:    " << MI);
+  LLVM_DEBUG(dbgs() << "widening:    " << MI);
   MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
 
   // Get rid of the old implicit-def of DstRegD.  Leave it if it defines a Q-reg
@@ -1498,7 +1498,7 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.addRegisterKilled(SrcRegS, TRI, true);
   }
 
-  DEBUG(dbgs() << "replaced by: " << MI);
+  LLVM_DEBUG(dbgs() << "replaced by: " << MI);
   return true;
 }
 

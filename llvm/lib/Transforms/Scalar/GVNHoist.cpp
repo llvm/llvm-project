@@ -622,7 +622,7 @@ private:
       // Iterate in reverse order to keep lower ranked values on the top.
       for (std::pair<VNType, Instruction *> &VI : reverse(it1->second)) {
         // Get the value of instruction I
-        DEBUG(dbgs() << "\nPushing on stack: " << *VI.second);
+        LLVM_DEBUG(dbgs() << "\nPushing on stack: " << *VI.second);
         RenameStack[VI.first].push_back(VI.second);
       }
     }
@@ -636,7 +636,7 @@ private:
       if (P == CHIBBs.end()) {
         continue;
       }
-      DEBUG(dbgs() << "\nLooking at CHIs in: " << Pred->getName(););
+      LLVM_DEBUG(dbgs() << "\nLooking at CHIs in: " << Pred->getName(););
       // A CHI is found (BB -> Pred is an edge in the CFG)
       // Pop the stack until Top(V) = Ve.
       auto &VCHI = P->second;
@@ -651,9 +651,9 @@ private:
               DT->properlyDominates(Pred, si->second.back()->getParent())) {
             C.Dest = BB;                     // Assign the edge
             C.I = si->second.pop_back_val(); // Assign the argument
-            DEBUG(dbgs() << "\nCHI Inserted in BB: " << C.Dest->getName()
-                         << *C.I << ", VN: " << C.VN.first << ", "
-                         << C.VN.second);
+            LLVM_DEBUG(dbgs()
+                       << "\nCHI Inserted in BB: " << C.Dest->getName() << *C.I
+                       << ", VN: " << C.VN.first << ", " << C.VN.second);
           }
           // Move to next CHI of a different value
           It = std::find_if(It, VCHI.end(),
@@ -798,8 +798,8 @@ private:
            // Ignore spurious PDFs.
           if (DT->properlyDominates(IDFB, V[i]->getParent())) {
             OutValue[IDFB].push_back(C);
-            DEBUG(dbgs() << "\nInsertion a CHI for BB: " << IDFB->getName()
-                         << ", for Insn: " << *V[i]);
+            LLVM_DEBUG(dbgs() << "\nInsertion a CHI for BB: " << IDFB->getName()
+                              << ", for Insn: " << *V[i]);
           }
         }
       }

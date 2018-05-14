@@ -261,7 +261,8 @@ void FastISel::sinkLocalValueMaterialization(MachineInstr &LocalMI,
   if (!UsedByPHI && MRI.use_nodbg_empty(DefReg)) {
     if (EmitStartPt == &LocalMI)
       EmitStartPt = EmitStartPt->getPrevNode();
-    DEBUG(dbgs() << "removing dead local value materialization " << LocalMI);
+    LLVM_DEBUG(dbgs() << "removing dead local value materialization "
+                      << LocalMI);
     OrderMap.Orders.erase(&LocalMI);
     LocalMI.eraseFromParent();
     return;
@@ -312,7 +313,7 @@ void FastISel::sinkLocalValueMaterialization(MachineInstr &LocalMI,
   }
 
   // Sink LocalMI before SinkPos and assign it the same DebugLoc.
-  DEBUG(dbgs() << "sinking local value to first use " << LocalMI);
+  LLVM_DEBUG(dbgs() << "sinking local value to first use " << LocalMI);
   FuncInfo.MBB->remove(&LocalMI);
   FuncInfo.MBB->insert(SinkPos, &LocalMI);
   if (SinkPos != FuncInfo.MBB->end())
@@ -1329,13 +1330,13 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     const DbgDeclareInst *DI = cast<DbgDeclareInst>(II);
     assert(DI->getVariable() && "Missing variable");
     if (!FuncInfo.MF->getMMI().hasDebugInfo()) {
-      DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
       return true;
     }
 
     const Value *Address = DI->getAddress();
     if (!Address || isa<UndefValue>(Address)) {
-      DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
       return true;
     }
 
@@ -1387,7 +1388,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     } else {
       // We can't yet handle anything else here because it would require
       // generating code, thus altering codegen because of debug info.
-      DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
     }
     return true;
   }
@@ -1430,7 +1431,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     } else {
       // We can't yet handle anything else here because it would require
       // generating code, thus altering codegen because of debug info.
-      DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
     }
     return true;
   }
