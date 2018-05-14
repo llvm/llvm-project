@@ -31,8 +31,8 @@
 #include "xray/xray_log_interface.h"
 #include "xray_buffer_queue.h"
 #include "xray_defs.h"
+#include "xray_fdr_flags.h"
 #include "xray_fdr_log_records.h"
-#include "xray_flags.h"
 #include "xray_tsc.h"
 
 namespace __xray {
@@ -386,7 +386,7 @@ static uint64_t thresholdTicks() {
                                     ? getTSCFrequency()
                                     : __xray::NanosecondsPerSecond;
   static const uint64_t ThresholdTicks =
-      TicksPerSec * flags()->xray_fdr_log_func_duration_threshold_us / 1000000;
+      TicksPerSec * fdrFlags()->func_duration_threshold_us / 1000000;
   return ThresholdTicks;
 }
 
