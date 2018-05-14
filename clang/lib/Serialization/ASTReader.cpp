@@ -6198,7 +6198,8 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     ElaboratedTypeKeyword Keyword = (ElaboratedTypeKeyword)Record[Idx++];
     NestedNameSpecifier *NNS = ReadNestedNameSpecifier(*Loc.F, Record, Idx);
     QualType NamedType = readType(*Loc.F, Record, Idx);
-    return Context.getElaboratedType(Keyword, NNS, NamedType);
+    TagDecl *OwnedTagDecl = ReadDeclAs<TagDecl>(*Loc.F, Record, Idx);
+    return Context.getElaboratedType(Keyword, NNS, NamedType, OwnedTagDecl);
   }
 
   case TYPE_OBJC_INTERFACE: {

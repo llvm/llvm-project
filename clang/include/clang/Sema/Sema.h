@@ -1663,7 +1663,8 @@ public:
   }
 
   QualType getElaboratedType(ElaboratedTypeKeyword Keyword,
-                             const CXXScopeSpec &SS, QualType T);
+                             const CXXScopeSpec &SS, QualType T,
+                             TagDecl *OwnedTagDecl = nullptr);
 
   QualType BuildTypeofExprType(Expr *E, SourceLocation Loc);
   /// If AsUnevaluated is false, E is treated as though it were an evaluated
@@ -2140,12 +2141,12 @@ public:
   void checkPartialSpecializationVisibility(SourceLocation Loc,
                                             NamedDecl *Spec);
 
-  /// Retrieve a suitable printing policy.
+  /// Retrieve a suitable printing policy for diagnostics.
   PrintingPolicy getPrintingPolicy() const {
     return getPrintingPolicy(Context, PP);
   }
 
-  /// Retrieve a suitable printing policy.
+  /// Retrieve a suitable printing policy for diagnostics.
   static PrintingPolicy getPrintingPolicy(const ASTContext &Ctx,
                                           const Preprocessor &PP);
 

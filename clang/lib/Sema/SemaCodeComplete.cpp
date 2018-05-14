@@ -4492,10 +4492,8 @@ void Sema::CodeCompleteConstructor(Scope *S, QualType Type, SourceLocation Loc,
     return;
 
   // A complete type is needed to lookup for constructors.
-  if (!isCompleteType(Loc, Type))
-    return;
-
-  CXXRecordDecl *RD = Type->getAsCXXRecordDecl();
+  CXXRecordDecl *RD =
+      isCompleteType(Loc, Type) ? Type->getAsCXXRecordDecl() : nullptr;
   if (!RD) {
     CodeCompleteExpression(S, Type);
     return;

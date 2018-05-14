@@ -3979,12 +3979,12 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
   return QualType(Spec, 0);
 }
 
-QualType
-ASTContext::getElaboratedType(ElaboratedTypeKeyword Keyword,
-                              NestedNameSpecifier *NNS,
-                              QualType NamedType) const {
+QualType ASTContext::getElaboratedType(ElaboratedTypeKeyword Keyword,
+                                       NestedNameSpecifier *NNS,
+                                       QualType NamedType,
+                                       TagDecl *OwnedTagDecl) const {
   llvm::FoldingSetNodeID ID;
-  ElaboratedType::Profile(ID, Keyword, NNS, NamedType);
+  ElaboratedType::Profile(ID, Keyword, NNS, NamedType, OwnedTagDecl);
 
   void *InsertPos = nullptr;
   ElaboratedType *T = ElaboratedTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -3999,7 +3999,8 @@ ASTContext::getElaboratedType(ElaboratedTypeKeyword Keyword,
     (void)CheckT;
   }
 
-  T = new (*this, TypeAlignment) ElaboratedType(Keyword, NNS, NamedType, Canon);
+  T = new (*this, TypeAlignment)
+      ElaboratedType(Keyword, NNS, NamedType, Canon, OwnedTagDecl);
   Types.push_back(T);
   ElaboratedTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);

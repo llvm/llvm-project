@@ -1221,6 +1221,17 @@ void TypePrinter::printInjectedClassNameAfter(const InjectedClassNameType *T,
 
 void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
                                         raw_ostream &OS) {
+  if (Policy.IncludeTagDefinition && T->getOwnedTagDecl()) {
+    TagDecl *OwnedTagDecl = T->getOwnedTagDecl();
+    assert(OwnedTagDecl->getTypeForDecl() == T->getNamedType().getTypePtr() &&
+           "OwnedTagDecl expected to be a declaration for the type");
+    PrintingPolicy SubPolicy = Policy;
+    SubPolicy.IncludeTagDefinition = false;
+    OwnedTagDecl->print(OS, SubPolicy, Indentation);
+    spaceBeforePlaceHolder(OS);
+    return;
+  }
+
   // The tag definition will take care of these.
   if (!Policy.IncludeTagDefinition)
   {
@@ -1238,6 +1249,8 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
 
 void TypePrinter::printElaboratedAfter(const ElaboratedType *T,
                                         raw_ostream &OS) {
+  if (Policy.IncludeTagDefinition && T->getOwnedTagDecl())
+    return;
   ElaboratedTypePolicyRAII PolicyRAII(Policy);
   printAfter(T->getNamedType(), OS);
 }

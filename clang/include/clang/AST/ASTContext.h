@@ -1419,8 +1419,8 @@ public:
   QualType getParenType(QualType NamedType) const;
 
   QualType getElaboratedType(ElaboratedTypeKeyword Keyword,
-                             NestedNameSpecifier *NNS,
-                             QualType NamedType) const;
+                             NestedNameSpecifier *NNS, QualType NamedType,
+                             TagDecl *OwnedTagDecl = nullptr) const;
   QualType getDependentNameType(ElaboratedTypeKeyword Keyword,
                                 NestedNameSpecifier *NNS,
                                 const IdentifierInfo *Name,
