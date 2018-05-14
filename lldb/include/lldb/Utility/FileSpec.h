@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h" // for StringRef
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 
 #include <stddef.h> // for size_t
 #include <stdint.h> // for uint32_t, uint64_t
@@ -60,11 +61,7 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class FileSpec {
 public:
-  enum PathSyntax : unsigned char {
-    ePathSyntaxPosix,
-    ePathSyntaxWindows,
-    ePathSyntaxHostNative
-  };
+  using Style = llvm::sys::path::Style;
 
   FileSpec();
 
@@ -86,7 +83,7 @@ public:
   /// @see FileSpec::SetFile (const char *path, bool resolve)
   //------------------------------------------------------------------
   explicit FileSpec(llvm::StringRef path, bool resolve_path,
-                    PathSyntax syntax = ePathSyntaxHostNative);
+                    Style style = Style::native);
 
   explicit FileSpec(llvm::StringRef path, bool resolve_path,
                     const llvm::Triple &Triple);
@@ -261,7 +258,7 @@ public:
   ///     \b true if the file path is case sensitive (POSIX), false
   ///		if case insensitive (Windows).
   //------------------------------------------------------------------
-  bool IsCaseSensitive() const { return m_syntax != ePathSyntaxWindows; }
+  bool IsCaseSensitive() const { return m_style != Style::windows; }
 
   //------------------------------------------------------------------
   /// Dump this object to a Stream.
@@ -316,7 +313,7 @@ public:
 
   uint64_t GetByteSize() const;
 
-  PathSyntax GetPathSyntax() const;
+  Style GetPathStyle() const;
 
   //------------------------------------------------------------------
   /// Directory string get accessor.
@@ -494,7 +491,7 @@ public:
   ///     the static FileSpec::Resolve.
   //------------------------------------------------------------------
   void SetFile(llvm::StringRef path, bool resolve_path,
-               PathSyntax syntax = ePathSyntaxHostNative);
+               Style style = Style::native);
 
   void SetFile(llvm::StringRef path, bool resolve_path,
                const llvm::Triple &Triple);
@@ -567,8 +564,7 @@ protected:
   ConstString m_directory;            ///< The uniqued directory path
   ConstString m_filename;             ///< The uniqued filename path
   mutable bool m_is_resolved = false; ///< True if this path has been resolved.
-  PathSyntax
-      m_syntax; ///< The syntax that this path uses (e.g. Windows / Posix)
+  Style m_style; ///< The syntax that this path uses (e.g. Windows / Posix)
 };
 
 //----------------------------------------------------------------------

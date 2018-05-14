@@ -759,9 +759,9 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   return true;
 }
 
-// Should we perform index-based completion in this context?
+// Should we perform index-based completion in a context of the specified kind?
 // FIXME: consider allowing completion, but restricting the result types.
-bool allowIndex(enum CodeCompletionContext::Kind K) {
+bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   switch (K) {
   case CodeCompletionContext::CCC_TopLevel:
   case CodeCompletionContext::CCC_ObjCInterface:
@@ -801,6 +801,34 @@ bool allowIndex(enum CodeCompletionContext::Kind K) {
     return false;
   }
   llvm_unreachable("unknown code completion context");
+}
+
+// Should we allow index completions in the specified context?
+bool allowIndex(CodeCompletionContext &CC) {
+  if (!contextAllowsIndex(CC.getKind()))
+    return false;
+  // We also avoid ClassName::bar (but allow namespace::bar).
+  auto Scope = CC.getCXXScopeSpecifier();
+  if (!Scope)
+    return true;
+  NestedNameSpecifier *NameSpec = (*Scope)->getScopeRep();
+  if (!NameSpec)
+    return true;
+  // We only query the index when qualifier is a namespace.
+  // If it's a class, we rely solely on sema completions.
+  switch (NameSpec->getKind()) {
+  case NestedNameSpecifier::Global:
+  case NestedNameSpecifier::Namespace:
+  case NestedNameSpecifier::NamespaceAlias:
+    return true;
+  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::TypeSpec:
+  case NestedNameSpecifier::TypeSpecWithTemplate:
+  // Unresolved inside a template.
+  case NestedNameSpecifier::Identifier:
+    return false;
+  }
+  llvm_unreachable("invalid NestedNameSpecifier kind");
 }
 
 } // namespace
@@ -918,7 +946,7 @@ private:
   }
 
   SymbolSlab queryIndex() {
-    if (!Opts.Index || !allowIndex(Recorder->CCContext.getKind()))
+    if (!Opts.Index || !allowIndex(Recorder->CCContext))
       return SymbolSlab();
     trace::Span Tracer("Query index");
     SPAN_ATTACH(Tracer, "limit", Opts.Limit);
