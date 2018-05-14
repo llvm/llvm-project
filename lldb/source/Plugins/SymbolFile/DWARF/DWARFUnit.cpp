@@ -41,20 +41,9 @@ DWARFUnit::~DWARFUnit() {}
 // Parses a compile unit and indexes its DIEs if it hasn't already been done.
 //----------------------------------------------------------------------
 size_t DWARFUnit::ExtractDIEsIfNeeded(bool cu_die_only) {
-  size_t initial_die_array_size;
-  auto already_parsed = [cu_die_only, &initial_die_array_size, this]() -> bool {
-    initial_die_array_size = m_die_array.size();
-    return (cu_die_only && initial_die_array_size > 0)
-        || initial_die_array_size > 1;
-  };
-  {
-    llvm::sys::ScopedReader lock(m_extractdies_mutex);
-    if (already_parsed())
-      return 0;
-  }
-  llvm::sys::ScopedWriter lock(m_extractdies_mutex);
-  if (already_parsed())
-    return 0;
+  const size_t initial_die_array_size = m_die_array.size();
+  if ((cu_die_only && initial_die_array_size > 0) || initial_die_array_size > 1)
+    return 0; // Already parsed
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(
@@ -302,8 +291,6 @@ void DWARFUnit::SetAddrBase(dw_addr_t addr_base,
 
 void DWARFUnit::ClearDIEs(bool keep_compile_unit_die) {
   if (m_die_array.size() > 1) {
-    llvm::sys::ScopedWriter lock(m_extractdies_mutex);
-
     // std::vectors never get any smaller when resized to a smaller size, or
     // when clear() or erase() are called, the size will report that it is
     // smaller, but the memory allocated remains intact (call capacity() to see
@@ -463,9 +450,9 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
 
     if (ContainsDIEOffset(die_offset)) {
       ExtractDIEsIfNeeded(false);
-      DWARFDebugInfoEntry::iterator end = m_die_array.end();
-      DWARFDebugInfoEntry::iterator pos =
-          lower_bound(m_die_array.begin(), end, die_offset, CompareDIEOffset);
+      DWARFDebugInfoEntry::const_iterator end = m_die_array.cend();
+      DWARFDebugInfoEntry::const_iterator pos =
+          lower_bound(m_die_array.cbegin(), end, die_offset, CompareDIEOffset);
       if (pos != end) {
         if (die_offset == (*pos).GetOffset())
           return DWARFDIE(this, &(*pos));

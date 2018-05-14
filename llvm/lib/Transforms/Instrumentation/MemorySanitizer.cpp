@@ -2556,7 +2556,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_cvttss2usi:
     case Intrinsic::x86_avx512_cvttsd2usi64:
     case Intrinsic::x86_avx512_cvttsd2usi:
-    case Intrinsic::x86_avx512_cvtusi2sd:
     case Intrinsic::x86_avx512_cvtusi2ss:
     case Intrinsic::x86_avx512_cvtusi642sd:
     case Intrinsic::x86_avx512_cvtusi642ss:

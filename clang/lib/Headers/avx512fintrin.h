@@ -9311,30 +9311,23 @@ _mm512_maskz_expand_epi32 (__mmask16 __U, __m512i __A)
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_cvtps_pd (__m256 __A)
 {
-  return (__m512d) __builtin_ia32_cvtps2pd512_mask ((__v8sf) __A,
-                (__v8df)
-                _mm512_undefined_pd (),
-                (__mmask8) -1,
-                _MM_FROUND_CUR_DIRECTION);
+  return (__m512d) __builtin_convertvector((__v8sf)__A, __v8df);
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_mask_cvtps_pd (__m512d __W, __mmask8 __U, __m256 __A)
 {
-  return (__m512d) __builtin_ia32_cvtps2pd512_mask ((__v8sf) __A,
-                (__v8df) __W,
-                (__mmask8) __U,
-                _MM_FROUND_CUR_DIRECTION);
+  return (__m512d)__builtin_ia32_selectpd_512((__mmask8)__U,
+                                              (__v8df)_mm512_cvtps_pd(__A),
+                                              (__v8df)__W);
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_maskz_cvtps_pd (__mmask8 __U, __m256 __A)
 {
-  return (__m512d) __builtin_ia32_cvtps2pd512_mask ((__v8sf) __A,
-                (__v8df)
-                _mm512_setzero_pd (),
-                (__mmask8) __U,
-                _MM_FROUND_CUR_DIRECTION);
+  return (__m512d)__builtin_ia32_selectpd_512((__mmask8)__U,
+                                              (__v8df)_mm512_cvtps_pd(__A),
+                                              (__v8df)_mm512_setzero_pd());
 }
 
 static __inline__ __m512 __DEFAULT_FN_ATTRS
@@ -9521,7 +9514,8 @@ _mm_maskz_cvtss_sd (__mmask8 __U, __m128d __A, __m128 __B)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cvtu32_sd (__m128d __A, unsigned __B)
 {
-  return (__m128d) __builtin_ia32_cvtusi2sd32 ((__v2df) __A, __B);
+  __A[0] = __B;
+  return __A;
 }
 
 #ifdef __x86_64__
@@ -9532,8 +9526,8 @@ _mm_cvtu32_sd (__m128d __A, unsigned __B)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cvtu64_sd (__m128d __A, unsigned long long __B)
 {
-  return (__m128d) __builtin_ia32_cvtusi2sd64 ((__v2df) __A, __B,
-                 _MM_FROUND_CUR_DIRECTION);
+  __A[0] = __B;
+  return __A;
 }
 #endif
 
@@ -9544,8 +9538,8 @@ _mm_cvtu64_sd (__m128d __A, unsigned long long __B)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cvtu32_ss (__m128 __A, unsigned __B)
 {
-  return (__m128) __builtin_ia32_cvtusi2ss32 ((__v4sf) __A, __B,
-                _MM_FROUND_CUR_DIRECTION);
+  __A[0] = __B;
+  return __A;
 }
 
 #ifdef __x86_64__
@@ -9556,8 +9550,8 @@ _mm_cvtu32_ss (__m128 __A, unsigned __B)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cvtu64_ss (__m128 __A, unsigned long long __B)
 {
-  return (__m128) __builtin_ia32_cvtusi2ss64 ((__v4sf) __A, __B,
-                _MM_FROUND_CUR_DIRECTION);
+  __A[0] = __B;
+  return __A;
 }
 #endif
 
