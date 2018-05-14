@@ -9,7 +9,12 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-import Cocoa
+import Foundation
+#if os(iOS)
+    import UIKit
+#elseif os(OSX)
+    import AppKit
+#endif    
 
 func main() {
   var num = 22
@@ -17,7 +22,11 @@ func main() {
   var str = "Hello world" //% self.expect("po num", substrs = ['22'])
   var arr = [1,2,3,4] 
   var nsarr = NSMutableArray(array: arr) //% self.expect("po str", substrs = ['Hello world'])
+#if os(iOS)
+  var clr = UIColor.red //% self.expect("po arr", substrs = ['1','2','3','4'])
+#elseif os(OSX)
   var clr = NSColor.red //% self.expect("po arr", substrs = ['1','2','3','4'])
+#endif
   //% self.expect("po nsarr", substrs = ['1','2','3','4'])
   var nsobject = NSObject() //% self.expect("po clr", substrs = ['1 0 0 1']) # may change depending on OS/platform
   var any: Any = 1234 //% self.expect("po nsobject", substrs = ['<NSObject: 0x']) # may change depending on OS/platform
