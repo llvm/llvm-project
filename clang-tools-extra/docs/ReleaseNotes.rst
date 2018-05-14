@@ -146,6 +146,11 @@ Improvements to clang-tidy
   Warns or suggests alternatives if SIMD intrinsics are used which can be replaced by
   ``std::experimental::simd`` operations.
 
+- New :doc:`bugprone-terminating-continue
+  <clang-tidy/checks/bugprone-terminating-continue>` check
+
+  Checks if a ``continue`` statement terminates the loop.
+
 - New :doc:`zircon-temporary-objects
   <clang-tidy/checks/zircon-temporary-objects>` check.
 
