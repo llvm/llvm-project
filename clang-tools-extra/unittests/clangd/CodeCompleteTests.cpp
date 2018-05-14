@@ -825,6 +825,67 @@ TEST(CompletionTest, GlobalQualifiedQuery) {
                                           UnorderedElementsAre(""))));
 }
 
+TEST(CompletionTest, NoIndexCompletionsInsideClasses) {
+  auto Completions = completions(
+      R"cpp(
+    struct Foo {
+      int SomeNameOfField;
+      typedef int SomeNameOfTypedefField;
+    };
+
+    Foo::^)cpp",
+      {func("::SomeNameInTheIndex"), func("::Foo::SomeNameInTheIndex")});
+
+  EXPECT_THAT(Completions.items,
+              AllOf(Contains(Labeled("SomeNameOfField")),
+                    Contains(Labeled("SomeNameOfTypedefField")),
+                    Not(Contains(Labeled("SomeNameInTheIndex")))));
+}
+
+TEST(CompletionTest, NoIndexCompletionsInsideDependentCode) {
+  {
+    auto Completions = completions(
+        R"cpp(
+      template <class T>
+      void foo() {
+        T::^
+      }
+      )cpp",
+        {func("::SomeNameInTheIndex")});
+
+    EXPECT_THAT(Completions.items,
+                Not(Contains(Labeled("SomeNameInTheIndex"))));
+  }
+
+  {
+    auto Completions = completions(
+        R"cpp(
+      template <class T>
+      void foo() {
+        T::template Y<int>::^
+      }
+      )cpp",
+        {func("::SomeNameInTheIndex")});
+
+    EXPECT_THAT(Completions.items,
+                Not(Contains(Labeled("SomeNameInTheIndex"))));
+  }
+
+  {
+    auto Completions = completions(
+        R"cpp(
+      template <class T>
+      void foo() {
+        T::foo::^
+      }
+      )cpp",
+        {func("::SomeNameInTheIndex")});
+
+    EXPECT_THAT(Completions.items,
+                Not(Contains(Labeled("SomeNameInTheIndex"))));
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

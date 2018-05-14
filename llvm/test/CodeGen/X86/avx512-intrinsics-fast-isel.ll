@@ -2077,5 +2077,97 @@ entry:
   ret <4 x float> %vecins.i
 }
 
+define <8 x double> @test_mm512_cvtps_pd(<8 x float> %__A) {
+; X32-LABEL: test_mm512_cvtps_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vcvtps2pd %ymm0, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_cvtps_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vcvtps2pd %ymm0, %zmm0
+; X64-NEXT:    retq
+entry:
+  %conv.i = fpext <8 x float> %__A to <8 x double>
+  ret <8 x double> %conv.i
+}
+
+define <8 x double> @test_mm512_cvtpslo_pd(<16 x float> %__A) {
+; X32-LABEL: test_mm512_cvtpslo_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vcvtps2pd %ymm0, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_cvtpslo_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vcvtps2pd %ymm0, %zmm0
+; X64-NEXT:    retq
+entry:
+  %shuffle.i.i = shufflevector <16 x float> %__A, <16 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %conv.i.i = fpext <8 x float> %shuffle.i.i to <8 x double>
+  ret <8 x double> %conv.i.i
+}
+
+define <8 x double> @test_mm512_mask_cvtps_pd(<8 x double> %__W, i8 zeroext %__U, <8 x float> %__A) {
+; X32-LABEL: test_mm512_mask_cvtps_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vcvtps2pd %ymm1, %zmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_cvtps_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vcvtps2pd %ymm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %conv.i.i = fpext <8 x float> %__A to <8 x double>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %1 = select <8 x i1> %0, <8 x double> %conv.i.i, <8 x double> %__W
+  ret <8 x double> %1
+}
+
+define <8 x double> @test_mm512_mask_cvtpslo_pd(<8 x double> %__W, i8 zeroext %__U, <16 x float> %__A) {
+; X32-LABEL: test_mm512_mask_cvtpslo_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vcvtps2pd %ymm1, %zmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_cvtpslo_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vcvtps2pd %ymm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %shuffle.i.i = shufflevector <16 x float> %__A, <16 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %conv.i.i.i = fpext <8 x float> %shuffle.i.i to <8 x double>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %1 = select <8 x i1> %0, <8 x double> %conv.i.i.i, <8 x double> %__W
+  ret <8 x double> %1
+}
+
+define <8 x double> @test_mm512_maskz_cvtps_pd(i8 zeroext %__U, <8 x float> %__A) {
+; X32-LABEL: test_mm512_maskz_cvtps_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vcvtps2pd %ymm0, %zmm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_cvtps_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vcvtps2pd %ymm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %conv.i.i = fpext <8 x float> %__A to <8 x double>
+  %0 = bitcast i8 %__U to <8 x i1>
+  %1 = select <8 x i1> %0, <8 x double> %conv.i.i, <8 x double> zeroinitializer
+  ret <8 x double> %1
+}
+
 !0 = !{i32 1}
 

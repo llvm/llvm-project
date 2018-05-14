@@ -576,14 +576,15 @@ let DecoderNamespace="MipsFP64" in {
 
 // Load/store doubleword indexed unaligned.
 // FIXME: This instruction should not be defined for FGR_32.
-let AdditionalPredicates = [IsNotNaCl] in {
+let AdditionalPredicates = [IsNotNaCl, NotInMicroMips] in {
   def LUXC1 : MMRel, LWXC1_FT<"luxc1", AFGR64Opnd, II_LUXC1>, LWXC1_FM<0x5>,
               INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_32;
   def SUXC1 : MMRel, SWXC1_FT<"suxc1", AFGR64Opnd, II_SUXC1>, SWXC1_FM<0xd>,
               INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_32;
 }
 
-let DecoderNamespace="MipsFP64" in {
+let AdditionalPredicates = [IsNotNaCl, NotInMicroMips],
+    DecoderNamespace="MipsFP64" in {
   def LUXC164 : LWXC1_FT<"luxc1", FGR64Opnd, II_LUXC1>, LWXC1_FM<0x5>,
                 INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_64;
   def SUXC164 : SWXC1_FT<"suxc1", FGR64Opnd, II_SUXC1>, SWXC1_FM<0xd>,

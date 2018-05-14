@@ -196,8 +196,10 @@ void Symbol::parseSymbolVersion() {
   // It is an error if the specified version is not defined.
   // Usually version script is not provided when linking executable,
   // but we may still want to override a versioned symbol from DSO,
-  // so we do not report error in this case.
-  if (Config->Shared)
+  // so we do not report error in this case. We also do not error
+  // if the symbol has a local version as it won't be in the dynamic
+  // symbol table.
+  if (Config->Shared && VersionId != VER_NDX_LOCAL)
     error(toString(File) + ": symbol " + S + " has undefined version " +
           Verstr);
 }

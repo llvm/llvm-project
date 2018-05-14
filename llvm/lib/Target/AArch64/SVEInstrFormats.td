@@ -27,6 +27,20 @@ def sve_pred_enum : Operand<i32>, ImmLeaf<i32, [{
   let ParserMatchClass = SVEPatternOperand;
 }
 
+def SVEPrefetchOperand : AsmOperandClass {
+  let Name = "SVEPrefetch";
+  let ParserMethod = "tryParsePrefetch<true>";
+  let PredicateMethod = "isPrefetch";
+  let RenderMethod = "addPrefetchOperands";
+}
+
+def sve_prfop : Operand<i32>, ImmLeaf<i32, [{
+    return (((uint32_t)Imm) <= 15);
+  }]> {
+  let PrintMethod = "printPrefetchOp<true>";
+  let ParserMatchClass = SVEPrefetchOperand;
+}
+
 class SVELogicalImmOperand<int Width> : AsmOperandClass {
   let Name = "SVELogicalImm" # Width;
   let DiagnosticType = "LogicalSecondSource";
