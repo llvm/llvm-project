@@ -5511,8 +5511,6 @@ def warn_block_capture_autoreleasing : Warning<
   "block captures an autoreleasing out-parameter, which may result in "
   "use-after-free bugs">,
   InGroup<BlockCaptureAutoReleasing>;
-def note_declare_parameter_autoreleasing : Note<
-  "declare the parameter __autoreleasing explicitly to suppress this warning">;
 def note_declare_parameter_strong : Note<
   "declare the parameter __strong or capture a __block __strong variable to "
   "keep values alive across autorelease pools">;
