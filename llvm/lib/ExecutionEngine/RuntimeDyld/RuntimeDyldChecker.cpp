@@ -688,12 +688,13 @@ RuntimeDyldCheckerImpl::RuntimeDyldCheckerImpl(RuntimeDyld &RTDyld,
 
 bool RuntimeDyldCheckerImpl::check(StringRef CheckExpr) const {
   CheckExpr = CheckExpr.trim();
-  DEBUG(dbgs() << "RuntimeDyldChecker: Checking '" << CheckExpr << "'...\n");
+  LLVM_DEBUG(dbgs() << "RuntimeDyldChecker: Checking '" << CheckExpr
+                    << "'...\n");
   RuntimeDyldCheckerExprEval P(*this, ErrStream);
   bool Result = P.evaluate(CheckExpr);
   (void)Result;
-  DEBUG(dbgs() << "RuntimeDyldChecker: '" << CheckExpr << "' "
-               << (Result ? "passed" : "FAILED") << ".\n");
+  LLVM_DEBUG(dbgs() << "RuntimeDyldChecker: '" << CheckExpr << "' "
+                    << (Result ? "passed" : "FAILED") << ".\n");
   return Result;
 }
 

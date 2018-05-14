@@ -1040,11 +1040,9 @@ MipsSETargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const {
   }
 
   if (Val.getNode()) {
-    DEBUG(dbgs() << "\nMipsSE DAG Combine:\n";
-          N->printrWithDepth(dbgs(), &DAG);
-          dbgs() << "\n=> \n";
-          Val.getNode()->printrWithDepth(dbgs(), &DAG);
-          dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "\nMipsSE DAG Combine:\n";
+               N->printrWithDepth(dbgs(), &DAG); dbgs() << "\n=> \n";
+               Val.getNode()->printrWithDepth(dbgs(), &DAG); dbgs() << "\n");
     return Val;
   }
 

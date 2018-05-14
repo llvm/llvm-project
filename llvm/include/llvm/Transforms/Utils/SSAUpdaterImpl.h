@@ -379,7 +379,7 @@ public:
         Traits::AddPHIOperand(PHI, PredInfo->AvailableVal, Pred);
       }
 
-      DEBUG(dbgs() << "  Inserted PHI: " << *PHI << "\n");
+      LLVM_DEBUG(dbgs() << "  Inserted PHI: " << *PHI << "\n");
 
       // If the client wants to know about all new instructions, tell it.
       if (InsertedPHIs) InsertedPHIs->push_back(PHI);

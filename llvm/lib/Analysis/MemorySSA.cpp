@@ -1240,10 +1240,11 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     unsigned long UpperBound = VersionStack.size() - 1;
 
     if (UpperBound - LocInfo.LowerBound > MaxCheckLimit) {
-      DEBUG(dbgs() << "MemorySSA skipping optimization of " << *MU << " ("
-                   << *(MU->getMemoryInst()) << ")"
-                   << " because there are " << UpperBound - LocInfo.LowerBound
-                   << " stores to disambiguate\n");
+      LLVM_DEBUG(dbgs() << "MemorySSA skipping optimization of " << *MU << " ("
+                        << *(MU->getMemoryInst()) << ")"
+                        << " because there are "
+                        << UpperBound - LocInfo.LowerBound
+                        << " stores to disambiguate\n");
       // Because we did not walk, LastKill is no longer valid, as this may
       // have been a kill.
       LocInfo.LastKillValid = false;
@@ -2036,10 +2037,10 @@ MemoryAccess *MemorySSA::CachingWalker::getClobberingMemoryAccess(
                                      : StartingUseOrDef;
 
   MemoryAccess *Clobber = getClobberingMemoryAccess(DefiningAccess, Q);
-  DEBUG(dbgs() << "Starting Memory SSA clobber for " << *I << " is ");
-  DEBUG(dbgs() << *StartingUseOrDef << "\n");
-  DEBUG(dbgs() << "Final Memory SSA clobber for " << *I << " is ");
-  DEBUG(dbgs() << *Clobber << "\n");
+  LLVM_DEBUG(dbgs() << "Starting Memory SSA clobber for " << *I << " is ");
+  LLVM_DEBUG(dbgs() << *StartingUseOrDef << "\n");
+  LLVM_DEBUG(dbgs() << "Final Memory SSA clobber for " << *I << " is ");
+  LLVM_DEBUG(dbgs() << *Clobber << "\n");
   return Clobber;
 }
 
@@ -2083,10 +2084,10 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   }
 
   MemoryAccess *Result = getClobberingMemoryAccess(DefiningAccess, Q);
-  DEBUG(dbgs() << "Starting Memory SSA clobber for " << *I << " is ");
-  DEBUG(dbgs() << *DefiningAccess << "\n");
-  DEBUG(dbgs() << "Final Memory SSA clobber for " << *I << " is ");
-  DEBUG(dbgs() << *Result << "\n");
+  LLVM_DEBUG(dbgs() << "Starting Memory SSA clobber for " << *I << " is ");
+  LLVM_DEBUG(dbgs() << *DefiningAccess << "\n");
+  LLVM_DEBUG(dbgs() << "Final Memory SSA clobber for " << *I << " is ");
+  LLVM_DEBUG(dbgs() << *Result << "\n");
 
   StartingAccess->setOptimized(Result);
   if (MSSA->isLiveOnEntryDef(Result))

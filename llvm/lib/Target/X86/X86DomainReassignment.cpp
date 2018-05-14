@@ -701,8 +701,9 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   if (DisableX86DomainReassignment)
     return false;
 
-  DEBUG(dbgs() << "***** Machine Function before Domain Reassignment *****\n");
-  DEBUG(MF.print(dbgs()));
+  LLVM_DEBUG(
+      dbgs() << "***** Machine Function before Domain Reassignment *****\n");
+  LLVM_DEBUG(MF.print(dbgs()));
 
   STI = &MF.getSubtarget<X86Subtarget>();
   // GPR->K is the only transformation currently supported, bail out early if no
@@ -752,8 +753,9 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
 
   DeleteContainerSeconds(Converters);
 
-  DEBUG(dbgs() << "***** Machine Function after Domain Reassignment *****\n");
-  DEBUG(MF.print(dbgs()));
+  LLVM_DEBUG(
+      dbgs() << "***** Machine Function after Domain Reassignment *****\n");
+  LLVM_DEBUG(MF.print(dbgs()));
 
   return Changed;
 }

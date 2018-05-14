@@ -346,7 +346,7 @@ class SegmentBuilder {
     else
       Segments.emplace_back(StartLoc.first, StartLoc.second, IsRegionEntry);
 
-    DEBUG({
+    LLVM_DEBUG({
       const auto &Last = Segments.back();
       dbgs() << "Segment at " << Last.Line << ":" << Last.Col
              << " (count = " << Last.Count << ")"
@@ -524,7 +524,7 @@ public:
     sortNestedRegions(Regions);
     ArrayRef<CountedRegion> CombinedRegions = combineRegions(Regions);
 
-    DEBUG({
+    LLVM_DEBUG({
       dbgs() << "Combined regions:\n";
       for (const auto &CR : CombinedRegions)
         dbgs() << "  " << CR.LineStart << ":" << CR.ColumnStart << " -> "
@@ -539,8 +539,8 @@ public:
       const auto &L = Segments[I - 1];
       const auto &R = Segments[I];
       if (!(L.Line < R.Line) && !(L.Line == R.Line && L.Col < R.Col)) {
-        DEBUG(dbgs() << " ! Segment " << L.Line << ":" << L.Col
-                     << " followed by " << R.Line << ":" << R.Col << "\n");
+        LLVM_DEBUG(dbgs() << " ! Segment " << L.Line << ":" << L.Col
+                          << " followed by " << R.Line << ":" << R.Col << "\n");
         assert(false && "Coverage segments not unique or sorted");
       }
     }
@@ -613,7 +613,7 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
       }
   }
 
-  DEBUG(dbgs() << "Emitting segments for file: " << Filename << "\n");
+  LLVM_DEBUG(dbgs() << "Emitting segments for file: " << Filename << "\n");
   FileCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
   return FileCoverage;
@@ -654,7 +654,8 @@ CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
         FunctionCoverage.Expansions.emplace_back(CR, Function);
     }
 
-  DEBUG(dbgs() << "Emitting segments for function: " << Function.Name << "\n");
+  LLVM_DEBUG(dbgs() << "Emitting segments for function: " << Function.Name
+                    << "\n");
   FunctionCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
   return FunctionCoverage;
@@ -672,8 +673,8 @@ CoverageData CoverageMapping::getCoverageForExpansion(
         ExpansionCoverage.Expansions.emplace_back(CR, Expansion.Function);
     }
 
-  DEBUG(dbgs() << "Emitting segments for expansion of file " << Expansion.FileID
-               << "\n");
+  LLVM_DEBUG(dbgs() << "Emitting segments for expansion of file "
+                    << Expansion.FileID << "\n");
   ExpansionCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
   return ExpansionCoverage;

@@ -625,15 +625,15 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
       // we want to.
       bool PossibleCopy = VD.PInfo != nullptr;
       if (RenameStack.empty()) {
-        DEBUG(dbgs() << "Rename Stack is empty\n");
+        LLVM_DEBUG(dbgs() << "Rename Stack is empty\n");
       } else {
-        DEBUG(dbgs() << "Rename Stack Top DFS numbers are ("
-                     << RenameStack.back().DFSIn << ","
-                     << RenameStack.back().DFSOut << ")\n");
+        LLVM_DEBUG(dbgs() << "Rename Stack Top DFS numbers are ("
+                          << RenameStack.back().DFSIn << ","
+                          << RenameStack.back().DFSOut << ")\n");
       }
 
-      DEBUG(dbgs() << "Current DFS numbers are (" << VD.DFSIn << ","
-                   << VD.DFSOut << ")\n");
+      LLVM_DEBUG(dbgs() << "Current DFS numbers are (" << VD.DFSIn << ","
+                        << VD.DFSOut << ")\n");
 
       bool ShouldPush = (VD.Def || PossibleCopy);
       bool OutOfScope = !stackIsInScope(RenameStack, VD);
@@ -652,7 +652,7 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
       if (VD.Def || PossibleCopy)
         continue;
       if (!DebugCounter::shouldExecute(RenameCounter)) {
-        DEBUG(dbgs() << "Skipping execution due to debug counter\n");
+        LLVM_DEBUG(dbgs() << "Skipping execution due to debug counter\n");
         continue;
       }
       ValueDFS &Result = RenameStack.back();
@@ -663,8 +663,9 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
       if (!Result.Def)
         Result.Def = materializeStack(Counter, RenameStack, Op);
 
-      DEBUG(dbgs() << "Found replacement " << *Result.Def << " for "
-                   << *VD.U->get() << " in " << *(VD.U->getUser()) << "\n");
+      LLVM_DEBUG(dbgs() << "Found replacement " << *Result.Def << " for "
+                        << *VD.U->get() << " in " << *(VD.U->getUser())
+                        << "\n");
       assert(DT.dominates(cast<Instruction>(Result.Def), *VD.U) &&
              "Predicateinfo def should have dominated this use");
       VD.U->set(Result.Def);

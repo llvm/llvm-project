@@ -1091,7 +1091,7 @@ bool MatchableInfo::validate(StringRef CommentDelimiter, bool IsAlias) const {
     // Verify that any operand is only mentioned once.
     // We reject aliases and ignore instructions for now.
     if (!IsAlias && Tok[0] == '$' && !OperandNames.insert(Tok).second) {
-      DEBUG({
+      LLVM_DEBUG({
         errs() << "warning: '" << TheDef->getName() << "': "
                << "ignoring instruction with tied operand '"
                << Tok << "'\n";
@@ -1477,7 +1477,7 @@ void AsmMatcherInfo::buildInfo() {
                            SubtargetFeaturePairs.end());
 #ifndef NDEBUG
   for (const auto &Pair : SubtargetFeatures)
-    DEBUG(Pair.second.dump());
+    LLVM_DEBUG(Pair.second.dump());
 #endif // NDEBUG
   assert(SubtargetFeatures.size() <= 64 && "Too many subtarget features!");
 

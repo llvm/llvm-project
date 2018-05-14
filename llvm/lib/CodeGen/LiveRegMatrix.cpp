@@ -102,37 +102,37 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
 }
 
 void LiveRegMatrix::assign(LiveInterval &VirtReg, unsigned PhysReg) {
-  DEBUG(dbgs() << "assigning " << printReg(VirtReg.reg, TRI)
-               << " to " << printReg(PhysReg, TRI) << ':');
+  LLVM_DEBUG(dbgs() << "assigning " << printReg(VirtReg.reg, TRI) << " to "
+                    << printReg(PhysReg, TRI) << ':');
   assert(!VRM->hasPhys(VirtReg.reg) && "Duplicate VirtReg assignment");
   VRM->assignVirt2Phys(VirtReg.reg, PhysReg);
 
-  foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
-                                         const LiveRange &Range) {
-    DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI) << ' ' << Range);
-    Matrix[Unit].unify(VirtReg, Range);
-    return false;
-  });
+  foreachUnit(
+      TRI, VirtReg, PhysReg, [&](unsigned Unit, const LiveRange &Range) {
+        LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI) << ' ' << Range);
+        Matrix[Unit].unify(VirtReg, Range);
+        return false;
+      });
 
   ++NumAssigned;
-  DEBUG(dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << '\n');
 }
 
 void LiveRegMatrix::unassign(LiveInterval &VirtReg) {
   unsigned PhysReg = VRM->getPhys(VirtReg.reg);
-  DEBUG(dbgs() << "unassigning " << printReg(VirtReg.reg, TRI)
-               << " from " << printReg(PhysReg, TRI) << ':');
+  LLVM_DEBUG(dbgs() << "unassigning " << printReg(VirtReg.reg, TRI) << " from "
+                    << printReg(PhysReg, TRI) << ':');
   VRM->clearVirt(VirtReg.reg);
 
-  foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
-                                         const LiveRange &Range) {
-    DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI));
-    Matrix[Unit].extract(VirtReg, Range);
-    return false;
-  });
+  foreachUnit(TRI, VirtReg, PhysReg,
+              [&](unsigned Unit, const LiveRange &Range) {
+                LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI));
+                Matrix[Unit].extract(VirtReg, Range);
+                return false;
+              });
 
   ++NumUnassigned;
-  DEBUG(dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << '\n');
 }
 
 bool LiveRegMatrix::isPhysRegUsed(unsigned PhysReg) const {

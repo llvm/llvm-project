@@ -123,6 +123,7 @@ protected:
   void printImmScale(const MCInst *MI, unsigned OpNum,
                      const MCSubtargetInfo &STI, raw_ostream &O);
 
+  template <bool IsSVEPrefetch = false>
   void printPrefetchOp(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O);
 

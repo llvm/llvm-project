@@ -253,8 +253,8 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // If the user provided a peel count, use that.
   bool UserPeelCount = UnrollForcePeelCount.getNumOccurrences() > 0;
   if (UserPeelCount) {
-    DEBUG(dbgs() << "Force-peeling first " << UnrollForcePeelCount
-                 << " iterations.\n");
+    LLVM_DEBUG(dbgs() << "Force-peeling first " << UnrollForcePeelCount
+                      << " iterations.\n");
     UP.PeelCount = UnrollForcePeelCount;
     return;
   }
@@ -298,8 +298,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
       DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
       // Consider max peel count limitation.
       assert(DesiredPeelCount > 0 && "Wrong loop size estimation?");
-      DEBUG(dbgs() << "Peel " << DesiredPeelCount << " iteration(s) to turn"
-                   << " some Phis into invariants.\n");
+      LLVM_DEBUG(dbgs() << "Peel " << DesiredPeelCount
+                        << " iteration(s) to turn"
+                        << " some Phis into invariants.\n");
       UP.PeelCount = DesiredPeelCount;
       return;
     }
@@ -320,20 +321,22 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     if (!PeelCount)
       return;
 
-    DEBUG(dbgs() << "Profile-based estimated trip count is " << *PeelCount
-                 << "\n");
+    LLVM_DEBUG(dbgs() << "Profile-based estimated trip count is " << *PeelCount
+                      << "\n");
 
     if (*PeelCount) {
       if ((*PeelCount <= UnrollPeelMaxCount) &&
           (LoopSize * (*PeelCount + 1) <= UP.Threshold)) {
-        DEBUG(dbgs() << "Peeling first " << *PeelCount << " iterations.\n");
+        LLVM_DEBUG(dbgs() << "Peeling first " << *PeelCount
+                          << " iterations.\n");
         UP.PeelCount = *PeelCount;
         return;
       }
-      DEBUG(dbgs() << "Requested peel count: " << *PeelCount << "\n");
-      DEBUG(dbgs() << "Max peel count: " << UnrollPeelMaxCount << "\n");
-      DEBUG(dbgs() << "Peel cost: " << LoopSize * (*PeelCount + 1) << "\n");
-      DEBUG(dbgs() << "Max peel cost: " << UP.Threshold << "\n");
+      LLVM_DEBUG(dbgs() << "Requested peel count: " << *PeelCount << "\n");
+      LLVM_DEBUG(dbgs() << "Max peel count: " << UnrollPeelMaxCount << "\n");
+      LLVM_DEBUG(dbgs() << "Peel cost: " << LoopSize * (*PeelCount + 1)
+                        << "\n");
+      LLVM_DEBUG(dbgs() << "Max peel cost: " << UP.Threshold << "\n");
     }
   }
 }

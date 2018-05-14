@@ -541,7 +541,7 @@ bool OptimizeLEAPass::removeRedundantAddrCalc(MemOpMap &LEAs) {
     MRI->clearKillFlags(DefMI->getOperand(0).getReg());
 
     ++NumSubstLEAs;
-    DEBUG(dbgs() << "OptimizeLEAs: Candidate to replace: "; MI.dump(););
+    LLVM_DEBUG(dbgs() << "OptimizeLEAs: Candidate to replace: "; MI.dump(););
 
     // Change instruction operands.
     MI.getOperand(MemOpNo + X86::AddrBaseReg)
@@ -553,7 +553,7 @@ bool OptimizeLEAPass::removeRedundantAddrCalc(MemOpMap &LEAs) {
     MI.getOperand(MemOpNo + X86::AddrSegmentReg)
         .ChangeToRegister(X86::NoRegister, false);
 
-    DEBUG(dbgs() << "OptimizeLEAs: Replaced by: "; MI.dump(););
+    LLVM_DEBUG(dbgs() << "OptimizeLEAs: Replaced by: "; MI.dump(););
 
     Changed = true;
   }
@@ -649,7 +649,8 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
         MRI->clearKillFlags(FirstVReg);
 
         ++NumRedundantLEAs;
-        DEBUG(dbgs() << "OptimizeLEAs: Remove redundant LEA: "; Last.dump(););
+        LLVM_DEBUG(dbgs() << "OptimizeLEAs: Remove redundant LEA: ";
+                   Last.dump(););
 
         // By this moment, all of the Last LEA's uses must be replaced. So we
         // can freely remove it.

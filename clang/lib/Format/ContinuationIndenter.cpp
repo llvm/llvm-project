@@ -90,8 +90,10 @@ static unsigned getLengthToMatchingParen(const FormatToken &Tok,
     return MatchingStackIndex >= 0 ? &Stack[MatchingStackIndex] : nullptr;
   };
   for (; End->Next; End = End->Next) {
-    if (End->Next->CanBreakBefore || !End->Next->closesScope())
+    if (End->Next->CanBreakBefore)
       break;
+    if (!End->Next->closesScope())
+      continue;
     if (End->Next->MatchingParen->isOneOf(tok::l_brace,
                                           TT_ArrayInitializerLSquare,
                                           tok::less)) {

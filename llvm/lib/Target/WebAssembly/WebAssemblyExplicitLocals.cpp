@@ -181,9 +181,9 @@ static MachineInstr *FindStartOfTree(MachineOperand &MO,
 }
 
 bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "********** Make Locals Explicit **********\n"
-                  "********** Function: "
-               << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** Make Locals Explicit **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
 
   // Disable this pass if directed to do so.
   if (DisableWebAssemblyExplicitLocals)

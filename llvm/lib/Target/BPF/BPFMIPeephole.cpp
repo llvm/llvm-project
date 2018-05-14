@@ -72,15 +72,15 @@ void BPFMIPeephole::initialize(MachineFunction &MFParm) {
   MF = &MFParm;
   MRI = &MF->getRegInfo();
   TII = MF->getSubtarget<BPFSubtarget>().getInstrInfo();
-  DEBUG(dbgs() << "*** BPF MachineSSA peephole pass ***\n\n");
+  LLVM_DEBUG(dbgs() << "*** BPF MachineSSA peephole pass ***\n\n");
 }
 
 bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
 {
   MachineInstr *DefInsn = MRI->getVRegDef(MovMI->getOperand(1).getReg());
 
-  DEBUG(dbgs() << "  Def of Mov Src:");
-  DEBUG(DefInsn->dump());
+  LLVM_DEBUG(dbgs() << "  Def of Mov Src:");
+  LLVM_DEBUG(DefInsn->dump());
 
   if (!DefInsn)
     return false;
@@ -111,7 +111,7 @@ bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
        return false;
   }
 
-  DEBUG(dbgs() << "  One ZExt elim sequence identified.\n");
+  LLVM_DEBUG(dbgs() << "  One ZExt elim sequence identified.\n");
 
   return true;
 }
@@ -139,8 +139,8 @@ bool BPFMIPeephole::eliminateZExtSeq(void) {
         unsigned ShfReg = MI.getOperand(1).getReg();
         MachineInstr *SllMI = MRI->getVRegDef(ShfReg);
 
-        DEBUG(dbgs() << "Starting SRL found:");
-        DEBUG(MI.dump());
+        LLVM_DEBUG(dbgs() << "Starting SRL found:");
+        LLVM_DEBUG(MI.dump());
 
         if (!SllMI ||
             SllMI->isPHI() ||
@@ -148,8 +148,8 @@ bool BPFMIPeephole::eliminateZExtSeq(void) {
             SllMI->getOperand(2).getImm() != 32)
           continue;
 
-        DEBUG(dbgs() << "  SLL found:");
-        DEBUG(SllMI->dump());
+        LLVM_DEBUG(dbgs() << "  SLL found:");
+        LLVM_DEBUG(SllMI->dump());
 
         MachineInstr *MovMI = MRI->getVRegDef(SllMI->getOperand(1).getReg());
         if (!MovMI ||
@@ -157,12 +157,13 @@ bool BPFMIPeephole::eliminateZExtSeq(void) {
             MovMI->getOpcode() != BPF::MOV_32_64)
           continue;
 
-        DEBUG(dbgs() << "  Type cast Mov found:");
-        DEBUG(MovMI->dump());
+        LLVM_DEBUG(dbgs() << "  Type cast Mov found:");
+        LLVM_DEBUG(MovMI->dump());
 
         unsigned SubReg = MovMI->getOperand(1).getReg();
         if (!isMovFrom32Def(MovMI)) {
-          DEBUG(dbgs() << "  One ZExt elim sequence failed qualifying elim.\n");
+          LLVM_DEBUG(dbgs()
+                     << "  One ZExt elim sequence failed qualifying elim.\n");
           continue;
         }
 
@@ -228,7 +229,7 @@ public:
 void BPFMIPreEmitPeephole::initialize(MachineFunction &MFParm) {
   MF = &MFParm;
   TRI = MF->getSubtarget<BPFSubtarget>().getRegisterInfo();
-  DEBUG(dbgs() << "*** BPF PreEmit peephole pass ***\n\n");
+  LLVM_DEBUG(dbgs() << "*** BPF PreEmit peephole pass ***\n\n");
 }
 
 bool BPFMIPreEmitPeephole::eliminateRedundantMov(void) {
@@ -239,8 +240,8 @@ bool BPFMIPreEmitPeephole::eliminateRedundantMov(void) {
     for (MachineInstr &MI : MBB) {
       // If the previous instruction was marked for elimination, remove it now.
       if (ToErase) {
-        DEBUG(dbgs() << "  Redundant Mov Eliminated:");
-        DEBUG(ToErase->dump());
+        LLVM_DEBUG(dbgs() << "  Redundant Mov Eliminated:");
+        LLVM_DEBUG(ToErase->dump());
         ToErase->eraseFromParent();
         ToErase = nullptr;
       }

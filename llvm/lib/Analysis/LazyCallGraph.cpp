@@ -66,15 +66,15 @@ static void addEdge(SmallVectorImpl<LazyCallGraph::Edge> &Edges,
   if (!EdgeIndexMap.insert({&N, Edges.size()}).second)
     return;
 
-  DEBUG(dbgs() << "    Added callable function: " << N.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "    Added callable function: " << N.getName() << "\n");
   Edges.emplace_back(LazyCallGraph::Edge(N, EK));
 }
 
 LazyCallGraph::EdgeSequence &LazyCallGraph::Node::populateSlow() {
   assert(!Edges && "Must not have already populated the edges for this node!");
 
-  DEBUG(dbgs() << "  Adding functions called by '" << getName()
-               << "' to the graph.\n");
+  LLVM_DEBUG(dbgs() << "  Adding functions called by '" << getName()
+                    << "' to the graph.\n");
 
   Edges = EdgeSequence();
 
@@ -152,8 +152,8 @@ static bool isKnownLibFunction(Function &F, TargetLibraryInfo &TLI) {
 }
 
 LazyCallGraph::LazyCallGraph(Module &M, TargetLibraryInfo &TLI) {
-  DEBUG(dbgs() << "Building CG for module: " << M.getModuleIdentifier()
-               << "\n");
+  LLVM_DEBUG(dbgs() << "Building CG for module: " << M.getModuleIdentifier()
+                    << "\n");
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
@@ -168,8 +168,8 @@ LazyCallGraph::LazyCallGraph(Module &M, TargetLibraryInfo &TLI) {
 
     // External linkage defined functions have edges to them from other
     // modules.
-    DEBUG(dbgs() << "  Adding '" << F.getName()
-                 << "' to entry set of the graph.\n");
+    LLVM_DEBUG(dbgs() << "  Adding '" << F.getName()
+                      << "' to entry set of the graph.\n");
     addEdge(EntryEdges.Edges, EntryEdges.EdgeIndexMap, get(F), Edge::Ref);
   }
 
@@ -181,8 +181,9 @@ LazyCallGraph::LazyCallGraph(Module &M, TargetLibraryInfo &TLI) {
       if (Visited.insert(GV.getInitializer()).second)
         Worklist.push_back(GV.getInitializer());
 
-  DEBUG(dbgs() << "  Adding functions referenced by global initializers to the "
-                  "entry set.\n");
+  LLVM_DEBUG(
+      dbgs() << "  Adding functions referenced by global initializers to the "
+                "entry set.\n");
   visitReferences(Worklist, Visited, [&](Function &F) {
     addEdge(EntryEdges.Edges, EntryEdges.EdgeIndexMap, get(F),
             LazyCallGraph::Edge::Ref);

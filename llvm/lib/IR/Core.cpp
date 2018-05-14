@@ -266,6 +266,111 @@ void LLVMSetTarget(LLVMModuleRef M, const char *Triple) {
   unwrap(M)->setTargetTriple(Triple);
 }
 
+/*--.. Module flags ........................................................--*/
+struct LLVMOpaqueModuleFlagEntry {
+  LLVMModuleFlagBehavior Behavior;
+  const char *Key;
+  size_t KeyLen;
+  LLVMMetadataRef Metadata;
+};
+
+static Module::ModFlagBehavior
+map_to_llvmModFlagBehavior(LLVMModuleFlagBehavior Behavior) {
+  switch (Behavior) {
+  case LLVMModuleFlagBehaviorError:
+    return Module::ModFlagBehavior::Error;
+  case LLVMModuleFlagBehaviorWarning:
+    return Module::ModFlagBehavior::Warning;
+  case LLVMModuleFlagBehaviorRequire:
+    return Module::ModFlagBehavior::Require;
+  case LLVMModuleFlagBehaviorOverride:
+    return Module::ModFlagBehavior::Override;
+  case LLVMModuleFlagBehaviorAppend:
+    return Module::ModFlagBehavior::Append;
+  case LLVMModuleFlagBehaviorAppendUnique:
+    return Module::ModFlagBehavior::AppendUnique;
+  }
+  llvm_unreachable("Unknown LLVMModuleFlagBehavior");
+}
+
+static LLVMModuleFlagBehavior
+map_from_llvmModFlagBehavior(Module::ModFlagBehavior Behavior) {
+  switch (Behavior) {
+  case Module::ModFlagBehavior::Error:
+    return LLVMModuleFlagBehaviorError;
+  case Module::ModFlagBehavior::Warning:
+    return LLVMModuleFlagBehaviorWarning;
+  case Module::ModFlagBehavior::Require:
+    return LLVMModuleFlagBehaviorRequire;
+  case Module::ModFlagBehavior::Override:
+    return LLVMModuleFlagBehaviorOverride;
+  case Module::ModFlagBehavior::Append:
+    return LLVMModuleFlagBehaviorAppend;
+  case Module::ModFlagBehavior::AppendUnique:
+    return LLVMModuleFlagBehaviorAppendUnique;
+  default:
+    llvm_unreachable("Unhandled Flag Behavior");
+  }
+}
+
+LLVMModuleFlagEntry *LLVMCopyModuleFlagsMetadata(LLVMModuleRef M, size_t *Len) {
+  SmallVector<Module::ModuleFlagEntry, 8> MFEs;
+  unwrap(M)->getModuleFlagsMetadata(MFEs);
+
+  LLVMOpaqueModuleFlagEntry *Result = static_cast<LLVMOpaqueModuleFlagEntry *>(
+      safe_malloc(MFEs.size() * sizeof(LLVMOpaqueModuleFlagEntry)));
+  for (unsigned i = 0; i < MFEs.size(); ++i) {
+    const auto &ModuleFlag = MFEs[i];
+    Result[i].Behavior = map_from_llvmModFlagBehavior(ModuleFlag.Behavior);
+    Result[i].Key = ModuleFlag.Key->getString().data();
+    Result[i].KeyLen = ModuleFlag.Key->getString().size();
+    Result[i].Metadata = wrap(ModuleFlag.Val);
+  }
+  *Len = MFEs.size();
+  return Result;
+}
+
+void LLVMDisposeModuleFlagsMetadata(LLVMModuleFlagEntry *Entries) {
+  free(Entries);
+}
+
+LLVMModuleFlagBehavior
+LLVMModuleFlagEntriesGetFlagBehavior(LLVMModuleFlagEntry *Entries,
+                                     unsigned Index) {
+  LLVMOpaqueModuleFlagEntry MFE =
+      static_cast<LLVMOpaqueModuleFlagEntry>(Entries[Index]);
+  return MFE.Behavior;
+}
+
+const char *LLVMModuleFlagEntriesGetKey(LLVMModuleFlagEntry *Entries,
+                                        unsigned Index, size_t *Len) {
+  LLVMOpaqueModuleFlagEntry MFE =
+      static_cast<LLVMOpaqueModuleFlagEntry>(Entries[Index]);
+  *Len = MFE.KeyLen;
+  return MFE.Key;
+}
+
+LLVMMetadataRef LLVMModuleFlagEntriesGetMetadata(LLVMModuleFlagEntry *Entries,
+                                                 unsigned Index) {
+  LLVMOpaqueModuleFlagEntry MFE =
+      static_cast<LLVMOpaqueModuleFlagEntry>(Entries[Index]);
+  return MFE.Metadata;
+}
+
+LLVMMetadataRef LLVMGetModuleFlag(LLVMModuleRef M,
+                                  const char *Key, size_t KeyLen) {
+  return wrap(unwrap(M)->getModuleFlag({Key, KeyLen}));
+}
+
+void LLVMAddModuleFlag(LLVMModuleRef M, LLVMModuleFlagBehavior Behavior,
+                       const char *Key, size_t KeyLen,
+                       LLVMMetadataRef Val) {
+  unwrap(M)->addModuleFlag(map_to_llvmModFlagBehavior(Behavior),
+                           {Key, KeyLen}, unwrap(Val));
+}
+
+/*--.. Printing modules ....................................................--*/
+
 void LLVMDumpModule(LLVMModuleRef M) {
   unwrap(M)->print(errs(), nullptr,
                    /*ShouldPreserveUseListOrder=*/false, /*IsForDebug=*/true);
@@ -1564,8 +1669,9 @@ void LLVMSetLinkage(LLVMValueRef Global, LLVMLinkage Linkage) {
     GV->setLinkage(GlobalValue::LinkOnceODRLinkage);
     break;
   case LLVMLinkOnceODRAutoHideLinkage:
-    DEBUG(errs() << "LLVMSetLinkage(): LLVMLinkOnceODRAutoHideLinkage is no "
-                    "longer supported.");
+    LLVM_DEBUG(
+        errs() << "LLVMSetLinkage(): LLVMLinkOnceODRAutoHideLinkage is no "
+                  "longer supported.");
     break;
   case LLVMWeakAnyLinkage:
     GV->setLinkage(GlobalValue::WeakAnyLinkage);
@@ -1589,19 +1695,21 @@ void LLVMSetLinkage(LLVMValueRef Global, LLVMLinkage Linkage) {
     GV->setLinkage(GlobalValue::PrivateLinkage);
     break;
   case LLVMDLLImportLinkage:
-    DEBUG(errs()
-          << "LLVMSetLinkage(): LLVMDLLImportLinkage is no longer supported.");
+    LLVM_DEBUG(
+        errs()
+        << "LLVMSetLinkage(): LLVMDLLImportLinkage is no longer supported.");
     break;
   case LLVMDLLExportLinkage:
-    DEBUG(errs()
-          << "LLVMSetLinkage(): LLVMDLLExportLinkage is no longer supported.");
+    LLVM_DEBUG(
+        errs()
+        << "LLVMSetLinkage(): LLVMDLLExportLinkage is no longer supported.");
     break;
   case LLVMExternalWeakLinkage:
     GV->setLinkage(GlobalValue::ExternalWeakLinkage);
     break;
   case LLVMGhostLinkage:
-    DEBUG(errs()
-          << "LLVMSetLinkage(): LLVMGhostLinkage is no longer supported.");
+    LLVM_DEBUG(
+        errs() << "LLVMSetLinkage(): LLVMGhostLinkage is no longer supported.");
     break;
   case LLVMCommonLinkage:
     GV->setLinkage(GlobalValue::CommonLinkage);

@@ -41,19 +41,18 @@ defm FMUL : ADDS_MMM<"mul.d", II_MUL_D, 1, fmul>,
 defm FSUB : ADDS_MMM<"sub.d", II_SUB_D, 0, fsub>,
             ADDS_FM_MM<1, 0x70>, ISA_MICROMIPS;
 
+let DecoderNamespace = "MicroMips" in {
+  def LWXC1_MM : MMRel, LWXC1_FT<"lwxc1", FGR32Opnd, II_LWXC1, load>,
+                 LWXC1_FM_MM<0x48>, ISA_MICROMIPS32_NOT_MIPS32R6;
+  def SWXC1_MM : MMRel, SWXC1_FT<"swxc1", FGR32Opnd, II_SWXC1, store>,
+                 SWXC1_FM_MM<0x88>, ISA_MICROMIPS32_NOT_MIPS32R6;
+
+  def LUXC1_MM : MMRel, LWXC1_FT<"luxc1", FGR64Opnd, II_LUXC1>,
+                 LWXC1_FM_MM<0x148>, FGR_64, ISA_MICROMIPS32_NOT_MIPS32R6;
+  def SUXC1_MM : MMRel, SWXC1_FT<"suxc1", FGR64Opnd, II_SUXC1>,
+                 SWXC1_FM_MM<0x188>, FGR_64, ISA_MICROMIPS32_NOT_MIPS32R6;
+}
 let isCodeGenOnly = 1 in {
-def LWXC1_MM : MMRel, LWXC1_FT<"lwxc1", FGR32Opnd, II_LWXC1, load>,
-               LWXC1_FM_MM<0x48>, ISA_MICROMIPS32_NOT_MIPS32R6;
-def SWXC1_MM : MMRel, SWXC1_FT<"swxc1", FGR32Opnd, II_SWXC1, store>,
-               SWXC1_FM_MM<0x88>, ISA_MICROMIPS32_NOT_MIPS32R6;
-
-// FIXME: These instruction definitions are incorrect. They should be 64-bit
-//        FPU only.
-def LUXC1_MM : MMRel, LWXC1_FT<"luxc1", AFGR64Opnd, II_LUXC1>,
-               LWXC1_FM_MM<0x148>, ISA_MICROMIPS32_NOT_MIPS32R6;
-def SUXC1_MM : MMRel, SWXC1_FT<"suxc1", AFGR64Opnd, II_SUXC1>,
-               SWXC1_FM_MM<0x188>, ISA_MICROMIPS32_NOT_MIPS32R6;
-
 def FCMP_S32_MM : MMRel, CEQS_FT<"s", FGR32, II_C_CC_S, MipsFPCmp>,
                   CEQS_FM_MM<0>, ISA_MICROMIPS32_NOT_MIPS32R6 {
   // FIXME: This is a required to work around the fact that these instructions

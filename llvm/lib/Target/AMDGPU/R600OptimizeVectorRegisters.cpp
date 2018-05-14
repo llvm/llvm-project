@@ -228,20 +228,20 @@ MachineInstr *R600VectorRegMerger::RebuildVector(
       UpdatedUndef.erase(ChanPos);
     assert(!is_contained(UpdatedUndef, Chan) &&
            "UpdatedUndef shouldn't contain Chan more than once!");
-    DEBUG(dbgs() << "    ->"; Tmp->dump(););
+    LLVM_DEBUG(dbgs() << "    ->"; Tmp->dump(););
     (void)Tmp;
     SrcVec = DstReg;
   }
   MachineInstr *NewMI =
       BuildMI(MBB, Pos, DL, TII->get(AMDGPU::COPY), Reg).addReg(SrcVec);
-  DEBUG(dbgs() << "    ->"; NewMI->dump(););
+  LLVM_DEBUG(dbgs() << "    ->"; NewMI->dump(););
 
-  DEBUG(dbgs() << "  Updating Swizzle:\n");
+  LLVM_DEBUG(dbgs() << "  Updating Swizzle:\n");
   for (MachineRegisterInfo::use_instr_iterator It = MRI->use_instr_begin(Reg),
       E = MRI->use_instr_end(); It != E; ++It) {
-    DEBUG(dbgs() << "    ";(*It).dump(); dbgs() << "    ->");
+    LLVM_DEBUG(dbgs() << "    "; (*It).dump(); dbgs() << "    ->");
     SwizzleInput(*It, RemapChan);
-    DEBUG((*It).dump());
+    LLVM_DEBUG((*It).dump());
   }
   RSI->Instr->eraseFromParent();
 
@@ -372,14 +372,14 @@ bool R600VectorRegMerger::runOnMachineFunction(MachineFunction &Fn) {
       if (!areAllUsesSwizzeable(Reg))
         continue;
 
-      DEBUG({
+      LLVM_DEBUG({
         dbgs() << "Trying to optimize ";
         MI.dump();
       });
 
       RegSeqInfo CandidateRSI;
       std::vector<std::pair<unsigned, unsigned>> RemapChan;
-      DEBUG(dbgs() << "Using common slots...\n";);
+      LLVM_DEBUG(dbgs() << "Using common slots...\n";);
       if (tryMergeUsingCommonSlot(RSI, CandidateRSI, RemapChan)) {
         // Remove CandidateRSI mapping
         RemoveMI(CandidateRSI.Instr);
@@ -387,7 +387,7 @@ bool R600VectorRegMerger::runOnMachineFunction(MachineFunction &Fn) {
         trackRSI(RSI);
         continue;
       }
-      DEBUG(dbgs() << "Using free slots...\n";);
+      LLVM_DEBUG(dbgs() << "Using free slots...\n";);
       RemapChan.clear();
       if (tryMergeUsingFreeSlot(RSI, CandidateRSI, RemapChan)) {
         RemoveMI(CandidateRSI.Instr);

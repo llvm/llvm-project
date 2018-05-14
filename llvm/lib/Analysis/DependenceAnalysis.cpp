@@ -415,9 +415,9 @@ LLVM_DUMP_METHOD void DependenceInfo::Constraint::dump(raw_ostream &OS) const {
 //            PLDI 1991
 bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
   ++DeltaApplications;
-  DEBUG(dbgs() << "\tintersect constraints\n");
-  DEBUG(dbgs() << "\t    X ="; X->dump(dbgs()));
-  DEBUG(dbgs() << "\t    Y ="; Y->dump(dbgs()));
+  LLVM_DEBUG(dbgs() << "\tintersect constraints\n");
+  LLVM_DEBUG(dbgs() << "\t    X ="; X->dump(dbgs()));
+  LLVM_DEBUG(dbgs() << "\t    Y ="; Y->dump(dbgs()));
   assert(!Y->isPoint() && "Y must not be a Point");
   if (X->isAny()) {
     if (Y->isAny())
@@ -433,7 +433,7 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
   }
 
   if (X->isDistance() && Y->isDistance()) {
-    DEBUG(dbgs() << "\t    intersect 2 distances\n");
+    LLVM_DEBUG(dbgs() << "\t    intersect 2 distances\n");
     if (isKnownPredicate(CmpInst::ICMP_EQ, X->getD(), Y->getD()))
       return false;
     if (isKnownPredicate(CmpInst::ICMP_NE, X->getD(), Y->getD())) {
@@ -460,12 +460,12 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
          "We shouldn't ever see X->isPoint() && Y->isPoint()");
 
   if (X->isLine() && Y->isLine()) {
-    DEBUG(dbgs() << "\t    intersect 2 lines\n");
+    LLVM_DEBUG(dbgs() << "\t    intersect 2 lines\n");
     const SCEV *Prod1 = SE->getMulExpr(X->getA(), Y->getB());
     const SCEV *Prod2 = SE->getMulExpr(X->getB(), Y->getA());
     if (isKnownPredicate(CmpInst::ICMP_EQ, Prod1, Prod2)) {
       // slopes are equal, so lines are parallel
-      DEBUG(dbgs() << "\t\tsame slope\n");
+      LLVM_DEBUG(dbgs() << "\t\tsame slope\n");
       Prod1 = SE->getMulExpr(X->getC(), Y->getB());
       Prod2 = SE->getMulExpr(X->getB(), Y->getC());
       if (isKnownPredicate(CmpInst::ICMP_EQ, Prod1, Prod2))
@@ -479,7 +479,7 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
     }
     if (isKnownPredicate(CmpInst::ICMP_NE, Prod1, Prod2)) {
       // slopes differ, so lines intersect
-      DEBUG(dbgs() << "\t\tdifferent slopes\n");
+      LLVM_DEBUG(dbgs() << "\t\tdifferent slopes\n");
       const SCEV *C1B2 = SE->getMulExpr(X->getC(), Y->getB());
       const SCEV *C1A2 = SE->getMulExpr(X->getC(), Y->getA());
       const SCEV *C2B1 = SE->getMulExpr(Y->getC(), X->getB());
@@ -501,10 +501,10 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
       APInt Xbot = A1B2_A2B1->getAPInt();
       APInt Ytop = C1A2_C2A1->getAPInt();
       APInt Ybot = A2B1_A1B2->getAPInt();
-      DEBUG(dbgs() << "\t\tXtop = " << Xtop << "\n");
-      DEBUG(dbgs() << "\t\tXbot = " << Xbot << "\n");
-      DEBUG(dbgs() << "\t\tYtop = " << Ytop << "\n");
-      DEBUG(dbgs() << "\t\tYbot = " << Ybot << "\n");
+      LLVM_DEBUG(dbgs() << "\t\tXtop = " << Xtop << "\n");
+      LLVM_DEBUG(dbgs() << "\t\tXbot = " << Xbot << "\n");
+      LLVM_DEBUG(dbgs() << "\t\tYtop = " << Ytop << "\n");
+      LLVM_DEBUG(dbgs() << "\t\tYbot = " << Ybot << "\n");
       APInt Xq = Xtop; // these need to be initialized, even
       APInt Xr = Xtop; // though they're just going to be overwritten
       APInt::sdivrem(Xtop, Xbot, Xq, Xr);
@@ -516,7 +516,7 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
         ++DeltaSuccesses;
         return true;
       }
-      DEBUG(dbgs() << "\t\tX = " << Xq << ", Y = " << Yq << "\n");
+      LLVM_DEBUG(dbgs() << "\t\tX = " << Xq << ", Y = " << Yq << "\n");
       if (Xq.slt(0) || Yq.slt(0)) {
         X->setEmpty();
         ++DeltaSuccesses;
@@ -525,7 +525,7 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
       if (const SCEVConstant *CUB =
           collectConstantUpperBound(X->getAssociatedLoop(), Prod1->getType())) {
         const APInt &UpperBound = CUB->getAPInt();
-        DEBUG(dbgs() << "\t\tupper bound = " << UpperBound << "\n");
+        LLVM_DEBUG(dbgs() << "\t\tupper bound = " << UpperBound << "\n");
         if (Xq.sgt(UpperBound) || Yq.sgt(UpperBound)) {
           X->setEmpty();
           ++DeltaSuccesses;
@@ -545,7 +545,7 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
   assert(!(X->isLine() && Y->isPoint()) && "This case should never occur");
 
   if (X->isPoint() && Y->isLine()) {
-    DEBUG(dbgs() << "\t    intersect Point and Line\n");
+    LLVM_DEBUG(dbgs() << "\t    intersect Point and Line\n");
     const SCEV *A1X1 = SE->getMulExpr(Y->getA(), X->getX());
     const SCEV *B1Y1 = SE->getMulExpr(Y->getB(), X->getY());
     const SCEV *Sum = SE->getAddExpr(A1X1, B1Y1);
@@ -1033,19 +1033,19 @@ const SCEVConstant *DependenceInfo::collectConstantUpperBound(const Loop *L,
 // Return true if dependence disproved.
 bool DependenceInfo::testZIV(const SCEV *Src, const SCEV *Dst,
                              FullDependence &Result) const {
-  DEBUG(dbgs() << "    src = " << *Src << "\n");
-  DEBUG(dbgs() << "    dst = " << *Dst << "\n");
+  LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
+  LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   ++ZIVapplications;
   if (isKnownPredicate(CmpInst::ICMP_EQ, Src, Dst)) {
-    DEBUG(dbgs() << "    provably dependent\n");
+    LLVM_DEBUG(dbgs() << "    provably dependent\n");
     return false; // provably dependent
   }
   if (isKnownPredicate(CmpInst::ICMP_NE, Src, Dst)) {
-    DEBUG(dbgs() << "    provably independent\n");
+    LLVM_DEBUG(dbgs() << "    provably independent\n");
     ++ZIVindependence;
     return true; // provably independent
   }
-  DEBUG(dbgs() << "    possibly dependent\n");
+  LLVM_DEBUG(dbgs() << "    possibly dependent\n");
   Result.Consistent = false;
   return false; // possibly dependent
 }
@@ -1082,25 +1082,25 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
                                    const SCEV *DstConst, const Loop *CurLoop,
                                    unsigned Level, FullDependence &Result,
                                    Constraint &NewConstraint) const {
-  DEBUG(dbgs() << "\tStrong SIV test\n");
-  DEBUG(dbgs() << "\t    Coeff = " << *Coeff);
-  DEBUG(dbgs() << ", " << *Coeff->getType() << "\n");
-  DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst);
-  DEBUG(dbgs() << ", " << *SrcConst->getType() << "\n");
-  DEBUG(dbgs() << "\t    DstConst = " << *DstConst);
-  DEBUG(dbgs() << ", " << *DstConst->getType() << "\n");
+  LLVM_DEBUG(dbgs() << "\tStrong SIV test\n");
+  LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff);
+  LLVM_DEBUG(dbgs() << ", " << *Coeff->getType() << "\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst);
+  LLVM_DEBUG(dbgs() << ", " << *SrcConst->getType() << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst);
+  LLVM_DEBUG(dbgs() << ", " << *DstConst->getType() << "\n");
   ++StrongSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "level out of range");
   Level--;
 
   const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
-  DEBUG(dbgs() << "\t    Delta = " << *Delta);
-  DEBUG(dbgs() << ", " << *Delta->getType() << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta);
+  LLVM_DEBUG(dbgs() << ", " << *Delta->getType() << "\n");
 
   // check that |Delta| < iteration count
   if (const SCEV *UpperBound = collectUpperBound(CurLoop, Delta->getType())) {
-    DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
-    DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
+    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
+    LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
     const SCEV *AbsDelta =
       SE->isKnownNonNegative(Delta) ? Delta : SE->getNegativeSCEV(Delta);
     const SCEV *AbsCoeff =
@@ -1121,8 +1121,8 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
     APInt Distance  = ConstDelta; // these need to be initialized
     APInt Remainder = ConstDelta;
     APInt::sdivrem(ConstDelta, ConstCoeff, Distance, Remainder);
-    DEBUG(dbgs() << "\t    Distance = " << Distance << "\n");
-    DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
+    LLVM_DEBUG(dbgs() << "\t    Distance = " << Distance << "\n");
+    LLVM_DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
     // Make sure Coeff divides Delta exactly
     if (Remainder != 0) {
       // Coeff doesn't divide Distance, no dependence
@@ -1149,7 +1149,7 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   }
   else {
     if (Coeff->isOne()) {
-      DEBUG(dbgs() << "\t    Distance = " << *Delta << "\n");
+      LLVM_DEBUG(dbgs() << "\t    Distance = " << *Delta << "\n");
       Result.DV[Level].Distance = Delta; // since X/1 == X
       NewConstraint.setDistance(Delta, CurLoop);
     }
@@ -1218,16 +1218,16 @@ bool DependenceInfo::weakCrossingSIVtest(
     const SCEV *Coeff, const SCEV *SrcConst, const SCEV *DstConst,
     const Loop *CurLoop, unsigned Level, FullDependence &Result,
     Constraint &NewConstraint, const SCEV *&SplitIter) const {
-  DEBUG(dbgs() << "\tWeak-Crossing SIV test\n");
-  DEBUG(dbgs() << "\t    Coeff = " << *Coeff << "\n");
-  DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
-  DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
+  LLVM_DEBUG(dbgs() << "\tWeak-Crossing SIV test\n");
+  LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff << "\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++WeakCrossingSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
   Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
-  DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   NewConstraint.setLine(Coeff, Coeff, Delta, CurLoop);
   if (Delta->isZero()) {
     Result.DV[Level].Direction &= unsigned(~Dependence::DVEntry::LT);
@@ -1257,7 +1257,7 @@ bool DependenceInfo::weakCrossingSIVtest(
   SplitIter = SE->getUDivExpr(
       SE->getSMaxExpr(SE->getZero(Delta->getType()), Delta),
       SE->getMulExpr(SE->getConstant(Delta->getType(), 2), ConstCoeff));
-  DEBUG(dbgs() << "\t    Split iter = " << *SplitIter << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Split iter = " << *SplitIter << "\n");
 
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   if (!ConstDelta)
@@ -1265,8 +1265,8 @@ bool DependenceInfo::weakCrossingSIVtest(
 
   // We're certain that ConstCoeff > 0; therefore,
   // if Delta < 0, then no dependence.
-  DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  DEBUG(dbgs() << "\t    ConstCoeff = " << *ConstCoeff << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
+  LLVM_DEBUG(dbgs() << "\t    ConstCoeff = " << *ConstCoeff << "\n");
   if (SE->isKnownNegative(Delta)) {
     // No dependence, Delta < 0
     ++WeakCrossingSIVindependence;
@@ -1277,11 +1277,11 @@ bool DependenceInfo::weakCrossingSIVtest(
   // We're certain that Delta > 0 and ConstCoeff > 0.
   // Check Delta/(2*ConstCoeff) against upper loop bound
   if (const SCEV *UpperBound = collectUpperBound(CurLoop, Delta->getType())) {
-    DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
+    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *ConstantTwo = SE->getConstant(UpperBound->getType(), 2);
     const SCEV *ML = SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound),
                                     ConstantTwo);
-    DEBUG(dbgs() << "\t    ML = " << *ML << "\n");
+    LLVM_DEBUG(dbgs() << "\t    ML = " << *ML << "\n");
     if (isKnownPredicate(CmpInst::ICMP_SGT, Delta, ML)) {
       // Delta too big, no dependence
       ++WeakCrossingSIVindependence;
@@ -1309,19 +1309,19 @@ bool DependenceInfo::weakCrossingSIVtest(
   APInt Distance = APDelta; // these need to be initialzed
   APInt Remainder = APDelta;
   APInt::sdivrem(APDelta, APCoeff, Distance, Remainder);
-  DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
   if (Remainder != 0) {
     // Coeff doesn't divide Delta, no dependence
     ++WeakCrossingSIVindependence;
     ++WeakCrossingSIVsuccesses;
     return true;
   }
-  DEBUG(dbgs() << "\t    Distance = " << Distance << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Distance = " << Distance << "\n");
 
   // if 2*Coeff doesn't divide Delta, then the equal direction isn't possible
   APInt Two = APInt(Distance.getBitWidth(), 2, true);
   Remainder = Distance.srem(Two);
-  DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
   if (Remainder != 0) {
     // Equal direction isn't possible
     Result.DV[Level].Direction &= unsigned(~Dependence::DVEntry::EQ);
@@ -1357,7 +1357,7 @@ static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
     APInt::sdivrem(G0, G1, Q, R);
   }
   G = G1;
-  DEBUG(dbgs() << "\t    GCD = " << G << "\n");
+  LLVM_DEBUG(dbgs() << "\t    GCD = " << G << "\n");
   X = AM.slt(0) ? -A1 : A1;
   Y = BM.slt(0) ? B1 : -B1;
 
@@ -1430,17 +1430,17 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                   const Loop *CurLoop, unsigned Level,
                                   FullDependence &Result,
                                   Constraint &NewConstraint) const {
-  DEBUG(dbgs() << "\tExact SIV test\n");
-  DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
-  DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
-  DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
-  DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
+  LLVM_DEBUG(dbgs() << "\tExact SIV test\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
+  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++ExactSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
   Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
-  DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   NewConstraint.setLine(SrcCoeff, SE->getNegativeSCEV(DstCoeff),
                         Delta, CurLoop);
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
@@ -1461,7 +1461,7 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
     return true;
   }
 
-  DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
+  LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
 
   // since SCEV construction normalizes, LM = 0
   APInt UM(Bits, 1, true);
@@ -1470,7 +1470,7 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   if (const SCEVConstant *CUB =
       collectConstantUpperBound(CurLoop, Delta->getType())) {
     UM = CUB->getAPInt();
-    DEBUG(dbgs() << "\t    UM = " << UM << "\n");
+    LLVM_DEBUG(dbgs() << "\t    UM = " << UM << "\n");
     UMvalid = true;
   }
 
@@ -1481,18 +1481,18 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   APInt TMUL = BM.sdiv(G);
   if (TMUL.sgt(0)) {
     TL = maxAPInt(TL, ceilingOfQuotient(-X, TMUL));
-    DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+    LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
     if (UMvalid) {
       TU = minAPInt(TU, floorOfQuotient(UM - X, TMUL));
-      DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+      LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
     }
   }
   else {
     TU = minAPInt(TU, floorOfQuotient(-X, TMUL));
-    DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+    LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
     if (UMvalid) {
       TL = maxAPInt(TL, ceilingOfQuotient(UM - X, TMUL));
-      DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+      LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
     }
   }
 
@@ -1500,18 +1500,18 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   TMUL = AM.sdiv(G);
   if (TMUL.sgt(0)) {
     TL = maxAPInt(TL, ceilingOfQuotient(-Y, TMUL));
-    DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+    LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
     if (UMvalid) {
       TU = minAPInt(TU, floorOfQuotient(UM - Y, TMUL));
-      DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+      LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
     }
   }
   else {
     TU = minAPInt(TU, floorOfQuotient(-Y, TMUL));
-    DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+    LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
     if (UMvalid) {
       TL = maxAPInt(TL, ceilingOfQuotient(UM - Y, TMUL));
-      DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+      LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
     }
   }
   if (TL.sgt(TU)) {
@@ -1526,15 +1526,15 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   // less than
   APInt SaveTU(TU); // save these
   APInt SaveTL(TL);
-  DEBUG(dbgs() << "\t    exploring LT direction\n");
+  LLVM_DEBUG(dbgs() << "\t    exploring LT direction\n");
   TMUL = AM - BM;
   if (TMUL.sgt(0)) {
     TL = maxAPInt(TL, ceilingOfQuotient(X - Y + 1, TMUL));
-    DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
+    LLVM_DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
   }
   else {
     TU = minAPInt(TU, floorOfQuotient(X - Y + 1, TMUL));
-    DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
+    LLVM_DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
   }
   if (TL.sle(TU)) {
     NewDirection |= Dependence::DVEntry::LT;
@@ -1544,23 +1544,23 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   // equal
   TU = SaveTU; // restore
   TL = SaveTL;
-  DEBUG(dbgs() << "\t    exploring EQ direction\n");
+  LLVM_DEBUG(dbgs() << "\t    exploring EQ direction\n");
   if (TMUL.sgt(0)) {
     TL = maxAPInt(TL, ceilingOfQuotient(X - Y, TMUL));
-    DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
+    LLVM_DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
   }
   else {
     TU = minAPInt(TU, floorOfQuotient(X - Y, TMUL));
-    DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
+    LLVM_DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
   }
   TMUL = BM - AM;
   if (TMUL.sgt(0)) {
     TL = maxAPInt(TL, ceilingOfQuotient(Y - X, TMUL));
-    DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
+    LLVM_DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
   }
   else {
     TU = minAPInt(TU, floorOfQuotient(Y - X, TMUL));
-    DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
+    LLVM_DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
   }
   if (TL.sle(TU)) {
     NewDirection |= Dependence::DVEntry::EQ;
@@ -1570,14 +1570,14 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   // greater than
   TU = SaveTU; // restore
   TL = SaveTL;
-  DEBUG(dbgs() << "\t    exploring GT direction\n");
+  LLVM_DEBUG(dbgs() << "\t    exploring GT direction\n");
   if (TMUL.sgt(0)) {
     TL = maxAPInt(TL, ceilingOfQuotient(Y - X + 1, TMUL));
-    DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
+    LLVM_DEBUG(dbgs() << "\t\t    TL = " << TL << "\n");
   }
   else {
     TU = minAPInt(TU, floorOfQuotient(Y - X + 1, TMUL));
-    DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
+    LLVM_DEBUG(dbgs() << "\t\t    TU = " << TU << "\n");
   }
   if (TL.sle(TU)) {
     NewDirection |= Dependence::DVEntry::GT;
@@ -1643,10 +1643,10 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   // For the WeakSIV test, it's possible the loop isn't common to
   // the Src and Dst loops. If it isn't, then there's no need to
   // record a direction.
-  DEBUG(dbgs() << "\tWeak-Zero (src) SIV test\n");
-  DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
-  DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
-  DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
+  LLVM_DEBUG(dbgs() << "\tWeak-Zero (src) SIV test\n");
+  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= MaxLevels && "Level out of range");
   Level--;
@@ -1654,7 +1654,7 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
   NewConstraint.setLine(SE->getZero(Delta->getType()), DstCoeff, Delta,
                         CurLoop);
-  DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (isKnownPredicate(CmpInst::ICMP_EQ, SrcConst, DstConst)) {
     if (Level < CommonLevels) {
       Result.DV[Level].Direction &= Dependence::DVEntry::LE;
@@ -1675,7 +1675,7 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   // check that Delta/SrcCoeff < iteration count
   // really check NewDelta < count*AbsCoeff
   if (const SCEV *UpperBound = collectUpperBound(CurLoop, Delta->getType())) {
-    DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
+    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
     if (isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
       ++WeakZeroSIVindependence;
@@ -1752,10 +1752,10 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
                                         Constraint &NewConstraint) const {
   // For the WeakSIV test, it's possible the loop isn't common to the
   // Src and Dst loops. If it isn't, then there's no need to record a direction.
-  DEBUG(dbgs() << "\tWeak-Zero (dst) SIV test\n");
-  DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
-  DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
-  DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
+  LLVM_DEBUG(dbgs() << "\tWeak-Zero (dst) SIV test\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= SrcLevels && "Level out of range");
   Level--;
@@ -1763,7 +1763,7 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   NewConstraint.setLine(SrcCoeff, SE->getZero(Delta->getType()), Delta,
                         CurLoop);
-  DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (isKnownPredicate(CmpInst::ICMP_EQ, DstConst, SrcConst)) {
     if (Level < CommonLevels) {
       Result.DV[Level].Direction &= Dependence::DVEntry::LE;
@@ -1784,7 +1784,7 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   // check that Delta/SrcCoeff < iteration count
   // really check NewDelta < count*AbsCoeff
   if (const SCEV *UpperBound = collectUpperBound(CurLoop, Delta->getType())) {
-    DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
+    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
     if (isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
       ++WeakZeroSIVindependence;
@@ -1833,15 +1833,15 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                    const SCEV *SrcConst, const SCEV *DstConst,
                                    const Loop *SrcLoop, const Loop *DstLoop,
                                    FullDependence &Result) const {
-  DEBUG(dbgs() << "\tExact RDIV test\n");
-  DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
-  DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
-  DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
-  DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
+  LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
+  LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
+  LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
+  LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++ExactRDIVapplications;
   Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
-  DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   const SCEVConstant *ConstSrcCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
   const SCEVConstant *ConstDstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
@@ -1859,7 +1859,7 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
     return true;
   }
 
-  DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
+  LLVM_DEBUG(dbgs() << "\t    X = " << X << ", Y = " << Y << "\n");
 
   // since SCEV construction seems to normalize, LM = 0
   APInt SrcUM(Bits, 1, true);
@@ -1868,7 +1868,7 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   if (const SCEVConstant *UpperBound =
       collectConstantUpperBound(SrcLoop, Delta->getType())) {
     SrcUM = UpperBound->getAPInt();
-    DEBUG(dbgs() << "\t    SrcUM = " << SrcUM << "\n");
+    LLVM_DEBUG(dbgs() << "\t    SrcUM = " << SrcUM << "\n");
     SrcUMvalid = true;
   }
 
@@ -1878,7 +1878,7 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   if (const SCEVConstant *UpperBound =
       collectConstantUpperBound(DstLoop, Delta->getType())) {
     DstUM = UpperBound->getAPInt();
-    DEBUG(dbgs() << "\t    DstUM = " << DstUM << "\n");
+    LLVM_DEBUG(dbgs() << "\t    DstUM = " << DstUM << "\n");
     DstUMvalid = true;
   }
 
@@ -1889,18 +1889,18 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   APInt TMUL = BM.sdiv(G);
   if (TMUL.sgt(0)) {
     TL = maxAPInt(TL, ceilingOfQuotient(-X, TMUL));
-    DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+    LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
     if (SrcUMvalid) {
       TU = minAPInt(TU, floorOfQuotient(SrcUM - X, TMUL));
-      DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+      LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
     }
   }
   else {
     TU = minAPInt(TU, floorOfQuotient(-X, TMUL));
-    DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+    LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
     if (SrcUMvalid) {
       TL = maxAPInt(TL, ceilingOfQuotient(SrcUM - X, TMUL));
-      DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+      LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
     }
   }
 
@@ -1908,18 +1908,18 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   TMUL = AM.sdiv(G);
   if (TMUL.sgt(0)) {
     TL = maxAPInt(TL, ceilingOfQuotient(-Y, TMUL));
-    DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+    LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
     if (DstUMvalid) {
       TU = minAPInt(TU, floorOfQuotient(DstUM - Y, TMUL));
-      DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+      LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
     }
   }
   else {
     TU = minAPInt(TU, floorOfQuotient(-Y, TMUL));
-    DEBUG(dbgs() << "\t    TU = " << TU << "\n");
+    LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
     if (DstUMvalid) {
       TL = maxAPInt(TL, ceilingOfQuotient(DstUM - Y, TMUL));
-      DEBUG(dbgs() << "\t    TL = " << TL << "\n");
+      LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
     }
   }
   if (TL.sgt(TU))
@@ -1975,27 +1975,27 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
                                       const Loop *Loop1,
                                       const Loop *Loop2) const {
   ++SymbolicRDIVapplications;
-  DEBUG(dbgs() << "\ttry symbolic RDIV test\n");
-  DEBUG(dbgs() << "\t    A1 = " << *A1);
-  DEBUG(dbgs() << ", type = " << *A1->getType() << "\n");
-  DEBUG(dbgs() << "\t    A2 = " << *A2 << "\n");
-  DEBUG(dbgs() << "\t    C1 = " << *C1 << "\n");
-  DEBUG(dbgs() << "\t    C2 = " << *C2 << "\n");
+  LLVM_DEBUG(dbgs() << "\ttry symbolic RDIV test\n");
+  LLVM_DEBUG(dbgs() << "\t    A1 = " << *A1);
+  LLVM_DEBUG(dbgs() << ", type = " << *A1->getType() << "\n");
+  LLVM_DEBUG(dbgs() << "\t    A2 = " << *A2 << "\n");
+  LLVM_DEBUG(dbgs() << "\t    C1 = " << *C1 << "\n");
+  LLVM_DEBUG(dbgs() << "\t    C2 = " << *C2 << "\n");
   const SCEV *N1 = collectUpperBound(Loop1, A1->getType());
   const SCEV *N2 = collectUpperBound(Loop2, A1->getType());
-  DEBUG(if (N1) dbgs() << "\t    N1 = " << *N1 << "\n");
-  DEBUG(if (N2) dbgs() << "\t    N2 = " << *N2 << "\n");
+  LLVM_DEBUG(if (N1) dbgs() << "\t    N1 = " << *N1 << "\n");
+  LLVM_DEBUG(if (N2) dbgs() << "\t    N2 = " << *N2 << "\n");
   const SCEV *C2_C1 = SE->getMinusSCEV(C2, C1);
   const SCEV *C1_C2 = SE->getMinusSCEV(C1, C2);
-  DEBUG(dbgs() << "\t    C2 - C1 = " << *C2_C1 << "\n");
-  DEBUG(dbgs() << "\t    C1 - C2 = " << *C1_C2 << "\n");
+  LLVM_DEBUG(dbgs() << "\t    C2 - C1 = " << *C2_C1 << "\n");
+  LLVM_DEBUG(dbgs() << "\t    C1 - C2 = " << *C1_C2 << "\n");
   if (SE->isKnownNonNegative(A1)) {
     if (SE->isKnownNonNegative(A2)) {
       // A1 >= 0 && A2 >= 0
       if (N1) {
         // make sure that c2 - c1 <= a1*N1
         const SCEV *A1N1 = SE->getMulExpr(A1, N1);
-        DEBUG(dbgs() << "\t    A1*N1 = " << *A1N1 << "\n");
+        LLVM_DEBUG(dbgs() << "\t    A1*N1 = " << *A1N1 << "\n");
         if (isKnownPredicate(CmpInst::ICMP_SGT, C2_C1, A1N1)) {
           ++SymbolicRDIVindependence;
           return true;
@@ -2004,7 +2004,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
       if (N2) {
         // make sure that -a2*N2 <= c2 - c1, or a2*N2 >= c1 - c2
         const SCEV *A2N2 = SE->getMulExpr(A2, N2);
-        DEBUG(dbgs() << "\t    A2*N2 = " << *A2N2 << "\n");
+        LLVM_DEBUG(dbgs() << "\t    A2*N2 = " << *A2N2 << "\n");
         if (isKnownPredicate(CmpInst::ICMP_SLT, A2N2, C1_C2)) {
           ++SymbolicRDIVindependence;
           return true;
@@ -2018,7 +2018,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
         const SCEV *A1N1 = SE->getMulExpr(A1, N1);
         const SCEV *A2N2 = SE->getMulExpr(A2, N2);
         const SCEV *A1N1_A2N2 = SE->getMinusSCEV(A1N1, A2N2);
-        DEBUG(dbgs() << "\t    A1*N1 - A2*N2 = " << *A1N1_A2N2 << "\n");
+        LLVM_DEBUG(dbgs() << "\t    A1*N1 - A2*N2 = " << *A1N1_A2N2 << "\n");
         if (isKnownPredicate(CmpInst::ICMP_SGT, C2_C1, A1N1_A2N2)) {
           ++SymbolicRDIVindependence;
           return true;
@@ -2039,7 +2039,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
         const SCEV *A1N1 = SE->getMulExpr(A1, N1);
         const SCEV *A2N2 = SE->getMulExpr(A2, N2);
         const SCEV *A1N1_A2N2 = SE->getMinusSCEV(A1N1, A2N2);
-        DEBUG(dbgs() << "\t    A1*N1 - A2*N2 = " << *A1N1_A2N2 << "\n");
+        LLVM_DEBUG(dbgs() << "\t    A1*N1 - A2*N2 = " << *A1N1_A2N2 << "\n");
         if (isKnownPredicate(CmpInst::ICMP_SGT, A1N1_A2N2, C2_C1)) {
           ++SymbolicRDIVindependence;
           return true;
@@ -2056,7 +2056,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
       if (N1) {
         // make sure that a1*N1 <= c2 - c1
         const SCEV *A1N1 = SE->getMulExpr(A1, N1);
-        DEBUG(dbgs() << "\t    A1*N1 = " << *A1N1 << "\n");
+        LLVM_DEBUG(dbgs() << "\t    A1*N1 = " << *A1N1 << "\n");
         if (isKnownPredicate(CmpInst::ICMP_SGT, A1N1, C2_C1)) {
           ++SymbolicRDIVindependence;
           return true;
@@ -2065,7 +2065,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
       if (N2) {
         // make sure that c2 - c1 <= -a2*N2, or c1 - c2 >= a2*N2
         const SCEV *A2N2 = SE->getMulExpr(A2, N2);
-        DEBUG(dbgs() << "\t    A2*N2 = " << *A2N2 << "\n");
+        LLVM_DEBUG(dbgs() << "\t    A2*N2 = " << *A2N2 << "\n");
         if (isKnownPredicate(CmpInst::ICMP_SLT, C1_C2, A2N2)) {
           ++SymbolicRDIVindependence;
           return true;
@@ -2088,8 +2088,8 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
 bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                              FullDependence &Result, Constraint &NewConstraint,
                              const SCEV *&SplitIter) const {
-  DEBUG(dbgs() << "    src = " << *Src << "\n");
-  DEBUG(dbgs() << "    dst = " << *Dst << "\n");
+  LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
+  LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
   if (SrcAddRec && DstAddRec) {
@@ -2165,8 +2165,8 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
   const SCEV *SrcCoeff, *DstCoeff;
   const Loop *SrcLoop, *DstLoop;
 
-  DEBUG(dbgs() << "    src = " << *Src << "\n");
-  DEBUG(dbgs() << "    dst = " << *Dst << "\n");
+  LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
+  LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
   if (SrcAddRec && DstAddRec) {
@@ -2222,8 +2222,8 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
 bool DependenceInfo::testMIV(const SCEV *Src, const SCEV *Dst,
                              const SmallBitVector &Loops,
                              FullDependence &Result) const {
-  DEBUG(dbgs() << "    src = " << *Src << "\n");
-  DEBUG(dbgs() << "    dst = " << *Dst << "\n");
+  LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
+  LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   Result.Consistent = false;
   return gcdMIVtest(Src, Dst, Result) ||
     banerjeeMIVtest(Src, Dst, Loops, Result);
@@ -2263,7 +2263,7 @@ const SCEVConstant *getConstantPart(const SCEV *Expr) {
 // to "a common divisor".
 bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
                                 FullDependence &Result) const {
-  DEBUG(dbgs() << "starting gcd\n");
+  LLVM_DEBUG(dbgs() << "starting gcd\n");
   ++GCDapplications;
   unsigned BitWidth = SE->getTypeSizeInBits(Src->getType());
   APInt RunningGCD = APInt::getNullValue(BitWidth);
@@ -2308,7 +2308,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
 
   APInt ExtraGCD = APInt::getNullValue(BitWidth);
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
-  DEBUG(dbgs() << "    Delta = " << *Delta << "\n");
+  LLVM_DEBUG(dbgs() << "    Delta = " << *Delta << "\n");
   const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Delta);
   if (const SCEVAddExpr *Sum = dyn_cast<SCEVAddExpr>(Delta)) {
     // If Delta is a sum of products, we may be able to make further progress.
@@ -2335,11 +2335,11 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   if (!Constant)
     return false;
   APInt ConstDelta = cast<SCEVConstant>(Constant)->getAPInt();
-  DEBUG(dbgs() << "    ConstDelta = " << ConstDelta << "\n");
+  LLVM_DEBUG(dbgs() << "    ConstDelta = " << ConstDelta << "\n");
   if (ConstDelta == 0)
     return false;
   RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ExtraGCD);
-  DEBUG(dbgs() << "    RunningGCD = " << RunningGCD << "\n");
+  LLVM_DEBUG(dbgs() << "    RunningGCD = " << RunningGCD << "\n");
   APInt Remainder = ConstDelta.srem(RunningGCD);
   if (Remainder != 0) {
     ++GCDindependence;
@@ -2358,7 +2358,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   // Given A[5*i + 10*j*M + 9*M*N] and A[15*i + 20*j*M - 21*N*M + 5],
   // we need to remember that the constant part is 5 and the RunningGCD should
   // be initialized to ExtraGCD = 30.
-  DEBUG(dbgs() << "    ExtraGCD = " << ExtraGCD << '\n');
+  LLVM_DEBUG(dbgs() << "    ExtraGCD = " << ExtraGCD << '\n');
 
   bool Improved = false;
   Coefficients = Src;
@@ -2413,10 +2413,10 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
       continue;
     APInt ConstCoeff = Constant->getAPInt();
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff.abs());
-    DEBUG(dbgs() << "\tRunningGCD = " << RunningGCD << "\n");
+    LLVM_DEBUG(dbgs() << "\tRunningGCD = " << RunningGCD << "\n");
     if (RunningGCD != 0) {
       Remainder = ConstDelta.srem(RunningGCD);
-      DEBUG(dbgs() << "\tRemainder = " << Remainder << "\n");
+      LLVM_DEBUG(dbgs() << "\tRemainder = " << Remainder << "\n");
       if (Remainder != 0) {
         unsigned Level = mapSrcLoop(CurLoop);
         Result.DV[Level - 1].Direction &= unsigned(~Dependence::DVEntry::EQ);
@@ -2426,7 +2426,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   }
   if (Improved)
     ++GCDsuccesses;
-  DEBUG(dbgs() << "all done\n");
+  LLVM_DEBUG(dbgs() << "all done\n");
   return false;
 }
 
@@ -2467,35 +2467,35 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
 bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
                                      const SmallBitVector &Loops,
                                      FullDependence &Result) const {
-  DEBUG(dbgs() << "starting Banerjee\n");
+  LLVM_DEBUG(dbgs() << "starting Banerjee\n");
   ++BanerjeeApplications;
-  DEBUG(dbgs() << "    Src = " << *Src << '\n');
+  LLVM_DEBUG(dbgs() << "    Src = " << *Src << '\n');
   const SCEV *A0;
   CoefficientInfo *A = collectCoeffInfo(Src, true, A0);
-  DEBUG(dbgs() << "    Dst = " << *Dst << '\n');
+  LLVM_DEBUG(dbgs() << "    Dst = " << *Dst << '\n');
   const SCEV *B0;
   CoefficientInfo *B = collectCoeffInfo(Dst, false, B0);
   BoundInfo *Bound = new BoundInfo[MaxLevels + 1];
   const SCEV *Delta = SE->getMinusSCEV(B0, A0);
-  DEBUG(dbgs() << "\tDelta = " << *Delta << '\n');
+  LLVM_DEBUG(dbgs() << "\tDelta = " << *Delta << '\n');
 
   // Compute bounds for all the * directions.
-  DEBUG(dbgs() << "\tBounds[*]\n");
+  LLVM_DEBUG(dbgs() << "\tBounds[*]\n");
   for (unsigned K = 1; K <= MaxLevels; ++K) {
     Bound[K].Iterations = A[K].Iterations ? A[K].Iterations : B[K].Iterations;
     Bound[K].Direction = Dependence::DVEntry::ALL;
     Bound[K].DirSet = Dependence::DVEntry::NONE;
     findBoundsALL(A, B, Bound, K);
 #ifndef NDEBUG
-    DEBUG(dbgs() << "\t    " << K << '\t');
+    LLVM_DEBUG(dbgs() << "\t    " << K << '\t');
     if (Bound[K].Lower[Dependence::DVEntry::ALL])
-      DEBUG(dbgs() << *Bound[K].Lower[Dependence::DVEntry::ALL] << '\t');
+      LLVM_DEBUG(dbgs() << *Bound[K].Lower[Dependence::DVEntry::ALL] << '\t');
     else
-      DEBUG(dbgs() << "-inf\t");
+      LLVM_DEBUG(dbgs() << "-inf\t");
     if (Bound[K].Upper[Dependence::DVEntry::ALL])
-      DEBUG(dbgs() << *Bound[K].Upper[Dependence::DVEntry::ALL] << '\n');
+      LLVM_DEBUG(dbgs() << *Bound[K].Upper[Dependence::DVEntry::ALL] << '\n');
     else
-      DEBUG(dbgs() << "+inf\n");
+      LLVM_DEBUG(dbgs() << "+inf\n");
 #endif
   }
 
@@ -2551,23 +2551,23 @@ unsigned DependenceInfo::exploreDirections(unsigned Level, CoefficientInfo *A,
                                            const SCEV *Delta) const {
   if (Level > CommonLevels) {
     // record result
-    DEBUG(dbgs() << "\t[");
+    LLVM_DEBUG(dbgs() << "\t[");
     for (unsigned K = 1; K <= CommonLevels; ++K) {
       if (Loops[K]) {
         Bound[K].DirSet |= Bound[K].Direction;
 #ifndef NDEBUG
         switch (Bound[K].Direction) {
         case Dependence::DVEntry::LT:
-          DEBUG(dbgs() << " <");
+          LLVM_DEBUG(dbgs() << " <");
           break;
         case Dependence::DVEntry::EQ:
-          DEBUG(dbgs() << " =");
+          LLVM_DEBUG(dbgs() << " =");
           break;
         case Dependence::DVEntry::GT:
-          DEBUG(dbgs() << " >");
+          LLVM_DEBUG(dbgs() << " >");
           break;
         case Dependence::DVEntry::ALL:
-          DEBUG(dbgs() << " *");
+          LLVM_DEBUG(dbgs() << " *");
           break;
         default:
           llvm_unreachable("unexpected Bound[K].Direction");
@@ -2575,7 +2575,7 @@ unsigned DependenceInfo::exploreDirections(unsigned Level, CoefficientInfo *A,
 #endif
       }
     }
-    DEBUG(dbgs() << " ]\n");
+    LLVM_DEBUG(dbgs() << " ]\n");
     return 1;
   }
   if (Loops[Level]) {
@@ -2586,34 +2586,40 @@ unsigned DependenceInfo::exploreDirections(unsigned Level, CoefficientInfo *A,
       findBoundsGT(A, B, Bound, Level);
       findBoundsEQ(A, B, Bound, Level);
 #ifndef NDEBUG
-      DEBUG(dbgs() << "\tBound for level = " << Level << '\n');
-      DEBUG(dbgs() << "\t    <\t");
+      LLVM_DEBUG(dbgs() << "\tBound for level = " << Level << '\n');
+      LLVM_DEBUG(dbgs() << "\t    <\t");
       if (Bound[Level].Lower[Dependence::DVEntry::LT])
-        DEBUG(dbgs() << *Bound[Level].Lower[Dependence::DVEntry::LT] << '\t');
+        LLVM_DEBUG(dbgs() << *Bound[Level].Lower[Dependence::DVEntry::LT]
+                          << '\t');
       else
-        DEBUG(dbgs() << "-inf\t");
+        LLVM_DEBUG(dbgs() << "-inf\t");
       if (Bound[Level].Upper[Dependence::DVEntry::LT])
-        DEBUG(dbgs() << *Bound[Level].Upper[Dependence::DVEntry::LT] << '\n');
+        LLVM_DEBUG(dbgs() << *Bound[Level].Upper[Dependence::DVEntry::LT]
+                          << '\n');
       else
-        DEBUG(dbgs() << "+inf\n");
-      DEBUG(dbgs() << "\t    =\t");
+        LLVM_DEBUG(dbgs() << "+inf\n");
+      LLVM_DEBUG(dbgs() << "\t    =\t");
       if (Bound[Level].Lower[Dependence::DVEntry::EQ])
-        DEBUG(dbgs() << *Bound[Level].Lower[Dependence::DVEntry::EQ] << '\t');
+        LLVM_DEBUG(dbgs() << *Bound[Level].Lower[Dependence::DVEntry::EQ]
+                          << '\t');
       else
-        DEBUG(dbgs() << "-inf\t");
+        LLVM_DEBUG(dbgs() << "-inf\t");
       if (Bound[Level].Upper[Dependence::DVEntry::EQ])
-        DEBUG(dbgs() << *Bound[Level].Upper[Dependence::DVEntry::EQ] << '\n');
+        LLVM_DEBUG(dbgs() << *Bound[Level].Upper[Dependence::DVEntry::EQ]
+                          << '\n');
       else
-        DEBUG(dbgs() << "+inf\n");
-      DEBUG(dbgs() << "\t    >\t");
+        LLVM_DEBUG(dbgs() << "+inf\n");
+      LLVM_DEBUG(dbgs() << "\t    >\t");
       if (Bound[Level].Lower[Dependence::DVEntry::GT])
-        DEBUG(dbgs() << *Bound[Level].Lower[Dependence::DVEntry::GT] << '\t');
+        LLVM_DEBUG(dbgs() << *Bound[Level].Lower[Dependence::DVEntry::GT]
+                          << '\t');
       else
-        DEBUG(dbgs() << "-inf\t");
+        LLVM_DEBUG(dbgs() << "-inf\t");
       if (Bound[Level].Upper[Dependence::DVEntry::GT])
-        DEBUG(dbgs() << *Bound[Level].Upper[Dependence::DVEntry::GT] << '\n');
+        LLVM_DEBUG(dbgs() << *Bound[Level].Upper[Dependence::DVEntry::GT]
+                          << '\n');
       else
-        DEBUG(dbgs() << "+inf\n");
+        LLVM_DEBUG(dbgs() << "+inf\n");
 #endif
     }
 
@@ -2860,21 +2866,21 @@ DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
   }
   Constant = Subscript;
 #ifndef NDEBUG
-  DEBUG(dbgs() << "\tCoefficient Info\n");
+  LLVM_DEBUG(dbgs() << "\tCoefficient Info\n");
   for (unsigned K = 1; K <= MaxLevels; ++K) {
-    DEBUG(dbgs() << "\t    " << K << "\t" << *CI[K].Coeff);
-    DEBUG(dbgs() << "\tPos Part = ");
-    DEBUG(dbgs() << *CI[K].PosPart);
-    DEBUG(dbgs() << "\tNeg Part = ");
-    DEBUG(dbgs() << *CI[K].NegPart);
-    DEBUG(dbgs() << "\tUpper Bound = ");
+    LLVM_DEBUG(dbgs() << "\t    " << K << "\t" << *CI[K].Coeff);
+    LLVM_DEBUG(dbgs() << "\tPos Part = ");
+    LLVM_DEBUG(dbgs() << *CI[K].PosPart);
+    LLVM_DEBUG(dbgs() << "\tNeg Part = ");
+    LLVM_DEBUG(dbgs() << *CI[K].NegPart);
+    LLVM_DEBUG(dbgs() << "\tUpper Bound = ");
     if (CI[K].Iterations)
-      DEBUG(dbgs() << *CI[K].Iterations);
+      LLVM_DEBUG(dbgs() << *CI[K].Iterations);
     else
-      DEBUG(dbgs() << "+inf");
-    DEBUG(dbgs() << '\n');
+      LLVM_DEBUG(dbgs() << "+inf");
+    LLVM_DEBUG(dbgs() << '\n');
   }
-  DEBUG(dbgs() << "\t    Constant = " << *Subscript << '\n');
+  LLVM_DEBUG(dbgs() << "\t    Constant = " << *Subscript << '\n');
 #endif
   return CI;
 }
@@ -2999,8 +3005,8 @@ bool DependenceInfo::propagate(const SCEV *&Src, const SCEV *&Dst,
                                bool &Consistent) {
   bool Result = false;
   for (unsigned LI : Loops.set_bits()) {
-    DEBUG(dbgs() << "\t    Constraint[" << LI << "] is");
-    DEBUG(Constraints[LI].dump(dbgs()));
+    LLVM_DEBUG(dbgs() << "\t    Constraint[" << LI << "] is");
+    LLVM_DEBUG(Constraints[LI].dump(dbgs()));
     if (Constraints[LI].isDistance())
       Result |= propagateDistance(Src, Dst, Constraints[LI], Consistent);
     else if (Constraints[LI].isLine())
@@ -3021,17 +3027,17 @@ bool DependenceInfo::propagateDistance(const SCEV *&Src, const SCEV *&Dst,
                                        Constraint &CurConstraint,
                                        bool &Consistent) {
   const Loop *CurLoop = CurConstraint.getAssociatedLoop();
-  DEBUG(dbgs() << "\t\tSrc is " << *Src << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tSrc is " << *Src << "\n");
   const SCEV *A_K = findCoefficient(Src, CurLoop);
   if (A_K->isZero())
     return false;
   const SCEV *DA_K = SE->getMulExpr(A_K, CurConstraint.getD());
   Src = SE->getMinusSCEV(Src, DA_K);
   Src = zeroCoefficient(Src, CurLoop);
-  DEBUG(dbgs() << "\t\tnew Src is " << *Src << "\n");
-  DEBUG(dbgs() << "\t\tDst is " << *Dst << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tnew Src is " << *Src << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tDst is " << *Dst << "\n");
   Dst = addToCoefficient(Dst, CurLoop, SE->getNegativeSCEV(A_K));
-  DEBUG(dbgs() << "\t\tnew Dst is " << *Dst << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tnew Dst is " << *Dst << "\n");
   if (!findCoefficient(Dst, CurLoop)->isZero())
     Consistent = false;
   return true;
@@ -3050,9 +3056,10 @@ bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
   const SCEV *A = CurConstraint.getA();
   const SCEV *B = CurConstraint.getB();
   const SCEV *C = CurConstraint.getC();
-  DEBUG(dbgs() << "\t\tA = " << *A << ", B = " << *B << ", C = " << *C << "\n");
-  DEBUG(dbgs() << "\t\tSrc = " << *Src << "\n");
-  DEBUG(dbgs() << "\t\tDst = " << *Dst << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tA = " << *A << ", B = " << *B << ", C = " << *C
+                    << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tSrc = " << *Src << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tDst = " << *Dst << "\n");
   if (A->isZero()) {
     const SCEVConstant *Bconst = dyn_cast<SCEVConstant>(B);
     const SCEVConstant *Cconst = dyn_cast<SCEVConstant>(C);
@@ -3108,8 +3115,8 @@ bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
     if (!findCoefficient(Dst, CurLoop)->isZero())
       Consistent = false;
   }
-  DEBUG(dbgs() << "\t\tnew Src = " << *Src << "\n");
-  DEBUG(dbgs() << "\t\tnew Dst = " << *Dst << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tnew Src = " << *Src << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tnew Dst = " << *Dst << "\n");
   return true;
 }
 
@@ -3124,13 +3131,13 @@ bool DependenceInfo::propagatePoint(const SCEV *&Src, const SCEV *&Dst,
   const SCEV *AP_K = findCoefficient(Dst, CurLoop);
   const SCEV *XA_K = SE->getMulExpr(A_K, CurConstraint.getX());
   const SCEV *YAP_K = SE->getMulExpr(AP_K, CurConstraint.getY());
-  DEBUG(dbgs() << "\t\tSrc is " << *Src << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tSrc is " << *Src << "\n");
   Src = SE->getAddExpr(Src, SE->getMinusSCEV(XA_K, YAP_K));
   Src = zeroCoefficient(Src, CurLoop);
-  DEBUG(dbgs() << "\t\tnew Src is " << *Src << "\n");
-  DEBUG(dbgs() << "\t\tDst is " << *Dst << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tnew Src is " << *Src << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tDst is " << *Dst << "\n");
   Dst = zeroCoefficient(Dst, CurLoop);
-  DEBUG(dbgs() << "\t\tnew Dst is " << *Dst << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tnew Dst is " << *Dst << "\n");
   return true;
 }
 
@@ -3138,8 +3145,8 @@ bool DependenceInfo::propagatePoint(const SCEV *&Src, const SCEV *&Dst,
 // Update direction vector entry based on the current constraint.
 void DependenceInfo::updateDirection(Dependence::DVEntry &Level,
                                      const Constraint &CurConstraint) const {
-  DEBUG(dbgs() << "\tUpdate direction, constraint =");
-  DEBUG(CurConstraint.dump(dbgs()));
+  LLVM_DEBUG(dbgs() << "\tUpdate direction, constraint =");
+  LLVM_DEBUG(CurConstraint.dump(dbgs()));
   if (CurConstraint.isAny())
     ; // use defaults
   else if (CurConstraint.isDistance()) {
@@ -3246,14 +3253,14 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
 
   int size = SrcSubscripts.size();
 
-  DEBUG({
-      dbgs() << "\nSrcSubscripts: ";
+  LLVM_DEBUG({
+    dbgs() << "\nSrcSubscripts: ";
     for (int i = 0; i < size; i++)
       dbgs() << *SrcSubscripts[i];
     dbgs() << "\nDstSubscripts: ";
     for (int i = 0; i < size; i++)
       dbgs() << *DstSubscripts[i];
-    });
+  });
 
   // The delinearization transforms a single-subscript MIV dependence test into
   // a multi-subscript SIV dependence test that is easier to compute. So we
@@ -3315,7 +3322,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   if (!isLoadOrStore(Src) || !isLoadOrStore(Dst)) {
     // can only analyze simple loads and stores, i.e., no calls, invokes, etc.
-    DEBUG(dbgs() << "can only handle simple loads and stores\n");
+    LLVM_DEBUG(dbgs() << "can only handle simple loads and stores\n");
     return make_unique<Dependence>(Src, Dst);
   }
 
@@ -3330,11 +3337,11 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   case MayAlias:
   case PartialAlias:
     // cannot analyse objects if we don't understand their aliasing.
-    DEBUG(dbgs() << "can't analyze may or partial alias\n");
+    LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
     return make_unique<Dependence>(Src, Dst);
   case NoAlias:
     // If the objects noalias, they are distinct, accesses are independent.
-    DEBUG(dbgs() << "no alias\n");
+    LLVM_DEBUG(dbgs() << "no alias\n");
     return nullptr;
   case MustAlias:
     break; // The underlying objects alias; test accesses for dependence.
@@ -3342,8 +3349,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   // establish loop nesting levels
   establishNestingLevels(Src, Dst);
-  DEBUG(dbgs() << "    common nesting levels = " << CommonLevels << "\n");
-  DEBUG(dbgs() << "    maximum nesting levels = " << MaxLevels << "\n");
+  LLVM_DEBUG(dbgs() << "    common nesting levels = " << CommonLevels << "\n");
+  LLVM_DEBUG(dbgs() << "    maximum nesting levels = " << MaxLevels << "\n");
 
   FullDependence Result(Src, Dst, PossiblyLoopIndependent, CommonLevels);
   ++TotalArrayPairs;
@@ -3352,14 +3359,14 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   SmallVector<Subscript, 2> Pair(Pairs);
   const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
   const SCEV *DstSCEV = SE->getSCEV(DstPtr);
-  DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
-  DEBUG(dbgs() << "    DstSCEV = " << *DstSCEV << "\n");
+  LLVM_DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
+  LLVM_DEBUG(dbgs() << "    DstSCEV = " << *DstSCEV << "\n");
   Pair[0].Src = SrcSCEV;
   Pair[0].Dst = DstSCEV;
 
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
-      DEBUG(dbgs() << "    delinearized\n");
+      LLVM_DEBUG(dbgs() << "    delinearized\n");
       Pairs = Pair.size();
     }
   }
@@ -3375,12 +3382,12 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                    Pair[P].Loops);
     Pair[P].GroupLoops = Pair[P].Loops;
     Pair[P].Group.set(P);
-    DEBUG(dbgs() << "    subscript " << P << "\n");
-    DEBUG(dbgs() << "\tsrc = " << *Pair[P].Src << "\n");
-    DEBUG(dbgs() << "\tdst = " << *Pair[P].Dst << "\n");
-    DEBUG(dbgs() << "\tclass = " << Pair[P].Classification << "\n");
-    DEBUG(dbgs() << "\tloops = ");
-    DEBUG(dumpSmallBitVector(Pair[P].Loops));
+    LLVM_DEBUG(dbgs() << "    subscript " << P << "\n");
+    LLVM_DEBUG(dbgs() << "\tsrc = " << *Pair[P].Src << "\n");
+    LLVM_DEBUG(dbgs() << "\tdst = " << *Pair[P].Dst << "\n");
+    LLVM_DEBUG(dbgs() << "\tclass = " << Pair[P].Classification << "\n");
+    LLVM_DEBUG(dbgs() << "\tloops = ");
+    LLVM_DEBUG(dumpSmallBitVector(Pair[P].Loops));
   }
 
   SmallBitVector Separable(Pairs);
@@ -3485,25 +3492,25 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     }
   }
 
-  DEBUG(dbgs() << "    Separable = ");
-  DEBUG(dumpSmallBitVector(Separable));
-  DEBUG(dbgs() << "    Coupled = ");
-  DEBUG(dumpSmallBitVector(Coupled));
+  LLVM_DEBUG(dbgs() << "    Separable = ");
+  LLVM_DEBUG(dumpSmallBitVector(Separable));
+  LLVM_DEBUG(dbgs() << "    Coupled = ");
+  LLVM_DEBUG(dumpSmallBitVector(Coupled));
 
   Constraint NewConstraint;
   NewConstraint.setAny(SE);
 
   // test separable subscripts
   for (unsigned SI : Separable.set_bits()) {
-    DEBUG(dbgs() << "testing subscript " << SI);
+    LLVM_DEBUG(dbgs() << "testing subscript " << SI);
     switch (Pair[SI].Classification) {
     case Subscript::ZIV:
-      DEBUG(dbgs() << ", ZIV\n");
+      LLVM_DEBUG(dbgs() << ", ZIV\n");
       if (testZIV(Pair[SI].Src, Pair[SI].Dst, Result))
         return nullptr;
       break;
     case Subscript::SIV: {
-      DEBUG(dbgs() << ", SIV\n");
+      LLVM_DEBUG(dbgs() << ", SIV\n");
       unsigned Level;
       const SCEV *SplitIter = nullptr;
       if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
@@ -3512,12 +3519,12 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       break;
     }
     case Subscript::RDIV:
-      DEBUG(dbgs() << ", RDIV\n");
+      LLVM_DEBUG(dbgs() << ", RDIV\n");
       if (testRDIV(Pair[SI].Src, Pair[SI].Dst, Result))
         return nullptr;
       break;
     case Subscript::MIV:
-      DEBUG(dbgs() << ", MIV\n");
+      LLVM_DEBUG(dbgs() << ", MIV\n");
       if (testMIV(Pair[SI].Src, Pair[SI].Dst, Pair[SI].Loops, Result))
         return nullptr;
       break;
@@ -3528,20 +3535,20 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   if (Coupled.count()) {
     // test coupled subscript groups
-    DEBUG(dbgs() << "starting on coupled subscripts\n");
-    DEBUG(dbgs() << "MaxLevels + 1 = " << MaxLevels + 1 << "\n");
+    LLVM_DEBUG(dbgs() << "starting on coupled subscripts\n");
+    LLVM_DEBUG(dbgs() << "MaxLevels + 1 = " << MaxLevels + 1 << "\n");
     SmallVector<Constraint, 4> Constraints(MaxLevels + 1);
     for (unsigned II = 0; II <= MaxLevels; ++II)
       Constraints[II].setAny(SE);
     for (unsigned SI : Coupled.set_bits()) {
-      DEBUG(dbgs() << "testing subscript group " << SI << " { ");
+      LLVM_DEBUG(dbgs() << "testing subscript group " << SI << " { ");
       SmallBitVector Group(Pair[SI].Group);
       SmallBitVector Sivs(Pairs);
       SmallBitVector Mivs(Pairs);
       SmallBitVector ConstrainedLevels(MaxLevels + 1);
       SmallVector<Subscript *, 4> PairsInGroup;
       for (unsigned SJ : Group.set_bits()) {
-        DEBUG(dbgs() << SJ << " ");
+        LLVM_DEBUG(dbgs() << SJ << " ");
         if (Pair[SJ].Classification == Subscript::SIV)
           Sivs.set(SJ);
         else
@@ -3549,15 +3556,15 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
         PairsInGroup.push_back(&Pair[SJ]);
       }
       unifySubscriptType(PairsInGroup);
-      DEBUG(dbgs() << "}\n");
+      LLVM_DEBUG(dbgs() << "}\n");
       while (Sivs.any()) {
         bool Changed = false;
         for (unsigned SJ : Sivs.set_bits()) {
-          DEBUG(dbgs() << "testing subscript " << SJ << ", SIV\n");
+          LLVM_DEBUG(dbgs() << "testing subscript " << SJ << ", SIV\n");
           // SJ is an SIV subscript that's part of the current coupled group
           unsigned Level;
           const SCEV *SplitIter = nullptr;
-          DEBUG(dbgs() << "SIV\n");
+          LLVM_DEBUG(dbgs() << "SIV\n");
           if (testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
                       SplitIter))
             return nullptr;
@@ -3573,15 +3580,15 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
         }
         if (Changed) {
           // propagate, possibly creating new SIVs and ZIVs
-          DEBUG(dbgs() << "    propagating\n");
-          DEBUG(dbgs() << "\tMivs = ");
-          DEBUG(dumpSmallBitVector(Mivs));
+          LLVM_DEBUG(dbgs() << "    propagating\n");
+          LLVM_DEBUG(dbgs() << "\tMivs = ");
+          LLVM_DEBUG(dumpSmallBitVector(Mivs));
           for (unsigned SJ : Mivs.set_bits()) {
             // SJ is an MIV subscript that's part of the current coupled group
-            DEBUG(dbgs() << "\tSJ = " << SJ << "\n");
+            LLVM_DEBUG(dbgs() << "\tSJ = " << SJ << "\n");
             if (propagate(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops,
                           Constraints, Result.Consistent)) {
-              DEBUG(dbgs() << "\t    Changed\n");
+              LLVM_DEBUG(dbgs() << "\t    Changed\n");
               ++DeltaPropagations;
               Pair[SJ].Classification =
                 classifyPair(Pair[SJ].Src, LI->getLoopFor(Src->getParent()),
@@ -3589,7 +3596,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                              Pair[SJ].Loops);
               switch (Pair[SJ].Classification) {
               case Subscript::ZIV:
-                DEBUG(dbgs() << "ZIV\n");
+                LLVM_DEBUG(dbgs() << "ZIV\n");
                 if (testZIV(Pair[SJ].Src, Pair[SJ].Dst, Result))
                   return nullptr;
                 Mivs.reset(SJ);
@@ -3612,7 +3619,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       // test & propagate remaining RDIVs
       for (unsigned SJ : Mivs.set_bits()) {
         if (Pair[SJ].Classification == Subscript::RDIV) {
-          DEBUG(dbgs() << "RDIV test\n");
+          LLVM_DEBUG(dbgs() << "RDIV test\n");
           if (testRDIV(Pair[SJ].Src, Pair[SJ].Dst, Result))
             return nullptr;
           // I don't yet understand how to propagate RDIV results
@@ -3625,7 +3632,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       // Better to somehow test all remaining subscripts simultaneously.
       for (unsigned SJ : Mivs.set_bits()) {
         if (Pair[SJ].Classification == Subscript::MIV) {
-          DEBUG(dbgs() << "MIV test\n");
+          LLVM_DEBUG(dbgs() << "MIV test\n");
           if (testMIV(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops, Result))
             return nullptr;
         }
@@ -3634,7 +3641,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       }
 
       // update Result.DV from constraint vector
-      DEBUG(dbgs() << "    updating\n");
+      LLVM_DEBUG(dbgs() << "    updating\n");
       for (unsigned SJ : ConstrainedLevels.set_bits()) {
         if (SJ > CommonLevels)
           break;
@@ -3760,7 +3767,7 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
 
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
-      DEBUG(dbgs() << "    delinearized\n");
+      LLVM_DEBUG(dbgs() << "    delinearized\n");
       Pairs = Pair.size();
     }
   }

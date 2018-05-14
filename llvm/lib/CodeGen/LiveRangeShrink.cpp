@@ -111,7 +111,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  DEBUG(dbgs() << "**** Analysing " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "**** Analysing " << MF.getName() << '\n');
 
   InstOrderMap IOM;
   // Map from register to instruction order (value of IOM) where the

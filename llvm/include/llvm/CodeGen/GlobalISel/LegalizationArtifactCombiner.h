@@ -38,7 +38,7 @@ public:
       return false;
     if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_TRUNC,
                                            MI.getOperand(1).getReg(), MRI)) {
-      DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       unsigned DstReg = MI.getOperand(0).getReg();
       unsigned SrcReg = DefMI->getOperand(1).getReg();
       Builder.setInstr(MI);
@@ -62,7 +62,7 @@ public:
       if (isInstUnsupported({TargetOpcode::G_AND, {DstTy}}) ||
           isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
         return false;
-      DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       Builder.setInstr(MI);
       unsigned ZExtSrc = MI.getOperand(1).getReg();
       LLT ZExtSrcTy = MRI.getType(ZExtSrc);
@@ -91,7 +91,7 @@ public:
           isInstUnsupported({TargetOpcode::G_ASHR, {DstTy}}) ||
           isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
         return false;
-      DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       Builder.setInstr(MI);
       unsigned SExtSrc = MI.getOperand(1).getReg();
       LLT SExtSrcTy = MRI.getType(SExtSrc);
@@ -123,7 +123,7 @@ public:
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
         return false;
-      DEBUG(dbgs() << ".. Combine EXT(IMPLICIT_DEF) " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine EXT(IMPLICIT_DEF) " << MI;);
       Builder.setInstr(MI);
       Builder.buildInstr(TargetOpcode::G_IMPLICIT_DEF, DstReg);
       markInstAndDefDead(MI, *DefMI, DeadInsts);

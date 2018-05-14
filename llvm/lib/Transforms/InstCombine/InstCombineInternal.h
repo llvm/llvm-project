@@ -536,8 +536,8 @@ public:
     if (&I == V)
       V = UndefValue::get(I.getType());
 
-    DEBUG(dbgs() << "IC: Replacing " << I << "\n"
-                 << "    with " << *V << '\n');
+    LLVM_DEBUG(dbgs() << "IC: Replacing " << I << "\n"
+                      << "    with " << *V << '\n');
 
     I.replaceAllUsesWith(V);
     return &I;
@@ -559,7 +559,7 @@ public:
   /// value, we can't rely on DCE to delete the instruction. Instead, visit
   /// methods should return the value returned by this function.
   Instruction *eraseInstFromFunction(Instruction &I) {
-    DEBUG(dbgs() << "IC: ERASE " << I << '\n');
+    LLVM_DEBUG(dbgs() << "IC: ERASE " << I << '\n');
     assert(I.use_empty() && "Cannot erase instruction that is used!");
     salvageDebugInfo(I);
 

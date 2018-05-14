@@ -220,8 +220,8 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   if (!DefMI->isSafeToMove(nullptr, SawStore))
     return false;
 
-  DEBUG(dbgs() << "Try to fold single def: " << *DefMI
-               << "       into single use: " << *UseMI);
+  LLVM_DEBUG(dbgs() << "Try to fold single def: " << *DefMI
+                    << "       into single use: " << *UseMI);
 
   SmallVector<unsigned, 8> Ops;
   if (UseMI->readsWritesVirtualRegister(LI->reg, &Ops).second)
@@ -230,7 +230,7 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   MachineInstr *FoldMI = TII.foldMemoryOperand(*UseMI, Ops, *DefMI, &LIS);
   if (!FoldMI)
     return false;
-  DEBUG(dbgs() << "                folded: " << *FoldMI);
+  LLVM_DEBUG(dbgs() << "                folded: " << *FoldMI);
   LIS.ReplaceMachineInstrInMaps(*UseMI, *FoldMI);
   UseMI->eraseFromParent();
   DefMI->addRegisterDead(LI->reg, nullptr);
@@ -267,18 +267,18 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
   }
   // Never delete inline asm.
   if (MI->isInlineAsm()) {
-    DEBUG(dbgs() << "Won't delete: " << Idx << '\t' << *MI);
+    LLVM_DEBUG(dbgs() << "Won't delete: " << Idx << '\t' << *MI);
     return;
   }
 
   // Use the same criteria as DeadMachineInstructionElim.
   bool SawStore = false;
   if (!MI->isSafeToMove(nullptr, SawStore)) {
-    DEBUG(dbgs() << "Can't delete: " << Idx << '\t' << *MI);
+    LLVM_DEBUG(dbgs() << "Can't delete: " << Idx << '\t' << *MI);
     return;
   }
 
-  DEBUG(dbgs() << "Deleting dead def " << Idx << '\t' << *MI);
+  LLVM_DEBUG(dbgs() << "Deleting dead def " << Idx << '\t' << *MI);
 
   // Collect virtual registers to be erased after MI is gone.
   SmallVector<unsigned, 8> RegsToErase;
@@ -352,7 +352,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
         continue;
       MI->RemoveOperand(i-1);
     }
-    DEBUG(dbgs() << "Converted physregs to:\t" << *MI);
+    LLVM_DEBUG(dbgs() << "Converted physregs to:\t" << *MI);
   } else {
     // If the dest of MI is an original reg and MI is reMaterializable,
     // don't delete the inst. Replace the dest with a new reg, and keep
@@ -465,7 +465,7 @@ LiveRangeEdit::calculateRegClassAndHint(MachineFunction &MF,
   for (unsigned I = 0, Size = size(); I < Size; ++I) {
     LiveInterval &LI = LIS.getInterval(get(I));
     if (MRI.recomputeRegClass(LI.reg))
-      DEBUG({
+      LLVM_DEBUG({
         const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
         dbgs() << "Inflated " << printReg(LI.reg) << " to "
                << TRI->getRegClassName(MRI.getRegClass(LI.reg)) << '\n';

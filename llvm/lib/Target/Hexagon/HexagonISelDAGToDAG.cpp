@@ -1892,15 +1892,15 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
     RootHeights[N] = std::max(getHeight(N->getOperand(0).getNode()),
                               getHeight(N->getOperand(1).getNode())) + 1;
 
-    DEBUG(dbgs() << "--> No need to balance root (Weight=" << Weight
-                 << " Height=" << RootHeights[N] << "): ");
-    DEBUG(N->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "--> No need to balance root (Weight=" << Weight
+                      << " Height=" << RootHeights[N] << "): ");
+    LLVM_DEBUG(N->dump(CurDAG));
 
     return SDValue(N, 0);
   }
 
-  DEBUG(dbgs() << "** Balancing root node: ");
-  DEBUG(N->dump(CurDAG));
+  LLVM_DEBUG(dbgs() << "** Balancing root node: ");
+  LLVM_DEBUG(N->dump(CurDAG));
 
   unsigned NOpcode = N->getOpcode();
 
@@ -1948,7 +1948,7 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
         // Whoops, this node was RAUWd by one of the balanceSubTree calls we
         // made. Our worklist isn't up to date anymore.
         // Restart the whole process.
-        DEBUG(dbgs() << "--> Subtree was RAUWd. Restarting...\n");
+        LLVM_DEBUG(dbgs() << "--> Subtree was RAUWd. Restarting...\n");
         return balanceSubTree(N, TopLevel);
       }
 
@@ -2019,15 +2019,15 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
     }
   }
 
-  DEBUG(dbgs() << "--> Current height=" << NodeHeights[SDValue(N, 0)]
-               << " weight=" << CurrentWeight << " imbalanced="
-               << Imbalanced << "\n");
+  LLVM_DEBUG(dbgs() << "--> Current height=" << NodeHeights[SDValue(N, 0)]
+                    << " weight=" << CurrentWeight
+                    << " imbalanced=" << Imbalanced << "\n");
 
   // Transform MUL(x, C * 2^Y) + SHL(z, Y) -> SHL(ADD(MUL(x, C), z), Y)
   //  This factors out a shift in order to match memw(a<<Y+b).
   if (CanFactorize && (willShiftRightEliminate(Mul1.Value, MaxPowerOf2) ||
                        willShiftRightEliminate(Mul2.Value, MaxPowerOf2))) {
-    DEBUG(dbgs() << "--> Found common factor for two MUL children!\n");
+    LLVM_DEBUG(dbgs() << "--> Found common factor for two MUL children!\n");
     int Weight = Mul1.Weight + Mul2.Weight;
     int Height = std::max(NodeHeights[Mul1.Value], NodeHeights[Mul2.Value]) + 1;
     SDValue Mul1Factored = factorOutPowerOf2(Mul1.Value, MaxPowerOf2);
@@ -2061,9 +2061,9 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
 
     if (getUsesInFunction(GANode->getGlobal()) == 1 && Offset->hasOneUse() &&
         getTargetLowering()->isOffsetFoldingLegal(GANode)) {
-      DEBUG(dbgs() << "--> Combining GA and offset (" << Offset->getSExtValue()
-          << "): ");
-      DEBUG(GANode->dump(CurDAG));
+      LLVM_DEBUG(dbgs() << "--> Combining GA and offset ("
+                        << Offset->getSExtValue() << "): ");
+      LLVM_DEBUG(GANode->dump(CurDAG));
 
       SDValue NewTGA =
         CurDAG->getTargetGlobalAddress(GANode->getGlobal(), SDLoc(GA.Value),
@@ -2107,7 +2107,7 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
   // If this is the top level and we haven't factored out a shift, we should try
   // to move a constant to the bottom to match addressing modes like memw(rX+C)
   if (TopLevel && !CanFactorize && Leaves.hasConst()) {
-    DEBUG(dbgs() << "--> Pushing constant to tip of tree.");
+    LLVM_DEBUG(dbgs() << "--> Pushing constant to tip of tree.");
     Leaves.pushToBottom(Leaves.pop());
   }
 
@@ -2134,7 +2134,7 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
     // Make sure that none of these nodes have been RAUW'd
     if ((RootWeights.count(V0.getNode()) && RootWeights[V0.getNode()] == -2) ||
         (RootWeights.count(V1.getNode()) && RootWeights[V1.getNode()] == -2)) {
-      DEBUG(dbgs() << "--> Subtree was RAUWd. Restarting...\n");
+      LLVM_DEBUG(dbgs() << "--> Subtree was RAUWd. Restarting...\n");
       return balanceSubTree(N, TopLevel);
     }
 
@@ -2168,9 +2168,9 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
     int Weight = V0Weight + V1Weight;
     Leaves.push(WeightedLeaf(NewNode, Weight, L0.InsertionOrder));
 
-    DEBUG(dbgs() << "--> Built new node (Weight=" << Weight << ",Height="
-                 << Height << "):\n");
-    DEBUG(NewNode.dump());
+    LLVM_DEBUG(dbgs() << "--> Built new node (Weight=" << Weight
+                      << ",Height=" << Height << "):\n");
+    LLVM_DEBUG(NewNode.dump());
   }
 
   assert(Leaves.size() == 1);
@@ -2194,15 +2194,15 @@ SDValue HexagonDAGToDAGISel::balanceSubTree(SDNode *N, bool TopLevel) {
   }
 
   if (N != NewRoot.getNode()) {
-    DEBUG(dbgs() << "--> Root is now: ");
-    DEBUG(NewRoot.dump());
+    LLVM_DEBUG(dbgs() << "--> Root is now: ");
+    LLVM_DEBUG(NewRoot.dump());
 
     // Replace all uses of old root by new root
     CurDAG->ReplaceAllUsesWith(N, NewRoot.getNode());
     // Mark that we have RAUW'd N
     RootWeights[N] = -2;
   } else {
-    DEBUG(dbgs() << "--> Root unchanged.\n");
+    LLVM_DEBUG(dbgs() << "--> Root unchanged.\n");
   }
 
   RootWeights[NewRoot.getNode()] = Leaves.top().Weight;
@@ -2225,8 +2225,8 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
     if (RootWeights.count(BasePtr.getNode()))
       continue;
 
-    DEBUG(dbgs() << "** Rebalancing address calculation in node: ");
-    DEBUG(N->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "** Rebalancing address calculation in node: ");
+    LLVM_DEBUG(N->dump(CurDAG));
 
     // FindRoots
     SmallVector<SDNode *, 4> Worklist;
@@ -2266,8 +2266,8 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
       N = CurDAG->UpdateNodeOperands(N, N->getOperand(0), N->getOperand(1),
             NewBasePtr, N->getOperand(3));
 
-    DEBUG(dbgs() << "--> Final node: ");
-    DEBUG(N->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "--> Final node: ");
+    LLVM_DEBUG(N->dump(CurDAG));
   }
 
   CurDAG->RemoveDeadNodes();

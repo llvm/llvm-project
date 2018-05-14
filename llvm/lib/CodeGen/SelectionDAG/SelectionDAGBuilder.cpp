@@ -1102,7 +1102,8 @@ void SelectionDAGBuilder::dropDanglingDebugInfo(const DILocalVariable *Variable,
         DIExpression *DanglingExpr = DI->getExpression();
         if (DanglingVariable == Variable &&
             Expr->fragmentsOverlap(DanglingExpr)) {
-          DEBUG(dbgs() << "Dropping dangling debug info for " << *DI << "\n");
+          LLVM_DEBUG(dbgs()
+                     << "Dropping dangling debug info for " << *DI << "\n");
           DDI = DanglingDebugInfo();
         }
       }
@@ -1127,24 +1128,24 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
     SDDbgValue *SDV;
     if (Val.getNode()) {
       if (!EmitFuncArgumentDbgValue(V, Variable, Expr, dl, false, Val)) {
-        DEBUG(dbgs() << "Resolve dangling debug info [order=" << DbgSDNodeOrder
-              << "] for:\n  " << *DI << "\n");
-        DEBUG(dbgs() << "  By mapping to:\n    "; Val.dump());
+        LLVM_DEBUG(dbgs() << "Resolve dangling debug info [order="
+                          << DbgSDNodeOrder << "] for:\n  " << *DI << "\n");
+        LLVM_DEBUG(dbgs() << "  By mapping to:\n    "; Val.dump());
         // Increase the SDNodeOrder for the DbgValue here to make sure it is
         // inserted after the definition of Val when emitting the instructions
         // after ISel. An alternative could be to teach
         // ScheduleDAGSDNodes::EmitSchedule to delay the insertion properly.
-        DEBUG(if (ValSDNodeOrder > DbgSDNodeOrder)
-                dbgs() << "changing SDNodeOrder from " << DbgSDNodeOrder
-                       << " to " << ValSDNodeOrder << "\n");
+        LLVM_DEBUG(if (ValSDNodeOrder > DbgSDNodeOrder) dbgs()
+                   << "changing SDNodeOrder from " << DbgSDNodeOrder << " to "
+                   << ValSDNodeOrder << "\n");
         SDV = getDbgValue(Val, Variable, Expr, dl,
                           std::max(DbgSDNodeOrder, ValSDNodeOrder));
         DAG.AddDbgValue(SDV, Val.getNode(), false);
       } else
-        DEBUG(dbgs() << "Resolved dangling debug info for " << *DI
-              << "in EmitFuncArgumentDbgValue\n");
+        LLVM_DEBUG(dbgs() << "Resolved dangling debug info for " << *DI
+                          << "in EmitFuncArgumentDbgValue\n");
     } else
-      DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
   }
   DanglingDebugInfoMap[V].clear();
 }
@@ -2750,7 +2751,7 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
   }
   if (isVectorReductionOp(&I)) {
     Flags.setVectorReduction(true);
-    DEBUG(dbgs() << "Detected a reduction operation:" << I << "\n");
+    LLVM_DEBUG(dbgs() << "Detected a reduction operation:" << I << "\n");
   }
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     Flags.copyFMF(*FPOp);
@@ -5142,7 +5143,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     const Value *Address = DI.getVariableLocation();
     if (!Address || isa<UndefValue>(Address) ||
         (Address->use_empty() && !isa<Argument>(Address))) {
-      DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
       return nullptr;
     }
 
@@ -5204,7 +5205,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       // virtual register info from the FuncInfo.ValueMap.
       if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl, true,
                                     N)) {
-        DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
+        LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
       }
     }
     return nullptr;
@@ -5307,8 +5308,8 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       return nullptr;
     }
 
-    DEBUG(dbgs() << "Dropping debug location info for:\n  " << DI << "\n");
-    DEBUG(dbgs() << "  Last seen at:\n    " << *V << "\n");
+    LLVM_DEBUG(dbgs() << "Dropping debug location info for:\n  " << DI << "\n");
+    LLVM_DEBUG(dbgs() << "  Last seen at:\n    " << *V << "\n");
     return nullptr;
   }
 
@@ -8629,7 +8630,8 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
       continue;
     }
 
-    DEBUG(dbgs() << "Found argument copy elision candidate: " << *AI << '\n');
+    LLVM_DEBUG(dbgs() << "Found argument copy elision candidate: " << *AI
+                      << '\n');
 
     // Mark this alloca and store for argument copy elision.
     *Info = StaticAllocaInfo::Elidable;
@@ -8670,8 +8672,9 @@ static void tryToElideArgumentCopy(
   int OldIndex = AllocaIndex;
   MachineFrameInfo &MFI = FuncInfo->MF->getFrameInfo();
   if (MFI.getObjectSize(FixedIndex) != MFI.getObjectSize(OldIndex)) {
-    DEBUG(dbgs() << "  argument copy elision failed due to bad fixed stack "
-                    "object size\n");
+    LLVM_DEBUG(
+        dbgs() << "  argument copy elision failed due to bad fixed stack "
+                  "object size\n");
     return;
   }
   unsigned RequiredAlignment = AI->getAlignment();
@@ -8680,16 +8683,16 @@ static void tryToElideArgumentCopy(
         AI->getAllocatedType());
   }
   if (MFI.getObjectAlignment(FixedIndex) < RequiredAlignment) {
-    DEBUG(dbgs() << "  argument copy elision failed: alignment of alloca "
-                    "greater than stack argument alignment ("
-                 << RequiredAlignment << " vs "
-                 << MFI.getObjectAlignment(FixedIndex) << ")\n");
+    LLVM_DEBUG(dbgs() << "  argument copy elision failed: alignment of alloca "
+                         "greater than stack argument alignment ("
+                      << RequiredAlignment << " vs "
+                      << MFI.getObjectAlignment(FixedIndex) << ")\n");
     return;
   }
 
   // Perform the elision. Delete the old stack object and replace its only use
   // in the variable info map. Mark the stack object as mutable.
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Eliding argument copy from " << Arg << " to " << *AI << '\n'
            << "  Replacing frame index " << OldIndex << " with " << FixedIndex
            << '\n';
@@ -8861,14 +8864,14 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
          "LowerFormalArguments didn't return a valid chain!");
   assert(InVals.size() == Ins.size() &&
          "LowerFormalArguments didn't emit the correct number of values!");
-  DEBUG({
-      for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
-        assert(InVals[i].getNode() &&
-               "LowerFormalArguments emitted a null value!");
-        assert(EVT(Ins[i].VT) == InVals[i].getValueType() &&
-               "LowerFormalArguments emitted a value with the wrong type!");
-      }
-    });
+  LLVM_DEBUG({
+    for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
+      assert(InVals[i].getNode() &&
+             "LowerFormalArguments emitted a null value!");
+      assert(EVT(Ins[i].VT) == InVals[i].getValueType() &&
+             "LowerFormalArguments emitted a value with the wrong type!");
+    }
+  });
 
   // Update the DAG with the new chain value resulting from argument lowering.
   DAG.setRoot(NewRoot);
@@ -10012,8 +10015,8 @@ MachineBasicBlock *SelectionDAGBuilder::peelDominantCaseCluster(
   if (!SwitchPeeled)
     return SwitchMBB;
 
-  DEBUG(dbgs() << "Peeled one top case in switch stmt, prob: " << TopCaseProb
-               << "\n");
+  LLVM_DEBUG(dbgs() << "Peeled one top case in switch stmt, prob: "
+                    << TopCaseProb << "\n");
 
   // Record the MBB for the peeled switch statement.
   MachineFunction::iterator BBI(SwitchMBB);
@@ -10030,10 +10033,11 @@ MachineBasicBlock *SelectionDAGBuilder::peelDominantCaseCluster(
 
   Clusters.erase(PeeledCaseIt);
   for (CaseCluster &CC : Clusters) {
-    DEBUG(dbgs() << "Scale the probablity for one cluster, before scaling: "
-                 << CC.Prob << "\n");
+    LLVM_DEBUG(
+        dbgs() << "Scale the probablity for one cluster, before scaling: "
+               << CC.Prob << "\n");
     CC.Prob = scaleCaseProbality(CC.Prob, TopCaseProb);
-    DEBUG(dbgs() << "After scaling: " << CC.Prob << "\n");
+    LLVM_DEBUG(dbgs() << "After scaling: " << CC.Prob << "\n");
   }
   PeeledCaseProb = TopCaseProb;
   return PeeledSwitchMBB;
@@ -10112,11 +10116,13 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
   findJumpTables(Clusters, &SI, DefaultMBB);
   findBitTestClusters(Clusters, &SI);
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Case clusters: ";
     for (const CaseCluster &C : Clusters) {
-      if (C.Kind == CC_JumpTable) dbgs() << "JT:";
-      if (C.Kind == CC_BitTests) dbgs() << "BT:";
+      if (C.Kind == CC_JumpTable)
+        dbgs() << "JT:";
+      if (C.Kind == CC_BitTests)
+        dbgs() << "BT:";
 
       C.Low->getValue().print(dbgs(), true);
       if (C.Low != C.High) {

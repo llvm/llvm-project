@@ -205,7 +205,7 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
     // Make sure that the first block is not a landing pad.
     if (BB == Result.front()) {
       if (BB->isEHPad()) {
-        DEBUG(dbgs() << "The first block cannot be an unwind block\n");
+        LLVM_DEBUG(dbgs() << "The first block cannot be an unwind block\n");
         return {};
       }
       continue;
@@ -215,8 +215,9 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
     // the subgraph which is being extracted.
     for (auto *PBB : predecessors(BB))
       if (!Result.count(PBB)) {
-        DEBUG(dbgs() << "No blocks in this region may have entries from "
-                         "outside the region except for the first block!\n");
+        LLVM_DEBUG(
+            dbgs() << "No blocks in this region may have entries from "
+                      "outside the region except for the first block!\n");
         return {};
       }
   }
@@ -623,8 +624,8 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
                                            BasicBlock *newHeader,
                                            Function *oldFunction,
                                            Module *M) {
-  DEBUG(dbgs() << "inputs: " << inputs.size() << "\n");
-  DEBUG(dbgs() << "outputs: " << outputs.size() << "\n");
+  LLVM_DEBUG(dbgs() << "inputs: " << inputs.size() << "\n");
+  LLVM_DEBUG(dbgs() << "outputs: " << outputs.size() << "\n");
 
   // This function returns unsigned, outputs will go back by reference.
   switch (NumExitBlocks) {
@@ -638,20 +639,20 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
 
   // Add the types of the input values to the function's argument list
   for (Value *value : inputs) {
-    DEBUG(dbgs() << "value used in func: " << *value << "\n");
+    LLVM_DEBUG(dbgs() << "value used in func: " << *value << "\n");
     paramTy.push_back(value->getType());
   }
 
   // Add the types of the output values to the function's argument list.
   for (Value *output : outputs) {
-    DEBUG(dbgs() << "instr used in func: " << *output << "\n");
+    LLVM_DEBUG(dbgs() << "instr used in func: " << *output << "\n");
     if (AggregateArgs)
       paramTy.push_back(output->getType());
     else
       paramTy.push_back(PointerType::getUnqual(output->getType()));
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Function type: " << *RetTy << " f(";
     for (Type *i : paramTy)
       dbgs() << *i << ", ";
@@ -1277,7 +1278,7 @@ Function *CodeExtractor::extractCodeRegion() {
         }
     }
 
-  DEBUG(if (verifyFunction(*newFunction)) 
-        report_fatal_error("verifyFunction failed!"));
+  LLVM_DEBUG(if (verifyFunction(*newFunction))
+                 report_fatal_error("verifyFunction failed!"));
   return newFunction;
 }

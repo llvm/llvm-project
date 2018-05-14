@@ -177,7 +177,7 @@ bool WebAssemblyFixIrreducibleControlFlow::VisitLoop(MachineFunction &MF,
   if (LLVM_LIKELY(RewriteSuccs.empty()))
     return false;
 
-  DEBUG(dbgs() << "Irreducible control flow detected!\n");
+  LLVM_DEBUG(dbgs() << "Irreducible control flow detected!\n");
 
   // Ok. We have irreducible control flow! Create a dispatch block which will
   // contains a jump table to any block in the problematic set of blocks.
@@ -208,7 +208,8 @@ bool WebAssemblyFixIrreducibleControlFlow::VisitLoop(MachineFunction &MF,
       continue;
 
     unsigned Index = MIB.getInstr()->getNumExplicitOperands() - 1;
-    DEBUG(dbgs() << printMBBReference(*MBB) << " has index " << Index << "\n");
+    LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has index " << Index
+                      << "\n");
 
     Pair.first->second = Index;
     for (auto Pred : MBB->predecessors())
@@ -267,9 +268,9 @@ bool WebAssemblyFixIrreducibleControlFlow::VisitLoop(MachineFunction &MF,
 
 bool WebAssemblyFixIrreducibleControlFlow::runOnMachineFunction(
     MachineFunction &MF) {
-  DEBUG(dbgs() << "********** Fixing Irreducible Control Flow **********\n"
-                  "********** Function: "
-               << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** Fixing Irreducible Control Flow **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
 
   bool Changed = false;
   auto &MLI = getAnalysis<MachineLoopInfo>();
@@ -287,7 +288,7 @@ bool WebAssemblyFixIrreducibleControlFlow::runOnMachineFunction(
 
   // If we made any changes, completely recompute everything.
   if (LLVM_UNLIKELY(Changed)) {
-    DEBUG(dbgs() << "Recomputing dominators and loops.\n");
+    LLVM_DEBUG(dbgs() << "Recomputing dominators and loops.\n");
     MF.getRegInfo().invalidateLiveness();
     MF.RenumberBlocks();
     getAnalysis<MachineDominatorTree>().runOnMachineFunction(MF);

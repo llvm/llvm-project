@@ -480,8 +480,8 @@ void LiveDebugValues::transferSpillInst(MachineInstr &MI,
   // Check if the register is the location of a debug value.
   for (unsigned ID : OpenRanges.getVarLocs()) {
     if (VarLocIDs[ID].isDescribedByReg() == Reg) {
-      DEBUG(dbgs() << "Spilling Register " << printReg(Reg, TRI) << '('
-                   << VarLocIDs[ID].Var.getVar()->getName() << ")\n");
+      LLVM_DEBUG(dbgs() << "Spilling Register " << printReg(Reg, TRI) << '('
+                        << VarLocIDs[ID].Var.getVar()->getName() << ")\n");
 
       // Create a DBG_VALUE instruction to describe the Var in its spilled
       // location, but don't insert it yet to avoid invalidating the
@@ -494,8 +494,8 @@ void LiveDebugValues::transferSpillInst(MachineInstr &MI,
       MachineInstr *SpDMI =
           BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(), true, SpillBase,
                   DMI->getDebugVariable(), SpillExpr);
-      DEBUG(dbgs() << "Creating DBG_VALUE inst for spill: ";
-            SpDMI->print(dbgs(), false, TII));
+      LLVM_DEBUG(dbgs() << "Creating DBG_VALUE inst for spill: ";
+                 SpDMI->print(dbgs(), false, TII));
 
       // The newly created DBG_VALUE instruction SpDMI must be inserted after
       // MI. Keep track of the pairing.
@@ -527,10 +527,12 @@ bool LiveDebugValues::transferTerminatorInst(MachineInstr &MI,
   if (OpenRanges.empty())
     return false;
 
-  DEBUG(for (unsigned ID : OpenRanges.getVarLocs()) {
-          // Copy OpenRanges to OutLocs, if not already present.
-          dbgs() << "Add to OutLocs: "; VarLocIDs[ID].dump();
-        });
+  LLVM_DEBUG(for (unsigned ID
+                  : OpenRanges.getVarLocs()) {
+    // Copy OpenRanges to OutLocs, if not already present.
+    dbgs() << "Add to OutLocs: ";
+    VarLocIDs[ID].dump();
+  });
   VarLocSet &VLS = OutLocs[CurMBB];
   Changed = VLS |= OpenRanges.getVarLocs();
   OpenRanges.clear();
@@ -556,7 +558,7 @@ bool LiveDebugValues::transfer(MachineInstr &MI, OpenRangesSet &OpenRanges,
 bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
                            VarLocInMBB &InLocs, const VarLocMap &VarLocIDs,
                            SmallPtrSet<const MachineBasicBlock *, 16> &Visited) {
-  DEBUG(dbgs() << "join MBB: " << MBB.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "join MBB: " << MBB.getName() << "\n");
   bool Changed = false;
 
   VarLocSet InLocsT; // Temporary incoming locations.
@@ -616,7 +618,7 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
                 DMI->getDebugVariable(), DMI->getDebugExpression());
     if (DMI->isIndirectDebugValue())
       MI->getOperand(1).setImm(DMI->getOperand(1).getImm());
-    DEBUG(dbgs() << "Inserted: "; MI->dump(););
+    LLVM_DEBUG(dbgs() << "Inserted: "; MI->dump(););
     ILS.set(ID);
     ++NumInserted;
     Changed = true;
@@ -627,7 +629,7 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
 bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
-  DEBUG(dbgs() << "\nDebug Range Extension\n");
+  LLVM_DEBUG(dbgs() << "\nDebug Range Extension\n");
 
   bool Changed = false;
   bool OLChanged = false;
@@ -658,8 +660,8 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
       transfer(MI, OpenRanges, OutLocs, VarLocIDs, Spills,
                /*transferSpills=*/false);
 
-  DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs, "OutLocs after initialization",
-                         dbgs()));
+  LLVM_DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs,
+                              "OutLocs after initialization", dbgs()));
 
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
   unsigned int RPONumber = 0;
@@ -679,7 +681,7 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
     // thing twice.  We could avoid this with a custom priority queue, but this
     // is probably not worth it.
     SmallPtrSet<MachineBasicBlock *, 16> OnPending;
-    DEBUG(dbgs() << "Processing Worklist\n");
+    LLVM_DEBUG(dbgs() << "Processing Worklist\n");
     while (!Worklist.empty()) {
       MachineBasicBlock *MBB = OrderToBB[Worklist.top()];
       Worklist.pop();
@@ -701,10 +703,10 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
                            SP.DebugInst);
         Spills.clear();
 
-        DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs,
-                               "OutLocs after propagating", dbgs()));
-        DEBUG(printVarLocInMBB(MF, InLocs, VarLocIDs,
-                               "InLocs after propagating", dbgs()));
+        LLVM_DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs,
+                                    "OutLocs after propagating", dbgs()));
+        LLVM_DEBUG(printVarLocInMBB(MF, InLocs, VarLocIDs,
+                                    "InLocs after propagating", dbgs()));
 
         if (OLChanged) {
           OLChanged = false;
@@ -721,8 +723,8 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
     assert(Pending.empty() && "Pending should be empty");
   }
 
-  DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs, "Final OutLocs", dbgs()));
-  DEBUG(printVarLocInMBB(MF, InLocs, VarLocIDs, "Final InLocs", dbgs()));
+  LLVM_DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs, "Final OutLocs", dbgs()));
+  LLVM_DEBUG(printVarLocInMBB(MF, InLocs, VarLocIDs, "Final InLocs", dbgs()));
   return Changed;
 }
 

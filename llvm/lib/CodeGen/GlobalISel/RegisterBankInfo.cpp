@@ -73,7 +73,7 @@ bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
     const RegisterBank &RegBank = getRegBank(Idx);
     assert(Idx == RegBank.getID() &&
            "ID does not match the index in the array");
-    DEBUG(dbgs() << "Verify " << RegBank << '\n');
+    LLVM_DEBUG(dbgs() << "Verify " << RegBank << '\n');
     assert(RegBank.verify(TRI) && "RegBank is invalid");
   }
 #endif // NDEBUG
@@ -404,18 +404,18 @@ RegisterBankInfo::getInstrAlternativeMappings(const MachineInstr &MI) const {
 void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
   MachineInstr &MI = OpdMapper.getMI();
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
-  DEBUG(dbgs() << "Applying default-like mapping\n");
+  LLVM_DEBUG(dbgs() << "Applying default-like mapping\n");
   for (unsigned OpIdx = 0,
                 EndIdx = OpdMapper.getInstrMapping().getNumOperands();
        OpIdx != EndIdx; ++OpIdx) {
-    DEBUG(dbgs() << "OpIdx " << OpIdx);
+    LLVM_DEBUG(dbgs() << "OpIdx " << OpIdx);
     MachineOperand &MO = MI.getOperand(OpIdx);
     if (!MO.isReg()) {
-      DEBUG(dbgs() << " is not a register, nothing to be done\n");
+      LLVM_DEBUG(dbgs() << " is not a register, nothing to be done\n");
       continue;
     }
     if (!MO.getReg()) {
-      DEBUG(dbgs() << " is %%noreg, nothing to be done\n");
+      LLVM_DEBUG(dbgs() << " is %%noreg, nothing to be done\n");
       continue;
     }
     assert(OpdMapper.getInstrMapping().getOperandMapping(OpIdx).NumBreakDowns !=
@@ -427,14 +427,14 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
     iterator_range<SmallVectorImpl<unsigned>::const_iterator> NewRegs =
         OpdMapper.getVRegs(OpIdx);
     if (NewRegs.begin() == NewRegs.end()) {
-      DEBUG(dbgs() << " has not been repaired, nothing to be done\n");
+      LLVM_DEBUG(dbgs() << " has not been repaired, nothing to be done\n");
       continue;
     }
     unsigned OrigReg = MO.getReg();
     unsigned NewReg = *NewRegs.begin();
-    DEBUG(dbgs() << " changed, replace " << printReg(OrigReg, nullptr));
+    LLVM_DEBUG(dbgs() << " changed, replace " << printReg(OrigReg, nullptr));
     MO.setReg(NewReg);
-    DEBUG(dbgs() << " with " << printReg(NewReg, nullptr));
+    LLVM_DEBUG(dbgs() << " with " << printReg(NewReg, nullptr));
 
     // The OperandsMapper creates plain scalar, we may have to fix that.
     // Check if the types match and if not, fix that.
@@ -448,11 +448,11 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
       assert(OrigTy.getSizeInBits() <= NewTy.getSizeInBits() &&
              "Types with difference size cannot be handled by the default "
              "mapping");
-      DEBUG(dbgs() << "\nChange type of new opd from " << NewTy << " to "
-                   << OrigTy);
+      LLVM_DEBUG(dbgs() << "\nChange type of new opd from " << NewTy << " to "
+                        << OrigTy);
       MRI.setType(NewReg, OrigTy);
     }
-    DEBUG(dbgs() << '\n');
+    LLVM_DEBUG(dbgs() << '\n');
   }
 }
 

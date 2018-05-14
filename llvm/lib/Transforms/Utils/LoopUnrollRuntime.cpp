@@ -418,8 +418,9 @@ canSafelyUnrollMultiExitLoop(Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits,
   // UnrollRuntimeMultiExit is true. This will need updating the logic in
   // connectEpilog/connectProlog.
   if (!LatchExit->getSinglePredecessor()) {
-    DEBUG(dbgs() << "Bailout for multi-exit handling when latch exit has >1 "
-                    "predecessor.\n");
+    LLVM_DEBUG(
+        dbgs() << "Bailout for multi-exit handling when latch exit has >1 "
+                  "predecessor.\n");
     return false;
   }
   // FIXME: We bail out of multi-exit unrolling when epilog loop is generated
@@ -528,14 +529,14 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                       LoopInfo *LI, ScalarEvolution *SE,
                                       DominatorTree *DT, AssumptionCache *AC,
                                       bool PreserveLCSSA) {
-  DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
-  DEBUG(L->dump());
-  DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n" :
-        dbgs() << "Using prolog remainder.\n");
+  LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
+  LLVM_DEBUG(L->dump());
+  LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
+                                : dbgs() << "Using prolog remainder.\n");
 
   // Make sure the loop is in canonical form.
   if (!L->isLoopSimplifyForm()) {
-    DEBUG(dbgs() << "Not in simplify form!\n");
+    LLVM_DEBUG(dbgs() << "Not in simplify form!\n");
     return false;
   }
 
@@ -561,7 +562,7 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   // Support only single exit and exiting block unless multi-exit loop unrolling is enabled.
   if (!isMultiExitUnrollingEnabled &&
       (!L->getExitingBlock() || OtherExits.size())) {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs()
         << "Multiple exit/exiting blocks in loop and multi-exit unrolling not "
            "enabled!\n");
@@ -581,7 +582,7 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   const SCEV *BECountSC = SE->getExitCount(L, Latch);
   if (isa<SCEVCouldNotCompute>(BECountSC) ||
       !BECountSC->getType()->isIntegerTy()) {
-    DEBUG(dbgs() << "Could not compute exit block SCEV\n");
+    LLVM_DEBUG(dbgs() << "Could not compute exit block SCEV\n");
     return false;
   }
 
@@ -591,7 +592,7 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   const SCEV *TripCountSC =
       SE->getAddExpr(BECountSC, SE->getConstant(BECountSC->getType(), 1));
   if (isa<SCEVCouldNotCompute>(TripCountSC)) {
-    DEBUG(dbgs() << "Could not compute trip count SCEV.\n");
+    LLVM_DEBUG(dbgs() << "Could not compute trip count SCEV.\n");
     return false;
   }
 
@@ -601,15 +602,16 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   SCEVExpander Expander(*SE, DL, "loop-unroll");
   if (!AllowExpensiveTripCount &&
       Expander.isHighCostExpansion(TripCountSC, L, PreHeaderBR)) {
-    DEBUG(dbgs() << "High cost for expanding trip count scev!\n");
+    LLVM_DEBUG(dbgs() << "High cost for expanding trip count scev!\n");
     return false;
   }
 
   // This constraint lets us deal with an overflowing trip count easily; see the
   // comment on ModVal below.
   if (Log2_32(Count) > BEWidth) {
-    DEBUG(dbgs()
-          << "Count failed constraint on overflow trip count calculation.\n");
+    LLVM_DEBUG(
+        dbgs()
+        << "Count failed constraint on overflow trip count calculation.\n");
     return false;
   }
 
@@ -896,7 +898,7 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   }
 
   if (remainderLoop && UnrollRemainder) {
-    DEBUG(dbgs() << "Unrolling remainder loop\n");
+    LLVM_DEBUG(dbgs() << "Unrolling remainder loop\n");
     UnrollLoop(remainderLoop, /*Count*/ Count - 1, /*TripCount*/ Count - 1,
                /*Force*/ false, /*AllowRuntime*/ false,
                /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,

@@ -181,7 +181,8 @@ void MachineCopyPropagation::ReadRegister(unsigned Reg) {
   for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI) {
     Reg2MIMap::iterator CI = CopyMap.find(*AI);
     if (CI != CopyMap.end()) {
-      DEBUG(dbgs() << "MCP: Copy is used - not dead: "; CI->second->dump());
+      LLVM_DEBUG(dbgs() << "MCP: Copy is used - not dead: ";
+                 CI->second->dump());
       MaybeDeadCopies.remove(CI->second);
     }
   }
@@ -229,7 +230,7 @@ bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy, unsigned Src,
   if (!isNopCopy(PrevCopy, Src, Def, TRI))
     return false;
 
-  DEBUG(dbgs() << "MCP: copy is a NOP, removing: "; Copy.dump());
+  LLVM_DEBUG(dbgs() << "MCP: copy is a NOP, removing: "; Copy.dump());
 
   // Copy was redundantly redefining either Src or Def. Remove earlier kill
   // flags between Copy and PrevCopy because the value will be reused now.
@@ -351,8 +352,9 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
 
     // FIXME: Don't handle partial uses of wider COPYs yet.
     if (MOUse.getReg() != CopyDstReg) {
-      DEBUG(dbgs() << "MCP: FIXME! Not forwarding COPY to sub-register use:\n  "
-                   << MI);
+      LLVM_DEBUG(
+          dbgs() << "MCP: FIXME! Not forwarding COPY to sub-register use:\n  "
+                 << MI);
       continue;
     }
 
@@ -367,20 +369,20 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
       continue;
 
     if (!DebugCounter::shouldExecute(FwdCounter)) {
-      DEBUG(dbgs() << "MCP: Skipping forwarding due to debug counter:\n  "
-                   << MI);
+      LLVM_DEBUG(dbgs() << "MCP: Skipping forwarding due to debug counter:\n  "
+                        << MI);
       continue;
     }
 
-    DEBUG(dbgs() << "MCP: Replacing " << printReg(MOUse.getReg(), TRI)
-                 << "\n     with " << printReg(CopySrcReg, TRI) << "\n     in "
-                 << MI << "     from " << Copy);
+    LLVM_DEBUG(dbgs() << "MCP: Replacing " << printReg(MOUse.getReg(), TRI)
+                      << "\n     with " << printReg(CopySrcReg, TRI)
+                      << "\n     in " << MI << "     from " << Copy);
 
     MOUse.setReg(CopySrcReg);
     if (!CopySrc.isRenamable())
       MOUse.setIsRenamable(false);
 
-    DEBUG(dbgs() << "MCP: After replacement: " << MI << "\n");
+    LLVM_DEBUG(dbgs() << "MCP: After replacement: " << MI << "\n");
 
     // Clear kill markers that may have been invalidated.
     for (MachineInstr &KMI :
@@ -393,7 +395,7 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
 }
 
 void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
-  DEBUG(dbgs() << "MCP: CopyPropagateBlock " << MBB.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "MCP: CopyPropagateBlock " << MBB.getName() << "\n");
 
   for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E; ) {
     MachineInstr *MI = &*I;
@@ -444,7 +446,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
         ReadRegister(Reg);
       }
 
-      DEBUG(dbgs() << "MCP: Copy is a deletion candidate: "; MI->dump());
+      LLVM_DEBUG(dbgs() << "MCP: Copy is a deletion candidate: "; MI->dump());
 
       // Copy is now a candidate for deletion.
       if (!MRI->isReserved(Def))
@@ -536,8 +538,8 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
           continue;
         }
 
-        DEBUG(dbgs() << "MCP: Removing copy due to regmask clobbering: ";
-              MaybeDead->dump());
+        LLVM_DEBUG(dbgs() << "MCP: Removing copy due to regmask clobbering: ";
+                   MaybeDead->dump());
 
         // erase() will return the next valid iterator pointing to the next
         // element after the erased one.
@@ -569,8 +571,8 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
   // since we don't want to trust live-in lists.
   if (MBB.succ_empty()) {
     for (MachineInstr *MaybeDead : MaybeDeadCopies) {
-      DEBUG(dbgs() << "MCP: Removing copy due to no live-out succ: ";
-            MaybeDead->dump());
+      LLVM_DEBUG(dbgs() << "MCP: Removing copy due to no live-out succ: ";
+                 MaybeDead->dump());
       assert(!MRI->isReserved(MaybeDead->getOperand(0).getReg()));
       MaybeDead->eraseFromParent();
       Changed = true;

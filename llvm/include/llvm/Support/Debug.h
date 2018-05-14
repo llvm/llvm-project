@@ -11,17 +11,18 @@
 // code, without it being enabled all of the time, and without having to add
 // command line options to enable it.
 //
-// In particular, just wrap your code with the DEBUG() macro, and it will be
-// enabled automatically if you specify '-debug' on the command-line.
-// DEBUG() requires the DEBUG_TYPE macro to be defined. Set it to "foo" specify
-// that your debug code belongs to class "foo". Be careful that you only do
-// this after including Debug.h and not around any #include of headers. Headers
-// should define and undef the macro acround the code that needs to use the
-// DEBUG() macro. Then, on the command line, you can specify '-debug-only=foo'
-// to enable JUST the debug information for the foo class.
+// In particular, just wrap your code with the LLVM_DEBUG() macro, and it will
+// be enabled automatically if you specify '-debug' on the command-line.
+// LLVM_DEBUG() requires the DEBUG_TYPE macro to be defined. Set it to "foo"
+// specify that your debug code belongs to class "foo". Be careful that you only
+// do this after including Debug.h and not around any #include of headers.
+// Headers should define and undef the macro acround the code that needs to use
+// the LLVM_DEBUG() macro. Then, on the command line, you can specify
+// '-debug-only=foo' to enable JUST the debug information for the foo class.
 //
 // When compiling without assertions, the -debug-* options and all code in
-// DEBUG() statements disappears, so it does not affect the runtime of the code.
+// LLVM_DEBUG() statements disappears, so it does not affect the runtime of the
+// code.
 //
 //===----------------------------------------------------------------------===//
 
@@ -113,9 +114,11 @@ raw_ostream &dbgs();
 // debug build, then the code specified as the option to the macro will be
 // executed.  Otherwise it will not be.  Example:
 //
-// DEBUG(dbgs() << "Bitset contains: " << Bitset << "\n");
+// LLVM_DEBUG(dbgs() << "Bitset contains: " << Bitset << "\n");
 //
-#define DEBUG(X) DEBUG_WITH_TYPE(DEBUG_TYPE, X)
+#define LLVM_DEBUG(X) DEBUG_WITH_TYPE(DEBUG_TYPE, X)
+
+#define DEBUG(X) LLVM_DEBUG(X)
 
 } // end namespace llvm
 

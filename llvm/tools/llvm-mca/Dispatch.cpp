@@ -176,7 +176,7 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteState *> &Writes,
   assert(RegID && RegID < RegisterMappings.size());
   WriteState *WS = RegisterMappings[RegID].first;
   if (WS) {
-    DEBUG(dbgs() << "Found a dependent use of RegID=" << RegID << '\n');
+    LLVM_DEBUG(dbgs() << "Found a dependent use of RegID=" << RegID << '\n');
     Writes.push_back(WS);
   }
 
@@ -184,8 +184,8 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteState *> &Writes,
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
     WS = RegisterMappings[*I].first;
     if (WS && std::find(Writes.begin(), Writes.end(), WS) == Writes.end()) {
-      DEBUG(dbgs() << "Found a dependent use of subReg " << *I << " (part of "
-                   << RegID << ")\n");
+      LLVM_DEBUG(dbgs() << "Found a dependent use of subReg " << *I
+                        << " (part of " << RegID << ")\n");
       Writes.push_back(WS);
     }
   }
@@ -254,12 +254,12 @@ void RegisterFile::dump() const {
 
 void DispatchUnit::notifyInstructionDispatched(const InstRef &IR,
                                                ArrayRef<unsigned> UsedRegs) {
-  DEBUG(dbgs() << "[E] Instruction Dispatched: " << IR << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Instruction Dispatched: " << IR << '\n');
   Owner->notifyInstructionEvent(HWInstructionDispatchedEvent(IR, UsedRegs));
 }
 
 void DispatchUnit::notifyInstructionRetired(const InstRef &IR) {
-  DEBUG(dbgs() << "[E] Instruction Retired: " << IR << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Instruction Retired: " << IR << '\n');
   SmallVector<unsigned, 4> FreedRegs(RAT->getNumRegisterFiles());
   for (const std::unique_ptr<WriteState> &WS : IR.getInstruction()->getDefs())
     RAT->invalidateRegisterMapping(*WS.get(), FreedRegs);
@@ -302,7 +302,8 @@ void DispatchUnit::updateRAWDependencies(ReadState &RS,
 
   collectWrites(DependentWrites, RS.getRegisterID());
   RS.setDependentWrites(DependentWrites.size());
-  DEBUG(dbgs() << "Found " << DependentWrites.size() << " dependent writes\n");
+  LLVM_DEBUG(dbgs() << "Found " << DependentWrites.size()
+                    << " dependent writes\n");
   // We know that this read depends on all the writes in DependentWrites.
   // For each write, check if we have ReadAdvance information, and use it
   // to figure out in how many cycles this read becomes available.

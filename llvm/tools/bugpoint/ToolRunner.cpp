@@ -194,10 +194,10 @@ Expected<int> LLI::ExecuteProgram(const std::string &Bitcode,
 
   outs() << "<lli>";
   outs().flush();
-  DEBUG(errs() << "\nAbout to run:\t";
-        for (unsigned i = 0, e = LLIArgs.size() - 1; i != e; ++i) errs()
-        << " " << LLIArgs[i];
-        errs() << "\n";);
+  LLVM_DEBUG(errs() << "\nAbout to run:\t";
+             for (unsigned i = 0, e = LLIArgs.size() - 1; i != e; ++i) errs()
+             << " " << LLIArgs[i];
+             errs() << "\n";);
   return RunProgramWithTimeout(LLIPath, &LLIArgs[0], InputFile, OutputFile,
                                OutputFile, Timeout, MemoryLimit);
 }
@@ -481,10 +481,10 @@ Expected<CC::FileType> LLC::OutputCode(const std::string &Bitcode,
 
   outs() << (UseIntegratedAssembler ? "<llc-ia>" : "<llc>");
   outs().flush();
-  DEBUG(errs() << "\nAbout to run:\t";
-        for (unsigned i = 0, e = LLCArgs.size() - 1; i != e; ++i) errs()
-        << " " << LLCArgs[i];
-        errs() << "\n";);
+  LLVM_DEBUG(errs() << "\nAbout to run:\t";
+             for (unsigned i = 0, e = LLCArgs.size() - 1; i != e; ++i) errs()
+             << " " << LLCArgs[i];
+             errs() << "\n";);
   if (RunProgramWithTimeout(LLCPath, &LLCArgs[0], "", "", "", Timeout,
                             MemoryLimit))
     return ProcessFailure(LLCPath, &LLCArgs[0], Timeout, MemoryLimit);
@@ -601,11 +601,11 @@ Expected<int> JIT::ExecuteProgram(const std::string &Bitcode,
 
   outs() << "<jit>";
   outs().flush();
-  DEBUG(errs() << "\nAbout to run:\t";
-        for (unsigned i = 0, e = JITArgs.size() - 1; i != e; ++i) errs()
-        << " " << JITArgs[i];
-        errs() << "\n";);
-  DEBUG(errs() << "\nSending output to " << OutputFile << "\n");
+  LLVM_DEBUG(errs() << "\nAbout to run:\t";
+             for (unsigned i = 0, e = JITArgs.size() - 1; i != e; ++i) errs()
+             << " " << JITArgs[i];
+             errs() << "\n";);
+  LLVM_DEBUG(errs() << "\nSending output to " << OutputFile << "\n");
   return RunProgramWithTimeout(LLIPath, &JITArgs[0], InputFile, OutputFile,
                                OutputFile, Timeout, MemoryLimit);
 }
@@ -710,10 +710,10 @@ Expected<int> CC::ExecuteProgram(const std::string &ProgramFile,
 
   outs() << "<CC>";
   outs().flush();
-  DEBUG(errs() << "\nAbout to run:\t";
-        for (unsigned i = 0, e = CCArgs.size() - 1; i != e; ++i) errs()
-        << " " << CCArgs[i];
-        errs() << "\n";);
+  LLVM_DEBUG(errs() << "\nAbout to run:\t";
+             for (unsigned i = 0, e = CCArgs.size() - 1; i != e; ++i) errs()
+             << " " << CCArgs[i];
+             errs() << "\n";);
   if (RunProgramWithTimeout(CCPath, &CCArgs[0], "", "", ""))
     return ProcessFailure(CCPath, &CCArgs[0]);
 
@@ -758,15 +758,16 @@ Expected<int> CC::ExecuteProgram(const std::string &ProgramFile,
   // Now that we have a binary, run it!
   outs() << "<program>";
   outs().flush();
-  DEBUG(errs() << "\nAbout to run:\t";
-        for (unsigned i = 0, e = ProgramArgs.size() - 1; i != e; ++i) errs()
-        << " " << ProgramArgs[i];
-        errs() << "\n";);
+  LLVM_DEBUG(
+      errs() << "\nAbout to run:\t";
+      for (unsigned i = 0, e = ProgramArgs.size() - 1; i != e; ++i) errs()
+      << " " << ProgramArgs[i];
+      errs() << "\n";);
 
   FileRemover OutputBinaryRemover(OutputBinary.str(), !SaveTemps);
 
   if (RemoteClientPath.empty()) {
-    DEBUG(errs() << "<run locally>");
+    LLVM_DEBUG(errs() << "<run locally>");
     std::string Error;
     int ExitCode = RunProgramWithTimeout(OutputBinary.str(), &ProgramArgs[0],
                                          InputFile, OutputFile, OutputFile,
@@ -855,10 +856,10 @@ Error CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
 
   outs() << "<CC>";
   outs().flush();
-  DEBUG(errs() << "\nAbout to run:\t";
-        for (unsigned i = 0, e = CCArgs.size() - 1; i != e; ++i) errs()
-        << " " << CCArgs[i];
-        errs() << "\n";);
+  LLVM_DEBUG(errs() << "\nAbout to run:\t";
+             for (unsigned i = 0, e = CCArgs.size() - 1; i != e; ++i) errs()
+             << " " << CCArgs[i];
+             errs() << "\n";);
   if (RunProgramWithTimeout(CCPath, &CCArgs[0], "", "", ""))
     return ProcessFailure(CCPath, &CCArgs[0]);
   return Error::success();

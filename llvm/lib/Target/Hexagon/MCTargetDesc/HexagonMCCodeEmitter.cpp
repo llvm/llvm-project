@@ -372,7 +372,7 @@ void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   MCInst &HMB = const_cast<MCInst &>(MI);
 
   assert(HexagonMCInstrInfo::isBundle(HMB));
-  DEBUG(dbgs() << "Encoding bundle\n";);
+  LLVM_DEBUG(dbgs() << "Encoding bundle\n";);
   State.Addend = 0;
   State.Extended = false;
   State.Bundle = &MI;
@@ -415,8 +415,8 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(const MCInst &MI,
   // in the first place!
   assert(!HexagonMCInstrInfo::getDesc(MCII, MI).isPseudo() &&
          "pseudo-instruction found");
-  DEBUG(dbgs() << "Encoding insn `"
-               << HexagonMCInstrInfo::getName(MCII, MI) << "'\n");
+  LLVM_DEBUG(dbgs() << "Encoding insn `"
+                    << HexagonMCInstrInfo::getName(MCII, MI) << "'\n");
 
   Binary = getBinaryCodeForInstr(MI, Fixups, STI);
   unsigned Opc = MI.getOpcode();
@@ -424,8 +424,8 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(const MCInst &MI,
   // Check for unimplemented instructions. Immediate extenders
   // are encoded as zero, so they need to be accounted for.
   if (!Binary && Opc != DuplexIClass0 && Opc != A4_ext) {
-    DEBUG(dbgs() << "Unimplemented inst `"
-                 << HexagonMCInstrInfo::getName(MCII, MI) << "'\n");
+    LLVM_DEBUG(dbgs() << "Unimplemented inst `"
+                      << HexagonMCInstrInfo::getName(MCII, MI) << "'\n");
     llvm_unreachable("Unimplemented Instruction");
   }
   Binary |= Parse;
@@ -630,13 +630,12 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   unsigned Opc = MCID.getOpcode();
   unsigned IType = HexagonMCInstrInfo::getType(MCII, MI);
 
-  DEBUG(dbgs() << "----------------------------------------\n"
-               << "Opcode Name: " << HexagonMCInstrInfo::getName(MCII, MI)
-               << "\nOpcode: " << Opc
-               << "\nRelocation bits: " << FixupWidth
-               << "\nAddend: " << State.Addend
-               << "\nVariant: " << unsigned(VarKind)
-               << "\n----------------------------------------\n");
+  LLVM_DEBUG(dbgs() << "----------------------------------------\n"
+                    << "Opcode Name: " << HexagonMCInstrInfo::getName(MCII, MI)
+                    << "\nOpcode: " << Opc << "\nRelocation bits: "
+                    << FixupWidth << "\nAddend: " << State.Addend
+                    << "\nVariant: " << unsigned(VarKind)
+                    << "\n----------------------------------------\n");
 
   // Pick the applicable fixup kind for the symbol.
   // Handle special cases first, the rest will be looked up in the tables.

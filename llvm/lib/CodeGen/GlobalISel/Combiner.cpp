@@ -40,7 +40,7 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   Builder.setMF(MF);
 
-  DEBUG(dbgs() << "Generic MI Combiner for: " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "Generic MI Combiner for: " << MF.getName() << '\n');
 
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
 
@@ -61,7 +61,7 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF) {
         ++MII;
         // Erase dead insts before even adding to the list.
         if (isTriviallyDead(*CurMI, *MRI)) {
-          DEBUG(dbgs() << *CurMI << "Is dead; erasing.\n");
+          LLVM_DEBUG(dbgs() << *CurMI << "Is dead; erasing.\n");
           CurMI->eraseFromParentAndMarkDBGValuesForRemoval();
           continue;
         }
@@ -71,7 +71,7 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF) {
     // Main Loop. Process the instructions here.
     while (!WorkList.empty()) {
       MachineInstr *CurrInst = WorkList.pop_back_val();
-      DEBUG(dbgs() << "Try combining " << *CurrInst << "\n";);
+      LLVM_DEBUG(dbgs() << "Try combining " << *CurrInst << "\n";);
       Changed |= CInfo.combine(*CurrInst, Builder);
     }
     MFChanged |= Changed;

@@ -335,6 +335,14 @@ namespace AArch64PRFM {
   #include "AArch64GenSystemOperands.inc"
 }
 
+namespace AArch64SVEPRFM {
+  struct SVEPRFM : SysAlias {
+    using SysAlias::SysAlias;
+  };
+#define GET_SVEPRFM_DECL
+#include "AArch64GenSystemOperands.inc"
+}
+
 namespace AArch64SVEPredPattern {
   struct SVEPREDPAT {
     const char *Name;

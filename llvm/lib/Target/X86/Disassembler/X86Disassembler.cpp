@@ -103,7 +103,7 @@ StringRef llvm::X86Disassembler::GetInstrName(unsigned Opcode,
   return MII->getName(Opcode);
 }
 
-#define debug(s) DEBUG(Debug(__FILE__, __LINE__, s));
+#define debug(s) LLVM_DEBUG(Debug(__FILE__, __LINE__, s));
 
 namespace llvm {
 

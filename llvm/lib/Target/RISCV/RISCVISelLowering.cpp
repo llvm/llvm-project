@@ -824,8 +824,8 @@ void RISCVTargetLowering::analyzeInputArgs(
 
     if (CC_RISCV(MF.getDataLayout(), i, ArgVT, ArgVT, CCValAssign::Full,
                  ArgFlags, CCInfo, /*IsRet=*/true, IsRet, ArgTy)) {
-      DEBUG(dbgs() << "InputArg #" << i << " has unhandled type "
-                   << EVT(ArgVT).getEVTString() << '\n');
+      LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type "
+                        << EVT(ArgVT).getEVTString() << '\n');
       llvm_unreachable(nullptr);
     }
   }
@@ -844,8 +844,8 @@ void RISCVTargetLowering::analyzeOutputArgs(
 
     if (CC_RISCV(MF.getDataLayout(), i, ArgVT, ArgVT, CCValAssign::Full,
                  ArgFlags, CCInfo, Outs[i].IsFixed, IsRet, OrigTy)) {
-      DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type "
-                   << EVT(ArgVT).getEVTString() << "\n");
+      LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type "
+                        << EVT(ArgVT).getEVTString() << "\n");
       llvm_unreachable(nullptr);
     }
   }

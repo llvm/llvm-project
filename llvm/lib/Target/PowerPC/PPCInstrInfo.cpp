@@ -2418,16 +2418,17 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
         CompareUseMI.RemoveOperand(2);
         continue;
       }
-      DEBUG(dbgs() << "Found LI -> CMPI -> ISEL, replacing with a copy.\n");
-      DEBUG(DefMI->dump(); MI.dump(); CompareUseMI.dump());
-      DEBUG(dbgs() << "Is converted to:\n");
+      LLVM_DEBUG(
+          dbgs() << "Found LI -> CMPI -> ISEL, replacing with a copy.\n");
+      LLVM_DEBUG(DefMI->dump(); MI.dump(); CompareUseMI.dump());
+      LLVM_DEBUG(dbgs() << "Is converted to:\n");
       // Convert to copy and remove unneeded operands.
       CompareUseMI.setDesc(get(PPC::COPY));
       CompareUseMI.RemoveOperand(3);
       CompareUseMI.RemoveOperand(RegToCopy == TrueReg ? 2 : 1);
       CmpIselsConverted++;
       Changed = true;
-      DEBUG(CompareUseMI.dump());
+      LLVM_DEBUG(CompareUseMI.dump());
     }
     if (Changed)
       return true;
@@ -2528,10 +2529,10 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
   }
 
   if (ReplaceWithLI) {
-    DEBUG(dbgs() << "Replacing instruction:\n");
-    DEBUG(MI.dump());
-    DEBUG(dbgs() << "Fed by:\n");
-    DEBUG(DefMI->dump());
+    LLVM_DEBUG(dbgs() << "Replacing instruction:\n");
+    LLVM_DEBUG(MI.dump());
+    LLVM_DEBUG(dbgs() << "Fed by:\n");
+    LLVM_DEBUG(DefMI->dump());
     LoadImmediateInfo LII;
     LII.Imm = NewImm;
     LII.Is64Bit = Is64BitLI;
@@ -2541,8 +2542,8 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     if (KilledDef && SetCR)
       *KilledDef = nullptr;
     replaceInstrWithLI(MI, LII);
-    DEBUG(dbgs() << "With:\n");
-    DEBUG(MI.dump());
+    LLVM_DEBUG(dbgs() << "With:\n");
+    LLVM_DEBUG(MI.dump());
     return true;
   }
   return false;

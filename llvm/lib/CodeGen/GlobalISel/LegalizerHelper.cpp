@@ -35,34 +35,34 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF)
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
-  DEBUG(dbgs() << "Legalizing: "; MI.print(dbgs()));
+  LLVM_DEBUG(dbgs() << "Legalizing: "; MI.print(dbgs()));
 
   auto Step = LI.getAction(MI, MRI);
   switch (Step.Action) {
   case Legal:
-    DEBUG(dbgs() << ".. Already legal\n");
+    LLVM_DEBUG(dbgs() << ".. Already legal\n");
     return AlreadyLegal;
   case Libcall:
-    DEBUG(dbgs() << ".. Convert to libcall\n");
+    LLVM_DEBUG(dbgs() << ".. Convert to libcall\n");
     return libcall(MI);
   case NarrowScalar:
-    DEBUG(dbgs() << ".. Narrow scalar\n");
+    LLVM_DEBUG(dbgs() << ".. Narrow scalar\n");
     return narrowScalar(MI, Step.TypeIdx, Step.NewType);
   case WidenScalar:
-    DEBUG(dbgs() << ".. Widen scalar\n");
+    LLVM_DEBUG(dbgs() << ".. Widen scalar\n");
     return widenScalar(MI, Step.TypeIdx, Step.NewType);
   case Lower:
-    DEBUG(dbgs() << ".. Lower\n");
+    LLVM_DEBUG(dbgs() << ".. Lower\n");
     return lower(MI, Step.TypeIdx, Step.NewType);
   case FewerElements:
-    DEBUG(dbgs() << ".. Reduce number of elements\n");
+    LLVM_DEBUG(dbgs() << ".. Reduce number of elements\n");
     return fewerElementsVector(MI, Step.TypeIdx, Step.NewType);
   case Custom:
-    DEBUG(dbgs() << ".. Custom legalization\n");
+    LLVM_DEBUG(dbgs() << ".. Custom legalization\n");
     return LI.legalizeCustom(MI, MRI, MIRBuilder) ? Legalized
                                                   : UnableToLegalize;
   default:
-    DEBUG(dbgs() << ".. Unable to legalize\n");
+    LLVM_DEBUG(dbgs() << ".. Unable to legalize\n");
     return UnableToLegalize;
   }
 }

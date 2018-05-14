@@ -223,12 +223,12 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
     uint64_t TotalCount, uint32_t NumCandidates) {
   std::vector<PromotionCandidate> Ret;
 
-  DEBUG(dbgs() << " \nWork on callsite #" << NumOfPGOICallsites << *Inst
-               << " Num_targets: " << ValueDataRef.size()
-               << " Num_candidates: " << NumCandidates << "\n");
+  LLVM_DEBUG(dbgs() << " \nWork on callsite #" << NumOfPGOICallsites << *Inst
+                    << " Num_targets: " << ValueDataRef.size()
+                    << " Num_candidates: " << NumCandidates << "\n");
   NumOfPGOICallsites++;
   if (ICPCSSkip != 0 && NumOfPGOICallsites <= ICPCSSkip) {
-    DEBUG(dbgs() << " Skip: User options.\n");
+    LLVM_DEBUG(dbgs() << " Skip: User options.\n");
     return Ret;
   }
 
@@ -236,11 +236,11 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
     uint64_t Count = ValueDataRef[I].Count;
     assert(Count <= TotalCount);
     uint64_t Target = ValueDataRef[I].Value;
-    DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
-                 << "  Target_func: " << Target << "\n");
+    LLVM_DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
+                      << "  Target_func: " << Target << "\n");
 
     if (ICPInvokeOnly && dyn_cast<CallInst>(Inst)) {
-      DEBUG(dbgs() << " Not promote: User options.\n");
+      LLVM_DEBUG(dbgs() << " Not promote: User options.\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", Inst)
                << " Not promote: User options";
@@ -248,7 +248,7 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
       break;
     }
     if (ICPCallOnly && dyn_cast<InvokeInst>(Inst)) {
-      DEBUG(dbgs() << " Not promote: User option.\n");
+      LLVM_DEBUG(dbgs() << " Not promote: User option.\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", Inst)
                << " Not promote: User options";
@@ -256,7 +256,7 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
       break;
     }
     if (ICPCutOff != 0 && NumOfPGOICallPromotion >= ICPCutOff) {
-      DEBUG(dbgs() << " Not promote: Cutoff reached.\n");
+      LLVM_DEBUG(dbgs() << " Not promote: Cutoff reached.\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "CutOffReached", Inst)
                << " Not promote: Cutoff reached";
@@ -266,7 +266,7 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
 
     Function *TargetFunction = Symtab->getFunction(Target);
     if (TargetFunction == nullptr) {
-      DEBUG(dbgs() << " Not promote: Cannot find the target\n");
+      LLVM_DEBUG(dbgs() << " Not promote: Cannot find the target\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", Inst)
                << "Cannot promote indirect call: target not found";
@@ -387,7 +387,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
   InstrProfSymtab Symtab;
   if (Error E = Symtab.create(M, InLTO)) {
     std::string SymtabFailure = toString(std::move(E));
-    DEBUG(dbgs() << "Failed to create symtab: " << SymtabFailure << "\n");
+    LLVM_DEBUG(dbgs() << "Failed to create symtab: " << SymtabFailure << "\n");
     (void)SymtabFailure;
     return false;
   }
@@ -412,12 +412,12 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
     ICallPromotionFunc ICallPromotion(F, &M, &Symtab, SamplePGO, *ORE);
     bool FuncChanged = ICallPromotion.processFunction(PSI);
     if (ICPDUMPAFTER && FuncChanged) {
-      DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));
-      DEBUG(dbgs() << "\n");
+      LLVM_DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));
+      LLVM_DEBUG(dbgs() << "\n");
     }
     Changed |= FuncChanged;
     if (ICPCutOff != 0 && NumOfPGOICallPromotion >= ICPCutOff) {
-      DEBUG(dbgs() << " Stop: Cutoff reached.\n");
+      LLVM_DEBUG(dbgs() << " Stop: Cutoff reached.\n");
       break;
     }
   }

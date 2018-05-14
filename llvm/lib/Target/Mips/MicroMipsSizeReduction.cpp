@@ -444,12 +444,12 @@ bool MicroMipsSizeReduce::ReplaceInstruction(MachineInstr *MI,
 
   enum OperandTransfer OpTransfer = Entry.TransferOperands();
 
-  DEBUG(dbgs() << "Converting 32-bit: " << *MI);
+  LLVM_DEBUG(dbgs() << "Converting 32-bit: " << *MI);
   ++NumReduced;
 
   if (OpTransfer == OT_OperandsAll) {
     MI->setDesc(MipsII->get(Entry.NarrowOpc()));
-    DEBUG(dbgs() << "       to 16-bit: " << *MI);
+    LLVM_DEBUG(dbgs() << "       to 16-bit: " << *MI);
     return true;
   } else {
     MachineBasicBlock &MBB = *MI->getParent();
@@ -484,7 +484,7 @@ bool MicroMipsSizeReduce::ReplaceInstruction(MachineInstr *MI,
     // Transfer MI flags.
     MIB.setMIFlags(MI->getFlags());
 
-    DEBUG(dbgs() << "       to 16-bit: " << *MIB);
+    LLVM_DEBUG(dbgs() << "       to 16-bit: " << *MIB);
     MBB.erase_instr(MI);
     return true;
   }

@@ -332,7 +332,7 @@ bool InterleavedAccess::lowerInterleavedLoad(
   if (!tryReplaceExtracts(Extracts, Shuffles))
     return false;
 
-  DEBUG(dbgs() << "IA: Found an interleaved load: " << *LI << "\n");
+  LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *LI << "\n");
 
   // Try to create target specific intrinsics to replace the load and shuffles.
   if (!TLI->lowerInterleavedLoad(LI, Shuffles, Indices, Factor))
@@ -424,7 +424,7 @@ bool InterleavedAccess::lowerInterleavedStore(
   if (!isReInterleaveMask(SVI->getShuffleMask(), Factor, MaxFactor, OpNumElts))
     return false;
 
-  DEBUG(dbgs() << "IA: Found an interleaved store: " << *SI << "\n");
+  LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *SI << "\n");
 
   // Try to create target specific intrinsics to replace the store and shuffle.
   if (!TLI->lowerInterleavedStore(SI, SVI, Factor))
@@ -441,7 +441,7 @@ bool InterleavedAccess::runOnFunction(Function &F) {
   if (!TPC || !LowerInterleavedAccesses)
     return false;
 
-  DEBUG(dbgs() << "*** " << getPassName() << ": " << F.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "*** " << getPassName() << ": " << F.getName() << "\n");
 
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &TM = TPC->getTM<TargetMachine>();

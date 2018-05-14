@@ -685,8 +685,8 @@ void RegAllocPBQP::spillVReg(unsigned VReg,
 
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   (void)TRI;
-  DEBUG(dbgs() << "VREG " << printReg(VReg, &TRI) << " -> SPILLED (Cost: "
-               << LRE.getParent().weight << ", New vregs: ");
+  LLVM_DEBUG(dbgs() << "VREG " << printReg(VReg, &TRI) << " -> SPILLED (Cost: "
+                    << LRE.getParent().weight << ", New vregs: ");
 
   // Copy any newly inserted live intervals into the list of regs to
   // allocate.
@@ -694,11 +694,11 @@ void RegAllocPBQP::spillVReg(unsigned VReg,
        I != E; ++I) {
     const LiveInterval &LI = LIS.getInterval(*I);
     assert(!LI.empty() && "Empty spill range.");
-    DEBUG(dbgs() << printReg(LI.reg, &TRI) << " ");
+    LLVM_DEBUG(dbgs() << printReg(LI.reg, &TRI) << " ");
     VRegsToAlloc.insert(LI.reg);
   }
 
-  DEBUG(dbgs() << ")\n");
+  LLVM_DEBUG(dbgs() << ")\n");
 }
 
 bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
@@ -724,8 +724,8 @@ bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
 
     if (AllocOption != PBQP::RegAlloc::getSpillOptionIdx()) {
       unsigned PReg = G.getNodeMetadata(NId).getAllowedRegs()[AllocOption - 1];
-      DEBUG(dbgs() << "VREG " << printReg(VReg, &TRI) << " -> "
-            << TRI.getName(PReg) << "\n");
+      LLVM_DEBUG(dbgs() << "VREG " << printReg(VReg, &TRI) << " -> "
+                        << TRI.getName(PReg) << "\n");
       assert(PReg != 0 && "Invalid preg selected.");
       VRM.assignVirt2Phys(VReg, PReg);
     } else {
@@ -801,7 +801,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
 
   MF.getRegInfo().freezeReservedRegs(MF);
 
-  DEBUG(dbgs() << "PBQP Register Allocating for " << MF.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "PBQP Register Allocating for " << MF.getName() << "\n");
 
   // Allocator main loop:
   //
@@ -836,7 +836,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
     unsigned Round = 0;
 
     while (!PBQPAllocComplete) {
-      DEBUG(dbgs() << "  PBQP Regalloc round " << Round << ":\n");
+      LLVM_DEBUG(dbgs() << "  PBQP Regalloc round " << Round << ":\n");
 
       PBQPRAGraph G(PBQPRAGraph::GraphMetadata(MF, LIS, MBFI));
       initializeGraph(G, VRM, *VRegSpiller);
@@ -850,8 +850,8 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
                                     ".pbqpgraph";
         std::error_code EC;
         raw_fd_ostream OS(GraphFileName, EC, sys::fs::F_Text);
-        DEBUG(dbgs() << "Dumping graph for round " << Round << " to \""
-              << GraphFileName << "\"\n");
+        LLVM_DEBUG(dbgs() << "Dumping graph for round " << Round << " to \""
+                          << GraphFileName << "\"\n");
         G.dump(OS);
       }
 #endif
@@ -868,7 +868,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   VRegsToAlloc.clear();
   EmptyIntervalVRegs.clear();
 
-  DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << VRM << "\n");
+  LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << VRM << "\n");
 
   return true;
 }

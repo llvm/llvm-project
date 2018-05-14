@@ -142,7 +142,7 @@ static void failIfError(Error E, Twine Context = "") {
   });
 }
 
-SmallVector<const char *, 256> PositionalArgs;
+static SmallVector<const char *, 256> PositionalArgs;
 
 static bool MRI;
 

@@ -180,7 +180,7 @@ bool MSP430DAGToDAGISel::MatchAddressBase(SDValue N, MSP430ISelAddressMode &AM) 
 }
 
 bool MSP430DAGToDAGISel::MatchAddress(SDValue N, MSP430ISelAddressMode &AM) {
-  DEBUG(errs() << "MatchAddress: "; AM.dump());
+  LLVM_DEBUG(errs() << "MatchAddress: "; AM.dump());
 
   switch (N.getOpcode()) {
   default: break;
@@ -384,9 +384,7 @@ void MSP430DAGToDAGISel::Select(SDNode *Node) {
 
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
-    DEBUG(errs() << "== ";
-          Node->dump(CurDAG);
-          errs() << "\n");
+    LLVM_DEBUG(errs() << "== "; Node->dump(CurDAG); errs() << "\n");
     Node->setNodeId(-1);
     return;
   }

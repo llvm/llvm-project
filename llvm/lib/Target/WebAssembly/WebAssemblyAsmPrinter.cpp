@@ -54,7 +54,7 @@ MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
                 MVT::v4i32, MVT::v4f32})
     if (TRI->isTypeLegalForClass(*TRC, T))
       return T;
-  DEBUG(errs() << "Unknown type for register number: " << RegNo);
+  LLVM_DEBUG(errs() << "Unknown type for register number: " << RegNo);
   llvm_unreachable("Unknown register type");
   return MVT::Other;
 }
@@ -191,7 +191,7 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyEnd() {
 }
 
 void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
-  DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
+  LLVM_DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
 
   switch (MI->getOpcode()) {
   case WebAssembly::ARGUMENT_I32:

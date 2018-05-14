@@ -242,16 +242,17 @@ bool SafeStack::IsAccessSafe(Value *Addr, uint64_t AccessSize,
       ConstantRange(APInt(BitWidth, 0), APInt(BitWidth, AllocaSize));
   bool Safe = AllocaRange.contains(AccessRange);
 
-  DEBUG(dbgs() << "[SafeStack] "
-               << (isa<AllocaInst>(AllocaPtr) ? "Alloca " : "ByValArgument ")
-               << *AllocaPtr << "\n"
-               << "            Access " << *Addr << "\n"
-               << "            SCEV " << *Expr
-               << " U: " << SE.getUnsignedRange(Expr)
-               << ", S: " << SE.getSignedRange(Expr) << "\n"
-               << "            Range " << AccessRange << "\n"
-               << "            AllocaRange " << AllocaRange << "\n"
-               << "            " << (Safe ? "safe" : "unsafe") << "\n");
+  LLVM_DEBUG(
+      dbgs() << "[SafeStack] "
+             << (isa<AllocaInst>(AllocaPtr) ? "Alloca " : "ByValArgument ")
+             << *AllocaPtr << "\n"
+             << "            Access " << *Addr << "\n"
+             << "            SCEV " << *Expr
+             << " U: " << SE.getUnsignedRange(Expr)
+             << ", S: " << SE.getSignedRange(Expr) << "\n"
+             << "            Range " << AccessRange << "\n"
+             << "            AllocaRange " << AllocaRange << "\n"
+             << "            " << (Safe ? "safe" : "unsafe") << "\n");
 
   return Safe;
 }
@@ -298,8 +299,9 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
       case Instruction::Store:
         if (V == I->getOperand(0)) {
           // Stored the pointer - conservatively assume it may be unsafe.
-          DEBUG(dbgs() << "[SafeStack] Unsafe alloca: " << *AllocaPtr
-                       << "\n            store of address: " << *I << "\n");
+          LLVM_DEBUG(dbgs()
+                     << "[SafeStack] Unsafe alloca: " << *AllocaPtr
+                     << "\n            store of address: " << *I << "\n");
           return false;
         }
 
@@ -324,9 +326,9 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
 
         if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
           if (!IsMemIntrinsicSafe(MI, UI, AllocaPtr, AllocaSize)) {
-            DEBUG(dbgs() << "[SafeStack] Unsafe alloca: " << *AllocaPtr
-                         << "\n            unsafe memintrinsic: " << *I
-                         << "\n");
+            LLVM_DEBUG(dbgs()
+                       << "[SafeStack] Unsafe alloca: " << *AllocaPtr
+                       << "\n            unsafe memintrinsic: " << *I << "\n");
             return false;
           }
           continue;
@@ -344,8 +346,8 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
           if (A->get() == V)
             if (!(CS.doesNotCapture(A - B) && (CS.doesNotAccessMemory(A - B) ||
                                                CS.doesNotAccessMemory()))) {
-              DEBUG(dbgs() << "[SafeStack] Unsafe alloca: " << *AllocaPtr
-                           << "\n            unsafe call: " << *I << "\n");
+              LLVM_DEBUG(dbgs() << "[SafeStack] Unsafe alloca: " << *AllocaPtr
+                                << "\n            unsafe call: " << *I << "\n");
               return false;
             }
         continue;
@@ -829,7 +831,7 @@ bool SafeStack::run() {
 
   TryInlinePointerAddress();
 
-  DEBUG(dbgs() << "[SafeStack]     safestack applied\n");
+  LLVM_DEBUG(dbgs() << "[SafeStack]     safestack applied\n");
   return true;
 }
 
@@ -850,17 +852,17 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    DEBUG(dbgs() << "[SafeStack] Function: " << F.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "[SafeStack] Function: " << F.getName() << "\n");
 
     if (!F.hasFnAttribute(Attribute::SafeStack)) {
-      DEBUG(dbgs() << "[SafeStack]     safestack is not requested"
-                      " for this function\n");
+      LLVM_DEBUG(dbgs() << "[SafeStack]     safestack is not requested"
+                           " for this function\n");
       return false;
     }
 
     if (F.isDeclaration()) {
-      DEBUG(dbgs() << "[SafeStack]     function definition"
-                      " is not available\n");
+      LLVM_DEBUG(dbgs() << "[SafeStack]     function definition"
+                           " is not available\n");
       return false;
     }
 

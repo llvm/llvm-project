@@ -637,14 +637,14 @@ static bool tryFoldInst(const SIInstrInfo *TII,
     const MachineOperand *Src0 = TII->getNamedOperand(*MI, AMDGPU::OpName::src0);
     const MachineOperand *Src1 = TII->getNamedOperand(*MI, AMDGPU::OpName::src1);
     if (Src1->isIdenticalTo(*Src0)) {
-      DEBUG(dbgs() << "Folded " << *MI << " into ");
+      LLVM_DEBUG(dbgs() << "Folded " << *MI << " into ");
       int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
       if (Src2Idx != -1)
         MI->RemoveOperand(Src2Idx);
       MI->RemoveOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1));
       mutateCopyOp(*MI, TII->get(Src0->isReg() ? (unsigned)AMDGPU::COPY
                                                : getMovOpc(false)));
-      DEBUG(dbgs() << *MI << '\n');
+      LLVM_DEBUG(dbgs() << *MI << '\n');
       return true;
     }
   }
@@ -685,7 +685,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
       // be folded due to multiple uses or operand constraints.
 
       if (OpToFold.isImm() && tryConstantFoldOp(*MRI, TII, UseMI, &OpToFold)) {
-        DEBUG(dbgs() << "Constant folded " << *UseMI <<'\n');
+        LLVM_DEBUG(dbgs() << "Constant folded " << *UseMI << '\n');
 
         // Some constant folding cases change the same immediate's use to a new
         // instruction, e.g. and x, 0 -> 0. Make sure we re-visit the user
@@ -752,8 +752,9 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
         // copies.
         MRI->clearKillFlags(Fold.OpToFold->getReg());
       }
-      DEBUG(dbgs() << "Folded source from " << MI << " into OpNo " <<
-            static_cast<int>(Fold.UseOpNo) << " of " << *Fold.UseMI << '\n');
+      LLVM_DEBUG(dbgs() << "Folded source from " << MI << " into OpNo "
+                        << static_cast<int>(Fold.UseOpNo) << " of "
+                        << *Fold.UseMI << '\n');
       tryFoldInst(TII, Fold.UseMI);
     } else if (Fold.isCommuted()) {
       // Restoring instruction's original operand order if fold has failed.
@@ -833,7 +834,8 @@ bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
   if (!DefClamp)
     return false;
 
-  DEBUG(dbgs() << "Folding clamp " << *DefClamp << " into " << *Def << '\n');
+  LLVM_DEBUG(dbgs() << "Folding clamp " << *DefClamp << " into " << *Def
+                    << '\n');
 
   // Clamp is applied after omod, so it is OK if omod is set.
   DefClamp->setImm(1);
@@ -956,7 +958,7 @@ bool SIFoldOperands::tryFoldOMod(MachineInstr &MI) {
   if (TII->hasModifiersSet(*Def, AMDGPU::OpName::clamp))
     return false;
 
-  DEBUG(dbgs() << "Folding omod " << MI << " into " << *Def << '\n');
+  LLVM_DEBUG(dbgs() << "Folding omod " << MI << " into " << *Def << '\n');
 
   DefOMod->setImm(OMod);
   MRI->replaceRegWith(MI.getOperand(0).getReg(), Def->getOperand(0).getReg());

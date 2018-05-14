@@ -42,7 +42,7 @@ namespace {
 }
 
 bool MipsModuleDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(errs() << "In MipsModuleDAGToDAGISel::runMachineFunction\n");
+  LLVM_DEBUG(errs() << "In MipsModuleDAGToDAGISel::runMachineFunction\n");
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<MipsTargetMachine>();
   TM.resetSubtarget(&MF);

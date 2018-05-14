@@ -61,6 +61,13 @@ namespace llvm {
 }
 
 namespace llvm {
+  namespace AArch64SVEPRFM {
+#define GET_SVEPRFM_IMPL
+#include "AArch64GenSystemOperands.inc"
+  }
+}
+
+namespace llvm {
   namespace AArch64SVEPredPattern {
 #define GET_SVEPREDPAT_IMPL
 #include "AArch64GenSystemOperands.inc"

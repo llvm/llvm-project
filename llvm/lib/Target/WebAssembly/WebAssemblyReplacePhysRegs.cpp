@@ -62,7 +62,7 @@ FunctionPass *llvm::createWebAssemblyReplacePhysRegs() {
 }
 
 bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "********** Replace Physical Registers **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });

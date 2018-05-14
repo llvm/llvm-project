@@ -316,7 +316,7 @@ static void splitCallSite(
   if (!IsMustTailCall && !Instr->use_empty())
     CallPN = PHINode::Create(Instr->getType(), Preds.size(), "phi.call");
 
-  DEBUG(dbgs() << "split call-site : " << *Instr << " into \n");
+  LLVM_DEBUG(dbgs() << "split call-site : " << *Instr << " into \n");
 
   assert(Preds.size() == 2 && "The ValueToValueMaps array has size 2.");
   // ValueToValueMapTy is neither copy nor moveable, so we use a simple array
@@ -344,8 +344,8 @@ static void splitCallSite(
         ++ArgNo;
       }
     }
-    DEBUG(dbgs() << "    " << *NewCI << " in " << SplitBlock->getName()
-                 << "\n");
+    LLVM_DEBUG(dbgs() << "    " << *NewCI << " in " << SplitBlock->getName()
+                      << "\n");
     if (CallPN)
       CallPN->addIncoming(NewCI, SplitBlock);
 

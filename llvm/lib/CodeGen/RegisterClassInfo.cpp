@@ -151,7 +151,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   RCI.MinCost = uint8_t(MinCost);
   RCI.LastCostChange = LastCostChange;
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "AllocationOrder(" << TRI->getRegClassName(RC) << ") = [";
     for (unsigned I = 0; I != RCI.NumRegs; ++I)
       dbgs() << ' ' << printReg(RCI.Order[I], TRI);

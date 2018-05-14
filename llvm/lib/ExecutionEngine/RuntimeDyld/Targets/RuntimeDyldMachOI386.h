@@ -97,7 +97,7 @@ public:
   }
 
   void resolveRelocation(const RelocationEntry &RE, uint64_t Value) override {
-    DEBUG(dumpRelocationToResolve(RE, Value));
+    LLVM_DEBUG(dumpRelocationToResolve(RE, Value));
 
     const SectionEntry &Section = Sections[RE.SectionID];
     uint8_t *LocalAddress = Section.getAddressWithOffset(RE.Offset);
@@ -192,11 +192,11 @@ private:
     // Compute the addend 'C' from the original expression 'A - B + C'.
     Addend -= AddrA - AddrB;
 
-    DEBUG(dbgs() << "Found SECTDIFF: AddrA: " << AddrA << ", AddrB: " << AddrB
-                 << ", Addend: " << Addend << ", SectionA ID: " << SectionAID
-                 << ", SectionAOffset: " << SectionAOffset
-                 << ", SectionB ID: " << SectionBID
-                 << ", SectionBOffset: " << SectionBOffset << "\n");
+    LLVM_DEBUG(dbgs() << "Found SECTDIFF: AddrA: " << AddrA
+                      << ", AddrB: " << AddrB << ", Addend: " << Addend
+                      << ", SectionA ID: " << SectionAID << ", SectionAOffset: "
+                      << SectionAOffset << ", SectionB ID: " << SectionBID
+                      << ", SectionBOffset: " << SectionBOffset << "\n");
     RelocationEntry R(SectionID, Offset, RelocType, Addend, SectionAID,
                       SectionAOffset, SectionBID, SectionBOffset,
                       IsPCRel, Size);

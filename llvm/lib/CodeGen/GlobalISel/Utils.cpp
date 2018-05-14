@@ -101,7 +101,7 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
     if (!MO.isReg())
       continue;
 
-    DEBUG(dbgs() << "Converting operand: " << MO << '\n');
+    LLVM_DEBUG(dbgs() << "Converting operand: " << MO << '\n');
     assert(MO.isReg() && "Unsupported non-reg operand");
 
     unsigned Reg = MO.getReg();
