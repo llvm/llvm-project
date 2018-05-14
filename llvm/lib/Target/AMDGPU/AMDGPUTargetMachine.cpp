@@ -620,7 +620,8 @@ void AMDGPUPassConfig::addIRPasses() {
   }
 
   // Handle uses of OpenCL image2d_t, image3d_t and sampler_t arguments.
-  addPass(createAMDGPUOpenCLImageTypeLoweringPass());
+  if (TM.getTargetTriple().getArch() == Triple::r600)
+    addPass(createR600OpenCLImageTypeLoweringPass());
 
   // Replace OpenCL enqueued block function pointers with global variables.
   addPass(createAMDGPUOpenCLEnqueuedBlockLoweringPass());

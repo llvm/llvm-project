@@ -4,10 +4,6 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=skx -show-mc-encoding | FileCheck %s --check-prefix=VCHECK --check-prefix=SKX
 
 define i64 @test_x86_sse_cvtss2si64(<4 x float> %a0) {
-; CHECK-LABEL: test_x86_sse_cvtss2si64:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtss2si %xmm0, %rax
-; CHECK-NEXT:    retq
 ; SSE-LABEL: test_x86_sse_cvtss2si64:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    cvtss2si %xmm0, %rax ## encoding: [0xf3,0x48,0x0f,0x2d,0xc0]
@@ -28,36 +24,7 @@ define i64 @test_x86_sse_cvtss2si64(<4 x float> %a0) {
 declare i64 @llvm.x86.sse.cvtss2si64(<4 x float>) nounwind readnone
 
 
-define <4 x float> @test_x86_sse_cvtsi642ss(<4 x float> %a0, i64 %a1) {
-; CHECK-LABEL: test_x86_sse_cvtsi642ss:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0
-; CHECK-NEXT:    retq
-; SSE-LABEL: test_x86_sse_cvtsi642ss:
-; SSE:       ## %bb.0:
-; SSE-NEXT:    cvtsi2ssq %rdi, %xmm0 ## encoding: [0xf3,0x48,0x0f,0x2a,0xc7]
-; SSE-NEXT:    retq ## encoding: [0xc3]
-;
-; AVX2-LABEL: test_x86_sse_cvtsi642ss:
-; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0 ## encoding: [0xc4,0xe1,0xfa,0x2a,0xc7]
-; AVX2-NEXT:    retq ## encoding: [0xc3]
-;
-; SKX-LABEL: test_x86_sse_cvtsi642ss:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe1,0xfa,0x2a,0xc7]
-; SKX-NEXT:    retq ## encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.sse.cvtsi642ss(<4 x float> %a0, i64 %a1) ; <<4 x float>> [#uses=1]
-  ret <4 x float> %res
-}
-declare <4 x float> @llvm.x86.sse.cvtsi642ss(<4 x float>, i64) nounwind readnone
-
-
 define i64 @test_x86_sse_cvttss2si64(<4 x float> %a0) {
-; CHECK-LABEL: test_x86_sse_cvttss2si64:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vcvttss2si %xmm0, %rax
-; CHECK-NEXT:    retq
 ; SSE-LABEL: test_x86_sse_cvttss2si64:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    cvttss2si %xmm0, %rax ## encoding: [0xf3,0x48,0x0f,0x2c,0xc0]

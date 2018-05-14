@@ -45,6 +45,92 @@ FDRLoggingOptions FDROptions;
 
 __sanitizer::SpinMutex FDROptionsMutex;
 
+namespace {
+XRayFileHeader &fdrCommonHeaderInfo() {
+  static XRayFileHeader Header = [] {
+    XRayFileHeader H;
+    // Version 2 of the log writes the extents of the buffer, instead of
+    // relying on an end-of-buffer record.
+    H.Version = 2;
+    H.Type = FileTypes::FDR_LOG;
+
+    // Test for required CPU features and cache the cycle frequency
+    static bool TSCSupported = probeRequiredCPUFeatures();
+    static uint64_t CycleFrequency =
+        TSCSupported ? getTSCFrequency() : __xray::NanosecondsPerSecond;
+    H.CycleFrequency = CycleFrequency;
+
+    // FIXME: Actually check whether we have 'constant_tsc' and
+    // 'nonstop_tsc' before setting the values in the header.
+    H.ConstantTSC = 1;
+    H.NonstopTSC = 1;
+    return H;
+  }();
+  return Header;
+}
+
+} // namespace
+
+// This is the iterator implementation, which knows how to handle FDR-mode
+// specific buffers. This is used as an implementation of the iterator function
+// needed by __xray_set_buffer_iterator(...). It maintains a global state of the
+// buffer iteration for the currently installed FDR mode buffers. In particular:
+//
+//   - If the argument represents the initial state of XRayBuffer ({nullptr, 0})
+//     then the iterator returns the header information.
+//   - If the argument represents the header information ({address of header
+//     info, size of the header info}) then it returns the first FDR buffer's
+//     address and extents.
+//   - It will keep returning the next buffer and extents as there are more
+//     buffers to process. When the input represents the last buffer, it will
+//     return the initial state to signal completion ({nullptr, 0}).
+//
+// See xray/xray_log_interface.h for more details on the requirements for the
+// implementations of __xray_set_buffer_iterator(...) and
+// __xray_log_process_buffers(...).
+XRayBuffer fdrIterator(const XRayBuffer B) {
+  DCHECK(internal_strcmp(__xray_log_get_current_mode(), "xray-fdr") == 0);
+  DCHECK(BQ->finalizing());
+
+  if (BQ == nullptr || !BQ->finalizing()) {
+    if (Verbosity())
+      Report(
+          "XRay FDR: Failed global buffer queue is null or not finalizing!\n");
+    return {nullptr, 0};
+  }
+
+  // We use a global scratch-pad for the header information, which only gets
+  // initialized the first time this function is called. We'll update one part
+  // of this information with some relevant data (in particular the number of
+  // buffers to expect).
+  static XRayFileHeader Header = fdrCommonHeaderInfo();
+  if (B.Data == nullptr && B.Size == 0) {
+    Header.FdrData = FdrAdditionalHeaderData{BQ->ConfiguredBufferSize()};
+    return XRayBuffer{static_cast<void *>(&Header), sizeof(Header)};
+  }
+
+  static BufferQueue::const_iterator It{};
+  static BufferQueue::const_iterator End{};
+  if (B.Data == static_cast<void *>(&Header) && B.Size == sizeof(Header)) {
+
+    // From this point on, we provide raw access to the raw buffer we're getting
+    // from the BufferQueue. We're relying on the iterators from the current
+    // Buffer queue.
+    It = BQ->cbegin();
+    End = BQ->cend();
+  }
+
+  if (It == End)
+    return {nullptr, 0};
+
+  XRayBuffer Result;
+  Result.Data = It->Data;
+  Result.Size = __sanitizer::atomic_load(&It->Extents->Size,
+                                         __sanitizer::memory_order_acquire);
+  ++It;
+  return Result;
+}
+
 // Must finalize before flushing.
 XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   if (__sanitizer::atomic_load(&LoggingStatus,
@@ -59,7 +145,6 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   if (!__sanitizer::atomic_compare_exchange_strong(
           &LogFlushStatus, &Result, XRayLogFlushStatus::XRAY_LOG_FLUSHING,
           __sanitizer::memory_order_release)) {
-
     if (__sanitizer::Verbosity())
       Report("Not flushing log, implementation is still finalizing.\n");
     return static_cast<XRayLogFlushStatus>(Result);
@@ -75,6 +160,23 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   // finalised before attempting to flush the log.
   __sanitizer::SleepForMillis(fdrFlags()->grace_period_ms);
 
+  // At this point, we're going to uninstall the iterator implementation, before
+  // we decide to do anything further with the global buffer queue.
+  __xray_log_remove_buffer_iterator();
+
+  if (fdrFlags()->no_file_flush) {
+    if (Verbosity())
+      Report("XRay FDR: Not flushing to file, 'no_file_flush=true'.\n");
+
+    // Clean up the buffer queue, and do not bother writing out the files!
+    delete BQ;
+    BQ = nullptr;
+    __sanitizer::atomic_store(&LogFlushStatus,
+                              XRayLogFlushStatus::XRAY_LOG_FLUSHED,
+                              __sanitizer::memory_order_release);
+    return XRayLogFlushStatus::XRAY_LOG_FLUSHED;
+  }
+
   // We write out the file in the following format:
   //
   //   1) We write down the XRay file header with version 1, type FDR_LOG.
@@ -84,8 +186,6 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   //      (fixed-sized) and let the tools reading the buffers deal with the data
   //      afterwards.
   //
-  // FIXME: Support the case for letting users handle the data through
-  // __xray_process_buffers(...) and provide an option to skip writing files.
   int Fd = -1;
   {
     // FIXME: Remove this section of the code, when we remove the struct-based
@@ -102,23 +202,7 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
     return Result;
   }
 
-  // Test for required CPU features and cache the cycle frequency
-  static bool TSCSupported = probeRequiredCPUFeatures();
-  static uint64_t CycleFrequency =
-      TSCSupported ? getTSCFrequency() : __xray::NanosecondsPerSecond;
-
-  XRayFileHeader Header;
-
-  // Version 2 of the log writes the extents of the buffer, instead of relying
-  // on an end-of-buffer record.
-  Header.Version = 2;
-  Header.Type = FileTypes::FDR_LOG;
-  Header.CycleFrequency = CycleFrequency;
-
-  // FIXME: Actually check whether we have 'constant_tsc' and 'nonstop_tsc'
-  // before setting the values in the header.
-  Header.ConstantTSC = 1;
-  Header.NonstopTSC = 1;
+  XRayFileHeader Header = fdrCommonHeaderInfo();
   Header.FdrData = FdrAdditionalHeaderData{BQ->ConfiguredBufferSize()};
   retryingWriteAll(Fd, reinterpret_cast<char *>(&Header),
                    reinterpret_cast<char *>(&Header) + sizeof(Header));
@@ -126,8 +210,8 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   BQ->apply([&](const BufferQueue::Buffer &B) {
     // Starting at version 2 of the FDR logging implementation, we only write
     // the records identified by the extents of the buffer. We use the Extents
-    // from the Buffer and write that out as the first record in the buffer.
-    // We still use a Metadata record, but fill in the extents instead for the
+    // from the Buffer and write that out as the first record in the buffer.  We
+    // still use a Metadata record, but fill in the extents instead for the
     // data.
     MetadataRecord ExtentsRecord;
     auto BufferExtents = __sanitizer::atomic_load(
@@ -180,8 +264,8 @@ struct TSCAndCPU {
 
 static TSCAndCPU getTimestamp() XRAY_NEVER_INSTRUMENT {
   // We want to get the TSC as early as possible, so that we can check whether
-  // we've seen this CPU before. We also do it before we load anything else, to
-  // allow for forward progress with the scheduling.
+  // we've seen this CPU before. We also do it before we load anything else,
+  // to allow for forward progress with the scheduling.
   TSCAndCPU Result;
 
   // Test once for required CPU features
@@ -242,8 +326,8 @@ void fdrLoggingHandleCustomEvent(void *Event,
 
   // Here we need to prepare the log to handle:
   //   - The metadata record we're going to write. (16 bytes)
-  //   - The additional data we're going to write. Currently, that's the size of
-  //   the event we're going to dump into the log as free-form bytes.
+  //   - The additional data we're going to write. Currently, that's the size
+  //   of the event we're going to dump into the log as free-form bytes.
   if (!prepareBuffer(TSC, CPU, clock_gettime, MetadataRecSize + EventSize)) {
     TLD.BQ = nullptr;
     return;
@@ -293,8 +377,8 @@ void fdrLoggingHandleTypedEvent(
 
   // Here we need to prepare the log to handle:
   //   - The metadata record we're going to write. (16 bytes)
-  //   - The additional data we're going to write. Currently, that's the size of
-  //   the event we're going to dump into the log as free-form bytes.
+  //   - The additional data we're going to write. Currently, that's the size
+  //   of the event we're going to dump into the log as free-form bytes.
   if (!prepareBuffer(TSC, CPU, clock_gettime, MetadataRecSize + EventSize)) {
     TLD.BQ = nullptr;
     return;
@@ -365,18 +449,23 @@ XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
     if (EnvOpts == nullptr)
       EnvOpts = "";
     FDRParser.ParseString(EnvOpts);
-    FDRParser.ParseString(static_cast<const char *>(Options));
-    *fdrFlags() = FDRFlags;
-
-    BufferSize = FDRFlags.buffer_size;
-    BufferMax = FDRFlags.buffer_max;
 
     // FIXME: Remove this when we fully remove the deprecated flags.
-    if (internal_strlen(EnvOpts) != 0) {
-      flags()->xray_fdr_log_func_duration_threshold_us =
-          FDRFlags.func_duration_threshold_us;
-      flags()->xray_fdr_log_grace_period_ms = FDRFlags.grace_period_ms;
+    if (internal_strlen(EnvOpts) == 0) {
+      FDRFlags.func_duration_threshold_us =
+          flags()->xray_fdr_log_func_duration_threshold_us;
+      FDRFlags.grace_period_ms = flags()->xray_fdr_log_grace_period_ms;
     }
+
+    // The provided options should always override the compiler-provided and
+    // environment-variable defined options.
+    FDRParser.ParseString(static_cast<const char *>(Options));
+    *fdrFlags() = FDRFlags;
+    BufferSize = FDRFlags.buffer_size;
+    BufferMax = FDRFlags.buffer_max;
+    __sanitizer::SpinMutexLock Guard(&FDROptionsMutex);
+    FDROptions.Fd = -1;
+    FDROptions.ReportErrors = true;
   } else if (OptionsSize != sizeof(FDRLoggingOptions)) {
     // FIXME: This is deprecated, and should really be removed.
     // At this point we use the flag parser specific to the FDR mode
@@ -433,6 +522,9 @@ XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
   __xray_set_handler(fdrLoggingHandleArg0);
   __xray_set_customevent_handler(fdrLoggingHandleCustomEvent);
   __xray_set_typedevent_handler(fdrLoggingHandleTypedEvent);
+
+  // Install the buffer iterator implementation.
+  __xray_log_set_buffer_iterator(fdrIterator);
 
   __sanitizer::atomic_store(&LoggingStatus,
                             XRayLogInitStatus::XRAY_LOG_INITIALIZED,

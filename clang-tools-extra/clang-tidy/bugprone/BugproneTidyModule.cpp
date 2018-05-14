@@ -40,6 +40,7 @@
 #include "SuspiciousSemicolonCheck.h"
 #include "SuspiciousStringCompareCheck.h"
 #include "SwappedArgumentsCheck.h"
+#include "TerminatingContinueCheck.h"
 #include "ThrowKeywordMissingCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
@@ -115,6 +116,8 @@ public:
         "bugprone-suspicious-string-compare");
     CheckFactories.registerCheck<SwappedArgumentsCheck>(
         "bugprone-swapped-arguments");
+    CheckFactories.registerCheck<TerminatingContinueCheck>(
+        "bugprone-terminating-continue");
     CheckFactories.registerCheck<ThrowKeywordMissingCheck>(
         "bugprone-throw-keyword-missing");
     CheckFactories.registerCheck<UndefinedMemoryManipulationCheck>(

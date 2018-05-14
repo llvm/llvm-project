@@ -140,6 +140,11 @@ typedef struct LLVMOpaqueDiagnosticInfo *LLVMDiagnosticInfoRef;
 typedef struct LLVMComdat *LLVMComdatRef;
 
 /**
+ * @see llvm::Module::ModuleFlagEntry
+ */
+typedef struct LLVMOpaqueModuleFlagEntry LLVMModuleFlagEntry;
+
+/**
  * @}
  */
 

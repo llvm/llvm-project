@@ -721,6 +721,10 @@ ATOMIC_BUILTIN(__opencl_atomic_fetch_xor, "v.", "t")
 ATOMIC_BUILTIN(__opencl_atomic_fetch_min, "v.", "t")
 ATOMIC_BUILTIN(__opencl_atomic_fetch_max, "v.", "t")
 
+// GCC does not support these, they are a Clang extension.
+ATOMIC_BUILTIN(__atomic_fetch_min, "iiD*i.", "t")
+ATOMIC_BUILTIN(__atomic_fetch_max, "v.", "t")
+
 #undef ATOMIC_BUILTIN
 
 // Non-overloaded atomic builtins.

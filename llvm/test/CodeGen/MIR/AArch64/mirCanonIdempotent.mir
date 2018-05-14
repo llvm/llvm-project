@@ -2,9 +2,10 @@
 # These Idempotent instructions are sorted alphabetically (based on after the '=')
 # CHECK: %namedVReg4352:gpr64 = MOVi64imm 4617315517961601024
 # CHECK: %namedVReg4353:gpr32 = MOVi32imm 408
-# CHECK: %namedVReg4354:gpr64all = IMPLICIT_DEF
-# CHECK: %namedVReg4355:fpr64 = FMOVDi 20
-# CHECK: %namedVReg4356:fpr64 = FMOVDi 112
+# CHECK: %namedVReg4354:gpr32 = MOVi32imm 408
+# CHECK: %namedVReg4355:gpr64all = IMPLICIT_DEF
+# CHECK: %namedVReg4356:fpr64 = FMOVDi 20
+# CHECK: %namedVReg4357:fpr64 = FMOVDi 112
 ...
 ---
 name: Proc8

@@ -54,16 +54,32 @@ template <> struct MappingTraits<exegesis::InstructionBenchmark> {
 } // namespace yaml
 } // namespace llvm
 
+LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(exegesis::InstructionBenchmark)
+
 namespace exegesis {
 
-InstructionBenchmark
-InstructionBenchmark::readYamlOrDie(llvm::StringRef Filename) {
+namespace {
+
+template <typename ObjectOrList>
+ObjectOrList readYamlOrDieCommon(llvm::StringRef Filename) {
   std::unique_ptr<llvm::MemoryBuffer> MemBuffer = llvm::cantFail(
       llvm::errorOrToExpected(llvm::MemoryBuffer::getFile(Filename)));
   llvm::yaml::Input Yin(*MemBuffer);
-  InstructionBenchmark Benchmark;
+  ObjectOrList Benchmark;
   Yin >> Benchmark;
   return Benchmark;
+}
+
+} // namespace
+
+InstructionBenchmark
+InstructionBenchmark::readYamlOrDie(llvm::StringRef Filename) {
+  return readYamlOrDieCommon<InstructionBenchmark>(Filename);
+}
+
+std::vector<InstructionBenchmark>
+InstructionBenchmark::readYamlsOrDie(llvm::StringRef Filename) {
+  return readYamlOrDieCommon<std::vector<InstructionBenchmark>>(Filename);
 }
 
 void InstructionBenchmark::writeYamlOrDie(const llvm::StringRef Filename) {

@@ -124,6 +124,7 @@ def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, h
 def : WriteRes<WriteLEA, [SKXPort15]>; // LEA instructions can't fold loads.
 
 defm : SKXWriteResPair<WriteCMOV,  [SKXPort06], 1>; // Conditional move.
+defm : X86WriteRes<WriteFCMOV, [SKXPort1], 3, [1], 1>; // x87 conditional move.
 def  : WriteRes<WriteSETCC, [SKXPort06]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [SKXPort06,SKXPort4,SKXPort237]> {
   let Latency = 2;
@@ -754,8 +755,7 @@ def SKXWriteResGroup31 : SchedWriteRes<[SKXPort1]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup31], (instregex "CMOV(N?)(B|BE|E|P)_F",
-                                             "PDEP(32|64)rr",
+def: InstRW<[SKXWriteResGroup31], (instregex "PDEP(32|64)rr",
                                              "PEXT(32|64)rr",
                                              "SHLD(16|32|64)rri8",
                                              "SHRD(16|32|64)rri8")>;

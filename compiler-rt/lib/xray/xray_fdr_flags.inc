@@ -25,3 +25,5 @@ XRAY_FLAG(int, grace_period_ms, 100,
 XRAY_FLAG(int, buffer_size, 16384,
           "Size of buffers in the circular buffer queue.")
 XRAY_FLAG(int, buffer_max, 100, "Maximum number of buffers in the queue.")
+XRAY_FLAG(bool, no_file_flush, false,
+          "Set to true to not write log files by default.")
