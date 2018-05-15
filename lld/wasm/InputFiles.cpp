@@ -159,7 +159,7 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
 
 void ObjFile::parse() {
   // Parse a memory buffer as a wasm file.
-  DEBUG(dbgs() << "Parsing object: " << toString(this) << "\n");
+  LLVM_DEBUG(dbgs() << "Parsing object: " << toString(this) << "\n");
   std::unique_ptr<Binary> Bin = CHECK(createBinary(MB), toString(this));
 
   auto *Obj = dyn_cast<WasmObjectFile>(Bin.get());
@@ -339,7 +339,7 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {
 
 void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
-  DEBUG(dbgs() << "Parsing library: " << toString(this) << "\n");
+  LLVM_DEBUG(dbgs() << "Parsing library: " << toString(this) << "\n");
   File = CHECK(Archive::create(MB), toString(this));
 
   // Read the symbol table to construct Lazy symbols.
@@ -348,7 +348,7 @@ void ArchiveFile::parse() {
     Symtab->addLazy(this, &Sym);
     ++Count;
   }
-  DEBUG(dbgs() << "Read " << Count << " symbols\n");
+  LLVM_DEBUG(dbgs() << "Read " << Count << " symbols\n");
 }
 
 void ArchiveFile::addMember(const Archive::Symbol *Sym) {
@@ -361,8 +361,8 @@ void ArchiveFile::addMember(const Archive::Symbol *Sym) {
   if (!Seen.insert(C.getChildOffset()).second)
     return;
 
-  DEBUG(dbgs() << "loading lazy: " << Sym->getName() << "\n");
-  DEBUG(dbgs() << "from archive: " << toString(this) << "\n");
+  LLVM_DEBUG(dbgs() << "loading lazy: " << Sym->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "from archive: " << toString(this) << "\n");
 
   MemoryBufferRef MB =
       CHECK(C.getMemoryBufferRef(),

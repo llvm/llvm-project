@@ -28,8 +28,8 @@ entry:
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:   - Type:
 
-; The __wasm_call_ctors is somewhat special.  Make sure we can use it
-; as the entry point if we choose
+; The __wasm_call_ctors is somewhat special since its created by the linker.
+; Make sure we can use it as the entry point if we choose
 ; RUN: wasm-ld --entry=__wasm_call_ctors -o %t3.wasm %t.o
 ; RUN: obj2yaml %t3.wasm | FileCheck %s -check-prefix=CHECK-CTOR
 

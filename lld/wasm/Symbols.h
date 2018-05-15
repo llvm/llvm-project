@@ -340,7 +340,6 @@ T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
 // Returns a symbol name for an error message.
 std::string toString(const wasm::Symbol &Sym);
 std::string toString(wasm::Symbol::Kind Kind);
-std::string toString(WasmSymbolType Type);
 
 } // namespace lld
 

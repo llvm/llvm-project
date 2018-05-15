@@ -59,23 +59,23 @@ public:
     // OldSchedule.
     IslCtx = S.getSharedIslCtx();
 
-    DEBUG(dbgs() << "Going to flatten old schedule:\n");
+    LLVM_DEBUG(dbgs() << "Going to flatten old schedule:\n");
     OldSchedule = S.getSchedule();
-    DEBUG(printSchedule(dbgs(), OldSchedule, 2));
+    LLVM_DEBUG(printSchedule(dbgs(), OldSchedule, 2));
 
     auto Domains = S.getDomains();
     auto RestrictedOldSchedule = OldSchedule.intersect_domain(Domains);
-    DEBUG(dbgs() << "Old schedule with domains:\n");
-    DEBUG(printSchedule(dbgs(), RestrictedOldSchedule, 2));
+    LLVM_DEBUG(dbgs() << "Old schedule with domains:\n");
+    LLVM_DEBUG(printSchedule(dbgs(), RestrictedOldSchedule, 2));
 
     auto NewSchedule = flattenSchedule(RestrictedOldSchedule);
 
-    DEBUG(dbgs() << "Flattened new schedule:\n");
-    DEBUG(printSchedule(dbgs(), NewSchedule, 2));
+    LLVM_DEBUG(dbgs() << "Flattened new schedule:\n");
+    LLVM_DEBUG(printSchedule(dbgs(), NewSchedule, 2));
 
     NewSchedule = NewSchedule.gist_domain(Domains);
-    DEBUG(dbgs() << "Gisted, flattened new schedule:\n");
-    DEBUG(printSchedule(dbgs(), NewSchedule, 2));
+    LLVM_DEBUG(dbgs() << "Gisted, flattened new schedule:\n");
+    LLVM_DEBUG(printSchedule(dbgs(), NewSchedule, 2));
 
     S.setSchedule(NewSchedule);
     return false;

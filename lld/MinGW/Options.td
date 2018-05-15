@@ -41,6 +41,7 @@ def verbose: F<"verbose">, HelpText<"Verbose mode">;
 def _HASH_HASH_HASH : Flag<["-"], "###">,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
 def mllvm: S<"mllvm">;
+def pdb: S<"pdb">, HelpText<"Specify output PDB debug information file">;
 def Xlink : J<"Xlink=">, MetaVarName<"<arg>">,
     HelpText<"Pass <arg> to the COFF linker">;
 

@@ -61,6 +61,9 @@ public:
 
   unsigned Bss : 1;
 
+  // Set for sections that should not be folded by ICF.
+  unsigned KeepUnique : 1;
+
   // These corresponds to the fields in Elf_Shdr.
   uint32_t Alignment;
   uint64_t Flags;
@@ -85,8 +88,8 @@ protected:
               uint64_t Entsize, uint64_t Alignment, uint32_t Type,
               uint32_t Info, uint32_t Link)
       : Name(Name), Repl(this), SectionKind(SectionKind), Live(false),
-        Bss(false), Alignment(Alignment), Flags(Flags), Entsize(Entsize),
-        Type(Type), Link(Link), Info(Info) {}
+        Bss(false), KeepUnique(false), Alignment(Alignment), Flags(Flags),
+        Entsize(Entsize), Type(Type), Link(Link), Info(Info) {}
 };
 
 // This corresponds to a section of an input file.
