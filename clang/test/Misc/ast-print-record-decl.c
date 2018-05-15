@@ -7,8 +7,8 @@
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
 //   RUN: %clang_cc1 -verify -ast-print -DKW=struct -DBASES= %s > %t.c
-//   RUN: FileCheck --check-prefixes=CHECK,PRINT -DKW=struct -DBASES= %s \
-//   RUN:           --input-file %t.c
+//   RUN: FileCheck --check-prefixes=CHECK,PRINT,PRINT-C -DKW=struct -DBASES= \
+//   RUN:           %s --input-file %t.c
 //
 //   Now check compiling and printing of the printed file.
 //
@@ -19,7 +19,8 @@
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
 //   RUN: %clang_cc1 -verify -ast-print %t.c \
-//   RUN: | FileCheck --check-prefixes=CHECK,PRINT -DKW=struct -DBASES= %s
+//   RUN: | FileCheck --check-prefixes=CHECK,PRINT,PRINT-C -DKW=struct \
+//   RUN:             -DBASES= %s
 
 // Repeat for union:
 //
@@ -30,8 +31,8 @@
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
 //   RUN: %clang_cc1 -verify -ast-print -DKW=union -DBASES= %s > %t.c
-//   RUN: FileCheck --check-prefixes=CHECK,PRINT -DKW=union -DBASES= %s \
-//   RUN:           --input-file %t.c
+//   RUN: FileCheck --check-prefixes=CHECK,PRINT,PRINT-C -DKW=union -DBASES= \
+//   RUN:           %s --input-file %t.c
 //
 //   Now check compiling and printing of the printed file.
 //
@@ -42,7 +43,8 @@
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
 //   RUN: %clang_cc1 -verify -ast-print %t.c \
-//   RUN: | FileCheck --check-prefixes=CHECK,PRINT -DKW=union -DBASES= %s
+//   RUN: | FileCheck --check-prefixes=CHECK,PRINT,PRINT-C -DKW=union \
+//   RUN:             -DBASES= %s
 
 // Repeat for C++ (BASES helps ensure we're printing as C++ not as C):
 //
@@ -54,7 +56,7 @@
 //
 //   RUN: %clang_cc1 -verify -ast-print -DKW=struct -DBASES=' : B' -xc++ %s \
 //   RUN: > %t.cpp
-//   RUN: FileCheck --check-prefixes=CHECK,PRINT,CXX -DKW=struct \
+//   RUN: FileCheck --check-prefixes=CHECK,PRINT,PRINT-CXX -DKW=struct \
 //   RUN:           -DBASES=' : B' %s --input-file %t.cpp
 //
 //   Now check compiling and printing of the printed file.
@@ -66,7 +68,7 @@
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
 //   RUN: %clang_cc1 -verify -ast-print %t.cpp \
-//   RUN: | FileCheck --check-prefixes=CHECK,PRINT,CXX -DKW=struct \
+//   RUN: | FileCheck --check-prefixes=CHECK,PRINT,PRINT-CXX -DKW=struct \
 //   RUN:             -DBASES=' : B' %s
 
 // END.
@@ -155,25 +157,33 @@ void defSelfRef() {
   // expected-note@+1 2 {{'T' has been explicitly marked deprecated here}}
   KW __attribute__((deprecated(""))) T *p0;
 
-  // PRINT-NEXT: [[KW]] __attribute__((aligned(16))) T[[BASES]] {
-  // PRINT-NEXT:   int i;
-  // PRINT-NEXT:   [[KW]] T *p2;
-  // PRINT-NEXT: } *p1;
-  KW __attribute__((aligned(16))) T BASES { // expected-warning {{'T' is deprecated}}
+  // PRINT-NEXT:  [[KW]] __attribute__((aligned(64))) T[[BASES]] {
+  // PRINT-NEXT:    int i;
+  // PRINT-NEXT:    [[KW]] T *p2;
+  // PRINT-NEXT:    [[KW]] __attribute__((may_alias)) T *p3;
+  // PRINT-NEXT:    [[KW]] T *p4;
+  // PRINT-NEXT:  } *p1;
+  KW __attribute__((aligned(64))) T BASES { // expected-warning {{'T' is deprecated}}
     int i;
     KW T *p2;
+    // FIXME: For C++, T at p3 loses aligned and deprecated, perhaps because
+    // that RecordDecl isn't in the same redecl list.  Perhaps the redecl lists
+    // are split here but not in C due to the different scoping rules in C++
+    // classes.
+    KW __attribute__((may_alias)) T *p3;
+    KW T *p4;
   } *p1;
 
-  // LLVM: store i64 16
+  // LLVM: store i64 64
   long s0 = sizeof *p0;
-  // LLVM-NEXT: store i64 16
+  // LLVM-NEXT: store i64 64
   long s1 = sizeof *p1;
-  // LLVM-NEXT: store i64 16
+  // LLVM-NEXT: store i64 64
   long s2 = sizeof *p0->p2;
-  // LLVM-NEXT: store i64 16
-  long s3 = sizeof *p1->p2;
-  // LLVM-NEXT: store i64 16
-  long s4 = sizeof *p1->p2->p2;
+  // LLVM-NEXT: store i64 64
+  long s3 = sizeof *p1->p3;
+  // LLVM-NEXT: store i64 64
+  long s4 = sizeof *p1->p4->p2;
 }
 
 // CHECK-LABEL: declsOnly
@@ -224,14 +234,41 @@ void inInit() {
 }
 
 #ifdef __cplusplus
-// CXX-LABEL: inMemberPtr
+// PRINT-CXX-LABEL: inMemberPtr
 void inMemberPtr() {
-  // CXX-NEXT: [[KW]] T1 {
-  // CXX-NEXT:   int i;
-  // CXX-NEXT: };
+  // PRINT-CXX-NEXT: [[KW]] T1 {
+  // PRINT-CXX-NEXT:   int i;
+  // PRINT-CXX-NEXT: };
   KW T1 { int i; };
-  // CXX-NEXT: [[KW]] T2 {
-  // CXX-NEXT: } T1::*p;
+  // PRINT-CXX-NEXT: [[KW]] T2 {
+  // PRINT-CXX-NEXT: } T1::*p;
   KW T2 {} T1::*p;
 }
 #endif
+
+// Check that tag decl groups stay together in decl contexts.
+
+// PRINT-LABEL: DeclGroupAtFileScope {
+// PRINT-NEXT:    int i;
+// PRINT-NEXT:  } *DeclGroupAtFileScopePtr;
+KW DeclGroupAtFileScope { int i; } *DeclGroupAtFileScopePtr;
+
+// PRINT-LABEL: DeclGroupInMemberList {
+KW DeclGroupInMemberList {
+  // PRINT-NEXT:  struct  T1 {
+  // PRINT-NEXT:    int i;
+  // PRINT-NEXT:  } t1;
+  struct T1 { int i; } t1;
+  // PRINT-NEXT:  union T2 {
+  // PRINT-NEXT:    int i;
+  // PRINT-NEXT:  } *t20, t21[2];
+  union T2 { int i; } *t20, t21[2];
+  // PRINT-NEXT:  enum T3 {
+  // PRINT-NEXT:    T30
+  // PRINT-NEXT:  } t30;
+  enum T3 { T30 } t30;
+  // PRINT-NEXT: };
+};
+
+// A tag decl group in the tag decl's own member list is exercised in
+// defSelfRef above.

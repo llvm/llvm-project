@@ -100,7 +100,9 @@ public:
     struct Bundle {
       std::array<Optional<StringRef>, 16> Data;
       ObjectInfo DeclTimeInfo;
-      Bundle(const ObjectInfo &Info) : DeclTimeInfo(Info) {}
+      uint16_t MemoryFlags;
+      Bundle(const ObjectInfo &Info, uint16_t Flags)
+          : DeclTimeInfo(Info), MemoryFlags(Flags) {}
     };
     std::map<BundleKey, Bundle> BundleData;
     // Bundles are listed in the order of their first occurrence.

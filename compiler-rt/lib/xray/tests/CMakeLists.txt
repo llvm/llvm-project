@@ -72,6 +72,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     add_xray_lib("RTXRay.test.osx"
       $<TARGET_OBJECTS:RTXray.osx>
       $<TARGET_OBJECTS:RTXrayFDR.osx>
+      $<TARGET_OBJECTS:RTXrayPROFILER.osx>
       $<TARGET_OBJECTS:RTSanitizerCommon.osx>
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>)
   else()
@@ -79,6 +80,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     add_xray_lib("RTXRay.test.${arch}"
       $<TARGET_OBJECTS:RTXray.${arch}>
       $<TARGET_OBJECTS:RTXrayFDR.${arch}>
+      $<TARGET_OBJECTS:RTXrayPROFILER.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>)
   endforeach()

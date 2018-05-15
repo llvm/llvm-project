@@ -83,3 +83,23 @@ void declsOnly() {
   // PRINT-NEXT: enum T *p4;
   enum T *p4;
 }
+
+// Check that tag decl groups stay together in decl contexts.
+
+// PRINT-LABEL: enum DeclGroupAtFileScope {
+// PRINT-NEXT:    DeclGroupAtFileScope0
+// PRINT-NEXT:  } *DeclGroupAtFileScopePtr;
+enum DeclGroupAtFileScope { DeclGroupAtFileScope0 } *DeclGroupAtFileScopePtr;
+
+// PRINT-LABEL: struct DeclGroupInMemberList
+struct DeclGroupInMemberList {
+  // PRINT-NEXT:  enum T1 {
+  // PRINT-NEXT:    T10
+  // PRINT-NEXT:  } *p0;
+  enum T1 { T10 } *p0;
+  // PRINT-NEXT:  enum T2 {
+  // PRINT-NEXT:    T20
+  // PRINT-NEXT:  } *p1, *p2;
+  enum T2 { T20 } *p1, *p2;
+  // PRINT-NEXT: };
+};
