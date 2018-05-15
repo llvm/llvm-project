@@ -116,9 +116,9 @@ void HelperDeclRGBuilder::run(
   if (const auto *FuncRef = Result.Nodes.getNodeAs<DeclRefExpr>("func_ref")) {
     const auto *DC = Result.Nodes.getNodeAs<Decl>("dc");
     assert(DC);
-    DEBUG(llvm::dbgs() << "Find helper function usage: "
-                       << FuncRef->getDecl()->getNameAsString() << " ("
-                       << FuncRef->getDecl() << ")\n");
+    LLVM_DEBUG(llvm::dbgs() << "Find helper function usage: "
+                            << FuncRef->getDecl()->getNameAsString() << " ("
+                            << FuncRef->getDecl() << ")\n");
     RG->addEdge(
         getOutmostClassOrFunDecl(DC->getCanonicalDecl()),
         getOutmostClassOrFunDecl(FuncRef->getDecl()->getCanonicalDecl()));
@@ -126,9 +126,9 @@ void HelperDeclRGBuilder::run(
                  Result.Nodes.getNodeAs<CXXRecordDecl>("used_class")) {
     const auto *DC = Result.Nodes.getNodeAs<Decl>("dc");
     assert(DC);
-    DEBUG(llvm::dbgs() << "Find helper class usage: "
-                       << UsedClass->getNameAsString() << " (" << UsedClass
-                       << ")\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "Find helper class usage: " << UsedClass->getNameAsString()
+               << " (" << UsedClass << ")\n");
     RG->addEdge(getOutmostClassOrFunDecl(DC->getCanonicalDecl()), UsedClass);
   }
 }
