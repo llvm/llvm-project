@@ -1337,7 +1337,7 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *Node,
   MatMulInfoTy MMI;
   if (PMBasedOpts && User &&
       isMatrMultPattern(isl::manage_copy(Node), OAI->D, MMI)) {
-    DEBUG(dbgs() << "The matrix multiplication pattern was detected\n");
+    LLVM_DEBUG(dbgs() << "The matrix multiplication pattern was detected\n");
     MatMulOpts++;
     return optimizeMatMulPattern(isl::manage(Node), OAI->TTI, MMI).release();
   }
@@ -1483,7 +1483,7 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
       getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
 
   if (D.getSharedIslCtx() != S.getSharedIslCtx()) {
-    DEBUG(dbgs() << "DependenceInfo for another SCoP/isl_ctx\n");
+    LLVM_DEBUG(dbgs() << "DependenceInfo for another SCoP/isl_ctx\n");
     return false;
   }
 
@@ -1538,10 +1538,10 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
               "or 'no'. Falling back to default: 'yes'\n";
   }
 
-  DEBUG(dbgs() << "\n\nCompute schedule from: ");
-  DEBUG(dbgs() << "Domain := " << Domain << ";\n");
-  DEBUG(dbgs() << "Proximity := " << Proximity << ";\n");
-  DEBUG(dbgs() << "Validity := " << Validity << ";\n");
+  LLVM_DEBUG(dbgs() << "\n\nCompute schedule from: ");
+  LLVM_DEBUG(dbgs() << "Domain := " << Domain << ";\n");
+  LLVM_DEBUG(dbgs() << "Proximity := " << Proximity << ";\n");
+  LLVM_DEBUG(dbgs() << "Validity := " << Validity << ";\n");
 
   unsigned IslSerializeSCCs;
 
@@ -1607,7 +1607,7 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
 
   ScopsRescheduled++;
 
-  DEBUG({
+  LLVM_DEBUG({
     auto *P = isl_printer_to_str(Ctx);
     P = isl_printer_set_yaml_style(P, ISL_YAML_STYLE_BLOCK);
     P = isl_printer_print_schedule(P, Schedule.get());

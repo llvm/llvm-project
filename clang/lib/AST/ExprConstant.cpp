@@ -6961,8 +6961,8 @@ bool ArrayExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   if (NumEltsToInit != NumElts && MaybeElementDependentArrayFiller(FillerExpr))
     NumEltsToInit = NumElts;
 
-  DEBUG(llvm::dbgs() << "The number of elements to initialize: " <<
-        NumEltsToInit << ".\n");
+  LLVM_DEBUG(llvm::dbgs() << "The number of elements to initialize: "
+                          << NumEltsToInit << ".\n");
 
   Result = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
 

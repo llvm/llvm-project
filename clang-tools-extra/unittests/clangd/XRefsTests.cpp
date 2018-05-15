@@ -12,15 +12,13 @@
 #include "Matchers.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
+#include "TestTU.h"
 #include "XRefs.h"
-#include "gmock/gmock.h"
 #include "index/FileIndex.h"
 #include "index/SymbolCollector.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/PCHContainerOperations.h"
-#include "clang/Frontend/Utils.h"
 #include "clang/Index/IndexingAction.h"
 #include "llvm/Support/Path.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -38,34 +36,6 @@ class IgnoreDiagnostics : public DiagnosticsConsumer {
   void onDiagnosticsReady(PathRef File,
                           std::vector<Diag> Diagnostics) override {}
 };
-
-// FIXME: this is duplicated with FileIndexTests. Share it.
-ParsedAST build(StringRef MainCode, StringRef HeaderCode = "") {
-  auto HeaderPath = testPath("foo.h");
-  auto MainPath = testPath("foo.cpp");
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
-      new vfs::InMemoryFileSystem());
-  VFS->addFile(MainPath, 0, llvm::MemoryBuffer::getMemBuffer(MainCode));
-  VFS->addFile(HeaderPath, 0, llvm::MemoryBuffer::getMemBuffer(HeaderCode));
-  std::vector<const char *> Cmd = {"clang", "-xc++", MainPath.c_str()};
-  if (!HeaderCode.empty()) {
-    std::vector<const char *> args = {"-include", HeaderPath.c_str()};
-    Cmd.insert(Cmd.begin() + 1, args.begin(), args.end());
-  }
-  auto CI = createInvocationFromCommandLine(Cmd);
-
-  auto Buf = MemoryBuffer::getMemBuffer(MainCode);
-  auto AST = ParsedAST::Build(std::move(CI), nullptr, std::move(Buf),
-                              std::make_shared<PCHContainerOperations>(), VFS);
-  assert(AST.hasValue());
-  return std::move(*AST);
-}
-
-std::unique_ptr<SymbolIndex> buildIndex(StringRef MainCode,
-                                        StringRef HeaderCode) {
-  auto AST = build(MainCode, HeaderCode);
-  return MemIndex::build(indexAST(&AST));
-}
 
 // Extracts ranges from an annotated example, and constructs a matcher for a
 // highlight set. Ranges should be named $read/$write as appropriate.
@@ -117,7 +87,7 @@ TEST(HighlightsTest, All) {
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
-    auto AST = build(T.code());
+    auto AST = TestTU::withCode(T.code()).build();
     EXPECT_THAT(findDocumentHighlights(AST, T.point()), HighlightsFrom(T))
         << Test;
   }
@@ -139,10 +109,12 @@ TEST(GoToDefinition, WithIndex) {
       void  $f1[[f1]]() {}
     )cpp");
 
-  auto Index = buildIndex(SymbolCpp.code(), SymbolHeader.code());
+  TestTU TU;
+  TU.Code = SymbolCpp.code();
+  TU.HeaderCode = SymbolHeader.code();
+  auto Index = TU.index();
   auto runFindDefinitionsWithIndex = [&Index](const Annotations &Main) {
-    auto AST = build(/*MainCode=*/Main.code(),
-                     /*HeaderCode=*/"");
+    auto AST = TestTU::withCode(Main.code()).build();
     return clangd::findDefinitions(AST, Main.point(), Index.get());
   };
 
@@ -329,7 +301,7 @@ TEST(GoToDefinition, All) {
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
-    auto AST = build(T.code());
+    auto AST = TestTU::withCode(T.code()).build();
     std::vector<Matcher<Location>> ExpectedLocations;
     for (const auto &R : T.ranges())
       ExpectedLocations.push_back(RangeIs(R));
@@ -661,7 +633,7 @@ TEST(Hover, All) {
 
   for (const OneTest &Test : Tests) {
     Annotations T(Test.Input);
-    auto AST = build(T.code());
+    auto AST = TestTU::withCode(T.code()).build();
     Hover H = getHover(AST, T.point());
 
     EXPECT_EQ(H.contents.value, Test.ExpectedHover) << Test.Input;

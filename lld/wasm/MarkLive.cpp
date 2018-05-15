@@ -37,7 +37,7 @@ void lld::wasm::markLive() {
   if (!Config->GcSections)
     return;
 
-  DEBUG(dbgs() << "markLive\n");
+  LLVM_DEBUG(dbgs() << "markLive\n");
   SmallVector<InputChunk *, 256> Q;
 
   auto Enqueue = [&](Symbol *Sym) {

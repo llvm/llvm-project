@@ -338,7 +338,8 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
     if (MA->isRead()) {
       // Reject load after store to same location.
       if (!Stores.is_disjoint(AccRel)) {
-        DEBUG(dbgs() << "Load after store of same element in same statement\n");
+        LLVM_DEBUG(
+            dbgs() << "Load after store of same element in same statement\n");
         OptimizationRemarkMissed R(PassName, "LoadAfterStore",
                                    MA->getAccessInstruction());
         R << "load after store of same element in same statement";
@@ -357,7 +358,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
     // In region statements the order is less clear, eg. the load and store
     // might be in a boxed loop.
     if (Stmt->isRegionStmt() && !Loads.is_disjoint(AccRel)) {
-      DEBUG(dbgs() << "WRITE in non-affine subregion not supported\n");
+      LLVM_DEBUG(dbgs() << "WRITE in non-affine subregion not supported\n");
       OptimizationRemarkMissed R(PassName, "StoreInSubregion",
                                  MA->getAccessInstruction());
       R << "store is in a non-affine subregion";
@@ -368,7 +369,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
 
     // Do not allow more than one store to the same location.
     if (!Stores.is_disjoint(AccRel) && !onlySameValueWrites(Stmt)) {
-      DEBUG(dbgs() << "WRITE after WRITE to same element\n");
+      LLVM_DEBUG(dbgs() << "WRITE after WRITE to same element\n");
       OptimizationRemarkMissed R(PassName, "StoreAfterStore",
                                  MA->getAccessInstruction());
       R << "store after store of same element in same statement";

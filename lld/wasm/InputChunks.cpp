@@ -23,7 +23,7 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::wasm;
 
-StringRef ReloctTypeToString(uint8_t RelocType) {
+static StringRef ReloctTypeToString(uint8_t RelocType) {
   switch (RelocType) {
 #define WASM_RELOC(NAME, REL) case REL: return #NAME;
 #include "llvm/BinaryFormat/WasmRelocs.def"
@@ -103,16 +103,17 @@ void InputChunk::writeTo(uint8_t *Buf) const {
   verifyRelocTargets();
 #endif
 
-  DEBUG(dbgs() << "applying relocations: " << getName()
-               << " count=" << Relocations.size() << "\n");
+  LLVM_DEBUG(dbgs() << "applying relocations: " << getName()
+                    << " count=" << Relocations.size() << "\n");
   int32_t Off = OutputOffset - getInputSectionOffset();
 
   for (const WasmRelocation &Rel : Relocations) {
     uint8_t *Loc = Buf + Rel.Offset + Off;
     uint32_t Value = File->calcNewValue(Rel);
-    DEBUG(dbgs() << "apply reloc: type=" << ReloctTypeToString(Rel.Type)
-                 << " addend=" << Rel.Addend << " index=" << Rel.Index
-                 << " value=" << Value << " offset=" << Rel.Offset << "\n");
+    LLVM_DEBUG(dbgs() << "apply reloc: type=" << ReloctTypeToString(Rel.Type)
+                      << " addend=" << Rel.Addend << " index=" << Rel.Index
+                      << " value=" << Value << " offset=" << Rel.Offset
+                      << "\n");
 
     switch (Rel.Type) {
     case R_WEBASSEMBLY_TYPE_INDEX_LEB:
@@ -145,8 +146,8 @@ void InputChunk::writeRelocations(raw_ostream &OS) const {
     return;
 
   int32_t Off = OutputOffset - getInputSectionOffset();
-  DEBUG(dbgs() << "writeRelocations: " << File->getName()
-               << " offset=" << Twine(Off) << "\n");
+  LLVM_DEBUG(dbgs() << "writeRelocations: " << File->getName()
+                    << " offset=" << Twine(Off) << "\n");
 
   for (const WasmRelocation &Rel : Relocations) {
     writeUleb128(OS, Rel.Type, "reloc type");
@@ -166,15 +167,15 @@ void InputChunk::writeRelocations(raw_ostream &OS) const {
 }
 
 void InputFunction::setFunctionIndex(uint32_t Index) {
-  DEBUG(dbgs() << "InputFunction::setFunctionIndex: " << getName() << " -> "
-               << Index << "\n");
+  LLVM_DEBUG(dbgs() << "InputFunction::setFunctionIndex: " << getName()
+                    << " -> " << Index << "\n");
   assert(!hasFunctionIndex());
   FunctionIndex = Index;
 }
 
 void InputFunction::setTableIndex(uint32_t Index) {
-  DEBUG(dbgs() << "InputFunction::setTableIndex: " << getName() << " -> "
-               << Index << "\n");
+  LLVM_DEBUG(dbgs() << "InputFunction::setTableIndex: " << getName() << " -> "
+                    << Index << "\n");
   assert(!hasTableIndex());
   TableIndex = Index;
 }

@@ -199,6 +199,9 @@ public:
 
   static const lldb::UnixSignalsSP &GetUnixSignals();
 
+  /// Launch the process specified in launch_info. The monitoring callback in
+  /// launch_info must be set, and it will be called when the process
+  /// terminates.
   static Status LaunchProcess(ProcessLaunchInfo &launch_info);
 
   //------------------------------------------------------------------

@@ -23,13 +23,13 @@ protected:
   std::string sortUsingDeclarations(llvm::StringRef Code,
                                     const std::vector<tooling::Range> &Ranges,
                                     const FormatStyle &Style = getLLVMStyle()) {
-    DEBUG(llvm::errs() << "---\n");
-    DEBUG(llvm::errs() << Code << "\n\n");
+    LLVM_DEBUG(llvm::errs() << "---\n");
+    LLVM_DEBUG(llvm::errs() << Code << "\n\n");
     tooling::Replacements Replaces =
         clang::format::sortUsingDeclarations(Style, Code, Ranges, "<stdin>");
     auto Result = applyAllReplacements(Code, Replaces);
     EXPECT_TRUE(static_cast<bool>(Result));
-    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    LLVM_DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
     return *Result;
   }
 

@@ -23,10 +23,12 @@ add_extra_unittest(ClangdTests
   HeadersTests.cpp
   IndexTests.cpp
   JSONExprTests.cpp
+  QualityTests.cpp
   SourceCodeTests.cpp
   SymbolCollectorTests.cpp
   SyncAPI.cpp
   TestFS.cpp
+  TestTU.cpp
   ThreadingTests.cpp
   TraceTests.cpp
   TUSchedulerTests.cpp
