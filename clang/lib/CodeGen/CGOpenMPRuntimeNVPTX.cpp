@@ -220,7 +220,10 @@ class CheckVarsEscapingDeclContext final
                "Parameter captured by value with variably modified type");
         EscapedParameters.insert(VD);
       }
-    }
+    } else if (VD->getType()->isAnyPointerType() ||
+               VD->getType()->isReferenceType())
+      // Do not globalize variables with reference or pointer type.
+      return;
     if (VD->getType()->isVariablyModifiedType())
       EscapedVariableLengthDecls.insert(VD);
     else
@@ -602,9 +605,12 @@ static const Stmt *getSingleCompoundChild(const Stmt *Body) {
 }
 
 /// Check if the parallel directive has an 'if' clause with non-constant or
-/// false condition.
-static bool hasParallelIfClause(ASTContext &Ctx,
-                                const OMPExecutableDirective &D) {
+/// false condition. Also, check if the number of threads is strictly specified
+/// and run those directives in non-SPMD mode.
+static bool hasParallelIfNumThreadsClause(ASTContext &Ctx,
+                                          const OMPExecutableDirective &D) {
+  if (D.hasClausesOfKind<OMPNumThreadsClause>())
+    return true;
   for (const auto *C : D.getClausesOfKind<OMPIfClause>()) {
     OpenMPDirectiveKind NameModifier = C->getNameModifier();
     if (NameModifier != OMPD_parallel && NameModifier != OMPD_unknown)
@@ -629,7 +635,7 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     switch (D.getDirectiveKind()) {
     case OMPD_target:
       if (isOpenMPParallelDirective(DKind) &&
-          !hasParallelIfClause(Ctx, *NestedDir))
+          !hasParallelIfNumThreadsClause(Ctx, *NestedDir))
         return true;
       if (DKind == OMPD_teams || DKind == OMPD_teams_distribute) {
         Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
@@ -639,7 +645,7 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
         if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
           DKind = NND->getDirectiveKind();
           if (isOpenMPParallelDirective(DKind) &&
-              !hasParallelIfClause(Ctx, *NND))
+              !hasParallelIfNumThreadsClause(Ctx, *NND))
             return true;
           if (DKind == OMPD_distribute) {
             Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
@@ -651,7 +657,7 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
             if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
               DKind = NND->getDirectiveKind();
               return isOpenMPParallelDirective(DKind) &&
-                     !hasParallelIfClause(Ctx, *NND);
+                     !hasParallelIfNumThreadsClause(Ctx, *NND);
             }
           }
         }
@@ -659,7 +665,7 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
       return false;
     case OMPD_target_teams:
       if (isOpenMPParallelDirective(DKind) &&
-          !hasParallelIfClause(Ctx, *NestedDir))
+          !hasParallelIfNumThreadsClause(Ctx, *NestedDir))
         return true;
       if (DKind == OMPD_distribute) {
         Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers();
@@ -669,13 +675,13 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
         if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
           DKind = NND->getDirectiveKind();
           return isOpenMPParallelDirective(DKind) &&
-                 !hasParallelIfClause(Ctx, *NND);
+                 !hasParallelIfNumThreadsClause(Ctx, *NND);
         }
       }
       return false;
     case OMPD_target_teams_distribute:
       return isOpenMPParallelDirective(DKind) &&
-             !hasParallelIfClause(Ctx, *NestedDir);
+             !hasParallelIfNumThreadsClause(Ctx, *NestedDir);
     case OMPD_target_simd:
     case OMPD_target_parallel:
     case OMPD_target_parallel_for:
@@ -746,7 +752,7 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_target_parallel_for_simd:
   case OMPD_target_teams_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for_simd:
-    return !hasParallelIfClause(Ctx, D);
+    return !hasParallelIfNumThreadsClause(Ctx, D);
   case OMPD_target_simd:
   case OMPD_target_teams_distribute_simd:
     return false;
@@ -967,7 +973,6 @@ void CGOpenMPRuntimeNVPTX::emitSpmdEntryHeader(
   CGF.EmitBlock(ExecuteBB);
 
   IsInTargetMasterThreadRegion = true;
-  emitGenericVarsProlog(CGF, D.getLocStart());
 }
 
 void CGOpenMPRuntimeNVPTX::emitSpmdEntryFooter(CodeGenFunction &CGF,
@@ -975,8 +980,6 @@ void CGOpenMPRuntimeNVPTX::emitSpmdEntryFooter(CodeGenFunction &CGF,
   IsInTargetMasterThreadRegion = false;
   if (!CGF.HaveInsertPoint())
     return;
-
-  emitGenericVarsEpilog(CGF);
 
   if (!EST.ExitBB)
     EST.ExitBB = CGF.createBasicBlock(".exit");
@@ -1464,8 +1467,7 @@ void CGOpenMPRuntimeNVPTX::emitProcBindClause(CodeGenFunction &CGF,
                                               OpenMPProcBindClauseKind ProcBind,
                                               SourceLocation Loc) {
   // Do nothing in case of Spmd mode and L0 parallel.
-  if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_SPMD &&
-      IsInTargetMasterThreadRegion)
+  if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_SPMD)
     return;
 
   CGOpenMPRuntime::emitProcBindClause(CGF, ProcBind, Loc);
@@ -1475,8 +1477,7 @@ void CGOpenMPRuntimeNVPTX::emitNumThreadsClause(CodeGenFunction &CGF,
                                                 llvm::Value *NumThreads,
                                                 SourceLocation Loc) {
   // Do nothing in case of Spmd mode and L0 parallel.
-  if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_SPMD &&
-      IsInTargetMasterThreadRegion)
+  if (getExecutionMode() == CGOpenMPRuntimeNVPTX::EM_SPMD)
     return;
 
   CGOpenMPRuntime::emitNumThreadsClause(CGF, NumThreads, Loc);
@@ -1887,8 +1888,6 @@ void CGOpenMPRuntimeNVPTX::emitSpmdParallelCall(
   // Just call the outlined function to execute the parallel region.
   // OutlinedFn(&GTid, &zero, CapturedStruct);
   //
-  // TODO: Do something with IfCond when support for the 'if' clause
-  // is added on Spmd target directives.
   llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
 
   Address ZeroAddr = CGF.CreateMemTemp(CGF.getContext().getIntTypeForBitwidth(

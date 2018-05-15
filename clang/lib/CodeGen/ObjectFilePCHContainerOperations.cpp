@@ -290,7 +290,7 @@ public:
     else
       ASTSym->setSection("__clangast");
 
-    DEBUG({
+    LLVM_DEBUG({
       // Print the IR for the PCH container to the debug output.
       llvm::SmallString<0> Buffer;
       clang::EmitBackendOutput(

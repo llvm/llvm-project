@@ -9,10 +9,9 @@
 ; CHECK-NEXT: Analyzing result type: v4f64
 ; CHECK-NEXT: Split node result: [[VFOUR]]: v4f64 = BUILD_VECTOR
 
-; FIXME: We dropped the 'reassoc' flag.
 ; CHECK: Legalizing node: [[VTWO:t.*]]: v2f64 = BUILD_VECTOR
 ; CHECK: Legally typed node: [[VTWO]]: v2f64 = BUILD_VECTOR
-; CHECK: Legalizing node: t26: v2f64 = fmaxnum nnan [[VTWO]], [[VTWO]]
+; CHECK: Legalizing node: t26: v2f64 = fmaxnum nnan reassoc [[VTWO]], [[VTWO]]
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"

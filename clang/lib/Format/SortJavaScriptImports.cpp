@@ -188,9 +188,9 @@ public:
     if (FirstNonImportLine && FirstNonImportLine->First->NewlinesBefore < 2)
       ReferencesText += "\n";
 
-    DEBUG(llvm::dbgs() << "Replacing imports:\n"
-                       << getSourceText(InsertionPoint) << "\nwith:\n"
-                       << ReferencesText << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "Replacing imports:\n"
+                            << getSourceText(InsertionPoint) << "\nwith:\n"
+                            << ReferencesText << "\n");
     auto Err = Result.add(tooling::Replacement(
         Env.getSourceManager(), CharSourceRange::getCharRange(InsertionPoint),
         ReferencesText));
@@ -307,7 +307,7 @@ private:
       FirstNonImportLine = nullptr;
       AnyImportAffected = AnyImportAffected || Line->Affected;
       Reference.Range.setEnd(LineEnd->Tok.getEndLoc());
-      DEBUG({
+      LLVM_DEBUG({
         llvm::dbgs() << "JsModuleReference: {"
                      << "is_export: " << Reference.IsExport
                      << ", cat: " << Reference.Category

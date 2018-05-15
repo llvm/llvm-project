@@ -285,49 +285,33 @@ define <8 x double> @test_intrinsic_fmax_v8f64(<8 x double> %x, <8 x double> %y)
   ret <8 x double> %z
 }
 
-; FIXME: The IR-level FMF should propagate to the node. With nnan, there's no need to blend.
+; The IR-level FMF propagate to the node. With nnan, there's no need to blend.
 
 define double @maxnum_intrinsic_nnan_fmf_f64(double %a, double %b) {
 ; SSE-LABEL: maxnum_intrinsic_nnan_fmf_f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movapd %xmm0, %xmm2
-; SSE-NEXT:    cmpunordsd %xmm0, %xmm2
-; SSE-NEXT:    movapd %xmm2, %xmm3
-; SSE-NEXT:    andpd %xmm1, %xmm3
-; SSE-NEXT:    maxsd %xmm0, %xmm1
-; SSE-NEXT:    andnpd %xmm1, %xmm2
-; SSE-NEXT:    orpd %xmm3, %xmm2
-; SSE-NEXT:    movapd %xmm2, %xmm0
+; SSE-NEXT:    maxsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: maxnum_intrinsic_nnan_fmf_f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmaxsd %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %r = tail call nnan double @llvm.maxnum.f64(double %a, double %b)
   ret double %r
 }
 
-; FIXME: Make sure vectors work too.
+; Make sure vectors work too.
 
 define <4 x float> @maxnum_intrinsic_nnan_fmf_f432(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: maxnum_intrinsic_nnan_fmf_f432:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm1, %xmm2
-; SSE-NEXT:    maxps %xmm0, %xmm2
-; SSE-NEXT:    cmpunordps %xmm0, %xmm0
-; SSE-NEXT:    andps %xmm0, %xmm1
-; SSE-NEXT:    andnps %xmm2, %xmm0
-; SSE-NEXT:    orps %xmm1, %xmm0
+; SSE-NEXT:    maxps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: maxnum_intrinsic_nnan_fmf_f432:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmaxps %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %r = tail call nnan <4 x float> @llvm.maxnum.v4f32(<4 x float> %a, <4 x float> %b)
   ret <4 x float> %r

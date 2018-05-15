@@ -2562,23 +2562,35 @@ def mv62 : Flag<["-"], "mv62">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv62"]>;
 def mv65 : Flag<["-"], "mv65">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv65"]>;
-def mhexagon_hvx : Flag<[ "-" ], "mhvx">, Group<m_hexagon_Features_HVX_Group>,
+def mhexagon_hvx : Flag<["-"], "mhvx">, Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon Vector eXtensions">;
-def mhexagon_hvx_EQ : Joined<[ "-" ], "mhvx=">,
+def mhexagon_hvx_EQ : Joined<["-"], "mhvx=">,
   Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon Vector eXtensions">;
-def mno_hexagon_hvx : Flag<[ "-" ], "mno-hvx">,
+def mno_hexagon_hvx : Flag<["-"], "mno-hvx">,
   Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Disable Hexagon Vector eXtensions">;
-def mhexagon_hvx_length_EQ : Joined<[ "-" ], "mhvx-length=">,
+def mhexagon_hvx_length_EQ : Joined<["-"], "mhvx-length=">,
   Group<m_hexagon_Features_HVX_Group>, HelpText<"Set Hexagon Vector Length">,
   Values<"64B,128B">;
 def ffixed_r19: Flag<["-"], "ffixed-r19">,
-  HelpText<"Reserve the r19 register (Hexagon only)">;
+  HelpText<"Reserve register r19 (Hexagon only)">;
+def mmemops : Flag<["-"], "mmemops">, Group<m_hexagon_Features_Group>,
+  Flags<[CC1Option]>, HelpText<"Enable generation of memop instructions">;
+def mno_memops : Flag<["-"], "mno-memops">, Group<m_hexagon_Features_Group>,
+  Flags<[CC1Option]>, HelpText<"Disable generation of memop instructions">;
 def mpackets : Flag<["-"], "mpackets">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Enable generation of instruction packets">;
 def mno_packets : Flag<["-"], "mno-packets">, Group<m_hexagon_Features_Group>,
   Flags<[CC1Option]>, HelpText<"Disable generation of instruction packets">;
+def mnvj : Flag<["-"], "mnvj">, Group<m_hexagon_Features_Group>,
+  Flags<[CC1Option]>, HelpText<"Enable generation of new-value jumps">;
+def mno_nvj : Flag<["-"], "mno-nvj">, Group<m_hexagon_Features_Group>,
+  Flags<[CC1Option]>, HelpText<"Disable generation of new-value jumps">;
+def mnvs : Flag<["-"], "mnvs">, Group<m_hexagon_Features_Group>,
+  Flags<[CC1Option]>, HelpText<"Enable generation of new-value stores">;
+def mno_nvs : Flag<["-"], "mno-nvs">, Group<m_hexagon_Features_Group>,
+  Flags<[CC1Option]>, HelpText<"Disable generation of new-value stores">;
 
 
 // X86 feature flags

@@ -7,7 +7,7 @@
 # RUN: echo "LIBSAMPLE_2.0 { global:" >> %t.script
 # RUN: echo '  extern "C" { _Z3bari; };' >> %t.script
 # RUN: echo "};" >> %t.script
-# RUN: ld.lld --hash-style=sysv --version-script %t.script -shared %t.o -o %t.so
+# RUN: ld.lld --hash-style=sysv --version-script %t.script -soname fixed-length-string -shared %t.o -o %t.so
 # RUN: llvm-readobj -V -dyn-symbols %t.so | FileCheck --check-prefix=DSO %s
 
 # DSO:      DynamicSymbols [
@@ -68,8 +68,8 @@
 # DSO-NEXT:  ]
 # DSO-NEXT:  Version symbols {
 # DSO-NEXT:    Section Name: .gnu.version
-# DSO-NEXT:    Address: 0x258
-# DSO-NEXT:    Offset: 0x258
+# DSO-NEXT:    Address: 0x2BA
+# DSO-NEXT:    Offset: 0x2BA
 # DSO-NEXT:    Link: 1
 # DSO-NEXT:    Symbols [
 # DSO-NEXT:      Symbol {

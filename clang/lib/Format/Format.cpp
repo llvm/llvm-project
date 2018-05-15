@@ -930,9 +930,9 @@ std::error_code parseConfiguration(StringRef Text, FormatStyle *Style) {
     // Ensure that each language is configured at most once.
     for (unsigned j = 0; j < i; ++j) {
       if (Styles[i].Language == Styles[j].Language) {
-        DEBUG(llvm::dbgs()
-              << "Duplicate languages in the config file on positions " << j
-              << " and " << i << "\n");
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Duplicate languages in the config file on positions "
+                   << j << " and " << i << "\n");
         return make_error_code(ParseError::Error);
       }
     }
@@ -2146,7 +2146,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
     SmallString<128> ConfigFile(Directory);
 
     llvm::sys::path::append(ConfigFile, ".clang-format");
-    DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
+    LLVM_DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
 
     Status = FS->status(ConfigFile.str());
     bool FoundConfigFile =
@@ -2155,7 +2155,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       // Try _clang-format too, since dotfiles are not commonly used on Windows.
       ConfigFile = Directory;
       llvm::sys::path::append(ConfigFile, "_clang-format");
-      DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
+      LLVM_DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
       Status = FS->status(ConfigFile.str());
       FoundConfigFile = Status && (Status->getType() ==
                                    llvm::sys::fs::file_type::regular_file);
@@ -2177,7 +2177,8 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
         return make_string_error("Error reading " + ConfigFile + ": " +
                                  ec.message());
       }
-      DEBUG(llvm::dbgs() << "Using configuration file " << ConfigFile << "\n");
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Using configuration file " << ConfigFile << "\n");
       return Style;
     }
   }

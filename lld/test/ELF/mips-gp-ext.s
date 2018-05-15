@@ -27,42 +27,42 @@
 # REQUIRES: mips
 
 # REL:      Contents of section .text:
-# REL-NEXT:  0000 3c080000 2108010c 8f82fffc
+# REL-NEXT:  0030 3c080000 2108010c 8f82ffcc
 #                 ^-- %hi(_gp_disp)
 #                          ^-- %lo(_gp_disp)
 #                                   ^-- 8 - (0x10c - 0x100)
 #                                       G - (GP - .got)
 
 # REL:      Contents of section .reginfo:
-# REL-NEXT:  0028 10000104 00000000 00000000 00000000
-# REL-NEXT:  0038 00000000 0000010c
+# REL-NEXT:  0058 10000104 00000000 00000000 00000000
+# REL-NEXT:  0068 00000000 0000013c
 #                          ^-- _gp
 
 # REL:      Contents of section .data:
 # REL-NEXT:  00f0 fffffef4
 #                 ^-- 0-0x10c
 
-# REL: 00000000         .text           00000000 foo
+# REL: 00000030         .text           00000000 foo
 # REL: 00000000         *ABS*           00000000 .hidden _gp_disp
-# REL: 0000010c         *ABS*           00000000 .hidden _gp
+# REL: 0000013c         *ABS*           00000000 .hidden _gp
 
 # ABS:      Contents of section .text:
-# ABS-NEXT:  0000 3c080000 21080200 8f82ff08
+# ABS-NEXT:  0030 3c080000 210801d0 8f82ff08
 #                 ^-- %hi(_gp_disp)
 #                          ^-- %lo(_gp_disp)
 #                                   ^-- 8 - (0x200 - 0x100)
 #                                       G - (GP - .got)
 
 # ABS:      Contents of section .reginfo:
-# ABS-NEXT:  0028 10000104 00000000 00000000 00000000
-# ABS-NEXT:  0038 00000000 00000200
+# ABS-NEXT:  0058 10000104 00000000 00000000 00000000
+# ABS-NEXT:  0068 00000000 00000200
 #                          ^-- _gp
 
 # ABS:      Contents of section .data:
-# ABS-NEXT:  00f0 fffffe00
+# ABS-NEXT:  00f0 fffffe30
 #                 ^-- 0-0x200
 
-# ABS: 00000000         .text           00000000 foo
+# ABS: 00000030         .text           00000000 foo
 # ABS: 00000000         *ABS*           00000000 .hidden _gp_disp
 # ABS: 00000200         *ABS*           00000000 .hidden _gp
 

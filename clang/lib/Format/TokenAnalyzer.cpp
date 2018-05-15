@@ -55,12 +55,12 @@ TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style)
       UnwrappedLines(1),
       Encoding(encoding::detectEncoding(
           Env.getSourceManager().getBufferData(Env.getFileID()))) {
-  DEBUG(
+  LLVM_DEBUG(
       llvm::dbgs() << "File encoding: "
                    << (Encoding == encoding::Encoding_UTF8 ? "UTF8" : "unknown")
                    << "\n");
-  DEBUG(llvm::dbgs() << "Language: " << getLanguageName(Style.Language)
-                     << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Language: " << getLanguageName(Style.Language)
+                          << "\n");
 }
 
 std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
@@ -74,7 +74,7 @@ std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
   assert(UnwrappedLines.rbegin()->empty());
   unsigned Penalty = 0;
   for (unsigned Run = 0, RunE = UnwrappedLines.size(); Run + 1 != RunE; ++Run) {
-    DEBUG(llvm::dbgs() << "Run " << Run << "...\n");
+    LLVM_DEBUG(llvm::dbgs() << "Run " << Run << "...\n");
     SmallVector<AnnotatedLine *, 16> AnnotatedLines;
 
     TokenAnnotator Annotator(Style, Tokens.getKeywords());
@@ -86,7 +86,7 @@ std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
     std::pair<tooling::Replacements, unsigned> RunResult =
         analyze(Annotator, AnnotatedLines, Tokens);
 
-    DEBUG({
+    LLVM_DEBUG({
       llvm::dbgs() << "Replacements for run " << Run << ":\n";
       for (tooling::Replacements::const_iterator I = RunResult.first.begin(),
                                                  E = RunResult.first.end();

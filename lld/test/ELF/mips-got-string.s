@@ -8,7 +8,7 @@
 
 # CHECK:      Symbol {
 # CHECK:        Name: $.str
-# CHECK-NEXT:   Value: 0xF4
+# CHECK-NEXT:   Value: 0x105
 # CHECK:      }
 
 # CHECK:      Local entries [

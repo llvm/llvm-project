@@ -24,8 +24,7 @@
 # CHECK-NEXT:      "documentRangeFormattingProvider": true,
 # CHECK-NEXT:      "executeCommandProvider": {
 # CHECK-NEXT:        "commands": [
-# CHECK-NEXT:          "clangd.applyFix",
-# CHECK-NEXT:          "clangd.insertInclude"
+# CHECK-NEXT:          "clangd.applyFix"
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
 # CHECK-NEXT:      "hoverProvider": true,

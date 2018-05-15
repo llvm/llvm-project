@@ -187,3 +187,8 @@ EXTERN void __kmpc_spmd_kernel_deinit() {
         omptarget_nvptx_threadPrivateContext);
   }
 }
+
+// Return true if the current target region is executed in SPMD mode.
+EXTERN int8_t __kmpc_is_spmd_exec_mode() {
+  return isSPMDMode();
+}

@@ -3101,12 +3101,13 @@ bool Scop::buildAliasChecks(AliasAnalysis &AA) {
   // we make the assumed context infeasible.
   invalidate(ALIASING, DebugLoc());
 
-  DEBUG(dbgs() << "\n\nNOTE: Run time checks for " << getNameStr()
-               << " could not be created as the number of parameters involved "
-                  "is too high. The SCoP will be "
-                  "dismissed.\nUse:\n\t--polly-rtc-max-parameters=X\nto adjust "
-                  "the maximal number of parameters but be advised that the "
-                  "compile time might increase exponentially.\n\n");
+  LLVM_DEBUG(
+      dbgs() << "\n\nNOTE: Run time checks for " << getNameStr()
+             << " could not be created as the number of parameters involved "
+                "is too high. The SCoP will be "
+                "dismissed.\nUse:\n\t--polly-rtc-max-parameters=X\nto adjust "
+                "the maximal number of parameters but be advised that the "
+                "compile time might increase exponentially.\n\n");
   return false;
 }
 
@@ -3327,8 +3328,8 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
            DominatorTree &DT, ScopDetection::DetectionContext &DC,
            OptimizationRemarkEmitter &ORE)
     : IslCtx(isl_ctx_alloc(), isl_ctx_free), SE(&ScalarEvolution), DT(&DT),
-      R(R), name(R.getNameStr()), HasSingleExitEdge(R.getExitingBlock()),
-      DC(DC), ORE(ORE), Affinator(this, LI),
+      R(R), name(None), HasSingleExitEdge(R.getExitingBlock()), DC(DC),
+      ORE(ORE), Affinator(this, LI),
       ID(getNextID((*R.getEntry()->getParent()).getName().str())) {
   if (IslOnErrorAbort)
     isl_options_set_on_error(getIslCtx().get(), ISL_ON_ERROR_ABORT);
@@ -4313,7 +4314,7 @@ void Scop::addRecordedAssumptions() {
 }
 
 void Scop::invalidate(AssumptionKind Kind, DebugLoc Loc, BasicBlock *BB) {
-  DEBUG(dbgs() << "Invalidate SCoP because of reason " << Kind << "\n");
+  LLVM_DEBUG(dbgs() << "Invalidate SCoP because of reason " << Kind << "\n");
   addAssumption(Kind, isl::set::empty(getParamSpace()), Loc, AS_ASSUMPTION, BB);
 }
 

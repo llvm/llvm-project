@@ -18,9 +18,12 @@
 #include "CodeCompletionStrings.h"
 #include "Compiler.h"
 #include "FuzzyMatch.h"
+#include "Headers.h"
 #include "Logger.h"
+#include "Quality.h"
 #include "SourceCode.h"
 #include "Trace.h"
+#include "URI.h"
 #include "index/Index.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -31,6 +34,9 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Format.h"
 #include <queue>
+
+// We log detailed candidate here if you run with -debug-only=codecomplete.
+#define DEBUG_TYPE "codecomplete"
 
 namespace clang {
 namespace clangd {
@@ -190,33 +196,26 @@ getOptionalParameters(const CodeCompletionString &CCS,
   return Result;
 }
 
-// Produces an integer that sorts in the same order as F.
-// That is: a < b <==> encodeFloat(a) < encodeFloat(b).
-uint32_t encodeFloat(float F) {
-  static_assert(std::numeric_limits<float>::is_iec559, "");
-  static_assert(sizeof(float) == sizeof(uint32_t), "");
-  constexpr uint32_t TopBit = ~(~uint32_t{0} >> 1);
+/// Creates a `HeaderFile` from \p Header which can be either a URI or a literal
+/// include.
+static llvm::Expected<HeaderFile> toHeaderFile(StringRef Header,
+                                               llvm::StringRef HintPath) {
+  if (isLiteralInclude(Header))
+    return HeaderFile{Header.str(), /*Verbatim=*/true};
+  auto U = URI::parse(Header);
+  if (!U)
+    return U.takeError();
 
-  // Get the bits of the float. Endianness is the same as for integers.
-  uint32_t U;
-  memcpy(&U, &F, sizeof(float));
-  // IEEE 754 floats compare like sign-magnitude integers.
-  if (U & TopBit)    // Negative float.
-    return 0 - U;    // Map onto the low half of integers, order reversed.
-  return U + TopBit; // Positive floats map onto the high half of integers.
-}
+  auto IncludePath = URI::includeSpelling(*U);
+  if (!IncludePath)
+    return IncludePath.takeError();
+  if (!IncludePath->empty())
+    return HeaderFile{std::move(*IncludePath), /*Verbatim=*/true};
 
-// Returns a string that sorts in the same order as (-Score, Name), for LSP.
-std::string sortText(float Score, llvm::StringRef Name) {
-  // We convert -Score to an integer, and hex-encode for readability.
-  // Example: [0.5, "foo"] -> "41000000foo"
-  std::string S;
-  llvm::raw_string_ostream OS(S);
-  write_hex(OS, encodeFloat(-Score), llvm::HexPrintStyle::Lower,
-            /*Width=*/2 * sizeof(Score));
-  OS << Name;
-  OS.flush();
-  return S;
+  auto Resolved = URI::resolve(*U, HintPath);
+  if (!Resolved)
+    return Resolved.takeError();
+  return HeaderFile{std::move(*Resolved), /*Verbatim=*/false};
 }
 
 /// A code completion result, in clang-native form.
@@ -227,38 +226,11 @@ struct CompletionCandidate {
   const CodeCompletionResult *SemaResult = nullptr;
   const Symbol *IndexResult = nullptr;
 
-  // Computes the "symbol quality" score for this completion. Higher is better.
-  float score() const {
-    float Score = 1;
-    if (IndexResult)
-      Score *= quality(*IndexResult);
-    if (SemaResult) {
-      // For now we just use the Sema priority, mapping it onto a 0-2 interval.
-      // That makes 1 neutral-ish, so we don't reward/penalize non-Sema results.
-      // Priority 80 is a really bad score.
-      Score *= 2 - std::min<float>(80, SemaResult->Priority) / 40;
-
-      switch (static_cast<CXAvailabilityKind>(SemaResult->Availability)) {
-      case CXAvailability_Available:
-        // No penalty.
-        break;
-      case CXAvailability_Deprecated:
-        Score *= 0.1f;
-        break;
-      case CXAvailability_NotAccessible:
-      case CXAvailability_NotAvailable:
-        Score = 0;
-        break;
-      }
-    }
-    return Score;
-  }
-
   // Builds an LSP completion item.
-  CompletionItem build(llvm::StringRef FileName,
-                       const CompletionItemScores &Scores,
+  CompletionItem build(StringRef FileName, const CompletionItemScores &Scores,
                        const CodeCompleteOptions &Opts,
-                       CodeCompletionString *SemaCCS) const {
+                       CodeCompletionString *SemaCCS,
+                       const IncludeInserter *Includes) const {
     assert(bool(SemaResult) == bool(SemaCCS));
     CompletionItem I;
     if (SemaResult) {
@@ -289,26 +261,29 @@ struct CompletionCandidate {
           I.documentation = D->Documentation;
         if (I.detail.empty())
           I.detail = D->CompletionDetail;
-        // FIXME: delay creating include insertion command to
-        // "completionItem/resolve", when it is supported
-        if (!D->IncludeHeader.empty()) {
-          // LSP favors additionalTextEdits over command. But we are still using
-          // command here because it would be expensive to calculate #include
-          // insertion edits for all candidates, and the include insertion edit
-          // is unlikely to conflict with the code completion edits.
-          Command Cmd;
-          // Command title is not added since this is not a user-facing command.
-          Cmd.command = ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE;
-          IncludeInsertion Insertion;
-          // Fallback to canonical header if declaration location is invalid.
-          Insertion.declaringHeader =
-              IndexResult->CanonicalDeclaration.FileURI.empty()
-                  ? D->IncludeHeader
-                  : IndexResult->CanonicalDeclaration.FileURI;
-          Insertion.preferredHeader = D->IncludeHeader;
-          Insertion.textDocument.uri = URIForFile(FileName);
-          Cmd.includeInsertion = std::move(Insertion);
-          I.command = std::move(Cmd);
+        if (Includes && !D->IncludeHeader.empty()) {
+          auto Edit = [&]() -> Expected<Optional<TextEdit>> {
+            auto ResolvedDeclaring = toHeaderFile(
+                IndexResult->CanonicalDeclaration.FileURI, FileName);
+            if (!ResolvedDeclaring)
+              return ResolvedDeclaring.takeError();
+            auto ResolvedInserted = toHeaderFile(D->IncludeHeader, FileName);
+            if (!ResolvedInserted)
+              return ResolvedInserted.takeError();
+            return Includes->insert(*ResolvedDeclaring, *ResolvedInserted);
+          }();
+          if (!Edit) {
+            std::string ErrMsg =
+                ("Failed to generate include insertion edits for adding header "
+                 "(FileURI=\"" +
+                 IndexResult->CanonicalDeclaration.FileURI +
+                 "\", IncludeHeader=\"" + D->IncludeHeader + "\") into " +
+                 FileName)
+                    .str();
+            log(ErrMsg + ":" + llvm::toString(Edit.takeError()));
+          } else if (*Edit) {
+            I.additionalTextEdits = {std::move(**Edit)};
+          }
         }
       }
     }
@@ -319,6 +294,7 @@ struct CompletionCandidate {
     return I;
   }
 };
+using ScoredCandidate = std::pair<CompletionCandidate, CompletionItemScores>;
 
 // Determine the symbol ID for a Sema code completion result, if possible.
 llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R) {
@@ -525,50 +501,12 @@ private:
   UniqueFunction<void()> ResultsCallback;
 };
 
-// Tracks a bounded number of candidates with the best scores.
-class TopN {
-public:
-  using value_type = std::pair<CompletionCandidate, CompletionItemScores>;
-  static constexpr size_t Unbounded = std::numeric_limits<size_t>::max();
-
-  TopN(size_t N) : N(N) {}
-
-  // Adds a candidate to the set.
-  // Returns true if a candidate was dropped to get back under N.
-  bool push(value_type &&V) {
-    bool Dropped = false;
-    if (Heap.size() >= N) {
-      Dropped = true;
-      if (N > 0 && greater(V, Heap.front())) {
-        std::pop_heap(Heap.begin(), Heap.end(), greater);
-        Heap.back() = std::move(V);
-        std::push_heap(Heap.begin(), Heap.end(), greater);
-      }
-    } else {
-      Heap.push_back(std::move(V));
-      std::push_heap(Heap.begin(), Heap.end(), greater);
-    }
-    assert(Heap.size() <= N);
-    assert(std::is_heap(Heap.begin(), Heap.end(), greater));
-    return Dropped;
-  }
-
-  // Returns candidates from best to worst.
-  std::vector<value_type> items() && {
-    std::sort_heap(Heap.begin(), Heap.end(), greater);
-    assert(Heap.size() <= N);
-    return std::move(Heap);
-  }
-
-private:
-  static bool greater(const value_type &L, const value_type &R) {
+struct ScoredCandidateGreater {
+  bool operator()(const ScoredCandidate &L, const ScoredCandidate &R) {
     if (L.second.finalScore != R.second.finalScore)
       return L.second.finalScore > R.second.finalScore;
     return L.first.Name < R.first.Name; // Earlier name is better.
   }
-
-  const size_t N;
-  std::vector<value_type> Heap; // Min-heap, comparator is greater().
 };
 
 class SignatureHelpCollector final : public CodeCompleteConsumer {
@@ -670,6 +608,7 @@ struct SemaCompleteInput {
   PathRef FileName;
   const tooling::CompileCommand &Command;
   PrecompiledPreamble const *Preamble;
+  const std::vector<Inclusion> &PreambleInclusions;
   StringRef Contents;
   Position Pos;
   IntrusiveRefCntPtr<vfs::FileSystem> VFS;
@@ -677,9 +616,12 @@ struct SemaCompleteInput {
 };
 
 // Invokes Sema code completion on a file.
+// If \p Includes is set, it will be initialized after a compiler instance has
+// been set up.
 bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
                       const clang::CodeCompleteOptions &Options,
-                      const SemaCompleteInput &Input) {
+                      const SemaCompleteInput &Input,
+                      std::unique_ptr<IncludeInserter> *Includes = nullptr) {
   trace::Span Tracer("Sema completion");
   std::vector<const char *> ArgStrs;
   for (const auto &S : Input.Command.CommandLine)
@@ -749,6 +691,28 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
     log("BeginSourceFile() failed when running codeComplete for " +
         Input.FileName);
     return false;
+  }
+  if (Includes) {
+    // Initialize Includes if provided.
+
+    // FIXME(ioeric): needs more consistent style support in clangd server.
+    auto Style = format::getStyle("file", Input.FileName, "LLVM",
+                                  Input.Contents, Input.VFS.get());
+    if (!Style) {
+      log("Failed to get FormatStyle for file" + Input.FileName +
+          ". Fall back to use LLVM style. Error: " +
+          llvm::toString(Style.takeError()));
+      Style = format::getLLVMStyle();
+    }
+    *Includes = llvm::make_unique<IncludeInserter>(
+        Input.FileName, Input.Contents, *Style, Input.Command.Directory,
+        Clang->getPreprocessor().getHeaderSearchInfo());
+    for (const auto &Inc : Input.PreambleInclusions)
+      Includes->get()->addExisting(Inc);
+    Clang->getPreprocessor().addPPCallbacks(collectInclusionsInMainFileCallback(
+        Clang->getSourceManager(), [Includes](Inclusion Inc) {
+          Includes->get()->addExisting(std::move(Inc));
+        }));
   }
   if (!Action.Execute()) {
     log("Execute() failed when running codeComplete for " + Input.FileName);
@@ -884,7 +848,8 @@ class CodeCompleteFlow {
   CompletionRecorder *Recorder = nullptr;
   int NSema = 0, NIndex = 0, NBoth = 0; // Counters for logging.
   bool Incomplete = false; // Would more be available with a higher limit?
-  llvm::Optional<FuzzyMatcher> Filter; // Initialized once Sema runs.
+  llvm::Optional<FuzzyMatcher> Filter;       // Initialized once Sema runs.
+  std::unique_ptr<IncludeInserter> Includes; // Initialized once compiler runs.
 
 public:
   // A CodeCompleteFlow object is only useful for calling run() exactly once.
@@ -893,20 +858,25 @@ public:
 
   CompletionList run(const SemaCompleteInput &SemaCCInput) && {
     trace::Span Tracer("CodeCompleteFlow");
+
     // We run Sema code completion first. It builds an AST and calculates:
     //   - completion results based on the AST.
     //   - partial identifier and context. We need these for the index query.
     CompletionList Output;
     auto RecorderOwner = llvm::make_unique<CompletionRecorder>(Opts, [&]() {
       assert(Recorder && "Recorder is not set");
+      assert(Includes && "Includes is not set");
+      // If preprocessor was run, inclusions from preprocessor callback should
+      // already be added to Inclusions.
       Output = runWithSema();
+      Includes.reset(); // Make sure this doesn't out-live Clang.
       SPAN_ATTACH(Tracer, "sema_completion_kind",
                   getCompletionKindString(Recorder->CCContext.getKind()));
     });
 
     Recorder = RecorderOwner.get();
     semaCodeComplete(std::move(RecorderOwner), Opts.getClangCompleteOpts(),
-                     SemaCCInput);
+                     SemaCCInput, &Includes);
 
     SPAN_ATTACH(Tracer, "sema_results", NSema);
     SPAN_ATTACH(Tracer, "index_results", NIndex);
@@ -976,7 +946,8 @@ private:
                const SymbolSlab &IndexResults) {
     trace::Span Tracer("Merge and score results");
     // We only keep the best N results at any time, in "native" format.
-    TopN Top(Opts.Limit == 0 ? TopN::Unbounded : Opts.Limit);
+    TopN<ScoredCandidate, ScoredCandidateGreater> Top(
+        Opts.Limit == 0 ? std::numeric_limits<size_t>::max() : Opts.Limit);
     llvm::DenseSet<const Symbol *> UsedIndexResults;
     auto CorrespondingIndexResult =
         [&](const CodeCompletionResult &SemaResult) -> const Symbol * {
@@ -1002,23 +973,42 @@ private:
   }
 
   // Scores a candidate and adds it to the TopN structure.
-  void addCandidate(TopN &Candidates, const CodeCompletionResult *SemaResult,
+  void addCandidate(TopN<ScoredCandidate, ScoredCandidateGreater> &Candidates,
+                    const CodeCompletionResult *SemaResult,
                     const Symbol *IndexResult) {
     CompletionCandidate C;
     C.SemaResult = SemaResult;
     C.IndexResult = IndexResult;
     C.Name = IndexResult ? IndexResult->Name : Recorder->getName(*SemaResult);
 
-    CompletionItemScores Scores;
+    SymbolQualitySignals Quality;
+    SymbolRelevanceSignals Relevance;
     if (auto FuzzyScore = Filter->match(C.Name))
-      Scores.filterScore = *FuzzyScore;
+      Relevance.NameMatch = *FuzzyScore;
     else
       return;
-    Scores.symbolScore = C.score();
-    // We score candidates by multiplying symbolScore ("quality" of the result)
-    // with filterScore (how well it matched the query).
-    // This is sensitive to the distribution of both component scores!
-    Scores.finalScore = Scores.filterScore * Scores.symbolScore;
+    if (IndexResult)
+      Quality.merge(*IndexResult);
+    if (SemaResult) {
+      Quality.merge(*SemaResult);
+      Relevance.merge(*SemaResult);
+    }
+
+    float QualScore = Quality.evaluate(), RelScore = Relevance.evaluate();
+    CompletionItemScores Scores;
+    Scores.finalScore = evaluateSymbolAndRelevance(QualScore, RelScore);
+    // The purpose of exporting component scores is to allow NameMatch to be
+    // replaced on the client-side. So we export (NameMatch, final/NameMatch)
+    // rather than (RelScore, QualScore).
+    Scores.filterScore = Relevance.NameMatch;
+    Scores.symbolScore =
+        Scores.filterScore ? Scores.finalScore / Scores.filterScore : QualScore;
+
+    DEBUG(llvm::dbgs() << "CodeComplete: " << C.Name
+                       << (IndexResult ? " (index)" : "")
+                       << (SemaResult ? " (sema)" : "") << " = "
+                       << Scores.finalScore << "\n"
+                       << Quality << Relevance << "\n");
 
     NSema += bool(SemaResult);
     NIndex += bool(IndexResult);
@@ -1032,19 +1022,21 @@ private:
     CodeCompletionString *SemaCCS = nullptr;
     if (auto *SR = Candidate.SemaResult)
       SemaCCS = Recorder->codeCompletionString(*SR, Opts.IncludeBriefComments);
-    return Candidate.build(FileName, Scores, Opts, SemaCCS);
+    return Candidate.build(FileName, Scores, Opts, SemaCCS, Includes.get());
   }
 };
 
 CompletionList codeComplete(PathRef FileName,
                             const tooling::CompileCommand &Command,
                             PrecompiledPreamble const *Preamble,
+                            const std::vector<Inclusion> &PreambleInclusions,
                             StringRef Contents, Position Pos,
                             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                             std::shared_ptr<PCHContainerOperations> PCHs,
                             CodeCompleteOptions Opts) {
   return CodeCompleteFlow(FileName, Opts)
-      .run({FileName, Command, Preamble, Contents, Pos, VFS, PCHs});
+      .run({FileName, Command, Preamble, PreambleInclusions, Contents, Pos, VFS,
+            PCHs});
 }
 
 SignatureHelp signatureHelp(PathRef FileName,
@@ -1061,7 +1053,8 @@ SignatureHelp signatureHelp(PathRef FileName,
   Options.IncludeBriefComments = true;
   semaCodeComplete(llvm::make_unique<SignatureHelpCollector>(Options, Result),
                    Options,
-                   {FileName, Command, Preamble, Contents, Pos, std::move(VFS),
+                   {FileName, Command, Preamble,
+                    /*PreambleInclusions=*/{}, Contents, Pos, std::move(VFS),
                     std::move(PCHs)});
   return Result;
 }

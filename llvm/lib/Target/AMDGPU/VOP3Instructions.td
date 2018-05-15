@@ -153,19 +153,24 @@ class getVOP3VCC<VOPProfile P, SDPatternOperator node> {
             (i1 VCC)))];
 }
 
-class VOP3Features<bit Clamp, bit OpSel> {
+class VOP3Features<bit Clamp, bit OpSel, bit Packed> {
   bit HasClamp = Clamp;
   bit HasOpSel = OpSel;
+  bit IsPacked = Packed;
 }
 
-def VOP3_REGULAR : VOP3Features<0, 0>;
-def VOP3_CLAMP   : VOP3Features<1, 0>;
-def VOP3_OPSEL   : VOP3Features<1, 1>;
+def VOP3_REGULAR : VOP3Features<0, 0, 0>;
+def VOP3_CLAMP   : VOP3Features<1, 0, 0>;
+def VOP3_OPSEL   : VOP3Features<1, 1, 0>;
+def VOP3_PACKED  : VOP3Features<1, 1, 1>;
 
 class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProfile<P.ArgVT> {
 
   let HasClamp = !if(Features.HasClamp, 1, P.HasClamp);
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
+  let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
+
+  let HasModifiers = !if(Features.IsPacked, 1, P.HasModifiers);
 
   // FIXME: Hack to stop printing _e64
   let Outs64 = (outs DstRC.RegClass:$vdst);

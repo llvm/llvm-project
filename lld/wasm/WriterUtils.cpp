@@ -37,7 +37,7 @@ static const char *valueTypeToString(uint8_t Type) {
 namespace lld {
 
 void wasm::debugWrite(uint64_t Offset, const Twine &Msg) {
-  DEBUG(dbgs() << format("  | %08lld: ", Offset) << Msg << "\n");
+  LLVM_DEBUG(dbgs() << format("  | %08lld: ", Offset) << Msg << "\n");
 }
 
 void wasm::writeUleb128(raw_ostream &OS, uint32_t Number, const Twine &Msg) {

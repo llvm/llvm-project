@@ -55,6 +55,7 @@ int bar(int n){
 
   // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l26}}(
   // CHECK: [[AA_ADDR:%.+]] = alloca i16*, align
+  // CHECK-NOT: call i8* @__kmpc_data_sharing_push_stack
   // CHECK: store i16* {{%.+}}, i16** [[AA_ADDR]], align
   // CHECK: [[AA:%.+]] = load i16*, i16** [[AA_ADDR]], align
   // CHECK: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()

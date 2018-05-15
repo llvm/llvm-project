@@ -66,7 +66,7 @@
 // CHECK-NEXT:    Address: 0x1C8
 // CHECK-NEXT:    Offset: 0x1C8
 // CHECK-NEXT:    Size: 24
-// CHECK-NEXT:    Link: 3
+// CHECK-NEXT:    Link: 2
 // CHECK-NEXT:    Info: 1
 // CHECK-NEXT:    AddressAlignment: 8
 // CHECK-NEXT:    EntrySize: 24
@@ -77,31 +77,13 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Section {
 // CHECK-NEXT:    Index: 2
-// CHECK-NEXT:    Name: .hash (9)
-// CHECK-NEXT:    Type: SHT_HASH (0x5)
+// CHECK-NEXT:    Name: .dynstr (9)
+// CHECK-NEXT:    Type: SHT_STRTAB (0x3)
 // CHECK-NEXT:    Flags [ (0x2)
 // CHECK-NEXT:      SHF_ALLOC (0x2)
 // CHECK-NEXT:    ]
 // CHECK-NEXT:    Address: 0x1E0
 // CHECK-NEXT:    Offset: 0x1E0
-// CHECK-NEXT:    Size: 16
-// CHECK-NEXT:    Link: 1
-// CHECK-NEXT:    Info: 0
-// CHECK-NEXT:    AddressAlignment: 4
-// CHECK-NEXT:    EntrySize: 4
-// CHECK-NEXT:    SectionData (
-// CHECK-NEXT:      0000: 01000000 01000000 00000000 00000000  |................|
-// CHECK-NEXT:    )
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Section {
-// CHECK-NEXT:    Index: 3
-// CHECK-NEXT:    Name: .dynstr (15)
-// CHECK-NEXT:    Type: SHT_STRTAB (0x3)
-// CHECK-NEXT:    Flags [ (0x2)
-// CHECK-NEXT:      SHF_ALLOC (0x2)
-// CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x1F0
-// CHECK-NEXT:    Offset: 0x1F0
 // CHECK-NEXT:    Size: 1
 // CHECK-NEXT:    Link: 0
 // CHECK-NEXT:    Info: 0
@@ -109,6 +91,24 @@
 // CHECK-NEXT:    EntrySize: 0
 // CHECK-NEXT:    SectionData (
 // CHECK-NEXT:      0000: 00                                   |.|
+// CHECK-NEXT:    )
+// CHECK-NEXT:  }
+// CHECK-NEXT:  Section {
+// CHECK-NEXT:    Index: 3
+// CHECK-NEXT:    Name: .hash (17)
+// CHECK-NEXT:    Type: SHT_HASH (0x5)
+// CHECK-NEXT:    Flags [ (0x2)
+// CHECK-NEXT:      SHF_ALLOC (0x2)
+// CHECK-NEXT:    ]
+// CHECK-NEXT:    Address: 0x1E4
+// CHECK-NEXT:    Offset: 0x1E4
+// CHECK-NEXT:    Size: 16
+// CHECK-NEXT:    Link: 1
+// CHECK-NEXT:    Info: 0
+// CHECK-NEXT:    AddressAlignment: 4
+// CHECK-NEXT:    EntrySize: 4
+// CHECK-NEXT:    SectionData (
+// CHECK-NEXT:      0000: 01000000 01000000 00000000 00000000  |................|
 // CHECK-NEXT:    )
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Section {
@@ -141,16 +141,16 @@
 // CHECK-NEXT:    Address: 0x20000
 // CHECK-NEXT:    Offset: 0x20000
 // CHECK-NEXT:    Size: 96
-// CHECK-NEXT:    Link: 3
+// CHECK-NEXT:    Link: 2
 // CHECK-NEXT:    Info: 0
 // CHECK-NEXT:    AddressAlignment: 8
 // CHECK-NEXT:    EntrySize: 16
 // CHECK-NEXT:    SectionData (
 // CHECK-NEXT:      0000: 06000000 00000000 C8010000 00000000  |................|
 // CHECK-NEXT:      0010: 0B000000 00000000 18000000 00000000  |................|
-// CHECK-NEXT:      0020: 05000000 00000000 F0010000 00000000  |................|
+// CHECK-NEXT:      0020: 05000000 00000000 E0010000 00000000  |................|
 // CHECK-NEXT:      0030: 0A000000 00000000 01000000 00000000  |................|
-// CHECK-NEXT:      0040: 04000000 00000000 E0010000 00000000  |................|
+// CHECK-NEXT:      0040: 04000000 00000000 E4010000 00000000  |................|
 // CHECK-NEXT:      0050: 00000000 00000000 00000000 00000000  |................|
 // CHECK-NEXT:    )
 // CHECK-NEXT:  }
@@ -170,7 +170,7 @@
 // CHECK-NEXT:    AddressAlignment: 1
 // CHECK-NEXT:    EntrySize: 1
 // CHECK-NEXT:    SectionData (
-// CHECK-NEXT:      0000: 4C4C4420 312E3000 |LLD 1.0.|
+// CHECK-NEXT:      0000: 4C4C4420 312E3000                    |LLD 1.0.|
 // CHECK-NEXT:    )
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Section {
@@ -206,8 +206,8 @@
 // CHECK-NEXT:    AddressAlignment: 1
 // CHECK-NEXT:    EntrySize: 0
 // CHECK-NEXT:    SectionData (
-// CHECK-NEXT:      0000: 002E6479 6E73796D 002E6861 7368002E  |..dynsym..hash..|
-// CHECK-NEXT:      0010: 64796E73 7472002E 74657874 002E6479  |dynstr..text..dy|
+// CHECK-NEXT:      0000: 002E6479 6E73796D 002E6479 6E737472  |..dynsym..dynstr|
+// CHECK-NEXT:      0010: 002E6861 7368002E 74657874 002E6479  |..hash..text..dy|
 // CHECK-NEXT:      0020: 6E616D69 63002E63 6F6D6D65 6E74002E  |namic..comment..|
 // CHECK-NEXT:      0030: 73796D74 6162002E 73687374 72746162  |symtab..shstrtab|
 // CHECK-NEXT:      0040: 002E7374 72746162 00                 |..strtab.|
@@ -249,8 +249,8 @@
 // CHECK-NEXT:    Offset: 0x0
 // CHECK-NEXT:    VirtualAddress: 0x0
 // CHECK-NEXT:    PhysicalAddress: 0x0
-// CHECK-NEXT:    FileSize: 497
-// CHECK-NEXT:    MemSize: 497
+// CHECK-NEXT:    FileSize: 500
+// CHECK-NEXT:    MemSize: 500
 // CHECK-NEXT:    Flags [ (0x4)
 // CHECK-NEXT:      PF_R (0x4)
 // CHECK-NEXT:    ]

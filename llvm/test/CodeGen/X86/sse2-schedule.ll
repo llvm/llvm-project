@@ -1818,15 +1818,15 @@ define <2 x double> @test_cvtps2pd(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; BTVER2-SSE-LABEL: test_cvtps2pd:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    cvtps2pd %xmm0, %xmm1 # sched: [3:1.00]
-; BTVER2-SSE-NEXT:    cvtps2pd (%rdi), %xmm0 # sched: [8:1.00]
+; BTVER2-SSE-NEXT:    cvtps2pd %xmm0, %xmm1 # sched: [2:1.00]
+; BTVER2-SSE-NEXT:    cvtps2pd (%rdi), %xmm0 # sched: [7:1.00]
 ; BTVER2-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_cvtps2pd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vcvtps2pd (%rdi), %xmm1 # sched: [8:1.00]
-; BTVER2-NEXT:    vcvtps2pd %xmm0, %xmm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vcvtps2pd (%rdi), %xmm1 # sched: [7:1.00]
+; BTVER2-NEXT:    vcvtps2pd %xmm0, %xmm0 # sched: [2:1.00]
 ; BTVER2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

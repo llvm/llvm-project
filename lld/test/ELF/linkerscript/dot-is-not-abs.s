@@ -26,7 +26,7 @@
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:     SHF_EXECINSTR
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x0
+# CHECK-NEXT:   Address: 0x1C
 # CHECK-NEXT:   Offset:
 # CHECK-NEXT:   Size: 4
 # CHECK-NEXT:   Link:
@@ -40,7 +40,7 @@
 
 # CHECK:      Symbol {
 # CHECK:        Name: foo
-# CHECK-NEXT:   Value: 0x4
+# CHECK-NEXT:   Value: 0x20
 # CHECK-NEXT:   Size: 0
 # CHECK-NEXT:   Binding: Local
 # CHECK-NEXT:   Type: None

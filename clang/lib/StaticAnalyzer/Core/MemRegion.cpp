@@ -1244,8 +1244,8 @@ RegionRawOffset ElementRegion::getAsArrayOffset() const {
         if (!Overflow)
           Overflow = checkedMul(Mult, offset.getQuantity());
         if (Overflow) {
-          DEBUG(llvm::dbgs() << "MemRegion::getAsArrayOffset: "
-                             << "offset overflowing, returning unknown\n");
+          LLVM_DEBUG(llvm::dbgs() << "MemRegion::getAsArrayOffset: "
+                                  << "offset overflowing, returning unknown\n");
 
           return nullptr;
         }

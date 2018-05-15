@@ -43,7 +43,7 @@ tx ftemplate(int n) {
     b[i] += 1;
   }
 
-#pragma omp target teams distribute parallel for simd collapse(2) firstprivate(f) private(k) num_threads(M)
+#pragma omp target teams distribute parallel for simd collapse(2) firstprivate(f) private(k)
   for(int i = 0; i < M; i++) {
     for(int j = 0; j < M; j++) {
       k = M;

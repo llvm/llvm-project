@@ -51,26 +51,11 @@ class TempEnvVar {
   const char *const name;
 };
 
-template <typename T>
-class StackOption : public cl::opt<T> {
-  typedef cl::opt<T> Base;
+template <typename T, typename Base = cl::opt<T>>
+class StackOption : public Base {
 public:
-  // One option...
-  template<class M0t>
-  explicit StackOption(const M0t &M0) : Base(M0) {}
-
-  // Two options...
-  template<class M0t, class M1t>
-  StackOption(const M0t &M0, const M1t &M1) : Base(M0, M1) {}
-
-  // Three options...
-  template<class M0t, class M1t, class M2t>
-  StackOption(const M0t &M0, const M1t &M1, const M2t &M2) : Base(M0, M1, M2) {}
-
-  // Four options...
-  template<class M0t, class M1t, class M2t, class M3t>
-  StackOption(const M0t &M0, const M1t &M1, const M2t &M2, const M3t &M3)
-    : Base(M0, M1, M2, M3) {}
+  template <class... Ts>
+  explicit StackOption(Ts &&... Ms) : Base(std::forward<Ts>(Ms)...) {}
 
   ~StackOption() override { this->removeArgument(); }
 
@@ -636,8 +621,8 @@ TEST(CommandLineTest, ResponseFileWindows) {
   if (!Triple(sys::getProcessTriple()).isOSWindows())
     return;
 
-  static cl::list<std::string>
-	  InputFilenames(cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);
+  StackOption<std::string, cl::list<std::string>> InputFilenames(
+      cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);
   StackOption<bool> TopLevelOpt("top-level", cl::init(false));
 
   // Create response file.
@@ -760,6 +745,7 @@ TEST(CommandLineTest, SetDefautValue) {
   EXPECT_TRUE(Opt1 == "true");
   EXPECT_TRUE(Opt2);
   EXPECT_TRUE(Opt3 == 3);
+  Alias.removeArgument();
 }
 
 TEST(CommandLineTest, ReadConfigFile) {
@@ -817,9 +803,9 @@ TEST(CommandLineTest, ReadConfigFile) {
 }
 
 TEST(CommandLineTest, PositionalEatArgsError) {
-  static cl::list<std::string> PosEatArgs("positional-eat-args", cl::Positional,
-    cl::desc("<arguments>..."), cl::ZeroOrMore,
-    cl::PositionalEatsArgs);
+  StackOption<std::string, cl::list<std::string>> PosEatArgs(
+      "positional-eat-args", cl::Positional, cl::desc("<arguments>..."),
+      cl::ZeroOrMore, cl::PositionalEatsArgs);
 
   const char *args[] = {"prog", "-positional-eat-args=XXXX"};
   const char *args2[] = {"prog", "-positional-eat-args=XXXX", "-foo"};

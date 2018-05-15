@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder -verify-machineinstrs | FileCheck %s
 # Check that BranchFolding pass is able to hoist a common instruction into a block with a single branch instruction.
 name: func
 tracksRegLiveness: true
@@ -8,7 +8,7 @@ body: |
     ; CHECK-LABEL: bb.0:
     ; CHECK: $x0 = ADDXri $x0, 1, 0
     ; CHECK: CBZX $x1, %bb.2
-    liveins: $x1
+    liveins: $x0, $x1
     CBZX $x1, %bb.2
 
   bb.1:

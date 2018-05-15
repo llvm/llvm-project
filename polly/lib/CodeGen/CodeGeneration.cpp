@@ -100,7 +100,7 @@ static void verifyGeneratedFunction(Scop &S, Function &F, IslAstInfo &AI) {
   if (!Verify || !verifyFunction(F, &errs()))
     return;
 
-  DEBUG({
+  LLVM_DEBUG({
     errs() << "== ISL Codegen created an invalid function ==\n\n== The "
               "SCoP ==\n";
     errs() << S;
@@ -196,7 +196,7 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
   // DependenceInfo or IslAstInfo around.
   IslAst &Ast = AI.getIslAst();
   if (Ast.getSharedIslCtx() != S.getSharedIslCtx()) {
-    DEBUG(dbgs() << "Got an IstAst for a different Scop/isl_ctx\n");
+    LLVM_DEBUG(dbgs() << "Got an IstAst for a different Scop/isl_ctx\n");
     return false;
   }
 

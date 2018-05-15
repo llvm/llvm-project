@@ -19,6 +19,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -123,9 +124,8 @@ bool Nios2AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
 
 // MCAsmBackend
 MCAsmBackend *llvm::createNios2AsmBackend(const Target &T,
+                                          const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU,
                                           const MCTargetOptions &Options) {
-
-  return new Nios2AsmBackend(T, TT.getOS());
+  return new Nios2AsmBackend(T, STI.getTargetTriple().getOS());
 }

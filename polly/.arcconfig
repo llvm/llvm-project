@@ -1,9 +1,4 @@
 {
   "repository.callsign" : "PLO",
-  "conduit_uri" : "https://reviews.llvm.org/",
-  "history.immutable" : true,
-  "load" : [
-    "utils/arcanist/LitTestEngine"
-  ],
-  "unit.engine" : "LitTestEngine"
+  "conduit_uri" : "https://reviews.llvm.org/"
 }

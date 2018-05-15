@@ -151,28 +151,28 @@ entry:
 
 Loop.Body:
 ; 5 = MemoryPhi({entry,3},{Loop.Body,4},{Loop.End,6})
-; CHECK: MemoryUse(5)
+; CHECK: MemoryUse(6)
 ; CHECK-NEXT: %0 = load i8
   %0 = load i8, i8* %after, !invariant.group !0
 
 ; FIXME: MemoryUse(1)
-; CHECK: MemoryUse(5)
+; CHECK: MemoryUse(6)
 ; CHECK-NEXT: %1 = load i8
   %1 = load i8, i8* %p, !invariant.group !0
 
-; CHECK: 4 = MemoryDef(5)
+; CHECK: 4 = MemoryDef(6)
   store i8 4, i8* %after, !invariant.group !0
 
   br i1 undef, label %Loop.End, label %Loop.Body
 
 Loop.End:
 ; 6 = MemoryPhi({entry,3},{Loop.Body,4})
-; CHECK: MemoryUse(6)
+; CHECK: MemoryUse(5)
 ; CHECK-NEXT: %2 = load
   %2 = load i8, i8* %after, align 4, !invariant.group !0
 
 ; FIXME: MemoryUse(1)
-; CHECK: MemoryUse(6)
+; CHECK: MemoryUse(5)
 ; CHECK-NEXT: %3 = load
   %3 = load i8, i8* %p, align 4, !invariant.group !0
   br i1 undef, label %Ret, label %Loop.Body
@@ -197,16 +197,16 @@ entry:
   br i1 undef, label %Loop.Body, label %Loop.End
 
 Loop.Body:
-; CHECK: 7 = MemoryPhi({entry,3},{Loop.Body,4},{Loop.next,5},{Loop.End,6})
-; CHECK: MemoryUse(7)
+; CHECK: 8 = MemoryPhi({entry,3},{Loop.Body,4},{Loop.next,5},{Loop.End,6})
+; CHECK: MemoryUse(8)
 ; CHECK-NEXT: %0 = load i8
   %0 = load i8, i8* %after, !invariant.group !0
 
-; CHECK: 4 = MemoryDef(7)
+; CHECK: 4 = MemoryDef(8)
 ; CHECK-NEXT: call void @clobber8
   call void @clobber8(i8* %after)
 
-; FIXME: MemoryUse(7)
+; FIXME: MemoryUse(8)
 ; CHECK: MemoryUse(4)
 ; CHECK-NEXT: %1 = load i8
   %1 = load i8, i8* %after, !invariant.group !0
@@ -217,7 +217,7 @@ Loop.next:
 ; CHECK-NEXT: call void @clobber8
   call void @clobber8(i8* %after)
 
-; FIXME: MemoryUse(7)
+; FIXME: MemoryUse(8)
 ; CHECK: MemoryUse(5)
 ; CHECK-NEXT: %2 = load i8
   %2 = load i8, i8* %after, !invariant.group !0
@@ -225,16 +225,16 @@ Loop.next:
   br i1 undef, label %Loop.End, label %Loop.Body
 
 Loop.End:
-; CHECK: 8 = MemoryPhi({entry,3},{Loop.next,5})
-; CHECK: MemoryUse(8)
+; CHECK: 7 = MemoryPhi({entry,3},{Loop.next,5})
+; CHECK: MemoryUse(7)
 ; CHECK-NEXT: %3 = load
   %3 = load i8, i8* %after, align 4, !invariant.group !0
 
-; CHECK: 6 = MemoryDef(8)
+; CHECK: 6 = MemoryDef(7)
 ; CHECK-NEXT: call void @clobber8
   call void @clobber8(i8* %after)
 
-; FIXME: MemoryUse(8)
+; FIXME: MemoryUse(7)
 ; CHECK: MemoryUse(6)
 ; CHECK-NEXT: %4 = load
   %4 = load i8, i8* %after, align 4, !invariant.group !0
@@ -263,28 +263,28 @@ Loop.Pre:
   %0 = load i8, i8* %after, !invariant.group !0
   br label %Loop.Body
 Loop.Body:
-; CHECK: 5 = MemoryPhi({Loop.Pre,3},{Loop.Body,4},{Loop.End,6})
-; CHECK-NEXT: MemoryUse(5)
+; CHECK: 6 = MemoryPhi({Loop.Pre,3},{Loop.Body,4},{Loop.End,5})
+; CHECK-NEXT: MemoryUse(6)
 ; CHECK-NEXT: %1 = load i8
   %1 = load i8, i8* %after, !invariant.group !0
 
 ; FIXME: MemoryUse(2)
-; CHECK: MemoryUse(5)
+; CHECK: MemoryUse(6)
 ; CHECK-NEXT: %2 = load i8
   %2 = load i8, i8* %p, !invariant.group !0
 
-; CHECK: 4 = MemoryDef(5)
+; CHECK: 4 = MemoryDef(6)
   store i8 4, i8* %after, !invariant.group !0
   br i1 undef, label %Loop.End, label %Loop.Body
 
 Loop.End:
-; CHECK: 6 = MemoryPhi({entry,3},{Loop.Body,4})
-; CHECK-NEXT: MemoryUse(6)
+; CHECK: 5 = MemoryPhi({entry,3},{Loop.Body,4})
+; CHECK-NEXT: MemoryUse(5)
 ; CHECK-NEXT: %3 = load
   %3 = load i8, i8* %after, align 4, !invariant.group !0
 
 ; FIXME: MemoryUse(2)
-; CHECK: MemoryUse(6)
+; CHECK: MemoryUse(5)
 ; CHECK-NEXT: %4 = load
   %4 = load i8, i8* %p, align 4, !invariant.group !0
   br i1 undef, label %Ret, label %Loop.Body

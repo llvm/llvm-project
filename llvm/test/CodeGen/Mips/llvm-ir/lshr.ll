@@ -816,92 +816,89 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 ;
 ; MMR3-LABEL: lshr_i128:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    addiusp -48
-; MMR3-NEXT:    .cfi_def_cfa_offset 48
-; MMR3-NEXT:    sw $17, 44($sp) # 4-byte Folded Spill
-; MMR3-NEXT:    sw $16, 40($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    addiusp -40
+; MMR3-NEXT:    .cfi_def_cfa_offset 40
+; MMR3-NEXT:    sw $17, 36($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    sw $16, 32($sp) # 4-byte Folded Spill
 ; MMR3-NEXT:    .cfi_offset 17, -4
 ; MMR3-NEXT:    .cfi_offset 16, -8
 ; MMR3-NEXT:    move $8, $7
-; MMR3-NEXT:    sw $6, 32($sp) # 4-byte Folded Spill
-; MMR3-NEXT:    sw $5, 36($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    sw $6, 24($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    sw $4, 28($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    lw $16, 68($sp)
+; MMR3-NEXT:    li16 $2, 64
+; MMR3-NEXT:    subu16 $7, $2, $16
+; MMR3-NEXT:    sllv $9, $5, $7
 ; MMR3-NEXT:    move $17, $5
-; MMR3-NEXT:    sw $4, 8($sp) # 4-byte Folded Spill
-; MMR3-NEXT:    lw $16, 76($sp)
-; MMR3-NEXT:    srlv $7, $7, $16
-; MMR3-NEXT:    not16 $3, $16
-; MMR3-NEXT:    sw $3, 24($sp) # 4-byte Folded Spill
-; MMR3-NEXT:    sll16 $2, $6, 1
-; MMR3-NEXT:    sllv $3, $2, $3
-; MMR3-NEXT:    li16 $4, 64
-; MMR3-NEXT:    or16 $3, $7
-; MMR3-NEXT:    srlv $5, $6, $16
-; MMR3-NEXT:    sw $5, 12($sp) # 4-byte Folded Spill
-; MMR3-NEXT:    subu16 $7, $4, $16
-; MMR3-NEXT:    sllv $9, $17, $7
-; MMR3-NEXT:    andi16 $2, $7, 32
-; MMR3-NEXT:    sw $2, 28($sp) # 4-byte Folded Spill
-; MMR3-NEXT:    andi16 $17, $16, 32
-; MMR3-NEXT:    sw $17, 16($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    sw $5, 0($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    andi16 $3, $7, 32
+; MMR3-NEXT:    sw $3, 20($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    li16 $2, 0
 ; MMR3-NEXT:    move $4, $9
-; MMR3-NEXT:    li16 $6, 0
-; MMR3-NEXT:    movn $4, $6, $2
-; MMR3-NEXT:    movn $3, $5, $17
-; MMR3-NEXT:    addiu $2, $16, -64
-; MMR3-NEXT:    lw $5, 36($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    srlv $5, $5, $2
-; MMR3-NEXT:    sw $5, 20($sp) # 4-byte Folded Spill
-; MMR3-NEXT:    lw $17, 8($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    sll16 $6, $17, 1
-; MMR3-NEXT:    sw $6, 4($sp) # 4-byte Folded Spill
-; MMR3-NEXT:    not16 $5, $2
+; MMR3-NEXT:    movn $4, $2, $3
+; MMR3-NEXT:    srlv $5, $8, $16
+; MMR3-NEXT:    not16 $3, $16
+; MMR3-NEXT:    sw $3, 16($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    sll16 $2, $6, 1
+; MMR3-NEXT:    sllv $2, $2, $3
+; MMR3-NEXT:    or16 $2, $5
+; MMR3-NEXT:    srlv $5, $6, $16
+; MMR3-NEXT:    sw $5, 4($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    andi16 $3, $16, 32
+; MMR3-NEXT:    sw $3, 12($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    movn $2, $5, $3
+; MMR3-NEXT:    addiu $3, $16, -64
+; MMR3-NEXT:    or16 $2, $4
+; MMR3-NEXT:    srlv $4, $17, $3
+; MMR3-NEXT:    sw $4, 8($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    lw $4, 28($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    sll16 $6, $4, 1
+; MMR3-NEXT:    not16 $5, $3
 ; MMR3-NEXT:    sllv $5, $6, $5
-; MMR3-NEXT:    or16 $3, $4
-; MMR3-NEXT:    lw $4, 20($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    or16 $5, $4
-; MMR3-NEXT:    srlv $1, $17, $2
-; MMR3-NEXT:    andi16 $2, $2, 32
-; MMR3-NEXT:    sw $2, 20($sp) # 4-byte Folded Spill
-; MMR3-NEXT:    movn $5, $1, $2
-; MMR3-NEXT:    sllv $2, $17, $7
-; MMR3-NEXT:    not16 $4, $7
-; MMR3-NEXT:    lw $7, 36($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    srl16 $6, $7, 1
-; MMR3-NEXT:    srlv $4, $6, $4
-; MMR3-NEXT:    sltiu $11, $16, 64
-; MMR3-NEXT:    movn $5, $3, $11
+; MMR3-NEXT:    lw $17, 8($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    or16 $5, $17
+; MMR3-NEXT:    srlv $1, $4, $3
+; MMR3-NEXT:    andi16 $3, $3, 32
+; MMR3-NEXT:    sw $3, 8($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    movn $5, $1, $3
+; MMR3-NEXT:    sltiu $10, $16, 64
+; MMR3-NEXT:    movn $5, $2, $10
+; MMR3-NEXT:    sllv $2, $4, $7
+; MMR3-NEXT:    not16 $3, $7
+; MMR3-NEXT:    lw $7, 0($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    srl16 $4, $7, 1
+; MMR3-NEXT:    srlv $4, $4, $3
 ; MMR3-NEXT:    or16 $4, $2
 ; MMR3-NEXT:    srlv $2, $7, $16
-; MMR3-NEXT:    lw $3, 24($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    lw $6, 4($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    lw $3, 16($sp) # 4-byte Folded Reload
 ; MMR3-NEXT:    sllv $3, $6, $3
 ; MMR3-NEXT:    or16 $3, $2
-; MMR3-NEXT:    srlv $2, $17, $16
-; MMR3-NEXT:    lw $6, 16($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    movn $3, $2, $6
-; MMR3-NEXT:    sltiu $10, $16, 64
+; MMR3-NEXT:    lw $2, 28($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    srlv $2, $2, $16
+; MMR3-NEXT:    lw $17, 12($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    movn $3, $2, $17
 ; MMR3-NEXT:    movz $5, $8, $16
+; MMR3-NEXT:    li16 $6, 0
+; MMR3-NEXT:    movz $3, $6, $10
+; MMR3-NEXT:    lw $7, 20($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    movn $4, $9, $7
+; MMR3-NEXT:    lw $6, 4($sp) # 4-byte Folded Reload
 ; MMR3-NEXT:    li16 $7, 0
-; MMR3-NEXT:    movz $3, $7, $10
-; MMR3-NEXT:    lw $17, 28($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    movn $4, $9, $17
-; MMR3-NEXT:    lw $7, 12($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    li16 $17, 0
-; MMR3-NEXT:    movn $7, $17, $6
-; MMR3-NEXT:    or16 $7, $4
-; MMR3-NEXT:    lw $4, 20($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    movn $1, $17, $4
-; MMR3-NEXT:    li16 $17, 0
-; MMR3-NEXT:    movn $1, $7, $11
-; MMR3-NEXT:    lw $4, 32($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    movn $6, $7, $17
+; MMR3-NEXT:    or16 $6, $4
+; MMR3-NEXT:    lw $4, 8($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    movn $1, $7, $4
+; MMR3-NEXT:    li16 $7, 0
+; MMR3-NEXT:    movn $1, $6, $10
+; MMR3-NEXT:    lw $4, 24($sp) # 4-byte Folded Reload
 ; MMR3-NEXT:    movz $1, $4, $16
-; MMR3-NEXT:    movn $2, $17, $6
+; MMR3-NEXT:    movn $2, $7, $17
 ; MMR3-NEXT:    li16 $4, 0
 ; MMR3-NEXT:    movz $2, $4, $10
 ; MMR3-NEXT:    move $4, $1
-; MMR3-NEXT:    lw $16, 40($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    lw $17, 44($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    addiusp 48
+; MMR3-NEXT:    lw $16, 32($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    lw $17, 36($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    addiusp 40
 ; MMR3-NEXT:    jrc $ra
 ;
 ; MMR6-LABEL: lshr_i128:
