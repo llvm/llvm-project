@@ -767,7 +767,7 @@ void IslAstInfo::print(raw_ostream &OS) {
 
   auto *Schedule = S.getScheduleTree().release();
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << S.getContextStr() << "\n";
     dbgs() << stringFromIslObj(Schedule);
   });
@@ -807,14 +807,15 @@ bool IslAstInfoWrapperPass::runOnScop(Scop &Scop) {
       getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
 
   if (D.getSharedIslCtx() != Scop.getSharedIslCtx()) {
-    DEBUG(dbgs() << "Got dependence analysis for different SCoP/isl_ctx\n");
+    LLVM_DEBUG(
+        dbgs() << "Got dependence analysis for different SCoP/isl_ctx\n");
     Ast.reset();
     return false;
   }
 
   Ast.reset(new IslAstInfo(Scop, D));
 
-  DEBUG(printScop(dbgs(), Scop));
+  LLVM_DEBUG(printScop(dbgs(), Scop));
   return false;
 }
 

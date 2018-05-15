@@ -438,6 +438,7 @@ ArrayRef<uint8_t> SectionChunk::getContents() const {
 }
 
 void SectionChunk::replace(SectionChunk *Other) {
+  Alignment = std::max(Alignment, Other->Alignment);
   Other->Repl = Repl;
   Other->Live = false;
 }

@@ -62,8 +62,8 @@ public:
     if (!F)
       return false;
     if (F->isDeclaration()) {
-      DEBUG(dbgs() << "Skipping " << F->getName()
-                   << "because it is a declaration.\n");
+      LLVM_DEBUG(dbgs() << "Skipping " << F->getName()
+                        << "because it is a declaration.\n");
       return false;
     }
 
@@ -79,8 +79,8 @@ public:
         SD.ValidRegions.count(RI.getTopLevelRegion()) > 0;
 
     if (HasScopAsTopLevelRegion) {
-      DEBUG(dbgs() << "Skipping " << F->getName()
-                   << " has scop as top level region");
+      LLVM_DEBUG(dbgs() << "Skipping " << F->getName()
+                        << " has scop as top level region");
       F->addFnAttr(llvm::Attribute::AlwaysInline);
 
       ModuleAnalysisManager MAM;
@@ -91,8 +91,8 @@ public:
       assert(M && "Function has illegal module");
       MPM.run(*M, MAM);
     } else {
-      DEBUG(dbgs() << F->getName()
-                   << " does NOT have scop as top level region\n");
+      LLVM_DEBUG(dbgs() << F->getName()
+                        << " does NOT have scop as top level region\n");
     }
 
     return false;

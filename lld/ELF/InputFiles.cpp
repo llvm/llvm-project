@@ -406,7 +406,7 @@ void ObjFile<ELFT>::initializeSections(
     DenseSet<CachedHashStringRef> &ComdatGroups) {
   const ELFFile<ELFT> &Obj = this->getObj();
 
-  ArrayRef<Elf_Shdr> ObjSections = CHECK(this->getObj().sections(), this);
+  ArrayRef<Elf_Shdr> ObjSections = CHECK(Obj.sections(), this);
   uint64_t Size = ObjSections.size();
   this->Sections.resize(Size);
   this->SectionStringTable =

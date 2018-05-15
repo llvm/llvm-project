@@ -304,7 +304,7 @@ void Writer::createCustomSections() {
       P->second->setOutputSectionIndex(SectionIndex);
     }
 
-    DEBUG(dbgs() << "createCustomSection: " << Name << "\n");
+    LLVM_DEBUG(dbgs() << "createCustomSection: " << Name << "\n");
     OutputSections.push_back(make<CustomSection>(Name, Pair.second));
   }
 }
@@ -716,7 +716,7 @@ void Writer::calculateImports() {
     if (!Sym->isLive())
       continue;
 
-    DEBUG(dbgs() << "import: " << Sym->getName() << "\n");
+    LLVM_DEBUG(dbgs() << "import: " << Sym->getName() << "\n");
     ImportedSymbols.emplace_back(Sym);
     if (auto *F = dyn_cast<FunctionSymbol>(Sym))
       F->setFunctionIndex(NumImportedFunctions++);
@@ -757,7 +757,7 @@ void Writer::calculateExports() {
       Export = {Name, WASM_EXTERNAL_GLOBAL, FakeGlobalIndex++};
     }
 
-    DEBUG(dbgs() << "Export: " << Name << "\n");
+    LLVM_DEBUG(dbgs() << "Export: " << Name << "\n");
     Exports.push_back(Export);
   }
 }
@@ -770,7 +770,7 @@ void Writer::assignSymtab() {
 
   unsigned SymbolIndex = SymtabEntries.size();
   for (ObjFile *File : Symtab->ObjectFiles) {
-    DEBUG(dbgs() << "Symtab entries: " << File->getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Symtab entries: " << File->getName() << "\n");
     for (Symbol *Sym : File->getSymbols()) {
       if (Sym->getFile() != File)
         continue;
@@ -817,7 +817,7 @@ uint32_t Writer::lookupType(const WasmSignature &Sig) {
 uint32_t Writer::registerType(const WasmSignature &Sig) {
   auto Pair = TypeIndices.insert(std::make_pair(Sig, Types.size()));
   if (Pair.second) {
-    DEBUG(dbgs() << "type " << toString(Sig) << "\n");
+    LLVM_DEBUG(dbgs() << "type " << toString(Sig) << "\n");
     Types.push_back(&Sig);
   }
   return Pair.first->second;
@@ -857,7 +857,7 @@ void Writer::assignIndexes() {
     AddDefinedFunction(Func);
 
   for (ObjFile *File : Symtab->ObjectFiles) {
-    DEBUG(dbgs() << "Functions: " << File->getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Functions: " << File->getName() << "\n");
     for (InputFunction *Func : File->Functions)
       AddDefinedFunction(Func);
   }
@@ -885,7 +885,7 @@ void Writer::assignIndexes() {
   };
 
   for (ObjFile *File : Symtab->ObjectFiles) {
-    DEBUG(dbgs() << "Handle relocs: " << File->getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Handle relocs: " << File->getName() << "\n");
     for (InputChunk *Chunk : File->Functions)
       HandleRelocs(Chunk);
     for (InputChunk *Chunk : File->Segments)
@@ -897,7 +897,7 @@ void Writer::assignIndexes() {
   uint32_t GlobalIndex = NumImportedGlobals + InputGlobals.size();
   auto AddDefinedGlobal = [&](InputGlobal *Global) {
     if (Global->Live) {
-      DEBUG(dbgs() << "AddDefinedGlobal: " << GlobalIndex << "\n");
+      LLVM_DEBUG(dbgs() << "AddDefinedGlobal: " << GlobalIndex << "\n");
       Global->setGlobalIndex(GlobalIndex++);
       InputGlobals.push_back(Global);
     }
@@ -907,7 +907,7 @@ void Writer::assignIndexes() {
     AddDefinedGlobal(Global);
 
   for (ObjFile *File : Symtab->ObjectFiles) {
-    DEBUG(dbgs() << "Globals: " << File->getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Globals: " << File->getName() << "\n");
     for (InputGlobal *Global : File->Globals)
       AddDefinedGlobal(Global);
   }
@@ -933,12 +933,12 @@ void Writer::createOutputSegments() {
       StringRef Name = getOutputDataSegmentName(Segment->getName());
       OutputSegment *&S = SegmentMap[Name];
       if (S == nullptr) {
-        DEBUG(dbgs() << "new segment: " << Name << "\n");
+        LLVM_DEBUG(dbgs() << "new segment: " << Name << "\n");
         S = make<OutputSegment>(Name, Segments.size());
         Segments.push_back(S);
       }
       S->addInputSegment(Segment);
-      DEBUG(dbgs() << "added data: " << Name << ": " << S->Size << "\n");
+      LLVM_DEBUG(dbgs() << "added data: " << Name << ": " << S->Size << "\n");
     }
   }
 }

@@ -1447,7 +1447,7 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
   bool should_log = log && log->GetVerbose();
-  
+
   uint32_t num_parsed = 0;
 
   // Iterate through all ClassInfo structures

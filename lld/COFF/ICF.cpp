@@ -45,6 +45,8 @@ public:
 private:
   void segregate(size_t Begin, size_t End, bool Constant);
 
+  bool assocEquals(const SectionChunk *A, const SectionChunk *B);
+
   bool equalsConstant(const SectionChunk *A, const SectionChunk *B);
   bool equalsVariable(const SectionChunk *A, const SectionChunk *B);
 
@@ -65,8 +67,8 @@ private:
 
 // Returns a hash value for S.
 uint32_t ICF::getHash(SectionChunk *C) {
-  return hash_combine(C->getOutputCharacteristics(), C->SectionName, C->Relocs.size(),
-                      C->Alignment, uint32_t(C->Header->SizeOfRawData),
+  return hash_combine(C->getOutputCharacteristics(), C->SectionName,
+                      C->Relocs.size(), uint32_t(C->Header->SizeOfRawData),
                       C->Checksum, C->getContents());
 }
 
@@ -91,8 +93,9 @@ bool ICF::isEligible(SectionChunk *C) {
   if (C->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
     return true;
 
-  // .xdata unwind info sections are eligible.
-  if (C->getSectionName().split('$').first == ".xdata")
+  // .pdata and .xdata unwind info sections are eligible.
+  StringRef OutSecName = C->getSectionName().split('$').first;
+  if (OutSecName == ".pdata" || OutSecName == ".xdata")
     return true;
 
   // So are vtables.
@@ -125,6 +128,19 @@ void ICF::segregate(size_t Begin, size_t End, bool Constant) {
   }
 }
 
+// Returns true if two sections' associative children are equal.
+bool ICF::assocEquals(const SectionChunk *A, const SectionChunk *B) {
+  auto ChildClasses = [&](const SectionChunk *SC) {
+    std::vector<uint32_t> Classes;
+    for (const SectionChunk *C : SC->children())
+      if (!C->SectionName.startswith(".debug") &&
+          C->SectionName != ".gfids$y" && C->SectionName != ".gljmp$y")
+        Classes.push_back(C->Class[Cnt % 2]);
+    return Classes;
+  };
+  return ChildClasses(A) == ChildClasses(B);
+}
+
 // Compare "non-moving" part of two sections, namely everything
 // except relocation targets.
 bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
@@ -152,9 +168,10 @@ bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
 
   // Compare section attributes and contents.
   return A->getOutputCharacteristics() == B->getOutputCharacteristics() &&
-         A->SectionName == B->SectionName && A->Alignment == B->Alignment &&
+         A->SectionName == B->SectionName &&
          A->Header->SizeOfRawData == B->Header->SizeOfRawData &&
-         A->Checksum == B->Checksum && A->getContents() == B->getContents();
+         A->Checksum == B->Checksum && A->getContents() == B->getContents() &&
+         assocEquals(A, B);
 }
 
 // Compare "moving" part of two sections, namely relocation targets.
@@ -170,7 +187,9 @@ bool ICF::equalsVariable(const SectionChunk *A, const SectionChunk *B) {
         return D1->getChunk()->Class[Cnt % 2] == D2->getChunk()->Class[Cnt % 2];
     return false;
   };
-  return std::equal(A->Relocs.begin(), A->Relocs.end(), B->Relocs.begin(), Eq);
+  return std::equal(A->Relocs.begin(), A->Relocs.end(), B->Relocs.begin(),
+                    Eq) &&
+         assocEquals(A, B);
 }
 
 // Find the first Chunk after Begin that has a different class from Begin.

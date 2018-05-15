@@ -13,7 +13,6 @@
 #include "DWARFDIE.h"
 #include "DWARFDebugInfoEntry.h"
 #include "lldb/lldb-enumerations.h"
-#include "llvm/Support/RWMutex.h"
 
 class DWARFUnit;
 class DWARFCompileUnit;
@@ -190,7 +189,6 @@ protected:
   // If this is a dwo compile unit this is the offset of the base compile unit
   // in the main object file
   dw_offset_t m_base_obj_offset = DW_INVALID_OFFSET;
-  llvm::sys::RWMutex m_extractdies_mutex;
 
   static void
   IndexPrivate(DWARFUnit *dwarf_cu, const lldb::LanguageType cu_language,

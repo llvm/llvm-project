@@ -97,6 +97,11 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
   Info.SetArchitecture(arch_spec);
   Info.SetArguments(args, true);
   Info.GetEnvironment() = Host::GetEnvironment();
+  // TODO: Use this callback to detect botched launches. If lldb-server does not
+  // start, we can print a nice error message here instead of hanging in
+  // Accept().
+  Info.SetMonitorProcessCallback(&ProcessLaunchInfo::NoOpMonitorCallback,
+                                 false);
 
   status = Host::LaunchProcess(Info);
   if (status.Fail())
