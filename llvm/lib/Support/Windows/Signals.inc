@@ -190,7 +190,7 @@ using namespace llvm;
 static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep);
 static BOOL WINAPI LLVMConsoleCtrlHandler(DWORD dwCtrlType);
 
-// InterruptFunction - The function to call if ctrl-c is pressed.
+// The function to call if ctrl-c is pressed.
 static void (*InterruptFunction)() = 0;
 
 static std::vector<std::string> *FilesToRemove = NULL;
@@ -387,9 +387,9 @@ namespace llvm {
 //===----------------------------------------------------------------------===//
 
 #ifdef _MSC_VER
-/// AvoidMessageBoxHook - Emulates hitting "retry" from an "abort, retry,
-/// ignore" CRT debug report dialog.  "retry" raises an exception which
-/// ultimately triggers our stack dumper.
+/// Emulates hitting "retry" from an "abort, retry, ignore" CRT debug report
+/// dialog. "retry" raises an exception which ultimately triggers our stack
+/// dumper.
 static LLVM_ATTRIBUTE_UNUSED int
 AvoidMessageBoxHook(int ReportType, char *Message, int *Return) {
   // Set *Return to the retry code for the return value of _CrtDbgReport:
@@ -447,7 +447,7 @@ static void RegisterHandler() {
   // else multi-threading problems will ensue.
 }
 
-// RemoveFileOnSignal - The public API
+// The public API
 bool sys::RemoveFileOnSignal(StringRef Filename, std::string* ErrMsg) {
   RegisterHandler();
 
@@ -466,7 +466,7 @@ bool sys::RemoveFileOnSignal(StringRef Filename, std::string* ErrMsg) {
   return false;
 }
 
-// DontRemoveFileOnSignal - The public API
+// The public API
 void sys::DontRemoveFileOnSignal(StringRef Filename) {
   if (FilesToRemove == NULL)
     return;
@@ -500,8 +500,8 @@ void sys::DisableSystemDialogsOnCrash() {
   _set_error_mode(_OUT_TO_STDERR);
 }
 
-/// PrintStackTraceOnErrorSignal - When an error signal (such as SIGABRT or
-/// SIGSEGV) is delivered to the process, print a stack trace and then exit.
+/// When an error signal (such as SIGABRT or SIGSEGV) is delivered to the
+/// process, print a stack trace and then exit.
 void sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
                                        bool DisableCrashReporting) {
   ::Argv0 = Argv0;
@@ -557,9 +557,9 @@ void llvm::sys::SetInterruptFunction(void (*IF)()) {
 }
 
 
-/// AddSignalHandler - Add a function to be called when a signal is delivered
-/// to the process.  The handler can have a cookie passed to it to identify
-/// what instance of the handler it is.
+/// Add a function to be called when a signal is delivered to the process. The
+/// handler can have a cookie passed to it to identify what instance of the
+/// handler it is.
 void llvm::sys::AddSignalHandler(void (*FnPtr)(void *), void *Cookie) {
   CallBacksToRun->push_back(std::make_pair(FnPtr, Cookie));
   RegisterHandler();

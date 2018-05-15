@@ -245,10 +245,11 @@ namespace llvm {
     /// \param Ty           Original type.
     /// \param BaseTy       Base type. Ty is inherits from base.
     /// \param BaseOffset   Base offset.
+    /// \param VBPtrOffset  Virtual base pointer offset.
     /// \param Flags        Flags to describe inheritance attribute,
     ///                     e.g. private
     DIDerivedType *createInheritance(DIType *Ty, DIType *BaseTy,
-                                     uint64_t BaseOffset,
+                                     uint64_t BaseOffset, uint32_t VBPtrOffset,
                                      DINode::DIFlags Flags);
 
     /// Create debugging information entry for a member.

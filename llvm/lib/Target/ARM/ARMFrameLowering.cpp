@@ -1620,6 +1620,17 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       (MFI.hasVarSizedObjects() || RegInfo->needsStackRealignment(MF)))
     SavedRegs.set(ARM::R4);
 
+  // If a stack probe will be emitted, spill R4 and LR, since they are
+  // clobbered by the stack probe call.
+  // This estimate should be a safe, conservative estimate. The actual
+  // stack probe is enabled based on the size of the local objects;
+  // this estimate also includes the varargs store size.
+  if (STI.isTargetWindows() &&
+      WindowsRequiresStackProbe(MF, MFI.estimateStackSize(MF))) {
+    SavedRegs.set(ARM::R4);
+    SavedRegs.set(ARM::LR);
+  }
+
   if (AFI->isThumb1OnlyFunction()) {
     // Spill LR if Thumb1 function uses variable length argument lists.
     if (AFI->getArgRegsSaveSize() > 0)

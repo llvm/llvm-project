@@ -209,10 +209,10 @@ void ThreadSuspender::KillAllThreads() {
 
 bool ThreadSuspender::SuspendAllThreads() {
   ThreadLister thread_lister(pid_);
-  bool retry;
+  bool retry = true;
   InternalMmapVector<tid_t> threads;
   threads.reserve(128);
-  do {
+  for (int i = 0; i < 30 && retry; ++i) {
     retry = false;
     switch (thread_lister.ListThreads(&threads)) {
       case ThreadLister::Error:
@@ -227,7 +227,7 @@ bool ThreadSuspender::SuspendAllThreads() {
     for (tid_t tid : threads)
       if (SuspendThread(tid))
         retry = true;
-  } while (retry);
+  };
   return suspended_threads_list_.ThreadCount();
 }
 

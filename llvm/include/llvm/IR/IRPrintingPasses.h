@@ -23,6 +23,7 @@
 #include <string>
 
 namespace llvm {
+class Pass;
 class BasicBlockPass;
 class Function;
 class FunctionPass;
@@ -53,6 +54,9 @@ BasicBlockPass *createPrintBasicBlockPass(raw_ostream &OS,
 /// The name is surrounded with ""'s and escaped if it has any special or
 /// non-printable characters in it.
 void printLLVMNameWithoutPrefix(raw_ostream &OS, StringRef Name);
+
+/// Return true if a pass is for IR printing.
+bool isIRPrintingPass(Pass *P);
 
 /// Pass for printing a Module as LLVM's text IR assembly.
 ///

@@ -170,16 +170,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rootn(float x, int ny)
     tv = USE_TABLE(exp_tbl_ep, j);
 
     float expylogx = mad(tv.s0, poly, mad(tv.s1, poly, tv.s1)) + tv.s0;
-    float sexpylogx;
-    if (!__clc_fp32_subnormals_supported()) {
-		int explg = ((as_uint(expylogx) & EXPBITS_SP32 >> 23) - 127);
-		m = (23-(m + 149)) == 0 ? 1: m;
-		uint mantissa =  ((as_uint(expylogx) & MANTBITS_SP32)|IMPBIT_SP32) >> (23-(m + 149));
-		sexpylogx = as_float(mantissa);
-    } else {
-		sexpylogx = expylogx * as_float(0x1 << (m + 149));
-    }
-
+    float sexpylogx = __clc_fp32_subnormals_supported() ? expylogx * as_float(0x1 << (m + 149)) : 0.0f;
 
     float texpylogx = as_float(as_int(expylogx) + m2);
     expylogx = m < -125 ? sexpylogx : texpylogx;

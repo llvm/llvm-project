@@ -225,12 +225,17 @@ TEST_F(LogChannelEnabledTest, log_options) {
     EXPECT_EQ(1, sscanf(Msg.str().c_str(), "%d Hello World", &seq_no));
   }
 
-  EXPECT_TRUE(EnableChannel(getStream(), LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION,
-                            "chan", {}, Err));
-  EXPECT_EQ(
-      "LogTest.cpp:logAndTakeOutput                                 Hello "
-      "World\n",
-      logAndTakeOutput("Hello World"));
+  {
+    EXPECT_TRUE(EnableChannel(getStream(), LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION,
+                              "chan", {}, Err));
+    llvm::StringRef Msg = logAndTakeOutput("Hello World");
+    char File[12];
+    char Function[17];
+      
+    sscanf(Msg.str().c_str(), "%[^:]:%s                                 Hello World", File, Function);
+    EXPECT_STRCASEEQ("LogTest.cpp", File);
+    EXPECT_STREQ("logAndTakeOutput", Function);
+  }
 
   EXPECT_TRUE(EnableChannel(
       getStream(), LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD, "chan", {}, Err));

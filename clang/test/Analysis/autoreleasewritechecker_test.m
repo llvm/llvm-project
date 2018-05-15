@@ -205,10 +205,65 @@ BOOL writeToErrorWithIterator(NSError *__autoreleasing* error, NSArray *a, NSSet
   return 0;
 }
 
+void writeIntoError(NSError **error) {
+  *error = [NSError errorWithDomain:1];
+}
+
+extern void readError(NSError *error);
+
 void writeToErrorWithIteratorNonnull(NSError *__autoreleasing* _Nonnull error, NSDictionary *a) {
   [a enumerateKeysAndObjectsUsingBlock:^{
      *error = [NSError errorWithDomain:1]; // expected-warning{{Write to autoreleasing out parameter}}
   }];
 }
+
+
+void escapeErrorFromIterator(NSError *__autoreleasing* _Nonnull error, NSDictionary *a) {
+  [a enumerateKeysAndObjectsUsingBlock:^{
+     writeIntoError(error); // expected-warning{{Capture of autoreleasing out parameter}}
+  }];
+}
+
+void noWarningOnRead(NSError *__autoreleasing* error, NSDictionary *a) {
+  [a enumerateKeysAndObjectsUsingBlock:^{
+     NSError* local = *error; // no-warning
+  }];
+}
+
+void noWarningOnEscapeRead(NSError *__autoreleasing* error, NSDictionary *a) {
+  [a enumerateKeysAndObjectsUsingBlock:^{
+     readError(*error); // no-warning
+  }];
+}
+
+@interface ErrorCapture
+- (void) captureErrorOut:(NSError**) error;
+- (void) captureError:(NSError*) error;
+@end
+
+void escapeErrorFromIteratorMethod(NSError *__autoreleasing* _Nonnull error,
+                                   NSDictionary *a,
+                                   ErrorCapture *capturer) {
+  [a enumerateKeysAndObjectsUsingBlock:^{
+      [capturer captureErrorOut:error]; // expected-warning{{Capture of autoreleasing out parameter}}
+  }];
+}
+
+void noWarningOnEscapeReadMethod(NSError *__autoreleasing* error,
+                                 NSDictionary *a,
+                                 ErrorCapture *capturer) {
+  [a enumerateKeysAndObjectsUsingBlock:^{
+    [capturer captureError:*error]; // no-warning
+  }];
+}
+
+void multipleErrors(NSError *__autoreleasing* error, NSDictionary *a) {
+  [a enumerateKeysAndObjectsUsingBlock:^{
+     writeIntoError(error); // expected-warning{{Capture of autoreleasing out parameter}}
+     *error = [NSError errorWithDomain:1]; // expected-warning{{Write to autoreleasing out parameter}}
+     writeIntoError(error); // expected-warning{{Capture of autoreleasing out parameter}}
+  }];
+}
+
 #endif
 

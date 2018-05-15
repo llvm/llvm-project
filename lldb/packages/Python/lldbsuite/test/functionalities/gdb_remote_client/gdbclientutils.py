@@ -76,7 +76,7 @@ def hex_decode_bytes(hex_bytes):
 
 class MockGDBServerResponder:
     """
-    A base class for handing client packets and issuing server responses for
+    A base class for handling client packets and issuing server responses for
     GDB tests.
 
     This handles many typical situations, while still allowing subclasses to
@@ -278,10 +278,14 @@ class MockGDBServer:
                 data = self._client.recv(4096)
                 if data is None or len(data) == 0:
                     break
+                # In Python 2, sockets return byte strings. In Python 3, sockets return bytes.
+                # If we got bytes (and not a byte string), decode them to a string for later handling.
+                if isinstance(data, bytes) and not isinstance(data, str):
+                    data = data.decode()
+                self._receive(data)
             except Exception as e:
                 self._client.close()
                 break
-            self._receive(data)
 
     def _receive(self, data):
         """
@@ -329,7 +333,7 @@ class MockGDBServer:
                 i += 1
             else:
                 raise self.InvalidPacketException(
-                        "Unexexpected leading byte: %s" % data[0])
+                        "Unexpected leading byte: %s" % data[0])
 
         # If we're looking beyond the start of the received data, then we're
         # looking for the end of the packet content, denoted by a #.
@@ -370,9 +374,9 @@ class MockGDBServer:
             return
         response = ""
         # We'll handle the ack stuff here since it's not something any of the
-        # tests will be concerned about, and it'll get turned off quicly anyway.
+        # tests will be concerned about, and it'll get turned off quickly anyway.
         if self._shouldSendAck:
-            self._client.sendall('+')
+            self._client.sendall('+'.encode())
         if packet == "QStartNoAckMode":
             self._shouldSendAck = False
             response = "OK"
@@ -382,6 +386,10 @@ class MockGDBServer:
         # Handle packet framing since we don't want to bother tests with it.
         if response is not None:
             framed = frame_packet(response)
+            # In Python 2, sockets send byte strings. In Python 3, sockets send bytes.
+            # If we got a string (and not a byte string), encode it before sending.
+            if isinstance(framed, str) and not isinstance(framed, bytes):
+                framed = framed.encode()
             self._client.sendall(framed)
 
     PACKET_ACK = object()
@@ -459,6 +467,7 @@ class GDBRemoteTestBase(TestBase):
         i = 0
         j = 0
         log = self.server.responder.packetLog
+        
         while i < len(packets) and j < len(log):
             if log[j] == packets[i]:
                 i += 1

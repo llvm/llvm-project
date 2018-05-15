@@ -2099,8 +2099,7 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
   for (const DIDerivedType *I : Info.Inheritance) {
     if (I->getFlags() & DINode::FlagVirtual) {
       // Virtual base.
-      // FIXME: Emit VBPtrOffset when the frontend provides it.
-      unsigned VBPtrOffset = 0;
+      unsigned VBPtrOffset = I->getVBPtrOffset();
       // FIXME: Despite the accessor name, the offset is really in bytes.
       unsigned VBTableIndex = I->getOffsetInBits() / 4;
       auto RecordKind = (I->getFlags() & DINode::FlagIndirectVirtualBase) == DINode::FlagIndirectVirtualBase

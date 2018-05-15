@@ -318,10 +318,14 @@ DIDerivedType *DIBuilder::createFriend(DIType *Ty, DIType *FriendTy) {
 
 DIDerivedType *DIBuilder::createInheritance(DIType *Ty, DIType *BaseTy,
                                             uint64_t BaseOffset,
+                                            uint32_t VBPtrOffset,
                                             DINode::DIFlags Flags) {
   assert(Ty && "Unable to create inheritance");
+  Metadata *ExtraData = ConstantAsMetadata::get(
+      ConstantInt::get(IntegerType::get(VMContext, 32), VBPtrOffset));
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_inheritance, "", nullptr,
-                            0, Ty, BaseTy, 0, 0, BaseOffset, None, Flags);
+                            0, Ty, BaseTy, 0, 0, BaseOffset, None,
+                            Flags, ExtraData);
 }
 
 DIDerivedType *DIBuilder::createMemberType(DIScope *Scope, StringRef Name,

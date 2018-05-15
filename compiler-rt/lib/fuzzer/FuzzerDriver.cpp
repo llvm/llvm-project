@@ -663,6 +663,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   if (Flags.cleanse_crash)
     return CleanseCrashInput(Args, Options);
 
+#if 0  // deprecated, to be removed.
   if (auto Name = Flags.run_equivalence_server) {
     SMR.Destroy(Name);
     if (!SMR.Create(Name)) {
@@ -688,6 +689,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     }
     Printf("INFO: EQUIVALENCE CLIENT UP\n");
   }
+#endif
 
   if (DoPlainRun) {
     Options.SaveArtifacts = false;
