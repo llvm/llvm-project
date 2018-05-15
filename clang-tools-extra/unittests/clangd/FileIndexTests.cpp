@@ -7,11 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestFS.h"
+#include "TestTU.h"
 #include "index/FileIndex.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/PCHContainerOperations.h"
-#include "clang/Frontend/Utils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -83,38 +80,19 @@ std::vector<std::string> match(const SymbolIndex &I,
   return Matches;
 }
 
-/// Create an ParsedAST for \p Code. Returns None if \p Code is empty.
-/// \p Code is put into <Path>.h which is included by \p <BasePath>.cpp.
-llvm::Optional<ParsedAST> build(llvm::StringRef BasePath,
-                                llvm::StringRef Code) {
-  if (Code.empty())
-    return llvm::None;
-
-  assert(llvm::sys::path::extension(BasePath).empty() &&
-         "BasePath must be a base file path without extension.");
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
-      new vfs::InMemoryFileSystem);
-  std::string Path = testPath((BasePath + ".cpp").str());
-  std::string Header = testPath((BasePath + ".h").str());
-  VFS->addFile(Path, 0, llvm::MemoryBuffer::getMemBuffer(""));
-  VFS->addFile(Header, 0, llvm::MemoryBuffer::getMemBuffer(Code));
-  const char *Args[] = {"clang", "-xc++", "-include", Header.c_str(),
-                        Path.c_str()};
-
-  auto CI = createInvocationFromCommandLine(Args);
-
-  auto Buf = llvm::MemoryBuffer::getMemBuffer(Code);
-  auto AST = ParsedAST::Build(std::move(CI), nullptr, std::move(Buf),
-                              std::make_shared<PCHContainerOperations>(), VFS);
-  assert(AST.hasValue());
-  return std::move(*AST);
+// Adds Basename.cpp, which includes Basename.h, which contains Code.
+void update(FileIndex &M, llvm::StringRef Basename, llvm::StringRef Code) {
+  TestTU File;
+  File.Filename = (Basename + ".cpp").str();
+  File.HeaderFilename = (Basename + ".h").str();
+  File.HeaderCode = Code;
+  auto AST = File.build();
+  M.update(File.Filename, &AST);
 }
 
 TEST(FileIndexTest, IndexAST) {
   FileIndex M;
-  M.update(
-      "f1",
-      build("f1", "namespace ns { void f() {} class X {}; }").getPointer());
+  update(M, "f1", "namespace ns { void f() {} class X {}; }");
 
   FuzzyFindRequest Req;
   Req.Query = "";
@@ -124,10 +102,7 @@ TEST(FileIndexTest, IndexAST) {
 
 TEST(FileIndexTest, NoLocal) {
   FileIndex M;
-  M.update(
-      "f1",
-      build("f1", "namespace ns { void f() { int local = 0; } class X {}; }")
-          .getPointer());
+  update(M, "f1", "namespace ns { void f() { int local = 0; } class X {}; }");
 
   FuzzyFindRequest Req;
   Req.Query = "";
@@ -136,12 +111,8 @@ TEST(FileIndexTest, NoLocal) {
 
 TEST(FileIndexTest, IndexMultiASTAndDeduplicate) {
   FileIndex M;
-  M.update(
-      "f1",
-      build("f1", "namespace ns { void f() {} class X {}; }").getPointer());
-  M.update(
-      "f2",
-      build("f2", "namespace ns { void ff() {} class X {}; }").getPointer());
+  update(M, "f1", "namespace ns { void f() {} class X {}; }");
+  update(M, "f2", "namespace ns { void ff() {} class X {}; }");
 
   FuzzyFindRequest Req;
   Req.Query = "";
@@ -151,30 +122,26 @@ TEST(FileIndexTest, IndexMultiASTAndDeduplicate) {
 
 TEST(FileIndexTest, RemoveAST) {
   FileIndex M;
-  M.update(
-      "f1",
-      build("f1", "namespace ns { void f() {} class X {}; }").getPointer());
+  update(M, "f1", "namespace ns { void f() {} class X {}; }");
 
   FuzzyFindRequest Req;
   Req.Query = "";
   Req.Scopes = {"ns::"};
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X"));
 
-  M.update("f1", nullptr);
+  M.update("f1.cpp", nullptr);
   EXPECT_THAT(match(M, Req), UnorderedElementsAre());
 }
 
 TEST(FileIndexTest, RemoveNonExisting) {
   FileIndex M;
-  M.update("no", nullptr);
+  M.update("no.cpp", nullptr);
   EXPECT_THAT(match(M, FuzzyFindRequest()), UnorderedElementsAre());
 }
 
 TEST(FileIndexTest, IgnoreClassMembers) {
   FileIndex M;
-  M.update("f1",
-           build("f1", "class X { static int m1; int m2; static void f(); };")
-               .getPointer());
+  update(M, "f1", "class X { static int m1; int m2; static void f(); };");
 
   FuzzyFindRequest Req;
   Req.Query = "";
@@ -183,7 +150,7 @@ TEST(FileIndexTest, IgnoreClassMembers) {
 
 TEST(FileIndexTest, NoIncludeCollected) {
   FileIndex M;
-  M.update("f", build("f", "class string {};").getPointer());
+  update(M, "f", "class string {};");
 
   FuzzyFindRequest Req;
   Req.Query = "";
@@ -206,7 +173,7 @@ vector<Ty> make_vector(Arg A) {}
 )cpp";
 
   FileIndex M;
-  M.update("f", build("f", Source).getPointer());
+  update(M, "f", Source);
 
   FuzzyFindRequest Req;
   Req.Query = "";

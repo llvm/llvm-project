@@ -104,6 +104,7 @@
 #include "View.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 
@@ -142,11 +143,11 @@ class TimelineView : public View {
   };
   std::vector<WaitTimeEntry> WaitTime;
 
-  void printTimelineViewEntry(llvm::raw_string_ostream &OS,
+  void printTimelineViewEntry(llvm::formatted_raw_ostream &OS,
                               const TimelineViewEntry &E, unsigned Iteration,
                               unsigned SourceIndex) const;
-  void printWaitTimeEntry(llvm::raw_string_ostream &OS, const WaitTimeEntry &E,
-                          unsigned Index) const;
+  void printWaitTimeEntry(llvm::formatted_raw_ostream &OS,
+                          const WaitTimeEntry &E, unsigned Index) const;
 
   const unsigned DEFAULT_ITERATIONS = 10;
 

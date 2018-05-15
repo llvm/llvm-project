@@ -187,17 +187,14 @@ let DecoderNamespace = "MicroMips" in {
   def MOVF_D32_MM : MMRel, CMov_F_F_FT<"movf.d", AFGR64Opnd, II_MOVF_D,
                                        MipsCMovFP_F>, CMov_F_F_FM_MM<0x20, 1>,
                     ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
-}
-let isCodeGenOnly = 1 in {
-def MFC1_MM : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd,
-                             II_MFC1, bitconvert>, MFC1_FM_MM<0x80>,
-              ISA_MICROMIPS;
-def MTC1_MM : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd,
-                             II_MTC1, bitconvert>, MFC1_FM_MM<0xa0>,
-              ISA_MICROMIPS;
-}
 
-let DecoderNamespace = "MicroMips" in {
+  def MFC1_MM : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd,
+                               II_MFC1, bitconvert>, MFC1_FM_MM<0x80>,
+                ISA_MICROMIPS;
+  def MTC1_MM : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd,
+                               II_MTC1, bitconvert>, MFC1_FM_MM<0xa0>,
+                ISA_MICROMIPS;
+
   def MADD_S_MM : MMRel, MADDS_FT<"madd.s", FGR32Opnd, II_MADD_S>,
                   MADDS_FM_MM<0x1>, ISA_MICROMIPS32_NOT_MIPS32R6, MADD4;
   def MSUB_S_MM : MMRel, MADDS_FT<"msub.s", FGR32Opnd, II_MSUB_S>,
@@ -366,11 +363,13 @@ multiclass C_COND_MM<string TypeStr, RegisterOperand RC, bits<2> fmt,
     let BaseOpcode = "c.ngt."#NAME;
   }
 }
+let DecoderNamespace = "MicroMips" in {
+  defm S   : C_COND_MM<"s", FGR32Opnd, 0b00, II_C_CC_S>,
+             ISA_MICROMIPS32_NOT_MIPS32R6;
+  defm D32 : C_COND_MM<"d", AFGR64Opnd, 0b01, II_C_CC_D>,
+             ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+}
 
-defm S   : C_COND_MM<"s", FGR32Opnd, 0b00, II_C_CC_S>,
-           ISA_MICROMIPS32_NOT_MIPS32R6;
-defm D32 : C_COND_MM<"d", AFGR64Opnd, 0b01, II_C_CC_D>,
-           ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
 let DecoderNamespace = "Mips64" in
   defm D64 : C_COND_MM<"d", FGR64Opnd, 0b01, II_C_CC_D>,
              ISA_MICROMIPS32_NOT_MIPS32R6, FGR_64;
@@ -407,11 +406,28 @@ let AddedComplexity = 40 in {
   def : StoreRegImmPat<SWC1_MM, f32>, ISA_MICROMIPS;
 }
 
-  def : MipsPat<(f32 (fpround FGR64Opnd:$src)),
-                (CVT_S_D64_MM FGR64Opnd:$src)>, ISA_MICROMIPS, FGR_64;
-  def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
-                (CVT_D64_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS, FGR_64;
-  def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
-                (CVT_S_D32_MM AFGR64Opnd:$src)>, ISA_MICROMIPS, FGR_32;
-  def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
-                (CVT_D32_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS, FGR_32;
+def : MipsPat<(f32 (fpround FGR64Opnd:$src)),
+              (CVT_S_D64_MM FGR64Opnd:$src)>, ISA_MICROMIPS, FGR_64;
+def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
+              (CVT_D64_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS, FGR_64;
+def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
+              (CVT_S_D32_MM AFGR64Opnd:$src)>, ISA_MICROMIPS, FGR_32;
+def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
+              (CVT_D32_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS, FGR_32;
+
+// Selects
+defm : MovzPats0<GPR32, FGR32, MOVZ_I_S_MM, SLT_MM, SLTu_MM, SLTi_MM, SLTiu_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6;
+defm : MovzPats1<GPR32, FGR32, MOVZ_I_S_MM, XOR_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6;
+
+defm : MovnPats<GPR32, FGR32, MOVN_I_S_MM, XOR_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6;
+
+defm : MovzPats0<GPR32, AFGR64, MOVZ_I_D32_MM, SLT_MM, SLTu_MM, SLTi_MM,
+                 SLTiu_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+defm : MovzPats1<GPR32, AFGR64, MOVZ_I_D32_MM, XOR_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+defm : MovnPats<GPR32, AFGR64, MOVN_I_D32_MM, XOR_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;

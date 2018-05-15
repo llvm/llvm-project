@@ -9,8 +9,7 @@ elseif(LLVM_USE_SANITIZE_COVERAGE)
   unset(DUMMY_MAIN)
 endif()
 
-# Hack to bypass LLVM's cmake sources check and allow multiple libraries and
-# executables from this directory.
+# Needed by LLVM's CMake checks because this file defines multiple targets.
 set(LLVM_OPTIONAL_SOURCES
   ClangFuzzer.cpp
   DummyClangFuzzer.cpp

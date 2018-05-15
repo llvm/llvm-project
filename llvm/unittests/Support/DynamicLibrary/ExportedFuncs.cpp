@@ -1,4 +1,4 @@
-//===- llvm/unittest/Support/DynamicLibrary/DynamicLibraryLib.cpp ---------===//
+//===- llvm/unittest/Support/DynamicLibrary/ExportedFuncs.cpp -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -99,7 +99,7 @@ entry:
 
 define void @storeu_lane0_64(half* nocapture %a, <4 x half> %b) #1 {
 ; CHECK-LABEL: storeu_lane0_64:
-; CHECK: st1 { v0.h }[0], [x{{[0-9]+}}]
+; CHECK: stur h0, [x{{[0-9]+}}, #-2]
 entry:
   %0 = getelementptr half, half* %a, i64 -1
   %1 = extractelement <4 x half> %b, i32 0
@@ -148,7 +148,7 @@ entry:
 
 define void @storeu_lane0_128(half* nocapture %a, <8 x half> %b) #1 {
 ; CHECK-LABEL: storeu_lane0_128:
-; CHECK: st1 { v0.h }[0], [x{{[0-9]+}}]
+; CHECK: stur h0, [x{{[0-9]+}}, #-2]
 entry:
   %0 = getelementptr half, half* %a, i64 -1
   %1 = extractelement <8 x half> %b, i32 0

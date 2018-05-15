@@ -24,6 +24,7 @@
 #include "BackendPrinter.h"
 #include "CodeRegion.h"
 #include "DispatchStatistics.h"
+#include "FetchStage.h"
 #include "InstructionInfoView.h"
 #include "InstructionTables.h"
 #include "RegisterFileStatistics.h"
@@ -435,8 +436,13 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    mca::Backend B(*STI, *MRI, IB, S, Width, RegisterFileSize, LoadQueueSize,
-                   StoreQueueSize, AssumeNoAlias);
+    // Ideally, I'd like to expose the pipeline building here,
+    // by registering all of the Stage instances.
+    // But for now, it's just this single puppy.
+    std::unique_ptr<mca::FetchStage> Fetch =
+        llvm::make_unique<mca::FetchStage>(IB, S);
+    mca::Backend B(*STI, *MRI, std::move(Fetch), Width, RegisterFileSize,
+                   LoadQueueSize, StoreQueueSize, AssumeNoAlias);
     mca::BackendPrinter Printer(B);
 
     Printer.addView(llvm::make_unique<mca::SummaryView>(S, Width));

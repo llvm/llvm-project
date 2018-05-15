@@ -66,6 +66,12 @@
     call void @foo()
     ret void
   }
+
+  define void @test_setb_c(i64 %a, i64 %b) {
+  entry:
+    call void @foo()
+    ret void
+  }
 ...
 ---
 name:            test_branch
@@ -478,6 +484,71 @@ body:             |
   ; CHECK-NEXT:    %4:gr64 = RCR64r1 %2, implicit-def $eflags, implicit killed $eflags
   ; CHECK-NEXT:    %5:gr64 = RCR64r1 %4, implicit-def{{( dead)?}} $eflags, implicit{{( killed)?}} $eflags
     MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
+
+    RET 0
+
+...
+---
+name:            test_setb_c
+# CHECK-LABEL: name: test_setb_c
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$rsi', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $rdi, $rsi
+
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = ADD64rr %0, %1, implicit-def $eflags
+    %3:gr64 = COPY $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+  ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETBr implicit $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+    $eflags = COPY %3
+    %4:gr8 = SETB_C8r implicit-def $eflags, implicit $eflags
+    MOV8mr $rsp, 1, $noreg, -16, $noreg, killed %4
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         %[[ZERO:[^:]*]]:gr32 = MOV32r0 implicit-def $eflags
+  ; CHECK-NEXT:    %[[ZERO_SUBREG:[^:]*]]:gr8 = EXTRACT_SUBREG %[[ZERO]], %subreg.sub_8bit
+  ; CHECK-NEXT:    %[[REPLACEMENT:[^:]*]]:gr8 = SUB8rr %[[ZERO_SUBREG]], %[[CF_REG]]
+  ; CHECK-NEXT:    MOV8mr $rsp, 1, $noreg, -16, $noreg, killed %[[REPLACEMENT]]
+
+    $eflags = COPY %3
+    %5:gr16 = SETB_C16r implicit-def $eflags, implicit $eflags
+    MOV16mr $rsp, 1, $noreg, -16, $noreg, killed %5
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         %[[CF_EXT:[^:]*]]:gr32 = MOVZX32rr8 %[[CF_REG]]
+  ; CHECK-NEXT:    %[[CF_TRUNC:[^:]*]]:gr16 = EXTRACT_SUBREG %[[CF_EXT]], %subreg.sub_16bit
+  ; CHECK-NEXT:    %[[ZERO:[^:]*]]:gr32 = MOV32r0 implicit-def $eflags
+  ; CHECK-NEXT:    %[[ZERO_SUBREG:[^:]*]]:gr16 = EXTRACT_SUBREG %[[ZERO]], %subreg.sub_16bit
+  ; CHECK-NEXT:    %[[REPLACEMENT:[^:]*]]:gr16 = SUB16rr %[[ZERO_SUBREG]], %[[CF_TRUNC]]
+  ; CHECK-NEXT:    MOV16mr $rsp, 1, $noreg, -16, $noreg, killed %[[REPLACEMENT]]
+
+    $eflags = COPY %3
+    %6:gr32 = SETB_C32r implicit-def $eflags, implicit $eflags
+    MOV32mr $rsp, 1, $noreg, -16, $noreg, killed %6
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         %[[CF_EXT:[^:]*]]:gr32 = MOVZX32rr8 %[[CF_REG]]
+  ; CHECK-NEXT:    %[[ZERO:[^:]*]]:gr32 = MOV32r0 implicit-def $eflags
+  ; CHECK-NEXT:    %[[REPLACEMENT:[^:]*]]:gr32 = SUB32rr %[[ZERO]], %[[CF_EXT]]
+  ; CHECK-NEXT:    MOV32mr $rsp, 1, $noreg, -16, $noreg, killed %[[REPLACEMENT]]
+
+    $eflags = COPY %3
+    %7:gr64 = SETB_C64r implicit-def $eflags, implicit $eflags
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %7
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         %[[CF_EXT1:[^:]*]]:gr32 = MOVZX32rr8 %[[CF_REG]]
+  ; CHECK-NEXT:    %[[CF_EXT2:[^:]*]]:gr64 = SUBREG_TO_REG 0, %[[CF_EXT1]], %subreg.sub_32bit
+  ; CHECK-NEXT:    %[[ZERO:[^:]*]]:gr32 = MOV32r0 implicit-def $eflags
+  ; CHECK-NEXT:    %[[ZERO_EXT:[^:]*]]:gr64 = SUBREG_TO_REG 0, %[[ZERO]], %subreg.sub_32bit
+  ; CHECK-NEXT:    %[[REPLACEMENT:[^:]*]]:gr64 = SUB64rr %[[ZERO_EXT]], %[[CF_EXT2]]
+  ; CHECK-NEXT:    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %[[REPLACEMENT]]
 
     RET 0
 

@@ -5,8 +5,8 @@
 
 // Special cases: -fcxx-exceptions in C code should warn about unused arguments
 // We should also not have any rtti-related arguments
-// RUN: %clang -x c -### -target x86_64-scei-ps4 -c -fcxx-exceptions %s 2>&1 | FileCheck -check-prefix=CHECK-UNUSED -check-prefix=CHECK-RTTI -check-prefix=CHECK-NO-RTTI %s
-// RUN: %clang -x c -### -target x86_64-unknown-unknown -c -fcxx-exceptions %s 2>&1 | FileCheck -check-prefix=CHECK-UNUSED -check-prefix=CHECK-RTTI -check-prefix=CHECK-NO-RTTI %s
+// RUN: %clang -x c -### -target x86_64-scei-ps4 -c -fcxx-exceptions %s 2>&1 | FileCheck -check-prefix=CHECK-UNUSED -check-prefix=CHECK-RTTI %s
+// RUN: %clang -x c -### -target x86_64-unknown-unknown -c -fcxx-exceptions %s 2>&1 | FileCheck -check-prefix=CHECK-UNUSED -check-prefix=CHECK-RTTI %s
 
 // Make sure we keep the last -frtti/-fno-rtti argument
 // RUN: %clang -### -c -fno-rtti -frtti %s 2>&1 | FileCheck -check-prefix=CHECK-RTTI %s
@@ -56,6 +56,6 @@
 // CHECK-EXC-ERROR: invalid argument '-fno-rtti' not allowed with '-fexceptions'
 // CHECK-EXC-ERROR-CXX: invalid argument '-fno-rtti' not allowed with '-fcxx-exceptions'
 // CHECK-RTTI-NOT: "-fno-rtti"
-// CHECK-NO-RTTI-NOT: "-frtti"
+// CHECK-NO-RTTI: "-fno-rtti"
 
 // CHECK-OK-NOT: {{warning:|error:}}

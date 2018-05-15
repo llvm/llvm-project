@@ -179,22 +179,6 @@ public:
   void rename(PathRef File, Position Pos, llvm::StringRef NewName,
               Callback<std::vector<tooling::Replacement>> CB);
 
-  /// Inserts a new #include into \p File, if it's not present in \p Code.
-  ///
-  /// \p DeclaringHeader The original header corresponding to this insertion
-  /// e.g. the header that declared a symbol. This can be either a URI or a
-  /// literal string quoted with <> or "" that can be #included directly.
-  /// \p InsertedHeader The preferred header to be inserted. This may be
-  /// different from \p DeclaringHeader as a header file can have a different
-  /// canonical include. This can be either a URI or a literal string quoted
-  /// with <> or "" that can be #included directly.
-  ///
-  /// Both OriginalHeader and InsertedHeader will be considered to determine
-  /// whether an include needs to be added.
-  Expected<tooling::Replacements> insertInclude(PathRef File, StringRef Code,
-                                                StringRef DeclaringHeader,
-                                                StringRef InsertedHeader);
-
   /// Only for testing purposes.
   /// Waits until all requests to worker thread are finished and dumps AST for
   /// \p File. \p File must be in the list of added documents.

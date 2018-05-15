@@ -136,6 +136,8 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
     Add("-output-def:" + StringRef(A->getValue()));
   if (auto *A = Args.getLastArg(OPT_image_base))
     Add("-base:" + StringRef(A->getValue()));
+  if (auto *A = Args.getLastArg(OPT_map))
+    Add("-lldmap:" + StringRef(A->getValue()));
 
   if (auto *A = Args.getLastArg(OPT_o))
     Add("-out:" + StringRef(A->getValue()));

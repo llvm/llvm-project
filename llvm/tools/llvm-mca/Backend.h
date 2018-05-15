@@ -16,9 +16,9 @@
 #define LLVM_TOOLS_LLVM_MCA_BACKEND_H
 
 #include "Dispatch.h"
+#include "FetchStage.h"
 #include "InstrBuilder.h"
 #include "Scheduler.h"
-#include "SourceMgr.h"
 
 namespace mca {
 
@@ -29,61 +29,60 @@ class HWStallEvent;
 /// An out of order backend for a specific subtarget.
 ///
 /// It emulates an out-of-order execution of instructions. Instructions are
-/// fetched from a MCInst sequence managed by an object of class SourceMgr.
-/// Instructions are firstly dispatched to the schedulers and then executed.
+/// fetched from a MCInst sequence managed by an initial 'Fetch' stage.
+/// Instructions are firstly fetched, then dispatched to the schedulers, and
+/// then executed.
+///
 /// This class tracks the lifetime of an instruction from the moment where
 /// it gets dispatched to the schedulers, to the moment where it finishes
 /// executing and register writes are architecturally committed.
 /// In particular, it monitors changes in the state of every instruction
 /// in flight.
+///
 /// Instructions are executed in a loop of iterations. The number of iterations
-/// is defined by the SourceMgr object.
-/// The Backend entrypoint is method 'Run()' which execute cycles in a loop
+/// is defined by the SourceMgr object, which is managed by the initial stage
+/// of the instruction pipeline.
+///
+/// The Backend entry point is method 'run()' which executes cycles in a loop
 /// until there are new instructions to dispatch, and not every instruction
 /// has been retired.
+///
 /// Internally, the Backend collects statistical information in the form of
 /// histograms. For example, it tracks how the dispatch group size changes
 /// over time.
 class Backend {
   const llvm::MCSubtargetInfo &STI;
 
-  InstrBuilder &IB;
+  /// This is the initial stage of the pipeline.
+  /// TODO: Eventually this will become a list of unique Stage* that this
+  /// backend pipeline executes.
+  std::unique_ptr<FetchStage> Fetch;
+
   std::unique_ptr<Scheduler> HWS;
   std::unique_ptr<DispatchUnit> DU;
-  SourceMgr &SM;
-  unsigned Cycles;
-
-  llvm::DenseMap<unsigned, std::unique_ptr<Instruction>> Instructions;
   std::set<HWEventListener *> Listeners;
+  unsigned Cycles;
 
   void runCycle(unsigned Cycle);
 
 public:
   Backend(const llvm::MCSubtargetInfo &Subtarget,
-          const llvm::MCRegisterInfo &MRI, InstrBuilder &B, SourceMgr &Source,
-          unsigned DispatchWidth = 0, unsigned RegisterFileSize = 0,
-          unsigned LoadQueueSize = 0, unsigned StoreQueueSize = 0,
-          bool AssumeNoAlias = false)
-      : STI(Subtarget), IB(B),
+          const llvm::MCRegisterInfo &MRI,
+          std::unique_ptr<FetchStage> InitialStage, unsigned DispatchWidth = 0,
+          unsigned RegisterFileSize = 0, unsigned LoadQueueSize = 0,
+          unsigned StoreQueueSize = 0, bool AssumeNoAlias = false)
+      : STI(Subtarget), Fetch(std::move(InitialStage)),
         HWS(llvm::make_unique<Scheduler>(this, Subtarget.getSchedModel(),
                                          LoadQueueSize, StoreQueueSize,
                                          AssumeNoAlias)),
         DU(llvm::make_unique<DispatchUnit>(this, Subtarget.getSchedModel(), MRI,
                                            RegisterFileSize, DispatchWidth,
                                            HWS.get())),
-        SM(Source), Cycles(0) {
+        Cycles(0) {
     HWS->setDispatchUnit(DU.get());
   }
 
-  void run() {
-    while (SM.hasNext() || !DU->isRCUEmpty())
-      runCycle(Cycles++);
-  }
-
-  void eraseInstruction(const InstRef &IR) {
-    Instructions.erase(IR.getSourceIndex());
-  }
-
+  void run();
   void addEventListener(HWEventListener *Listener);
   void notifyCycleBegin(unsigned Cycle);
   void notifyInstructionEvent(const HWInstructionEvent &Event);

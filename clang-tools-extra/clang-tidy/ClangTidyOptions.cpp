@@ -225,7 +225,8 @@ FileOptionsProvider::FileOptionsProvider(
 // similar.
 std::vector<OptionsSource>
 FileOptionsProvider::getRawOptions(StringRef FileName) {
-  DEBUG(llvm::dbgs() << "Getting options for file " << FileName << "...\n");
+  LLVM_DEBUG(llvm::dbgs() << "Getting options for file " << FileName
+                          << "...\n");
   assert(FS && "FS must be set.");
 
   llvm::SmallString<128> AbsoluteFilePath(FileName);
@@ -254,8 +255,8 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
     if (Result) {
       // Store cached value for all intermediate directories.
       while (Path != CurrentPath) {
-        DEBUG(llvm::dbgs() << "Caching configuration for path " << Path
-                           << ".\n");
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Caching configuration for path " << Path << ".\n");
         CachedOptions[Path] = *Result;
         Path = llvm::sys::path::parent_path(Path);
       }
@@ -282,7 +283,7 @@ FileOptionsProvider::tryReadConfigFile(StringRef Directory) {
   for (const ConfigFileHandler &ConfigHandler : ConfigHandlers) {
     SmallString<128> ConfigFile(Directory);
     llvm::sys::path::append(ConfigFile, ConfigHandler.first);
-    DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
+    LLVM_DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
 
     bool IsFile = false;
     // Ignore errors from is_regular_file: we only need to know if we can read

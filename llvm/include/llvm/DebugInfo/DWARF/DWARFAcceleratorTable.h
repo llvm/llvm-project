@@ -429,6 +429,9 @@ public:
 
     Expected<Entry> getEntry(uint32_t *Offset) const;
 
+    /// Look up all entries in this Name Index matching \c Key.
+    iterator_range<ValueIterator> equal_range(StringRef Key) const;
+
     llvm::Error extract();
     uint32_t getUnitOffset() const { return Base; }
     uint32_t getNextUnitOffset() const { return Base + 4 + Hdr.UnitLength; }
@@ -443,6 +446,10 @@ public:
     /// relies on the fact that this can also be used as an iterator into the
     /// "NameIndices" vector in the Accelerator section.
     const NameIndex *CurrentIndex = nullptr;
+
+    /// Whether this is a local iterator (searches in CurrentIndex only) or not
+    /// (searches all name indices).
+    bool IsLocal;
 
     Optional<Entry> CurrentEntry;
     unsigned DataOffset = 0; ///< Offset into the section.
@@ -463,6 +470,10 @@ public:
     /// accelerator table matching Key. The iterator will run through all Name
     /// Indexes in the section in sequence.
     ValueIterator(const DWARFDebugNames &AccelTable, StringRef Key);
+
+    /// Create a "begin" iterator for looping over all entries in a specific
+    /// Name Index. Other indices in the section will not be visited.
+    ValueIterator(const NameIndex &NI, StringRef Key);
 
     /// End marker.
     ValueIterator() = default;
@@ -488,6 +499,7 @@ public:
 
 private:
   SmallVector<NameIndex, 0> NameIndices;
+  DenseMap<uint32_t, const NameIndex *> CUToNameIndex;
 
 public:
   DWARFDebugNames(const DWARFDataExtractor &AccelSection,
@@ -503,6 +515,10 @@ public:
   using const_iterator = SmallVector<NameIndex, 0>::const_iterator;
   const_iterator begin() const { return NameIndices.begin(); }
   const_iterator end() const { return NameIndices.end(); }
+
+  /// Return the Name Index covering the compile unit at CUOffset, or nullptr if
+  /// there is no Name Index covering that unit.
+  const NameIndex *getCUNameIndex(uint32_t CUOffset);
 };
 
 } // end namespace llvm

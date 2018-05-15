@@ -1142,6 +1142,141 @@ DWARFVerifier::verifyNameIndexEntries(const DWARFDebugNames::NameIndex &NI,
   return NumErrors;
 }
 
+static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
+  Optional<DWARFFormValue> Location = Die.findRecursively(DW_AT_location);
+  if (!Location)
+    return false;
+
+  auto ContainsInterestingOperators = [&](StringRef D) {
+    DWARFUnit *U = Die.getDwarfUnit();
+    DataExtractor Data(D, DCtx.isLittleEndian(), U->getAddressByteSize());
+    DWARFExpression Expression(Data, U->getVersion(), U->getAddressByteSize());
+    return any_of(Expression, [](DWARFExpression::Operation &Op) {
+      return !Op.isError() && (Op.getCode() == DW_OP_addr ||
+                               Op.getCode() == DW_OP_form_tls_address ||
+                               Op.getCode() == DW_OP_GNU_push_tls_address);
+    });
+  };
+
+  if (Optional<ArrayRef<uint8_t>> Expr = Location->getAsBlock()) {
+    // Inlined location.
+    if (ContainsInterestingOperators(toStringRef(*Expr)))
+      return true;
+  } else if (Optional<uint64_t> Offset = Location->getAsSectionOffset()) {
+    // Location list.
+    if (const DWARFDebugLoc *DebugLoc = DCtx.getDebugLoc()) {
+      if (const DWARFDebugLoc::LocationList *LocList =
+              DebugLoc->getLocationListAtOffset(*Offset)) {
+        if (any_of(LocList->Entries, [&](const DWARFDebugLoc::Entry &E) {
+              return ContainsInterestingOperators({E.Loc.data(), E.Loc.size()});
+            }))
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
+unsigned DWARFVerifier::verifyNameIndexCompleteness(
+    const DWARFDie &Die, const DWARFDebugNames::NameIndex &NI) {
+
+  // First check, if the Die should be indexed. The code follows the DWARF v5
+  // wording as closely as possible.
+
+  // "All non-defining declarations (that is, debugging information entries
+  // with a DW_AT_declaration attribute) are excluded."
+  if (Die.find(DW_AT_declaration))
+    return 0;
+
+  // "DW_TAG_namespace debugging information entries without a DW_AT_name
+  // attribute are included with the name “(anonymous namespace)”.
+  // All other debugging information entries without a DW_AT_name attribute
+  // are excluded."
+  // "If a subprogram or inlined subroutine is included, and has a
+  // DW_AT_linkage_name attribute, there will be an additional index entry for
+  // the linkage name."
+  auto EntryNames = getNames(Die);
+  if (EntryNames.empty())
+    return 0;
+
+  // We deviate from the specification here, which says:
+  // "The name index must contain an entry for each debugging information entry
+  // that defines a named subprogram, label, variable, type, or namespace,
+  // subject to ..."
+  // Instead whitelisting all TAGs representing a "type" or a "subprogram", to
+  // make sure we catch any missing items, we instead blacklist all TAGs that we
+  // know shouldn't be indexed.
+  switch (Die.getTag()) {
+  // Compile unit has a name but it shouldn't be indexed.
+  case DW_TAG_compile_unit:
+    return 0;
+
+  // Function and template parameters are not globally visible, so we shouldn't
+  // index them.
+  case DW_TAG_formal_parameter:
+  case DW_TAG_template_value_parameter:
+  case DW_TAG_template_type_parameter:
+  case DW_TAG_GNU_template_parameter_pack:
+  case DW_TAG_GNU_template_template_param:
+    return 0;
+
+  // Object members aren't globally visible.
+  case DW_TAG_member:
+    return 0;
+
+  // According to a strict reading of the specification, enumerators should not
+  // be indexed (and LLVM currently does not do that). However, this causes
+  // problems for the debuggers, so we may need to reconsider this.
+  case DW_TAG_enumerator:
+    return 0;
+
+  // Imported declarations should not be indexed according to the specification
+  // and LLVM currently does not do that.
+  case DW_TAG_imported_declaration:
+    return 0;
+
+  // "DW_TAG_subprogram, DW_TAG_inlined_subroutine, and DW_TAG_label debugging
+  // information entries without an address attribute (DW_AT_low_pc,
+  // DW_AT_high_pc, DW_AT_ranges, or DW_AT_entry_pc) are excluded."
+  case DW_TAG_subprogram:
+  case DW_TAG_inlined_subroutine:
+  case DW_TAG_label:
+    if (Die.findRecursively(
+            {DW_AT_low_pc, DW_AT_high_pc, DW_AT_ranges, DW_AT_entry_pc}))
+      break;
+    return 0;
+
+  // "DW_TAG_variable debugging information entries with a DW_AT_location
+  // attribute that includes a DW_OP_addr or DW_OP_form_tls_address operator are
+  // included; otherwise, they are excluded."
+  //
+  // LLVM extension: We also add DW_OP_GNU_push_tls_address to this list.
+  case DW_TAG_variable:
+    if (isVariableIndexable(Die, DCtx))
+      break;
+    return 0;
+
+  default:
+    break;
+  }
+
+  // Now we know that our Die should be present in the Index. Let's check if
+  // that's the case.
+  unsigned NumErrors = 0;
+  for (StringRef Name : EntryNames) {
+    if (none_of(NI.equal_range(Name), [&Die](const DWARFDebugNames::Entry &E) {
+          return E.getDIESectionOffset() == uint64_t(Die.getOffset());
+        })) {
+      error() << formatv("Name Index @ {0:x}: Entry for DIE @ {1:x} ({2}) with "
+                         "name {3} missing.\n",
+                         NI.getUnitOffset(), Die.getOffset(), Die.getTag(),
+                         Name);
+      ++NumErrors;
+    }
+  }
+  return NumErrors;
+}
+
 unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
                                          const DataExtractor &StrData) {
   unsigned NumErrors = 0;
@@ -1171,6 +1306,16 @@ unsigned DWARFVerifier::verifyDebugNames(const DWARFSection &AccelSection,
     for (uint64_t Name = 1; Name <= NI.getNameCount(); ++Name)
       NumErrors += verifyNameIndexEntries(NI, Name, StrData);
 
+  if (NumErrors > 0)
+    return NumErrors;
+
+  for (const std::unique_ptr<DWARFCompileUnit> &CU : DCtx.compile_units()) {
+    if (const DWARFDebugNames::NameIndex *NI =
+            AccelTable.getCUNameIndex(CU->getOffset())) {
+      for (const DWARFDebugInfoEntry &Die : CU->dies())
+        NumErrors += verifyNameIndexCompleteness(DWARFDie(CU.get(), &Die), *NI);
+    }
+  }
   return NumErrors;
 }
 

@@ -156,7 +156,7 @@ define float @fmul_fadd_fast2(float %x, float %y, float %z) {
 ; This is the minimum FMF needed for this transform - the FMA allows reassociation.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_reassoc1:'
-; FMFDEBUG:         fma {{t[0-9]+}}
+; FMFDEBUG:         fma reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_reassoc1:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_reassoc1:'
@@ -192,7 +192,7 @@ define float @fmul_fma_reassoc1(float %x) {
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_reassoc2:'
-; FMFDEBUG:         fma {{t[0-9]+}}
+; FMFDEBUG:         fma reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_reassoc2:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_reassoc2:'
@@ -228,7 +228,7 @@ define float @fmul_fma_reassoc2(float %x) {
 ; The FMA is now fully 'fast'. This implies that reassociation is allowed.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast1:'
-; FMFDEBUG:         fma {{t[0-9]+}}
+; FMFDEBUG:         fma nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast1:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast1:'
@@ -264,7 +264,7 @@ define float @fmul_fma_fast1(float %x) {
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast2:'
-; FMFDEBUG:         fma {{t[0-9]+}}
+; FMFDEBUG:         fma nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast2:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast2:'
@@ -300,7 +300,7 @@ define float @fmul_fma_fast2(float %x) {
 ; Reduced precision for sqrt is allowed - should use estimate and NR iterations.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn:'
-; FMFDEBUG:         fsqrt {{t[0-9]+}}
+; FMFDEBUG:         fsqrt afn {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn:'
@@ -340,7 +340,7 @@ define float @sqrt_afn(float %x) {
 ; The call is now fully 'fast'. This implies that approximation is allowed.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast:'
-; FMFDEBUG:         fsqrt {{t[0-9]+}}
+; FMFDEBUG:         fsqrt nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast:'
@@ -391,10 +391,8 @@ define double @fcmp_nnan(double %a, double %y, double %z) {
 ; FMF-LABEL: fcmp_nnan:
 ; FMF:       # %bb.0:
 ; FMF-NEXT:    xxlxor 0, 0, 0
-; FMF-NEXT:    fcmpu 0, 1, 1
-; FMF-NEXT:    fcmpu 1, 1, 0
-; FMF-NEXT:    cror 20, 4, 3
-; FMF-NEXT:    bc 12, 20, .LBB12_2
+; FMF-NEXT:    xscmpudp 0, 1, 0
+; FMF-NEXT:    blt 0, .LBB12_2
 ; FMF-NEXT:  # %bb.1:
 ; FMF-NEXT:    fmr 3, 2
 ; FMF-NEXT:  .LBB12_2:
@@ -421,13 +419,13 @@ define double @fcmp_nnan(double %a, double %y, double %z) {
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'log2_approx:'
 ; FMFDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<double (double)* @log2>
 ; FMFDEBUG:         ch,glue = callseq_end t15, TargetConstant:i64<32>, TargetConstant:i64<0>, t15:1
-; FMFDEBUG:         f64,ch,glue = CopyFromReg t16, Register:f64 $f1, t16:1
+; FMFDEBUG:         f64,ch,glue = CopyFromReg afn t16, Register:f64 $f1, t16:1
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'log2_approx:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'log2_approx:'
 ; GLOBALDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<double (double)* @log2>
 ; GLOBALDEBUG:         ch,glue = callseq_end t15, TargetConstant:i64<32>, TargetConstant:i64<0>, t15:1
-; GLOBALDEBUG:         f64,ch,glue = CopyFromReg t16, Register:f64 $f1, t16:1
+; GLOBALDEBUG:         f64,ch,glue = CopyFromReg afn t16, Register:f64 $f1, t16:1
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'log2_approx:'
 
 declare double @log2(double)

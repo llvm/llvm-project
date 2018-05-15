@@ -868,11 +868,12 @@ PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
 
   if (IsHost()) {
     // We are going to hand this process off to debugserver which will be in
-    // charge of setting the exit status. We still need to reap it from lldb
-    // but if we let the monitor thread also set the exit status, we set up a
-    // race between debugserver & us for who will find out about the debugged
-    // process's death.
-    launch_info.GetFlags().Set(eLaunchFlagDontSetExitStatus);
+    // charge of setting the exit status.  However, we still need to reap it
+    // from lldb. So, make sure we use a exit callback which does not set exit
+    // status.
+    const bool monitor_signals = false;
+    launch_info.SetMonitorProcessCallback(
+        &ProcessLaunchInfo::NoOpMonitorCallback, monitor_signals);
     process_sp = Platform::DebugProcess(launch_info, debugger, target, error);
   } else {
     if (m_remote_platform_sp)

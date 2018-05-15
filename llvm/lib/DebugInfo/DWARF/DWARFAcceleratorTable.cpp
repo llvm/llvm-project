@@ -770,6 +770,11 @@ llvm::Error DWARFDebugNames::extract() {
   return Error::success();
 }
 
+iterator_range<DWARFDebugNames::ValueIterator>
+DWARFDebugNames::NameIndex::equal_range(StringRef Key) const {
+  return make_range(ValueIterator(*this, Key), ValueIterator());
+}
+
 LLVM_DUMP_METHOD void DWARFDebugNames::dump(raw_ostream &OS) const {
   ScopedPrinter W(OS);
   for (const NameIndex &NI : NameIndices)
@@ -844,15 +849,28 @@ void DWARFDebugNames::ValueIterator::next() {
   if (getEntryAtCurrentOffset())
     return;
 
-  // Try the next Name Index.
+  // If we're a local iterator, we're done.
+  if (IsLocal) {
+    setEnd();
+    return;
+  }
+
+  // Otherwise, try the next index.
   ++CurrentIndex;
   searchFromStartOfCurrentIndex();
 }
 
 DWARFDebugNames::ValueIterator::ValueIterator(const DWARFDebugNames &AccelTable,
                                               StringRef Key)
-    : CurrentIndex(AccelTable.NameIndices.begin()), Key(Key) {
+    : CurrentIndex(AccelTable.NameIndices.begin()), IsLocal(false), Key(Key) {
   searchFromStartOfCurrentIndex();
+}
+
+DWARFDebugNames::ValueIterator::ValueIterator(
+    const DWARFDebugNames::NameIndex &NI, StringRef Key)
+    : CurrentIndex(&NI), IsLocal(true), Key(Key) {
+  if (!findInCurrentIndex())
+    setEnd();
 }
 
 iterator_range<DWARFDebugNames::ValueIterator>
@@ -860,4 +878,15 @@ DWARFDebugNames::equal_range(StringRef Key) const {
   if (NameIndices.empty())
     return make_range(ValueIterator(), ValueIterator());
   return make_range(ValueIterator(*this, Key), ValueIterator());
+}
+
+const DWARFDebugNames::NameIndex *
+DWARFDebugNames::getCUNameIndex(uint32_t CUOffset) {
+  if (CUToNameIndex.size() == 0 && NameIndices.size() > 0) {
+    for (const auto &NI : *this) {
+      for (uint32_t CU = 0; CU < NI.getCUCount(); ++CU)
+        CUToNameIndex.try_emplace(NI.getCUOffset(CU), &NI);
+    }
+  }
+  return CUToNameIndex.lookup(CUOffset);
 }

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ResourcePressureView.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mca {
@@ -55,7 +56,9 @@ void ResourcePressureView::onInstructionEvent(const HWInstructionEvent &Event) {
   }
 }
 
-static void printColumnNames(raw_string_ostream &OS, const MCSchedModel &SM) {
+static void printColumnNames(formatted_raw_ostream &OS,
+                             const MCSchedModel &SM) {
+  unsigned Column = OS.getColumn();
   for (unsigned I = 1, ResourceIndex = 0, E = SM.getNumProcResourceKinds();
        I < E; ++I) {
     const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
@@ -64,47 +67,37 @@ static void printColumnNames(raw_string_ostream &OS, const MCSchedModel &SM) {
     if (ProcResource.SubUnitsIdxBegin || !NumUnits)
       continue;
 
-    if (NumUnits == 1) {
-      OS << '[' << ResourceIndex << ']';
-      if (ResourceIndex < 10)
-        OS << "    ";
-      else
-        OS << "   ";
-    } else {
-      for (unsigned J = 0; J < NumUnits; ++J) {
-        OS << "[" << ResourceIndex << '.' << J << ']';
-        if (ResourceIndex < 10)
-          OS << "  ";
-        else
-          OS << ' ';
-      }
+    for (unsigned J = 0; J < NumUnits; ++J) {
+      Column += 7;
+      OS << "[" << ResourceIndex;
+      if (NumUnits > 1)
+        OS << '.' << J;
+      OS << ']';
+      OS.PadToColumn(Column);
     }
+
     ResourceIndex++;
   }
 }
 
-static void printResourcePressure(raw_string_ostream &OS, double Pressure) {
+static void printResourcePressure(formatted_raw_ostream &OS, double Pressure,
+                                  unsigned Col) {
   if (!Pressure || Pressure < 0.005) {
-    OS << " -     ";
-    return;
+    OS << " - ";
+  } else {
+    // Round to the value to the nearest hundredth and then print it.
+    OS << format("%.2f", floor((Pressure * 100) + 0.5) / 100);
   }
-
-  // Round to the value to the nearest hundredth and then print it.
-  OS << format("%.2f", floor((Pressure * 100) + 0.5)/100);
-  if (Pressure < 10.0)
-    OS << "   ";
-  else if (Pressure < 100.0)
-    OS << "  ";
-  else
-    OS << ' ';
+  OS.PadToColumn(Col);
 }
 
 void ResourcePressureView::printResourcePressurePerIteration(
     raw_ostream &OS, unsigned Executions) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
+  formatted_raw_ostream FOS(TempStream);
 
-  TempStream << "\n\nResources:\n";
+  FOS << "\n\nResources:\n";
   const MCSchedModel &SM = STI.getSchedModel();
   for (unsigned I = 1, ResourceIndex = 0, E = SM.getNumProcResourceKinds();
        I < E; ++I) {
@@ -115,25 +108,29 @@ void ResourcePressureView::printResourcePressurePerIteration(
       continue;
 
     for (unsigned J = 0; J < NumUnits; ++J) {
-      TempStream << '[' << ResourceIndex;
+      FOS << '[' << ResourceIndex;
       if (NumUnits > 1)
-        TempStream << '.' << J;
-      TempStream << "] - " << ProcResource.Name << '\n';
+        FOS << '.' << J;
+      FOS << ']';
+      FOS.PadToColumn(6);
+      FOS << "- " << ProcResource.Name << '\n';
     }
 
     ResourceIndex++;
   }
 
-  TempStream << "\n\nResource pressure per iteration:\n";
-  printColumnNames(TempStream, SM);
-  TempStream << '\n';
+  FOS << "\n\nResource pressure per iteration:\n";
+  FOS.flush();
+  printColumnNames(FOS, SM);
+  FOS << '\n';
+  FOS.flush();
 
   for (unsigned I = 0, E = NumResourceUnits; I < E; ++I) {
     double Usage = ResourceUsage[I + Source.size() * E];
-    printResourcePressure(TempStream, Usage / Executions);
+    printResourcePressure(FOS, Usage / Executions, (I + 1) * 7);
   }
 
-  TempStream.flush();
+  FOS.flush();
   OS << Buffer;
 }
 
@@ -141,20 +138,32 @@ void ResourcePressureView::printResourcePressurePerInstruction(
     raw_ostream &OS, unsigned Executions) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
+  formatted_raw_ostream FOS(TempStream);
 
-  TempStream << "\n\nResource pressure by instruction:\n";
-  printColumnNames(TempStream, STI.getSchedModel());
-  TempStream << "\tInstructions:\n";
+  FOS << "\n\nResource pressure by instruction:\n";
+  printColumnNames(FOS, STI.getSchedModel());
+  FOS << "Instructions:\n";
+
+  std::string Instruction;
+  raw_string_ostream InstrStream(Instruction);
 
   for (unsigned I = 0, E = Source.size(); I < E; ++I) {
     for (unsigned J = 0; J < NumResourceUnits; ++J) {
       double Usage = ResourceUsage[J + I * NumResourceUnits];
-      printResourcePressure(TempStream, Usage / Executions);
+      printResourcePressure(FOS, Usage / Executions, (J + 1) * 7);
     }
 
-    MCIP.printInst(&Source.getMCInstFromIndex(I), TempStream, "", STI);
-    TempStream << '\n';
-    TempStream.flush();
+    MCIP.printInst(&Source.getMCInstFromIndex(I), InstrStream, "", STI);
+    InstrStream.flush();
+    StringRef Str(Instruction);
+
+    // Remove any tabs or spaces at the beginning of the instruction.
+    Str = Str.ltrim();
+
+    FOS << Str << '\n';
+    Instruction = "";
+
+    FOS.flush();
     OS << Buffer;
     Buffer = "";
   }

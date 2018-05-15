@@ -550,6 +550,35 @@
 ; HEADERS-NEXT:   0010: 00000100 02000300 04000000 00000000  |................|
 ; HEADERS-NEXT: )
 
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 27
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 44
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 0100FFFF 00000000 00000000 00008880  |................|
+; HEADERS-NEXT:   0010: 00000500 05000500 05000000 46006F00  |............F.o.|
+; HEADERS-NEXT:   0020: 6F006200 61007200 00000000           |o.b.a.r.....|
+; HEADERS-NEXT: )
+
+; HEADERS-DAG: Resource type (int): 5
+; HEADERS-NEXT: Resource name (int): 28
+; HEADERS-NEXT: Data version: 0
+; HEADERS-NEXT: Memory flags: 0x1030
+; HEADERS-NEXT: Language ID: 1033
+; HEADERS-NEXT: Version (major): 0
+; HEADERS-NEXT: Version (minor): 0
+; HEADERS-NEXT: Characteristics: 0
+; HEADERS-NEXT: Data size: 26
+; HEADERS-NEXT: Data: (
+; HEADERS-NEXT:   0000: 00008880 00000000 00000500 05000500  |................|
+; HEADERS-NEXT:   0010: 05000000 FFFF2A00 0000               |......*...|
+; HEADERS-NEXT: )
+
 
 ; RUN: not llvm-rc /FO %t %p/Inputs/tag-dialog-large-coord.rc 2>&1 | FileCheck %s --check-prefix COORD1
 

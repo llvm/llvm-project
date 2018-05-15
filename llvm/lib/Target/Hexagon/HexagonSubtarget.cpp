@@ -40,10 +40,6 @@ using namespace llvm;
 #include "HexagonGenSubtargetInfo.inc"
 
 
-static cl::opt<bool> EnableIEEERndNear("enable-hexagon-ieee-rnd-near",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Generate non-chopped conversion from fp to int."));
-
 static cl::opt<bool> EnableBSBSched("enable-bsb-sched",
   cl::Hidden, cl::ZeroOrMore, cl::init(true));
 
@@ -114,7 +110,6 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   UseHVX64BOps = false;
   UseLongCalls = false;
 
-  ModeIEEERndNear = EnableIEEERndNear;
   UseBSBScheduling = hasV60TOps() && EnableBSBSched;
 
   ParseSubtargetFeatures(CPUString, FS);

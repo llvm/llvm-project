@@ -304,3 +304,62 @@ bb1:
   %tmp12 = trunc i32 %tmp11 to i16
   br label %bb1
 }
+
+; Use a particular instruction pattern in order to lower to the post-RA pseudo
+; used to lower SETB into an SBB pattern in order to make sure that kind of
+; usage of a copied EFLAGS continues to work.
+define void @PR37431(i32* %arg1, i8* %arg2, i8* %arg3) {
+; X32-LABEL: PR37431:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    .cfi_offset %esi, -8
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl (%eax), %eax
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    sarl $31, %ecx
+; X32-NEXT:    cmpl %eax, %eax
+; X32-NEXT:    sbbl %ecx, %eax
+; X32-NEXT:    setb %al
+; X32-NEXT:    sbbb %cl, %cl
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movb %cl, (%edx)
+; X32-NEXT:    movzbl %al, %eax
+; X32-NEXT:    xorl %ecx, %ecx
+; X32-NEXT:    subl %eax, %ecx
+; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    idivl %ecx
+; X32-NEXT:    movb %dl, (%esi)
+; X32-NEXT:    popl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 4
+; X32-NEXT:    retl
+;
+; X64-LABEL: PR37431:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdx, %rcx
+; X64-NEXT:    movslq (%rdi), %rax
+; X64-NEXT:    cmpq %rax, %rax
+; X64-NEXT:    sbbb %dl, %dl
+; X64-NEXT:    cmpq %rax, %rax
+; X64-NEXT:    movb %dl, (%rsi)
+; X64-NEXT:    sbbl %esi, %esi
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    idivl %esi
+; X64-NEXT:    movb %dl, (%rcx)
+; X64-NEXT:    retq
+entry:
+  %tmp = load i32, i32* %arg1
+  %tmp1 = sext i32 %tmp to i64
+  %tmp2 = icmp ugt i64 %tmp1, undef
+  %tmp3 = zext i1 %tmp2 to i8
+  %tmp4 = sub i8 0, %tmp3
+  store i8 %tmp4, i8* %arg2
+  %tmp5 = sext i8 %tmp4 to i32
+  %tmp6 = srem i32 0, %tmp5
+  %tmp7 = trunc i32 %tmp6 to i8
+  store i8 %tmp7, i8* %arg3
+  ret void
+}

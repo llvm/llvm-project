@@ -2477,6 +2477,22 @@ def : Pat<(truncstorei16 GPR64:$Rt, (am_unscaled16 GPR64sp:$Rn, simm9:$offset)),
 def : Pat<(truncstorei8 GPR64:$Rt, (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
   (STURBBi (EXTRACT_SUBREG GPR64:$Rt, sub_32), GPR64sp:$Rn, simm9:$offset)>;
 
+// Match stores from lane 0 to the appropriate subreg's store.
+multiclass VecStoreULane0Pat<SDPatternOperator StoreOp,
+                             ValueType VTy, ValueType STy,
+                             SubRegIndex SubRegIdx, Instruction STR> {
+  defm : VecStoreLane0Pat<am_unscaled128, StoreOp, VTy, STy, SubRegIdx, simm9, STR>;
+}
+
+let AddedComplexity = 19 in {
+  defm : VecStoreULane0Pat<truncstorei16, v8i16, i32, hsub, STURHi>;
+  defm : VecStoreULane0Pat<store,         v8f16, f16, hsub, STURHi>;
+  defm : VecStoreULane0Pat<store,         v4i32, i32, ssub, STURSi>;
+  defm : VecStoreULane0Pat<store,         v4f32, f32, ssub, STURSi>;
+  defm : VecStoreULane0Pat<store,         v2i64, i64, dsub, STURDi>;
+  defm : VecStoreULane0Pat<store,         v2f64, f64, dsub, STURDi>;
+}
+
 //---
 // STR mnemonics fall back to STUR for negative or unaligned offsets.
 def : InstAlias<"str $Rt, [$Rn, $offset]",

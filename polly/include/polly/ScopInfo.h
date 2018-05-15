@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -1717,7 +1718,7 @@ private:
   Region &R;
 
   /// The name of the SCoP (identical to the regions name)
-  std::string name;
+  Optional<std::string> name;
 
   /// The ID to be assigned to the next Scop in a function
   static int NextScopID;
@@ -2455,7 +2456,11 @@ public:
   /// could be executed.
   bool isEmpty() const { return Stmts.empty(); }
 
-  const StringRef getName() const { return name; }
+  StringRef getName() {
+    if (!name)
+      name = R.getNameStr();
+    return *name;
+  }
 
   using array_iterator = ArrayInfoSetTy::iterator;
   using const_array_iterator = ArrayInfoSetTy::const_iterator;

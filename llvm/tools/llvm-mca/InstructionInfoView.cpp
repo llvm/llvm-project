@@ -25,11 +25,14 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   const MCSchedModel &SM = STI.getSchedModel();
   unsigned Instructions = Source.size();
 
+  std::string Instruction;
+  raw_string_ostream InstrStream(Instruction);
+
   TempStream << "\n\nInstruction Info:\n";
   TempStream << "[1]: #uOps\n[2]: Latency\n[3]: RThroughput\n"
              << "[4]: MayLoad\n[5]: MayStore\n[6]: HasSideEffects\n\n";
 
-  TempStream << "[1]    [2]    [3]    [4]    [5]    [6]\tInstructions:\n";
+  TempStream << "[1]    [2]    [3]    [4]    [5]    [6]    Instructions:\n";
   for (unsigned I = 0, E = Instructions; I < E; ++I) {
     const MCInst &Inst = Source.getMCInstFromIndex(I);
     const MCInstrDesc &MCDesc = MCII.get(Inst.getOpcode());
@@ -65,8 +68,15 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     TempStream << (MCDesc.mayLoad() ? " *     " : "       ");
     TempStream << (MCDesc.mayStore() ? " *     " : "       ");
     TempStream << (MCDesc.hasUnmodeledSideEffects() ? " * " : "   ");
-    MCIP.printInst(&Inst, TempStream, "", STI);
-    TempStream << '\n';
+
+    MCIP.printInst(&Inst, InstrStream, "", STI);
+    InstrStream.flush();
+
+    // Consume any tabs or spaces at the beginning of the string.
+    StringRef Str(Instruction);
+    Str = Str.ltrim();
+    TempStream << "    " << Str << '\n';
+    Instruction = "";
   }
 
   TempStream.flush();
