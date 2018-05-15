@@ -1847,7 +1847,7 @@ static std::string GetXcodeContentsPath() {
         &status, // Put the exit status of the process in here
         &signo,  // Put the signal that caused the process to exit in here
         &output, // Get the output from the command and place it in this string
-        3);      // Timeout in seconds to wait for shell program to finish
+        std::chrono::seconds(3));      // Timeout in seconds to wait for shell program to finish
     if (status == 0 && !output.empty()) {
       size_t first_non_newline = output.find_last_not_of("\r\n");
       if (first_non_newline != std::string::npos) {
