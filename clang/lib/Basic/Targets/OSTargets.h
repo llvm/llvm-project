@@ -551,7 +551,8 @@ protected:
     Builder.defineMacro("_LARGEFILE_SOURCE");
     Builder.defineMacro("_LARGEFILE64_SOURCE");
     Builder.defineMacro("__EXTENSIONS__");
-    Builder.defineMacro("_REENTRANT");
+    if (Opts.POSIXThreads)
+      Builder.defineMacro("_REENTRANT");
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
   }

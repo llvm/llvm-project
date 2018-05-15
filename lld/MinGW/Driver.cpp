@@ -144,14 +144,19 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
   else
     Add("-out:a.exe");
 
+  if (auto *A = Args.getLastArg(OPT_pdb)) {
+    Add("-debug");
+    Add("-pdb:" + StringRef(A->getValue()));
+  } else if (!Args.hasArg(OPT_strip_all)) {
+    Add("-debug:dwarf");
+  }
+
   if (Args.hasArg(OPT_shared))
     Add("-dll");
   if (Args.hasArg(OPT_verbose))
     Add("-verbose");
   if (Args.hasArg(OPT_export_all_symbols))
     Add("-export-all-symbols");
-  if (!Args.hasArg(OPT_strip_all))
-    Add("-debug:dwarf");
   if (Args.hasArg(OPT_large_address_aware))
     Add("-largeaddressaware");
   if (Args.hasArg(OPT_kill_at))

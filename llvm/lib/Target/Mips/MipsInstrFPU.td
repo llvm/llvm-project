@@ -478,37 +478,34 @@ let AdditionalPredicates = [NotInMicroMips] in {
 let AdditionalPredicates = [NotInMicroMips] in {
   def CFC1 : MMRel, MFC1_FT<"cfc1", GPR32Opnd, CCROpnd, II_CFC1>, MFC1_FM<2>;
   def CTC1 : MMRel, MTC1_FT<"ctc1", CCROpnd, GPR32Opnd, II_CTC1>, MFC1_FM<6>;
-}
-def MFC1 : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd, II_MFC1,
-                          bitconvert>, MFC1_FM<0>;
-def MFC1_D64 : MFC1_FT<"mfc1", GPR32Opnd, FGR64Opnd, II_MFC1>, MFC1_FM<0>,
-               FGR_64 {
-  let DecoderNamespace = "MipsFP64";
-}
-def MTC1 : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd, II_MTC1,
-                          bitconvert>, MFC1_FM<4>;
-def MTC1_D64 : MTC1_FT<"mtc1", FGR64Opnd, GPR32Opnd, II_MTC1>, MFC1_FM<4>,
-               FGR_64 {
-  let DecoderNamespace = "MipsFP64";
-}
 
-let AdditionalPredicates = [NotInMicroMips] in {
+  def MFC1 : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd, II_MFC1,
+                            bitconvert>, MFC1_FM<0>;
+  def MFC1_D64 : MFC1_FT<"mfc1", GPR32Opnd, FGR64Opnd, II_MFC1>, MFC1_FM<0>,
+                 FGR_64 {
+    let DecoderNamespace = "MipsFP64";
+  }
+  def MTC1 : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd, II_MTC1,
+                            bitconvert>, MFC1_FM<4>;
+  def MTC1_D64 : MTC1_FT<"mtc1", FGR64Opnd, GPR32Opnd, II_MTC1>, MFC1_FM<4>,
+                 FGR_64 {
+    let DecoderNamespace = "MipsFP64";
+  }
+
   def MFHC1_D32 : MMRel, MFC1_FT<"mfhc1", GPR32Opnd, AFGR64Opnd, II_MFHC1>,
                   MFC1_FM<3>, ISA_MIPS32R2, FGR_32;
   def MFHC1_D64 : MFC1_FT<"mfhc1", GPR32Opnd, FGR64Opnd, II_MFHC1>,
                   MFC1_FM<3>, ISA_MIPS32R2, FGR_64 {
     let DecoderNamespace = "MipsFP64";
   }
-}
-let AdditionalPredicates = [NotInMicroMips] in {
+
   def MTHC1_D32 : MMRel, StdMMR6Rel, MTC1_64_FT<"mthc1", AFGR64Opnd, GPR32Opnd, II_MTHC1>,
                   MFC1_FM<7>, ISA_MIPS32R2, FGR_32;
   def MTHC1_D64 : MTC1_64_FT<"mthc1", FGR64Opnd, GPR32Opnd, II_MTHC1>,
                   MFC1_FM<7>, ISA_MIPS32R2, FGR_64 {
     let DecoderNamespace = "MipsFP64";
   }
-}
-let AdditionalPredicates = [NotInMicroMips] in {
+
   def DMTC1 : MTC1_FT<"dmtc1", FGR64Opnd, GPR64Opnd, II_DMTC1,
               bitconvert>, MFC1_FM<5>, ISA_MIPS3;
   def DMFC1 : MFC1_FT<"dmfc1", GPR64Opnd, FGR64Opnd, II_DMFC1,

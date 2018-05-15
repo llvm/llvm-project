@@ -10,6 +10,8 @@
 #include "InMemoryAssembler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -139,9 +141,15 @@ static void fillMachineFunction(llvm::MachineFunction &MF,
       }
     }
   }
-  // Adding the Return Opcode.
+  // Insert the return code.
   const llvm::TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  llvm::BuildMI(MBB, DL, TII->get(TII->getReturnOpcode()));
+  if (TII->getReturnOpcode() < TII->getNumOpcodes()) {
+    llvm::BuildMI(MBB, DL, TII->get(TII->getReturnOpcode()));
+  } else {
+    llvm::MachineIRBuilder MIB(MF);
+    MIB.setMBB(*MBB);
+    MF.getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, 0);
+  }
 }
 
 namespace {

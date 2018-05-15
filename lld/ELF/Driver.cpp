@@ -1163,6 +1163,18 @@ template <class ELFT> static void demoteSymbols() {
   }
 }
 
+// Record sections that define symbols mentioned in --keep-unique <symbol>
+// these sections are inelligible for ICF.
+static void findKeepUniqueSections(opt::InputArgList &Args) {
+  for (auto *Arg : Args.filtered(OPT_keep_unique)) {
+    StringRef Name = Arg->getValue();
+    if (auto *Sym = dyn_cast_or_null<Defined>(Symtab->find(Name)))
+      Sym->Section->KeepUnique = true;
+    else
+      warn("could not find symbol " + Name + " to keep unique");
+  }
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
@@ -1335,8 +1347,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   markLive<ELFT>();
   demoteSymbols<ELFT>();
   mergeSections();
-  if (Config->ICF)
+  if (Config->ICF) {
+    findKeepUniqueSections(Args);
     doIcf<ELFT>();
+  }
 
   // Read the callgraph now that we know what was gced or icfed
   if (auto *Arg = Args.getLastArg(OPT_call_graph_ordering_file))
