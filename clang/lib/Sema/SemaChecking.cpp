@@ -9673,7 +9673,8 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
     return DiagnoseImpCast(
         S, E, T, CContext,
         IsLiteral ? diag::warn_impcast_literal_float_to_integer_out_of_range
-                  : diag::warn_impcast_float_to_integer_out_of_range);
+                  : diag::warn_impcast_float_to_integer_out_of_range,
+        PruneWarnings);
 
   unsigned DiagID = 0;
   if (IsLiteral) {
