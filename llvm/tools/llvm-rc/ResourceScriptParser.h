@@ -129,6 +129,8 @@ private:
   //    msdn.microsoft.com/en-us/library/windows/desktop/aa381002(v=vs.85).aspx
   enum class OptStmtType { BasicStmt, DialogStmt, DialogExStmt };
 
+  uint16_t parseMemoryFlags(uint16_t DefaultFlags);
+
   Expected<OptionalStmtList>
   parseOptionalStatements(OptStmtType StmtsType = OptStmtType::BasicStmt);
 

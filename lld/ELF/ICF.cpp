@@ -162,7 +162,8 @@ template <class ELFT> static uint32_t getHash(InputSection *S) {
 
 // Returns true if section S is subject of ICF.
 static bool isEligible(InputSection *S) {
-  if (!S->Live || !(S->Flags & SHF_ALLOC) || (S->Flags & SHF_WRITE))
+  if (!S->Live || S->KeepUnique || !(S->Flags & SHF_ALLOC) ||
+      (S->Flags & SHF_WRITE))
     return false;
 
   // Don't merge read only data sections unless

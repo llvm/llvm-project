@@ -19,6 +19,7 @@ llvm_map_components_to_libnames(libs
   CodeGen
   Core
   ExecutionEngine
+  GlobalISel
   MC
   MCJIT
   Object

@@ -160,10 +160,13 @@ enum MemoryFlags {
 class RCResource {
 public:
   IntOrString ResName;
+  uint16_t MemoryFlags = getDefaultMemoryFlags();
   void setName(const IntOrString &Name) { ResName = Name; }
   virtual raw_ostream &log(raw_ostream &OS) const {
     return OS << "Base statement\n";
   };
+  RCResource() {}
+  RCResource(uint16_t Flags) : MemoryFlags(Flags) {}
   virtual ~RCResource() {}
 
   virtual Error visit(Visitor *) const {
@@ -175,9 +178,10 @@ public:
   virtual Error applyStmts(Visitor *) const { return Error::success(); }
 
   // By default, memory flags are DISCARDABLE | PURE | MOVEABLE.
-  virtual uint16_t getMemoryFlags() const {
+  static uint16_t getDefaultMemoryFlags() {
     return MfDiscardable | MfPure | MfMoveable;
   }
+
   virtual ResourceKind getKind() const { return RkBase; }
   static bool classof(const RCResource *Res) { return true; }
 
@@ -193,13 +197,13 @@ public:
 // characteristics are equal to 0.
 class NullResource : public RCResource {
 public:
+  NullResource() : RCResource(0) {}
   raw_ostream &log(raw_ostream &OS) const override {
     return OS << "Null resource\n";
   }
   Error visit(Visitor *V) const override { return V->visitNullResource(this); }
   IntOrString getResourceType() const override { return 0; }
   Twine getResourceTypeName() const override { return "(NULL)"; }
-  uint16_t getMemoryFlags() const override { return 0; }
 };
 
 // Optional statement base. All such statements should derive from this base.
@@ -228,8 +232,10 @@ class OptStatementsRCResource : public RCResource {
 public:
   std::unique_ptr<OptionalStmtList> OptStatements;
 
-  OptStatementsRCResource(OptionalStmtList &&Stmts)
-      : OptStatements(llvm::make_unique<OptionalStmtList>(std::move(Stmts))) {}
+  OptStatementsRCResource(OptionalStmtList &&Stmts,
+                          uint16_t Flags = RCResource::getDefaultMemoryFlags())
+      : RCResource(Flags),
+        OptStatements(llvm::make_unique<OptionalStmtList>(std::move(Stmts))) {}
 
   virtual Error applyStmts(Visitor *V) const { return OptStatements->visit(V); }
 };
@@ -284,18 +290,18 @@ public:
     static uint32_t OptionsFlags[NumFlags];
   };
 
+  AcceleratorsResource(OptionalStmtList &&List, uint16_t Flags)
+      : OptStatementsRCResource(std::move(List), Flags) {}
+
   std::vector<Accelerator> Accelerators;
 
-  using OptStatementsRCResource::OptStatementsRCResource;
   void addAccelerator(IntOrString Event, uint32_t Id, uint16_t Flags) {
     Accelerators.push_back(Accelerator{Event, Id, Flags});
   }
   raw_ostream &log(raw_ostream &) const override;
 
   IntOrString getResourceType() const override { return RkAccelerators; }
-  uint16_t getMemoryFlags() const override {
-    return MfPure | MfMoveable;
-  }
+  static uint16_t getDefaultMemoryFlags() { return MfPure | MfMoveable; }
   Twine getResourceTypeName() const override { return "ACCELERATORS"; }
 
   Error visit(Visitor *V) const override {
@@ -314,11 +320,12 @@ class BitmapResource : public RCResource {
 public:
   StringRef BitmapLoc;
 
-  BitmapResource(StringRef Location) : BitmapLoc(Location) {}
+  BitmapResource(StringRef Location, uint16_t Flags)
+      : RCResource(Flags), BitmapLoc(Location) {}
   raw_ostream &log(raw_ostream &) const override;
 
   IntOrString getResourceType() const override { return RkBitmap; }
-  uint16_t getMemoryFlags() const override { return MfPure | MfMoveable; }
+  static uint16_t getDefaultMemoryFlags() { return MfPure | MfMoveable; }
 
   Twine getResourceTypeName() const override { return "BITMAP"; }
   Error visit(Visitor *V) const override {
@@ -337,10 +344,12 @@ class CursorResource : public RCResource {
 public:
   StringRef CursorLoc;
 
-  CursorResource(StringRef Location) : CursorLoc(Location) {}
+  CursorResource(StringRef Location, uint16_t Flags)
+      : RCResource(Flags), CursorLoc(Location) {}
   raw_ostream &log(raw_ostream &) const override;
 
   Twine getResourceTypeName() const override { return "CURSOR"; }
+  static uint16_t getDefaultMemoryFlags() { return MfDiscardable | MfMoveable; }
   Error visit(Visitor *V) const override {
     return V->visitCursorResource(this);
   }
@@ -357,10 +366,12 @@ class IconResource : public RCResource {
 public:
   StringRef IconLoc;
 
-  IconResource(StringRef Location) : IconLoc(Location) {}
+  IconResource(StringRef Location, uint16_t Flags)
+      : RCResource(Flags), IconLoc(Location) {}
   raw_ostream &log(raw_ostream &) const override;
 
   Twine getResourceTypeName() const override { return "ICON"; }
+  static uint16_t getDefaultMemoryFlags() { return MfDiscardable | MfMoveable; }
   Error visit(Visitor *V) const override { return V->visitIconResource(this); }
   ResourceKind getKind() const override { return RkIcon; }
   static bool classof(const RCResource *Res) {
@@ -377,13 +388,14 @@ class HTMLResource : public RCResource {
 public:
   StringRef HTMLLoc;
 
-  HTMLResource(StringRef Location) : HTMLLoc(Location) {}
+  HTMLResource(StringRef Location, uint16_t Flags)
+      : RCResource(Flags), HTMLLoc(Location) {}
   raw_ostream &log(raw_ostream &) const override;
 
   Error visit(Visitor *V) const override { return V->visitHTMLResource(this); }
 
   // Curiously, file resources don't have DISCARDABLE flag set.
-  uint16_t getMemoryFlags() const override { return MfPure | MfMoveable; }
+  static uint16_t getDefaultMemoryFlags() { return MfPure | MfMoveable; }
   IntOrString getResourceType() const override { return RkHTML; }
   Twine getResourceTypeName() const override { return "HTML"; }
   ResourceKind getKind() const override { return RkHTML; }
@@ -497,8 +509,9 @@ class MenuResource : public OptStatementsRCResource {
 public:
   MenuDefinitionList Elements;
 
-  MenuResource(OptionalStmtList &&OptStmts, MenuDefinitionList &&Items)
-      : OptStatementsRCResource(std::move(OptStmts)),
+  MenuResource(OptionalStmtList &&OptStmts, MenuDefinitionList &&Items,
+               uint16_t Flags)
+      : OptStatementsRCResource(std::move(OptStmts), Flags),
         Elements(std::move(Items)) {}
   raw_ostream &log(raw_ostream &) const override;
 
@@ -518,7 +531,8 @@ class StringTableResource : public OptStatementsRCResource {
 public:
   std::vector<std::pair<uint32_t, StringRef>> Table;
 
-  using OptStatementsRCResource::OptStatementsRCResource;
+  StringTableResource(OptionalStmtList &&List, uint16_t Flags)
+      : OptStatementsRCResource(std::move(List), Flags) {}
   void addString(uint32_t ID, StringRef String) {
     Table.emplace_back(ID, String);
   }
@@ -588,8 +602,8 @@ public:
 
   DialogResource(uint32_t PosX, uint32_t PosY, uint32_t DlgWidth,
                  uint32_t DlgHeight, uint32_t DlgHelpID,
-                 OptionalStmtList &&OptStmts, bool IsDialogEx)
-      : OptStatementsRCResource(std::move(OptStmts)), X(PosX), Y(PosY),
+                 OptionalStmtList &&OptStmts, bool IsDialogEx, uint16_t Flags)
+      : OptStatementsRCResource(std::move(OptStmts), Flags), X(PosX), Y(PosY),
         Width(DlgWidth), Height(DlgHeight), HelpID(DlgHelpID),
         IsExtended(IsDialogEx) {}
 
@@ -623,15 +637,19 @@ public:
   std::vector<IntOrString> Contents;
   bool IsFileResource;
 
-  UserDefinedResource(IntOrString ResourceType, StringRef FileLocation)
-      : Type(ResourceType), FileLoc(FileLocation), IsFileResource(true) {}
-  UserDefinedResource(IntOrString ResourceType, std::vector<IntOrString> &&Data)
-      : Type(ResourceType), Contents(std::move(Data)), IsFileResource(false) {}
+  UserDefinedResource(IntOrString ResourceType, StringRef FileLocation,
+                      uint16_t Flags)
+      : RCResource(Flags), Type(ResourceType), FileLoc(FileLocation),
+        IsFileResource(true) {}
+  UserDefinedResource(IntOrString ResourceType, std::vector<IntOrString> &&Data,
+                      uint16_t Flags)
+      : RCResource(Flags), Type(ResourceType), Contents(std::move(Data)),
+        IsFileResource(false) {}
 
   raw_ostream &log(raw_ostream &) const override;
   IntOrString getResourceType() const override { return Type; }
   Twine getResourceTypeName() const override { return Type; }
-  uint16_t getMemoryFlags() const override { return MfPure | MfMoveable; }
+  static uint16_t getDefaultMemoryFlags() { return MfPure | MfMoveable; }
 
   Error visit(Visitor *V) const override {
     return V->visitUserDefinedResource(this);
@@ -754,12 +772,13 @@ public:
   VersionInfoFixed FixedData;
 
   VersionInfoResource(VersionInfoBlock &&TopLevelBlock,
-                      VersionInfoFixed &&FixedInfo)
-      : MainBlock(std::move(TopLevelBlock)), FixedData(std::move(FixedInfo)) {}
+                      VersionInfoFixed &&FixedInfo, uint16_t Flags)
+      : RCResource(Flags), MainBlock(std::move(TopLevelBlock)),
+        FixedData(std::move(FixedInfo)) {}
 
   raw_ostream &log(raw_ostream &) const override;
   IntOrString getResourceType() const override { return RkVersionInfo; }
-  uint16_t getMemoryFlags() const override { return MfMoveable | MfPure; }
+  static uint16_t getDefaultMemoryFlags() { return MfMoveable | MfPure; }
   Twine getResourceTypeName() const override { return "VERSIONINFO"; }
   Error visit(Visitor *V) const override {
     return V->visitVersionInfoResource(this);

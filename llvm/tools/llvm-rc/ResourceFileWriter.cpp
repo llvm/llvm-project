@@ -482,8 +482,8 @@ Error ResourceFileWriter::visitStringTableResource(const RCResource *Base) {
     if (Iter == BundleData.end()) {
       // Need to create a bundle.
       StringTableData.BundleList.push_back(Key);
-      auto EmplaceResult =
-          BundleData.emplace(Key, StringTableInfo::Bundle(ObjectData));
+      auto EmplaceResult = BundleData.emplace(
+          Key, StringTableInfo::Bundle(ObjectData, Res->MemoryFlags));
       assert(EmplaceResult.second && "Could not create a bundle");
       Iter = EmplaceResult.first;
     }
@@ -556,7 +556,7 @@ Error ResourceFileWriter::writeResource(
   padStream(sizeof(uint32_t));
   object::WinResHeaderSuffix HeaderSuffix{
       ulittle32_t(0), // DataVersion; seems to always be 0
-      ulittle16_t(Res->getMemoryFlags()), ulittle16_t(ObjectData.LanguageInfo),
+      ulittle16_t(Res->MemoryFlags), ulittle16_t(ObjectData.LanguageInfo),
       ulittle32_t(ObjectData.VersionInfo),
       ulittle32_t(ObjectData.Characteristics)};
   writeObject(HeaderSuffix);
@@ -785,15 +785,13 @@ public:
 
   SingleIconCursorResource(IconCursorGroupType ResourceType,
                            const ResourceDirEntryStart &HeaderEntry,
-                           ArrayRef<uint8_t> ImageData)
-      : Type(ResourceType), Header(HeaderEntry), Image(ImageData) {}
+                           ArrayRef<uint8_t> ImageData, uint16_t Flags)
+      : RCResource(Flags), Type(ResourceType), Header(HeaderEntry),
+        Image(ImageData) {}
 
   Twine getResourceTypeName() const override { return "Icon/cursor image"; }
   IntOrString getResourceType() const override {
     return Type == IconCursorGroupType::Icon ? RkSingleIcon : RkSingleCursor;
-  }
-  uint16_t getMemoryFlags() const override {
-    return MfDiscardable | MfMoveable;
   }
   ResourceKind getKind() const override { return RkSingleCursorOrIconRes; }
   static bool classof(const RCResource *Res) {
@@ -915,46 +913,57 @@ Error ResourceFileWriter::visitIconOrCursorResource(const RCResource *Base) {
     Reader.setOffset(ItemOffsets[ID]);
     ArrayRef<uint8_t> Image;
     RETURN_IF_ERROR(Reader.readArray(Image, ItemEntries[ID].Size));
-    SingleIconCursorResource SingleRes(Type, ItemEntries[ID], Image);
+    SingleIconCursorResource SingleRes(Type, ItemEntries[ID], Image,
+                                       Base->MemoryFlags);
     SingleRes.setName(IconCursorID + ID);
     RETURN_IF_ERROR(visitSingleIconOrCursor(&SingleRes));
   }
 
   // Now, write all the headers concatenated into a separate resource.
   for (size_t ID = 0; ID < NumItems; ++ID) {
-    if (Type == IconCursorGroupType::Icon) {
-      // rc.exe seems to always set NumPlanes to 1. No idea why it happens.
-      ItemEntries[ID].Planes = 1;
-      continue;
-    }
-
-    // We need to rewrite the cursor headers.
+    // We need to rewrite the cursor headers, and fetch actual values
+    // for Planes/BitCount.
     const auto &OldHeader = ItemEntries[ID];
-    ResourceDirEntryStart NewHeader;
-    NewHeader.Cursor.Width = OldHeader.Icon.Width;
-    // Each cursor in fact stores two bitmaps, one under another.
-    // Height provided in cursor definition describes the height of the
-    // cursor, whereas the value existing in resource definition describes
-    // the height of the bitmap. Therefore, we need to double this height.
-    NewHeader.Cursor.Height = OldHeader.Icon.Height * 2;
+    ResourceDirEntryStart NewHeader = OldHeader;
+
+    if (Type == IconCursorGroupType::Cursor) {
+      NewHeader.Cursor.Width = OldHeader.Icon.Width;
+      // Each cursor in fact stores two bitmaps, one under another.
+      // Height provided in cursor definition describes the height of the
+      // cursor, whereas the value existing in resource definition describes
+      // the height of the bitmap. Therefore, we need to double this height.
+      NewHeader.Cursor.Height = OldHeader.Icon.Height * 2;
+
+      // Two WORDs were written at the beginning of the resource (hotspot
+      // location). This is reflected in Size field.
+      NewHeader.Size += 2 * sizeof(uint16_t);
+    }
 
     // Now, we actually need to read the bitmap header to find
     // the number of planes and the number of bits per pixel.
     Reader.setOffset(ItemOffsets[ID]);
     const BitmapInfoHeader *BMPHeader;
     RETURN_IF_ERROR(Reader.readObject(BMPHeader));
-    NewHeader.Planes = BMPHeader->Planes;
-    NewHeader.BitCount = BMPHeader->BitCount;
-
-    // Two WORDs were written at the beginning of the resource (hotspot
-    // location). This is reflected in Size field.
-    NewHeader.Size = OldHeader.Size + 2 * sizeof(uint16_t);
+    if (BMPHeader->Size == sizeof(BitmapInfoHeader)) {
+      NewHeader.Planes = BMPHeader->Planes;
+      NewHeader.BitCount = BMPHeader->BitCount;
+    } else {
+      // A PNG .ico file.
+      // https://blogs.msdn.microsoft.com/oldnewthing/20101022-00/?p=12473
+      // "The image must be in 32bpp"
+      NewHeader.Planes = 1;
+      NewHeader.BitCount = 32;
+    }
 
     ItemEntries[ID] = NewHeader;
   }
 
   IconCursorGroupResource HeaderRes(Type, *Header, std::move(ItemEntries));
   HeaderRes.setName(ResName);
+  if (Base->MemoryFlags & MfPreload) {
+    HeaderRes.MemoryFlags |= MfPreload;
+    HeaderRes.MemoryFlags &= ~MfPure;
+  }
   RETURN_IF_ERROR(visitIconOrCursorGroup(&HeaderRes));
 
   return Error::success();
@@ -1208,7 +1217,8 @@ public:
   using BundleType = ResourceFileWriter::StringTableInfo::Bundle;
   BundleType Bundle;
 
-  BundleResource(const BundleType &StrBundle) : Bundle(StrBundle) {}
+  BundleResource(const BundleType &StrBundle)
+      : RCResource(StrBundle.MemoryFlags), Bundle(StrBundle) {}
   IntOrString getResourceType() const override { return 6; }
 
   ResourceKind getKind() const override { return RkStringTableBundle; }
