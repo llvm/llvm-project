@@ -208,7 +208,7 @@ for.end:
 
 ; CHECK-LABEL:            VCMPBRCC:
 
-; CHECK-SOFT:             bl  __aeabi_fcmple
+; CHECK-SOFT:             bl  __aeabi_fcmpgt
 ; CHECK-SOFT:             cmp r0, #0
 
 ; CHECK-SOFTFP-FP16:      vcvtb.f32.f16 [[S2:s[0-9]]], [[S2]]

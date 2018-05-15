@@ -1,3 +1,6 @@
+# Needed by LLVM's CMake checks because this file defines multiple targets.
+set(LLVM_OPTIONAL_SOURCES TestPlugin.cpp)
+
 set(LLVM_LINK_COMPONENTS Support Passes Core)
 
 # If plugins are disabled, this test will disable itself at runtime. Otherwise,
@@ -9,7 +12,7 @@ endif()
 add_llvm_unittest(PluginsTests PluginsTest.cpp)
 export_executable_symbols(PluginsTests)
 
-add_library(TestPlugin MODULE TestPlugin.cxx)
+add_library(TestPlugin MODULE TestPlugin.cpp)
 
 set_output_directory(TestPlugin
   BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}

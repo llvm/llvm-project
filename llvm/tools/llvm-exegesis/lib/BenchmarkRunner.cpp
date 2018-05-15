@@ -26,11 +26,8 @@ BenchmarkRunner::run(const LLVMState &State, const unsigned Opcode,
                      const InstructionFilter &Filter) const {
   InstructionBenchmark InstrBenchmark;
 
-  InstrBenchmark.AsmTmpl.Name =
-      llvm::Twine(getDisplayName())
-          .concat(" ")
-          .concat(State.getInstrInfo().getName(Opcode))
-          .str();
+  InstrBenchmark.Key.OpcodeName = State.getInstrInfo().getName(Opcode);
+  InstrBenchmark.Key.Mode = getDisplayName();
   InstrBenchmark.CpuName = State.getCpuName();
   InstrBenchmark.LLVMTriple = State.getTriple();
   InstrBenchmark.NumRepetitions = NumRepetitions;

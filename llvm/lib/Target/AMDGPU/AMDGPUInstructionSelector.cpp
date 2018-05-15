@@ -204,36 +204,67 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  unsigned DstReg = I.getOperand(0).getReg();
-  unsigned Size = RBI.getSizeInBits(DstReg, MRI, TRI);
+  MachineOperand &ImmOp = I.getOperand(1);
 
+  // The AMDGPU backend only supports Imm operands and not CImm or FPImm.
+  if (ImmOp.isFPImm()) {
+    const APInt &Imm = ImmOp.getFPImm()->getValueAPF().bitcastToAPInt();
+    ImmOp.ChangeToImmediate(Imm.getZExtValue());
+  } else if (ImmOp.isCImm()) {
+    ImmOp.ChangeToImmediate(ImmOp.getCImm()->getZExtValue());
+  }
+
+  unsigned DstReg = I.getOperand(0).getReg();
+  unsigned Size;
+  bool IsSgpr;
+  const RegisterBank *RB = MRI.getRegBankOrNull(I.getOperand(0).getReg());
+  if (RB) {
+    IsSgpr = RB->getID() == AMDGPU::SGPRRegBankID;
+    Size = MRI.getType(DstReg).getSizeInBits();
+  } else {
+    const TargetRegisterClass *RC = TRI.getRegClassForReg(MRI, DstReg);
+    IsSgpr = TRI.isSGPRClass(RC);
+    Size = RC->MC->getPhysRegSize() * 8;
+  }
+
+  if (Size != 32 && Size != 64)
+    return false;
+
+  unsigned Opcode = IsSgpr ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
   if (Size == 32) {
-    I.setDesc(TII.get(AMDGPU::S_MOV_B32));
+    I.setDesc(TII.get(Opcode));
+    I.addImplicitDefUseOperands(*MF);
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
-  assert(Size == 64);
-
   DebugLoc DL = I.getDebugLoc();
-  unsigned LoReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  unsigned HiReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-  const APInt &Imm = I.getOperand(1).getCImm()->getValue();
+  const TargetRegisterClass *RC = IsSgpr ? &AMDGPU::SReg_32_XM0RegClass :
+                                           &AMDGPU::VGPR_32RegClass;
+  unsigned LoReg = MRI.createVirtualRegister(RC);
+  unsigned HiReg = MRI.createVirtualRegister(RC);
+  const APInt &Imm = APInt(Size, I.getOperand(1).getImm());
 
-  BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_MOV_B32), LoReg)
+  BuildMI(*BB, &I, DL, TII.get(Opcode), LoReg)
           .addImm(Imm.trunc(32).getZExtValue());
 
-  BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_MOV_B32), HiReg)
+  BuildMI(*BB, &I, DL, TII.get(Opcode), HiReg)
           .addImm(Imm.ashr(32).getZExtValue());
 
-  BuildMI(*BB, &I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
-          .addReg(LoReg)
-          .addImm(AMDGPU::sub0)
-          .addReg(HiReg)
-          .addImm(AMDGPU::sub1);
+  const MachineInstr *RS =
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
+              .addReg(LoReg)
+              .addImm(AMDGPU::sub0)
+              .addReg(HiReg)
+              .addImm(AMDGPU::sub1);
+
   // We can't call constrainSelectedInstRegOperands here, because it doesn't
   // work for target independent opcodes
   I.eraseFromParent();
-  return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_64RegClass, MRI);
+  const TargetRegisterClass *DstRC =
+      TRI.getConstrainedRegClassForOperand(RS->getOperand(0), MRI);
+  if (!DstRC)
+    return true;
+  return RBI.constrainGenericRegister(DstReg, *DstRC, MRI);
 }
 
 static bool isConstant(const MachineInstr &MI) {
@@ -484,6 +515,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_BITCAST:
     return selectCOPY(I);
   case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_FCONSTANT:
     return selectG_CONSTANT(I);
   case TargetOpcode::G_GEP:
     return selectG_GEP(I);

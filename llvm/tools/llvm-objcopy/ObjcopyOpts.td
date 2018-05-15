@@ -83,3 +83,10 @@ defm strip_symbol : Eq<"strip-symbol">,
                        HelpText<"Remove symbol <symbol>">;
 def N : JoinedOrSeparate<["-"], "N">,
         Alias<strip_symbol>;
+defm keep_symbol : Eq<"keep-symbol">,
+                       MetaVarName<"symbol">,
+                       HelpText<"Do not remove symbol <symbol>">;
+def K : JoinedOrSeparate<["-"], "K">,
+        Alias<keep_symbol>;
+def only_keep_debug : Flag<["-", "--"], "only-keep-debug">,
+                          HelpText<"Currently ignored. Only for compaitability with GNU objcopy.">;

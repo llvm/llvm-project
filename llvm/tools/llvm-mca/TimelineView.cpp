@@ -73,48 +73,30 @@ void TimelineView::onInstructionEvent(const HWInstructionEvent &Event) {
   LastCycle = std::max(LastCycle, CurrentCycle);
 }
 
-static void printAverageTime(raw_string_ostream &OS, double AverageTime) {
-  // Round to the nearest tenth.
-  OS << format("%.1f", floor((AverageTime * 10) + 0.5)/10);
-  if (AverageTime < 10.0)
-    OS << "    ";
-  else if (AverageTime < 100.0)
-    OS << "   ";
-  else
-    OS << "  ";
-}
-
-void TimelineView::printWaitTimeEntry(raw_string_ostream &OS,
+void TimelineView::printWaitTimeEntry(formatted_raw_ostream &OS,
                                       const WaitTimeEntry &Entry,
                                       unsigned SourceIndex) const {
   OS << SourceIndex << '.';
-  if (SourceIndex < 10)
-    OS << "    ";
-  else if (SourceIndex < 100)
-    OS << "   ";
-  else if (SourceIndex < 1000)
-    OS << "  ";
-  else
-    OS << ' ';
+  OS.PadToColumn(7);
 
   if (Entry.Executions == 0) {
-    OS << " -      -      -      -   ";
+    OS << "-      -      -      -     ";
   } else {
     double AverageTime1, AverageTime2, AverageTime3;
     unsigned Executions = Entry.Executions;
     AverageTime1 = (double)Entry.CyclesSpentInSchedulerQueue / Executions;
     AverageTime2 = (double)Entry.CyclesSpentInSQWhileReady / Executions;
     AverageTime3 = (double)Entry.CyclesSpentAfterWBAndBeforeRetire / Executions;
-    if (Executions < 10)
-      OS << ' ' << Executions << "     ";
-    else if (Executions < 100)
-      OS << ' ' << Executions << "    ";
-    else
-      OS << Executions << "   ";
 
-    printAverageTime(OS, AverageTime1);
-    printAverageTime(OS, AverageTime2);
-    printAverageTime(OS, AverageTime3);
+    OS << Executions;
+    OS.PadToColumn(13);
+
+    OS << format("%.1f", floor((AverageTime1 * 10) + 0.5) / 10);
+    OS.PadToColumn(20);
+    OS << format("%.1f", floor((AverageTime2 * 10) + 0.5) / 10);
+    OS.PadToColumn(27);
+    OS << format("%.1f", floor((AverageTime3 * 10) + 0.5) / 10);
+    OS.PadToColumn(34);
   }
 }
 
@@ -124,34 +106,47 @@ void TimelineView::printAverageWaitTimes(raw_ostream &OS) const {
 
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
+  formatted_raw_ostream FOS(TempStream);
 
-  TempStream
-      << "\n\nAverage Wait times (based on the timeline view):\n"
+  FOS << "\n\nAverage Wait times (based on the timeline view):\n"
       << "[0]: Executions\n"
       << "[1]: Average time spent waiting in a scheduler's queue\n"
       << "[2]: Average time spent waiting in a scheduler's queue while ready\n"
       << "[3]: Average time elapsed from WB until retire stage\n\n";
-  TempStream << "      [0]    [1]    [2]    [3]\n";
+  FOS << "      [0]    [1]    [2]    [3]\n";
+
+  // Use a different string stream for the instruction.
+  std::string Instruction;
+  raw_string_ostream InstrStream(Instruction);
 
   for (unsigned I = 0, E = WaitTime.size(); I < E; ++I) {
-    printWaitTimeEntry(TempStream, WaitTime[I], I);
+    printWaitTimeEntry(FOS, WaitTime[I], I);
     // Append the instruction info at the end of the line.
     const MCInst &Inst = AsmSequence.getMCInstFromIndex(I);
-    MCIP.printInst(&Inst, TempStream, "", STI);
-    TempStream << '\n';
-    TempStream.flush();
+
+    MCIP.printInst(&Inst, InstrStream, "", STI);
+    InstrStream.flush();
+
+    // Consume any tabs or spaces at the beginning of the string.
+    StringRef Str(Instruction);
+    Str = Str.ltrim();
+    FOS << "   " << Str << '\n';
+    FOS.flush();
+    Instruction = "";
+
     OS << Buffer;
     Buffer = "";
   }
 }
 
-void TimelineView::printTimelineViewEntry(raw_string_ostream &OS,
+void TimelineView::printTimelineViewEntry(formatted_raw_ostream &OS,
                                           const TimelineViewEntry &Entry,
                                           unsigned Iteration,
                                           unsigned SourceIndex) const {
   if (Iteration == 0 && SourceIndex == 0)
     OS << '\n';
-  OS << '[' << Iteration << ',' << SourceIndex << "]\t";
+  OS << '[' << Iteration << ',' << SourceIndex << ']';
+  OS.PadToColumn(10);
   for (unsigned I = 0, E = Entry.CycleDispatched; I < E; ++I)
     OS << ((I % 5 == 0) ? '.' : ' ');
   OS << TimelineView::DisplayChar::Dispatched;
@@ -182,9 +177,9 @@ void TimelineView::printTimelineViewEntry(raw_string_ostream &OS,
     OS << ((I % 5 == 0 || I == LastCycle) ? '.' : ' ');
 }
 
-static void printTimelineHeader(raw_string_ostream &OS, unsigned Cycles) {
+static void printTimelineHeader(formatted_raw_ostream &OS, unsigned Cycles) {
   OS << "\n\nTimeline view:\n";
-  OS << "     \t";
+  OS.PadToColumn(10);
   for (unsigned I = 0; I <= Cycles; ++I) {
     if (((I / 10) & 1) == 0)
       OS << ' ';
@@ -192,7 +187,8 @@ static void printTimelineHeader(raw_string_ostream &OS, unsigned Cycles) {
       OS << I % 10;
   }
 
-  OS << "\nIndex\t";
+  OS << "\nIndex";
+  OS.PadToColumn(10);
   for (unsigned I = 0; I <= Cycles; ++I) {
     if (((I / 10) & 1) == 0)
       OS << I % 10;
@@ -204,11 +200,16 @@ static void printTimelineHeader(raw_string_ostream &OS, unsigned Cycles) {
 
 void TimelineView::printTimeline(raw_ostream &OS) const {
   std::string Buffer;
-  raw_string_ostream TempStream(Buffer);
+  raw_string_ostream StringStream(Buffer);
+  formatted_raw_ostream FOS(StringStream);
 
-  printTimelineHeader(TempStream, LastCycle);
-  TempStream.flush();
+  printTimelineHeader(FOS, LastCycle);
+  FOS.flush();
   OS << Buffer;
+
+  // Use a different string stream for the instruction.
+  std::string Instruction;
+  raw_string_ostream InstrStream(Instruction);
 
   for (unsigned I = 0, E = Timeline.size(); I < E; ++I) {
     Buffer = "";
@@ -218,12 +219,18 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
 
     unsigned Iteration = I / AsmSequence.size();
     unsigned SourceIndex = I % AsmSequence.size();
-    printTimelineViewEntry(TempStream, Entry, Iteration, SourceIndex);
+    printTimelineViewEntry(FOS, Entry, Iteration, SourceIndex);
     // Append the instruction info at the end of the line.
     const MCInst &Inst = AsmSequence.getMCInstFromIndex(I);
-    MCIP.printInst(&Inst, TempStream, "", STI);
-    TempStream << '\n';
-    TempStream.flush();
+    MCIP.printInst(&Inst, InstrStream, "", STI);
+    InstrStream.flush();
+
+    // Consume any tabs or spaces at the beginning of the string.
+    StringRef Str(Instruction);
+    Str = Str.ltrim();
+    FOS << "   " << Str << '\n';
+    FOS.flush();
+    Instruction = "";
     OS << Buffer;
   }
 }

@@ -1,4 +1,4 @@
-//===- unittests/Passes/Plugins/Plugin.cxx --------------------------------===//
+//===- unittests/Passes/Plugins/Plugin.cpp --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -23,8 +23,14 @@
 
 namespace exegesis {
 
-struct AsmTemplate {
-  std::string Name;
+struct InstructionBenchmarkKey {
+  // The LLVM opcode name.
+  std::string OpcodeName;
+  // The benchmark mode.
+  std::string Mode;
+  // An opaque configuration, that can be used to separate several benchmarks of
+  // the same instruction under different configurations.
+  std::string Config;
 };
 
 struct BenchmarkMeasure {
@@ -35,12 +41,13 @@ struct BenchmarkMeasure {
 
 // The result of an instruction benchmark.
 struct InstructionBenchmark {
-  AsmTemplate AsmTmpl;
+  InstructionBenchmarkKey Key;
   std::string CpuName;
   std::string LLVMTriple;
   int NumRepetitions = 0;
   std::vector<BenchmarkMeasure> Measurements;
   std::string Error;
+  std::string Info;
 
   static InstructionBenchmark readYamlOrDie(llvm::StringRef Filename);
   static std::vector<InstructionBenchmark> readYamlsOrDie(llvm::StringRef Filename);

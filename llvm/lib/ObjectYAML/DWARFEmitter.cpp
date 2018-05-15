@@ -307,6 +307,7 @@ EmitDebugSectionImpl(const DWARFYAML::Data &DI, EmitFuncType EmitFunc,
     OutputBuffers[Sec] = MemoryBuffer::getMemBufferCopy(Data);
 }
 
+namespace {
 class DIEFixupVisitor : public DWARFYAML::Visitor {
   uint64_t Length;
 
@@ -345,6 +346,7 @@ private:
     Length += MBR.getBufferSize();
   }
 };
+} // namespace
 
 Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
 DWARFYAML::EmitDebugSections(StringRef YAMLString, bool ApplyFixups,

@@ -62,6 +62,7 @@ public:
 
   Error visitCaptionStmt(const CaptionStmt *) override;
   Error visitCharacteristicsStmt(const CharacteristicsStmt *) override;
+  Error visitClassStmt(const ClassStmt *) override;
   Error visitFontStmt(const FontStmt *) override;
   Error visitLanguageStmt(const LanguageResource *) override;
   Error visitStyleStmt(const StyleStmt *) override;
@@ -88,8 +89,11 @@ public:
       uint32_t Charset;
     };
     Optional<FontInfo> Font;
+    IntOrString Class;
 
-    ObjectInfo() : LanguageInfo(0), Characteristics(0), VersionInfo(0) {}
+    ObjectInfo()
+        : LanguageInfo(0), Characteristics(0), VersionInfo(0),
+          Class(StringRef()) {}
   } ObjectData;
 
   struct StringTableInfo {

@@ -57,17 +57,18 @@ std::vector<size_t> rangeQuery(const std::vector<InstructionBenchmark> &Points,
 
 } // namespace
 
-InstructionBenchmarkClustering::InstructionBenchmarkClustering()
-    : NoiseCluster_(ClusterId::noise()), ErrorCluster_(ClusterId::error()) {}
+InstructionBenchmarkClustering::InstructionBenchmarkClustering(
+    const std::vector<InstructionBenchmark> &Points)
+    : Points_(Points), NoiseCluster_(ClusterId::noise()),
+      ErrorCluster_(ClusterId::error()) {}
 
-llvm::Error InstructionBenchmarkClustering::validateAndSetup(
-    const std::vector<InstructionBenchmark> &Points) {
-  ClusterIdForPoint_.resize(Points.size());
+llvm::Error InstructionBenchmarkClustering::validateAndSetup() {
+  ClusterIdForPoint_.resize(Points_.size());
   // Mark erroneous measurements out.
   // All points must have the same number of dimensions, in the same order.
   const std::vector<BenchmarkMeasure> *LastMeasurement = nullptr;
-  for (size_t P = 0, NumPoints = Points.size(); P < NumPoints; ++P) {
-    const auto &Point = Points[P];
+  for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
+    const auto &Point = Points_[P];
     if (!Point.Error.empty()) {
       ClusterIdForPoint_[P] = ClusterId::error();
       ErrorCluster_.PointIndices.push_back(P);
@@ -96,13 +97,12 @@ llvm::Error InstructionBenchmarkClustering::validateAndSetup(
   return llvm::Error::success();
 }
 
-void InstructionBenchmarkClustering::dbScan(
-    const std::vector<InstructionBenchmark> &Points, const size_t MinPts,
-    const double EpsilonSquared) {
-  for (size_t P = 0, NumPoints = Points.size(); P < NumPoints; ++P) {
+void InstructionBenchmarkClustering::dbScan(const size_t MinPts,
+                                            const double EpsilonSquared) {
+  for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
     if (!ClusterIdForPoint_[P].isUndef())
       continue; // Previously processed in inner loop.
-    const auto Neighbors = rangeQuery(Points, P, EpsilonSquared);
+    const auto Neighbors = rangeQuery(Points_, P, EpsilonSquared);
     if (Neighbors.size() + 1 < MinPts) { // Density check.
       // The region around P is not dense enough to create a new cluster, mark
       // as noise for now.
@@ -136,7 +136,7 @@ void InstructionBenchmarkClustering::dbScan(
       ClusterIdForPoint_[Q] = CurrentCluster.Id;
       CurrentCluster.PointIndices.push_back(Q);
       // And extend to the neighbors of Q if the region is dense enough.
-      const auto Neighbors = rangeQuery(Points, Q, EpsilonSquared);
+      const auto Neighbors = rangeQuery(Points_, Q, EpsilonSquared);
       if (Neighbors.size() + 1 >= MinPts) {
         ToProcess.insert(Neighbors.begin(), Neighbors.end());
       }
@@ -144,7 +144,7 @@ void InstructionBenchmarkClustering::dbScan(
   }
 
   // Add noisy points to noise cluster.
-  for (size_t P = 0, NumPoints = Points.size(); P < NumPoints; ++P) {
+  for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
     if (ClusterIdForPoint_[P].isNoise()) {
       NoiseCluster_.PointIndices.push_back(P);
     }
@@ -155,15 +155,15 @@ llvm::Expected<InstructionBenchmarkClustering>
 InstructionBenchmarkClustering::create(
     const std::vector<InstructionBenchmark> &Points, const size_t MinPts,
     const double Epsilon) {
-  InstructionBenchmarkClustering Clustering;
-  if (auto Error = Clustering.validateAndSetup(Points)) {
+  InstructionBenchmarkClustering Clustering(Points);
+  if (auto Error = Clustering.validateAndSetup()) {
     return std::move(Error);
   }
   if (Clustering.ErrorCluster_.PointIndices.size() == Points.size()) {
     return Clustering; // Nothing to cluster.
   }
 
-  Clustering.dbScan(Points, MinPts, Epsilon * Epsilon);
+  Clustering.dbScan(MinPts, Epsilon * Epsilon);
   return Clustering;
 }
 

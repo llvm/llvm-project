@@ -66,7 +66,6 @@ def FeatureReservedR19: SubtargetFeature<"reserved-r19", "ReservedR19",
 //===----------------------------------------------------------------------===//
 
 def UseMEMOPS          : Predicate<"HST->useMemops()">;
-def IEEERndNearV5T     : Predicate<"HST->modeIEEERndNear()">;
 def UseHVX64B          : Predicate<"HST->useHVX64BOps()">,
                          AssemblerPredicate<"ExtensionHVX64B">;
 def UseHVX128B         : Predicate<"HST->useHVX128BOps()">,

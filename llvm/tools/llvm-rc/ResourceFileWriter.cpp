@@ -458,6 +458,11 @@ Error ResourceFileWriter::visitCaptionStmt(const CaptionStmt *Stmt) {
   return Error::success();
 }
 
+Error ResourceFileWriter::visitClassStmt(const ClassStmt *Stmt) {
+  ObjectData.Class = Stmt->Value;
+  return Error::success();
+}
+
 Error ResourceFileWriter::visitHTMLResource(const RCResource *Res) {
   return writeResource(Res, &ResourceFileWriter::writeHTMLBody);
 }
@@ -1120,8 +1125,8 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
   // think there is no menu attached to the dialog.
   writeInt<uint16_t>(0);
 
-  // Window CLASS field. Not kept here.
-  writeInt<uint16_t>(0);
+  // Window CLASS field.
+  RETURN_IF_ERROR(writeIntOrString(ObjectData.Class));
 
   // Window title or a single word equal to 0.
   RETURN_IF_ERROR(writeCString(ObjectData.Caption));

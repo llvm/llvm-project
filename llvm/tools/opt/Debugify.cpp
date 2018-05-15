@@ -126,6 +126,7 @@ bool applyDebugifyMetadata(Module &M,
 
 bool checkDebugifyMetadata(Module &M,
                            iterator_range<Module::iterator> Functions,
+                           StringRef NameOfWrappedPass,
                            StringRef Banner,
                            bool Strip) {
   // Skip modules without debugify metadata.
@@ -190,7 +191,8 @@ bool checkDebugifyMetadata(Module &M,
     outs() << "ERROR: Missing variable " << Idx + 1 << "\n";
   HasErrors |= MissingVars.count() > 0;
 
-  outs() << Banner << (HasErrors ? "FAIL" : "PASS") << '\n';
+  outs() << Banner << " [" << NameOfWrappedPass << "]: "
+         << (HasErrors ? "FAIL" : "PASS") << '\n';
   if (HasErrors) {
     outs() << "Module IR Dump\n";
     M.print(outs(), nullptr, false);
@@ -245,16 +247,18 @@ struct DebugifyFunctionPass : public FunctionPass {
 /// legacy module pass manager.
 struct CheckDebugifyModulePass : public ModulePass {
   bool runOnModule(Module &M) override {
-    return checkDebugifyMetadata(M, M.functions(), "CheckModuleDebugify: ",
-                                 Strip);
+    return checkDebugifyMetadata(M, M.functions(), NameOfWrappedPass,
+                                 "CheckModuleDebugify", Strip);
   }
 
-  CheckDebugifyModulePass(bool Strip = false) : ModulePass(ID), Strip(Strip) {}
+  CheckDebugifyModulePass(bool Strip = false, StringRef NameOfWrappedPass = "")
+      : ModulePass(ID), Strip(Strip), NameOfWrappedPass(NameOfWrappedPass) {}
 
   static char ID; // Pass identification.
 
 private:
   bool Strip;
+  StringRef NameOfWrappedPass;
 };
 
 /// FunctionPass for checking debug info inserted by -debugify-function, used
@@ -264,10 +268,11 @@ struct CheckDebugifyFunctionPass : public FunctionPass {
     Module &M = *F.getParent();
     auto FuncIt = F.getIterator();
     return checkDebugifyMetadata(M, make_range(FuncIt, std::next(FuncIt)),
-                     "CheckFunctionDebugify: ", Strip);
+                                 NameOfWrappedPass, "CheckFunctionDebugify", Strip);
   }
 
-  CheckDebugifyFunctionPass(bool Strip = false) : FunctionPass(ID), Strip(Strip) {}
+  CheckDebugifyFunctionPass(bool Strip = false, StringRef NameOfWrappedPass = "")
+      : FunctionPass(ID), Strip(Strip), NameOfWrappedPass(NameOfWrappedPass) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -277,6 +282,7 @@ struct CheckDebugifyFunctionPass : public FunctionPass {
 
 private:
   bool Strip;
+  StringRef NameOfWrappedPass;
 };
 
 } // end anonymous namespace
@@ -294,17 +300,17 @@ PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
   return PreservedAnalyses::all();
 }
 
-ModulePass *createCheckDebugifyModulePass(bool Strip) {
-  return new CheckDebugifyModulePass(Strip);
+ModulePass *createCheckDebugifyModulePass(bool Strip, StringRef NameOfWrappedPass) {
+  return new CheckDebugifyModulePass(Strip, NameOfWrappedPass);
 }
 
-FunctionPass *createCheckDebugifyFunctionPass(bool Strip) {
-  return new CheckDebugifyFunctionPass(Strip);
+FunctionPass *createCheckDebugifyFunctionPass(bool Strip, StringRef NameOfWrappedPass) {
+  return new CheckDebugifyFunctionPass(Strip, NameOfWrappedPass);
 }
 
 PreservedAnalyses NewPMCheckDebugifyPass::run(Module &M,
                                               ModuleAnalysisManager &) {
-  checkDebugifyMetadata(M, M.functions(), "CheckModuleDebugify: ", false);
+  checkDebugifyMetadata(M, M.functions(), "", "CheckModuleDebugify", false);
   return PreservedAnalyses::all();
 }
 

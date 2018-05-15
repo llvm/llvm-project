@@ -25,7 +25,8 @@
 ; RUN:    -check-prefix=CMOV64
 ; RUN: llc < %s -mtriple=mips64-unknown-linux-gnu -mcpu=mips64r6 -verify-machineinstrs | FileCheck %s \
 ; RUN:    -check-prefix=64R6
-; RUN: llc < %s -mtriple=mips-unknown-linux-gnu -mcpu=mips32r3 -mattr=+micromips -verify-machineinstrs | FileCheck %s \
+; RUN: llc < %s -mtriple=mips-unknown-linux-gnu -mcpu=mips32r3 \
+; RUN:   -asm-show-inst -mattr=+micromips -verify-machineinstrs | FileCheck %s \
 ; RUN:    -check-prefix=MM32R3
 ; RUN: llc < %s -mtriple=mips-unknown-linux-gnu -mcpu=mips32r6 -mattr=+micromips -verify-machineinstrs | FileCheck %s \
 ; RUN:    -check-prefix=MM32R6
@@ -98,12 +99,12 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_i1_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    mtc1 $7, $f2
-; MM32R3-NEXT:    mthc1 $6, $f2
-; MM32R3-NEXT:    andi16 $2, $4, 1
-; MM32R3-NEXT:    ldc1 $f0, 16($sp)
-; MM32R3-NEXT:    jr $ra
-; MM32R3-NEXT:    movn.d $f0, $f2, $2
+; MM32R3:       mtc1 $7, $f2 # <MCInst #{{.*}} MTC1
+; MM32R3:       mthc1 $6, $f2 # <MCInst #{{.*}} MTHC1_D32_MM
+; MM32R3:       andi16 $2, $4, 1 # <MCInst #{{.*}} ANDI16_MM
+; MM32R3:       ldc1 $f0, 16($sp) # <MCInst #{{.*}} LDC1_MM
+; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
+; MM32R3:       movn.d $f0, $f2, $2 # <MCInst #{{.*}} MOVN_I_D32_MM
 ;
 ; MM32R6-LABEL: tst_select_i1_double:
 ; MM32R6:       # %bb.0: # %entry
@@ -180,11 +181,11 @@ define double @tst_select_i1_double_reordered(double %x, double %y,
 ;
 ; MM32R3-LABEL: tst_select_i1_double_reordered:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    lw $2, 16($sp)
-; MM32R3-NEXT:    andi16 $2, $2, 1
-; MM32R3-NEXT:    jr $ra
-; MM32R3-NEXT:    movn.d $f0, $f12, $2
+; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
+; MM32R3:       lw $2, 16($sp) # <MCInst #{{.*}} LWSP_MM
+; MM32R3:       andi16 $2, $2, 1 # <MCInst #{{.*}} ANDI16_MM
+; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
+; MM32R3:       movn.d $f0, $f12, $2 # <MCInst #{{.*}} MOVN_I_D32_MM
 ;
 ; MM32R6-LABEL: tst_select_i1_double_reordered:
 ; MM32R6:       # %bb.0: # %entry
@@ -260,10 +261,10 @@ define double @tst_select_fcmp_olt_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_olt_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.olt.d $f12, $f14
-; MM32R3-NEXT:    jr $ra
-; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0
+; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
+; MM32R3:       c.olt.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
+; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
+; MM32R3:       movt.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVT_D32_MM
 ;
 ; MM32R6-LABEL: tst_select_fcmp_olt_double:
 ; MM32R6:       # %bb.0: # %entry
@@ -340,10 +341,10 @@ define double @tst_select_fcmp_ole_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_ole_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.ole.d $f12, $f14
-; MM32R3-NEXT:    jr $ra
-; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0
+; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
+; MM32R3:       c.ole.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
+; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
+; MM32R3:       movt.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVT_D32_MM
 ;
 ; MM32R6-LABEL: tst_select_fcmp_ole_double:
 ; MM32R6:       # %bb.0: # %entry
@@ -420,10 +421,10 @@ define double @tst_select_fcmp_ogt_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_ogt_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.ule.d $f12, $f14
-; MM32R3-NEXT:    jr $ra
-; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0
+; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
+; MM32R3:       c.ule.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
+; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
+; MM32R3:       movf.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVF_D32_MM
 ;
 ; MM32R6-LABEL: tst_select_fcmp_ogt_double:
 ; MM32R6:       # %bb.0: # %entry
@@ -500,10 +501,10 @@ define double @tst_select_fcmp_oge_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_oge_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.ult.d $f12, $f14
-; MM32R3-NEXT:    jr $ra
-; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0
+; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
+; MM32R3:       c.ult.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
+; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
+; MM32R3:       movf.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVF_D32_MM
 ;
 ; MM32R6-LABEL: tst_select_fcmp_oge_double:
 ; MM32R6:       # %bb.0: # %entry
@@ -580,10 +581,10 @@ define double @tst_select_fcmp_oeq_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_oeq_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.eq.d $f12, $f14
-; MM32R3-NEXT:    jr $ra
-; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0
+; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
+; MM32R3:       c.eq.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
+; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
+; MM32R3:       movt.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVT_D32_MM
 ;
 ; MM32R6-LABEL: tst_select_fcmp_oeq_double:
 ; MM32R6:       # %bb.0: # %entry
@@ -662,10 +663,10 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ;
 ; MM32R3-LABEL: tst_select_fcmp_one_double:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    mov.d $f0, $f14
-; MM32R3-NEXT:    c.ueq.d $f12, $f14
-; MM32R3-NEXT:    jr $ra
-; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0
+; MM32R3:       mov.d $f0, $f14 # <MCInst #{{.*}} FMOV_D32
+; MM32R3:       c.ueq.d $f12, $f14 # <MCInst #{{.*}} FCMP_D32_MM
+; MM32R3:       jr $ra # <MCInst #{{.*}} JR_MM
+; MM32R3:       movf.d $f0, $f12, $fcc0 # <MCInst #{{.*}} MOVF_D32_MM
 ;
 ; MM32R6-LABEL: tst_select_fcmp_one_double:
 ; MM32R6:       # %bb.0: # %entry

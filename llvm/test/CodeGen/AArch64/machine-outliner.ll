@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin -mcpu=cortex-a53 -enable-misched=false < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -enable-linkonceodr-outlining -mtriple=aarch64-apple-darwin < %s | FileCheck %s -check-prefix=ODR
 
 define linkonce_odr void @fish() #0 {
@@ -67,7 +68,8 @@ define void @dog() #0 {
 }
 
 ; ODR: [[OUTLINED]]:
-; CHECK: [[OUTLINED]]:
+; CHECK: .p2align 2
+; CHECK-NEXT: [[OUTLINED]]:
 ; CHECK-DAG: orr w8, wzr, #0x1
 ; CHECK-NEXT: stp w8, wzr, [sp, #8]
 ; CHECK-NEXT: orr w8, wzr, #0x2

@@ -318,7 +318,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
   return Changed;
 }
 
-bool propagateLocalCopies(MachineBasicBlock *MBB) {
+static bool propagateLocalCopies(MachineBasicBlock *MBB) {
   bool Changed = false;
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
 
@@ -468,9 +468,8 @@ static void doCandidateWalk(std::vector<TypedVReg> &VRegs,
   }
 }
 
+namespace {
 class NamedVRegCursor {
-
-private:
   MachineRegisterInfo &MRI;
   unsigned virtualVRegNumber;
 
@@ -512,6 +511,7 @@ public:
     return MRI.createVirtualRegister(RC, OS.str());
   }
 };
+} // namespace
 
 static std::map<unsigned, unsigned>
 GetVRegRenameMap(const std::vector<TypedVReg> &VRegs,

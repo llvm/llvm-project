@@ -227,7 +227,6 @@ defm : ZnWriteResFpuPair<WriteFVarBlendY,[ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteVarBlend,  [ZnFPU0],  1>;
 defm : ZnWriteResFpuPair<WriteVarBlendY, [ZnFPU0],  1>;
 defm : ZnWriteResFpuPair<WriteCvtI2F,    [ZnFPU3],  5>;
-defm : ZnWriteResFpuPair<WriteCvtF2F,    [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtF2I,    [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteFDiv,      [ZnFPU3], 15>;
 defm : ZnWriteResFpuPair<WriteFDivX,     [ZnFPU3], 15>;
@@ -272,7 +271,6 @@ defm : ZnWriteResFpuPair<WriteFSqrt64X,  [ZnFPU3], 20, [20]>;
 defm : ZnWriteResFpuPair<WriteFSqrt64Y,  [ZnFPU3], 40, [40], 1, 7, 1>;
 defm : ZnWriteResFpuPair<WriteFSqrt64Z,  [ZnFPU3], 40, [40], 1, 7, 1>;
 defm : ZnWriteResFpuPair<WriteFSqrt80,   [ZnFPU3], 20, [20]>;
-def  : WriteRes<WriteCvtF2FSt, [ZnFPU3, ZnAGU]>;
 
 // Vector integer operations which uses FPU units
 defm : X86WriteRes<WriteVecLoad,         [ZnAGU], 8, [1], 1>;
@@ -1187,9 +1185,16 @@ def : InstRW<[WriteMicrocoded], (instregex "VGATHERQPDYrm")>;
 def ZnWriteCVTPD2PSr: SchedWriteRes<[ZnFPU3]> {
   let Latency = 4;
 }
+def ZnWriteCVTPD2PSYr: SchedWriteRes<[ZnFPU3]> {
+  let Latency = 5;
+}
+
 // CVTPD2PS.
 // x,x.
-def : InstRW<[ZnWriteCVTPD2PSr], (instregex "(V?)CVTPD2PSrr")>;
+def : SchedAlias<WriteCvtPD2PS,  ZnWriteCVTPD2PSr>;
+
+// y,y.
+def : SchedAlias<WriteCvtPD2PSY, ZnWriteCVTPD2PSYr>;
 
 def ZnWriteCVTPD2PSLd: SchedWriteRes<[ZnAGU,ZnFPU03]> {
   let Latency = 11;
@@ -1197,28 +1202,28 @@ def ZnWriteCVTPD2PSLd: SchedWriteRes<[ZnAGU,ZnFPU03]> {
   let ResourceCycles = [1,2];
 }
 // x,m128.
-def : InstRW<[ZnWriteCVTPD2PSLd], (instregex "(V?)CVTPD2PS(X?)rm")>;
+def : SchedAlias<WriteCvtPD2PSLd, ZnWriteCVTPD2PSLd>;
 
 // x,m256.
 def ZnWriteCVTPD2PSYLd : SchedWriteRes<[ZnAGU, ZnFPU3]> {
   let Latency = 11;
 }
-def : InstRW<[ZnWriteCVTPD2PSYLd], (instregex "(V?)CVTPD2PSYrm")>;
+def : SchedAlias<WriteCvtPD2PSYLd, ZnWriteCVTPD2PSYLd>;
 
 // CVTSD2SS.
 // x,x.
 // Same as WriteCVTPD2PSr
-def : InstRW<[ZnWriteCVTPD2PSr], (instregex "(V)?CVTSD2SSrr")>;
+def : SchedAlias<WriteCvtSD2SS, ZnWriteCVTPD2PSr>;
 
 // x,m64.
-def : InstRW<[ZnWriteCVTPD2PSLd], (instregex "(V)?CVTSD2SSrm")>;
+def : SchedAlias<WriteCvtSD2SSLd, ZnWriteCVTPD2PSLd>;
 
 // CVTPS2PD.
 // x,x.
 def ZnWriteCVTPS2PDr : SchedWriteRes<[ZnFPU3]> {
   let Latency = 3;
 }
-def : InstRW<[ZnWriteCVTPS2PDr], (instregex "(V?)CVTPS2PDrr")>;
+def : SchedAlias<WriteCvtPS2PD, ZnWriteCVTPS2PDr>;
 
 // x,m64.
 // y,m128.
@@ -1226,20 +1231,21 @@ def ZnWriteCVTPS2PDLd : SchedWriteRes<[ZnAGU, ZnFPU3]> {
   let Latency = 10;
   let NumMicroOps = 2;
 }
-def : InstRW<[ZnWriteCVTPS2PDLd], (instregex "(V?)CVTPS2PD(Y?)rm")>;
+def : SchedAlias<WriteCvtPS2PDLd, ZnWriteCVTPS2PDLd>;
+def : SchedAlias<WriteCvtPS2PDYLd, ZnWriteCVTPS2PDLd>;
 
 // y,x.
 def ZnWriteVCVTPS2PDY : SchedWriteRes<[ZnFPU3]> {
   let Latency = 3;
 }
-def : InstRW<[ZnWriteVCVTPS2PDY], (instregex "VCVTPS2PDYrr")>;
+def : SchedAlias<WriteCvtPS2PDY, ZnWriteVCVTPS2PDY>;
 
 // CVTSS2SD.
 // x,x.
 def ZnWriteCVTSS2SDr : SchedWriteRes<[ZnFPU3]> {
   let Latency = 4;
 }
-def : InstRW<[ZnWriteCVTSS2SDr], (instregex "(V?)CVTSS2SDrr")>;
+def : SchedAlias<WriteCvtSS2SD, ZnWriteCVTSS2SDr>;
 
 // x,m32.
 def ZnWriteCVTSS2SDLd : SchedWriteRes<[ZnAGU, ZnFPU3]> {
@@ -1247,7 +1253,7 @@ def ZnWriteCVTSS2SDLd : SchedWriteRes<[ZnAGU, ZnFPU3]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1, 2];
 }
-def : InstRW<[ZnWriteCVTSS2SDLd], (instregex "(V?)CVTSS2SDrm")>;
+def : SchedAlias<WriteCvtSS2SDLd, ZnWriteCVTSS2SDLd>;
 
 def ZnWriteCVTDQ2PDr: SchedWriteRes<[ZnFPU12,ZnFPU3]> {
   let Latency = 5;
@@ -1326,18 +1332,21 @@ def : InstRW<[ZnWriteCVSTSI2SIr], (instregex "(V?)CVT(T?)SD2SI(64)?rr")>;
 // r32,m32.
 def : InstRW<[ZnWriteCVSTSI2SILd], (instregex "(V?)CVT(T?)SD2SI(64)?rm")>;
 
-
 // VCVTPS2PH.
 // x,v,i.
-def : InstRW<[WriteMicrocoded], (instregex "VCVTPS2PH(Y?)rr")>;
+def : SchedAlias<WriteCvtPS2PH,    ZnWriteMicrocoded>;
+def : SchedAlias<WriteCvtPS2PHY,   ZnWriteMicrocoded>;
 // m,v,i.
-def : InstRW<[WriteMicrocoded], (instregex "VCVTPS2PH(Y?)mr")>;
+def : SchedAlias<WriteCvtPS2PHSt,  ZnWriteMicrocoded>;
+def : SchedAlias<WriteCvtPS2PHYSt, ZnWriteMicrocoded>;
 
 // VCVTPH2PS.
 // v,x.
-def : InstRW<[WriteMicrocoded], (instregex "VCVTPH2PS(Y?)rr")>;
+def : SchedAlias<WriteCvtPH2PS,    ZnWriteMicrocoded>;
+def : SchedAlias<WriteCvtPH2PSY,   ZnWriteMicrocoded>;
 // v,m.
-def : InstRW<[WriteMicrocoded], (instregex "VCVTPH2PS(Y?)rm")>;
+def : SchedAlias<WriteCvtPH2PSLd,  ZnWriteMicrocoded>;
+def : SchedAlias<WriteCvtPH2PSYLd, ZnWriteMicrocoded>;
 
 //-- SSE4A instructions --//
 // EXTRQ
