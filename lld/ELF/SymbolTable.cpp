@@ -598,9 +598,9 @@ Symbol *SymbolTable::find(StringRef Name) {
 // This is used to handle lazy symbols. May replace existent
 // symbol with lazy version or request to Fetch it.
 template <class ELFT, typename LazyT, typename... ArgT>
-void replaceOrFetchLazy(StringRef Name, InputFile &File,
-                        llvm::function_ref<InputFile *()> Fetch,
-                        ArgT &&... Arg) {
+static void replaceOrFetchLazy(StringRef Name, InputFile &File,
+                               llvm::function_ref<InputFile *()> Fetch,
+                               ArgT &&... Arg) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = Symtab->insert(Name);

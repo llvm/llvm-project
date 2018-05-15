@@ -134,8 +134,8 @@ public:
   StringRef getName() const override { return Function->SymbolName; }
   StringRef getDebugName() const override { return Function->DebugName; }
   uint32_t getComdat() const override { return Function->Comdat; }
-  const ArrayRef<uint8_t> getFunctionBody() const { return Function->Body; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
+  uint32_t getFunctionCodeOffset() const { return Function->CodeOffset; }
   uint32_t getFunctionIndex() const { return FunctionIndex.getValue(); }
   bool hasFunctionIndex() const { return FunctionIndex.hasValue(); }
   void setFunctionIndex(uint32_t Index);
