@@ -1021,7 +1021,7 @@ be passed by value.
 .. _DEBUG:
 
 The ``LLVM_DEBUG()`` macro and ``-debug`` option
--------------------------------------------
+------------------------------------------------
 
 Often when working on your pass you will put a bunch of debugging printouts and
 other code into your pass.  After you get it working, you want to remove it, but

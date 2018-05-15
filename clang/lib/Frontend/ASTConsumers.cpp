@@ -87,9 +87,10 @@ namespace {
                 << DC->getPrimaryContext() << "\n";
         } else
           Out << "Not a DeclContext\n";
-      } else if (OutputKind == Print)
-        D->print(Out, /*Indentation=*/0, /*PrintInstantiation=*/true);
-      else if (OutputKind != None)
+      } else if (OutputKind == Print) {
+        PrintingPolicy Policy(D->getASTContext().getLangOpts());
+        D->print(Out, Policy, /*Indentation=*/0, /*PrintInstantiation=*/true);
+      } else if (OutputKind != None)
         D->dump(Out, OutputKind == DumpFull);
     }
 

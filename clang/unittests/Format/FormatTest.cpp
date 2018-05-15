@@ -10665,16 +10665,17 @@ TEST_F(FormatTest, ParsesConfiguration) {
   CHECK_PARSE("ForEachMacros: [BOOST_FOREACH, Q_FOREACH]", ForEachMacros,
               BoostAndQForeach);
 
-  Style.IncludeCategories.clear();
-  std::vector<FormatStyle::IncludeCategory> ExpectedCategories = {{"abc/.*", 2},
-                                                                  {".*", 1}};
+  Style.IncludeStyle.IncludeCategories.clear();
+  std::vector<tooling::IncludeStyle::IncludeCategory> ExpectedCategories = {
+      {"abc/.*", 2}, {".*", 1}};
   CHECK_PARSE("IncludeCategories:\n"
               "  - Regex: abc/.*\n"
               "    Priority: 2\n"
               "  - Regex: .*\n"
               "    Priority: 1",
-              IncludeCategories, ExpectedCategories);
-  CHECK_PARSE("IncludeIsMainRegex: 'abc$'", IncludeIsMainRegex, "abc$");
+              IncludeStyle.IncludeCategories, ExpectedCategories);
+  CHECK_PARSE("IncludeIsMainRegex: 'abc$'", IncludeStyle.IncludeIsMainRegex,
+              "abc$");
 
   Style.RawStringFormats.clear();
   std::vector<FormatStyle::RawStringFormat> ExpectedRawStringFormats = {

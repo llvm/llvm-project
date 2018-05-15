@@ -67,8 +67,8 @@ private:
 
 // Returns a hash value for S.
 uint32_t ICF::getHash(SectionChunk *C) {
-  return hash_combine(C->getOutputCharacteristics(), C->SectionName, C->Relocs.size(),
-                      C->Alignment, uint32_t(C->Header->SizeOfRawData),
+  return hash_combine(C->getOutputCharacteristics(), C->SectionName,
+                      C->Relocs.size(), uint32_t(C->Header->SizeOfRawData),
                       C->Checksum, C->getContents());
 }
 
@@ -168,7 +168,7 @@ bool ICF::equalsConstant(const SectionChunk *A, const SectionChunk *B) {
 
   // Compare section attributes and contents.
   return A->getOutputCharacteristics() == B->getOutputCharacteristics() &&
-         A->SectionName == B->SectionName && A->Alignment == B->Alignment &&
+         A->SectionName == B->SectionName &&
          A->Header->SizeOfRawData == B->Header->SizeOfRawData &&
          A->Checksum == B->Checksum && A->getContents() == B->getContents() &&
          assocEquals(A, B);

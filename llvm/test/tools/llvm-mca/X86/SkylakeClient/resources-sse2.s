@@ -128,6 +128,9 @@ movlpd      (%rax), %xmm2
 
 movmskpd    %xmm0, %rcx
 
+movntil     %eax, (%rax)
+movntiq     %rax, (%rax)
+
 movntdq     %xmm0, (%rax)
 movntpd     %xmm0, (%rax)
 
@@ -485,6 +488,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  2      1     1.00           *        	movlpd	%xmm0, (%rax)
 # CHECK-NEXT:  2      6     1.00    *               	movlpd	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00                    	movmskpd	%xmm0, %ecx
+# CHECK-NEXT:  2      1     1.00           *        	movntil	%eax, (%rax)
+# CHECK-NEXT:  2      1     1.00           *        	movntiq	%rax, (%rax)
 # CHECK-NEXT:  2      1     1.00           *        	movntdq	%xmm0, (%rax)
 # CHECK-NEXT:  2      1     1.00           *        	movntpd	%xmm0, (%rax)
 # CHECK-NEXT:  1      1     0.33                    	movq	%xmm0, %xmm2
@@ -676,7 +681,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     38.00  110.42 78.42  62.00  62.00  12.00  93.42  1.75   4.00
+# CHECK-NEXT:  -     38.00  110.42 78.42  62.67  62.67  14.00  93.42  1.75   4.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    	Instructions:
@@ -766,6 +771,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33   	movlpd	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     	movlpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     	movmskpd	%xmm0, %ecx
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33   	movntil	%eax, (%rax)
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33   	movntiq	%rax, (%rax)
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33   	movntdq	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33   	movntpd	%xmm0, (%rax)
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     	movq	%xmm0, %xmm2

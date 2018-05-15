@@ -108,6 +108,10 @@ static bool matchAndOrChain(Value *V, MaskOps &MOps) {
   if (!MOps.Root)
     MOps.Root = Candidate;
 
+  // The shift constant is out-of-range? This code hasn't been simplified.
+  if (BitIndex >= MOps.Mask.getBitWidth())
+    return false;
+
   // Fill in the mask bit derived from the shift constant.
   MOps.Mask.setBit(BitIndex);
   return MOps.Root == Candidate;

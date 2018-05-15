@@ -260,13 +260,12 @@ void Scheduler::scheduleInstruction(InstRef &IR) {
   // targets, zero-idiom instructions (for example: a xor that clears the value
   // of a register) are treated speacially, and are often eliminated at register
   // renaming stage.
-  bool IsZeroLatency = !Desc.MaxLatency && Desc.Resources.empty();
 
   // Instructions that use an in-order dispatch/issue processor resource must be
   // issued immediately to the pipeline(s). Any other in-order buffered
   // resources (i.e. BufferSize=1) is consumed.
 
-  if (!IsZeroLatency && !Resources->mustIssueImmediately(Desc)) {
+  if (!Desc.isZeroLatency() && !Resources->mustIssueImmediately(Desc)) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding " << IR
                       << " to the Ready Queue\n");
     ReadyQueue[IR.getSourceIndex()] = IR.getInstruction();

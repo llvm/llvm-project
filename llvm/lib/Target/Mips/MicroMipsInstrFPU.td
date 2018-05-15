@@ -80,22 +80,21 @@ let DecoderNamespace = "MicroMips" in {
                      ROUND_W_FM_MM<0, 0x24>, ISA_MICROMIPS;
 }
 
-let isCodeGenOnly = 1 in {
-def ROUND_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd,
-                                              II_ROUND>, ROUND_W_FM_MM<0, 0xec>,
-                   ISA_MICROMIPS;
-
-def CEIL_W_MM  : MMRel, ABSS_FT<"ceil.w.d", FGR32Opnd, AFGR64Opnd, II_CEIL>,
-                 ROUND_W_FM_MM<1, 0x6c>, ISA_MICROMIPS, FGR_32;
-def FLOOR_W_MM : MMRel, ABSS_FT<"floor.w.d", FGR32Opnd, AFGR64Opnd, II_FLOOR>,
-                 ROUND_W_FM_MM<1, 0x2c>, ISA_MICROMIPS, FGR_32;
-def ROUND_W_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.d", FGR32Opnd, AFGR64Opnd,
-                                            II_ROUND>, ROUND_W_FM_MM<1, 0xec>,
-                 ISA_MICROMIPS, FGR_32;
-def TRUNC_W_MM : MMRel, ABSS_FT<"trunc.w.d", FGR32Opnd, AFGR64Opnd, II_TRUNC>,
-                 ROUND_W_FM_MM<1, 0xac>, ISA_MICROMIPS, FGR_32;
-}
 let DecoderNamespace = "MicroMips" in {
+  def ROUND_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd,
+                                                FGR32Opnd, II_ROUND>,
+                     ROUND_W_FM_MM<0, 0xec>, ISA_MICROMIPS;
+
+  def CEIL_W_MM  : MMRel, ABSS_FT<"ceil.w.d", FGR32Opnd, AFGR64Opnd, II_CEIL>,
+                   ROUND_W_FM_MM<1, 0x6c>, ISA_MICROMIPS, FGR_32;
+  def FLOOR_W_MM : MMRel, ABSS_FT<"floor.w.d", FGR32Opnd, AFGR64Opnd, II_FLOOR>,
+                   ROUND_W_FM_MM<1, 0x2c>, ISA_MICROMIPS, FGR_32;
+  def ROUND_W_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.d", FGR32Opnd,
+                                              AFGR64Opnd, II_ROUND>,
+                   ROUND_W_FM_MM<1, 0xec>, ISA_MICROMIPS, FGR_32;
+  def TRUNC_W_MM : MMRel, ABSS_FT<"trunc.w.d", FGR32Opnd, AFGR64Opnd, II_TRUNC>,
+                   ROUND_W_FM_MM<1, 0xac>, ISA_MICROMIPS, FGR_32;
+
   def CVT_L_S_MM   : MMRel, ABSS_FT<"cvt.l.s", FGR64Opnd, FGR32Opnd, II_CVT>,
                      ROUND_W_FM_MM<0, 0x4>, ISA_MICROMIPS, FGR_64;
   def CVT_L_D64_MM : MMRel, ABSS_FT<"cvt.l.d", FGR64Opnd, FGR64Opnd, II_CVT>,
@@ -221,16 +220,16 @@ let DecoderNamespace = "MicroMips" in {
     def NMSUB_D32_MM : MMRel, NMADDS_FT<"nmsub.d", AFGR64Opnd, II_NMSUB_D>,
                        MADDS_FM_MM<0x2a>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
   }
-}
 
-def FLOOR_W_S_MM : MMRel, ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd,
-                                  II_FLOOR>, ROUND_W_FM_MM<0, 0x2c>,
-                   ISA_MICROMIPS;
-def TRUNC_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"trunc.w.s", FGR32Opnd,
-                                              FGR32Opnd, II_TRUNC>,
-                   ROUND_W_FM_MM<0, 0xac>, ISA_MICROMIPS;
-def CEIL_W_S_MM  : MMRel, ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
-                   ROUND_W_FM_MM<0, 0x6c>, ISA_MICROMIPS;
+  def FLOOR_W_S_MM : MMRel, ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd,
+                                    II_FLOOR>, ROUND_W_FM_MM<0, 0x2c>,
+                     ISA_MICROMIPS;
+  def TRUNC_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"trunc.w.s", FGR32Opnd,
+                                                FGR32Opnd, II_TRUNC>,
+                     ROUND_W_FM_MM<0, 0xac>, ISA_MICROMIPS;
+  def CEIL_W_S_MM  : MMRel, ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
+                     ROUND_W_FM_MM<0, 0x6c>, ISA_MICROMIPS;
+}
 def FSQRT_S_MM : MMRel, ABSS_FT<"sqrt.s", FGR32Opnd, FGR32Opnd, II_SQRT_S,
                                 fsqrt>, ROUND_W_FM_MM<0, 0x28>, ISA_MICROMIPS {
   string DecoderNamespace = "MicroMips";

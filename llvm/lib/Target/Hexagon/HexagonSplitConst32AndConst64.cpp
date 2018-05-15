@@ -60,14 +60,14 @@ INITIALIZE_PASS(HexagonSplitConst32AndConst64, "split-const-for-sdata",
       "Hexagon Split Const32s and Const64s", false, false)
 
 bool HexagonSplitConst32AndConst64::runOnMachineFunction(MachineFunction &Fn) {
-  const HexagonTargetObjectFile &TLOF =
-      *static_cast<const HexagonTargetObjectFile *>(
-          Fn.getTarget().getObjFileLowering());
-  if (TLOF.isSmallDataEnabled())
-    return true;
+  auto &HST = Fn.getSubtarget<HexagonSubtarget>();
+  auto &HTM = static_cast<const HexagonTargetMachine&>(Fn.getTarget());
+  auto &TLOF = *HTM.getObjFileLowering();
+  if (HST.useSmallData() && TLOF.isSmallDataEnabled())
+    return false;
 
-  const TargetInstrInfo *TII = Fn.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = Fn.getSubtarget().getRegisterInfo();
+  const TargetInstrInfo *TII = HST.getInstrInfo();
+  const TargetRegisterInfo *TRI = HST.getRegisterInfo();
 
   // Loop over all of the basic blocks
   for (MachineBasicBlock &B : Fn) {
@@ -109,7 +109,6 @@ bool HexagonSplitConst32AndConst64::runOnMachineFunction(MachineFunction &Fn) {
 //===----------------------------------------------------------------------===//
 //                         Public Constructor Functions
 //===----------------------------------------------------------------------===//
-
 FunctionPass *llvm::createHexagonSplitConst32AndConst64() {
   return new HexagonSplitConst32AndConst64();
 }

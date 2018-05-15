@@ -1107,19 +1107,21 @@ __m256i test_mm512_maskz_cvtusepi16_epi8(__mmask32 __M, __m512i __A) {
 
 __m256i test_mm512_cvtepi16_epi8(__m512i __A) {
   // CHECK-LABEL: @test_mm512_cvtepi16_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmov.wb.512
+  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
   return _mm512_cvtepi16_epi8(__A); 
 }
 
 __m256i test_mm512_mask_cvtepi16_epi8(__m256i __O, __mmask32 __M, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtepi16_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmov.wb.512
+  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm512_mask_cvtepi16_epi8(__O, __M, __A); 
 }
 
 __m256i test_mm512_maskz_cvtepi16_epi8(__mmask32 __M, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_cvtepi16_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmov.wb.512
+  // CHECK: trunc <32 x i16> %{{.*}} to <32 x i8>
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
   return _mm512_maskz_cvtepi16_epi8(__M, __A); 
 }
 

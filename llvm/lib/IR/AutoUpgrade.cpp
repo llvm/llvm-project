@@ -293,6 +293,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.load.") || // Added in 3.9
       Name == "sse42.crc32.64.8" || // Added in 3.4
       Name.startswith("avx.vbroadcast.s") || // Added in 3.5
+      Name.startswith("avx512.vbroadcast.s") || // Added in 7.0
       Name.startswith("avx512.mask.palignr.") || // Added in 3.9
       Name.startswith("avx512.mask.valign.") || // Added in 4.0
       Name.startswith("sse2.psll.dq") || // Added in 3.7
@@ -1676,7 +1677,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Trunc0 = Builder.CreateTrunc(CI->getArgOperand(0), Type::getInt32Ty(C));
       Rep = Builder.CreateCall(CRC32, {Trunc0, CI->getArgOperand(1)});
       Rep = Builder.CreateZExt(Rep, CI->getType(), "");
-    } else if (IsX86 && Name.startswith("avx.vbroadcast.s")) {
+    } else if (IsX86 && (Name.startswith("avx.vbroadcast.s") ||
+                         Name.startswith("avx512.vbroadcast.s"))) {
       // Replace broadcasts with a series of insertelements.
       Type *VecTy = CI->getType();
       Type *EltTy = VecTy->getVectorElementType();

@@ -249,7 +249,8 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
 
     // If the linkage name is different than the name, go ahead and output
     // that as well into the name table.
-    if (GV->getLinkageName() != "" && GV->getName() != GV->getLinkageName())
+    if (GV->getLinkageName() != "" && GV->getName() != GV->getLinkageName() &&
+        DD->useAllLinkageNames())
       DD->addAccelName(GV->getLinkageName(), *VariableDIE);
   }
 

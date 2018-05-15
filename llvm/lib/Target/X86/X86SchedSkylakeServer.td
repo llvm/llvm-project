@@ -145,9 +145,10 @@ defm : SKXWriteResPair<WriteBEXTR, [SKXPort06,SKXPort15], 2, [1,1], 2>;
 defm : SKXWriteResPair<WriteBZHI, [SKXPort15], 1>;
 
 // Loads, stores, and moves, not folded with other operations.
-def : WriteRes<WriteLoad,  [SKXPort23]> { let Latency = 5; }
-def : WriteRes<WriteStore, [SKXPort237, SKXPort4]>;
-def : WriteRes<WriteMove,  [SKXPort0156]>;
+defm : X86WriteRes<WriteLoad,    [SKXPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteStore,   [SKXPort237, SKXPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteStoreNT, [SKXPort237, SKXPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteMove,    [SKXPort0156], 1, [1], 1>;
 
 // Idioms that clear a register, like xorps %xmm0, %xmm0.
 // These can often bypass execution ports completely.
@@ -166,6 +167,9 @@ defm : X86WriteRes<WriteFMaskedLoadY,  [SKXPort23,SKXPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteFStore,        [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreX,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreY,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreNT,      [SKXPort237,SKXPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreNTX,     [SKXPort237,SKXPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreNTY,     [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStore,  [SKXPort237,SKXPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStoreY, [SKXPort237,SKXPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteFMove,         [SKXPort015], 1, [1], 1>;
@@ -258,11 +262,15 @@ def  : WriteRes<WriteCvtF2FSt, [SKXPort4,SKXPort5,SKXPort237,SKXPort015]> {
 defm : X86WriteRes<WriteVecLoad,         [SKXPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteVecLoadX,        [SKXPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteVecLoadY,        [SKXPort23], 7, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNT,       [SKXPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNTY,      [SKXPort23], 7, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [SKXPort23,SKXPort015], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [SKXPort23,SKXPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecStore,        [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreX,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreNT,      [SKXPort237,SKXPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreNTY,     [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStore,  [SKXPort237,SKXPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [SKXPort237,SKXPort0], 2, [1,1], 2>;
 defm : X86WriteRes<WriteVecMove,         [SKXPort015], 1, [1], 1>;
@@ -605,8 +613,6 @@ def SKXWriteResGroup11 : SchedWriteRes<[SKXPort4,SKXPort237]> {
 def: InstRW<[SKXWriteResGroup11], (instregex "FBSTPm",
                                              "KMOV(B|D|Q|W)mk",
                                              "MMX_MOVD64mr",
-                                             "MOVNTI_64mr",
-                                             "MOVNTImr",
                                              "ST_FP(32|64|80)m",
                                              "VMOV(H|L)(PD|PS)Z128mr(b?)",
                                              "(V?)MOV(H|L)(PD|PS)mr",

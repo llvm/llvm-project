@@ -2983,6 +2983,9 @@ bool HexagonInstrInfo::mayBeCurLoad(const MachineInstr &MI) const {
 
 // Returns true, if a ST insn can be promoted to a new-value store.
 bool HexagonInstrInfo::mayBeNewStore(const MachineInstr &MI) const {
+  if (MI.mayStore() && !Subtarget.useNewValueStores())
+    return false;
+
   const uint64_t F = MI.getDesc().TSFlags;
   return (F >> HexagonII::mayNVStorePos) & HexagonII::mayNVStoreMask;
 }

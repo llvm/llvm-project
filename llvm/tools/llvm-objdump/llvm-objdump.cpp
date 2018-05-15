@@ -401,277 +401,6 @@ bool llvm::RelocAddressLess(RelocationRef a, RelocationRef b) {
   return a.getOffset() < b.getOffset();
 }
 
-namespace {
-class SourcePrinter {
-protected:
-  DILineInfo OldLineInfo;
-  const ObjectFile *Obj = nullptr;
-  std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
-  // File name to file contents of source
-  std::unordered_map<std::string, std::unique_ptr<MemoryBuffer>> SourceCache;
-  // Mark the line endings of the cached source
-  std::unordered_map<std::string, std::vector<StringRef>> LineCache;
-
-private:
-  bool cacheSource(const DILineInfo& LineInfoFile);
-
-public:
-  SourcePrinter() = default;
-  SourcePrinter(const ObjectFile *Obj, StringRef DefaultArch) : Obj(Obj) {
-    symbolize::LLVMSymbolizer::Options SymbolizerOpts(
-        DILineInfoSpecifier::FunctionNameKind::None, true, false, false,
-        DefaultArch);
-    Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
-  }
-  virtual ~SourcePrinter() = default;
-  virtual void printSourceLine(raw_ostream &OS, uint64_t Address,
-                               StringRef Delimiter = "; ");
-};
-
-bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
-  std::unique_ptr<MemoryBuffer> Buffer;
-  if (LineInfo.Source) {
-    Buffer = MemoryBuffer::getMemBuffer(*LineInfo.Source);
-  } else {
-    auto BufferOrError = MemoryBuffer::getFile(LineInfo.FileName);
-    if (!BufferOrError)
-      return false;
-    Buffer = std::move(*BufferOrError);
-  }
-  // Chomp the file to get lines
-  size_t BufferSize = Buffer->getBufferSize();
-  const char *BufferStart = Buffer->getBufferStart();
-  for (const char *Start = BufferStart, *End = BufferStart;
-       End < BufferStart + BufferSize; End++)
-    if (*End == '\n' || End == BufferStart + BufferSize - 1 ||
-        (*End == '\r' && *(End + 1) == '\n')) {
-      LineCache[LineInfo.FileName].push_back(StringRef(Start, End - Start));
-      if (*End == '\r')
-        End++;
-      Start = End + 1;
-    }
-  SourceCache[LineInfo.FileName] = std::move(Buffer);
-  return true;
-}
-
-void SourcePrinter::printSourceLine(raw_ostream &OS, uint64_t Address,
-                                    StringRef Delimiter) {
-  if (!Symbolizer)
-    return;
-  DILineInfo LineInfo = DILineInfo();
-  auto ExpectecLineInfo =
-      Symbolizer->symbolizeCode(Obj->getFileName(), Address);
-  if (!ExpectecLineInfo)
-    consumeError(ExpectecLineInfo.takeError());
-  else
-    LineInfo = *ExpectecLineInfo;
-
-  if ((LineInfo.FileName == "<invalid>") || OldLineInfo.Line == LineInfo.Line ||
-      LineInfo.Line == 0)
-    return;
-
-  if (PrintLines)
-    OS << Delimiter << LineInfo.FileName << ":" << LineInfo.Line << "\n";
-  if (PrintSource) {
-    if (SourceCache.find(LineInfo.FileName) == SourceCache.end())
-      if (!cacheSource(LineInfo))
-        return;
-    auto FileBuffer = SourceCache.find(LineInfo.FileName);
-    if (FileBuffer != SourceCache.end()) {
-      auto LineBuffer = LineCache.find(LineInfo.FileName);
-      if (LineBuffer != LineCache.end()) {
-        if (LineInfo.Line > LineBuffer->second.size())
-          return;
-        // Vector begins at 0, line numbers are non-zero
-        OS << Delimiter << LineBuffer->second[LineInfo.Line - 1].ltrim()
-           << "\n";
-      }
-    }
-  }
-  OldLineInfo = LineInfo;
-}
-
-static bool isArmElf(const ObjectFile *Obj) {
-  return (Obj->isELF() &&
-          (Obj->getArch() == Triple::aarch64 ||
-           Obj->getArch() == Triple::aarch64_be ||
-           Obj->getArch() == Triple::arm || Obj->getArch() == Triple::armeb ||
-           Obj->getArch() == Triple::thumb ||
-           Obj->getArch() == Triple::thumbeb));
-}
-
-class PrettyPrinter {
-public:
-  virtual ~PrettyPrinter() = default;
-  virtual void printInst(MCInstPrinter &IP, const MCInst *MI,
-                         ArrayRef<uint8_t> Bytes, uint64_t Address,
-                         raw_ostream &OS, StringRef Annot,
-                         MCSubtargetInfo const &STI, SourcePrinter *SP) {
-    if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address);
-    if (!NoLeadingAddr)
-      OS << format("%8" PRIx64 ":", Address);
-    if (!NoShowRawInsn) {
-      OS << "\t";
-      dumpBytes(Bytes, OS);
-    }
-    if (MI)
-      IP.printInst(MI, OS, "", STI);
-    else
-      OS << " <unknown>";
-  }
-};
-PrettyPrinter PrettyPrinterInst;
-class HexagonPrettyPrinter : public PrettyPrinter {
-public:
-  void printLead(ArrayRef<uint8_t> Bytes, uint64_t Address,
-                 raw_ostream &OS) {
-    uint32_t opcode =
-      (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
-    if (!NoLeadingAddr)
-      OS << format("%8" PRIx64 ":", Address);
-    if (!NoShowRawInsn) {
-      OS << "\t";
-      dumpBytes(Bytes.slice(0, 4), OS);
-      OS << format("%08" PRIx32, opcode);
-    }
-  }
-  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 uint64_t Address, raw_ostream &OS, StringRef Annot,
-                 MCSubtargetInfo const &STI, SourcePrinter *SP) override {
-    if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, "");
-    if (!MI) {
-      printLead(Bytes, Address, OS);
-      OS << " <unknown>";
-      return;
-    }
-    std::string Buffer;
-    {
-      raw_string_ostream TempStream(Buffer);
-      IP.printInst(MI, TempStream, "", STI);
-    }
-    StringRef Contents(Buffer);
-    // Split off bundle attributes
-    auto PacketBundle = Contents.rsplit('\n');
-    // Split off first instruction from the rest
-    auto HeadTail = PacketBundle.first.split('\n');
-    auto Preamble = " { ";
-    auto Separator = "";
-    while(!HeadTail.first.empty()) {
-      OS << Separator;
-      Separator = "\n";
-      if (SP && (PrintSource || PrintLines))
-        SP->printSourceLine(OS, Address, "");
-      printLead(Bytes, Address, OS);
-      OS << Preamble;
-      Preamble = "   ";
-      StringRef Inst;
-      auto Duplex = HeadTail.first.split('\v');
-      if(!Duplex.second.empty()){
-        OS << Duplex.first;
-        OS << "; ";
-        Inst = Duplex.second;
-      }
-      else
-        Inst = HeadTail.first;
-      OS << Inst;
-      Bytes = Bytes.slice(4);
-      Address += 4;
-      HeadTail = HeadTail.second.split('\n');
-    }
-    OS << " } " << PacketBundle.second;
-  }
-};
-HexagonPrettyPrinter HexagonPrettyPrinterInst;
-
-class AMDGCNPrettyPrinter : public PrettyPrinter {
-public:
-  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 uint64_t Address, raw_ostream &OS, StringRef Annot,
-                 MCSubtargetInfo const &STI, SourcePrinter *SP) override {
-    if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address);
-
-    typedef support::ulittle32_t U32;
-
-    if (MI) {
-      SmallString<40> InstStr;
-      raw_svector_ostream IS(InstStr);
-
-      IP.printInst(MI, IS, "", STI);
-
-      OS << left_justify(IS.str(), 60);
-    } else {
-      // an unrecognized encoding - this is probably data so represent it
-      // using the .long directive, or .byte directive if fewer than 4 bytes
-      // remaining
-      if (Bytes.size() >= 4) {
-        OS << format("\t.long 0x%08" PRIx32 " ",
-                     static_cast<uint32_t>(*reinterpret_cast<const U32*>(Bytes.data())));
-        OS.indent(42);
-      } else {
-          OS << format("\t.byte 0x%02" PRIx8, Bytes[0]);
-          for (unsigned int i = 1; i < Bytes.size(); i++)
-            OS << format(", 0x%02" PRIx8, Bytes[i]);
-          OS.indent(55 - (6 * Bytes.size()));
-      }
-    }
-
-    OS << format("// %012" PRIX64 ": ", Address);
-    if (Bytes.size() >=4) {
-      for (auto D : makeArrayRef(reinterpret_cast<const U32*>(Bytes.data()),
-                                 Bytes.size() / sizeof(U32)))
-        // D should be explicitly casted to uint32_t here as it is passed
-        // by format to snprintf as vararg.
-        OS << format("%08" PRIX32 " ", static_cast<uint32_t>(D));
-    } else {
-      for (unsigned int i = 0; i < Bytes.size(); i++)
-        OS << format("%02" PRIX8 " ", Bytes[i]);
-    }
-
-    if (!Annot.empty())
-      OS << "// " << Annot;
-  }
-};
-AMDGCNPrettyPrinter AMDGCNPrettyPrinterInst;
-
-class BPFPrettyPrinter : public PrettyPrinter {
-public:
-  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 uint64_t Address, raw_ostream &OS, StringRef Annot,
-                 MCSubtargetInfo const &STI, SourcePrinter *SP) override {
-    if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address);
-    if (!NoLeadingAddr)
-      OS << format("%8" PRId64 ":", Address / 8);
-    if (!NoShowRawInsn) {
-      OS << "\t";
-      dumpBytes(Bytes, OS);
-    }
-    if (MI)
-      IP.printInst(MI, OS, "", STI);
-    else
-      OS << " <unknown>";
-  }
-};
-BPFPrettyPrinter BPFPrettyPrinterInst;
-
-PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
-  switch(Triple.getArch()) {
-  default:
-    return PrettyPrinterInst;
-  case Triple::hexagon:
-    return HexagonPrettyPrinterInst;
-  case Triple::amdgcn:
-    return AMDGCNPrettyPrinterInst;
-  case Triple::bpfel:
-  case Triple::bpfeb:
-    return BPFPrettyPrinterInst;
-  }
-}
-}
-
 template <class ELFT>
 static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
                                                 const RelocationRef &RelRef,
@@ -1162,6 +891,304 @@ static bool getHidden(RelocationRef RelRef) {
   return false;
 }
 
+namespace {
+class SourcePrinter {
+protected:
+  DILineInfo OldLineInfo;
+  const ObjectFile *Obj = nullptr;
+  std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
+  // File name to file contents of source
+  std::unordered_map<std::string, std::unique_ptr<MemoryBuffer>> SourceCache;
+  // Mark the line endings of the cached source
+  std::unordered_map<std::string, std::vector<StringRef>> LineCache;
+
+private:
+  bool cacheSource(const DILineInfo& LineInfoFile);
+
+public:
+  SourcePrinter() = default;
+  SourcePrinter(const ObjectFile *Obj, StringRef DefaultArch) : Obj(Obj) {
+    symbolize::LLVMSymbolizer::Options SymbolizerOpts(
+        DILineInfoSpecifier::FunctionNameKind::None, true, false, false,
+        DefaultArch);
+    Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
+  }
+  virtual ~SourcePrinter() = default;
+  virtual void printSourceLine(raw_ostream &OS, uint64_t Address,
+                               StringRef Delimiter = "; ");
+};
+
+bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
+  std::unique_ptr<MemoryBuffer> Buffer;
+  if (LineInfo.Source) {
+    Buffer = MemoryBuffer::getMemBuffer(*LineInfo.Source);
+  } else {
+    auto BufferOrError = MemoryBuffer::getFile(LineInfo.FileName);
+    if (!BufferOrError)
+      return false;
+    Buffer = std::move(*BufferOrError);
+  }
+  // Chomp the file to get lines
+  size_t BufferSize = Buffer->getBufferSize();
+  const char *BufferStart = Buffer->getBufferStart();
+  for (const char *Start = BufferStart, *End = BufferStart;
+       End < BufferStart + BufferSize; End++)
+    if (*End == '\n' || End == BufferStart + BufferSize - 1 ||
+        (*End == '\r' && *(End + 1) == '\n')) {
+      LineCache[LineInfo.FileName].push_back(StringRef(Start, End - Start));
+      if (*End == '\r')
+        End++;
+      Start = End + 1;
+    }
+  SourceCache[LineInfo.FileName] = std::move(Buffer);
+  return true;
+}
+
+void SourcePrinter::printSourceLine(raw_ostream &OS, uint64_t Address,
+                                    StringRef Delimiter) {
+  if (!Symbolizer)
+    return;
+  DILineInfo LineInfo = DILineInfo();
+  auto ExpectecLineInfo =
+      Symbolizer->symbolizeCode(Obj->getFileName(), Address);
+  if (!ExpectecLineInfo)
+    consumeError(ExpectecLineInfo.takeError());
+  else
+    LineInfo = *ExpectecLineInfo;
+
+  if ((LineInfo.FileName == "<invalid>") || OldLineInfo.Line == LineInfo.Line ||
+      LineInfo.Line == 0)
+    return;
+
+  if (PrintLines)
+    OS << Delimiter << LineInfo.FileName << ":" << LineInfo.Line << "\n";
+  if (PrintSource) {
+    if (SourceCache.find(LineInfo.FileName) == SourceCache.end())
+      if (!cacheSource(LineInfo))
+        return;
+    auto FileBuffer = SourceCache.find(LineInfo.FileName);
+    if (FileBuffer != SourceCache.end()) {
+      auto LineBuffer = LineCache.find(LineInfo.FileName);
+      if (LineBuffer != LineCache.end()) {
+        if (LineInfo.Line > LineBuffer->second.size())
+          return;
+        // Vector begins at 0, line numbers are non-zero
+        OS << Delimiter << LineBuffer->second[LineInfo.Line - 1].ltrim()
+           << "\n";
+      }
+    }
+  }
+  OldLineInfo = LineInfo;
+}
+
+static bool isArmElf(const ObjectFile *Obj) {
+  return (Obj->isELF() &&
+          (Obj->getArch() == Triple::aarch64 ||
+           Obj->getArch() == Triple::aarch64_be ||
+           Obj->getArch() == Triple::arm || Obj->getArch() == Triple::armeb ||
+           Obj->getArch() == Triple::thumb ||
+           Obj->getArch() == Triple::thumbeb));
+}
+
+class PrettyPrinter {
+public:
+  virtual ~PrettyPrinter() = default;
+  virtual void printInst(MCInstPrinter &IP, const MCInst *MI,
+                         ArrayRef<uint8_t> Bytes, uint64_t Address,
+                         raw_ostream &OS, StringRef Annot,
+                         MCSubtargetInfo const &STI, SourcePrinter *SP,
+                         std::vector<RelocationRef> *Rels = nullptr) {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address);
+    if (!NoLeadingAddr)
+      OS << format("%8" PRIx64 ":", Address);
+    if (!NoShowRawInsn) {
+      OS << "\t";
+      dumpBytes(Bytes, OS);
+    }
+    if (MI)
+      IP.printInst(MI, OS, "", STI);
+    else
+      OS << " <unknown>";
+  }
+};
+PrettyPrinter PrettyPrinterInst;
+class HexagonPrettyPrinter : public PrettyPrinter {
+public:
+  void printLead(ArrayRef<uint8_t> Bytes, uint64_t Address,
+                 raw_ostream &OS) {
+    uint32_t opcode =
+      (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
+    if (!NoLeadingAddr)
+      OS << format("%8" PRIx64 ":", Address);
+    if (!NoShowRawInsn) {
+      OS << "\t";
+      dumpBytes(Bytes.slice(0, 4), OS);
+      OS << format("%08" PRIx32, opcode);
+    }
+  }
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 uint64_t Address, raw_ostream &OS, StringRef Annot,
+                 MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 std::vector<RelocationRef> *Rels) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address, "");
+    if (!MI) {
+      printLead(Bytes, Address, OS);
+      OS << " <unknown>";
+      return;
+    }
+    std::string Buffer;
+    {
+      raw_string_ostream TempStream(Buffer);
+      IP.printInst(MI, TempStream, "", STI);
+    }
+    StringRef Contents(Buffer);
+    // Split off bundle attributes
+    auto PacketBundle = Contents.rsplit('\n');
+    // Split off first instruction from the rest
+    auto HeadTail = PacketBundle.first.split('\n');
+    auto Preamble = " { ";
+    auto Separator = "";
+    StringRef Fmt = "\t\t\t%08" PRIx64 ":  ";
+    std::vector<RelocationRef>::const_iterator rel_cur = Rels->begin();
+    std::vector<RelocationRef>::const_iterator rel_end = Rels->end();
+
+    // Hexagon's packets require relocations to be inline rather than
+    // clustered at the end of the packet.
+    auto PrintReloc = [&]() -> void {
+      while ((rel_cur != rel_end) && (rel_cur->getOffset() <= Address)) {
+        if (rel_cur->getOffset() == Address) {
+          SmallString<16> name;
+          SmallString<32> val;
+          rel_cur->getTypeName(name);
+          error(getRelocationValueString(*rel_cur, val));
+          OS << Separator << format(Fmt.data(), Address) << name << "\t" << val
+                << "\n";
+          return;
+        }
+        rel_cur++;
+      }
+    };
+
+    while(!HeadTail.first.empty()) {
+      OS << Separator;
+      Separator = "\n";
+      if (SP && (PrintSource || PrintLines))
+        SP->printSourceLine(OS, Address, "");
+      printLead(Bytes, Address, OS);
+      OS << Preamble;
+      Preamble = "   ";
+      StringRef Inst;
+      auto Duplex = HeadTail.first.split('\v');
+      if(!Duplex.second.empty()){
+        OS << Duplex.first;
+        OS << "; ";
+        Inst = Duplex.second;
+      }
+      else
+        Inst = HeadTail.first;
+      OS << Inst;
+      HeadTail = HeadTail.second.split('\n');
+      if (HeadTail.first.empty())
+        OS << " } " << PacketBundle.second;
+      PrintReloc();
+      Bytes = Bytes.slice(4);
+      Address += 4;
+    }
+  }
+};
+HexagonPrettyPrinter HexagonPrettyPrinterInst;
+
+class AMDGCNPrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 uint64_t Address, raw_ostream &OS, StringRef Annot,
+                 MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 std::vector<RelocationRef> *Rels) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address);
+
+    typedef support::ulittle32_t U32;
+
+    if (MI) {
+      SmallString<40> InstStr;
+      raw_svector_ostream IS(InstStr);
+
+      IP.printInst(MI, IS, "", STI);
+
+      OS << left_justify(IS.str(), 60);
+    } else {
+      // an unrecognized encoding - this is probably data so represent it
+      // using the .long directive, or .byte directive if fewer than 4 bytes
+      // remaining
+      if (Bytes.size() >= 4) {
+        OS << format("\t.long 0x%08" PRIx32 " ",
+                     static_cast<uint32_t>(*reinterpret_cast<const U32*>(Bytes.data())));
+        OS.indent(42);
+      } else {
+          OS << format("\t.byte 0x%02" PRIx8, Bytes[0]);
+          for (unsigned int i = 1; i < Bytes.size(); i++)
+            OS << format(", 0x%02" PRIx8, Bytes[i]);
+          OS.indent(55 - (6 * Bytes.size()));
+      }
+    }
+
+    OS << format("// %012" PRIX64 ": ", Address);
+    if (Bytes.size() >=4) {
+      for (auto D : makeArrayRef(reinterpret_cast<const U32*>(Bytes.data()),
+                                 Bytes.size() / sizeof(U32)))
+        // D should be explicitly casted to uint32_t here as it is passed
+        // by format to snprintf as vararg.
+        OS << format("%08" PRIX32 " ", static_cast<uint32_t>(D));
+    } else {
+      for (unsigned int i = 0; i < Bytes.size(); i++)
+        OS << format("%02" PRIX8 " ", Bytes[i]);
+    }
+
+    if (!Annot.empty())
+      OS << "// " << Annot;
+  }
+};
+AMDGCNPrettyPrinter AMDGCNPrettyPrinterInst;
+
+class BPFPrettyPrinter : public PrettyPrinter {
+public:
+  void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
+                 uint64_t Address, raw_ostream &OS, StringRef Annot,
+                 MCSubtargetInfo const &STI, SourcePrinter *SP,
+                 std::vector<RelocationRef> *Rels) override {
+    if (SP && (PrintSource || PrintLines))
+      SP->printSourceLine(OS, Address);
+    if (!NoLeadingAddr)
+      OS << format("%8" PRId64 ":", Address / 8);
+    if (!NoShowRawInsn) {
+      OS << "\t";
+      dumpBytes(Bytes, OS);
+    }
+    if (MI)
+      IP.printInst(MI, OS, "", STI);
+    else
+      OS << " <unknown>";
+  }
+};
+BPFPrettyPrinter BPFPrettyPrinterInst;
+
+PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
+  switch(Triple.getArch()) {
+  default:
+    return PrettyPrinterInst;
+  case Triple::hexagon:
+    return HexagonPrettyPrinterInst;
+  case Triple::amdgcn:
+    return AMDGCNPrettyPrinterInst;
+  case Triple::bpfel:
+  case Triple::bpfeb:
+    return BPFPrettyPrinterInst;
+  }
+}
+}
+
 static uint8_t getElfSymbolType(const ObjectFile *Obj, const SymbolRef &Sym) {
   assert(Obj->isELF());
   if (auto *Elf32LEObj = dyn_cast<ELF32LEObjectFile>(Obj))
@@ -1647,7 +1674,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
         PIP.printInst(*IP, Disassembled ? &Inst : nullptr,
                       Bytes.slice(Index, Size), SectionAddr + Index, outs(), "",
-                      *STI, &SP);
+                      *STI, &SP, &Rels);
         outs() << CommentStream.str();
         Comments.clear();
 
@@ -1704,27 +1731,29 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
         }
         outs() << "\n";
 
-        // Print relocation for instruction.
-        while (rel_cur != rel_end) {
-          bool hidden = getHidden(*rel_cur);
-          uint64_t addr = rel_cur->getOffset();
-          SmallString<16> name;
-          SmallString<32> val;
+        // Hexagon does this in pretty printer
+        if (Obj->getArch() != Triple::hexagon)
+          // Print relocation for instruction.
+          while (rel_cur != rel_end) {
+            bool hidden = getHidden(*rel_cur);
+            uint64_t addr = rel_cur->getOffset();
+            SmallString<16> name;
+            SmallString<32> val;
 
-          // If this relocation is hidden, skip it.
-          if (hidden || ((SectionAddr + addr) < StartAddress)) {
+            // If this relocation is hidden, skip it.
+            if (hidden || ((SectionAddr + addr) < StartAddress)) {
+              ++rel_cur;
+              continue;
+            }
+
+            // Stop when rel_cur's address is past the current instruction.
+            if (addr >= Index + Size) break;
+            rel_cur->getTypeName(name);
+            error(getRelocationValueString(*rel_cur, val));
+            outs() << format(Fmt.data(), SectionAddr + addr) << name
+                   << "\t" << val << "\n";
             ++rel_cur;
-            continue;
           }
-
-          // Stop when rel_cur's address is past the current instruction.
-          if (addr >= Index + Size) break;
-          rel_cur->getTypeName(name);
-          error(getRelocationValueString(*rel_cur, val));
-          outs() << format(Fmt.data(), SectionAddr + addr) << name
-                 << "\t" << val << "\n";
-          ++rel_cur;
-        }
       }
     }
   }

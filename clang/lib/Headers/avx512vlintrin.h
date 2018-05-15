@@ -7627,24 +7627,23 @@ _mm_mask_cvtepi32_storeu_epi16 (void * __P, __mmask8 __M, __m128i __A)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_cvtepi32_epi16 (__m256i __A)
 {
-  return (__m128i) __builtin_ia32_pmovdw256_mask ((__v8si) __A,
-              (__v8hi)_mm_setzero_si128 (),
-              (__mmask8) -1);
+  return (__m128i)__builtin_convertvector((__v8si)__A, __v8hi);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_mask_cvtepi32_epi16 (__m128i __O, __mmask8 __M, __m256i __A)
 {
-  return (__m128i) __builtin_ia32_pmovdw256_mask ((__v8si) __A,
-              (__v8hi) __O, __M);
+  return (__m128i)__builtin_ia32_selectw_128((__mmask8)__M,
+                                             (__v8hi)_mm256_cvtepi32_epi16(__A),
+                                             (__v8hi)__O);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_maskz_cvtepi32_epi16 (__mmask8 __M, __m256i __A)
 {
-  return (__m128i) __builtin_ia32_pmovdw256_mask ((__v8si) __A,
-              (__v8hi) _mm_setzero_si128 (),
-              __M);
+  return (__m128i)__builtin_ia32_selectw_128((__mmask8)__M,
+                                             (__v8hi)_mm256_cvtepi32_epi16(__A),
+                                             (__v8hi)_mm_setzero_si128());
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
@@ -7743,24 +7742,23 @@ _mm_mask_cvtepi64_storeu_epi32 (void * __P, __mmask8 __M, __m128i __A)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_cvtepi64_epi32 (__m256i __A)
 {
-  return (__m128i) __builtin_ia32_pmovqd256_mask ((__v4di) __A,
-              (__v4si) _mm_undefined_si128(),
-              (__mmask8) -1);
+  return (__m128i)__builtin_convertvector((__v4di)__A, __v4si);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_mask_cvtepi64_epi32 (__m128i __O, __mmask8 __M, __m256i __A)
 {
-  return (__m128i) __builtin_ia32_pmovqd256_mask ((__v4di) __A,
-              (__v4si) __O, __M);
+  return (__m128i)__builtin_ia32_selectd_128((__mmask8)__M,
+                                             (__v4si)_mm256_cvtepi64_epi32(__A),
+                                             (__v4si)__O);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_maskz_cvtepi64_epi32 (__mmask8 __M, __m256i __A)
 {
-  return (__m128i) __builtin_ia32_pmovqd256_mask ((__v4di) __A,
-              (__v4si) _mm_setzero_si128 (),
-              __M);
+  return (__m128i)__builtin_ia32_selectd_128((__mmask8)__M,
+                                             (__v4si)_mm256_cvtepi64_epi32(__A),
+                                             (__v4si)_mm_setzero_si128());
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
