@@ -189,6 +189,13 @@ void ProcessLaunchInfo::SetMonitorProcessCallback(
   m_monitor_signals = monitor_signals;
 }
 
+bool ProcessLaunchInfo::NoOpMonitorCallback(lldb::pid_t pid, bool exited, int signal, int status) {
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
+  LLDB_LOG(log, "pid = {0}, exited = {1}, signal = {2}, status = {3}", pid,
+           exited, signal, status);
+  return true;
+}
+
 bool ProcessLaunchInfo::MonitorProcess() const {
   if (m_monitor_callback && ProcessIDIsValid()) {
     Host::StartMonitoringChildProcess(m_monitor_callback, GetProcessID(),

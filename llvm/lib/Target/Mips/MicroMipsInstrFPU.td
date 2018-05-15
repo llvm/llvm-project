@@ -414,3 +414,20 @@ def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
               (CVT_S_D32_MM AFGR64Opnd:$src)>, ISA_MICROMIPS, FGR_32;
 def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
               (CVT_D32_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS, FGR_32;
+
+// Selects
+defm : MovzPats0<GPR32, FGR32, MOVZ_I_S_MM, SLT_MM, SLTu_MM, SLTi_MM, SLTiu_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6;
+defm : MovzPats1<GPR32, FGR32, MOVZ_I_S_MM, XOR_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6;
+
+defm : MovnPats<GPR32, FGR32, MOVN_I_S_MM, XOR_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6;
+
+defm : MovzPats0<GPR32, AFGR64, MOVZ_I_D32_MM, SLT_MM, SLTu_MM, SLTi_MM,
+                 SLTiu_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+defm : MovzPats1<GPR32, AFGR64, MOVZ_I_D32_MM, XOR_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;
+defm : MovnPats<GPR32, AFGR64, MOVN_I_D32_MM, XOR_MM>,
+       ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32;

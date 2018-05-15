@@ -1068,7 +1068,7 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx,
   }
 
   // Parse the LLVM options before we process files in case the file handling
-  // makes use of things like DEBUG().
+  // makes use of things like LLVM_DEBUG().
   parseLLVMOptions(ctx);
 
   // Handle input files and sectcreate.

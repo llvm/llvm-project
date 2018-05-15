@@ -399,10 +399,10 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
     getManager()->getContext(FD);
   bool IsAutosynthesized;
   Stmt* Body = AD->getBody(IsAutosynthesized);
-  DEBUG({
-      if (IsAutosynthesized)
-        llvm::dbgs() << "Using autosynthesized body for " << FD->getName()
-                     << "\n";
+  LLVM_DEBUG({
+    if (IsAutosynthesized)
+      llvm::dbgs() << "Using autosynthesized body for " << FD->getName()
+                   << "\n";
   });
   if (Body) {
     const Decl* Decl = AD->getDecl();

@@ -43,20 +43,20 @@ labs = 0x1AB5
 // CHECK:         VMA              LMA     Size Align Out     In      Symbol
 // CHECK-NEXT: 2001c8           2001c8       78     8 .dynsym
 // CHECK-NEXT: 2001c8           2001c8       78     8         <internal>:(.dynsym)
-// CHECK-NEXT: 200240           200240       2c     8 .gnu.hash
-// CHECK-NEXT: 200240           200240       2c     8         <internal>:(.gnu.hash)
-// CHECK-NEXT: 20026c           20026c       30     4 .hash
-// CHECK-NEXT: 20026c           20026c       30     4         <internal>:(.hash)
-// CHECK-NEXT: 20029c           20029c       31     1 .dynstr
-// CHECK-NEXT: 20029c           20029c       31     1         <internal>:(.dynstr)
-// CHECK-NEXT: 2002d0           2002d0       30     8 .rela.dyn
-// CHECK-NEXT: 2002d0           2002d0       30     8         <internal>:(.rela.dyn)
-// CHECK-NEXT: 200300           200300       30     8 .rela.plt
-// CHECK-NEXT: 200300           200300       30     8         <internal>:(.rela.plt)
-// CHECK-NEXT: 200330           200330       64     8 .eh_frame
-// CHECK-NEXT: 200330           200330       2c     1         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.eh_frame+0x0)
-// CHECK-NEXT: 200360           200360       14     1         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.eh_frame+0x2c)
-// CHECK-NEXT: 200378           200378       18     1         {{.*}}{{/|\\}}map-file.s.tmp2.o:(.eh_frame+0x18)
+// CHECK-NEXT: 200240           200240       31     1 .dynstr
+// CHECK-NEXT: 200240           200240       31     1         <internal>:(.dynstr)
+// CHECK-NEXT: 200278           200278       2c     8 .gnu.hash
+// CHECK-NEXT: 200278           200278       2c     8         <internal>:(.gnu.hash)
+// CHECK-NEXT: 2002a4           2002a4       30     4 .hash
+// CHECK-NEXT: 2002a4           2002a4       30     4         <internal>:(.hash)
+// CHECK-NEXT: 2002d8           2002d8       30     8 .rela.dyn
+// CHECK-NEXT: 2002d8           2002d8       30     8         <internal>:(.rela.dyn)
+// CHECK-NEXT: 200308           200308       30     8 .rela.plt
+// CHECK-NEXT: 200308           200308       30     8         <internal>:(.rela.plt)
+// CHECK-NEXT: 200338           200338       64     8 .eh_frame
+// CHECK-NEXT: 200338           200338       2c     1         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.eh_frame+0x0)
+// CHECK-NEXT: 200368           200368       14     1         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.eh_frame+0x2c)
+// CHECK-NEXT: 200380           200380       18     1         {{.*}}{{/|\\}}map-file.s.tmp2.o:(.eh_frame+0x18)
 // CHECK-NEXT: 201000           201000       2d     4 .text
 // CHECK-NEXT: 201000           201000       28     4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.text)
 // CHECK-NEXT: 201000           201000        0     1                 _start
@@ -94,6 +94,7 @@ labs = 0x1AB5
 // CHECK-NEXT:      0                0       84     1         <internal>:(.shstrtab)
 // CHECK-NEXT:      0                0       6d     1 .strtab
 // CHECK-NEXT:      0                0       6d     1         <internal>:(.strtab)
+
 
 // RUN: not ld.lld %t1.o %t2.o %t3.o %t4.a -o %t -Map=/ 2>&1 \
 // RUN:  | FileCheck -check-prefix=FAIL %s

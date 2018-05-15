@@ -143,7 +143,7 @@ define <8 x i16> @test_vcvtps2ph_128(<4 x float> %a0, <4 x float> %a1, <4 x i16>
 ; BROADWELL-LABEL: test_vcvtps2ph_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvtps2ph $0, %xmm0, %xmm0 # sched: [4:1.00]
-; BROADWELL-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [4:1.00]
+; BROADWELL-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [5:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vcvtps2ph_128:
@@ -196,7 +196,7 @@ define <8 x i16> @test_vcvtps2ph_256(<8 x float> %a0, <8 x float> %a1, <8 x i16>
 ; BROADWELL-LABEL: test_vcvtps2ph_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [6:1.00]
-; BROADWELL-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [4:1.00]
+; BROADWELL-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [7:1.00]
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;

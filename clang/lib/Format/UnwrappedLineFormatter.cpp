@@ -905,7 +905,8 @@ private:
       Penalty = Queue.top().first.first;
       StateNode *Node = Queue.top().second;
       if (!Node->State.NextToken) {
-        DEBUG(llvm::dbgs() << "\n---\nPenalty for line: " << Penalty << "\n");
+        LLVM_DEBUG(llvm::dbgs()
+                   << "\n---\nPenalty for line: " << Penalty << "\n");
         break;
       }
       Queue.pop();
@@ -929,7 +930,7 @@ private:
     if (Queue.empty()) {
       // We were unable to find a solution, do nothing.
       // FIXME: Add diagnostic?
-      DEBUG(llvm::dbgs() << "Could not find a solution.\n");
+      LLVM_DEBUG(llvm::dbgs() << "Could not find a solution.\n");
       return 0;
     }
 
@@ -937,8 +938,9 @@ private:
     if (!DryRun)
       reconstructPath(InitialState, Queue.top().second);
 
-    DEBUG(llvm::dbgs() << "Total number of analyzed states: " << Count << "\n");
-    DEBUG(llvm::dbgs() << "---\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "Total number of analyzed states: " << Count << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "---\n");
 
     return Penalty;
   }
@@ -980,7 +982,7 @@ private:
       formatChildren(State, (*I)->NewLine, /*DryRun=*/false, Penalty);
       Penalty += Indenter->addTokenToState(State, (*I)->NewLine, false);
 
-      DEBUG({
+      LLVM_DEBUG({
         printLineState((*I)->Previous->State);
         if ((*I)->NewLine) {
           llvm::dbgs() << "Penalty for placing "

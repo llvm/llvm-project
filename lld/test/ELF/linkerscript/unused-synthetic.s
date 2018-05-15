@@ -10,8 +10,10 @@
 # RUN: llvm-objdump -section-headers %t.so | FileCheck %s
 # CHECK-NOT:  .got
 # CHECK-NOT:  .plt
-# CHECK:      .text
-# CHECK-NEXT: .dynsym
+# CHECK:      .dynsym
+# CHECK-NEXT: .dynstr
+# CHECK-NEXT: .text
+# CHECK-NEXT: .gnu.hash
 
 # Test that the size of a removed unused synthetic input section is not added
 # to the output section size. Adding a symbol assignment prevents removal of

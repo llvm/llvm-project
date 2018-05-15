@@ -386,6 +386,8 @@ RCParser::parseSingleOptionalStatement(OptStmtType StmtsType) {
   if (StmtsType != OptStmtType::BasicStmt) {
     if (TypeToken->equals_lower("CAPTION"))
       return parseCaptionStmt();
+    if (TypeToken->equals_lower("CLASS"))
+      return parseClassStmt();
     if (TypeToken->equals_lower("FONT"))
       return parseFontStmt(StmtsType);
     if (TypeToken->equals_lower("STYLE"))
@@ -777,6 +779,11 @@ RCParser::ParseOptionType RCParser::parseVersionStmt() {
 RCParser::ParseOptionType RCParser::parseCaptionStmt() {
   ASSIGN_OR_RETURN(Arg, readString());
   return llvm::make_unique<CaptionStmt>(*Arg);
+}
+
+RCParser::ParseOptionType RCParser::parseClassStmt() {
+  ASSIGN_OR_RETURN(Arg, readIntOrString());
+  return llvm::make_unique<ClassStmt>(*Arg);
 }
 
 RCParser::ParseOptionType RCParser::parseFontStmt(OptStmtType DialogType) {

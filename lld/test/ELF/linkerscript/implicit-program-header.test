@@ -8,8 +8,8 @@
 # RUN: llvm-readobj -elf-output-style=GNU -l %t1 | FileCheck %s
 
 # CHECK:      Segment Sections...
-# CHECK-NEXT:   00     .text .dynsym .hash .dynstr .dynamic
-# CHECK-NEXT:   01     .bar .foo
+# CHECK-NEXT:   00     .text .hash .dynamic
+# CHECK-NEXT:   01     .bar .dynsym .dynstr .foo
 
 PHDRS {
   ph_write PT_LOAD FLAGS(2);

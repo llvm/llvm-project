@@ -9,8 +9,10 @@ SECTIONS {
 }
 
 # CHECK:       Sections:
-# CHECK-NEXT:   Idx Name          Size      Address
-# CHECK-NEXT:    0               00000000 0000000000000000
-# CHECK-NEXT:    1 .text         00000000 0000000000001000
+# CHECK-NEXT:  Idx Name          Size      Address          Type
+# CHECK-NEXT:    0               00000000 0000000000000000 
+# CHECK-NEXT:    1 .dynsym       00000030 0000000000001000 
+# CHECK-NEXT:    2 .dynstr       00000003 0000000000001030 
+# CHECK-NEXT:    3 .text         00000000 0000000000001034
 
-# CHECK: 0000000000000001         .text            00000000 A
+# CHECK: 0000000000000001         .dynsym            00000000 A

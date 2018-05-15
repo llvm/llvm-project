@@ -146,9 +146,9 @@ void RegisterFile::addRegisterWrite(WriteState &WS,
     RegisterMappings[*I].first = &WS;
 }
 
-void RegisterFile::removeRegisterWrite(
-    const WriteState &WS, MutableArrayRef<unsigned> FreedPhysRegs,
-    bool ShouldFreePhysRegs) {
+void RegisterFile::removeRegisterWrite(const WriteState &WS,
+                                       MutableArrayRef<unsigned> FreedPhysRegs,
+                                       bool ShouldFreePhysRegs) {
   unsigned RegID = WS.getRegisterID();
   bool ShouldInvalidateSuperRegs = WS.fullyUpdatesSuperRegs();
 
@@ -273,7 +273,6 @@ void DispatchUnit::notifyInstructionRetired(const InstRef &IR) {
   for (const std::unique_ptr<WriteState> &WS : IR.getInstruction()->getDefs())
     RAT->removeRegisterWrite(*WS.get(), FreedRegs, !Desc.isZeroLatency());
   Owner->notifyInstructionEvent(HWInstructionRetiredEvent(IR, FreedRegs));
-  Owner->eraseInstruction(IR);
 }
 
 bool DispatchUnit::checkRAT(const InstRef &IR) {

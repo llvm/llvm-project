@@ -20,8 +20,8 @@ buildTestFS(StringMap<std::string> const &Files) {
       new vfs::InMemoryFileSystem);
   for (auto &FileAndContents : Files) {
     MemFS->addFile(FileAndContents.first(), time_t(),
-                   MemoryBuffer::getMemBuffer(FileAndContents.second,
-                                              FileAndContents.first()));
+                   MemoryBuffer::getMemBufferCopy(FileAndContents.second,
+                                                  FileAndContents.first()));
   }
   return MemFS;
 }

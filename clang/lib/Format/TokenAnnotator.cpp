@@ -2143,7 +2143,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
       ++IndentLevel;
   }
 
-  DEBUG({ printDebugInfo(Line); });
+  LLVM_DEBUG({ printDebugInfo(Line); });
 }
 
 void TokenAnnotator::calculateUnbreakableTailLengths(AnnotatedLine &Line) {

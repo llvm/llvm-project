@@ -115,9 +115,7 @@ void ClangdLSPServer::onInitialize(InitializeParams &Params) {
             {"workspaceSymbolProvider", true},
             {"executeCommandProvider",
              json::obj{
-                 {"commands",
-                  {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND,
-                   ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE}},
+                 {"commands", {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND}},
              }},
         }}}});
 }
@@ -190,42 +188,6 @@ void ClangdLSPServer::onCommand(ExecuteCommandParams &Params) {
 
     reply("Fix applied.");
     ApplyEdit(*Params.workspaceEdit);
-  } else if (Params.command ==
-             ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE) {
-    auto &FileURI = Params.includeInsertion->textDocument.uri;
-    auto Code = DraftMgr.getDraft(FileURI.file());
-    if (!Code)
-      return replyError(ErrorCode::InvalidParams,
-                        ("command " +
-                         ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE +
-                         " called on non-added file " + FileURI.file())
-                            .str());
-    llvm::StringRef DeclaringHeader = Params.includeInsertion->declaringHeader;
-    if (DeclaringHeader.empty())
-      return replyError(
-          ErrorCode::InvalidParams,
-          "declaringHeader must be provided for include insertion.");
-    llvm::StringRef PreferredHeader = Params.includeInsertion->preferredHeader;
-    auto Replaces = Server.insertInclude(
-        FileURI.file(), *Code, DeclaringHeader,
-        PreferredHeader.empty() ? DeclaringHeader : PreferredHeader);
-    if (!Replaces) {
-      std::string ErrMsg =
-          ("Failed to generate include insertion edits for adding " +
-           DeclaringHeader + " (" + PreferredHeader + ") into " +
-           FileURI.file())
-              .str();
-      log(ErrMsg + ":" + llvm::toString(Replaces.takeError()));
-      replyError(ErrorCode::InternalError, ErrMsg);
-      return;
-    }
-    auto Edits = replacementsToEdits(*Code, *Replaces);
-    WorkspaceEdit WE;
-    WE.changes = {{FileURI.uri(), Edits}};
-
-    reply(("Inserted header " + DeclaringHeader + " (" + PreferredHeader + ")")
-              .str());
-    ApplyEdit(std::move(WE));
   } else {
     // We should not get here because ExecuteCommandParams would not have
     // parsed in the first place and this handler should not be called. But if

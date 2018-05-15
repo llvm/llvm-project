@@ -1319,18 +1319,12 @@ void MemorySSA::OptimizeUses::optimizeUses() {
 }
 
 void MemorySSA::placePHINodes(
-    const SmallPtrSetImpl<BasicBlock *> &DefiningBlocks,
-    const DenseMap<const BasicBlock *, unsigned int> &BBNumbers) {
+    const SmallPtrSetImpl<BasicBlock *> &DefiningBlocks) {
   // Determine where our MemoryPhi's should go
   ForwardIDFCalculator IDFs(*DT);
   IDFs.setDefiningBlocks(DefiningBlocks);
   SmallVector<BasicBlock *, 32> IDFBlocks;
   IDFs.calculate(IDFBlocks);
-
-  llvm::sort(IDFBlocks.begin(), IDFBlocks.end(),
-             [&BBNumbers](const BasicBlock *A, const BasicBlock *B) {
-               return BBNumbers.lookup(A) < BBNumbers.lookup(B);
-             });
 
   // Now place MemoryPhi nodes.
   for (auto &BB : IDFBlocks)
@@ -1347,8 +1341,6 @@ void MemorySSA::buildMemorySSA() {
   BasicBlock &StartingPoint = F.getEntryBlock();
   LiveOnEntryDef.reset(new MemoryDef(F.getContext(), nullptr, nullptr,
                                      &StartingPoint, NextID++));
-  DenseMap<const BasicBlock *, unsigned int> BBNumbers;
-  unsigned NextBBNum = 0;
 
   // We maintain lists of memory accesses per-block, trading memory for time. We
   // could just look up the memory access for every possible instruction in the
@@ -1357,7 +1349,6 @@ void MemorySSA::buildMemorySSA() {
   // Go through each block, figure out where defs occur, and chain together all
   // the accesses.
   for (BasicBlock &B : F) {
-    BBNumbers[&B] = NextBBNum++;
     bool InsertIntoDef = false;
     AccessList *Accesses = nullptr;
     DefsList *Defs = nullptr;
@@ -1379,7 +1370,7 @@ void MemorySSA::buildMemorySSA() {
     if (InsertIntoDef)
       DefiningBlocks.insert(&B);
   }
-  placePHINodes(DefiningBlocks, BBNumbers);
+  placePHINodes(DefiningBlocks);
 
   // Now do regular SSA renaming on the MemoryDef/MemoryUse. Visited will get
   // filled in with all blocks.

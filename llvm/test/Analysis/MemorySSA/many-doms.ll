@@ -10,7 +10,7 @@ entry:
   br label %loopbegin
 
 loopbegin:
-; CHECK: 7 = MemoryPhi({entry,liveOnEntry},{sw.epilog,6})
+; CHECK: 8 = MemoryPhi({entry,liveOnEntry},{sw.epilog,6})
 ; CHECK-NEXT: %n =
   %n = phi i32 [ 0, %entry ], [ %1, %sw.epilog ]
   %m = alloca i32, align 4
@@ -22,41 +22,41 @@ loopbegin:
   ]
 
 sw.bb:
-; CHECK: 1 = MemoryDef(7)
+; CHECK: 1 = MemoryDef(8)
 ; CHECK-NEXT: store i32 1
   store i32 1, i32* %m, align 4
   br label %sw.epilog
 
 sw.bb1:
-; CHECK: 2 = MemoryDef(7)
+; CHECK: 2 = MemoryDef(8)
 ; CHECK-NEXT: store i32 2
   store i32 2, i32* %m, align 4
   br label %sw.epilog
 
 sw.bb2:
-; CHECK: 3 = MemoryDef(7)
+; CHECK: 3 = MemoryDef(8)
 ; CHECK-NEXT: store i32 3
   store i32 3, i32* %m, align 4
   br label %sw.epilog
 
 sw.bb3:
-; CHECK: 4 = MemoryDef(7)
+; CHECK: 4 = MemoryDef(8)
 ; CHECK-NEXT: store i32 4
   store i32 4, i32* %m, align 4
   br label %sw.epilog
 
 sw.default:
-; CHECK: 5 = MemoryDef(7)
+; CHECK: 5 = MemoryDef(8)
 ; CHECK-NEXT: store i32 5
   store i32 5, i32* %m, align 4
   br label %sw.epilog
 
 sw.epilog:
-; CHECK: 8 = MemoryPhi({sw.default,5},{sw.bb,1},{sw.bb1,2},{sw.bb2,3},{sw.bb3,4})
-; CHECK-NEXT: MemoryUse(8)
+; CHECK: 7 = MemoryPhi({sw.default,5},{sw.bb,1},{sw.bb1,2},{sw.bb2,3},{sw.bb3,4})
+; CHECK-NEXT: MemoryUse(7)
 ; CHECK-NEXT: %0 =
   %0 = load i32, i32* %m, align 4
-; CHECK: 6 = MemoryDef(8)
+; CHECK: 6 = MemoryDef(7)
 ; CHECK-NEXT: %1 =
   %1 = load volatile i32, i32* %p, align 4
   %2 = icmp eq i32 %0, %1

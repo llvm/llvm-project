@@ -18,7 +18,7 @@
 
 __thread int id;
 
-int baz(int f);
+int baz(int f, double &a);
 
 template<typename tx, typename ty>
 struct TT{
@@ -345,7 +345,7 @@ struct S1 {
     {
       this->a = (double)b + 1.5;
       c[1][1] = ++a;
-      baz(a);
+      baz(a, a);
     }
 
     return c[1][1] + (int)b;
@@ -367,9 +367,9 @@ int bar(int n){
   return a;
 }
 
-int baz(int f) {
+int baz(int f, double &a) {
 #pragma omp parallel
-  f = 2;
+  f = 2 + a;
   return f;
 }
 
@@ -551,7 +551,7 @@ int baz(int f) {
   // CHECK: [[EXIT]]
   // CHECK: ret void
 
-  // CHECK: define i32 [[BAZ]](i32 [[F:%.*]])
+  // CHECK: define i32 [[BAZ]](i32 [[F:%.*]], double* dereferenceable{{.*}})
   // CHECK: [[ZERO_ADDR:%.+]] = alloca i32,
   // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t*
   // CHECK: [[GTID_ADDR:%.+]] = alloca i32,
@@ -559,13 +559,13 @@ int baz(int f) {
   // CHECK: [[PTR:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} 4, i16 0)
   // CHECK: [[REC_ADDR:%.+]] = bitcast i8* [[PTR]] to %struct._globalized_locals_ty*
   // CHECK: [[F_PTR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[REC_ADDR]], i32 0, i32 0
-  // CHECK: store i32 [[F]], i32* [[F_PTR]],
+  // CHECK: store i32 %{{.+}}, i32* [[F_PTR]],
   // CHECK: store i32 [[GTID]], i32* [[GTID_ADDR]],
   // CHECK: icmp eq i32
   // CHECK: br i1
 
   // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* @{{.+}} to i8*), i16 1)
-  // CHECK: call void @__kmpc_begin_sharing_variables(i8*** [[SHARED_PTR:%.+]], i{{64|32}} 1)
+  // CHECK: call void @__kmpc_begin_sharing_variables(i8*** [[SHARED_PTR:%.+]], i{{64|32}} 2)
   // CHECK: [[SHARED:%.+]] = load i8**, i8*** [[SHARED_PTR]],
   // CHECK: [[REF:%.+]] = getelementptr inbounds i8*, i8** [[SHARED]], i{{64|32}} 0
   // CHECK: [[F_REF:%.+]] = bitcast i32* [[F_PTR]] to i8*
@@ -580,11 +580,11 @@ int baz(int f) {
   // CHECK: br i1
 
   // CHECK: call void @__kmpc_serialized_parallel(%struct.ident_t* @{{.+}}, i32 [[GTID]])
-  // CHECK: call void @__omp_outlined__(i32* [[GTID_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]])
+  // CHECK: call void [[OUTLINED:@.+]](i32* [[GTID_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]], double* %{{.+}})
   // CHECK: call void @__kmpc_end_serialized_parallel(%struct.ident_t* @{{.+}}, i32 [[GTID]])
   // CHECK: br label
 
-  // CHECK: call void @__omp_outlined__(i32* [[GTID_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]])
+  // CHECK: call void [[OUTLINED]](i32* [[GTID_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]], double* %{{.+}})
   // CHECK: br label
 
   // CHECK: [[RES:%.+]] = load i32, i32* [[F_PTR]],
