@@ -20,6 +20,7 @@
 #include "FuzzyMatch.h"
 #include "Headers.h"
 #include "Logger.h"
+#include "Quality.h"
 #include "SourceCode.h"
 #include "Trace.h"
 #include "URI.h"
@@ -33,6 +34,9 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Format.h"
 #include <queue>
+
+// We log detailed candidate here if you run with -debug-only=codecomplete.
+#define DEBUG_TYPE "codecomplete"
 
 namespace clang {
 namespace clangd {
@@ -192,35 +196,6 @@ getOptionalParameters(const CodeCompletionString &CCS,
   return Result;
 }
 
-// Produces an integer that sorts in the same order as F.
-// That is: a < b <==> encodeFloat(a) < encodeFloat(b).
-uint32_t encodeFloat(float F) {
-  static_assert(std::numeric_limits<float>::is_iec559, "");
-  static_assert(sizeof(float) == sizeof(uint32_t), "");
-  constexpr uint32_t TopBit = ~(~uint32_t{0} >> 1);
-
-  // Get the bits of the float. Endianness is the same as for integers.
-  uint32_t U;
-  memcpy(&U, &F, sizeof(float));
-  // IEEE 754 floats compare like sign-magnitude integers.
-  if (U & TopBit)    // Negative float.
-    return 0 - U;    // Map onto the low half of integers, order reversed.
-  return U + TopBit; // Positive floats map onto the high half of integers.
-}
-
-// Returns a string that sorts in the same order as (-Score, Name), for LSP.
-std::string sortText(float Score, llvm::StringRef Name) {
-  // We convert -Score to an integer, and hex-encode for readability.
-  // Example: [0.5, "foo"] -> "41000000foo"
-  std::string S;
-  llvm::raw_string_ostream OS(S);
-  write_hex(OS, encodeFloat(-Score), llvm::HexPrintStyle::Lower,
-            /*Width=*/2 * sizeof(Score));
-  OS << Name;
-  OS.flush();
-  return S;
-}
-
 /// Creates a `HeaderFile` from \p Header which can be either a URI or a literal
 /// include.
 static llvm::Expected<HeaderFile> toHeaderFile(StringRef Header,
@@ -250,33 +225,6 @@ struct CompletionCandidate {
   // We may have a result from Sema, from the index, or both.
   const CodeCompletionResult *SemaResult = nullptr;
   const Symbol *IndexResult = nullptr;
-
-  // Computes the "symbol quality" score for this completion. Higher is better.
-  float score() const {
-    float Score = 1;
-    if (IndexResult)
-      Score *= quality(*IndexResult);
-    if (SemaResult) {
-      // For now we just use the Sema priority, mapping it onto a 0-2 interval.
-      // That makes 1 neutral-ish, so we don't reward/penalize non-Sema results.
-      // Priority 80 is a really bad score.
-      Score *= 2 - std::min<float>(80, SemaResult->Priority) / 40;
-
-      switch (static_cast<CXAvailabilityKind>(SemaResult->Availability)) {
-      case CXAvailability_Available:
-        // No penalty.
-        break;
-      case CXAvailability_Deprecated:
-        Score *= 0.1f;
-        break;
-      case CXAvailability_NotAccessible:
-      case CXAvailability_NotAvailable:
-        Score = 0;
-        break;
-      }
-    }
-    return Score;
-  }
 
   // Builds an LSP completion item.
   CompletionItem build(StringRef FileName, const CompletionItemScores &Scores,
@@ -346,6 +294,7 @@ struct CompletionCandidate {
     return I;
   }
 };
+using ScoredCandidate = std::pair<CompletionCandidate, CompletionItemScores>;
 
 // Determine the symbol ID for a Sema code completion result, if possible.
 llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R) {
@@ -552,50 +501,12 @@ private:
   UniqueFunction<void()> ResultsCallback;
 };
 
-// Tracks a bounded number of candidates with the best scores.
-class TopN {
-public:
-  using value_type = std::pair<CompletionCandidate, CompletionItemScores>;
-  static constexpr size_t Unbounded = std::numeric_limits<size_t>::max();
-
-  TopN(size_t N) : N(N) {}
-
-  // Adds a candidate to the set.
-  // Returns true if a candidate was dropped to get back under N.
-  bool push(value_type &&V) {
-    bool Dropped = false;
-    if (Heap.size() >= N) {
-      Dropped = true;
-      if (N > 0 && greater(V, Heap.front())) {
-        std::pop_heap(Heap.begin(), Heap.end(), greater);
-        Heap.back() = std::move(V);
-        std::push_heap(Heap.begin(), Heap.end(), greater);
-      }
-    } else {
-      Heap.push_back(std::move(V));
-      std::push_heap(Heap.begin(), Heap.end(), greater);
-    }
-    assert(Heap.size() <= N);
-    assert(std::is_heap(Heap.begin(), Heap.end(), greater));
-    return Dropped;
-  }
-
-  // Returns candidates from best to worst.
-  std::vector<value_type> items() && {
-    std::sort_heap(Heap.begin(), Heap.end(), greater);
-    assert(Heap.size() <= N);
-    return std::move(Heap);
-  }
-
-private:
-  static bool greater(const value_type &L, const value_type &R) {
+struct ScoredCandidateGreater {
+  bool operator()(const ScoredCandidate &L, const ScoredCandidate &R) {
     if (L.second.finalScore != R.second.finalScore)
       return L.second.finalScore > R.second.finalScore;
     return L.first.Name < R.first.Name; // Earlier name is better.
   }
-
-  const size_t N;
-  std::vector<value_type> Heap; // Min-heap, comparator is greater().
 };
 
 class SignatureHelpCollector final : public CodeCompleteConsumer {
@@ -1035,7 +946,8 @@ private:
                const SymbolSlab &IndexResults) {
     trace::Span Tracer("Merge and score results");
     // We only keep the best N results at any time, in "native" format.
-    TopN Top(Opts.Limit == 0 ? TopN::Unbounded : Opts.Limit);
+    TopN<ScoredCandidate, ScoredCandidateGreater> Top(
+        Opts.Limit == 0 ? std::numeric_limits<size_t>::max() : Opts.Limit);
     llvm::DenseSet<const Symbol *> UsedIndexResults;
     auto CorrespondingIndexResult =
         [&](const CodeCompletionResult &SemaResult) -> const Symbol * {
@@ -1061,23 +973,42 @@ private:
   }
 
   // Scores a candidate and adds it to the TopN structure.
-  void addCandidate(TopN &Candidates, const CodeCompletionResult *SemaResult,
+  void addCandidate(TopN<ScoredCandidate, ScoredCandidateGreater> &Candidates,
+                    const CodeCompletionResult *SemaResult,
                     const Symbol *IndexResult) {
     CompletionCandidate C;
     C.SemaResult = SemaResult;
     C.IndexResult = IndexResult;
     C.Name = IndexResult ? IndexResult->Name : Recorder->getName(*SemaResult);
 
-    CompletionItemScores Scores;
+    SymbolQualitySignals Quality;
+    SymbolRelevanceSignals Relevance;
     if (auto FuzzyScore = Filter->match(C.Name))
-      Scores.filterScore = *FuzzyScore;
+      Relevance.NameMatch = *FuzzyScore;
     else
       return;
-    Scores.symbolScore = C.score();
-    // We score candidates by multiplying symbolScore ("quality" of the result)
-    // with filterScore (how well it matched the query).
-    // This is sensitive to the distribution of both component scores!
-    Scores.finalScore = Scores.filterScore * Scores.symbolScore;
+    if (IndexResult)
+      Quality.merge(*IndexResult);
+    if (SemaResult) {
+      Quality.merge(*SemaResult);
+      Relevance.merge(*SemaResult);
+    }
+
+    float QualScore = Quality.evaluate(), RelScore = Relevance.evaluate();
+    CompletionItemScores Scores;
+    Scores.finalScore = evaluateSymbolAndRelevance(QualScore, RelScore);
+    // The purpose of exporting component scores is to allow NameMatch to be
+    // replaced on the client-side. So we export (NameMatch, final/NameMatch)
+    // rather than (RelScore, QualScore).
+    Scores.filterScore = Relevance.NameMatch;
+    Scores.symbolScore =
+        Scores.filterScore ? Scores.finalScore / Scores.filterScore : QualScore;
+
+    DEBUG(llvm::dbgs() << "CodeComplete: " << C.Name
+                       << (IndexResult ? " (index)" : "")
+                       << (SemaResult ? " (sema)" : "") << " = "
+                       << Scores.finalScore << "\n"
+                       << Quality << Relevance << "\n");
 
     NSema += bool(SemaResult);
     NIndex += bool(IndexResult);
