@@ -83,8 +83,8 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   const TargetRegisterClass *RC = &Mips::GPR32RegClass;
 
   if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
-    DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
-                 << " operand\n");
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
+                      << " operand\n");
     return false;
   }
   return true;

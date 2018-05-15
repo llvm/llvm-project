@@ -482,11 +482,11 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
 // remove the use-soft-float attribute
 static void removeUseSoftFloat(Function &F) {
   AttrBuilder B;
-  DEBUG(errs() << "removing -use-soft-float\n");
+  LLVM_DEBUG(errs() << "removing -use-soft-float\n");
   B.addAttribute("use-soft-float", "false");
   F.removeAttributes(AttributeList::FunctionIndex, B);
   if (F.hasFnAttribute("use-soft-float")) {
-    DEBUG(errs() << "still has -use-soft-float\n");
+    LLVM_DEBUG(errs() << "still has -use-soft-float\n");
   }
   F.addAttributes(AttributeList::FunctionIndex, B);
 }
@@ -510,7 +510,7 @@ static void removeUseSoftFloat(Function &F) {
 bool Mips16HardFloat::runOnModule(Module &M) {
   auto &TM = static_cast<const MipsTargetMachine &>(
       getAnalysis<TargetPassConfig>().getTM<TargetMachine>());
-  DEBUG(errs() << "Run on Module Mips16HardFloat\n");
+  LLVM_DEBUG(errs() << "Run on Module Mips16HardFloat\n");
   bool Modified = false;
   for (Module::iterator F = M.begin(), E = M.end(); F != E; ++F) {
     if (F->hasFnAttribute("nomips16") &&

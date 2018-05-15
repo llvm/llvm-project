@@ -161,7 +161,7 @@ void ExecutionDomainFix::enterBasicBlock(
 
   // This is the entry block.
   if (MBB->pred_empty()) {
-    DEBUG(dbgs() << printMBBReference(*MBB) << ": entry\n");
+    LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << ": entry\n");
     return;
   }
 
@@ -200,9 +200,9 @@ void ExecutionDomainFix::enterBasicBlock(
         force(rx, pdv->getFirstDomain());
     }
   }
-  DEBUG(dbgs() << printMBBReference(*MBB)
-               << (!TraversedMBB.IsDone ? ": incomplete\n"
-                                        : ": all preds known\n"));
+  LLVM_DEBUG(dbgs() << printMBBReference(*MBB)
+                    << (!TraversedMBB.IsDone ? ": incomplete\n"
+                                             : ": all preds known\n"));
 }
 
 void ExecutionDomainFix::leaveBasicBlock(
@@ -245,7 +245,7 @@ void ExecutionDomainFix::processDefs(MachineInstr *MI, bool Kill) {
       continue;
     for (int rx : regIndices(MO.getReg())) {
       // This instruction explicitly defines rx.
-      DEBUG(dbgs() << printReg(RC->getRegister(rx), TRI) << ":\t" << *MI);
+      LLVM_DEBUG(dbgs() << printReg(RC->getRegister(rx), TRI) << ":\t" << *MI);
 
       // Kill off domains redefined by generic instructions.
       if (Kill)
@@ -420,8 +420,8 @@ bool ExecutionDomainFix::runOnMachineFunction(MachineFunction &mf) {
   LiveRegs.clear();
   assert(NumRegs == RC->getNumRegs() && "Bad regclass");
 
-  DEBUG(dbgs() << "********** FIX EXECUTION DOMAIN: "
-               << TRI->getRegClassName(RC) << " **********\n");
+  LLVM_DEBUG(dbgs() << "********** FIX EXECUTION DOMAIN: "
+                    << TRI->getRegClassName(RC) << " **********\n");
 
   // If no relevant registers are used in the function, we can skip it
   // completely.

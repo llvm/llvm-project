@@ -679,7 +679,8 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg,
   if (!isEntry && BI.Needs == StateWQM && BI.OutNeeds != StateExact)
     return;
 
-  DEBUG(dbgs() << "\nProcessing block " << printMBBReference(MBB) << ":\n");
+  LLVM_DEBUG(dbgs() << "\nProcessing block " << printMBBReference(MBB)
+                    << ":\n");
 
   unsigned SavedWQMReg = 0;
   unsigned SavedNonWWMReg = 0;
@@ -882,7 +883,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  DEBUG(printInfo());
+  LLVM_DEBUG(printInfo());
 
   lowerCopyInstrs();
 

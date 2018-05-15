@@ -302,9 +302,9 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
     for (auto *Candidate : make_range(I, E)) {
       auto Score =
           computeWideningScore(GuardInst, GuardInstLoop, Candidate, CurLoop);
-      DEBUG(dbgs() << "Score between " << *GuardInst->getArgOperand(0)
-                   << " and " << *Candidate->getArgOperand(0) << " is "
-                   << scoreTypeToString(Score) << "\n");
+      LLVM_DEBUG(dbgs() << "Score between " << *GuardInst->getArgOperand(0)
+                        << " and " << *Candidate->getArgOperand(0) << " is "
+                        << scoreTypeToString(Score) << "\n");
       if (Score > BestScoreSoFar) {
         BestScoreSoFar = Score;
         BestSoFar = Candidate;
@@ -313,15 +313,16 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
   }
 
   if (BestScoreSoFar == WS_IllegalOrNegative) {
-    DEBUG(dbgs() << "Did not eliminate guard " << *GuardInst << "\n");
+    LLVM_DEBUG(dbgs() << "Did not eliminate guard " << *GuardInst << "\n");
     return false;
   }
 
   assert(BestSoFar != GuardInst && "Should have never visited same guard!");
   assert(DT.dominates(BestSoFar, GuardInst) && "Should be!");
 
-  DEBUG(dbgs() << "Widening " << *GuardInst << " into " << *BestSoFar
-               << " with score " << scoreTypeToString(BestScoreSoFar) << "\n");
+  LLVM_DEBUG(dbgs() << "Widening " << *GuardInst << " into " << *BestSoFar
+                    << " with score " << scoreTypeToString(BestScoreSoFar)
+                    << "\n");
   widenGuard(BestSoFar, GuardInst->getArgOperand(0));
   GuardInst->setArgOperand(0, ConstantInt::getTrue(GuardInst->getContext()));
   EliminatedGuards.push_back(GuardInst);

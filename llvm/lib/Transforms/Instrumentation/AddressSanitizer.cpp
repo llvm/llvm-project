@@ -877,7 +877,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     processStaticAllocas();
 
     if (ClDebugStack) {
-      DEBUG(dbgs() << F);
+      LLVM_DEBUG(dbgs() << F);
     }
     return true;
   }
@@ -1617,7 +1617,7 @@ void AddressSanitizerModule::createInitializerPoisonCalls(
 
 bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
   Type *Ty = G->getValueType();
-  DEBUG(dbgs() << "GLOBAL: " << *G << "\n");
+  LLVM_DEBUG(dbgs() << "GLOBAL: " << *G << "\n");
 
   if (GlobalsMD.get(G).IsBlacklisted) return false;
   if (!Ty->isSized()) return false;
@@ -1659,7 +1659,8 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
     // See https://github.com/google/sanitizers/issues/305
     // and http://msdn.microsoft.com/en-US/en-en/library/bb918180(v=vs.120).aspx
     if (Section.startswith(".CRT")) {
-      DEBUG(dbgs() << "Ignoring a global initializer callback: " << *G << "\n");
+      LLVM_DEBUG(dbgs() << "Ignoring a global initializer callback: " << *G
+                        << "\n");
       return false;
     }
 
@@ -1676,7 +1677,7 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
       // them.
       if (ParsedSegment == "__OBJC" ||
           (ParsedSegment == "__DATA" && ParsedSection.startswith("__objc_"))) {
-        DEBUG(dbgs() << "Ignoring ObjC runtime global: " << *G << "\n");
+        LLVM_DEBUG(dbgs() << "Ignoring ObjC runtime global: " << *G << "\n");
         return false;
       }
       // See https://github.com/google/sanitizers/issues/32
@@ -1688,13 +1689,13 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
       // Therefore there's no point in placing redzones into __DATA,__cfstring.
       // Moreover, it causes the linker to crash on OS X 10.7
       if (ParsedSegment == "__DATA" && ParsedSection == "__cfstring") {
-        DEBUG(dbgs() << "Ignoring CFString: " << *G << "\n");
+        LLVM_DEBUG(dbgs() << "Ignoring CFString: " << *G << "\n");
         return false;
       }
       // The linker merges the contents of cstring_literals and removes the
       // trailing zeroes.
       if (ParsedSegment == "__TEXT" && (TAA & MachO::S_CSTRING_LITERALS)) {
-        DEBUG(dbgs() << "Ignoring a cstring literal: " << *G << "\n");
+        LLVM_DEBUG(dbgs() << "Ignoring a cstring literal: " << *G << "\n");
         return false;
       }
     }
@@ -2161,7 +2162,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
 
     if (ClInitializers && MD.IsDynInit) HasDynamicallyInitializedGlobals = true;
 
-    DEBUG(dbgs() << "NEW GLOBAL: " << *NewGlobal << "\n");
+    LLVM_DEBUG(dbgs() << "NEW GLOBAL: " << *NewGlobal << "\n");
 
     Initializers[i] = Initializer;
   }
@@ -2195,7 +2196,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
   if (HasDynamicallyInitializedGlobals)
     createInitializerPoisonCalls(M, ModuleName);
 
-  DEBUG(dbgs() << M);
+  LLVM_DEBUG(dbgs() << M);
   return true;
 }
 
@@ -2436,7 +2437,7 @@ bool AddressSanitizer::runOnFunction(Function &F) {
   // Leave if the function doesn't need instrumentation.
   if (!F.hasFnAttribute(Attribute::SanitizeAddress)) return FunctionModified;
 
-  DEBUG(dbgs() << "ASAN instrumenting:\n" << F << "\n");
+  LLVM_DEBUG(dbgs() << "ASAN instrumenting:\n" << F << "\n");
 
   initializeCallbacks(*F.getParent());
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -2549,8 +2550,8 @@ bool AddressSanitizer::runOnFunction(Function &F) {
   if (NumInstrumented > 0 || ChangedStack || !NoReturnCalls.empty())
     FunctionModified = true;
 
-  DEBUG(dbgs() << "ASAN done instrumenting: " << FunctionModified << " "
-               << F << "\n");
+  LLVM_DEBUG(dbgs() << "ASAN done instrumenting: " << FunctionModified << " "
+                    << F << "\n");
 
   return FunctionModified;
 }
@@ -2866,7 +2867,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
   }
 
   auto DescriptionString = ComputeASanStackFrameDescription(SVD);
-  DEBUG(dbgs() << DescriptionString << " --- " << L.FrameSize << "\n");
+  LLVM_DEBUG(dbgs() << DescriptionString << " --- " << L.FrameSize << "\n");
   uint64_t LocalStackSize = L.FrameSize;
   bool DoStackMalloc = ClUseAfterReturn && !ASan.CompileKernel &&
                        LocalStackSize <= kMaxStackMallocSize;
@@ -3101,7 +3102,8 @@ AllocaInst *FunctionStackPoisoner::findAllocaForValue(Value *V) {
   } else if (GetElementPtrInst *EP = dyn_cast<GetElementPtrInst>(V)) {
     Res = findAllocaForValue(EP->getPointerOperand());
   } else {
-    DEBUG(dbgs() << "Alloca search canceled on unknown instruction: " << *V << "\n");
+    LLVM_DEBUG(dbgs() << "Alloca search canceled on unknown instruction: " << *V
+                      << "\n");
   }
   if (Res) AllocaForValue[V] = Res;
   return Res;

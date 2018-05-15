@@ -878,7 +878,7 @@ define void @test_movntq(x86_mmx* %a0, x86_mmx %a1) optsize {
 ;
 ; BTVER2-LABEL: test_movntq:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movntq %mm0, (%rdi) # sched: [1:1.00]
+; BTVER2-NEXT:    movntq %mm0, (%rdi) # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movntq:

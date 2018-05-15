@@ -290,6 +290,7 @@ map_to_llvmModFlagBehavior(LLVMModuleFlagBehavior Behavior) {
   case LLVMModuleFlagBehaviorAppendUnique:
     return Module::ModFlagBehavior::AppendUnique;
   }
+  llvm_unreachable("Unknown LLVMModuleFlagBehavior");
 }
 
 static LLVMModuleFlagBehavior
@@ -1668,8 +1669,9 @@ void LLVMSetLinkage(LLVMValueRef Global, LLVMLinkage Linkage) {
     GV->setLinkage(GlobalValue::LinkOnceODRLinkage);
     break;
   case LLVMLinkOnceODRAutoHideLinkage:
-    DEBUG(errs() << "LLVMSetLinkage(): LLVMLinkOnceODRAutoHideLinkage is no "
-                    "longer supported.");
+    LLVM_DEBUG(
+        errs() << "LLVMSetLinkage(): LLVMLinkOnceODRAutoHideLinkage is no "
+                  "longer supported.");
     break;
   case LLVMWeakAnyLinkage:
     GV->setLinkage(GlobalValue::WeakAnyLinkage);
@@ -1693,19 +1695,21 @@ void LLVMSetLinkage(LLVMValueRef Global, LLVMLinkage Linkage) {
     GV->setLinkage(GlobalValue::PrivateLinkage);
     break;
   case LLVMDLLImportLinkage:
-    DEBUG(errs()
-          << "LLVMSetLinkage(): LLVMDLLImportLinkage is no longer supported.");
+    LLVM_DEBUG(
+        errs()
+        << "LLVMSetLinkage(): LLVMDLLImportLinkage is no longer supported.");
     break;
   case LLVMDLLExportLinkage:
-    DEBUG(errs()
-          << "LLVMSetLinkage(): LLVMDLLExportLinkage is no longer supported.");
+    LLVM_DEBUG(
+        errs()
+        << "LLVMSetLinkage(): LLVMDLLExportLinkage is no longer supported.");
     break;
   case LLVMExternalWeakLinkage:
     GV->setLinkage(GlobalValue::ExternalWeakLinkage);
     break;
   case LLVMGhostLinkage:
-    DEBUG(errs()
-          << "LLVMSetLinkage(): LLVMGhostLinkage is no longer supported.");
+    LLVM_DEBUG(
+        errs() << "LLVMSetLinkage(): LLVMGhostLinkage is no longer supported.");
     break;
   case LLVMCommonLinkage:
     GV->setLinkage(GlobalValue::CommonLinkage);

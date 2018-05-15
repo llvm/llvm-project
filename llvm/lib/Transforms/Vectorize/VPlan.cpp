@@ -116,7 +116,7 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   BasicBlock *PrevBB = CFG.PrevBB;
   BasicBlock *NewBB = BasicBlock::Create(PrevBB->getContext(), getName(),
                                          PrevBB->getParent(), CFG.LastBB);
-  DEBUG(dbgs() << "LV: created " << NewBB->getName() << '\n');
+  LLVM_DEBUG(dbgs() << "LV: created " << NewBB->getName() << '\n');
 
   // Hook up the new basic block to its predecessors.
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
@@ -125,7 +125,7 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
     assert(PredBB && "Predecessor basic-block not found building successor.");
     auto *PredBBTerminator = PredBB->getTerminator();
-    DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
+    LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
     if (isa<UnreachableInst>(PredBBTerminator)) {
       assert(PredVPSuccessors.size() == 1 &&
              "Predecessor ending w/o branch must have single successor.");
@@ -175,8 +175,8 @@ void VPBasicBlock::execute(VPTransformState *State) {
   }
 
   // 2. Fill the IR basic block with IR instructions.
-  DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
-               << " in BB:" << NewBB->getName() << '\n');
+  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
+                    << " in BB:" << NewBB->getName() << '\n');
 
   State->CFG.VPBB2IRBB[this] = NewBB;
   State->CFG.PrevVPBB = this;
@@ -184,7 +184,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
   for (VPRecipeBase &Recipe : Recipes)
     Recipe.execute(*State);
 
-  DEBUG(dbgs() << "LV: filled BB:" << *NewBB);
+  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *NewBB);
 }
 
 void VPRegionBlock::execute(VPTransformState *State) {
@@ -193,7 +193,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
   if (!isReplicator()) {
     // Visit the VPBlocks connected to "this", starting from it.
     for (VPBlockBase *Block : RPOT) {
-      DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
+      LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
       Block->execute(State);
     }
     return;
@@ -210,7 +210,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
       State->Instance->Lane = Lane;
       // Visit the VPBlocks connected to \p this, starting from it.
       for (VPBlockBase *Block : RPOT) {
-        DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
+        LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
         Block->execute(State);
       }
     }

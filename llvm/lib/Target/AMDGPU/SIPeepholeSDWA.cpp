@@ -846,7 +846,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
 void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : MBB) {
     if (auto Operand = matchSDWAOperand(MI)) {
-      DEBUG(dbgs() << "Match: " << MI << "To: " << *Operand << '\n');
+      LLVM_DEBUG(dbgs() << "Match: " << MI << "To: " << *Operand << '\n');
       SDWAOperands[&MI] = std::move(Operand);
       ++NumSDWAPatternsFound;
     }
@@ -901,7 +901,7 @@ bool SIPeepholeSDWA::isConvertibleToSDWA(const MachineInstr &MI,
 bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
                                    const SDWAOperandsVector &SDWAOperands) {
 
-  DEBUG(dbgs() << "Convert instruction:" << MI);
+  LLVM_DEBUG(dbgs() << "Convert instruction:" << MI);
 
   // Convert to sdwa
   int SDWAOpcode;
@@ -1050,7 +1050,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
   // Apply all sdwa operand patterns.
   bool Converted = false;
   for (auto &Operand : SDWAOperands) {
-    DEBUG(dbgs() << *SDWAInst << "\nOperand: " << *Operand);
+    LLVM_DEBUG(dbgs() << *SDWAInst << "\nOperand: " << *Operand);
     // There should be no intesection between SDWA operands and potential MIs
     // e.g.:
     // v_and_b32 v0, 0xff, v1 -> src:v1 sel:BYTE_0
@@ -1071,7 +1071,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     return false;
   }
 
-  DEBUG(dbgs() << "\nInto:" << *SDWAInst << '\n');
+  LLVM_DEBUG(dbgs() << "\nInto:" << *SDWAInst << '\n');
   ++NumSDWAInstructionsPeepholed;
 
   MI.eraseFromParent();

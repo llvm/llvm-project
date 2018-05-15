@@ -128,6 +128,9 @@ movlpd      (%rax), %xmm2
 
 movmskpd    %xmm0, %rcx
 
+movntil     %eax, (%rax)
+movntiq     %rax, (%rax)
+
 movntdq     %xmm0, (%rax)
 movntpd     %xmm0, (%rax)
 
@@ -485,6 +488,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00           *        	movlpd	%xmm0, (%rax)
 # CHECK-NEXT:  1      1     1.00    *               	movlpd	(%rax), %xmm2
 # CHECK-NEXT:  1      3     3.00                    	movmskpd	%xmm0, %ecx
+# CHECK-NEXT:  1      1     1.00           *        	movntil	%eax, (%rax)
+# CHECK-NEXT:  1      1     1.00           *        	movntiq	%rax, (%rax)
 # CHECK-NEXT:  1      1     1.00           *        	movntdq	%xmm0, (%rax)
 # CHECK-NEXT:  1      1     1.00           *        	movntpd	%xmm0, (%rax)
 # CHECK-NEXT:  1      1     0.50                    	movq	%xmm0, %xmm2
@@ -668,7 +673,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 866.50 638.50
+# CHECK-NEXT: 868.50 638.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    	Instructions:
@@ -758,6 +763,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: 1.00    -     	movlpd	%xmm0, (%rax)
 # CHECK-NEXT: 1.00    -     	movlpd	(%rax), %xmm2
 # CHECK-NEXT: 3.00    -     	movmskpd	%xmm0, %ecx
+# CHECK-NEXT: 1.00    -     	movntil	%eax, (%rax)
+# CHECK-NEXT: 1.00    -     	movntiq	%rax, (%rax)
 # CHECK-NEXT: 1.00    -     	movntdq	%xmm0, (%rax)
 # CHECK-NEXT: 1.00    -     	movntpd	%xmm0, (%rax)
 # CHECK-NEXT: 0.50   0.50   	movq	%xmm0, %xmm2

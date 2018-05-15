@@ -77,17 +77,17 @@ private:
     for (CharRanges::const_iterator I = Ranges.begin(), E = Ranges.end();
          I != E; ++I) {
       if (I != Ranges.begin() && Prev >= I->Lower) {
-        DEBUG(dbgs() << "Upper bound 0x");
-        DEBUG(dbgs().write_hex(Prev));
-        DEBUG(dbgs() << " should be less than succeeding lower bound 0x");
-        DEBUG(dbgs().write_hex(I->Lower) << "\n");
+        LLVM_DEBUG(dbgs() << "Upper bound 0x");
+        LLVM_DEBUG(dbgs().write_hex(Prev));
+        LLVM_DEBUG(dbgs() << " should be less than succeeding lower bound 0x");
+        LLVM_DEBUG(dbgs().write_hex(I->Lower) << "\n");
         return false;
       }
       if (I->Upper < I->Lower) {
-        DEBUG(dbgs() << "Upper bound 0x");
-        DEBUG(dbgs().write_hex(I->Lower));
-        DEBUG(dbgs() << " should not be less than lower bound 0x");
-        DEBUG(dbgs().write_hex(I->Upper) << "\n");
+        LLVM_DEBUG(dbgs() << "Upper bound 0x");
+        LLVM_DEBUG(dbgs().write_hex(I->Lower));
+        LLVM_DEBUG(dbgs() << " should not be less than lower bound 0x");
+        LLVM_DEBUG(dbgs().write_hex(I->Upper) << "\n");
         return false;
       }
       Prev = I->Upper;

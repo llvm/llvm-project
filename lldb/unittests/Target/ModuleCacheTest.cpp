@@ -44,7 +44,7 @@ static const uint32_t uuid_bytes = 20;
 static const size_t module_size = 5602;
 
 static FileSpec GetDummyRemotePath() {
-  FileSpec fs("/", false, FileSpec::ePathSyntaxPosix);
+  FileSpec fs("/", false, FileSpec::Style::posix);
   fs.AppendPathComponent(dummy_remote_dir);
   fs.AppendPathComponent(module_name);
   return fs;

@@ -138,15 +138,15 @@ bool MSP430BSel::expandBranches(OffsetVector &BlockOffsets) {
         continue;
       }
 
-      DEBUG(dbgs() << "  Found a branch that needs expanding, "
-                   << printMBBReference(*DestBB) << ", Distance "
-                   << BranchDistance << "\n");
+      LLVM_DEBUG(dbgs() << "  Found a branch that needs expanding, "
+                        << printMBBReference(*DestBB) << ", Distance "
+                        << BranchDistance << "\n");
 
       // If JCC is not the last instruction we need to split the MBB.
       if (MI->getOpcode() == MSP430::JCC && std::next(MI) != EE) {
 
-        DEBUG(dbgs() << "  Found a basic block that needs to be split, "
-                     << printMBBReference(*MBB) << "\n");
+        LLVM_DEBUG(dbgs() << "  Found a basic block that needs to be split, "
+                          << printMBBReference(*MBB) << "\n");
 
         // Create a new basic block.
         MachineBasicBlock *NewBB =
@@ -229,7 +229,7 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &mf) {
   if (!BranchSelectEnabled)
     return false;
 
-  DEBUG(dbgs() << "\n********** " << getPassName() << " **********\n");
+  LLVM_DEBUG(dbgs() << "\n********** " << getPassName() << " **********\n");
 
   // BlockOffsets - Contains the distance from the beginning of the function to
   // the beginning of each basic block.

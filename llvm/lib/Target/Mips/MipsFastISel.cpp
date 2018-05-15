@@ -1001,11 +1001,12 @@ bool MipsFastISel::selectFPExt(const Instruction *I) {
 bool MipsFastISel::selectSelect(const Instruction *I) {
   assert(isa<SelectInst>(I) && "Expected a select instruction.");
 
-  DEBUG(dbgs() << "selectSelect\n");
+  LLVM_DEBUG(dbgs() << "selectSelect\n");
 
   MVT VT;
   if (!isTypeSupported(I->getType(), VT) || UnsupportedFPMode) {
-    DEBUG(dbgs() << ".. .. gave up (!isTypeSupported || UnsupportedFPMode)\n");
+    LLVM_DEBUG(
+        dbgs() << ".. .. gave up (!isTypeSupported || UnsupportedFPMode)\n");
     return false;
   }
 
@@ -1288,22 +1289,22 @@ bool MipsFastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
 }
 
 bool MipsFastISel::fastLowerArguments() {
-  DEBUG(dbgs() << "fastLowerArguments\n");
+  LLVM_DEBUG(dbgs() << "fastLowerArguments\n");
 
   if (!FuncInfo.CanLowerReturn) {
-    DEBUG(dbgs() << ".. gave up (!CanLowerReturn)\n");
+    LLVM_DEBUG(dbgs() << ".. gave up (!CanLowerReturn)\n");
     return false;
   }
 
   const Function *F = FuncInfo.Fn;
   if (F->isVarArg()) {
-    DEBUG(dbgs() << ".. gave up (varargs)\n");
+    LLVM_DEBUG(dbgs() << ".. gave up (varargs)\n");
     return false;
   }
 
   CallingConv::ID CC = F->getCallingConv();
   if (CC != CallingConv::C) {
-    DEBUG(dbgs() << ".. gave up (calling convention is not C)\n");
+    LLVM_DEBUG(dbgs() << ".. gave up (calling convention is not C)\n");
     return false;
   }
 
@@ -1329,21 +1330,21 @@ bool MipsFastISel::fastLowerArguments() {
     if (FormalArg.hasAttribute(Attribute::InReg) ||
         FormalArg.hasAttribute(Attribute::StructRet) ||
         FormalArg.hasAttribute(Attribute::ByVal)) {
-      DEBUG(dbgs() << ".. gave up (inreg, structret, byval)\n");
+      LLVM_DEBUG(dbgs() << ".. gave up (inreg, structret, byval)\n");
       return false;
     }
 
     Type *ArgTy = FormalArg.getType();
     if (ArgTy->isStructTy() || ArgTy->isArrayTy() || ArgTy->isVectorTy()) {
-      DEBUG(dbgs() << ".. gave up (struct, array, or vector)\n");
+      LLVM_DEBUG(dbgs() << ".. gave up (struct, array, or vector)\n");
       return false;
     }
 
     EVT ArgVT = TLI.getValueType(DL, ArgTy);
-    DEBUG(dbgs() << ".. " << FormalArg.getArgNo() << ": "
-                 << ArgVT.getEVTString() << "\n");
+    LLVM_DEBUG(dbgs() << ".. " << FormalArg.getArgNo() << ": "
+                      << ArgVT.getEVTString() << "\n");
     if (!ArgVT.isSimple()) {
-      DEBUG(dbgs() << ".. .. gave up (not a simple type)\n");
+      LLVM_DEBUG(dbgs() << ".. .. gave up (not a simple type)\n");
       return false;
     }
 
@@ -1355,16 +1356,16 @@ bool MipsFastISel::fastLowerArguments() {
           !FormalArg.hasAttribute(Attribute::ZExt)) {
         // It must be any extend, this shouldn't happen for clang-generated IR
         // so just fall back on SelectionDAG.
-        DEBUG(dbgs() << ".. .. gave up (i8/i16 arg is not extended)\n");
+        LLVM_DEBUG(dbgs() << ".. .. gave up (i8/i16 arg is not extended)\n");
         return false;
       }
 
       if (NextGPR32 == GPR32ArgRegs.end()) {
-        DEBUG(dbgs() << ".. .. gave up (ran out of GPR32 arguments)\n");
+        LLVM_DEBUG(dbgs() << ".. .. gave up (ran out of GPR32 arguments)\n");
         return false;
       }
 
-      DEBUG(dbgs() << ".. .. GPR32(" << *NextGPR32 << ")\n");
+      LLVM_DEBUG(dbgs() << ".. .. GPR32(" << *NextGPR32 << ")\n");
       Allocation.emplace_back(&Mips::GPR32RegClass, *NextGPR32++);
 
       // Allocating any GPR32 prohibits further use of floating point arguments.
@@ -1375,16 +1376,16 @@ bool MipsFastISel::fastLowerArguments() {
     case MVT::i32:
       if (FormalArg.hasAttribute(Attribute::ZExt)) {
         // The O32 ABI does not permit a zero-extended i32.
-        DEBUG(dbgs() << ".. .. gave up (i32 arg is zero extended)\n");
+        LLVM_DEBUG(dbgs() << ".. .. gave up (i32 arg is zero extended)\n");
         return false;
       }
 
       if (NextGPR32 == GPR32ArgRegs.end()) {
-        DEBUG(dbgs() << ".. .. gave up (ran out of GPR32 arguments)\n");
+        LLVM_DEBUG(dbgs() << ".. .. gave up (ran out of GPR32 arguments)\n");
         return false;
       }
 
-      DEBUG(dbgs() << ".. .. GPR32(" << *NextGPR32 << ")\n");
+      LLVM_DEBUG(dbgs() << ".. .. GPR32(" << *NextGPR32 << ")\n");
       Allocation.emplace_back(&Mips::GPR32RegClass, *NextGPR32++);
 
       // Allocating any GPR32 prohibits further use of floating point arguments.
@@ -1394,14 +1395,14 @@ bool MipsFastISel::fastLowerArguments() {
 
     case MVT::f32:
       if (UnsupportedFPMode) {
-        DEBUG(dbgs() << ".. .. gave up (UnsupportedFPMode)\n");
+        LLVM_DEBUG(dbgs() << ".. .. gave up (UnsupportedFPMode)\n");
         return false;
       }
       if (NextFGR32 == FGR32ArgRegs.end()) {
-        DEBUG(dbgs() << ".. .. gave up (ran out of FGR32 arguments)\n");
+        LLVM_DEBUG(dbgs() << ".. .. gave up (ran out of FGR32 arguments)\n");
         return false;
       }
-      DEBUG(dbgs() << ".. .. FGR32(" << *NextFGR32 << ")\n");
+      LLVM_DEBUG(dbgs() << ".. .. FGR32(" << *NextFGR32 << ")\n");
       Allocation.emplace_back(&Mips::FGR32RegClass, *NextFGR32++);
       // Allocating an FGR32 also allocates the super-register AFGR64, and
       // ABI rules require us to skip the corresponding GPR32.
@@ -1413,14 +1414,14 @@ bool MipsFastISel::fastLowerArguments() {
 
     case MVT::f64:
       if (UnsupportedFPMode) {
-        DEBUG(dbgs() << ".. .. gave up (UnsupportedFPMode)\n");
+        LLVM_DEBUG(dbgs() << ".. .. gave up (UnsupportedFPMode)\n");
         return false;
       }
       if (NextAFGR64 == AFGR64ArgRegs.end()) {
-        DEBUG(dbgs() << ".. .. gave up (ran out of AFGR64 arguments)\n");
+        LLVM_DEBUG(dbgs() << ".. .. gave up (ran out of AFGR64 arguments)\n");
         return false;
       }
-      DEBUG(dbgs() << ".. .. AFGR64(" << *NextAFGR64 << ")\n");
+      LLVM_DEBUG(dbgs() << ".. .. AFGR64(" << *NextAFGR64 << ")\n");
       Allocation.emplace_back(&Mips::AFGR64RegClass, *NextAFGR64++);
       // Allocating an FGR32 also allocates the super-register AFGR64, and
       // ABI rules require us to skip the corresponding GPR32 pair.
@@ -1433,7 +1434,7 @@ bool MipsFastISel::fastLowerArguments() {
       break;
 
     default:
-      DEBUG(dbgs() << ".. .. gave up (unknown type)\n");
+      LLVM_DEBUG(dbgs() << ".. .. gave up (unknown type)\n");
       return false;
     }
   }
@@ -1648,7 +1649,7 @@ bool MipsFastISel::selectRet(const Instruction *I) {
   const Function &F = *I->getParent()->getParent();
   const ReturnInst *Ret = cast<ReturnInst>(I);
 
-  DEBUG(dbgs() << "selectRet\n");
+  LLVM_DEBUG(dbgs() << "selectRet\n");
 
   if (!FuncInfo.CanLowerReturn)
     return false;
@@ -1712,7 +1713,7 @@ bool MipsFastISel::selectRet(const Instruction *I) {
 
     // Do not handle FGR64 returns for now.
     if (RVVT == MVT::f64 && UnsupportedFPMode) {
-      DEBUG(dbgs() << ".. .. gave up (UnsupportedFPMode\n");
+      LLVM_DEBUG(dbgs() << ".. .. gave up (UnsupportedFPMode\n");
       return false;
     }
 

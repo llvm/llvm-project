@@ -654,7 +654,7 @@ getNotRelocatableInstructions(CoroBeginInst *CoroBegin,
   // set.
   do {
     Instruction *Current = Work.pop_back_val();
-    DEBUG(dbgs() << "CoroSplit: Will not relocate: " << *Current << "\n");
+    LLVM_DEBUG(dbgs() << "CoroSplit: Will not relocate: " << *Current << "\n");
     DoNotRelocate.insert(Current);
     for (Value *U : Current->operands()) {
       auto *I = dyn_cast<Instruction>(U);
@@ -850,8 +850,8 @@ struct CoroSplit : public CallGraphSCCPass {
     for (Function *F : Coroutines) {
       Attribute Attr = F->getFnAttribute(CORO_PRESPLIT_ATTR);
       StringRef Value = Attr.getValueAsString();
-      DEBUG(dbgs() << "CoroSplit: Processing coroutine '" << F->getName()
-                   << "' state: " << Value << "\n");
+      LLVM_DEBUG(dbgs() << "CoroSplit: Processing coroutine '" << F->getName()
+                        << "' state: " << Value << "\n");
       if (Value == UNPREPARED_FOR_SPLIT) {
         prepareForSplit(*F, CG);
         continue;

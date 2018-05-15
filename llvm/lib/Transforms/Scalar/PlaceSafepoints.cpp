@@ -323,7 +323,7 @@ bool PlaceBackedgeSafepointsImpl::runOnLoop(Loop *L) {
     // avoiding the runtime cost of the actual safepoint.
     if (!AllBackedges) {
       if (mustBeFiniteCountedLoop(L, SE, Pred)) {
-        DEBUG(dbgs() << "skipping safepoint placement in finite loop\n");
+        LLVM_DEBUG(dbgs() << "skipping safepoint placement in finite loop\n");
         FiniteExecution++;
         continue;
       }
@@ -332,7 +332,9 @@ bool PlaceBackedgeSafepointsImpl::runOnLoop(Loop *L) {
         // Note: This is only semantically legal since we won't do any further
         // IPO or inlining before the actual call insertion..  If we hadn't, we
         // might latter loose this call safepoint.
-        DEBUG(dbgs() << "skipping safepoint placement due to unconditional call\n");
+        LLVM_DEBUG(
+            dbgs()
+            << "skipping safepoint placement due to unconditional call\n");
         CallInLoop++;
         continue;
       }
@@ -348,7 +350,7 @@ bool PlaceBackedgeSafepointsImpl::runOnLoop(Loop *L) {
     // variables) and branches to the true header
     TerminatorInst *Term = Pred->getTerminator();
 
-    DEBUG(dbgs() << "[LSP] terminator instruction: " << *Term);
+    LLVM_DEBUG(dbgs() << "[LSP] terminator instruction: " << *Term);
 
     PollLocations.push_back(Term);
   }

@@ -228,7 +228,7 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
       ColumnEnd = std::numeric_limits<unsigned>::max();
     }
 
-    DEBUG({
+    LLVM_DEBUG({
       dbgs() << "Counter in file " << InferredFileID << " " << LineStart << ":"
              << ColumnStart << " -> " << (LineStart + NumLines) << ":"
              << ColumnEnd << ", ";

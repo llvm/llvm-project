@@ -164,8 +164,8 @@ void LocalStackSlotPass::AdjustStackOffset(MachineFrameInfo &MFI,
   Offset = (Offset + Align - 1) / Align * Align;
 
   int64_t LocalOffset = StackGrowsDown ? -Offset : Offset;
-  DEBUG(dbgs() << "Allocate FI(" << FrameIdx << ") to local offset "
-        << LocalOffset << "\n");
+  LLVM_DEBUG(dbgs() << "Allocate FI(" << FrameIdx << ") to local offset "
+                    << LocalOffset << "\n");
   // Keep the offset available for base register allocation
   LocalOffsets[FrameIdx] = LocalOffset;
   // And tell MFI about it for PEI to use later
@@ -351,7 +351,7 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
     assert(MFI.isObjectPreAllocated(FrameIdx) &&
            "Only pre-allocated locals expected!");
 
-    DEBUG(dbgs() << "Considering: " << MI);
+    LLVM_DEBUG(dbgs() << "Considering: " << MI);
 
     unsigned idx = 0;
     for (unsigned f = MI.getNumOperands(); idx != f; ++idx) {
@@ -367,7 +367,7 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
     int64_t Offset = 0;
     int64_t FrameSizeAdjust = StackGrowsDown ? MFI.getLocalFrameSize() : 0;
 
-    DEBUG(dbgs() << "  Replacing FI in: " << MI);
+    LLVM_DEBUG(dbgs() << "  Replacing FI in: " << MI);
 
     // If we have a suitable base register available, use it; otherwise
     // create a new one. Note that any offset encoded in the
@@ -377,7 +377,7 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
     if (UsedBaseReg &&
         lookupCandidateBaseReg(BaseReg, BaseOffset, FrameSizeAdjust,
                                LocalOffset, MI, TRI)) {
-      DEBUG(dbgs() << "  Reusing base register " << BaseReg << "\n");
+      LLVM_DEBUG(dbgs() << "  Reusing base register " << BaseReg << "\n");
       // We found a register to reuse.
       Offset = FrameSizeAdjust + LocalOffset - BaseOffset;
     } else {
@@ -405,8 +405,9 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
       const TargetRegisterClass *RC = TRI->getPointerRegClass(*MF);
       BaseReg = Fn.getRegInfo().createVirtualRegister(RC);
 
-      DEBUG(dbgs() << "  Materializing base register " << BaseReg <<
-            " at frame local offset " << LocalOffset + InstrOffset << "\n");
+      LLVM_DEBUG(dbgs() << "  Materializing base register " << BaseReg
+                        << " at frame local offset "
+                        << LocalOffset + InstrOffset << "\n");
 
       // Tell the target to insert the instruction to initialize
       // the base register.
@@ -427,7 +428,7 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
     // Modify the instruction to use the new base register rather
     // than the frame index operand.
     TRI->resolveFrameIndex(MI, BaseReg, Offset);
-    DEBUG(dbgs() << "Resolved: " << MI);
+    LLVM_DEBUG(dbgs() << "Resolved: " << MI);
 
     ++NumReplacements;
   }

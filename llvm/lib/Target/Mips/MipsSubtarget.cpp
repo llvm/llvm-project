@@ -234,7 +234,8 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
 }
 
 bool MipsSubtarget::useConstantIslands() {
-  DEBUG(dbgs() << "use constant islands " << Mips16ConstantIslands << "\n");
+  LLVM_DEBUG(dbgs() << "use constant islands " << Mips16ConstantIslands
+                    << "\n");
   return Mips16ConstantIslands;
 }
 

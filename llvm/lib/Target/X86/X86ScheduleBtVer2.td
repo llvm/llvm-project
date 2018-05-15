@@ -575,7 +575,13 @@ def : InstRW<[JWriteVCVTYLd, ReadAfterLd], (instrs VCVTDQ2PDYrm, VCVTDQ2PSYrm,
 def JWriteVMOVNTDQSt: SchedWriteRes<[JFPU1, JSTC, JSAGU]> {
   let Latency = 2;
 }
-def : InstRW<[JWriteVMOVNTDQSt], (instrs MOVNTDQmr, VMOVNTDQmr)>;
+def : InstRW<[JWriteVMOVNTDQSt], (instrs MMX_MOVNTQmr, MOVNTDQmr, VMOVNTDQmr)>;
+
+def JWriteVMOVNTDQYSt: SchedWriteRes<[JFPU1, JSTC, JSAGU]> {
+  let Latency = 2;
+  let ResourceCycles = [2, 2, 2];
+}
+def : InstRW<[JWriteVMOVNTDQYSt], (instrs VMOVNTDQYmr)>;
 
 def JWriteMOVNTSt: SchedWriteRes<[JFPU1, JSTC, JSAGU]> {
   let Latency = 3;
@@ -586,7 +592,7 @@ def JWriteVMOVNTPYSt: SchedWriteRes<[JFPU1, JSTC, JSAGU]> {
   let Latency = 3;
   let ResourceCycles = [2, 2, 2];
 }
-def : InstRW<[JWriteVMOVNTPYSt], (instrs VMOVNTDQYmr, VMOVNTPDYmr, VMOVNTPSYmr)>;
+def : InstRW<[JWriteVMOVNTPYSt], (instrs VMOVNTPDYmr, VMOVNTPSYmr)>;
 
 def JWriteVCVTPDY: SchedWriteRes<[JFPU1, JSTC, JFPX]> {
   let Latency = 6;

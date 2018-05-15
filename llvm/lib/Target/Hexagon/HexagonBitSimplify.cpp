@@ -2450,7 +2450,7 @@ bool BitSimplification::simplifyExtractLow(MachineInstr *MI,
   if (Len == RW)
     return false;
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << __func__ << " on reg: " << printReg(RD.Reg, &HRI, RD.Sub)
            << ", MI: " << *MI;
     dbgs() << "Cell: " << RC << '\n';
@@ -2644,7 +2644,7 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
 
   const HexagonEvaluator HE(HRI, MRI, HII, MF);
   BitTracker BT(HE, MF);
-  DEBUG(BT.trace(true));
+  LLVM_DEBUG(BT.trace(true));
   BT.run();
 
   MachineBasicBlock &Entry = MF.front();
@@ -2975,7 +2975,8 @@ void HexagonLoopRescheduling::moveGroup(InstrGroup &G, MachineBasicBlock &LB,
 }
 
 bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
-  DEBUG(dbgs() << "Processing loop in " << printMBBReference(*C.LB) << "\n");
+  LLVM_DEBUG(dbgs() << "Processing loop in " << printMBBReference(*C.LB)
+                    << "\n");
   std::vector<PhiInfo> Phis;
   for (auto &I : *C.LB) {
     if (!I.isPHI())
@@ -2999,7 +3000,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     Phis.push_back(PhiInfo(I, *C.LB));
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Phis: {";
     for (auto &I : Phis) {
       dbgs() << ' ' << printReg(I.DefR, HRI) << "=phi("
@@ -3120,7 +3121,7 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     Groups.push_back(G);
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     for (unsigned i = 0, n = Groups.size(); i < n; ++i) {
       InstrGroup &G = Groups[i];
       dbgs() << "Group[" << i << "] inp: "
@@ -3188,7 +3189,7 @@ bool HexagonLoopRescheduling::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   const HexagonEvaluator HE(*HRI, *MRI, *HII, MF);
   BitTracker BT(HE, MF);
-  DEBUG(BT.trace(true));
+  LLVM_DEBUG(BT.trace(true));
   BT.run();
   BTP = &BT;
 

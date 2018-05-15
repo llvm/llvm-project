@@ -513,9 +513,9 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
 
         if (MDT.dominates(MI1, MI2)) {
           if (!intereferes(MI2, MI1)) {
-            DEBUG(dbgs() << "Erasing from "
-                         << printMBBReference(*MI2->getParent()) << " "
-                         << *MI2);
+            LLVM_DEBUG(dbgs()
+                       << "Erasing from "
+                       << printMBBReference(*MI2->getParent()) << " " << *MI2);
             MI2->eraseFromParent();
             Defs.erase(I2++);
             Changed = true;
@@ -523,9 +523,9 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
           }
         } else if (MDT.dominates(MI2, MI1)) {
           if (!intereferes(MI1, MI2)) {
-            DEBUG(dbgs() << "Erasing from "
-                         << printMBBReference(*MI1->getParent()) << " "
-                         << *MI1);
+            LLVM_DEBUG(dbgs()
+                       << "Erasing from "
+                       << printMBBReference(*MI1->getParent()) << " " << *MI1);
             MI1->eraseFromParent();
             Defs.erase(I1++);
             Changed = true;
@@ -541,11 +541,12 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
 
           MachineBasicBlock::iterator I = MBB->getFirstNonPHI();
           if (!intereferes(MI1, I) && !intereferes(MI2, I)) {
-            DEBUG(dbgs() << "Erasing from "
-                         << printMBBReference(*MI1->getParent()) << " " << *MI1
-                         << "and moving from "
-                         << printMBBReference(*MI2->getParent()) << " to "
-                         << printMBBReference(*I->getParent()) << " " << *MI2);
+            LLVM_DEBUG(dbgs()
+                       << "Erasing from "
+                       << printMBBReference(*MI1->getParent()) << " " << *MI1
+                       << "and moving from "
+                       << printMBBReference(*MI2->getParent()) << " to "
+                       << printMBBReference(*I->getParent()) << " " << *MI2);
             I->getParent()->splice(I, MI2->getParent(), MI2);
             MI1->eraseFromParent();
             Defs.erase(I1++);
@@ -633,7 +634,8 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
           if (!predsHasDivergentTerminator(MBB0, TRI) &&
               !predsHasDivergentTerminator(MBB1, TRI)) {
-            DEBUG(dbgs() << "Not fixing PHI for uniform branch: " << MI << '\n');
+            LLVM_DEBUG(dbgs()
+                       << "Not fixing PHI for uniform branch: " << MI << '\n');
             break;
           }
         }
@@ -673,7 +675,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
         SmallSet<unsigned, 8> Visited;
         if (HasVGPROperand || !phiHasBreakDef(MI, MRI, Visited)) {
-          DEBUG(dbgs() << "Fixing PHI: " << MI);
+          LLVM_DEBUG(dbgs() << "Fixing PHI: " << MI);
           TII->moveToVALU(MI);
         }
         break;
@@ -685,7 +687,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
           continue;
         }
 
-        DEBUG(dbgs() << "Fixing REG_SEQUENCE: " << MI);
+        LLVM_DEBUG(dbgs() << "Fixing REG_SEQUENCE: " << MI);
 
         TII->moveToVALU(MI);
         break;
@@ -696,7 +698,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         Src1RC = MRI.getRegClass(MI.getOperand(2).getReg());
         if (TRI->isSGPRClass(DstRC) &&
             (TRI->hasVGPRs(Src0RC) || TRI->hasVGPRs(Src1RC))) {
-          DEBUG(dbgs() << " Fixing INSERT_SUBREG: " << MI);
+          LLVM_DEBUG(dbgs() << " Fixing INSERT_SUBREG: " << MI);
           TII->moveToVALU(MI);
         }
         break;

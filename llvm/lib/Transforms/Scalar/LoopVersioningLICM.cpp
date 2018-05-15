@@ -246,48 +246,47 @@ private:
 bool LoopVersioningLICM::legalLoopStructure() {
   // Loop must be in loop simplify form.
   if (!CurLoop->isLoopSimplifyForm()) {
-    DEBUG(
-        dbgs() << "    loop is not in loop-simplify form.\n");
+    LLVM_DEBUG(dbgs() << "    loop is not in loop-simplify form.\n");
     return false;
   }
   // Loop should be innermost loop, if not return false.
   if (!CurLoop->getSubLoops().empty()) {
-    DEBUG(dbgs() << "    loop is not innermost\n");
+    LLVM_DEBUG(dbgs() << "    loop is not innermost\n");
     return false;
   }
   // Loop should have a single backedge, if not return false.
   if (CurLoop->getNumBackEdges() != 1) {
-    DEBUG(dbgs() << "    loop has multiple backedges\n");
+    LLVM_DEBUG(dbgs() << "    loop has multiple backedges\n");
     return false;
   }
   // Loop must have a single exiting block, if not return false.
   if (!CurLoop->getExitingBlock()) {
-    DEBUG(dbgs() << "    loop has multiple exiting block\n");
+    LLVM_DEBUG(dbgs() << "    loop has multiple exiting block\n");
     return false;
   }
   // We only handle bottom-tested loop, i.e. loop in which the condition is
   // checked at the end of each iteration. With that we can assume that all
   // instructions in the loop are executed the same number of times.
   if (CurLoop->getExitingBlock() != CurLoop->getLoopLatch()) {
-    DEBUG(dbgs() << "    loop is not bottom tested\n");
+    LLVM_DEBUG(dbgs() << "    loop is not bottom tested\n");
     return false;
   }
   // Parallel loops must not have aliasing loop-invariant memory accesses.
   // Hence we don't need to version anything in this case.
   if (CurLoop->isAnnotatedParallel()) {
-    DEBUG(dbgs() << "    Parallel loop is not worth versioning\n");
+    LLVM_DEBUG(dbgs() << "    Parallel loop is not worth versioning\n");
     return false;
   }
   // Loop depth more then LoopDepthThreshold are not allowed
   if (CurLoop->getLoopDepth() > LoopDepthThreshold) {
-    DEBUG(dbgs() << "    loop depth is more then threshold\n");
+    LLVM_DEBUG(dbgs() << "    loop depth is more then threshold\n");
     return false;
   }
   // We need to be able to compute the loop trip count in order
   // to generate the bound checks.
   const SCEV *ExitCount = SE->getBackedgeTakenCount(CurLoop);
   if (ExitCount == SE->getCouldNotCompute()) {
-    DEBUG(dbgs() << "    loop does not has trip count\n");
+    LLVM_DEBUG(dbgs() << "    loop does not has trip count\n");
     return false;
   }
   return true;
@@ -335,18 +334,18 @@ bool LoopVersioningLICM::legalLoopMemoryAccesses() {
   }
   // Ensure types should be of same type.
   if (!TypeSafety) {
-    DEBUG(dbgs() << "    Alias tracker type safety failed!\n");
+    LLVM_DEBUG(dbgs() << "    Alias tracker type safety failed!\n");
     return false;
   }
   // Ensure loop body shouldn't be read only.
   if (!HasMod) {
-    DEBUG(dbgs() << "    No memory modified in loop body\n");
+    LLVM_DEBUG(dbgs() << "    No memory modified in loop body\n");
     return false;
   }
   // Make sure alias set has may alias case.
   // If there no alias memory ambiguity, return false.
   if (!HasMayAlias) {
-    DEBUG(dbgs() << "    No ambiguity in memory access.\n");
+    LLVM_DEBUG(dbgs() << "    No ambiguity in memory access.\n");
     return false;
   }
   return true;
@@ -362,12 +361,12 @@ bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
   assert(I != nullptr && "Null instruction found!");
   // Check function call safety
   if (isa<CallInst>(I) && !AA->doesNotAccessMemory(CallSite(I))) {
-    DEBUG(dbgs() << "    Unsafe call site found.\n");
+    LLVM_DEBUG(dbgs() << "    Unsafe call site found.\n");
     return false;
   }
   // Avoid loops with possiblity of throw
   if (I->mayThrow()) {
-    DEBUG(dbgs() << "    May throw instruction found in loop body\n");
+    LLVM_DEBUG(dbgs() << "    May throw instruction found in loop body\n");
     return false;
   }
   // If current instruction is load instructions
@@ -375,7 +374,7 @@ bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
   if (I->mayReadFromMemory()) {
     LoadInst *Ld = dyn_cast<LoadInst>(I);
     if (!Ld || !Ld->isSimple()) {
-      DEBUG(dbgs() << "    Found a non-simple load.\n");
+      LLVM_DEBUG(dbgs() << "    Found a non-simple load.\n");
       return false;
     }
     LoadAndStoreCounter++;
@@ -389,7 +388,7 @@ bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
   else if (I->mayWriteToMemory()) {
     StoreInst *St = dyn_cast<StoreInst>(I);
     if (!St || !St->isSimple()) {
-      DEBUG(dbgs() << "    Found a non-simple store.\n");
+      LLVM_DEBUG(dbgs() << "    Found a non-simple store.\n");
       return false;
     }
     LoadAndStoreCounter++;
@@ -428,13 +427,14 @@ bool LoopVersioningLICM::legalLoopInstructions() {
   LAI = &LAA->getInfo(CurLoop);
   // Check LoopAccessInfo for need of runtime check.
   if (LAI->getRuntimePointerChecking()->getChecks().empty()) {
-    DEBUG(dbgs() << "    LAA: Runtime check not found !!\n");
+    LLVM_DEBUG(dbgs() << "    LAA: Runtime check not found !!\n");
     return false;
   }
   // Number of runtime-checks should be less then RuntimeMemoryCheckThreshold
   if (LAI->getNumRuntimePointerChecks() >
       VectorizerParams::RuntimeMemoryCheckThreshold) {
-    DEBUG(dbgs() << "    LAA: Runtime checks are more than threshold !!\n");
+    LLVM_DEBUG(
+        dbgs() << "    LAA: Runtime checks are more than threshold !!\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "RuntimeCheck",
                                       CurLoop->getStartLoc(),
@@ -448,23 +448,25 @@ bool LoopVersioningLICM::legalLoopInstructions() {
   }
   // Loop should have at least one invariant load or store instruction.
   if (!InvariantCounter) {
-    DEBUG(dbgs() << "    Invariant not found !!\n");
+    LLVM_DEBUG(dbgs() << "    Invariant not found !!\n");
     return false;
   }
   // Read only loop not allowed.
   if (IsReadOnlyLoop) {
-    DEBUG(dbgs() << "    Found a read-only loop!\n");
+    LLVM_DEBUG(dbgs() << "    Found a read-only loop!\n");
     return false;
   }
   // Profitablity check:
   // Check invariant threshold, should be in limit.
   if (InvariantCounter * 100 < InvariantThreshold * LoadAndStoreCounter) {
-    DEBUG(dbgs()
-          << "    Invariant load & store are less then defined threshold\n");
-    DEBUG(dbgs() << "    Invariant loads & stores: "
-                 << ((InvariantCounter * 100) / LoadAndStoreCounter) << "%\n");
-    DEBUG(dbgs() << "    Invariant loads & store threshold: "
-                 << InvariantThreshold << "%\n");
+    LLVM_DEBUG(
+        dbgs()
+        << "    Invariant load & store are less then defined threshold\n");
+    LLVM_DEBUG(dbgs() << "    Invariant loads & stores: "
+                      << ((InvariantCounter * 100) / LoadAndStoreCounter)
+                      << "%\n");
+    LLVM_DEBUG(dbgs() << "    Invariant loads & store threshold: "
+                      << InvariantThreshold << "%\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "InvariantThreshold",
                                       CurLoop->getStartLoc(),
@@ -497,16 +499,16 @@ bool LoopVersioningLICM::isLoopAlreadyVisited() {
 /// Return true if legal else returns false.
 bool LoopVersioningLICM::isLegalForVersioning() {
   using namespace ore;
-  DEBUG(dbgs() << "Loop: " << *CurLoop);
+  LLVM_DEBUG(dbgs() << "Loop: " << *CurLoop);
   // Make sure not re-visiting same loop again.
   if (isLoopAlreadyVisited()) {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "    Revisiting loop in LoopVersioningLICM not allowed.\n\n");
     return false;
   }
   // Check loop structure leagality.
   if (!legalLoopStructure()) {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "    Loop structure not suitable for LoopVersioningLICM\n\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "IllegalLoopStruct",
@@ -518,14 +520,16 @@ bool LoopVersioningLICM::isLegalForVersioning() {
   }
   // Check loop instruction leagality.
   if (!legalLoopInstructions()) {
-    DEBUG(dbgs()
-          << "    Loop instructions not suitable for LoopVersioningLICM\n\n");
+    LLVM_DEBUG(
+        dbgs()
+        << "    Loop instructions not suitable for LoopVersioningLICM\n\n");
     return false;
   }
   // Check loop memory access leagality.
   if (!legalLoopMemoryAccesses()) {
-    DEBUG(dbgs()
-          << "    Loop memory access not suitable for LoopVersioningLICM\n\n");
+    LLVM_DEBUG(
+        dbgs()
+        << "    Loop memory access not suitable for LoopVersioningLICM\n\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "IllegalLoopMemoryAccess",
                                       CurLoop->getStartLoc(),
@@ -535,7 +539,7 @@ bool LoopVersioningLICM::isLegalForVersioning() {
     return false;
   }
   // Loop versioning is feasible, return true.
-  DEBUG(dbgs() << "    Loop Versioning found to be beneficial\n\n");
+  LLVM_DEBUG(dbgs() << "    Loop Versioning found to be beneficial\n\n");
   ORE->emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "IsLegalForVersioning",
                               CurLoop->getStartLoc(), CurLoop->getHeader())

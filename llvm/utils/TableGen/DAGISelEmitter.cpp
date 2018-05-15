@@ -137,13 +137,16 @@ void DAGISelEmitter::run(raw_ostream &OS) {
         "// When neither of the GET_DAGISEL* macros is defined, the functions\n"
         "// are emitted inline.\n\n";
 
-  DEBUG(errs() << "\n\nALL PATTERNS TO MATCH:\n\n";
-        for (CodeGenDAGPatterns::ptm_iterator I = CGP.ptm_begin(),
-             E = CGP.ptm_end(); I != E; ++I) {
-          errs() << "PATTERN: ";   I->getSrcPattern()->dump();
-          errs() << "\nRESULT:  "; I->getDstPattern()->dump();
-          errs() << "\n";
-        });
+  LLVM_DEBUG(errs() << "\n\nALL PATTERNS TO MATCH:\n\n";
+             for (CodeGenDAGPatterns::ptm_iterator I = CGP.ptm_begin(),
+                  E = CGP.ptm_end();
+                  I != E; ++I) {
+               errs() << "PATTERN: ";
+               I->getSrcPattern()->dump();
+               errs() << "\nRESULT:  ";
+               I->getDstPattern()->dump();
+               errs() << "\n";
+             });
 
   // Add all the patterns to a temporary list so we can sort them.
   std::vector<const PatternToMatch*> Patterns;

@@ -361,14 +361,14 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
                                    getAnalysisIfAvailable<MachineModuleInfo>());
   }
 
-  DEBUG(dbgs() << "\nIfcvt: function (" << ++FnNum <<  ") \'"
-               << MF.getName() << "\'");
+  LLVM_DEBUG(dbgs() << "\nIfcvt: function (" << ++FnNum << ") \'"
+                    << MF.getName() << "\'");
 
   if (FnNum < IfCvtFnStart || (IfCvtFnStop != -1 && FnNum > IfCvtFnStop)) {
-    DEBUG(dbgs() << " skipped\n");
+    LLVM_DEBUG(dbgs() << " skipped\n");
     return false;
   }
-  DEBUG(dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "\n");
 
   MF.RenumberBlocks();
   BBAnalysis.resize(MF.getNumBlockIDs());
@@ -406,14 +406,14 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
       case ICSimpleFalse: {
         bool isFalse = Kind == ICSimpleFalse;
         if ((isFalse && DisableSimpleF) || (!isFalse && DisableSimple)) break;
-        DEBUG(dbgs() << "Ifcvt (Simple"
-                     << (Kind == ICSimpleFalse ? " false" : "")
-                     << "): " << printMBBReference(*BBI.BB) << " ("
-                     << ((Kind == ICSimpleFalse) ? BBI.FalseBB->getNumber()
-                                                 : BBI.TrueBB->getNumber())
-                     << ") ");
+        LLVM_DEBUG(dbgs() << "Ifcvt (Simple"
+                          << (Kind == ICSimpleFalse ? " false" : "")
+                          << "): " << printMBBReference(*BBI.BB) << " ("
+                          << ((Kind == ICSimpleFalse) ? BBI.FalseBB->getNumber()
+                                                      : BBI.TrueBB->getNumber())
+                          << ") ");
         RetVal = IfConvertSimple(BBI, Kind);
-        DEBUG(dbgs() << (RetVal ? "succeeded!" : "failed!") << "\n");
+        LLVM_DEBUG(dbgs() << (RetVal ? "succeeded!" : "failed!") << "\n");
         if (RetVal) {
           if (isFalse) ++NumSimpleFalse;
           else         ++NumSimple;
@@ -430,16 +430,16 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
         if (DisableTriangleR && !isFalse && isRev) break;
         if (DisableTriangleF && isFalse && !isRev) break;
         if (DisableTriangleFR && isFalse && isRev) break;
-        DEBUG(dbgs() << "Ifcvt (Triangle");
+        LLVM_DEBUG(dbgs() << "Ifcvt (Triangle");
         if (isFalse)
-          DEBUG(dbgs() << " false");
+          LLVM_DEBUG(dbgs() << " false");
         if (isRev)
-          DEBUG(dbgs() << " rev");
-        DEBUG(dbgs() << "): " << printMBBReference(*BBI.BB)
-                     << " (T:" << BBI.TrueBB->getNumber()
-                     << ",F:" << BBI.FalseBB->getNumber() << ") ");
+          LLVM_DEBUG(dbgs() << " rev");
+        LLVM_DEBUG(dbgs() << "): " << printMBBReference(*BBI.BB)
+                          << " (T:" << BBI.TrueBB->getNumber()
+                          << ",F:" << BBI.FalseBB->getNumber() << ") ");
         RetVal = IfConvertTriangle(BBI, Kind);
-        DEBUG(dbgs() << (RetVal ? "succeeded!" : "failed!") << "\n");
+        LLVM_DEBUG(dbgs() << (RetVal ? "succeeded!" : "failed!") << "\n");
         if (RetVal) {
           if (isFalse) {
             if (isRev) ++NumTriangleFRev;
@@ -453,24 +453,25 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
       }
       case ICDiamond:
         if (DisableDiamond) break;
-        DEBUG(dbgs() << "Ifcvt (Diamond): " << printMBBReference(*BBI.BB)
-                     << " (T:" << BBI.TrueBB->getNumber()
-                     << ",F:" << BBI.FalseBB->getNumber() << ") ");
+        LLVM_DEBUG(dbgs() << "Ifcvt (Diamond): " << printMBBReference(*BBI.BB)
+                          << " (T:" << BBI.TrueBB->getNumber()
+                          << ",F:" << BBI.FalseBB->getNumber() << ") ");
         RetVal = IfConvertDiamond(BBI, Kind, NumDups, NumDups2,
                                   Token->TClobbersPred,
                                   Token->FClobbersPred);
-        DEBUG(dbgs() << (RetVal ? "succeeded!" : "failed!") << "\n");
+        LLVM_DEBUG(dbgs() << (RetVal ? "succeeded!" : "failed!") << "\n");
         if (RetVal) ++NumDiamonds;
         break;
       case ICForkedDiamond:
         if (DisableForkedDiamond) break;
-        DEBUG(dbgs() << "Ifcvt (Forked Diamond): " << printMBBReference(*BBI.BB)
-                     << " (T:" << BBI.TrueBB->getNumber()
-                     << ",F:" << BBI.FalseBB->getNumber() << ") ");
+        LLVM_DEBUG(dbgs() << "Ifcvt (Forked Diamond): "
+                          << printMBBReference(*BBI.BB)
+                          << " (T:" << BBI.TrueBB->getNumber()
+                          << ",F:" << BBI.FalseBB->getNumber() << ") ");
         RetVal = IfConvertForkedDiamond(BBI, Kind, NumDups, NumDups2,
                                       Token->TClobbersPred,
                                       Token->FClobbersPred);
-        DEBUG(dbgs() << (RetVal ? "succeeded!" : "failed!") << "\n");
+        LLVM_DEBUG(dbgs() << (RetVal ? "succeeded!" : "failed!") << "\n");
         if (RetVal) ++NumForkedDiamonds;
         break;
       }

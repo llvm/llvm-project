@@ -1804,19 +1804,21 @@ __m128i test_mm_maskz_cvtepi16_epi8(__mmask8 __M, __m128i __A) {
 
 __m128i test_mm256_cvtepi16_epi8(__m256i __A) {
   // CHECK-LABEL: @test_mm256_cvtepi16_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmov.wb.256
+  // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
   return _mm256_cvtepi16_epi8(__A); 
 }
 
 __m128i test_mm256_mask_cvtepi16_epi8(__m128i __O, __mmask16 __M, __m256i __A) {
   // CHECK-LABEL: @test_mm256_mask_cvtepi16_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmov.wb.256
+  // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm256_mask_cvtepi16_epi8(__O, __M, __A); 
 }
 
 __m128i test_mm256_maskz_cvtepi16_epi8(__mmask16 __M, __m256i __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvtepi16_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmov.wb.256
+  // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
   return _mm256_maskz_cvtepi16_epi8(__M, __A); 
 }
 

@@ -68,7 +68,7 @@ FunctionPass *llvm::createWebAssemblyArgumentMove() {
 }
 
 bool WebAssemblyArgumentMove::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "********** Argument Move **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });

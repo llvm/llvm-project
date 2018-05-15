@@ -1231,11 +1231,6 @@ defm VBROADCASTSS  : avx512_fp_broadcast_ss<0x18, "vbroadcastss",
 defm VBROADCASTSD  : avx512_fp_broadcast_sd<0x19, "vbroadcastsd",
                                        avx512vl_f64_info>, VEX_W;
 
-def : Pat<(int_x86_avx512_vbroadcast_ss_512 addr:$src),
-          (VBROADCASTSSZm addr:$src)>;
-def : Pat<(int_x86_avx512_vbroadcast_sd_512 addr:$src),
-          (VBROADCASTSDZm addr:$src)>;
-
 multiclass avx512_int_broadcast_reg<bits<8> opc, SchedWrite SchedRR,
                                     X86VectorVTInfo _, SDPatternOperator OpNode,
                                     RegisterClass SrcRC> {

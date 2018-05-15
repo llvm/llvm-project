@@ -1122,6 +1122,7 @@ DWARFVerifier::verifyNameIndexEntries(const DWARFDebugNames::NameIndex &NI,
                          "of DIE @ {2:x}: index - {3}; debug_info - {4}.\n",
                          NI.getUnitOffset(), EntryID, DIEOffset, Str,
                          make_range(EntryNames.begin(), EntryNames.end()));
+      ++NumErrors;
     }
   }
   handleAllErrors(EntryOr.takeError(),

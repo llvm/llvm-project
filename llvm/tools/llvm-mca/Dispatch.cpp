@@ -91,8 +91,8 @@ void RegisterFile::addRegisterFile(ArrayRef<MCRegisterCostEntry> Entries,
   }
 }
 
-void RegisterFile::createNewMappings(IndexPlusCostPairTy Entry,
-                                     MutableArrayRef<unsigned> UsedPhysRegs) {
+void RegisterFile::allocatePhysRegs(IndexPlusCostPairTy Entry,
+                                    MutableArrayRef<unsigned> UsedPhysRegs) {
   unsigned RegisterFileIndex = Entry.first;
   unsigned Cost = Entry.second;
   if (RegisterFileIndex) {
@@ -106,8 +106,8 @@ void RegisterFile::createNewMappings(IndexPlusCostPairTy Entry,
   UsedPhysRegs[0] += Cost;
 }
 
-void RegisterFile::removeMappings(IndexPlusCostPairTy Entry,
-                                  MutableArrayRef<unsigned> FreedPhysRegs) {
+void RegisterFile::freePhysRegs(IndexPlusCostPairTy Entry,
+                                MutableArrayRef<unsigned> FreedPhysRegs) {
   unsigned RegisterFileIndex = Entry.first;
   unsigned Cost = Entry.second;
   if (RegisterFileIndex) {
@@ -121,8 +121,9 @@ void RegisterFile::removeMappings(IndexPlusCostPairTy Entry,
   FreedPhysRegs[0] += Cost;
 }
 
-void RegisterFile::addRegisterMapping(WriteState &WS,
-                                      MutableArrayRef<unsigned> UsedPhysRegs) {
+void RegisterFile::addRegisterWrite(WriteState &WS,
+                                    MutableArrayRef<unsigned> UsedPhysRegs,
+                                    bool ShouldAllocatePhysRegs) {
   unsigned RegID = WS.getRegisterID();
   assert(RegID && "Adding an invalid register definition?");
 
@@ -131,7 +132,11 @@ void RegisterFile::addRegisterMapping(WriteState &WS,
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I)
     RegisterMappings[*I].first = &WS;
 
-  createNewMappings(Mapping.second, UsedPhysRegs);
+  // No physical registers are allocated for instructions that are optimized in
+  // hardware. For example, zero-latency data-dependency breaking instructions
+  // don't consume physical registers.
+  if (ShouldAllocatePhysRegs)
+    allocatePhysRegs(Mapping.second, UsedPhysRegs);
 
   // If this is a partial update, then we are done.
   if (!WS.fullyUpdatesSuperRegs())
@@ -141,8 +146,9 @@ void RegisterFile::addRegisterMapping(WriteState &WS,
     RegisterMappings[*I].first = &WS;
 }
 
-void RegisterFile::invalidateRegisterMapping(
-    const WriteState &WS, MutableArrayRef<unsigned> FreedPhysRegs) {
+void RegisterFile::removeRegisterWrite(
+    const WriteState &WS, MutableArrayRef<unsigned> FreedPhysRegs,
+    bool ShouldFreePhysRegs) {
   unsigned RegID = WS.getRegisterID();
   bool ShouldInvalidateSuperRegs = WS.fullyUpdatesSuperRegs();
 
@@ -154,7 +160,8 @@ void RegisterFile::invalidateRegisterMapping(
   if (!Mapping.first)
     return;
 
-  removeMappings(Mapping.second, FreedPhysRegs);
+  if (ShouldFreePhysRegs)
+    freePhysRegs(Mapping.second, FreedPhysRegs);
 
   if (Mapping.first == &WS)
     Mapping.first = nullptr;
@@ -176,7 +183,7 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteState *> &Writes,
   assert(RegID && RegID < RegisterMappings.size());
   WriteState *WS = RegisterMappings[RegID].first;
   if (WS) {
-    DEBUG(dbgs() << "Found a dependent use of RegID=" << RegID << '\n');
+    LLVM_DEBUG(dbgs() << "Found a dependent use of RegID=" << RegID << '\n');
     Writes.push_back(WS);
   }
 
@@ -184,8 +191,8 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteState *> &Writes,
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
     WS = RegisterMappings[*I].first;
     if (WS && std::find(Writes.begin(), Writes.end(), WS) == Writes.end()) {
-      DEBUG(dbgs() << "Found a dependent use of subReg " << *I << " (part of "
-                   << RegID << ")\n");
+      LLVM_DEBUG(dbgs() << "Found a dependent use of subReg " << *I
+                        << " (part of " << RegID << ")\n");
       Writes.push_back(WS);
     }
   }
@@ -254,15 +261,17 @@ void RegisterFile::dump() const {
 
 void DispatchUnit::notifyInstructionDispatched(const InstRef &IR,
                                                ArrayRef<unsigned> UsedRegs) {
-  DEBUG(dbgs() << "[E] Instruction Dispatched: " << IR << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Instruction Dispatched: " << IR << '\n');
   Owner->notifyInstructionEvent(HWInstructionDispatchedEvent(IR, UsedRegs));
 }
 
 void DispatchUnit::notifyInstructionRetired(const InstRef &IR) {
-  DEBUG(dbgs() << "[E] Instruction Retired: " << IR << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Instruction Retired: " << IR << '\n');
   SmallVector<unsigned, 4> FreedRegs(RAT->getNumRegisterFiles());
+  const InstrDesc &Desc = IR.getInstruction()->getDesc();
+
   for (const std::unique_ptr<WriteState> &WS : IR.getInstruction()->getDefs())
-    RAT->invalidateRegisterMapping(*WS.get(), FreedRegs);
+    RAT->removeRegisterWrite(*WS.get(), FreedRegs, !Desc.isZeroLatency());
   Owner->notifyInstructionEvent(HWInstructionRetiredEvent(IR, FreedRegs));
   Owner->eraseInstruction(IR);
 }
@@ -302,7 +311,8 @@ void DispatchUnit::updateRAWDependencies(ReadState &RS,
 
   collectWrites(DependentWrites, RS.getRegisterID());
   RS.setDependentWrites(DependentWrites.size());
-  DEBUG(dbgs() << "Found " << DependentWrites.size() << " dependent writes\n");
+  LLVM_DEBUG(dbgs() << "Found " << DependentWrites.size()
+                    << " dependent writes\n");
   // We know that this read depends on all the writes in DependentWrites.
   // For each write, check if we have ReadAdvance information, and use it
   // to figure out in how many cycles this read becomes available.
@@ -338,18 +348,22 @@ void DispatchUnit::dispatch(InstRef IR, const MCSubtargetInfo &STI) {
     AvailableEntries -= NumMicroOps;
   }
 
-  // Update RAW dependencies if this instruction is not a zero-latency
-  // instruction. The assumption is that a zero-latency instruction doesn't
-  // require to be issued to the scheduler for execution. More importantly, it
-  // doesn't have to wait on the register input operands.
-  if (Desc.MaxLatency || !Desc.Resources.empty())
+  // A dependency-breaking instruction doesn't have to wait on the register
+  // input operands, and it is often optimized at register renaming stage.
+  // Update RAW dependencies if this instruction is not a dependency-breaking
+  // instruction. A dependency-breaking instruction is a zero-latency
+  // instruction that doesn't consume hardware resources.
+  // An example of dependency-breaking instruction on X86 is a zero-idiom XOR.
+  if (!Desc.isZeroLatency())
     for (std::unique_ptr<ReadState> &RS : IS.getUses())
       updateRAWDependencies(*RS, STI);
 
-  // Allocate new mappings.
+  // By default, a dependency-breaking zero-latency instruction is expected to
+  // be optimized at register renaming stage. That means, no physical register
+  // is allocated to the instruction.
   SmallVector<unsigned, 4> RegisterFiles(RAT->getNumRegisterFiles());
   for (std::unique_ptr<WriteState> &WS : IS.getDefs())
-    RAT->addRegisterMapping(*WS, RegisterFiles);
+    RAT->addRegisterWrite(*WS, RegisterFiles, !Desc.isZeroLatency());
 
   // Reserve slots in the RCU, and notify the instruction that it has been
   // dispatched to the schedulers for execution.

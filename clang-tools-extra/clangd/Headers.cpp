@@ -10,6 +10,7 @@
 #include "Headers.h"
 #include "Compiler.h"
 #include "Logger.h"
+#include "SourceCode.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -24,27 +25,34 @@ namespace {
 
 class RecordHeaders : public PPCallbacks {
 public:
-  RecordHeaders(llvm::StringSet<> &WrittenHeaders,
-                llvm::StringSet<> &ResolvedHeaders)
-      : WrittenHeaders(WrittenHeaders), ResolvedHeaders(ResolvedHeaders) {}
+  RecordHeaders(const SourceManager &SM,
+                std::function<void(Inclusion)> Callback)
+      : SM(SM), Callback(std::move(Callback)) {}
 
-  void InclusionDirective(SourceLocation /*HashLoc*/,
-                          const Token & /*IncludeTok*/,
+  // Record existing #includes - both written and resolved paths. Only #includes
+  // in the main file are collected.
+  void InclusionDirective(SourceLocation HashLoc, const Token & /*IncludeTok*/,
                           llvm::StringRef FileName, bool IsAngled,
-                          CharSourceRange /*FilenameRange*/,
-                          const FileEntry *File, llvm::StringRef /*SearchPath*/,
+                          CharSourceRange FilenameRange, const FileEntry *File,
+                          llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
                           const Module * /*Imported*/,
                           SrcMgr::CharacteristicKind /*FileType*/) override {
-    WrittenHeaders.insert(
-        (IsAngled ? "<" + FileName + ">" : "\"" + FileName + "\"").str());
-    if (File != nullptr && !File->tryGetRealPathName().empty())
-      ResolvedHeaders.insert(File->tryGetRealPathName());
+    // Only inclusion directives in the main file make sense. The user cannot
+    // select directives not in the main file.
+    if (HashLoc.isInvalid() || !SM.isInMainFile(HashLoc))
+      return;
+    std::string Written =
+        (IsAngled ? "<" + FileName + ">" : "\"" + FileName + "\"").str();
+    std::string Resolved = (!File || File->tryGetRealPathName().empty())
+                               ? ""
+                               : File->tryGetRealPathName();
+    Callback({halfOpenToRange(SM, FilenameRange), Written, Resolved});
   }
 
 private:
-  llvm::StringSet<> &WrittenHeaders;
-  llvm::StringSet<> &ResolvedHeaders;
+  const SourceManager &SM;
+  std::function<void(Inclusion)> Callback;
 };
 
 } // namespace
@@ -56,6 +64,12 @@ bool isLiteralInclude(llvm::StringRef Include) {
 bool HeaderFile::valid() const {
   return (Verbatim && isLiteralInclude(File)) ||
          (!Verbatim && llvm::sys::path::is_absolute(File));
+}
+
+std::unique_ptr<PPCallbacks>
+collectInclusionsInMainFileCallback(const SourceManager &SM,
+                                    std::function<void(Inclusion)> Callback) {
+  return llvm::make_unique<RecordHeaders>(SM, std::move(Callback));
 }
 
 /// FIXME(ioeric): we might not want to insert an absolute include path if the
@@ -110,17 +124,22 @@ calculateIncludePath(llvm::StringRef File, llvm::StringRef Code,
     return llvm::make_error<llvm::StringError>(
         "Failed to begin preprocessor only action for file " + File,
         llvm::inconvertibleErrorCode());
-  llvm::StringSet<> WrittenHeaders;
-  llvm::StringSet<> ResolvedHeaders;
-  Clang->getPreprocessor().addPPCallbacks(
-      llvm::make_unique<RecordHeaders>(WrittenHeaders, ResolvedHeaders));
+  std::vector<Inclusion> Inclusions;
+  Clang->getPreprocessor().addPPCallbacks(collectInclusionsInMainFileCallback(
+      Clang->getSourceManager(),
+      [&Inclusions](Inclusion Inc) { Inclusions.push_back(std::move(Inc)); }));
   if (!Action.Execute())
     return llvm::make_error<llvm::StringError>(
         "Failed to execute preprocessor only action for file " + File,
         llvm::inconvertibleErrorCode());
+  llvm::StringSet<> IncludedHeaders;
+  for (const auto &Inc : Inclusions) {
+    IncludedHeaders.insert(Inc.Written);
+    if (!Inc.Resolved.empty())
+      IncludedHeaders.insert(Inc.Resolved);
+  }
   auto Included = [&](llvm::StringRef Header) {
-    return WrittenHeaders.find(Header) != WrittenHeaders.end() ||
-           ResolvedHeaders.find(Header) != ResolvedHeaders.end();
+    return IncludedHeaders.find(Header) != IncludedHeaders.end();
   };
   if (Included(DeclaringHeader.File) || Included(InsertedHeader.File))
     return "";

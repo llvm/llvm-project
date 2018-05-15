@@ -564,10 +564,12 @@ AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
   Offset = alignTo(Offset, Align, Skew);
 
   if (StackGrowsDown) {
-    DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << -Offset << "]\n");
+    LLVM_DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << -Offset
+                      << "]\n");
     MFI.setObjectOffset(FrameIdx, -Offset); // Set the computed offset
   } else {
-    DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << Offset << "]\n");
+    LLVM_DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") at SP[" << Offset
+                      << "]\n");
     MFI.setObjectOffset(FrameIdx, Offset);
     Offset += MFI.getObjectSize(FrameIdx);
   }
@@ -660,12 +662,12 @@ static inline bool scavengeStackSlot(MachineFrameInfo &MFI, int FrameIdx,
 
   if (StackGrowsDown) {
     int ObjStart = -(FreeStart + ObjSize);
-    DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") scavenged at SP[" << ObjStart
-                 << "]\n");
+    LLVM_DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") scavenged at SP["
+                      << ObjStart << "]\n");
     MFI.setObjectOffset(FrameIdx, ObjStart);
   } else {
-    DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") scavenged at SP[" << FreeStart
-                 << "]\n");
+    LLVM_DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") scavenged at SP["
+                      << FreeStart << "]\n");
     MFI.setObjectOffset(FrameIdx, FreeStart);
   }
 
@@ -745,7 +747,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
       // Adjust to alignment boundary
       Offset = alignTo(Offset, Align, Skew);
 
-      DEBUG(dbgs() << "alloc FI(" << i << ") at SP[" << -Offset << "]\n");
+      LLVM_DEBUG(dbgs() << "alloc FI(" << i << ") at SP[" << -Offset << "]\n");
       MFI.setObjectOffset(i, -Offset);        // Set the computed offset
     }
   } else if (MaxCSFrameIndex >= MinCSFrameIndex) {
@@ -758,7 +760,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
       // Adjust to alignment boundary
       Offset = alignTo(Offset, Align, Skew);
 
-      DEBUG(dbgs() << "alloc FI(" << i << ") at SP[" << Offset << "]\n");
+      LLVM_DEBUG(dbgs() << "alloc FI(" << i << ") at SP[" << Offset << "]\n");
       MFI.setObjectOffset(i, Offset);
       Offset += MFI.getObjectSize(i);
     }
@@ -795,14 +797,14 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
     // Adjust to alignment boundary.
     Offset = alignTo(Offset, Align, Skew);
 
-    DEBUG(dbgs() << "Local frame base offset: " << Offset << "\n");
+    LLVM_DEBUG(dbgs() << "Local frame base offset: " << Offset << "\n");
 
     // Resolve offsets for objects in the local block.
     for (unsigned i = 0, e = MFI.getLocalFrameObjectCount(); i != e; ++i) {
       std::pair<int, int64_t> Entry = MFI.getLocalFrameObjectMap(i);
       int64_t FIOffset = (StackGrowsDown ? -Offset : Offset) + Entry.second;
-      DEBUG(dbgs() << "alloc FI(" << Entry.first << ") at SP[" <<
-            FIOffset << "]\n");
+      LLVM_DEBUG(dbgs() << "alloc FI(" << Entry.first << ") at SP[" << FIOffset
+                        << "]\n");
       MFI.setObjectOffset(Entry.first, FIOffset);
     }
     // Allocate the local block

@@ -155,13 +155,13 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
   MLI = &getAnalysis<MachineLoopInfo>();
   LiveRegs.init(TII->getRegisterInfo());
 
-  DEBUG(dbgs() << "Start X86FixupBWInsts\n";);
+  LLVM_DEBUG(dbgs() << "Start X86FixupBWInsts\n";);
 
   // Process all basic blocks.
   for (auto &MBB : MF)
     processBasicBlock(MF, MBB);
 
-  DEBUG(dbgs() << "End X86FixupBWInsts\n";);
+  LLVM_DEBUG(dbgs() << "End X86FixupBWInsts\n";);
 
   return true;
 }

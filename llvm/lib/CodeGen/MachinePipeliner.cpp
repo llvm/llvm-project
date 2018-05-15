@@ -886,7 +886,7 @@ void SwingSchedulerDAG::schedule() {
   Topo.InitDAGTopologicalSorting();
   postprocessDAG();
   changeDependences();
-  DEBUG({
+  LLVM_DEBUG({
     for (unsigned su = 0, e = SUnits.size(); su != e; ++su)
       SUnits[su].dumpAll(this);
   });
@@ -906,8 +906,8 @@ void SwingSchedulerDAG::schedule() {
     RecMII = 0;
 
   MII = std::max(ResMII, RecMII);
-  DEBUG(dbgs() << "MII = " << MII << " (rec=" << RecMII << ", res=" << ResMII
-               << ")\n");
+  LLVM_DEBUG(dbgs() << "MII = " << MII << " (rec=" << RecMII
+                    << ", res=" << ResMII << ")\n");
 
   // Can't schedule a loop without a valid MII.
   if (MII == 0)
@@ -925,7 +925,7 @@ void SwingSchedulerDAG::schedule() {
 
   checkNodeSets(NodeSets);
 
-  DEBUG({
+  LLVM_DEBUG({
     for (auto &I : NodeSets) {
       dbgs() << "  Rec NodeSet ";
       I.dump();
@@ -938,7 +938,7 @@ void SwingSchedulerDAG::schedule() {
 
   removeDuplicateNodes(NodeSets);
 
-  DEBUG({
+  LLVM_DEBUG({
     for (auto &I : NodeSets) {
       dbgs() << "  NodeSet ";
       I.dump();
@@ -1634,7 +1634,7 @@ static bool ignoreDependence(const SDep &D, bool isPred) {
 void SwingSchedulerDAG::computeNodeFunctions(NodeSetType &NodeSets) {
   ScheduleInfo.resize(SUnits.size());
 
-  DEBUG({
+  LLVM_DEBUG({
     for (ScheduleDAGTopologicalSort::const_iterator I = Topo.begin(),
                                                     E = Topo.end();
          I != E; ++I) {
@@ -1696,7 +1696,7 @@ void SwingSchedulerDAG::computeNodeFunctions(NodeSetType &NodeSets) {
   for (NodeSet &I : NodeSets)
     I.computeNodeSetInfo(this);
 
-  DEBUG({
+  LLVM_DEBUG({
     for (unsigned i = 0; i < SUnits.size(); i++) {
       dbgs() << "\tNode " << i << ":\n";
       dbgs() << "\t   ASAP = " << getASAP(&SUnits[i]) << "\n";
@@ -1883,9 +1883,10 @@ void SwingSchedulerDAG::registerPressureFilter(NodeSetType &NodeSets) {
                                              CriticalPSets,
                                              RecRegPressure.MaxSetPressure);
       if (RPDelta.Excess.isValid()) {
-        DEBUG(dbgs() << "Excess register pressure: SU(" << SU->NodeNum << ") "
-                     << TRI->getRegPressureSetName(RPDelta.Excess.getPSet())
-                     << ":" << RPDelta.Excess.getUnitInc());
+        LLVM_DEBUG(
+            dbgs() << "Excess register pressure: SU(" << SU->NodeNum << ") "
+                   << TRI->getRegPressureSetName(RPDelta.Excess.getPSet())
+                   << ":" << RPDelta.Excess.getUnitInc());
         NS.setExceedPressure(SU);
         break;
       }
@@ -1936,7 +1937,7 @@ void SwingSchedulerDAG::checkNodeSets(NodeSetType &NodeSets) {
       return;
   }
   NodeSets.clear();
-  DEBUG(dbgs() << "Clear recurrence node-sets\n");
+  LLVM_DEBUG(dbgs() << "Clear recurrence node-sets\n");
   return;
 }
 
@@ -2082,28 +2083,28 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
   NodeOrder.clear();
 
   for (auto &Nodes : NodeSets) {
-    DEBUG(dbgs() << "NodeSet size " << Nodes.size() << "\n");
+    LLVM_DEBUG(dbgs() << "NodeSet size " << Nodes.size() << "\n");
     OrderKind Order;
     SmallSetVector<SUnit *, 8> N;
     if (pred_L(NodeOrder, N) && isSubset(N, Nodes)) {
       R.insert(N.begin(), N.end());
       Order = BottomUp;
-      DEBUG(dbgs() << "  Bottom up (preds) ");
+      LLVM_DEBUG(dbgs() << "  Bottom up (preds) ");
     } else if (succ_L(NodeOrder, N) && isSubset(N, Nodes)) {
       R.insert(N.begin(), N.end());
       Order = TopDown;
-      DEBUG(dbgs() << "  Top down (succs) ");
+      LLVM_DEBUG(dbgs() << "  Top down (succs) ");
     } else if (isIntersect(N, Nodes, R)) {
       // If some of the successors are in the existing node-set, then use the
       // top-down ordering.
       Order = TopDown;
-      DEBUG(dbgs() << "  Top down (intersect) ");
+      LLVM_DEBUG(dbgs() << "  Top down (intersect) ");
     } else if (NodeSets.size() == 1) {
       for (auto &N : Nodes)
         if (N->Succs.size() == 0)
           R.insert(N);
       Order = BottomUp;
-      DEBUG(dbgs() << "  Bottom up (all) ");
+      LLVM_DEBUG(dbgs() << "  Bottom up (all) ");
     } else {
       // Find the node with the highest ASAP.
       SUnit *maxASAP = nullptr;
@@ -2114,7 +2115,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
       }
       R.insert(maxASAP);
       Order = BottomUp;
-      DEBUG(dbgs() << "  Bottom up (default) ");
+      LLVM_DEBUG(dbgs() << "  Bottom up (default) ");
     }
 
     while (!R.empty()) {
@@ -2137,7 +2138,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
               maxHeight = I;
           }
           NodeOrder.insert(maxHeight);
-          DEBUG(dbgs() << maxHeight->NodeNum << " ");
+          LLVM_DEBUG(dbgs() << maxHeight->NodeNum << " ");
           R.remove(maxHeight);
           for (const auto &I : maxHeight->Succs) {
             if (Nodes.count(I.getSUnit()) == 0)
@@ -2160,7 +2161,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
           }
         }
         Order = BottomUp;
-        DEBUG(dbgs() << "\n   Switching order to bottom up ");
+        LLVM_DEBUG(dbgs() << "\n   Switching order to bottom up ");
         SmallSetVector<SUnit *, 8> N;
         if (pred_L(NodeOrder, N, &Nodes))
           R.insert(N.begin(), N.end());
@@ -2182,7 +2183,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
               maxDepth = I;
           }
           NodeOrder.insert(maxDepth);
-          DEBUG(dbgs() << maxDepth->NodeNum << " ");
+          LLVM_DEBUG(dbgs() << maxDepth->NodeNum << " ");
           R.remove(maxDepth);
           if (Nodes.isExceedSU(maxDepth)) {
             Order = TopDown;
@@ -2209,16 +2210,16 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
           }
         }
         Order = TopDown;
-        DEBUG(dbgs() << "\n   Switching order to top down ");
+        LLVM_DEBUG(dbgs() << "\n   Switching order to top down ");
         SmallSetVector<SUnit *, 8> N;
         if (succ_L(NodeOrder, N, &Nodes))
           R.insert(N.begin(), N.end());
       }
     }
-    DEBUG(dbgs() << "\nDone with Nodeset\n");
+    LLVM_DEBUG(dbgs() << "\nDone with Nodeset\n");
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Node order: ";
     for (SUnit *I : NodeOrder)
       dbgs() << " " << I->NodeNum << " ";
@@ -2237,7 +2238,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
   for (unsigned II = MII; II < MII + 10 && !scheduleFound; ++II) {
     Schedule.reset();
     Schedule.setInitiationInterval(II);
-    DEBUG(dbgs() << "Try to schedule with " << II << "\n");
+    LLVM_DEBUG(dbgs() << "Try to schedule with " << II << "\n");
 
     SetVector<SUnit *>::iterator NI = NodeOrder.begin();
     SetVector<SUnit *>::iterator NE = NodeOrder.end();
@@ -2254,12 +2255,12 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       int SchedStart = INT_MIN;
       Schedule.computeStart(SU, &EarlyStart, &LateStart, &SchedEnd, &SchedStart,
                             II, this);
-      DEBUG({
+      LLVM_DEBUG({
         dbgs() << "Inst (" << SU->NodeNum << ") ";
         SU->getInstr()->dump();
         dbgs() << "\n";
       });
-      DEBUG({
+      LLVM_DEBUG({
         dbgs() << "\tes: " << EarlyStart << " ls: " << LateStart
                << " me: " << SchedEnd << " ms: " << SchedStart << "\n";
       });
@@ -2295,7 +2296,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
             Schedule.getMaxStageCount() > (unsigned)SwpMaxStages)
           scheduleFound = false;
 
-      DEBUG({
+      LLVM_DEBUG({
         if (!scheduleFound)
           dbgs() << "\tCan't schedule\n";
       });
@@ -2306,7 +2307,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       scheduleFound = Schedule.isValidSchedule(this);
   }
 
-  DEBUG(dbgs() << "Schedule Found? " << scheduleFound << "\n");
+  LLVM_DEBUG(dbgs() << "Schedule Found? " << scheduleFound << "\n");
 
   if (scheduleFound)
     Schedule.finalizeSchedule(this);
@@ -2376,7 +2377,7 @@ void SwingSchedulerDAG::generatePipelinedLoop(SMSchedule &Schedule) {
   generatePhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, Schedule, VRMap,
                InstrMap, MaxStageCount, MaxStageCount, false);
 
-  DEBUG(dbgs() << "New block\n"; KernelBB->dump(););
+  LLVM_DEBUG(dbgs() << "New block\n"; KernelBB->dump(););
 
   SmallVector<MachineBasicBlock *, 4> EpilogBBs;
   // Generate the epilog instructions to complete the pipeline.
@@ -2445,7 +2446,7 @@ void SwingSchedulerDAG::generateProlog(SMSchedule &Schedule, unsigned LastStage,
       }
     }
     rewritePhiValues(NewBB, i, Schedule, VRMap, InstrMap);
-    DEBUG({
+    LLVM_DEBUG({
       dbgs() << "prolog:\n";
       NewBB->dump();
     });
@@ -2527,7 +2528,7 @@ void SwingSchedulerDAG::generateEpilog(SMSchedule &Schedule, unsigned LastStage,
                  InstrMap, LastStage, EpilogStage, i == 1);
     PredBB = NewBB;
 
-    DEBUG({
+    LLVM_DEBUG({
       dbgs() << "epilog:\n";
       NewBB->dump();
     });
@@ -3625,7 +3626,7 @@ bool SMSchedule::insert(SUnit *SU, int StartCycle, int EndCycle, int II) {
     }
     if (ST.getInstrInfo()->isZeroCost(SU->getInstr()->getOpcode()) ||
         Resources->canReserveResources(*SU->getInstr())) {
-      DEBUG({
+      LLVM_DEBUG({
         dbgs() << "\tinsert at cycle " << curCycle << " ";
         SU->getInstr()->dump();
       });
@@ -3638,7 +3639,7 @@ bool SMSchedule::insert(SUnit *SU, int StartCycle, int EndCycle, int II) {
         FirstCycle = curCycle;
       return true;
     }
-    DEBUG({
+    LLVM_DEBUG({
       dbgs() << "\tfailed to insert at cycle " << curCycle << " ";
       SU->getInstr()->dump();
     });
@@ -4034,18 +4035,19 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
           Circuits.begin(), Circuits.end(),
           [SU](const NodeSet &Circuit) { return Circuit.count(SU); });
       if (InCircuit)
-        DEBUG(dbgs() << "In a circuit, predecessor ";);
+        LLVM_DEBUG(dbgs() << "In a circuit, predecessor ";);
       else {
         Valid = false;
         NumNodeOrderIssues++;
-        DEBUG(dbgs() << "Predecessor ";);
+        LLVM_DEBUG(dbgs() << "Predecessor ";);
       }
-      DEBUG(dbgs() << Pred->NodeNum << " and successor " << Succ->NodeNum
-                   << " are scheduled before node " << SU->NodeNum << "\n";);
+      LLVM_DEBUG(dbgs() << Pred->NodeNum << " and successor " << Succ->NodeNum
+                        << " are scheduled before node " << SU->NodeNum
+                        << "\n";);
     }
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     if (!Valid)
       dbgs() << "Invalid node order found!\n";
   });
@@ -4188,7 +4190,7 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
     SSD->fixupRegisterOverlaps(cycleInstrs);
   }
 
-  DEBUG(dump(););
+  LLVM_DEBUG(dump(););
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -210,9 +210,9 @@ static bool addDiscriminators(Function &F) {
       // it in 1 byte ULEB128 representation.
       unsigned Discriminator = R.second ? ++LDM[L] : LDM[L];
       I.setDebugLoc(DIL->setBaseDiscriminator(Discriminator));
-      DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
-                   << DIL->getColumn() << ":" << Discriminator << " " << I
-                   << "\n");
+      LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                        << DIL->getColumn() << ":" << Discriminator << " " << I
+                        << "\n");
       Changed = true;
     }
   }

@@ -141,7 +141,7 @@ rescheduleLexographically(std::vector<MachineInstr *> instructions,
 
   for (auto &II : StringInstrMap) {
 
-    DEBUG({
+    LLVM_DEBUG({
       dbgs() << "Splicing ";
       II.second->dump();
       dbgs() << " right before: ";
@@ -233,7 +233,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
       continue;
     }
 
-    DEBUG(dbgs() << "Operand " << 0 << " of "; II->dump(); MO.dump(););
+    LLVM_DEBUG(dbgs() << "Operand " << 0 << " of "; II->dump(); MO.dump(););
 
     MachineInstr *Def = II;
     unsigned Distance = ~0U;
@@ -280,7 +280,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
     if (DefI == BBE || UseI == BBE)
       continue;
 
-    DEBUG({
+    LLVM_DEBUG({
       dbgs() << "Splicing ";
       DefI->dump();
       dbgs() << " right before: ";
@@ -302,13 +302,15 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
     if (UseI == MBB->instr_end())
       continue;
 
-    DEBUG(dbgs() << "Rescheduling Multi-Use Instructions Lexographically.";);
+    LLVM_DEBUG(
+        dbgs() << "Rescheduling Multi-Use Instructions Lexographically.";);
     Changed |= rescheduleLexographically(
         E.second, MBB, [&]() -> MachineBasicBlock::iterator { return UseI; });
   }
 
   PseudoIdempotentInstCount = PseudoIdempotentInstructions.size();
-  DEBUG(dbgs() << "Rescheduling Idempotent Instructions Lexographically.";);
+  LLVM_DEBUG(
+      dbgs() << "Rescheduling Idempotent Instructions Lexographically.";);
   Changed |= rescheduleLexographically(
       PseudoIdempotentInstructions, MBB,
       [&]() -> MachineBasicBlock::iterator { return MBB->begin(); });
@@ -384,7 +386,7 @@ static std::vector<MachineInstr *> populateCandidates(MachineBasicBlock *MBB) {
     if (!MI->mayStore() && !MI->isBranch() && !DoesMISideEffect)
       continue;
 
-    DEBUG(dbgs() << "Found Candidate:  "; MI->dump(););
+    LLVM_DEBUG(dbgs() << "Found Candidate:  "; MI->dump(););
     Candidates.push_back(MI);
   }
 
@@ -405,7 +407,7 @@ static void doCandidateWalk(std::vector<TypedVReg> &VRegs,
     RegQueue.pop();
 
     if (TReg.isFrameIndex()) {
-      DEBUG(dbgs() << "Popping frame index.\n";);
+      LLVM_DEBUG(dbgs() << "Popping frame index.\n";);
       VRegs.push_back(TypedVReg(RSE_FrameIndex));
       continue;
     }
@@ -414,7 +416,7 @@ static void doCandidateWalk(std::vector<TypedVReg> &VRegs,
     unsigned Reg = TReg.getReg();
 
     if (TargetRegisterInfo::isVirtualRegister(Reg)) {
-      DEBUG({
+      LLVM_DEBUG({
         dbgs() << "Popping vreg ";
         MRI.def_begin(Reg)->dump();
         dbgs() << "\n";
@@ -426,7 +428,7 @@ static void doCandidateWalk(std::vector<TypedVReg> &VRegs,
         VRegs.push_back(TypedVReg(Reg));
       }
     } else {
-      DEBUG(dbgs() << "Popping physreg.\n";);
+      LLVM_DEBUG(dbgs() << "Popping physreg.\n";);
       VRegs.push_back(TypedVReg(Reg));
       continue;
     }
@@ -442,7 +444,7 @@ static void doCandidateWalk(std::vector<TypedVReg> &VRegs,
         break;
       }
 
-      DEBUG({
+      LLVM_DEBUG({
         dbgs() << "\n========================\n";
         dbgs() << "Visited MI: ";
         Def->dump();
@@ -454,7 +456,7 @@ static void doCandidateWalk(std::vector<TypedVReg> &VRegs,
 
         MachineOperand &MO = Def->getOperand(I);
         if (MO.isFI()) {
-          DEBUG(dbgs() << "Pushing frame index.\n";);
+          LLVM_DEBUG(dbgs() << "Pushing frame index.\n";);
           RegQueue.push(TypedVReg(RSE_FrameIndex));
         }
 
@@ -526,7 +528,7 @@ GetVRegRenameMap(const std::vector<TypedVReg> &VRegs,
       // from a copy from a frame index. So it's safe to skip by one.
       unsigned LastRenameReg = NVC.incrementVirtualVReg();
       (void)LastRenameReg;
-      DEBUG(dbgs() << "Skipping rename for FI " << LastRenameReg << "\n";);
+      LLVM_DEBUG(dbgs() << "Skipping rename for FI " << LastRenameReg << "\n";);
       continue;
     } else if (vreg.isCandidate()) {
 
@@ -543,7 +545,7 @@ GetVRegRenameMap(const std::vector<TypedVReg> &VRegs,
     } else if (!TargetRegisterInfo::isVirtualRegister(vreg.getReg())) {
       unsigned LastRenameReg = NVC.incrementVirtualVReg();
       (void)LastRenameReg;
-      DEBUG({
+      LLVM_DEBUG({
         dbgs() << "Skipping rename for Phys Reg " << LastRenameReg << "\n";
       });
       continue;
@@ -551,26 +553,27 @@ GetVRegRenameMap(const std::vector<TypedVReg> &VRegs,
 
     auto Reg = vreg.getReg();
     if (llvm::find(renamedInOtherBB, Reg) != renamedInOtherBB.end()) {
-      DEBUG(dbgs() << "Vreg " << Reg << " already renamed in other BB.\n";);
+      LLVM_DEBUG(dbgs() << "Vreg " << Reg
+                        << " already renamed in other BB.\n";);
       continue;
     }
 
     auto Rename = NVC.createVirtualRegister(MRI.getRegClass(Reg));
 
     if (VRegRenameMap.find(Reg) == VRegRenameMap.end()) {
-      DEBUG(dbgs() << "Mapping vreg ";);
+      LLVM_DEBUG(dbgs() << "Mapping vreg ";);
       if (MRI.reg_begin(Reg) != MRI.reg_end()) {
-        DEBUG(auto foo = &*MRI.reg_begin(Reg); foo->dump(););
+        LLVM_DEBUG(auto foo = &*MRI.reg_begin(Reg); foo->dump(););
       } else {
-        DEBUG(dbgs() << Reg;);
+        LLVM_DEBUG(dbgs() << Reg;);
       }
-      DEBUG(dbgs() << " to ";);
+      LLVM_DEBUG(dbgs() << " to ";);
       if (MRI.reg_begin(Rename) != MRI.reg_end()) {
-        DEBUG(auto foo = &*MRI.reg_begin(Rename); foo->dump(););
+        LLVM_DEBUG(auto foo = &*MRI.reg_begin(Rename); foo->dump(););
       } else {
-        DEBUG(dbgs() << Rename;);
+        LLVM_DEBUG(dbgs() << Rename;);
       }
-      DEBUG(dbgs() << "\n";);
+      LLVM_DEBUG(dbgs() << "\n";);
 
       VRegRenameMap.insert(std::pair<unsigned, unsigned>(Reg, Rename));
     }
@@ -638,18 +641,19 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
   if (CanonicalizeBasicBlockNumber != ~0U) {
     if (CanonicalizeBasicBlockNumber != basicBlockNum++)
       return false;
-    DEBUG(dbgs() << "\n Canonicalizing BasicBlock " << MBB->getName() << "\n";);
+    LLVM_DEBUG(dbgs() << "\n Canonicalizing BasicBlock " << MBB->getName()
+                      << "\n";);
   }
 
   if (llvm::find(bbNames, MBB->getName()) != bbNames.end()) {
-    DEBUG({
+    LLVM_DEBUG({
       dbgs() << "Found potentially duplicate BasicBlocks: " << MBB->getName()
              << "\n";
     });
     return false;
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "\n\n  NEW BASIC BLOCK: " << MBB->getName() << "  \n\n";
     dbgs() << "\n\n================================================\n\n";
   });
@@ -659,16 +663,17 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   bbNames.push_back(MBB->getName());
-  DEBUG(dbgs() << "\n\n NEW BASIC BLOCK: " << MBB->getName() << "\n\n";);
+  LLVM_DEBUG(dbgs() << "\n\n NEW BASIC BLOCK: " << MBB->getName() << "\n\n";);
 
-  DEBUG(dbgs() << "MBB Before Canonical Copy Propagation:\n"; MBB->dump(););
+  LLVM_DEBUG(dbgs() << "MBB Before Canonical Copy Propagation:\n";
+             MBB->dump(););
   Changed |= propagateLocalCopies(MBB);
-  DEBUG(dbgs() << "MBB After Canonical Copy Propagation:\n"; MBB->dump(););
+  LLVM_DEBUG(dbgs() << "MBB After Canonical Copy Propagation:\n"; MBB->dump(););
 
-  DEBUG(dbgs() << "MBB Before Scheduling:\n"; MBB->dump(););
+  LLVM_DEBUG(dbgs() << "MBB Before Scheduling:\n"; MBB->dump(););
   unsigned IdempotentInstCount = 0;
   Changed |= rescheduleCanonically(IdempotentInstCount, MBB);
-  DEBUG(dbgs() << "MBB After Scheduling:\n"; MBB->dump(););
+  LLVM_DEBUG(dbgs() << "MBB After Scheduling:\n"; MBB->dump(););
 
   std::vector<MachineInstr *> Candidates = populateCandidates(MBB);
   std::vector<MachineInstr *> VisitedMIs;
@@ -693,7 +698,7 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
       if (!(MO.isReg() && TargetRegisterInfo::isVirtualRegister(MO.getReg())))
         continue;
 
-      DEBUG(dbgs() << "Enqueue register"; MO.dump(); dbgs() << "\n";);
+      LLVM_DEBUG(dbgs() << "Enqueue register"; MO.dump(); dbgs() << "\n";);
       RegQueue.push(TypedVReg(MO.getReg()));
     }
 
@@ -710,7 +715,7 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
       if (!MO.isReg() && !MO.isFI())
         continue;
 
-      DEBUG(dbgs() << "Enqueue Reg/FI"; MO.dump(); dbgs() << "\n";);
+      LLVM_DEBUG(dbgs() << "Enqueue Reg/FI"; MO.dump(); dbgs() << "\n";);
 
       RegQueue.push(MO.isReg() ? TypedVReg(MO.getReg())
                                : TypedVReg(RSE_FrameIndex));
@@ -752,8 +757,10 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
 
   Changed |= doDefKillClear(MBB);
 
-  DEBUG(dbgs() << "Updated MachineBasicBlock:\n"; MBB->dump(); dbgs() << "\n";);
-  DEBUG(dbgs() << "\n\n================================================\n\n");
+  LLVM_DEBUG(dbgs() << "Updated MachineBasicBlock:\n"; MBB->dump();
+             dbgs() << "\n";);
+  LLVM_DEBUG(
+      dbgs() << "\n\n================================================\n\n");
   return Changed;
 }
 
@@ -763,19 +770,21 @@ bool MIRCanonicalizer::runOnMachineFunction(MachineFunction &MF) {
   if (CanonicalizeFunctionNumber != ~0U) {
     if (CanonicalizeFunctionNumber != functionNum++)
       return false;
-    DEBUG(dbgs() << "\n Canonicalizing Function " << MF.getName() << "\n";);
+    LLVM_DEBUG(dbgs() << "\n Canonicalizing Function " << MF.getName()
+                      << "\n";);
   }
 
   // we need a valid vreg to create a vreg type for skipping all those
   // stray vreg numbers so reach alignment/canonical vreg values.
   std::vector<MachineBasicBlock *> RPOList = GetRPOList(MF);
 
-  DEBUG(dbgs() << "\n\n  NEW MACHINE FUNCTION: " << MF.getName() << "  \n\n";
-        dbgs() << "\n\n================================================\n\n";
-        dbgs() << "Total Basic Blocks: " << RPOList.size() << "\n";
-        for (auto MBB
-             : RPOList) { dbgs() << MBB->getName() << "\n"; } dbgs()
-        << "\n\n================================================\n\n";);
+  LLVM_DEBUG(
+      dbgs() << "\n\n  NEW MACHINE FUNCTION: " << MF.getName() << "  \n\n";
+      dbgs() << "\n\n================================================\n\n";
+      dbgs() << "Total Basic Blocks: " << RPOList.size() << "\n";
+      for (auto MBB
+           : RPOList) { dbgs() << MBB->getName() << "\n"; } dbgs()
+      << "\n\n================================================\n\n";);
 
   std::vector<StringRef> BBNames;
   std::vector<unsigned> RenamedInOtherBB;

@@ -442,8 +442,8 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
   auto &DL = M.getDataLayout();
 
-  DEBUG(dbgs() << " Trying to merge set, starts with #"
-               << GlobalSet.find_first() << "\n");
+  LLVM_DEBUG(dbgs() << " Trying to merge set, starts with #"
+                    << GlobalSet.find_first() << "\n");
 
   ssize_t i = GlobalSet.find_first();
   while (i != -1) {

@@ -349,23 +349,22 @@ defm D64 : C_COND_M<"d", FGR64Opnd, 17, II_C_CC_D>, ISA_MIPS1_NOT_32R6_64R6,
 //===----------------------------------------------------------------------===//
 // Floating Point Instructions
 //===----------------------------------------------------------------------===//
-def ROUND_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd, II_ROUND>,
-                 ABSS_FM<0xc, 16>, ISA_MIPS2;
-defm ROUND_W : ROUND_M<"round.w.d", II_ROUND>, ABSS_FM<0xc, 17>, ISA_MIPS2;
-def TRUNC_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"trunc.w.s", FGR32Opnd, FGR32Opnd, II_TRUNC>,
-                 ABSS_FM<0xd, 16>, ISA_MIPS2;
-def CEIL_W_S   : MMRel, StdMMR6Rel, ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
-                 ABSS_FM<0xe, 16>, ISA_MIPS2;
-def FLOOR_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd, II_FLOOR>,
-                 ABSS_FM<0xf, 16>, ISA_MIPS2;
-let AdditionalPredicates = [NotInMicroMips] in
+let AdditionalPredicates = [NotInMicroMips] in {
+  def ROUND_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd, II_ROUND>,
+                   ABSS_FM<0xc, 16>, ISA_MIPS2;
+  defm ROUND_W : ROUND_M<"round.w.d", II_ROUND>, ABSS_FM<0xc, 17>, ISA_MIPS2;
+  def TRUNC_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"trunc.w.s", FGR32Opnd, FGR32Opnd, II_TRUNC>,
+                   ABSS_FM<0xd, 16>, ISA_MIPS2;
+  def CEIL_W_S   : MMRel, StdMMR6Rel, ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
+                   ABSS_FM<0xe, 16>, ISA_MIPS2;
+  def FLOOR_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd, II_FLOOR>,
+                   ABSS_FM<0xf, 16>, ISA_MIPS2;
   def CVT_W_S    : MMRel, ABSS_FT<"cvt.w.s", FGR32Opnd, FGR32Opnd, II_CVT>,
                    ABSS_FM<0x24, 16>, ISA_MIPS1;
 
-defm TRUNC_W : ROUND_M<"trunc.w.d", II_TRUNC>, ABSS_FM<0xd, 17>, ISA_MIPS2;
-defm CEIL_W  : ROUND_M<"ceil.w.d", II_CEIL>, ABSS_FM<0xe, 17>, ISA_MIPS2;
-defm FLOOR_W : ROUND_M<"floor.w.d", II_FLOOR>, ABSS_FM<0xf, 17>, ISA_MIPS2;
-let AdditionalPredicates = [NotInMicroMips] in {
+  defm TRUNC_W : ROUND_M<"trunc.w.d", II_TRUNC>, ABSS_FM<0xd, 17>, ISA_MIPS2;
+  defm CEIL_W  : ROUND_M<"ceil.w.d", II_CEIL>, ABSS_FM<0xe, 17>, ISA_MIPS2;
+  defm FLOOR_W : ROUND_M<"floor.w.d", II_FLOOR>, ABSS_FM<0xf, 17>, ISA_MIPS2;
   defm CVT_W   : ROUND_M<"cvt.w.d", II_CVT>, ABSS_FM<0x24, 17>, ISA_MIPS1;
 }
 
@@ -576,14 +575,15 @@ let DecoderNamespace="MipsFP64" in {
 
 // Load/store doubleword indexed unaligned.
 // FIXME: This instruction should not be defined for FGR_32.
-let AdditionalPredicates = [IsNotNaCl] in {
+let AdditionalPredicates = [IsNotNaCl, NotInMicroMips] in {
   def LUXC1 : MMRel, LWXC1_FT<"luxc1", AFGR64Opnd, II_LUXC1>, LWXC1_FM<0x5>,
               INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_32;
   def SUXC1 : MMRel, SWXC1_FT<"suxc1", AFGR64Opnd, II_SUXC1>, SWXC1_FM<0xd>,
               INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_32;
 }
 
-let DecoderNamespace="MipsFP64" in {
+let AdditionalPredicates = [IsNotNaCl, NotInMicroMips],
+    DecoderNamespace="MipsFP64" in {
   def LUXC164 : LWXC1_FT<"luxc1", FGR64Opnd, II_LUXC1>, LWXC1_FM<0x5>,
                 INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_64;
   def SUXC164 : SWXC1_FT<"suxc1", FGR64Opnd, II_SUXC1>, SWXC1_FM<0xd>,

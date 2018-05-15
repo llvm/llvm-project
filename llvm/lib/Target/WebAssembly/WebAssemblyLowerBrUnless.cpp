@@ -55,9 +55,9 @@ FunctionPass *llvm::createWebAssemblyLowerBrUnless() {
 }
 
 bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "********** Lowering br_unless **********\n"
-                  "********** Function: "
-               << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** Lowering br_unless **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
 
   auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();

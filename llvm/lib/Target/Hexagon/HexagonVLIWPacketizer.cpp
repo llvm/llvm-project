@@ -375,7 +375,7 @@ bool HexagonPacketizerList::promoteToDotCur(MachineInstr &MI,
 void HexagonPacketizerList::cleanUpDotCur() {
   MachineInstr *MI = nullptr;
   for (auto BI : CurrentPacketMIs) {
-    DEBUG(dbgs() << "Cleanup packet has "; BI->dump(););
+    LLVM_DEBUG(dbgs() << "Cleanup packet has "; BI->dump(););
     if (HII->isDotCurInst(*BI)) {
       MI = BI;
       continue;
@@ -390,7 +390,7 @@ void HexagonPacketizerList::cleanUpDotCur() {
     return;
   // We did not find a use of the CUR, so de-cur it.
   MI->setDesc(HII->get(HII->getNonDotCurOp(*MI)));
-  DEBUG(dbgs() << "Demoted CUR "; MI->dump(););
+  LLVM_DEBUG(dbgs() << "Demoted CUR "; MI->dump(););
 }
 
 // Check to see if an instruction can be dot cur.
@@ -414,11 +414,10 @@ bool HexagonPacketizerList::canPromoteToDotCur(const MachineInstr &MI,
     return false;
 
   // Make sure candidate instruction uses cur.
-  DEBUG(dbgs() << "Can we DOT Cur Vector MI\n";
-        MI.dump();
-        dbgs() << "in packet\n";);
+  LLVM_DEBUG(dbgs() << "Can we DOT Cur Vector MI\n"; MI.dump();
+             dbgs() << "in packet\n";);
   MachineInstr &MJ = *MII;
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Checking CUR against ";
     MJ.dump();
   });
@@ -433,12 +432,12 @@ bool HexagonPacketizerList::canPromoteToDotCur(const MachineInstr &MI,
   // Check for existing uses of a vector register within the packet which
   // would be affected by converting a vector load into .cur formt.
   for (auto BI : CurrentPacketMIs) {
-    DEBUG(dbgs() << "packet has "; BI->dump(););
+    LLVM_DEBUG(dbgs() << "packet has "; BI->dump(););
     if (BI->readsRegister(DepReg, MF.getSubtarget().getRegisterInfo()))
       return false;
   }
 
-  DEBUG(dbgs() << "Can Dot CUR MI\n"; MI.dump(););
+  LLVM_DEBUG(dbgs() << "Can Dot CUR MI\n"; MI.dump(););
   // We can convert the opcode into a .cur.
   return true;
 }
@@ -1762,7 +1761,7 @@ void HexagonPacketizerList::endPacket(MachineBasicBlock *MBB,
   bool memShufDisabled = getmemShufDisabled();
   if (memShufDisabled && !foundLSInPacket()) {
     setmemShufDisabled(false);
-    DEBUG(dbgs() << "  Not added to NoShufPacket\n");
+    LLVM_DEBUG(dbgs() << "  Not added to NoShufPacket\n");
   }
   memShufDisabled = getmemShufDisabled();
 
@@ -1781,7 +1780,7 @@ void HexagonPacketizerList::endPacket(MachineBasicBlock *MBB,
   CurrentPacketMIs.clear();
 
   ResourceTracker->clearResources();
-  DEBUG(dbgs() << "End packet\n");
+  LLVM_DEBUG(dbgs() << "End packet\n");
 }
 
 bool HexagonPacketizerList::shouldAddToPacket(const MachineInstr &MI) {

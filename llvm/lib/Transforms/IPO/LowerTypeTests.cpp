@@ -1026,7 +1026,7 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
   for (Metadata *TypeId : TypeIds) {
     // Build the bitset.
     BitSetInfo BSI = buildBitSet(TypeId, GlobalLayout);
-    DEBUG({
+    LLVM_DEBUG({
       if (auto MDS = dyn_cast<MDString>(TypeId))
         dbgs() << MDS->getString() << ": ";
       else

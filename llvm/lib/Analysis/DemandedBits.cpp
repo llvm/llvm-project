@@ -283,7 +283,7 @@ void DemandedBits::performAnalysis() {
     if (!isAlwaysLive(&I))
       continue;
 
-    DEBUG(dbgs() << "DemandedBits: Root: " << I << "\n");
+    LLVM_DEBUG(dbgs() << "DemandedBits: Root: " << I << "\n");
     // For integer-valued instructions, set up an initial empty set of alive
     // bits and add the instruction to the work list. For other instructions
     // add their operands to the work list (for integer values operands, mark
@@ -313,13 +313,13 @@ void DemandedBits::performAnalysis() {
   while (!Worklist.empty()) {
     Instruction *UserI = Worklist.pop_back_val();
 
-    DEBUG(dbgs() << "DemandedBits: Visiting: " << *UserI);
+    LLVM_DEBUG(dbgs() << "DemandedBits: Visiting: " << *UserI);
     APInt AOut;
     if (UserI->getType()->isIntegerTy()) {
       AOut = AliveBits[UserI];
-      DEBUG(dbgs() << " Alive Out: " << AOut);
+      LLVM_DEBUG(dbgs() << " Alive Out: " << AOut);
     }
-    DEBUG(dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "\n");
 
     if (!UserI->getType()->isIntegerTy())
       Visited.insert(UserI);

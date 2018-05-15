@@ -521,7 +521,7 @@ bool AVRDAGToDAGISel::selectMultiplication(llvm::SDNode *N) {
 void AVRDAGToDAGISel::Select(SDNode *N) {
   // If we have a custom node, we already have selected!
   if (N->isMachineOpcode()) {
-    DEBUG(errs() << "== "; N->dump(CurDAG); errs() << "\n");
+    LLVM_DEBUG(errs() << "== "; N->dump(CurDAG); errs() << "\n");
     N->setNodeId(-1);
     return;
   }

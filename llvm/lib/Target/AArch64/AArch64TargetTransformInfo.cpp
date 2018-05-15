@@ -728,14 +728,14 @@ getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   };
 
   int StridedLoads = countStridedLoads(L, SE);
-  DEBUG(dbgs() << "falkor-hwpf: detected " << StridedLoads
-               << " strided loads\n");
+  LLVM_DEBUG(dbgs() << "falkor-hwpf: detected " << StridedLoads
+                    << " strided loads\n");
   // Pick the largest power of 2 unroll count that won't result in too many
   // strided loads.
   if (StridedLoads) {
     UP.MaxCount = 1 << Log2_32(MaxStridedLoads / StridedLoads);
-    DEBUG(dbgs() << "falkor-hwpf: setting unroll MaxCount to " << UP.MaxCount
-                 << '\n');
+    LLVM_DEBUG(dbgs() << "falkor-hwpf: setting unroll MaxCount to "
+                      << UP.MaxCount << '\n');
   }
 }
 

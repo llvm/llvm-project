@@ -110,7 +110,7 @@ foldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI, ScalarEvolution *SE,
   if (OnlyPred->getTerminator()->getNumSuccessors() != 1)
     return nullptr;
 
-  DEBUG(dbgs() << "Merging: " << *BB << "into: " << *OnlyPred);
+  LLVM_DEBUG(dbgs() << "Merging: " << *BB << "into: " << *OnlyPred);
 
   // Resolve any PHI nodes at the start of the block.  They are all
   // guaranteed to have exactly one entry if they exist, unless there are
@@ -297,19 +297,19 @@ LoopUnrollResult llvm::UnrollLoop(
 
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
-    DEBUG(dbgs() << "  Can't unroll; loop preheader-insertion failed.\n");
+    LLVM_DEBUG(dbgs() << "  Can't unroll; loop preheader-insertion failed.\n");
     return LoopUnrollResult::Unmodified;
   }
 
   BasicBlock *LatchBlock = L->getLoopLatch();
   if (!LatchBlock) {
-    DEBUG(dbgs() << "  Can't unroll; loop exit-block-insertion failed.\n");
+    LLVM_DEBUG(dbgs() << "  Can't unroll; loop exit-block-insertion failed.\n");
     return LoopUnrollResult::Unmodified;
   }
 
   // Loops with indirectbr cannot be cloned.
   if (!L->isSafeToClone()) {
-    DEBUG(dbgs() << "  Can't unroll; Loop body cannot be cloned.\n");
+    LLVM_DEBUG(dbgs() << "  Can't unroll; Loop body cannot be cloned.\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -322,8 +322,9 @@ LoopUnrollResult llvm::UnrollLoop(
 
   if (!BI || BI->isUnconditional()) {
     // The loop-rotate pass can be helpful to avoid this in many cases.
-    DEBUG(dbgs() <<
-             "  Can't unroll; loop not terminated by a conditional branch.\n");
+    LLVM_DEBUG(
+        dbgs()
+        << "  Can't unroll; loop not terminated by a conditional branch.\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -332,22 +333,22 @@ LoopUnrollResult llvm::UnrollLoop(
   };
 
   if (!CheckSuccessors(0, 1) && !CheckSuccessors(1, 0)) {
-    DEBUG(dbgs() << "Can't unroll; only loops with one conditional latch"
-                    " exiting the loop can be unrolled\n");
+    LLVM_DEBUG(dbgs() << "Can't unroll; only loops with one conditional latch"
+                         " exiting the loop can be unrolled\n");
     return LoopUnrollResult::Unmodified;
   }
 
   if (Header->hasAddressTaken()) {
     // The loop-rotate pass can be helpful to avoid this in many cases.
-    DEBUG(dbgs() <<
-          "  Won't unroll loop: address of header block is taken.\n");
+    LLVM_DEBUG(
+        dbgs() << "  Won't unroll loop: address of header block is taken.\n");
     return LoopUnrollResult::Unmodified;
   }
 
   if (TripCount != 0)
-    DEBUG(dbgs() << "  Trip Count = " << TripCount << "\n");
+    LLVM_DEBUG(dbgs() << "  Trip Count = " << TripCount << "\n");
   if (TripMultiple != 1)
-    DEBUG(dbgs() << "  Trip Multiple = " << TripMultiple << "\n");
+    LLVM_DEBUG(dbgs() << "  Trip Multiple = " << TripMultiple << "\n");
 
   // Effectively "DCE" unrolled iterations that are beyond the tripcount
   // and will never be executed.
@@ -356,7 +357,7 @@ LoopUnrollResult llvm::UnrollLoop(
 
   // Don't enter the unroll code if there is nothing to do.
   if (TripCount == 0 && Count < 2 && PeelCount == 0) {
-    DEBUG(dbgs() << "Won't unroll; almost nothing to do\n");
+    LLVM_DEBUG(dbgs() << "Won't unroll; almost nothing to do\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -407,7 +408,7 @@ LoopUnrollResult llvm::UnrollLoop(
 
   // Loops containing convergent instructions must have a count that divides
   // their TripMultiple.
-  DEBUG(
+  LLVM_DEBUG(
       {
         bool HasConvergent = false;
         for (auto &BB : L->blocks())
@@ -430,9 +431,8 @@ LoopUnrollResult llvm::UnrollLoop(
     if (Force)
       RuntimeTripCount = false;
     else {
-      DEBUG(
-          dbgs() << "Wont unroll; remainder loop could not be generated"
-                    "when assuming runtime trip count\n");
+      LLVM_DEBUG(dbgs() << "Wont unroll; remainder loop could not be generated"
+                           "when assuming runtime trip count\n");
       return LoopUnrollResult::Unmodified;
     }
   }
@@ -451,8 +451,8 @@ LoopUnrollResult llvm::UnrollLoop(
   using namespace ore;
   // Report the unrolling decision.
   if (CompletelyUnroll) {
-    DEBUG(dbgs() << "COMPLETELY UNROLLING loop %" << Header->getName()
-                 << " with trip count " << TripCount << "!\n");
+    LLVM_DEBUG(dbgs() << "COMPLETELY UNROLLING loop %" << Header->getName()
+                      << " with trip count " << TripCount << "!\n");
     if (ORE)
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
@@ -461,8 +461,8 @@ LoopUnrollResult llvm::UnrollLoop(
                << NV("UnrollCount", TripCount) << " iterations";
       });
   } else if (PeelCount) {
-    DEBUG(dbgs() << "PEELING loop %" << Header->getName()
-                 << " with iteration count " << PeelCount << "!\n");
+    LLVM_DEBUG(dbgs() << "PEELING loop %" << Header->getName()
+                      << " with iteration count " << PeelCount << "!\n");
     if (ORE)
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "Peeled", L->getStartLoc(),
@@ -478,29 +478,29 @@ LoopUnrollResult llvm::UnrollLoop(
                   << NV("UnrollCount", Count);
     };
 
-    DEBUG(dbgs() << "UNROLLING loop %" << Header->getName()
-          << " by " << Count);
+    LLVM_DEBUG(dbgs() << "UNROLLING loop %" << Header->getName() << " by "
+                      << Count);
     if (TripMultiple == 0 || BreakoutTrip != TripMultiple) {
-      DEBUG(dbgs() << " with a breakout at trip " << BreakoutTrip);
+      LLVM_DEBUG(dbgs() << " with a breakout at trip " << BreakoutTrip);
       if (ORE)
         ORE->emit([&]() {
           return DiagBuilder() << " with a breakout at trip "
                                << NV("BreakoutTrip", BreakoutTrip);
         });
     } else if (TripMultiple != 1) {
-      DEBUG(dbgs() << " with " << TripMultiple << " trips per branch");
+      LLVM_DEBUG(dbgs() << " with " << TripMultiple << " trips per branch");
       if (ORE)
         ORE->emit([&]() {
           return DiagBuilder() << " with " << NV("TripMultiple", TripMultiple)
                                << " trips per branch";
         });
     } else if (RuntimeTripCount) {
-      DEBUG(dbgs() << " with run-time trip count");
+      LLVM_DEBUG(dbgs() << " with run-time trip count");
       if (ORE)
         ORE->emit(
             [&]() { return DiagBuilder() << " with run-time trip count"; });
     }
-    DEBUG(dbgs() << "!\n");
+    LLVM_DEBUG(dbgs() << "!\n");
   }
 
   // We are going to make changes to this loop. SCEV may be keeping cached info

@@ -4131,3 +4131,23 @@ define <2 x double> @test_x86_avx512_mm_cvtu32_sd(<2 x double> %a, i32 %b)
   ret <2 x double> %res
 }
 declare <2 x double> @llvm.x86.avx512.cvtusi2sd(<2 x double>, i32) nounwind readnone
+
+define <16 x float> @test_x86_vbroadcast_ss_512(i8* %a0) {
+; CHECK-LABEL: test_x86_vbroadcast_ss_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vbroadcastss (%rdi), %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x float> @llvm.x86.avx512.vbroadcast.ss.512(i8* %a0) ; <<16 x float>> [#uses=1]
+  ret <16 x float> %res
+}
+declare <16 x float> @llvm.x86.avx512.vbroadcast.ss.512(i8*) nounwind readonly
+
+define <8 x double> @test_x86_vbroadcast_sd_512(i8* %a0) {
+; CHECK-LABEL: test_x86_vbroadcast_sd_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vbroadcastsd (%rdi), %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x double> @llvm.x86.avx512.vbroadcast.sd.512(i8* %a0) ; <<8 x double>> [#uses=1]
+  ret <8 x double> %res
+}
+declare <8 x double> @llvm.x86.avx512.vbroadcast.sd.512(i8*) nounwind readonly

@@ -796,9 +796,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     MS.initializeCallbacks(*F.getParent());
     ActualFnStart = &F.getEntryBlock();
 
-    DEBUG(if (!InsertChecks)
-          dbgs() << "MemorySanitizer is not inserting checks into '"
-                 << F.getName() << "'\n");
+    LLVM_DEBUG(if (!InsertChecks) dbgs()
+               << "MemorySanitizer is not inserting checks into '"
+               << F.getName() << "'\n");
   }
 
   Value *updateOrigin(Value *V, IRBuilder<> &IRB) {
@@ -901,7 +901,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ true);
 
       StoreInst *NewSI = IRB.CreateAlignedStore(Shadow, ShadowPtr, Alignment);
-      DEBUG(dbgs() << "  STORE: " << *NewSI << "\n");
+      LLVM_DEBUG(dbgs() << "  STORE: " << *NewSI << "\n");
 
       if (ClCheckAccessAddress)
         insertShadowCheck(Addr, NewSI);
@@ -932,9 +932,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void materializeOneCheck(Instruction *OrigIns, Value *Shadow, Value *Origin,
                            bool AsCall) {
     IRBuilder<> IRB(OrigIns);
-    DEBUG(dbgs() << "  SHAD0 : " << *Shadow << "\n");
+    LLVM_DEBUG(dbgs() << "  SHAD0 : " << *Shadow << "\n");
     Value *ConvertedShadow = convertToShadowTyNoVec(Shadow, IRB);
-    DEBUG(dbgs() << "  SHAD1 : " << *ConvertedShadow << "\n");
+    LLVM_DEBUG(dbgs() << "  SHAD1 : " << *ConvertedShadow << "\n");
 
     Constant *ConstantShadow = dyn_cast_or_null<Constant>(ConvertedShadow);
     if (ConstantShadow) {
@@ -964,7 +964,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
       IRB.SetInsertPoint(CheckTerm);
       insertWarningFn(IRB, Origin);
-      DEBUG(dbgs() << "  CHECK: " << *Cmp << "\n");
+      LLVM_DEBUG(dbgs() << "  CHECK: " << *Cmp << "\n");
     }
   }
 
@@ -975,7 +975,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Value *Origin = ShadowData.Origin;
       materializeOneCheck(OrigIns, Shadow, Origin, InstrumentWithCalls);
     }
-    DEBUG(dbgs() << "DONE:\n" << F);
+    LLVM_DEBUG(dbgs() << "DONE:\n" << F);
   }
 
   /// Add MemorySanitizer instrumentation to a function.
@@ -1048,7 +1048,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       for (unsigned i = 0, n = ST->getNumElements(); i < n; i++)
         Elements.push_back(getShadowTy(ST->getElementType(i)));
       StructType *Res = StructType::get(*MS.C, Elements, ST->isPacked());
-      DEBUG(dbgs() << "getShadowTy: " << *ST << " ===> " << *Res << "\n");
+      LLVM_DEBUG(dbgs() << "getShadowTy: " << *ST << " ===> " << *Res << "\n");
       return Res;
     }
     uint32_t TypeSize = DL.getTypeSizeInBits(OrigTy);
@@ -1182,7 +1182,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void setOrigin(Value *V, Value *Origin) {
     if (!MS.TrackOrigins) return;
     assert(!OriginMap.count(V) && "Values may only have one origin");
-    DEBUG(dbgs() << "ORIGIN: " << *V << "  ==> " << *Origin << "\n");
+    LLVM_DEBUG(dbgs() << "ORIGIN: " << *V << "  ==> " << *Origin << "\n");
     OriginMap[V] = Origin;
   }
 
@@ -1245,7 +1245,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // For instructions the shadow is already stored in the map.
       Value *Shadow = ShadowMap[V];
       if (!Shadow) {
-        DEBUG(dbgs() << "No shadow: " << *V << "\n" << *(I->getParent()));
+        LLVM_DEBUG(dbgs() << "No shadow: " << *V << "\n" << *(I->getParent()));
         (void)I;
         assert(Shadow && "No shadow for a value");
       }
@@ -1253,7 +1253,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
     if (UndefValue *U = dyn_cast<UndefValue>(V)) {
       Value *AllOnes = PoisonUndef ? getPoisonedShadow(V) : getCleanShadow(V);
-      DEBUG(dbgs() << "Undef: " << *U << " ==> " << *AllOnes << "\n");
+      LLVM_DEBUG(dbgs() << "Undef: " << *U << " ==> " << *AllOnes << "\n");
       (void)U;
       return AllOnes;
     }
@@ -1268,7 +1268,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       const DataLayout &DL = F->getParent()->getDataLayout();
       for (auto &FArg : F->args()) {
         if (!FArg.getType()->isSized()) {
-          DEBUG(dbgs() << "Arg is not sized\n");
+          LLVM_DEBUG(dbgs() << "Arg is not sized\n");
           continue;
         }
         unsigned Size =
@@ -1300,7 +1300,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
               unsigned CopyAlign = std::min(ArgAlign, kShadowTLSAlignment);
               Value *Cpy = EntryIRB.CreateMemCpy(CpShadowPtr, CopyAlign, Base,
                                                  CopyAlign, Size);
-              DEBUG(dbgs() << "  ByValCpy: " << *Cpy << "\n");
+              LLVM_DEBUG(dbgs() << "  ByValCpy: " << *Cpy << "\n");
               (void)Cpy;
             }
             *ShadowPtr = getCleanShadow(V);
@@ -1313,8 +1313,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                   EntryIRB.CreateAlignedLoad(Base, kShadowTLSAlignment);
             }
           }
-          DEBUG(dbgs() << "  ARG:    "  << FArg << " ==> " <<
-                **ShadowPtr << "\n");
+          LLVM_DEBUG(dbgs()
+                     << "  ARG:    " << FArg << " ==> " << **ShadowPtr << "\n");
           if (MS.TrackOrigins && !Overflow) {
             Value *OriginPtr =
                 getOriginPtrForArgument(&FArg, EntryIRB, ArgOffset);
@@ -2790,13 +2790,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
 
     unsigned ArgOffset = 0;
-    DEBUG(dbgs() << "  CallSite: " << I << "\n");
+    LLVM_DEBUG(dbgs() << "  CallSite: " << I << "\n");
     for (CallSite::arg_iterator ArgIt = CS.arg_begin(), End = CS.arg_end();
          ArgIt != End; ++ArgIt) {
       Value *A = *ArgIt;
       unsigned i = ArgIt - CS.arg_begin();
       if (!A->getType()->isSized()) {
-        DEBUG(dbgs() << "Arg " << i << " is not sized: " << I << "\n");
+        LLVM_DEBUG(dbgs() << "Arg " << i << " is not sized: " << I << "\n");
         continue;
       }
       unsigned Size = 0;
@@ -2806,8 +2806,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // __msan_param_tls.
       Value *ArgShadow = getShadow(A);
       Value *ArgShadowBase = getShadowPtrForArgument(A, IRB, ArgOffset);
-      DEBUG(dbgs() << "  Arg#" << i << ": " << *A <<
-            " Shadow: " << *ArgShadow << "\n");
+      LLVM_DEBUG(dbgs() << "  Arg#" << i << ": " << *A
+                        << " Shadow: " << *ArgShadow << "\n");
       bool ArgIsInitialized = false;
       const DataLayout &DL = F.getParent()->getDataLayout();
       if (CS.paramHasAttr(i, Attribute::ByVal)) {
@@ -2836,10 +2836,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                         getOriginPtrForArgument(A, IRB, ArgOffset));
       (void)Store;
       assert(Size != 0 && Store != nullptr);
-      DEBUG(dbgs() << "  Param:" << *Store << "\n");
+      LLVM_DEBUG(dbgs() << "  Param:" << *Store << "\n");
       ArgOffset += alignTo(Size, 8);
     }
-    DEBUG(dbgs() << "  done with call args\n");
+    LLVM_DEBUG(dbgs() << "  done with call args\n");
 
     FunctionType *FT =
       cast<FunctionType>(CS.getCalledValue()->getType()->getContainedType(0));
@@ -3046,24 +3046,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitExtractValueInst(ExtractValueInst &I) {
     IRBuilder<> IRB(&I);
     Value *Agg = I.getAggregateOperand();
-    DEBUG(dbgs() << "ExtractValue:  " << I << "\n");
+    LLVM_DEBUG(dbgs() << "ExtractValue:  " << I << "\n");
     Value *AggShadow = getShadow(Agg);
-    DEBUG(dbgs() << "   AggShadow:  " << *AggShadow << "\n");
+    LLVM_DEBUG(dbgs() << "   AggShadow:  " << *AggShadow << "\n");
     Value *ResShadow = IRB.CreateExtractValue(AggShadow, I.getIndices());
-    DEBUG(dbgs() << "   ResShadow:  " << *ResShadow << "\n");
+    LLVM_DEBUG(dbgs() << "   ResShadow:  " << *ResShadow << "\n");
     setShadow(&I, ResShadow);
     setOriginForNaryOp(I);
   }
 
   void visitInsertValueInst(InsertValueInst &I) {
     IRBuilder<> IRB(&I);
-    DEBUG(dbgs() << "InsertValue:  " << I << "\n");
+    LLVM_DEBUG(dbgs() << "InsertValue:  " << I << "\n");
     Value *AggShadow = getShadow(I.getAggregateOperand());
     Value *InsShadow = getShadow(I.getInsertedValueOperand());
-    DEBUG(dbgs() << "   AggShadow:  " << *AggShadow << "\n");
-    DEBUG(dbgs() << "   InsShadow:  " << *InsShadow << "\n");
+    LLVM_DEBUG(dbgs() << "   AggShadow:  " << *AggShadow << "\n");
+    LLVM_DEBUG(dbgs() << "   InsShadow:  " << *InsShadow << "\n");
     Value *Res = IRB.CreateInsertValue(AggShadow, InsShadow, I.getIndices());
-    DEBUG(dbgs() << "   Res:        " << *Res << "\n");
+    LLVM_DEBUG(dbgs() << "   Res:        " << *Res << "\n");
     setShadow(&I, Res);
     setOriginForNaryOp(I);
   }
@@ -3078,17 +3078,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void visitResumeInst(ResumeInst &I) {
-    DEBUG(dbgs() << "Resume: " << I << "\n");
+    LLVM_DEBUG(dbgs() << "Resume: " << I << "\n");
     // Nothing to do here.
   }
 
   void visitCleanupReturnInst(CleanupReturnInst &CRI) {
-    DEBUG(dbgs() << "CleanupReturn: " << CRI << "\n");
+    LLVM_DEBUG(dbgs() << "CleanupReturn: " << CRI << "\n");
     // Nothing to do here.
   }
 
   void visitCatchReturnInst(CatchReturnInst &CRI) {
-    DEBUG(dbgs() << "CatchReturn: " << CRI << "\n");
+    LLVM_DEBUG(dbgs() << "CatchReturn: " << CRI << "\n");
     // Nothing to do here.
   }
 
@@ -3129,7 +3129,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Everything else: stop propagating and check for poisoned shadow.
     if (ClDumpStrictInstructions)
       dumpInst(I);
-    DEBUG(dbgs() << "DEFAULT: " << I << "\n");
+    LLVM_DEBUG(dbgs() << "DEFAULT: " << I << "\n");
     for (size_t i = 0, n = I.getNumOperands(); i < n; i++) {
       Value *Operand = I.getOperand(i);
       if (Operand->getType()->isSized())

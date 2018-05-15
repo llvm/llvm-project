@@ -2910,3 +2910,18 @@ def HexagonREADCYCLE: SDNode<"HexagonISD::READCYCLE", SDTInt64Leaf,
   [SDNPHasChain]>;
 
 def: Pat<(HexagonREADCYCLE), (A4_tfrcpp UPCYCLE)>;
+
+// The declared return value of the store-locked intrinsics is i32, but
+// the instructions actually define i1. To avoid register copies from
+// IntRegs to PredRegs and back, fold the entire pattern checking the
+// result against true/false.
+let AddedComplexity = 100 in {
+  def: Pat<(i1 (setne (int_hexagon_S2_storew_locked I32:$Rs, I32:$Rt), 0)),
+           (S2_storew_locked I32:$Rs, I32:$Rt)>;
+  def: Pat<(i1 (seteq (int_hexagon_S2_storew_locked I32:$Rs, I32:$Rt), 0)),
+           (C2_not (S2_storew_locked I32:$Rs, I32:$Rt))>;
+  def: Pat<(i1 (setne (int_hexagon_S4_stored_locked I32:$Rs, I64:$Rt), 0)),
+           (S4_stored_locked I32:$Rs, I64:$Rt)>;
+  def: Pat<(i1 (seteq (int_hexagon_S4_stored_locked I32:$Rs, I64:$Rt), 0)),
+           (C2_not (S4_stored_locked I32:$Rs, I64:$Rt))>;
+}

@@ -855,9 +855,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
 
   MachineBasicBlock *NMBB = MF->CreateMachineBasicBlock();
   MF->insert(std::next(MachineFunction::iterator(this)), NMBB);
-  DEBUG(dbgs() << "Splitting critical edge: " << printMBBReference(*this)
-               << " -- " << printMBBReference(*NMBB) << " -- "
-               << printMBBReference(*Succ) << '\n');
+  LLVM_DEBUG(dbgs() << "Splitting critical edge: " << printMBBReference(*this)
+                    << " -- " << printMBBReference(*NMBB) << " -- "
+                    << printMBBReference(*Succ) << '\n');
 
   LiveIntervals *LIS = P.getAnalysisIfAvailable<LiveIntervals>();
   SlotIndexes *Indexes = P.getAnalysisIfAvailable<SlotIndexes>();
@@ -886,7 +886,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
         if (TargetRegisterInfo::isPhysicalRegister(Reg) ||
             LV->getVarInfo(Reg).removeKill(*MI)) {
           KilledRegs.push_back(Reg);
-          DEBUG(dbgs() << "Removing terminator kill: " << *MI);
+          LLVM_DEBUG(dbgs() << "Removing terminator kill: " << *MI);
           OI->setIsKill(false);
         }
       }
@@ -977,7 +977,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
           continue;
         if (TargetRegisterInfo::isVirtualRegister(Reg))
           LV->getVarInfo(Reg).Kills.push_back(&*I);
-        DEBUG(dbgs() << "Restored terminator kill: " << *I);
+        LLVM_DEBUG(dbgs() << "Restored terminator kill: " << *I);
         break;
       }
     }
@@ -1110,8 +1110,8 @@ bool MachineBasicBlock::canSplitCriticalEdge(
   // case that we can't handle. Since this never happens in properly optimized
   // code, just skip those edges.
   if (TBB && TBB == FBB) {
-    DEBUG(dbgs() << "Won't split critical edge after degenerate "
-                 << printMBBReference(*this) << '\n');
+    LLVM_DEBUG(dbgs() << "Won't split critical edge after degenerate "
+                      << printMBBReference(*this) << '\n');
     return false;
   }
   return true;

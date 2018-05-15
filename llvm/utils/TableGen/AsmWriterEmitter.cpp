@@ -351,8 +351,8 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
 
     // If we don't have enough bits for this operand, don't include it.
     if (NumBits > BitsLeft) {
-      DEBUG(errs() << "Not enough bits to densely encode " << NumBits
-                   << " more bits\n");
+      LLVM_DEBUG(errs() << "Not enough bits to densely encode " << NumBits
+                        << " more bits\n");
       break;
     }
 

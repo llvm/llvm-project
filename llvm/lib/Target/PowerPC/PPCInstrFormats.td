@@ -2131,6 +2131,27 @@ class Z23Form_3<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31}    = RC;
 }
 
+class Z23Form_8<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
+              InstrItinClass itin, list<dag> pattern>
+         : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<5> VRT;
+  bit R;
+  bits<5> VRB;
+  bits<2> idx;
+
+  let Pattern = pattern;
+
+  bit RC = 0;    // set by isDOT
+
+  let Inst{6-10}  = VRT;
+  let Inst{11-14} = 0;
+  let Inst{15} = R;
+  let Inst{16-20} = VRB;
+  let Inst{21-22} = idx;
+  let Inst{23-30} = xo;
+  let Inst{31}    = RC;
+}
+
 //===----------------------------------------------------------------------===//
 class Pseudo<dag OOL, dag IOL, string asmstr, list<dag> pattern>
     : I<0, OOL, IOL, asmstr, NoItinerary> {

@@ -201,7 +201,7 @@ bool SIAnnotateControlFlow::isElse(PHINode *Phi) {
 // Erase "Phi" if it is not used any more
 void SIAnnotateControlFlow::eraseIfUnused(PHINode *Phi) {
   if (RecursivelyDeleteDeadPHINode(Phi)) {
-    DEBUG(dbgs() << "Erased unused condition phi\n");
+    LLVM_DEBUG(dbgs() << "Erased unused condition phi\n");
   }
 }
 
