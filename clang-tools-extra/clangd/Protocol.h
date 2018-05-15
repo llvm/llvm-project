@@ -99,6 +99,9 @@ struct Position {
     return std::tie(LHS.line, LHS.character) ==
            std::tie(RHS.line, RHS.character);
   }
+  friend bool operator!=(const Position &LHS, const Position &RHS) {
+    return !(LHS == RHS);
+  }
   friend bool operator<(const Position &LHS, const Position &RHS) {
     return std::tie(LHS.line, LHS.character) <
            std::tie(RHS.line, RHS.character);

@@ -161,6 +161,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     // both the old and the new version in case only one of them matches.
     CompletionList Result = clangd::codeComplete(
         File, IP->Command, PreambleData ? &PreambleData->Preamble : nullptr,
+        PreambleData ? PreambleData->Inclusions : std::vector<Inclusion>(),
         IP->Contents, Pos, FS, PCHs, CodeCompleteOpts);
     CB(std::move(Result));
   };
