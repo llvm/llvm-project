@@ -1,5 +1,6 @@
 add_library(LLVMExegesis
   STATIC
+  Analysis.cpp
   BenchmarkResult.cpp
   BenchmarkRunner.cpp
   Clustering.cpp

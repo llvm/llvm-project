@@ -27,13 +27,16 @@ namespace {
 TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   InstructionBenchmark ToDisk;
 
-  ToDisk.AsmTmpl.Name = "name";
+  ToDisk.Key.OpcodeName = "name";
+  ToDisk.Key.Mode = "mode";
+  ToDisk.Key.Config = "config";
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";
   ToDisk.NumRepetitions = 1;
   ToDisk.Measurements.push_back(BenchmarkMeasure{"a", 1, "debug a"});
   ToDisk.Measurements.push_back(BenchmarkMeasure{"b", 2, ""});
   ToDisk.Error = "error";
+  ToDisk.Info = "info";
 
   llvm::SmallString<64> Filename;
   std::error_code EC;
@@ -47,24 +50,30 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
     // One-element version.
     const auto FromDisk = InstructionBenchmark::readYamlOrDie(Filename);
 
-    EXPECT_EQ(FromDisk.AsmTmpl.Name, ToDisk.AsmTmpl.Name);
+    EXPECT_EQ(FromDisk.Key.OpcodeName, ToDisk.Key.OpcodeName);
+    EXPECT_EQ(FromDisk.Key.Mode, ToDisk.Key.Mode);
+    EXPECT_EQ(FromDisk.Key.Config, ToDisk.Key.Config);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
     EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
     EXPECT_EQ(FromDisk.NumRepetitions, ToDisk.NumRepetitions);
     EXPECT_THAT(FromDisk.Measurements, ToDisk.Measurements);
     EXPECT_THAT(FromDisk.Error, ToDisk.Error);
+    EXPECT_EQ(FromDisk.Info, ToDisk.Info);
   }
   {
     // Vector version.
     const auto FromDiskVector = InstructionBenchmark::readYamlsOrDie(Filename);
     ASSERT_EQ(FromDiskVector.size(), size_t{1});
     const auto FromDisk = FromDiskVector[0];
-    EXPECT_EQ(FromDisk.AsmTmpl.Name, ToDisk.AsmTmpl.Name);
+    EXPECT_EQ(FromDisk.Key.OpcodeName, ToDisk.Key.OpcodeName);
+    EXPECT_EQ(FromDisk.Key.Mode, ToDisk.Key.Mode);
+    EXPECT_EQ(FromDisk.Key.Config, ToDisk.Key.Config);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
     EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
     EXPECT_EQ(FromDisk.NumRepetitions, ToDisk.NumRepetitions);
     EXPECT_THAT(FromDisk.Measurements, ToDisk.Measurements);
     EXPECT_THAT(FromDisk.Error, ToDisk.Error);
+    EXPECT_EQ(FromDisk.Info, ToDisk.Info);
   }
 }
 

@@ -25,7 +25,7 @@
 // CHECK:        Type: PT_NOTE
 // CHECK-NEXT:   Offset:
 // CHECK-NEXT:   VirtualAddress: 0x[[ADDR]]
-// CHECK-NEXT:   PhysicalAddress: 0x245
+// CHECK-NEXT:   PhysicalAddress: 0x24C
 // CHECK-NEXT:   FileSize: 16
 // CHECK-NEXT:   MemSize: 16
 // CHECK-NOT:  PT_NOTE

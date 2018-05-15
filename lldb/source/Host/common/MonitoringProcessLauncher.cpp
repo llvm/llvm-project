@@ -9,7 +9,6 @@
 
 #include "lldb/Host/MonitoringProcessLauncher.h"
 #include "lldb/Host/HostProcess.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
@@ -58,18 +57,9 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
   if (process.GetProcessId() != LLDB_INVALID_PROCESS_ID) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
-    Host::MonitorChildProcessCallback callback =
-        launch_info.GetMonitorProcessCallback();
-
-    bool monitor_signals = false;
-    if (callback) {
-      // If the ProcessLaunchInfo specified a callback, use that.
-      monitor_signals = launch_info.GetMonitorSignals();
-    } else {
-      callback = Process::SetProcessExitStatus;
-    }
-
-    process.StartMonitoring(callback, monitor_signals);
+    assert(launch_info.GetMonitorProcessCallback());
+    process.StartMonitoring(launch_info.GetMonitorProcessCallback(),
+                            launch_info.GetMonitorSignals());
     if (log)
       log->PutCString("started monitoring child process.");
   } else {

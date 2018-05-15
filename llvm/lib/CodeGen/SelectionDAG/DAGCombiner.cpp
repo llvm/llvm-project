@@ -13258,6 +13258,12 @@ void DAGCombiner::getStoreMergeCandidates(
     // Load and store should be the same type.
     if (MemVT != LoadVT)
       return;
+    // Loads must only have one use.
+    if (!Ld->hasNUsesOfValue(1, 0))
+      return;
+    // The memory operands must not be volatile.
+    if (Ld->isVolatile() || Ld->isIndexed())
+      return;
   }
   auto CandidateMatch = [&](StoreSDNode *Other, BaseIndexOffset &Ptr,
                             int64_t &Offset) -> bool {
@@ -13274,6 +13280,12 @@ void DAGCombiner::getStoreMergeCandidates(
       if (LoadSDNode *OtherLd = dyn_cast<LoadSDNode>(Val)) {
         auto LPtr = BaseIndexOffset::match(OtherLd, DAG);
         if (LoadVT != OtherLd->getMemoryVT())
+          return false;
+        // Loads must only have one use.
+        if (!OtherLd->hasNUsesOfValue(1, 0))
+          return false;
+        // The memory operands must not be volatile.
+        if (OtherLd->isVolatile() || OtherLd->isIndexed())
           return false;
         if (!(LBasePtr.equalBaseIndex(LPtr, DAG)))
           return false;
@@ -13649,21 +13661,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     for (unsigned i = 0; i < NumConsecutiveStores; ++i) {
       StoreSDNode *St = cast<StoreSDNode>(StoreNodes[i].MemNode);
       SDValue Val = peekThroughBitcast(St->getValue());
-      LoadSDNode *Ld = dyn_cast<LoadSDNode>(Val);
-      if (!Ld)
-        break;
-
-      // Loads must only have one use.
-      if (!Ld->hasNUsesOfValue(1, 0))
-        break;
-
-      // The memory operands must not be volatile.
-      if (Ld->isVolatile() || Ld->isIndexed())
-        break;
-
-      // The stored memory type must be the same.
-      if (Ld->getMemoryVT() != MemVT)
-        break;
+      LoadSDNode *Ld = cast<LoadSDNode>(Val);
 
       BaseIndexOffset LdPtr = BaseIndexOffset::match(Ld, DAG);
       // If this is not the first ptr that we check.

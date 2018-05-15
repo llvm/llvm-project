@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 
+#include "Headers.h"
 #include "Logger.h"
 #include "Path.h"
 #include "Protocol.h"
@@ -69,6 +70,7 @@ struct CodeCompleteOptions {
 CompletionList codeComplete(PathRef FileName,
                             const tooling::CompileCommand &Command,
                             PrecompiledPreamble const *Preamble,
+                            const std::vector<Inclusion> &PreambleInclusions,
                             StringRef Contents, Position Pos,
                             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                             std::shared_ptr<PCHContainerOperations> PCHs,

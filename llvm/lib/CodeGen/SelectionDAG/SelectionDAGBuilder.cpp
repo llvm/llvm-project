@@ -1069,6 +1069,22 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
 
   visit(I.getOpcode(), I);
 
+  if (auto *FPMO = dyn_cast<FPMathOperator>(&I)) {
+    // Propagate the fast-math-flags of this IR instruction to the DAG node that
+    // maps to this instruction.
+    // TODO: We could handle all flags (nsw, etc) here.
+    // TODO: If an IR instruction maps to >1 node, only the final node will have
+    //       flags set.
+    if (SDNode *Node = getNodeForIRValue(&I)) {
+      SDNodeFlags IncomingFlags;
+      IncomingFlags.copyFMF(*FPMO);
+      if (!Node->getFlags().isDefined())
+        Node->setFlags(IncomingFlags);
+      else
+        Node->intersectFlagsWith(IncomingFlags);
+    }
+  }
+
   if (!isa<TerminatorInst>(&I) && !HasTailCall &&
       !isStatepoint(&I)) // statepoints handle their exports internally
     CopyToExportRegsIfNeeded(&I);
@@ -2753,9 +2769,6 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
     Flags.setVectorReduction(true);
     LLVM_DEBUG(dbgs() << "Detected a reduction operation:" << I << "\n");
   }
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
-    Flags.copyFMF(*FPOp);
-  }
 
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
@@ -2851,13 +2864,12 @@ void SelectionDAGBuilder::visitFCmp(const User &I) {
     predicate = FCmpInst::Predicate(FC->getPredicate());
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
-  ISD::CondCode Condition = getFCmpCondCode(predicate);
 
-  // FIXME: Fcmp instructions have fast-math-flags in IR, so we should use them.
-  // FIXME: We should propagate the fast-math-flags to the DAG node itself for
-  // further optimization, but currently FMF is only applicable to binary nodes.
-  if (TM.Options.NoNaNsFPMath)
+  ISD::CondCode Condition = getFCmpCondCode(predicate);
+  auto *FPMO = dyn_cast<FPMathOperator>(&I);
+  if ((FPMO && FPMO->hasNoNaNs()) || TM.Options.NoNaNsFPMath)
     Condition = getFCmpCodeWithoutNaN(Condition);
+
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
   setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Condition));
@@ -8082,8 +8094,6 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
   FastMathFlags FMF;
   if (isa<FPMathOperator>(I))
     FMF = I.getFastMathFlags();
-  SDNodeFlags SDFlags;
-  SDFlags.setNoNaNs(FMF.noNaNs());
 
   switch (Intrinsic) {
   case Intrinsic::experimental_vector_reduce_fadd:
@@ -8126,10 +8136,10 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
     Res = DAG.getNode(ISD::VECREDUCE_UMIN, dl, VT, Op1);
     break;
   case Intrinsic::experimental_vector_reduce_fmax:
-    Res = DAG.getNode(ISD::VECREDUCE_FMAX, dl, VT, Op1, SDFlags);
+    Res = DAG.getNode(ISD::VECREDUCE_FMAX, dl, VT, Op1);
     break;
   case Intrinsic::experimental_vector_reduce_fmin:
-    Res = DAG.getNode(ISD::VECREDUCE_FMIN, dl, VT, Op1, SDFlags);
+    Res = DAG.getNode(ISD::VECREDUCE_FMIN, dl, VT, Op1);
     break;
   default:
     llvm_unreachable("Unhandled vector reduce intrinsic");

@@ -1954,8 +1954,8 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     // Push a destructor cleanup for this parameter if the ABI requires it.
     // Don't push a cleanup in a thunk for a method that will also emit a
     // cleanup.
-    if (!IsScalar && !CurFuncIsThunk &&
-        getContext().isParamDestroyedInCallee(Ty)) {
+    if (hasAggregateEvaluationKind(Ty) && !CurFuncIsThunk &&
+        Ty->getAs<RecordType>()->getDecl()->isParamDestroyedInCallee()) {
       if (QualType::DestructionKind DtorKind = Ty.isDestructedType()) {
         assert((DtorKind == QualType::DK_cxx_destructor ||
                 DtorKind == QualType::DK_nontrivial_c_struct) &&

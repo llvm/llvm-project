@@ -776,8 +776,7 @@ private:
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
   MemoryUseOrDef *createNewAccess(Instruction *);
   MemoryAccess *findDominatingDef(BasicBlock *, enum InsertionPlace);
-  void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &,
-                     const DenseMap<const BasicBlock *, unsigned int> &);
+  void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &);
   MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *, bool);
   void renameSuccessorPhis(BasicBlock *, MemoryAccess *, bool);
   void renamePass(DomTreeNode *, MemoryAccess *IncomingVal,

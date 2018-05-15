@@ -687,6 +687,13 @@ public:
   SDValue getValue(const Value *V);
   bool findValue(const Value *V) const;
 
+  /// Return the SDNode for the specified IR value if it exists.
+  SDNode *getNodeForIRValue(const Value *V) {
+    if (NodeMap.find(V) == NodeMap.end())
+      return nullptr;
+    return NodeMap[V].getNode();
+  }
+
   SDValue getNonRegisterValue(const Value *V);
   SDValue getValueImpl(const Value *V);
 

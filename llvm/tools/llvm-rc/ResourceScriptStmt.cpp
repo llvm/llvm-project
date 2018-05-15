@@ -267,6 +267,10 @@ raw_ostream &CaptionStmt::log(raw_ostream &OS) const {
   return OS << "Caption: " << Value << "\n";
 }
 
+raw_ostream &ClassStmt::log(raw_ostream &OS) const {
+  return OS << "Class: " << Value << "\n";
+}
+
 raw_ostream &FontStmt::log(raw_ostream &OS) const {
   OS << "Font: size = " << Size << ", face = " << Name
      << ", weight = " << Weight;

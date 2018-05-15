@@ -1,4 +1,4 @@
-//===- llvm/unittest/Support/DynamicLibrary/PipSqueak.cxx -----------------===//
+//===- llvm/unittest/Support/DynamicLibrary/PipSqueak.cpp -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -46,4 +46,4 @@ extern "C" PIPSQUEAK_EXPORT void TestOrder(std::vector<std::string> &V) {
 }
 
 #define PIPSQUEAK_TESTA_RETURN "LibCall"
-#include "ExportedFuncs.cxx"
+#include "ExportedFuncs.cpp"

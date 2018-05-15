@@ -680,8 +680,8 @@ void ClangMoveTool::run(const ast_matchers::MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<clang::NamedDecl>("helper_decls")) {
     MovedDecls.push_back(ND);
     HelperDeclarations.push_back(ND);
-    DEBUG(llvm::dbgs() << "Add helper : "
-                       << ND->getNameAsString() << " (" << ND << ")\n");
+    LLVM_DEBUG(llvm::dbgs() << "Add helper : " << ND->getNameAsString() << " ("
+                            << ND << ")\n");
   } else if (const auto *UD =
                  Result.Nodes.getNodeAs<clang::NamedDecl>("using_decl")) {
     MovedDecls.push_back(UD);
@@ -741,12 +741,12 @@ void ClangMoveTool::removeDeclsInOldFiles() {
     // We remove the helper declarations which are not used in the old.cc after
     // moving the given declarations.
     for (const auto *D : HelperDeclarations) {
-      DEBUG(llvm::dbgs() << "Check helper is used: "
-                         << D->getNameAsString() << " (" << D << ")\n");
+      LLVM_DEBUG(llvm::dbgs() << "Check helper is used: "
+                              << D->getNameAsString() << " (" << D << ")\n");
       if (!UsedDecls.count(HelperDeclRGBuilder::getOutmostClassOrFunDecl(
               D->getCanonicalDecl()))) {
-        DEBUG(llvm::dbgs() << "Helper removed in old.cc: "
-                           << D->getNameAsString() << " (" << D << ")\n");
+        LLVM_DEBUG(llvm::dbgs() << "Helper removed in old.cc: "
+                                << D->getNameAsString() << " (" << D << ")\n");
         RemovedDecls.push_back(D);
       }
     }
@@ -826,8 +826,8 @@ void ClangMoveTool::moveDeclsToNewFiles() {
             D->getCanonicalDecl())))
       continue;
 
-    DEBUG(llvm::dbgs() << "Helper used in new.cc: " << D->getNameAsString()
-                       << " " << D << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "Helper used in new.cc: " << D->getNameAsString()
+                            << " " << D << "\n");
     ActualNewCCDecls.push_back(D);
   }
 
@@ -937,7 +937,7 @@ void ClangMoveTool::onEndOfTranslationUnit() {
     moveAll(SM, Context->Spec.OldCC, Context->Spec.NewCC);
     return;
   }
-  DEBUG(RGBuilder.getGraph()->dump());
+  LLVM_DEBUG(RGBuilder.getGraph()->dump());
   moveDeclsToNewFiles();
   removeDeclsInOldFiles();
 }

@@ -42,6 +42,7 @@ constexpr llvm::StringLiteral DefaultSpecialAcronyms[] = {
     "[2-9]G",
     "ACL",
     "API",
+    "AR",
     "ARGB",
     "ASCII",
     "BGRA",

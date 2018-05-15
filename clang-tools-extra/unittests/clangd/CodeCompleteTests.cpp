@@ -45,6 +45,16 @@ MATCHER_P(Kind, K, "") { return arg.kind == K; }
 MATCHER_P(Filter, F, "") { return arg.filterText == F; }
 MATCHER_P(Doc, D, "") { return arg.documentation == D; }
 MATCHER_P(Detail, D, "") { return arg.detail == D; }
+MATCHER_P(InsertInclude, IncludeHeader, "") {
+  if (arg.additionalTextEdits.size() != 1)
+    return false;
+  const auto &Edit = arg.additionalTextEdits[0];
+  if (Edit.range.start != Edit.range.end)
+    return false;
+  SmallVector<StringRef, 2> Matches;
+  llvm::Regex RE(R"(#include[ ]*(["<][^">]*[">]))");
+  return RE.match(Edit.newText, &Matches) && Matches[1] == IncludeHeader;
+}
 MATCHER_P(PlainText, Text, "") {
   return arg.insertTextFormat == clangd::InsertTextFormat::PlainText &&
          arg.insertText == Text;
@@ -58,6 +68,8 @@ MATCHER(NameContainsFilter, "") {
     return true;
   return llvm::StringRef(arg.insertText).contains(arg.filterText);
 }
+MATCHER(HasAdditionalEdits, "") { return !arg.additionalTextEdits.empty(); }
+
 // Shorthand for Contains(Named(Name)).
 Matcher<const std::vector<CompletionItem> &> Has(std::string Name) {
   return Contains(Named(std::move(Name)));
@@ -75,9 +87,7 @@ std::unique_ptr<SymbolIndex> memIndex(std::vector<Symbol> Symbols) {
   return MemIndex::build(std::move(Slab).build());
 }
 
-// Builds a server and runs code completion.
-// If IndexSymbols is non-empty, an index will be built and passed to opts.
-CompletionList completions(StringRef Text,
+CompletionList completions(ClangdServer &Server, StringRef Text,
                            std::vector<Symbol> IndexSymbols = {},
                            clangd::CodeCompleteOptions Opts = {}) {
   std::unique_ptr<SymbolIndex> OverrideIndex;
@@ -87,10 +97,6 @@ CompletionList completions(StringRef Text,
     Opts.Index = OverrideIndex.get();
   }
 
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
   auto File = testPath("foo.cpp");
   Annotations Test(Text);
   runAddDocument(Server, File, Test.code());
@@ -99,6 +105,18 @@ CompletionList completions(StringRef Text,
   // Sanity-check that filterText is valid.
   EXPECT_THAT(CompletionList.items, Each(NameContainsFilter()));
   return CompletionList;
+}
+
+// Builds a server and runs code completion.
+// If IndexSymbols is non-empty, an index will be built and passed to opts.
+CompletionList completions(StringRef Text,
+                           std::vector<Symbol> IndexSymbols = {},
+                           clangd::CodeCompleteOptions Opts = {}) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  return completions(Server, Text, std::move(IndexSymbols), std::move(Opts));
 }
 
 std::string replace(StringRef Haystack, StringRef Needle, StringRef Repl) {
@@ -503,6 +521,42 @@ TEST(CompletionTest, SemaIndexMergeWithLimit) {
       {func("ns::both"), cls("ns::Index")}, Opts);
   EXPECT_EQ(Results.items.size(), Opts.Limit);
   EXPECT_TRUE(Results.isIncomplete);
+}
+
+TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  std::string Subdir = testPath("sub");
+  std::string SearchDirArg = (llvm::Twine("-I") + Subdir).str();
+  CDB.ExtraClangFlags = {SearchDirArg.c_str()};
+  std::string BarHeader = testPath("sub/bar.h");
+  FS.Files[BarHeader] = "";
+
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  Symbol::Details Scratch;
+  auto BarURI = URI::createFile(BarHeader).toString();
+  Symbol Sym = cls("ns::X");
+  Sym.CanonicalDeclaration.FileURI = BarURI;
+  Scratch.IncludeHeader = BarURI;
+  Sym.Detail = &Scratch;
+  // Shoten include path based on search dirctory and insert.
+  auto Results = completions(Server,
+                             R"cpp(
+          int main() { ns::^ }
+      )cpp",
+                             {Sym});
+  EXPECT_THAT(Results.items,
+              ElementsAre(AllOf(Named("X"), InsertInclude("\"bar.h\""))));
+  // Duplicate based on inclusions in preamble.
+  Results = completions(Server,
+                        R"cpp(
+          #include "sub/bar.h"  // not shortest, so should only match resolved.
+          int main() { ns::^ }
+      )cpp",
+                        {Sym});
+  EXPECT_THAT(Results.items,
+              ElementsAre(AllOf(Named("X"), Not(HasAdditionalEdits()))));
 }
 
 TEST(CompletionTest, IndexSuppressesPreambleCompletions) {

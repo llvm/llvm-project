@@ -516,4 +516,7 @@ EXTERN void __kmpc_data_sharing_environment_end(
 EXTERN void *
 __kmpc_get_data_sharing_environment_frame(int32_t SourceThreadID,
                                           int16_t IsOMPRuntimeInitialized);
+
+// SPMD execution mode interrogation function.
+EXTERN int8_t __kmpc_is_spmd_exec_mode();
 #endif

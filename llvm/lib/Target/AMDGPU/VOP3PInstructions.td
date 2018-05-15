@@ -170,10 +170,10 @@ let SubtargetPredicate = HasDLInsts in {
 def V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16", VOP3_Profile<VOP_F32_V2F16_V2F16_F32>, int_amdgcn_fdot2>;
 def V_DOT2_I32_I16 : VOP3PInst<"v_dot2_i32_i16", VOP3_Profile<VOP_I32_V2I16_V2I16_I32>, int_amdgcn_sdot2>;
 def V_DOT2_U32_U16 : VOP3PInst<"v_dot2_u32_u16", VOP3_Profile<VOP_I32_V2I16_V2I16_I32>, int_amdgcn_udot2>;
-def V_DOT4_I32_I8  : VOP3Inst<"v_dot4_i32_i8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_sdot4>;
-def V_DOT4_U32_U8  : VOP3Inst<"v_dot4_u32_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_udot4>;
-def V_DOT8_I32_I4  : VOP3Inst<"v_dot8_i32_i4", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_sdot8>;
-def V_DOT8_U32_U4  : VOP3Inst<"v_dot8_u32_u4", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_udot8>;
+def V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot4>;
+def V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4>;
+def V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot8>;
+def V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot8>;
 
 } // End SubtargetPredicate = HasDLInsts
 
