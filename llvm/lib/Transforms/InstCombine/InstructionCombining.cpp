@@ -1937,16 +1937,17 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // addrspacecast between types is canonicalized as a bitcast, then an
   // addrspacecast. To take advantage of the below bitcast + struct GEP, look
   // through the addrspacecast.
+  Value *ASCStrippedPtrOp = PtrOp;
   if (auto *ASC = dyn_cast<AddrSpaceCastInst>(PtrOp)) {
     //   X = bitcast A addrspace(1)* to B addrspace(1)*
     //   Y = addrspacecast A addrspace(1)* to B addrspace(2)*
     //   Z = gep Y, <...constant indices...>
     // Into an addrspacecasted GEP of the struct.
     if (auto *BC = dyn_cast<BitCastInst>(ASC->getOperand(0)))
-      PtrOp = BC;
+      ASCStrippedPtrOp = BC;
   }
 
-  if (auto *BCI = dyn_cast<BitCastInst>(PtrOp)) {
+  if (auto *BCI = dyn_cast<BitCastInst>(ASCStrippedPtrOp)) {
     Value *SrcOp = BCI->getOperand(0);
     PointerType *SrcType = cast<PointerType>(BCI->getSrcTy());
     Type *SrcEltType = SrcType->getElementType();

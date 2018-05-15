@@ -147,9 +147,10 @@ defm : BWWriteResPair<WriteBEXTR, [BWPort06,BWPort15], 2, [1,1], 2>;
 defm : BWWriteResPair<WriteBZHI, [BWPort15], 1>;
 
 // Loads, stores, and moves, not folded with other operations.
-def : WriteRes<WriteLoad,  [BWPort23]> { let Latency = 5; }
-def : WriteRes<WriteStore, [BWPort237, BWPort4]>;
-def : WriteRes<WriteMove,  [BWPort0156]>;
+defm : X86WriteRes<WriteLoad,    [BWPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteStore,   [BWPort237, BWPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteStoreNT, [BWPort237, BWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteMove,    [BWPort0156], 1, [1,1], 1>;
 
 // Idioms that clear a register, like xorps %xmm0, %xmm0.
 // These can often bypass execution ports completely.
@@ -171,6 +172,9 @@ defm : X86WriteRes<WriteFMaskedLoadY,  [BWPort23,BWPort5], 8, [1,2], 3>;
 defm : X86WriteRes<WriteFStore,        [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreX,       [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreY,       [BWPort237,BWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreNT,      [BWPort237,BWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreNTX,     [BWPort237,BWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFStoreNTY,     [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFMaskedStore,  [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMaskedStoreY, [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteFMove,         [BWPort5], 1, [1], 1>;
@@ -266,11 +270,15 @@ def  : WriteRes<WriteCvtF2FSt, [BWPort1,BWPort4,BWPort237]> {
 defm : X86WriteRes<WriteVecLoad,         [BWPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteVecLoadX,        [BWPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteVecLoadY,        [BWPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNT,       [BWPort23], 5, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNTY,      [BWPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [BWPort23,BWPort5], 7, [1,2], 3>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [BWPort23,BWPort5], 8, [1,2], 3>;
 defm : X86WriteRes<WriteVecStore,        [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreX,       [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [BWPort237,BWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreNT,      [BWPort237,BWPort4], 1, [1,1], 2>;
+defm : X86WriteRes<WriteVecStoreNTY,     [BWPort237,BWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedStore,  [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [BWPort0,BWPort4,BWPort237,BWPort15], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteVecMove,         [BWPort015], 1, [1], 1>;
@@ -578,8 +586,6 @@ def BWWriteResGroup10 : SchedWriteRes<[BWPort4,BWPort237]> {
 }
 def: InstRW<[BWWriteResGroup10], (instregex "FBSTPm",
                                             "MMX_MOVD64mr",
-                                            "MOVNTI_64mr",
-                                            "MOVNTImr",
                                             "ST_FP(32|64|80)m",
                                             "(V?)MOV(H|L)(PD|PS)mr",
                                             "(V?)MOVPDI2DImr",

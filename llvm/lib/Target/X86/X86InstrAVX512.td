@@ -4373,11 +4373,11 @@ multiclass avx512_movnt_vl<bits<8> opc, string OpcodeStr,
 }
 
 defm VMOVNTDQ : avx512_movnt_vl<0xE7, "vmovntdq", avx512vl_i64_info,
-                                SchedWriteVecMoveLS>, PD;
+                                SchedWriteVecMoveLSNT>, PD;
 defm VMOVNTPD : avx512_movnt_vl<0x2B, "vmovntpd", avx512vl_f64_info,
-                                SchedWriteFMoveLS>, PD, VEX_W;
+                                SchedWriteFMoveLSNT>, PD, VEX_W;
 defm VMOVNTPS : avx512_movnt_vl<0x2B, "vmovntps", avx512vl_f32_info,
-                                SchedWriteFMoveLS>, PS;
+                                SchedWriteFMoveLSNT>, PS;
 
 let Predicates = [HasAVX512], AddedComplexity = 400 in {
   def : Pat<(alignednontemporalstore (v16i32 VR512:$src), addr:$dst),

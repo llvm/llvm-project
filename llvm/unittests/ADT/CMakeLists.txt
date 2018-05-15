@@ -2,7 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-set(ADTSources
+add_llvm_unittest(ADTTests
   APFloatTest.cpp
   APIntTest.cpp
   APSIntTest.cpp
@@ -65,10 +65,6 @@ set(ADTSources
   TripleTest.cpp
   TwineTest.cpp
   VariadicFunctionTest.cpp
- )
-
-add_llvm_unittest(ADTTests
-  ${ADTSources}
   )
 
 add_dependencies(ADTTests intrinsics_gen)

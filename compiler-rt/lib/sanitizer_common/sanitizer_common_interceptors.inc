@@ -4054,22 +4054,6 @@ INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
 #define INIT_PTHREAD_MUTEX_UNLOCK
 #endif
 
-#if SANITIZER_INTERCEPT___PTHREAD_MUTEX
-INTERCEPTOR(int, __pthread_mutex_lock, void *m)
-ALIAS(WRAPPER_NAME(pthread_mutex_lock));
-
-INTERCEPTOR(int, __pthread_mutex_unlock, void *m)
-ALIAS(WRAPPER_NAME(pthread_mutex_unlock));
-
-#define INIT___PTHREAD_MUTEX_LOCK \
-  COMMON_INTERCEPT_FUNCTION(__pthread_mutex_lock)
-#define INIT___PTHREAD_MUTEX_UNLOCK \
-  COMMON_INTERCEPT_FUNCTION(__pthread_mutex_unlock)
-#else
-#define INIT___PTHREAD_MUTEX_LOCK
-#define INIT___PTHREAD_MUTEX_UNLOCK
-#endif
-
 #if SANITIZER_INTERCEPT___LIBC_MUTEX
 INTERCEPTOR(int, __libc_mutex_lock, void *m)
 ALIAS(WRAPPER_NAME(pthread_mutex_lock));
@@ -7318,8 +7302,6 @@ static void InitializeCommonInterceptors() {
   INIT__EXIT;
   INIT_PTHREAD_MUTEX_LOCK;
   INIT_PTHREAD_MUTEX_UNLOCK;
-  INIT___PTHREAD_MUTEX_LOCK;
-  INIT___PTHREAD_MUTEX_UNLOCK;
   INIT___LIBC_MUTEX_LOCK;
   INIT___LIBC_MUTEX_UNLOCK;
   INIT___LIBC_THR_SETCANCELSTATE;

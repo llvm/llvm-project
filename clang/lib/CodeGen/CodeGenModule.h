@@ -785,6 +785,13 @@ public:
                                      ForDefinition_t IsForDefinition
                                        = NotForDefinition);
 
+  /// Return the AST address space of string literal, which is used to emit
+  /// the string literal as global variable in LLVM IR.
+  /// Note: This is not necessarily the address space of the string literal
+  /// in AST. For address space agnostic language, e.g. C++, string literal
+  /// in AST is always in default address space.
+  LangAS getStringLiteralAddressSpace() const;
+
   /// Return the address of the given function. If Ty is non-null, then this
   /// function will use the specified type if it has to create it.
   llvm::Constant *GetAddrOfFunction(GlobalDecl GD, llvm::Type *Ty = nullptr,

@@ -9,6 +9,7 @@
 ; CHECK-NEXT: Analyzing result type: v4f64
 ; CHECK-NEXT: Split node result: [[VFOUR]]: v4f64 = BUILD_VECTOR
 
+; FIXME: We dropped the 'reassoc' flag.
 ; CHECK: Legalizing node: [[VTWO:t.*]]: v2f64 = BUILD_VECTOR
 ; CHECK: Legally typed node: [[VTWO]]: v2f64 = BUILD_VECTOR
 ; CHECK: Legalizing node: t26: v2f64 = fmaxnum nnan [[VTWO]], [[VTWO]]
@@ -24,7 +25,7 @@ entry:
  %1 = insertelement <4 x double> %0, double 1.0, i32 1
  %2 = insertelement <4 x double> %1, double 1.0, i32 2
  %3 = insertelement <4 x double> %2, double 1.0, i32 3
- %4 = call nnan double @llvm.experimental.vector.reduce.fmax.f64.v4f64(<4 x double> %3)
+ %4 = call nnan reassoc double @llvm.experimental.vector.reduce.fmax.f64.v4f64(<4 x double> %3)
  ret double %4
 }
 

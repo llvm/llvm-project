@@ -2581,8 +2581,10 @@ multiclass Memopxr_add_pat<PatFrag Load, PatFrag Store, PatFrag ImmPred,
 
 multiclass Memopxr_pat<PatFrag Load, PatFrag Store, PatFrag ImmPred,
                        SDNode Oper, InstHexagon MI> {
-  defm: Memopxr_base_pat <Load, Store,          Oper, MI>;
-  defm: Memopxr_add_pat  <Load, Store, ImmPred, Oper, MI>;
+  let Predicates = [UseMEMOPS] in {
+    defm: Memopxr_base_pat <Load, Store,          Oper, MI>;
+    defm: Memopxr_add_pat  <Load, Store, ImmPred, Oper, MI>;
+  }
 }
 
 let AddedComplexity = 200 in {
@@ -2680,8 +2682,10 @@ multiclass Memopxi_add_pat<PatFrag Load, PatFrag Store, PatFrag ImmPred,
 multiclass Memopxi_pat<PatFrag Load, PatFrag Store, PatFrag ImmPred,
                        SDNode Oper, PatFrag Arg, SDNodeXForm ArgMod,
                        InstHexagon MI> {
-  defm: Memopxi_base_pat <Load, Store,          Oper, Arg, ArgMod, MI>;
-  defm: Memopxi_add_pat  <Load, Store, ImmPred, Oper, Arg, ArgMod, MI>;
+  let Predicates = [UseMEMOPS] in {
+    defm: Memopxi_base_pat <Load, Store,          Oper, Arg, ArgMod, MI>;
+    defm: Memopxi_add_pat  <Load, Store, ImmPred, Oper, Arg, ArgMod, MI>;
+  }
 }
 
 let AddedComplexity = 220 in {

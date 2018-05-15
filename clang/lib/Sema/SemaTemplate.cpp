@@ -105,6 +105,12 @@ static NamedDecl *isAcceptableTemplateName(ASTContext &Context,
     return nullptr;
   }
 
+  // 'using Dependent::foo;' can resolve to a template name.
+  // 'using typename Dependent::foo;' cannot (not even if 'foo' is an
+  // injected-class-name).
+  if (isa<UnresolvedUsingValueDecl>(D))
+    return D;
+
   return nullptr;
 }
 
@@ -214,6 +220,10 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
 
     // We'll do this lookup again later.
     R.suppressDiagnostics();
+  } else if (isa<UnresolvedUsingValueDecl>((*R.begin())->getUnderlyingDecl())) {
+    // We don't yet know whether this is a template-name or not.
+    MemberOfUnknownSpecialization = true;
+    return TNK_Non_template;
   } else {
     TemplateDecl *TD = cast<TemplateDecl>((*R.begin())->getUnderlyingDecl());
 
@@ -429,7 +439,7 @@ bool Sema::LookupTemplateName(LookupResult &Found,
     if (ExampleLookupResult && TemplateKWLoc.isValid()) {
       Diag(Found.getNameLoc(), diag::err_template_kw_refers_to_non_template)
         << Found.getLookupName() << SS.getRange();
-      Diag(ExampleLookupResult->getLocation(),
+      Diag(ExampleLookupResult->getUnderlyingDecl()->getLocation(),
            diag::note_template_kw_refers_to_non_template)
           << Found.getLookupName();
       return true;
@@ -1966,6 +1976,8 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
   // FIXME: Add a kind for this to give more meaningful diagnostics. But can
   // this substitution process actually fail?
   InstantiatingTemplate BuildingDeductionGuides(*this, Loc, Template);
+  if (BuildingDeductionGuides.isInvalid())
+    return;
 
   // Convert declared constructors into deduction guide templates.
   // FIXME: Skip constructors for which deduction must necessarily fail (those

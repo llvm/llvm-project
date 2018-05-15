@@ -18,26 +18,13 @@
 
 using namespace llvm;
 
-bool DWARFTypeUnit::extractImpl(const DWARFDataExtractor &debug_info,
-                                uint32_t *offset_ptr) {
-  if (!DWARFUnit::extractImpl(debug_info, offset_ptr))
-    return false;
-  TypeHash = debug_info.getU64(offset_ptr);
-  TypeOffset = debug_info.getU32(offset_ptr);
-  // TypeOffset is relative to the beginning of the header,
-  // so we have to account for the leading length field.
-  // FIXME: The size of the length field is 12 in DWARF64.
-  unsigned SizeOfLength = 4;
-  return TypeOffset < getLength() + SizeOfLength;
-}
-
 void DWARFTypeUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
-  DWARFDie TD = getDIEForOffset(TypeOffset + getOffset());
+  DWARFDie TD = getDIEForOffset(getTypeOffset() + getOffset());
   const char *Name = TD.getName(DINameKind::ShortName);
 
   if (DumpOpts.SummarizeTypes) {
     OS << "name = '" << Name << "'"
-       << " type_signature = " << format("0x%016" PRIx64, TypeHash)
+       << " type_signature = " << format("0x%016" PRIx64, getTypeHash())
        << " length = " << format("0x%08x", getLength()) << '\n';
     return;
   }
@@ -50,8 +37,8 @@ void DWARFTypeUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
   OS << " abbr_offset = " << format("0x%04x", getAbbreviations()->getOffset())
      << " addr_size = " << format("0x%02x", getAddressByteSize())
      << " name = '" << Name << "'"
-     << " type_signature = " << format("0x%016" PRIx64, TypeHash)
-     << " type_offset = " << format("0x%04x", TypeOffset)
+     << " type_signature = " << format("0x%016" PRIx64, getTypeHash())
+     << " type_offset = " << format("0x%04x", getTypeOffset())
      << " (next unit at " << format("0x%08x", getNextUnitOffset()) << ")\n";
 
   if (DWARFDie TU = getUnitDIE(false))

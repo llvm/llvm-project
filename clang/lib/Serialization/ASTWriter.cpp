@@ -512,6 +512,7 @@ void ASTTypeWriter::VisitElaboratedType(const ElaboratedType *T) {
   Record.push_back(T->getKeyword());
   Record.AddNestedNameSpecifier(T->getQualifier());
   Record.AddTypeRef(T->getNamedType());
+  Record.AddDeclRef(T->getOwnedTagDecl());
   Code = TYPE_ELABORATED;
 }
 

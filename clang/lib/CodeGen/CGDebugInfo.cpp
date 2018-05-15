@@ -1536,6 +1536,7 @@ void CGDebugInfo::CollectCXXBasesAux(
     auto *BaseTy = getOrCreateType(BI.getType(), Unit);
     llvm::DINode::DIFlags BFlags = StartingFlags;
     uint64_t BaseOffset;
+    uint32_t VBPtrOffset = 0;
 
     if (BI.isVirtual()) {
       if (CGM.getTarget().getCXXABI().isItaniumFamily()) {
@@ -1549,6 +1550,8 @@ void CGDebugInfo::CollectCXXBasesAux(
         // vbase offset offset in Itanium.
         BaseOffset =
             4 * CGM.getMicrosoftVTableContext().getVBTableIndex(RD, Base);
+        VBPtrOffset = CGM.getContext().getASTRecordLayout(RD).getVBPtrOffset()
+                         .getQuantity();
       }
       BFlags |= llvm::DINode::FlagVirtual;
     } else
@@ -1558,7 +1561,8 @@ void CGDebugInfo::CollectCXXBasesAux(
 
     BFlags |= getAccessFlag(BI.getAccessSpecifier(), RD);
     llvm::DIType *DTy =
-        DBuilder.createInheritance(RecordTy, BaseTy, BaseOffset, BFlags);
+        DBuilder.createInheritance(RecordTy, BaseTy, BaseOffset, VBPtrOffset,
+                                   BFlags);
     EltTys.push_back(DTy);
   }
 }
@@ -2192,7 +2196,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
     if (!SClassTy)
       return nullptr;
 
-    llvm::DIType *InhTag = DBuilder.createInheritance(RealDecl, SClassTy, 0,
+    llvm::DIType *InhTag = DBuilder.createInheritance(RealDecl, SClassTy, 0, 0,
                                                       llvm::DINode::FlagZero);
     EltTys.push_back(InhTag);
   }

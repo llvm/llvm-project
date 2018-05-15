@@ -16,8 +16,10 @@
 #define LLVM_CLANG_FORMAT_FORMAT_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Tooling/Core/IncludeStyle.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Regex.h"
 #include <system_error>
 
 namespace clang {
@@ -998,91 +1000,7 @@ struct FormatStyle {
   /// For example: BOOST_FOREACH.
   std::vector<std::string> ForEachMacros;
 
-  /// Styles for sorting multiple ``#include`` blocks.
-  enum IncludeBlocksStyle {
-    /// Sort each ``#include`` block separately.
-    /// \code
-    ///    #include "b.h"               into      #include "b.h"
-    ///
-    ///    #include <lib/main.h>                  #include "a.h"
-    ///    #include "a.h"                         #include <lib/main.h>
-    /// \endcode
-    IBS_Preserve,
-    /// Merge multiple ``#include`` blocks together and sort as one.
-    /// \code
-    ///    #include "b.h"               into      #include "a.h"
-    ///                                           #include "b.h"
-    ///    #include <lib/main.h>                  #include <lib/main.h>
-    ///    #include "a.h"
-    /// \endcode
-    IBS_Merge,
-    /// Merge multiple ``#include`` blocks together and sort as one.
-    /// Then split into groups based on category priority. See
-    /// ``IncludeCategories``.
-    /// \code
-    ///    #include "b.h"               into      #include "a.h"
-    ///                                           #include "b.h"
-    ///    #include <lib/main.h>
-    ///    #include "a.h"                         #include <lib/main.h>
-    /// \endcode
-    IBS_Regroup,
-  };
-
-  /// Dependent on the value, multiple ``#include`` blocks can be sorted
-  /// as one and divided based on category.
-  IncludeBlocksStyle IncludeBlocks;
-
-  /// See documentation of ``IncludeCategories``.
-  struct IncludeCategory {
-    /// The regular expression that this category matches.
-    std::string Regex;
-    /// The priority to assign to this category.
-    int Priority;
-    bool operator==(const IncludeCategory &Other) const {
-      return Regex == Other.Regex && Priority == Other.Priority;
-    }
-  };
-
-  /// Regular expressions denoting the different ``#include`` categories
-  /// used for ordering ``#includes``.
-  ///
-  /// These regular expressions are matched against the filename of an include
-  /// (including the <> or "") in order. The value belonging to the first
-  /// matching regular expression is assigned and ``#includes`` are sorted first
-  /// according to increasing category number and then alphabetically within
-  /// each category.
-  ///
-  /// If none of the regular expressions match, INT_MAX is assigned as
-  /// category. The main header for a source file automatically gets category 0.
-  /// so that it is generally kept at the beginning of the ``#includes``
-  /// (http://llvm.org/docs/CodingStandards.html#include-style). However, you
-  /// can also assign negative priorities if you have certain headers that
-  /// always need to be first.
-  ///
-  /// To configure this in the .clang-format file, use:
-  /// \code{.yaml}
-  ///   IncludeCategories:
-  ///     - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
-  ///       Priority:        2
-  ///     - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
-  ///       Priority:        3
-  ///     - Regex:           '.*'
-  ///       Priority:        1
-  /// \endcode
-  std::vector<IncludeCategory> IncludeCategories;
-
-  /// Specify a regular expression of suffixes that are allowed in the
-  /// file-to-main-include mapping.
-  ///
-  /// When guessing whether a #include is the "main" include (to assign
-  /// category 0, see above), use this regex of allowed suffixes to the header
-  /// stem. A partial match is done, so that:
-  /// - "" means "arbitrary suffix"
-  /// - "$" means "no suffix"
-  ///
-  /// For example, if configured to "(_test)?$", then a header a.h would be seen
-  /// as the "main" include in both a.cc and a_test.cc.
-  std::string IncludeIsMainRegex;
+  tooling::IncludeStyle IncludeStyle;
 
   /// Indent case labels one level from the switch statement.
   ///
@@ -1735,8 +1653,8 @@ struct FormatStyle {
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
-           IncludeBlocks == R.IncludeBlocks &&
-           IncludeCategories == R.IncludeCategories &&
+           IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&
+           IncludeStyle.IncludeCategories == R.IncludeStyle.IncludeCategories &&
            IndentCaseLabels == R.IndentCaseLabels &&
            IndentPPDirectives == R.IndentPPDirectives &&
            IndentWidth == R.IndentWidth && Language == R.Language &&
@@ -1753,8 +1671,7 @@ struct FormatStyle {
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
-           PenaltyBreakAssignment ==
-               R.PenaltyBreakAssignment &&
+           PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
            PenaltyBreakBeforeFirstCallParameter ==
                R.PenaltyBreakBeforeFirstCallParameter &&
            PenaltyBreakComment == R.PenaltyBreakComment &&
@@ -1894,17 +1811,13 @@ formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
 /// This also supports inserting/deleting C++ #include directives:
 /// - If a replacement has offset UINT_MAX, length 0, and a replacement text
 ///   that is an #include directive, this will insert the #include into the
-///   correct block in the \p Code. When searching for points to insert new
-///   header, this ignores #include's after the #include block(s) in the
-///   beginning of a file to avoid inserting headers into code sections where
-///   new #include's should not be added by default. These code sections
-///   include:
-///     - raw string literals (containing #include).
-///     - #if blocks.
-///     - Special #include's among declarations (e.g. functions).
+///   correct block in the \p Code.
 /// - If a replacement has offset UINT_MAX, length 1, and a replacement text
 ///   that is the name of the header to be removed, the header will be removed
 ///   from \p Code if it exists.
+/// The include manipulation is done via `tooling::HeaderInclude`, see its
+/// documentation for more details on how include insertion points are found and
+/// what edits are produced.
 llvm::Expected<tooling::Replacements>
 cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
                           const FormatStyle &Style);
