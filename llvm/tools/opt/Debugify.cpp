@@ -39,10 +39,12 @@ bool isFunctionSkipped(Function &F) {
   return F.isDeclaration() || !F.hasExactDefinition();
 }
 
-bool applyDebugifyMetadata(Module &M) {
+bool applyDebugifyMetadata(Module &M,
+                           iterator_range<Module::iterator> Functions,
+                           StringRef Banner) {
   // Skip modules with debug info.
   if (M.getNamedMetadata("llvm.dbg.cu")) {
-    errs() << "Debugify: Skipping module with debug info\n";
+    errs() << Banner << "Skipping module with debug info\n";
     return false;
   }
 
@@ -65,12 +67,11 @@ bool applyDebugifyMetadata(Module &M) {
   unsigned NextLine = 1;
   unsigned NextVar = 1;
   auto File = DIB.createFile(M.getName(), "/");
-  auto CU =
-      DIB.createCompileUnit(dwarf::DW_LANG_C, DIB.createFile(M.getName(), "/"),
+  auto CU = DIB.createCompileUnit(dwarf::DW_LANG_C, File,
                             "debugify", /*isOptimized=*/true, "", 0);
 
   // Visit each instruction.
-  for (Function &F : M) {
+  for (Function &F : Functions) {
     if (isFunctionSkipped(F))
       continue;
 
@@ -118,54 +119,57 @@ bool applyDebugifyMetadata(Module &M) {
   };
   addDebugifyOperand(NextLine - 1); // Original number of lines.
   addDebugifyOperand(NextVar - 1);  // Original number of variables.
+  assert(NMD->getNumOperands() == 2 &&
+         "llvm.debugify should have exactly 2 operands!");
   return true;
 }
 
-void checkDebugifyMetadata(Module &M) {
+bool checkDebugifyMetadata(Module &M,
+                           iterator_range<Module::iterator> Functions,
+                           StringRef Banner,
+                           bool Strip) {
   // Skip modules without debugify metadata.
   NamedMDNode *NMD = M.getNamedMetadata("llvm.debugify");
-  if (!NMD)
-    return;
+  if (!NMD) {
+    errs() << Banner << "Skipping module without debugify metadata\n";
+    return false;
+  }
 
   auto getDebugifyOperand = [&](unsigned Idx) -> unsigned {
     return mdconst::extract<ConstantInt>(NMD->getOperand(Idx)->getOperand(0))
         ->getZExtValue();
   };
+  assert(NMD->getNumOperands() == 2 &&
+         "llvm.debugify should have exactly 2 operands!");
   unsigned OriginalNumLines = getDebugifyOperand(0);
   unsigned OriginalNumVars = getDebugifyOperand(1);
   bool HasErrors = false;
 
-  // Find missing lines.
   BitVector MissingLines{OriginalNumLines, true};
-  for (Function &F : M) {
+  BitVector MissingVars{OriginalNumVars, true};
+  for (Function &F : Functions) {
     if (isFunctionSkipped(F))
       continue;
 
+    // Find missing lines.
     for (Instruction &I : instructions(F)) {
       if (isa<DbgValueInst>(&I))
         continue;
 
       auto DL = I.getDebugLoc();
-      if (DL) {
+      if (DL && DL.getLine() != 0) {
         MissingLines.reset(DL.getLine() - 1);
         continue;
       }
 
-      outs() << "ERROR: Instruction with empty DebugLoc -- ";
+      outs() << "ERROR: Instruction with empty DebugLoc in function ";
+      outs() << F.getName() << " --";
       I.print(outs());
       outs() << "\n";
       HasErrors = true;
     }
-  }
-  for (unsigned Idx : MissingLines.set_bits())
-    outs() << "WARNING: Missing line " << Idx + 1 << "\n";
 
-  // Find missing variables.
-  BitVector MissingVars{OriginalNumVars, true};
-  for (Function &F : M) {
-    if (isFunctionSkipped(F))
-      continue;
-
+    // Find missing variables.
     for (Instruction &I : instructions(F)) {
       auto *DVI = dyn_cast<DbgValueInst>(&I);
       if (!DVI)
@@ -177,18 +181,39 @@ void checkDebugifyMetadata(Module &M) {
       MissingVars.reset(Var - 1);
     }
   }
+
+  // Print the results.
+  for (unsigned Idx : MissingLines.set_bits())
+    outs() << "WARNING: Missing line " << Idx + 1 << "\n";
+
   for (unsigned Idx : MissingVars.set_bits())
     outs() << "ERROR: Missing variable " << Idx + 1 << "\n";
   HasErrors |= MissingVars.count() > 0;
 
-  outs() << "CheckDebugify: " << (HasErrors ? "FAIL" : "PASS") << "\n";
+  outs() << Banner << (HasErrors ? "FAIL" : "PASS") << '\n';
+  if (HasErrors) {
+    outs() << "Module IR Dump\n";
+    M.print(outs(), nullptr, false);
+  }
+
+  // Strip the Debugify Metadata if required.
+  if (Strip) {
+    StripDebugInfo(M);
+    M.eraseNamedMetadata(NMD);
+    return true;
+  }
+
+  return false;
 }
 
-/// Attach synthetic debug info to everything.
-struct DebugifyPass : public ModulePass {
-  bool runOnModule(Module &M) override { return applyDebugifyMetadata(M); }
+/// ModulePass for attaching synthetic debug info to everything, used with the
+/// legacy module pass manager.
+struct DebugifyModulePass : public ModulePass {
+  bool runOnModule(Module &M) override {
+    return applyDebugifyMetadata(M, M.functions(), "ModuleDebugify: ");
+  }
 
-  DebugifyPass() : ModulePass(ID) {}
+  DebugifyModulePass() : ModulePass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -197,43 +222,104 @@ struct DebugifyPass : public ModulePass {
   static char ID; // Pass identification.
 };
 
-/// Check debug info inserted by -debugify for completeness.
-struct CheckDebugifyPass : public ModulePass {
-  bool runOnModule(Module &M) override {
-    checkDebugifyMetadata(M);
-    return false;
+/// FunctionPass for attaching synthetic debug info to instructions within a
+/// single function, used with the legacy module pass manager.
+struct DebugifyFunctionPass : public FunctionPass {
+  bool runOnFunction(Function &F) override {
+    Module &M = *F.getParent();
+    auto FuncIt = F.getIterator();
+    return applyDebugifyMetadata(M, make_range(FuncIt, std::next(FuncIt)),
+                     "FunctionDebugify: ");
   }
 
-  CheckDebugifyPass() : ModulePass(ID) {}
+  DebugifyFunctionPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
 
   static char ID; // Pass identification.
+};
+
+/// ModulePass for checking debug info inserted by -debugify, used with the
+/// legacy module pass manager.
+struct CheckDebugifyModulePass : public ModulePass {
+  bool runOnModule(Module &M) override {
+    return checkDebugifyMetadata(M, M.functions(), "CheckModuleDebugify: ",
+                                 Strip);
+  }
+
+  CheckDebugifyModulePass(bool Strip = false) : ModulePass(ID), Strip(Strip) {}
+
+  static char ID; // Pass identification.
+
+private:
+  bool Strip;
+};
+
+/// FunctionPass for checking debug info inserted by -debugify-function, used
+/// with the legacy module pass manager.
+struct CheckDebugifyFunctionPass : public FunctionPass {
+  bool runOnFunction(Function &F) override {
+    Module &M = *F.getParent();
+    auto FuncIt = F.getIterator();
+    return checkDebugifyMetadata(M, make_range(FuncIt, std::next(FuncIt)),
+                     "CheckFunctionDebugify: ", Strip);
+  }
+
+  CheckDebugifyFunctionPass(bool Strip = false) : FunctionPass(ID), Strip(Strip) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+
+  static char ID; // Pass identification.
+
+private:
+  bool Strip;
 };
 
 } // end anonymous namespace
 
-ModulePass *createDebugifyPass() { return new DebugifyPass(); }
+ModulePass *createDebugifyModulePass() {
+  return new DebugifyModulePass();
+}
+
+FunctionPass *createDebugifyFunctionPass() {
+  return new DebugifyFunctionPass();
+}
 
 PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
-  applyDebugifyMetadata(M);
+  applyDebugifyMetadata(M, M.functions(), "ModuleDebugify: ");
   return PreservedAnalyses::all();
 }
 
-ModulePass *createCheckDebugifyPass() { return new CheckDebugifyPass(); }
+ModulePass *createCheckDebugifyModulePass(bool Strip) {
+  return new CheckDebugifyModulePass(Strip);
+}
+
+FunctionPass *createCheckDebugifyFunctionPass(bool Strip) {
+  return new CheckDebugifyFunctionPass(Strip);
+}
 
 PreservedAnalyses NewPMCheckDebugifyPass::run(Module &M,
                                               ModuleAnalysisManager &) {
-  checkDebugifyMetadata(M);
+  checkDebugifyMetadata(M, M.functions(), "CheckModuleDebugify: ", false);
   return PreservedAnalyses::all();
 }
 
-char DebugifyPass::ID = 0;
-static RegisterPass<DebugifyPass> X("debugify",
+char DebugifyModulePass::ID = 0;
+static RegisterPass<DebugifyModulePass> DM("debugify",
                                     "Attach debug info to everything");
 
-char CheckDebugifyPass::ID = 0;
-static RegisterPass<CheckDebugifyPass> Y("check-debugify",
+char CheckDebugifyModulePass::ID = 0;
+static RegisterPass<CheckDebugifyModulePass> CDM("check-debugify",
                                          "Check debug info from -debugify");
+
+char DebugifyFunctionPass::ID = 0;
+static RegisterPass<DebugifyFunctionPass> DF("debugify-function",
+                                    "Attach debug info to a function");
+
+char CheckDebugifyFunctionPass::ID = 0;
+static RegisterPass<CheckDebugifyFunctionPass> CDF("check-debugify-function",
+                                         "Check debug info from -debugify-function");

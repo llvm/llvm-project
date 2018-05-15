@@ -55,6 +55,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UsePackets = false;
   bool UseNewValueJumps = false;
   bool UseNewValueStores = false;
+  bool UseSmallData = false;
 
   bool HasMemNoShuf = false;
   bool EnableDuplex = false;
@@ -153,10 +154,13 @@ public:
   bool hasV65TOpsOnly() const {
     return getHexagonArchVersion() == Hexagon::ArchEnum::V65;
   }
+
+  bool useLongCalls() const { return UseLongCalls; }
   bool useMemops() const { return UseMemops; }
   bool usePackets() const { return UsePackets; }
   bool useNewValueJumps() const { return UseNewValueJumps; }
   bool useNewValueStores() const { return UseNewValueStores; }
+  bool useSmallData() const { return UseSmallData; }
 
   bool modeIEEERndNear() const { return ModeIEEERndNear; }
   bool useHVXOps() const { return HexagonHVXVersion > Hexagon::ArchEnum::V4; }
@@ -165,7 +169,6 @@ public:
 
   bool hasMemNoShuf() const { return HasMemNoShuf; }
   bool hasReservedR19() const { return ReservedR19; }
-  bool useLongCalls() const { return UseLongCalls; }
   bool usePredicatedCalls() const;
 
   bool useBSBScheduling() const { return UseBSBScheduling; }

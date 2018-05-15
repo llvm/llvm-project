@@ -192,6 +192,8 @@ defm init: Eq<"init">, HelpText<"Specify an initializer function">,
 
 defm just_symbols: Eq<"just-symbols">, HelpText<"Just link symbols">;
 
+defm keep_unique: Eq<"keep-unique">, HelpText<"Do not fold this symbol during ICF">;
+
 defm library: Eq<"library">, HelpText<"Root name of library to use">,
   MetaVarName<"<libName>">;
 

@@ -1,0 +1,15 @@
+; RUN: llvm-rc /FO %t %p/Inputs/memoryflags-stringtable.rc
+; RUN: llvm-readobj %t | FileCheck %s
+
+; CHECK:      Resource type (int): 6
+; CHECK-NEXT: Resource name (int): 1
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x10
+; CHECK:      Resource type (int): 6
+; CHECK-NEXT: Resource name (int): 1
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK:      Resource type (int): 6
+; CHECK-NEXT: Resource name (int): 1
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x60

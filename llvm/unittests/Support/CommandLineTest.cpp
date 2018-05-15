@@ -816,4 +816,23 @@ TEST(CommandLineTest, ReadConfigFile) {
   llvm::sys::fs::remove(TestDir);
 }
 
+TEST(CommandLineTest, PositionalEatArgsError) {
+  static cl::list<std::string> PosEatArgs("positional-eat-args", cl::Positional,
+    cl::desc("<arguments>..."), cl::ZeroOrMore,
+    cl::PositionalEatsArgs);
+
+  const char *args[] = {"prog", "-positional-eat-args=XXXX"};
+  const char *args2[] = {"prog", "-positional-eat-args=XXXX", "-foo"};
+  const char *args3[] = {"prog", "-positional-eat-args", "-foo"};
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS)); OS.flush();
+  EXPECT_FALSE(Errs.empty()); Errs.clear();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args2, StringRef(), &OS)); OS.flush();
+  EXPECT_FALSE(Errs.empty()); Errs.clear();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(Errs.empty());
+}
+
 }  // anonymous namespace

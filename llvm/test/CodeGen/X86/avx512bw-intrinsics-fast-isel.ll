@@ -801,5 +801,65 @@ entry:
   ret i32 %4
 }
 
+define <4 x i64> @test_mm512_cvtepi16_epi8(<8 x i64> %__A) {
+; X32-LABEL: test_mm512_cvtepi16_epi8:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vpmovwb %zmm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_cvtepi16_epi8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpmovwb %zmm0, %ymm0
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <32 x i16>
+  %conv.i = trunc <32 x i16> %0 to <32 x i8>
+  %1 = bitcast <32 x i8> %conv.i to <4 x i64>
+  ret <4 x i64> %1
+}
+
+define <4 x i64> @test_mm512_mask_cvtepi16_epi8(<4 x i64> %__O, i32 %__M, <8 x i64> %__A) {
+; X32-LABEL: test_mm512_mask_cvtepi16_epi8:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; X32-NEXT:    vpmovwb %zmm1, %ymm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_cvtepi16_epi8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovd %edi, %k1
+; X64-NEXT:    vpmovwb %zmm1, %ymm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <32 x i16>
+  %conv.i.i = trunc <32 x i16> %0 to <32 x i8>
+  %1 = bitcast <4 x i64> %__O to <32 x i8>
+  %2 = bitcast i32 %__M to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %conv.i.i, <32 x i8> %1
+  %4 = bitcast <32 x i8> %3 to <4 x i64>
+  ret <4 x i64> %4
+}
+
+define <4 x i64> @test_mm512_maskz_cvtepi16_epi8(i32 %__M, <8 x i64> %__A) {
+; X32-LABEL: test_mm512_maskz_cvtepi16_epi8:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; X32-NEXT:    vpmovwb %zmm0, %ymm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_cvtepi16_epi8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovd %edi, %k1
+; X64-NEXT:    vpmovwb %zmm0, %ymm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <32 x i16>
+  %conv.i.i = trunc <32 x i16> %0 to <32 x i8>
+  %1 = bitcast i32 %__M to <32 x i1>
+  %2 = select <32 x i1> %1, <32 x i8> %conv.i.i, <32 x i8> zeroinitializer
+  %3 = bitcast <32 x i8> %2 to <4 x i64>
+  ret <4 x i64> %3
+}
+
 !0 = !{i32 1}
 
