@@ -1976,6 +1976,8 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
   // FIXME: Add a kind for this to give more meaningful diagnostics. But can
   // this substitution process actually fail?
   InstantiatingTemplate BuildingDeductionGuides(*this, Loc, Template);
+  if (BuildingDeductionGuides.isInvalid())
+    return;
 
   // Convert declared constructors into deduction guide templates.
   // FIXME: Skip constructors for which deduction must necessarily fail (those

@@ -36,4 +36,4 @@
 ; CHECK-UNDEFINED1: error: undefined symbol: symboldoesnotexist
 
 ; RUN: not wasm-ld %t.start.o -o %t.wasm --undefined symboldoesnotexist --allow-undefined 2>&1 | FileCheck -check-prefix=CHECK-UNDEFINED2 %s
-; CHECK-UNDEFINED2: function forced with --undefined not found: symboldoesnotexist
+; CHECK-UNDEFINED2: symbol forced with --undefined not found: symboldoesnotexist

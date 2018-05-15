@@ -290,6 +290,9 @@ inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
   return !(LHS == RHS);
 }
 
+std::string toString(wasm::WasmSymbolType type);
+std::string relocTypetoString(uint32_t type);
+
 } // end namespace wasm
 } // end namespace llvm
 

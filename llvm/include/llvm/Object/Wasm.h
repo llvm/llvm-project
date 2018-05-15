@@ -89,7 +89,8 @@ public:
   }
 
   void print(raw_ostream &Out) const {
-    Out << "Name=" << Info.Name << ", Kind=" << int(Info.Kind)
+    Out << "Name=" << Info.Name
+        << ", Kind=" << toString(wasm::WasmSymbolType(Info.Kind))
         << ", Flags=" << Info.Flags;
     if (!isTypeData()) {
       Out << ", ElemIndex=" << Info.ElementIndex;

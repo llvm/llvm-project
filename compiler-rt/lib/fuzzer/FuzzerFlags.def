@@ -144,8 +144,8 @@ FUZZER_FLAG_INT(ignore_remaining_args, 0, "If 1, ignore all arguments passed "
                 "after this one. Useful for fuzzers that need to do their own "
                 "argument parsing.")
 
-FUZZER_FLAG_STRING(run_equivalence_server, "Experimental")
-FUZZER_FLAG_STRING(use_equivalence_server, "Experimental")
+FUZZER_DEPRECATED_FLAG(run_equivalence_server)
+FUZZER_DEPRECATED_FLAG(use_equivalence_server)
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
 FUZZER_DEPRECATED_FLAG(use_clang_coverage)
 FUZZER_FLAG_INT(use_feature_frequency, 0, "Experimental/internal")

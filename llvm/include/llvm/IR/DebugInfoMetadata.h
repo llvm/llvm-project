@@ -866,7 +866,8 @@ public:
   /// Get extra data associated with this derived type.
   ///
   /// Class type for pointer-to-members, objective-c property node for ivars,
-  /// or global constant wrapper for static members.
+  /// global constant wrapper for static members, or virtual base pointer offset
+  /// for inheritance.
   ///
   /// TODO: Separate out types that need this extra operand: pointer-to-member
   /// types and member fields (static members and ivars).
@@ -882,6 +883,14 @@ public:
 
   DIObjCProperty *getObjCProperty() const {
     return dyn_cast_or_null<DIObjCProperty>(getExtraData());
+  }
+
+  uint32_t getVBPtrOffset() const {
+    assert(getTag() == dwarf::DW_TAG_inheritance);
+    if (auto *CM = cast_or_null<ConstantAsMetadata>(getExtraData()))
+      if (auto *CI = dyn_cast_or_null<ConstantInt>(CM->getValue()))
+        return static_cast<uint32_t>(CI->getZExtValue());
+    return 0;
   }
 
   Constant *getStorageOffsetInBits() const {

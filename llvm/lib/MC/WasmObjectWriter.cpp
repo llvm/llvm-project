@@ -37,32 +37,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mc"
 
-#if !defined(NDEBUG)
-static std::string toString(wasm::WasmSymbolType type) {
-  switch (type) {
-  case wasm::WASM_SYMBOL_TYPE_FUNCTION:
-    return "WASM_SYMBOL_TYPE_FUNCTION";
-  case wasm::WASM_SYMBOL_TYPE_GLOBAL:
-    return "WASM_SYMBOL_TYPE_GLOBAL";
-  case wasm::WASM_SYMBOL_TYPE_DATA:
-    return "WASM_SYMBOL_TYPE_DATA";
-  case wasm::WASM_SYMBOL_TYPE_SECTION:
-    return "WASM_SYMBOL_TYPE_SECTION";
-  }
-  llvm_unreachable("unknown symbol type");
-}
-#endif
-
-static std::string relocTypetoString(uint32_t type) {
-  switch (type) {
-#define WASM_RELOC(NAME, VALUE) case VALUE: return #NAME;
-#include "llvm/BinaryFormat/WasmRelocs.def"
-#undef WASM_RELOC
-  default:
-    llvm_unreachable("uknown reloc type");
-  }
-}
-
 namespace {
 
 // Went we ceate the indirect function table we start at 1, so that there is
@@ -189,7 +163,7 @@ struct WasmRelocationEntry {
   }
 
   void print(raw_ostream &Out) const {
-    Out << relocTypetoString(Type)
+    Out << wasm::relocTypetoString(Type)
         << " Off=" << Offset << ", Sym=" << *Symbol << ", Addend=" << Addend
         << ", FixupSection=" << FixupSection->getSectionName();
   }

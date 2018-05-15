@@ -806,7 +806,7 @@ static bool CannotBeMinInLoop(const SCEV *BoundSCEV, Loop *L,
                                      SE.getConstant(Min));
 }
 
-static bool isKnownNonNegativeInLoop(const SCEV *BoundSCEV, Loop *L,
+static bool isKnownNonNegativeInLoop(const SCEV *BoundSCEV, const Loop *L,
                                      ScalarEvolution &SE) {
   const SCEV *Zero = SE.getZero(BoundSCEV->getType());
   return SE.isAvailableAtLoopEntry(BoundSCEV, L) &&

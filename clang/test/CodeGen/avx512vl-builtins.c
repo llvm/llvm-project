@@ -6583,15 +6583,13 @@ __m128i test_mm256_cvtepi32_epi16(__m256i __A) {
 
 __m128i test_mm256_mask_cvtepi32_epi16(__m128i __O, __mmask8 __M, __m256i __A) {
   // CHECK-LABEL: @test_mm256_mask_cvtepi32_epi16
-  // CHECK: trunc <8 x i32> %{{.*}} to <8 x i16>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
+  // CHECK: @llvm.x86.avx512.mask.pmov.dw.256
   return _mm256_mask_cvtepi32_epi16(__O, __M, __A); 
 }
 
 __m128i test_mm256_maskz_cvtepi32_epi16(__mmask8 __M, __m256i __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvtepi32_epi16
-  // CHECK: trunc <8 x i32> %{{.*}} to <8 x i16>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
+  // CHECK: @llvm.x86.avx512.mask.pmov.dw.256
   return _mm256_maskz_cvtepi32_epi16(__M, __A); 
 }
 

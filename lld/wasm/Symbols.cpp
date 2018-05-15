@@ -31,13 +31,13 @@ DefinedGlobal *WasmSym::StackPointer;
 
 WasmSymbolType Symbol::getWasmType() const {
   if (isa<FunctionSymbol>(this))
-    return llvm::wasm::WASM_SYMBOL_TYPE_FUNCTION;
+    return WASM_SYMBOL_TYPE_FUNCTION;
   if (isa<DataSymbol>(this))
-    return llvm::wasm::WASM_SYMBOL_TYPE_DATA;
+    return WASM_SYMBOL_TYPE_DATA;
   if (isa<GlobalSymbol>(this))
-    return llvm::wasm::WASM_SYMBOL_TYPE_GLOBAL;
+    return WASM_SYMBOL_TYPE_GLOBAL;
   if (isa<SectionSymbol>(this))
-    return llvm::wasm::WASM_SYMBOL_TYPE_SECTION;
+    return WASM_SYMBOL_TYPE_SECTION;
   llvm_unreachable("invalid symbol kind");
 }
 
@@ -238,18 +238,4 @@ std::string lld::toString(wasm::Symbol::Kind Kind) {
     return "SectionKind";
   }
   llvm_unreachable("invalid symbol kind");
-}
-
-std::string lld::toString(WasmSymbolType Type) {
-  switch (Type) {
-  case llvm::wasm::WASM_SYMBOL_TYPE_FUNCTION:
-    return "Function";
-  case llvm::wasm::WASM_SYMBOL_TYPE_DATA:
-    return "Data";
-  case llvm::wasm::WASM_SYMBOL_TYPE_GLOBAL:
-    return "Global";
-  case llvm::wasm::WASM_SYMBOL_TYPE_SECTION:
-    return "Section";
-  }
-  llvm_unreachable("invalid symbol type");
 }

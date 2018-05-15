@@ -30,6 +30,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
 #include <cstddef>
@@ -362,7 +363,10 @@ public:
                              bool MultiArg = false);
 
   // Prints option name followed by message.  Always returns true.
-  bool error(const Twine &Message, StringRef ArgName = StringRef());
+  bool error(const Twine &Message, StringRef ArgName = StringRef(), raw_ostream &Errs = llvm::errs());
+  bool error(const Twine &Message, raw_ostream &Errs) {
+    return error(Message, StringRef(), Errs);
+  }
 
   inline int getNumOccurrences() const { return NumOccurrences; }
   inline void reset() { NumOccurrences = 0; }

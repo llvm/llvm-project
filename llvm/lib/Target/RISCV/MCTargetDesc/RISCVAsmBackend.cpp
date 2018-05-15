@@ -43,6 +43,14 @@ public:
   std::unique_ptr<MCObjectWriter>
   createObjectWriter(raw_pwrite_stream &OS) const override;
 
+  // If linker relaxation is enabled, always emit relocations even if the fixup
+  // can be resolved. This is necessary for correctness as offsets may change
+  // during relaxation.
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target) override {
+    return STI.getFeatureBits()[RISCV::FeatureRelax];
+  }
+
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override;
