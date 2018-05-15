@@ -479,10 +479,10 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
     AMemSet =
       Builder.CreateMemSet(StartPtr, ByteVal, Range.End-Range.Start, Alignment);
 
-    DEBUG(dbgs() << "Replace stores:\n";
-          for (Instruction *SI : Range.TheStores)
-            dbgs() << *SI << '\n';
-          dbgs() << "With: " << *AMemSet << '\n');
+    LLVM_DEBUG(dbgs() << "Replace stores:\n"; for (Instruction *SI
+                                                   : Range.TheStores) dbgs()
+                                              << *SI << '\n';
+               dbgs() << "With: " << *AMemSet << '\n');
 
     if (!Range.TheStores.empty())
       AMemSet->setDebugLoc(Range.TheStores[0]->getDebugLoc());
@@ -603,7 +603,7 @@ static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P,
 
   // We made it, we need to lift
   for (auto *I : llvm::reverse(ToLift)) {
-    DEBUG(dbgs() << "Lifting " << *I << " before " << *P << "\n");
+    LLVM_DEBUG(dbgs() << "Lifting " << *I << " before " << *P << "\n");
     I->moveBefore(P);
   }
 
@@ -680,8 +680,8 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
                 LI->getPointerOperand(), findLoadAlignment(DL, LI), Size,
                 SI->isVolatile());
 
-          DEBUG(dbgs() << "Promoting " << *LI << " to " << *SI
-                       << " => " << *M << "\n");
+          LLVM_DEBUG(dbgs() << "Promoting " << *LI << " to " << *SI << " => "
+                            << *M << "\n");
 
           MD->removeInstruction(SI);
           SI->eraseFromParent();
@@ -770,7 +770,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
       auto *M = Builder.CreateMemSet(SI->getPointerOperand(), ByteVal,
                                      Size, Align, SI->isVolatile());
 
-      DEBUG(dbgs() << "Promoting " << *SI << " to " << *M << "\n");
+      LLVM_DEBUG(dbgs() << "Promoting " << *SI << " to " << *M << "\n");
 
       MD->removeInstruction(SI);
       SI->eraseFromParent();
@@ -1294,8 +1294,8 @@ bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
                     MemoryLocation::getForSource(M)))
     return false;
 
-  DEBUG(dbgs() << "MemCpyOptPass: Optimizing memmove -> memcpy: " << *M
-               << "\n");
+  LLVM_DEBUG(dbgs() << "MemCpyOptPass: Optimizing memmove -> memcpy: " << *M
+                    << "\n");
 
   // If not, then we know we can transform this.
   Type *ArgTys[3] = { M->getRawDest()->getType(),
@@ -1377,9 +1377,9 @@ bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
     TmpCast = new BitCastInst(MDep->getSource(), ByValArg->getType(),
                               "tmpcast", CS.getInstruction());
 
-  DEBUG(dbgs() << "MemCpyOptPass: Forwarding memcpy to byval:\n"
-               << "  " << *MDep << "\n"
-               << "  " << *CS.getInstruction() << "\n");
+  LLVM_DEBUG(dbgs() << "MemCpyOptPass: Forwarding memcpy to byval:\n"
+                    << "  " << *MDep << "\n"
+                    << "  " << *CS.getInstruction() << "\n");
 
   // Otherwise we're good!  Update the byval argument.
   CS.setArgument(ArgNo, TmpCast);

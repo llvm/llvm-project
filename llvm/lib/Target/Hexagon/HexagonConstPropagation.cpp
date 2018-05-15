@@ -617,7 +617,7 @@ void MachineConstPropagator::CellMap::print(raw_ostream &os,
 void MachineConstPropagator::visitPHI(const MachineInstr &PN) {
   const MachineBasicBlock *MB = PN.getParent();
   unsigned MBN = MB->getNumber();
-  DEBUG(dbgs() << "Visiting FI(" << printMBBReference(*MB) << "): " << PN);
+  LLVM_DEBUG(dbgs() << "Visiting FI(" << printMBBReference(*MB) << "): " << PN);
 
   const MachineOperand &MD = PN.getOperand(0);
   Register DefR(MD);
@@ -642,8 +642,8 @@ Bottomize:
     const MachineBasicBlock *PB = PN.getOperand(i+1).getMBB();
     unsigned PBN = PB->getNumber();
     if (!EdgeExec.count(CFGEdge(PBN, MBN))) {
-      DEBUG(dbgs() << "  edge " << printMBBReference(*PB) << "->"
-                   << printMBBReference(*MB) << " not executable\n");
+      LLVM_DEBUG(dbgs() << "  edge " << printMBBReference(*PB) << "->"
+                        << printMBBReference(*MB) << " not executable\n");
       continue;
     }
     const MachineOperand &SO = PN.getOperand(i);
@@ -658,8 +658,9 @@ Bottomize:
 
     LatticeCell SrcC;
     bool Eval = MCE.evaluate(UseR, Cells.get(UseR.Reg), SrcC);
-    DEBUG(dbgs() << "  edge from " << printMBBReference(*PB) << ": "
-                 << printReg(UseR.Reg, &MCE.TRI, UseR.SubReg) << SrcC << '\n');
+    LLVM_DEBUG(dbgs() << "  edge from " << printMBBReference(*PB) << ": "
+                      << printReg(UseR.Reg, &MCE.TRI, UseR.SubReg) << SrcC
+                      << '\n');
     Changed |= Eval ? DefC.meet(SrcC)
                     : DefC.setBottom();
     Cells.update(DefR.Reg, DefC);
@@ -671,11 +672,11 @@ Bottomize:
 }
 
 void MachineConstPropagator::visitNonBranch(const MachineInstr &MI) {
-  DEBUG(dbgs() << "Visiting MI(" << printMBBReference(*MI.getParent())
-               << "): " << MI);
+  LLVM_DEBUG(dbgs() << "Visiting MI(" << printMBBReference(*MI.getParent())
+                    << "): " << MI);
   CellMap Outputs;
   bool Eval = MCE.evaluate(MI, Cells, Outputs);
-  DEBUG({
+  LLVM_DEBUG({
     if (Eval) {
       dbgs() << "  outputs:";
       for (auto &I : Outputs)
@@ -728,8 +729,8 @@ void MachineConstPropagator::visitBranchesFrom(const MachineInstr &BrI) {
   while (It != End) {
     const MachineInstr &MI = *It;
     InstrExec.insert(&MI);
-    DEBUG(dbgs() << "Visiting " << (EvalOk ? "BR" : "br") << "("
-                 << printMBBReference(B) << "): " << MI);
+    LLVM_DEBUG(dbgs() << "Visiting " << (EvalOk ? "BR" : "br") << "("
+                      << printMBBReference(B) << "): " << MI);
     // Do not evaluate subsequent branches if the evaluation of any of the
     // previous branches failed. Keep iterating over the branches only
     // to mark them as executable.
@@ -763,23 +764,23 @@ void MachineConstPropagator::visitBranchesFrom(const MachineInstr &BrI) {
     // last one set "FallsThru", then add an edge to the layout successor
     // to the targets.
     Targets.clear();
-    DEBUG(dbgs() << "  failed to evaluate a branch...adding all CFG "
-                    "successors\n");
+    LLVM_DEBUG(dbgs() << "  failed to evaluate a branch...adding all CFG "
+                         "successors\n");
     for (const MachineBasicBlock *SB : B.successors())
       Targets.insert(SB);
   }
 
   for (const MachineBasicBlock *TB : Targets) {
     unsigned TBN = TB->getNumber();
-    DEBUG(dbgs() << "  pushing edge " << printMBBReference(B) << " -> "
-                 << printMBBReference(*TB) << "\n");
+    LLVM_DEBUG(dbgs() << "  pushing edge " << printMBBReference(B) << " -> "
+                      << printMBBReference(*TB) << "\n");
     FlowQ.push(CFGEdge(MBN, TBN));
   }
 }
 
 void MachineConstPropagator::visitUsesOf(unsigned Reg) {
-  DEBUG(dbgs() << "Visiting uses of " << printReg(Reg, &MCE.TRI)
-               << Cells.get(Reg) << '\n');
+  LLVM_DEBUG(dbgs() << "Visiting uses of " << printReg(Reg, &MCE.TRI)
+                    << Cells.get(Reg) << '\n');
   for (MachineInstr &MI : MRI->use_nodbg_instructions(Reg)) {
     // Do not process non-executable instructions. They can become exceutable
     // later (via a flow-edge in the work queue). In such case, the instruc-
@@ -870,10 +871,10 @@ void MachineConstPropagator::propagate(MachineFunction &MF) {
     CFGEdge Edge = FlowQ.front();
     FlowQ.pop();
 
-    DEBUG(dbgs() << "Picked edge "
-                 << printMBBReference(*MF.getBlockNumbered(Edge.first)) << "->"
-                 << printMBBReference(*MF.getBlockNumbered(Edge.second))
-                 << '\n');
+    LLVM_DEBUG(
+        dbgs() << "Picked edge "
+               << printMBBReference(*MF.getBlockNumbered(Edge.first)) << "->"
+               << printMBBReference(*MF.getBlockNumbered(Edge.second)) << '\n');
     if (Edge.first != EntryNum)
       if (EdgeExec.count(Edge))
         continue;
@@ -927,7 +928,7 @@ void MachineConstPropagator::propagate(MachineFunction &MF) {
     }
   } // while (FlowQ)
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Cells after propagation:\n";
     Cells.print(dbgs(), MCE.TRI);
     dbgs() << "Dead CFG edges:\n";
@@ -1042,7 +1043,7 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
 // This is the constant propagation algorithm as described by Wegman-Zadeck.
 // Most of the terminology comes from there.
 bool MachineConstPropagator::run(MachineFunction &MF) {
-  DEBUG(MF.print(dbgs() << "Starting MachineConstPropagator\n", nullptr));
+  LLVM_DEBUG(MF.print(dbgs() << "Starting MachineConstPropagator\n", nullptr));
 
   MRI = &MF.getRegInfo();
 
@@ -1054,7 +1055,7 @@ bool MachineConstPropagator::run(MachineFunction &MF) {
   propagate(MF);
   bool Changed = rewrite(MF);
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "End of MachineConstPropagator (Changed=" << Changed << ")\n";
     if (Changed)
       MF.print(dbgs(), nullptr);
@@ -2778,7 +2779,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
   AllDefs = false;
 
   // Some diagnostics.
-  // DEBUG({...}) gets confused with all this code as an argument.
+  // LLVM_DEBUG({...}) gets confused with all this code as an argument.
 #ifndef NDEBUG
   bool Debugging = DebugFlag && isCurrentDebugType(DEBUG_TYPE);
   if (Debugging) {
@@ -2923,7 +2924,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
     ChangedNum++;
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     if (!NewInstrs.empty()) {
       MachineFunction &MF = *MI.getParent()->getParent();
       dbgs() << "In function: " << MF.getName() << "\n";
@@ -3090,7 +3091,7 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
         MO.setIsKill(false);
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     if (NewMI) {
       dbgs() << "Rewrite: for " << MI;
       if (NewMI != &MI)
@@ -3130,7 +3131,7 @@ bool HexagonConstEvaluator::rewriteHexBranch(MachineInstr &BrI,
   if (BrI.getOpcode() == Hexagon::J2_jump)
     return false;
 
-  DEBUG(dbgs() << "Rewrite(" << printMBBReference(B) << "):" << BrI);
+  LLVM_DEBUG(dbgs() << "Rewrite(" << printMBBReference(B) << "):" << BrI);
   bool Rewritten = false;
   if (NumTargets > 0) {
     assert(!FallsThru && "This should have been checked before");

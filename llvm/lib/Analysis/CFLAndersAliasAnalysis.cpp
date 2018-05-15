@@ -855,8 +855,9 @@ AliasResult CFLAndersAAResult::query(const MemoryLocation &LocA,
     if (!Fn) {
       // The only times this is known to happen are when globals + InlineAsm are
       // involved
-      DEBUG(dbgs()
-            << "CFLAndersAA: could not extract parent function information.\n");
+      LLVM_DEBUG(
+          dbgs()
+          << "CFLAndersAA: could not extract parent function information.\n");
       return MayAlias;
     }
   } else {

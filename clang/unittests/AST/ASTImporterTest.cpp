@@ -207,8 +207,8 @@ class ASTImporterTestBase : public ::testing::TestWithParam<ArgVector> {
 
   struct TU {
     // Buffer for the context, must live in the test scope.
-    StringRef Code;
-    StringRef FileName;
+    std::string Code;
+    std::string FileName;
     std::unique_ptr<ASTUnit> Unit;
     TranslationUnitDecl *TUDecl = nullptr;
     TU(StringRef Code, StringRef FileName, ArgVector Args)

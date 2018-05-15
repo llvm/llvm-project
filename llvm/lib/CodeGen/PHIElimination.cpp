@@ -270,7 +270,8 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       IncomingReg = entry;
       reusedIncoming = true;
       ++NumReused;
-      DEBUG(dbgs() << "Reusing " << printReg(IncomingReg) << " for " << *MPhi);
+      LLVM_DEBUG(dbgs() << "Reusing " << printReg(IncomingReg) << " for "
+                        << *MPhi);
     } else {
       const TargetRegisterClass *RC = MF.getRegInfo().getRegClass(DestReg);
       entry = IncomingReg = MF.getRegInfo().createVirtualRegister(RC);
@@ -295,9 +296,9 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       // AfterPHIsIt, so it appears before the current PHICopy.
       if (reusedIncoming)
         if (MachineInstr *OldKill = VI.findKill(&MBB)) {
-          DEBUG(dbgs() << "Remove old kill from " << *OldKill);
+          LLVM_DEBUG(dbgs() << "Remove old kill from " << *OldKill);
           LV->removeVirtualRegisterKilled(IncomingReg, *OldKill);
-          DEBUG(MBB.dump());
+          LLVM_DEBUG(MBB.dump());
         }
 
       // Add information to LiveVariables to know that the incoming value is
@@ -593,9 +594,9 @@ bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
       if (!ShouldSplit && !NoPhiElimLiveOutEarlyExit)
         continue;
       if (ShouldSplit) {
-        DEBUG(dbgs() << printReg(Reg) << " live-out before critical edge "
-                     << printMBBReference(*PreMBB) << " -> "
-                     << printMBBReference(MBB) << ": " << *BBI);
+        LLVM_DEBUG(dbgs() << printReg(Reg) << " live-out before critical edge "
+                          << printMBBReference(*PreMBB) << " -> "
+                          << printMBBReference(MBB) << ": " << *BBI);
       }
 
       // If Reg is not live-in to MBB, it means it must be live-in to some
@@ -610,10 +611,12 @@ bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
 
       // Check for a loop exiting edge.
       if (!ShouldSplit && CurLoop != PreLoop) {
-        DEBUG({
+        LLVM_DEBUG({
           dbgs() << "Split wouldn't help, maybe avoid loop copies?\n";
-          if (PreLoop) dbgs() << "PreLoop: " << *PreLoop;
-          if (CurLoop) dbgs() << "CurLoop: " << *CurLoop;
+          if (PreLoop)
+            dbgs() << "PreLoop: " << *PreLoop;
+          if (CurLoop)
+            dbgs() << "CurLoop: " << *CurLoop;
         });
         // This edge could be entering a loop, exiting a loop, or it could be
         // both: Jumping directly form one loop to the header of a sibling
@@ -624,7 +627,7 @@ bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
       if (!ShouldSplit && !SplitAllCriticalEdges)
         continue;
       if (!PreMBB->SplitCriticalEdge(&MBB, *this)) {
-        DEBUG(dbgs() << "Failed to split critical edge.\n");
+        LLVM_DEBUG(dbgs() << "Failed to split critical edge.\n");
         continue;
       }
       Changed = true;

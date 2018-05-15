@@ -190,7 +190,7 @@ void BPFDAGToDAGISel::Select(SDNode *Node) {
 
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
-    DEBUG(dbgs() << "== "; Node->dump(CurDAG); dbgs() << '\n');
+    LLVM_DEBUG(dbgs() << "== "; Node->dump(CurDAG); dbgs() << '\n');
     return;
   }
 
@@ -277,7 +277,7 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
     if (OP1N->getOpcode() <= ISD::BUILTIN_OP_END || OP1N->getNumOperands() == 0)
       return;
 
-    DEBUG(dbgs() << "Check candidate load: "; LD->dump(); dbgs() << '\n');
+    LLVM_DEBUG(dbgs() << "Check candidate load: "; LD->dump(); dbgs() << '\n');
 
     const GlobalAddressSDNode *GADN =
         dyn_cast<GlobalAddressSDNode>(OP1N->getOperand(0).getNode());
@@ -287,7 +287,7 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
           getConstantFieldValue(GADN, CDN->getZExtValue(), size, new_val.c);
   } else if (LDAddrNode->getOpcode() > ISD::BUILTIN_OP_END &&
              LDAddrNode->getNumOperands() > 0) {
-    DEBUG(dbgs() << "Check candidate load: "; LD->dump(); dbgs() << '\n');
+    LLVM_DEBUG(dbgs() << "Check candidate load: "; LD->dump(); dbgs() << '\n');
 
     SDValue OP1 = LDAddrNode->getOperand(0);
     if (const GlobalAddressSDNode *GADN =
@@ -310,8 +310,8 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
     val = new_val.d;
   }
 
-  DEBUG(dbgs() << "Replacing load of size " << size << " with constant " << val
-               << '\n');
+  LLVM_DEBUG(dbgs() << "Replacing load of size " << size << " with constant "
+                    << val << '\n');
   SDValue NVal = CurDAG->getConstant(val, DL, MVT::i64);
 
   // After replacement, the current node is dead, we need to
@@ -427,8 +427,8 @@ bool BPFDAGToDAGISel::fillGenericConstant(const DataLayout &DL,
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
     uint64_t val = CI->getZExtValue();
-    DEBUG(dbgs() << "Byte array at offset " << Offset << " with value " << val
-                 << '\n');
+    LLVM_DEBUG(dbgs() << "Byte array at offset " << Offset << " with value "
+                      << val << '\n');
 
     if (Size > 8 || (Size & (Size - 1)))
       return false;
@@ -517,8 +517,9 @@ void BPFDAGToDAGISel::PreprocessCopyToReg(SDNode *Node) {
     break;
   }
 
-  DEBUG(dbgs() << "Find Load Value to VReg "
-               << TargetRegisterInfo::virtReg2Index(RegN->getReg()) << '\n');
+  LLVM_DEBUG(dbgs() << "Find Load Value to VReg "
+                    << TargetRegisterInfo::virtReg2Index(RegN->getReg())
+                    << '\n');
   load_to_vreg_[RegN->getReg()] = mem_load_op;
 }
 
@@ -544,8 +545,8 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
           (IntNo == Intrinsic::bpf_load_word && MaskV == 0xFFFFFFFF)))
       return;
 
-    DEBUG(dbgs() << "Remove the redundant AND operation in: "; Node->dump();
-          dbgs() << '\n');
+    LLVM_DEBUG(dbgs() << "Remove the redundant AND operation in: ";
+               Node->dump(); dbgs() << '\n');
 
     I--;
     CurDAG->ReplaceAllUsesWith(SDValue(Node, 0), BaseV);
@@ -579,7 +580,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
   if (!RegN || !TargetRegisterInfo::isVirtualRegister(RegN->getReg()))
     return;
   unsigned AndOpReg = RegN->getReg();
-  DEBUG(dbgs() << "Examine " << printReg(AndOpReg) << '\n');
+  LLVM_DEBUG(dbgs() << "Examine " << printReg(AndOpReg) << '\n');
 
   // Examine the PHI insns in the MachineBasicBlock to found out the
   // definitions of this virtual register. At this stage (DAG2DAG
@@ -610,7 +611,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
     // Trace each incoming definition, e.g., (%0, %bb.1) and (%1, %bb.3)
     // The AND operation can be removed if both %0 in %bb.1 and %1 in
     // %bb.3 are defined with a load matching the MaskN.
-    DEBUG(dbgs() << "Check PHI Insn: "; MII->dump(); dbgs() << '\n');
+    LLVM_DEBUG(dbgs() << "Check PHI Insn: "; MII->dump(); dbgs() << '\n');
     unsigned PrevReg = -1;
     for (unsigned i = 0; i < MII->getNumOperands(); ++i) {
       const MachineOperand &MOP = MII->getOperand(i);
@@ -626,8 +627,8 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
     }
   }
 
-  DEBUG(dbgs() << "Remove the redundant AND operation in: "; Node->dump();
-        dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << "Remove the redundant AND operation in: "; Node->dump();
+             dbgs() << '\n');
 
   I--;
   CurDAG->ReplaceAllUsesWith(SDValue(Node, 0), BaseV);

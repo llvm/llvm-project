@@ -90,9 +90,10 @@ class X86SchedWriteMoveLSWidths<X86SchedWriteMoveLS sScl,
 }
 
 // Loads, stores, and moves, not folded with other operations.
-def WriteLoad  : SchedWrite;
-def WriteStore : SchedWrite;
-def WriteMove  : SchedWrite;
+def WriteLoad    : SchedWrite;
+def WriteStore   : SchedWrite;
+def WriteStoreNT : SchedWrite;
+def WriteMove    : SchedWrite;
 
 // Arithmetic.
 defm WriteALU    : X86SchedWritePair; // Simple integer ALU op.
@@ -145,6 +146,9 @@ def  WriteFMaskedLoadY  : SchedWrite;
 def  WriteFStore        : SchedWrite;
 def  WriteFStoreX       : SchedWrite;
 def  WriteFStoreY       : SchedWrite;
+def  WriteFStoreNT      : SchedWrite;
+def  WriteFStoreNTX     : SchedWrite;
+def  WriteFStoreNTY     : SchedWrite;
 def  WriteFMaskedStore  : SchedWrite;
 def  WriteFMaskedStoreY : SchedWrite;
 def  WriteFMove         : SchedWrite;
@@ -229,11 +233,15 @@ defm WritePHAddY : X86SchedWritePair; // YMM/ZMM.
 def  WriteVecLoad         : SchedWrite;
 def  WriteVecLoadX        : SchedWrite;
 def  WriteVecLoadY        : SchedWrite;
+def  WriteVecLoadNT       : SchedWrite;
+def  WriteVecLoadNTY      : SchedWrite;
 def  WriteVecMaskedLoad   : SchedWrite;
 def  WriteVecMaskedLoadY  : SchedWrite;
 def  WriteVecStore        : SchedWrite;
 def  WriteVecStoreX       : SchedWrite;
 def  WriteVecStoreY       : SchedWrite;
+def  WriteVecStoreNT      : SchedWrite;
+def  WriteVecStoreNTY     : SchedWrite;
 def  WriteVecMaskedStore  : SchedWrite;
 def  WriteVecMaskedStoreY : SchedWrite;
 def  WriteVecMove         : SchedWrite;
@@ -352,6 +360,16 @@ def SchedWriteFMoveLS
   : X86SchedWriteMoveLSWidths<WriteFMoveLS, WriteFMoveLSX,
                               WriteFMoveLSY, WriteFMoveLSY>;
 
+def WriteFMoveLSNT
+ : X86SchedWriteMoveLS<WriteFMove, WriteFLoad, WriteFStoreNT>;
+def WriteFMoveLSNTX
+ : X86SchedWriteMoveLS<WriteFMove, WriteFLoad, WriteFStoreNTX>;
+def WriteFMoveLSNTY
+ : X86SchedWriteMoveLS<WriteFMoveY, WriteFLoadY, WriteFStoreNTY>;
+def SchedWriteFMoveLSNT
+  : X86SchedWriteMoveLSWidths<WriteFMoveLSNT, WriteFMoveLSNTX,
+                              WriteFMoveLSNTY, WriteFMoveLSNTY>;
+
 def WriteVecMoveLS
  : X86SchedWriteMoveLS<WriteVecMove, WriteVecLoad, WriteVecStore>;
 def WriteVecMoveLSX
@@ -361,6 +379,16 @@ def WriteVecMoveLSY
 def SchedWriteVecMoveLS
   : X86SchedWriteMoveLSWidths<WriteVecMoveLS, WriteVecMoveLSX,
                               WriteVecMoveLSY, WriteVecMoveLSY>;
+
+def WriteVecMoveLSNT
+ : X86SchedWriteMoveLS<WriteVecMove, WriteVecLoadNT, WriteVecStoreNT>;
+def WriteVecMoveLSNTX
+ : X86SchedWriteMoveLS<WriteVecMoveX, WriteVecLoadNT, WriteVecStoreNT>;
+def WriteVecMoveLSNTY
+ : X86SchedWriteMoveLS<WriteVecMoveY, WriteVecLoadNTY, WriteVecStoreNTY>;
+def SchedWriteVecMoveLSNT
+  : X86SchedWriteMoveLSWidths<WriteVecMoveLSNT, WriteVecMoveLSNTX,
+                              WriteVecMoveLSNTY, WriteVecMoveLSNTY>;
 
 // Vector width wrappers.
 def SchedWriteFAdd

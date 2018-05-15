@@ -247,7 +247,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
   if (!L->empty())
     return MadeChange;
 
-  DEBUG(dbgs() << "PIP: Examining: " << *L << "\n");
+  LLVM_DEBUG(dbgs() << "PIP: Examining: " << *L << "\n");
 
   BasicBlock *Header = L->getHeader();
 
@@ -332,7 +332,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
   if (!LoopPredecessor)
     return MadeChange;
 
-  DEBUG(dbgs() << "PIP: Found " << Buckets.size() << " buckets\n");
+  LLVM_DEBUG(dbgs() << "PIP: Found " << Buckets.size() << " buckets\n");
 
   SmallSet<BasicBlock *, 16> BBChanged;
   for (unsigned i = 0, e = Buckets.size(); i != e; ++i) {
@@ -381,7 +381,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
     if (!BasePtrSCEV->isAffine())
       continue;
 
-    DEBUG(dbgs() << "PIP: Transforming: " << *BasePtrSCEV << "\n");
+    LLVM_DEBUG(dbgs() << "PIP: Transforming: " << *BasePtrSCEV << "\n");
     assert(BasePtrSCEV->getLoop() == L &&
            "AddRec for the wrong loop?");
 
@@ -407,7 +407,7 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
     if (!isSafeToExpand(BasePtrStartSCEV, *SE))
       continue;
 
-    DEBUG(dbgs() << "PIP: New start is: " << *BasePtrStartSCEV << "\n");
+    LLVM_DEBUG(dbgs() << "PIP: New start is: " << *BasePtrStartSCEV << "\n");
 
     if (alreadyPrepared(L, MemI, BasePtrStartSCEV, BasePtrIncSCEV))
       continue;

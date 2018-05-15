@@ -555,47 +555,48 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
 
   if (AddReductionVar(Phi, RK_IntegerAdd, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an ADD reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an ADD reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_IntegerMult, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found a MUL reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found a MUL reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_IntegerOr, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an OR reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an OR reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_IntegerAnd, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an AND reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an AND reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_IntegerXor, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found a XOR reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found a XOR reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_IntegerMinMax, TheLoop, HasFunNoNaNAttr, RedDes,
                       DB, AC, DT)) {
-    DEBUG(dbgs() << "Found a MINMAX reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found a MINMAX reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_FloatMult, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an FMult reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an FMult reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_FloatAdd, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an FAdd reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an FAdd reduction PHI." << *Phi << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RK_FloatMinMax, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
-    DEBUG(dbgs() << "Found an float MINMAX reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found an float MINMAX reduction PHI." << *Phi
+                      << "\n");
     return true;
   }
   // Not a reduction of known type.
@@ -1052,7 +1053,7 @@ bool InductionDescriptor::isInductionPHI(PHINode *Phi, const Loop *TheLoop,
     AR = PSE.getAsAddRec(Phi);
 
   if (!AR) {
-    DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
+    LLVM_DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
     return false;
   }
 
@@ -1086,14 +1087,15 @@ bool InductionDescriptor::isInductionPHI(
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PhiScev);
 
   if (!AR) {
-    DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
+    LLVM_DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
     return false;
   }
 
   if (AR->getLoop() != TheLoop) {
     // FIXME: We should treat this as a uniform. Unfortunately, we
     // don't currently know how to handled uniform PHIs.
-    DEBUG(dbgs() << "LV: PHI is a recurrence with respect to an outer loop.\n");
+    LLVM_DEBUG(
+        dbgs() << "LV: PHI is a recurrence with respect to an outer loop.\n");
     return false;
   }
 
@@ -1174,11 +1176,12 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
         BB, InLoopPredecessors, ".loopexit", DT, LI, PreserveLCSSA);
 
     if (!NewExitBB)
-      DEBUG(dbgs() << "WARNING: Can't create a dedicated exit block for loop: "
-                   << *L << "\n");
+      LLVM_DEBUG(
+          dbgs() << "WARNING: Can't create a dedicated exit block for loop: "
+                 << *L << "\n");
     else
-      DEBUG(dbgs() << "LoopSimplify: Creating dedicated exit block "
-                   << NewExitBB->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "LoopSimplify: Creating dedicated exit block "
+                        << NewExitBB->getName() << "\n");
     return true;
   };
 

@@ -728,11 +728,11 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                          ? ConstantInt::getTrue(BB->getContext())
                          : ConstantInt::getFalse(BB->getContext());
         AvailableValues.insert(CondInst, TorF);
-        DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
-                     << CondInst->getName() << "' as " << *TorF << " in "
-                     << BB->getName() << "\n");
+        LLVM_DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
+                          << CondInst->getName() << "' as " << *TorF << " in "
+                          << BB->getName() << "\n");
         if (!DebugCounter::shouldExecute(CSECounter)) {
-          DEBUG(dbgs() << "Skipping due to debug counter\n");
+          LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
         } else {
           // Replace all dominated uses with the known value.
           if (unsigned Count = replaceDominatedUsesWith(
@@ -758,9 +758,9 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // Dead instructions should just be removed.
     if (isInstructionTriviallyDead(Inst, &TLI)) {
-      DEBUG(dbgs() << "EarlyCSE DCE: " << *Inst << '\n');
+      LLVM_DEBUG(dbgs() << "EarlyCSE DCE: " << *Inst << '\n');
       if (!DebugCounter::shouldExecute(CSECounter)) {
-        DEBUG(dbgs() << "Skipping due to debug counter\n");
+        LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
         continue;
       }
       salvageDebugInfo(*Inst);
@@ -779,16 +779,17 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       auto *CondI =
           dyn_cast<Instruction>(cast<CallInst>(Inst)->getArgOperand(0));
       if (CondI && SimpleValue::canHandle(CondI)) {
-        DEBUG(dbgs() << "EarlyCSE considering assumption: " << *Inst << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE considering assumption: " << *Inst
+                          << '\n');
         AvailableValues.insert(CondI, ConstantInt::getTrue(BB->getContext()));
       } else
-        DEBUG(dbgs() << "EarlyCSE skipping assumption: " << *Inst << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE skipping assumption: " << *Inst << '\n');
       continue;
     }
 
     // Skip sideeffect intrinsics, for the same reason as assume intrinsics.
     if (match(Inst, m_Intrinsic<Intrinsic::sideeffect>())) {
-      DEBUG(dbgs() << "EarlyCSE skipping sideeffect: " << *Inst << '\n');
+      LLVM_DEBUG(dbgs() << "EarlyCSE skipping sideeffect: " << *Inst << '\n');
       continue;
     }
 
@@ -826,7 +827,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
             // Is the condition known to be true?
             if (isa<ConstantInt>(KnownCond) &&
                 cast<ConstantInt>(KnownCond)->isOne()) {
-              DEBUG(dbgs() << "EarlyCSE removing guard: " << *Inst << '\n');
+              LLVM_DEBUG(dbgs()
+                         << "EarlyCSE removing guard: " << *Inst << '\n');
               removeMSSA(Inst);
               Inst->eraseFromParent();
               Changed = true;
@@ -851,9 +853,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // If the instruction can be simplified (e.g. X+0 = X) then replace it with
     // its simpler value.
     if (Value *V = SimplifyInstruction(Inst, SQ)) {
-      DEBUG(dbgs() << "EarlyCSE Simplify: " << *Inst << "  to: " << *V << '\n');
+      LLVM_DEBUG(dbgs() << "EarlyCSE Simplify: " << *Inst << "  to: " << *V
+                        << '\n');
       if (!DebugCounter::shouldExecute(CSECounter)) {
-        DEBUG(dbgs() << "Skipping due to debug counter\n");
+        LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
       } else {
         bool Killed = false;
         if (!Inst->use_empty()) {
@@ -877,9 +880,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     if (SimpleValue::canHandle(Inst)) {
       // See if the instruction has an available value.  If so, use it.
       if (Value *V = AvailableValues.lookup(Inst)) {
-        DEBUG(dbgs() << "EarlyCSE CSE: " << *Inst << "  to: " << *V << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << *Inst << "  to: " << *V
+                          << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
-          DEBUG(dbgs() << "Skipping due to debug counter\n");
+          LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
         if (auto *I = dyn_cast<Instruction>(V))
@@ -937,10 +941,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                                InVal.DefInst, Inst))) {
         Value *Op = getOrCreateResult(InVal.DefInst, Inst->getType());
         if (Op != nullptr) {
-          DEBUG(dbgs() << "EarlyCSE CSE LOAD: " << *Inst
-                       << "  to: " << *InVal.DefInst << '\n');
+          LLVM_DEBUG(dbgs() << "EarlyCSE CSE LOAD: " << *Inst
+                            << "  to: " << *InVal.DefInst << '\n');
           if (!DebugCounter::shouldExecute(CSECounter)) {
-            DEBUG(dbgs() << "Skipping due to debug counter\n");
+            LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
             continue;
           }
           if (!Inst->use_empty())
@@ -980,10 +984,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       if (InVal.first != nullptr &&
           isSameMemGeneration(InVal.second, CurrentGeneration, InVal.first,
                               Inst)) {
-        DEBUG(dbgs() << "EarlyCSE CSE CALL: " << *Inst
-                     << "  to: " << *InVal.first << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE CSE CALL: " << *Inst
+                          << "  to: " << *InVal.first << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
-          DEBUG(dbgs() << "Skipping due to debug counter\n");
+          LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
         if (!Inst->use_empty())
@@ -1036,9 +1040,9 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                     MemInst.getPointerOperand() ||
                 MSSA) &&
                "can't have an intervening store if not using MemorySSA!");
-        DEBUG(dbgs() << "EarlyCSE DSE (writeback): " << *Inst << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE DSE (writeback): " << *Inst << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
-          DEBUG(dbgs() << "Skipping due to debug counter\n");
+          LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
         removeMSSA(Inst);
@@ -1071,10 +1075,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                  !LastStoreMemInst.isVolatile() &&
                  "Violated invariant");
           if (LastStoreMemInst.isMatchingMemLoc(MemInst)) {
-            DEBUG(dbgs() << "EarlyCSE DEAD STORE: " << *LastStore
-                         << "  due to: " << *Inst << '\n');
+            LLVM_DEBUG(dbgs() << "EarlyCSE DEAD STORE: " << *LastStore
+                              << "  due to: " << *Inst << '\n');
             if (!DebugCounter::shouldExecute(CSECounter)) {
-              DEBUG(dbgs() << "Skipping due to debug counter\n");
+              LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
             } else {
               removeMSSA(LastStore);
               LastStore->eraseFromParent();

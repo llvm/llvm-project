@@ -350,9 +350,7 @@ public:
   void setWaitcnt(MachineInstr *WaitcntIn) { LfWaitcnt = WaitcntIn; }
   MachineInstr *getWaitcnt() const { return LfWaitcnt; }
 
-  void print() {
-    DEBUG(dbgs() << "  iteration " << IterCnt << '\n';);
-  }
+  void print() { LLVM_DEBUG(dbgs() << "  iteration " << IterCnt << '\n';); }
 
 private:
   // s_waitcnt added at the end of loop footer to stablize wait scores
@@ -515,7 +513,7 @@ void BlockWaitcntBrackets::setExpScore(const MachineInstr *MI,
                                        const MachineRegisterInfo *MRI,
                                        unsigned OpNo, int32_t Val) {
   RegInterval Interval = getRegInterval(MI, TII, MRI, TRI, OpNo, false);
-  DEBUG({
+  LLVM_DEBUG({
     const MachineOperand &Opnd = MI->getOperand(OpNo);
     assert(TRI->isVGPR(*MRI, Opnd.getReg()));
   });
@@ -1206,8 +1204,9 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
             ScoreBracket = BlockWaitcntBracketsMap[TBB].get();
           }
           ScoreBracket->setRevisitLoop(true);
-          DEBUG(dbgs() << "set-revisit: Block"
-                       << ContainingLoop->getHeader()->getNumber() << '\n';);
+          LLVM_DEBUG(dbgs()
+                         << "set-revisit: Block"
+                         << ContainingLoop->getHeader()->getNumber() << '\n';);
         }
       }
 
@@ -1242,26 +1241,29 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
       if (insertSWaitInst) {
         if (OldWaitcnt && OldWaitcnt->getOpcode() == AMDGPU::S_WAITCNT) {
           if (ForceEmitZeroWaitcnts)
-            DEBUG(dbgs() << "Force emit s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)\n");
+            LLVM_DEBUG(
+                dbgs()
+                << "Force emit s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)\n");
           if (IsForceEmitWaitcnt)
-            DEBUG(dbgs() << "Force emit a s_waitcnt due to debug counter\n");
+            LLVM_DEBUG(dbgs()
+                       << "Force emit a s_waitcnt due to debug counter\n");
 
           OldWaitcnt->getOperand(0).setImm(Enc);
           if (!OldWaitcnt->getParent())
             MI.getParent()->insert(MI, OldWaitcnt);
 
-          DEBUG(dbgs() << "updateWaitcntInBlock\n"
-                       << "Old Instr: " << MI << '\n'
-                       << "New Instr: " << *OldWaitcnt << '\n');
+          LLVM_DEBUG(dbgs() << "updateWaitcntInBlock\n"
+                            << "Old Instr: " << MI << '\n'
+                            << "New Instr: " << *OldWaitcnt << '\n');
         } else {
             auto SWaitInst = BuildMI(*MI.getParent(), MI.getIterator(),
                                MI.getDebugLoc(), TII->get(AMDGPU::S_WAITCNT))
                              .addImm(Enc);
             TrackedWaitcntSet.insert(SWaitInst);
 
-            DEBUG(dbgs() << "insertWaitcntInBlock\n"
-                         << "Old Instr: " << MI << '\n'
-                         << "New Instr: " << *SWaitInst << '\n');
+            LLVM_DEBUG(dbgs() << "insertWaitcntInBlock\n"
+                              << "Old Instr: " << MI << '\n'
+                              << "New Instr: " << *SWaitInst << '\n');
         }
       }
 
@@ -1670,7 +1672,7 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
   BlockWaitcntBrackets *ScoreBrackets = BlockWaitcntBracketsMap[&Block].get();
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "*** Block" << Block.getNumber() << " ***";
     ScoreBrackets->dump();
   });
@@ -1731,7 +1733,7 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     ScoreBrackets->clearWaitcnt();
 
-    DEBUG({
+    LLVM_DEBUG({
       Inst.print(dbgs());
       ScoreBrackets->dump();
     });
@@ -1771,7 +1773,7 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   if (ContainingLoop && isLoopBottom(ContainingLoop, &Block)) {
     LoopWaitcntData *WaitcntData = LoopWaitcntDataMap[ContainingLoop].get();
     WaitcntData->print();
-    DEBUG(dbgs() << '\n';);
+    LLVM_DEBUG(dbgs() << '\n';);
 
     // The iterative waitcnt insertion algorithm aims for optimal waitcnt
     // placement and doesn't always guarantee convergence for a loop. Each
@@ -1811,7 +1813,7 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       }
 
       if (SWaitInst) {
-        DEBUG({
+        LLVM_DEBUG({
           SWaitInst->print(dbgs());
           dbgs() << "\nAdjusted score board:";
           ScoreBrackets->dump();
@@ -1896,8 +1898,8 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       if ((std::count(BlockWaitcntProcessedSet.begin(),
                       BlockWaitcntProcessedSet.end(), &MBB) < Count)) {
         BlockWaitcntBracketsMap[&MBB]->setRevisitLoop(true);
-        DEBUG(dbgs() << "set-revisit: Block"
-                     << ContainingLoop->getHeader()->getNumber() << '\n';);
+        LLVM_DEBUG(dbgs() << "set-revisit: Block"
+                          << ContainingLoop->getHeader()->getNumber() << '\n';);
       }
     }
 
@@ -1931,7 +1933,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
         }
         LoopWaitcntData *WaitcntData = LoopWaitcntDataMap[ContainingLoop].get();
         WaitcntData->incIterCnt();
-        DEBUG(dbgs() << "revisit: Block" << EntryBB->getNumber() << '\n';);
+        LLVM_DEBUG(dbgs() << "revisit: Block" << EntryBB->getNumber() << '\n';);
         continue;
       } else {
         LoopWaitcntData *WaitcntData = LoopWaitcntDataMap[ContainingLoop].get();

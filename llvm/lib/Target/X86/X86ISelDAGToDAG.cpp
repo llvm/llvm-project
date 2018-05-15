@@ -1308,10 +1308,10 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
 bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
                                               unsigned Depth) {
   SDLoc dl(N);
-  DEBUG({
-      dbgs() << "MatchAddress: ";
-      AM.dump(CurDAG);
-    });
+  LLVM_DEBUG({
+    dbgs() << "MatchAddress: ";
+    AM.dump(CurDAG);
+  });
   // Limit recursion.
   if (Depth > 5)
     return matchAddressBase(N, AM);
@@ -2744,7 +2744,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   SDLoc dl(Node);
 
   if (Node->isMachineOpcode()) {
-    DEBUG(dbgs() << "== ";  Node->dump(CurDAG); dbgs() << '\n');
+    LLVM_DEBUG(dbgs() << "== "; Node->dump(CurDAG); dbgs() << '\n');
     Node->setNodeId(-1);
     return;   // Already selected.
   }
@@ -3025,7 +3025,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         InFlag = ResLo.getValue(2);
       }
       ReplaceUses(SDValue(Node, 0), ResLo);
-      DEBUG(dbgs() << "=> "; ResLo.getNode()->dump(CurDAG); dbgs() << '\n');
+      LLVM_DEBUG(dbgs() << "=> "; ResLo.getNode()->dump(CurDAG);
+                 dbgs() << '\n');
     }
     // Copy the high half of the result, if it is needed.
     if (!SDValue(Node, 1).use_empty()) {
@@ -3036,7 +3037,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         InFlag = ResHi.getValue(2);
       }
       ReplaceUses(SDValue(Node, 1), ResHi);
-      DEBUG(dbgs() << "=> "; ResHi.getNode()->dump(CurDAG); dbgs() << '\n');
+      LLVM_DEBUG(dbgs() << "=> "; ResHi.getNode()->dump(CurDAG);
+                 dbgs() << '\n');
     }
 
     CurDAG->RemoveDeadNode(Node);
@@ -3198,7 +3200,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
             CurDAG->getTargetExtractSubreg(X86::sub_8bit, dl, MVT::i8, Result);
       }
       ReplaceUses(SDValue(Node, 1), Result);
-      DEBUG(dbgs() << "=> "; Result.getNode()->dump(CurDAG); dbgs() << '\n');
+      LLVM_DEBUG(dbgs() << "=> "; Result.getNode()->dump(CurDAG);
+                 dbgs() << '\n');
     }
     // Copy the division (low) result, if it is needed.
     if (!SDValue(Node, 0).use_empty()) {
@@ -3206,7 +3209,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
                                                 LoReg, NVT, InFlag);
       InFlag = Result.getValue(2);
       ReplaceUses(SDValue(Node, 0), Result);
-      DEBUG(dbgs() << "=> "; Result.getNode()->dump(CurDAG); dbgs() << '\n');
+      LLVM_DEBUG(dbgs() << "=> "; Result.getNode()->dump(CurDAG);
+                 dbgs() << '\n');
     }
     // Copy the remainder (high) result, if it is needed.
     if (!SDValue(Node, 1).use_empty()) {
@@ -3214,7 +3218,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
                                               HiReg, NVT, InFlag);
       InFlag = Result.getValue(2);
       ReplaceUses(SDValue(Node, 1), Result);
-      DEBUG(dbgs() << "=> "; Result.getNode()->dump(CurDAG); dbgs() << '\n');
+      LLVM_DEBUG(dbgs() << "=> "; Result.getNode()->dump(CurDAG);
+                 dbgs() << '\n');
     }
     CurDAG->RemoveDeadNode(Node);
     return;

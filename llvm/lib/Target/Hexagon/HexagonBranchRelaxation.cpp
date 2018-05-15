@@ -90,7 +90,7 @@ FunctionPass *llvm::createHexagonBranchRelaxation() {
 }
 
 bool HexagonBranchRelaxation::runOnMachineFunction(MachineFunction &MF) {
-  DEBUG(dbgs() << "****** Hexagon Branch Relaxation ******\n");
+  LLVM_DEBUG(dbgs() << "****** Hexagon Branch Relaxation ******\n");
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
@@ -200,14 +200,14 @@ bool HexagonBranchRelaxation::reGenerateBranch(MachineFunction &MF,
     for (auto &MI : B) {
       if (!MI.isBranch() || !isJumpOutOfRange(MI, BlockToInstOffset))
         continue;
-      DEBUG(dbgs() << "Long distance jump. isExtendable("
-                   << HII->isExtendable(MI) << ") isConstExtended("
-                   << HII->isConstExtended(MI) << ") " << MI);
+      LLVM_DEBUG(dbgs() << "Long distance jump. isExtendable("
+                        << HII->isExtendable(MI) << ") isConstExtended("
+                        << HII->isConstExtended(MI) << ") " << MI);
 
       // Since we have not merged HW loops relaxation into
       // this code (yet), soften our approach for the moment.
       if (!HII->isExtendable(MI) && !HII->isExtended(MI)) {
-        DEBUG(dbgs() << "\tUnderimplemented relax branch instruction.\n");
+        LLVM_DEBUG(dbgs() << "\tUnderimplemented relax branch instruction.\n");
       } else {
         // Find which operand is expandable.
         int ExtOpNum = HII->getCExtOpNum(MI);

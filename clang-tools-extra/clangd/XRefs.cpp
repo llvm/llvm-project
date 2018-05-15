@@ -234,12 +234,10 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
 
   std::vector<Location> Result;
   // Handle goto definition for #include.
-  for (auto &IncludeLoc : AST.getInclusionLocations()) {
-    Range R = IncludeLoc.first;
+  for (auto &Inc : AST.getInclusions()) {
     Position Pos = sourceLocToPosition(SourceMgr, SourceLocationBeg);
-
-    if (R.contains(Pos))
-      Result.push_back(Location{URIForFile{IncludeLoc.second}, {}});
+    if (!Inc.Resolved.empty() && Inc.R.contains(Pos))
+      Result.push_back(Location{URIForFile{Inc.Resolved}, {}});
   }
   if (!Result.empty())
     return Result;

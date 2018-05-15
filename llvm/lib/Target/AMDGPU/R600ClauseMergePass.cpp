@@ -121,7 +121,7 @@ bool R600ClauseMergePass::mergeIfPossible(MachineInstr &RootCFAlu,
       LaterInstCount = getCFAluSize(LatrCFAlu);
   unsigned CumuledInsts = RootInstCount + LaterInstCount;
   if (CumuledInsts >= TII->getMaxAlusPerClause()) {
-    DEBUG(dbgs() << "Excess inst counts\n");
+    LLVM_DEBUG(dbgs() << "Excess inst counts\n");
     return false;
   }
   if (RootCFAlu.getOpcode() == AMDGPU::CF_ALU_PUSH_BEFORE)
@@ -139,7 +139,7 @@ bool R600ClauseMergePass::mergeIfPossible(MachineInstr &RootCFAlu,
            RootCFAlu.getOperand(KBank0Idx).getImm() ||
        LatrCFAlu.getOperand(KBank0LineIdx).getImm() !=
            RootCFAlu.getOperand(KBank0LineIdx).getImm())) {
-    DEBUG(dbgs() << "Wrong KC0\n");
+    LLVM_DEBUG(dbgs() << "Wrong KC0\n");
     return false;
   }
   // Is KCache Bank 1 compatible ?
@@ -155,7 +155,7 @@ bool R600ClauseMergePass::mergeIfPossible(MachineInstr &RootCFAlu,
            RootCFAlu.getOperand(KBank1Idx).getImm() ||
        LatrCFAlu.getOperand(KBank1LineIdx).getImm() !=
            RootCFAlu.getOperand(KBank1LineIdx).getImm())) {
-    DEBUG(dbgs() << "Wrong KC0\n");
+    LLVM_DEBUG(dbgs() << "Wrong KC0\n");
     return false;
   }
   if (LatrCFAlu.getOperand(Mode0Idx).getImm()) {

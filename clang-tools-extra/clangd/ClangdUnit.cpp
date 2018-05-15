@@ -83,44 +83,13 @@ private:
   std::vector<const Decl *> TopLevelDecls;
 };
 
-class InclusionLocationsCollector : public PPCallbacks {
-public:
-  InclusionLocationsCollector(SourceManager &SourceMgr,
-                              InclusionLocations &IncLocations)
-      : SourceMgr(SourceMgr), IncLocations(IncLocations) {}
-
-  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
-                          StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
-                          SrcMgr::CharacteristicKind FileType) override {
-    auto SR = FilenameRange.getAsRange();
-    if (SR.isInvalid() || !File || File->tryGetRealPathName().empty())
-      return;
-
-    if (SourceMgr.isInMainFile(SR.getBegin())) {
-      // Only inclusion directives in the main file make sense. The user cannot
-      // select directives not in the main file.
-      IncLocations.emplace_back(halfOpenToRange(SourceMgr, FilenameRange),
-                                File->tryGetRealPathName());
-    }
-  }
-
-private:
-  SourceManager &SourceMgr;
-  InclusionLocations &IncLocations;
-};
-
 class CppFilePreambleCallbacks : public PreambleCallbacks {
 public:
   std::vector<serialization::DeclID> takeTopLevelDeclIDs() {
     return std::move(TopLevelDeclIDs);
   }
 
-  InclusionLocations takeInclusionLocations() {
-    return std::move(IncLocations);
-  }
+  std::vector<Inclusion> takeInclusions() { return std::move(Inclusions); }
 
   void AfterPCHEmitted(ASTWriter &Writer) override {
     TopLevelDeclIDs.reserve(TopLevelDecls.size());
@@ -146,14 +115,15 @@ public:
 
   std::unique_ptr<PPCallbacks> createPPCallbacks() override {
     assert(SourceMgr && "SourceMgr must be set at this point");
-    return llvm::make_unique<InclusionLocationsCollector>(*SourceMgr,
-                                                          IncLocations);
+    return collectInclusionsInMainFileCallback(
+        *SourceMgr,
+        [this](Inclusion Inc) { Inclusions.push_back(std::move(Inc)); });
   }
 
 private:
   std::vector<Decl *> TopLevelDecls;
   std::vector<serialization::DeclID> TopLevelDeclIDs;
-  InclusionLocations IncLocations;
+  std::vector<Inclusion> Inclusions;
   SourceManager *SourceMgr = nullptr;
 };
 
@@ -191,15 +161,15 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
     return llvm::None;
   }
 
-  InclusionLocations IncLocations;
+  std::vector<Inclusion> Inclusions;
   // Copy over the includes from the preamble, then combine with the
   // non-preamble includes below.
   if (Preamble)
-    IncLocations = Preamble->IncLocations;
+    Inclusions = Preamble->Inclusions;
 
-  Clang->getPreprocessor().addPPCallbacks(
-      llvm::make_unique<InclusionLocationsCollector>(Clang->getSourceManager(),
-                                                     IncLocations));
+  Clang->getPreprocessor().addPPCallbacks(collectInclusionsInMainFileCallback(
+      Clang->getSourceManager(),
+      [&Inclusions](Inclusion Inc) { Inclusions.push_back(std::move(Inc)); }));
 
   if (!Action->Execute())
     log("Execute() failed when building AST for " + MainInput.getFile());
@@ -213,7 +183,7 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
   std::vector<const Decl *> ParsedDecls = Action->takeTopLevelDecls();
   return ParsedAST(std::move(Preamble), std::move(Clang), std::move(Action),
                    std::move(ParsedDecls), ASTDiags.take(),
-                   std::move(IncLocations));
+                   std::move(Inclusions));
 }
 
 void ParsedAST::ensurePreambleDeclsDeserialized() {
@@ -279,27 +249,27 @@ std::size_t ParsedAST::getUsedBytes() const {
          ::getUsedBytes(TopLevelDecls) + ::getUsedBytes(Diags);
 }
 
-const InclusionLocations &ParsedAST::getInclusionLocations() const {
-  return IncLocations;
+const std::vector<Inclusion> &ParsedAST::getInclusions() const {
+  return Inclusions;
 }
 
 PreambleData::PreambleData(PrecompiledPreamble Preamble,
                            std::vector<serialization::DeclID> TopLevelDeclIDs,
                            std::vector<Diag> Diags,
-                           InclusionLocations IncLocations)
+                           std::vector<Inclusion> Inclusions)
     : Preamble(std::move(Preamble)),
       TopLevelDeclIDs(std::move(TopLevelDeclIDs)), Diags(std::move(Diags)),
-      IncLocations(std::move(IncLocations)) {}
+      Inclusions(std::move(Inclusions)) {}
 
 ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
                      std::vector<const Decl *> TopLevelDecls,
-                     std::vector<Diag> Diags, InclusionLocations IncLocations)
+                     std::vector<Diag> Diags, std::vector<Inclusion> Inclusions)
     : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Diags(std::move(Diags)),
       TopLevelDecls(std::move(TopLevelDecls)), PreambleDeclsDeserialized(false),
-      IncLocations(std::move(IncLocations)) {
+      Inclusions(std::move(Inclusions)) {
   assert(this->Clang);
   assert(this->Action);
 }
@@ -448,8 +418,7 @@ CppFile::rebuildPreamble(CompilerInvocation &CI,
     return std::make_shared<PreambleData>(
         std::move(*BuiltPreamble),
         SerializedDeclsCollector.takeTopLevelDeclIDs(),
-        PreambleDiagnostics.take(),
-        SerializedDeclsCollector.takeInclusionLocations());
+        PreambleDiagnostics.take(), SerializedDeclsCollector.takeInclusions());
   } else {
     log("Could not build a preamble for file " + Twine(FileName));
     return nullptr;

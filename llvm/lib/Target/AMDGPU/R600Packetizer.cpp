@@ -236,7 +236,7 @@ public:
         if (ConsideredInstUsesAlreadyWrittenVectorElement &&
             !TII->isVectorOnly(MI) && VLIW5) {
           isTransSlot = true;
-          DEBUG({
+          LLVM_DEBUG({
             dbgs() << "Considering as Trans Inst :";
             MI.dump();
           });
@@ -249,7 +249,7 @@ public:
     // Are the Constants limitations met ?
     CurrentPacketMIs.push_back(&MI);
     if (!TII->fitsConstReadLimitations(CurrentPacketMIs)) {
-      DEBUG({
+      LLVM_DEBUG({
         dbgs() << "Couldn't pack :\n";
         MI.dump();
         dbgs() << "with the following packets :\n";
@@ -266,7 +266,7 @@ public:
     // Is there a BankSwizzle set that meet Read Port limitations ?
     if (!TII->fitsReadPortLimitations(CurrentPacketMIs,
             PV, BS, isTransSlot)) {
-      DEBUG({
+      LLVM_DEBUG({
         dbgs() << "Couldn't pack :\n";
         MI.dump();
         dbgs() << "with the following packets :\n";

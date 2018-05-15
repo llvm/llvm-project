@@ -5133,15 +5133,15 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       assert(isa<GlobalAddressSDNode>(Callee) &&
              "Callee should be an llvm::Function object.");
-      DEBUG(
-        const GlobalValue *GV = cast<GlobalAddressSDNode>(Callee)->getGlobal();
-        const unsigned Width = 80 - strlen("TCO caller: ")
-                                  - strlen(", callee linkage: 0, 0");
-        dbgs() << "TCO caller: "
-               << left_justify(DAG.getMachineFunction().getName(), Width)
-               << ", callee linkage: "
-               << GV->getVisibility() << ", " << GV->getLinkage() << "\n"
-      );
+      LLVM_DEBUG(
+          const GlobalValue *GV =
+              cast<GlobalAddressSDNode>(Callee)->getGlobal();
+          const unsigned Width =
+              80 - strlen("TCO caller: ") - strlen(", callee linkage: 0, 0");
+          dbgs() << "TCO caller: "
+                 << left_justify(DAG.getMachineFunction().getName(), Width)
+                 << ", callee linkage: " << GV->getVisibility() << ", "
+                 << GV->getLinkage() << "\n");
     }
   }
 

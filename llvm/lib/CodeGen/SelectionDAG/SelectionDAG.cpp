@@ -90,10 +90,7 @@ void SelectionDAG::DAGUpdateListener::NodeUpdated(SDNode*) {}
 #define DEBUG_TYPE "selectiondag"
 
 static void NewSDValueDbgMsg(SDValue V, StringRef Msg, SelectionDAG *G) {
-  DEBUG(
-    dbgs() << Msg;
-    V.getNode()->dump(G);
-  );
+  LLVM_DEBUG(dbgs() << Msg; V.getNode()->dump(G););
 }
 
 //===----------------------------------------------------------------------===//
@@ -7410,8 +7407,9 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
                         DV->isIndirect(), DV->getDebugLoc(), DV->getOrder());
         ClonedDVs.push_back(Clone);
         DV->setIsInvalidated();
-        DEBUG(dbgs() << "SALVAGE: Rewriting"; N0.getNode()->dumprFull(this);
-              dbgs() << " into " << *DIExpr << '\n');
+        LLVM_DEBUG(dbgs() << "SALVAGE: Rewriting";
+                   N0.getNode()->dumprFull(this);
+                   dbgs() << " into " << *DIExpr << '\n');
       }
     }
   }

@@ -673,13 +673,13 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
         }
         const AllocaInst *Allocation = MFI->getObjectAllocation(Slot);
         if (Allocation) {
-          DEBUG(dbgs() << "Found a lifetime ");
-          DEBUG(dbgs() << (MI.getOpcode() == TargetOpcode::LIFETIME_START
-                               ? "start"
-                               : "end"));
-          DEBUG(dbgs() << " marker for slot #" << Slot);
-          DEBUG(dbgs() << " with allocation: " << Allocation->getName()
-                       << "\n");
+          LLVM_DEBUG(dbgs() << "Found a lifetime ");
+          LLVM_DEBUG(dbgs() << (MI.getOpcode() == TargetOpcode::LIFETIME_START
+                                    ? "start"
+                                    : "end"));
+          LLVM_DEBUG(dbgs() << " marker for slot #" << Slot);
+          LLVM_DEBUG(dbgs()
+                     << " with allocation: " << Allocation->getName() << "\n");
         }
         Markers.push_back(&MI);
         MarkersFound += 1;
@@ -708,7 +708,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   for (unsigned slot = 0; slot < NumSlot; ++slot)
     if (NumStartLifetimes[slot] > 1 || NumEndLifetimes[slot] > 1)
       ConservativeSlots.set(slot);
-  DEBUG(dumpBV("Conservative slots", ConservativeSlots));
+  LLVM_DEBUG(dumpBV("Conservative slots", ConservativeSlots));
 
   // Step 2: compute begin/end sets for each block
 
@@ -739,14 +739,16 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
           BlockInfo.End.set(Slot);
         } else {
           for (auto Slot : slots) {
-            DEBUG(dbgs() << "Found a use of slot #" << Slot);
-            DEBUG(dbgs() << " at " << printMBBReference(*MBB) << " index ");
-            DEBUG(Indexes->getInstructionIndex(MI).print(dbgs()));
+            LLVM_DEBUG(dbgs() << "Found a use of slot #" << Slot);
+            LLVM_DEBUG(dbgs()
+                       << " at " << printMBBReference(*MBB) << " index ");
+            LLVM_DEBUG(Indexes->getInstructionIndex(MI).print(dbgs()));
             const AllocaInst *Allocation = MFI->getObjectAllocation(Slot);
             if (Allocation) {
-              DEBUG(dbgs() << " with allocation: "<< Allocation->getName());
+              LLVM_DEBUG(dbgs()
+                         << " with allocation: " << Allocation->getName());
             }
-            DEBUG(dbgs() << "\n");
+            LLVM_DEBUG(dbgs() << "\n");
             if (BlockInfo.End.test(Slot)) {
               BlockInfo.End.reset(Slot);
             }
@@ -881,7 +883,7 @@ bool StackColoring::removeAllMarkers() {
   }
   Markers.clear();
 
-  DEBUG(dbgs()<<"Removed "<<Count<<" markers.\n");
+  LLVM_DEBUG(dbgs() << "Removed " << Count << " markers.\n");
   return Count;
 }
 
@@ -895,8 +897,8 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     if (!VI.Var)
       continue;
     if (SlotRemap.count(VI.Slot)) {
-      DEBUG(dbgs() << "Remapping debug info for ["
-                   << cast<DILocalVariable>(VI.Var)->getName() << "].\n");
+      LLVM_DEBUG(dbgs() << "Remapping debug info for ["
+                        << cast<DILocalVariable>(VI.Var)->getName() << "].\n");
       VI.Slot = SlotRemap[VI.Slot];
       FixedDbg++;
     }
@@ -1065,9 +1067,9 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
             SlotRemap.count(H.CatchObj.FrameIndex))
           H.CatchObj.FrameIndex = SlotRemap[H.CatchObj.FrameIndex];
 
-  DEBUG(dbgs()<<"Fixed "<<FixedMemOp<<" machine memory operands.\n");
-  DEBUG(dbgs()<<"Fixed "<<FixedDbg<<" debug locations.\n");
-  DEBUG(dbgs()<<"Fixed "<<FixedInstr<<" machine instructions.\n");
+  LLVM_DEBUG(dbgs() << "Fixed " << FixedMemOp << " machine memory operands.\n");
+  LLVM_DEBUG(dbgs() << "Fixed " << FixedDbg << " debug locations.\n");
+  LLVM_DEBUG(dbgs() << "Fixed " << FixedInstr << " machine instructions.\n");
 }
 
 void StackColoring::removeInvalidSlotRanges() {
@@ -1105,7 +1107,7 @@ void StackColoring::removeInvalidSlotRanges() {
         SlotIndex Index = Indexes->getInstructionIndex(I);
         if (Interval->find(Index) == Interval->end()) {
           Interval->clear();
-          DEBUG(dbgs()<<"Invalidating range #"<<Slot<<"\n");
+          LLVM_DEBUG(dbgs() << "Invalidating range #" << Slot << "\n");
           EscapedAllocas++;
         }
       }
@@ -1129,8 +1131,8 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 }
 
 bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
-  DEBUG(dbgs() << "********** Stack Coloring **********\n"
-               << "********** Function: " << Func.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** Stack Coloring **********\n"
+                    << "********** Function: " << Func.getName() << '\n');
   MF = &Func;
   MFI = &MF->getFrameInfo();
   Indexes = &getAnalysis<SlotIndexes>();
@@ -1157,21 +1159,23 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
   unsigned NumMarkers = collectMarkers(NumSlots);
 
   unsigned TotalSize = 0;
-  DEBUG(dbgs()<<"Found "<<NumMarkers<<" markers and "<<NumSlots<<" slots\n");
-  DEBUG(dbgs()<<"Slot structure:\n");
+  LLVM_DEBUG(dbgs() << "Found " << NumMarkers << " markers and " << NumSlots
+                    << " slots\n");
+  LLVM_DEBUG(dbgs() << "Slot structure:\n");
 
   for (int i=0; i < MFI->getObjectIndexEnd(); ++i) {
-    DEBUG(dbgs()<<"Slot #"<<i<<" - "<<MFI->getObjectSize(i)<<" bytes.\n");
+    LLVM_DEBUG(dbgs() << "Slot #" << i << " - " << MFI->getObjectSize(i)
+                      << " bytes.\n");
     TotalSize += MFI->getObjectSize(i);
   }
 
-  DEBUG(dbgs()<<"Total Stack size: "<<TotalSize<<" bytes\n\n");
+  LLVM_DEBUG(dbgs() << "Total Stack size: " << TotalSize << " bytes\n\n");
 
   // Don't continue because there are not enough lifetime markers, or the
   // stack is too small, or we are told not to optimize the slots.
   if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
       skipFunction(Func.getFunction())) {
-    DEBUG(dbgs()<<"Will not try to merge slots.\n");
+    LLVM_DEBUG(dbgs() << "Will not try to merge slots.\n");
     return removeAllMarkers();
   }
 
@@ -1184,12 +1188,12 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
   // Calculate the liveness of each block.
   calculateLocalLiveness();
-  DEBUG(dbgs() << "Dataflow iterations: " << NumIterations << "\n");
-  DEBUG(dump());
+  LLVM_DEBUG(dbgs() << "Dataflow iterations: " << NumIterations << "\n");
+  LLVM_DEBUG(dump());
 
   // Propagate the liveness information.
   calculateLiveIntervals(NumSlots);
-  DEBUG(dumpIntervals());
+  LLVM_DEBUG(dumpIntervals());
 
   // Search for allocas which are used outside of the declared lifetime
   // markers.
@@ -1260,8 +1264,8 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
           SlotRemap[SecondSlot] = FirstSlot;
           SortedSlots[J] = -1;
-          DEBUG(dbgs()<<"Merging #"<<FirstSlot<<" and slots #"<<
-                SecondSlot<<" together.\n");
+          LLVM_DEBUG(dbgs() << "Merging #" << FirstSlot << " and slots #"
+                            << SecondSlot << " together.\n");
           unsigned MaxAlignment = std::max(MFI->getObjectAlignment(FirstSlot),
                                            MFI->getObjectAlignment(SecondSlot));
 
@@ -1281,8 +1285,8 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
   // Record statistics.
   StackSpaceSaved += ReducedSize;
   StackSlotMerged += RemovedSlots;
-  DEBUG(dbgs()<<"Merge "<<RemovedSlots<<" slots. Saved "<<
-        ReducedSize<<" bytes\n");
+  LLVM_DEBUG(dbgs() << "Merge " << RemovedSlots << " slots. Saved "
+                    << ReducedSize << " bytes\n");
 
   // Scan the entire function and update all machine operands that use frame
   // indices to use the remapped frame index.

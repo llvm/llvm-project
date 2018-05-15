@@ -36,10 +36,8 @@ static cl::opt<unsigned long long>
          cl::desc("Seed for the random number generator"), cl::init(0));
 
 RandomNumberGenerator::RandomNumberGenerator(StringRef Salt) {
-  DEBUG(
-    if (Seed == 0)
-      dbgs() << "Warning! Using unseeded random number generator.\n"
-  );
+  LLVM_DEBUG(if (Seed == 0) dbgs()
+             << "Warning! Using unseeded random number generator.\n");
 
   // Combine seed and salts using std::seed_seq.
   // Data: Seed-low, Seed-high, Salt

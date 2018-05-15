@@ -1287,13 +1287,11 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       StrOpc = RPI.isPaired() ? AArch64::STPXi : AArch64::STRXui;
     else
       StrOpc = RPI.isPaired() ? AArch64::STPDi : AArch64::STRDui;
-    DEBUG(dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
-          if (RPI.isPaired())
-            dbgs() << ", " << printReg(Reg2, TRI);
-          dbgs() << ") -> fi#(" << RPI.FrameIdx;
-          if (RPI.isPaired())
-            dbgs() << ", " << RPI.FrameIdx+1;
-          dbgs() << ")\n");
+    LLVM_DEBUG(dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
+               if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
+               dbgs() << ") -> fi#(" << RPI.FrameIdx;
+               if (RPI.isPaired()) dbgs() << ", " << RPI.FrameIdx + 1;
+               dbgs() << ")\n");
 
     MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
     if (!MRI.isReserved(Reg1))
@@ -1350,13 +1348,11 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       LdrOpc = RPI.isPaired() ? AArch64::LDPXi : AArch64::LDRXui;
     else
       LdrOpc = RPI.isPaired() ? AArch64::LDPDi : AArch64::LDRDui;
-    DEBUG(dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
-          if (RPI.isPaired())
-            dbgs() << ", " << printReg(Reg2, TRI);
-          dbgs() << ") -> fi#(" << RPI.FrameIdx;
-          if (RPI.isPaired())
-            dbgs() << ", " << RPI.FrameIdx+1;
-          dbgs() << ")\n");
+    LLVM_DEBUG(dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
+               if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
+               dbgs() << ") -> fi#(" << RPI.FrameIdx;
+               if (RPI.isPaired()) dbgs() << ", " << RPI.FrameIdx + 1;
+               dbgs() << ")\n");
 
     MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(LdrOpc));
     if (RPI.isPaired()) {
@@ -1465,10 +1461,11 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     }
   }
 
-  DEBUG(dbgs() << "*** determineCalleeSaves\nUsed CSRs:";
-        for (unsigned Reg : SavedRegs.set_bits())
-          dbgs() << ' ' << printReg(Reg, RegInfo);
-        dbgs() << "\n";);
+  LLVM_DEBUG(dbgs() << "*** determineCalleeSaves\nUsed CSRs:";
+             for (unsigned Reg
+                  : SavedRegs.set_bits()) dbgs()
+             << ' ' << printReg(Reg, RegInfo);
+             dbgs() << "\n";);
 
   // If any callee-saved registers are used, the frame cannot be eliminated.
   unsigned NumRegsSpilled = SavedRegs.count();
@@ -1477,7 +1474,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // The CSR spill slots have not been allocated yet, so estimateStackSize
   // won't include them.
   unsigned CFSize = MFI.estimateStackSize(MF) + 8 * NumRegsSpilled;
-  DEBUG(dbgs() << "Estimated stack frame size: " << CFSize << " bytes.\n");
+  LLVM_DEBUG(dbgs() << "Estimated stack frame size: " << CFSize << " bytes.\n");
   unsigned EstimatedStackSizeLimit = estimateRSStackSizeLimit(MF);
   bool BigStack = (CFSize > EstimatedStackSizeLimit);
   if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF))
@@ -1491,8 +1488,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // here.
   if (BigStack) {
     if (!ExtraCSSpill && UnspilledCSGPR != AArch64::NoRegister) {
-      DEBUG(dbgs() << "Spilling " << printReg(UnspilledCSGPR, RegInfo)
-                   << " to get a scratch register.\n");
+      LLVM_DEBUG(dbgs() << "Spilling " << printReg(UnspilledCSGPR, RegInfo)
+                        << " to get a scratch register.\n");
       SavedRegs.set(UnspilledCSGPR);
       // MachO's compact unwind format relies on all registers being stored in
       // pairs, so if we need to spill one extra for BigStack, then we need to
@@ -1512,8 +1509,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       unsigned Align = TRI->getSpillAlignment(RC);
       int FI = MFI.CreateStackObject(Size, Align, false);
       RS->addScavengingFrameIndex(FI);
-      DEBUG(dbgs() << "No available CS registers, allocated fi#" << FI
-                   << " as the emergency spill slot.\n");
+      LLVM_DEBUG(dbgs() << "No available CS registers, allocated fi#" << FI
+                        << " as the emergency spill slot.\n");
     }
   }
 

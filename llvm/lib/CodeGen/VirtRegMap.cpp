@@ -242,10 +242,9 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   Indexes = &getAnalysis<SlotIndexes>();
   LIS = &getAnalysis<LiveIntervals>();
   VRM = &getAnalysis<VirtRegMap>();
-  DEBUG(dbgs() << "********** REWRITE VIRTUAL REGISTERS **********\n"
-               << "********** Function: "
-               << MF->getName() << '\n');
-  DEBUG(VRM->dump());
+  LLVM_DEBUG(dbgs() << "********** REWRITE VIRTUAL REGISTERS **********\n"
+                    << "********** Function: " << MF->getName() << '\n');
+  LLVM_DEBUG(VRM->dump());
 
   // Add kill flags while we still have virtual registers.
   LIS->addKillFlags(VRM);
@@ -377,7 +376,7 @@ bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
 void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
   if (!MI.isIdentityCopy())
     return;
-  DEBUG(dbgs() << "Identity copy: " << MI);
+  LLVM_DEBUG(dbgs() << "Identity copy: " << MI);
   ++NumIdCopies;
 
   // Copies like:
@@ -388,14 +387,14 @@ void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
   // instruction to maintain this information.
   if (MI.getOperand(0).isUndef() || MI.getNumOperands() > 2) {
     MI.setDesc(TII->get(TargetOpcode::KILL));
-    DEBUG(dbgs() << "  replace by: " << MI);
+    LLVM_DEBUG(dbgs() << "  replace by: " << MI);
     return;
   }
 
   if (Indexes)
     Indexes->removeSingleMachineInstrFromMaps(MI);
   MI.eraseFromBundle();
-  DEBUG(dbgs() << "  deleted.\n");
+  LLVM_DEBUG(dbgs() << "  deleted.\n");
 }
 
 /// The liverange splitting logic sometimes produces bundles of copies when
@@ -462,7 +461,7 @@ void VirtRegRewriter::rewrite() {
 
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {
-    DEBUG(MBBI->print(dbgs(), Indexes));
+    LLVM_DEBUG(MBBI->print(dbgs(), Indexes));
     for (MachineBasicBlock::instr_iterator
            MII = MBBI->instr_begin(), MIE = MBBI->instr_end(); MII != MIE;) {
       MachineInstr *MI = &*MII;
@@ -545,7 +544,7 @@ void VirtRegRewriter::rewrite() {
       while (!SuperDefs.empty())
         MI->addRegisterDefined(SuperDefs.pop_back_val(), TRI);
 
-      DEBUG(dbgs() << "> " << *MI);
+      LLVM_DEBUG(dbgs() << "> " << *MI);
 
       expandCopyBundle(*MI);
 

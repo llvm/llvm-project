@@ -87,8 +87,9 @@ void DIEAbbrev::Emit(const AsmPrinter *AP) const {
     // easily, which helps track down where it came from.
     if (!dwarf::isValidFormForVersion(AttrData.getForm(),
                                       AP->getDwarfVersion())) {
-      DEBUG(dbgs() << "Invalid form " << format("0x%x", AttrData.getForm())
-                   << " for DWARF version " << AP->getDwarfVersion() << "\n");
+      LLVM_DEBUG(dbgs() << "Invalid form " << format("0x%x", AttrData.getForm())
+                        << " for DWARF version " << AP->getDwarfVersion()
+                        << "\n");
       llvm_unreachable("Invalid form for specified DWARF version");
     }
 #endif

@@ -69,12 +69,12 @@ ScoreboardHazardRecognizer::ScoreboardHazardRecognizer(
 
   // If MaxLookAhead is not set above, then we are not enabled.
   if (!isEnabled())
-    DEBUG(dbgs() << "Disabled scoreboard hazard recognizer\n");
+    LLVM_DEBUG(dbgs() << "Disabled scoreboard hazard recognizer\n");
   else {
     // A nonempty itinerary must have a SchedModel.
     IssueWidth = ItinData->SchedModel.IssueWidth;
-    DEBUG(dbgs() << "Using scoreboard hazard recognizer: Depth = "
-          << ScoreboardDepth << '\n');
+    LLVM_DEBUG(dbgs() << "Using scoreboard hazard recognizer: Depth = "
+                      << ScoreboardDepth << '\n');
   }
 }
 
@@ -156,9 +156,9 @@ ScoreboardHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
       }
 
       if (!freeUnits) {
-        DEBUG(dbgs() << "*** Hazard in cycle +" << StageCycle << ", ");
-        DEBUG(dbgs() << "SU(" << SU->NodeNum << "): ");
-        DEBUG(DAG->dumpNode(SU));
+        LLVM_DEBUG(dbgs() << "*** Hazard in cycle +" << StageCycle << ", ");
+        LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << "): ");
+        LLVM_DEBUG(DAG->dumpNode(SU));
         return Hazard;
       }
     }
@@ -224,8 +224,8 @@ void ScoreboardHazardRecognizer::EmitInstruction(SUnit *SU) {
     cycle += IS->getNextCycles();
   }
 
-  DEBUG(ReservedScoreboard.dump());
-  DEBUG(RequiredScoreboard.dump());
+  LLVM_DEBUG(ReservedScoreboard.dump());
+  LLVM_DEBUG(RequiredScoreboard.dump());
 }
 
 void ScoreboardHazardRecognizer::AdvanceCycle() {

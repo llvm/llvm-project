@@ -653,13 +653,13 @@ void InferAddressSpaces::inferAddressSpaces(
 
     // Tries to update the address space of the stack top according to the
     // address spaces of its operands.
-    DEBUG(dbgs() << "Updating the address space of\n  " << *V << '\n');
+    LLVM_DEBUG(dbgs() << "Updating the address space of\n  " << *V << '\n');
     Optional<unsigned> NewAS = updateAddressSpace(*V, *InferredAddrSpace);
     if (!NewAS.hasValue())
       continue;
     // If any updates are made, grabs its users to the worklist because
     // their address spaces can also be possibly updated.
-    DEBUG(dbgs() << "  to " << NewAS.getValue() << '\n');
+    LLVM_DEBUG(dbgs() << "  to " << NewAS.getValue() << '\n');
     (*InferredAddrSpace)[V] = NewAS.getValue();
 
     for (Value *User : V->users()) {
@@ -901,15 +901,15 @@ bool InferAddressSpaces::rewriteWithNewAddressSpaces(
     if (NewV == nullptr)
       continue;
 
-    DEBUG(dbgs() << "Replacing the uses of " << *V
-                 << "\n  with\n  " << *NewV << '\n');
+    LLVM_DEBUG(dbgs() << "Replacing the uses of " << *V << "\n  with\n  "
+                      << *NewV << '\n');
 
     if (Constant *C = dyn_cast<Constant>(V)) {
       Constant *Replace = ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),
                                                          C->getType());
       if (C != Replace) {
-        DEBUG(dbgs() << "Inserting replacement const cast: "
-              << Replace << ": " << *Replace << '\n');
+        LLVM_DEBUG(dbgs() << "Inserting replacement const cast: " << Replace
+                          << ": " << *Replace << '\n');
         C->replaceAllUsesWith(Replace);
         V = Replace;
       }

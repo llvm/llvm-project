@@ -76,25 +76,25 @@ struct BCEAtom {
 BCEAtom visitICmpLoadOperand(Value *const Val) {
   BCEAtom Result;
   if (auto *const LoadI = dyn_cast<LoadInst>(Val)) {
-    DEBUG(dbgs() << "load\n");
+    LLVM_DEBUG(dbgs() << "load\n");
     if (LoadI->isUsedOutsideOfBlock(LoadI->getParent())) {
-      DEBUG(dbgs() << "used outside of block\n");
+      LLVM_DEBUG(dbgs() << "used outside of block\n");
       return {};
     }
     if (LoadI->isVolatile()) {
-      DEBUG(dbgs() << "volatile\n");
+      LLVM_DEBUG(dbgs() << "volatile\n");
       return {};
     }
     Value *const Addr = LoadI->getOperand(0);
     if (auto *const GEP = dyn_cast<GetElementPtrInst>(Addr)) {
-      DEBUG(dbgs() << "GEP\n");
+      LLVM_DEBUG(dbgs() << "GEP\n");
       if (LoadI->isUsedOutsideOfBlock(LoadI->getParent())) {
-        DEBUG(dbgs() << "used outside of block\n");
+        LLVM_DEBUG(dbgs() << "used outside of block\n");
         return {};
       }
       const auto &DL = GEP->getModule()->getDataLayout();
       if (!isDereferenceablePointer(GEP, DL)) {
-        DEBUG(dbgs() << "not dereferenceable\n");
+        LLVM_DEBUG(dbgs() << "not dereferenceable\n");
         // We need to make sure that we can do comparison in any order, so we
         // require memory to be unconditionnally dereferencable.
         return {};
@@ -251,13 +251,13 @@ BCECmpBlock visitICmp(const ICmpInst *const CmpI,
   // If there are any other uses of the comparison, we cannot merge it with
   // other comparisons as we would create an orphan use of the value.
   if (!CmpI->hasOneUse()) {
-    DEBUG(dbgs() << "cmp has several uses\n");
+    LLVM_DEBUG(dbgs() << "cmp has several uses\n");
     return {};
   }
   if (CmpI->getPredicate() == ExpectedPredicate) {
-    DEBUG(dbgs() << "cmp "
-                 << (ExpectedPredicate == ICmpInst::ICMP_EQ ? "eq" : "ne")
-                 << "\n");
+    LLVM_DEBUG(dbgs() << "cmp "
+                      << (ExpectedPredicate == ICmpInst::ICMP_EQ ? "eq" : "ne")
+                      << "\n");
     auto Lhs = visitICmpLoadOperand(CmpI->getOperand(0));
     if (!Lhs.Base()) return {};
     auto Rhs = visitICmpLoadOperand(CmpI->getOperand(1));
@@ -275,7 +275,7 @@ BCECmpBlock visitCmpBlock(Value *const Val, BasicBlock *const Block,
   if (Block->empty()) return {};
   auto *const BranchI = dyn_cast<BranchInst>(Block->getTerminator());
   if (!BranchI) return {};
-  DEBUG(dbgs() << "branch\n");
+  LLVM_DEBUG(dbgs() << "branch\n");
   if (BranchI->isUnconditional()) {
     // In this case, we expect an incoming value which is the result of the
     // comparison. This is the last link in the chain of comparisons (note
@@ -283,7 +283,7 @@ BCECmpBlock visitCmpBlock(Value *const Val, BasicBlock *const Block,
     // can be reordered).
     auto *const CmpI = dyn_cast<ICmpInst>(Val);
     if (!CmpI) return {};
-    DEBUG(dbgs() << "icmp\n");
+    LLVM_DEBUG(dbgs() << "icmp\n");
     auto Result = visitICmp(CmpI, ICmpInst::ICMP_EQ);
     Result.CmpI = CmpI;
     Result.BranchI = BranchI;
@@ -292,12 +292,12 @@ BCECmpBlock visitCmpBlock(Value *const Val, BasicBlock *const Block,
     // In this case, we expect a constant incoming value (the comparison is
     // chained).
     const auto *const Const = dyn_cast<ConstantInt>(Val);
-    DEBUG(dbgs() << "const\n");
+    LLVM_DEBUG(dbgs() << "const\n");
     if (!Const->isZero()) return {};
-    DEBUG(dbgs() << "false\n");
+    LLVM_DEBUG(dbgs() << "false\n");
     auto *const CmpI = dyn_cast<ICmpInst>(BranchI->getCondition());
     if (!CmpI) return {};
-    DEBUG(dbgs() << "icmp\n");
+    LLVM_DEBUG(dbgs() << "icmp\n");
     assert(BranchI->getNumSuccessors() == 2 && "expecting a cond branch");
     BasicBlock *const FalseBlock = BranchI->getSuccessor(1);
     auto Result = visitICmp(
@@ -311,12 +311,13 @@ BCECmpBlock visitCmpBlock(Value *const Val, BasicBlock *const Block,
 
 static inline void enqueueBlock(std::vector<BCECmpBlock> &Comparisons,
                                 BCECmpBlock &Comparison) {
-  DEBUG(dbgs() << "Block '" << Comparison.BB->getName() << "': Found cmp of "
-               << Comparison.SizeBits() << " bits between "
-               << Comparison.Lhs().Base() << " + " << Comparison.Lhs().Offset
-               << " and " << Comparison.Rhs().Base() << " + "
-               << Comparison.Rhs().Offset << "\n");
-  DEBUG(dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "Block '" << Comparison.BB->getName()
+                    << "': Found cmp of " << Comparison.SizeBits()
+                    << " bits between " << Comparison.Lhs().Base() << " + "
+                    << Comparison.Lhs().Offset << " and "
+                    << Comparison.Rhs().Base() << " + "
+                    << Comparison.Rhs().Offset << "\n");
+  LLVM_DEBUG(dbgs() << "\n");
   Comparisons.push_back(Comparison);
 }
 
@@ -367,12 +368,12 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi)
                                            Block, Phi.getParent());
     Comparison.BB = Block;
     if (!Comparison.IsValid()) {
-      DEBUG(dbgs() << "chain with invalid BCECmpBlock, no merge.\n");
+      LLVM_DEBUG(dbgs() << "chain with invalid BCECmpBlock, no merge.\n");
       return;
     }
     if (Comparison.doesOtherWork()) {
-      DEBUG(dbgs() << "block '" << Comparison.BB->getName()
-                   << "' does extra work besides compare\n");
+      LLVM_DEBUG(dbgs() << "block '" << Comparison.BB->getName()
+                        << "' does extra work besides compare\n");
       if (Comparisons.empty()) {
         // This is the initial block in the chain, in case this block does other
         // work, we can try to split the block and move the irrelevant
@@ -388,13 +389,15 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi)
         //
         // NOTE: we only handle block with single predecessor for now.
         if (Comparison.canSplit()) {
-          DEBUG(dbgs() << "Split initial block '" << Comparison.BB->getName()
-                       << "' that does extra work besides compare\n");
+          LLVM_DEBUG(dbgs()
+                     << "Split initial block '" << Comparison.BB->getName()
+                     << "' that does extra work besides compare\n");
           Comparison.RequireSplit = true;
           enqueueBlock(Comparisons, Comparison);
         } else {
-          DEBUG(dbgs() << "ignoring initial block '" << Comparison.BB->getName()
-                       << "' that does extra work besides compare\n");
+          LLVM_DEBUG(dbgs()
+                     << "ignoring initial block '" << Comparison.BB->getName()
+                     << "' that does extra work besides compare\n");
         }
         continue;
       }
@@ -428,7 +431,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi)
 
   // It is possible we have no suitable comparison to merge.
   if (Comparisons.empty()) {
-    DEBUG(dbgs() << "chain with no BCE basic blocks, no merge\n");
+    LLVM_DEBUG(dbgs() << "chain with no BCE basic blocks, no merge\n");
     return;
   }
   EntryBlock_ = Comparisons[0].BB;
@@ -549,7 +552,7 @@ void BCECmpChain::mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
     if (C != Comparisons.end())
       C->split(EntryBlock_);
 
-    DEBUG(dbgs() << "Merging " << Comparisons.size() << " comparisons\n");
+    LLVM_DEBUG(dbgs() << "Merging " << Comparisons.size() << " comparisons\n");
     const auto TotalSize =
         std::accumulate(Comparisons.begin(), Comparisons.end(), 0,
                         [](int Size, const BCECmpBlock &C) {
@@ -594,17 +597,17 @@ void BCECmpChain::mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
   } else {
     assert(Comparisons.size() == 1);
     // There are no blocks to merge, but we still need to update the branches.
-    DEBUG(dbgs() << "Only one comparison, updating branches\n");
+    LLVM_DEBUG(dbgs() << "Only one comparison, updating branches\n");
     if (NextBBInChain) {
       if (FirstComparison.BranchI->isConditional()) {
-        DEBUG(dbgs() << "conditional -> conditional\n");
+        LLVM_DEBUG(dbgs() << "conditional -> conditional\n");
         // Just update the "true" target, the "false" target should already be
         // the phi block.
         assert(FirstComparison.BranchI->getSuccessor(1) == Phi.getParent());
         FirstComparison.BranchI->setSuccessor(0, NextBBInChain);
         Phi.addIncoming(ConstantInt::getFalse(Context), BB);
       } else {
-        DEBUG(dbgs() << "unconditional -> conditional\n");
+        LLVM_DEBUG(dbgs() << "unconditional -> conditional\n");
         // Replace the unconditional branch by a conditional one.
         FirstComparison.BranchI->eraseFromParent();
         IRBuilder<> Builder(BB);
@@ -614,14 +617,14 @@ void BCECmpChain::mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
       }
     } else {
       if (FirstComparison.BranchI->isConditional()) {
-        DEBUG(dbgs() << "conditional -> unconditional\n");
+        LLVM_DEBUG(dbgs() << "conditional -> unconditional\n");
         // Replace the conditional branch by an unconditional one.
         FirstComparison.BranchI->eraseFromParent();
         IRBuilder<> Builder(BB);
         Builder.CreateBr(Phi.getParent());
         Phi.addIncoming(FirstComparison.CmpI, BB);
       } else {
-        DEBUG(dbgs() << "unconditional -> unconditional\n");
+        LLVM_DEBUG(dbgs() << "unconditional -> unconditional\n");
         Phi.addIncoming(FirstComparison.CmpI, BB);
       }
     }
@@ -639,22 +642,22 @@ std::vector<BasicBlock *> getOrderedBlocks(PHINode &Phi,
     if (CurBlock->hasAddressTaken()) {
       // Somebody is jumping to the block through an address, all bets are
       // off.
-      DEBUG(dbgs() << "skip: block " << BlockIndex
-                   << " has its address taken\n");
+      LLVM_DEBUG(dbgs() << "skip: block " << BlockIndex
+                        << " has its address taken\n");
       return {};
     }
     Blocks[BlockIndex] = CurBlock;
     auto *SinglePredecessor = CurBlock->getSinglePredecessor();
     if (!SinglePredecessor) {
       // The block has two or more predecessors.
-      DEBUG(dbgs() << "skip: block " << BlockIndex
-                   << " has two or more predecessors\n");
+      LLVM_DEBUG(dbgs() << "skip: block " << BlockIndex
+                        << " has two or more predecessors\n");
       return {};
     }
     if (Phi.getBasicBlockIndex(SinglePredecessor) < 0) {
       // The block does not link back to the phi.
-      DEBUG(dbgs() << "skip: block " << BlockIndex
-                   << " does not link back to the phi\n");
+      LLVM_DEBUG(dbgs() << "skip: block " << BlockIndex
+                        << " does not link back to the phi\n");
       return {};
     }
     CurBlock = SinglePredecessor;
@@ -664,9 +667,9 @@ std::vector<BasicBlock *> getOrderedBlocks(PHINode &Phi,
 }
 
 bool processPhi(PHINode &Phi, const TargetLibraryInfo *const TLI) {
-  DEBUG(dbgs() << "processPhi()\n");
+  LLVM_DEBUG(dbgs() << "processPhi()\n");
   if (Phi.getNumIncomingValues() <= 1) {
-    DEBUG(dbgs() << "skip: only one incoming value in phi\n");
+    LLVM_DEBUG(dbgs() << "skip: only one incoming value in phi\n");
     return false;
   }
   // We are looking for something that has the following structure:
@@ -690,7 +693,7 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo *const TLI) {
     if (isa<ConstantInt>(Phi.getIncomingValue(I))) continue;
     if (LastBlock) {
       // There are several non-constant values.
-      DEBUG(dbgs() << "skip: several non-constant values\n");
+      LLVM_DEBUG(dbgs() << "skip: several non-constant values\n");
       return false;
     }
     if (!isa<ICmpInst>(Phi.getIncomingValue(I)) ||
@@ -701,7 +704,7 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo *const TLI) {
       // producing block more than once.
       //
       // This is an uncommon case, so we bail.
-      DEBUG(
+      LLVM_DEBUG(
           dbgs()
           << "skip: non-constant value not from cmp or not from last block.\n");
       return false;
@@ -710,11 +713,11 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo *const TLI) {
   }
   if (!LastBlock) {
     // There is no non-constant block.
-    DEBUG(dbgs() << "skip: no non-constant block\n");
+    LLVM_DEBUG(dbgs() << "skip: no non-constant block\n");
     return false;
   }
   if (LastBlock->getSingleSuccessor() != Phi.getParent()) {
-    DEBUG(dbgs() << "skip: last block non-phi successor\n");
+    LLVM_DEBUG(dbgs() << "skip: last block non-phi successor\n");
     return false;
   }
 
@@ -724,7 +727,7 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo *const TLI) {
   BCECmpChain CmpChain(Blocks, Phi);
 
   if (CmpChain.size() < 2) {
-    DEBUG(dbgs() << "skip: only one compare block\n");
+    LLVM_DEBUG(dbgs() << "skip: only one compare block\n");
     return false;
   }
 
@@ -759,7 +762,7 @@ class MergeICmps : public FunctionPass {
 
 PreservedAnalyses MergeICmps::runImpl(Function &F, const TargetLibraryInfo *TLI,
                                       const TargetTransformInfo *TTI) {
-  DEBUG(dbgs() << "MergeICmpsPass: " << F.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "MergeICmpsPass: " << F.getName() << "\n");
 
   // We only try merging comparisons if the target wants to expand memcmp later.
   // The rationale is to avoid turning small chains into memcmp calls.

@@ -976,9 +976,9 @@ void ThinLTOCodeGenerator::run() {
 
         {
           auto ErrOrBuffer = CacheEntry.tryLoadingBuffer();
-          DEBUG(dbgs() << "Cache " << (ErrOrBuffer ? "hit" : "miss") << " '"
-                       << CacheEntryPath << "' for buffer " << count << " "
-                       << ModuleIdentifier << "\n");
+          LLVM_DEBUG(dbgs() << "Cache " << (ErrOrBuffer ? "hit" : "miss")
+                            << " '" << CacheEntryPath << "' for buffer "
+                            << count << " " << ModuleIdentifier << "\n");
 
           if (ErrOrBuffer) {
             // Cache Hit!

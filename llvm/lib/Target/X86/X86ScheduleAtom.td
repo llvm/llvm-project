@@ -144,9 +144,10 @@ defm : AtomWriteResPair<WriteShift, [AtomPort0], [AtomPort0]>;
 // Loads, stores, and moves, not folded with other operations.
 ////////////////////////////////////////////////////////////////////////////////
 
-def : WriteRes<WriteLoad,  [AtomPort0]>;
-def : WriteRes<WriteStore, [AtomPort0]>;
-def : WriteRes<WriteMove,  [AtomPort01]>;
+def : WriteRes<WriteLoad,    [AtomPort0]>;
+def : WriteRes<WriteStore,   [AtomPort0]>;
+def : WriteRes<WriteStoreNT, [AtomPort0]>;
+def : WriteRes<WriteMove,    [AtomPort01]>;
 
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
@@ -190,6 +191,9 @@ def  : WriteRes<WriteFMaskedLoadY,  [AtomPort0]>;
 def  : WriteRes<WriteFStore,        [AtomPort0]>;
 def  : WriteRes<WriteFStoreX,       [AtomPort0]>;
 def  : WriteRes<WriteFStoreY,       [AtomPort0]>;
+def  : WriteRes<WriteFStoreNT,      [AtomPort0]>;
+def  : WriteRes<WriteFStoreNTX,     [AtomPort0]>;
+def  : WriteRes<WriteFStoreNTY,     [AtomPort0]>;
 def  : WriteRes<WriteFMaskedStore,  [AtomPort0]>;
 def  : WriteRes<WriteFMaskedStoreY, [AtomPort0]>;
 
@@ -281,12 +285,16 @@ def  : WriteRes<WriteCvtF2FSt, [AtomPort0]>; // NOTE: Doesn't exist on Atom.
 def  : WriteRes<WriteVecLoad,         [AtomPort0]>;
 def  : WriteRes<WriteVecLoadX,        [AtomPort0]>;
 def  : WriteRes<WriteVecLoadY,        [AtomPort0]>;
+def  : WriteRes<WriteVecLoadNT,       [AtomPort0]>;
+def  : WriteRes<WriteVecLoadNTY,      [AtomPort0]>;
 def  : WriteRes<WriteVecMaskedLoad,   [AtomPort0]>;
 def  : WriteRes<WriteVecMaskedLoadY,  [AtomPort0]>;
 
 def  : WriteRes<WriteVecStore,        [AtomPort0]>;
 def  : WriteRes<WriteVecStoreX,       [AtomPort0]>;
 def  : WriteRes<WriteVecStoreY,       [AtomPort0]>;
+def  : WriteRes<WriteVecStoreNT,      [AtomPort0]>;
+def  : WriteRes<WriteVecStoreNTY,     [AtomPort0]>;
 def  : WriteRes<WriteVecMaskedStore,  [AtomPort0]>;
 def  : WriteRes<WriteVecMaskedStoreY, [AtomPort0]>;
 

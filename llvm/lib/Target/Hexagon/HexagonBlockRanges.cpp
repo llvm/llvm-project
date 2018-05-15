@@ -422,10 +422,10 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
 HexagonBlockRanges::RegToRangeMap HexagonBlockRanges::computeLiveMap(
       InstrIndexMap &IndexMap) {
   RegToRangeMap LiveMap;
-  DEBUG(dbgs() << __func__ << ": index map\n" << IndexMap << '\n');
+  LLVM_DEBUG(dbgs() << __func__ << ": index map\n" << IndexMap << '\n');
   computeInitialLiveRanges(IndexMap, LiveMap);
-  DEBUG(dbgs() << __func__ << ": live map\n"
-               << PrintRangeMap(LiveMap, TRI) << '\n');
+  LLVM_DEBUG(dbgs() << __func__ << ": live map\n"
+                    << PrintRangeMap(LiveMap, TRI) << '\n');
   return LiveMap;
 }
 
@@ -486,8 +486,8 @@ HexagonBlockRanges::RegToRangeMap HexagonBlockRanges::computeDeadMap(
     if (TargetRegisterInfo::isVirtualRegister(P.first.Reg))
       addDeadRanges(P.first);
 
-  DEBUG(dbgs() << __func__ << ": dead map\n"
-               << PrintRangeMap(DeadMap, TRI) << '\n');
+  LLVM_DEBUG(dbgs() << __func__ << ": dead map\n"
+                    << PrintRangeMap(DeadMap, TRI) << '\n');
   return DeadMap;
 }
 

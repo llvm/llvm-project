@@ -26,17 +26,25 @@
 # CHECK-EL: bc1t       1332             # encoding: [0xa0,0x43,0x9a,0x02]
 # CHECK-EL: nop                         # encoding: [0x00,0x00,0x00,0x00]
 # CHECK-EL: ceil.w.s   $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x1b]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} CEIL_W_S_MM
 # CHECK-EL: ceil.w.d   $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x5b]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} CEIL_W_MM
 # CHECK-EL: cvt.w.s    $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x09]
 # CHECK-EL: cvt.w.d    $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x49]
 # CHECK-EL: floor.w.s  $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x0b]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} FLOOR_W_S_MM
 # CHECK-EL: floor.w.d  $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x4b]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} FLOOR_W_MM
 # CHECK-EL: round.w.s  $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x3b]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} ROUND_W_S_MM
 # CHECK-EL: round.w.d  $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x7b]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} ROUND_W_MM
 # CHECK-EL: sqrt.s     $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x0a]
 # CHECK-EL: sqrt.d     $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x4a]
 # CHECK-EL: trunc.w.s  $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x2b]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} TRUNC_W_S_MM
 # CHECK-EL: trunc.w.d  $f6, $f8         # encoding: [0xc8,0x54,0x3b,0x6b]
+# CHECK-EL-NEXT:                        # <MCInst #{{[0-9]+}} TRUNC_W_MM
 # CHECK-EL: abs.s      $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x03]
 # CHECK-EL: abs.d      $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x23]
 # CHECK-EL: mov.s      $f6, $f8         # encoding: [0xc8,0x54,0x7b,0x00]
@@ -101,17 +109,25 @@
 # CHECK-EB: bc1t  1332                  # encoding: [0x43,0xa0,0x02,0x9a]
 # CHECK-EB: nop                         # encoding: [0x00,0x00,0x00,0x00]
 # CHECK-EB: ceil.w.s  $f6, $f8          # encoding: [0x54,0xc8,0x1b,0x3b]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} CEIL_W_S_MM
 # CHECK-EB: ceil.w.d  $f6, $f8          # encoding: [0x54,0xc8,0x5b,0x3b]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} CEIL_W_MM
 # CHECK-EB: cvt.w.s   $f6, $f8          # encoding: [0x54,0xc8,0x09,0x3b]
 # CHECK-EB: cvt.w.d   $f6, $f8          # encoding: [0x54,0xc8,0x49,0x3b]
 # CHECK-EB: floor.w.s $f6, $f8          # encoding: [0x54,0xc8,0x0b,0x3b]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} FLOOR_W_S_MM
 # CHECK-EB: floor.w.d $f6, $f8          # encoding: [0x54,0xc8,0x4b,0x3b]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} FLOOR_W_MM
 # CHECK-EB: round.w.s $f6, $f8          # encoding: [0x54,0xc8,0x3b,0x3b]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} ROUND_W_S_MM
 # CHECK-EB: round.w.d $f6, $f8          # encoding: [0x54,0xc8,0x7b,0x3b]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} ROUND_W_MM
 # CHECK-EB: sqrt.s    $f6, $f8          # encoding: [0x54,0xc8,0x0a,0x3b]
 # CHECK-EB: sqrt.d    $f6, $f8          # encoding: [0x54,0xc8,0x4a,0x3b]
 # CHECK-EB: trunc.w.s $f6, $f8          # encoding: [0x54,0xc8,0x2b,0x3b]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} TRUNC_W_S_MM
 # CHECK-EB: trunc.w.d $f6, $f8          # encoding: [0x54,0xc8,0x6b,0x3b]
+# CHECK-EB-NEXT:                        # <MCInst #{{[0-9]+}} TRUNC_W_MM
 # CHECK-EB: abs.s $f6, $f8              # encoding: [0x54,0xc8,0x03,0x7b]
 # CHECK-EB: abs.d $f6, $f8              # encoding: [0x54,0xc8,0x23,0x7b]
 # CHECK-EB: mov.s $f6, $f8              # encoding: [0x54,0xc8,0x00,0x7b]

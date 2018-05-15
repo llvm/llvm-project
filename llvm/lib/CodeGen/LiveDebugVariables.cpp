@@ -511,7 +511,7 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   if (MI.getNumOperands() != 4 ||
       !(MI.getOperand(1).isReg() || MI.getOperand(1).isImm()) ||
       !MI.getOperand(2).isMetadata()) {
-    DEBUG(dbgs() << "Can't handle " << MI);
+    LLVM_DEBUG(dbgs() << "Can't handle " << MI);
     return false;
   }
 
@@ -530,8 +530,8 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
       // The DBG_VALUE is described by a virtual register that does not have a
       // live interval. Discard the DBG_VALUE.
       Discard = true;
-      DEBUG(dbgs() << "Discarding debug info (no LIS interval): "
-            << Idx << " " << MI);
+      LLVM_DEBUG(dbgs() << "Discarding debug info (no LIS interval): " << Idx
+                        << " " << MI);
     } else {
       // The DBG_VALUE is only valid if either Reg is live out from Idx, or Reg
       // is defined dead at Idx (where Idx is the slot index for the instruction
@@ -542,8 +542,8 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
         // We have found a DBG_VALUE with the value in a virtual register that
         // is not live. Discard the DBG_VALUE.
         Discard = true;
-        DEBUG(dbgs() << "Discarding debug info (reg not live): "
-              << Idx << " " << MI);
+        LLVM_DEBUG(dbgs() << "Discarding debug info (reg not live): " << Idx
+                          << " " << MI);
       }
     }
   }
@@ -688,7 +688,8 @@ void UserValue::addDefsFromCopies(
   if (CopyValues.empty())
     return;
 
-  DEBUG(dbgs() << "Got " << CopyValues.size() << " copies of " << *LI << '\n');
+  LLVM_DEBUG(dbgs() << "Got " << CopyValues.size() << " copies of " << *LI
+                    << '\n');
 
   // Try to add defs of the copied values for each kill point.
   for (unsigned i = 0, e = Kills.size(); i != e; ++i) {
@@ -702,8 +703,8 @@ void UserValue::addDefsFromCopies(
       LocMap::iterator I = locInts.find(Idx);
       if (I.valid() && I.start() <= Idx)
         continue;
-      DEBUG(dbgs() << "Kill at " << Idx << " covered by valno #"
-                   << DstVNI->id << " in " << *DstLI << '\n');
+      LLVM_DEBUG(dbgs() << "Kill at " << Idx << " covered by valno #"
+                        << DstVNI->id << " in " << *DstLI << '\n');
       MachineInstr *CopyMI = LIS.getInstructionFromIndex(DstVNI->def);
       assert(CopyMI && CopyMI->isCopy() && "Bad copy value");
       unsigned LocNo = getLocationNo(CopyMI->getOperand(0));
@@ -851,12 +852,12 @@ bool LDVImpl::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   LIS = &pass.getAnalysis<LiveIntervals>();
   TRI = mf.getSubtarget().getRegisterInfo();
-  DEBUG(dbgs() << "********** COMPUTING LIVE DEBUG VARIABLES: "
-               << mf.getName() << " **********\n");
+  LLVM_DEBUG(dbgs() << "********** COMPUTING LIVE DEBUG VARIABLES: "
+                    << mf.getName() << " **********\n");
 
   bool Changed = collectDebugValues(mf);
   computeIntervals();
-  DEBUG(print(dbgs()));
+  LLVM_DEBUG(print(dbgs()));
   ModifiedMF = Changed;
   return Changed;
 }
@@ -902,7 +903,7 @@ LiveDebugVariables::~LiveDebugVariables() {
 bool
 UserValue::splitLocation(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
                          LiveIntervals& LIS) {
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Splitting Loc" << OldLocNo << '\t';
     print(dbgs(), nullptr);
   });
@@ -985,8 +986,8 @@ UserValue::splitLocation(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
   while (LocMapI.valid()) {
     DbgValueLocation v = LocMapI.value();
     if (v.locNo() == OldLocNo) {
-      DEBUG(dbgs() << "Erasing [" << LocMapI.start() << ';'
-                   << LocMapI.stop() << ")\n");
+      LLVM_DEBUG(dbgs() << "Erasing [" << LocMapI.start() << ';'
+                        << LocMapI.stop() << ")\n");
       LocMapI.erase();
     } else {
       if (v.locNo() > OldLocNo)
@@ -995,7 +996,10 @@ UserValue::splitLocation(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
     }
   }
 
-  DEBUG({dbgs() << "Split result: \t"; print(dbgs(), nullptr);});
+  LLVM_DEBUG({
+    dbgs() << "Split result: \t";
+    print(dbgs(), nullptr);
+  });
   return DidChange;
 }
 
@@ -1213,11 +1217,11 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
     if (trimmedDefs.count(Start))
       Start = Start.getPrevIndex();
 
-    DEBUG(dbgs() << "\t[" << Start << ';' << Stop << "):" << Loc.locNo());
+    LLVM_DEBUG(dbgs() << "\t[" << Start << ';' << Stop << "):" << Loc.locNo());
     MachineFunction::iterator MBB = LIS.getMBBFromIndex(Start)->getIterator();
     SlotIndex MBBEnd = LIS.getMBBEndIdx(&*MBB);
 
-    DEBUG(dbgs() << ' ' << printMBBReference(*MBB) << '-' << MBBEnd);
+    LLVM_DEBUG(dbgs() << ' ' << printMBBReference(*MBB) << '-' << MBBEnd);
     insertDebugValue(&*MBB, Start, Stop, Loc, Spilled, LIS, TII, TRI);
     // This interval may span multiple basic blocks.
     // Insert a DBG_VALUE into each one.
@@ -1227,10 +1231,10 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
       if (++MBB == MFEnd)
         break;
       MBBEnd = LIS.getMBBEndIdx(&*MBB);
-      DEBUG(dbgs() << ' ' << printMBBReference(*MBB) << '-' << MBBEnd);
+      LLVM_DEBUG(dbgs() << ' ' << printMBBReference(*MBB) << '-' << MBBEnd);
       insertDebugValue(&*MBB, Start, Stop, Loc, Spilled, LIS, TII, TRI);
     }
-    DEBUG(dbgs() << '\n');
+    LLVM_DEBUG(dbgs() << '\n');
     if (MBB == MFEnd)
       break;
 
@@ -1239,13 +1243,13 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
 }
 
 void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
-  DEBUG(dbgs() << "********** EMITTING LIVE DEBUG VARIABLES **********\n");
+  LLVM_DEBUG(dbgs() << "********** EMITTING LIVE DEBUG VARIABLES **********\n");
   if (!MF)
     return;
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   BitVector SpilledLocations;
   for (unsigned i = 0, e = userValues.size(); i != e; ++i) {
-    DEBUG(userValues[i]->print(dbgs(), TRI));
+    LLVM_DEBUG(userValues[i]->print(dbgs(), TRI));
     userValues[i]->rewriteLocations(*VRM, *TRI, SpilledLocations);
     userValues[i]->emitDebugValues(VRM, *LIS, *TII, *TRI, SpilledLocations);
   }

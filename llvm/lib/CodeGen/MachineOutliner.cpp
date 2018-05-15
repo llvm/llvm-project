@@ -1112,11 +1112,11 @@ void MachineOutliner::prune(Candidate &C,
   // Remove C from the CandidateList.
   C.InCandidateList = false;
 
-  DEBUG(dbgs() << "- Removed a Candidate \n";
-        dbgs() << "--- Num fns left for candidate: " << F.getOccurrenceCount()
-               << "\n";
-        dbgs() << "--- Candidate's functions's benefit: " << F.getBenefit()
-               << "\n";);
+  LLVM_DEBUG(dbgs() << "- Removed a Candidate \n";
+             dbgs() << "--- Num fns left for candidate: "
+                    << F.getOccurrenceCount() << "\n";
+             dbgs() << "--- Candidate's functions's benefit: " << F.getBenefit()
+                    << "\n";);
 }
 
 void MachineOutliner::pruneOverlaps(
@@ -1441,7 +1441,7 @@ bool MachineOutliner::outline(
     NumOutlined++;
   }
 
-  DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n";);
+  LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n";);
 
   return OutlinedSomething;
 }
@@ -1461,8 +1461,9 @@ bool MachineOutliner::runOnModule(Module &M) {
   // Does the target implement the MachineOutliner? If it doesn't, quit here.
   if (!TII->useMachineOutliner()) {
     // No. So we're done.
-    DEBUG(dbgs()
-          << "Skipping pass: Target does not support the MachineOutliner.\n");
+    LLVM_DEBUG(
+        dbgs()
+        << "Skipping pass: Target does not support the MachineOutliner.\n");
     return false;
   }
 

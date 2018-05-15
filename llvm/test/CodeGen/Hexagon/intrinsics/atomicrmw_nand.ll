@@ -22,7 +22,7 @@
 ; CHECK: [[RESULT_REG:r[0-9]+]] = sub(#-1,[[AND_RESULT_REG]])
 ; CHECK: memw_locked([[SECOND_ADDR]],[[LOCK_PRED_REG:p[0-9]+]]) = [[RESULT_REG]]
 
-; CHECK: cmp.eq{{.*}}jump{{.*}}[[FAIL_LABEL]]
+; CHECK: if (![[LOCK_PRED_REG]]) jump{{.*}}[[FAIL_LABEL]]
 ; CHECK-DAG: memw(gp+#g2) = [[LOCKED_READ_REG]]
 ; CHECK-DAG: jumpr r31
 define void @f0() {
@@ -44,7 +44,7 @@ b0:
 ; CHECK: [[RESULT_REG:r[:0-9]+]] = not([[AND_RESULT_REG]])
 ; CHECK: memd_locked([[SECOND_ADDR]],[[LOCK_PRED_REG:p[0-9]+]]) = [[RESULT_REG]]
 
-; CHECK: cmp.eq{{.*}}jump{{.*}}[[FAIL_LABEL]]
+; CHECK: if (![[LOCK_PRED_REG]]) jump{{.*}}[[FAIL_LABEL]]
 ; CHECK-DAG: memd(gp+#g5) = [[LOCKED_READ_REG]]
 ; CHECK-DAG: jumpr r31
 define void @f1() {

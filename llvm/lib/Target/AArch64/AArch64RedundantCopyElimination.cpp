@@ -427,9 +427,9 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
           }
 
           if (IsCopy)
-            DEBUG(dbgs() << "Remove redundant Copy : " << *MI);
+            LLVM_DEBUG(dbgs() << "Remove redundant Copy : " << *MI);
           else
-            DEBUG(dbgs() << "Remove redundant Move : " << *MI);
+            LLVM_DEBUG(dbgs() << "Remove redundant Move : " << *MI);
 
           MI->eraseFromParent();
           Changed = true;
@@ -473,8 +473,8 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
 
   // Clear kills in the range where changes were made.  This is conservative,
   // but should be okay since kill markers are being phased out.
-  DEBUG(dbgs() << "Clearing kill flags.\n\tFirstUse: " << *FirstUse
-               << "\tLastChange: " << *LastChange);
+  LLVM_DEBUG(dbgs() << "Clearing kill flags.\n\tFirstUse: " << *FirstUse
+                    << "\tLastChange: " << *LastChange);
   for (MachineInstr &MMI : make_range(FirstUse, PredMBB->end()))
     MMI.clearKillInfo();
   for (MachineInstr &MMI : make_range(MBB->begin(), LastChange))

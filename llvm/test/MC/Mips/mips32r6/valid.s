@@ -66,6 +66,10 @@ a:
         bovc     $2, $0, 4       # CHECK: bovc $2, $zero, 4    # encoding: [0x20,0x40,0x00,0x01]
         bovc     $2, $4, 4       # CHECK: bovc $2, $4, 4      # encoding: [0x20,0x82,0x00,0x01]
         cache      1, 8($5)         # CHECK: cache 1, 8($5)          # encoding: [0x7c,0xa1,0x04,0x25]
+        ceil.w.d  $f11,$f24         # CHECK: ceil.w.d  $f11, $f24 # encoding: [0x46,0x20,0xc2,0xce]
+                                    # CHECK:                      # <MCInst #{{.*}} CEIL_W_D64
+        ceil.w.s  $f6,$f20          # CHECK: ceil.w.s  $f6, $f20  # encoding: [0x46,0x00,0xa1,0x8e]
+                                    # CHECK:                      # <MCInst #{{.*}} CEIL_W_S
         cmp.af.s   $f2,$f3,$f4      # CHECK: cmp.af.s $f2, $f3, $f4  # encoding: [0x46,0x84,0x18,0x80]
         cmp.af.d   $f2,$f3,$f4      # CHECK: cmp.af.d $f2, $f3, $f4  # encoding: [0x46,0xa4,0x18,0x80]
         cmp.un.s   $f2,$f3,$f4      # CHECK: cmp.un.s $f2, $f3, $f4  # encoding: [0x46,0x84,0x18,0x81]
@@ -110,6 +114,10 @@ a:
         eretnc                   # CHECK: eretnc           # encoding: [0x42,0x00,0x00,0x58]
         evp     $5               # CHECK: evp $5           # encoding: [0x41,0x65,0x00,0x04]
         evp                      # CHECK: evp $zero        # encoding: [0x41,0x60,0x00,0x04]
+        floor.w.d $f14,$f11      # CHECK: floor.w.d $f14, $f11      # encoding: [0x46,0x20,0x5b,0x8f]
+                                 # CHECK:                           # <MCInst #{{.*}} FLOOR_W_D64
+        floor.w.s $f8,$f9        # CHECK: floor.w.s $f8, $f9        # encoding: [0x46,0x00,0x4a,0x0f]
+                                 # CHECK:                           # <MCInst #{{.*}} FLOOR_W_S
         jialc   $5, 256          # CHECK: jialc $5, 256    # encoding: [0xf8,0x05,0x01,0x00]
         jic     $5, 256          # CHECK: jic $5, 256      # encoding: [0xd8,0x05,0x01,0x00]
         l.s     $f2, 8($3)       # CHECK: lwc1 $f2, 8($3)  # encoding: [0xc4,0x62,0x00,0x08]
@@ -150,6 +158,10 @@ a:
                                  # CHECK-NEXT: .set  mips32r2
                                  # CHECK-NEXT: rdhwr $sp, $11
                                  # CHECK-NEXT: .set  pop      # encoding: [0x7c,0x1d,0x58,0x3b]
+        round.w.d $f6, $f4       # CHECK: round.w.d $f6, $f4     # encoding: [0x46,0x20,0x21,0x8c]
+                                 # CHECK:                        # <MCInst #{{.*}} ROUND_W_D64
+        round.w.s $f27,$f28      # CHECK: round.w.s $f27, $f28   # encoding: [0x46,0x00,0xe6,0xcc]
+                                 # CHECK:                        # <MCInst #{{.*}} ROUND_W_S
         recip.d $f19,$f6         # CHECK: recip.d $f19, $f6   # encoding: [0x46,0x20,0x34,0xd5]
         recip.s $f3,$f30         # CHECK: recip.s $f3, $f30   # encoding: [0x46,0x00,0xf0,0xd5]
         s.s    $f2, 8($3)        # CHECK: swc1 $f2, 8($3)     # encoding: [0xe4,0x62,0x00,0x08]

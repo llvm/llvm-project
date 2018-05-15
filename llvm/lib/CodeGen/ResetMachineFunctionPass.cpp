@@ -55,7 +55,7 @@ namespace {
               MachineFunctionProperties::Property::FailedISel)) {
         if (AbortOnFailedISel)
           report_fatal_error("Instruction selection failed");
-        DEBUG(dbgs() << "Resetting: " << MF.getName() << '\n');
+        LLVM_DEBUG(dbgs() << "Resetting: " << MF.getName() << '\n');
         ++NumFunctionsReset;
         MF.reset();
         if (EmitFallbackDiag) {

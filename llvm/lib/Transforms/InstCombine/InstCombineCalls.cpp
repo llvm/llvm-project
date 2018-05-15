@@ -3780,8 +3780,8 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
     // Remove the convergent attr on calls when the callee is not convergent.
     if (CS.isConvergent() && !CalleeF->isConvergent() &&
         !CalleeF->isIntrinsic()) {
-      DEBUG(dbgs() << "Removing convergent attr from instr "
-                   << CS.getInstruction() << "\n");
+      LLVM_DEBUG(dbgs() << "Removing convergent attr from instr "
+                        << CS.getInstruction() << "\n");
       CS.setNotConvergent();
       return CS.getInstruction();
     }

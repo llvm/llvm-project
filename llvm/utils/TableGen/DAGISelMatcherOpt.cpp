@@ -293,15 +293,12 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
     if (Scan != e &&
         // Don't print it's obvious nothing extra could be merged anyway.
         Scan+1 != e) {
-      DEBUG(errs() << "Couldn't merge this:\n";
-            Optn->print(errs(), 4);
-            errs() << "into this:\n";
-            OptionsToMatch[Scan]->print(errs(), 4);
-            if (Scan+1 != e)
-              OptionsToMatch[Scan+1]->printOne(errs());
-            if (Scan+2 < e)
-              OptionsToMatch[Scan+2]->printOne(errs());
-            errs() << "\n");
+      LLVM_DEBUG(errs() << "Couldn't merge this:\n"; Optn->print(errs(), 4);
+                 errs() << "into this:\n";
+                 OptionsToMatch[Scan]->print(errs(), 4);
+                 if (Scan + 1 != e) OptionsToMatch[Scan + 1]->printOne(errs());
+                 if (Scan + 2 < e) OptionsToMatch[Scan + 2]->printOne(errs());
+                 errs() << "\n");
     }
     
     // If we only found one option starting with this matcher, no factoring is

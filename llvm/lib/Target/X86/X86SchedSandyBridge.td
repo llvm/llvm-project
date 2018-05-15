@@ -96,10 +96,11 @@ multiclass SBWriteResPair<X86FoldableSchedWrite SchedRW,
 // 2/3 cycle to recompute the address.
 def : WriteRes<WriteRMW, [SBPort23,SBPort4]>;
 
-def : WriteRes<WriteStore, [SBPort23, SBPort4]>;
-def : WriteRes<WriteLoad,  [SBPort23]> { let Latency = 5; }
-def : WriteRes<WriteMove,  [SBPort015]>;
-def : WriteRes<WriteZero,  []>;
+def : WriteRes<WriteStore,   [SBPort23, SBPort4]>;
+def : WriteRes<WriteStoreNT, [SBPort23, SBPort4]>;
+def : WriteRes<WriteLoad,    [SBPort23]> { let Latency = 5; }
+def : WriteRes<WriteMove,    [SBPort015]>;
+def : WriteRes<WriteZero,    []>;
 
 defm : SBWriteResPair<WriteALU,    [SBPort015], 1>;
 defm : SBWriteResPair<WriteIMul,   [SBPort1],   3>;
@@ -153,6 +154,9 @@ defm : X86WriteRes<WriteFMaskedLoadY,  [SBPort23,SBPort05], 9, [1,2], 3>;
 defm : X86WriteRes<WriteFStore,        [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreX,       [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreY,       [SBPort23,SBPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteFStoreNT,      [SBPort23,SBPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteFStoreNTX,     [SBPort23,SBPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteFStoreNTY,     [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFMaskedStore,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
 defm : X86WriteRes<WriteFMaskedStoreY, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
 defm : X86WriteRes<WriteFMove,         [SBPort5], 1, [1], 1>;
@@ -237,11 +241,15 @@ def  : WriteRes<WriteCvtF2FSt, [SBPort1, SBPort23, SBPort4]> { let Latency = 4; 
 defm : X86WriteRes<WriteVecLoad,         [SBPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteVecLoadX,        [SBPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteVecLoadY,        [SBPort23], 7, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNT,       [SBPort23], 6, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNTY,      [SBPort23], 7, [1], 1>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [SBPort23,SBPort05], 8, [1,2], 3>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [SBPort23,SBPort05], 9, [1,2], 3>;
 defm : X86WriteRes<WriteVecStore,        [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecStoreX,       [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecStoreY,       [SBPort23,SBPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteVecStoreNT,      [SBPort23,SBPort4], 1, [1,1], 1>;
+defm : X86WriteRes<WriteVecStoreNTY,     [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecMaskedStore,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
 defm : X86WriteRes<WriteVecMove,         [SBPort05], 1, [1], 1>;

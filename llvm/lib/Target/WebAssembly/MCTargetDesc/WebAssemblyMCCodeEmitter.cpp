@@ -88,7 +88,8 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         assert(Desc.TSFlags == 0 &&
                "WebAssembly non-variable_ops don't use TSFlags");
         const MCOperandInfo &Info = Desc.OpInfo[i];
-        DEBUG(dbgs() << "Encoding immediate: type=" << int(Info.OperandType) << "\n");
+        LLVM_DEBUG(dbgs() << "Encoding immediate: type="
+                          << int(Info.OperandType) << "\n");
         if (Info.OperandType == WebAssembly::OPERAND_I32IMM) {
           encodeSLEB128(int32_t(MO.getImm()), OS);
         } else if (Info.OperandType == WebAssembly::OPERAND_OFFSET32) {

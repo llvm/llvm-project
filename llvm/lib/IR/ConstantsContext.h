@@ -695,7 +695,9 @@ public:
     return nullptr;
   }
 
-  void dump() const { DEBUG(dbgs() << "Constant.cpp: ConstantUniqueMap\n"); }
+  void dump() const {
+    LLVM_DEBUG(dbgs() << "Constant.cpp: ConstantUniqueMap\n");
+  }
 };
 
 } // end namespace llvm

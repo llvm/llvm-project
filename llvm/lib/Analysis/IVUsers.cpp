@@ -235,13 +235,13 @@ bool IVUsers::AddUsersImpl(Instruction *I,
     if (LI->getLoopFor(User->getParent()) != L) {
       if (isa<PHINode>(User) || Processed.count(User) ||
           !AddUsersImpl(User, SimpleLoopNests)) {
-        DEBUG(dbgs() << "FOUND USER in other loop: " << *User << '\n'
-                     << "   OF SCEV: " << *ISE << '\n');
+        LLVM_DEBUG(dbgs() << "FOUND USER in other loop: " << *User << '\n'
+                          << "   OF SCEV: " << *ISE << '\n');
         AddUserToIVUsers = true;
       }
     } else if (Processed.count(User) || !AddUsersImpl(User, SimpleLoopNests)) {
-      DEBUG(dbgs() << "FOUND USER: " << *User << '\n'
-                   << "   OF SCEV: " << *ISE << '\n');
+      LLVM_DEBUG(dbgs() << "FOUND USER: " << *User << '\n'
+                        << "   OF SCEV: " << *ISE << '\n');
       AddUserToIVUsers = true;
     }
 
@@ -274,14 +274,15 @@ bool IVUsers::AddUsersImpl(Instruction *I,
         // If we normalized the expression, but denormalization doesn't give the
         // original one, discard this user.
         if (OriginalISE != DenormalizedISE) {
-          DEBUG(dbgs() << "   DISCARDING (NORMALIZATION ISN'T INVERTIBLE): "
-                       << *ISE << '\n');
+          LLVM_DEBUG(dbgs()
+                     << "   DISCARDING (NORMALIZATION ISN'T INVERTIBLE): "
+                     << *ISE << '\n');
           IVUses.pop_back();
           return false;
         }
       }
-      DEBUG(if (SE->getSCEV(I) != ISE)
-              dbgs() << "   NORMALIZED TO: " << *ISE << '\n');
+      LLVM_DEBUG(if (SE->getSCEV(I) != ISE) dbgs()
+                 << "   NORMALIZED TO: " << *ISE << '\n');
     }
   }
   return true;

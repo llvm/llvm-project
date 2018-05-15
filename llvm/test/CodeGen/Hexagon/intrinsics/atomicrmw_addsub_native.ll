@@ -39,7 +39,7 @@ BINARY_OP_entry:
 ; CHECK: [[RESULT_REG:r[0-9]+]] = [[BINARY_OP]]([[LOCKED_READ_REG]],[[FIRST_VALUE]])
 ; CHECK: memw_locked([[SECOND_ADDR]],[[LOCK_PRED_REG:p[0-9]+]]) = [[RESULT_REG]]
 
-; CHECK: cmp.eq{{.*}}jump{{.*}}[[FAIL_LABEL]]
+; CHECK: if (![[LOCK_PRED_REG]]) jump{{.*}}[[FAIL_LABEL]]
 ; CHECK-DAG: memw(gp+#i32Result) = [[LOCKED_READ_REG]]
 ; CHECK-DAG: jumpr r31
 
@@ -60,7 +60,7 @@ entry:
 ; CHECK: [[RESULT_REG:r[0-9]+:[0-9]+]] = [[BINARY_OP]]([[LOCKED_READ_REG]],[[FIRST_VALUE]])
 ; CHECK: memd_locked([[SECOND_ADDR]],[[LOCK_PRED_REG:p[0-9]+]]) = [[RESULT_REG]]
 
-; CHECK: cmp.eq{{.*}}jump{{.*}}[[FAIL_LABEL]]
+; CHECK: if (![[LOCK_PRED_REG]]) jump{{.*}}[[FAIL_LABEL]]
 ; CHECK-DAG: memd(gp+#i64Result) = [[LOCKED_READ_REG]]
 ; CHECK-DAG: jumpr r31
 
@@ -81,7 +81,7 @@ entry:
 ; CHECK: [[RESULT_REG:r[0-9]+]] = [[BINARY_OP]]([[LOCKED_READ_REG]],[[FIRST_VALUE]])
 ; CHECK: memw_locked([[SECOND_ADDR]],[[LOCK_PRED_REG:p[0-9]+]]) = [[RESULT_REG]]
 
-; CHECK: cmp.eq{{.*}}jump{{.*}}[[FAIL_LABEL]]
+; CHECK: if (![[LOCK_PRED_REG]]) jump{{.*}}[[FAIL_LABEL]]
 ; CHECK-DAG: memw(gp+#ptrResult) = [[LOCKED_READ_REG]]
 ; CHECK-DAG: jumpr r31
 

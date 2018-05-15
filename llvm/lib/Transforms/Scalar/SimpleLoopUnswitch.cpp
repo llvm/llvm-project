@@ -184,7 +184,7 @@ static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
 static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
                                   LoopInfo &LI) {
   assert(BI.isConditional() && "Can only unswitch a conditional branch!");
-  DEBUG(dbgs() << "  Trying to unswitch branch: " << BI << "\n");
+  LLVM_DEBUG(dbgs() << "  Trying to unswitch branch: " << BI << "\n");
 
   Value *LoopCond = BI.getCondition();
 
@@ -212,8 +212,8 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB))
     return false;
 
-  DEBUG(dbgs() << "    unswitching trivial branch when: " << CondVal
-               << " == " << LoopCond << "\n");
+  LLVM_DEBUG(dbgs() << "    unswitching trivial branch when: " << CondVal
+                    << " == " << LoopCond << "\n");
 
   // Split the preheader, so that we know that there is a safe place to insert
   // the conditional branch. We will change the preheader to have a conditional
@@ -292,7 +292,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
 /// branch. Still more cleanup can be done with some simplify-cfg like pass.
 static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
                                   LoopInfo &LI) {
-  DEBUG(dbgs() << "  Trying to unswitch switch: " << SI << "\n");
+  LLVM_DEBUG(dbgs() << "  Trying to unswitch switch: " << SI << "\n");
   Value *LoopCond = SI.getCondition();
 
   // If this isn't switching on an invariant condition, we can't unswitch it.
@@ -316,7 +316,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   else if (ExitCaseIndices.empty())
     return false;
 
-  DEBUG(dbgs() << "    unswitching trivial cases...\n");
+  LLVM_DEBUG(dbgs() << "    unswitching trivial cases...\n");
 
   SmallVector<std::pair<ConstantInt *, BasicBlock *>, 4> ExitCases;
   ExitCases.reserve(ExitCaseIndices.size());
@@ -1798,8 +1798,9 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
   if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
     return Changed;
 
-  DEBUG(dbgs() << "Considering " << UnswitchCandidates.size()
-               << " non-trivial loop invariant conditions for unswitching.\n");
+  LLVM_DEBUG(
+      dbgs() << "Considering " << UnswitchCandidates.size()
+             << " non-trivial loop invariant conditions for unswitching.\n");
 
   // Given that unswitching these terminators will require duplicating parts of
   // the loop, so we need to be able to model that cost. Compute the ephemeral
@@ -1835,7 +1836,7 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
     assert(LoopCost >= 0 && "Must not have negative loop costs!");
     BBCostMap[BB] = Cost;
   }
-  DEBUG(dbgs() << "  Total loop cost: " << LoopCost << "\n");
+  LLVM_DEBUG(dbgs() << "  Total loop cost: " << LoopCost << "\n");
 
   // Now we find the best candidate by searching for the one with the following
   // properties in order:
@@ -1889,8 +1890,8 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
   int BestUnswitchCost;
   for (TerminatorInst *CandidateTI : UnswitchCandidates) {
     int CandidateCost = ComputeUnswitchedCost(CandidateTI);
-    DEBUG(dbgs() << "  Computed cost of " << CandidateCost
-                 << " for unswitch candidate: " << *CandidateTI << "\n");
+    LLVM_DEBUG(dbgs() << "  Computed cost of " << CandidateCost
+                      << " for unswitch candidate: " << *CandidateTI << "\n");
     if (!BestUnswitchTI || CandidateCost < BestUnswitchCost) {
       BestUnswitchTI = CandidateTI;
       BestUnswitchCost = CandidateCost;
@@ -1898,14 +1899,14 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
   }
 
   if (BestUnswitchCost < UnswitchThreshold) {
-    DEBUG(dbgs() << "  Trying to unswitch non-trivial (cost = "
-                 << BestUnswitchCost << ") branch: " << *BestUnswitchTI
-                 << "\n");
+    LLVM_DEBUG(dbgs() << "  Trying to unswitch non-trivial (cost = "
+                      << BestUnswitchCost << ") branch: " << *BestUnswitchTI
+                      << "\n");
     Changed |= unswitchInvariantBranch(L, cast<BranchInst>(*BestUnswitchTI), DT,
                                        LI, AC, NonTrivialUnswitchCB);
   } else {
-    DEBUG(dbgs() << "Cannot unswitch, lowest cost found: " << BestUnswitchCost
-                 << "\n");
+    LLVM_DEBUG(dbgs() << "Cannot unswitch, lowest cost found: "
+                      << BestUnswitchCost << "\n");
   }
 
   return Changed;
@@ -1917,7 +1918,8 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
   Function &F = *L.getHeader()->getParent();
   (void)F;
 
-  DEBUG(dbgs() << "Unswitching loop in " << F.getName() << ": " << L << "\n");
+  LLVM_DEBUG(dbgs() << "Unswitching loop in " << F.getName() << ": " << L
+                    << "\n");
 
   // Save the current loop name in a variable so that we can report it even
   // after it has been deleted.
@@ -1977,7 +1979,8 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   Function &F = *L->getHeader()->getParent();
 
-  DEBUG(dbgs() << "Unswitching loop in " << F.getName() << ": " << *L << "\n");
+  LLVM_DEBUG(dbgs() << "Unswitching loop in " << F.getName() << ": " << *L
+                    << "\n");
 
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();

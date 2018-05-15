@@ -298,8 +298,8 @@ void ARCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
          "Only support 4-byte stores to stack now.");
   assert(ARC::GPR32RegClass.hasSubClassEq(RC) &&
          "Only support GPR32 stores to stack now.");
-  DEBUG(dbgs() << "Created store reg=" << printReg(SrcReg, TRI)
-               << " to FrameIndex=" << FrameIndex << "\n");
+  LLVM_DEBUG(dbgs() << "Created store reg=" << printReg(SrcReg, TRI)
+                    << " to FrameIndex=" << FrameIndex << "\n");
   BuildMI(MBB, I, dl, get(ARC::ST_rs9))
       .addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FrameIndex)
@@ -325,8 +325,8 @@ void ARCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
          "Only support 4-byte loads from stack now.");
   assert(ARC::GPR32RegClass.hasSubClassEq(RC) &&
          "Only support GPR32 stores to stack now.");
-  DEBUG(dbgs() << "Created load reg=" << printReg(DestReg, TRI)
-               << " from FrameIndex=" << FrameIndex << "\n");
+  LLVM_DEBUG(dbgs() << "Created load reg=" << printReg(DestReg, TRI)
+                    << " from FrameIndex=" << FrameIndex << "\n");
   BuildMI(MBB, I, dl, get(ARC::LD_rs9))
       .addReg(DestReg, RegState::Define)
       .addFrameIndex(FrameIndex)

@@ -163,6 +163,8 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
     return R_PPC_CALL_PLT;
   case R_PPC64_REL16_LO:
   case R_PPC64_REL16_HA:
+  case R_PPC64_REL32:
+  case R_PPC64_REL64:
     return R_PC;
   default:
     return R_ABS;

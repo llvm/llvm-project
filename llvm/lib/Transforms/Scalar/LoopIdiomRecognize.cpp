@@ -310,9 +310,9 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   SmallVector<BasicBlock *, 8> ExitBlocks;
   CurLoop->getUniqueExitBlocks(ExitBlocks);
 
-  DEBUG(dbgs() << "loop-idiom Scanning: F["
-               << CurLoop->getHeader()->getParent()->getName() << "] Loop %"
-               << CurLoop->getHeader()->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "loop-idiom Scanning: F["
+                    << CurLoop->getHeader()->getParent()->getName()
+                    << "] Loop %" << CurLoop->getHeader()->getName() << "\n");
 
   bool MadeChange = false;
 
@@ -936,8 +936,9 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
   }
 
-  DEBUG(dbgs() << "  Formed memset: " << *NewCall << "\n"
-               << "    from store to: " << *Ev << " at: " << *TheStore << "\n");
+  LLVM_DEBUG(dbgs() << "  Formed memset: " << *NewCall << "\n"
+                    << "    from store to: " << *Ev << " at: " << *TheStore
+                    << "\n");
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 
   // Okay, the memset has been formed.  Zap the original store and anything that
@@ -1067,9 +1068,10 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   }
   NewCall->setDebugLoc(SI->getDebugLoc());
 
-  DEBUG(dbgs() << "  Formed memcpy: " << *NewCall << "\n"
-               << "    from load ptr=" << *LoadEv << " at: " << *LI << "\n"
-               << "    from store ptr=" << *StoreEv << " at: " << *SI << "\n");
+  LLVM_DEBUG(dbgs() << "  Formed memcpy: " << *NewCall << "\n"
+                    << "    from load ptr=" << *LoadEv << " at: " << *LI << "\n"
+                    << "    from store ptr=" << *StoreEv << " at: " << *SI
+                    << "\n");
 
   // Okay, the memcpy has been formed.  Zap the original store and anything that
   // feeds into it.
@@ -1085,9 +1087,9 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
                                                    bool IsLoopMemset) {
   if (ApplyCodeSizeHeuristics && CurLoop->getNumBlocks() > 1) {
     if (!CurLoop->getParentLoop() && (!IsMemset || !IsLoopMemset)) {
-      DEBUG(dbgs() << "  " << CurLoop->getHeader()->getParent()->getName()
-                   << " : LIR " << (IsMemset ? "Memset" : "Memcpy")
-                   << " avoided: multi-block top-level loop\n");
+      LLVM_DEBUG(dbgs() << "  " << CurLoop->getHeader()->getParent()->getName()
+                        << " : LIR " << (IsMemset ? "Memset" : "Memcpy")
+                        << " avoided: multi-block top-level loop\n");
       return true;
     }
   }

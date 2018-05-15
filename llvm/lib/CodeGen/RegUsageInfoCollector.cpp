@@ -83,9 +83,9 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const TargetMachine &TM = MF.getTarget();
 
-  DEBUG(dbgs() << " -------------------- " << getPassName()
-               << " -------------------- \n");
-  DEBUG(dbgs() << "Function Name : " << MF.getName() << "\n");
+  LLVM_DEBUG(dbgs() << " -------------------- " << getPassName()
+                    << " -------------------- \n");
+  LLVM_DEBUG(dbgs() << "Function Name : " << MF.getName() << "\n");
 
   std::vector<uint32_t> RegMask;
 
@@ -101,7 +101,7 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
 
   PRUI->setTargetMachine(&TM);
 
-  DEBUG(dbgs() << "Clobbered Registers: ");
+  LLVM_DEBUG(dbgs() << "Clobbered Registers: ");
 
   const BitVector &UsedPhysRegsMask = MRI->getUsedPhysRegsMask();
   auto SetRegAsDefined = [&RegMask] (unsigned Reg) {
@@ -134,15 +134,15 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
     }
   } else {
     ++NumCSROpt;
-    DEBUG(dbgs() << MF.getName()
-                 << " function optimized for not having CSR.\n");
+    LLVM_DEBUG(dbgs() << MF.getName()
+                      << " function optimized for not having CSR.\n");
   }
 
   for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg)
     if (MachineOperand::clobbersPhysReg(&(RegMask[0]), PReg))
-      DEBUG(dbgs() << printReg(PReg, TRI) << " ");
+      LLVM_DEBUG(dbgs() << printReg(PReg, TRI) << " ");
 
-  DEBUG(dbgs() << " \n----------------------------------------\n");
+  LLVM_DEBUG(dbgs() << " \n----------------------------------------\n");
 
   PRUI->storeUpdateRegUsageInfo(&F, std::move(RegMask));
 

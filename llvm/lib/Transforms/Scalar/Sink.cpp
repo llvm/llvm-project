@@ -187,11 +187,9 @@ static bool SinkInstruction(Instruction *Inst,
   if (!SuccToSinkTo)
     return false;
 
-  DEBUG(dbgs() << "Sink" << *Inst << " (";
-        Inst->getParent()->printAsOperand(dbgs(), false);
-        dbgs() << " -> ";
-        SuccToSinkTo->printAsOperand(dbgs(), false);
-        dbgs() << ")\n");
+  LLVM_DEBUG(dbgs() << "Sink" << *Inst << " (";
+             Inst->getParent()->printAsOperand(dbgs(), false); dbgs() << " -> ";
+             SuccToSinkTo->printAsOperand(dbgs(), false); dbgs() << ")\n");
 
   // Move the instruction.
   Inst->moveBefore(&*SuccToSinkTo->getFirstInsertionPt());
@@ -244,7 +242,7 @@ static bool iterativelySinkInstructions(Function &F, DominatorTree &DT,
 
   do {
     MadeChange = false;
-    DEBUG(dbgs() << "Sinking iteration " << NumSinkIter << "\n");
+    LLVM_DEBUG(dbgs() << "Sinking iteration " << NumSinkIter << "\n");
     // Process all basic blocks.
     for (BasicBlock &I : F)
       MadeChange |= ProcessBlock(I, DT, LI, AA);

@@ -116,15 +116,15 @@ static InputIt find_best(InputIt First, InputIt Last, UnaryPredicate Predicate,
   for (InputIt I = First; I != Last; ++I) {
     unsigned Matched = Predicate(*I);
     if (Matched != FindBest_NoMatch) {
-      DEBUG(dbgs() << std::distance(First, I) << " is a match (";
-            I->print(dbgs()); dbgs() << ")\n");
+      LLVM_DEBUG(dbgs() << std::distance(First, I) << " is a match (";
+                 I->print(dbgs()); dbgs() << ")\n");
       if (Best == Last || BetterThan(*I, *Best)) {
-        DEBUG(dbgs() << ".. and it beats the last one\n");
+        LLVM_DEBUG(dbgs() << ".. and it beats the last one\n");
         Best = I;
       }
     }
     if (Matched == FindBest_PerfectMatch) {
-      DEBUG(dbgs() << ".. and it is unbeatable\n");
+      LLVM_DEBUG(dbgs() << ".. and it is unbeatable\n");
       break;
     }
   }
@@ -444,7 +444,7 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
   std::list<MipsRelocationEntry> Sorted;
   std::list<ELFRelocationEntry> Remainder;
 
-  DEBUG(dumpRelocs("R: ", Relocs));
+  LLVM_DEBUG(dumpRelocs("R: ", Relocs));
 
   // Separate the movable relocations (AHL relocations using the high bits) from
   // the immobile relocations (everything else). This does not preserve high/low
@@ -455,7 +455,7 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
                });
 
   for (auto &R : Remainder) {
-    DEBUG(dbgs() << "Matching: " << R << "\n");
+    LLVM_DEBUG(dbgs() << "Matching: " << R << "\n");
 
     unsigned MatchingType = getMatchingLoType(R);
     assert(MatchingType != ELF::R_MIPS_NONE &&
@@ -490,7 +490,7 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
     Sorted.insert(InsertionPoint, R)->Matched = true;
   }
 
-  DEBUG(dumpRelocs("S: ", Sorted));
+  LLVM_DEBUG(dumpRelocs("S: ", Sorted));
 
   assert(Relocs.size() == Sorted.size() && "Some relocs were not consumed");
 

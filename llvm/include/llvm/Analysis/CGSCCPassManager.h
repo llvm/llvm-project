@@ -387,15 +387,15 @@ public:
       do {
         LazyCallGraph::RefSCC *RC = RCWorklist.pop_back_val();
         if (InvalidRefSCCSet.count(RC)) {
-          DEBUG(dbgs() << "Skipping an invalid RefSCC...\n");
+          LLVM_DEBUG(dbgs() << "Skipping an invalid RefSCC...\n");
           continue;
         }
 
         assert(CWorklist.empty() &&
                "Should always start with an empty SCC worklist");
 
-        DEBUG(dbgs() << "Running an SCC pass across the RefSCC: " << *RC
-                     << "\n");
+        LLVM_DEBUG(dbgs() << "Running an SCC pass across the RefSCC: " << *RC
+                          << "\n");
 
         // Push the initial SCCs in reverse post-order as we'll pop off the
         // back and so see this in post-order.
@@ -409,12 +409,13 @@ public:
           // other RefSCCs should be queued above, so we just need to skip both
           // scenarios here.
           if (InvalidSCCSet.count(C)) {
-            DEBUG(dbgs() << "Skipping an invalid SCC...\n");
+            LLVM_DEBUG(dbgs() << "Skipping an invalid SCC...\n");
             continue;
           }
           if (&C->getOuterRefSCC() != RC) {
-            DEBUG(dbgs() << "Skipping an SCC that is now part of some other "
-                            "RefSCC...\n");
+            LLVM_DEBUG(dbgs()
+                       << "Skipping an SCC that is now part of some other "
+                          "RefSCC...\n");
             continue;
           }
 
@@ -436,7 +437,8 @@ public:
             // If the CGSCC pass wasn't able to provide a valid updated SCC,
             // the current SCC may simply need to be skipped if invalid.
             if (UR.InvalidatedSCCs.count(C)) {
-              DEBUG(dbgs() << "Skipping invalidated root or island SCC!\n");
+              LLVM_DEBUG(dbgs()
+                         << "Skipping invalidated root or island SCC!\n");
               break;
             }
             // Check that we didn't miss any update scenario.
@@ -464,9 +466,10 @@ public:
             // FIXME: If we ever start having RefSCC passes, we'll want to
             // iterate there too.
             if (UR.UpdatedC)
-              DEBUG(dbgs() << "Re-running SCC passes after a refinement of the "
-                              "current SCC: "
-                           << *UR.UpdatedC << "\n");
+              LLVM_DEBUG(dbgs()
+                         << "Re-running SCC passes after a refinement of the "
+                            "current SCC: "
+                         << *UR.UpdatedC << "\n");
 
             // Note that both `C` and `RC` may at this point refer to deleted,
             // invalid SCC and RefSCCs respectively. But we will short circuit
@@ -601,7 +604,8 @@ public:
     // a pointer we can overwrite.
     LazyCallGraph::SCC *CurrentC = &C;
 
-    DEBUG(dbgs() << "Running function passes across an SCC: " << C << "\n");
+    LLVM_DEBUG(dbgs() << "Running function passes across an SCC: " << C
+                      << "\n");
 
     PreservedAnalyses PA = PreservedAnalyses::all();
     for (LazyCallGraph::Node *N : Nodes) {
@@ -757,9 +761,9 @@ public:
         if (!F)
           return false;
 
-        DEBUG(dbgs() << "Found devirutalized call from "
-                     << CS.getParent()->getParent()->getName() << " to "
-                     << F->getName() << "\n");
+        LLVM_DEBUG(dbgs() << "Found devirutalized call from "
+                          << CS.getParent()->getParent()->getName() << " to "
+                          << F->getName() << "\n");
 
         // We now have a direct call where previously we had an indirect call,
         // so iterate to process this devirtualization site.
@@ -793,16 +797,18 @@ public:
 
       // Otherwise, if we've already hit our max, we're done.
       if (Iteration >= MaxIterations) {
-        DEBUG(dbgs() << "Found another devirtualization after hitting the max "
-                        "number of repetitions ("
-                     << MaxIterations << ") on SCC: " << *C << "\n");
+        LLVM_DEBUG(
+            dbgs() << "Found another devirtualization after hitting the max "
+                      "number of repetitions ("
+                   << MaxIterations << ") on SCC: " << *C << "\n");
         PA.intersect(std::move(PassPA));
         break;
       }
 
-      DEBUG(dbgs()
-            << "Repeating an SCC pass after finding a devirtualization in: "
-            << *C << "\n");
+      LLVM_DEBUG(
+          dbgs()
+          << "Repeating an SCC pass after finding a devirtualization in: " << *C
+          << "\n");
 
       // Move over the new call counts in preparation for iterating.
       CallCounts = std::move(NewCallCounts);

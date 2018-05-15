@@ -124,8 +124,9 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
             continue;
           if (dependsOnLocalPhi(L, Br->getCondition())) {
             UP.Threshold += UnrollThresholdIf;
-            DEBUG(dbgs() << "Set unroll threshold " << UP.Threshold
-                         << " for loop:\n" << *L << " due to " << *Br << '\n');
+            LLVM_DEBUG(dbgs() << "Set unroll threshold " << UP.Threshold
+                              << " for loop:\n"
+                              << *L << " due to " << *Br << '\n');
             if (UP.Threshold >= MaxBoost)
               return;
           }
@@ -201,8 +202,9 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       // Don't use the maximum allowed value here as it will make some
       // programs way too big.
       UP.Threshold = Threshold;
-      DEBUG(dbgs() << "Set unroll threshold " << Threshold << " for loop:\n"
-                   << *L << " due to " << *GEP << '\n');
+      LLVM_DEBUG(dbgs() << "Set unroll threshold " << Threshold
+                        << " for loop:\n"
+                        << *L << " due to " << *GEP << '\n');
       if (UP.Threshold >= MaxBoost)
         return;
     }

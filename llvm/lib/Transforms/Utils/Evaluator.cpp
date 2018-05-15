@@ -226,22 +226,23 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
   while (true) {
     Constant *InstResult = nullptr;
 
-    DEBUG(dbgs() << "Evaluating Instruction: " << *CurInst << "\n");
+    LLVM_DEBUG(dbgs() << "Evaluating Instruction: " << *CurInst << "\n");
 
     if (StoreInst *SI = dyn_cast<StoreInst>(CurInst)) {
       if (!SI->isSimple()) {
-        DEBUG(dbgs() << "Store is not simple! Can not evaluate.\n");
+        LLVM_DEBUG(dbgs() << "Store is not simple! Can not evaluate.\n");
         return false;  // no volatile/atomic accesses.
       }
       Constant *Ptr = getVal(SI->getOperand(1));
       if (auto *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI)) {
-        DEBUG(dbgs() << "Folding constant ptr expression: " << *Ptr);
+        LLVM_DEBUG(dbgs() << "Folding constant ptr expression: " << *Ptr);
         Ptr = FoldedPtr;
-        DEBUG(dbgs() << "; To: " << *Ptr << "\n");
+        LLVM_DEBUG(dbgs() << "; To: " << *Ptr << "\n");
       }
       if (!isSimpleEnoughPointerToCommit(Ptr)) {
         // If this is too complex for us to commit, reject it.
-        DEBUG(dbgs() << "Pointer is too complex for us to evaluate store.");
+        LLVM_DEBUG(
+            dbgs() << "Pointer is too complex for us to evaluate store.");
         return false;
       }
 
@@ -250,14 +251,15 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
       // If this might be too difficult for the backend to handle (e.g. the addr
       // of one global variable divided by another) then we can't commit it.
       if (!isSimpleEnoughValueToCommit(Val, SimpleConstants, DL)) {
-        DEBUG(dbgs() << "Store value is too complex to evaluate store. " << *Val
-              << "\n");
+        LLVM_DEBUG(dbgs() << "Store value is too complex to evaluate store. "
+                          << *Val << "\n");
         return false;
       }
 
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Ptr)) {
         if (CE->getOpcode() == Instruction::BitCast) {
-          DEBUG(dbgs() << "Attempting to resolve bitcast on constant ptr.\n");
+          LLVM_DEBUG(dbgs()
+                     << "Attempting to resolve bitcast on constant ptr.\n");
           // If we're evaluating a store through a bitcast, then we need
           // to pull the bitcast off the pointer type and push it onto the
           // stored value.
@@ -287,14 +289,14 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
             // If we can't improve the situation by introspecting NewTy,
             // we have to give up.
             } else {
-              DEBUG(dbgs() << "Failed to bitcast constant ptr, can not "
-                    "evaluate.\n");
+              LLVM_DEBUG(dbgs() << "Failed to bitcast constant ptr, can not "
+                                   "evaluate.\n");
               return false;
             }
           }
 
           Val = NewVal;
-          DEBUG(dbgs() << "Evaluated bitcast: " << *Val << "\n");
+          LLVM_DEBUG(dbgs() << "Evaluated bitcast: " << *Val << "\n");
         }
       }
 
@@ -303,37 +305,37 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
       InstResult = ConstantExpr::get(BO->getOpcode(),
                                      getVal(BO->getOperand(0)),
                                      getVal(BO->getOperand(1)));
-      DEBUG(dbgs() << "Found a BinaryOperator! Simplifying: " << *InstResult
-            << "\n");
+      LLVM_DEBUG(dbgs() << "Found a BinaryOperator! Simplifying: "
+                        << *InstResult << "\n");
     } else if (CmpInst *CI = dyn_cast<CmpInst>(CurInst)) {
       InstResult = ConstantExpr::getCompare(CI->getPredicate(),
                                             getVal(CI->getOperand(0)),
                                             getVal(CI->getOperand(1)));
-      DEBUG(dbgs() << "Found a CmpInst! Simplifying: " << *InstResult
-            << "\n");
+      LLVM_DEBUG(dbgs() << "Found a CmpInst! Simplifying: " << *InstResult
+                        << "\n");
     } else if (CastInst *CI = dyn_cast<CastInst>(CurInst)) {
       InstResult = ConstantExpr::getCast(CI->getOpcode(),
                                          getVal(CI->getOperand(0)),
                                          CI->getType());
-      DEBUG(dbgs() << "Found a Cast! Simplifying: " << *InstResult
-            << "\n");
+      LLVM_DEBUG(dbgs() << "Found a Cast! Simplifying: " << *InstResult
+                        << "\n");
     } else if (SelectInst *SI = dyn_cast<SelectInst>(CurInst)) {
       InstResult = ConstantExpr::getSelect(getVal(SI->getOperand(0)),
                                            getVal(SI->getOperand(1)),
                                            getVal(SI->getOperand(2)));
-      DEBUG(dbgs() << "Found a Select! Simplifying: " << *InstResult
-            << "\n");
+      LLVM_DEBUG(dbgs() << "Found a Select! Simplifying: " << *InstResult
+                        << "\n");
     } else if (auto *EVI = dyn_cast<ExtractValueInst>(CurInst)) {
       InstResult = ConstantExpr::getExtractValue(
           getVal(EVI->getAggregateOperand()), EVI->getIndices());
-      DEBUG(dbgs() << "Found an ExtractValueInst! Simplifying: " << *InstResult
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "Found an ExtractValueInst! Simplifying: "
+                        << *InstResult << "\n");
     } else if (auto *IVI = dyn_cast<InsertValueInst>(CurInst)) {
       InstResult = ConstantExpr::getInsertValue(
           getVal(IVI->getAggregateOperand()),
           getVal(IVI->getInsertedValueOperand()), IVI->getIndices());
-      DEBUG(dbgs() << "Found an InsertValueInst! Simplifying: " << *InstResult
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "Found an InsertValueInst! Simplifying: "
+                        << *InstResult << "\n");
     } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(CurInst)) {
       Constant *P = getVal(GEP->getOperand(0));
       SmallVector<Constant*, 8> GEPOps;
@@ -343,31 +345,33 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
       InstResult =
           ConstantExpr::getGetElementPtr(GEP->getSourceElementType(), P, GEPOps,
                                          cast<GEPOperator>(GEP)->isInBounds());
-      DEBUG(dbgs() << "Found a GEP! Simplifying: " << *InstResult
-            << "\n");
+      LLVM_DEBUG(dbgs() << "Found a GEP! Simplifying: " << *InstResult << "\n");
     } else if (LoadInst *LI = dyn_cast<LoadInst>(CurInst)) {
       if (!LI->isSimple()) {
-        DEBUG(dbgs() << "Found a Load! Not a simple load, can not evaluate.\n");
+        LLVM_DEBUG(
+            dbgs() << "Found a Load! Not a simple load, can not evaluate.\n");
         return false;  // no volatile/atomic accesses.
       }
 
       Constant *Ptr = getVal(LI->getOperand(0));
       if (auto *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI)) {
         Ptr = FoldedPtr;
-        DEBUG(dbgs() << "Found a constant pointer expression, constant "
-              "folding: " << *Ptr << "\n");
+        LLVM_DEBUG(dbgs() << "Found a constant pointer expression, constant "
+                             "folding: "
+                          << *Ptr << "\n");
       }
       InstResult = ComputeLoadResult(Ptr);
       if (!InstResult) {
-        DEBUG(dbgs() << "Failed to compute load result. Can not evaluate load."
-              "\n");
+        LLVM_DEBUG(
+            dbgs() << "Failed to compute load result. Can not evaluate load."
+                      "\n");
         return false; // Could not evaluate load.
       }
 
-      DEBUG(dbgs() << "Evaluated load: " << *InstResult << "\n");
+      LLVM_DEBUG(dbgs() << "Evaluated load: " << *InstResult << "\n");
     } else if (AllocaInst *AI = dyn_cast<AllocaInst>(CurInst)) {
       if (AI->isArrayAllocation()) {
-        DEBUG(dbgs() << "Found an array alloca. Can not evaluate.\n");
+        LLVM_DEBUG(dbgs() << "Found an array alloca. Can not evaluate.\n");
         return false;  // Cannot handle array allocs.
       }
       Type *Ty = AI->getAllocatedType();
@@ -375,28 +379,28 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           Ty, false, GlobalValue::InternalLinkage, UndefValue::get(Ty),
           AI->getName()));
       InstResult = AllocaTmps.back().get();
-      DEBUG(dbgs() << "Found an alloca. Result: " << *InstResult << "\n");
+      LLVM_DEBUG(dbgs() << "Found an alloca. Result: " << *InstResult << "\n");
     } else if (isa<CallInst>(CurInst) || isa<InvokeInst>(CurInst)) {
       CallSite CS(&*CurInst);
 
       // Debug info can safely be ignored here.
       if (isa<DbgInfoIntrinsic>(CS.getInstruction())) {
-        DEBUG(dbgs() << "Ignoring debug info.\n");
+        LLVM_DEBUG(dbgs() << "Ignoring debug info.\n");
         ++CurInst;
         continue;
       }
 
       // Cannot handle inline asm.
       if (isa<InlineAsm>(CS.getCalledValue())) {
-        DEBUG(dbgs() << "Found inline asm, can not evaluate.\n");
+        LLVM_DEBUG(dbgs() << "Found inline asm, can not evaluate.\n");
         return false;
       }
 
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CS.getInstruction())) {
         if (MemSetInst *MSI = dyn_cast<MemSetInst>(II)) {
           if (MSI->isVolatile()) {
-            DEBUG(dbgs() << "Can not optimize a volatile memset " <<
-                  "intrinsic.\n");
+            LLVM_DEBUG(dbgs() << "Can not optimize a volatile memset "
+                              << "intrinsic.\n");
             return false;
           }
           Constant *Ptr = getVal(MSI->getDest());
@@ -404,7 +408,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           Constant *DestVal = ComputeLoadResult(getVal(Ptr));
           if (Val->isNullValue() && DestVal && DestVal->isNullValue()) {
             // This memset is a no-op.
-            DEBUG(dbgs() << "Ignoring no-op memset.\n");
+            LLVM_DEBUG(dbgs() << "Ignoring no-op memset.\n");
             ++CurInst;
             continue;
           }
@@ -412,7 +416,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
 
         if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
             II->getIntrinsicID() == Intrinsic::lifetime_end) {
-          DEBUG(dbgs() << "Ignoring lifetime intrinsic.\n");
+          LLVM_DEBUG(dbgs() << "Ignoring lifetime intrinsic.\n");
           ++CurInst;
           continue;
         }
@@ -421,7 +425,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           // We don't insert an entry into Values, as it doesn't have a
           // meaningful return value.
           if (!II->use_empty()) {
-            DEBUG(dbgs() << "Found unused invariant_start. Can't evaluate.\n");
+            LLVM_DEBUG(dbgs()
+                       << "Found unused invariant_start. Can't evaluate.\n");
             return false;
           }
           ConstantInt *Size = cast<ConstantInt>(II->getArgOperand(0));
@@ -433,34 +438,35 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
                 Size->getValue().getLimitedValue() >=
                     DL.getTypeStoreSize(ElemTy)) {
               Invariants.insert(GV);
-              DEBUG(dbgs() << "Found a global var that is an invariant: " << *GV
-                    << "\n");
+              LLVM_DEBUG(dbgs() << "Found a global var that is an invariant: "
+                                << *GV << "\n");
             } else {
-              DEBUG(dbgs() << "Found a global var, but can not treat it as an "
-                    "invariant.\n");
+              LLVM_DEBUG(dbgs()
+                         << "Found a global var, but can not treat it as an "
+                            "invariant.\n");
             }
           }
           // Continue even if we do nothing.
           ++CurInst;
           continue;
         } else if (II->getIntrinsicID() == Intrinsic::assume) {
-          DEBUG(dbgs() << "Skipping assume intrinsic.\n");
+          LLVM_DEBUG(dbgs() << "Skipping assume intrinsic.\n");
           ++CurInst;
           continue;
         } else if (II->getIntrinsicID() == Intrinsic::sideeffect) {
-          DEBUG(dbgs() << "Skipping sideeffect intrinsic.\n");
+          LLVM_DEBUG(dbgs() << "Skipping sideeffect intrinsic.\n");
           ++CurInst;
           continue;
         }
 
-        DEBUG(dbgs() << "Unknown intrinsic. Can not evaluate.\n");
+        LLVM_DEBUG(dbgs() << "Unknown intrinsic. Can not evaluate.\n");
         return false;
       }
 
       // Resolve function pointers.
       Function *Callee = dyn_cast<Function>(getVal(CS.getCalledValue()));
       if (!Callee || Callee->isInterposable()) {
-        DEBUG(dbgs() << "Can not resolve function pointer.\n");
+        LLVM_DEBUG(dbgs() << "Can not resolve function pointer.\n");
         return false;  // Cannot resolve.
       }
 
@@ -472,15 +478,15 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
         // If this is a function we can constant fold, do it.
         if (Constant *C = ConstantFoldCall(CS, Callee, Formals, TLI)) {
           InstResult = C;
-          DEBUG(dbgs() << "Constant folded function call. Result: " <<
-                *InstResult << "\n");
+          LLVM_DEBUG(dbgs() << "Constant folded function call. Result: "
+                            << *InstResult << "\n");
         } else {
-          DEBUG(dbgs() << "Can not constant fold function call.\n");
+          LLVM_DEBUG(dbgs() << "Can not constant fold function call.\n");
           return false;
         }
       } else {
         if (Callee->getFunctionType()->isVarArg()) {
-          DEBUG(dbgs() << "Can not constant fold vararg function call.\n");
+          LLVM_DEBUG(dbgs() << "Can not constant fold vararg function call.\n");
           return false;
         }
 
@@ -488,21 +494,22 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
         // Execute the call, if successful, use the return value.
         ValueStack.emplace_back();
         if (!EvaluateFunction(Callee, RetVal, Formals)) {
-          DEBUG(dbgs() << "Failed to evaluate function.\n");
+          LLVM_DEBUG(dbgs() << "Failed to evaluate function.\n");
           return false;
         }
         ValueStack.pop_back();
         InstResult = RetVal;
 
         if (InstResult) {
-          DEBUG(dbgs() << "Successfully evaluated function. Result: "
-                       << *InstResult << "\n\n");
+          LLVM_DEBUG(dbgs() << "Successfully evaluated function. Result: "
+                            << *InstResult << "\n\n");
         } else {
-          DEBUG(dbgs() << "Successfully evaluated function. Result: 0\n\n");
+          LLVM_DEBUG(dbgs()
+                     << "Successfully evaluated function. Result: 0\n\n");
         }
       }
     } else if (isa<TerminatorInst>(CurInst)) {
-      DEBUG(dbgs() << "Found a terminator instruction.\n");
+      LLVM_DEBUG(dbgs() << "Found a terminator instruction.\n");
 
       if (BranchInst *BI = dyn_cast<BranchInst>(CurInst)) {
         if (BI->isUnconditional()) {
@@ -529,17 +536,18 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
         NextBB = nullptr;
       } else {
         // invoke, unwind, resume, unreachable.
-        DEBUG(dbgs() << "Can not handle terminator.");
+        LLVM_DEBUG(dbgs() << "Can not handle terminator.");
         return false;  // Cannot handle this terminator.
       }
 
       // We succeeded at evaluating this block!
-      DEBUG(dbgs() << "Successfully evaluated block.\n");
+      LLVM_DEBUG(dbgs() << "Successfully evaluated block.\n");
       return true;
     } else {
       // Did not know how to evaluate this!
-      DEBUG(dbgs() << "Failed to evaluate block due to unhandled instruction."
-            "\n");
+      LLVM_DEBUG(
+          dbgs() << "Failed to evaluate block due to unhandled instruction."
+                    "\n");
       return false;
     }
 
@@ -553,7 +561,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
     // If we just processed an invoke, we finished evaluating the block.
     if (InvokeInst *II = dyn_cast<InvokeInst>(CurInst)) {
       NextBB = II->getNormalDest();
-      DEBUG(dbgs() << "Found an invoke instruction. Finished Block.\n\n");
+      LLVM_DEBUG(dbgs() << "Found an invoke instruction. Finished Block.\n\n");
       return true;
     }
 
@@ -592,7 +600,7 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
 
   while (true) {
     BasicBlock *NextBB = nullptr; // Initialized to avoid compiler warnings.
-    DEBUG(dbgs() << "Trying to evaluate BB: " << *CurBB << "\n");
+    LLVM_DEBUG(dbgs() << "Trying to evaluate BB: " << *CurBB << "\n");
 
     if (!EvaluateBlock(CurInst, NextBB))
       return false;

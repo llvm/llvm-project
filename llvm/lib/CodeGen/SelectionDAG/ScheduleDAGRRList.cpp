@@ -347,8 +347,8 @@ static void GetCostForDef(const ScheduleDAGSDNodes::RegDefIter &RegDefPos,
 
 /// Schedule - Schedule the DAG using list scheduling.
 void ScheduleDAGRRList::Schedule() {
-  DEBUG(dbgs() << "********** List Scheduling " << printMBBReference(*BB)
-               << " '" << BB->getName() << "' **********\n");
+  LLVM_DEBUG(dbgs() << "********** List Scheduling " << printMBBReference(*BB)
+                    << " '" << BB->getName() << "' **********\n");
 
   CurCycle = 0;
   IssueCount = 0;
@@ -365,8 +365,7 @@ void ScheduleDAGRRList::Schedule() {
   // Build the scheduling graph.
   BuildSchedGraph(nullptr);
 
-  DEBUG(for (SUnit &SU : SUnits)
-          SU.dumpAll(this));
+  LLVM_DEBUG(for (SUnit &SU : SUnits) SU.dumpAll(this));
   Topo.InitDAGTopologicalSorting();
 
   AvailableQueue->initNodes(SUnits);
@@ -378,11 +377,11 @@ void ScheduleDAGRRList::Schedule() {
 
   AvailableQueue->releaseState();
 
-  DEBUG({
-      dbgs() << "*** Final schedule ***\n";
-      dumpSchedule();
-      dbgs() << '\n';
-    });
+  LLVM_DEBUG({
+    dbgs() << "*** Final schedule ***\n";
+    dumpSchedule();
+    dbgs() << '\n';
+  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -729,13 +728,13 @@ static void resetVRegCycle(SUnit *SU);
 /// count of its predecessors. If a predecessor pending count is zero, add it to
 /// the Available queue.
 void ScheduleDAGRRList::ScheduleNodeBottomUp(SUnit *SU) {
-  DEBUG(dbgs() << "\n*** Scheduling [" << CurCycle << "]: ");
-  DEBUG(SU->dump(this));
+  LLVM_DEBUG(dbgs() << "\n*** Scheduling [" << CurCycle << "]: ");
+  LLVM_DEBUG(SU->dump(this));
 
 #ifndef NDEBUG
   if (CurCycle < SU->getHeight())
-    DEBUG(dbgs() << "   Height [" << SU->getHeight()
-          << "] pipeline stall!\n");
+    LLVM_DEBUG(dbgs() << "   Height [" << SU->getHeight()
+                      << "] pipeline stall!\n");
 #endif
 
   // FIXME: Do not modify node height. It may interfere with
@@ -828,8 +827,8 @@ void ScheduleDAGRRList::CapturePred(SDep *PredEdge) {
 /// UnscheduleNodeBottomUp - Remove the node from the schedule, update its and
 /// its predecessor states to reflect the change.
 void ScheduleDAGRRList::UnscheduleNodeBottomUp(SUnit *SU) {
-  DEBUG(dbgs() << "*** Unscheduling [" << SU->getHeight() << "]: ");
-  DEBUG(SU->dump(this));
+  LLVM_DEBUG(dbgs() << "*** Unscheduling [" << SU->getHeight() << "]: ");
+  LLVM_DEBUG(SU->dump(this));
 
   for (SDep &Pred : SU->Preds) {
     CapturePred(&Pred);
@@ -1011,7 +1010,7 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
     computeLatency(LoadSU);
   }
 
-  DEBUG(dbgs() << "Unfolding SU #" << SU->NodeNum << "\n");
+  LLVM_DEBUG(dbgs() << "Unfolding SU #" << SU->NodeNum << "\n");
 
   // Now that we are committed to unfolding replace DAG Uses.
   for (unsigned i = 0; i != NumVals; ++i)
@@ -1118,12 +1117,13 @@ SUnit *ScheduleDAGRRList::CopyAndMoveSuccessors(SUnit *SU) {
   if (!N)
     return nullptr;
 
-  DEBUG(dbgs() << "Considering duplicating the SU\n");
-  DEBUG(SU->dump(this));
+  LLVM_DEBUG(dbgs() << "Considering duplicating the SU\n");
+  LLVM_DEBUG(SU->dump(this));
 
   if (N->getGluedNode() &&
       !TII->canCopyGluedNodeDuringSchedule(N)) {
-    DEBUG(dbgs()
+    LLVM_DEBUG(
+        dbgs()
         << "Giving up because it has incoming glue and the target does not "
            "want to copy it\n");
     return nullptr;
@@ -1134,7 +1134,7 @@ SUnit *ScheduleDAGRRList::CopyAndMoveSuccessors(SUnit *SU) {
   for (unsigned i = 0, e = N->getNumValues(); i != e; ++i) {
     MVT VT = N->getSimpleValueType(i);
     if (VT == MVT::Glue) {
-      DEBUG(dbgs() << "Giving up because it has outgoing glue\n");
+      LLVM_DEBUG(dbgs() << "Giving up because it has outgoing glue\n");
       return nullptr;
     } else if (VT == MVT::Other)
       TryUnfold = true;
@@ -1142,8 +1142,9 @@ SUnit *ScheduleDAGRRList::CopyAndMoveSuccessors(SUnit *SU) {
   for (const SDValue &Op : N->op_values()) {
     MVT VT = Op.getNode()->getSimpleValueType(Op.getResNo());
     if (VT == MVT::Glue && !TII->canCopyGluedNodeDuringSchedule(N)) {
-      DEBUG(dbgs() << "Giving up because it one of the operands is glue and "
-                      "the target does not want to copy it\n");
+      LLVM_DEBUG(
+          dbgs() << "Giving up because it one of the operands is glue and "
+                    "the target does not want to copy it\n");
       return nullptr;
     }
   }
@@ -1160,7 +1161,7 @@ SUnit *ScheduleDAGRRList::CopyAndMoveSuccessors(SUnit *SU) {
       return SU;
   }
 
-  DEBUG(dbgs() << "    Duplicating SU #" << SU->NodeNum << "\n");
+  LLVM_DEBUG(dbgs() << "    Duplicating SU #" << SU->NodeNum << "\n");
   NewSU = CreateClone(SU);
 
   // New SUnit has the exact same predecessors.
@@ -1421,7 +1422,7 @@ void ScheduleDAGRRList::releaseInterferences(unsigned Reg) {
     // Furthermore, it may have been made available again, in which case it is
     // now already in the AvailableQueue.
     if (SU->isAvailable && !SU->NodeQueueId) {
-      DEBUG(dbgs() << "    Repushing SU #" << SU->NodeNum << '\n');
+      LLVM_DEBUG(dbgs() << "    Repushing SU #" << SU->NodeNum << '\n');
       AvailableQueue->push(SU);
     }
     if (i < Interferences.size())
@@ -1442,12 +1443,10 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
       SmallVector<unsigned, 4> LRegs;
       if (!DelayForLiveRegsBottomUp(CurSU, LRegs))
         break;
-      DEBUG(dbgs() << "    Interfering reg ";
-            if (LRegs[0] == TRI->getNumRegs())
-              dbgs() << "CallResource";
-            else
-              dbgs() << printReg(LRegs[0], TRI);
-            dbgs() << " SU #" << CurSU->NodeNum << '\n');
+      LLVM_DEBUG(dbgs() << "    Interfering reg ";
+                 if (LRegs[0] == TRI->getNumRegs()) dbgs() << "CallResource";
+                 else dbgs() << printReg(LRegs[0], TRI);
+                 dbgs() << " SU #" << CurSU->NodeNum << '\n');
       std::pair<LRegsMapT::iterator, bool> LRegsPair =
         LRegsMap.insert(std::make_pair(CurSU, LRegs));
       if (LRegsPair.second) {
@@ -1493,17 +1492,17 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
         if (!BtSU->isPending)
           AvailableQueue->remove(BtSU);
       }
-      DEBUG(dbgs() << "ARTIFICIAL edge from SU(" << BtSU->NodeNum << ") to SU("
-            << TrySU->NodeNum << ")\n");
+      LLVM_DEBUG(dbgs() << "ARTIFICIAL edge from SU(" << BtSU->NodeNum
+                        << ") to SU(" << TrySU->NodeNum << ")\n");
       AddPred(TrySU, SDep(BtSU, SDep::Artificial));
 
       // If one or more successors has been unscheduled, then the current
       // node is no longer available.
       if (!TrySU->isAvailable || !TrySU->NodeQueueId) {
-        DEBUG(dbgs() << "TrySU not available; choosing node from queue\n");
+        LLVM_DEBUG(dbgs() << "TrySU not available; choosing node from queue\n");
         CurSU = AvailableQueue->pop();
       } else {
-        DEBUG(dbgs() << "TrySU available\n");
+        LLVM_DEBUG(dbgs() << "TrySU available\n");
         // Available and in AvailableQueue
         AvailableQueue->remove(TrySU);
         CurSU = TrySU;
@@ -1547,14 +1546,14 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
       // Issue copies, these can be expensive cross register class copies.
       SmallVector<SUnit*, 2> Copies;
       InsertCopiesAndMoveSuccs(LRDef, Reg, DestRC, RC, Copies);
-      DEBUG(dbgs() << "    Adding an edge from SU #" << TrySU->NodeNum
-            << " to SU #" << Copies.front()->NodeNum << "\n");
+      LLVM_DEBUG(dbgs() << "    Adding an edge from SU #" << TrySU->NodeNum
+                        << " to SU #" << Copies.front()->NodeNum << "\n");
       AddPred(TrySU, SDep(Copies.front(), SDep::Artificial));
       NewDef = Copies.back();
     }
 
-    DEBUG(dbgs() << "    Adding an edge from SU #" << NewDef->NodeNum
-          << " to SU #" << TrySU->NodeNum << "\n");
+    LLVM_DEBUG(dbgs() << "    Adding an edge from SU #" << NewDef->NodeNum
+                      << " to SU #" << TrySU->NodeNum << "\n");
     LiveRegDefs[Reg] = NewDef;
     AddPred(NewDef, SDep(TrySU, SDep::Artificial));
     TrySU->isAvailable = false;
@@ -1582,8 +1581,8 @@ void ScheduleDAGRRList::ListScheduleBottomUp() {
   // priority. If it is not ready put it back.  Schedule the node.
   Sequence.reserve(SUnits.size());
   while (!AvailableQueue->empty() || !Interferences.empty()) {
-    DEBUG(dbgs() << "\nExamining Available:\n";
-          AvailableQueue->dump(this));
+    LLVM_DEBUG(dbgs() << "\nExamining Available:\n";
+               AvailableQueue->dump(this));
 
     // Pick the best node to schedule taking all constraints into
     // consideration.
@@ -2046,8 +2045,8 @@ LLVM_DUMP_METHOD void RegReductionPQBase::dumpRegPressure() const {
     unsigned Id = RC->getID();
     unsigned RP = RegPressure[Id];
     if (!RP) continue;
-    DEBUG(dbgs() << TRI->getRegClassName(RC) << ": " << RP << " / "
-          << RegLimit[Id] << '\n');
+    LLVM_DEBUG(dbgs() << TRI->getRegClassName(RC) << ": " << RP << " / "
+                      << RegLimit[Id] << '\n');
   }
 }
 #endif
@@ -2199,14 +2198,15 @@ void RegReductionPQBase::scheduledNode(SUnit *SU) {
     if (RegPressure[RCId] < Cost) {
       // Register pressure tracking is imprecise. This can happen. But we try
       // hard not to let it happen because it likely results in poor scheduling.
-      DEBUG(dbgs() << "  SU(" << SU->NodeNum << ") has too many regdefs\n");
+      LLVM_DEBUG(dbgs() << "  SU(" << SU->NodeNum
+                        << ") has too many regdefs\n");
       RegPressure[RCId] = 0;
     }
     else {
       RegPressure[RCId] -= Cost;
     }
   }
-  DEBUG(dumpRegPressure());
+  LLVM_DEBUG(dumpRegPressure());
 }
 
 void RegReductionPQBase::unscheduledNode(SUnit *SU) {
@@ -2286,7 +2286,7 @@ void RegReductionPQBase::unscheduledNode(SUnit *SU) {
     }
   }
 
-  DEBUG(dumpRegPressure());
+  LLVM_DEBUG(dumpRegPressure());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2381,7 +2381,7 @@ static void initVRegCycle(SUnit *SU) {
   if (!hasOnlyLiveInOpers(SU) || !hasOnlyLiveOutUses(SU))
     return;
 
-  DEBUG(dbgs() << "VRegCycle: SU(" << SU->NodeNum << ")\n");
+  LLVM_DEBUG(dbgs() << "VRegCycle: SU(" << SU->NodeNum << ")\n");
 
   SU->isVRegCycle = true;
 
@@ -2419,7 +2419,7 @@ static bool hasVRegCycleUse(const SUnit *SU) {
     if (Pred.isCtrl()) continue;  // ignore chain preds
     if (Pred.getSUnit()->isVRegCycle &&
         Pred.getSUnit()->getNode()->getOpcode() == ISD::CopyFromReg) {
-      DEBUG(dbgs() << "  VReg cycle use: SU (" << SU->NodeNum << ")\n");
+      LLVM_DEBUG(dbgs() << "  VReg cycle use: SU (" << SU->NodeNum << ")\n");
       return true;
     }
   }
@@ -2479,9 +2479,9 @@ static int BUCompareLatency(SUnit *left, SUnit *right, bool checkPref,
     int LDepth = left->getDepth() - LPenalty;
     int RDepth = right->getDepth() - RPenalty;
     if (LDepth != RDepth) {
-      DEBUG(dbgs() << "  Comparing latency of SU (" << left->NodeNum
-            << ") depth " << LDepth << " vs SU (" << right->NodeNum
-            << ") depth " << RDepth << "\n");
+      LLVM_DEBUG(dbgs() << "  Comparing latency of SU (" << left->NodeNum
+                        << ") depth " << LDepth << " vs SU (" << right->NodeNum
+                        << ") depth " << RDepth << "\n");
       return LDepth < RDepth ? 1 : -1;
     }
     if (left->Latency != right->Latency)
@@ -2503,9 +2503,9 @@ static bool BURRSort(SUnit *left, SUnit *right, RegReductionPQBase *SPQ) {
       static const char *const PhysRegMsg[] = { " has no physreg",
                                                 " defines a physreg" };
       #endif
-      DEBUG(dbgs() << "  SU (" << left->NodeNum << ") "
-            << PhysRegMsg[LHasPhysReg] << " SU(" << right->NodeNum << ") "
-            << PhysRegMsg[RHasPhysReg] << "\n");
+      LLVM_DEBUG(dbgs() << "  SU (" << left->NodeNum << ") "
+                        << PhysRegMsg[LHasPhysReg] << " SU(" << right->NodeNum
+                        << ") " << PhysRegMsg[RHasPhysReg] << "\n");
       return LHasPhysReg < RHasPhysReg;
     }
   }
@@ -2649,13 +2649,13 @@ bool hybrid_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
   // Avoid causing spills. If register pressure is high, schedule for
   // register pressure reduction.
   if (LHigh && !RHigh) {
-    DEBUG(dbgs() << "  pressure SU(" << left->NodeNum << ") > SU("
-          << right->NodeNum << ")\n");
+    LLVM_DEBUG(dbgs() << "  pressure SU(" << left->NodeNum << ") > SU("
+                      << right->NodeNum << ")\n");
     return true;
   }
   else if (!LHigh && RHigh) {
-    DEBUG(dbgs() << "  pressure SU(" << right->NodeNum << ") > SU("
-          << left->NodeNum << ")\n");
+    LLVM_DEBUG(dbgs() << "  pressure SU(" << right->NodeNum << ") > SU("
+                      << left->NodeNum << ")\n");
     return false;
   }
   if (!LHigh && !RHigh) {
@@ -2717,8 +2717,9 @@ bool ilp_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
     RPDiff = SPQ->RegPressureDiff(right, RLiveUses);
   }
   if (!DisableSchedRegPressure && LPDiff != RPDiff) {
-    DEBUG(dbgs() << "RegPressureDiff SU(" << left->NodeNum << "): " << LPDiff
-          << " != SU(" << right->NodeNum << "): " << RPDiff << "\n");
+    LLVM_DEBUG(dbgs() << "RegPressureDiff SU(" << left->NodeNum
+                      << "): " << LPDiff << " != SU(" << right->NodeNum
+                      << "): " << RPDiff << "\n");
     return LPDiff > RPDiff;
   }
 
@@ -2730,8 +2731,9 @@ bool ilp_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
   }
 
   if (!DisableSchedLiveUses && (LLiveUses != RLiveUses)) {
-    DEBUG(dbgs() << "Live uses SU(" << left->NodeNum << "): " << LLiveUses
-          << " != SU(" << right->NodeNum << "): " << RLiveUses << "\n");
+    LLVM_DEBUG(dbgs() << "Live uses SU(" << left->NodeNum << "): " << LLiveUses
+                      << " != SU(" << right->NodeNum << "): " << RLiveUses
+                      << "\n");
     return LLiveUses < RLiveUses;
   }
 
@@ -2745,9 +2747,9 @@ bool ilp_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
   if (!DisableSchedCriticalPath) {
     int spread = (int)left->getDepth() - (int)right->getDepth();
     if (std::abs(spread) > MaxReorderWindow) {
-      DEBUG(dbgs() << "Depth of SU(" << left->NodeNum << "): "
-            << left->getDepth() << " != SU(" << right->NodeNum << "): "
-            << right->getDepth() << "\n");
+      LLVM_DEBUG(dbgs() << "Depth of SU(" << left->NodeNum << "): "
+                        << left->getDepth() << " != SU(" << right->NodeNum
+                        << "): " << right->getDepth() << "\n");
       return left->getDepth() < right->getDepth();
     }
   }
@@ -2968,9 +2970,10 @@ void RegReductionPQBase::PrescheduleNodesWithMultipleUses() {
 
     // Ok, the transformation is safe and the heuristics suggest it is
     // profitable. Update the graph.
-    DEBUG(dbgs() << "    Prescheduling SU #" << SU.NodeNum
-                 << " next to PredSU #" << PredSU->NodeNum
-                 << " to guide scheduling in the presence of multiple uses\n");
+    LLVM_DEBUG(
+        dbgs() << "    Prescheduling SU #" << SU.NodeNum << " next to PredSU #"
+               << PredSU->NodeNum
+               << " to guide scheduling in the presence of multiple uses\n");
     for (unsigned i = 0; i != PredSU->Succs.size(); ++i) {
       SDep Edge = PredSU->Succs[i];
       assert(!Edge.isAssignedRegDep());
@@ -3059,8 +3062,9 @@ void RegReductionPQBase::AddPseudoTwoAddrDeps() {
              (isLiveOut && !hasOnlyLiveOutUses(SuccSU)) ||
              (!SU.isCommutable && SuccSU->isCommutable)) &&
             !scheduleDAG->IsReachable(SuccSU, &SU)) {
-          DEBUG(dbgs() << "    Adding a pseudo-two-addr edge from SU #"
-                       << SU.NodeNum << " to SU #" << SuccSU->NodeNum << "\n");
+          LLVM_DEBUG(dbgs()
+                     << "    Adding a pseudo-two-addr edge from SU #"
+                     << SU.NodeNum << " to SU #" << SuccSU->NodeNum << "\n");
           scheduleDAG->AddPred(&SU, SDep(SuccSU, SDep::Artificial));
         }
       }

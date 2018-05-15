@@ -132,8 +132,8 @@ bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
   if (skipFunction(Fn))
     return false;
 
-  DEBUG(dbgs() << "********** Begin Constant Hoisting **********\n");
-  DEBUG(dbgs() << "********** Function: " << Fn.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** Begin Constant Hoisting **********\n");
+  LLVM_DEBUG(dbgs() << "********** Function: " << Fn.getName() << '\n');
 
   bool MadeChange =
       Impl.runImpl(Fn, getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn),
@@ -144,11 +144,11 @@ bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
                    Fn.getEntryBlock());
 
   if (MadeChange) {
-    DEBUG(dbgs() << "********** Function after Constant Hoisting: "
-                 << Fn.getName() << '\n');
-    DEBUG(dbgs() << Fn);
+    LLVM_DEBUG(dbgs() << "********** Function after Constant Hoisting: "
+                      << Fn.getName() << '\n');
+    LLVM_DEBUG(dbgs() << Fn);
   }
-  DEBUG(dbgs() << "********** End Constant Hoisting **********\n");
+  LLVM_DEBUG(dbgs() << "********** End Constant Hoisting **********\n");
 
   return MadeChange;
 }
@@ -364,14 +364,13 @@ void ConstantHoistingPass::collectConstantCandidates(
       Itr->second = ConstCandVec.size() - 1;
     }
     ConstCandVec[Itr->second].addUser(Inst, Idx, Cost);
-    DEBUG(if (isa<ConstantInt>(Inst->getOperand(Idx)))
-            dbgs() << "Collect constant " << *ConstInt << " from " << *Inst
+    LLVM_DEBUG(if (isa<ConstantInt>(Inst->getOperand(Idx))) dbgs()
+                   << "Collect constant " << *ConstInt << " from " << *Inst
                    << " with cost " << Cost << '\n';
-          else
-          dbgs() << "Collect constant " << *ConstInt << " indirectly from "
-                 << *Inst << " via " << *Inst->getOperand(Idx) << " with cost "
-                 << Cost << '\n';
-    );
+               else dbgs() << "Collect constant " << *ConstInt
+                           << " indirectly from " << *Inst << " via "
+                           << *Inst->getOperand(Idx) << " with cost " << Cost
+                           << '\n';);
   }
 }
 
@@ -501,20 +500,21 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
     return NumUses;
   }
 
-  DEBUG(dbgs() << "== Maximize constants in range ==\n");
+  LLVM_DEBUG(dbgs() << "== Maximize constants in range ==\n");
   int MaxCost = -1;
   for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
     auto Value = ConstCand->ConstInt->getValue();
     Type *Ty = ConstCand->ConstInt->getType();
     int Cost = 0;
     NumUses += ConstCand->Uses.size();
-    DEBUG(dbgs() << "= Constant: " << ConstCand->ConstInt->getValue() << "\n");
+    LLVM_DEBUG(dbgs() << "= Constant: " << ConstCand->ConstInt->getValue()
+                      << "\n");
 
     for (auto User : ConstCand->Uses) {
       unsigned Opcode = User.Inst->getOpcode();
       unsigned OpndIdx = User.OpndIdx;
       Cost += TTI->getIntImmCost(Opcode, OpndIdx, Value, Ty);
-      DEBUG(dbgs() << "Cost: " << Cost << "\n");
+      LLVM_DEBUG(dbgs() << "Cost: " << Cost << "\n");
 
       for (auto C2 = S; C2 != E; ++C2) {
         Optional<APInt> Diff = calculateOffsetDiff(
@@ -524,18 +524,18 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
           const int ImmCosts =
             TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, Diff.getValue(), Ty);
           Cost -= ImmCosts;
-          DEBUG(dbgs() << "Offset " << Diff.getValue() << " "
-                       << "has penalty: " << ImmCosts << "\n"
-                       << "Adjusted cost: " << Cost << "\n");
+          LLVM_DEBUG(dbgs() << "Offset " << Diff.getValue() << " "
+                            << "has penalty: " << ImmCosts << "\n"
+                            << "Adjusted cost: " << Cost << "\n");
         }
       }
     }
-    DEBUG(dbgs() << "Cumulative cost: " << Cost << "\n");
+    LLVM_DEBUG(dbgs() << "Cumulative cost: " << Cost << "\n");
     if (Cost > MaxCost) {
       MaxCost = Cost;
       MaxCostItr = ConstCand;
-      DEBUG(dbgs() << "New candidate: " << MaxCostItr->ConstInt->getValue()
-                   << "\n");
+      LLVM_DEBUG(dbgs() << "New candidate: " << MaxCostItr->ConstInt->getValue()
+                        << "\n");
     }
   }
   return NumUses;
@@ -641,19 +641,20 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
     Mat = BinaryOperator::Create(Instruction::Add, Base, Offset,
                                  "const_mat", InsertionPt);
 
-    DEBUG(dbgs() << "Materialize constant (" << *Base->getOperand(0)
-                 << " + " << *Offset << ") in BB "
-                 << Mat->getParent()->getName() << '\n' << *Mat << '\n');
+    LLVM_DEBUG(dbgs() << "Materialize constant (" << *Base->getOperand(0)
+                      << " + " << *Offset << ") in BB "
+                      << Mat->getParent()->getName() << '\n'
+                      << *Mat << '\n');
     Mat->setDebugLoc(ConstUser.Inst->getDebugLoc());
   }
   Value *Opnd = ConstUser.Inst->getOperand(ConstUser.OpndIdx);
 
   // Visit constant integer.
   if (isa<ConstantInt>(Opnd)) {
-    DEBUG(dbgs() << "Update: " << *ConstUser.Inst << '\n');
+    LLVM_DEBUG(dbgs() << "Update: " << *ConstUser.Inst << '\n');
     if (!updateOperand(ConstUser.Inst, ConstUser.OpndIdx, Mat) && Offset)
       Mat->eraseFromParent();
-    DEBUG(dbgs() << "To    : " << *ConstUser.Inst << '\n');
+    LLVM_DEBUG(dbgs() << "To    : " << *ConstUser.Inst << '\n');
     return;
   }
 
@@ -669,13 +670,13 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
       ClonedCastInst->insertAfter(CastInst);
       // Use the same debug location as the original cast instruction.
       ClonedCastInst->setDebugLoc(CastInst->getDebugLoc());
-      DEBUG(dbgs() << "Clone instruction: " << *CastInst << '\n'
-                   << "To               : " << *ClonedCastInst << '\n');
+      LLVM_DEBUG(dbgs() << "Clone instruction: " << *CastInst << '\n'
+                        << "To               : " << *ClonedCastInst << '\n');
     }
 
-    DEBUG(dbgs() << "Update: " << *ConstUser.Inst << '\n');
+    LLVM_DEBUG(dbgs() << "Update: " << *ConstUser.Inst << '\n');
     updateOperand(ConstUser.Inst, ConstUser.OpndIdx, ClonedCastInst);
-    DEBUG(dbgs() << "To    : " << *ConstUser.Inst << '\n');
+    LLVM_DEBUG(dbgs() << "To    : " << *ConstUser.Inst << '\n');
     return;
   }
 
@@ -689,15 +690,15 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
     // Use the same debug location as the instruction we are about to update.
     ConstExprInst->setDebugLoc(ConstUser.Inst->getDebugLoc());
 
-    DEBUG(dbgs() << "Create instruction: " << *ConstExprInst << '\n'
-                 << "From              : " << *ConstExpr << '\n');
-    DEBUG(dbgs() << "Update: " << *ConstUser.Inst << '\n');
+    LLVM_DEBUG(dbgs() << "Create instruction: " << *ConstExprInst << '\n'
+                      << "From              : " << *ConstExpr << '\n');
+    LLVM_DEBUG(dbgs() << "Update: " << *ConstUser.Inst << '\n');
     if (!updateOperand(ConstUser.Inst, ConstUser.OpndIdx, ConstExprInst)) {
       ConstExprInst->eraseFromParent();
       if (Offset)
         Mat->eraseFromParent();
     }
-    DEBUG(dbgs() << "To    : " << *ConstUser.Inst << '\n');
+    LLVM_DEBUG(dbgs() << "To    : " << *ConstUser.Inst << '\n');
     return;
   }
 }
@@ -720,9 +721,9 @@ bool ConstantHoistingPass::emitBaseConstants() {
 
       Base->setDebugLoc(IP->getDebugLoc());
 
-      DEBUG(dbgs() << "Hoist constant (" << *ConstInfo.BaseConstant
-                   << ") to BB " << IP->getParent()->getName() << '\n'
-                   << *Base << '\n');
+      LLVM_DEBUG(dbgs() << "Hoist constant (" << *ConstInfo.BaseConstant
+                        << ") to BB " << IP->getParent()->getName() << '\n'
+                        << *Base << '\n');
 
       // Emit materialization code for all rebased constants.
       unsigned Uses = 0;

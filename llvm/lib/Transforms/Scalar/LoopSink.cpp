@@ -224,11 +224,11 @@ static bool sinkInstruction(Loop &L, Instruction &I,
     }
     // Replaces uses of I with IC in blocks dominated by N
     replaceDominatedUsesWith(&I, IC, DT, N);
-    DEBUG(dbgs() << "Sinking a clone of " << I << " To: " << N->getName()
-                 << '\n');
+    LLVM_DEBUG(dbgs() << "Sinking a clone of " << I << " To: " << N->getName()
+                      << '\n');
     NumLoopSunkCloned++;
   }
-  DEBUG(dbgs() << "Sinking " << I << " To: " << MoveBB->getName() << '\n');
+  LLVM_DEBUG(dbgs() << "Sinking " << I << " To: " << MoveBB->getName() << '\n');
   NumLoopSunk++;
   I.moveBefore(&*MoveBB->getFirstInsertionPt());
 

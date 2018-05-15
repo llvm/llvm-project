@@ -10283,10 +10283,11 @@ ARMAsmParser::FilterNearMisses(SmallVectorImpl<NearMissInfo> &NearMissesIn,
         Message.Message = "too many operands for instruction";
       } else {
         Message.Message = "invalid operand for instruction";
-        DEBUG(dbgs() << "Missing diagnostic string for operand class " <<
-              getMatchClassName((MatchClassKind)I.getOperandClass())
-              << I.getOperandClass() << ", error " << I.getOperandError()
-              << ", opcode " << MII.getName(I.getOpcode()) << "\n");
+        LLVM_DEBUG(
+            dbgs() << "Missing diagnostic string for operand class "
+                   << getMatchClassName((MatchClassKind)I.getOperandClass())
+                   << I.getOperandClass() << ", error " << I.getOperandError()
+                   << ", opcode " << MII.getName(I.getOpcode()) << "\n");
       }
       NearMissesOut.emplace_back(Message);
       break;
