@@ -18,6 +18,8 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 
 // FIXME: we should not need this
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
@@ -28,6 +30,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 using namespace lldb_private::formatters::swift;
+using namespace llvm;
 
 bool lldb_private::formatters::swift::Character_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
@@ -138,6 +141,40 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       StringPrinter::ReadStringAndDumpToStreamOptions());
 }
 
+/// Get an Obj-C object's class name, if one is present.
+static Optional<StringRef> getObjC_ClassName(ValueObject &valobj,
+                                             Process &process) {
+  ObjCLanguageRuntime *runtime =
+      (ObjCLanguageRuntime *)process.GetLanguageRuntime(
+          lldb::eLanguageTypeObjC);
+  if (!runtime)
+    return None;
+
+  ObjCLanguageRuntime::ClassDescriptorSP descriptor(
+      runtime->GetClassDescriptor(valobj));
+
+  if (!descriptor.get() || !descriptor->IsValid())
+    return None;
+
+  ConstString class_name_cs = descriptor->GetClassName();
+  return class_name_cs.GetStringRef();
+}
+
+/// If valobj is a _SwiftRawStringStorage instance, retrieve the payload address
+/// of the character data and determine whether the string is in UTF-16.
+static bool GetRawStringStoragePayload(Process &process, ValueObject &valobj,
+                                       uint64_t &payloadAddr, bool &isUTF16) {
+  CompilerType ty = valobj.GetCompilerType();
+
+  auto objCName = getObjC_ClassName(valobj, process);
+  if (!objCName || !objCName->contains("_SwiftStringStorage"))
+    return false;
+
+  isUTF16 = !objCName->endswith("UInt8_");
+  payloadAddr = valobj.GetValueAsUnsigned(0) + 16;
+  return true;
+}
+
 bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options,
@@ -231,17 +268,29 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
         process->GetTarget().GetScratchClangASTContext()->GetBasicType(
             lldb::eBasicTypeObjCID);
 
-    // Warning: Using ValueObject::CreateValueObjectFromAddress can create an
-    // invalid ValueObject here in an unknown set of cases. Until this is fixed,
-    // use CreateValueObjectFromData (rdar://39741576).
+    bool success = false;
+    ValueObjectSP nsstring;
+
+    // We may have an NSString pointer inline, so try formatting it directly.
     DataExtractor DE(&startAddress, process->GetAddressByteSize(),
                      process->GetByteOrder(), process->GetAddressByteSize());
-    ValueObjectSP nsstring = ValueObject::CreateValueObjectFromData(
+    nsstring = ValueObject::CreateValueObjectFromData(
         "nsstring", DE, valobj.GetExecutionContextRef(), id_type);
+    if (nsstring && !nsstring->GetError().Fail())
+      success =
+          NSStringSummaryProvider(*nsstring.get(), stream, summary_options);
 
-    if (nsstring)
-      return NSStringSummaryProvider(*nsstring.get(), stream, summary_options);
-    return false;
+    // Swift sometimes (but not always) wraps the NSString with one level of
+    // pointer indirection. So, first, dereference & format the string.
+    if (!success) {
+      nsstring = ValueObject::CreateValueObjectFromAddress(
+          "nsstring", startAddress, valobj.GetExecutionContextRef(), id_type);
+      if (nsstring && !nsstring->GetError().Fail())
+        success =
+            NSStringSummaryProvider(*nsstring.get(), stream, summary_options);
+    }
+
+    return success;
   };
 
   if (is64Bit) {
@@ -322,7 +371,8 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       // Small strings aren't emitted yet.
       return false;
     } else {
-      // The associated value in the selected enum case is an NSString.
+      // The associated value in the selected enum case is either an NSString,
+      // or a native _SwiftStringStorage.
       ValueObjectSP assocVal =
           valobj.GetChildAtNamePath({g_object, g_variant, g_strong});
       if (!assocVal)
@@ -333,6 +383,14 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
           assocVal->GetDynamicValue(lldb::eDynamicCanRunTarget);
       if (!decodedVal)
         return false;
+
+      uint64_t payloadAddr;
+      bool isUTF16;
+      if (GetRawStringStoragePayload(*process.get(), *decodedVal.get(),
+                                     payloadAddr, isUTF16)) {
+        uint64_t count = otherBits->GetValueAsUnsigned(0);
+        return readStringFromAddress(payloadAddr, count, isUTF16);
+      }
 
       uint64_t nsstringAddr =
           decodedVal->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
