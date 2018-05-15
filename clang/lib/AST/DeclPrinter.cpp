@@ -375,21 +375,23 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
           !isa<ClassTemplateSpecializationDecl>(DC))
         continue;
 
-    // The next bits of code handles stuff like "struct {int x;} a,b"; we're
+    // The next bits of code handle stuff like "struct {int x;} a,b"; we're
     // forced to merge the declarations because there's no other way to
-    // refer to the struct in question.  This limited merging is safe without
-    // a bunch of other checks because it only merges declarations directly
-    // referring to the tag, not typedefs.
+    // refer to the struct in question.  When that struct is named instead, we
+    // also need to merge to avoid splitting off a stand-alone struct
+    // declaration that produces the warning ext_no_declarators in some
+    // contexts.
+    //
+    // This limited merging is safe without a bunch of other checks because it
+    // only merges declarations directly referring to the tag, not typedefs.
     //
     // Check whether the current declaration should be grouped with a previous
-    // unnamed struct.
+    // non-free-standing tag declaration.
     QualType CurDeclType = getDeclType(*D);
     if (!Decls.empty() && !CurDeclType.isNull()) {
       QualType BaseType = GetBaseType(CurDeclType);
-      if (!BaseType.isNull() && isa<ElaboratedType>(BaseType))
-        BaseType = cast<ElaboratedType>(BaseType)->getNamedType();
-      if (!BaseType.isNull() && isa<TagType>(BaseType) &&
-          cast<TagType>(BaseType)->getDecl() == Decls[0]) {
+      if (!BaseType.isNull() && isa<ElaboratedType>(BaseType) &&
+          cast<ElaboratedType>(BaseType)->getOwnedTagDecl() == Decls[0]) {
         Decls.push_back(*D);
         continue;
       }
@@ -399,9 +401,9 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     if (!Decls.empty())
       ProcessDeclGroup(Decls);
 
-    // If the current declaration is an unnamed tag type, save it
+    // If the current declaration is not a free standing declaration, save it
     // so we can merge it with the subsequent declaration(s) using it.
-    if (isa<TagDecl>(*D) && !cast<TagDecl>(*D)->getIdentifier()) {
+    if (isa<TagDecl>(*D) && !cast<TagDecl>(*D)->isFreeStanding()) {
       Decls.push_back(*D);
       continue;
     }

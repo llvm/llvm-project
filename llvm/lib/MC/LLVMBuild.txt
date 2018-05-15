@@ -22,4 +22,4 @@ subdirectories = MCDisassembler MCParser
 type = Library
 name = MC
 parent = Libraries
-required_libraries = Support DebugInfoCodeView
+required_libraries = Support BinaryFormat DebugInfoCodeView

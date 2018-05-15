@@ -7633,17 +7633,16 @@ _mm256_cvtepi32_epi16 (__m256i __A)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_mask_cvtepi32_epi16 (__m128i __O, __mmask8 __M, __m256i __A)
 {
-  return (__m128i)__builtin_ia32_selectw_128((__mmask8)__M,
-                                             (__v8hi)_mm256_cvtepi32_epi16(__A),
-                                             (__v8hi)__O);
+  return (__m128i) __builtin_ia32_pmovdw256_mask ((__v8si) __A,
+              (__v8hi) __O, __M);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm256_maskz_cvtepi32_epi16 (__mmask8 __M, __m256i __A)
 {
-  return (__m128i)__builtin_ia32_selectw_128((__mmask8)__M,
-                                             (__v8hi)_mm256_cvtepi32_epi16(__A),
-                                             (__v8hi)_mm_setzero_si128());
+  return (__m128i) __builtin_ia32_pmovdw256_mask ((__v8si) __A,
+              (__v8hi) _mm_setzero_si128 (),
+              __M);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS

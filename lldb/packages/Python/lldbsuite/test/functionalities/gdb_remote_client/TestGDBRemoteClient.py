@@ -1,4 +1,5 @@
 import lldb
+import binascii
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 from gdbclientutils import *
@@ -25,7 +26,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
 
             # Then, when we are asked to attach, error out.
             def vAttach(self, pid):
-                return "E42;" + error_msg.encode("hex")
+                return "E42;" + binascii.hexlify(error_msg.encode()).decode()
 
         self.server.responder = MyResponder()
 

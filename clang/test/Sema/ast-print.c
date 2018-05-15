@@ -83,8 +83,7 @@ enum EnumWithAttributes { // expected-warning {{'EnumWithAttributes' is deprecat
   EnumWithAttributesFoo __attribute__((deprecated)),
   // CHECK-NEXT: EnumWithAttributesBar __attribute__((unavailable(""))) = 50
   EnumWithAttributesBar __attribute__((unavailable)) = 50
-  // CHECK-NEXT: };
-  // CHECK-NEXT: enum EnumWithAttributes *EnumWithAttributesPtr;
+  // CHECK-NEXT: } *EnumWithAttributesPtr;
 } __attribute__((deprecated)) *EnumWithAttributesPtr; // expected-note {{'EnumWithAttributes' has been explicitly marked deprecated here}}
 
 // FIXME: If enum is forward-declared at file scope, attributes are lost.

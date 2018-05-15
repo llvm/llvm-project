@@ -7,7 +7,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; RUN: llc -filetype=obj %s -o %t.data-segment-merging.o
 
-; RUN: wasm-ld -no-gc-sections --allow-undefined -o %t.merged.wasm %t.data-segment-merging.o
+; RUN: wasm-ld -no-gc-sections --no-entry -o %t.merged.wasm %t.data-segment-merging.o
 ; RUN: obj2yaml %t.merged.wasm | FileCheck %s --check-prefix=MERGE
 ; MERGE:       - Type:            DATA
 ; MERGE-NEXT:    Segments:
@@ -18,7 +18,7 @@ target triple = "wasm32-unknown-unknown"
 ; MERGE-NEXT:          Value:           1024
 ; MERGE-NEXT:        Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
 
-; RUN: wasm-ld -no-gc-sections --allow-undefined --no-merge-data-segments -o %t.separate.wasm %t.data-segment-merging.o
+; RUN: wasm-ld -no-gc-sections --no-entry --no-merge-data-segments -o %t.separate.wasm %t.data-segment-merging.o
 ; RUN: obj2yaml %t.separate.wasm | FileCheck %s --check-prefix=SEPARATE
 ; SEPARATE:       - Type:            DATA
 ; SEPARATE-NEXT:    Segments:

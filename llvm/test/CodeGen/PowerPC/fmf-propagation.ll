@@ -2,8 +2,8 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=powerpc64le -debug-only=isel -o /dev/null 2>&1                        | FileCheck %s --check-prefix=FMFDEBUG
 ; RUN: llc < %s -mtriple=powerpc64le                                                           | FileCheck %s --check-prefix=FMF
-; RUN: llc < %s -mtriple=powerpc64le -debug-only=isel -o /dev/null 2>&1 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GLOBALDEBUG
-; RUN: llc < %s -mtriple=powerpc64le -enable-unsafe-fp-math                                    | FileCheck %s --check-prefix=GLOBAL
+; RUN: llc < %s -mtriple=powerpc64le -debug-only=isel -o /dev/null 2>&1 -enable-unsafe-fp-math -enable-no-nans-fp-math | FileCheck %s --check-prefix=GLOBALDEBUG
+; RUN: llc < %s -mtriple=powerpc64le -enable-unsafe-fp-math -enable-no-nans-fp-math                                    | FileCheck %s --check-prefix=GLOBAL
 
 ; Test FP transforms using instruction/node-level fast-math-flags.
 ; We're also checking debug output to verify that FMF is propagated to the newly created nodes.
@@ -375,5 +375,87 @@ define float @sqrt_fast(float %x) {
 ; GLOBAL-NEXT:    blr
   %rt = call fast float @llvm.sqrt.f32(float %x)
   ret float %rt
+}
+
+; fcmp can have fast-math-flags.
+
+; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fcmp_nnan:'
+; FMFDEBUG:         select_cc {{t[0-9]+}}
+; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fcmp_nnan:'
+
+; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fcmp_nnan:'
+; GLOBALDEBUG:         select_cc {{t[0-9]+}}
+; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fcmp_nnan:'
+
+define double @fcmp_nnan(double %a, double %y, double %z) {
+; FMF-LABEL: fcmp_nnan:
+; FMF:       # %bb.0:
+; FMF-NEXT:    xxlxor 0, 0, 0
+; FMF-NEXT:    fcmpu 0, 1, 1
+; FMF-NEXT:    fcmpu 1, 1, 0
+; FMF-NEXT:    cror 20, 4, 3
+; FMF-NEXT:    bc 12, 20, .LBB12_2
+; FMF-NEXT:  # %bb.1:
+; FMF-NEXT:    fmr 3, 2
+; FMF-NEXT:  .LBB12_2:
+; FMF-NEXT:    fmr 1, 3
+; FMF-NEXT:    blr
+;
+; GLOBAL-LABEL: fcmp_nnan:
+; GLOBAL:       # %bb.0:
+; GLOBAL-NEXT:    xxlxor 0, 0, 0
+; GLOBAL-NEXT:    xscmpudp 0, 1, 0
+; GLOBAL-NEXT:    blt 0, .LBB12_2
+; GLOBAL-NEXT:  # %bb.1:
+; GLOBAL-NEXT:    fmr 3, 2
+; GLOBAL-NEXT:  .LBB12_2:
+; GLOBAL-NEXT:    fmr 1, 3
+; GLOBAL-NEXT:    blr
+  %cmp = fcmp nnan ult double %a, 0.0
+  %z.y = select i1 %cmp, double %z, double %y
+  ret double %z.y
+}
+
+; FP library calls can have fast-math-flags.
+
+; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'log2_approx:'
+; FMFDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<double (double)* @log2>
+; FMFDEBUG:         ch,glue = callseq_end t15, TargetConstant:i64<32>, TargetConstant:i64<0>, t15:1
+; FMFDEBUG:         f64,ch,glue = CopyFromReg t16, Register:f64 $f1, t16:1
+; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'log2_approx:'
+
+; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'log2_approx:'
+; GLOBALDEBUG:         ch,glue = PPCISD::CALL_NOP t11, TargetGlobalAddress:i64<double (double)* @log2>
+; GLOBALDEBUG:         ch,glue = callseq_end t15, TargetConstant:i64<32>, TargetConstant:i64<0>, t15:1
+; GLOBALDEBUG:         f64,ch,glue = CopyFromReg t16, Register:f64 $f1, t16:1
+; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'log2_approx:'
+
+declare double @log2(double)
+define double @log2_approx(double %x) nounwind {
+; FMF-LABEL: log2_approx:
+; FMF:       # %bb.0:
+; FMF-NEXT:    mflr 0
+; FMF-NEXT:    std 0, 16(1)
+; FMF-NEXT:    stdu 1, -32(1)
+; FMF-NEXT:    bl log2
+; FMF-NEXT:    nop
+; FMF-NEXT:    addi 1, 1, 32
+; FMF-NEXT:    ld 0, 16(1)
+; FMF-NEXT:    mtlr 0
+; FMF-NEXT:    blr
+;
+; GLOBAL-LABEL: log2_approx:
+; GLOBAL:       # %bb.0:
+; GLOBAL-NEXT:    mflr 0
+; GLOBAL-NEXT:    std 0, 16(1)
+; GLOBAL-NEXT:    stdu 1, -32(1)
+; GLOBAL-NEXT:    bl log2
+; GLOBAL-NEXT:    nop
+; GLOBAL-NEXT:    addi 1, 1, 32
+; GLOBAL-NEXT:    ld 0, 16(1)
+; GLOBAL-NEXT:    mtlr 0
+; GLOBAL-NEXT:    blr
+  %r = call afn double @log2(double %x)
+  ret double %r
 }
 

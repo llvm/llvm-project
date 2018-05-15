@@ -62,22 +62,22 @@ static RETSIGTYPE SignalHandler(int Sig);  // defined below.
 
 static ManagedStatic<sys::SmartMutex<true> > SignalsMutex;
 
-/// InterruptFunction - The function to call if ctrl-c is pressed.
+/// The function to call if ctrl-c is pressed.
 static void (*InterruptFunction)() = nullptr;
 
 static ManagedStatic<std::vector<std::string>> FilesToRemove;
 
 static StringRef Argv0;
 
-// IntSigs - Signals that represent requested termination. There's no bug
-// or failure, or if there is, it's not our direct responsibility. For whatever
-// reason, our continued execution is no longer desirable.
+// Signals that represent requested termination. There's no bug or failure, or
+// if there is, it's not our direct responsibility. For whatever reason, our
+// continued execution is no longer desirable.
 static const int IntSigs[] = {
   SIGHUP, SIGINT, SIGPIPE, SIGTERM, SIGUSR1, SIGUSR2
 };
 
-// KillSigs - Signals that represent that we have a bug, and our prompt
-// termination has been ordered.
+// Signals that represent that we have a bug, and our prompt termination has
+// been ordered.
 static const int KillSigs[] = {
   SIGILL, SIGTRAP, SIGABRT, SIGFPE, SIGBUS, SIGSEGV, SIGQUIT
 #ifdef SIGSYS
@@ -100,23 +100,6 @@ static struct {
   int SigNo;
 } RegisteredSignalInfo[array_lengthof(IntSigs) + array_lengthof(KillSigs)];
 
-
-static void RegisterHandler(int Signal) {
-  assert(NumRegisteredSignals < array_lengthof(RegisteredSignalInfo) &&
-         "Out of space for signal handlers!");
-
-  struct sigaction NewHandler;
-
-  NewHandler.sa_handler = SignalHandler;
-  NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK;
-  sigemptyset(&NewHandler.sa_mask);
-
-  // Install the new handler, save the old one in RegisteredSignalInfo.
-  sigaction(Signal, &NewHandler,
-            &RegisteredSignalInfo[NumRegisteredSignals].SA);
-  RegisteredSignalInfo[NumRegisteredSignals].SigNo = Signal;
-  ++NumRegisteredSignals;
-}
 
 #if defined(HAVE_SIGALTSTACK)
 // Hold onto both the old and new alternate signal stack so that it's not
@@ -159,8 +142,27 @@ static void RegisterHandlers() {
   // be able to reliably handle signals due to stack overflow.
   CreateSigAltStack();
 
-  for (auto S : IntSigs) RegisterHandler(S);
-  for (auto S : KillSigs) RegisterHandler(S);
+  auto registerHandler = [&](int Signal) {
+    assert(NumRegisteredSignals < array_lengthof(RegisteredSignalInfo) &&
+           "Out of space for signal handlers!");
+
+    struct sigaction NewHandler;
+
+    NewHandler.sa_handler = SignalHandler;
+    NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK;
+    sigemptyset(&NewHandler.sa_mask);
+
+    // Install the new handler, save the old one in RegisteredSignalInfo.
+    sigaction(Signal, &NewHandler,
+              &RegisteredSignalInfo[NumRegisteredSignals].SA);
+    RegisteredSignalInfo[NumRegisteredSignals].SigNo = Signal;
+    ++NumRegisteredSignals;
+  };
+
+  for (auto S : IntSigs)
+    registerHandler(S);
+  for (auto S : KillSigs)
+    registerHandler(S);
 }
 
 static void UnregisterHandlers() {
@@ -172,10 +174,9 @@ static void UnregisterHandlers() {
 }
 
 
-/// RemoveFilesToRemove - Process the FilesToRemove list. This function
-/// should be called with the SignalsMutex lock held.
-/// NB: This must be an async signal safe function. It cannot allocate or free
-/// memory, even in debug builds.
+/// Process the FilesToRemove list. This function should be called with the
+/// SignalsMutex lock held. NB: This must be an async signal safe function. It
+/// cannot allocate or free memory, even in debug builds.
 static void RemoveFilesToRemove() {
   // Avoid constructing ManagedStatic in the signal handler.
   // If FilesToRemove is not constructed, there are no files to remove.
@@ -206,7 +207,7 @@ static void RemoveFilesToRemove() {
   }
 }
 
-// SignalHandler - The signal handler that runs.
+// The signal handler that runs.
 static RETSIGTYPE SignalHandler(int Sig) {
   // Restore the signal behavior to default, so that the program actually
   // crashes when we return and the signal reissues.  This also ensures that if
@@ -265,7 +266,7 @@ void llvm::sys::SetInterruptFunction(void (*IF)()) {
   RegisterHandlers();
 }
 
-// RemoveFileOnSignal - The public API
+// The public API
 bool llvm::sys::RemoveFileOnSignal(StringRef Filename,
                                    std::string* ErrMsg) {
   {
@@ -277,7 +278,7 @@ bool llvm::sys::RemoveFileOnSignal(StringRef Filename,
   return false;
 }
 
-// DontRemoveFileOnSignal - The public API
+// The public API
 void llvm::sys::DontRemoveFileOnSignal(StringRef Filename) {
   sys::SmartScopedLock<true> Guard(*SignalsMutex);
   std::vector<std::string>::reverse_iterator RI =
@@ -287,9 +288,9 @@ void llvm::sys::DontRemoveFileOnSignal(StringRef Filename) {
     I = FilesToRemove->erase(RI.base()-1);
 }
 
-/// AddSignalHandler - Add a function to be called when a signal is delivered
-/// to the process.  The handler can have a cookie passed to it to identify
-/// what instance of the handler it is.
+/// Add a function to be called when a signal is delivered to the process. The
+/// handler can have a cookie passed to it to identify what instance of the
+/// handler it is.
 void llvm::sys::AddSignalHandler(void (*FnPtr)(void *), void *Cookie) {
   CallBacksToRun->push_back(std::make_pair(FnPtr, Cookie));
   RegisterHandlers();
@@ -384,8 +385,8 @@ static int unwindBacktrace(void **StackTrace, int MaxEntries) {
 }
 #endif
 
-// PrintStackTrace - In the case of a program crash or fault, print out a stack
-// trace so that the user has an indication of why and where we died.
+// In the case of a program crash or fault, print out a stack trace so that the
+// user has an indication of why and where we died.
 //
 // On glibc systems we have the 'backtrace' function, which works nicely, but
 // doesn't demangle symbols.
@@ -464,8 +465,8 @@ static void PrintStackTraceSignalHandler(void *) {
 
 void llvm::sys::DisableSystemDialogsOnCrash() {}
 
-/// PrintStackTraceOnErrorSignal - When an error signal (such as SIGABRT or
-/// SIGSEGV) is delivered to the process, print a stack trace and then exit.
+/// When an error signal (such as SIGABRT or SIGSEGV) is delivered to the
+/// process, print a stack trace and then exit.
 void llvm::sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
                                              bool DisableCrashReporting) {
   ::Argv0 = Argv0;

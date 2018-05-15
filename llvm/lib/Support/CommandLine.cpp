@@ -1270,8 +1270,15 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 
     // If this is a named positional argument, just remember that it is the
     // active one...
-    if (Handler->getFormattingFlag() == cl::Positional)
+    if (Handler->getFormattingFlag() == cl::Positional) {
+      if ((Handler->getMiscFlags() & PositionalEatsArgs) && !Value.empty()) {
+        Handler->error("This argument does not take a value.\n"
+                       "\tInstead, it consumes any positional arguments until "
+                       "the next recognized option.", *Errs);
+        ErrorParsing = true;
+      }
       ActivePositionalArg = Handler;
+    }
     else
       ErrorParsing |= ProvideOption(Handler, ArgName, Value, argc, argv, i);
   }
@@ -1396,15 +1403,15 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 // Option Base class implementation
 //
 
-bool Option::error(const Twine &Message, StringRef ArgName) {
+bool Option::error(const Twine &Message, StringRef ArgName, raw_ostream &Errs) {
   if (!ArgName.data())
     ArgName = ArgStr;
   if (ArgName.empty())
-    errs() << HelpStr; // Be nice for positional arguments
+    Errs << HelpStr; // Be nice for positional arguments
   else
-    errs() << GlobalParser->ProgramName << ": for the -" << ArgName;
+    Errs << GlobalParser->ProgramName << ": for the -" << ArgName;
 
-  errs() << " option: " << Message << "\n";
+  Errs << " option: " << Message << "\n";
   return true;
 }
 
@@ -1474,8 +1481,12 @@ void alias::printOptionInfo(size_t GlobalWidth) const {
 size_t basic_parser_impl::getOptionWidth(const Option &O) const {
   size_t Len = O.ArgStr.size();
   auto ValName = getValueName();
-  if (!ValName.empty())
-    Len += getValueStr(O, ValName).size() + 3;
+  if (!ValName.empty()) {
+    size_t FormattingLen = 3;
+    if (O.getMiscFlags() & PositionalEatsArgs)
+      FormattingLen = 6;
+    Len += getValueStr(O, ValName).size() + FormattingLen;
+  }
 
   return Len + 6;
 }
@@ -1488,8 +1499,13 @@ void basic_parser_impl::printOptionInfo(const Option &O,
   outs() << "  -" << O.ArgStr;
 
   auto ValName = getValueName();
-  if (!ValName.empty())
-    outs() << "=<" << getValueStr(O, ValName) << '>';
+  if (!ValName.empty()) {
+    if (O.getMiscFlags() & PositionalEatsArgs) {
+      outs() << " <" << getValueStr(O, ValName) << ">...";
+    } else {
+      outs() << "=<" << getValueStr(O, ValName) << '>';
+    }
+  }
 
   Option::printHelpStr(O.HelpStr, GlobalWidth, getOptionWidth(O));
 }

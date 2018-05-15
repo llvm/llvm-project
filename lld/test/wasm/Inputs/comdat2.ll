@@ -9,5 +9,5 @@ entry:
 
 define i32 @callInline2() {
 entry:
-    ret i32 ptrtoint (i32 ()* @inlineFn to i32)
+  ret i32 ptrtoint (i32 ()* @inlineFn to i32)
 }

@@ -150,3 +150,11 @@ BasicBlockPass *llvm::createPrintBasicBlockPass(llvm::raw_ostream &OS,
                                                 const std::string &Banner) {
   return new PrintBasicBlockPass(OS, Banner);
 }
+
+bool llvm::isIRPrintingPass(Pass *P) {
+  const char *PID = (const char*)P->getPassID();
+
+  return (PID == &PrintModulePassWrapper::ID)
+      || (PID == &PrintFunctionPassWrapper::ID)
+      || (PID == &PrintBasicBlockPass::ID);
+}
