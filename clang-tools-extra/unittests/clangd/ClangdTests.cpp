@@ -938,67 +938,6 @@ int d;
   ASSERT_EQ(DiagConsumer.Count, 2); // Sanity check - we actually ran both?
 }
 
-TEST_F(ClangdVFSTest, InsertIncludes) {
-  MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB;
-  std::string SearchDirArg = (llvm::Twine("-I") + testRoot()).str();
-  CDB.ExtraClangFlags.insert(CDB.ExtraClangFlags.end(), {SearchDirArg.c_str()});
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
-
-  auto FooCpp = testPath("foo.cpp");
-  const auto Code = R"cpp(
-#include "x.h"
-#include "z.h"
-
-void f() {}
-)cpp";
-  FS.Files[FooCpp] = Code;
-  runAddDocument(Server, FooCpp, Code);
-
-  auto ChangedCode = [&](llvm::StringRef Original, llvm::StringRef Preferred) {
-    auto Replaces = Server.insertInclude(
-        FooCpp, Code, Original, Preferred.empty() ? Original : Preferred);
-    EXPECT_TRUE(static_cast<bool>(Replaces));
-    auto Changed = tooling::applyAllReplacements(Code, *Replaces);
-    EXPECT_TRUE(static_cast<bool>(Changed));
-    return *Changed;
-  };
-  auto Inserted = [&](llvm::StringRef Original, llvm::StringRef Preferred,
-                      llvm::StringRef Expected) {
-    return llvm::StringRef(ChangedCode(Original, Preferred))
-        .contains((llvm::Twine("#include ") + Expected + "").str());
-  };
-
-  EXPECT_TRUE(Inserted("\"y.h\"", /*Preferred=*/"", "\"y.h\""));
-  EXPECT_TRUE(Inserted("\"y.h\"", /*Preferred=*/"\"Y.h\"", "\"Y.h\""));
-  EXPECT_TRUE(Inserted("<string>", /*Preferred=*/"", "<string>"));
-  EXPECT_TRUE(Inserted("<string>", /*Preferred=*/"", "<string>"));
-
-  std::string OriginalHeader = URI::createFile(testPath("y.h")).toString();
-  std::string PreferredHeader = URI::createFile(testPath("Y.h")).toString();
-  EXPECT_TRUE(Inserted(OriginalHeader,
-                       /*Preferred=*/"", "\"y.h\""));
-  EXPECT_TRUE(Inserted(OriginalHeader,
-                       /*Preferred=*/"<Y.h>", "<Y.h>"));
-  EXPECT_TRUE(Inserted(OriginalHeader, PreferredHeader, "\"Y.h\""));
-  EXPECT_TRUE(Inserted("<y.h>", PreferredHeader, "\"Y.h\""));
-  auto TestURIHeader =
-      URI::parse(llvm::formatv("{0}:///x/y/z.h", ClangdTestScheme).str());
-  EXPECT_TRUE(static_cast<bool>(TestURIHeader));
-  EXPECT_TRUE(Inserted(TestURIHeader->toString(), "", "\"x/y/z.h\""));
-
-  // Check that includes are sorted.
-  const auto Expected = R"cpp(
-#include "x.h"
-#include "y.h"
-#include "z.h"
-
-void f() {}
-)cpp";
-  EXPECT_EQ(Expected, ChangedCode("\"y.h\"", /*Preferred=*/""));
-}
-
 TEST_F(ClangdVFSTest, FormatCode) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;

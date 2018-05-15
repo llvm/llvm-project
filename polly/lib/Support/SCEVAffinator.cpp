@@ -368,7 +368,7 @@ PWACtx SCEVAffinator::visitAddExpr(const SCEVAddExpr *Expr) {
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
     Sum = combine(Sum, visit(Expr->getOperand(i)), isl_pw_aff_add);
     if (isTooComplex(Sum))
-      return std::make_pair(nullptr, nullptr);
+      return complexityBailout();
   }
 
   return Sum;
@@ -380,7 +380,7 @@ PWACtx SCEVAffinator::visitMulExpr(const SCEVMulExpr *Expr) {
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
     Prod = combine(Prod, visit(Expr->getOperand(i)), isl_pw_aff_mul);
     if (isTooComplex(Prod))
-      return std::make_pair(nullptr, nullptr);
+      return complexityBailout();
   }
 
   return Prod;
@@ -431,7 +431,7 @@ PWACtx SCEVAffinator::visitSMaxExpr(const SCEVSMaxExpr *Expr) {
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
     Max = combine(Max, visit(Expr->getOperand(i)), isl_pw_aff_max);
     if (isTooComplex(Max))
-      return std::make_pair(nullptr, nullptr);
+      return complexityBailout();
   }
 
   return Max;
@@ -531,4 +531,12 @@ PWACtx SCEVAffinator::visitUnknown(const SCEVUnknown *Expr) {
 
   llvm_unreachable(
       "Unknowns SCEV was neither parameter nor a valid instruction.");
+}
+
+PWACtx SCEVAffinator::complexityBailout() {
+  // We hit the complexity limit for affine expressions; invalidate the scop
+  // and return a constant zero.
+  const DebugLoc &Loc = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
+  S->invalidate(COMPLEXITY, Loc);
+  return visit(SE.getZero(Type::getInt32Ty(BB->getContext())));
 }

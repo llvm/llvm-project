@@ -289,27 +289,6 @@ struct CompletionCandidate {
           I.documentation = D->Documentation;
         if (I.detail.empty())
           I.detail = D->CompletionDetail;
-        // FIXME: delay creating include insertion command to
-        // "completionItem/resolve", when it is supported
-        if (!D->IncludeHeader.empty()) {
-          // LSP favors additionalTextEdits over command. But we are still using
-          // command here because it would be expensive to calculate #include
-          // insertion edits for all candidates, and the include insertion edit
-          // is unlikely to conflict with the code completion edits.
-          Command Cmd;
-          // Command title is not added since this is not a user-facing command.
-          Cmd.command = ExecuteCommandParams::CLANGD_INSERT_HEADER_INCLUDE;
-          IncludeInsertion Insertion;
-          // Fallback to canonical header if declaration location is invalid.
-          Insertion.declaringHeader =
-              IndexResult->CanonicalDeclaration.FileURI.empty()
-                  ? D->IncludeHeader
-                  : IndexResult->CanonicalDeclaration.FileURI;
-          Insertion.preferredHeader = D->IncludeHeader;
-          Insertion.textDocument.uri = URIForFile(FileName);
-          Cmd.includeInsertion = std::move(Insertion);
-          I.command = std::move(Cmd);
-        }
       }
     }
     I.scoreInfo = Scores;

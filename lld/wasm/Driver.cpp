@@ -360,9 +360,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
     WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end", 0);
 
+    // For now, since we don't actually use the start function as the
+    // wasm start symbol, we don't need to care about it signature.
     if (!Config->Entry.empty())
-      EntrySym = Symtab->addUndefinedFunction(Config->Entry, 0, nullptr,
-                                              &NullSignature);
+      EntrySym =
+          Symtab->addUndefinedFunction(Config->Entry, 0, nullptr, nullptr);
 
     // Handle the `--undefined <sym>` options.
     for (auto *Arg : Args.filtered(OPT_undefined))
@@ -386,15 +388,19 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (!Config->Relocatable && !Config->AllowUndefined) {
     Symtab->reportRemainingUndefines();
   } else {
-    // When we allow undefined symbols we cannot include those defined in
-    // -u/--undefined since these undefined symbols have only names and no
-    // function signature, which means they cannot be written to the final
-    // output.
+    // Even when using --allow-undefined we still want to report the absence of
+    // our initial set of undefined symbols (i.e. the entry point and symbols
+    // specified via --undefined).
+    // Part of the reason for this is that these function don't have signatures
+    // so which means they cannot be written as wasm function imports.
     for (auto *Arg : Args.filtered(OPT_undefined)) {
       Symbol *Sym = Symtab->find(Arg->getValue());
       if (!Sym->isDefined())
-        error("function forced with --undefined not found: " + Sym->getName());
+        error("symbol forced with --undefined not found: " + Sym->getName());
     }
+    if (EntrySym && !EntrySym->isDefined())
+      error("entry symbol not defined (pass --no-entry to supress): " +
+            EntrySym->getName());
   }
   if (errorCount())
     return;

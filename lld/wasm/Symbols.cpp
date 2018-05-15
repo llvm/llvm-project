@@ -31,13 +31,13 @@ DefinedGlobal *WasmSym::StackPointer;
 
 WasmSymbolType Symbol::getWasmType() const {
   if (isa<FunctionSymbol>(this))
-    return llvm::wasm::WASM_SYMBOL_TYPE_FUNCTION;
+    return WASM_SYMBOL_TYPE_FUNCTION;
   if (isa<DataSymbol>(this))
-    return llvm::wasm::WASM_SYMBOL_TYPE_DATA;
+    return WASM_SYMBOL_TYPE_DATA;
   if (isa<GlobalSymbol>(this))
-    return llvm::wasm::WASM_SYMBOL_TYPE_GLOBAL;
+    return WASM_SYMBOL_TYPE_GLOBAL;
   if (isa<SectionSymbol>(this))
-    return llvm::wasm::WASM_SYMBOL_TYPE_SECTION;
+    return WASM_SYMBOL_TYPE_SECTION;
   llvm_unreachable("invalid symbol kind");
 }
 
@@ -71,7 +71,8 @@ uint32_t Symbol::getOutputSymbolIndex() const {
 }
 
 void Symbol::setOutputSymbolIndex(uint32_t Index) {
-  DEBUG(dbgs() << "setOutputSymbolIndex " << Name << " -> " << Index << "\n");
+  LLVM_DEBUG(dbgs() << "setOutputSymbolIndex " << Name << " -> " << Index
+                    << "\n");
   assert(OutputSymbolIndex == INVALID_INDEX);
   OutputSymbolIndex = Index;
 }
@@ -89,7 +90,7 @@ bool Symbol::isHidden() const {
 }
 
 void Symbol::setHidden(bool IsHidden) {
-  DEBUG(dbgs() << "setHidden: " << Name << " -> " << IsHidden << "\n");
+  LLVM_DEBUG(dbgs() << "setHidden: " << Name << " -> " << IsHidden << "\n");
   Flags &= ~WASM_SYMBOL_VISIBILITY_MASK;
   if (IsHidden)
     Flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
@@ -105,7 +106,7 @@ uint32_t FunctionSymbol::getFunctionIndex() const {
 }
 
 void FunctionSymbol::setFunctionIndex(uint32_t Index) {
-  DEBUG(dbgs() << "setFunctionIndex " << Name << " -> " << Index << "\n");
+  LLVM_DEBUG(dbgs() << "setFunctionIndex " << Name << " -> " << Index << "\n");
   assert(FunctionIndex == INVALID_INDEX);
   FunctionIndex = Index;
 }
@@ -137,7 +138,7 @@ void FunctionSymbol::setTableIndex(uint32_t Index) {
     F->Function->setTableIndex(Index);
     return;
   }
-  DEBUG(dbgs() << "setTableIndex " << Name << " -> " << Index << "\n");
+  LLVM_DEBUG(dbgs() << "setTableIndex " << Name << " -> " << Index << "\n");
   assert(TableIndex == INVALID_INDEX);
   TableIndex = Index;
 }
@@ -149,25 +150,25 @@ DefinedFunction::DefinedFunction(StringRef Name, uint32_t Flags, InputFile *F,
       Function(Function) {}
 
 uint32_t DefinedData::getVirtualAddress() const {
-  DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
+  LLVM_DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
   if (Segment)
     return Segment->OutputSeg->StartVA + Segment->OutputSegmentOffset + Offset;
   return Offset;
 }
 
 void DefinedData::setVirtualAddress(uint32_t Value) {
-  DEBUG(dbgs() << "setVirtualAddress " << Name << " -> " << Value << "\n");
+  LLVM_DEBUG(dbgs() << "setVirtualAddress " << Name << " -> " << Value << "\n");
   assert(!Segment);
   Offset = Value;
 }
 
 uint32_t DefinedData::getOutputSegmentOffset() const {
-  DEBUG(dbgs() << "getOutputSegmentOffset: " << getName() << "\n");
+  LLVM_DEBUG(dbgs() << "getOutputSegmentOffset: " << getName() << "\n");
   return Segment->OutputSegmentOffset + Offset;
 }
 
 uint32_t DefinedData::getOutputSegmentIndex() const {
-  DEBUG(dbgs() << "getOutputSegmentIndex: " << getName() << "\n");
+  LLVM_DEBUG(dbgs() << "getOutputSegmentIndex: " << getName() << "\n");
   return Segment->OutputSeg->Index;
 }
 
@@ -179,7 +180,7 @@ uint32_t GlobalSymbol::getGlobalIndex() const {
 }
 
 void GlobalSymbol::setGlobalIndex(uint32_t Index) {
-  DEBUG(dbgs() << "setGlobalIndex " << Name << " -> " << Index << "\n");
+  LLVM_DEBUG(dbgs() << "setGlobalIndex " << Name << " -> " << Index << "\n");
   assert(GlobalIndex == INVALID_INDEX);
   GlobalIndex = Index;
 }
@@ -197,14 +198,14 @@ DefinedGlobal::DefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
       Global(Global) {}
 
 uint32_t SectionSymbol::getOutputSectionIndex() const {
-  DEBUG(dbgs() << "getOutputSectionIndex: " << getName() << "\n");
+  LLVM_DEBUG(dbgs() << "getOutputSectionIndex: " << getName() << "\n");
   assert(OutputSectionIndex != INVALID_INDEX);
   return OutputSectionIndex;
 }
 
 void SectionSymbol::setOutputSectionIndex(uint32_t Index) {
-  DEBUG(dbgs() << "setOutputSectionIndex: " << getName() << " -> " << Index
-               << "\n");
+  LLVM_DEBUG(dbgs() << "setOutputSectionIndex: " << getName() << " -> " << Index
+                    << "\n");
   assert(Index != INVALID_INDEX);
   OutputSectionIndex = Index;
 }
@@ -238,18 +239,4 @@ std::string lld::toString(wasm::Symbol::Kind Kind) {
     return "SectionKind";
   }
   llvm_unreachable("invalid symbol kind");
-}
-
-std::string lld::toString(WasmSymbolType Type) {
-  switch (Type) {
-  case llvm::wasm::WASM_SYMBOL_TYPE_FUNCTION:
-    return "Function";
-  case llvm::wasm::WASM_SYMBOL_TYPE_DATA:
-    return "Data";
-  case llvm::wasm::WASM_SYMBOL_TYPE_GLOBAL:
-    return "Global";
-  case llvm::wasm::WASM_SYMBOL_TYPE_SECTION:
-    return "Section";
-  }
-  llvm_unreachable("invalid symbol type");
 }
