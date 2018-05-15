@@ -23,7 +23,8 @@ if(LLVM_ENABLE_LIBPFM AND HAVE_LIBPFM)
 endif()
 
 if(LLVM_TARGETS_TO_BUILD MATCHES "X86")
-  add_subdirectory(
-    X86
-  )
+  add_subdirectory(X86)
+endif()
+if(LLVM_TARGETS_TO_BUILD MATCHES "ARM")
+	add_subdirectory(ARM)
 endif()

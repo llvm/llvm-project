@@ -1,6 +1,19 @@
-#include "RetireControlUnit.h"
+//===---------------------- RetireControlUnit.cpp ---------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+/// \file
+///
+/// This file implements methods declared by the RetireControlUnit interface.
+///
+//===----------------------------------------------------------------------===//
+
 #include "Dispatch.h"
-#include "llvm/MC/MCSchedule.h"
+#include "RetireControlUnit.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -28,7 +41,8 @@ RetireControlUnit::RetireControlUnit(const llvm::MCSchedModel &SM,
 }
 
 // Reserves a number of slots, and returns a new token.
-unsigned RetireControlUnit::reserveSlot(const InstRef &IR, unsigned NumMicroOps) {
+unsigned RetireControlUnit::reserveSlot(const InstRef &IR,
+                                        unsigned NumMicroOps) {
   assert(isAvailable(NumMicroOps));
   unsigned NormalizedQuantity =
       std::min(NumMicroOps, static_cast<unsigned>(Queue.size()));

@@ -90,6 +90,10 @@ RUN: ld.lld -### -m i386pep foo.o -s | FileCheck -check-prefix STRIP %s
 RUN: ld.lld -### -m i386pep foo.o --strip-all | FileCheck -check-prefix STRIP %s
 STRIP-NOT: -debug:dwarf
 
+RUN: ld.lld -### -m i386pep foo.o -pdb out.pdb | FileCheck -check-prefix PDB %s
+PDB: -debug -pdb:out.pdb
+PDB-NOT: -debug:dwarf
+
 RUN: ld.lld -### -m i386pep foo.o --large-address-aware | FileCheck -check-prefix LARGE-ADDRESS-AWARE %s
 LARGE-ADDRESS-AWARE: -largeaddressaware
 

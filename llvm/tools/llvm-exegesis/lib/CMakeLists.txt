@@ -1,5 +1,6 @@
 add_library(LLVMExegesis
   STATIC
+  Analysis.cpp
   BenchmarkResult.cpp
   BenchmarkRunner.cpp
   Clustering.cpp
@@ -19,6 +20,7 @@ llvm_map_components_to_libnames(libs
   CodeGen
   Core
   ExecutionEngine
+  GlobalISel
   MC
   MCJIT
   Object

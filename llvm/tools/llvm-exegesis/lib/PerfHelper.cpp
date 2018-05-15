@@ -15,6 +15,7 @@
 #include "perfmon/pfmlib.h"
 #include "perfmon/pfmlib_perf_event.h"
 #endif
+#include <cassert>
 
 namespace exegesis {
 namespace pfm {
@@ -88,6 +89,7 @@ llvm::StringRef PerfEvent::getPfmEventString() const {
 
 #ifdef HAVE_LIBPFM
 Counter::Counter(const PerfEvent &Event) {
+  assert(Event.valid());
   const pid_t Pid = 0;    // measure current process/thread.
   const int Cpu = -1;     // measure any processor.
   const int GroupFd = -1; // no grouping of counters.
@@ -108,8 +110,10 @@ void Counter::stop() { ioctl(FileDescriptor, PERF_EVENT_IOC_DISABLE, 0); }
 int64_t Counter::read() const {
   int64_t Count = 0;
   ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
-  if (ReadSize != sizeof(Count))
+  if (ReadSize != sizeof(Count)) {
+    Count = -1;
     llvm::errs() << "Failed to read event counter\n";
+  }
   return Count;
 }
 

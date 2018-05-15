@@ -54,7 +54,7 @@
 //   RUN:        -DKW=struct -DBASES=' : B' -o - -xc++ %s \
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
-//   RUN: %clang_cc1 -verify -ast-print -DKW=struct -DBASES=' : B' -xc++ %s \
+//   RUN: %clang_cc1 -verify -triple x86_64-linux -ast-print -DKW=struct -DBASES=' : B' -xc++ %s \
 //   RUN: > %t.cpp
 //   RUN: FileCheck --check-prefixes=CHECK,PRINT,PRINT-CXX -DKW=struct \
 //   RUN:           -DBASES=' : B' %s --input-file %t.cpp
@@ -67,7 +67,7 @@
 //   RUN: %clang -target x86_64-linux -Xclang -verify -S -emit-llvm -o - %t.cpp \
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
-//   RUN: %clang_cc1 -verify -ast-print %t.cpp \
+//   RUN: %clang_cc1 -verify -triple x86_64-linux -ast-print %t.cpp \
 //   RUN: | FileCheck --check-prefixes=CHECK,PRINT,PRINT-CXX -DKW=struct \
 //   RUN:             -DBASES=' : B' %s
 
