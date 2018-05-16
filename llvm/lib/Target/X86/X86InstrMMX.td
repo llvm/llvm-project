@@ -142,11 +142,11 @@ multiclass sse12_cvt_pint_3addr<bits<8> opc, RegisterClass SrcRC,
   def irr : MMXPI<opc, MRMSrcReg, (outs DstRC:$dst),
                   (ins DstRC:$src1, SrcRC:$src2), asm,
                   [(set DstRC:$dst, (Int DstRC:$src1, SrcRC:$src2))], d>,
-                  Sched<[WriteCvtI2F]>;
+                  Sched<[WriteCvtI2PS]>;
   def irm : MMXPI<opc, MRMSrcMem, (outs DstRC:$dst),
                   (ins DstRC:$src1, x86memop:$src2), asm,
                   [(set DstRC:$dst, (Int DstRC:$src1, (ld_frag addr:$src2)))], d>,
-                  Sched<[WriteCvtI2FLd]>;
+                  Sched<[WriteCvtI2PS.Folded]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -512,19 +512,19 @@ def MMX_PSHUFWmi : MMXIi8<0x70, MRMSrcMem,
 // -- Conversion Instructions
 defm MMX_CVTPS2PI : sse12_cvt_pint<0x2D, VR128, VR64, int_x86_sse_cvtps2pi,
                       f64mem, load, "cvtps2pi\t{$src, $dst|$dst, $src}",
-                      WriteCvtF2I, SSEPackedSingle>, PS;
+                      WriteCvtPS2I, SSEPackedSingle>, PS;
 defm MMX_CVTPD2PI : sse12_cvt_pint<0x2D, VR128, VR64, int_x86_sse_cvtpd2pi,
                       f128mem, memop, "cvtpd2pi\t{$src, $dst|$dst, $src}",
-                      WriteCvtF2I, SSEPackedDouble>, PD;
+                      WriteCvtPD2I, SSEPackedDouble>, PD;
 defm MMX_CVTTPS2PI : sse12_cvt_pint<0x2C, VR128, VR64, int_x86_sse_cvttps2pi,
                        f64mem, load, "cvttps2pi\t{$src, $dst|$dst, $src}",
-                       WriteCvtF2I, SSEPackedSingle>, PS;
+                       WriteCvtPS2I, SSEPackedSingle>, PS;
 defm MMX_CVTTPD2PI : sse12_cvt_pint<0x2C, VR128, VR64, int_x86_sse_cvttpd2pi,
                        f128mem, memop, "cvttpd2pi\t{$src, $dst|$dst, $src}",
-                       WriteCvtF2I, SSEPackedDouble>, PD;
+                       WriteCvtPD2I, SSEPackedDouble>, PD;
 defm MMX_CVTPI2PD : sse12_cvt_pint<0x2A, VR64, VR128, int_x86_sse_cvtpi2pd,
                          i64mem, load, "cvtpi2pd\t{$src, $dst|$dst, $src}",
-                         WriteCvtI2F, SSEPackedDouble>, PD;
+                         WriteCvtI2PD, SSEPackedDouble>, PD;
 let Constraints = "$src1 = $dst" in {
   defm MMX_CVTPI2PS : sse12_cvt_pint_3addr<0x2A, VR64, VR128,
                          int_x86_sse_cvtpi2ps,

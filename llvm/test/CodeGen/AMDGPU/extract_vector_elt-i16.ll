@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SICIVI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=SICIVI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SICIVI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,SICIVI,GFX89 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v2i16:
 ; GCN: s_load_dword [[VEC:s[0-9]+]]
@@ -96,20 +96,15 @@ define amdgpu_kernel void @extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x
 ; SICIVI: buffer_load_ushort
 ; SICIVI: buffer_load_ushort
 
-; SICIVI: buffer_store_short
-; SICIVI: buffer_store_short
-; SICIVI: buffer_store_short
+; GFX9-DAG: global_load_short_d16_hi v
+; GFX9-DAG: global_load_short_d16 v
 
-; SICIVI: buffer_load_ushort
-; SICIVI: buffer_store_short
+; GCN-DAG: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 4
+; GFX89: v_lshrrev_b64 v{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}, v
 
-; GFX9: buffer_load_ushort
-; GFX9: global_load_short_d16_hi
-; GFX9: global_load_short_d16 v
-; GFX9: buffer_store_dword
-; GFX9: buffer_store_dword
-; GFX9: buffer_load_ushort
-; GFX9: buffer_store_short
+; SI: v_lshr_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}
+
+; GCN: {{buffer|global}}_store_short
 define amdgpu_kernel void @dynamic_extract_vector_elt_v3i16(i16 addrspace(1)* %out, <3 x i16> %foo, i32 %idx) #0 {
   %p0 = extractelement <3 x i16> %foo, i32 %idx
   %out1 = getelementptr i16, i16 addrspace(1)* %out, i32 1
@@ -117,29 +112,15 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v3i16(i16 addrspace(1)* %o
   ret void
 }
 
-; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v4i16:
-; SICIVI: buffer_load_ushort
-; SICIVI: buffer_load_ushort
-; SICIVI: buffer_load_ushort
-; SICIVI: buffer_load_ushort
-
-; SICIVI: buffer_store_short
-; SICIVI: buffer_store_short
-; SICIVI: buffer_store_short
-; SICIVI: buffer_store_short
-
-; SICIVI: buffer_load_ushort
-; SICIVI: buffer_store_short
-
-; GFX9: s_load_dword
-; GFX9: buffer_store_dword
-; GFX9: buffer_store_dword
-; GFX9: buffer_load_ushort
-; GFX9: buffer_store_short
-define amdgpu_kernel void @dynamic_extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x i16> %foo, i32 %idx) #0 {
-  %p0 = extractelement <4 x i16> %foo, i32 %idx
-  %out1 = getelementptr i16, i16 addrspace(1)* %out, i32 1
-  store i16 %p0, i16 addrspace(1)* %out
+; GCN-LABEL: {{^}}v_insertelement_v4i16_dynamic_sgpr:
+define amdgpu_kernel void @v_insertelement_v4i16_dynamic_sgpr(i16 addrspace(1)* %out, <4 x i16> addrspace(1)* %in, i32 %idx) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.ext = sext i32 %tid to i64
+  %in.gep = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(1)* %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i64 %tid.ext
+  %vec = load <4 x i16>, <4 x i16> addrspace(1)* %in.gep
+  %vec.extract = extractelement <4 x i16> %vec, i32 %idx
+  store i16 %vec.extract, i16 addrspace(1)* %out.gep
   ret void
 }
 

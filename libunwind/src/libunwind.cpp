@@ -61,10 +61,9 @@ _LIBUNWIND_EXPORT int unw_init_local(unw_cursor_t *cursor,
 # define REGISTER_KIND Registers_arm
 #elif defined(__or1k__)
 # define REGISTER_KIND Registers_or1k
-#elif defined(__mips__) && defined(_ABIO32) && _MIPS_SIM == _ABIO32 &&         \
-    defined(__mips_soft_float)
+#elif defined(__mips__) && defined(_ABIO32) && _MIPS_SIM == _ABIO32
 # define REGISTER_KIND Registers_mips_o32
-#elif defined(__mips64) && defined(__mips_soft_float)
+#elif defined(__mips64)
 # define REGISTER_KIND Registers_mips_newabi
 #elif defined(__mips__)
 # warning The MIPS architecture is not supported with this ABI and environment!

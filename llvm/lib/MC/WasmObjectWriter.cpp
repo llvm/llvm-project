@@ -225,6 +225,9 @@ class WasmObjectWriter : public MCObjectWriter {
   DenseMap<const MCSectionWasm *, std::vector<WasmRelocationEntry>>
       CustomSectionsRelocations;
 
+  // Map from section to fintining function.
+  DenseMap<const MCSection *, const MCSymbol *> SectionFunctions;
+
   DenseMap<WasmFunctionType, int32_t, WasmFunctionTypeDenseMapInfo>
       FunctionTypeIndices;
   SmallVector<WasmFunctionType, 4> FunctionTypes;
@@ -265,6 +268,7 @@ private:
     FunctionTypes.clear();
     Globals.clear();
     DataSegments.clear();
+    SectionFunctions.clear();
     MCObjectWriter::reset();
     NumFunctionImports = 0;
     NumGlobalImports = 0;
@@ -383,6 +387,18 @@ void WasmObjectWriter::writeHeader(const MCAssembler &Asm) {
 
 void WasmObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                 const MCAsmLayout &Layout) {
+  // Build a map of sections to the function that defines them, for use
+  // in recordRelocation.
+  for (const MCSymbol &S : Asm.symbols()) {
+    const auto &WS = static_cast<const MCSymbolWasm &>(S);
+    if (WS.isDefined() && WS.isFunction() && !WS.isVariable()) {
+      const auto &Sec = static_cast<const MCSectionWasm &>(S.getSection());
+      auto Pair = SectionFunctions.insert(std::make_pair(&Sec, &S));
+      if (!Pair.second)
+        report_fatal_error("section already has a defining function: " +
+                           Sec.getSectionName());
+    }
+  }
 }
 
 void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
@@ -475,7 +491,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     const MCSymbol *SectionSymbol = nullptr;
     const MCSection &SecA = SymA->getSection();
     if (SecA.getKind().isText())
-      SectionSymbol = SecA.begin()->getAtom();
+      SectionSymbol = SectionFunctions.find(&SecA)->second;
     else
       SectionSymbol = SecA.getBeginSymbol();
     if (!SectionSymbol)

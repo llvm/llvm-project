@@ -7613,7 +7613,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
       // If the user is going to see an error here, recover by making the
       // definition visible.
       bool TreatAsComplete = Diagnoser && !isSFINAEContext();
-      if (Diagnoser)
+      if (Diagnoser && SuggestedDef)
         diagnoseMissingImport(Loc, SuggestedDef, MissingImportKind::Definition,
                               /*Recover*/TreatAsComplete);
       return !TreatAsComplete;

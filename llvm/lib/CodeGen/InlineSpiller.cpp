@@ -617,8 +617,11 @@ void InlineSpiller::reMaterializeAll() {
       MachineInstr &MI = *RegI++;
 
       // Debug values are not allowed to affect codegen.
-      if (MI.isDebugInstr())
+      if (MI.isDebugValue())
         continue;
+
+      assert(!MI.isDebugInstr() && "Did not expect to find a use in debug "
+             "instruction that isn't a DBG_VALUE");
 
       anyRemat |= reMaterializeFor(LI, MI);
     }
@@ -933,7 +936,7 @@ void InlineSpiller::spillAroundUses(unsigned Reg) {
     MachineInstr *MI = &*(RegI++);
 
     // Debug values are not allowed to affect codegen.
-    if (MI->isDebugInstr()) {
+    if (MI->isDebugValue()) {
       // Modify DBG_VALUE now that the value is in a spill slot.
       MachineBasicBlock *MBB = MI->getParent();
       LLVM_DEBUG(dbgs() << "Modifying debug info due to spill:\t" << *MI);
@@ -941,6 +944,9 @@ void InlineSpiller::spillAroundUses(unsigned Reg) {
       MBB->erase(MI);
       continue;
     }
+
+    assert(!MI->isDebugInstr() && "Did not expect to find a use in debug "
+           "instruction that isn't a DBG_VALUE");
 
     // Ignore copies to/from snippets. We'll delete them.
     if (SnippetCopies.count(MI))

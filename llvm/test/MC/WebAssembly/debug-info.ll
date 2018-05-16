@@ -204,6 +204,13 @@
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
 
+; generated from the following C code using: clang --target=wasm32 -g -O0 -S -emit-llvm test.c
+; extern int myextern;
+; void f2(void) { return; }
+;
+; int* foo = &myextern;
+; void (*ptr2)(void) = f2;
+
 target triple = "wasm32-unknown-unknown"
 
 source_filename = "test.c"
@@ -226,7 +233,7 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "foo", scope: !2, file: !3, line: 4, type: !11, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 6.0.0 (trunk 315924) (llvm/trunk 315960)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 7.0.0 (trunk 332303) (llvm/trunk 332406)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "test.c", directory: "/usr/local/google/home/sbc/dev/wasm/simple")
 !4 = !{}
 !5 = !{!0, !6}
@@ -240,6 +247,6 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 !13 = !{i32 2, !"Dwarf Version", i32 4}
 !14 = !{i32 2, !"Debug Info Version", i32 3}
 !15 = !{i32 1, !"wchar_size", i32 4}
-!16 = !{!"clang version 6.0.0 (trunk 315924) (llvm/trunk 315960)"}
+!16 = !{!"clang version 7.0.0 (trunk 332303) (llvm/trunk 332406)"}
 !17 = distinct !DISubprogram(name: "f2", scope: !3, file: !3, line: 2, type: !9, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !4)
-!18 = !DILocation(line: 2, column: 16, scope: !17)
+!18 = !DILocation(line: 2, column: 17, scope: !17)

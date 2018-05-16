@@ -169,6 +169,19 @@ struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakTemplateDeclarationsStyle> {
+  static void enumeration(IO &IO, FormatStyle::BreakTemplateDeclarationsStyle &Value) {
+    IO.enumCase(Value, "No", FormatStyle::BTDS_No);
+    IO.enumCase(Value, "MultiLine", FormatStyle::BTDS_MultiLine);
+    IO.enumCase(Value, "Yes", FormatStyle::BTDS_Yes);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "false", FormatStyle::BTDS_MultiLine);
+    IO.enumCase(Value, "true", FormatStyle::BTDS_Yes);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::DefinitionReturnTypeBreakingStyle> {
   static void
   enumeration(IO &IO, FormatStyle::DefinitionReturnTypeBreakingStyle &Value) {
@@ -400,6 +413,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("PenaltyBreakFirstLessLess",
                    Style.PenaltyBreakFirstLessLess);
     IO.mapOptional("PenaltyBreakString", Style.PenaltyBreakString);
+    IO.mapOptional("PenaltyBreakTemplateDeclaration",
+                   Style.PenaltyBreakTemplateDeclaration);
     IO.mapOptional("PenaltyExcessCharacter", Style.PenaltyExcessCharacter);
     IO.mapOptional("PenaltyReturnTypeOnItsOwnLine",
                    Style.PenaltyReturnTypeOnItsOwnLine);
@@ -598,7 +613,7 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
-  LLVMStyle.AlwaysBreakTemplateDeclarations = false;
+  LLVMStyle.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.BinPackArguments = true;
   LLVMStyle.BinPackParameters = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
@@ -670,6 +685,7 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.PenaltyExcessCharacter = 1000000;
   LLVMStyle.PenaltyReturnTypeOnItsOwnLine = 60;
   LLVMStyle.PenaltyBreakBeforeFirstCallParameter = 19;
+  LLVMStyle.PenaltyBreakTemplateDeclaration = prec::Relational;
 
   LLVMStyle.DisableFormat = false;
   LLVMStyle.SortIncludes = true;
@@ -694,7 +710,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.AllowShortIfStatementsOnASingleLine = true;
   GoogleStyle.AllowShortLoopsOnASingleLine = true;
   GoogleStyle.AlwaysBreakBeforeMultilineStrings = true;
-  GoogleStyle.AlwaysBreakTemplateDeclarations = true;
+  GoogleStyle.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   GoogleStyle.ConstructorInitializerAllOnOneLineOrOnePerLine = true;
   GoogleStyle.DerivePointerAlignment = true;
   GoogleStyle.IncludeStyle.IncludeCategories = {
@@ -819,7 +835,7 @@ FormatStyle getMozillaStyle() {
   MozillaStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_TopLevel;
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
-  MozillaStyle.AlwaysBreakTemplateDeclarations = true;
+  MozillaStyle.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   MozillaStyle.BinPackParameters = false;
   MozillaStyle.BinPackArguments = false;
   MozillaStyle.BreakBeforeBraces = FormatStyle::BS_Mozilla;

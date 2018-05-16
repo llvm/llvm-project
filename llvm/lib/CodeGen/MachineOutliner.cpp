@@ -1253,6 +1253,14 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   F->setLinkage(GlobalValue::InternalLinkage);
   F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
+  // FIXME: Set nounwind, so we don't generate eh_frame? Haven't verified it's
+  // necessary.
+
+  // Set optsize/minsize, so we don't insert padding between outlined
+  // functions.
+  F->addFnAttr(Attribute::OptimizeForSize);
+  F->addFnAttr(Attribute::MinSize);
+
   // Save F so that we can add debug info later if we need to.
   CreatedIRFunctions.push_back(F);
 

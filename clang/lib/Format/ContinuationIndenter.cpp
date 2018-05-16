@@ -402,6 +402,12 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         Style.Language == FormatStyle::LK_JavaScript))
     return true;
 
+  // If the template declaration spans multiple lines, force wrap before the
+  // function/class declaration
+  if (Previous.ClosesTemplateDeclaration &&
+      State.Stack.back().BreakBeforeParameter)
+    return true;
+
   if (State.Column <= NewLineColumn)
     return false;
 
@@ -453,7 +459,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     // for cases where the entire line does not fit on a single line as a
     // different LineFormatter would be used otherwise.
     if (Previous.ClosesTemplateDeclaration)
-      return true;
+      return Style.AlwaysBreakTemplateDeclarations != FormatStyle::BTDS_No;
     if (Previous.is(TT_FunctionAnnotationRParen))
       return true;
     if (Previous.is(TT_LeadingJavaAnnotation) && Current.isNot(tok::l_paren) &&

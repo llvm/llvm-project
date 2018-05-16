@@ -161,9 +161,7 @@ define i8* @_Z3fooi(i32 signext %Letter) {
 ; MIPS64R2-NEXT:    beqz $1, .LBB0_3
 ; MIPS64R2-NEXT:    nop
 ; MIPS64R2-NEXT:  .LBB0_1: # %entry
-; MIPS64R2-NEXT:    daddiu $1, $zero, 8
-; MIPS64R2-NEXT:    dmult $2, $1
-; MIPS64R2-NEXT:    mflo $1
+; MIPS64R2-NEXT:    dsll $1, $2, 3
 ; MIPS64R2-NEXT:    lui $2, %highest(.LJTI0_0)
 ; MIPS64R2-NEXT:    daddiu $2, $2, %higher(.LJTI0_0)
 ; MIPS64R2-NEXT:    dsll $2, $2, 16
@@ -481,9 +479,7 @@ define i8* @_Z3fooi(i32 signext %Letter) {
 ; PIC-MIPS64R2-NEXT:    beqz $1, .LBB0_3
 ; PIC-MIPS64R2-NEXT:    nop
 ; PIC-MIPS64R2-NEXT:  .LBB0_1: # %entry
-; PIC-MIPS64R2-NEXT:    daddiu $1, $zero, 8
-; PIC-MIPS64R2-NEXT:    dmult $3, $1
-; PIC-MIPS64R2-NEXT:    mflo $1
+; PIC-MIPS64R2-NEXT:    dsll $1, $3, 3
 ; PIC-MIPS64R2-NEXT:    ld $3, %got_page(.LJTI0_0)($2)
 ; PIC-MIPS64R2-NEXT:    daddu $1, $1, $3
 ; PIC-MIPS64R2-NEXT:    ld $1, %got_ofst(.LJTI0_0)($1)

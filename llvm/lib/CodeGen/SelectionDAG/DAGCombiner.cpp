@@ -540,15 +540,20 @@ namespace {
 
     /// This is a helper function for MergeConsecutiveStores. Stores
     /// that potentially may be merged with St are placed in
-    /// StoreNodes.
+    /// StoreNodes. RootNode is a chain predecessor to all store
+    /// candidates.
     void getStoreMergeCandidates(StoreSDNode *St,
-                                 SmallVectorImpl<MemOpLink> &StoreNodes);
+                                 SmallVectorImpl<MemOpLink> &StoreNodes,
+                                 SDNode *&Root);
 
     /// Helper function for MergeConsecutiveStores. Checks if
     /// candidate stores have indirect dependency through their
-    /// operands. \return True if safe to merge.
+    /// operands. RootNode is the predecessor to all stores calculated
+    /// by getStoreMergeCandidates and is used to prune the dependency check.
+    /// \return True if safe to merge.
     bool checkMergeStoreCandidatesForDependencies(
-        SmallVectorImpl<MemOpLink> &StoreNodes, unsigned NumStores);
+        SmallVectorImpl<MemOpLink> &StoreNodes, unsigned NumStores,
+        SDNode *RootNode);
 
     /// Merge consecutive store operations into a wide store.
     /// This optimization uses wide integers or vectors when possible.
@@ -13229,7 +13234,8 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
 }
 
 void DAGCombiner::getStoreMergeCandidates(
-    StoreSDNode *St, SmallVectorImpl<MemOpLink> &StoreNodes) {
+    StoreSDNode *St, SmallVectorImpl<MemOpLink> &StoreNodes,
+    SDNode *&RootNode) {
   // This holds the base pointer, index, and the offset in bytes from the base
   // pointer.
   BaseIndexOffset BasePtr = BaseIndexOffset::match(St, DAG);
@@ -13328,7 +13334,7 @@ void DAGCombiner::getStoreMergeCandidates(
   // FIXME: We should be able to climb and
   // descend TokenFactors to find candidates as well.
 
-  SDNode *RootNode = (St->getChain()).getNode();
+  RootNode = St->getChain().getNode();
 
   if (LoadSDNode *Ldn = dyn_cast<LoadSDNode>(RootNode)) {
     RootNode = Ldn->getChain().getNode();
@@ -13359,21 +13365,48 @@ void DAGCombiner::getStoreMergeCandidates(
 // through the chain). Check in parallel by searching up from
 // non-chain operands of candidates.
 bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
-    SmallVectorImpl<MemOpLink> &StoreNodes, unsigned NumStores) {
+    SmallVectorImpl<MemOpLink> &StoreNodes, unsigned NumStores,
+    SDNode *RootNode) {
   // FIXME: We should be able to truncate a full search of
   // predecessors by doing a BFS and keeping tabs the originating
   // stores from which worklist nodes come from in a similar way to
   // TokenFactor simplfication.
 
-  SmallPtrSet<const SDNode *, 16> Visited;
+  SmallPtrSet<const SDNode *, 32> Visited;
   SmallVector<const SDNode *, 8> Worklist;
-  unsigned int Max = 1024;
+
+  // RootNode is a predecessor to all candidates so we need not search
+  // past it. Add RootNode (peeking through TokenFactors). Do not count
+  // these towards size check.
+
+  Worklist.push_back(RootNode);
+  while (!Worklist.empty()) {
+    auto N = Worklist.pop_back_val();
+    if (N->getOpcode() == ISD::TokenFactor) {
+      for (SDValue Op : N->ops())
+        Worklist.push_back(Op.getNode());
+    }
+    Visited.insert(N);
+  }
+
+  // Don't count pruning nodes towards max.
+  unsigned int Max = 1024 + Visited.size();
   // Search Ops of store candidates.
   for (unsigned i = 0; i < NumStores; ++i) {
-    SDNode *n = StoreNodes[i].MemNode;
-    // Potential loops may happen only through non-chain operands
-    for (unsigned j = 1; j < n->getNumOperands(); ++j)
-      Worklist.push_back(n->getOperand(j).getNode());
+    SDNode *N = StoreNodes[i].MemNode;
+    // Of the 4 Store Operands:
+    //   * Chain (Op 0) -> We have already considered these
+    //                    in candidate selection and can be
+    //                    safely ignored
+    //   * Value (Op 1) -> Cycles may happen (e.g. through load chains)
+    //   * Address (Op 2) -> Merged addresses may only vary by a fixed constant
+    //                      and so no cycles are possible.
+    //   * (Op 3) -> appears to always be undef. Cannot be source of cycle.
+    //
+    // Thus we need only check predecessors of the value operands.
+    auto *Op = N->getOperand(1).getNode();
+    if (Visited.insert(Op).second)
+      Worklist.push_back(Op);
   }
   // Search through DAG. We can stop early if we find a store node.
   for (unsigned i = 0; i < NumStores; ++i)
@@ -13417,8 +13450,9 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     return false;
 
   SmallVector<MemOpLink, 8> StoreNodes;
+  SDNode *RootNode;
   // Find potential store merge candidates by searching through chain sub-DAG
-  getStoreMergeCandidates(St, StoreNodes);
+  getStoreMergeCandidates(St, StoreNodes, RootNode);
 
   // Check if there is anything to merge.
   if (StoreNodes.size() < 2)
@@ -13468,14 +13502,6 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     }
 
     if (NumConsecutiveStores < 2) {
-      StoreNodes.erase(StoreNodes.begin(),
-                       StoreNodes.begin() + NumConsecutiveStores);
-      continue;
-    }
-
-    // Check that we can merge these candidates without causing a cycle
-    if (!checkMergeStoreCandidatesForDependencies(StoreNodes,
-                                                  NumConsecutiveStores)) {
       StoreNodes.erase(StoreNodes.begin(),
                        StoreNodes.begin() + NumConsecutiveStores);
       continue;
@@ -13576,6 +13602,13 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
         continue;
       }
 
+      // Check that we can merge these candidates without causing a cycle.
+      if (!checkMergeStoreCandidatesForDependencies(StoreNodes, NumElem,
+                                                    RootNode)) {
+        StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
+        continue;
+      }
+
       bool Merged = MergeStoresOfConstantsOrVecElts(
           StoreNodes, MemVT, NumElem, true, UseVector, LastIntegerTrunc);
       RV |= Merged;
@@ -13631,6 +13664,14 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
           NumSkip++;
 
         StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumSkip);
+        continue;
+      }
+
+      // Check that we can merge these candidates without causing a cycle.
+      if (!checkMergeStoreCandidatesForDependencies(
+              StoreNodes, NumStoresToMerge, RootNode)) {
+        StoreNodes.erase(StoreNodes.begin(),
+                         StoreNodes.begin() + NumStoresToMerge);
         continue;
       }
 
@@ -13800,6 +13841,13 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
              (StoreNodes[NumSkip].MemNode->getAlignment() <= FirstStoreAlign))
         NumSkip++;
       StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumSkip);
+      continue;
+    }
+
+    // Check that we can merge these candidates without causing a cycle.
+    if (!checkMergeStoreCandidatesForDependencies(StoreNodes, NumElem,
+                                                  RootNode)) {
+      StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
       continue;
     }
 

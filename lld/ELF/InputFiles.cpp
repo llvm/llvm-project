@@ -1032,9 +1032,13 @@ BitcodeFile::BitcodeFile(MemoryBufferRef MB, StringRef ArchiveName,
   // this causes a collision which result in only one of the objects being
   // taken into consideration at LTO time (which very likely causes undefined
   // symbols later in the link stage).
+  std::string Path = MB.getBufferIdentifier().str();
+  if (Config->ThinLTOIndexOnly)
+    Path = updateSuffixInPath(MB.getBufferIdentifier());
+
   MemoryBufferRef MBRef(
       MB.getBuffer(),
-      Saver.save(ArchiveName + MB.getBufferIdentifier() +
+      Saver.save(ArchiveName + Path +
                  (ArchiveName.empty() ? "" : utostr(OffsetInArchive))));
   Obj = CHECK(lto::InputFile::create(MBRef), this);
 

@@ -36,19 +36,55 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
+// Use explicit storage to avoid accessing cl::opt in a signal handler.
+static bool DisableSymbolicationFlag = false;
+static cl::opt<bool, true>
     DisableSymbolication("disable-symbolication",
                          cl::desc("Disable symbolizing crash backtraces."),
-                         cl::init(false), cl::Hidden);
+                         cl::location(DisableSymbolicationFlag), cl::Hidden);
 
-static ManagedStatic<std::vector<std::pair<void (*)(void *), void *>>>
-    CallBacksToRun;
+// Callbacks to run in signal handler must be lock-free because a signal handler
+// could be running as we add new callbacks. We don't add unbounded numbers of
+// callbacks, an array is therefore sufficient.
+struct CallbackAndCookie {
+  sys::SignalHandlerCallback Callback;
+  void *Cookie;
+  enum class Status { Empty, Initializing, Initialized, Executing };
+  std::atomic<Status> Flag;
+};
+static constexpr size_t MaxSignalHandlerCallbacks = 8;
+static CallbackAndCookie CallBacksToRun[MaxSignalHandlerCallbacks];
+
+// Signal-safe.
 void sys::RunSignalHandlers() {
-  if (!CallBacksToRun.isConstructed())
+  for (size_t I = 0; I < MaxSignalHandlerCallbacks; ++I) {
+    auto &RunMe = CallBacksToRun[I];
+    auto Expected = CallbackAndCookie::Status::Initialized;
+    auto Desired = CallbackAndCookie::Status::Executing;
+    if (!RunMe.Flag.compare_exchange_strong(Expected, Desired))
+      continue;
+    (*RunMe.Callback)(RunMe.Cookie);
+    RunMe.Callback = nullptr;
+    RunMe.Cookie = nullptr;
+    RunMe.Flag.store(CallbackAndCookie::Status::Empty);
+  }
+}
+
+// Signal-safe.
+static void insertSignalHandler(sys::SignalHandlerCallback FnPtr,
+                                void *Cookie) {
+  for (size_t I = 0; I < MaxSignalHandlerCallbacks; ++I) {
+    auto &SetMe = CallBacksToRun[I];
+    auto Expected = CallbackAndCookie::Status::Empty;
+    auto Desired = CallbackAndCookie::Status::Initializing;
+    if (!SetMe.Flag.compare_exchange_strong(Expected, Desired))
+      continue;
+    SetMe.Callback = FnPtr;
+    SetMe.Cookie = Cookie;
+    SetMe.Flag.store(CallbackAndCookie::Status::Initialized);
     return;
-  for (auto &I : *CallBacksToRun)
-    I.first(I.second);
-  CallBacksToRun->clear();
+  }
+  report_fatal_error("too many signal callbacks already registered");
 }
 
 static bool findModulesAndOffsets(void **StackTrace, int Depth,
@@ -68,7 +104,7 @@ static FormattedNumber format_ptr(void *PC) {
 LLVM_ATTRIBUTE_USED
 static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
                                       int Depth, llvm::raw_ostream &OS) {
-  if (DisableSymbolication)
+  if (DisableSymbolicationFlag)
     return false;
 
   // Don't recursively invoke the llvm-symbolizer binary.

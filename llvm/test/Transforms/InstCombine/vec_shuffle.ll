@@ -439,9 +439,9 @@ define <2 x float> @fadd_const_multiuse(<2 x float> %v) {
 
 define <4 x i32> @mul_const_splat(<4 x i32> %v) {
 ; CHECK-LABEL: @mul_const_splat(
-; CHECK-NEXT:    [[T1:%.*]] = shufflevector <4 x i32> [[V:%.*]], <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[R:%.*]] = mul <4 x i32> [[T1]], <i32 42, i32 42, i32 42, i32 42>
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[V:%.*]], <i32 undef, i32 42, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %t1 = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %r = mul <4 x i32> <i32 42, i32 42, i32 42, i32 42>, %t1
@@ -452,13 +452,26 @@ define <4 x i32> @mul_const_splat(<4 x i32> %v) {
 
 define <4 x i32> @lshr_const_half_splat(<4 x i32> %v) {
 ; CHECK-LABEL: @lshr_const_half_splat(
-; CHECK-NEXT:    [[T1:%.*]] = shufflevector <4 x i32> [[V:%.*]], <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 2>
-; CHECK-NEXT:    [[R:%.*]] = lshr <4 x i32> <i32 8, i32 8, i32 9, i32 9>, [[T1]]
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 undef, i32 8, i32 9, i32 undef>, [[V:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 2>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %t1 = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 2>
   %r = lshr <4 x i32> <i32 8, i32 8, i32 9, i32 9>, %t1
   ret <4 x i32> %r
+}
+
+; We can't change this because there's no pre-shuffle version of the fmul constant.
+
+define <2 x float> @fmul_const_invalid_constant(<2 x float> %v) {
+; CHECK-LABEL: @fmul_const_invalid_constant(
+; CHECK-NEXT:    [[T1:%.*]] = shufflevector <2 x float> [[V:%.*]], <2 x float> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = fmul <2 x float> [[T1]], <float 4.100000e+01, float 4.200000e+01>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %t1 = shufflevector <2 x float> %v, <2 x float> undef, <2 x i32> <i32 0, i32 0>
+  %r = fmul <2 x float> %t1, <float 41.0, float 42.0>
+  ret <2 x float> %r
 }
 
 define <4 x i32> @shuffle_17add2(<4 x i32> %v) {

@@ -226,8 +226,18 @@ defm : ZnWriteResFpuPair<WriteFVarBlend, [ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteFVarBlendY,[ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteVarBlend,  [ZnFPU0],  1>;
 defm : ZnWriteResFpuPair<WriteVarBlendY, [ZnFPU0],  1>;
-defm : ZnWriteResFpuPair<WriteCvtI2F,    [ZnFPU3],  5>;
-defm : ZnWriteResFpuPair<WriteCvtF2I,    [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtSS2I,   [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtPS2I,   [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtPS2IY,  [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtSD2I,   [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtPD2I,   [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtPD2IY,  [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtI2SS,   [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtI2PS,   [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtI2PSY,  [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtI2SD,   [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtI2PD,   [ZnFPU3],  5>;
+defm : ZnWriteResFpuPair<WriteCvtI2PDY,  [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteFDiv,      [ZnFPU3], 15>;
 defm : ZnWriteResFpuPair<WriteFDivX,     [ZnFPU3], 15>;
 //defm : ZnWriteResFpuPair<WriteFDivY,     [ZnFPU3], 15>;
@@ -1317,7 +1327,7 @@ def ZnWriteCVSTSI2SDr: SchedWriteRes<[ZnFPU013, ZnFPU3]> {
 }
 // CVTSI2SD.
 // x,r32/64.
-def : InstRW<[ZnWriteCVSTSI2SDr], (instregex "(V?)CVTSI2SD(64)?rr")>;
+def : InstRW<[ZnWriteCVSTSI2SDr], (instregex "(V?)CVTSI(64)?2SDrr")>;
 
 
 def ZnWriteCVSTSI2SIr: SchedWriteRes<[ZnFPU3, ZnFPU2]> {

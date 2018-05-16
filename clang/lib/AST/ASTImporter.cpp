@@ -78,7 +78,7 @@ namespace clang {
 
   public:
     explicit ASTNodeImporter(ASTImporter &Importer) : Importer(Importer) {}
-    
+
     using TypeVisitor<ASTNodeImporter, QualType>::Visit;
     using DeclVisitor<ASTNodeImporter, Decl *>::Visit;
     using StmtVisitor<ASTNodeImporter, Stmt *>::Visit;

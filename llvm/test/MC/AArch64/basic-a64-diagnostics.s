@@ -2476,7 +2476,7 @@
 // CHECK-ERROR-NEXT:        prfm pldl1strm, [w3, #8]
 // CHECK-ERROR-NEXT:                         ^
 // CHECK-ERROR-AARCH64-NEXT: error: operand specifier not recognised
-// CHECK-ERROR-ARM64-NEXT: error: pre-fetch hint expected
+// CHECK-ERROR-ARM64-NEXT: error: prefetch hint expected
 // CHECK-ERROR-NEXT:        prfm wibble, [sp]
 // CHECK-ERROR-NEXT:             ^
 

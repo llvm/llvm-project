@@ -278,12 +278,12 @@ public:
       case PT_Function:
         super::add(createDebugifyFunctionPass());
         super::add(P);
-        super::add(createCheckDebugifyFunctionPass(true));
+        super::add(createCheckDebugifyFunctionPass(true, P->getPassName()));
         break;
       case PT_Module:
         super::add(createDebugifyModulePass());
         super::add(P);
-        super::add(createCheckDebugifyModulePass(true));
+        super::add(createCheckDebugifyModulePass(true, P->getPassName()));
         break;
       default:
         super::add(P);

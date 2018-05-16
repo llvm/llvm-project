@@ -19,18 +19,18 @@
 # CHECK-NEXT: [5]: MayStore
 # CHECK-NEXT: [6]: HasSideEffects
 
-# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]	Instructions:
-# CHECK-NEXT:  1      1     0.50                    	addq	%rdi, %rsi
-# CHECK-NEXT:  1      4     1.00    *               	addq	(%rsp), %rsi
-# CHECK-NEXT:  1      1     0.50                    	addq	%rdx, %r8
+# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# CHECK-NEXT:  1      1     0.50                        addq	%rdi, %rsi
+# CHECK-NEXT:  1      4     1.00    *                   addq	(%rsp), %rsi
+# CHECK-NEXT:  1      1     0.50                        addq	%rdx, %r8
 
 # CHECK:      Timeline view:
 
-# CHECK:      Index	0123456
+# CHECK:      Index     0123456
 
-# CHECK:      [0,0]	DeER ..	addq	%rdi, %rsi
-# CHECK-NEXT: [0,1]	DeeeeER	addq	(%rsp), %rsi
-# CHECK-NEXT: [0,2]	D=eE--R	addq	%rdx, %r8
+# CHECK:      [0,0]     DeER ..   addq	%rdi, %rsi
+# CHECK-NEXT: [0,1]     DeeeeER   addq	(%rsp), %rsi
+# CHECK-NEXT: [0,2]     D=eE--R   addq	%rdx, %r8
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -39,7 +39,7 @@
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     1     1.0    1.0    0.0    	addq	%rdi, %rsi
-# CHECK-NEXT: 1.     1     1.0    0.0    0.0    	addq	(%rsp), %rsi
-# CHECK-NEXT: 2.     1     2.0    2.0    2.0    	addq	%rdx, %r8
+# CHECK-NEXT: 0.     1     1.0    1.0    0.0       addq	%rdi, %rsi
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       addq	(%rsp), %rsi
+# CHECK-NEXT: 2.     1     2.0    2.0    2.0       addq	%rdx, %r8
 

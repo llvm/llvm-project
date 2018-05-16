@@ -276,7 +276,7 @@ static isl::set addRangeBoundsToSet(isl::set S, const ConstantRange &Range,
   if (Range.isFullSet())
     return S;
 
-  if (isl_set_n_basic_set(S.get()) > MaxDisjunctsInContext)
+  if (S.n_basic_set() > MaxDisjunctsInContext)
     return S;
 
   // In case of signed wrapping, we can refine the set of valid values by
@@ -2312,7 +2312,7 @@ buildMinMaxAccess(isl::set Set, Scop::MinMaxVectorTy &MinMaxAccesses, Scop &S) {
   Set = Set.remove_divs();
   polly::simplify(Set);
 
-  if (isl_set_n_basic_set(Set.get()) > RunTimeChecksMaxAccessDisjuncts)
+  if (Set.n_basic_set() > RunTimeChecksMaxAccessDisjuncts)
     Set = Set.simple_hull();
 
   // Restrict the number of parameters involved in the access as the lexmin/
@@ -2652,16 +2652,15 @@ bool Scop::propagateInvalidStmtDomains(
 
       Loop *SuccBBLoop = getFirstNonBoxedLoopFor(SuccBB, LI, getBoxedLoops());
 
-      auto *AdjustedInvalidDomain = adjustDomainDimensions(
-          *this, InvalidDomain.copy(), BBLoop, SuccBBLoop);
+      auto AdjustedInvalidDomain = isl::manage(adjustDomainDimensions(
+          *this, InvalidDomain.copy(), BBLoop, SuccBBLoop));
 
-      auto *SuccInvalidDomain = InvalidDomainMap[SuccBB].copy();
-      SuccInvalidDomain =
-          isl_set_union(SuccInvalidDomain, AdjustedInvalidDomain);
-      SuccInvalidDomain = isl_set_coalesce(SuccInvalidDomain);
-      unsigned NumConjucts = isl_set_n_basic_set(SuccInvalidDomain);
+      isl::set SuccInvalidDomain = InvalidDomainMap[SuccBB];
+      SuccInvalidDomain = SuccInvalidDomain.unite(AdjustedInvalidDomain);
+      SuccInvalidDomain = SuccInvalidDomain.coalesce();
+      unsigned NumConjucts = SuccInvalidDomain.n_basic_set();
 
-      InvalidDomainMap[SuccBB] = isl::manage(SuccInvalidDomain);
+      InvalidDomainMap[SuccBB] = SuccInvalidDomain;
 
       // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will bail.
@@ -2839,7 +2838,7 @@ bool Scop::buildDomainsWithBranchConstraints(
 
       // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will clean up and bail.
-      if (isl_set_n_basic_set(SuccDomain.get()) < MaxDisjunctsInDomain)
+      if (SuccDomain.n_basic_set() < MaxDisjunctsInDomain)
         continue;
 
       invalidate(COMPLEXITY, DebugLoc());
@@ -3686,7 +3685,7 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs) {
   isl::set DomainCtx = Stmt.getDomain().params();
   DomainCtx = DomainCtx.subtract(StmtInvalidCtx);
 
-  if (isl_set_n_basic_set(DomainCtx.get()) >= MaxDisjunctsInDomain) {
+  if (DomainCtx.n_basic_set() >= MaxDisjunctsInDomain) {
     auto *AccInst = InvMAs.front().MA->getAccessInstruction();
     invalidate(COMPLEXITY, AccInst->getDebugLoc(), AccInst->getParent());
     return;
@@ -3878,8 +3877,7 @@ isl::set Scop::getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes) {
     return WrittenCtx;
 
   WrittenCtx = WrittenCtx.remove_divs();
-  bool TooComplex =
-      isl_set_n_basic_set(WrittenCtx.get()) >= MaxDisjunctsInDomain;
+  bool TooComplex = WrittenCtx.n_basic_set() >= MaxDisjunctsInDomain;
   if (TooComplex || !isRequiredInvariantLoad(LI))
     return nullptr;
 

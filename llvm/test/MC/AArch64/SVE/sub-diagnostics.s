@@ -14,7 +14,7 @@ sub z4.h, z27.h, z31.x
 
 // Element size specifiers should match.
 sub z0.h, z8.h, z8.b
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: sub z0.h, z8.h, z8.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

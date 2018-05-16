@@ -2521,12 +2521,14 @@ public:
 
   uint64_t  getSP() const         { return _registers.__r[1]; }
   void      setSP(uint32_t value) { _registers.__r[1] = value; }
-  uint64_t  getIP() const         { return _registers.__r[9]; }
-  void      setIP(uint32_t value) { _registers.__r[9] = value; }
+  uint64_t  getIP() const         { return _registers.__pc; }
+  void      setIP(uint32_t value) { _registers.__pc = value; }
 
 private:
   struct or1k_thread_state_t {
-    unsigned int __r[32];
+    unsigned int __r[32]; // r0-r31
+    unsigned int __pc;    // Program counter
+    unsigned int __epcr;  // Program counter at exception
   };
 
   or1k_thread_state_t _registers;
@@ -2552,6 +2554,8 @@ inline bool Registers_or1k::validRegister(int regNum) const {
     return false;
   if (regNum <= UNW_OR1K_R31)
     return true;
+  if (regNum == UNW_OR1K_EPCR)
+    return true;
   return false;
 }
 
@@ -2561,9 +2565,11 @@ inline uint32_t Registers_or1k::getRegister(int regNum) const {
 
   switch (regNum) {
   case UNW_REG_IP:
-    return _registers.__r[9];
+    return _registers.__pc;
   case UNW_REG_SP:
     return _registers.__r[1];
+  case UNW_OR1K_EPCR:
+    return _registers.__epcr;
   }
   _LIBUNWIND_ABORT("unsupported or1k register");
 }
@@ -2576,10 +2582,13 @@ inline void Registers_or1k::setRegister(int regNum, uint32_t value) {
 
   switch (regNum) {
   case UNW_REG_IP:
-    _registers.__r[9] = value;
+    _registers.__pc = value;
     return;
   case UNW_REG_SP:
     _registers.__r[1] = value;
+    return;
+  case UNW_OR1K_EPCR:
+    _registers.__epcr = value;
     return;
   }
   _LIBUNWIND_ABORT("unsupported or1k register");
@@ -2676,6 +2685,8 @@ inline const char *Registers_or1k::getRegisterName(int regNum) {
     return "r30";
   case UNW_OR1K_R31:
     return "r31";
+  case UNW_OR1K_EPCR:
+    return "EPCR";
   default:
     return "unknown register";
   }
@@ -2718,6 +2729,14 @@ private:
   };
 
   mips_o32_thread_state_t _registers;
+#ifdef __mips_hard_float
+  /// O32 with 32-bit floating point registers only uses half of this
+  /// space.  However, using the same layout for 32-bit vs 64-bit
+  /// floating point registers results in a single context size for
+  /// O32 with hard float.
+  uint32_t _padding;
+  double _floats[32];
+#endif
 };
 
 inline Registers_mips_o32::Registers_mips_o32(const void *registers) {
@@ -2744,13 +2763,28 @@ inline bool Registers_mips_o32::validRegister(int regNum) const {
     return true;
   if (regNum == UNW_MIPS_LO)
     return true;
-  // FIXME: Hard float, DSP accumulator registers, MSA registers
+#if defined(__mips_hard_float) && __mips_fpr == 32
+  if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31)
+    return true;
+#endif
+  // FIXME: DSP accumulator registers, MSA registers
   return false;
 }
 
 inline uint32_t Registers_mips_o32::getRegister(int regNum) const {
   if (regNum >= UNW_MIPS_R0 && regNum <= UNW_MIPS_R31)
     return _registers.__r[regNum - UNW_MIPS_R0];
+#if defined(__mips_hard_float) && __mips_fpr == 32
+  if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31) {
+    uint32_t *p;
+
+    if (regNum % 2 == 0)
+      p = (uint32_t *)&_floats[regNum - UNW_MIPS_F0];
+    else
+      p = (uint32_t *)&_floats[(regNum - 1) - UNW_MIPS_F0] + 1;
+    return *p;
+  }
+#endif
 
   switch (regNum) {
   case UNW_REG_IP:
@@ -2770,6 +2804,18 @@ inline void Registers_mips_o32::setRegister(int regNum, uint32_t value) {
     _registers.__r[regNum - UNW_MIPS_R0] = value;
     return;
   }
+#if defined(__mips_hard_float) && __mips_fpr == 32
+  if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31) {
+    uint32_t *p;
+
+    if (regNum % 2 == 0)
+      p = (uint32_t *)&_floats[regNum - UNW_MIPS_F0];
+    else
+      p = (uint32_t *)&_floats[(regNum - 1) - UNW_MIPS_F0] + 1;
+    *p = value;
+    return;
+  }
+#endif
 
   switch (regNum) {
   case UNW_REG_IP:
@@ -2788,17 +2834,31 @@ inline void Registers_mips_o32::setRegister(int regNum, uint32_t value) {
   _LIBUNWIND_ABORT("unsupported mips_o32 register");
 }
 
-inline bool Registers_mips_o32::validFloatRegister(int /* regNum */) const {
+inline bool Registers_mips_o32::validFloatRegister(int regNum) const {
+#if defined(__mips_hard_float) && __mips_fpr == 64
+  if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31)
+    return true;
+#endif
   return false;
 }
 
-inline double Registers_mips_o32::getFloatRegister(int /* regNum */) const {
+inline double Registers_mips_o32::getFloatRegister(int regNum) const {
+#if defined(__mips_hard_float) && __mips_fpr == 64
+  assert(validFloatRegister(regNum));
+  return _floats[regNum - UNW_MIPS_F0];
+#else
   _LIBUNWIND_ABORT("mips_o32 float support not implemented");
+#endif
 }
 
-inline void Registers_mips_o32::setFloatRegister(int /* regNum */,
-                                                 double /* value */) {
+inline void Registers_mips_o32::setFloatRegister(int regNum,
+                                                 double value) {
+#if defined(__mips_hard_float) && __mips_fpr == 64
+  assert(validFloatRegister(regNum));
+  _floats[regNum - UNW_MIPS_F0] = value;
+#else
   _LIBUNWIND_ABORT("mips_o32 float support not implemented");
+#endif
 }
 
 inline bool Registers_mips_o32::validVectorRegister(int /* regNum */) const {
@@ -2879,6 +2939,70 @@ inline const char *Registers_mips_o32::getRegisterName(int regNum) {
     return "$30";
   case UNW_MIPS_R31:
     return "$31";
+  case UNW_MIPS_F0:
+    return "$f0";
+  case UNW_MIPS_F1:
+    return "$f1";
+  case UNW_MIPS_F2:
+    return "$f2";
+  case UNW_MIPS_F3:
+    return "$f3";
+  case UNW_MIPS_F4:
+    return "$f4";
+  case UNW_MIPS_F5:
+    return "$f5";
+  case UNW_MIPS_F6:
+    return "$f6";
+  case UNW_MIPS_F7:
+    return "$f7";
+  case UNW_MIPS_F8:
+    return "$f8";
+  case UNW_MIPS_F9:
+    return "$f9";
+  case UNW_MIPS_F10:
+    return "$f10";
+  case UNW_MIPS_F11:
+    return "$f11";
+  case UNW_MIPS_F12:
+    return "$f12";
+  case UNW_MIPS_F13:
+    return "$f13";
+  case UNW_MIPS_F14:
+    return "$f14";
+  case UNW_MIPS_F15:
+    return "$f15";
+  case UNW_MIPS_F16:
+    return "$f16";
+  case UNW_MIPS_F17:
+    return "$f17";
+  case UNW_MIPS_F18:
+    return "$f18";
+  case UNW_MIPS_F19:
+    return "$f19";
+  case UNW_MIPS_F20:
+    return "$f20";
+  case UNW_MIPS_F21:
+    return "$f21";
+  case UNW_MIPS_F22:
+    return "$f22";
+  case UNW_MIPS_F23:
+    return "$f23";
+  case UNW_MIPS_F24:
+    return "$f24";
+  case UNW_MIPS_F25:
+    return "$f25";
+  case UNW_MIPS_F26:
+    return "$f26";
+  case UNW_MIPS_F27:
+    return "$f27";
+  case UNW_MIPS_F28:
+    return "$f28";
+  case UNW_MIPS_F29:
+    return "$f29";
+  case UNW_MIPS_F30:
+    return "$f30";
+  case UNW_MIPS_F31:
+    return "$f31";
   case UNW_MIPS_HI:
     return "$hi";
   case UNW_MIPS_LO:
@@ -2924,6 +3048,9 @@ private:
   };
 
   mips_newabi_thread_state_t _registers;
+#ifdef __mips_hard_float
+  double _floats[32];
+#endif
 };
 
 inline Registers_mips_newabi::Registers_mips_newabi(const void *registers) {
@@ -2994,17 +3121,31 @@ inline void Registers_mips_newabi::setRegister(int regNum, uint64_t value) {
   _LIBUNWIND_ABORT("unsupported mips_newabi register");
 }
 
-inline bool Registers_mips_newabi::validFloatRegister(int /* regNum */) const {
+inline bool Registers_mips_newabi::validFloatRegister(int regNum) const {
+#ifdef __mips_hard_float
+  if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31)
+    return true;
+#endif
   return false;
 }
 
-inline double Registers_mips_newabi::getFloatRegister(int /* regNum */) const {
+inline double Registers_mips_newabi::getFloatRegister(int regNum) const {
+#ifdef __mips_hard_float
+  assert(validFloatRegister(regNum));
+  return _floats[regNum - UNW_MIPS_F0];
+#else
   _LIBUNWIND_ABORT("mips_newabi float support not implemented");
+#endif
 }
 
-inline void Registers_mips_newabi::setFloatRegister(int /* regNum */,
-                                                 double /* value */) {
+inline void Registers_mips_newabi::setFloatRegister(int regNum,
+                                                    double value) {
+#ifdef __mips_hard_float
+  assert(validFloatRegister(regNum));
+  _floats[regNum - UNW_MIPS_F0] = value;
+#else
   _LIBUNWIND_ABORT("mips_newabi float support not implemented");
+#endif
 }
 
 inline bool Registers_mips_newabi::validVectorRegister(int /* regNum */) const {
@@ -3085,6 +3226,70 @@ inline const char *Registers_mips_newabi::getRegisterName(int regNum) {
     return "$30";
   case UNW_MIPS_R31:
     return "$31";
+  case UNW_MIPS_F0:
+    return "$f0";
+  case UNW_MIPS_F1:
+    return "$f1";
+  case UNW_MIPS_F2:
+    return "$f2";
+  case UNW_MIPS_F3:
+    return "$f3";
+  case UNW_MIPS_F4:
+    return "$f4";
+  case UNW_MIPS_F5:
+    return "$f5";
+  case UNW_MIPS_F6:
+    return "$f6";
+  case UNW_MIPS_F7:
+    return "$f7";
+  case UNW_MIPS_F8:
+    return "$f8";
+  case UNW_MIPS_F9:
+    return "$f9";
+  case UNW_MIPS_F10:
+    return "$f10";
+  case UNW_MIPS_F11:
+    return "$f11";
+  case UNW_MIPS_F12:
+    return "$f12";
+  case UNW_MIPS_F13:
+    return "$f13";
+  case UNW_MIPS_F14:
+    return "$f14";
+  case UNW_MIPS_F15:
+    return "$f15";
+  case UNW_MIPS_F16:
+    return "$f16";
+  case UNW_MIPS_F17:
+    return "$f17";
+  case UNW_MIPS_F18:
+    return "$f18";
+  case UNW_MIPS_F19:
+    return "$f19";
+  case UNW_MIPS_F20:
+    return "$f20";
+  case UNW_MIPS_F21:
+    return "$f21";
+  case UNW_MIPS_F22:
+    return "$f22";
+  case UNW_MIPS_F23:
+    return "$f23";
+  case UNW_MIPS_F24:
+    return "$f24";
+  case UNW_MIPS_F25:
+    return "$f25";
+  case UNW_MIPS_F26:
+    return "$f26";
+  case UNW_MIPS_F27:
+    return "$f27";
+  case UNW_MIPS_F28:
+    return "$f28";
+  case UNW_MIPS_F29:
+    return "$f29";
+  case UNW_MIPS_F30:
+    return "$f30";
+  case UNW_MIPS_F31:
+    return "$f31";
   case UNW_MIPS_HI:
     return "$hi";
   case UNW_MIPS_LO:

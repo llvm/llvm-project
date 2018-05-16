@@ -657,7 +657,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
           for (const MCPhysReg *U = D.getImplicitUses(); U && *U; ++U)
             if (*U == Hexagon::GP)
               return true;
-            return false;
+          return false;
         };
         if (UsesGP(MCID))
           FixupKind = GPRelFixups[Shift];

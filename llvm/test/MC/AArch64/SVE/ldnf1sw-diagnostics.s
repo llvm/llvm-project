@@ -4,12 +4,12 @@
 // Invalid operand (.s)
 
 ldnf1sw z23.s, p0/z, [x13, #1, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: ldnf1sw z23.s, p0/z, [x13, #1, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnf1sw z29.s, p0/z, [x3, #1, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: ldnf1sw z29.s, p0/z, [x3, #1, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

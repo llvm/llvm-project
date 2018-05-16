@@ -3688,8 +3688,17 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     unsigned EntrySize =
       DAG.getMachineFunction().getJumpTableInfo()->getEntrySize(TD);
 
-    Index = DAG.getNode(ISD::MUL, dl, Index.getValueType(), Index,
-                        DAG.getConstant(EntrySize, dl, Index.getValueType()));
+    // For power-of-two jumptable entry sizes convert multiplication to a shift.
+    // This transformation needs to be done here since otherwise the MIPS
+    // backend will end up emitting a three instruction multiply sequence
+    // instead of a single shift and MSP430 will call a runtime function.
+    if (llvm::isPowerOf2_32(EntrySize))
+      Index = DAG.getNode(
+          ISD::SHL, dl, Index.getValueType(), Index,
+          DAG.getConstant(llvm::Log2_32(EntrySize), dl, Index.getValueType()));
+    else
+      Index = DAG.getNode(ISD::MUL, dl, Index.getValueType(), Index,
+                          DAG.getConstant(EntrySize, dl, Index.getValueType()));
     SDValue Addr = DAG.getNode(ISD::ADD, dl, Index.getValueType(),
                                Index, Table);
 

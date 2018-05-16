@@ -116,16 +116,6 @@ HexagonTargetLowering::initializeHVXLowering() {
   }
 
   for (MVT T : LegalV) {
-    MVT BoolV = MVT::getVectorVT(MVT::i1, T.getVectorNumElements());
-    setOperationAction(ISD::BUILD_VECTOR,       BoolV, Custom);
-    setOperationAction(ISD::CONCAT_VECTORS,     BoolV, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR,   BoolV, Custom);
-    setOperationAction(ISD::INSERT_VECTOR_ELT,  BoolV, Custom);
-    setOperationAction(ISD::EXTRACT_SUBVECTOR,  BoolV, Custom);
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, BoolV, Custom);
-  }
-
-  for (MVT T : LegalV) {
     if (T == ByteV)
       continue;
     // Promote all shuffles to operate on vectors of bytes.
@@ -174,9 +164,35 @@ HexagonTargetLowering::initializeHVXLowering() {
       // Promote all shuffles to operate on vectors of bytes.
       setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteW);
     }
+  }
 
+  // Boolean vectors.
+
+  for (MVT T : LegalW) {
+    // Boolean types for vector pairs will overlap with the boolean
+    // types for single vectors, e.g.
+    //   v64i8  -> v64i1 (single)
+    //   v64i16 -> v64i1 (pair)
+    // Set these actions first, and allow the single actions to overwrite
+    // any duplicates.
+    MVT BoolW = MVT::getVectorVT(MVT::i1, T.getVectorNumElements());
+    setOperationAction(ISD::SETCC,              BoolW, Custom);
+    setOperationAction(ISD::AND,                BoolW, Custom);
+    setOperationAction(ISD::OR,                 BoolW, Custom);
+    setOperationAction(ISD::XOR,                BoolW, Custom);
+  }
+
+  for (MVT T : LegalV) {
     MVT BoolV = MVT::getVectorVT(MVT::i1, T.getVectorNumElements());
-    setOperationAction(ISD::SETCC, BoolV, Custom);
+    setOperationAction(ISD::BUILD_VECTOR,       BoolV, Custom);
+    setOperationAction(ISD::CONCAT_VECTORS,     BoolV, Custom);
+    setOperationAction(ISD::INSERT_SUBVECTOR,   BoolV, Custom);
+    setOperationAction(ISD::INSERT_VECTOR_ELT,  BoolV, Custom);
+    setOperationAction(ISD::EXTRACT_SUBVECTOR,  BoolV, Custom);
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, BoolV, Custom);
+    setOperationAction(ISD::AND,                BoolV, Legal);
+    setOperationAction(ISD::OR,                 BoolV, Legal);
+    setOperationAction(ISD::XOR,                BoolV, Legal);
   }
 }
 

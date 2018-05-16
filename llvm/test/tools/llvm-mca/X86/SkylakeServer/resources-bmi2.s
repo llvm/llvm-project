@@ -57,88 +57,88 @@ shrx        %rax, (%rbx), %rcx
 # CHECK-NEXT: [5]: MayStore
 # CHECK-NEXT: [6]: HasSideEffects
 
-# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]	Instructions:
-# CHECK-NEXT:  1      1     0.50                    	bzhil	%eax, %ebx, %ecx
-# CHECK-NEXT:  2      6     0.50    *               	bzhil	%eax, (%rbx), %ecx
-# CHECK-NEXT:  1      1     0.50                    	bzhiq	%rax, %rbx, %rcx
-# CHECK-NEXT:  2      6     0.50    *               	bzhiq	%rax, (%rbx), %rcx
-# CHECK-NEXT:  3      4     1.00                    	mulxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  4      9     1.00    *               	mulxl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  2      4     1.00                    	mulxq	%rax, %rbx, %rcx
-# CHECK-NEXT:  3      9     1.00    *               	mulxq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  1      3     1.00                    	pdepl	%eax, %ebx, %ecx
-# CHECK-NEXT:  2      8     1.00    *               	pdepl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  1      3     1.00                    	pdepq	%rax, %rbx, %rcx
-# CHECK-NEXT:  2      8     1.00    *               	pdepq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  1      3     1.00                    	pextl	%eax, %ebx, %ecx
-# CHECK-NEXT:  2      8     1.00    *               	pextl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  1      3     1.00                    	pextq	%rax, %rbx, %rcx
-# CHECK-NEXT:  2      8     1.00    *               	pextq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  1      1     0.50                    	rorxl	$1, %eax, %ecx
-# CHECK-NEXT:  2      6     0.50    *               	rorxl	$1, (%rax), %ecx
-# CHECK-NEXT:  1      1     0.50                    	rorxq	$1, %rax, %rcx
-# CHECK-NEXT:  2      6     0.50    *               	rorxq	$1, (%rax), %rcx
-# CHECK-NEXT:  1      1     0.50                    	sarxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  2      6     0.50    *               	sarxl	%eax, (%rbx), %ecx
-# CHECK-NEXT:  1      1     0.50                    	sarxq	%rax, %rbx, %rcx
-# CHECK-NEXT:  2      6     0.50    *               	sarxq	%rax, (%rbx), %rcx
-# CHECK-NEXT:  1      1     0.50                    	shlxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  2      6     0.50    *               	shlxl	%eax, (%rbx), %ecx
-# CHECK-NEXT:  1      1     0.50                    	shlxq	%rax, %rbx, %rcx
-# CHECK-NEXT:  2      6     0.50    *               	shlxq	%rax, (%rbx), %rcx
-# CHECK-NEXT:  1      1     0.50                    	shrxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  2      6     0.50    *               	shrxl	%eax, (%rbx), %ecx
-# CHECK-NEXT:  1      1     0.50                    	shrxq	%rax, %rbx, %rcx
-# CHECK-NEXT:  2      6     0.50    *               	shrxq	%rax, (%rbx), %rcx
+# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# CHECK-NEXT:  1      1     0.50                        bzhil	%eax, %ebx, %ecx
+# CHECK-NEXT:  2      6     0.50    *                   bzhil	%eax, (%rbx), %ecx
+# CHECK-NEXT:  1      1     0.50                        bzhiq	%rax, %rbx, %rcx
+# CHECK-NEXT:  2      6     0.50    *                   bzhiq	%rax, (%rbx), %rcx
+# CHECK-NEXT:  3      4     1.00                        mulxl	%eax, %ebx, %ecx
+# CHECK-NEXT:  4      9     1.00    *                   mulxl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  2      4     1.00                        mulxq	%rax, %rbx, %rcx
+# CHECK-NEXT:  3      9     1.00    *                   mulxq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  1      3     1.00                        pdepl	%eax, %ebx, %ecx
+# CHECK-NEXT:  2      8     1.00    *                   pdepl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  1      3     1.00                        pdepq	%rax, %rbx, %rcx
+# CHECK-NEXT:  2      8     1.00    *                   pdepq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  1      3     1.00                        pextl	%eax, %ebx, %ecx
+# CHECK-NEXT:  2      8     1.00    *                   pextl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  1      3     1.00                        pextq	%rax, %rbx, %rcx
+# CHECK-NEXT:  2      8     1.00    *                   pextq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  1      1     0.50                        rorxl	$1, %eax, %ecx
+# CHECK-NEXT:  2      6     0.50    *                   rorxl	$1, (%rax), %ecx
+# CHECK-NEXT:  1      1     0.50                        rorxq	$1, %rax, %rcx
+# CHECK-NEXT:  2      6     0.50    *                   rorxq	$1, (%rax), %rcx
+# CHECK-NEXT:  1      1     0.50                        sarxl	%eax, %ebx, %ecx
+# CHECK-NEXT:  2      6     0.50    *                   sarxl	%eax, (%rbx), %ecx
+# CHECK-NEXT:  1      1     0.50                        sarxq	%rax, %rbx, %rcx
+# CHECK-NEXT:  2      6     0.50    *                   sarxq	%rax, (%rbx), %rcx
+# CHECK-NEXT:  1      1     0.50                        shlxl	%eax, %ebx, %ecx
+# CHECK-NEXT:  2      6     0.50    *                   shlxl	%eax, (%rbx), %ecx
+# CHECK-NEXT:  1      1     0.50                        shlxq	%rax, %rbx, %rcx
+# CHECK-NEXT:  2      6     0.50    *                   shlxq	%rax, (%rbx), %rcx
+# CHECK-NEXT:  1      1     0.50                        shrxl	%eax, %ebx, %ecx
+# CHECK-NEXT:  2      6     0.50    *                   shrxl	%eax, (%rbx), %ecx
+# CHECK-NEXT:  1      1     0.50                        shrxq	%rax, %rbx, %rcx
+# CHECK-NEXT:  2      6     0.50    *                   shrxq	%rax, (%rbx), %rcx
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0] - SKXDivider
-# CHECK-NEXT: [1] - SKXFPDivider
-# CHECK-NEXT: [2] - SKXPort0
-# CHECK-NEXT: [3] - SKXPort1
-# CHECK-NEXT: [4] - SKXPort2
-# CHECK-NEXT: [5] - SKXPort3
-# CHECK-NEXT: [6] - SKXPort4
-# CHECK-NEXT: [7] - SKXPort5
-# CHECK-NEXT: [8] - SKXPort6
-# CHECK-NEXT: [9] - SKXPort7
+# CHECK-NEXT: [0]   - SKXDivider
+# CHECK-NEXT: [1]   - SKXFPDivider
+# CHECK-NEXT: [2]   - SKXPort0
+# CHECK-NEXT: [3]   - SKXPort1
+# CHECK-NEXT: [4]   - SKXPort2
+# CHECK-NEXT: [5]   - SKXPort3
+# CHECK-NEXT: [6]   - SKXPort4
+# CHECK-NEXT: [7]   - SKXPort5
+# CHECK-NEXT: [8]   - SKXPort6
+# CHECK-NEXT: [9]   - SKXPort7
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
 # CHECK-NEXT:  -      -     9.50   14.50  8.00   8.00    -     4.50   9.50    -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    	Instructions:
-# CHECK-NEXT:  -      -      -     0.50    -      -      -     0.50    -      -     	bzhil	%eax, %ebx, %ecx
-# CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     0.50    -      -     	bzhil	%eax, (%rbx), %ecx
-# CHECK-NEXT:  -      -      -     0.50    -      -      -     0.50    -      -     	bzhiq	%rax, %rbx, %rcx
-# CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     0.50    -      -     	bzhiq	%rax, (%rbx), %rcx
-# CHECK-NEXT:  -      -     0.75   1.25    -      -      -     0.25   0.75    -     	mulxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  -      -     0.75   1.25   0.50   0.50    -     0.25   0.75    -     	mulxl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00    -      -     	mulxq	%rax, %rbx, %rcx
-# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -     1.00    -      -     	mulxq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     	pdepl	%eax, %ebx, %ecx
-# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     	pdepl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     	pdepq	%rax, %rbx, %rcx
-# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     	pdepq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     	pextl	%eax, %ebx, %ecx
-# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     	pextl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     	pextq	%rax, %rbx, %rcx
-# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     	pextq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     	rorxl	$1, %eax, %ecx
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     	rorxl	$1, (%rax), %ecx
-# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     	rorxq	$1, %rax, %rcx
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     	rorxq	$1, (%rax), %rcx
-# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     	sarxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     	sarxl	%eax, (%rbx), %ecx
-# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     	sarxq	%rax, %rbx, %rcx
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     	sarxq	%rax, (%rbx), %rcx
-# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     	shlxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     	shlxl	%eax, (%rbx), %ecx
-# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     	shlxq	%rax, %rbx, %rcx
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     	shlxq	%rax, (%rbx), %rcx
-# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     	shrxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     	shrxl	%eax, (%rbx), %ecx
-# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     	shrxq	%rax, %rbx, %rcx
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     	shrxq	%rax, (%rbx), %rcx
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
+# CHECK-NEXT:  -      -      -     0.50    -      -      -     0.50    -      -     bzhil	%eax, %ebx, %ecx
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     0.50    -      -     bzhil	%eax, (%rbx), %ecx
+# CHECK-NEXT:  -      -      -     0.50    -      -      -     0.50    -      -     bzhiq	%rax, %rbx, %rcx
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     0.50    -      -     bzhiq	%rax, (%rbx), %rcx
+# CHECK-NEXT:  -      -     0.75   1.25    -      -      -     0.25   0.75    -     mulxl	%eax, %ebx, %ecx
+# CHECK-NEXT:  -      -     0.75   1.25   0.50   0.50    -     0.25   0.75    -     mulxl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00    -      -     mulxq	%rax, %rbx, %rcx
+# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -     1.00    -      -     mulxq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     pdepl	%eax, %ebx, %ecx
+# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     pdepl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     pdepq	%rax, %rbx, %rcx
+# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     pdepq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     pextl	%eax, %ebx, %ecx
+# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     pextl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     pextq	%rax, %rbx, %rcx
+# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     pextq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     rorxl	$1, %eax, %ecx
+# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     rorxl	$1, (%rax), %ecx
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     rorxq	$1, %rax, %rcx
+# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     rorxq	$1, (%rax), %rcx
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     sarxl	%eax, %ebx, %ecx
+# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     sarxl	%eax, (%rbx), %ecx
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     sarxq	%rax, %rbx, %rcx
+# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     sarxq	%rax, (%rbx), %rcx
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     shlxl	%eax, %ebx, %ecx
+# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     shlxl	%eax, (%rbx), %ecx
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     shlxq	%rax, %rbx, %rcx
+# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     shlxq	%rax, (%rbx), %rcx
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     shrxl	%eax, %ebx, %ecx
+# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     shrxl	%eax, (%rbx), %ecx
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     shrxq	%rax, %rbx, %rcx
+# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     shrxq	%rax, (%rbx), %rcx
 

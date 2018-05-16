@@ -21,42 +21,42 @@ vcvtps2ph   $0, %ymm0, (%rax)
 # CHECK-NEXT: [5]: MayStore
 # CHECK-NEXT: [6]: HasSideEffects
 
-# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]	Instructions:
-# CHECK-NEXT:  1      100    -                      	vcvtph2ps	%xmm0, %xmm2
-# CHECK-NEXT:  1      100    -      *               	vcvtph2ps	(%rax), %xmm2
-# CHECK-NEXT:  1      100    -                      	vcvtph2ps	%xmm0, %ymm2
-# CHECK-NEXT:  1      100    -      *               	vcvtph2ps	(%rax), %ymm2
-# CHECK-NEXT:  1      100    -                      	vcvtps2ph	$0, %xmm0, %xmm2
-# CHECK-NEXT:  1      100    -             *        	vcvtps2ph	$0, %xmm0, (%rax)
-# CHECK-NEXT:  1      100    -                      	vcvtps2ph	$0, %ymm0, %xmm2
-# CHECK-NEXT:  1      100    -             *        	vcvtps2ph	$0, %ymm0, (%rax)
+# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# CHECK-NEXT:  1      100    -                          vcvtph2ps	%xmm0, %xmm2
+# CHECK-NEXT:  1      100    -      *                   vcvtph2ps	(%rax), %xmm2
+# CHECK-NEXT:  1      100    -                          vcvtph2ps	%xmm0, %ymm2
+# CHECK-NEXT:  1      100    -      *                   vcvtph2ps	(%rax), %ymm2
+# CHECK-NEXT:  1      100    -                          vcvtps2ph	$0, %xmm0, %xmm2
+# CHECK-NEXT:  1      100    -             *            vcvtps2ph	$0, %xmm0, (%rax)
+# CHECK-NEXT:  1      100    -                          vcvtps2ph	$0, %ymm0, %xmm2
+# CHECK-NEXT:  1      100    -             *            vcvtps2ph	$0, %ymm0, (%rax)
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0] - ZnAGU0
-# CHECK-NEXT: [1] - ZnAGU1
-# CHECK-NEXT: [2] - ZnALU0
-# CHECK-NEXT: [3] - ZnALU1
-# CHECK-NEXT: [4] - ZnALU2
-# CHECK-NEXT: [5] - ZnALU3
-# CHECK-NEXT: [6] - ZnDivider
-# CHECK-NEXT: [7] - ZnFPU0
-# CHECK-NEXT: [8] - ZnFPU1
-# CHECK-NEXT: [9] - ZnFPU2
-# CHECK-NEXT: [10] - ZnFPU3
-# CHECK-NEXT: [11] - ZnMultiplier
+# CHECK-NEXT: [0]   - ZnAGU0
+# CHECK-NEXT: [1]   - ZnAGU1
+# CHECK-NEXT: [2]   - ZnALU0
+# CHECK-NEXT: [3]   - ZnALU1
+# CHECK-NEXT: [4]   - ZnALU2
+# CHECK-NEXT: [5]   - ZnALU3
+# CHECK-NEXT: [6]   - ZnDivider
+# CHECK-NEXT: [7]   - ZnFPU0
+# CHECK-NEXT: [8]   - ZnFPU1
+# CHECK-NEXT: [9]   - ZnFPU2
+# CHECK-NEXT: [10]  - ZnFPU3
+# CHECK-NEXT: [11]  - ZnMultiplier
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   	Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	vcvtph2ps	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	vcvtph2ps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	vcvtph2ps	%xmm0, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	vcvtph2ps	(%rax), %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	vcvtps2ph	$0, %xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	vcvtps2ph	$0, %xmm0, (%rax)
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	vcvtps2ph	$0, %ymm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     	vcvtps2ph	$0, %ymm0, (%rax)
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vcvtph2ps	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vcvtph2ps	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vcvtph2ps	%xmm0, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vcvtph2ps	(%rax), %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vcvtps2ph	$0, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vcvtps2ph	$0, %xmm0, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vcvtps2ph	$0, %ymm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vcvtps2ph	$0, %ymm0, (%rax)
 

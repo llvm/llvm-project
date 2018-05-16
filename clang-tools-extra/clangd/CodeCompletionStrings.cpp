@@ -8,6 +8,8 @@
 //===---------------------------------------------------------------------===//
 
 #include "CodeCompletionStrings.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/RawCommentList.h"
 #include <utility>
 
 namespace clang {
@@ -122,13 +124,43 @@ void processSnippetChunks(const CodeCompletionString &CCS,
 
 } // namespace
 
+std::string getDocComment(const ASTContext &Ctx,
+                          const CodeCompletionResult &Result) {
+  // FIXME: clang's completion also returns documentation for RK_Pattern if they
+  // contain a pattern for ObjC properties. Unfortunately, there is no API to
+  // get this declaration, so we don't show documentation in that case.
+  if (Result.Kind != CodeCompletionResult::RK_Declaration)
+    return "";
+  auto Decl = Result.getDeclaration();
+  if (!Decl)
+    return "";
+  const RawComment *RC = getCompletionComment(Ctx, Decl);
+  if (!RC)
+    return "";
+  return RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+}
+
+std::string
+getParameterDocComment(const ASTContext &Ctx,
+                       const CodeCompleteConsumer::OverloadCandidate &Result,
+                       unsigned ArgIndex) {
+  auto Func = Result.getFunction();
+  if (!Func)
+    return "";
+  const RawComment *RC = getParameterComment(Ctx, Result, ArgIndex);
+  if (!RC)
+    return "";
+  return RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+}
+
 void getLabelAndInsertText(const CodeCompletionString &CCS, std::string *Label,
                            std::string *InsertText, bool EnableSnippets) {
   return EnableSnippets ? processSnippetChunks(CCS, Label, InsertText)
                         : processPlainTextChunks(CCS, Label, InsertText);
 }
 
-std::string getDocumentation(const CodeCompletionString &CCS) {
+std::string formatDocumentation(const CodeCompletionString &CCS,
+                                llvm::StringRef DocComment) {
   // Things like __attribute__((nonnull(1,3))) and [[noreturn]]. Present this
   // information in the documentation field.
   std::string Result;
@@ -146,13 +178,13 @@ std::string getDocumentation(const CodeCompletionString &CCS) {
     }
   }
   // Add brief documentation (if there is any).
-  if (CCS.getBriefComment() != nullptr) {
+  if (!DocComment.empty()) {
     if (!Result.empty()) {
       // This means we previously added annotations. Add an extra newline
       // character to make the annotations stand out.
       Result.push_back('\n');
     }
-    Result += CCS.getBriefComment();
+    Result += DocComment;
   }
   return Result;
 }

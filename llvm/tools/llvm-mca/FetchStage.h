@@ -17,17 +17,14 @@
 #define LLVM_TOOLS_LLVM_MCA_FETCH_STAGE_H
 
 #include "InstrBuilder.h"
-#include "Instruction.h"
 #include "SourceMgr.h"
 #include "Stage.h"
-#include "llvm/ADT/DenseMap.h"
+#include <map>
 
 namespace mca {
 
 class FetchStage : public Stage {
-  using InstMap = llvm::DenseMap<unsigned, std::unique_ptr<Instruction>>;
-  using InstMapPr =
-      llvm::detail::DenseMapPair<unsigned, std::unique_ptr<Instruction>>;
+  using InstMap = std::map<unsigned, std::unique_ptr<Instruction>>;
   InstMap Instructions;
   InstrBuilder &IB;
   SourceMgr &SM;
@@ -37,7 +34,7 @@ public:
   FetchStage(const FetchStage &Other) = delete;
   FetchStage &operator=(const FetchStage &Other) = delete;
 
-  bool isReady() override final;
+  bool isReady() const override final;
   bool execute(InstRef &IR) override final;
   void postExecute(const InstRef &IR) override final;
 };

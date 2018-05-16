@@ -296,8 +296,21 @@ def WriteVecMOVMSKY : SchedWrite;
 def WriteMMXMOVMSK  : SchedWrite;
 
 // Conversion between integer and float.
-defm WriteCvtF2I : X86SchedWritePair; // Float -> Integer.
-defm WriteCvtI2F : X86SchedWritePair; // Integer -> Float.
+defm WriteCvtSD2I  : X86SchedWritePair; // Double -> Integer.
+defm WriteCvtPD2I  : X86SchedWritePair; // Double -> Integer (XMM).
+defm WriteCvtPD2IY : X86SchedWritePair; // Double -> Integer (YMM/ZMM).
+
+defm WriteCvtSS2I  : X86SchedWritePair; // Float -> Integer.
+defm WriteCvtPS2I  : X86SchedWritePair; // Float -> Integer (XMM).
+defm WriteCvtPS2IY : X86SchedWritePair; // Float -> Integer (YMM/ZMM).
+
+defm WriteCvtI2SD  : X86SchedWritePair; // Integer -> Double.
+defm WriteCvtI2PD  : X86SchedWritePair; // Integer -> Double (XMM).
+defm WriteCvtI2PDY : X86SchedWritePair; // Integer -> Double (YMM/ZMM).
+
+defm WriteCvtI2SS  : X86SchedWritePair; // Integer -> Float.
+defm WriteCvtI2PS  : X86SchedWritePair; // Integer -> Float (XMM).
+defm WriteCvtI2PSY : X86SchedWritePair; // Integer -> Float (YMM/ZMM).
 
 defm WriteCvtSS2SD  : X86SchedWritePair; // Float -> Double size conversion.
 defm WriteCvtPS2PD  : X86SchedWritePair; // Float -> Double size conversion (XMM).
@@ -458,6 +471,18 @@ def SchedWriteFVarBlend
  : X86SchedWriteWidths<WriteFVarBlend, WriteFVarBlend,
                        WriteFVarBlendY, WriteFVarBlendY>;
 
+def SchedWriteCvtDQ2PD
+ : X86SchedWriteWidths<WriteCvtI2SD, WriteCvtI2PD,
+                       WriteCvtI2PDY, WriteCvtI2PDY>;
+def SchedWriteCvtDQ2PS
+ : X86SchedWriteWidths<WriteCvtI2SS, WriteCvtI2PS,
+                       WriteCvtI2PSY, WriteCvtI2PSY>;
+def SchedWriteCvtPD2DQ
+ : X86SchedWriteWidths<WriteCvtSD2I, WriteCvtPD2I,
+                       WriteCvtPD2IY, WriteCvtPD2IY>;
+def SchedWriteCvtPS2DQ
+ : X86SchedWriteWidths<WriteCvtSS2I, WriteCvtPS2I,
+                       WriteCvtPS2IY, WriteCvtPS2IY>;
 def SchedWriteCvtPS2PD
  : X86SchedWriteWidths<WriteCvtSS2SD, WriteCvtPS2PD,
                        WriteCvtPS2PDY, WriteCvtPS2PDY>;

@@ -56,8 +56,13 @@ struct NewPMDebugifyPass : public llvm::PassInfoMixin<NewPMDebugifyPass> {
   llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
 
-llvm::ModulePass *createCheckDebugifyModulePass(bool Strip = false);
-llvm::FunctionPass *createCheckDebugifyFunctionPass(bool Strip = false);
+llvm::ModulePass *
+createCheckDebugifyModulePass(bool Strip = false,
+                              llvm::StringRef NameOfWrappedPass = "");
+
+llvm::FunctionPass *
+createCheckDebugifyFunctionPass(bool Strip = false,
+                                llvm::StringRef NameOfWrappedPass = "");
 
 struct NewPMCheckDebugifyPass
     : public llvm::PassInfoMixin<NewPMCheckDebugifyPass> {

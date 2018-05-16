@@ -82,7 +82,7 @@ int maini1() {
 int baz3() { return 2 + baz2(); }
 int baz2() {
 // CHECK-DAG: define weak void @__omp_offloading_{{.*}}baz2{{.*}}_l[[@LINE+1]](i64 {{.*}})
-#pragma omp target
+#pragma omp target parallel
   ++c;
   return 2 + baz3();
 }

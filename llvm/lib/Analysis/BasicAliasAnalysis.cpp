@@ -132,7 +132,18 @@ static bool isNonEscapingLocalObject(const Value *V) {
 /// Returns true if the pointer is one which would have been considered an
 /// escape by isNonEscapingLocalObject.
 static bool isEscapeSource(const Value *V) {
-  if (isa<CallInst>(V) || isa<InvokeInst>(V) || isa<Argument>(V))
+  if (auto CS = ImmutableCallSite(V)) {
+    // launder_invariant_group captures its argument only by returning it,
+    // so it might not be considered an escape by isNonEscapingLocalObject.
+    // Note that adding similar special cases for intrinsics in CaptureTracking
+    // requires handling them here too.
+    if (CS.getIntrinsicID() == Intrinsic::launder_invariant_group)
+      return false;
+
+    return true;
+  }
+
+  if (isa<Argument>(V))
     return true;
 
   // The load case works because isNonEscapingLocalObject considers all

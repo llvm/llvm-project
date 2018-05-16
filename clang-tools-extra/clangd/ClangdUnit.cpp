@@ -25,6 +25,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -316,6 +317,7 @@ llvm::Optional<std::vector<Diag>> CppFile::rebuild(ParseInputs &&Inputs) {
     }
     // createInvocationFromCommandLine sets DisableFree.
     CI->getFrontendOpts().DisableFree = false;
+    CI->getLangOpts()->CommentOpts.ParseAllComments = true;
   }
 
   std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =

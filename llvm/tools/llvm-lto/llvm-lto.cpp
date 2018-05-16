@@ -380,7 +380,7 @@ static void createCombinedModuleSummaryIndex() {
     ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename + "': ");
     std::unique_ptr<MemoryBuffer> MB =
         ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Filename)));
-    ExitOnErr(readModuleSummaryIndex(*MB, CombinedIndex, ++NextModuleId));
+    ExitOnErr(readModuleSummaryIndex(*MB, CombinedIndex, NextModuleId++));
   }
   std::error_code EC;
   assert(!OutputFilename.empty());

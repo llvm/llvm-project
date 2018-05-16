@@ -261,8 +261,7 @@ void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
   // completion. At least there aren't any we're aware of.
   EXPECT_THAT(Results.items, Not(Contains(Kind(CompletionItemKind::Snippet))));
   // Check documentation.
-  EXPECT_IFF(Opts.IncludeBriefComments, Results.items,
-             Contains(IsDocumented()));
+  EXPECT_IFF(Opts.IncludeComments, Results.items, Contains(IsDocumented()));
 }
 
 void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
@@ -307,8 +306,7 @@ void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
               AllOf(Has("local_var"), Has("LocalClass"),
                     Contains(Kind(CompletionItemKind::Snippet))));
   // Check documentation.
-  EXPECT_IFF(Opts.IncludeBriefComments, Results.items,
-             Contains(IsDocumented()));
+  EXPECT_IFF(Opts.IncludeComments, Results.items, Contains(IsDocumented()));
 }
 
 TEST(CompletionTest, CompletionOptions) {
@@ -319,7 +317,7 @@ TEST(CompletionTest, CompletionOptions) {
   // We used to test every combination of options, but that got too slow (2^N).
   auto Flags = {
       &clangd::CodeCompleteOptions::IncludeMacros,
-      &clangd::CodeCompleteOptions::IncludeBriefComments,
+      &clangd::CodeCompleteOptions::IncludeComments,
       &clangd::CodeCompleteOptions::EnableSnippets,
       &clangd::CodeCompleteOptions::IncludeCodePatterns,
       &clangd::CodeCompleteOptions::IncludeIneligibleResults,
@@ -628,6 +626,30 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
   EXPECT_THAT(Results.items, Contains(AllOf(Named("fooooo"), Filter("fooooo"),
                                             Kind(CompletionItemKind::Function),
                                             Doc("Doooc"), Detail("void"))));
+}
+
+TEST(CompletionTest, Documentation) {
+  auto Results = completions(
+      R"cpp(
+      // Non-doxygen comment.
+      int foo();
+      /// Doxygen comment.
+      /// \param int a
+      int bar(int a);
+      /* Multi-line
+         block comment
+      */
+      int baz();
+
+      int x = ^
+     )cpp");
+  EXPECT_THAT(Results.items,
+              Contains(AllOf(Named("foo"), Doc("Non-doxygen comment."))));
+  EXPECT_THAT(
+      Results.items,
+      Contains(AllOf(Named("bar"), Doc("Doxygen comment.\n\\param int a"))));
+  EXPECT_THAT(Results.items,
+              Contains(AllOf(Named("baz"), Doc("Multi-line\nblock comment"))));
 }
 
 TEST(CodeCompleteTest, DisableTypoCorrection) {

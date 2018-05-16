@@ -64,8 +64,8 @@ class SizeClassAllocator32 {
   struct TransferBatch {
     static const uptr kMaxNumCached = SizeClassMap::kMaxNumCachedHint - 2;
     void SetFromArray(void *batch[], uptr count) {
+      DCHECK_LE(count, kMaxNumCached);
       count_ = count;
-      CHECK_LE(count_, kMaxNumCached);
       for (uptr i = 0; i < count; i++)
         batch_[i] = batch[i];
     }
@@ -73,9 +73,9 @@ class SizeClassAllocator32 {
     void Clear() { count_ = 0; }
     void Add(void *ptr) {
       batch_[count_++] = ptr;
-      CHECK_LE(count_, kMaxNumCached);
+      DCHECK_LE(count_, kMaxNumCached);
     }
-    void CopyToArray(void *to_batch[]) {
+    void CopyToArray(void *to_batch[]) const {
       for (uptr i = 0, n = Count(); i < n; i++)
         to_batch[i] = batch_[i];
     }
@@ -153,7 +153,7 @@ class SizeClassAllocator32 {
 
   NOINLINE TransferBatch *AllocateBatch(AllocatorStats *stat, AllocatorCache *c,
                                         uptr class_id) {
-    CHECK_LT(class_id, kNumClasses);
+    DCHECK_LT(class_id, kNumClasses);
     SizeClassInfo *sci = GetSizeClassInfo(class_id);
     SpinMutexLock l(&sci->mutex);
     if (sci->free_list.empty()) {
@@ -168,14 +168,12 @@ class SizeClassAllocator32 {
 
   NOINLINE void DeallocateBatch(AllocatorStats *stat, uptr class_id,
                                 TransferBatch *b) {
-    CHECK_LT(class_id, kNumClasses);
+    DCHECK_LT(class_id, kNumClasses);
     CHECK_GT(b->Count(), 0);
     SizeClassInfo *sci = GetSizeClassInfo(class_id);
     SpinMutexLock l(&sci->mutex);
     sci->free_list.push_front(b);
   }
-
-  uptr GetRegionBeginBySizeClass(uptr class_id) { return 0; }
 
   bool PointerIsMine(const void *p) {
     uptr mem = reinterpret_cast<uptr>(p);
@@ -252,12 +250,9 @@ class SizeClassAllocator32 {
       }
   }
 
-  void PrintStats() {
-  }
+  void PrintStats() {}
 
-  static uptr AdditionalSize() {
-    return 0;
-  }
+  static uptr AdditionalSize() { return 0; }
 
   typedef SizeClassMap SizeClassMapT;
   static const uptr kNumClasses = SizeClassMap::kNumClasses;
@@ -267,7 +262,7 @@ class SizeClassAllocator32 {
   static const uptr kNumPossibleRegions = kSpaceSize / kRegionSize;
 
   struct ALIGNED(SANITIZER_CACHE_LINE_SIZE) SizeClassInfo {
-    SpinMutex mutex;
+    StaticSpinMutex mutex;
     IntrusiveList<TransferBatch> free_list;
     u32 rand_state;
   };
@@ -284,8 +279,8 @@ class SizeClassAllocator32 {
   }
 
   uptr AllocateRegion(AllocatorStats *stat, uptr class_id) {
-    CHECK_LT(class_id, kNumClasses);
-    uptr res = reinterpret_cast<uptr>(MmapAlignedOrDieOnFatalError(
+    DCHECK_LT(class_id, kNumClasses);
+    const uptr res = reinterpret_cast<uptr>(MmapAlignedOrDieOnFatalError(
         kRegionSize, kRegionSize, PrimaryAllocatorName));
     if (UNLIKELY(!res))
       return 0;

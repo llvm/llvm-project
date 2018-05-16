@@ -758,7 +758,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
 #  thread_state pointer is in r3
 #
 
-  # restore integral registerrs
+  # restore integral registers
   l.lwz     r0,  0(r3)
   l.lwz     r1,  4(r3)
   l.lwz     r2,  8(r3)
@@ -768,7 +768,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
   l.lwz     r6, 24(r3)
   l.lwz     r7, 28(r3)
   l.lwz     r8, 32(r3)
-  l.lwz     r9, 36(r3)
+  # skip r9
   l.lwz    r10, 40(r3)
   l.lwz    r11, 44(r3)
   l.lwz    r12, 48(r3)
@@ -795,12 +795,13 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
   # at last, restore r3
   l.lwz    r3,  12(r3)
 
+  # load new pc into ra
+  l.lwz    r9, 128(r3)
   # jump to pc
   l.jr     r9
    l.nop
 
-#elif defined(__mips__) && defined(_ABIO32) && _MIPS_SIM == _ABIO32 &&         \
-    defined(__mips_soft_float)
+#elif defined(__mips__) && defined(_ABIO32) && _MIPS_SIM == _ABIO32
 
 //
 // void libunwind::Registers_mips_o32::jumpto()
@@ -813,6 +814,59 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
   .set noat
   .set noreorder
   .set nomacro
+#ifdef __mips_hard_float
+#if __mips_fpr == 32
+  ldc1  $f0, (4 * 36 + 8 * 0)($4)
+  ldc1  $f2, (4 * 36 + 8 * 2)($4)
+  ldc1  $f4, (4 * 36 + 8 * 4)($4)
+  ldc1  $f6, (4 * 36 + 8 * 6)($4)
+  ldc1  $f8, (4 * 36 + 8 * 8)($4)
+  ldc1  $f10, (4 * 36 + 8 * 10)($4)
+  ldc1  $f12, (4 * 36 + 8 * 12)($4)
+  ldc1  $f14, (4 * 36 + 8 * 14)($4)
+  ldc1  $f16, (4 * 36 + 8 * 16)($4)
+  ldc1  $f18, (4 * 36 + 8 * 18)($4)
+  ldc1  $f20, (4 * 36 + 8 * 20)($4)
+  ldc1  $f22, (4 * 36 + 8 * 22)($4)
+  ldc1  $f24, (4 * 36 + 8 * 24)($4)
+  ldc1  $f26, (4 * 36 + 8 * 26)($4)
+  ldc1  $f28, (4 * 36 + 8 * 28)($4)
+  ldc1  $f30, (4 * 36 + 8 * 30)($4)
+#else
+  ldc1  $f0, (4 * 36 + 8 * 0)($4)
+  ldc1  $f1, (4 * 36 + 8 * 1)($4)
+  ldc1  $f2, (4 * 36 + 8 * 2)($4)
+  ldc1  $f3, (4 * 36 + 8 * 3)($4)
+  ldc1  $f4, (4 * 36 + 8 * 4)($4)
+  ldc1  $f5, (4 * 36 + 8 * 5)($4)
+  ldc1  $f6, (4 * 36 + 8 * 6)($4)
+  ldc1  $f7, (4 * 36 + 8 * 7)($4)
+  ldc1  $f8, (4 * 36 + 8 * 8)($4)
+  ldc1  $f9, (4 * 36 + 8 * 9)($4)
+  ldc1  $f10, (4 * 36 + 8 * 10)($4)
+  ldc1  $f11, (4 * 36 + 8 * 11)($4)
+  ldc1  $f12, (4 * 36 + 8 * 12)($4)
+  ldc1  $f13, (4 * 36 + 8 * 13)($4)
+  ldc1  $f14, (4 * 36 + 8 * 14)($4)
+  ldc1  $f15, (4 * 36 + 8 * 15)($4)
+  ldc1  $f16, (4 * 36 + 8 * 16)($4)
+  ldc1  $f17, (4 * 36 + 8 * 17)($4)
+  ldc1  $f18, (4 * 36 + 8 * 18)($4)
+  ldc1  $f19, (4 * 36 + 8 * 19)($4)
+  ldc1  $f20, (4 * 36 + 8 * 20)($4)
+  ldc1  $f21, (4 * 36 + 8 * 21)($4)
+  ldc1  $f22, (4 * 36 + 8 * 22)($4)
+  ldc1  $f23, (4 * 36 + 8 * 23)($4)
+  ldc1  $f24, (4 * 36 + 8 * 24)($4)
+  ldc1  $f25, (4 * 36 + 8 * 25)($4)
+  ldc1  $f26, (4 * 36 + 8 * 26)($4)
+  ldc1  $f27, (4 * 36 + 8 * 27)($4)
+  ldc1  $f28, (4 * 36 + 8 * 28)($4)
+  ldc1  $f29, (4 * 36 + 8 * 29)($4)
+  ldc1  $f30, (4 * 36 + 8 * 30)($4)
+  ldc1  $f31, (4 * 36 + 8 * 31)($4)
+#endif
+#endif
   // restore hi and lo
   lw    $8, (4 * 33)($4)
   mthi  $8
@@ -856,7 +910,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
   lw    $4, (4 * 4)($4)
   .set pop
 
-#elif defined(__mips64) && defined(__mips_soft_float)
+#elif defined(__mips64)
 
 //
 // void libunwind::Registers_mips_newabi::jumpto()
@@ -869,6 +923,40 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind21Registers_mips_newabi6jumptoEv)
   .set noat
   .set noreorder
   .set nomacro
+#ifdef __mips_hard_float
+  ldc1  $f0, (8 * 35)($4)
+  ldc1  $f1, (8 * 36)($4)
+  ldc1  $f2, (8 * 37)($4)
+  ldc1  $f3, (8 * 38)($4)
+  ldc1  $f4, (8 * 39)($4)
+  ldc1  $f5, (8 * 40)($4)
+  ldc1  $f6, (8 * 41)($4)
+  ldc1  $f7, (8 * 42)($4)
+  ldc1  $f8, (8 * 43)($4)
+  ldc1  $f9, (8 * 44)($4)
+  ldc1  $f10, (8 * 45)($4)
+  ldc1  $f11, (8 * 46)($4)
+  ldc1  $f12, (8 * 47)($4)
+  ldc1  $f13, (8 * 48)($4)
+  ldc1  $f14, (8 * 49)($4)
+  ldc1  $f15, (8 * 50)($4)
+  ldc1  $f16, (8 * 51)($4)
+  ldc1  $f17, (8 * 52)($4)
+  ldc1  $f18, (8 * 53)($4)
+  ldc1  $f19, (8 * 54)($4)
+  ldc1  $f20, (8 * 55)($4)
+  ldc1  $f21, (8 * 56)($4)
+  ldc1  $f22, (8 * 57)($4)
+  ldc1  $f23, (8 * 58)($4)
+  ldc1  $f24, (8 * 59)($4)
+  ldc1  $f25, (8 * 60)($4)
+  ldc1  $f26, (8 * 61)($4)
+  ldc1  $f27, (8 * 62)($4)
+  ldc1  $f28, (8 * 63)($4)
+  ldc1  $f29, (8 * 64)($4)
+  ldc1  $f30, (8 * 65)($4)
+  ldc1  $f31, (8 * 66)($4)
+#endif
   // restore hi and lo
   ld    $8, (8 * 33)($4)
   mthi  $8

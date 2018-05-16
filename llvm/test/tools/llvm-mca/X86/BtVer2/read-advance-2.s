@@ -21,16 +21,16 @@
 # CHECK-NEXT: [5]: MayStore
 # CHECK-NEXT: [6]: HasSideEffects
 
-# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]	Instructions:
-# CHECK-NEXT:  2      3     1.00                    	imull	%esi
-# CHECK-NEXT:  2      6     1.00    *               	imull	(%rdi)
+# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# CHECK-NEXT:  2      3     1.00                        imull	%esi
+# CHECK-NEXT:  2      6     1.00    *                   imull	(%rdi)
 
 # CHECK:      Timeline view:
 
-# CHECK:      Index	0123456789
+# CHECK:      Index     0123456789
 
-# CHECK:      [0,0]	DeeeER   .	imull	%esi
-# CHECK-NEXT: [0,1]	.DeeeeeeER	imull	(%rdi)
+# CHECK:      [0,0]     DeeeER   .   imull	%esi
+# CHECK-NEXT: [0,1]     .DeeeeeeER   imull	(%rdi)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -39,6 +39,6 @@
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     1     1.0    1.0    0.0    	imull	%esi
-# CHECK-NEXT: 1.     1     1.0    1.0    0.0    	imull	(%rdi)
+# CHECK-NEXT: 0.     1     1.0    1.0    0.0       imull	%esi
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       imull	(%rdi)
 

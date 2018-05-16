@@ -2311,6 +2311,8 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   if (Left.opensScope()) {
     if (Style.AlignAfterOpenBracket == FormatStyle::BAS_DontAlign)
       return 0;
+    if (Left.is(tok::l_brace) && !Style.Cpp11BracedListStyle)
+      return 19;
     return Left.ParameterCount > 1 ? Style.PenaltyBreakBeforeFirstCallParameter
                                    : 19;
   }
@@ -2336,6 +2338,8 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
       return 2;
     return 1;
   }
+  if (Left.ClosesTemplateDeclaration)
+    return Style.PenaltyBreakTemplateDeclaration;
   if (Left.is(TT_ConditionalExpr))
     return prec::Conditional;
   prec::Level Level = Left.getPrecedence();
@@ -2867,7 +2871,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Right.Previous->ClosesTemplateDeclaration &&
       Right.Previous->MatchingParen &&
       Right.Previous->MatchingParen->NestingLevel == 0 &&
-      Style.AlwaysBreakTemplateDeclarations)
+      Style.AlwaysBreakTemplateDeclarations == FormatStyle::BTDS_Yes)
     return true;
   if (Right.is(TT_CtorInitializerComma) &&
       Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma &&
@@ -3047,6 +3051,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return false;
   if (Left.is(tok::equal) && !Right.isOneOf(tok::kw_default, tok::kw_delete) &&
       Line.Type == LT_VirtualFunctionDecl && Left.NestingLevel == 0)
+    return false;
+  if (Left.is(tok::equal) && Right.is(tok::l_brace) &&
+      !Style.Cpp11BracedListStyle)
     return false;
   if (Left.is(tok::l_paren) && Left.is(TT_AttributeParen))
     return false;

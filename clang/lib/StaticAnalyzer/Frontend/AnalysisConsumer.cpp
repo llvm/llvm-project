@@ -73,7 +73,7 @@ void ento::createPlistHTMLDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
                                              const Preprocessor &PP) {
   createHTMLDiagnosticConsumer(AnalyzerOpts, C,
                                llvm::sys::path::parent_path(prefix), PP);
-  createPlistDiagnosticConsumer(AnalyzerOpts, C, prefix, PP);
+  createPlistMultiFileDiagnosticConsumer(AnalyzerOpts, C, prefix, PP);
 }
 
 void ento::createTextPathDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,

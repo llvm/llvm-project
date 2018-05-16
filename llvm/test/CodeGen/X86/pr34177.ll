@@ -24,27 +24,27 @@ define void @test() local_unnamed_addr {
 ; CHECK-NEXT:    fcmove %st(4), %st(0)
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    cmpq %rax, %rax
-; CHECK-NEXT:    fld %st(3)
-; CHECK-NEXT:    fcmove %st(5), %st(0)
-; CHECK-NEXT:    fstp %st(5)
-; CHECK-NEXT:    fxch %st(2)
-; CHECK-NEXT:    fadd %st(3)
-; CHECK-NEXT:    fxch %st(4)
-; CHECK-NEXT:    fadd %st(3)
-; CHECK-NEXT:    fxch %st(2)
-; CHECK-NEXT:    fadd %st(3)
+; CHECK-NEXT:    fxch %st(3)
+; CHECK-NEXT:    fcmove %st(4), %st(0)
+; CHECK-NEXT:    fstp %st(4)
 ; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    faddp %st(3)
+; CHECK-NEXT:    fadd %st(0), %st(0)
+; CHECK-NEXT:    fxch %st(3)
+; CHECK-NEXT:    fadd %st(0), %st(0)
+; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:    fadd %st(0), %st(0)
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fadd %st(0), %st(0)
 ; CHECK-NEXT:    fxch %st(3)
 ; CHECK-NEXT:    fstpt (%rax)
-; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fxch %st(2)
 ; CHECK-NEXT:    fstpt (%rax)
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fstpt (%rax)
 ; CHECK-NEXT:    fstpt (%rax)
   %1 = icmp eq <4 x i64> <i64 0, i64 1, i64 2, i64 3>, undef
   %2 = select <4 x i1> %1, <4 x x86_fp80> <x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000>, <4 x x86_fp80> zeroinitializer
-  %3 = fadd <4 x x86_fp80> undef, %2
+  %3 = fadd <4 x x86_fp80> %2, %2
   %4 = shufflevector <4 x x86_fp80> %3, <4 x x86_fp80> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
   store <8 x x86_fp80> %4, <8 x x86_fp80>* undef, align 16
   unreachable
