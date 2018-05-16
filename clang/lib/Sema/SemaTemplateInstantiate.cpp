@@ -2398,127 +2398,137 @@ getPatternForClassTemplateSpecialization(
   if (Inst.isInvalid() || Inst.isAlreadyInstantiating())
     return nullptr;
 
-  ClassTemplateDecl *Template = ClassTemplateSpec->getSpecializedTemplate();
-  CXXRecordDecl *Pattern = nullptr;
+  llvm::PointerUnion<ClassTemplateDecl *,
+                     ClassTemplatePartialSpecializationDecl *>
+      Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
+  if (!Specialized.is<ClassTemplatePartialSpecializationDecl *>()) {
+    // Find best matching specialization.
+    ClassTemplateDecl *Template = ClassTemplateSpec->getSpecializedTemplate();
 
-  // C++ [temp.class.spec.match]p1:
-  //   When a class template is used in a context that requires an
-  //   instantiation of the class, it is necessary to determine
-  //   whether the instantiation is to be generated using the primary
-  //   template or one of the partial specializations. This is done by
-  //   matching the template arguments of the class template
-  //   specialization with the template argument lists of the partial
-  //   specializations.
-  typedef PartialSpecMatchResult MatchResult;
-  SmallVector<MatchResult, 4> Matched;
-  SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
-  Template->getPartialSpecializations(PartialSpecs);
-  TemplateSpecCandidateSet FailedCandidates(PointOfInstantiation);
-  for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
-    ClassTemplatePartialSpecializationDecl *Partial = PartialSpecs[I];
-    TemplateDeductionInfo Info(FailedCandidates.getLocation());
-    if (Sema::TemplateDeductionResult Result = S.DeduceTemplateArguments(
-            Partial, ClassTemplateSpec->getTemplateArgs(), Info)) {
-      // Store the failed-deduction information for use in diagnostics, later.
-      // TODO: Actually use the failed-deduction info?
-      FailedCandidates.addCandidate().set(
-          DeclAccessPair::make(Template, AS_public), Partial,
-          MakeDeductionFailureInfo(S.Context, Result, Info));
-      (void)Result;
+    // C++ [temp.class.spec.match]p1:
+    //   When a class template is used in a context that requires an
+    //   instantiation of the class, it is necessary to determine
+    //   whether the instantiation is to be generated using the primary
+    //   template or one of the partial specializations. This is done by
+    //   matching the template arguments of the class template
+    //   specialization with the template argument lists of the partial
+    //   specializations.
+    typedef PartialSpecMatchResult MatchResult;
+    SmallVector<MatchResult, 4> Matched;
+    SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
+    Template->getPartialSpecializations(PartialSpecs);
+    TemplateSpecCandidateSet FailedCandidates(PointOfInstantiation);
+    for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
+      ClassTemplatePartialSpecializationDecl *Partial = PartialSpecs[I];
+      TemplateDeductionInfo Info(FailedCandidates.getLocation());
+      if (Sema::TemplateDeductionResult Result = S.DeduceTemplateArguments(
+              Partial, ClassTemplateSpec->getTemplateArgs(), Info)) {
+        // Store the failed-deduction information for use in diagnostics, later.
+        // TODO: Actually use the failed-deduction info?
+        FailedCandidates.addCandidate().set(
+            DeclAccessPair::make(Template, AS_public), Partial,
+            MakeDeductionFailureInfo(S.Context, Result, Info));
+        (void)Result;
+      } else {
+        Matched.push_back(PartialSpecMatchResult());
+        Matched.back().Partial = Partial;
+        Matched.back().Args = Info.take();
+      }
+    }
+
+    // If we're dealing with a member template where the template parameters
+    // have been instantiated, this provides the original template parameters
+    // from which the member template's parameters were instantiated.
+
+    if (Matched.size() >= 1) {
+      SmallVectorImpl<MatchResult>::iterator Best = Matched.begin();
+      if (Matched.size() == 1) {
+        //   -- If exactly one matching specialization is found, the
+        //      instantiation is generated from that specialization.
+        // We don't need to do anything for this.
+      } else {
+        //   -- If more than one matching specialization is found, the
+        //      partial order rules (14.5.4.2) are used to determine
+        //      whether one of the specializations is more specialized
+        //      than the others. If none of the specializations is more
+        //      specialized than all of the other matching
+        //      specializations, then the use of the class template is
+        //      ambiguous and the program is ill-formed.
+        for (SmallVectorImpl<MatchResult>::iterator P = Best + 1,
+                                                 PEnd = Matched.end();
+             P != PEnd; ++P) {
+          if (S.getMoreSpecializedPartialSpecialization(
+                  P->Partial, Best->Partial, PointOfInstantiation) ==
+              P->Partial)
+            Best = P;
+        }
+
+        // Determine if the best partial specialization is more specialized than
+        // the others.
+        bool Ambiguous = false;
+        for (SmallVectorImpl<MatchResult>::iterator P = Matched.begin(),
+                                                 PEnd = Matched.end();
+             P != PEnd; ++P) {
+          if (P != Best && S.getMoreSpecializedPartialSpecialization(
+                               P->Partial, Best->Partial,
+                               PointOfInstantiation) != Best->Partial) {
+            Ambiguous = true;
+            break;
+          }
+        }
+
+        if (Ambiguous) {
+          // Partial ordering did not produce a clear winner. Complain.
+          Inst.Clear();
+          ClassTemplateSpec->setInvalidDecl();
+          S.Diag(PointOfInstantiation,
+                 diag::err_partial_spec_ordering_ambiguous)
+              << ClassTemplateSpec;
+
+          // Print the matching partial specializations.
+          for (SmallVectorImpl<MatchResult>::iterator P = Matched.begin(),
+                                                   PEnd = Matched.end();
+               P != PEnd; ++P)
+            S.Diag(P->Partial->getLocation(), diag::note_partial_spec_match)
+                << S.getTemplateArgumentBindingsText(
+                       P->Partial->getTemplateParameters(), *P->Args);
+
+          return nullptr;
+        }
+      }
+
+      ClassTemplateSpec->setInstantiationOf(Best->Partial, Best->Args);
     } else {
-      Matched.push_back(PartialSpecMatchResult());
-      Matched.back().Partial = Partial;
-      Matched.back().Args = Info.take();
+      //   -- If no matches are found, the instantiation is generated
+      //      from the primary template.
     }
   }
 
-  // If we're dealing with a member template where the template parameters
-  // have been instantiated, this provides the original template parameters
-  // from which the member template's parameters were instantiated.
-
-  if (Matched.size() >= 1) {
-    SmallVectorImpl<MatchResult>::iterator Best = Matched.begin();
-    if (Matched.size() == 1) {
-      //   -- If exactly one matching specialization is found, the
-      //      instantiation is generated from that specialization.
-      // We don't need to do anything for this.
-    } else {
-      //   -- If more than one matching specialization is found, the
-      //      partial order rules (14.5.4.2) are used to determine
-      //      whether one of the specializations is more specialized
-      //      than the others. If none of the specializations is more
-      //      specialized than all of the other matching
-      //      specializations, then the use of the class template is
-      //      ambiguous and the program is ill-formed.
-      for (SmallVectorImpl<MatchResult>::iterator P = Best + 1,
-                                               PEnd = Matched.end();
-           P != PEnd; ++P) {
-        if (S.getMoreSpecializedPartialSpecialization(
-                P->Partial, Best->Partial, PointOfInstantiation) == P->Partial)
-          Best = P;
-      }
-      
-      // Determine if the best partial specialization is more specialized than
-      // the others.
-      bool Ambiguous = false;
-      for (SmallVectorImpl<MatchResult>::iterator P = Matched.begin(),
-                                               PEnd = Matched.end();
-           P != PEnd; ++P) {
-        if (P != Best &&
-            S.getMoreSpecializedPartialSpecialization(P->Partial, Best->Partial,
-                                                      PointOfInstantiation) !=
-                Best->Partial) {
-          Ambiguous = true;
-          break;
-        }
-      }
-       
-      if (Ambiguous) {
-        // Partial ordering did not produce a clear winner. Complain.
-        Inst.Clear();
-        ClassTemplateSpec->setInvalidDecl();
-        S.Diag(PointOfInstantiation, diag::err_partial_spec_ordering_ambiguous)
-          << ClassTemplateSpec;
-        
-        // Print the matching partial specializations.
-        for (SmallVectorImpl<MatchResult>::iterator P = Matched.begin(),
-                                                 PEnd = Matched.end();
-             P != PEnd; ++P)
-          S.Diag(P->Partial->getLocation(), diag::note_partial_spec_match)
-            << S.getTemplateArgumentBindingsText(
-                   P->Partial->getTemplateParameters(), *P->Args);
-
-        return nullptr;
-      }
-    }
-    
+  CXXRecordDecl *Pattern = nullptr;
+  Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
+  if (auto *PartialSpec =
+          Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
     // Instantiate using the best class template partial specialization.
-    ClassTemplatePartialSpecializationDecl *OrigPartialSpec = Best->Partial;
-    while (OrigPartialSpec->getInstantiatedFromMember()) {
+    while (PartialSpec->getInstantiatedFromMember()) {
       // If we've found an explicit specialization of this class template,
       // stop here and use that as the pattern.
-      if (OrigPartialSpec->isMemberSpecialization())
+      if (PartialSpec->isMemberSpecialization())
         break;
-      
-      OrigPartialSpec = OrigPartialSpec->getInstantiatedFromMember();
+
+      PartialSpec = PartialSpec->getInstantiatedFromMember();
     }
-    
-    Pattern = OrigPartialSpec;
-    ClassTemplateSpec->setInstantiationOf(Best->Partial, Best->Args);
+    Pattern = PartialSpec;
   } else {
-    //   -- If no matches are found, the instantiation is generated
-    //      from the primary template.
-    ClassTemplateDecl *OrigTemplate = Template;
-    while (OrigTemplate->getInstantiatedFromMemberTemplate()) {
+    ClassTemplateDecl *Template = ClassTemplateSpec->getSpecializedTemplate();
+    while (Template->getInstantiatedFromMemberTemplate()) {
       // If we've found an explicit specialization of this class template,
       // stop here and use that as the pattern.
-      if (OrigTemplate->isMemberSpecialization())
+      if (Template->isMemberSpecialization())
         break;
-      
-      OrigTemplate = OrigTemplate->getInstantiatedFromMemberTemplate();
+
+      Template = Template->getInstantiatedFromMemberTemplate();
     }
-    
-    Pattern = OrigTemplate->getTemplatedDecl();
+    Pattern = Template->getTemplatedDecl();
   }
 
   return Pattern;

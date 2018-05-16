@@ -8,7 +8,7 @@ zip2 z6.h, z23.h, z31.x
 
 // Element size specifiers should match.
 zip2 z0.h, z30.h, z24.b
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: zip2 z0.h, z30.h, z24.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -26,7 +26,7 @@ zip2 z1.s, z2.s, z32.s
 
 // p16 is not a valid SVE predicate register
 zip2 p1.s, p2.s, p16.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: zip2 p1.s, p2.s, p16.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -38,6 +38,6 @@ zip2 z1.s, z2.s, p3.s
 
 // Combining predicate and data registers as operands
 zip2 p1.s, p2.s, z3.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: zip2 p1.s, p2.s, z3.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

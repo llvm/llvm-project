@@ -813,6 +813,14 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       if (Config->ThinLTOPrefixReplace.second.empty())
         error("thinlto-prefix-replace expects 'old;new' format, but got " +
               S.substr(23));
+    } else if (S.startswith("thinlto-object-suffix-replace=")) {
+      std::tie(Config->ThinLTOObjectSuffixReplace.first,
+               Config->ThinLTOObjectSuffixReplace.second) =
+          S.substr(30).split(';');
+      if (Config->ThinLTOObjectSuffixReplace.second.empty())
+        error(
+            "thinlto-object-suffix-replace expects 'old;new' format, but got " +
+            S.substr(30));
     } else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
                !S.startswith("-pass-through=") && !S.startswith("thinlto")) {
       parseClangOption(S, Arg->getSpelling());

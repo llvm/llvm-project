@@ -26,7 +26,7 @@ prfb #pldl1keep, p0, [x0]
 
 
 // --------------------------------------------------------------------------//
-// invalid addressing modes
+// invalid scalar + scalar addressing modes
 
 prfb #0, p0, [x0, #-33, mul vl]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
@@ -51,6 +51,73 @@ prfb #0, p0, [x0, x0, uxtw]
 prfb #0, p0, [x0, x0, lsl #2]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 without shift
 // CHECK-NEXT: prfb #0, p0, [x0, x0, lsl #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid scalar + vector addressing modes
+
+prfb #0, p0, [x0, z0.b]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: prfb #0, p0, [x0, z0.b]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+prfb #0, p0, [x0, z0.h]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: prfb #0, p0, [x0, z0.h]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+prfb #0, p0, [x0, z0.s]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK-NEXT: prfb #0, p0, [x0, z0.s]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+prfb #0, p0, [x0, z0.s]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK-NEXT: prfb #0, p0, [x0, z0.s]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+prfb #0, p0, [x0, z0.s, uxtw #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK-NEXT: prfb #0, p0, [x0, z0.s, uxtw #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+prfb #0, p0, [x0, z0.s, lsl #0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'
+// CHECK-NEXT: prfb #0, p0, [x0, z0.s, lsl #0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+prfb #0, p0, [x0, z0.d, lsl #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: prfb #0, p0, [x0, z0.d, lsl #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+prfb #0, p0, [x0, z0.d, sxtw #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK-NEXT: prfb #0, p0, [x0, z0.d, sxtw #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
+// Invalid vector + immediate addressing modes
+
+prfb #0, p0, [z0.s, #-1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 31].
+// CHECK-NEXT: prfb #0, p0, [z0.s, #-1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+prfb #0, p0, [z0.s, #32]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 31].
+// CHECK-NEXT: prfb #0, p0, [z0.s, #32]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+prfb #0, p0, [z0.d, #-1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 31].
+// CHECK-NEXT: prfb #0, p0, [z0.d, #-1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+prfb #0, p0, [z0.d, #32]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 31].
+// CHECK-NEXT: prfb #0, p0, [z0.d, #32]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 

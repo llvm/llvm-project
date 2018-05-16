@@ -1199,6 +1199,15 @@ public:
     return OptSize ? MaxStoresPerMemcpyOptSize : MaxStoresPerMemcpy;
   }
 
+  /// \brief Get maximum # of store operations to be glued together
+  ///
+  /// This function returns the maximum number of store operations permitted
+  /// to glue together during lowering of llvm.memcpy. The value is set by
+  //  the target at the performance threshold for such a replacement.
+  virtual unsigned getMaxGluedStoresPerMemcpy() const {
+    return MaxGluedStoresPerMemcpy;
+  }
+
   /// Get maximum # of load operations permitted for memcmp
   ///
   /// This function returns the maximum number of load operations permitted
@@ -2508,6 +2517,14 @@ protected:
   /// and one 1-byte store. This only applies to copying a constant array of
   /// constant size.
   unsigned MaxStoresPerMemcpy;
+
+
+  /// \brief Specify max number of store instructions to glue in inlined memcpy.
+  ///
+  /// When memcpy is inlined based on MaxStoresPerMemcpy, specify maximum number
+  /// of store instructions to keep together. This helps in pairing and
+  //  vectorization later on.
+  unsigned MaxGluedStoresPerMemcpy = 0;
 
   /// Maximum number of store operations that may be substituted for a call to
   /// memcpy, used for functions with OptSize attribute.

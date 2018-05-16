@@ -4,12 +4,12 @@
 // Invalid operand (.s)
 
 ld1sw z23.s, p0/z, [x13, #1, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: ld1sw z23.s, p0/z, [x13, #1, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sw z29.s, p0/z, [x3, #1, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: ld1sw z29.s, p0/z, [x3, #1, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -89,17 +89,12 @@ ld1sw z0.d, p0/z, [x0, w0, uxtw]
 // Invalid scalar + vector addressing modes
 
 ld1sw z0.d, p0/z, [x0, z0.h]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: ld1sw z0.d, p0/z, [x0, z0.h]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sw z0.d, p0/z, [x0, z0.s]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
-// CHECK-NEXT: ld1sw z0.d, p0/z, [x0, z0.s]
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-ld1sw z0.d, p0/z, [x0, z0.s]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: ld1sw z0.d, p0/z, [x0, z0.s]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -133,12 +128,12 @@ ld1sw z0.d, p0/z, [x0, z0.d, sxtw #3]
 // Invalid vector + immediate addressing modes
 
 ld1sw z0.s, p0/z, [z0.s]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: ld1sw z0.s, p0/z, [z0.s]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sw z0.s, p0/z, [z0.s, #4]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: ld1sw z0.s, p0/z, [z0.s, #4]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
