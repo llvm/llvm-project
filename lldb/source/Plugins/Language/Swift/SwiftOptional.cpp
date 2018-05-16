@@ -42,7 +42,6 @@ std::string lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
 // retrieve the value of the Some case..
 static PointerOrSP
 ExtractSomeIfAny(ValueObject *optional,
-                 lldb::DynamicValueType dynamic_value = lldb::eNoDynamicValues,
                  bool synthetic_value = false) {
   if (!optional)
     return nullptr;
@@ -64,41 +63,53 @@ ExtractSomeIfAny(ValueObject *optional,
   if (!value_sp)
     return nullptr;
 
+  auto process_sp = optional->GetProcessSP();
+  SwiftLanguageRuntime *swift_runtime =
+      process_sp ? process_sp->GetSwiftLanguageRuntime() : nullptr;
+
   SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy;
   if (SwiftASTContext::IsNonTriviallyManagedReferenceType(
           non_synth_valobj->GetCompilerType(), strategy) &&
       strategy ==
           SwiftASTContext::NonTriviallyManagedReferenceStrategy::eWeak) {
-    if (auto process_sp = optional->GetProcessSP()) {
-      if (auto swift_runtime = process_sp->GetSwiftLanguageRuntime()) {
-        lldb::addr_t original_ptr =
-            value_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-        lldb::addr_t tweaked_ptr =
-            swift_runtime->MaybeMaskNonTrivialReferencePointer(original_ptr,
-                                                               strategy);
-        if (original_ptr != tweaked_ptr) {
-          CompilerType value_type(value_sp->GetCompilerType());
-          DataBufferSP buffer_sp(
-              new DataBufferHeap(&tweaked_ptr, sizeof(tweaked_ptr)));
-          DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(),
-                                  process_sp->GetAddressByteSize());
-          ExecutionContext exe_ctx(process_sp);
-          value_sp = PointerOrSP(ValueObject::CreateValueObjectFromData(
-              value_sp->GetName().AsCString(), extractor, exe_ctx, value_type));
-          if (!value_sp)
-            return nullptr;
-          else
-            value_sp->SetSyntheticChildrenGenerated(true);
-        }
+    if (swift_runtime) {
+      lldb::addr_t original_ptr =
+          value_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+      lldb::addr_t tweaked_ptr =
+          swift_runtime->MaybeMaskNonTrivialReferencePointer(original_ptr,
+                                                             strategy);
+      if (original_ptr != tweaked_ptr) {
+        CompilerType value_type(value_sp->GetCompilerType());
+        DataBufferSP buffer_sp(
+            new DataBufferHeap(&tweaked_ptr, sizeof(tweaked_ptr)));
+        DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(),
+                                process_sp->GetAddressByteSize());
+        ExecutionContext exe_ctx(process_sp);
+        value_sp = PointerOrSP(ValueObject::CreateValueObjectFromData(
+            value_sp->GetName().AsCString(), extractor, exe_ctx, value_type));
+        if (!value_sp)
+          return nullptr;
+        else
+          value_sp->SetSyntheticChildrenGenerated(true);
       }
     }
   }
 
-  if (dynamic_value != lldb::eNoDynamicValues) {
-    ValueObjectSP dyn_value_sp = value_sp->GetDynamicValue(dynamic_value);
-    if (dyn_value_sp)
-      value_sp = dyn_value_sp;
-  }
+  lldb::DynamicValueType use_dynamic;
+
+  // FIXME: We usually want to display the dynamic value of an optional's
+  // payload, but we don't have a simple way to determine whether the dynamic
+  // value was actually requested. Consult the target setting as a workaround.
+  if (swift_runtime->CouldHaveDynamicValue(*value_sp))
+    // FIXME (cont): Here, we'd like to use some new API to determine whether
+    // a dynamic value was actually requested.
+    use_dynamic = eDynamicDontRunTarget;
+  else
+    use_dynamic = value_sp->GetTargetSP()->GetPreferDynamicValue();
+
+  ValueObjectSP dyn_value_sp = value_sp->GetDynamicValue(use_dynamic);
+  if (dyn_value_sp)
+    value_sp = dyn_value_sp;
 
   if (synthetic_value && value_sp->HasSyntheticValue())
     value_sp = value_sp->GetSyntheticValue();
@@ -109,8 +120,7 @@ ExtractSomeIfAny(ValueObject *optional,
 static bool
 SwiftOptional_SummaryProvider_Impl(ValueObject &valobj, Stream &stream,
                                    const TypeSummaryOptions &options) {
-  PointerOrSP some =
-      ExtractSomeIfAny(&valobj, valobj.GetDynamicValueType(), true);
+  PointerOrSP some = ExtractSomeIfAny(&valobj, true);
   if (!some) {
     stream.Printf("nil");
     return true;
@@ -158,8 +168,7 @@ bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
   if (!target_valobj)
     return false;
 
-  PointerOrSP some = ExtractSomeIfAny(
-      target_valobj, target_valobj->GetDynamicValueType(), true);
+  PointerOrSP some = ExtractSomeIfAny(target_valobj, true);
 
   if (!some)
     return true;
@@ -220,7 +229,7 @@ bool lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::Update() {
   m_is_none = true;
   m_children = false;
 
-  m_some = ExtractSomeIfAny(&m_backend, m_backend.GetDynamicValueType(), true);
+  m_some = ExtractSomeIfAny(&m_backend, true);
 
   if (!m_some) {
     m_is_none = true;
