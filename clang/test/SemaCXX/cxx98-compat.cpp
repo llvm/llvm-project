@@ -47,6 +47,8 @@ namespace TemplateParsing {
 
 void Lambda() {
   []{}(); // expected-warning {{lambda expressions are incompatible with C++98}}
+  // Don't warn about implicit "-> auto" here.
+  [](){}(); // expected-warning {{lambda expressions are incompatible with C++98}}
 }
 
 struct Ctor {

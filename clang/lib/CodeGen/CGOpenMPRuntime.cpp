@@ -1470,9 +1470,10 @@ createConstantGlobalStruct(CodeGenModule &CGM, QualType Ty,
 }
 
 template <typename T>
-void createConstantGlobalStructAndAddToParent(CodeGenModule &CGM, QualType Ty,
-                                              ArrayRef<llvm::Constant *> Data,
-                                              T &Parent) {
+static void
+createConstantGlobalStructAndAddToParent(CodeGenModule &CGM, QualType Ty,
+                                         ArrayRef<llvm::Constant *> Data,
+                                         T &Parent) {
   const auto *RD = cast<RecordDecl>(Ty->getAsTagDecl());
   const CGRecordLayout &RL = CGM.getTypes().getCGRecordLayout(RD);
   ConstantStructBuilder Fields = Parent.beginStruct(RL.getLLVMType());
