@@ -151,6 +151,11 @@ Improvements to clang-tidy
   Warns or suggests alternatives if SIMD intrinsics are used which can be replaced by
   ``std::experimental::simd`` operations.
 
+- New :doc:`readability-simplify-subscript-expr
+  <clang-tidy/checks/readability-simplify-subscript-expr>` check.
+
+  Simplifies subscript expressions like ``s.data()[i]`` into ``s[i]``.
+
 - New :doc:`zircon-temporary-objects
   <clang-tidy/checks/zircon-temporary-objects>` check.
 
