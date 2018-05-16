@@ -261,8 +261,7 @@ void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
   // completion. At least there aren't any we're aware of.
   EXPECT_THAT(Results.items, Not(Contains(Kind(CompletionItemKind::Snippet))));
   // Check documentation.
-  EXPECT_IFF(Opts.IncludeBriefComments, Results.items,
-             Contains(IsDocumented()));
+  EXPECT_IFF(Opts.IncludeComments, Results.items, Contains(IsDocumented()));
 }
 
 void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
@@ -307,8 +306,7 @@ void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
               AllOf(Has("local_var"), Has("LocalClass"),
                     Contains(Kind(CompletionItemKind::Snippet))));
   // Check documentation.
-  EXPECT_IFF(Opts.IncludeBriefComments, Results.items,
-             Contains(IsDocumented()));
+  EXPECT_IFF(Opts.IncludeComments, Results.items, Contains(IsDocumented()));
 }
 
 TEST(CompletionTest, CompletionOptions) {
@@ -319,7 +317,7 @@ TEST(CompletionTest, CompletionOptions) {
   // We used to test every combination of options, but that got too slow (2^N).
   auto Flags = {
       &clangd::CodeCompleteOptions::IncludeMacros,
-      &clangd::CodeCompleteOptions::IncludeBriefComments,
+      &clangd::CodeCompleteOptions::IncludeComments,
       &clangd::CodeCompleteOptions::EnableSnippets,
       &clangd::CodeCompleteOptions::IncludeCodePatterns,
       &clangd::CodeCompleteOptions::IncludeIneligibleResults,

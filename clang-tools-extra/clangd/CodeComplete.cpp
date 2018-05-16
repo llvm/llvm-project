@@ -230,7 +230,8 @@ struct CompletionCandidate {
   CompletionItem build(StringRef FileName, const CompletionItemScores &Scores,
                        const CodeCompleteOptions &Opts,
                        CodeCompletionString *SemaCCS,
-                       const IncludeInserter *Includes) const {
+                       const IncludeInserter *Includes,
+                       llvm::StringRef SemaDocComment) const {
     assert(bool(SemaResult) == bool(SemaCCS));
     CompletionItem I;
     if (SemaResult) {
@@ -238,7 +239,7 @@ struct CompletionCandidate {
       getLabelAndInsertText(*SemaCCS, &I.label, &I.insertText,
                             Opts.EnableSnippets);
       I.filterText = getFilterText(*SemaCCS);
-      I.documentation = getDocumentation(*SemaCCS);
+      I.documentation = formatDocumentation(*SemaCCS, SemaDocComment);
       I.detail = getDetail(*SemaCCS);
     }
     if (IndexResult) {
@@ -481,17 +482,17 @@ struct CompletionRecorder : public CodeCompleteConsumer {
     case CodeCompletionResult::RK_Pattern:
       return Result.Pattern->getTypedText();
     }
-    auto *CCS = codeCompletionString(Result, /*IncludeBriefComments=*/false);
+    auto *CCS = codeCompletionString(Result);
     return CCS->getTypedText();
   }
 
   // Build a CodeCompletion string for R, which must be from Results.
   // The CCS will be owned by this recorder.
-  CodeCompletionString *codeCompletionString(const CodeCompletionResult &R,
-                                             bool IncludeBriefComments) {
+  CodeCompletionString *codeCompletionString(const CodeCompletionResult &R) {
     // CodeCompletionResult doesn't seem to be const-correct. We own it, anyway.
     return const_cast<CodeCompletionResult &>(R).CreateCodeCompletionString(
-        *CCSema, CCContext, *CCAllocator, CCTUInfo, IncludeBriefComments);
+        *CCSema, CCContext, *CCAllocator, CCTUInfo,
+        /*IncludeBriefComments=*/false);
   }
 
 private:
@@ -535,7 +536,9 @@ public:
       const auto *CCS = Candidate.CreateSignatureString(
           CurrentArg, S, *Allocator, CCTUInfo, true);
       assert(CCS && "Expected the CodeCompletionString to be non-null");
-      SigHelp.signatures.push_back(ProcessOverloadCandidate(Candidate, *CCS));
+      SigHelp.signatures.push_back(ProcessOverloadCandidate(
+          Candidate, *CCS,
+          getParameterDocComment(S.getASTContext(), Candidate, CurrentArg)));
     }
   }
 
@@ -548,11 +551,12 @@ private:
   // CompletionString.h.
   SignatureInformation
   ProcessOverloadCandidate(const OverloadCandidate &Candidate,
-                           const CodeCompletionString &CCS) const {
+                           const CodeCompletionString &CCS,
+                           llvm::StringRef DocComment) const {
     SignatureInformation Result;
     const char *ReturnType = nullptr;
 
-    Result.documentation = getDocumentation(CCS);
+    Result.documentation = formatDocumentation(CCS, DocComment);
 
     for (const auto &Chunk : CCS) {
       switch (Chunk.Kind) {
@@ -802,7 +806,11 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   Result.IncludeCodePatterns = EnableSnippets && IncludeCodePatterns;
   Result.IncludeMacros = IncludeMacros;
   Result.IncludeGlobals = true;
-  Result.IncludeBriefComments = IncludeBriefComments;
+  // We choose to include full comments and not do doxygen parsing in
+  // completion.
+  // FIXME: ideally, we should support doxygen in some form, e.g. do markdown
+  // formatting of the comments.
+  Result.IncludeBriefComments = false;
 
   // When an is used, Sema is responsible for completing the main file,
   // the index can provide results from the preamble.
@@ -1020,9 +1028,15 @@ private:
   CompletionItem toCompletionItem(const CompletionCandidate &Candidate,
                                   const CompletionItemScores &Scores) {
     CodeCompletionString *SemaCCS = nullptr;
-    if (auto *SR = Candidate.SemaResult)
-      SemaCCS = Recorder->codeCompletionString(*SR, Opts.IncludeBriefComments);
-    return Candidate.build(FileName, Scores, Opts, SemaCCS, Includes.get());
+    std::string DocComment;
+    if (auto *SR = Candidate.SemaResult) {
+      SemaCCS = Recorder->codeCompletionString(*SR);
+      if (Opts.IncludeComments) {
+        assert(Recorder->CCSema);
+        DocComment = getDocComment(Recorder->CCSema->getASTContext(), *SR);
+      }
+    }
+    return Candidate.build(FileName, Scores, Opts, SemaCCS, Includes.get(), DocComment);
   }
 };
 
@@ -1050,7 +1064,7 @@ SignatureHelp signatureHelp(PathRef FileName,
   Options.IncludeGlobals = false;
   Options.IncludeMacros = false;
   Options.IncludeCodePatterns = false;
-  Options.IncludeBriefComments = true;
+  Options.IncludeBriefComments = false;
   semaCodeComplete(llvm::make_unique<SignatureHelpCollector>(Options, Result),
                    Options,
                    {FileName, Command, Preamble,

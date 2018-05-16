@@ -490,11 +490,11 @@ TEST_F(SymbolCollectorTest, SymbolWithDocumentation) {
     }
   )";
   runSymbolCollector(Header, /*Main=*/"");
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(QName("nx"),
-                                   AllOf(QName("nx::ff"),
-                                         Labeled("ff(int x, double y)"),
-                                         Detail("int"), Doc("Foo comment."))));
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          QName("nx"), AllOf(QName("nx::ff"), Labeled("ff(int x, double y)"),
+                             Detail("int"), Doc("Foo comment."))));
 }
 
 TEST_F(SymbolCollectorTest, PlainAndSnippet) {

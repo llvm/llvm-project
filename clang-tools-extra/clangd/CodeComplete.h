@@ -45,10 +45,8 @@ struct CodeCompleteOptions {
   /// Add macros to code completion results.
   bool IncludeMacros = true;
 
-  /// Add brief comments to completion items, if available.
-  /// FIXME(ibiryukov): it looks like turning this option on significantly slows
-  /// down completion, investigate if it can be made faster.
-  bool IncludeBriefComments = true;
+  /// Add comments to code completion results, if available.
+  bool IncludeComments = true;
 
   /// Include results that are not legal completions in the current context.
   /// For example, private members are usually inaccessible.

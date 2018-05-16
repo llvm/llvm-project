@@ -338,7 +338,8 @@ void SymbolCollector::finish() {
 
 const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
                                               SymbolID ID) {
-  auto &SM = ND.getASTContext().getSourceManager();
+  auto &Ctx = ND.getASTContext();
+  auto &SM = Ctx.getSourceManager();
 
   std::string QName;
   llvm::raw_string_ostream OS(QName);
@@ -369,7 +370,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   const auto *CCS = SymbolCompletion.CreateCodeCompletionString(
       *ASTCtx, *PP, CodeCompletionContext::CCC_Name, *CompletionAllocator,
       *CompletionTUInfo,
-      /*IncludeBriefComments*/ true);
+      /*IncludeBriefComments*/ false);
   std::string Label;
   std::string SnippetInsertText;
   std::string IgnoredLabel;
@@ -379,7 +380,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   getLabelAndInsertText(*CCS, &IgnoredLabel, &PlainInsertText,
                         /*EnableSnippets=*/false);
   std::string FilterText = getFilterText(*CCS);
-  std::string Documentation = getDocumentation(*CCS);
+  std::string Documentation =
+      formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion));
   std::string CompletionDetail = getDetail(*CCS);
 
   std::string Include;
