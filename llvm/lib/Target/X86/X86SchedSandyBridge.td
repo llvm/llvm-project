@@ -234,13 +234,23 @@ defm : SBWriteResPair<WriteFVarBlend, [SBPort05], 2, [2], 2, 6>;
 defm : SBWriteResPair<WriteFVarBlendY,[SBPort05], 2, [2], 2, 7>;
 
 // Conversion between integer and float.
-defm : SBWriteResPair<WriteCvtF2I, [SBPort1],  3>;
-defm : SBWriteResPair<WriteCvtI2F, [SBPort1],  4>;
+defm : SBWriteResPair<WriteCvtSS2I,   [SBPort1], 3>;
+defm : SBWriteResPair<WriteCvtPS2I,   [SBPort1], 3>;
+defm : SBWriteResPair<WriteCvtPS2IY,  [SBPort1], 3>;
+defm : SBWriteResPair<WriteCvtSD2I,   [SBPort1], 3>;
+defm : SBWriteResPair<WriteCvtPD2I,   [SBPort1], 3>;
+defm : SBWriteResPair<WriteCvtPD2IY,  [SBPort1], 3>;
+
+defm : SBWriteResPair<WriteCvtI2SS,   [SBPort1], 4>;
+defm : SBWriteResPair<WriteCvtI2PS,   [SBPort1], 4>;
+defm : SBWriteResPair<WriteCvtI2PSY,  [SBPort1], 4>;
+defm : SBWriteResPair<WriteCvtI2SD,   [SBPort1], 4>;
+defm : SBWriteResPair<WriteCvtI2PD,   [SBPort1], 4>;
+defm : SBWriteResPair<WriteCvtI2PDY,  [SBPort1], 4>;
 
 defm : SBWriteResPair<WriteCvtSS2SD,  [SBPort0], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteCvtPS2PD,  [SBPort0,SBPort5], 2, [1,1], 2>;
 defm : SBWriteResPair<WriteCvtPS2PDY, [SBPort0,SBPort5], 2, [1,1], 2>;
-
 defm : SBWriteResPair<WriteCvtSD2SS,  [SBPort1,SBPort5], 4, [1,1], 2, 6>;
 defm : SBWriteResPair<WriteCvtPD2PS,  [SBPort1,SBPort5], 4, [1,1], 2, 6>;
 defm : SBWriteResPair<WriteCvtPD2PSY, [SBPort1,SBPort5], 4, [1,1], 2, 7>;

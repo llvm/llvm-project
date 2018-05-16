@@ -187,6 +187,9 @@ void AArch64CallLowering::splitToValueTypes(
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
   LLVMContext &Ctx = OrigArg.Ty->getContext();
 
+  if (OrigArg.Ty->isVoidTy())
+    return;
+
   SmallVector<EVT, 4> SplitVTs;
   SmallVector<uint64_t, 4> Offsets;
   ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitVTs, &Offsets, 0);

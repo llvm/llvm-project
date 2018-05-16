@@ -5212,7 +5212,7 @@ SDValue AArch64TargetLowering::getRecipEstimate(SDValue Operand,
 
 // Table of Constraints
 // TODO: This is the current set of constraints supported by ARM for the
-// compiler, not all of them may make sense, e.g. S may be difficult to support.
+// compiler, not all of them may make sense.
 //
 // r - A general register
 // w - An FP/SIMD register of some size in the range v0-v31
@@ -5272,6 +5272,8 @@ AArch64TargetLowering::getConstraintType(StringRef Constraint) const {
     // currently handle addresses it is the same as 'r'.
     case 'Q':
       return C_Memory;
+    case 'S': // A symbolic address
+      return C_Other;
     }
   }
   return TargetLowering::getConstraintType(Constraint);
@@ -5394,6 +5396,23 @@ void AArch64TargetLowering::LowerAsmOperandForConstraint(
       Result = DAG.getRegister(AArch64::XZR, MVT::i64);
     else
       Result = DAG.getRegister(AArch64::WZR, MVT::i32);
+    break;
+  }
+  case 'S': {
+    // An absolute symbolic address or label reference.
+    if (const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
+      Result = DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
+                                          GA->getValueType(0));
+    } else if (const BlockAddressSDNode *BA =
+                   dyn_cast<BlockAddressSDNode>(Op)) {
+      Result =
+          DAG.getTargetBlockAddress(BA->getBlockAddress(), BA->getValueType(0));
+    } else if (const ExternalSymbolSDNode *ES =
+                   dyn_cast<ExternalSymbolSDNode>(Op)) {
+      Result =
+          DAG.getTargetExternalSymbol(ES->getSymbol(), ES->getValueType(0));
+    } else
+      return;
     break;
   }
 

@@ -7,17 +7,17 @@ target datalayout = "A5"
 ; size and not 4 corresponding to the sign-extended size (i32).
 
 ; DEBUG: {{^}}# Machine code for function extload_align:
-; DEBUG: (load 2, addrspace 5)
+; DEBUG: (volatile load 2 from %ir.a, addrspace 5)
 ; DEBUG: {{^}}# End machine code for function extload_align.
 
 define amdgpu_kernel void @extload_align(i32 addrspace(5)* %out, i32 %index) #0 {
   %v0 = alloca [4 x i16], addrspace(5)
   %a1 = getelementptr inbounds [4 x i16], [4 x i16] addrspace(5)* %v0, i32 0, i32 0
   %a2 = getelementptr inbounds [4 x i16], [4 x i16] addrspace(5)* %v0, i32 0, i32 1
-  store i16 0, i16 addrspace(5)* %a1
-  store i16 1, i16 addrspace(5)* %a2
+  store volatile i16 0, i16 addrspace(5)* %a1
+  store volatile i16 1, i16 addrspace(5)* %a2
   %a = getelementptr inbounds [4 x i16], [4 x i16] addrspace(5)* %v0, i32 0, i32 %index
-  %val = load i16, i16 addrspace(5)* %a
+  %val = load volatile i16, i16 addrspace(5)* %a
   %eval = sext i16 %val to i32
   store i32 %eval, i32 addrspace(5)* %out
   ret void

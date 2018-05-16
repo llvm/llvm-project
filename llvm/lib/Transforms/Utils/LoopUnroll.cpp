@@ -252,6 +252,48 @@ static bool isEpilogProfitable(Loop *L) {
   return false;
 }
 
+/// Perform some cleanup and simplifications on loops after unrolling. It is
+/// useful to simplify the IV's in the new loop, as well as do a quick
+/// simplify/dce pass of the instructions.
+static void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
+                                    ScalarEvolution *SE, DominatorTree *DT,
+                                    AssumptionCache *AC) {
+  // Simplify any new induction variables in the partially unrolled loop.
+  if (SE && SimplifyIVs) {
+    SmallVector<WeakTrackingVH, 16> DeadInsts;
+    simplifyLoopIVs(L, SE, DT, LI, DeadInsts);
+
+    // Aggressively clean up dead instructions that simplifyLoopIVs already
+    // identified. Any remaining should be cleaned up below.
+    while (!DeadInsts.empty())
+      if (Instruction *Inst =
+              dyn_cast_or_null<Instruction>(&*DeadInsts.pop_back_val()))
+        RecursivelyDeleteTriviallyDeadInstructions(Inst);
+  }
+
+  // At this point, the code is well formed.  We now do a quick sweep over the
+  // inserted code, doing constant propagation and dead code elimination as we
+  // go.
+  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+  const std::vector<BasicBlock *> &NewLoopBlocks = L->getBlocks();
+  for (BasicBlock *BB : NewLoopBlocks) {
+    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
+      Instruction *Inst = &*I++;
+
+      if (Value *V = SimplifyInstruction(Inst, {DL, nullptr, DT, AC}))
+        if (LI->replacementPreservesLCSSAForm(Inst, V))
+          Inst->replaceAllUsesWith(V);
+      if (isInstructionTriviallyDead(Inst))
+        BB->getInstList().erase(Inst);
+    }
+  }
+
+  // TODO: after peeling or unrolling, previously loop variant conditions are
+  // likely to fold to constants, eagerly propagating those here will require
+  // fewer cleanup passes to be run.  Alternatively, a LoopEarlyCSE might be
+  // appropriate.
+}
+
 /// Unroll the given loop by Count. The loop must be in LCSSA form.  Unrolling
 /// can only fail when the loop's latch block is not terminated by a conditional
 /// branch instruction. However, if the trip count (and multiple) are not known,
@@ -776,40 +818,10 @@ LoopUnrollResult llvm::UnrollLoop(
     }
   }
 
-  // Simplify any new induction variables in the partially unrolled loop.
-  if (SE && !CompletelyUnroll && (Count > 1 || Peeled)) {
-    SmallVector<WeakTrackingVH, 16> DeadInsts;
-    simplifyLoopIVs(L, SE, DT, LI, DeadInsts);
-
-    // Aggressively clean up dead instructions that simplifyLoopIVs already
-    // identified. Any remaining should be cleaned up below.
-    while (!DeadInsts.empty())
-      if (Instruction *Inst =
-              dyn_cast_or_null<Instruction>(&*DeadInsts.pop_back_val()))
-        RecursivelyDeleteTriviallyDeadInstructions(Inst);
-  }
-
-  // At this point, the code is well formed.  We now do a quick sweep over the
-  // inserted code, doing constant propagation and dead code elimination as we
-  // go.
-  const DataLayout &DL = Header->getModule()->getDataLayout();
-  const std::vector<BasicBlock*> &NewLoopBlocks = L->getBlocks();
-  for (BasicBlock *BB : NewLoopBlocks) {
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ) {
-      Instruction *Inst = &*I++;
-
-      if (Value *V = SimplifyInstruction(Inst, {DL, nullptr, DT, AC}))
-        if (LI->replacementPreservesLCSSAForm(Inst, V))
-          Inst->replaceAllUsesWith(V);
-      if (isInstructionTriviallyDead(Inst))
-        BB->getInstList().erase(Inst);
-    }
-  }
-
-  // TODO: after peeling or unrolling, previously loop variant conditions are
-  // likely to fold to constants, eagerly propagating those here will require
-  // fewer cleanup passes to be run.  Alternatively, a LoopEarlyCSE might be
-  // appropriate.
+  // At this point, the code is well formed.  We now simplify the unrolled loop,
+  // doing constant propagation and dead code elimination as we go.
+  simplifyLoopAfterUnroll(L, !CompletelyUnroll && (Count > 1 || Peeled), LI, SE,
+                          DT, AC);
 
   NumCompletelyUnrolled += CompletelyUnroll;
   ++NumUnrolled;
