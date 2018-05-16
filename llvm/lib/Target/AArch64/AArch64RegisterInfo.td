@@ -792,7 +792,7 @@ def PPR_3b : PPRClass<7>; // Restricted 3 bit SVE predicate register class.
 
 class PPRAsmOperand <string name, string RegClass, int Width>: AsmOperandClass {
   let Name = "SVE" # name # "Reg";
-  let PredicateMethod = "isSVEVectorRegOfWidth<"
+  let PredicateMethod = "isSVEPredicateVectorRegOfWidth<"
                             # Width # ", " # "AArch64::" # RegClass # "RegClassID>";
   let DiagnosticType = "InvalidSVE" # name # "Reg";
   let RenderMethod = "addRegOperands";
@@ -837,9 +837,10 @@ def ZPR : RegisterClass<"AArch64",
 
 class ZPRAsmOperand <string name, int Width>: AsmOperandClass {
   let Name = "SVE" # name # "Reg";
-  let PredicateMethod = "isSVEVectorRegOfWidth<"
+  let PredicateMethod = "isSVEDataVectorRegOfWidth<"
                             # Width # ", AArch64::ZPRRegClassID>";
   let RenderMethod = "addRegOperands";
+  let DiagnosticType = "InvalidZPR" # Width;
   let ParserMethod = "tryParseSVEDataVector<false, "
                                # !if(!eq(Width, 0), "false", "true") # ">";
 }
@@ -958,7 +959,7 @@ class ZPRExtendAsmOperand<string ShiftExtend, int RegWidth, int Scale,
   let Name = "ZPRExtend" # ShiftExtend # RegWidth # Scale
                          # !if(ScaleAlwaysSame, "Only", "");
 
-  let PredicateMethod = "isSVEVectorRegWithShiftExtend<"
+  let PredicateMethod = "isSVEDataVectorRegWithShiftExtend<"
                           # RegWidth # ", AArch64::ZPRRegClassID, "
                           # "AArch64_AM::" # ShiftExtend # ", "
                           # Scale # ", "

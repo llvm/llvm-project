@@ -21,7 +21,7 @@ set_output_directory(TestPlugin
 
 set_target_properties(TestPlugin
   PROPERTIES PREFIX ""
-  SUFFIX ".so"
+  SUFFIX ${LTDL_SHLIB_EXT}
   )
 set_target_properties(TestPlugin PROPERTIES FOLDER "Tests")
 

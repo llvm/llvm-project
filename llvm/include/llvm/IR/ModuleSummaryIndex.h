@@ -312,7 +312,7 @@ public:
   StringRef modulePath() const { return ModulePath; }
 
   /// Get the flags for this GlobalValue (see \p struct GVFlags).
-  GVFlags flags() { return Flags; }
+  GVFlags flags() const { return Flags; }
 
   /// Return linkage type recorded for this global value.
   GlobalValue::LinkageTypes linkage() const {
@@ -516,7 +516,7 @@ public:
   }
 
   /// Get function attribute flags.
-  FFlags &fflags() { return FunFlags; }
+  FFlags fflags() const { return FunFlags; }
 
   /// Get the instruction count recorded for this function.
   unsigned instCount() const { return InstCount; }

@@ -2668,6 +2668,14 @@ def warn_mismatched_section : Warning<
 def warn_attribute_section_on_redeclaration : Warning<
   "section attribute is specified on redeclared variable">, InGroup<Section>;
 
+def err_mismatched_code_seg_base : Error<
+  "derived class must specify the same code segment as its base classes">;
+def err_mismatched_code_seg_override : Error<
+  "overriding virtual function must specify the same code segment as its overridden function">;
+def err_conflicting_codeseg_attribute : Error<
+  "conflicting code segment specifiers">;
+def warn_duplicate_codeseg_attribute : Warning<
+  "duplicate code segment specifiers">, InGroup<Section>;
 def err_anonymous_property: Error<
   "anonymous property is not supported">;
 def err_property_is_variably_modified : Error<

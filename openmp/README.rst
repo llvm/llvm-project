@@ -257,9 +257,11 @@ Options for ``libomptarget``
 Options for ``NVPTX device RTL``
 --------------------------------
 
-**LIBOMPTARGET_NVPTX_ENABLE_BCLIB** = ``OFF|ON``
+**LIBOMPTARGET_NVPTX_ENABLE_BCLIB** = ``ON|OFF``
   Enable CUDA LLVM bitcode offloading device RTL. This is used for link time
-  optimization of the OMP runtime and application code.
+  optimization of the OMP runtime and application code. This option is enabled
+  by default if the build system determines that `CMAKE_C_COMPILER` is able to
+  compile and link the library.
 
 **LIBOMPTARGET_NVPTX_CUDA_COMPILER** = ``""``
   Location of a CUDA compiler capable of emitting LLVM bitcode. Currently only

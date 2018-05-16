@@ -17,7 +17,6 @@
 #define LLVM_TOOLS_LLVM_MCA_FETCH_STAGE_H
 
 #include "InstrBuilder.h"
-#include "Instruction.h"
 #include "SourceMgr.h"
 #include "Stage.h"
 #include <map>

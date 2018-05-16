@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Config/config.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -32,7 +33,7 @@ static std::string LibPath(const std::string Name = "TestPlugin") {
   void *Ptr = (void *)(intptr_t)anchor;
   std::string Path = sys::fs::getMainExecutable(Argv0, Ptr);
   llvm::SmallString<256> Buf{sys::path::parent_path(Path)};
-  sys::path::append(Buf, (Name + ".so").c_str());
+  sys::path::append(Buf, (Name + LTDL_SHLIB_EXT).c_str());
   return Buf.str();
 }
 

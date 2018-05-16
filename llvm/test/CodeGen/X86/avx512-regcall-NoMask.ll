@@ -1166,30 +1166,25 @@ define x86_regcallcc <32 x float> @testf32_stack(<32 x float> %a0, <32 x float> 
 define x86_regcallcc i32 @test_argRetMixTypes(double, float, i8 signext, i32, i64, i16 signext, i32*) #0 {
 ; X32-LABEL: test_argRetMixTypes:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $16, %esp
-; X32-NEXT:    vmovd %edx, %xmm2
-; X32-NEXT:    vpinsrd $1, %edi, %xmm2, %xmm2
-; X32-NEXT:    movl 8(%ebp), %edx
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
 ; X32-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vcvtsi2sdl %eax, %xmm3, %xmm1
+; X32-NEXT:    vcvtsi2sdl %eax, %xmm2, %xmm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vcvtsi2sdl %ecx, %xmm3, %xmm1
+; X32-NEXT:    vcvtsi2sdl %ecx, %xmm2, %xmm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vmovq %xmm2, {{[0-9]+}}(%esp)
-; X32-NEXT:    fildll {{[0-9]+}}(%esp)
-; X32-NEXT:    fstpl (%esp)
-; X32-NEXT:    vaddsd (%esp), %xmm0, %xmm0
-; X32-NEXT:    vcvtsi2sdl %esi, %xmm3, %xmm1
+; X32-NEXT:    vmovd %edx, %xmm1
+; X32-NEXT:    vpinsrd $1, %edi, %xmm1, %xmm1
+; X32-NEXT:    vcvtqq2pd %ymm1, %ymm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vcvtsi2sdl (%edx), %xmm3, %xmm1
+; X32-NEXT:    vcvtsi2sdl %esi, %xmm2, %xmm1
+; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; X32-NEXT:    vcvtsi2sdl (%ebx), %xmm2, %xmm1
 ; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vcvttsd2si %xmm0, %eax
-; X32-NEXT:    movl %ebp, %esp
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argRetMixTypes:
