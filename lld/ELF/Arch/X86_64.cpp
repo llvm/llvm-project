@@ -573,7 +573,7 @@ void RetpolineZNow<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   write32le(Buf + 8, -TargetInfo::getPltEntryOffset(Index) - 12);
 }
 
-template <class ELFT> TargetInfo *getTargetInfo() {
+template <class ELFT> static TargetInfo *getTargetInfo() {
   if (Config->ZRetpolineplt) {
     if (Config->ZNow) {
       static RetpolineZNow<ELFT> T;

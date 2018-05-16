@@ -150,9 +150,6 @@ def warn_drv_unknown_argument_clang_cl : Warning<
 def warn_drv_unknown_argument_clang_cl_with_suggestion : Warning<
   "unknown argument ignored in clang-cl '%0' (did you mean '%1'?)">,
   InGroup<UnknownArgument>;
-def warn_drv_ignored_clang_abi_version : Warning<
-  "target requires clang ABI version %0, ignoring requested version">,
-  InGroup<UnusedCommandLineArgument>;
 
 def warn_drv_ycyu_no_arg_clang_cl : Warning<
   "support for '%0' without a filename not implemented yet; flag ignored">,

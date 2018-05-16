@@ -102,6 +102,7 @@ struct WasmFunction {
   ArrayRef<uint8_t> Body;
   uint32_t CodeSectionOffset;
   uint32_t Size;
+  uint32_t CodeOffset;  // start of Locals and Body
   StringRef SymbolName; // from the "linking" section
   StringRef DebugName; // from the "name" section
   uint32_t Comdat; // from the "comdat info" section

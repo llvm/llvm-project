@@ -54,20 +54,34 @@
 //   RUN:        -DKW=struct -DBASES=' : B' -o - -xc++ %s \
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
-//   RUN: %clang_cc1 -verify -triple x86_64-linux -ast-print -DKW=struct -DBASES=' : B' -xc++ %s \
-//   RUN: > %t.cpp
+//   RUN: %clang_cc1 -verify -ast-print -DKW=struct -DBASES=' : B' -xc++ %s \
+//   RUN:            > %t.cpp
 //   RUN: FileCheck --check-prefixes=CHECK,PRINT,PRINT-CXX -DKW=struct \
 //   RUN:           -DBASES=' : B' %s --input-file %t.cpp
 //
 //   Now check compiling and printing of the printed file.
 //
-//   RUN: echo "// expected""-warning@* 10 {{'T' is deprecated}}" >> %t.cpp
-//   RUN: echo "// expected""-note@* 10 {{'T' has been explicitly marked deprecated here}}" >> %t.cpp
+//   RUN: echo "// expected""-warning@* 10 {{'T' is deprecated}}" > %t.diags
+//   RUN: echo "// expected""-note@* 10 {{'T' has been explicitly marked deprecated here}}" >> %t.diags
+//   RUN: cat %t.diags >> %t.cpp
 //
 //   RUN: %clang -target x86_64-linux -Xclang -verify -S -emit-llvm -o - %t.cpp \
 //   RUN: | FileCheck --check-prefixes=CHECK,LLVM %s
 //
-//   RUN: %clang_cc1 -verify -triple x86_64-linux -ast-print %t.cpp \
+//   RUN: %clang_cc1 -verify -ast-print %t.cpp \
+//   RUN: | FileCheck --check-prefixes=CHECK,PRINT,PRINT-CXX -DKW=struct \
+//   RUN:             -DBASES=' : B' %s
+//
+//   Make sure implicit attributes aren't printed.  See comments in inMemberPtr
+//   for details.
+//
+//   RUN: %clang_cc1 -triple i686-pc-win32 -verify -ast-print -DKW=struct \
+//   RUN:            -DBASES=' : B' -xc++ %s > %t.cpp
+//   RUN: FileCheck --check-prefixes=CHECK,PRINT,PRINT-CXX -DKW=struct \
+//   RUN:           -DBASES=' : B' %s --input-file %t.cpp
+//
+//   RUN: cat %t.diags >> %t.cpp
+//   RUN: %clang_cc1 -triple i686-pc-win32 -verify -ast-print %t.cpp \
 //   RUN: | FileCheck --check-prefixes=CHECK,PRINT,PRINT-CXX -DKW=struct \
 //   RUN:             -DBASES=' : B' %s
 
@@ -236,6 +250,9 @@ void inInit() {
 #ifdef __cplusplus
 // PRINT-CXX-LABEL: inMemberPtr
 void inMemberPtr() {
+  // Under windows, the implicit attribute __single_inheritance used to print
+  // between KW and T1 here, but that wasn't faithful to the original source.
+  //
   // PRINT-CXX-NEXT: [[KW]] T1 {
   // PRINT-CXX-NEXT:   int i;
   // PRINT-CXX-NEXT: };

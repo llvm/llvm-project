@@ -11,14 +11,14 @@ define void @bar() {
 
 ; Verify that the module & function (check-)debugify passes run at least twice.
 
-; CHECK-DAG: CheckModuleDebugify: PASS
-; CHECK-DAG: CheckFunctionDebugify: PASS
-; CHECK-DAG: CheckFunctionDebugify: PASS
-; CHECK-DAG: CheckFunctionDebugify: PASS
-; CHECK-DAG: CheckFunctionDebugify: PASS
+; CHECK-DAG: CheckModuleDebugify [{{.*}}]: PASS
+; CHECK-DAG: CheckFunctionDebugify [{{.*}}]: PASS
+; CHECK-DAG: CheckFunctionDebugify [{{.*}}]: PASS
+; CHECK-DAG: CheckFunctionDebugify [{{.*}}]: PASS
+; CHECK-DAG: CheckFunctionDebugify [{{.*}}]: PASS
 
-; CHECK-DAG: CheckModuleDebugify: PASS
-; CHECK-DAG: CheckFunctionDebugify: PASS
-; CHECK-DAG: CheckFunctionDebugify: PASS
-; CHECK-DAG: CheckFunctionDebugify: PASS
-; CHECK-DAG: CheckFunctionDebugify: PASS
+; CHECK-DAG: CheckModuleDebugify [{{.*}}]: PASS
+; CHECK-DAG: CheckFunctionDebugify [{{.*}}]: PASS
+; CHECK-DAG: CheckFunctionDebugify [{{.*}}]: PASS
+; CHECK-DAG: CheckFunctionDebugify [{{.*}}]: PASS
+; CHECK-DAG: CheckFunctionDebugify [{{.*}}]: PASS

@@ -254,21 +254,24 @@ static CallExpr *create_call_once_funcptr_call(ASTContext &C, ASTMaker M,
 
   QualType Ty = Callback->getType();
   DeclRefExpr *Call = M.makeDeclRefExpr(Callback);
-  CastKind CK;
+  Expr *SubExpr;
   if (Ty->isRValueReferenceType()) {
-    CK = CK_LValueToRValue;
-  } else {
-    assert(Ty->isLValueReferenceType());
-    CK = CK_FunctionToPointerDecay;
+    SubExpr = M.makeImplicitCast(
+        Call, Ty.getNonReferenceType(), CK_LValueToRValue);
+  } else if (Ty->isLValueReferenceType() &&
+             Call->getType()->isFunctionType()) {
     Ty = C.getPointerType(Ty.getNonReferenceType());
+    SubExpr = M.makeImplicitCast(Call, Ty, CK_FunctionToPointerDecay);
+  } else if (Ty->isLValueReferenceType()
+             && Call->getType()->isPointerType()
+             && Call->getType()->getPointeeType()->isFunctionType()){
+    SubExpr = Call;
+  } else {
+    llvm_unreachable("Unexpected state");
   }
 
   return new (C)
-      CallExpr(C, M.makeImplicitCast(Call, Ty.getNonReferenceType(), CK),
-               /*args=*/CallArgs,
-               /*QualType=*/C.VoidTy,
-               /*ExprValueType=*/VK_RValue,
-               /*SourceLocation=*/SourceLocation());
+      CallExpr(C, SubExpr, CallArgs, C.VoidTy, VK_RValue, SourceLocation());
 }
 
 static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,

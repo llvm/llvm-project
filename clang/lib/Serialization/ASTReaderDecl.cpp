@@ -2552,11 +2552,11 @@ void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase, T *Existing,
 /// 6.1.2.6/1). Although most merging is done in Sema, we need to guarantee
 /// that some types are mergeable during deserialization, otherwise name
 /// lookup fails. This is the case for EnumConstantDecl.
-bool allowODRLikeMergeInC(NamedDecl *ND) {
+static bool allowODRLikeMergeInC(NamedDecl *ND) {
   if (!ND)
     return false;
   // TODO: implement merge for other necessary decls.
-  if (dyn_cast<EnumConstantDecl>(ND))
+  if (isa<EnumConstantDecl>(ND))
     return true;
   return false;
 }

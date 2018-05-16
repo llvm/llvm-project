@@ -2537,10 +2537,97 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     insertShadowCheck(Shadow, Origin, &I);
   }
 
+  void handleMaskedStore(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *V = I.getArgOperand(0);
+    Value *Addr = I.getArgOperand(1);
+    unsigned Align = cast<ConstantInt>(I.getArgOperand(2))->getZExtValue();
+    Value *Mask = I.getArgOperand(3);
+    Value *Shadow = getShadow(V);
+
+    Value *ShadowPtr;
+    Value *OriginPtr;
+    std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
+        Addr, IRB, Shadow->getType(), Align, /*isStore*/ true);
+
+    if (ClCheckAccessAddress) {
+      insertShadowCheck(Addr, &I);
+      // Uninitialized mask is kind of like uninitialized address, but not as
+      // scary.
+      insertShadowCheck(Mask, &I);
+    }
+
+    IRB.CreateMaskedStore(Shadow, ShadowPtr, Align, Mask);
+
+    if (MS.TrackOrigins) {
+      auto &DL = F.getParent()->getDataLayout();
+      paintOrigin(IRB, getOrigin(V), OriginPtr,
+                  DL.getTypeStoreSize(Shadow->getType()),
+                  std::max(Align, kMinOriginAlignment));
+    }
+  }
+
+  bool handleMaskedLoad(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Addr = I.getArgOperand(0);
+    unsigned Align = cast<ConstantInt>(I.getArgOperand(1))->getZExtValue();
+    Value *Mask = I.getArgOperand(2);
+    Value *PassThru = I.getArgOperand(3);
+
+    Type *ShadowTy = getShadowTy(&I);
+    Value *ShadowPtr, *OriginPtr;
+    if (PropagateShadow) {
+      std::tie(ShadowPtr, OriginPtr) =
+          getShadowOriginPtr(Addr, IRB, ShadowTy, Align, /*isStore*/ false);
+      setShadow(&I, IRB.CreateMaskedLoad(ShadowPtr, Align, Mask,
+                                         getShadow(PassThru), "_msmaskedld"));
+    } else {
+      setShadow(&I, getCleanShadow(&I));
+    }
+
+    if (ClCheckAccessAddress) {
+      insertShadowCheck(Addr, &I);
+      insertShadowCheck(Mask, &I);
+    }
+
+    if (MS.TrackOrigins) {
+      if (PropagateShadow) {
+        // Choose between PassThru's and the loaded value's origins.
+        Value *MaskedPassThruShadow = IRB.CreateAnd(
+            getShadow(PassThru), IRB.CreateSExt(IRB.CreateNeg(Mask), ShadowTy));
+
+        Value *Acc = IRB.CreateExtractElement(
+            MaskedPassThruShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
+        for (int i = 1, N = PassThru->getType()->getVectorNumElements(); i < N;
+             ++i) {
+          Value *More = IRB.CreateExtractElement(
+              MaskedPassThruShadow, ConstantInt::get(IRB.getInt32Ty(), i));
+          Acc = IRB.CreateOr(Acc, More);
+        }
+
+        Value *Origin = IRB.CreateSelect(
+            IRB.CreateICmpNE(Acc, Constant::getNullValue(Acc->getType())),
+            getOrigin(PassThru), IRB.CreateLoad(OriginPtr));
+
+        setOrigin(&I, Origin);
+      } else {
+        setOrigin(&I, getCleanOrigin());
+      }
+    }
+    return true;
+  }
+
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case Intrinsic::bswap:
       handleBswap(I);
+      break;
+    case Intrinsic::masked_store:
+      handleMaskedStore(I);
+      break;
+    case Intrinsic::masked_load:
+      handleMaskedLoad(I);
       break;
     case Intrinsic::x86_sse_stmxcsr:
       handleStmxcsr(I);

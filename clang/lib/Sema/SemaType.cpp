@@ -2962,9 +2962,11 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
 
       T = SemaRef.Context.IntTy;
       D.setInvalidType(true);
-    } else if (!HaveTrailing) {
+    } else if (!HaveTrailing &&
+               D.getContext() != DeclaratorContext::LambdaExprContext) {
       // If there was a trailing return type, we already got
       // warn_cxx98_compat_trailing_return_type in the parser.
+      // If this was a lambda, we already warned on that too.
       SemaRef.Diag(AutoRange.getBegin(),
                    diag::warn_cxx98_compat_auto_type_specifier)
         << AutoRange;

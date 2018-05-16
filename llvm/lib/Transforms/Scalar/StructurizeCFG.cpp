@@ -380,8 +380,9 @@ Value *StructurizeCFG::invert(Value *Condition) {
     return ConstantExpr::getNot(C);
 
   // Second: If the condition is already inverted, return the original value
-  if (match(Condition, m_Not(m_Value(Condition))))
-    return Condition;
+  Value *NotCondition;
+  if (match(Condition, m_Not(m_Value(NotCondition))))
+    return NotCondition;
 
   if (Instruction *Inst = dyn_cast<Instruction>(Condition)) {
     // Third: Check all the users for an invert
