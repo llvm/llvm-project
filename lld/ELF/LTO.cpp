@@ -266,7 +266,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       if (F->AddedToLink || !isBitcode(F->MB))
         continue;
 
-      std::string Path = getThinLTOOutputFile(F->getName());
+      std::string Path = updateSuffixInPath(getThinLTOOutputFile(F->getName()));
+
       std::unique_ptr<raw_fd_ostream> OS = openFile(Path + ".thinlto.bc");
       if (!OS)
         continue;

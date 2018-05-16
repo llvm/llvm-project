@@ -27,14 +27,14 @@ extern "C" {
 #if defined(__ANDROID__)
 
 #include <android/api-level.h>
-
-// Android gained most locale aware functions in L (API level 21)
-#if __ANDROID_API__ < 21
+#include <android/ndk-version.h>
 #include <support/xlocale/__posix_l_fallback.h>
-#endif
-
-// The strto* family was added in O (API Level 26)
-#if __ANDROID_API__ < 26
+// In NDK versions later than 16, locale-aware functions are provided by
+// legacy_stdlib_inlines.h
+#if __NDK_MAJOR__ <= 16
+#if __ANDROID_API__ < 21
+#include <support/xlocale/__strtonum_fallback.h>
+#elif __ANDROID_API__ < 26
 
 #if defined(__cplusplus)
 extern "C" {
@@ -61,6 +61,7 @@ inline _LIBCPP_ALWAYS_INLINE long strtol_l(const char* __nptr, char** __endptr,
 
 #endif // __ANDROID_API__ < 26
 
+#endif // __NDK_MAJOR__ <= 16
 #endif // defined(__ANDROID__)
 
 #endif // defined(__BIONIC__)

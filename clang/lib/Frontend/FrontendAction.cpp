@@ -153,6 +153,10 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   if (FrontendPluginRegistry::begin() == FrontendPluginRegistry::end())
     return Consumer;
 
+  // If this is a code completion run, avoid invoking the plugin consumers
+  if (CI.hasCodeCompletionConsumer())
+    return Consumer;
+
   // Collect the list of plugins that go before the main action (in Consumers)
   // or after it (in AfterConsumers)
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;

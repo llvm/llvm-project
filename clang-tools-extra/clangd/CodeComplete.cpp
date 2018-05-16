@@ -1067,11 +1067,11 @@ SignatureHelp signatureHelp(PathRef FileName,
   Options.IncludeMacros = false;
   Options.IncludeCodePatterns = false;
   Options.IncludeBriefComments = false;
+  std::vector<Inclusion> PreambleInclusions = {}; // Unused for signatureHelp
   semaCodeComplete(llvm::make_unique<SignatureHelpCollector>(Options, Result),
                    Options,
-                   {FileName, Command, Preamble,
-                    /*PreambleInclusions=*/{}, Contents, Pos, std::move(VFS),
-                    std::move(PCHs)});
+                   {FileName, Command, Preamble, PreambleInclusions, Contents,
+                    Pos, std::move(VFS), std::move(PCHs)});
   return Result;
 }
 
