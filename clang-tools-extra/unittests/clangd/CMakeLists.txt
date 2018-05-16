@@ -38,6 +38,7 @@ add_extra_unittest(ClangdTests
 
 target_link_libraries(ClangdTests
   PRIVATE
+  clangAST
   clangBasic
   clangDaemon
   clangFormat

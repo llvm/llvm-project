@@ -351,14 +351,44 @@ struct FormatStyle {
   /// \endcode
   bool AlwaysBreakBeforeMultilineStrings;
 
-  /// If ``true``, always break after the ``template<...>`` of a template
-  /// declaration.
-  /// \code
-  ///    true:                                  false:
-  ///    template <typename T>          vs.     template <typename T> class C {};
-  ///    class C {};
-  /// \endcode
-  bool AlwaysBreakTemplateDeclarations;
+  /// Different ways to break after the template declaration.
+  enum BreakTemplateDeclarationsStyle {
+      /// Do not force break before declaration.
+      /// ``PenaltyBreakTemplateDeclaration`` is taken into account.
+      /// \code
+      ///    template <typename T> T foo() {
+      ///    }
+      ///    template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
+      ///                                int bbbbbbbbbbbbbbbbbbbbb) {
+      ///    }
+      /// \endcode
+      BTDS_No,
+      /// Force break after template declaration only when the following
+      /// declaration spans multiple lines.
+      /// \code
+      ///    template <typename T> T foo() {
+      ///    }
+      ///    template <typename T>
+      ///    T foo(int aaaaaaaaaaaaaaaaaaaaa,
+      ///          int bbbbbbbbbbbbbbbbbbbbb) {
+      ///    }
+      /// \endcode
+      BTDS_MultiLine,
+      /// Always break after template declaration.
+      /// \code
+      ///    template <typename T>
+      ///    T foo() {
+      ///    }
+      ///    template <typename T>
+      ///    T foo(int aaaaaaaaaaaaaaaaaaaaa,
+      ///          int bbbbbbbbbbbbbbbbbbbbb) {
+      ///    }
+      /// \endcode
+      BTDS_Yes
+  };
+
+  /// The template declaration breaking style to use.
+  BreakTemplateDeclarationsStyle AlwaysBreakTemplateDeclarations;
 
   /// If ``false``, a function call's arguments will either be all on the
   /// same line or will have one line each.
@@ -1295,6 +1325,9 @@ struct FormatStyle {
   /// The penalty for each line break introduced inside a string literal.
   unsigned PenaltyBreakString;
 
+  /// The penalty for breaking after template declaration.
+  unsigned PenaltyBreakTemplateDeclaration;
+
   /// The penalty for each character outside of the column limit.
   unsigned PenaltyExcessCharacter;
 
@@ -1679,6 +1712,8 @@ struct FormatStyle {
            PenaltyBreakString == R.PenaltyBreakString &&
            PenaltyExcessCharacter == R.PenaltyExcessCharacter &&
            PenaltyReturnTypeOnItsOwnLine == R.PenaltyReturnTypeOnItsOwnLine &&
+           PenaltyBreakTemplateDeclaration ==
+               R.PenaltyBreakTemplateDeclaration &&
            PointerAlignment == R.PointerAlignment &&
            RawStringFormats == R.RawStringFormats &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&

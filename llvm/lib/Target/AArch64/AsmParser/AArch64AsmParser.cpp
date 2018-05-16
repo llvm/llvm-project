@@ -2087,13 +2087,13 @@ AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
   }
 
   if (Tok.isNot(AsmToken::Identifier)) {
-    TokError("pre-fetch hint expected");
+    TokError("prefetch hint expected");
     return MatchOperand_ParseFail;
   }
 
   auto PRFM = LookupByName(Tok.getString());
   if (!PRFM) {
-    TokError("pre-fetch hint expected");
+    TokError("prefetch hint expected");
     return MatchOperand_ParseFail;
   }
 
@@ -3653,6 +3653,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be a multiple of 4 in range [-32, 28].");
   case Match_InvalidMemoryIndexed16SImm4:
     return Error(Loc, "index must be a multiple of 16 in range [-128, 112].");
+  case Match_InvalidMemoryIndexed1SImm6:
+    return Error(Loc, "index must be an integer in range [-32, 31].");
   case Match_InvalidMemoryIndexedSImm9:
     return Error(Loc, "index must be an integer in range [-256, 255].");
   case Match_InvalidMemoryIndexed8SImm10:
@@ -4233,6 +4235,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed2SImm4:
   case Match_InvalidMemoryIndexed3SImm4:
   case Match_InvalidMemoryIndexed4SImm4:
+  case Match_InvalidMemoryIndexed1SImm6:
   case Match_InvalidMemoryIndexed16SImm4:
   case Match_InvalidMemoryIndexed4SImm7:
   case Match_InvalidMemoryIndexed8SImm7:

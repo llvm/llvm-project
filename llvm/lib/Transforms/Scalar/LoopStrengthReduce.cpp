@@ -3598,7 +3598,12 @@ void LSRInstance::GenerateReassociationsImpl(LSRUse &LU, unsigned LUIdx,
     if (InsertFormula(LU, LUIdx, F))
       // If that formula hadn't been seen before, recurse to find more like
       // it.
-      GenerateReassociations(LU, LUIdx, LU.Formulae.back(), Depth + 1);
+      // Add check on Log16(AddOps.size()) - same as Log2_32(AddOps.size()) >> 2)
+      // Because just Depth is not enough to bound compile time.
+      // This means that every time AddOps.size() is greater 16^x we will add
+      // x to Depth.
+      GenerateReassociations(LU, LUIdx, LU.Formulae.back(),
+                             Depth + 1 + (Log2_32(AddOps.size()) >> 2));
   }
 }
 

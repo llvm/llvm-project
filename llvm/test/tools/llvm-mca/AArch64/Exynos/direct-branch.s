@@ -24,16 +24,16 @@
 # ALL-NEXT: [5]: MayStore
 # ALL-NEXT: [6]: HasSideEffects
 
-# ALL:      [1]    [2]    [3]    [4]    [5]    [6]	Instructions:
-# ALL-NEXT:  1      0      -                      	b	t
+# ALL:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# ALL-NEXT:  1      0      -                          b	t
 
 # ALL:      Timeline view:
 
-# ALL:      Index	01
+# ALL:      Index     01
 
-# ALL:      [0,0]	DR	b	t
-# ALL-NEXT: [1,0]	DR	b	t
-# ALL-NEXT: [2,0]	DR	b	t
+# ALL:      [0,0]     DR   b	t
+# ALL-NEXT: [1,0]     DR   b	t
+# ALL-NEXT: [2,0]     DR   b	t
 
 # ALL:      Average Wait times (based on the timeline view):
 # ALL-NEXT: [0]: Executions
@@ -42,5 +42,5 @@
 # ALL-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # ALL:            [0]    [1]    [2]    [3]
-# ALL-NEXT: 0.     3     0.0    0.0    0.0    	b	t
+# ALL-NEXT: 0.     3     0.0    0.0    0.0       b	t
 

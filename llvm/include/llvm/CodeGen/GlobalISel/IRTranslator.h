@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Types.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/IR/Intrinsics.h"
 #include <memory>
 #include <utility>
@@ -63,9 +64,83 @@ private:
   /// Interface used to lower the everything related to calls.
   const CallLowering *CLI;
 
-  /// Mapping of the values of the current LLVM IR function
-  /// to the related virtual registers.
-  ValueToVReg ValToVReg;
+  /// This class contains the mapping between the Values to vreg related data.
+  class ValueToVRegInfo {
+  public:
+    ValueToVRegInfo() = default;
+
+    using VRegListT = SmallVector<unsigned, 1>;
+    using OffsetListT = SmallVector<uint64_t, 1>;
+
+    using const_vreg_iterator =
+        DenseMap<const Value *, VRegListT *>::const_iterator;
+    using const_offset_iterator =
+        DenseMap<const Value *, OffsetListT *>::const_iterator;
+
+    inline const_vreg_iterator vregs_end() const { return ValToVRegs.end(); }
+
+    VRegListT *getVRegs(const Value &V) {
+      auto It = ValToVRegs.find(&V);
+      if (It != ValToVRegs.end())
+        return It->second;
+
+      return insertVRegs(V);
+    }
+
+    OffsetListT *getOffsets(const Value &V) {
+      auto It = TypeToOffsets.find(V.getType());
+      if (It != TypeToOffsets.end())
+        return It->second;
+
+      return insertOffsets(V);
+    }
+
+    const_vreg_iterator findVRegs(const Value &V) const {
+      return ValToVRegs.find(&V);
+    }
+
+    bool contains(const Value &V) const {
+      return ValToVRegs.find(&V) != ValToVRegs.end();
+    }
+
+    void reset() {
+      ValToVRegs.clear();
+      TypeToOffsets.clear();
+      VRegAlloc.DestroyAll();
+      OffsetAlloc.DestroyAll();
+    }
+
+  private:
+    VRegListT *insertVRegs(const Value &V) {
+      assert(ValToVRegs.find(&V) == ValToVRegs.end() && "Value already exists");
+
+      // We placement new using our fast allocator since we never try to free
+      // the vectors until translation is finished.
+      auto *VRegList = new (VRegAlloc.Allocate()) VRegListT();
+      ValToVRegs[&V] = VRegList;
+      return VRegList;
+    }
+
+    OffsetListT *insertOffsets(const Value &V) {
+      assert(TypeToOffsets.find(V.getType()) == TypeToOffsets.end() &&
+             "Type already exists");
+
+      auto *OffsetList = new (OffsetAlloc.Allocate()) OffsetListT();
+      TypeToOffsets[V.getType()] = OffsetList;
+      return OffsetList;
+    }
+    SpecificBumpPtrAllocator<VRegListT> VRegAlloc;
+    SpecificBumpPtrAllocator<OffsetListT> OffsetAlloc;
+
+    // We store pointers to vectors here since references may be invalidated
+    // while we hold them if we stored the vectors directly.
+    DenseMap<const Value *, VRegListT*> ValToVRegs;
+    DenseMap<const Type *, OffsetListT*> TypeToOffsets;
+  };
+
+  /// Mapping of the values of the current LLVM IR function to the related
+  /// virtual registers and offsets.
+  ValueToVRegInfo VMap;
 
   // N.b. it's not completely obvious that this will be sufficient for every
   // LLVM IR construct (with "invoke" being the obvious candidate to mess up our
@@ -82,7 +157,8 @@ private:
 
   // List of stubbed PHI instructions, for values and basic blocks to be filled
   // in once all MachineBasicBlocks have been created.
-  SmallVector<std::pair<const PHINode *, MachineInstr *>, 4> PendingPHIs;
+  SmallVector<std::pair<const PHINode *, SmallVector<MachineInstr *, 1>>, 4>
+      PendingPHIs;
 
   /// Record of what frame index has been allocated to specified allocas for
   /// this function.
@@ -99,7 +175,7 @@ private:
   /// The general algorithm is:
   /// 1. Look for a virtual register for each operand or
   ///    create one.
-  /// 2 Update the ValToVReg accordingly.
+  /// 2 Update the VMap accordingly.
   /// 2.alt. For constant arguments, if they are compile time constants,
   ///   produce an immediate in the right operand and do not touch
   ///   ValToReg. Actually we will go with a virtual register for each
@@ -145,6 +221,19 @@ private:
                                MachineIRBuilder &MIRBuilder);
 
   bool translateInlineAsm(const CallInst &CI, MachineIRBuilder &MIRBuilder);
+
+  // FIXME: temporary function to expose previous interface to call lowering
+  // until it is refactored.
+  /// Combines all component registers of \p V into a single scalar with size
+  /// "max(Offsets) + last size".
+  unsigned packRegs(const Value &V, MachineIRBuilder &MIRBuilder);
+
+  void unpackRegs(const Value &V, unsigned Src, MachineIRBuilder &MIRBuilder);
+
+  /// Returns true if the value should be split into multiple LLTs.
+  /// If \p Offsets is given then the split type's offsets will be stored in it.
+  bool valueIsSplit(const Value &V,
+                    SmallVectorImpl<uint64_t> *Offsets = nullptr);
 
   /// Translate call instruction.
   /// \pre \p U is a call instruction.
@@ -381,9 +470,24 @@ private:
   // * Clear the different maps.
   void finalizeFunction();
 
-  /// Get the VReg that represents \p Val.
-  /// If such VReg does not exist, it is created.
-  unsigned getOrCreateVReg(const Value &Val);
+  /// Get the VRegs that represent \p Val.
+  /// Non-aggregate types have just one corresponding VReg and the list can be
+  /// used as a single "unsigned". Aggregates get flattened. If such VRegs do
+  /// not exist, they are created.
+  ArrayRef<unsigned> getOrCreateVRegs(const Value &Val);
+
+  unsigned getOrCreateVReg(const Value &Val) {
+    auto Regs = getOrCreateVRegs(Val);
+    if (Regs.empty())
+      return 0;
+    assert(Regs.size() == 1 &&
+           "attempt to get single VReg for aggregate or void");
+    return Regs[0];
+  }
+
+  /// Allocate some vregs and offsets in the VMap. Then populate just the
+  /// offsets while leaving the vregs empty.
+  ValueToVRegInfo::VRegListT &allocateVRegs(const Value &Val);
 
   /// Get the frame index that represents \p Val.
   /// If such VReg does not exist, it is created.

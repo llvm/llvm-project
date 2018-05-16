@@ -93,6 +93,11 @@ Non-comprehensive list of changes in this release
   behavior can be restored by setting ``-fclang-abi-compat`` to ``6`` or
   lower.
 
+- An existing tool named ``diagtool`` has been added to the release. As the
+  name suggests, it helps with dealing with diagnostics in ``clang``, such as
+  finding out the warning hierarchy, and which of them are enabled by default
+  or for a particular compiler invocation.
+
 - ...
 
 New Compiler Flags

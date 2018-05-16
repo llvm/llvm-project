@@ -34611,7 +34611,7 @@ static SDValue detectUSatPattern(SDValue In, EVT VT, SelectionDAG &DAG,
       return UMin;
 
   if (SDValue SMin = MatchMinMax(In, ISD::SMIN, C2))
-    if (SDValue SMax = MatchMinMax(SMin, ISD::SMAX, C1))
+    if (MatchMinMax(SMin, ISD::SMAX, C1))
       if (C1.isNonNegative() && C2.isMask(VT.getScalarSizeInBits()))
         return SMin;
 

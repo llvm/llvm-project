@@ -32,17 +32,6 @@ define i128 @ABIi128(i128 %arg1) {
   ret i128 %res
 }
 
-; It happens that we don't handle ConstantArray instances yet during
-; translation. Any other constant would be fine too.
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate constant: [1 x double] (in function: constant)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for constant
-; FALLBACK-WITH-REPORT-OUT-LABEL: constant:
-; FALLBACK-WITH-REPORT-OUT: fmov d0, #1.0
-define [1 x double] @constant() {
-  ret [1 x double] [double 1.0]
-}
-
   ; The key problem here is that we may fail to create an MBB referenced by a
   ; PHI. If so, we cannot complete the G_PHI and mustn't try or bad things
   ; happen.
@@ -183,16 +172,6 @@ block:
 end:
   %vec = load <2 x i16*>, <2 x i16*>* undef
   br label %block
-}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %1:_(s96), %3:_(p0) :: (store 12 into `%struct96* undef`, align 4) (in function: nonpow2_insertvalue_narrowing)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_insertvalue_narrowing
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_insertvalue_narrowing:
-%struct96 = type { float, float, float }
-define void @nonpow2_insertvalue_narrowing(float %a) {
-  %dummy = insertvalue %struct96 undef, float %a, 0
-  store %struct96 %dummy, %struct96* undef
-  ret void
 }
 
 ; FALLBACK-WITH-REPORT-ERR remark: <unknown>:0:0: unable to legalize instruction: G_STORE %3, %4 :: (store 12 into `i96* undef`, align 16) (in function: nonpow2_add_narrowing)

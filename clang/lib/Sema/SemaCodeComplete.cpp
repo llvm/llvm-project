@@ -2765,27 +2765,11 @@ CodeCompletionResult::CreateCodeCompletionString(ASTContext &Ctx,
     if (Declaration) {
       Result.addParentContext(Declaration->getDeclContext());
       Pattern->ParentName = Result.getParentName();
-      // Provide code completion comment for self.GetterName where
-      // GetterName is the getter method for a property with name
-      // different from the property name (declared via a property
-      // getter attribute.
-      const NamedDecl *ND = Declaration;
-      if (const ObjCMethodDecl *M = dyn_cast<ObjCMethodDecl>(ND))
-        if (M->isPropertyAccessor())
-          if (const ObjCPropertyDecl *PDecl = M->findPropertyDecl())
-            if (PDecl->getGetterName() == M->getSelector() &&
-                PDecl->getIdentifier() != M->getIdentifier()) {
-              if (const RawComment *RC = 
-                    Ctx.getRawCommentForAnyRedecl(M)) {
-                Result.addBriefComment(RC->getBriefText(Ctx));
-                Pattern->BriefComment = Result.getBriefComment();
-              }
-              else if (const RawComment *RC = 
-                         Ctx.getRawCommentForAnyRedecl(PDecl)) {
-                Result.addBriefComment(RC->getBriefText(Ctx));
-                Pattern->BriefComment = Result.getBriefComment();
-              }
-            }
+      if (const RawComment *RC =
+              getPatternCompletionComment(Ctx, Declaration)) {
+        Result.addBriefComment(RC->getBriefText(Ctx));
+        Pattern->BriefComment = Result.getBriefComment();
+      }
     }
     
     return Pattern;
@@ -2845,14 +2829,9 @@ CodeCompletionResult::CreateCodeCompletionString(ASTContext &Ctx,
 
   if (IncludeBriefComments) {
     // Add documentation comment, if it exists.
-    if (const RawComment *RC = Ctx.getRawCommentForAnyRedecl(ND)) {
+    if (const RawComment *RC = getCompletionComment(Ctx, Declaration)) {
       Result.addBriefComment(RC->getBriefText(Ctx));
     } 
-    else if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(ND))
-      if (OMD->isPropertyAccessor())
-        if (const ObjCPropertyDecl *PDecl = OMD->findPropertyDecl())
-          if (const RawComment *RC = Ctx.getRawCommentForAnyRedecl(PDecl))
-            Result.addBriefComment(RC->getBriefText(Ctx));
   }
 
   if (StartsNestedNameSpecifier) {
@@ -3042,6 +3021,59 @@ CodeCompletionResult::CreateCodeCompletionString(ASTContext &Ctx,
   return Result.TakeString();
 }
 
+const RawComment *clang::getCompletionComment(const ASTContext &Ctx,
+                                              const NamedDecl *ND) {
+  if (!ND)
+    return nullptr;
+  if (auto *RC = Ctx.getRawCommentForAnyRedecl(ND))
+    return RC;
+
+  // Try to find comment from a property for ObjC methods.
+  const ObjCMethodDecl *M = dyn_cast<ObjCMethodDecl>(ND);
+  if (!M)
+    return nullptr;
+  const ObjCPropertyDecl *PDecl = M->findPropertyDecl();
+  if (!PDecl)
+    return nullptr;
+
+  return Ctx.getRawCommentForAnyRedecl(PDecl);
+}
+
+const RawComment *clang::getPatternCompletionComment(const ASTContext &Ctx,
+                                                     const NamedDecl *ND) {
+  const ObjCMethodDecl *M = dyn_cast_or_null<ObjCMethodDecl>(ND);
+  if (!M || !M->isPropertyAccessor())
+    return nullptr;
+
+  // Provide code completion comment for self.GetterName where
+  // GetterName is the getter method for a property with name
+  // different from the property name (declared via a property
+  // getter attribute.
+  const ObjCPropertyDecl *PDecl = M->findPropertyDecl();
+  if (!PDecl)
+    return nullptr;
+  if (PDecl->getGetterName() == M->getSelector() &&
+      PDecl->getIdentifier() != M->getIdentifier()) {
+    if (auto *RC = Ctx.getRawCommentForAnyRedecl(M))
+      return RC;
+    if (auto *RC = Ctx.getRawCommentForAnyRedecl(PDecl))
+      return RC;
+  }
+  return nullptr;
+}
+
+const RawComment *clang::getParameterComment(
+    const ASTContext &Ctx,
+    const CodeCompleteConsumer::OverloadCandidate &Result,
+    unsigned ArgIndex) {
+  auto FDecl = Result.getFunction();
+  if (!FDecl)
+    return nullptr;
+  if (ArgIndex < FDecl->getNumParams())
+    return Ctx.getRawCommentForAnyRedecl(FDecl->getParamDecl(ArgIndex));
+  return nullptr;
+}
+
 /// Add function overload parameter chunks to the given code completion
 /// string.
 static void AddOverloadParameterChunks(ASTContext &Context,
@@ -3137,10 +3169,10 @@ CodeCompleteConsumer::OverloadCandidate::CreateSignatureString(
   }
 
   if (FDecl) {
-    if (IncludeBriefComments && CurrentArg < FDecl->getNumParams())
-      if (auto RC = S.getASTContext().getRawCommentForAnyRedecl(
-          FDecl->getParamDecl(CurrentArg)))
+    if (IncludeBriefComments) {
+      if (auto RC = getParameterComment(S.getASTContext(), *this, CurrentArg))
         Result.addBriefComment(RC->getBriefText(S.getASTContext()));
+    }
     AddResultTypeChunk(S.Context, Policy, FDecl, QualType(), Result);
     Result.AddTextChunk(
       Result.getAllocator().CopyString(FDecl->getNameAsString()));

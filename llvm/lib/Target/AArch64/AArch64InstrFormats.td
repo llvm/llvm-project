@@ -343,6 +343,14 @@ def uimm6s8 : Operand<i64>, ImmLeaf<i64,
   let ParserMatchClass = UImm6s8Operand;
 }
 
+// simm6sN predicate - True if the immediate is a multiple of N in the range
+// [-32 * N, 31 * N].
+def SImm6s1Operand : SImmScaledMemoryIndexed<6, 1>;
+def simm6s1 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -32 && Imm < 32; }]> {
+  let ParserMatchClass = SImm6s1Operand;
+  let DecoderMethod = "DecodeSImm<6>";
+}
+
 // simm4sN predicate - True if the immediate is a multiple of N in the range
 // [ -8* N, 7 * N].
 def SImm4s1Operand  : SImmScaledMemoryIndexed<4, 1>;

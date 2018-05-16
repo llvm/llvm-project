@@ -111,6 +111,30 @@ public:
     return extractBriefText(Context);
   }
 
+  /// Returns sanitized comment text, suitable for presentation in editor UIs.
+  /// E.g. will transform:
+  ///     // This is a long multiline comment.
+  ///     //   Parts of it  might be indented.
+  ///     /* The comments styles might be mixed. */
+  ///  into
+  ///     "This is a long multiline comment.\n"
+  ///     "  Parts of it  might be indented.\n"
+  ///     "The comments styles might be mixed."
+  /// Also removes leading indentation and sanitizes some common cases:
+  ///     /* This is a first line.
+  ///      *   This is a second line. It is indented.
+  ///      * This is a third line. */
+  /// and
+  ///     /* This is a first line.
+  ///          This is a second line. It is indented.
+  ///     This is a third line. */
+  /// will both turn into:
+  ///     "This is a first line.\n"
+  ///     "  This is a second line. It is indented.\n"
+  ///     "This is a third line."
+  std::string getFormattedText(const SourceManager &SourceMgr,
+                               DiagnosticsEngine &Diags) const;
+
   /// Parse the comment, assuming it is attached to decl \c D.
   comments::FullComment *parse(const ASTContext &Context,
                                const Preprocessor *PP, const Decl *D) const;

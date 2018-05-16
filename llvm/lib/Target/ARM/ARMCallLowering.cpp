@@ -469,7 +469,12 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (!MBB.empty())
     MIRBuilder.setInstr(*MBB.begin());
 
-  return handleAssignments(MIRBuilder, ArgInfos, ArgHandler);
+  if (!handleAssignments(MIRBuilder, ArgInfos, ArgHandler))
+    return false;
+
+  // Move back to the end of the basic block.
+  MIRBuilder.setMBB(MBB);
+  return true;
 }
 
 namespace {

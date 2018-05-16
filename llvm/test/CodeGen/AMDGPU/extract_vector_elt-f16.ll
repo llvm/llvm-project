@@ -70,31 +70,20 @@ define amdgpu_kernel void @extract_vector_elt_v3f16(half addrspace(1)* %out, <3 
   ret void
 }
 
-; GCN-LABEL: {{^}}extract_vector_elt_v4f16:
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
-; GCN: buffer_store_short
-; GCN: buffer_store_short
-define amdgpu_kernel void @extract_vector_elt_v4f16(half addrspace(1)* %out, <4 x half> %foo) #0 {
-  %p0 = extractelement <4 x half> %foo, i32 0
-  %p1 = extractelement <4 x half> %foo, i32 2
-  %out1 = getelementptr half, half addrspace(1)* %out, i32 10
-  store half %p1, half addrspace(1)* %out, align 2
-  store half %p0, half addrspace(1)* %out1, align 2
-  ret void
-}
-
 ; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v3f16:
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
+; SICIVI: buffer_load_ushort
+; SICIVI: buffer_load_ushort
+; SICIVI: buffer_load_ushort
 
-; GCN: buffer_store_short
-; GCN: buffer_store_short
-; GCN: buffer_store_short
+; GFX9-DAG: global_load_short_d16_hi v
+; GFX9-DAG: global_load_short_d16 v
 
-; GCN: buffer_load_ushort
-; GCN: buffer_store_short
+; GCN-DAG: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 4
+; GFX89: v_lshrrev_b64 v{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}, v
+
+; SI: v_lshr_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}
+
+; GCN: {{buffer|global}}_store_short
 define amdgpu_kernel void @dynamic_extract_vector_elt_v3f16(half addrspace(1)* %out, <3 x half> %foo, i32 %idx) #0 {
   %p0 = extractelement <3 x half> %foo, i32 %idx
   %out1 = getelementptr half, half addrspace(1)* %out, i32 1
@@ -102,23 +91,45 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v3f16(half addrspace(1)* %
   ret void
 }
 
-; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v4f16:
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
+; GCN-LABEL: {{^}}v_extractelement_v4f16_2:
+; SI: buffer_load_dword [[LOAD:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; SI: buffer_store_short [[LOAD]]
 
-; GCN: buffer_store_short
-; GCN: buffer_store_short
-; GCN: buffer_store_short
-; GCN: buffer_store_short
+; VI: flat_load_dword v
+; VI: flat_store_short
 
-; GCN: buffer_load_ushort
-; GCN: buffer_store_short
-define amdgpu_kernel void @dynamic_extract_vector_elt_v4f16(half addrspace(1)* %out, <4 x half> %foo, i32 %idx) #0 {
-  %p0 = extractelement <4 x half> %foo, i32 %idx
-  %out1 = getelementptr half, half addrspace(1)* %out, i32 1
-  store half %p0, half addrspace(1)* %out
+; GFX9: global_load_dword [[LOAD:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, off offset:4
+; GFX9: global_store_short_d16_hi v{{\[[0-9]+:[0-9]+\]}}, [[LOAD]]
+define amdgpu_kernel void @v_extractelement_v4f16_2(half addrspace(1)* %out, <4 x half> addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.ext = sext i32 %tid to i64
+  %in.gep = getelementptr inbounds <4 x half>, <4 x half> addrspace(1)* %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds half, half addrspace(1)* %out, i64 %tid.ext
+  %vec = load <4 x half>, <4 x half> addrspace(1)* %in.gep
+  %vec.extract = extractelement <4 x half> %vec, i32 2
+  store half %vec.extract, half addrspace(1)* %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_insertelement_v4f16_dynamic_vgpr:
+; GCN-DAG: {{flat|global|buffer}}_load_dword [[IDX:v[0-9]+]],
+; GCN-DAG: {{flat|global|buffer}}_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
+; GCN-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, [[IDX]]
+
+; GFX89: v_lshrrev_b64 v{{\[}}[[SHIFT_LO:[0-9]+]]:[[SHIFT_HI:[0-9]+]]{{\]}}, [[SCALED_IDX]], v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, v[[SHIFT_LO]]
+
+; SI: v_lshr_b64 v{{\[}}[[SHIFT_LO:[0-9]+]]:[[SHIFT_HI:[0-9]+]]{{\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}, [[SCALED_IDX]]
+; SI: buffer_store_short v[[SHIFT_LO]]
+define amdgpu_kernel void @v_insertelement_v4f16_dynamic_vgpr(half addrspace(1)* %out, <4 x half> addrspace(1)* %in) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %tid.ext = sext i32 %tid to i64
+  %in.gep = getelementptr inbounds <4 x half>, <4 x half> addrspace(1)* %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds half, half addrspace(1)* %out, i64 %tid.ext
+  %idx.val = load volatile i32, i32 addrspace(1)* undef
+  %vec = load <4 x half>, <4 x half> addrspace(1)* %in.gep
+  %vec.extract = extractelement <4 x half> %vec, i32 %idx.val
+  store half %vec.extract, half addrspace(1)* %out.gep
   ret void
 }
 

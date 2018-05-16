@@ -46,6 +46,7 @@ class NamedDecl;
 class NestedNameSpecifier;
 class Preprocessor;
 class Sema;
+class RawComment;
 
 /// Default priority values for code-completion results based
 /// on their kind.
@@ -1072,6 +1073,23 @@ public:
 
   virtual CodeCompletionTUInfo &getCodeCompletionTUInfo() = 0;
 };
+
+/// Get the documentation comment used to produce
+/// CodeCompletionString::BriefComment for RK_Declaration.
+const RawComment *getCompletionComment(const ASTContext &Ctx,
+                                       const NamedDecl *Decl);
+
+/// Get the documentation comment used to produce
+/// CodeCompletionString::BriefComment for RK_Pattern.
+const RawComment *getPatternCompletionComment(const ASTContext &Ctx,
+                                              const NamedDecl *Decl);
+
+/// Get the documentation comment used to produce
+/// CodeCompletionString::BriefComment for OverloadCandidate.
+const RawComment *
+getParameterComment(const ASTContext &Ctx,
+                    const CodeCompleteConsumer::OverloadCandidate &Result,
+                    unsigned ArgIndex);
 
 /// A simple code-completion consumer that prints the results it
 /// receives in a simple format.

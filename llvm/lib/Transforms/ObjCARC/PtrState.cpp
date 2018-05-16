@@ -268,6 +268,11 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
     if (isa<InvokeInst>(Inst)) {
       const auto IP = BB->getFirstInsertionPt();
       InsertAfter = IP == BB->end() ? std::prev(BB->end()) : IP;
+      if (isa<CatchSwitchInst>(InsertAfter))
+        // A catchswitch must be the only non-phi instruction in its basic
+        // block, so attempting to insert an instruction into such a block would
+        // produce invalid IR.
+        SetCFGHazardAfflicted(true);
     } else {
       InsertAfter = std::next(Inst->getIterator());
     }
