@@ -68,11 +68,6 @@ MCCodeEmitter *createARMBEMCCodeEmitter(const MCInstrInfo &MCII,
                                         const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
-MCAsmBackend *createARMAsmBackend(const Target &T, const MCSubtargetInfo &STI,
-                                  const MCRegisterInfo &MRI,
-                                  const MCTargetOptions &Options,
-                                  bool IsLittleEndian);
-
 MCAsmBackend *createARMLEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
@@ -80,16 +75,6 @@ MCAsmBackend *createARMLEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
 MCAsmBackend *createARMBEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
-
-MCAsmBackend *createThumbLEAsmBackend(const Target &T,
-                                      const MCSubtargetInfo &STI,
-                                      const MCRegisterInfo &MRI,
-                                      const MCTargetOptions &Options);
-
-MCAsmBackend *createThumbBEAsmBackend(const Target &T,
-                                      const MCSubtargetInfo &STI,
-                                      const MCRegisterInfo &MRI,
-                                      const MCTargetOptions &Options);
 
 // Construct a PE/COFF machine code streamer which will generate a PE/COFF
 // object file.
