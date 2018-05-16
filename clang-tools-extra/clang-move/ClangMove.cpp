@@ -95,12 +95,16 @@ std::string MakeAbsolutePath(const SourceManager &SM, StringRef Path) {
       llvm::sys::path::parent_path(AbsolutePath.str()));
   if (Dir) {
     StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
-    SmallVector<char, 128> AbsoluteFilename;
-    llvm::sys::path::append(AbsoluteFilename, DirName,
-                            llvm::sys::path::filename(AbsolutePath.str()));
-    return llvm::StringRef(AbsoluteFilename.data(), AbsoluteFilename.size())
-        .str();
+    // FIXME: getCanonicalName might fail to get real path on VFS.
+    if (llvm::sys::path::is_absolute(DirName)) {
+      SmallVector<char, 128> AbsoluteFilename;
+      llvm::sys::path::append(AbsoluteFilename, DirName,
+                              llvm::sys::path::filename(AbsolutePath.str()));
+      return llvm::StringRef(AbsoluteFilename.data(), AbsoluteFilename.size())
+          .str();
+    }
   }
+  llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
   return AbsolutePath.str();
 }
 

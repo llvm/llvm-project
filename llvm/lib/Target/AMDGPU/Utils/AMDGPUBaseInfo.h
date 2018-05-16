@@ -42,7 +42,8 @@ namespace IsaInfo {
 enum {
   // The closed Vulkan driver sets 96, which limits the wave count to 8 but
   // doesn't spill SGPRs as much as when 80 is set.
-  FIXED_NUM_SGPRS_FOR_INIT_BUG = 96
+  FIXED_NUM_SGPRS_FOR_INIT_BUG = 96,
+  TRAP_NUM_SGPRS = 16
 };
 
 /// Instruction set architecture version.

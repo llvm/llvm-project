@@ -14,9 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "FetchStage.h"
-#include "Instruction.h"
 
-using namespace mca;
+namespace mca {
 
 bool FetchStage::isReady() const { return SM.hasNext(); }
 
@@ -40,3 +39,5 @@ void FetchStage::postExecute(const InstRef &IR) {
     Instructions.erase(Instructions.begin(), It);
   SM.updateNext();
 }
+
+} // namespace mca

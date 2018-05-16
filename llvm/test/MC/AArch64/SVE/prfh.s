@@ -192,3 +192,57 @@ prfh    pldl1strm, p0, [x0, #31, mul vl]
 // CHECK-ENCODING: [0x01,0x20,0xdf,0x85]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 01 20 df 85
+
+prfh    pldl3strm, p5, [x10, z21.s, uxtw #1]
+// CHECK-INST: prfh    pldl3strm, p5, [x10, z21.s, uxtw #1]
+// CHECK-ENCODING: [0x45,0x35,0x35,0x84]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 45 35 35 84 <unknown>
+
+prfh    pldl3strm, p5, [x10, z21.s, sxtw #1]
+// CHECK-INST: prfh    pldl3strm, p5, [x10, z21.s, sxtw #1]
+// CHECK-ENCODING: [0x45,0x35,0x75,0x84]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 45 35 75 84 <unknown>
+
+prfh    pldl3strm, p5, [x10, z21.d, uxtw #1]
+// CHECK-INST: prfh    pldl3strm, p5, [x10, z21.d, uxtw #1]
+// CHECK-ENCODING: [0x45,0x35,0x35,0xc4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 45 35 35 c4 <unknown>
+
+prfh    pldl3strm, p5, [x10, z21.d, sxtw #1]
+// CHECK-INST: prfh    pldl3strm, p5, [x10, z21.d, sxtw #1]
+// CHECK-ENCODING: [0x45,0x35,0x75,0xc4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 45 35 75 c4 <unknown>
+
+prfh    pldl1keep, p0, [x0, z0.d, lsl #1]
+// CHECK-INST: prfh    pldl1keep, p0, [x0, z0.d, lsl #1]
+// CHECK-ENCODING: [0x00,0xa0,0x60,0xc4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 a0 60 c4 <unknown>
+
+prfh    #15, p7, [z31.s, #0]
+// CHECK-INST: prfh    #15, p7, [z31.s]
+// CHECK-ENCODING: [0xef,0xff,0x80,0x84]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ef ff 80 84 <unknown>
+
+prfh    #15, p7, [z31.s, #62]
+// CHECK-INST: prfh    #15, p7, [z31.s, #62]
+// CHECK-ENCODING: [0xef,0xff,0x9f,0x84]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ef ff 9f 84 <unknown>
+
+prfh    #15, p7, [z31.d, #0]
+// CHECK-INST: prfh    #15, p7, [z31.d]
+// CHECK-ENCODING: [0xef,0xff,0x80,0xc4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ef ff 80 c4 <unknown>
+
+prfh    #15, p7, [z31.d, #62]
+// CHECK-INST: prfh    #15, p7, [z31.d, #62]
+// CHECK-ENCODING: [0xef,0xff,0x9f,0xc4]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ef ff 9f c4 <unknown>

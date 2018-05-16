@@ -18,17 +18,17 @@ ldnt1b z29.b, p0/z, [x3, #8, MUL VL]
 // Invalid result type.
 
 ldnt1b z0.h, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: ldnt1b z0.h, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnt1b z0.s, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: ldnt1b z0.s, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnt1b z0.d, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: ldnt1b z0.d, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

@@ -535,6 +535,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   // Perform these initializations only once.
   MaxStoresPerMemset = MaxStoresPerMemcpy = MaxStoresPerMemmove =
       MaxLoadsPerMemcmp = 8;
+  MaxGluedStoresPerMemcpy = 0;
   MaxStoresPerMemsetOptSize = MaxStoresPerMemcpyOptSize =
       MaxStoresPerMemmoveOptSize = MaxLoadsPerMemcmpOptSize = 4;
   UseUnderscoreSetJmp = false;

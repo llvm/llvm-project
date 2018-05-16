@@ -745,6 +745,7 @@ enum {
   UNW_OR1K_R29 = 29,
   UNW_OR1K_R30 = 30,
   UNW_OR1K_R31 = 31,
+  UNW_OR1K_EPCR = 32,
 };
 
 // MIPS registers

@@ -99,7 +99,7 @@
 /// functions, making them private to any shared library they are linked into.
 /// On PE/COFF targets, library visibility is the default, so this isn't needed.
 #if (__has_attribute(visibility) || LLVM_GNUC_PREREQ(4, 0, 0)) &&              \
-    !defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(LLVM_ON_WIN32)
+    !defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(_WIN32)
 #define LLVM_LIBRARY_VISIBILITY __attribute__ ((visibility("hidden")))
 #else
 #define LLVM_LIBRARY_VISIBILITY
@@ -146,7 +146,7 @@
 
 // FIXME: Provide this for PE/COFF targets.
 #if (__has_attribute(weak) || LLVM_GNUC_PREREQ(4, 0, 0)) &&                    \
-    (!defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(LLVM_ON_WIN32))
+    (!defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(_WIN32))
 #define LLVM_ATTRIBUTE_WEAK __attribute__((__weak__))
 #else
 #define LLVM_ATTRIBUTE_WEAK

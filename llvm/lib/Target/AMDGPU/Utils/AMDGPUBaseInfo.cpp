@@ -358,9 +358,11 @@ unsigned getMinNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU) {
 
   if (WavesPerEU >= getMaxWavesPerEU(Features))
     return 0;
-  unsigned MinNumSGPRs =
-      alignDown(getTotalNumSGPRs(Features) / (WavesPerEU + 1),
-                getSGPRAllocGranule(Features)) + 1;
+
+  unsigned MinNumSGPRs = getTotalNumSGPRs(Features) / (WavesPerEU + 1);
+  if (Features.test(FeatureTrapHandler))
+    MinNumSGPRs -= std::min(MinNumSGPRs, (unsigned)TRAP_NUM_SGPRS);
+  MinNumSGPRs = alignDown(MinNumSGPRs, getSGPRAllocGranule(Features)) + 1;
   return std::min(MinNumSGPRs, getAddressableNumSGPRs(Features));
 }
 
@@ -369,11 +371,13 @@ unsigned getMaxNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU,
   assert(WavesPerEU != 0);
 
   IsaVersion Version = getIsaVersion(Features);
-  unsigned MaxNumSGPRs = alignDown(getTotalNumSGPRs(Features) / WavesPerEU,
-                                   getSGPRAllocGranule(Features));
   unsigned AddressableNumSGPRs = getAddressableNumSGPRs(Features);
   if (Version.Major >= 8 && !Addressable)
     AddressableNumSGPRs = 112;
+  unsigned MaxNumSGPRs = getTotalNumSGPRs(Features) / WavesPerEU;
+  if (Features.test(FeatureTrapHandler))
+    MaxNumSGPRs -= std::min(MaxNumSGPRs, (unsigned)TRAP_NUM_SGPRS);
+  MaxNumSGPRs = alignDown(MaxNumSGPRs, getSGPRAllocGranule(Features));
   return std::min(MaxNumSGPRs, AddressableNumSGPRs);
 }
 

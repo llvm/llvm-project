@@ -34,8 +34,8 @@
 define void @Precompute_Patch_Values(%struct.Bicubic_Patch_Struct* %Shape) {
 ; CHECK: Precompute_Patch_Values
 ; CHECK: ldr [[VAL:x[0-9]+]], [x0, #288]
-; CHECK-NEXT: str [[VAL]], [sp, #232]
 ; CHECK-NEXT: ldr [[VAL2:q[0-9]+]], [x0, #272]
+; CHECK-NEXT: str [[VAL]], [sp, #232]
 ; CHECK-NEXT: stur [[VAL2]], {{\[}}sp, #216]
 entry:
   %Control_Points = alloca [16 x [3 x double]], align 8

@@ -3349,8 +3349,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_ROUND:
     return lowerFP_ROUND(Op, DAG);
   case ISD::TRAP:
-  case ISD::DEBUGTRAP:
     return lowerTRAP(Op, DAG);
+  case ISD::DEBUGTRAP:
+    return lowerDEBUGTRAP(Op, DAG);
   }
   return SDValue();
 }
@@ -4011,40 +4012,37 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
-  MachineFunction &MF = DAG.getMachineFunction();
   SDValue Chain = Op.getOperand(0);
 
-  unsigned TrapID = Op.getOpcode() == ISD::DEBUGTRAP ?
-    SISubtarget::TrapIDLLVMDebugTrap : SISubtarget::TrapIDLLVMTrap;
-
-  if (Subtarget->getTrapHandlerAbi() == SISubtarget::TrapHandlerAbiHsa &&
-      Subtarget->isTrapHandlerEnabled()) {
-    SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-    unsigned UserSGPR = Info->getQueuePtrUserSGPR();
-    assert(UserSGPR != AMDGPU::NoRegister);
-
-    SDValue QueuePtr = CreateLiveInRegister(
-      DAG, &AMDGPU::SReg_64RegClass, UserSGPR, MVT::i64);
-
-    SDValue SGPR01 = DAG.getRegister(AMDGPU::SGPR0_SGPR1, MVT::i64);
-
-    SDValue ToReg = DAG.getCopyToReg(Chain, SL, SGPR01,
-                                     QueuePtr, SDValue());
-
-    SDValue Ops[] = {
-      ToReg,
-      DAG.getTargetConstant(TrapID, SL, MVT::i16),
-      SGPR01,
-      ToReg.getValue(1)
-    };
-
-    return DAG.getNode(AMDGPUISD::TRAP, SL, MVT::Other, Ops);
-  }
-
-  switch (TrapID) {
-  case SISubtarget::TrapIDLLVMTrap:
+  if (Subtarget->getTrapHandlerAbi() != SISubtarget::TrapHandlerAbiHsa ||
+      !Subtarget->isTrapHandlerEnabled())
     return DAG.getNode(AMDGPUISD::ENDPGM, SL, MVT::Other, Chain);
-  case SISubtarget::TrapIDLLVMDebugTrap: {
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned UserSGPR = Info->getQueuePtrUserSGPR();
+  assert(UserSGPR != AMDGPU::NoRegister);
+  SDValue QueuePtr = CreateLiveInRegister(
+    DAG, &AMDGPU::SReg_64RegClass, UserSGPR, MVT::i64);
+  SDValue SGPR01 = DAG.getRegister(AMDGPU::SGPR0_SGPR1, MVT::i64);
+  SDValue ToReg = DAG.getCopyToReg(Chain, SL, SGPR01,
+                                   QueuePtr, SDValue());
+  SDValue Ops[] = {
+    ToReg,
+    DAG.getTargetConstant(SISubtarget::TrapIDLLVMTrap, SL, MVT::i16),
+    SGPR01,
+    ToReg.getValue(1)
+  };
+  return DAG.getNode(AMDGPUISD::TRAP, SL, MVT::Other, Ops);
+}
+
+SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  SDValue Chain = Op.getOperand(0);
+  MachineFunction &MF = DAG.getMachineFunction();
+
+  if (Subtarget->getTrapHandlerAbi() != SISubtarget::TrapHandlerAbiHsa ||
+      !Subtarget->isTrapHandlerEnabled()) {
     DiagnosticInfoUnsupported NoTrap(MF.getFunction(),
                                      "debugtrap handler not supported",
                                      Op.getDebugLoc(),
@@ -4053,11 +4051,12 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
     Ctx.diagnose(NoTrap);
     return Chain;
   }
-  default:
-    llvm_unreachable("unsupported trap handler type!");
-  }
 
-  return Chain;
+  SDValue Ops[] = {
+    Chain,
+    DAG.getTargetConstant(SISubtarget::TrapIDLLVMDebugTrap, SL, MVT::i16)
+  };
+  return DAG.getNode(AMDGPUISD::TRAP, SL, MVT::Other, Ops);
 }
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,

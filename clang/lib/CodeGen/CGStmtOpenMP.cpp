@@ -3935,7 +3935,7 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
     OMPLexicalScope Scope(CGF, S, OMPD_target);
     CGM.getOpenMPRuntime().emitInlinedDirective(
         CGF, OMPD_target, [&S](CodeGenFunction &CGF, PrePostActionTy &) {
-          CGF.EmitStmt(S.getCapturedStmt(OMPD_target)->getCapturedStmt());
+          CGF.EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
         });
     return;
   }

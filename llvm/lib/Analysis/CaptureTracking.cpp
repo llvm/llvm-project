@@ -249,6 +249,8 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker) {
 
       // launder.invariant.group only captures pointer by returning it,
       // so the pointer wasn't captured if returned pointer is not captured.
+      // Note that adding similar special cases for intrinsics requires handling
+      // them in 'isEscapeSource' in BasicAA.
       if (CS.getIntrinsicID() == Intrinsic::launder_invariant_group) {
         AddUses(I);
         break;

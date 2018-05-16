@@ -96,6 +96,8 @@ enum OpenMPRTLFunctionNVPTX {
   /// Call to uint16_t __kmpc_parallel_level(ident_t *loc, kmp_int32
   /// global_tid);
   OMPRTL_NVPTX__kmpc_parallel_level,
+  /// Call to int8_t __kmpc_is_spmd_exec_mode();
+  OMPRTL_NVPTX__kmpc_is_spmd_exec_mode,
 };
 
 /// Pre(post)-action for different OpenMP constructs specialized for NVPTX.
@@ -220,8 +222,7 @@ class CheckVarsEscapingDeclContext final
                "Parameter captured by value with variably modified type");
         EscapedParameters.insert(VD);
       }
-    } else if (VD->getType()->isAnyPointerType() ||
-               VD->getType()->isReferenceType())
+    } else if (VD->getType()->isReferenceType())
       // Do not globalize variables with reference or pointer type.
       return;
     if (VD->getType()->isVariablyModifiedType())
@@ -317,8 +318,18 @@ public:
       return;
     if (D->hasAssociatedStmt()) {
       if (const auto *S =
-              dyn_cast_or_null<CapturedStmt>(D->getAssociatedStmt()))
+              dyn_cast_or_null<CapturedStmt>(D->getAssociatedStmt())) {
+        // Do not analyze directives that do not actually require capturing,
+        // like `omp for` or `omp simd` directives.
+        llvm::SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
+        getOpenMPCaptureRegions(CaptureRegions, D->getDirectiveKind());
+        if (CaptureRegions.size() == 1 &&
+            CaptureRegions.back() == OMPD_unknown) {
+          VisitStmt(S->getCapturedStmt());
+          return;
+        }
         VisitOpenMPCapturedStmt(S);
+      }
     }
   }
   void VisitCapturedStmt(const CapturedStmt *S) {
@@ -1411,6 +1422,12 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_parallel_level");
     break;
   }
+  case OMPRTL_NVPTX__kmpc_is_spmd_exec_mode: {
+    // Build int8_t __kmpc_is_spmd_exec_mode();
+    auto *FnTy = llvm::FunctionType::get(CGM.Int8Ty, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_is_spmd_exec_mode");
+    break;
+  }
   }
   return RTLFn;
 }
@@ -1828,7 +1845,9 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDParallelCall(
       RCG(CGF);
     } else {
       // Check for master and then parallelism:
-      // if (is_master) {
+      // if (__kmpc_is_spmd_exec_mode()) {
+      //  Serialized execution.
+      // } else if (is_master) {
       //   Worker call.
       // } else if (__kmpc_parallel_level(loc, gtid)) {
       //   Serialized execution.
@@ -1837,13 +1856,22 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDParallelCall(
       // }
       CGBuilderTy &Bld = CGF.Builder;
       llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".exit");
+      llvm::BasicBlock *SPMDCheckBB = CGF.createBasicBlock(".spmdcheck");
       llvm::BasicBlock *MasterCheckBB = CGF.createBasicBlock(".mastercheck");
       llvm::BasicBlock *ParallelCheckBB =
           CGF.createBasicBlock(".parallelcheck");
+      llvm::Value *IsSPMD = Bld.CreateIsNotNull(CGF.EmitNounwindRuntimeCall(
+          createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_is_spmd_exec_mode)));
+      Bld.CreateCondBr(IsSPMD, SPMDCheckBB, MasterCheckBB);
+      CGF.EmitBlock(SPMDCheckBB);
+      SeqGen(CGF, Action);
+      CGF.EmitBranch(ExitBB);
+      CGF.EmitBlock(MasterCheckBB);
+      llvm::BasicBlock *MasterThenBB = CGF.createBasicBlock("master.then");
       llvm::Value *IsMaster =
           Bld.CreateICmpEQ(getNVPTXThreadID(CGF), getMasterThreadID(CGF));
-      Bld.CreateCondBr(IsMaster, MasterCheckBB, ParallelCheckBB);
-      CGF.EmitBlock(MasterCheckBB);
+      Bld.CreateCondBr(IsMaster, MasterThenBB, ParallelCheckBB);
+      CGF.EmitBlock(MasterThenBB);
       L0ParallelGen(CGF, Action);
       CGF.EmitBranch(ExitBB);
       // There is no need to emit line number for unconditional branch.

@@ -3788,14 +3788,33 @@ the ``s_trap`` instruction with the following usage:
                                            ``queue_ptr`` terminated and its
                                                          associated queue put
                                                          into the error state.
-     ``llvm.debugtrap``  ``s_trap 0x03`` ``SGPR0-1``:    If debugger not
-                                           ``queue_ptr`` installed handled
-                                                         same as ``llvm.trap``.
-     debugger breakpoint ``s_trap 0x07``                 Reserved for  debugger
+     ``llvm.debugtrap``  ``s_trap 0x03``                 - If debugger not
+                                                           installed then
+                                                           behaves as a
+                                                           no-operation. The
+                                                           trap handler is
+                                                           entered and
+                                                           immediately returns
+                                                           to continue
+                                                           execution of the
+                                                           wavefront.
+                                                         - If the debugger is
+                                                           installed, causes
+                                                           the debug trap to be
+                                                           reported by the
+                                                           debugger and the
+                                                           wavefront is put in
+                                                           the halt state until
+                                                           resumed by the
+                                                           debugger.
+     reserved            ``s_trap 0x04``                 Reserved.
+     reserved            ``s_trap 0x05``                 Reserved.
+     reserved            ``s_trap 0x06``                 Reserved.
+     debugger breakpoint ``s_trap 0x07``                 Reserved for debugger
                                                          breakpoints.
-     debugger            ``s_trap 0x08``                 Reserved for debugger.
-     debugger            ``s_trap 0xfe``                 Reserved for debugger.
-     debugger            ``s_trap 0xff``                 Reserved for debugger.
+     reserved            ``s_trap 0x08``                 Reserved.
+     reserved            ``s_trap 0xfe``                 Reserved.
+     reserved            ``s_trap 0xff``                 Reserved.
      =================== =============== =============== =======================
 
 AMDPAL

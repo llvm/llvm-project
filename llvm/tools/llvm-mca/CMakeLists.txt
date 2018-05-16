@@ -23,6 +23,7 @@ add_llvm_tool(llvm-mca
   InstructionTables.cpp
   LSUnit.cpp
   llvm-mca.cpp
+  RegisterFile.cpp
   RegisterFileStatistics.cpp
   ResourcePressureView.cpp
   RetireControlUnit.cpp

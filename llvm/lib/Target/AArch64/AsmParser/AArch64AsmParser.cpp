@@ -872,20 +872,36 @@ public:
   }
 
   template <int ElementWidth, unsigned Class>
-  bool isSVEVectorRegOfWidth() const {
-    return isSVEVectorReg<Class>() &&
-           (ElementWidth == 0 || Reg.ElementWidth == ElementWidth);
+  DiagnosticPredicate isSVEPredicateVectorRegOfWidth() const {
+    if (Kind != k_Register || Reg.Kind != RegKind::SVEPredicateVector)
+      return DiagnosticPredicateTy::NoMatch;
+
+    if (isSVEVectorReg<Class>() &&
+           (ElementWidth == 0 || Reg.ElementWidth == ElementWidth))
+      return DiagnosticPredicateTy::Match;
+
+    return DiagnosticPredicateTy::NearMatch;
+  }
+
+  template <int ElementWidth, unsigned Class>
+  DiagnosticPredicate isSVEDataVectorRegOfWidth() const {
+    if (Kind != k_Register || Reg.Kind != RegKind::SVEDataVector)
+      return DiagnosticPredicateTy::NoMatch;
+
+    if (isSVEVectorReg<Class>() &&
+           (ElementWidth == 0 || Reg.ElementWidth == ElementWidth))
+      return DiagnosticPredicateTy::Match;
+
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   template <int ElementWidth, unsigned Class,
             AArch64_AM::ShiftExtendType ShiftExtendTy, int ShiftWidth,
             bool ShiftWidthAlwaysSame>
-  DiagnosticPredicate isSVEVectorRegWithShiftExtend() const {
-    if (Kind != k_Register || Reg.Kind != RegKind::SVEDataVector)
+  DiagnosticPredicate isSVEDataVectorRegWithShiftExtend() const {
+    auto VectorMatch = isSVEDataVectorRegOfWidth<ElementWidth, Class>();
+    if (!VectorMatch.isMatch())
       return DiagnosticPredicateTy::NoMatch;
-
-    if (!isSVEVectorRegOfWidth<ElementWidth, Class>())
-      return DiagnosticPredicateTy::NearMatch;
 
     // Give a more specific diagnostic when the user has explicitly typed in
     // a shift-amount that does not match what is expected, but for which
@@ -3817,6 +3833,14 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d, lsl #2'");
   case Match_InvalidZPR64LSL64:
     return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].d, lsl #3'");
+  case Match_InvalidZPR0:
+    return Error(Loc, "expected register without element width sufix");
+  case Match_InvalidZPR8:
+  case Match_InvalidZPR16:
+  case Match_InvalidZPR32:
+  case Match_InvalidZPR64:
+  case Match_InvalidZPR128:
+    return Error(Loc, "invalid element width");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPredicateAnyReg:
@@ -4299,6 +4323,12 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPR64LSL16:
   case Match_InvalidZPR64LSL32:
   case Match_InvalidZPR64LSL64:
+  case Match_InvalidZPR0:
+  case Match_InvalidZPR8:
+  case Match_InvalidZPR16:
+  case Match_InvalidZPR32:
+  case Match_InvalidZPR64:
+  case Match_InvalidZPR128:
   case Match_InvalidSVEPredicateAnyReg:
   case Match_InvalidSVEPattern:
   case Match_InvalidSVEPredicateBReg:
