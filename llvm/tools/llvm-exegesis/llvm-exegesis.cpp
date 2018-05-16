@@ -70,6 +70,10 @@ static llvm::cl::opt<float>
                     llvm::cl::desc("dbscan epsilon for analysis clustering"),
                     llvm::cl::init(0.1));
 
+static llvm::cl::opt<std::string> AnalysisClustersFile("analysis-clusters-file",
+                                                       llvm::cl::desc(""),
+                                                       llvm::cl::init("-"));
+
 namespace exegesis {
 
 void benchmarkMain() {
@@ -135,7 +139,6 @@ void analysisMain() {
   // FIXME: Check that all points have the same triple/cpu.
   // FIXME: Merge points from several runs (latency and uops).
 
-  //llvm::InitializeAllTargets();
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
 
@@ -146,12 +149,18 @@ void analysisMain() {
     llvm::errs() << "unknown target '" << Points[0].LLVMTriple << "'\n";
     return;
   }
-  std::unique_ptr<llvm::MCSubtargetInfo> STI(TheTarget->createMCSubtargetInfo(
-      Points[0].LLVMTriple, Points[0].CpuName, ""));
-
   const auto Clustering = llvm::cantFail(InstructionBenchmarkClustering::create(
       Points, AnalysisNumPoints, AnalysisEpsilon));
-  if (auto Err = printAnalysisClusters(Clustering, *STI, llvm::outs()))
+
+  const Analysis Analyzer(*TheTarget, Clustering);
+
+  std::error_code ErrorCode;
+  llvm::raw_fd_ostream ClustersOS(AnalysisClustersFile, ErrorCode,
+                                  llvm::sys::fs::F_RW);
+  if (ErrorCode)
+    llvm::report_fatal_error("cannot open out file: " + AnalysisClustersFile);
+
+  if (auto Err = Analyzer.printClusters(ClustersOS))
     llvm::report_fatal_error(std::move(Err));
 }
 

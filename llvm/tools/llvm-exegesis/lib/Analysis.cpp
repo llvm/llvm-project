@@ -34,13 +34,27 @@ static void writeCsvEscaped(llvm::raw_ostream &OS, const std::string &S) {
 
 // Prints a row representing an instruction, along with scheduling info and
 // point coordinates (measurements).
-static void printInstructionRow(const InstructionBenchmark &Point,
-                                const llvm::MCSubtargetInfo &STI,
-                                const size_t ClusterId, llvm::raw_ostream &OS) {
+void Analysis::printInstructionRow(const size_t ClusterId, const size_t PointId,
+                                   llvm::raw_ostream &OS) const {
+  const InstructionBenchmark &Point = Clustering_.getPoints()[PointId];
+
   OS << ClusterId << kCsvSep;
   writeCsvEscaped(OS, Point.Key.OpcodeName);
   OS << kCsvSep;
   writeCsvEscaped(OS, Point.Key.Config);
+  OS << kCsvSep;
+  const auto OpcodeIt = MnemonicToOpcode_.find(Point.Key.OpcodeName);
+  if (OpcodeIt != MnemonicToOpcode_.end()) {
+    const auto &SchedModel = SubtargetInfo_->getSchedModel();
+    const unsigned SchedClassId = InstrInfo_->get(OpcodeIt->second).getSchedClass();
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    const llvm::MCSchedClassDesc *const SCDesc =
+       SchedModel.getSchedClassDesc(SchedClassId);
+    writeCsvEscaped(OS, SCDesc->Name);
+#else
+    OS << SchedClassId;
+#endif
+  }
   // FIXME: Print the sched class once InstructionBenchmark separates key into
   // (mnemonic, mode, opaque).
   for (const auto &Measurement : Point.Measurements) {
@@ -50,36 +64,41 @@ static void printInstructionRow(const InstructionBenchmark &Point,
   OS << "\n";
 }
 
-static void printCluster(const std::vector<InstructionBenchmark> &Points,
-                         const llvm::MCSubtargetInfo &STI,
-                         const size_t ClusterId,
-                         const InstructionBenchmarkClustering::Cluster &Cluster,
-                         llvm::raw_ostream &OS) {
-  // Print all points.
-  for (const auto &PointId : Cluster.PointIndices) {
-    printInstructionRow(Points[PointId], STI, ClusterId, OS);
-  }
+Analysis::Analysis(const llvm::Target &Target,
+                   const InstructionBenchmarkClustering &Clustering)
+    : Clustering_(Clustering) {
+  if (Clustering.getPoints().empty())
+    return;
+
+  InstrInfo_.reset(Target.createMCInstrInfo());
+  const InstructionBenchmark &FirstPoint = Clustering.getPoints().front();
+  SubtargetInfo_.reset(Target.createMCSubtargetInfo(
+      FirstPoint.LLVMTriple, FirstPoint.CpuName, ""));
+
+  // Build an index of mnemonic->opcode.
+  for (int I = 0, E = InstrInfo_->getNumOpcodes(); I < E; ++I)
+    MnemonicToOpcode_.emplace(InstrInfo_->getName(I), I);
 }
 
-llvm::Error
-printAnalysisClusters(const InstructionBenchmarkClustering &Clustering,
-                      const llvm::MCSubtargetInfo &STI, llvm::raw_ostream &OS) {
-  if (Clustering.getPoints().empty())
+llvm::Error Analysis::printClusters(llvm::raw_ostream &OS) const {
+  if (Clustering_.getPoints().empty())
     return llvm::Error::success();
 
   // Write the header.
   OS << "cluster_id" << kCsvSep << "opcode_name" << kCsvSep << "config"
      << kCsvSep << "sched_class";
-  for (const auto &Measurement : Clustering.getPoints().front().Measurements) {
+  for (const auto &Measurement : Clustering_.getPoints().front().Measurements) {
     OS << kCsvSep;
     writeCsvEscaped(OS, Measurement.Key);
   }
   OS << "\n";
 
   // Write the points.
-  for (size_t I = 0, E = Clustering.getValidClusters().size(); I < E; ++I) {
-    printCluster(Clustering.getPoints(), STI, I,
-                 Clustering.getValidClusters()[I], OS);
+  const auto& Clusters = Clustering_.getValidClusters();
+  for (size_t I = 0, E = Clusters.size(); I < E; ++I) {
+    for (const size_t PointId : Clusters[I].PointIndices) {
+      printInstructionRow(I, PointId, OS);
+    }
     OS << "\n\n";
   }
   return llvm::Error::success();

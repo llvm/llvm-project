@@ -276,6 +276,11 @@ void AArch64AsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
     printOffset(MO.getOffset(), O);
     break;
   }
+  case MachineOperand::MO_BlockAddress: {
+    MCSymbol *Sym = GetBlockAddressSymbol(MO.getBlockAddress());
+    Sym->print(O, MAI);
+    break;
+  }
   }
 }
 

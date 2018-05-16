@@ -1592,6 +1592,7 @@ bool ObjCARCOpt::PairUpRetainsAndReleases(
       assert(It != Retains.end());
       const RRInfo &NewRetainRRI = It->second;
       KnownSafeTD &= NewRetainRRI.KnownSafe;
+      CFGHazardAfflicted |= NewRetainRRI.CFGHazardAfflicted;
       for (Instruction *NewRetainRelease : NewRetainRRI.Calls) {
         auto Jt = Releases.find(NewRetainRelease);
         if (Jt == Releases.end())
