@@ -3,6 +3,9 @@
 // RUN: llvm-mc -filetype=obj -triple powerpc64le-linux-gnu -large-code-model %s \
 // RUN:   -o - | llvm-readobj -s -sd | FileCheck --check-prefix=CHECK-PPC %s
 
+// REQUIRES: x86-registered-target
+// REQUIRES: powerpc-registered-target
+
 // CHECK-X86:      Section {
 // CHECK-X86:        Index:
 // CHECK-X86:        Name: .eh_frame
