@@ -2,10 +2,6 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules  -fdisable-module-hash -fsyntax-only -F %S/Inputs/Frameworks %s
 // RUN: %clang_cc1 -ast-print %t/ModulesCache/SimpleKit.pcm | FileCheck %s
 
-// REQUIRES: rdar40296113
-// This test relies on -ast-print including implicit attributes, but it no
-// longer does that as of https://reviews.llvm.org/D46894.
-
 #import <SimpleKit/SimpleKit.h>
 
 // CHECK: void *getCFOwnedToUnowned() __attribute__((cf_returns_not_retained));

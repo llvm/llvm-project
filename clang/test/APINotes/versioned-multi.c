@@ -14,10 +14,6 @@
 // RUN: %clang_cc1 -fmodules -fblocks -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/Versioned5 -fdisable-module-hash -fapinotes-modules -fapinotes-swift-version=5 -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s
 // RUN: %clang_cc1 -ast-print %t/ModulesCache/Versioned5/VersionedKit.pcm | FileCheck -check-prefix=CHECK-VERSIONED-5 %s
 
-// REQUIRES: rdar40296113
-// This test relies on -ast-print including implicit attributes, but it no
-// longer does that as of https://reviews.llvm.org/D46894.
-
 #import <VersionedKit/VersionedKit.h>
 
 // CHECK-UNVERSIONED: typedef int MultiVersionedTypedef4;
