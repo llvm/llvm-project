@@ -100,7 +100,8 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   // The rest of this check is only relevant to C++.
-  if (!getLangOpts().CPlusPlus)
+  // We also disable it for Objective-C++.
+  if (!getLangOpts().CPlusPlus || getLangOpts().ObjC1 || getLangOpts().ObjC2)
     return;
   // Ignore code inside extern "C" {} blocks.
   if (!match(expr(hasAncestor(linkageSpecDecl())), *CastExpr, *Result.Context)
