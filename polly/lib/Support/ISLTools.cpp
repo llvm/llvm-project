@@ -47,6 +47,10 @@ isl::multi_aff makeShiftDimAff(isl::space Space, int Pos, int Amount) {
 /// @return { [Space1[] -> Space2[]] -> [Space2[] -> Space1[]] }
 isl::basic_map makeTupleSwapBasicMap(isl::space FromSpace1,
                                      isl::space FromSpace2) {
+  // Fast-path on out-of-quota.
+  if (!FromSpace1 || !FromSpace2)
+    return {};
+
   assert(FromSpace1.is_set());
   assert(FromSpace2.is_set());
 
