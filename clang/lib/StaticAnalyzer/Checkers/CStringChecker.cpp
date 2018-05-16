@@ -158,6 +158,10 @@ public:
   static bool SummarizeRegion(raw_ostream &os, ASTContext &Ctx,
                               const MemRegion *MR);
 
+  static bool memsetAux(const Expr *DstBuffer, const Expr *CharE,
+                        const Expr *Size, CheckerContext &C,
+                        ProgramStateRef &State);
+
   // Re-usable checks
   ProgramStateRef checkNonNull(CheckerContext &C,
                                    ProgramStateRef state,
@@ -997,6 +1001,95 @@ bool CStringChecker::SummarizeRegion(raw_ostream &os, ASTContext &Ctx,
   default:
     return false;
   }
+}
+
+bool CStringChecker::memsetAux(const Expr *DstBuffer, const Expr *CharE,
+                               const Expr *Size, CheckerContext &C,
+                               ProgramStateRef &State) {
+  SVal MemVal = C.getSVal(DstBuffer);
+  SVal CharVal = C.getSVal(CharE);
+  SVal SizeVal = C.getSVal(Size);
+  const MemRegion *MR = MemVal.getAsRegion();
+  if (!MR)
+    return false;
+
+  // We're about to model memset by producing a "default binding" in the Store.
+  // Our current implementation - RegionStore - doesn't support default bindings
+  // that don't cover the whole base region. So we should first get the offset
+  // and the base region to figure out whether the offset of buffer is 0.
+  RegionOffset Offset = MR->getAsOffset();
+  const MemRegion *BR = Offset.getRegion();
+
+  Optional<NonLoc> SizeNL = SizeVal.getAs<NonLoc>();
+  if (!SizeNL)
+    return false;
+
+  SValBuilder &svalBuilder = C.getSValBuilder();
+  ASTContext &Ctx = C.getASTContext();
+
+  // void *memset(void *dest, int ch, size_t count);
+  // For now we can only handle the case of offset is 0 and concrete char value.
+  if (Offset.isValid() && !Offset.hasSymbolicOffset() &&
+      Offset.getOffset() == 0) {
+    // Get the base region's extent.
+    auto *SubReg = cast<SubRegion>(BR);
+    DefinedOrUnknownSVal Extent = SubReg->getExtent(svalBuilder);
+
+    ProgramStateRef StateWholeReg, StateNotWholeReg;
+    std::tie(StateWholeReg, StateNotWholeReg) =
+        State->assume(svalBuilder.evalEQ(State, Extent, *SizeNL));
+
+    // With the semantic of 'memset()', we should convert the CharVal to 
+    // unsigned char.
+    CharVal = svalBuilder.evalCast(CharVal, Ctx.UnsignedCharTy, Ctx.IntTy);
+
+    ProgramStateRef StateNullChar, StateNonNullChar;
+    std::tie(StateNullChar, StateNonNullChar) =
+        assumeZero(C, State, CharVal, Ctx.UnsignedCharTy);
+
+    if (StateWholeReg && !StateNotWholeReg && StateNullChar &&
+        !StateNonNullChar) {
+      // If the 'memset()' acts on the whole region of destination buffer and
+      // the value of the second argument of 'memset()' is zero, bind the second
+      // argument's value to the destination buffer with 'default binding'.
+      // FIXME: Since there is no perfect way to bind the non-zero character, we
+      // can only deal with zero value here. In the future, we need to deal with
+      // the binding of non-zero value in the case of whole region.
+      State = State->bindDefaultZero(svalBuilder.makeLoc(BR),
+                                     C.getLocationContext());
+    } else {
+      // If the destination buffer's extent is not equal to the value of
+      // third argument, just invalidate buffer.
+      State = InvalidateBuffer(C, State, DstBuffer, MemVal,
+                               /*IsSourceBuffer*/ false, Size);
+    }
+
+    if (StateNullChar && !StateNonNullChar) {
+      // If the value of the second argument of 'memset()' is zero, set the
+      // string length of destination buffer to 0 directly.
+      State = setCStringLength(State, MR,
+                               svalBuilder.makeZeroVal(Ctx.getSizeType()));
+    } else if (!StateNullChar && StateNonNullChar) {
+      SVal NewStrLen = svalBuilder.getMetadataSymbolVal(
+          CStringChecker::getTag(), MR, DstBuffer, Ctx.getSizeType(),
+          C.getLocationContext(), C.blockCount());
+
+      // If the value of second argument is not zero, then the string length
+      // is at least the size argument.
+      SVal NewStrLenGESize = svalBuilder.evalBinOp(
+          State, BO_GE, NewStrLen, SizeVal, svalBuilder.getConditionType());
+
+      State = setCStringLength(
+          State->assume(NewStrLenGESize.castAs<DefinedOrUnknownSVal>(), true),
+          MR, NewStrLen);
+    }
+  } else {
+    // If the offset is not zero and char value is not concrete, we can do
+    // nothing but invalidate the buffer.
+    State = InvalidateBuffer(C, State, DstBuffer, MemVal,
+                             /*IsSourceBuffer*/ false, Size);
+  }
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2048,6 +2141,7 @@ void CStringChecker::evalMemset(CheckerContext &C, const CallExpr *CE) const {
   CurrentFunctionDescription = "memory set function";
 
   const Expr *Mem = CE->getArg(0);
+  const Expr *CharE = CE->getArg(1);
   const Expr *Size = CE->getArg(2);
   ProgramStateRef State = C.getState();
 
@@ -2080,9 +2174,11 @@ void CStringChecker::evalMemset(CheckerContext &C, const CallExpr *CE) const {
   State = CheckBufferAccess(C, State, Size, Mem);
   if (!State)
     return;
-  State = InvalidateBuffer(C, State, Mem, C.getSVal(Mem),
-      /*IsSourceBuffer*/false, Size);
-  if (!State)
+
+  // According to the values of the arguments, bind the value of the second
+  // argument to the destination buffer and set string length, or just
+  // invalidate the destination buffer.
+  if (!memsetAux(Mem, CharE, Size, C, State))
     return;
 
   State = State->BindExpr(CE, LCtx, MemVal);

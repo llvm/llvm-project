@@ -343,13 +343,23 @@ def : WriteRes<WriteVecExtractSt, [BWPort4,BWPort5,BWPort237]> {
 }
 
 // Conversion between integer and float.
-defm : BWWriteResPair<WriteCvtF2I,    [BWPort1], 3>; // Float -> Integer.
-defm : BWWriteResPair<WriteCvtI2F,    [BWPort1], 4>; // Integer -> Float.
+defm : BWWriteResPair<WriteCvtSS2I,   [BWPort1], 3>;
+defm : BWWriteResPair<WriteCvtPS2I,   [BWPort1], 3>;
+defm : BWWriteResPair<WriteCvtPS2IY,  [BWPort1], 3>;
+defm : BWWriteResPair<WriteCvtSD2I,   [BWPort1], 3>;
+defm : BWWriteResPair<WriteCvtPD2I,   [BWPort1], 3>;
+defm : BWWriteResPair<WriteCvtPD2IY,  [BWPort1], 3>;
+
+defm : BWWriteResPair<WriteCvtI2SS,   [BWPort1], 4>;
+defm : BWWriteResPair<WriteCvtI2PS,   [BWPort1], 4>;
+defm : BWWriteResPair<WriteCvtI2PSY,  [BWPort1], 4>;
+defm : BWWriteResPair<WriteCvtI2SD,   [BWPort1], 4>;
+defm : BWWriteResPair<WriteCvtI2PD,   [BWPort1], 4>;
+defm : BWWriteResPair<WriteCvtI2PDY,  [BWPort1], 4>;
 
 defm : BWWriteResPair<WriteCvtSS2SD,  [BWPort1], 3>;
 defm : BWWriteResPair<WriteCvtPS2PD,  [BWPort1], 3>;
 defm : BWWriteResPair<WriteCvtPS2PDY, [BWPort1], 3>;
-
 defm : BWWriteResPair<WriteCvtSD2SS,  [BWPort1], 3>;
 defm : BWWriteResPair<WriteCvtPD2PS,  [BWPort1], 3>;
 defm : BWWriteResPair<WriteCvtPD2PSY, [BWPort1], 3>;

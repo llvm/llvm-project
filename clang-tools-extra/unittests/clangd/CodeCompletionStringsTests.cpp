@@ -51,14 +51,15 @@ TEST_F(CompletionStringTest, FilterText) {
 }
 
 TEST_F(CompletionStringTest, Documentation) {
-  Builder.addBriefComment("Is this brief?");
-  EXPECT_EQ(getDocumentation(*Builder.TakeString()), "Is this brief?");
+  Builder.addBriefComment("This is ignored");
+  EXPECT_EQ(formatDocumentation(*Builder.TakeString(), "Is this brief?"),
+            "Is this brief?");
 }
 
 TEST_F(CompletionStringTest, DocumentationWithAnnotation) {
-  Builder.addBriefComment("Is this brief?");
+  Builder.addBriefComment("This is ignored");
   Builder.AddAnnotation("Ano");
-  EXPECT_EQ(getDocumentation(*Builder.TakeString()),
+  EXPECT_EQ(formatDocumentation(*Builder.TakeString(), "Is this brief?"),
             "Annotation: Ano\n\nIs this brief?");
 }
 
@@ -67,7 +68,7 @@ TEST_F(CompletionStringTest, MultipleAnnotations) {
   Builder.AddAnnotation("Ano2");
   Builder.AddAnnotation("Ano3");
 
-  EXPECT_EQ(getDocumentation(*Builder.TakeString()),
+  EXPECT_EQ(formatDocumentation(*Builder.TakeString(), ""),
             "Annotations: Ano1 Ano2 Ano3\n");
 }
 
@@ -97,7 +98,7 @@ TEST_F(CompletionStringTest, FunctionPlainText) {
 
 TEST_F(CompletionStringTest, FunctionSnippet) {
   Builder.AddResultTypeChunk("result no no");
-  Builder.addBriefComment("Foo's comment");
+  Builder.addBriefComment("This comment is ignored");
   Builder.AddTypedTextChunk("Foo");
   Builder.AddChunk(CodeCompletionString::CK_LeftParen);
   Builder.AddPlaceholderChunk("p1");
@@ -113,7 +114,7 @@ TEST_F(CompletionStringTest, FunctionSnippet) {
   labelAndInsertText(*CCS, /*EnableSnippets=*/true);
   EXPECT_EQ(Label, "Foo(p1, p2)");
   EXPECT_EQ(InsertText, "Foo(${1:p1}, ${2:p2})");
-  EXPECT_EQ(getDocumentation(*CCS), "Foo's comment");
+  EXPECT_EQ(formatDocumentation(*CCS, "Foo's comment"), "Foo's comment");
   EXPECT_EQ(getFilterText(*CCS), "Foo");
 }
 

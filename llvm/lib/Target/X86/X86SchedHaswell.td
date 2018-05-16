@@ -249,13 +249,23 @@ defm : HWWriteResPair<WriteFVarBlend,  [HWPort5], 2, [2], 2, 6>;
 defm : HWWriteResPair<WriteFVarBlendY, [HWPort5], 2, [2], 2, 7>;
 
 // Conversion between integer and float.
-defm : HWWriteResPair<WriteCvtF2I, [HWPort1], 3>;
-defm : HWWriteResPair<WriteCvtI2F, [HWPort1], 4>;
+defm : HWWriteResPair<WriteCvtSD2I,   [HWPort1], 3>;
+defm : HWWriteResPair<WriteCvtPD2I,   [HWPort1], 3>;
+defm : HWWriteResPair<WriteCvtPD2IY,  [HWPort1], 3>;
+defm : HWWriteResPair<WriteCvtSS2I,   [HWPort1], 3>;
+defm : HWWriteResPair<WriteCvtPS2I,   [HWPort1], 3>;
+defm : HWWriteResPair<WriteCvtPS2IY,  [HWPort1], 3>;
+
+defm : HWWriteResPair<WriteCvtI2SD,   [HWPort1], 4>;
+defm : HWWriteResPair<WriteCvtI2PD,   [HWPort1], 4>;
+defm : HWWriteResPair<WriteCvtI2PDY,  [HWPort1], 4>;
+defm : HWWriteResPair<WriteCvtI2SS,   [HWPort1], 4>;
+defm : HWWriteResPair<WriteCvtI2PS,   [HWPort1], 4>;
+defm : HWWriteResPair<WriteCvtI2PSY,  [HWPort1], 4>;
 
 defm : HWWriteResPair<WriteCvtSS2SD,  [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPS2PD,  [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPS2PDY, [HWPort1], 3>;
-
 defm : HWWriteResPair<WriteCvtSD2SS,  [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPD2PS,  [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPD2PSY, [HWPort1], 3>;

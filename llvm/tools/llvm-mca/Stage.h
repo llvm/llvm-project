@@ -16,13 +16,12 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_STAGE_H
 #define LLVM_TOOLS_LLVM_MCA_STAGE_H
 
-#include "HWEventListener.h"
-#include "Instruction.h"
-#include "SourceMgr.h"
-#include <memory>
-#include <string>
+#include <set>
 
 namespace mca {
+
+class HWEventListener;
+class InstRef;
 
 class Stage {
   std::set<HWEventListener *> Listeners;
@@ -36,7 +35,7 @@ public:
   /// Called prior to preExecute to ensure that the stage can operate.
   /// TODO: Remove this logic once backend::run and backend::runCycle become
   /// one routine.
-  virtual bool isReady() { return true; }
+  virtual bool isReady() const { return true; }
 
   /// Called as a setup phase to prepare for the main stage execution.
   virtual void preExecute(const InstRef &IR) {}

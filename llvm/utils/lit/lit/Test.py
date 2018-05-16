@@ -381,7 +381,9 @@ class Test:
                 encoded_output = self.result.output.encode("utf-8", 'ignore')
             else:
                 encoded_output = self.result.output
-            fil.write(encoded_output)
+            # In the unlikely case that the output contains the CDATA terminator
+            # we wrap it by creating a new CDATA block
+            fil.write(encoded_output.replace("]]>", "]]]]><![CDATA[>"))
             fil.write("]]></failure>\n</testcase>")
         elif self.result.code == UNSUPPORTED:
             unsupported_features = self.getMissingRequiredFeatures()

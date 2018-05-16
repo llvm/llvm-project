@@ -22,7 +22,7 @@ namespace mca {
 Stage::Stage() {}
 
 void Stage::addListener(HWEventListener *Listener) {
-  llvm::llvm_unreachable_internal("Stage-based eventing is not implemented.");
+  llvm_unreachable("Stage-based eventing is not implemented.");
 }
 
 } // namespace mca

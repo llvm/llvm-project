@@ -336,13 +336,23 @@ def : WriteRes<WriteVecExtractSt, [SKLPort4,SKLPort5,SKLPort237]> {
 }
 
 // Conversion between integer and float.
-defm : SKLWriteResPair<WriteCvtF2I, [SKLPort1], 3>; // Float -> Integer.
-defm : SKLWriteResPair<WriteCvtI2F, [SKLPort1], 4>; // Integer -> Float.
+defm : SKLWriteResPair<WriteCvtSS2I,   [SKLPort1], 3>;
+defm : SKLWriteResPair<WriteCvtPS2I,   [SKLPort1], 3>;
+defm : SKLWriteResPair<WriteCvtPS2IY,  [SKLPort1], 3>;
+defm : SKLWriteResPair<WriteCvtSD2I,   [SKLPort1], 3>;
+defm : SKLWriteResPair<WriteCvtPD2I,   [SKLPort1], 3>;
+defm : SKLWriteResPair<WriteCvtPD2IY,  [SKLPort1], 3>;
+
+defm : SKLWriteResPair<WriteCvtI2SS,   [SKLPort1], 4>;
+defm : SKLWriteResPair<WriteCvtI2PS,   [SKLPort1], 4>;
+defm : SKLWriteResPair<WriteCvtI2PSY,  [SKLPort1], 4>;
+defm : SKLWriteResPair<WriteCvtI2SD,   [SKLPort1], 4>;
+defm : SKLWriteResPair<WriteCvtI2PD,   [SKLPort1], 4>;
+defm : SKLWriteResPair<WriteCvtI2PDY,  [SKLPort1], 4>;
 
 defm : SKLWriteResPair<WriteCvtSS2SD,  [SKLPort1], 3>;
 defm : SKLWriteResPair<WriteCvtPS2PD,  [SKLPort1], 3>;
 defm : SKLWriteResPair<WriteCvtPS2PDY, [SKLPort1], 3>;
-
 defm : SKLWriteResPair<WriteCvtSD2SS,  [SKLPort1], 3>;
 defm : SKLWriteResPair<WriteCvtPD2PS,  [SKLPort1], 3>;
 defm : SKLWriteResPair<WriteCvtPD2PSY, [SKLPort1], 3>;

@@ -22,7 +22,7 @@ void f14(int *a) {
 void foo() {
   int *x = malloc(sizeof(int));
   memset(x, 0, sizeof(int));
-  int n = 1 / *x; // FIXME: no-warning
+  int n = 1 / *x; // expected-warning {{Division by zero}}
   free(x);
 }
 

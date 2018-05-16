@@ -1159,6 +1159,28 @@ multiclass sve_mem_eld_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
                   (!cast<Instruction>(NAME) VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
 }
 
+class sve_mem_eld_ss<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
+                     string asm, RegisterOperand gprty>
+: I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
+  asm, "\t$Zt, $Pg/z, [$Rn, $Rm]",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Rm;
+  bits<5> Rn;
+  bits<5> Zt;
+  let Inst{31-25} = 0b1010010;
+  let Inst{24-23} = sz;
+  let Inst{22-21} = nregs;
+  let Inst{20-16} = Rm;
+  let Inst{15-13} = 0b110;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayLoad = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Memory - 32-bit Gather and Unsized Contiguous Group
 //===----------------------------------------------------------------------===//
@@ -1249,6 +1271,58 @@ multiclass sve_mem_32b_gld_vi_32_ptrs<bits<4> opc, string asm, Operand imm_ty> {
                   (!cast<Instruction>(NAME # _IMM_REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, imm_ty:$imm5), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
                   (!cast<Instruction>(NAME # _IMM_REAL) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, 0), 1>;
+}
+
+class sve_mem_prfm_si<bits<2> msz, string asm>
+: I<(outs), (ins sve_prfop:$prfop, PPR3bAny:$Pg, GPR64sp:$Rn, simm6s1:$imm6),
+  asm, "\t$prfop, $Pg, [$Rn, $imm6, mul vl]",
+  "",
+  []>, Sched<[]> {
+  bits<5> Rn;
+  bits<3> Pg;
+  bits<6> imm6;
+  bits<4> prfop;
+  let Inst{31-22} = 0b1000010111;
+  let Inst{21-16} = imm6;
+  let Inst{15}    = 0b0;
+  let Inst{14-13} = msz;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4}     = 0b0;
+  let Inst{3-0}   = prfop;
+
+  let hasSideEffects = 1;
+}
+
+multiclass sve_mem_prfm_si<bits<2> msz, string asm> {
+  def NAME : sve_mem_prfm_si<msz, asm>;
+
+  def : InstAlias<asm # "\t$prfop, $Pg, [$Rn]",
+                  (!cast<Instruction>(NAME) sve_prfop:$prfop, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
+}
+
+class sve_mem_prfm_ss<bits<3> opc, string asm, RegisterOperand gprty>
+: I<(outs), (ins sve_prfop:$prfop, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
+  asm, "\t$prfop, $Pg, [$Rn, $Rm]",
+  "",
+  []>, Sched<[]> {
+  bits<5> Rm;
+  bits<5> Rn;
+  bits<3> Pg;
+  bits<4> prfop;
+  let Inst{31-25} = 0b1000010;
+  let Inst{24-23} = opc{2-1};
+  let Inst{22-21} = 0b00;
+  let Inst{20-16} = Rm;
+  let Inst{15}    = 0b1;
+  let Inst{14}    = opc{0};
+  let Inst{13}    = 0b0;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4}     = 0b0;
+  let Inst{3-0}   = prfop;
+
+  let hasSideEffects = 1;
 }
 
 class sve_mem_z_fill<string asm>
