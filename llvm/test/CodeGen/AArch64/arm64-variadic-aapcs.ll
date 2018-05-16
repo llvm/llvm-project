@@ -130,12 +130,9 @@ define void @test_va_copy() {
 
 ; CHECK: add x[[SRC:[0-9]+]], {{x[0-9]+}}, :lo12:var
 
-; CHECK: ldr [[BLOCK:q[0-9]+]], [x[[SRC]]]
+; CHECK: ldp [[BLOCK:q[0-9]+]], [[BLOCK:q[0-9]+]], [x[[SRC]]]
 ; CHECK: add x[[DST:[0-9]+]], {{x[0-9]+}}, :lo12:second_list
-; CHECK: str [[BLOCK]], [x[[DST]]]
-
-; CHECK: ldr [[BLOCK:q[0-9]+]], [x[[SRC]], #16]
-; CHECK: str [[BLOCK]], [x[[DST]], #16]
+; CHECK: stp [[BLOCK:q[0-9]+]], [[BLOCK:q[0-9]+]], [x[[DST]]]
   ret void
 ; CHECK: ret
 }

@@ -174,6 +174,9 @@ public:
   /// Return the flags for this symbol.
   JITSymbolFlags getFlags() const { return Flags; }
 
+  /// Set the flags for this symbol.
+  void setFlags(JITSymbolFlags Flags) { this->Flags = std::move(Flags); }
+
 private:
   JITTargetAddress Address = 0;
   JITSymbolFlags Flags;

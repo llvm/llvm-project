@@ -1325,6 +1325,64 @@ class sve_mem_prfm_ss<bits<3> opc, string asm, RegisterOperand gprty>
   let hasSideEffects = 1;
 }
 
+class sve_mem_32b_prfm_sv<bits<2> msz, bit xs, string asm,
+                          RegisterOperand zprext>
+: I<(outs), (ins sve_prfop:$prfop, PPR3bAny:$Pg, GPR64sp:$Rn, zprext:$Zm),
+  asm, "\t$prfop, $Pg, [$Rn, $Zm]",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Rn;
+  bits<5> Zm;
+  bits<4> prfop;
+  let Inst{31-23} = 0b100001000;
+  let Inst{22}    = xs;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = 0b0;
+  let Inst{14-13} = msz;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4}     = 0b0;
+  let Inst{3-0}   = prfop;
+
+  let hasSideEffects = 1;
+}
+
+multiclass sve_mem_32b_prfm_sv_scaled<bits<2> msz, string asm,
+                                      RegisterOperand sxtw_opnd,
+                                      RegisterOperand uxtw_opnd> {
+  def _UXTW_SCALED : sve_mem_32b_prfm_sv<msz, 0, asm, uxtw_opnd>;
+  def _SXTW_SCALED : sve_mem_32b_prfm_sv<msz, 1, asm, sxtw_opnd>;
+}
+
+class sve_mem_32b_prfm_vi<bits<2> msz, string asm, Operand imm_ty>
+: I<(outs), (ins sve_prfop:$prfop, PPR3bAny:$Pg, ZPR32:$Zn, imm_ty:$imm5),
+  asm, "\t$prfop, $Pg, [$Zn, $imm5]",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zn;
+  bits<5> imm5;
+  bits<4> prfop;
+  let Inst{31-25} = 0b1000010;
+  let Inst{24-23} = msz;
+  let Inst{22-21} = 0b00;
+  let Inst{20-16} = imm5;
+  let Inst{15-13} = 0b111;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4}     = 0b0;
+  let Inst{3-0}   = prfop;
+}
+
+multiclass sve_mem_32b_prfm_vi<bits<2> msz, string asm, Operand imm_ty> {
+  def NAME : sve_mem_32b_prfm_vi<msz, asm, imm_ty>;
+
+  def : InstAlias<asm # "\t$prfop, $Pg, [$Zn]",
+                  (!cast<Instruction>(NAME) sve_prfop:$prfop, PPR3bAny:$Pg, ZPR32:$Zn, 0), 1>;
+}
+
 class sve_mem_z_fill<string asm>
 : I<(outs ZPRAny:$Zt), (ins GPR64sp:$Rn, simm9:$imm9),
   asm, "\t$Zt, [$Rn, $imm9, mul vl]",
@@ -1481,4 +1539,71 @@ multiclass sve_mem_64b_gld_vi_64_ptrs<bits<4> opc, string asm, Operand imm_ty> {
                  (!cast<Instruction>(NAME # _IMM_REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, imm_ty:$imm5), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
                   (!cast<Instruction>(NAME # _IMM_REAL) Z_d:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, 0), 1>;
+}
+
+// bit lsl is '0' if the offsets are extended (uxtw/sxtw), '1' if shifted (lsl)
+class sve_mem_64b_prfm_sv<bits<2> msz, bit xs, bit lsl, string asm,
+                          RegisterOperand zprext>
+: I<(outs), (ins sve_prfop:$prfop, PPR3bAny:$Pg, GPR64sp:$Rn, zprext:$Zm),
+  asm, "\t$prfop, $Pg, [$Rn, $Zm]",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Rn;
+  bits<5> Zm;
+  bits<4> prfop;
+  let Inst{31-23} = 0b110001000;
+  let Inst{22}    = xs;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = lsl;
+  let Inst{14-13} = msz;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4}     = 0b0;
+  let Inst{3-0}   = prfop;
+
+  let hasSideEffects = 1;
+}
+
+multiclass sve_mem_64b_prfm_sv_ext_scaled<bits<2> msz, string asm,
+                                          RegisterOperand sxtw_opnd,
+                                          RegisterOperand uxtw_opnd> {
+  def _UXTW_SCALED : sve_mem_64b_prfm_sv<msz, 0, 0, asm, uxtw_opnd>;
+  def _SXTW_SCALED : sve_mem_64b_prfm_sv<msz, 1, 0, asm, sxtw_opnd>;
+}
+
+multiclass sve_mem_64b_prfm_sv_lsl_scaled<bits<2> msz, string asm,
+                                          RegisterOperand zprext> {
+  def NAME : sve_mem_64b_prfm_sv<msz, 1, 1, asm, zprext>;
+}
+
+
+class sve_mem_64b_prfm_vi<bits<2> msz, string asm, Operand imm_ty>
+: I<(outs), (ins sve_prfop:$prfop, PPR3bAny:$Pg, ZPR64:$Zn, imm_ty:$imm5),
+  asm, "\t$prfop, $Pg, [$Zn, $imm5]",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zn;
+  bits<5> imm5;
+  bits<4> prfop;
+  let Inst{31-25} = 0b1100010;
+  let Inst{24-23} = msz;
+  let Inst{22-21} = 0b00;
+  let Inst{20-16} = imm5;
+  let Inst{15-13} = 0b111;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4}     = 0b0;
+  let Inst{3-0}   = prfop;
+
+  let hasSideEffects = 1;
+}
+
+multiclass sve_mem_64b_prfm_vi<bits<2> msz, string asm, Operand imm_ty> {
+  def NAME : sve_mem_64b_prfm_vi<msz, asm, imm_ty>;
+
+  def : InstAlias<asm # "\t$prfop, $Pg, [$Zn]",
+                  (!cast<Instruction>(NAME) sve_prfop:$prfop, PPR3bAny:$Pg, ZPR64:$Zn, 0), 1>;
 }

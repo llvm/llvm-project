@@ -5188,6 +5188,12 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     if (!MightNeedStackFixUp)
       return MachineOutlinerInstrType::Legal;
 
+    // Any modification of SP will break our code to save/restore LR.
+    // FIXME: We could handle some instructions which add a constant offset to
+    // SP, with a bit more work.
+    if (MI.modifiesRegister(AArch64::SP, &RI))
+      return MachineOutlinerInstrType::Illegal;
+
     // At this point, we have a stack instruction that we might need to fix
     // up. We'll handle it if it's a load or store.
     if (MI.mayLoadOrStore()) {
@@ -5216,6 +5222,8 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
       // It's in range, so we can outline it.
       return MachineOutlinerInstrType::Legal;
     }
+
+    // FIXME: Add handling for instructions like "add x0, sp, #8".
 
     // We can't fix it up, so don't outline it.
     return MachineOutlinerInstrType::Illegal;
@@ -5255,10 +5263,11 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 void AArch64InstrInfo::insertOutlinerEpilogue(
     MachineBasicBlock &MBB, MachineFunction &MF,
     const MachineOutlinerInfo &MInfo) const {
-
   // Is there a call in the outlined range?
-  if (std::any_of(MBB.instr_begin(), MBB.instr_end(),
-                  [](MachineInstr &MI) { return MI.isCall(); })) {
+  auto IsNonTailCall = [](MachineInstr &MI) {
+    return MI.isCall() && !MI.isReturn();
+  };
+  if (std::any_of(MBB.instr_begin(), MBB.instr_end(), IsNonTailCall)) {
     // Fix up the instructions in the range, since we're going to modify the
     // stack.
     fixupPostOutline(MBB);

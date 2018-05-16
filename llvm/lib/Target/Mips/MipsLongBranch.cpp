@@ -584,8 +584,7 @@ bool MipsLongBranch::runOnMachineFunction(MachineFunction &F) {
       if (!I->Br || I->HasLongBranch)
         continue;
 
-      int ShVal = STI.inMicroMipsMode() ? 2 : 4;
-      int64_t Offset = computeOffset(I->Br) / ShVal;
+      int64_t Offset = computeOffset(I->Br);
 
       if (STI.isTargetNaCl()) {
         // The offset calculation does not include sandboxing instructions
@@ -595,8 +594,9 @@ bool MipsLongBranch::runOnMachineFunction(MachineFunction &F) {
         Offset *= 2;
       }
 
-      // Check if offset fits into 16-bit immediate field of branches.
-      if (!ForceLongBranch && isInt<16>(Offset))
+      // Check if offset fits into the immediate field of the branch.
+      if (!ForceLongBranch &&
+          TII->isBranchOffsetInRange(I->Br->getOpcode(), Offset))
         continue;
 
       I->HasLongBranch = true;

@@ -580,6 +580,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::GlobalAddress);
 
   MaxStoresPerMemset = MaxStoresPerMemsetOptSize = 8;
+  MaxGluedStoresPerMemcpy = 4;
+
   MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = 4;
   MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = 4;
 

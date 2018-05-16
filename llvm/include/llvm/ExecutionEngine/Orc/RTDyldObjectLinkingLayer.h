@@ -124,7 +124,8 @@ private:
     Error finalize() override {
       assert(PFC && "mapSectionAddress called on finalized LinkedObject");
 
-      JITSymbolResolverAdapter ResolverAdapter(PFC->Parent.ES, *PFC->Resolver);
+      JITSymbolResolverAdapter ResolverAdapter(PFC->Parent.ES, *PFC->Resolver,
+                                               nullptr);
       PFC->RTDyld = llvm::make_unique<RuntimeDyld>(*MemMgr, ResolverAdapter);
       PFC->RTDyld->setProcessAllSections(PFC->ProcessAllSections);
 

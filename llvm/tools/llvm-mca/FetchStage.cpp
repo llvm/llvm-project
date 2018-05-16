@@ -14,9 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "FetchStage.h"
-#include "Instruction.h"
 
-using namespace mca;
+namespace mca {
 
 bool FetchStage::isReady() const { return SM.hasNext(); }
 
@@ -31,8 +30,14 @@ bool FetchStage::execute(InstRef &IR) {
 }
 
 void FetchStage::postExecute(const InstRef &IR) {
-  // Reclaim instructions that have been retired.
-  llvm::remove_if(Instructions,
-                  [](InstMapPr &Pr) { return Pr.getSecond()->isRetired(); });
+  // Find the first instruction which hasn't been retired.
+  const InstMap::iterator It =
+      llvm::find_if(Instructions, [](const InstMap::value_type &KeyValuePair) {
+        return !KeyValuePair.second->isRetired();
+      });
+  if (It != Instructions.begin())
+    Instructions.erase(Instructions.begin(), It);
   SM.updateNext();
 }
+
+} // namespace mca

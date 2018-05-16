@@ -91,12 +91,12 @@ st1w z0.s, p0, [x0, w0, uxtw]
 // Invalid scalar + vector addressing modes
 
 st1w z0.d, p0, [x0, z0.h]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: st1w z0.d, p0, [x0, z0.h]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1w z0.d, p0, [x0, z0.s]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid shift/extend specified, expected 'z[0..31].d, (uxtw|sxtw)'
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: st1w z0.d, p0, [x0, z0.s]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

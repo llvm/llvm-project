@@ -16,18 +16,10 @@ declare void @_Unwind_Resume(i8*)
 ; CHECK:     EH_LABEL
 
 ; CHECK:     [[PTR:%[0-9]+]]:_(p0) = COPY $x0
-; CHECK:     [[STRUCT_PTR:%[0-9]+]]:_(s64) = G_PTRTOINT [[PTR]](p0)
-
 ; CHECK:     [[SEL_PTR:%[0-9]+]]:_(p0) = COPY $x1
-; CHECK:     [[SEL:%[0-9]+]]:_(s32) = G_PTRTOINT [[SEL_PTR]]
-; CHECK:     [[STRUCT_SEL:%[0-9]+]]:_(s64) = G_INSERT {{%[0-9]+}}, [[SEL]](s32), 0
-
-; CHECK:     [[PTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[STRUCT_PTR]](s64)
-; CHECK:     G_STORE [[PTR]](p0), {{%[0-9]+}}(p0)
-
-; CHECK:     [[SEL_TMP:%[0-9]+]]:_(s32) = G_EXTRACT [[STRUCT_SEL]](s64), 0
-; CHECK:     [[SEL:%[0-9]+]]:_(s32) = COPY [[SEL_TMP]]
-; CHECK:     G_STORE [[SEL]](s32), {{%[0-9]+}}(p0)
+; CHECK:     [[SEL_PTR_INT:%[0-9]+]]:_(s32) = G_PTRTOINT [[SEL_PTR]](p0)
+; CHECK:     G_STORE [[PTR]](p0), %0(p0) :: (store 8 into %ir.exn.slot)
+; CHECK:     G_STORE [[SEL_PTR_INT]](s32), %1(p0) :: (store 4 into %ir.ehselector.slot)
 
 define void @bar() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   %exn.slot = alloca i8*

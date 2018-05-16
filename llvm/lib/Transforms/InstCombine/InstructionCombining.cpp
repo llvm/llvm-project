@@ -1401,7 +1401,8 @@ Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
     // Find constant NewC that has property:
     //   shuffle(NewC, ShMask) = C
     // If such constant does not exist (example: ShMask=<0,0> and C=<1,2>)
-    // reorder is not possible.
+    // reorder is not possible. A 1-to-1 mapping is not required. Example:
+    // ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <undef,5,6,undef>
     SmallVector<int, 16> ShMask;
     ShuffleVectorInst::getShuffleMask(Mask, ShMask);
     SmallVector<Constant *, 16>
@@ -1411,7 +1412,8 @@ Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
       if (ShMask[I] >= 0) {
         assert(ShMask[I] < (int)VWidth);
         Constant *CElt = C->getAggregateElement(I);
-        if (!CElt || !isa<UndefValue>(NewVecC[ShMask[I]])) {
+        Constant *NewCElt = NewVecC[ShMask[I]];
+        if (!CElt || (!isa<UndefValue>(NewCElt) && NewCElt != CElt)) {
           MayChange = false;
           break;
         }

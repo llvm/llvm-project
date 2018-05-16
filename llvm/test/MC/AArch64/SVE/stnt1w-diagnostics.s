@@ -18,17 +18,17 @@ stnt1w z29.s, p0, [x3, #8, MUL VL]
 // Invalid source type.
 
 stnt1w z0.b, p0, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: stnt1w z0.b, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 stnt1w z0.h, p0, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: stnt1w z0.h, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 stnt1w z0.d, p0, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: stnt1w z0.d, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

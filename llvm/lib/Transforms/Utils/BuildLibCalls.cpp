@@ -386,6 +386,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_fseek:
   case LibFunc_ftell:
   case LibFunc_fgetc:
+  case LibFunc_fgetc_unlocked:
   case LibFunc_fseeko:
   case LibFunc_ftello:
   case LibFunc_fileno:
@@ -404,6 +405,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F);
     return Changed;
   case LibFunc_fputc:
+  case LibFunc_fputc_unlocked:
   case LibFunc_fstat:
   case LibFunc_frexp:
   case LibFunc_frexpf:
@@ -413,21 +415,25 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
   case LibFunc_fgets:
+  case LibFunc_fgets_unlocked:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
   case LibFunc_fread:
+  case LibFunc_fread_unlocked:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 3);
     return Changed;
   case LibFunc_fwrite:
+  case LibFunc_fwrite_unlocked:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 3);
     // FIXME: readonly #1?
     return Changed;
   case LibFunc_fputs:
+  case LibFunc_fputs_unlocked:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
@@ -458,6 +464,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_gets:
   case LibFunc_getchar:
+  case LibFunc_getchar_unlocked:
     Changed |= setDoesNotThrow(F);
     return Changed;
   case LibFunc_getitimer:
@@ -496,6 +503,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
   case LibFunc_putc:
+  case LibFunc_putc_unlocked:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     return Changed;
@@ -516,6 +524,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
   case LibFunc_putchar:
+  case LibFunc_putchar_unlocked:
     Changed |= setDoesNotThrow(F);
     return Changed;
   case LibFunc_popen:
@@ -997,6 +1006,24 @@ Value *llvm::emitFPutC(Value *Char, Value *File, IRBuilder<> &B,
   return CI;
 }
 
+Value *llvm::emitFPutCUnlocked(Value *Char, Value *File, IRBuilder<> &B,
+                               const TargetLibraryInfo *TLI) {
+  if (!TLI->has(LibFunc_fputc_unlocked))
+    return nullptr;
+
+  Module *M = B.GetInsertBlock()->getModule();
+  Constant *F = M->getOrInsertFunction("fputc_unlocked", B.getInt32Ty(),
+                                       B.getInt32Ty(), File->getType());
+  if (File->getType()->isPointerTy())
+    inferLibFuncAttributes(*M->getFunction("fputc_unlocked"), *TLI);
+  Char = B.CreateIntCast(Char, B.getInt32Ty(), /*isSigned*/ true, "chari");
+  CallInst *CI = B.CreateCall(F, {Char, File}, "fputc_unlocked");
+
+  if (const Function *Fn = dyn_cast<Function>(F->stripPointerCasts()))
+    CI->setCallingConv(Fn->getCallingConv());
+  return CI;
+}
+
 Value *llvm::emitFPutS(Value *Str, Value *File, IRBuilder<> &B,
                        const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc_fputs))
@@ -1009,6 +1036,24 @@ Value *llvm::emitFPutS(Value *Str, Value *File, IRBuilder<> &B,
   if (File->getType()->isPointerTy())
     inferLibFuncAttributes(*M->getFunction(FPutsName), *TLI);
   CallInst *CI = B.CreateCall(F, {castToCStr(Str, B), File}, "fputs");
+
+  if (const Function *Fn = dyn_cast<Function>(F->stripPointerCasts()))
+    CI->setCallingConv(Fn->getCallingConv());
+  return CI;
+}
+
+Value *llvm::emitFPutSUnlocked(Value *Str, Value *File, IRBuilder<> &B,
+                               const TargetLibraryInfo *TLI) {
+  if (!TLI->has(LibFunc_fputs_unlocked))
+    return nullptr;
+
+  Module *M = B.GetInsertBlock()->getModule();
+  StringRef FPutsUnlockedName = TLI->getName(LibFunc_fputs_unlocked);
+  Constant *F = M->getOrInsertFunction(FPutsUnlockedName, B.getInt32Ty(),
+                                       B.getInt8PtrTy(), File->getType());
+  if (File->getType()->isPointerTy())
+    inferLibFuncAttributes(*M->getFunction(FPutsUnlockedName), *TLI);
+  CallInst *CI = B.CreateCall(F, {castToCStr(Str, B), File}, "fputs_unlocked");
 
   if (const Function *Fn = dyn_cast<Function>(F->stripPointerCasts()))
     CI->setCallingConv(Fn->getCallingConv());
@@ -1072,5 +1117,84 @@ Value *llvm::emitCalloc(Value *Num, Value *Size, const AttributeList &Attrs,
   if (const auto *F = dyn_cast<Function>(Calloc->stripPointerCasts()))
     CI->setCallingConv(F->getCallingConv());
 
+  return CI;
+}
+
+Value *llvm::emitFWriteUnlocked(Value *Ptr, Value *Size, Value *N, Value *File,
+                                IRBuilder<> &B, const DataLayout &DL,
+                                const TargetLibraryInfo *TLI) {
+  if (!TLI->has(LibFunc_fwrite_unlocked))
+    return nullptr;
+
+  Module *M = B.GetInsertBlock()->getModule();
+  LLVMContext &Context = B.GetInsertBlock()->getContext();
+  StringRef FWriteUnlockedName = TLI->getName(LibFunc_fwrite_unlocked);
+  Constant *F = M->getOrInsertFunction(
+      FWriteUnlockedName, DL.getIntPtrType(Context), B.getInt8PtrTy(),
+      DL.getIntPtrType(Context), DL.getIntPtrType(Context), File->getType());
+
+  if (File->getType()->isPointerTy())
+    inferLibFuncAttributes(*M->getFunction(FWriteUnlockedName), *TLI);
+  CallInst *CI = B.CreateCall(F, {castToCStr(Ptr, B), Size, N, File});
+
+  if (const Function *Fn = dyn_cast<Function>(F->stripPointerCasts()))
+    CI->setCallingConv(Fn->getCallingConv());
+  return CI;
+}
+
+Value *llvm::emitFGetCUnlocked(Value *File, IRBuilder<> &B,
+                               const TargetLibraryInfo *TLI) {
+  if (!TLI->has(LibFunc_fgetc_unlocked))
+    return nullptr;
+
+  Module *M = B.GetInsertBlock()->getModule();
+  Constant *F =
+      M->getOrInsertFunction("fgetc_unlocked", B.getInt32Ty(), File->getType());
+  if (File->getType()->isPointerTy())
+    inferLibFuncAttributes(*M->getFunction("fgetc_unlocked"), *TLI);
+  CallInst *CI = B.CreateCall(F, File, "fgetc_unlocked");
+
+  if (const Function *Fn = dyn_cast<Function>(F->stripPointerCasts()))
+    CI->setCallingConv(Fn->getCallingConv());
+  return CI;
+}
+
+Value *llvm::emitFGetSUnlocked(Value *Str, Value *Size, Value *File,
+                               IRBuilder<> &B, const TargetLibraryInfo *TLI) {
+  if (!TLI->has(LibFunc_fgets_unlocked))
+    return nullptr;
+
+  Module *M = B.GetInsertBlock()->getModule();
+  Constant *F =
+      M->getOrInsertFunction("fgets_unlocked", B.getInt8PtrTy(),
+                             B.getInt8PtrTy(), B.getInt32Ty(), File->getType());
+  inferLibFuncAttributes(*M->getFunction("fgets_unlocked"), *TLI);
+  CallInst *CI =
+      B.CreateCall(F, {castToCStr(Str, B), Size, File}, "fgets_unlocked");
+
+  if (const Function *Fn = dyn_cast<Function>(F->stripPointerCasts()))
+    CI->setCallingConv(Fn->getCallingConv());
+  return CI;
+}
+
+Value *llvm::emitFReadUnlocked(Value *Ptr, Value *Size, Value *N, Value *File,
+                               IRBuilder<> &B, const DataLayout &DL,
+                               const TargetLibraryInfo *TLI) {
+  if (!TLI->has(LibFunc_fread_unlocked))
+    return nullptr;
+
+  Module *M = B.GetInsertBlock()->getModule();
+  LLVMContext &Context = B.GetInsertBlock()->getContext();
+  StringRef FReadUnlockedName = TLI->getName(LibFunc_fread_unlocked);
+  Constant *F = M->getOrInsertFunction(
+      FReadUnlockedName, DL.getIntPtrType(Context), B.getInt8PtrTy(),
+      DL.getIntPtrType(Context), DL.getIntPtrType(Context), File->getType());
+
+  if (File->getType()->isPointerTy())
+    inferLibFuncAttributes(*M->getFunction(FReadUnlockedName), *TLI);
+  CallInst *CI = B.CreateCall(F, {castToCStr(Ptr, B), Size, N, File});
+
+  if (const Function *Fn = dyn_cast<Function>(F->stripPointerCasts()))
+    CI->setCallingConv(Fn->getCallingConv());
   return CI;
 }

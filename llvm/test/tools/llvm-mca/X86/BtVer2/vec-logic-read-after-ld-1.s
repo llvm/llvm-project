@@ -18,16 +18,16 @@ vandps (%rdi), %xmm1, %xmm2
 # CHECK-NEXT: [5]: MayStore
 # CHECK-NEXT: [6]: HasSideEffects
 
-# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]	Instructions:
-# CHECK-NEXT:  1      3     1.00                    	vaddps	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT:  1      6     1.00    *               	vandps	(%rdi), %xmm1, %xmm2
+# CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# CHECK-NEXT:  1      3     1.00                        vaddps	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT:  1      6     1.00    *                   vandps	(%rdi), %xmm1, %xmm2
 
 # CHECK:      Timeline view:
 
-# CHECK:      Index	012345678
+# CHECK:      Index     012345678
 
-# CHECK:      [0,0]	DeeeER  .	vaddps	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [0,1]	DeeeeeeER	vandps	(%rdi), %xmm1, %xmm2
+# CHECK:      [0,0]     DeeeER  .   vaddps	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DeeeeeeER   vandps	(%rdi), %xmm1, %xmm2
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -36,6 +36,6 @@ vandps (%rdi), %xmm1, %xmm2
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     1     1.0    1.0    0.0    	vaddps	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: 1.     1     1.0    0.0    0.0    	vandps	(%rdi), %xmm1, %xmm2
+# CHECK-NEXT: 0.     1     1.0    1.0    0.0       vaddps	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       vandps	(%rdi), %xmm1, %xmm2
 
