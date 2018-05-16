@@ -938,6 +938,10 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
   l.sw     116(r3), r29
   l.sw     120(r3), r30
   l.sw     124(r3), r31
+  # store ra to pc
+  l.sw     128(r3), r9
+  # zero epcr
+  l.sw     132(r3), r0
 #endif
 
 #endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */

@@ -1069,9 +1069,8 @@ SignatureHelp signatureHelp(PathRef FileName,
   Options.IncludeBriefComments = false;
   semaCodeComplete(llvm::make_unique<SignatureHelpCollector>(Options, Result),
                    Options,
-                   {FileName, Command, Preamble,
-                    /*PreambleInclusions=*/{}, Contents, Pos, std::move(VFS),
-                    std::move(PCHs)});
+                   {FileName, Command, Preamble, std::vector<Inclusion>(),
+                    Contents, Pos, std::move(VFS), std::move(PCHs)});
   return Result;
 }
 

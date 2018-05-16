@@ -758,7 +758,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
 #  thread_state pointer is in r3
 #
 
-  # restore integral registerrs
+  # restore integral registers
   l.lwz     r0,  0(r3)
   l.lwz     r1,  4(r3)
   l.lwz     r2,  8(r3)
@@ -768,7 +768,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
   l.lwz     r6, 24(r3)
   l.lwz     r7, 28(r3)
   l.lwz     r8, 32(r3)
-  l.lwz     r9, 36(r3)
+  # skip r9
   l.lwz    r10, 40(r3)
   l.lwz    r11, 44(r3)
   l.lwz    r12, 48(r3)
@@ -795,6 +795,8 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
   # at last, restore r3
   l.lwz    r3,  12(r3)
 
+  # load new pc into ra
+  l.lwz    r9, 128(r3)
   # jump to pc
   l.jr     r9
    l.nop
