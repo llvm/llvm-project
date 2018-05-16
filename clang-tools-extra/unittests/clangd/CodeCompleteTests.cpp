@@ -628,6 +628,30 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
                                             Doc("Doooc"), Detail("void"))));
 }
 
+TEST(CompletionTest, Documentation) {
+  auto Results = completions(
+      R"cpp(
+      // Non-doxygen comment.
+      int foo();
+      /// Doxygen comment.
+      /// \param int a
+      int bar(int a);
+      /* Multi-line
+         block comment
+      */
+      int baz();
+
+      int x = ^
+     )cpp");
+  EXPECT_THAT(Results.items,
+              Contains(AllOf(Named("foo"), Doc("Non-doxygen comment."))));
+  EXPECT_THAT(
+      Results.items,
+      Contains(AllOf(Named("bar"), Doc("Doxygen comment.\n\\param int a"))));
+  EXPECT_THAT(Results.items,
+              Contains(AllOf(Named("baz"), Doc("Multi-line\nblock comment"))));
+}
+
 TEST(CodeCompleteTest, DisableTypoCorrection) {
   auto Results = completions(R"cpp(
      namespace clang { int v; }

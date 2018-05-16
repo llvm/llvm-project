@@ -25,6 +25,7 @@
 #include "Trace.h"
 #include "URI.h"
 #include "index/Index.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -648,6 +649,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
     return false;
   }
   CI->getFrontendOpts().DisableFree = false;
+  CI->getLangOpts()->CommentOpts.ParseAllComments = true;
 
   std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(Input.Contents, Input.FileName);
