@@ -215,7 +215,7 @@ void DeclPrinter::prettyPrintAttributes(Decl *D) {
   if (D->hasAttrs()) {
     AttrVec &Attrs = D->getAttrs();
     for (auto *A : Attrs) {
-      if (A->isInherited())
+      if (A->isInherited() || A->isImplicit())
         continue;
       switch (A->getKind()) {
 #define ATTR(X)

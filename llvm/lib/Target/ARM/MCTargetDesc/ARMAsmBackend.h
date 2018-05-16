@@ -41,8 +41,7 @@ public:
 
   unsigned adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
                             const MCValue &Target, uint64_t Value,
-                            bool IsResolved, MCContext &Ctx,
-                            bool IsLittleEndian) const;
+                            bool IsResolved, MCContext &Ctx) const;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

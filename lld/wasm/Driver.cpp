@@ -98,11 +98,13 @@ static const opt::OptTable::Info OptInfo[] = {
 #undef OPTION
 };
 
+namespace {
 class WasmOptTable : public llvm::opt::OptTable {
 public:
   WasmOptTable() : OptTable(OptInfo) {}
   opt::InputArgList parse(ArrayRef<const char *> Argv);
 };
+} // namespace
 
 // Set color diagnostics according to -color-diagnostics={auto,always,never}
 // or -no-color-diagnostics flags.

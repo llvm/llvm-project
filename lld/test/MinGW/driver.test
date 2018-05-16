@@ -134,3 +134,9 @@ RUN: ld.lld -### -m i386pep --start-group foo.o --end-group
 RUN: ld.lld -### foo.o -m i386pe -shared --kill-at | FileCheck -check-prefix=KILL-AT %s
 RUN: ld.lld -### foo.o -m i386pe -shared -kill-at | FileCheck -check-prefix=KILL-AT %s
 KILL-AT: -kill-at
+
+RUN: ld.lld -### foo.o -m i386pep -Map bar.map | FileCheck -check-prefix=MAP %s
+RUN: ld.lld -### foo.o -m i386pep --Map bar.map | FileCheck -check-prefix=MAP %s
+RUN: ld.lld -### foo.o -m i386pep -Map=bar.map | FileCheck -check-prefix=MAP %s
+RUN: ld.lld -### foo.o -m i386pep --Map=bar.map | FileCheck -check-prefix=MAP %s
+MAP: -lldmap:bar.map

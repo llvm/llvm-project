@@ -420,15 +420,14 @@ define <4 x i32> @sub_const(<4 x i32> %v) {
   ret <4 x i32> %r
 }
 
-; FIXME: Math before shuffle requires an extra shuffle.
+; Math before shuffle requires an extra shuffle.
 
 define <2 x float> @fadd_const_multiuse(<2 x float> %v) {
 ; CHECK-LABEL: @fadd_const_multiuse(
 ; CHECK-NEXT:    [[T1:%.*]] = shufflevector <2 x float> [[V:%.*]], <2 x float> undef, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[V]], <float 4.200000e+01, float 4.100000e+01>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[T1]], <float 4.100000e+01, float 4.200000e+01>
 ; CHECK-NEXT:    call void @use(<2 x float> [[T1]])
-; CHECK-NEXT:    ret <2 x float> [[TMP2]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %t1 = shufflevector <2 x float> %v, <2 x float> undef, <2 x i32> <i32 1, i32 0>
   %r = fadd <2 x float> %t1, <float 41.0, float 42.0>

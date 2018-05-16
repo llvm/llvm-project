@@ -2751,16 +2751,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
           << A->getAsString(Args) << A->getValue();
     }
   }
-  // The PS4 requires version 6 of the clang ABI.
-  if (T.isPS4()) {
-    // Issue a warning if another version of the ABI was requested.
-    if (Args.getLastArg(OPT_fclang_abi_compat_EQ) &&
-        Opts.getClangABICompat() != LangOptions::ClangABI::Ver6) {
-      Diags.Report(diag::warn_drv_ignored_clang_abi_version)
-        << 6;
-    }
-    Opts.setClangABICompat(LangOptions::ClangABI::Ver6);
-  }
 }
 
 static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
