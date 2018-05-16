@@ -80,6 +80,6 @@ define weak_odr zeroext i1 @baz() {
 ; CHECK-FAIL: WARNING: Missing line 3
 ; CHECK-FAIL: WARNING: Missing line 4
 ; CHECK-FAIL: ERROR: Missing variable 1
-; CHECK-FAIL: CheckModuleDebugify: FAIL
+; CHECK-FAIL: CheckModuleDebugify [{{.*}}]: FAIL
 
-; PASS: CheckModuleDebugify: PASS
+; PASS: CheckModuleDebugify [{{.*}}]: PASS

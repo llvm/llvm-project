@@ -1,5 +1,6 @@
 # Check xunit output
-# RUN: %{lit} --xunit-xml-output %t.xunit.xml %{inputs}/xunit-output || true
+# RUN: rm -rf %t.xunit.xml
+# RUN: not %{lit} --xunit-xml-output %t.xunit.xml %{inputs}/xunit-output
 # RUN: FileCheck < %t.xunit.xml %s
 
 # CHECK: <?xml version="1.0" encoding="UTF-8" ?>

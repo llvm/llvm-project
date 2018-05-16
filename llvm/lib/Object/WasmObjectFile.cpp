@@ -875,6 +875,7 @@ Error WasmObjectFile::parseCodeSection(const uint8_t *Ptr, const uint8_t *End) {
     uint32_t Size = readVaruint32(Ptr);
     const uint8_t *FunctionEnd = Ptr + Size;
 
+    Function.CodeOffset = Ptr - FunctionStart;
     Function.Index = NumImportedFunctions + Functions.size();
     Function.CodeSectionOffset = FunctionStart - CodeSectionStart;
     Function.Size = FunctionEnd - FunctionStart;

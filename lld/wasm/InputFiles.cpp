@@ -16,7 +16,6 @@
 #include "lld/Common/Memory.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Wasm.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "lld"
@@ -41,12 +40,6 @@ Optional<MemoryBufferRef> lld::wasm::readFile(StringRef Path) {
   make<std::unique_ptr<MemoryBuffer>>(std::move(MB)); // take MB ownership
 
   return MBRef;
-}
-
-static size_t getFunctionCodeOffset(ArrayRef<uint8_t> FunctionBody) {
-  unsigned Count;
-  llvm::decodeULEB128(FunctionBody.data(), &Count);
-  return Count;
 }
 
 void ObjFile::dumpInfo() const {
@@ -105,10 +98,8 @@ uint32_t ObjFile::calcExpectedValue(const WasmRelocation &Reloc) const {
   }
   case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
     if (auto *Sym = dyn_cast<DefinedFunction>(getFunctionSymbol(Reloc.Index))) {
-      size_t FunctionCodeOffset =
-          getFunctionCodeOffset(Sym->Function->getFunctionBody());
-      return Sym->Function->getFunctionInputOffset() + FunctionCodeOffset +
-             Reloc.Addend;
+      return Sym->Function->getFunctionInputOffset() +
+             Sym->Function->getFunctionCodeOffset() + Reloc.Addend;
     }
     return 0;
   case R_WEBASSEMBLY_SECTION_OFFSET_I32:
@@ -145,9 +136,8 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
     return getGlobalSymbol(Reloc.Index)->getGlobalIndex();
   case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
     if (auto *Sym = dyn_cast<DefinedFunction>(getFunctionSymbol(Reloc.Index))) {
-      size_t FunctionCodeOffset =
-          getFunctionCodeOffset(Sym->Function->getFunctionBody());
-      return Sym->Function->OutputOffset + FunctionCodeOffset + Reloc.Addend;
+      return Sym->Function->OutputOffset +
+             Sym->Function->getFunctionCodeOffset() + Reloc.Addend;
     }
     return 0;
   case R_WEBASSEMBLY_SECTION_OFFSET_I32:

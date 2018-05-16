@@ -1,3 +1,4 @@
+# RUN: rm -f %t.xml
 # RUN: not %{lit} -j 1 -v %{inputs}/shtest-format --xunit-xml-output %t.xml
 # RUN: FileCheck < %t.xml %s
 
