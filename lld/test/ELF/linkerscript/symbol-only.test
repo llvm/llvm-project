@@ -15,6 +15,8 @@ SECTIONS {
 # CHECK-NEXT: Idx Name          Size      Address
 # CHECK-NEXT:   0               00000000 0000000000000000
 # CHECK:          abc           00000000 [[ADDR:[0-9a-f]*]] BSS
+# CHECK-NEXT:     .dynsym       00000030 0000000000000190
+# CHECK-NEXT:     .dynstr       00000005 00000000000001c0
 # CHECK-NEXT:     bar           00000000 0000000000001000 DATA
 
 # CHECK: SYMBOL TABLE:

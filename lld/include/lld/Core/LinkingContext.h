@@ -31,7 +31,7 @@ class Writer;
 class Node;
 class SharedLibraryFile;
 
-/// \brief The LinkingContext class encapsulates "what and how" to link.
+/// The LinkingContext class encapsulates "what and how" to link.
 ///
 /// The base class LinkingContext contains the options needed by core linking.
 /// Subclasses of LinkingContext have additional options needed by specific
