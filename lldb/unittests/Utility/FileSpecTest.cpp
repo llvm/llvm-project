@@ -200,7 +200,6 @@ TEST(FileSpecTest, GetNormalizedPath) {
       {"/.", "/"},
       {"..", ".."},
       {".", "."},
-      {"", "."},
       {"../..", "../.."},
       {"foo/..", "."},
       {"foo/../bar", "bar"},
@@ -242,7 +241,6 @@ TEST(FileSpecTest, GetNormalizedPath) {
       {R"(.\.\foo)", R"(foo)"},
       {R"(..\foo)", R"(..\foo)"},
       {R"(..\..\foo)", R"(..\..\foo)"},
-      {"", "."},
   };
   for (auto test : windows_tests) {
     EXPECT_EQ(test.second,
