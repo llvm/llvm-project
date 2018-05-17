@@ -156,8 +156,8 @@ public:
                               lldb::offset_t *hash_data_offset_ptr,
                               Pair &pair) const override;
 
-    const lldb_private::DWARFDataExtractor &m_data;
-    const lldb_private::DWARFDataExtractor &m_string_table;
+    lldb_private::DWARFDataExtractor m_data;
+    lldb_private::DWARFDataExtractor m_string_table;
     std::string m_name;
   };
 

@@ -37,7 +37,7 @@ public:
   bool CalculateStopInfo() override;
   Unwind *GetUnwinder() override;
 
-  bool DoResume();
+  Status DoResume();
 
   HostThread GetHostThread() const { return m_host_thread; }
 

@@ -16,6 +16,7 @@ class ExprBug35310(TestBase):
         self.main_source = "main.cpp"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_issue35310(self):
         """Test invoking functions with non-standard linkage names.
 
