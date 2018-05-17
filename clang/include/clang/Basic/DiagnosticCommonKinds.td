@@ -237,6 +237,14 @@ def err_apinotes_message : Error<"%0">;
 def warn_apinotes_message : Warning<"%0">, InGroup<DiagGroup<"apinotes">>;
 def note_apinotes_message : Note<"%0">;
 
+class NonportablePrivateAPINotesPath  : Warning<
+  "private API notes file for module '%0' should be named "
+  "'%0_private.apinotes', not '%1'">;
+def warn_apinotes_private_case : NonportablePrivateAPINotesPath,
+  InGroup<DiagGroup<"nonportable-private-apinotes-path">>;
+def warn_apinotes_private_case_system : NonportablePrivateAPINotesPath, 
+  DefaultIgnore, InGroup<DiagGroup<"nonportable-private-system-apinotes-path">>;
+
 // OpenCL C++.
 def err_openclcxx_not_supported : Error<
   "'%0' is not supported in OpenCL C++">;

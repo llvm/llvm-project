@@ -5,3 +5,7 @@ module HeaderLib {
 module BrokenTypes {
   header "BrokenTypes.h"
 }
+
+module ModuleWithWrongCasePrivate {
+  header "ModuleWithWrongCasePrivate.h"
+}
