@@ -181,6 +181,7 @@ struct Configuration {
   uint32_t MinorImageVersion = 0;
   uint32_t MajorOSVersion = 6;
   uint32_t MinorOSVersion = 0;
+  uint32_t Timestamp = 0;
   bool DynamicBase = true;
   bool AllowBind = true;
   bool NxCompat = true;
@@ -194,6 +195,7 @@ struct Configuration {
   bool WarnLocallyDefinedImported = true;
   bool Incremental = true;
   bool KillAt = false;
+  bool Repro = false;
 };
 
 extern Configuration *Config;

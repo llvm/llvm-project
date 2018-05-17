@@ -124,7 +124,8 @@ defm : SKXWriteResPair<WriteCRC32, [SKXPort1], 3>;
 def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, high part.
 def : WriteRes<WriteLEA, [SKXPort15]>; // LEA instructions can't fold loads.
 
-defm : SKXWriteResPair<WriteCMOV,  [SKXPort06], 1>; // Conditional move.
+defm : SKXWriteResPair<WriteCMOV,  [SKXPort06], 1, [1], 1>; // Conditional move.
+defm : SKXWriteResPair<WriteCMOV2, [SKXPort06], 2, [2], 2>; // Conditional (CF + ZF flag) move.
 defm : X86WriteRes<WriteFCMOV, [SKXPort1], 3, [1], 1>; // x87 conditional move.
 def  : WriteRes<WriteSETCC, [SKXPort06]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [SKXPort06,SKXPort4,SKXPort237]> {
@@ -673,8 +674,7 @@ def SKXWriteResGroup15 : SchedWriteRes<[SKXPort06]> {
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup15], (instregex "CMOV(A|BE)(16|32|64)rr",
-                                             "ROL(8|16|32|64)r1",
+def: InstRW<[SKXWriteResGroup15], (instregex "ROL(8|16|32|64)r1",
                                              "ROL(8|16|32|64)ri",
                                              "ROR(8|16|32|64)r1",
                                              "ROR(8|16|32|64)ri",
@@ -1416,13 +1416,6 @@ def: InstRW<[SKXWriteResGroup97], (instregex "VPERMI2W128rr",
                                              "VPERMT2W128rr",
                                              "VPERMT2W256rr",
                                              "VPERMT2Wrr")>;
-
-def SKXWriteResGroup98 : SchedWriteRes<[SKXPort23,SKXPort06]> {
-  let Latency = 7;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,2];
-}
-def: InstRW<[SKXWriteResGroup98], (instregex "CMOV(A|BE)(16|32|64)rm")>;
 
 def SKXWriteResGroup99 : SchedWriteRes<[SKXPort23,SKXPort0156]> {
   let Latency = 7;

@@ -1456,6 +1456,11 @@ public:
 
   void setDescribedVarTemplate(VarTemplateDecl *Template);
 
+  // Is this variable known to have a definition somewhere in the complete
+  // program? This may be true even if the declaration has internal linkage and
+  // has no definition within this source file.
+  bool isKnownToBeDefined() const;
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }

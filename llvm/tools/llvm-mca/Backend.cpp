@@ -30,7 +30,7 @@ void Backend::addEventListener(HWEventListener *Listener) {
 }
 
 void Backend::run() {
-  while (Fetch->isReady() || !DU->isRCUEmpty())
+  while (Fetch->isReady() || !Dispatch->isReady())
     runCycle(Cycles++);
 }
 
@@ -39,10 +39,8 @@ void Backend::runCycle(unsigned Cycle) {
 
   InstRef IR;
   while (Fetch->execute(IR)) {
-    const InstrDesc &Desc = IR.getInstruction()->getDesc();
-    if (!DU->isAvailable(Desc.NumMicroOps) || !DU->canDispatch(IR))
+    if (!Dispatch->execute(IR))
       break;
-    DU->dispatch(IR, STI);
     Fetch->postExecute(IR);
   }
 
@@ -54,7 +52,7 @@ void Backend::notifyCycleBegin(unsigned Cycle) {
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleBegin();
 
-  DU->cycleEvent();
+  Dispatch->cycleEvent();
   HWS->cycleEvent();
 }
 

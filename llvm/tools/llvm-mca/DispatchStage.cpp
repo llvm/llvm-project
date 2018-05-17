@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements methods declared by the DispatchUnit class.
+/// This file implements methods declared by the DispatchStage class.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Dispatch.h"
+#include "DispatchStage.h"
 #include "Backend.h"
 #include "HWEventListener.h"
 #include "Scheduler.h"
@@ -24,13 +24,13 @@ using namespace llvm;
 
 namespace mca {
 
-void DispatchUnit::notifyInstructionDispatched(const InstRef &IR,
-                                               ArrayRef<unsigned> UsedRegs) {
+void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
+                                                ArrayRef<unsigned> UsedRegs) {
   LLVM_DEBUG(dbgs() << "[E] Instruction Dispatched: " << IR << '\n');
   Owner->notifyInstructionEvent(HWInstructionDispatchedEvent(IR, UsedRegs));
 }
 
-void DispatchUnit::notifyInstructionRetired(const InstRef &IR) {
+void DispatchStage::notifyInstructionRetired(const InstRef &IR) {
   LLVM_DEBUG(dbgs() << "[E] Instruction Retired: " << IR << '\n');
   SmallVector<unsigned, 4> FreedRegs(RAT->getNumRegisterFiles());
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
@@ -40,7 +40,7 @@ void DispatchUnit::notifyInstructionRetired(const InstRef &IR) {
   Owner->notifyInstructionEvent(HWInstructionRetiredEvent(IR, FreedRegs));
 }
 
-bool DispatchUnit::checkRAT(const InstRef &IR) {
+bool DispatchStage::checkRAT(const InstRef &IR) {
   SmallVector<unsigned, 4> RegDefs;
   for (const std::unique_ptr<WriteState> &RegDef :
        IR.getInstruction()->getDefs())
@@ -56,7 +56,7 @@ bool DispatchUnit::checkRAT(const InstRef &IR) {
   return true;
 }
 
-bool DispatchUnit::checkRCU(const InstRef &IR) {
+bool DispatchStage::checkRCU(const InstRef &IR) {
   const unsigned NumMicroOps = IR.getInstruction()->getDesc().NumMicroOps;
   if (RCU->isAvailable(NumMicroOps))
     return true;
@@ -65,12 +65,12 @@ bool DispatchUnit::checkRCU(const InstRef &IR) {
   return false;
 }
 
-bool DispatchUnit::checkScheduler(const InstRef &IR) {
+bool DispatchStage::checkScheduler(const InstRef &IR) {
   return SC->canBeDispatched(IR);
 }
 
-void DispatchUnit::updateRAWDependencies(ReadState &RS,
-                                         const MCSubtargetInfo &STI) {
+void DispatchStage::updateRAWDependencies(ReadState &RS,
+                                          const MCSubtargetInfo &STI) {
   SmallVector<WriteState *, 4> DependentWrites;
 
   collectWrites(DependentWrites, RS.getRegisterID());
@@ -98,7 +98,7 @@ void DispatchUnit::updateRAWDependencies(ReadState &RS,
   DependentWrites.clear();
 }
 
-void DispatchUnit::dispatch(InstRef IR, const MCSubtargetInfo &STI) {
+void DispatchStage::dispatch(InstRef IR) {
   assert(!CarryOver && "Cannot dispatch another instruction!");
   Instruction &IS = *IR.getInstruction();
   const InstrDesc &Desc = IS.getDesc();
@@ -142,8 +142,16 @@ void DispatchUnit::dispatch(InstRef IR, const MCSubtargetInfo &STI) {
   SC->scheduleInstruction(IR);
 }
 
+bool DispatchStage::execute(InstRef &IR) {
+  const InstrDesc &Desc = IR.getInstruction()->getDesc();
+  if (!isAvailable(Desc.NumMicroOps) || !canDispatch(IR))
+    return false;
+  dispatch(IR);
+  return true;
+}
+
 #ifndef NDEBUG
-void DispatchUnit::dump() const {
+void DispatchStage::dump() const {
   RAT->dump();
   RCU->dump();
 }

@@ -252,6 +252,8 @@ def HasCRC   : Predicate<"Subtarget->hasCRC()">,
                AssemblerPredicate<"FeatureCRC">;
 def HasVirt  : Predicate<"Subtarget->hasVirt()">,
                AssemblerPredicate<"FeatureVirt">;
+def HasGINV  : Predicate<"Subtarget->hasGINV()">,
+               AssemblerPredicate<"FeatureGINV">;
 // TODO: Add support for FPOpFusion::Standard
 def AllowFPOpFusion : Predicate<"TM.Options.AllowFPOpFusion =="
                                 " FPOpFusion::Fast">;
@@ -466,6 +468,10 @@ class ASE_CRC {
 
 class ASE_VIRT {
   list <Predicate> ASEPredicate = [HasVirt];
+}
+
+class ASE_GINV {
+  list <Predicate> ASEPredicate = [HasGINV];
 }
 
 // Class used for separating microMIPSr6 and microMIPS (r3) instruction.

@@ -550,7 +550,7 @@ bool ObjCARCContract::runOnFunction(Function &F) {
 
   DenseMap<BasicBlock *, ColorVector> BlockColors;
   if (F.hasPersonalityFn() &&
-      isFuncletEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
+      isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     BlockColors = colorEHFunclets(F);
 
   LLVM_DEBUG(llvm::dbgs() << "**** ObjCARC Contract ****\n");

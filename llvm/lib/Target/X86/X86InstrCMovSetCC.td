@@ -14,9 +14,10 @@
 
 
 // CMOV instructions.
-multiclass CMOV<bits<8> opc, string Mnemonic, PatLeaf CondNode> {
+multiclass CMOV<bits<8> opc, string Mnemonic, X86FoldableSchedWrite Sched,
+                PatLeaf CondNode> {
   let Uses = [EFLAGS], Predicates = [HasCMov], Constraints = "$src1 = $dst",
-      isCommutable = 1, SchedRW = [WriteCMOV] in {
+      isCommutable = 1, SchedRW = [Sched] in {
     def NAME#16rr
       : I<opc, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src1, GR16:$src2),
           !strconcat(Mnemonic, "{w}\t{$src2, $dst|$dst, $src2}"),
@@ -37,7 +38,7 @@ multiclass CMOV<bits<8> opc, string Mnemonic, PatLeaf CondNode> {
   }
 
   let Uses = [EFLAGS], Predicates = [HasCMov], Constraints = "$src1 = $dst",
-      SchedRW = [WriteCMOVLd, ReadAfterLd] in {
+      SchedRW = [Sched.Folded, ReadAfterLd] in {
     def NAME#16rm
       : I<opc, MRMSrcMem, (outs GR16:$dst), (ins GR16:$src1, i16mem:$src2),
           !strconcat(Mnemonic, "{w}\t{$src2, $dst|$dst, $src2}"),
@@ -58,22 +59,22 @@ multiclass CMOV<bits<8> opc, string Mnemonic, PatLeaf CondNode> {
 
 
 // Conditional Moves.
-defm CMOVO  : CMOV<0x40, "cmovo" , X86_COND_O>;
-defm CMOVNO : CMOV<0x41, "cmovno", X86_COND_NO>;
-defm CMOVB  : CMOV<0x42, "cmovb" , X86_COND_B>;
-defm CMOVAE : CMOV<0x43, "cmovae", X86_COND_AE>;
-defm CMOVE  : CMOV<0x44, "cmove" , X86_COND_E>;
-defm CMOVNE : CMOV<0x45, "cmovne", X86_COND_NE>;
-defm CMOVBE : CMOV<0x46, "cmovbe", X86_COND_BE>;
-defm CMOVA  : CMOV<0x47, "cmova" , X86_COND_A>;
-defm CMOVS  : CMOV<0x48, "cmovs" , X86_COND_S>;
-defm CMOVNS : CMOV<0x49, "cmovns", X86_COND_NS>;
-defm CMOVP  : CMOV<0x4A, "cmovp" , X86_COND_P>;
-defm CMOVNP : CMOV<0x4B, "cmovnp", X86_COND_NP>;
-defm CMOVL  : CMOV<0x4C, "cmovl" , X86_COND_L>;
-defm CMOVGE : CMOV<0x4D, "cmovge", X86_COND_GE>;
-defm CMOVLE : CMOV<0x4E, "cmovle", X86_COND_LE>;
-defm CMOVG  : CMOV<0x4F, "cmovg" , X86_COND_G>;
+defm CMOVO  : CMOV<0x40, "cmovo" , WriteCMOV,  X86_COND_O>;
+defm CMOVNO : CMOV<0x41, "cmovno", WriteCMOV,  X86_COND_NO>;
+defm CMOVB  : CMOV<0x42, "cmovb" , WriteCMOV,  X86_COND_B>;
+defm CMOVAE : CMOV<0x43, "cmovae", WriteCMOV,  X86_COND_AE>;
+defm CMOVE  : CMOV<0x44, "cmove" , WriteCMOV,  X86_COND_E>;
+defm CMOVNE : CMOV<0x45, "cmovne", WriteCMOV,  X86_COND_NE>;
+defm CMOVBE : CMOV<0x46, "cmovbe", WriteCMOV2, X86_COND_BE>;
+defm CMOVA  : CMOV<0x47, "cmova" , WriteCMOV2, X86_COND_A>;
+defm CMOVS  : CMOV<0x48, "cmovs" , WriteCMOV,  X86_COND_S>;
+defm CMOVNS : CMOV<0x49, "cmovns", WriteCMOV,  X86_COND_NS>;
+defm CMOVP  : CMOV<0x4A, "cmovp" , WriteCMOV,  X86_COND_P>;
+defm CMOVNP : CMOV<0x4B, "cmovnp", WriteCMOV,  X86_COND_NP>;
+defm CMOVL  : CMOV<0x4C, "cmovl" , WriteCMOV,  X86_COND_L>;
+defm CMOVGE : CMOV<0x4D, "cmovge", WriteCMOV,  X86_COND_GE>;
+defm CMOVLE : CMOV<0x4E, "cmovle", WriteCMOV,  X86_COND_LE>;
+defm CMOVG  : CMOV<0x4F, "cmovg" , WriteCMOV,  X86_COND_G>;
 
 
 // SetCC instructions.

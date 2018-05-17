@@ -126,6 +126,7 @@ def : WriteRes<WriteIMulH, []> { let Latency = 3; } // Integer multiplication, h
 def : WriteRes<WriteLEA, [BWPort15]>; // LEA instructions can't fold loads.
 
 defm : BWWriteResPair<WriteCMOV,  [BWPort06], 1>; // Conditional move.
+defm : BWWriteResPair<WriteCMOV2, [BWPort06,BWPort0156], 2, [1,1], 2>; // // Conditional (CF + ZF flag) move.
 defm : X86WriteRes<WriteFCMOV, [BWPort1], 3, [1], 1>; // x87 conditional move.
 
 def  : WriteRes<WriteSETCC, [BWPort06]>; // Setcc.
@@ -686,7 +687,6 @@ def: InstRW<[BWWriteResGroup20], (instrs CWD)>;
 def: InstRW<[BWWriteResGroup20], (instrs JCXZ, JECXZ, JRCXZ)>;
 def: InstRW<[BWWriteResGroup20], (instregex "ADC8i8",
                                             "ADC8ri",
-                                            "CMOV(A|BE)(16|32|64)rr",
                                             "SBB8i8",
                                             "SBB8ri",
                                             "SET(A|BE)r")>;
@@ -1129,13 +1129,6 @@ def BWWriteResGroup84 : SchedWriteRes<[BWPort6,BWPort23,BWPort0156]> {
   let ResourceCycles = [1,1,1];
 }
 def: InstRW<[BWWriteResGroup84], (instrs LRETQ, RETQ)>;
-
-def BWWriteResGroup86 : SchedWriteRes<[BWPort23,BWPort06,BWPort0156]> {
-  let Latency = 7;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[BWWriteResGroup86], (instregex "CMOV(A|BE)(16|32|64)rm")>;
 
 def BWWriteResGroup87 : SchedWriteRes<[BWPort4,BWPort23,BWPort237,BWPort06]> {
   let Latency = 7;

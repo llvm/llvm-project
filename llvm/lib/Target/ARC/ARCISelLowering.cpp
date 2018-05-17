@@ -72,7 +72,7 @@ static ARCCC::CondCode ISDCCtoARCCC(ISD::CondCode isdCC) {
 
 ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
                                      const ARCSubtarget &Subtarget)
-    : TargetLowering(TM), TM(TM), Subtarget(Subtarget) {
+    : TargetLowering(TM), Subtarget(Subtarget) {
   // Set up the register classes.
   addRegisterClass(MVT::i32, &ARC::GPR32RegClass);
 

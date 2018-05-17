@@ -97,7 +97,7 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI, raw_ostream &OS,
                                             const MCSubtargetInfo &STI) const {
   MCInst TmpInst;
   MCOperand Func = MI.getOperand(0);
-  unsigned Ra = RISCV::X1;
+  unsigned Ra = (MI.getOpcode() == RISCV::PseudoTAIL) ? RISCV::X6 : RISCV::X1;
   uint32_t Binary;
 
   assert(Func.isExpr() && "Expected expression");
@@ -128,7 +128,8 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   // Get byte count of instruction.
   unsigned Size = Desc.getSize();
 
-  if (MI.getOpcode() == RISCV::PseudoCALL) {
+  if (MI.getOpcode() == RISCV::PseudoCALL ||
+      MI.getOpcode() == RISCV::PseudoTAIL) {
     expandFunctionCall(MI, OS, Fixups, STI);
     MCNumEmitted += 2;
     return;

@@ -93,6 +93,7 @@ defm : AtomWriteResPair<WriteIDiv64, [AtomPort01], [AtomPort01],130,130,[130],[1
 defm : AtomWriteResPair<WriteCRC32, [AtomPort01], [AtomPort01]>; // NOTE: Doesn't exist on Atom.
 
 defm : AtomWriteResPair<WriteCMOV,  [AtomPort01], [AtomPort0]>;
+defm : AtomWriteResPair<WriteCMOV2, [AtomPort01], [AtomPort0]>;
 defm : X86WriteRes<WriteFCMOV, [AtomPort01], 9, [9], 1>; // x87 conditional move.
 
 def  : WriteRes<WriteSETCC, [AtomPort01]>;

@@ -58,6 +58,7 @@ def section : P<"section", "Specify section attributes">;
 def stack   : P<"stack", "Size of the stack">;
 def stub    : P<"stub", "Specify DOS stub file">;
 def subsystem : P<"subsystem", "Specify subsystem">;
+def timestamp : P<"timestamp", "Specify the PE header timestamp">;
 def version : P<"version", "Specify a version number in the PE header">;
 def wholearchive_file : P<"wholearchive", "Include all object files from this archive">;
 
@@ -89,6 +90,7 @@ def driver : P<"driver", "Generate a Windows NT Kernel Mode Driver">;
 def nodefaultlib_all : F<"nodefaultlib">;
 def noentry : F<"noentry">;
 def profile : F<"profile">;
+def repro : F<"Brepro">, HelpText<"Use a hash of the executable as the PE header timestamp">;
 def swaprun_cd : F<"swaprun:cd">;
 def swaprun_net : F<"swaprun:net">;
 def verbose : F<"verbose">;

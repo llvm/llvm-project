@@ -722,7 +722,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
 
   DenseMap<BasicBlock *, ColorVector> BlockColors;
   if (F.hasPersonalityFn() &&
-      isFuncletEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
+      isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     BlockColors = colorEHFunclets(F);
 
   // Visit all objc_* calls in F.

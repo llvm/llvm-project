@@ -118,7 +118,6 @@ class HexagonAsmParser : public MCTargetAsmParser {
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
   bool ParseDirectiveSubsection(SMLoc L);
-  bool ParseDirectiveValue(unsigned Size, SMLoc L);
   bool ParseDirectiveComm(bool IsLocal, SMLoc L);
   bool RegisterMatchesArch(unsigned MatchNum) const;
 
@@ -164,6 +163,10 @@ public:
       InBrackets(false) {
     MCB.setOpcode(Hexagon::BUNDLE);
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
+
+    Parser.addAliasForDirective(".half", ".2byte");
+    Parser.addAliasForDirective(".hword", ".2byte");
+    Parser.addAliasForDirective(".word", ".4byte");
 
     MCAsmParserExtension::Initialize(_Parser);
   }
@@ -651,11 +654,6 @@ bool HexagonAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 /// ParseDirective parses the Hexagon specific directives
 bool HexagonAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
-  if ((IDVal.lower() == ".word") || (IDVal.lower() == ".4byte"))
-    return ParseDirectiveValue(4, DirectiveID.getLoc());
-  if (IDVal.lower() == ".short" || IDVal.lower() == ".hword" ||
-      IDVal.lower() == ".half")
-    return ParseDirectiveValue(2, DirectiveID.getLoc());
   if (IDVal.lower() == ".falign")
     return ParseDirectiveFalign(256, DirectiveID.getLoc());
   if ((IDVal.lower() == ".lcomm") || (IDVal.lower() == ".lcommon"))
@@ -720,39 +718,6 @@ bool HexagonAsmParser::ParseDirectiveFalign(unsigned Size, SMLoc L) {
   getTargetStreamer().emitFAlign(16, MaxBytesToFill);
   Lex();
 
-  return false;
-}
-
-///  ::= .word [ expression (, expression)* ]
-bool HexagonAsmParser::ParseDirectiveValue(unsigned Size, SMLoc L) {
-  if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    while (true) {
-      const MCExpr *Value;
-      SMLoc ExprLoc = L;
-      if (getParser().parseExpression(Value))
-        return true;
-
-      // Special case constant expressions to match code generator.
-      if (const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(Value)) {
-        assert(Size <= 8 && "Invalid size");
-        uint64_t IntValue = MCE->getValue();
-        if (!isUIntN(8 * Size, IntValue) && !isIntN(8 * Size, IntValue))
-          return Error(ExprLoc, "literal value out of range for directive");
-        getStreamer().EmitIntValue(IntValue, Size);
-      } else
-        getStreamer().EmitValue(Value, Size);
-
-      if (getLexer().is(AsmToken::EndOfStatement))
-        break;
-
-      // FIXME: Improve diagnostic.
-      if (getLexer().isNot(AsmToken::Comma))
-        return TokError("unexpected token in directive");
-      Lex();
-    }
-  }
-
-  Lex();
   return false;
 }
 

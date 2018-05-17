@@ -44,9 +44,9 @@ void test_constraints_immed(void) {
 
 void test_constraint_S(void) {
     int *addr;
-    asm("adrp %0, %A1\n\t"
-        "add %0, %0, %L1" : "=r"(addr) : "S"(&var));
-// CHECK: call i32* asm "adrp $0, ${1:A}\0A\09add $0, $0, ${1:L}", "=r,S"(i64* @var)
+    asm("adrp %0, %1\n\t"
+        "add %0, %0, :lo12:%1" : "=r"(addr) : "S"(&var));
+// CHECK: call i32* asm "adrp $0, $1\0A\09add $0, $0, :lo12:$1", "=r,S"(i64* @var)
 }
 
 void test_constraint_Q(void) {

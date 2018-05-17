@@ -15,7 +15,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_BACKEND_H
 #define LLVM_TOOLS_LLVM_MCA_BACKEND_H
 
-#include "Dispatch.h"
+#include "DispatchStage.h"
 #include "FetchStage.h"
 #include "InstrBuilder.h"
 #include "Scheduler.h"
@@ -51,15 +51,12 @@ class HWStallEvent;
 /// histograms. For example, it tracks how the dispatch group size changes
 /// over time.
 class Backend {
-  const llvm::MCSubtargetInfo &STI;
-
   /// This is the initial stage of the pipeline.
   /// TODO: Eventually this will become a list of unique Stage* that this
   /// backend pipeline executes.
   std::unique_ptr<FetchStage> Fetch;
-
   std::unique_ptr<Scheduler> HWS;
-  std::unique_ptr<DispatchUnit> DU;
+  std::unique_ptr<DispatchStage> Dispatch;
   std::set<HWEventListener *> Listeners;
   unsigned Cycles;
 
@@ -71,15 +68,14 @@ public:
           std::unique_ptr<FetchStage> InitialStage, unsigned DispatchWidth = 0,
           unsigned RegisterFileSize = 0, unsigned LoadQueueSize = 0,
           unsigned StoreQueueSize = 0, bool AssumeNoAlias = false)
-      : STI(Subtarget), Fetch(std::move(InitialStage)),
+      : Fetch(std::move(InitialStage)),
         HWS(llvm::make_unique<Scheduler>(this, Subtarget.getSchedModel(),
                                          LoadQueueSize, StoreQueueSize,
                                          AssumeNoAlias)),
-        DU(llvm::make_unique<DispatchUnit>(this, Subtarget.getSchedModel(), MRI,
-                                           RegisterFileSize, DispatchWidth,
-                                           HWS.get())),
+        Dispatch(llvm::make_unique<DispatchStage>(
+            this, Subtarget, MRI, RegisterFileSize, DispatchWidth, HWS.get())),
         Cycles(0) {
-    HWS->setDispatchUnit(DU.get());
+    HWS->setDispatchStage(Dispatch.get());
   }
 
   void run();

@@ -23,14 +23,14 @@
 
 namespace mca {
 
-class DispatchUnit;
+class DispatchStage;
 
 /// This class tracks which instructions are in-flight (i.e., dispatched but not
 /// retired) in the OoO backend.
 //
 /// This class checks on every cycle if/which instructions can be retired.
 /// Instructions are retired in program order.
-/// In the event of instruction retired, the DispatchUnit object that owns
+/// In the event of instruction retired, the DispatchStage object that owns
 /// this RetireControlUnit (RCU) gets notified.
 /// On instruction retired, register updates are all architecturally
 /// committed, and any temporary registers originally allocated for the
@@ -62,10 +62,10 @@ private:
   unsigned AvailableSlots;
   unsigned MaxRetirePerCycle; // 0 means no limit.
   std::vector<RUToken> Queue;
-  DispatchUnit *Owner;
+  DispatchStage *Owner;
 
 public:
-  RetireControlUnit(const llvm::MCSchedModel &SM, DispatchUnit *DU);
+  RetireControlUnit(const llvm::MCSchedModel &SM, DispatchStage *DU);
 
   bool isFull() const { return !AvailableSlots; }
   bool isEmpty() const { return AvailableSlots == Queue.size(); }

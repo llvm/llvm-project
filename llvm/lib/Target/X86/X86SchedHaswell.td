@@ -123,6 +123,7 @@ defm : HWWriteResPair<WriteJump,   [HWPort06],  1>;
 defm : HWWriteResPair<WriteCRC32,  [HWPort1],   3>;
 
 defm : HWWriteResPair<WriteCMOV,  [HWPort06,HWPort0156], 2, [1,1], 2>; // Conditional move.
+defm : HWWriteResPair<WriteCMOV2, [HWPort06,HWPort0156], 3, [1,2], 3>; // Conditional (CF + ZF flag) move.
 defm : X86WriteRes<WriteFCMOV, [HWPort1], 3, [1], 1>; // x87 conditional move.
 def  : WriteRes<WriteSETCC, [HWPort06]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [HWPort06,HWPort4,HWPort237]> {
@@ -1293,8 +1294,7 @@ def HWWriteResGroup59 : SchedWriteRes<[HWPort06,HWPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[HWWriteResGroup59], (instregex "CMOV(A|BE)(16|32|64)rr",
-                                            "RCL(8|16|32|64)r1",
+def: InstRW<[HWWriteResGroup59], (instregex "RCL(8|16|32|64)r1",
                                             "RCL(8|16|32|64)ri",
                                             "RCR(8|16|32|64)r1",
                                             "RCR(8|16|32|64)ri")>;
@@ -1324,13 +1324,6 @@ def HWWriteResGroup62 : SchedWriteRes<[HWPort1,HWPort4,HWPort237]> {
 }
 def: InstRW<[HWWriteResGroup62], (instregex "IST(T?)_FP(16|32|64)m",
                                             "IST_F(16|32)m")>;
-
-def HWWriteResGroup65 : SchedWriteRes<[HWPort23,HWPort06,HWPort0156]> {
-  let Latency = 8;
-  let NumMicroOps = 4;
-  let ResourceCycles = [1,1,2];
-}
-def: InstRW<[HWWriteResGroup65], (instregex "CMOV(A|BE)(16|32|64)rm")>;
 
 def HWWriteResGroup66 : SchedWriteRes<[HWPort23,HWPort237,HWPort06,HWPort0156]> {
   let Latency = 9;
