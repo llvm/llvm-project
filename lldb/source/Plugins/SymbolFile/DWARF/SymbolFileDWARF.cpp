@@ -2158,7 +2158,15 @@ void SymbolFileDWARF::Index() {
     // a DIE in one compile unit refers to another and the indexes accesses
     // those DIEs.
     //----------------------------------------------------------------------
-    TaskMapOverInt(0, num_compile_units, extract_fn);
+    // If we end up here holding the module lock, the bellow parallel
+    // processing will hang if it needs the same lock. For example, when
+    // calling into GetDwoSymbolFileForCompileUnit() it will try to take
+    // the module lock. rdar://problem/38461035
+    // Disable parallel processing for now.
+    // TaskMapOverInt(0, num_compile_units, extract_fn);
+    for (int i=0; i<num_compile_units; ++i) {
+      extract_fn(i);
+    }
 
     // Now create a task runner that can index each DWARF compile unit in a
     // separate
