@@ -1,11 +1,9 @@
 ; RUN: llc -mtriple=arm64-apple-ios   -mcpu=cyclone   < %s | FileCheck %s -check-prefixes=ALL,CYCLONE
+; RUN: llc -mtriple=arm64-apple-ios   -mcpu=cyclone -mattr=+fullfp16 < %s | FileCheck %s -check-prefixes=CYCLONE-FULLFP16
 ; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=exynos-m1 < %s | FileCheck %s -check-prefixes=ALL,OTHERS
 ; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=exynos-m3 < %s | FileCheck %s -check-prefixes=ALL,OTHERS
 ; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=kryo      < %s | FileCheck %s -check-prefixes=ALL,OTHERS
 ; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=falkor    < %s | FileCheck %s -check-prefixes=ALL,OTHERS
-
-; rdar://11481771
-; rdar://13713797
 
 declare void @bar(half, float, double, <2 x double>)
 declare void @bari(i32, i32)
@@ -16,11 +14,14 @@ define void @t1() nounwind ssp {
 entry:
 ; ALL-LABEL: t1:
 ; ALL-NOT: fmov
-; CYCLONE: fmov h0, wzr
+; ALL:     ldr h0,{{.*}}
 ; CYCLONE: fmov s1, wzr
 ; CYCLONE: fmov d2, xzr
 ; CYCLONE: movi.16b v3, #0
-; OTHERS: movi v{{[0-3]+}}.2d, #0000000000000000
+; CYCLONE-FULLFP16: fmov h0, wzr
+; CYCLONE-FULLFP16: fmov s1, wzr
+; CYCLONE-FULLFP16: fmov d2, xzr
+; CYCLONE-FULLFP16: movi.16b v3, #0
 ; OTHERS: movi v{{[0-3]+}}.2d, #0000000000000000
 ; OTHERS: movi v{{[0-3]+}}.2d, #0000000000000000
 ; OTHERS: movi v{{[0-3]+}}.2d, #0000000000000000
@@ -53,6 +54,8 @@ define void @t4() nounwind ssp {
 ; ALL-NOT: fmov
 ; CYCLONE: fmov s{{[0-3]+}}, wzr
 ; CYCLONE: fmov s{{[0-3]+}}, wzr
+; CYCLONE-FULLFP16: fmov s{{[0-3]+}}, wzr
+; CYCLONE-FULLFP16: fmov s{{[0-3]+}}, wzr
 ; OTHERS: movi v{{[0-3]+}}.2d, #0000000000000000
 ; OTHERS: movi v{{[0-3]+}}.2d, #0000000000000000
   tail call void @barf(float 0.000000e+00, float 0.000000e+00) nounwind
