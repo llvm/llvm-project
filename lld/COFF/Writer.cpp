@@ -1192,16 +1192,18 @@ void Writer::writeBuildId() {
       reinterpret_cast<const char *>(Buffer->getBufferStart()),
       Buffer->getBufferSize());
 
-  uint32_t Hash = static_cast<uint32_t>(xxHash64(OutputFileData));
+  uint32_t Timestamp = Config->Timestamp;
+  if (Config->Repro)
+    Timestamp = static_cast<uint32_t>(xxHash64(OutputFileData));
 
   if (DebugDirectory)
-    DebugDirectory->setTimeDateStamp(Hash);
+    DebugDirectory->setTimeDateStamp(Timestamp);
 
   uint8_t *Buf = Buffer->getBufferStart();
   Buf += DOSStubSize + sizeof(PEMagic);
   object::coff_file_header *CoffHeader =
       reinterpret_cast<coff_file_header *>(Buf);
-  CoffHeader->TimeDateStamp = Hash;
+  CoffHeader->TimeDateStamp = Timestamp;
 }
 
 // Sort .pdata section contents according to PE/COFF spec 5.5.
