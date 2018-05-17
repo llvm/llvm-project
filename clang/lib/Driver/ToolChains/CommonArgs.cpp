@@ -538,6 +538,11 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
   // the option, so don't try to pass it.
   if (TC.getTriple().getOS() == llvm::Triple::Solaris)
     return true;
+  // Myriad is static linking only.  Furthermore, some versions of its
+  // linker have the bug where --export-dynamic overrides -static, so
+  // don't use --export-dynamic on that platform.
+  if (TC.getTriple().getVendor() == llvm::Triple::Myriad)
+    return true;
   SmallString<128> SanRT(TC.getCompilerRT(Args, Sanitizer));
   if (llvm::sys::fs::exists(SanRT + ".syms")) {
     CmdArgs.push_back(Args.MakeArgString("--dynamic-list=" + SanRT + ".syms"));

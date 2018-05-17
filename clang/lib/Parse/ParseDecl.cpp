@@ -798,8 +798,10 @@ static bool VersionNumberSeparator(const char Separator) {
 ///
 /// version:
 ///   simple-integer
-///   simple-integer ',' simple-integer
-///   simple-integer ',' simple-integer ',' simple-integer
+///   simple-integer '.' simple-integer
+///   simple-integer '_' simple-integer
+///   simple-integer '.' simple-integer '.' simple-integer
+///   simple-integer '_' simple-integer '_' simple-integer
 VersionTuple Parser::ParseVersionTuple(SourceRange &Range) {
   Range = SourceRange(Tok.getLocation(), Tok.getEndLoc());
 
@@ -877,7 +879,7 @@ VersionTuple Parser::ParseVersionTuple(SourceRange &Range) {
       return VersionTuple();
     }
 
-    return VersionTuple(Major, Minor, (AfterMajorSeparator == '_'));
+    return VersionTuple(Major, Minor);
   }
 
   const char AfterMinorSeparator = ThisTokBegin[AfterMinor];
@@ -908,7 +910,7 @@ VersionTuple Parser::ParseVersionTuple(SourceRange &Range) {
     return VersionTuple();
   }
   ConsumeToken();
-  return VersionTuple(Major, Minor, Subminor, (AfterMajorSeparator == '_'));
+  return VersionTuple(Major, Minor, Subminor);
 }
 
 /// Parse the contents of the "availability" attribute.

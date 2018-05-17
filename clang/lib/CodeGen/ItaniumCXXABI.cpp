@@ -825,7 +825,6 @@ ItaniumCXXABI::EmitMemberFunctionPointer(const CXXMethodDecl *MD) {
 llvm::Constant *ItaniumCXXABI::BuildMemberPointer(const CXXMethodDecl *MD,
                                                   CharUnits ThisAdjustment) {
   assert(MD->isInstance() && "Member function must not be static!");
-  MD = MD->getCanonicalDecl();
 
   CodeGenTypes &Types = CGM.getTypes();
 
@@ -1640,7 +1639,6 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
                                                   Address This,
                                                   llvm::Type *Ty,
                                                   SourceLocation Loc) {
-  GD = GD.getCanonicalDecl();
   Ty = Ty->getPointerTo()->getPointerTo();
   auto *MethodDecl = cast<CXXMethodDecl>(GD.getDecl());
   llvm::Value *VTable = CGF.GetVTablePtr(This, Ty, MethodDecl->getParent());
@@ -1674,7 +1672,7 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
     VFunc = VFuncLoad;
   }
 
-  CGCallee Callee(MethodDecl, VFunc);
+  CGCallee Callee(MethodDecl->getCanonicalDecl(), VFunc);
   return Callee;
 }
 
