@@ -7194,7 +7194,7 @@ def : Pat<(f64 (fpextend FR32X:$src)),
           Requires<[HasAVX512]>;
 def : Pat<(f64 (fpextend (loadf32 addr:$src))),
           (VCVTSS2SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>,
-          Requires<[HasAVX512]>;
+          Requires<[HasAVX512, OptForSize]>;
 
 def : Pat<(f64 (extloadf32 addr:$src)),
           (VCVTSS2SDZrm (f64 (IMPLICIT_DEF)), addr:$src)>,

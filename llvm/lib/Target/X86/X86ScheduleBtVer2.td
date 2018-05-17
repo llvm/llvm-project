@@ -156,6 +156,7 @@ def : WriteRes<WriteRMW, [JSAGU]>;
 ////////////////////////////////////////////////////////////////////////////////
 
 defm : JWriteResIntPair<WriteALU,    [JALU01], 1>;
+defm : JWriteResIntPair<WriteADC,    [JALU01], 1>;
 defm : JWriteResIntPair<WriteIMul,   [JALU1, JMul], 3, [1, 1], 2>; // i8/i16/i32 multiplication
 defm : JWriteResIntPair<WriteIMul64, [JALU1, JMul], 6, [1, 4], 2>; // i64 multiplication
 defm : X86WriteRes<WriteIMulH,       [JALU1], 6, [4], 1>;

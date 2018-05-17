@@ -154,6 +154,15 @@ static cl::opt<bool> PrintInstructionInfoView(
     cl::desc("Print the instruction info view (enabled by default)"),
     cl::cat(ViewOptions), cl::init(true));
 
+static cl::opt<bool> EnableAllStats("all-stats",
+                                    cl::desc("Print all hardware statistics"),
+                                    cl::cat(ViewOptions), cl::init(false));
+
+static cl::opt<bool>
+    EnableAllViews("all-views",
+                   cl::desc("Print all views including hardware statistics"),
+                   cl::cat(ViewOptions), cl::init(false));
+
 namespace {
 
 const Target *getTarget(const char *ProgName) {
@@ -273,6 +282,32 @@ public:
 };
 } // end of anonymous namespace
 
+static void processOptionImpl(cl::opt<bool> &O, const cl::opt<bool> &Default) {
+  if (!O.getNumOccurrences() || O.getPosition() < Default.getPosition())
+    O = Default.getValue();
+}
+
+static void processViewOptions() {
+  if (!EnableAllViews.getNumOccurrences() &&
+      !EnableAllStats.getNumOccurrences())
+    return;
+
+  if (EnableAllViews.getNumOccurrences()) {
+    processOptionImpl(PrintResourcePressureView, EnableAllViews);
+    processOptionImpl(PrintTimelineView, EnableAllViews);
+    processOptionImpl(PrintInstructionInfoView, EnableAllViews);
+  }
+
+  const cl::opt<bool> &Default =
+      EnableAllViews.getPosition() < EnableAllStats.getPosition()
+          ? EnableAllStats
+          : EnableAllViews;
+  processOptionImpl(PrintRegisterFileStats, Default);
+  processOptionImpl(PrintDispatchStats, Default);
+  processOptionImpl(PrintSchedulerStats, Default);
+  processOptionImpl(PrintRetireStats, Default);
+}
+
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
@@ -308,6 +343,9 @@ int main(int argc, char **argv) {
     WithColor::error() << InputFilename << ": " << EC.message() << '\n';
     return 1;
   }
+
+  // Apply overrides to llvm-mca specific options.
+  processViewOptions();
 
   SourceMgr SrcMgr;
 

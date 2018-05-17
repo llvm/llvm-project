@@ -97,7 +97,9 @@ def WriteMove    : SchedWrite;
 
 // Arithmetic.
 defm WriteALU    : X86SchedWritePair; // Simple integer ALU op.
+defm WriteADC    : X86SchedWritePair; // Integer ALU + flags op.
 def  WriteALURMW : WriteSequence<[WriteALULd, WriteStore]>;
+def  WriteADCRMW : WriteSequence<[WriteADCLd, WriteStore]>;
 defm WriteIMul   : X86SchedWritePair; // Integer multiplication.
 defm WriteIMul64 : X86SchedWritePair; // Integer 64-bit multiplication.
 def  WriteIMulH  : SchedWrite;        // Integer multiplication, high part.

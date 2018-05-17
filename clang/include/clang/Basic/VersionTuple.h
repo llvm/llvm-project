@@ -24,9 +24,7 @@ namespace clang {
 
 /// Represents a version number in the form major[.minor[.subminor[.build]]].
 class VersionTuple {
-  unsigned Major : 31;
-
-  unsigned UsesUnderscores : 1;
+  unsigned Major : 32;
 
   unsigned Minor : 31;
   unsigned HasMinor : 1;
@@ -39,30 +37,25 @@ class VersionTuple {
 
 public:
   VersionTuple()
-      : Major(0), UsesUnderscores(false), Minor(0), HasMinor(false),
-        Subminor(0), HasSubminor(false), Build(0), HasBuild(false) {}
+      : Major(0), Minor(0), HasMinor(false), Subminor(0), HasSubminor(false),
+        Build(0), HasBuild(false) {}
 
   explicit VersionTuple(unsigned Major)
-      : Major(Major), UsesUnderscores(false), Minor(0), HasMinor(false),
-        Subminor(0), HasSubminor(false), Build(0), HasBuild(false) {}
+      : Major(Major), Minor(0), HasMinor(false), Subminor(0),
+        HasSubminor(false), Build(0), HasBuild(false) {}
 
-  explicit VersionTuple(unsigned Major, unsigned Minor,
-                        bool UsesUnderscores = false)
-      : Major(Major), UsesUnderscores(UsesUnderscores), Minor(Minor),
-        HasMinor(true), Subminor(0), HasSubminor(false), Build(0),
-        HasBuild(false) {}
+  explicit VersionTuple(unsigned Major, unsigned Minor)
+      : Major(Major), Minor(Minor), HasMinor(true), Subminor(0),
+        HasSubminor(false), Build(0), HasBuild(false) {}
 
-  explicit VersionTuple(unsigned Major, unsigned Minor, unsigned Subminor,
-                        bool UsesUnderscores = false)
-      : Major(Major), UsesUnderscores(UsesUnderscores), Minor(Minor),
-        HasMinor(true), Subminor(Subminor), HasSubminor(true), Build(0),
-        HasBuild(false) {}
+  explicit VersionTuple(unsigned Major, unsigned Minor, unsigned Subminor)
+      : Major(Major), Minor(Minor), HasMinor(true), Subminor(Subminor),
+        HasSubminor(true), Build(0), HasBuild(false) {}
 
   explicit VersionTuple(unsigned Major, unsigned Minor, unsigned Subminor,
-                        unsigned Build, bool UsesUnderscores = false)
-      : Major(Major), UsesUnderscores(UsesUnderscores), Minor(Minor),
-        HasMinor(true), Subminor(Subminor), HasSubminor(true), Build(Build),
-        HasBuild(true) {}
+                        unsigned Build)
+      : Major(Major), Minor(Minor), HasMinor(true), Subminor(Subminor),
+        HasSubminor(true), Build(Build), HasBuild(true) {}
 
   /// Determine whether this version information is empty
   /// (e.g., all version components are zero).
@@ -92,14 +85,6 @@ public:
     if (!HasBuild)
       return None;
     return Build;
-  }
-
-  bool usesUnderscores() const {
-    return UsesUnderscores;
-  }
-
-  void UseDotAsSeparator() {
-    UsesUnderscores = false;
   }
   
   /// Determine if two version numbers are equivalent. If not

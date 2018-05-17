@@ -248,6 +248,12 @@ public:
   /// Get the working directory of this file system.
   virtual llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const = 0;
 
+  /// Gets real path of \p Path e.g. collapse all . and .. patterns, resolve
+  /// symlinks. For real file system, this uses `llvm::sys::fs::real_path`.
+  /// This returns errc::operation_not_permitted if not implemented by subclass.
+  virtual std::error_code getRealPath(const Twine &Path,
+                                      SmallVectorImpl<char> &Output) const;
+
   /// Check whether a file exists. Provided for convenience.
   bool exists(const Twine &Path);
 

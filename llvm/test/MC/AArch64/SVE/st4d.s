@@ -7,6 +7,18 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
 // RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
+st4d    { z0.d, z1.d, z2.d, z3.d }, p0, [x0, x0, lsl #3]
+// CHECK-INST: st4d    { z0.d, z1.d, z2.d, z3.d }, p0, [x0, x0, lsl #3]
+// CHECK-ENCODING: [0x00,0x60,0xe0,0xe5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 60 e0 e5 <unknown>
+
+st4d    { z5.d, z6.d, z7.d, z8.d }, p3, [x17, x16, lsl #3]
+// CHECK-INST: st4d    { z5.d, z6.d, z7.d, z8.d }, p3, [x17, x16, lsl #3]
+// CHECK-ENCODING: [0x25,0x6e,0xf0,0xe5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 25 6e f0 e5 <unknown>
+
 st4d    { z0.d, z1.d, z2.d, z3.d }, p0, [x0]
 // CHECK-INST: st4d    { z0.d, z1.d, z2.d, z3.d }, p0, [x0]
 // CHECK-ENCODING: [0x00,0xe0,0xf0,0xe5]

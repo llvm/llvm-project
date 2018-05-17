@@ -58,49 +58,54 @@ For example,
    this result.
 That's about it.)";
   // Two-slash comments.
-  EXPECT_EQ(ExpectedOutput, formatComment(
+  auto Formatted = formatComment(
 R"cpp(
 // This function does this and that.
 // For example,
 //    Runnning it in that case will give you
 //    this result.
-// That's about it.)cpp"));
+// That's about it.)cpp");
+  EXPECT_EQ(ExpectedOutput, Formatted);
 
   // Three-slash comments.
-  EXPECT_EQ(ExpectedOutput, formatComment(
+  Formatted = formatComment(
 R"cpp(
 /// This function does this and that.
 /// For example,
 ///    Runnning it in that case will give you
 ///    this result.
-/// That's about it.)cpp"));
+/// That's about it.)cpp");
+  EXPECT_EQ(ExpectedOutput, Formatted);
 
   // Block comments.
-  EXPECT_EQ(ExpectedOutput, formatComment(
+  Formatted = formatComment(
 R"cpp(
 /* This function does this and that.
  * For example,
  *    Runnning it in that case will give you
  *    this result.
- * That's about it.*/)cpp"));
+ * That's about it.*/)cpp");
+  EXPECT_EQ(ExpectedOutput, Formatted);
 
   // Doxygen-style block comments.
-  EXPECT_EQ(ExpectedOutput, formatComment(
+  Formatted = formatComment(
 R"cpp(
 /** This function does this and that.
   * For example,
   *    Runnning it in that case will give you
   *    this result.
-  * That's about it.*/)cpp"));
+  * That's about it.*/)cpp");
+  EXPECT_EQ(ExpectedOutput, Formatted);
 
   // Weird indentation.
-  EXPECT_EQ(ExpectedOutput, formatComment(
+  Formatted = formatComment(
 R"cpp(
        // This function does this and that.
   //      For example,
   //         Runnning it in that case will give you
         //   this result.
-       // That's about it.)cpp"));
+       // That's about it.)cpp");
+  EXPECT_EQ(ExpectedOutput, Formatted);
   // clang-format on
 }
 
@@ -111,11 +116,12 @@ R"(\brief This is the brief part of the comment.
 \param a something about a.
 @param b something about b.)";
 
-  EXPECT_EQ(ExpectedOutput, formatComment(
+  auto Formatted = formatComment(
 R"cpp(
 /// \brief This is the brief part of the comment.
 /// \param a something about a.
-/// @param b something about b.)cpp"));
+/// @param b something about b.)cpp");
+  EXPECT_EQ(ExpectedOutput, Formatted);
   // clang-format on
 }
 
