@@ -2562,6 +2562,8 @@ def mrtm : Flag<["-"], "mrtm">, Group<m_x86_Features_Group>;
 def mno_rtm : Flag<["-"], "mno-rtm">, Group<m_x86_Features_Group>;
 def mrdseed : Flag<["-"], "mrdseed">, Group<m_x86_Features_Group>;
 def mno_rdseed : Flag<["-"], "mno-rdseed">, Group<m_x86_Features_Group>;
+def msahf : Flag<["-"], "msahf">, Group<m_x86_Features_Group>;
+def mno_sahf : Flag<["-"], "mno-sahf">, Group<m_x86_Features_Group>;
 def msgx : Flag<["-"], "msgx">, Group<m_x86_Features_Group>;
 def mno_sgx : Flag<["-"], "mno-sgx">, Group<m_x86_Features_Group>;
 def msha : Flag<["-"], "msha">, Group<m_x86_Features_Group>;
