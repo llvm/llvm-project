@@ -35,6 +35,7 @@ struct InputInfo {
   size_t NumSuccessfullMutations = 0;
   bool MayDeleteFile = false;
   bool Reduced = false;
+  bool HasFocusFunction = false;
   Vector<uint32_t> UniqFeatureSet;
   float FeatureFrequencyScore = 1.0;
 };
@@ -70,10 +71,17 @@ class InputCorpus {
         Res = std::max(Res, II->U.size());
     return Res;
   }
+
+  size_t NumInputsThatTouchFocusFunction() {
+    return std::count_if(Inputs.begin(), Inputs.end(), [](const InputInfo *II) {
+      return II->HasFocusFunction;
+    });
+  }
+
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
   void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
-                   const Vector<uint32_t> &FeatureSet) {
+                   bool HasFocusFunction, const Vector<uint32_t> &FeatureSet) {
     assert(!U.empty());
     if (FeatureDebug)
       Printf("ADD_TO_CORPUS %zd NF %zd\n", Inputs.size(), NumFeatures);
@@ -83,6 +91,7 @@ class InputCorpus {
     II.NumFeatures = NumFeatures;
     II.MayDeleteFile = MayDeleteFile;
     II.UniqFeatureSet = FeatureSet;
+    II.HasFocusFunction = HasFocusFunction;
     std::sort(II.UniqFeatureSet.begin(), II.UniqFeatureSet.end());
     ComputeSHA1(U.data(), U.size(), II.Sha1);
     Hashes.insert(Sha1ToString(II.Sha1));
@@ -265,6 +274,7 @@ private:
     for (size_t i = 0; i < N; i++)
       Weights[i] = Inputs[i]->NumFeatures
                        ? (i + 1) * Inputs[i]->FeatureFrequencyScore
+                       * (Inputs[i]->HasFocusFunction ? 1000 : 1)
                        : 0.;
     if (FeatureDebug) {
       for (size_t i = 0; i < N; i++)

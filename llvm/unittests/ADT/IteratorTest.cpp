@@ -369,8 +369,8 @@ TEST(RangeTest, Distance) {
   std::vector<int> v1;
   std::vector<int> v2{1, 2, 3};
 
-  EXPECT_EQ(std::distance(v1.begin(), v1.end()), distance(v1));
-  EXPECT_EQ(std::distance(v2.begin(), v2.end()), distance(v2));
+  EXPECT_EQ(std::distance(v1.begin(), v1.end()), size(v1));
+  EXPECT_EQ(std::distance(v2.begin(), v2.end()), size(v2));
 }
 
 } // anonymous namespace

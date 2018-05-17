@@ -626,6 +626,8 @@ const internal::VariadicDynCastAllOfMatcher<Decl, ObjCCategoryImplDecl>
     objcCategoryImplDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, ObjCMethodDecl>
     objcMethodDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, BlockDecl>
+    blockDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, ObjCIvarDecl> objcIvarDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, ObjCPropertyDecl>
     objcPropertyDecl;

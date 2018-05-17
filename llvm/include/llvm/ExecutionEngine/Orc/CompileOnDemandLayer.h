@@ -490,10 +490,11 @@ private:
           return LD.BackingResolver->lookupFlags(SymbolFlags,
                                                  *NotFoundViaLegacyLookup);
         },
-        [&LD, LegacyLookup](std::shared_ptr<AsynchronousSymbolQuery> Query,
-                            SymbolNameSet Symbols) {
+        [this, &LD,
+         LegacyLookup](std::shared_ptr<AsynchronousSymbolQuery> Query,
+                       SymbolNameSet Symbols) {
           auto NotFoundViaLegacyLookup =
-              lookupWithLegacyFn(*Query, Symbols, LegacyLookup);
+              lookupWithLegacyFn(ES, *Query, Symbols, LegacyLookup);
           return LD.BackingResolver->lookup(Query, NotFoundViaLegacyLookup);
         });
 
@@ -647,10 +648,10 @@ private:
           return LD.BackingResolver->lookupFlags(SymbolFlags,
                                                  *NotFoundViaLegacyLookup);
         },
-        [&LD, LegacyLookup](std::shared_ptr<AsynchronousSymbolQuery> Q,
-                            SymbolNameSet Symbols) {
+        [this, &LD, LegacyLookup](std::shared_ptr<AsynchronousSymbolQuery> Q,
+                                  SymbolNameSet Symbols) {
           auto NotFoundViaLegacyLookup =
-              lookupWithLegacyFn(*Q, Symbols, LegacyLookup);
+              lookupWithLegacyFn(ES, *Q, Symbols, LegacyLookup);
           return LD.BackingResolver->lookup(Q,
                                             std::move(NotFoundViaLegacyLookup));
         });
