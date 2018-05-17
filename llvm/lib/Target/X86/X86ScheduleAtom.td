@@ -77,6 +77,7 @@ def : WriteRes<WriteRMW, [AtomPort0]>;
 ////////////////////////////////////////////////////////////////////////////////
 
 defm : AtomWriteResPair<WriteALU,    [AtomPort01], [AtomPort0]>;
+defm : AtomWriteResPair<WriteADC,    [AtomPort01], [AtomPort0]>;
 defm : AtomWriteResPair<WriteIMul,   [AtomPort01], [AtomPort01],  7,  7,  [7],  [7]>;
 defm : AtomWriteResPair<WriteIMul64, [AtomPort01], [AtomPort01], 12, 12, [12], [12]>;
 
@@ -433,8 +434,6 @@ def AtomWrite0_1 : SchedWriteRes<[AtomPort0]> {
 }
 def : InstRW<[AtomWrite0_1], (instrs FXAM, LD_Frr,
                                      BSWAP32r, BSWAP64r,
-                                     DEC8m, DEC16m, DEC32m, DEC64m,
-                                     INC8m, INC16m, INC32m, INC64m,
                                      MOVSX64rr32,
                                      MMX_MOVD64rr,
                                      MMX_MOVD64to64rr,
@@ -442,8 +441,9 @@ def : InstRW<[AtomWrite0_1], (instrs FXAM, LD_Frr,
                                      MOVDI2SSrr,
                                      MOV64toPQIrr,
                                      MOV64toSDrr)>;
-def : InstRW<[AtomWrite0_1], (instregex "(ADC|ADD|AND|NEG|NOT|OR|SBB|SUB|XOR)(8|16|32|64)m",
-                                        "(RCL|RCR|ROL|ROR|SAR|SHL|SHR)(8|16|32|64)m",
+def : SchedAlias<WriteALURMW, AtomWrite0_1>;
+def : SchedAlias<WriteADCRMW, AtomWrite0_1>;
+def : InstRW<[AtomWrite0_1], (instregex "(RCL|RCR|ROL|ROR|SAR|SHL|SHR)(8|16|32|64)m",
                                         "MOV(S|Z)X(32|64)rr(8|8_NOREX|16)")>;
 
 def AtomWrite0_3 : SchedWriteRes<[AtomPort0]> {

@@ -106,6 +106,7 @@ def : WriteRes<WriteRMW, [SKXPort237,SKXPort4]>;
 
 // Arithmetic.
 defm : SKXWriteResPair<WriteALU,    [SKXPort0156], 1>; // Simple integer ALU op.
+defm : SKXWriteResPair<WriteADC,    [SKXPort06],   1>; // Integer ALU + flags op.
 defm : SKXWriteResPair<WriteIMul,   [SKXPort1],    3>; // Integer multiplication.
 defm : SKXWriteResPair<WriteIMul64, [SKXPort1],    3>; // Integer 64-bit multiplication.
 
@@ -565,22 +566,14 @@ def SKXWriteResGroup7 : SchedWriteRes<[SKXPort06]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[SKXWriteResGroup7], (instrs CDQ, CQO, CLAC, STAC)>;
-def: InstRW<[SKXWriteResGroup7], (instregex "ADC(16|32|64)ri",
-                                            "ADC(16|32|64)i",
-                                            "ADC(8|16|32|64)rr",
-                                            "ADCX(32|64)rr",
-                                            "ADOX(32|64)rr",
-                                            "BT(16|32|64)ri8",
+def: InstRW<[SKXWriteResGroup7], (instregex "BT(16|32|64)ri8",
                                             "BT(16|32|64)rr",
                                             "BTC(16|32|64)ri8",
                                             "BTC(16|32|64)rr",
                                             "BTR(16|32|64)ri8",
                                             "BTR(16|32|64)rr",
                                             "BTS(16|32|64)ri8",
-                                            "BTS(16|32|64)rr",
-                                            "SBB(16|32|64)ri",
-                                            "SBB(16|32|64)i",
-                                            "SBB(8|16|32|64)rr")>;
+                                            "BTS(16|32|64)rr")>;
 
 def SKXWriteResGroup8 : SchedWriteRes<[SKXPort15]> {
   let Latency = 1;
@@ -1221,10 +1214,6 @@ def SKXWriteResGroup78 : SchedWriteRes<[SKXPort23,SKXPort06]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[SKXWriteResGroup78], (instregex "BT(16|32|64)mi8")>;
-def: InstRW<[SKXWriteResGroup78, ReadAfterLd], (instrs ADC8rm, ADC16rm, ADC32rm, ADC64rm,
-                                                       ADCX32rm, ADCX64rm,
-                                                       ADOX32rm, ADOX64rm,
-                                                       SBB8rm, SBB16rm, SBB32rm, SBB64rm)>;
 
 def SKXWriteResGroup79 : SchedWriteRes<[SKXPort23,SKXPort15]> {
   let Latency = 6;
@@ -1687,11 +1676,8 @@ def SKXWriteResGroup130 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort06
   let NumMicroOps = 6;
   let ResourceCycles = [1,1,1,2,1];
 }
-def: InstRW<[SKXWriteResGroup130], (instregex "ADC(8|16|32|64)mi",
-                                              "CMPXCHG(8|16|32|64)rm",
-                                              "SBB(8|16|32|64)mi")>;
-def: InstRW<[SKXWriteResGroup130, ReadAfterLd], (instrs ADC8mr, ADC16mr, ADC32mr, ADC64mr,
-                                                        SBB8mr, SBB16mr, SBB32mr, SBB64mr)>;
+def: SchedAlias<WriteADCRMW, SKXWriteResGroup130>;
+def: InstRW<[SKXWriteResGroup130], (instregex "CMPXCHG(8|16|32|64)rm")>;
 
 def SKXWriteResGroup131 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort5,SKXPort237,SKXPort0156]> {
   let Latency = 8;

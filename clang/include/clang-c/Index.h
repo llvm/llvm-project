@@ -1324,7 +1324,15 @@ enum CXTranslationUnit_Flags {
   /**
    * Sets the preprocessor in a mode for parsing a single file only.
    */
-  CXTranslationUnit_SingleFileParse = 0x400
+  CXTranslationUnit_SingleFileParse = 0x400,
+
+  /**
+   * \brief Used in combination with CXTranslationUnit_SkipFunctionBodies to
+   * constrain the skipping of function bodies to the preamble.
+   *
+   * The function bodies of the main file are not skipped.
+   */
+  CXTranslationUnit_LimitSkipFunctionBodiesToPreamble = 0x800
 };
 
 /**

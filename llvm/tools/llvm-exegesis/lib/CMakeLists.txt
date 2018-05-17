@@ -1,15 +1,15 @@
 add_library(LLVMExegesis
   STATIC
   Analysis.cpp
+  Assembler.cpp
   BenchmarkResult.cpp
   BenchmarkRunner.cpp
   Clustering.cpp
-  InMemoryAssembler.cpp
-  InstructionSnippetGenerator.cpp
   Latency.cpp
   LlvmState.cpp
-  OperandGraph.cpp
+  MCInstrDescView.cpp
   PerfHelper.cpp
+  RegisterAliasing.cpp
   Uops.cpp
   X86.cpp
   )

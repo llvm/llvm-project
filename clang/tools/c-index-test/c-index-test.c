@@ -82,6 +82,8 @@ static unsigned getDefaultParsingOptions() {
     options |= CXTranslationUnit_CreatePreambleOnFirstParse;
   if (getenv("CINDEXTEST_KEEP_GOING"))
     options |= CXTranslationUnit_KeepGoing;
+  if (getenv("CINDEXTEST_LIMIT_SKIP_FUNCTION_BODIES_TO_PREAMBLE"))
+    options |= CXTranslationUnit_LimitSkipFunctionBodiesToPreamble;
 
   return options;
 }

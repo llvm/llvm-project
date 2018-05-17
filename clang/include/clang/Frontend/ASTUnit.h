@@ -81,6 +81,9 @@ class FileSystem;
 
 } // namespace vfs
 
+/// \brief Enumerates the available scopes for skipping function bodies.
+enum class SkipFunctionBodiesScope { None, Preamble, PreambleAndMainFile };
+
 /// Utility class for loading a ASTContext from an AST file.
 class ASTUnit {
 public:
@@ -348,6 +351,9 @@ private:
   /// inconsistent state, and is not safe to free.
   unsigned UnsafeToFree : 1;
 
+  /// \brief Enumerator specifying the scope for skipping function bodies.
+  SkipFunctionBodiesScope SkipFunctionBodies = SkipFunctionBodiesScope::None;
+
   /// Cache any "global" code-completion results, so that we can avoid
   /// recomputing them with each completion.
   void CacheCodeCompletionResults();
@@ -363,7 +369,7 @@ private:
 
   std::unique_ptr<llvm::MemoryBuffer> getMainBufferWithPrecompiledPreamble(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-      const CompilerInvocation &PreambleInvocationIn,
+      CompilerInvocation &PreambleInvocationIn,
       IntrusiveRefCntPtr<vfs::FileSystem> VFS, bool AllowRebuild = true,
       unsigned MaxLines = 0);
   void RealizeTopLevelDeclsFromPreamble();
@@ -801,9 +807,11 @@ public:
       TranslationUnitKind TUKind = TU_Complete,
       bool CacheCodeCompletionResults = false,
       bool IncludeBriefCommentsInCodeCompletion = false,
-      bool AllowPCHWithCompilerErrors = false, bool SkipFunctionBodies = false,
-      bool SingleFileParse = false,
-      bool UserFilesAreVolatile = false, bool ForSerialization = false,
+      bool AllowPCHWithCompilerErrors = false,
+      SkipFunctionBodiesScope SkipFunctionBodies =
+          SkipFunctionBodiesScope::None,
+      bool SingleFileParse = false, bool UserFilesAreVolatile = false,
+      bool ForSerialization = false,
       llvm::Optional<StringRef> ModuleFormat = llvm::None,
       std::unique_ptr<ASTUnit> *ErrAST = nullptr,
       IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr);
