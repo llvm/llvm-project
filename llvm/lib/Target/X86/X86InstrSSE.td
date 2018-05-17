@@ -897,8 +897,6 @@ let Constraints = "$src1 = $dst", AddedComplexity = 20 in {
 // SSE 1 & 2 - Conversion Instructions
 //===----------------------------------------------------------------------===//
 
-// FIXME: We probably want to match the rm form only when optimizing for
-// size, to avoid false depenendecies (see sse_fp_unop_s for details)
 multiclass sse12_cvt_s<bits<8> opc, RegisterClass SrcRC, RegisterClass DstRC,
                      SDNode OpNode, X86MemOperand x86memop, PatFrag ld_frag,
                      string asm, X86FoldableSchedWrite sched> {
@@ -925,8 +923,6 @@ let hasSideEffects = 0 in {
 }
 }
 
-// FIXME: We probably want to match the rm form only when optimizing for
-// size, to avoid false depenendecies (see sse_fp_unop_s for details)
 multiclass sse12_vcvt_avx<bits<8> opc, RegisterClass SrcRC, RegisterClass DstRC,
                           X86MemOperand x86memop, string asm,
                           X86FoldableSchedWrite sched> {
@@ -1301,24 +1297,25 @@ def CVTSD2SSrm_Int: I<0x5A, MRMSrcMem,
 
 // Convert scalar single to scalar double
 // SSE2 instructions with XS prefix
-let hasSideEffects = 0, Predicates = [UseAVX] in {
+let hasSideEffects = 0 in {
 def VCVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst),
                     (ins FR64:$src1, FR32:$src2),
                     "vcvtss2sd\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
                     XS, VEX_4V, VEX_LIG, VEX_WIG, NotMemoryFoldable,
-                    Sched<[WriteCvtSS2SD]>;
+                    Sched<[WriteCvtSS2SD]>, Requires<[UseAVX]>;
 let mayLoad = 1 in
 def VCVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst),
                     (ins FR64:$src1, f32mem:$src2),
                     "vcvtss2sd\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
                     XS, VEX_4V, VEX_LIG, VEX_WIG, NotMemoryFoldable,
-                    Sched<[WriteCvtSS2SD.Folded, ReadAfterLd]>;
+                    Sched<[WriteCvtSS2SD.Folded, ReadAfterLd]>,
+                    Requires<[UseAVX, OptForSize]>;
 }
 
 def : Pat<(f64 (fpextend FR32:$src)),
     (VCVTSS2SDrr (f64 (IMPLICIT_DEF)), FR32:$src)>, Requires<[UseAVX]>;
 def : Pat<(fpextend (loadf32 addr:$src)),
-    (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>, Requires<[UseAVX]>;
+    (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>, Requires<[UseAVX, OptForSize]>;
 
 def : Pat<(extloadf32 addr:$src),
     (VCVTSS2SDrm (f64 (IMPLICIT_DEF)), addr:$src)>,
@@ -1343,7 +1340,7 @@ def CVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst), (ins f32mem:$src),
 // Since these loads aren't folded into the fpextend, we have to match it
 // explicitly here.
 def : Pat<(fpextend (loadf32 addr:$src)),
-          (CVTSS2SDrm addr:$src)>, Requires<[UseSSE2]>;
+          (CVTSS2SDrm addr:$src)>, Requires<[UseSSE2, OptForSize]>;
 def : Pat<(extloadf32 addr:$src),
           (CVTSS2SDrr (MOVSSrm addr:$src))>, Requires<[UseSSE2, OptForSpeed]>;
 

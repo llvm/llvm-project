@@ -22,7 +22,6 @@ void
 test1()
 {
     typedef std::linear_congruential_engine<T, a, c, m> LCE;
-    typedef typename LCE::result_type result_type;
     LCE e1;
     LCE e2;
     e2.seed();

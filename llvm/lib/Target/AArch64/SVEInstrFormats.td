@@ -574,6 +574,28 @@ multiclass sve_mem_est_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
                   (!cast<Instruction>(NAME) VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
 }
 
+class sve_mem_est_ss<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
+                     string asm, RegisterOperand gprty>
+: I<(outs), (ins VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
+  asm, "\t$Zt, $Pg, [$Rn, $Rm]",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Rm;
+  bits<5> Rn;
+  bits<5> Zt;
+  let Inst{31-25} = 0b1110010;
+  let Inst{24-23} = sz;
+  let Inst{22-21} = nregs;
+  let Inst{20-16} = Rm;
+  let Inst{15-13} = 0b011;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayStore = 1;
+}
+
 class sve_mem_cst_ss_base<bits<4> dtype, string asm,
                           RegisterOperand listty, RegisterOperand gprty>
 : I<(outs), (ins listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),

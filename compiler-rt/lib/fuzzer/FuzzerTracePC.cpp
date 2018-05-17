@@ -229,6 +229,39 @@ void TracePC::IterateCoveredFunctions(CallBack CB) {
   }
 }
 
+void TracePC::SetFocusFunction(const std::string &FuncName) {
+  // This function should be called once.
+  assert(FocusFunction.first > NumModulesWithInline8bitCounters);
+  if (FuncName.empty())
+    return;
+  for (size_t M = 0; M < NumModulesWithInline8bitCounters; M++) {
+    auto &PCTE = ModulePCTable[M];
+    size_t N = PCTE.Stop - PCTE.Start;
+    for (size_t I = 0; I < N; I++) {
+      if (!(PCTE.Start[I].PCFlags & 1)) continue;  // not a function entry.
+      auto Name = DescribePC("%F", GetNextInstructionPc(PCTE.Start[I].PC));
+      if (Name[0] == 'i' && Name[1] == 'n' && Name[2] == ' ')
+        Name = Name.substr(3, std::string::npos);
+      if (FuncName != Name) continue;
+      Printf("INFO: Focus function is set to '%s'\n", Name.c_str());
+      FocusFunction = {M, I};
+      return;
+    }
+  }
+}
+
+bool TracePC::ObservedFocusFunction() {
+  size_t I = FocusFunction.first;
+  size_t J = FocusFunction.second;
+  if (I >= NumModulesWithInline8bitCounters)
+    return false;
+  auto &MC = ModuleCounters[I];
+  size_t Size = MC.Stop - MC.Start;
+  if (J >= Size)
+    return false;
+  return MC.Start[J] != 0;
+}
+
 void TracePC::PrintCoverage() {
   if (!EF->__sanitizer_symbolize_pc ||
       !EF->__sanitizer_get_module_and_offset_for_pc) {

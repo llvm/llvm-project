@@ -3380,9 +3380,15 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
     = options & CXTranslationUnit_CacheCompletionResults;
   bool IncludeBriefCommentsInCodeCompletion
     = options & CXTranslationUnit_IncludeBriefCommentsInCodeCompletion;
-  bool SkipFunctionBodies = options & CXTranslationUnit_SkipFunctionBodies;
   bool SingleFileParse = options & CXTranslationUnit_SingleFileParse;
   bool ForSerialization = options & CXTranslationUnit_ForSerialization;
+  SkipFunctionBodiesScope SkipFunctionBodies = SkipFunctionBodiesScope::None;
+  if (options & CXTranslationUnit_SkipFunctionBodies) {
+    SkipFunctionBodies =
+        (options & CXTranslationUnit_LimitSkipFunctionBodiesToPreamble)
+            ? SkipFunctionBodiesScope::Preamble
+            : SkipFunctionBodiesScope::PreambleAndMainFile;
+  }
 
   // Configure the diagnostics.
   IntrusiveRefCntPtr<DiagnosticsEngine>

@@ -29,11 +29,11 @@ raw_ostream& clang::operator<<(raw_ostream &Out,
                                      const VersionTuple &V) {
   Out << V.getMajor();
   if (Optional<unsigned> Minor = V.getMinor())
-    Out << (V.usesUnderscores() ? '_' : '.') << *Minor;
+    Out << '.' << *Minor;
   if (Optional<unsigned> Subminor = V.getSubminor())
-    Out << (V.usesUnderscores() ? '_' : '.') << *Subminor;
+    Out << '.' << *Subminor;
   if (Optional<unsigned> Build = V.getBuild())
-    Out << (V.usesUnderscores() ? '_' : '.') << *Build;
+    Out << '.' << *Build;
   return Out;
 }
 

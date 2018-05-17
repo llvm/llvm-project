@@ -30,6 +30,30 @@ st2b {z7.b, z8.b}, p3, [x1, #5, MUL VL]
 
 
 // --------------------------------------------------------------------------//
+// Invalid scalar + scalar addressing modes
+
+st2b { z0.b, z1.b }, p0, [x0, xzr]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 without shift
+// CHECK-NEXT: st2b { z0.b, z1.b }, p0, [x0, xzr]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st2b { z0.b, z1.b }, p0, [x0, x0, lsl #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 without shift
+// CHECK-NEXT: st2b { z0.b, z1.b }, p0, [x0, x0, lsl #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st2b { z0.b, z1.b }, p0, [x0, w0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 without shift
+// CHECK-NEXT: st2b { z0.b, z1.b }, p0, [x0, w0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st2b { z0.b, z1.b }, p0, [x0, w0, uxtw]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 without shift
+// CHECK-NEXT: st2b { z0.b, z1.b }, p0, [x0, w0, uxtw]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
 // error: restricted predicate has range [0, 7].
 
 st2b {z2.b, z3.b}, p8, [x15, #10, MUL VL]

@@ -512,9 +512,7 @@ def: InstRW<[SBWriteResGroup4], (instregex "BT(16|32|64)ri8",
                                            "BTR(16|32|64)ri8",
                                            "BTR(16|32|64)rr",
                                            "BTS(16|32|64)ri8",
-                                           "BTS(16|32|64)rr",
-                                           "VMOVDQA(Y?)rr",
-                                           "VMOVDQU(Y?)rr")>;
+                                           "BTS(16|32|64)rr")>;
 
 def SBWriteResGroup5 : SchedWriteRes<[SBPort15]> {
   let Latency = 1;
@@ -532,8 +530,7 @@ def SBWriteResGroup6 : SchedWriteRes<[SBPort015]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[SBWriteResGroup6], (instregex "MMX_MOVQ2DQrr",
-                                           "MOVDQArr", // TODO: Why are these separated from their VEX equivalent
-                                           "MOVDQUrr")>; // TODO: Why are these separated from their VEX equivalent
+                                           "MOVDQ(A|U)rr")>; // NOTE: Different port requirements to VEX equivalents
 
 def SBWriteResGroup7 : SchedWriteRes<[SBPort0]> {
   let Latency = 2;
@@ -743,8 +740,7 @@ def SBWriteResGroup33 : SchedWriteRes<[SBPort4,SBPort23]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup33], (instregex "PUSH64i8",
-                                            "PUSH(16|32|64)r")>;
+def: InstRW<[SBWriteResGroup33], (instregex "PUSH(16r|32r|64r|64i8)")>;
 
 def SBWriteResGroup35 : SchedWriteRes<[SBPort1,SBPort5]> {
   let Latency = 5;
