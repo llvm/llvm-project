@@ -1,3 +1,5 @@
+# REQUIRES: shell
+
 # Check xunit output
 # RUN: rm -rf %t.xunit.xml
 # RUN: not %{lit} --xunit-xml-output %t.xunit.xml %{inputs}/xunit-output

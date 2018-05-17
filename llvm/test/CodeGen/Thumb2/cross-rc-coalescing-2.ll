@@ -68,6 +68,6 @@ bb8:                                              ; preds = %bb8, %bb7
   br i1 %34, label %bb8, label %bb9
 
 bb9:                                              ; preds = %bb8
-  %35 = fadd float 0.000000e+00, %34
+  %35 = fadd float 0.000000e+00, %33
   br label %bb7
 }

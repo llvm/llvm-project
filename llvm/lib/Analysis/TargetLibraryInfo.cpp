@@ -482,7 +482,8 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_sinhl_finite);
   }
 
-  if (T.isGNUEnvironment() || (T.isAndroid() && !T.isAndroidVersionLT(28))) {
+  if ((T.isOSLinux() && T.isGNUEnvironment()) ||
+      (T.isAndroid() && !T.isAndroidVersionLT(28))) {
     // available IO unlocked variants on GNU/Linux and Android P or later
     TLI.setAvailable(LibFunc_getc_unlocked);
     TLI.setAvailable(LibFunc_getchar_unlocked);
