@@ -198,6 +198,7 @@ bool X86TargetInfo::initFeatureMap(
     LLVM_FALLTHROUGH;
   case CK_Core2:
     setFeatureEnabledImpl(Features, "ssse3", true);
+    setFeatureEnabledImpl(Features, "sahf", true);
     LLVM_FALLTHROUGH;
   case CK_Yonah:
   case CK_Prescott:
@@ -239,6 +240,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "ssse3", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
     setFeatureEnabledImpl(Features, "cx16", true);
+    setFeatureEnabledImpl(Features, "sahf", true);
     break;
 
   case CK_KNM:
@@ -269,6 +271,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "xsaveopt", true);
     setFeatureEnabledImpl(Features, "xsave", true);
     setFeatureEnabledImpl(Features, "movbe", true);
+    setFeatureEnabledImpl(Features, "sahf", true);
     break;
 
   case CK_K6_2:
@@ -282,6 +285,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "sse4a", true);
     setFeatureEnabledImpl(Features, "lzcnt", true);
     setFeatureEnabledImpl(Features, "popcnt", true);
+    setFeatureEnabledImpl(Features, "sahf", true);
     LLVM_FALLTHROUGH;
   case CK_K8SSE3:
     setFeatureEnabledImpl(Features, "sse3", true);
@@ -315,6 +319,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "prfchw", true);
     setFeatureEnabledImpl(Features, "cx16", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
+    setFeatureEnabledImpl(Features, "sahf", true);
     break;
 
   case CK_ZNVER1:
@@ -338,6 +343,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "prfchw", true);
     setFeatureEnabledImpl(Features, "rdrnd", true);
     setFeatureEnabledImpl(Features, "rdseed", true);
+    setFeatureEnabledImpl(Features, "sahf", true);
     setFeatureEnabledImpl(Features, "sha", true);
     setFeatureEnabledImpl(Features, "sse4a", true);
     setFeatureEnabledImpl(Features, "xsave", true);
@@ -372,6 +378,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "cx16", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
     setFeatureEnabledImpl(Features, "xsave", true);
+    setFeatureEnabledImpl(Features, "sahf", true);
     break;
   }
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec))
@@ -768,6 +775,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasRetpoline = true;
     } else if (Feature == "+retpoline-external-thunk") {
       HasRetpolineExternalThunk = true;
+    } else if (Feature == "+sahf") {
+      HasLAHFSAHF = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -1240,6 +1249,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("rdrnd", true)
       .Case("rdseed", true)
       .Case("rtm", true)
+      .Case("sahf", true)
       .Case("sgx", true)
       .Case("sha", true)
       .Case("shstk", true)
@@ -1313,6 +1323,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("retpoline", HasRetpoline)
       .Case("retpoline-external-thunk", HasRetpolineExternalThunk)
       .Case("rtm", HasRTM)
+      .Case("sahf", HasLAHFSAHF)
       .Case("sgx", HasSGX)
       .Case("sha", HasSHA)
       .Case("shstk", HasSHSTK)
