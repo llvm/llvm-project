@@ -61,6 +61,14 @@ AST_MATCHER_P(CXXMethodDecl, ofOutermostEnclosingClass,
   return InnerMatcher.matches(*Parent, Finder, Builder);
 }
 
+std::string CleanPath(StringRef PathRef) {
+  llvm::SmallString<128> Path(PathRef);
+  llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
+  // FIXME: figure out why this is necessary.
+  llvm::sys::path::native(Path);
+  return Path.str();
+}
+
 // Make the Path absolute using the CurrentDir if the Path is not an absolute
 // path. An empty Path will result in an empty string.
 std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
@@ -72,9 +80,7 @@ std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
           llvm::sys::fs::make_absolute(InitialDirectory, AbsolutePath))
     llvm::errs() << "Warning: could not make absolute file: '" << EC.message()
                  << '\n';
-  llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
-  llvm::sys::path::native(AbsolutePath);
-  return AbsolutePath.str();
+  return CleanPath(std::move(AbsolutePath));
 }
 
 // Make the Path absolute using the current working directory of the given
@@ -97,15 +103,13 @@ std::string MakeAbsolutePath(const SourceManager &SM, StringRef Path) {
     StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
     // FIXME: getCanonicalName might fail to get real path on VFS.
     if (llvm::sys::path::is_absolute(DirName)) {
-      SmallVector<char, 128> AbsoluteFilename;
+      SmallString<128> AbsoluteFilename;
       llvm::sys::path::append(AbsoluteFilename, DirName,
                               llvm::sys::path::filename(AbsolutePath.str()));
-      return llvm::StringRef(AbsoluteFilename.data(), AbsoluteFilename.size())
-          .str();
+      return CleanPath(AbsoluteFilename);
     }
   }
-  llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
-  return AbsolutePath.str();
+  return CleanPath(AbsolutePath);
 }
 
 // Matches AST nodes that are expanded within the given AbsoluteFilePath.

@@ -355,19 +355,7 @@ inline bool isBitcode(MemoryBufferRef MB) {
   return identify_magic(MB.getBuffer()) == llvm::file_magic::bitcode;
 }
 
-inline std::string updateSuffixInPath(llvm::StringRef Path) {
-  if (Path.endswith(Config->ThinLTOObjectSuffixReplace.first)) {
-    size_t pos = Path.rfind(Config->ThinLTOObjectSuffixReplace.first);
-    std::string SuffixedPath =
-        (Path.str().substr(0, pos) +
-         Config->ThinLTOObjectSuffixReplace.second.str());
-    return SuffixedPath;
-  } else {
-    error("cannot find suffix " +
-          Config->ThinLTOObjectSuffixReplace.first.str());
-    return "";
-  }
-}
+std::string replaceThinLTOSuffix(StringRef Path);
 
 extern std::vector<BinaryFile *> BinaryFiles;
 extern std::vector<BitcodeFile *> BitcodeFiles;
