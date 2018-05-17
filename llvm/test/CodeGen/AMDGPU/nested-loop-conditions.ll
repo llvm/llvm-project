@@ -70,7 +70,7 @@
 
 ; GCN: [[BB9:BB[0-9]+_[0-9]+]]: ; %bb9
 ; GCN-NEXT: ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT: s_branch [[BB9]]
+; GCN-NEXT: s_cbranch_vccnz [[BB9]]
 define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* nocapture %arg) #0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1

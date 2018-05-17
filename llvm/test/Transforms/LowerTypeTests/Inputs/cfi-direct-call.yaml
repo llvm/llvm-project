@@ -1,0 +1,10 @@
+---
+TypeIdMap:
+  typeid1:
+    TTRes:
+      Kind:            AllOnes
+CfiFunctionDefs:
+  - internal_def
+CfiFunctionDecls:
+  - external_decl
+...

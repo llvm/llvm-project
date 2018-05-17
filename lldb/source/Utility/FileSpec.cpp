@@ -258,6 +258,14 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve, Style style) {
   if (m_style == Style::windows)
     std::replace(resolved.begin(), resolved.end(), '\\', '/');
 
+  if (resolved.empty()) {
+    // If we have no path after normalization set the path to the current
+    // directory. This matches what python does and also a few other path
+    // utilities. 
+    m_filename.SetString(".");
+    return;
+  }
+
   m_filename.SetString(llvm::sys::path::filename(resolved, m_style));
   llvm::StringRef dir = llvm::sys::path::parent_path(resolved, m_style);
   if (!dir.empty())

@@ -97,7 +97,9 @@ def WriteMove    : SchedWrite;
 
 // Arithmetic.
 defm WriteALU    : X86SchedWritePair; // Simple integer ALU op.
+defm WriteADC    : X86SchedWritePair; // Integer ALU + flags op.
 def  WriteALURMW : WriteSequence<[WriteALULd, WriteStore]>;
+def  WriteADCRMW : WriteSequence<[WriteADCLd, WriteStore]>;
 defm WriteIMul   : X86SchedWritePair; // Integer multiplication.
 defm WriteIMul64 : X86SchedWritePair; // Integer 64-bit multiplication.
 def  WriteIMulH  : SchedWrite;        // Integer multiplication, high part.
@@ -117,7 +119,8 @@ defm WriteBitScan : X86SchedWritePair; // Bit scan forward/reverse.
 defm WritePOPCNT : X86SchedWritePair; // Bit population count.
 defm WriteLZCNT : X86SchedWritePair; // Leading zero count.
 defm WriteTZCNT : X86SchedWritePair; // Trailing zero count.
-defm WriteCMOV : X86SchedWritePair; // Conditional move.
+defm WriteCMOV  : X86SchedWritePair; // Conditional move.
+defm WriteCMOV2 : X86SchedWritePair; // Conditional (CF + ZF flag) move.
 def  WriteFCMOV : SchedWrite; // X87 conditional move.
 def  WriteSETCC : SchedWrite; // Set register based on condition code.
 def  WriteSETCCStore : SchedWrite;

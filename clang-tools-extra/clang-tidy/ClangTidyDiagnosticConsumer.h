@@ -99,7 +99,8 @@ struct ClangTidyStats {
 class ClangTidyContext {
 public:
   /// \brief Initializes \c ClangTidyContext instance.
-  ClangTidyContext(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider);
+  ClangTidyContext(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
+                   bool AllowEnablingAnalyzerAlphaCheckers = false);
 
   ~ClangTidyContext();
 
@@ -178,6 +179,12 @@ public:
     return CurrentBuildDirectory;
   }
 
+  /// \brief If the experimental alpha checkers from the static analyzer can be
+  /// enabled.
+  bool canEnableAnalyzerAlphaCheckers() const {
+    return AllowEnablingAnalyzerAlphaCheckers;
+  }
+
 private:
   // Calls setDiagnosticsEngine() and storeError().
   friend class ClangTidyDiagnosticConsumer;
@@ -209,6 +216,8 @@ private:
   llvm::DenseMap<unsigned, std::string> CheckNamesByDiagnosticID;
 
   bool Profile;
+
+  bool AllowEnablingAnalyzerAlphaCheckers;
 };
 
 /// \brief A diagnostic consumer that turns each \c Diagnostic into a

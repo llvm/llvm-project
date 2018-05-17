@@ -235,6 +235,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("watchpoint set variable foo --watch w", "watchpoint set variable foo --watch write")
         self.complete_from_to('watchpoint set variable foo -w read_', 'watchpoint set variable foo -w read_write')
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_symbol_name(self):
         self.build()
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))

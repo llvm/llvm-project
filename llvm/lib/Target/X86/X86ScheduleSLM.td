@@ -94,6 +94,7 @@ def : WriteRes<WriteLDMXCSR,  [SLM_MEC_RSV]> { let Latency = 3; }
 def : InstRW<[WriteMove], (instrs COPY)>;
 
 defm : SLMWriteResPair<WriteALU,    [SLM_IEC_RSV01], 1>;
+defm : SLMWriteResPair<WriteADC,    [SLM_IEC_RSV01], 1>;
 defm : SLMWriteResPair<WriteIMul,   [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteIMul64, [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteShift,  [SLM_IEC_RSV0],  1>;
@@ -101,6 +102,7 @@ defm : SLMWriteResPair<WriteJump,   [SLM_IEC_RSV1],  1>;
 defm : SLMWriteResPair<WriteCRC32,  [SLM_IEC_RSV1],  3>;
 
 defm : SLMWriteResPair<WriteCMOV,  [SLM_IEC_RSV01], 2, [2]>;
+defm : SLMWriteResPair<WriteCMOV2, [SLM_IEC_RSV01], 2, [2]>;
 defm : X86WriteRes<WriteFCMOV, [SLM_FPC_RSV1], 3, [1], 1>; // x87 conditional move.
 def  : WriteRes<WriteSETCC, [SLM_IEC_RSV01]>;
 def  : WriteRes<WriteSETCCStore, [SLM_IEC_RSV01, SLM_MEC_RSV]> {

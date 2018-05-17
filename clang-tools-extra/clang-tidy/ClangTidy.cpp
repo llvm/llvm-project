@@ -309,11 +309,12 @@ static void setStaticAnalyzerCheckerOpts(const ClangTidyOptions &Opts,
 
 typedef std::vector<std::pair<std::string, bool>> CheckersList;
 
-static CheckersList getCheckersControlList(ClangTidyContext &Context) {
+static CheckersList getCheckersControlList(ClangTidyContext &Context,
+                                           bool IncludeExperimental) {
   CheckersList List;
 
   const auto &RegisteredCheckers =
-      AnalyzerOptions::getRegisteredCheckers(/*IncludeExperimental=*/false);
+      AnalyzerOptions::getRegisteredCheckers(IncludeExperimental);
   bool AnalyzerChecksEnabled = false;
   for (StringRef CheckName : RegisteredCheckers) {
     std::string ClangTidyCheckName((AnalyzerCheckNamePrefix + CheckName).str());
@@ -379,7 +380,8 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
     Consumers.push_back(Finder->newASTConsumer());
 
   AnalyzerOptionsRef AnalyzerOptions = Compiler.getAnalyzerOpts();
-  AnalyzerOptions->CheckersControlList = getCheckersControlList(Context);
+  AnalyzerOptions->CheckersControlList =
+      getCheckersControlList(Context, Context.canEnableAnalyzerAlphaCheckers());
   if (!AnalyzerOptions->CheckersControlList.empty()) {
     setStaticAnalyzerCheckerOpts(Context.getOptions(), AnalyzerOptions);
     AnalyzerOptions->AnalysisStoreOpt = RegionStoreModel;
@@ -404,7 +406,8 @@ std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
       CheckNames.push_back(CheckFactory.first);
   }
 
-  for (const auto &AnalyzerCheck : getCheckersControlList(Context))
+  for (const auto &AnalyzerCheck : getCheckersControlList(
+           Context, Context.canEnableAnalyzerAlphaCheckers()))
     CheckNames.push_back(AnalyzerCheckNamePrefix + AnalyzerCheck.first);
 
   std::sort(CheckNames.begin(), CheckNames.end());
@@ -463,18 +466,24 @@ void OptionsView::store(ClangTidyOptions::OptionMap &Options,
   store(Options, LocalName, llvm::itostr(Value));
 }
 
-std::vector<std::string> getCheckNames(const ClangTidyOptions &Options) {
+std::vector<std::string>
+getCheckNames(const ClangTidyOptions &Options,
+              bool AllowEnablingAnalyzerAlphaCheckers) {
   clang::tidy::ClangTidyContext Context(
       llvm::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(),
-                                                Options));
+                                                Options),
+      AllowEnablingAnalyzerAlphaCheckers);
   ClangTidyASTConsumerFactory Factory(Context);
   return Factory.getCheckNames();
 }
 
-ClangTidyOptions::OptionMap getCheckOptions(const ClangTidyOptions &Options) {
+ClangTidyOptions::OptionMap
+getCheckOptions(const ClangTidyOptions &Options,
+                bool AllowEnablingAnalyzerAlphaCheckers) {
   clang::tidy::ClangTidyContext Context(
       llvm::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(),
-                                                Options));
+                                                Options),
+      AllowEnablingAnalyzerAlphaCheckers);
   ClangTidyASTConsumerFactory Factory(Context);
   return Factory.getCheckOptions();
 }

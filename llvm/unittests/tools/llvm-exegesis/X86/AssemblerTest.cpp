@@ -34,21 +34,21 @@ protected:
   }
 };
 
-TEST_F(X86MachineFunctionGeneratorTest, JitFunction) {
+TEST_F(X86MachineFunctionGeneratorTest, DISABLED_JitFunction) {
   Check(llvm::MCInst(), 0xc3);
 }
 
-TEST_F(X86MachineFunctionGeneratorTest, JitFunctionXOR32rr) {
+TEST_F(X86MachineFunctionGeneratorTest, DISABLED_JitFunctionXOR32rr) {
   Check(MCInstBuilder(XOR32rr).addReg(EAX).addReg(EAX).addReg(EAX), 0x31, 0xc0,
         0xc3);
 }
 
-TEST_F(X86MachineFunctionGeneratorTest, JitFunctionMOV64ri) {
+TEST_F(X86MachineFunctionGeneratorTest, DISABLED_JitFunctionMOV64ri) {
   Check(MCInstBuilder(MOV64ri32).addReg(RAX).addImm(42), 0x48, 0xc7, 0xc0, 0x2a,
         0x00, 0x00, 0x00, 0xc3);
 }
 
-TEST_F(X86MachineFunctionGeneratorTest, JitFunctionMOV32ri) {
+TEST_F(X86MachineFunctionGeneratorTest, DISABLED_JitFunctionMOV32ri) {
   Check(MCInstBuilder(MOV32ri).addReg(EAX).addImm(42), 0xb8, 0x2a, 0x00, 0x00,
         0x00, 0xc3);
 }

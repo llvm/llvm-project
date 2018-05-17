@@ -6245,7 +6245,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       // -- a predefined __func__ variable
       if (auto *E = Value.getLValueBase().dyn_cast<const Expr*>()) {
         if (isa<CXXUuidofExpr>(E)) {
-          Converted = TemplateArgument(const_cast<Expr*>(E));
+          Converted = TemplateArgument(ArgResult.get());
           break;
         }
         Diag(Arg->getLocStart(), diag::err_template_arg_not_decl_ref)

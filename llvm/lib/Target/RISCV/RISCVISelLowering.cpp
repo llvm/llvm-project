@@ -293,17 +293,22 @@ SDValue RISCVTargetLowering::lowerGlobalAddress(SDValue Op,
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = N->getGlobal();
   int64_t Offset = N->getOffset();
+  MVT XLenVT = Subtarget.getXLenVT();
 
   if (isPositionIndependent() || Subtarget.is64Bit())
     report_fatal_error("Unable to lowerGlobalAddress");
-
-  SDValue GAHi =
-    DAG.getTargetGlobalAddress(GV, DL, Ty, Offset, RISCVII::MO_HI);
-  SDValue GALo =
-    DAG.getTargetGlobalAddress(GV, DL, Ty, Offset, RISCVII::MO_LO);
+  // In order to maximise the opportunity for common subexpression elimination,
+  // emit a separate ADD node for the global address offset instead of folding
+  // it in the global address node. Later peephole optimisations may choose to
+  // fold it back in when profitable.
+  SDValue GAHi = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, RISCVII::MO_HI);
+  SDValue GALo = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, RISCVII::MO_LO);
   SDValue MNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, Ty, GAHi), 0);
   SDValue MNLo =
     SDValue(DAG.getMachineNode(RISCV::ADDI, DL, Ty, MNHi, GALo), 0);
+  if (Offset != 0)
+    return DAG.getNode(ISD::ADD, DL, Ty, MNLo,
+                       DAG.getConstant(Offset, DL, XLenVT));
   return MNLo;
 }
 

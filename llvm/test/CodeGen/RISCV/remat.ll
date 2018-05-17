@@ -20,36 +20,29 @@
 ; the stack and restored. It creates high register pressure to force this
 ; situation.
 
-; TODO: it makes no sense to spill %hi(h), %hi(l) or the constant 64 to the
-; stack.
-
 define i32 @test() nounwind {
 ; RV32I-LABEL: test:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    addi sp, sp, -64
-; RV32I-NEXT:    sw ra, 60(sp)
-; RV32I-NEXT:    sw s1, 56(sp)
-; RV32I-NEXT:    sw s2, 52(sp)
-; RV32I-NEXT:    sw s3, 48(sp)
-; RV32I-NEXT:    sw s4, 44(sp)
-; RV32I-NEXT:    sw s5, 40(sp)
-; RV32I-NEXT:    sw s6, 36(sp)
-; RV32I-NEXT:    sw s7, 32(sp)
-; RV32I-NEXT:    sw s8, 28(sp)
-; RV32I-NEXT:    sw s9, 24(sp)
-; RV32I-NEXT:    sw s10, 20(sp)
-; RV32I-NEXT:    sw s11, 16(sp)
+; RV32I-NEXT:    addi sp, sp, -48
+; RV32I-NEXT:    sw ra, 44(sp)
+; RV32I-NEXT:    sw s1, 40(sp)
+; RV32I-NEXT:    sw s2, 36(sp)
+; RV32I-NEXT:    sw s3, 32(sp)
+; RV32I-NEXT:    sw s4, 28(sp)
+; RV32I-NEXT:    sw s5, 24(sp)
+; RV32I-NEXT:    sw s6, 20(sp)
+; RV32I-NEXT:    sw s7, 16(sp)
+; RV32I-NEXT:    sw s8, 12(sp)
+; RV32I-NEXT:    sw s9, 8(sp)
+; RV32I-NEXT:    sw s10, 4(sp)
+; RV32I-NEXT:    sw s11, 0(sp)
 ; RV32I-NEXT:    lui s3, %hi(a)
 ; RV32I-NEXT:    lw a0, %lo(a)(s3)
 ; RV32I-NEXT:    beqz a0, .LBB0_11
 ; RV32I-NEXT:  # %bb.1: # %for.body.preheader
-; RV32I-NEXT:    lui a1, %hi(l)
-; RV32I-NEXT:    sw a1, 12(sp)
 ; RV32I-NEXT:    lui s5, %hi(k)
 ; RV32I-NEXT:    lui s6, %hi(j)
 ; RV32I-NEXT:    lui s7, %hi(i)
-; RV32I-NEXT:    lui a1, %hi(h)
-; RV32I-NEXT:    sw a1, 8(sp)
 ; RV32I-NEXT:    lui s9, %hi(g)
 ; RV32I-NEXT:    lui s10, %hi(f)
 ; RV32I-NEXT:    lui s11, %hi(e)
@@ -57,11 +50,9 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    addi s1, zero, 32
 ; RV32I-NEXT:    lui s2, %hi(c)
 ; RV32I-NEXT:    lui s4, %hi(b)
-; RV32I-NEXT:    addi a1, zero, 64
-; RV32I-NEXT:    sw a1, 4(sp)
 ; RV32I-NEXT:  .LBB0_2: # %for.body
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    lw a1, 12(sp)
+; RV32I-NEXT:    lui a1, %hi(l)
 ; RV32I-NEXT:    lw a1, %lo(l)(a1)
 ; RV32I-NEXT:    beqz a1, .LBB0_4
 ; RV32I-NEXT:  # %bb.3: # %if.then
@@ -83,7 +74,7 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lw a2, %lo(d)(s8)
 ; RV32I-NEXT:    lw a1, %lo(c)(s2)
 ; RV32I-NEXT:    lw a0, %lo(b)(s4)
-; RV32I-NEXT:    lw a5, 4(sp)
+; RV32I-NEXT:    addi a5, zero, 64
 ; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_6: # %if.end5
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
@@ -104,7 +95,7 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    beqz a0, .LBB0_10
 ; RV32I-NEXT:  # %bb.9: # %if.then11
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; RV32I-NEXT:    lw a0, 8(sp)
+; RV32I-NEXT:    lui a0, %hi(h)
 ; RV32I-NEXT:    lw a4, %lo(h)(a0)
 ; RV32I-NEXT:    lw a3, %lo(g)(s9)
 ; RV32I-NEXT:    lw a2, %lo(f)(s10)
@@ -120,19 +111,19 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    bnez a0, .LBB0_2
 ; RV32I-NEXT:  .LBB0_11: # %for.end
 ; RV32I-NEXT:    addi a0, zero, 1
-; RV32I-NEXT:    lw s11, 16(sp)
-; RV32I-NEXT:    lw s10, 20(sp)
-; RV32I-NEXT:    lw s9, 24(sp)
-; RV32I-NEXT:    lw s8, 28(sp)
-; RV32I-NEXT:    lw s7, 32(sp)
-; RV32I-NEXT:    lw s6, 36(sp)
-; RV32I-NEXT:    lw s5, 40(sp)
-; RV32I-NEXT:    lw s4, 44(sp)
-; RV32I-NEXT:    lw s3, 48(sp)
-; RV32I-NEXT:    lw s2, 52(sp)
-; RV32I-NEXT:    lw s1, 56(sp)
-; RV32I-NEXT:    lw ra, 60(sp)
-; RV32I-NEXT:    addi sp, sp, 64
+; RV32I-NEXT:    lw s11, 0(sp)
+; RV32I-NEXT:    lw s10, 4(sp)
+; RV32I-NEXT:    lw s9, 8(sp)
+; RV32I-NEXT:    lw s8, 12(sp)
+; RV32I-NEXT:    lw s7, 16(sp)
+; RV32I-NEXT:    lw s6, 20(sp)
+; RV32I-NEXT:    lw s5, 24(sp)
+; RV32I-NEXT:    lw s4, 28(sp)
+; RV32I-NEXT:    lw s3, 32(sp)
+; RV32I-NEXT:    lw s2, 36(sp)
+; RV32I-NEXT:    lw s1, 40(sp)
+; RV32I-NEXT:    lw ra, 44(sp)
+; RV32I-NEXT:    addi sp, sp, 48
 ; RV32I-NEXT:    ret
 entry:
   %.pr = load i32, i32* @a, align 4
