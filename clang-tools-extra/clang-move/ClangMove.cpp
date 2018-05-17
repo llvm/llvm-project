@@ -64,6 +64,8 @@ AST_MATCHER_P(CXXMethodDecl, ofOutermostEnclosingClass,
 std::string CleanPath(StringRef PathRef) {
   llvm::SmallString<128> Path(PathRef);
   llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
+  // FIXME: figure out why this is necessary.
+  llvm::sys::path::native(Path);
   return Path.str();
 }
 
