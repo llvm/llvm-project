@@ -30,6 +30,35 @@ st4w {z7.s, z8.s, z9.s, z10.s}, p3, [x1, #5, MUL VL]
 
 
 // --------------------------------------------------------------------------//
+// Invalid scalar + scalar addressing modes
+
+st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0, x0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 with required shift 'lsl #2'
+// CHECK-NEXT: st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0, x0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0, xzr]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 with required shift 'lsl #2'
+// CHECK-NEXT: st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0, xzr]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0, x0, lsl #3]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 with required shift 'lsl #2'
+// CHECK-NEXT: st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0, x0, lsl #3]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0, w0]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 with required shift 'lsl #2'
+// CHECK-NEXT: st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0, w0]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0, w0, uxtw]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: register must be x0..x30 with required shift 'lsl #2'
+// CHECK-NEXT: st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0, w0, uxtw]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
 // error: restricted predicate has range [0, 7].
 
 st4w {z2.s, z3.s, z4.s, z5.s}, p8, [x15, #10, MUL VL]

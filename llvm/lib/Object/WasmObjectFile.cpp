@@ -35,6 +35,23 @@
 using namespace llvm;
 using namespace object;
 
+void WasmSymbol::print(raw_ostream &Out) const {
+  Out << "Name=" << Info.Name
+  << ", Kind=" << toString(wasm::WasmSymbolType(Info.Kind))
+  << ", Flags=" << Info.Flags;
+  if (!isTypeData()) {
+    Out << ", ElemIndex=" << Info.ElementIndex;
+  } else if (isDefined()) {
+    Out << ", Segment=" << Info.DataRef.Segment;
+    Out << ", Offset=" << Info.DataRef.Offset;
+    Out << ", Size=" << Info.DataRef.Size;
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void WasmSymbol::dump() const { print(dbgs()); }
+#endif
+
 Expected<std::unique_ptr<WasmObjectFile>>
 ObjectFile::createWasmObjectFile(MemoryBufferRef Buffer) {
   Error Err = Error::success();

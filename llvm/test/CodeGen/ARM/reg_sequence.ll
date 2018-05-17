@@ -205,8 +205,8 @@ bb5:                                              ; preds = %bb3
 bb.i25:                                           ; preds = %bb.i25, %bb5
   %0 = shufflevector <2 x float> undef, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3> ; <<4 x float>> [#uses=1]
   %1 = call <4 x float> @llvm.arm.neon.vrsqrte.v4f32(<4 x float> %0) nounwind ; <<4 x float>> [#uses=1]
-  %2 = fmul <4 x float> %1, undef                 ; <<4 x float>> [#uses=1]
-  %3 = fmul <4 x float> undef, %2                 ; <<4 x float>> [#uses=1]
+  %2 = fmul <4 x float> %1, %1                 ; <<4 x float>> [#uses=1]
+  %3 = fmul <4 x float> %2, %2                 ; <<4 x float>> [#uses=1]
   %tmp26.i = bitcast <4 x float> %3 to <2 x double> ; <<2 x double>> [#uses=1]
   %4 = extractelement <2 x double> %tmp26.i, i32 0 ; <double> [#uses=1]
   %5 = bitcast double %4 to <2 x float>           ; <<2 x float>> [#uses=1]
@@ -283,17 +283,17 @@ entry:
   %4 = extractelement <2 x double> %tmp54.i, i32 1 ; <double> [#uses=1]
   %5 = bitcast double %4 to <2 x float>           ; <<2 x float>> [#uses=1]
   %6 = shufflevector <2 x float> %5, <2 x float> undef, <4 x i32> zeroinitializer ; <<4 x float>> [#uses=1]
-  %7 = fmul <4 x float> undef, %6                 ; <<4 x float>> [#uses=1]
-  %8 = fadd <4 x float> %7, undef                 ; <<4 x float>> [#uses=1]
-  %9 = fadd <4 x float> %8, undef                 ; <<4 x float>> [#uses=1]
+  %7 = fmul <4 x float> %6, %6 
+  %8 = fadd <4 x float> %7, %7
+  %9 = fadd <4 x float> %8, %8
   %10 = shufflevector <4 x float> undef, <4 x float> %9, <4 x i32> <i32 0, i32 1, i32 2, i32 7> ; <<4 x float>> [#uses=1]
   %11 = fmul <4 x float> %10, <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01> ; <<4 x float>> [#uses=1]
   %12 = shufflevector <4 x float> %11, <4 x float> undef, <4 x i32> <i32 3, i32 undef, i32 undef, i32 undef> ; <<4 x float>> [#uses=1]
   %13 = shufflevector <4 x float> %12, <4 x float> undef, <4 x i32> zeroinitializer ; <<4 x float>> [#uses=1]
-  %14 = fmul <4 x float> %13, undef               ; <<4 x float>> [#uses=1]
-  %15 = fadd <4 x float> undef, %14               ; <<4 x float>> [#uses=1]
+  %14 = fmul <4 x float> %13, %13
+  %15 = fadd <4 x float> %14, %14
   %16 = shufflevector <4 x float> undef, <4 x float> %15, <4 x i32> <i32 0, i32 1, i32 6, i32 3> ; <<4 x float>> [#uses=1]
-  %17 = fmul <4 x float> %16, undef               ; <<4 x float>> [#uses=1]
+  %17 = fmul <4 x float> %16, %16
   %18 = extractelement <4 x float> %17, i32 2     ; <float> [#uses=1]
   store float %18, float* undef, align 4
   br i1 undef, label %exit, label %bb14

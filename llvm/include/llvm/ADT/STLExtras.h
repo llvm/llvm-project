@@ -1026,9 +1026,14 @@ void erase_if(Container &C, UnaryPredicate P) {
   C.erase(remove_if(C, P), C.end());
 }
 
-/// Wrapper function around std::distance which works with ranges.
+/// Get the size of a range. This is a wrapper function around std::distance
+/// which is only enabled when the operation is O(1).
 template <typename R>
-auto distance(R &&Range)
+auto size(R &&Range, typename std::enable_if<
+                         std::is_same<typename std::iterator_traits<decltype(
+                                          Range.begin())>::iterator_category,
+                                      std::random_access_iterator_tag>::value,
+                         void>::type * = nullptr)
     -> decltype(std::distance(Range.begin(), Range.end())) {
   return std::distance(Range.begin(), Range.end());
 }

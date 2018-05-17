@@ -4119,7 +4119,7 @@ int api(const uint8_t *data, size_t size) {
   return 1;
 }
 
-int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (api(Data, Size)) {
     // Should've crashed before getting here.
     return 0;

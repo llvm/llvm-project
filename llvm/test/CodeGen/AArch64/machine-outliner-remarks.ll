@@ -4,9 +4,9 @@
 ; CHECK-SAME: Instructions from outlining all occurrences (9) >=
 ; CHECK-SAME: Unoutlined instruction count (4)
 ; CHECK-SAME: (Also found at: machine-outliner-remarks.ll:13:9)
-; CHECK: remark: <unknown>:0:0: Saved 5 instructions by outlining 7 instructions
-; CHECK-SAME: from 2 locations. (Found at: machine-outliner-remarks.ll:27:9,
-; CHECK-SAME: machine-outliner-remarks.ll:36:1)
+; CHECK: remark: <unknown>:0:0: Saved 5 instructions by outlining 12 instructions
+; CHECK-SAME: from 2 locations. (Found at: machine-outliner-remarks.ll:36:1,
+; CHECK-SAME: machine-outliner-remarks.ll:27:9)
 ; RUN: llc %s -enable-machine-outliner -mtriple=aarch64-unknown-unknown -o /dev/null -pass-remarks-missed=machine-outliner -pass-remarks-output=%t.yaml
 ; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
 ; YAML: --- !Missed
@@ -40,17 +40,17 @@
 ; YAML-NEXT:   - OutliningBenefit: '5'
 ; YAML-NEXT:   - String:          ' instructions by '
 ; YAML-NEXT:   - String:          'outlining '
-; YAML-NEXT:   - Length:          '7'
+; YAML-NEXT:   - Length:          '12'
 ; YAML-NEXT:   - String:          ' instructions '
 ; YAML-NEXT:   - String:          'from '
 ; YAML-NEXT:   - NumOccurrences:  '2'
 ; YAML-NEXT:   - String:          ' locations. '
 ; YAML-NEXT:   - String:          '(Found at: '
-; YAML-NEXT:   - StartLoc0:       'machine-outliner-remarks.ll:27:9'
-; YAML-NEXT:     DebugLoc:        { File: machine-outliner-remarks.ll, Line: 27, Column: 9 }
-; YAML-NEXT:   - String:          ', '
-; YAML-NEXT:   - StartLoc1:       'machine-outliner-remarks.ll:36:1'
+; YAML-NEXT:   - StartLoc0:       'machine-outliner-remarks.ll:36:1'
 ; YAML-NEXT:     DebugLoc:        { File: machine-outliner-remarks.ll, Line: 36, Column: 1 }
+; YAML-NEXT:   - String:          ', '
+; YAML-NEXT:   - StartLoc1:       'machine-outliner-remarks.ll:27:9'
+; YAML-NEXT:     DebugLoc:        { File: machine-outliner-remarks.ll, Line: 27, Column: 9 }
 ; YAML-NEXT:   - String:          ')'
 
 define void @dog() #0 !dbg !8 {
@@ -76,10 +76,14 @@ define void @foo() #0 !dbg !18 {
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
-  store i32 1, i32* %2, align 4, !dbg !24
-  store i32 2, i32* %3, align 4
-  store i32 3, i32* %4, align 4, !dbg !26
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  store i32 1, i32* %1, align 4, !dbg !24
+  store i32 2, i32* %2, align 4
+  store i32 3, i32* %3, align 4
+  store i32 4, i32* %4, align 4
+  store i32 5, i32* %5, align 4
+  store i32 6, i32* %6, align 4, !dbg !26
   ret void
 }
 
@@ -88,10 +92,14 @@ define void @bar() #0 !dbg !27 {
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
-  store i32 1, i32* %2, align 4, !dbg !33
-  store i32 2, i32* %3, align 4
-  store i32 3, i32* %4, align 4, !dbg !35
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  store i32 1, i32* %1, align 4, !dbg !33
+  store i32 2, i32* %2, align 4
+  store i32 3, i32* %3, align 4
+  store i32 4, i32* %4, align 4
+  store i32 5, i32* %5, align 4
+  store i32 6, i32* %6, align 4, !dbg !35
   ret void
 }
 

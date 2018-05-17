@@ -620,6 +620,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.ExitOnSrcPos = Flags.exit_on_src_pos;
   if (Flags.exit_on_item)
     Options.ExitOnItem = Flags.exit_on_item;
+  if (Flags.focus_function)
+    Options.FocusFunction = Flags.focus_function;
 
   unsigned Seed = Flags.seed;
   // Initialize Seed.
