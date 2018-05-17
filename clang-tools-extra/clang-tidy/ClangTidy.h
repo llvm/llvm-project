@@ -210,7 +210,8 @@ private:
 
 /// \brief Fills the list of check names that are enabled when the provided
 /// filters are applied.
-std::vector<std::string> getCheckNames(const ClangTidyOptions &Options);
+std::vector<std::string> getCheckNames(const ClangTidyOptions &Options,
+                                       bool AllowEnablingAnalyzerAlphaCheckers);
 
 /// \brief Returns the effective check-specific options.
 ///
@@ -218,7 +219,9 @@ std::vector<std::string> getCheckNames(const ClangTidyOptions &Options);
 /// effective options from all created checks. The returned set of options
 /// includes default check-specific options for all keys not overridden by \p
 /// Options.
-ClangTidyOptions::OptionMap getCheckOptions(const ClangTidyOptions &Options);
+ClangTidyOptions::OptionMap
+getCheckOptions(const ClangTidyOptions &Options,
+                bool AllowEnablingAnalyzerAlphaCheckers);
 
 /// \brief Run a set of clang-tidy checks on a set of files.
 ///
