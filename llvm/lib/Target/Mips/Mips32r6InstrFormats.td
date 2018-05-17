@@ -591,3 +591,15 @@ class SPECIAL3_2R_SZ_CRC<bits<2> sz, bits<3> direction> : MipsR6Inst {
 
   string DecoderMethod = "DecodeCRC";
 }
+
+class SPECIAL3_GINV<bits<2> ginv> : MipsR6Inst {
+  bits<5> rs;
+  bits<2> type_;
+
+  let Inst{31-26} = OPGROUP_SPECIAL3.Value;
+  let Inst{25-21} = rs;
+  let Inst{20-10} = 0x0;
+  let Inst{9-8}   = type_;
+  let Inst{7-6}   = ginv;
+  let Inst{5-0}   = 0b111101;
+}

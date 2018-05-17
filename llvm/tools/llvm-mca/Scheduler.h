@@ -24,7 +24,7 @@
 namespace mca {
 
 class Backend;
-class DispatchUnit;
+class DispatchStage;
 
 /// Used to notify the internal state of a processor resource.
 ///
@@ -411,7 +411,7 @@ class Scheduler {
   Backend *const Owner;
 
   // The dispatch unit gets notified when instructions are executed.
-  DispatchUnit *DU;
+  DispatchStage *DS;
 
   using QueueEntryTy = std::pair<unsigned, Instruction *>;
   std::map<unsigned, Instruction *> WaitQueue;
@@ -454,13 +454,13 @@ public:
                                       AssumeNoAlias)),
         Owner(B) {}
 
-  void setDispatchUnit(DispatchUnit *DispUnit) { DU = DispUnit; }
+  void setDispatchStage(DispatchStage *DispStage) { DS = DispStage; }
 
   /// Check if the instruction in 'IR' can be dispatched.
   ///
-  /// The DispatchUnit is responsible for querying the Scheduler before
+  /// The DispatchStage is responsible for querying the Scheduler before
   /// dispatching new instructions. Queries are performed through method
-  /// `Scheduler::CanBeDispatched`. If scheduling resources are available,
+  /// `Scheduler::canBeDispatched`. If scheduling resources are available,
   /// and the instruction can be dispatched, then this method returns true.
   /// Otherwise, a generic HWStallEvent is notified to the listeners.
   bool canBeDispatched(const InstRef &IR) const;

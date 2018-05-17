@@ -50,9 +50,14 @@ struct InstructionBenchmark {
   std::string Info;
 
   static InstructionBenchmark readYamlOrDie(llvm::StringRef Filename);
-  static std::vector<InstructionBenchmark> readYamlsOrDie(llvm::StringRef Filename);
+  static std::vector<InstructionBenchmark>
 
-  // Unfortunately this function is non const because of YAML traits.
+  // Read functions.
+  readYamlsOrDie(llvm::StringRef Filename);
+  void readYamlFrom(llvm::StringRef InputContent);
+
+  // Write functions, non-const because of YAML traits.
+  void writeYamlTo(llvm::raw_ostream &S);
   void writeYamlOrDie(const llvm::StringRef Filename);
 };
 

@@ -170,6 +170,9 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   SmallVector<BasicBlock *, 4> ReturningBlocks;
   SmallVector<BasicBlock *, 4> UnreachableBlocks;
 
+  // Dummy return block for infinite loop.
+  BasicBlock *DummyReturnBB = nullptr;
+
   for (BasicBlock *BB : PDT.getRoots()) {
     if (isa<ReturnInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
@@ -177,6 +180,35 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
     } else if (isa<UnreachableInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
         UnreachableBlocks.push_back(BB);
+    } else if (BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator())) {
+
+      ConstantInt *BoolTrue = ConstantInt::getTrue(F.getContext());
+      if (DummyReturnBB == nullptr) {
+        DummyReturnBB = BasicBlock::Create(F.getContext(),
+                                           "DummyReturnBlock", &F);
+        Type *RetTy = F.getReturnType();
+        Value *RetVal = RetTy->isVoidTy() ? nullptr : UndefValue::get(RetTy);
+        ReturnInst::Create(F.getContext(), RetVal, DummyReturnBB);
+        ReturningBlocks.push_back(DummyReturnBB);
+      }
+
+      if (BI->isUnconditional()) {
+        BasicBlock *LoopHeaderBB = BI->getSuccessor(0);
+        BI->eraseFromParent(); // Delete the unconditional branch.
+        // Add a new conditional branch with a dummy edge to the return block.
+        BranchInst::Create(LoopHeaderBB, DummyReturnBB, BoolTrue, BB);
+      } else { // Conditional branch.
+        // Create a new transition block to hold the conditional branch.
+        BasicBlock *TransitionBB = BasicBlock::Create(F.getContext(),
+                                                      "TransitionBlock", &F);
+
+        // Move BI from BB to the new transition block.
+        BI->removeFromParent();
+        TransitionBB->getInstList().push_back(BI);
+
+        // Create a branch that will always branch to the transition block.
+        BranchInst::Create(TransitionBB, DummyReturnBB, BoolTrue, BB);
+      }
     }
   }
 

@@ -21,19 +21,19 @@ namespace exegesis {
 
 class UopsBenchmarkRunner : public BenchmarkRunner {
 public:
+  using BenchmarkRunner::BenchmarkRunner;
   ~UopsBenchmarkRunner() override;
 
 private:
   const char *getDisplayName() const override;
 
   llvm::Expected<std::vector<llvm::MCInst>>
-  createCode(const LLVMState &State, unsigned OpcodeIndex,
-             unsigned NumRepetitions,
-             const JitFunctionContext &Context) const override;
+  createSnippet(RegisterAliasingTrackerCache &RATC, unsigned Opcode,
+                llvm::raw_ostream &Info) const override;
 
   std::vector<BenchmarkMeasure>
-  runMeasurements(const LLVMState &State, const JitFunction &Function,
-                  unsigned NumRepetitions) const override;
+  runMeasurements(const ExecutableFunction &EF,
+                  const unsigned NumRepetitions) const override;
 };
 
 } // namespace exegesis

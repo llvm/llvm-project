@@ -168,9 +168,9 @@ define i32 @lw_sw_global(i32 %a) nounwind {
 ; RV32I-NEXT:    lui a2, %hi(G)
 ; RV32I-NEXT:    lw a1, %lo(G)(a2)
 ; RV32I-NEXT:    sw a0, %lo(G)(a2)
-; RV32I-NEXT:    lui a2, %hi(G+36)
-; RV32I-NEXT:    lw a3, %lo(G+36)(a2)
-; RV32I-NEXT:    sw a0, %lo(G+36)(a2)
+; RV32I-NEXT:    addi a2, a2, %lo(G)
+; RV32I-NEXT:    lw a3, 36(a2)
+; RV32I-NEXT:    sw a0, 36(a2)
 ; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    ret
   %1 = load volatile i32, i32* @G

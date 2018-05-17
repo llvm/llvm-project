@@ -269,16 +269,16 @@ define arm_aapcs_vfpcc float @t9(%0* nocapture, %3* nocapture) nounwind {
 }
 
 ; PR7162
-define arm_aapcs_vfpcc i32 @t10() nounwind {
+define arm_aapcs_vfpcc i32 @t10(float %x) nounwind {
 entry:
 ; CHECK-LABEL: t10:
 ; CHECK: vmov.i32 q[[Q0:[0-9]+]], #0x3f000000
 ; CHECK: vmul.f32 q8, q8, d[[DREG:[0-1]+]]
 ; CHECK: vadd.f32 q8, q8, q8
   %0 = shufflevector <4 x float> zeroinitializer, <4 x float> undef, <4 x i32> zeroinitializer ; <<4 x float>> [#uses=1]
-  %1 = insertelement <4 x float> %0, float undef, i32 1 ; <<4 x float>> [#uses=1]
-  %2 = insertelement <4 x float> %1, float undef, i32 2 ; <<4 x float>> [#uses=1]
-  %3 = insertelement <4 x float> %2, float undef, i32 3 ; <<4 x float>> [#uses=1]
+  %1 = insertelement <4 x float> %0, float %x, i32 1 ; <<4 x float>> [#uses=1]
+  %2 = insertelement <4 x float> %1, float %x, i32 2 ; <<4 x float>> [#uses=1]
+  %3 = insertelement <4 x float> %2, float %x, i32 3 ; <<4 x float>> [#uses=1]
   %tmp54.i = bitcast <4 x float> %3 to <2 x double> ; <<2 x double>> [#uses=1]
   %4 = extractelement <2 x double> %tmp54.i, i32 1 ; <double> [#uses=1]
   %5 = bitcast double %4 to <2 x float>           ; <<2 x float>> [#uses=1]

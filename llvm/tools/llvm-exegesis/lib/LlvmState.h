@@ -6,6 +6,11 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// A class to set up and access common LLVM objects.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TOOLS_LLVM_EXEGESIS_LLVMSTATE_H
 #define LLVM_TOOLS_LLVM_EXEGESIS_LLVMSTATE_H

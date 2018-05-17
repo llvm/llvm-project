@@ -2,8 +2,8 @@ llvm-mca - LLVM Machine Code Analyzer
 -------------------------------------
 
 llvm-mca is a performance analysis tool that uses information which is already
-available in LLVM (e.g. scheduling models) to statically measure the performance
-of machine code in a specific cpu.
+available in LLVM (e.g., scheduling models) to statically measure the
+performance of machine code in a specific cpu.
 
 Performance is measured in terms of throughput as well as processor resource
 consumption.  The tool currently works for processors with an out-of-order
@@ -25,9 +25,8 @@ bottlenecks.
 Scheduling models are mostly used to compute instruction latencies, to obtain
 read-advance information, and understand how processor resources are used by
 instructions.  By design, the quality of the performance analysis conducted by
-the tool is inevitably affected by the quality of the target scheduling models. 
-
-However, scheduling models intentionally do not describe all processors details,
+the tool is inevitably affected by the quality of the target scheduling models.
+However, scheduling models intentionally do not describe all processor details,
 since the goal is just to enable the scheduling of machine instructions during
 compilation. That means, there are processor details which are not important for
 the purpose of scheduling instructions (and therefore not described by the
@@ -90,8 +89,8 @@ Resources:
 
 
 Resource pressure per iteration:
-[0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    
- -      -      -      -     2.00   1.00    -      -      -      -     
+[0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
+ -      -      -      -     2.00   1.00    -      -      -      -
 
 Resource pressure by instruction:
 [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    	Instructions:
@@ -120,8 +119,8 @@ for a total of 900 instructions dynamically executed.
 
 The report is structured in three main sections.  A first section collects a few
 performance numbers; the goal of this section is to give a very quick overview
-of the performance throughput. In this example, the two important perforamce
-indicators are a) the predicted total number of cycles, and b) the IPC. 
+of the performance throughput. In this example, the two important performance
+indicators are a) the predicted total number of cycles, and b) the IPC.
 IPC is probably the most important throughput indicator. A big delta between the
 Dispatch Width and the computed IPC is an indicator of potential performance
 issues.
@@ -139,8 +138,8 @@ pipeline JFPU1, while horizontal FP adds can only be issued to pipeline JFPU0.
 
 The third (and last) section of the report shows the latency and reciprocal
 throughput of every instruction in the sequence. That section also reports extra
-information related to the number of micro opcodes, and opcode properties (i.e.
-'MayLoad', 'MayStore' and 'UnmodeledSideEffects').
+information related to the number of micro opcodes, and opcode properties (i.e.,
+'MayLoad', 'MayStore', and 'UnmodeledSideEffects').
 
 The resource pressure view helps with identifying bottlenecks caused by high
 usage of specific hardware resources.  Situations with resource pressure mainly
@@ -158,7 +157,7 @@ timeline view for the dot-product example from the previous section.
 ///////////////
 Timeline view:
      	          012345
-Index	0123456789      
+Index	0123456789
 
 [0,0]	DeeER.    .    .	vmulps	%xmm0, %xmm1, %xmm2
 [0,1]	D==eeeER  .    .	vhaddps	%xmm2, %xmm2, %xmm3
@@ -197,11 +196,11 @@ sub-optimal usage of hardware resources.
 
 An instruction in the timeline view is identified by a pair of indices, where
 the 'first' index identifies an iteration, and the 'second' index is the actual
-instruction index (i.e. where it appears in the code sequence).
+instruction index (i.e., where it appears in the code sequence).
 
-Excluding the first and last column, the remaining columns are in cycles.  Cycles
-are numbered sequentially starting from 0.  The following characters are used to
-describe the state of an instruction:
+Excluding the first and last column, the remaining columns are in cycles.
+Cycles are numbered sequentially starting from 0.  The following characters are
+used to describe the state of an instruction:
 
  D : Instruction dispatched.
  e : Instruction executing.
@@ -216,7 +215,7 @@ Based on the timeline view from the example, we know that:
   - Instruction [1, 0] reached the write back stage at cycle 4.
   - Instruction [1, 0] was retired at cycle 10.
 
-Instruction [1, 0] (i.e. the vmulps from iteration #1) doesn't have to wait in
+Instruction [1, 0] (i.e., the vmulps from iteration #1) doesn't have to wait in
 the scheduler's queue for the operands to become available. By the time the
 vmulps is dispatched, operands are already available, and pipeline JFPU1 is
 ready to serve another instruction.  So the instruction can be immediately
@@ -225,7 +224,7 @@ instruction only spent 1cy in the scheduler's queue.
 
 There is a gap of 5 cycles between the write-back stage and the retire event.
 That is because instructions must retire in program order, so [1,0] has to wait
-for [0, 2] to be retired first (i.e it has to wait unti cycle 10).
+for [0, 2] to be retired first (i.e., it has to wait until cycle 10).
 
 In the dot-product example, all instructions are in a RAW (Read After Write)
 dependency chain.  Register %xmm2 written by the vmulps is immediately used by
@@ -250,7 +249,7 @@ scheduler's queue.  So the difference between the two counters is a good
 indicator of how big of an impact data dependencies had on the execution of
 instructions.  When performance is mostly limited by the lack of hardware
 resources, the delta between the two counters is small.  However, the number of
-cycles spent in the queue tends to be bigger (i.e. more than 1-3cy) especially
+cycles spent in the queue tends to be bigger (i.e., more than 1-3cy) especially
 when compared with other low latency instructions.
 
 Extra statistics to further diagnose performance issues.
@@ -317,13 +316,13 @@ instructions 51.5% of the time.  The dispatch group was limited to one
 instruction 44.6% of the cycles, which corresponds to 272 cycles.
 
 If we look at section "Dynamic Dispatch Stall Cycles", we can see how counter
-SCHEDQ reports 272 cycles.  Counter SCHEDQ is incremented every time the dispatch
-logic is unable to dispatch a full group of two instructions because the
-scheduler's queue is full.
+SCHEDQ reports 272 cycles.  Counter SCHEDQ is incremented every time the
+dispatch logic is unable to dispatch a full group of two instructions because
+the scheduler's queue is full.
 
 Section "Scheduler's queue usage" shows how the maximum number of buffer entries
-(i.e. scheduler's queue entries) used at runtime for resource JFPU01 reached its
-maximum. Note that AMD Jaguar implements three schedulers:
+(i.e., scheduler's queue entries) used at runtime for resource JFPU01 reached
+its maximum. Note that AMD Jaguar implements three schedulers:
   * JALU01 - A scheduler for ALU instructions
   * JLSAGU - A scheduler for address generation
   * JFPU01 - A scheduler floating point operations.
@@ -346,7 +345,7 @@ LLVM-MCA instruction flow
 -------------------------
 
 This section describes the instruction flow through the out-of-order backend, as
-well as the functional units involved in the process. 
+well as the functional units involved in the process.
 
 An instruction goes through a default sequence of stages:
     - Dispatch (Instruction is dispatched to the schedulers).
@@ -368,11 +367,11 @@ Instruction Dispatch
 
 During the Dispatch stage, instructions are picked in program order from a queue
 of already decoded instructions, and dispatched in groups to the hardware
-schedulers.  The dispatch logic is implemented by class DispatchUnit in file
-Dispatch.h.
+schedulers.  The dispatch logic is implemented by class DispatchStage in file
+DispatchStage.h.
 
 The size of a dispatch group depends on the availability of hardware resources,
-and it cannot exceed the value of field 'DispatchWidth' in class DispatchUnit.
+and it cannot exceed the value of field 'DispatchWidth' in class DispatchStage.
 Note that field DispatchWidth defaults to the value of field 'IssueWidth' from
 the scheduling model.
 
@@ -385,34 +384,35 @@ An instruction can be dispatched if:
  - There are enough temporary registers to do register renaming
  - Schedulers are not full.
 
-Since r329067, scheduling models can now optionally specify which register files
-are available on the processor. Class DispatchUnit(see Dispatch.h) would use
-that information to initialize register file descriptors.
+Since r329067, scheduling models can now optionally specify which register
+files are available on the processor. Class DispatchStage(see DispatchStage.h)
+would use that information to initialize register file descriptors.
 
 By default, if the model doesn't describe register files, the tool
 (optimistically) assumes a single register file with an unbounded number of
-temporary registers.  Users can limit the number of temporary registers that are
-globally available for register renaming using flag `-register-file-size=<N>`,
-where N is the number of temporaries.  A value of zero for N means 'unbounded'.
-Knowing how many temporaries are available for register renaming, the tool can
-predict dispatch stalls caused by the lack of temporaries.
+temporary registers.  Users can limit the number of temporary registers that
+are globally available for register renaming using flag
+`-register-file-size=<N>`, where N is the number of temporaries.  A value of
+zero for N means 'unbounded'.  Knowing how many temporaries are available for
+register renaming, the tool can predict dispatch stalls caused by the lack of
+temporaries.
 
 The number of reorder buffer entries consumed by an instruction depends on the
 number of micro-opcodes it specifies in the target scheduling model (see field
-'NumMicroOpcodes' of tablegen class ProcWriteResources and its derived classes;
+'NumMicroOpcodes' of TableGen class ProcWriteResources and its derived classes;
 TargetSchedule.td).
 
-The reorder buffer is implemented by class RetireControlUnit (see Dispatch.h).
-Its goal is to track the progress of instructions that are "in-flight", and
-retire instructions in program order.  The number of entries in the reorder
-buffer defaults to the value of field 'MicroOpBufferSize' from the target
-scheduling model.
+The reorder buffer is implemented by class RetireControlUnit (see
+DispatchStage.h).  Its goal is to track the progress of instructions that are
+"in-flight", and retire instructions in program order.  The number of entries
+in the reorder buffer defaults to the value of field 'MicroOpBufferSize' from
+the target scheduling model.
 
 Instructions that are dispatched to the schedulers consume scheduler buffer
 entries.  The tool queries the scheduling model to figure out the set of
 buffered resources consumed by an instruction.  Buffered resources are treated
 like "scheduler" resources, and the field 'BufferSize' (from the processor
-resource tablegen definition) defines the size of the scheduler's queue.
+resource TableGen definition) defines the size of the scheduler's queue.
 
 Zero latency instructions (for example NOP instructions) don't consume scheduler
 resources.  However, those instructions still reserve a number of slots in the
@@ -485,7 +485,7 @@ Load/Store Unit and Memory Consistency Model
 The tool attempts to emulate out-of-order execution of memory operations.  Class
 LSUnit (see file LSUnit.h) emulates a load/store unit implementing queues for
 speculative execution of loads and stores.
- 
+
 Each load (or store) consumes an entry in the load (or store) queue.  The number
 of slots in the load/store queues is unknown by the tool, since there is no
 mention of it in the scheduling model.  In practice, users can specify flag
@@ -502,13 +502,14 @@ rules are:
 4) A younger load is allowed to pass an older store provided that the load does
    not alias with the store.
 
-By default, this class conservatively (i.e. pessimistically) assumes that loads
-always may-alias store operations.  Essentially, this LSUnit doesn't perform any
-sort of alias analysis to rule out cases where loads and stores don't overlap
-with each other.  The downside of this approach however is that younger loads are
-never allowed to pass older stores.  To make it possible for a younger load to
-pass an older store, users can use the command line flag -noalias.  Under
-'noalias', a younger load is always allowed to pass an older store.
+By default, this class conservatively (i.e., pessimistically) assumes that loads
+always may-alias store operations.  Essentially, this LSUnit doesn't perform
+any sort of alias analysis to rule out cases where loads and stores don't
+overlap with each other.  The downside of this approach however is that younger
+loads are never allowed to pass older stores.  To make it possible for a
+younger load to pass an older store, users can use the command line flag
+-noalias.  Under 'noalias', a younger load is always allowed to pass an older
+store.
 
 Note that, in the case of write-combining memory, rule 2. could be relaxed a bit
 to allow reordering of non-aliasing store operations.  That being said, at the
@@ -573,7 +574,7 @@ the processor model used by the tool.
 Most recent Intel and AMD processors implement dedicated LoopBuffer/OpCache in
 the hardware frontend to speedup the throughput in the presence of tight loops.
 The presence of these buffers complicates the decoding logic, and requires
-knowledge on the branch predictor too.  Class 'SchedMachineModel' in tablegen
+knowledge on the branch predictor too.  Class 'SchedMachineModel' in TableGen
 provides a field named 'LoopMicroOpBufferSize' which is used to describe loop
 buffers.  However, the purpose of that field is to enable loop unrolling of
 tight loops; essentially, it affects the cost model used by pass loop-unroll.
@@ -609,9 +610,9 @@ the compiler to predict the latency of instructions and package issue groups
 accordingly. For such targets, there is no dynamic scheduling done by the
 hardware.
 
-Existing classes (DispatchUnit, Scheduler, etc.) could be extended/adapted to
+Existing classes (DispatchStage, Scheduler, etc.) could be extended/adapted to
 support processors with a single dispatch/issue stage. The execution flow would
-require some changes in the way how existing components (i.e.  DispatchUnit,
+require some changes in the way how existing components (i.e.,  DispatchStage,
 Scheduler, etc.) interact. This can be a future development.
 
 The following sections describes other known limitations.  The goal is not to
@@ -690,8 +691,8 @@ To get accurate performance analysis, the tool has to know which instructions
 perform a partial register update, and which instructions fully update the
 destination's super-register.
 
-One way to expose this information is (again) via tablegen.  For example, we
-could add a flag in the tablegen instruction class to tag instructions that
+One way to expose this information is (again) via TableGen.  For example, we
+could add a flag in the TableGen instruction class to tag instructions that
 perform partial register updates. Something like this: 'bit
 hasPartialRegisterUpdate = 1'. However, this would force a `let
 hasPartialRegisterUpdate = 0` on several instruction definitions.
@@ -707,7 +708,7 @@ idea. But the plan is to have this fixed as a future development.
 The tool doesn't know about macro-op fusion. On modern x86 processors, a
 'cmp/test' followed by a 'jmp' is fused into a single macro operation.  The
 advantage is that the fused pair only consumes a single slot in the dispatch
-group. 
+group.
 
 As a future development, the tool should be extended to address macro-fusion.
 Ideally, we could have LLVM generate a table enumerating all the opcode pairs
@@ -777,9 +778,9 @@ the associated MCInstrDesc object.
 However class MCInstrDesc describes properties and operands of MachineInstr
 objects. Essentially, MCInstrDesc is not meant to be used to describe MCInst
 objects.  To be more specific, MCInstrDesc objects are automatically generated
-via tablegen from the instruction set description in the target .td files.  For
+via TableGen from the instruction set description in the target .td files.  For
 example, field `MCInstrDesc::NumDefs' is always equal to the cardinality of the
-`(outs)` set from the tablegen instruction definition.
+`(outs)` set from the TableGen instruction definition.
 
 By construction, register definitions always appear at the beginning of the
 MachineOperands list in MachineInstr. Basically, the (outs) are the first
@@ -792,8 +793,8 @@ objects through a lowering step. By default the lowering logic simply iterates
 over the machine operands of a MachineInstr, and converts/expands them into
 equivalent MCOperand objects.
 
-The default lowering strategy has the advantage of preserving all of the
-above mentioned assumptions on the machine operand sequence. That means, register
+The default lowering strategy has the advantage of preserving all of the above
+mentioned assumptions on the machine operand sequence. That means, register
 definitions would still be at the beginning of the MCOperand sequence, and
 register uses would come after.
 
@@ -803,7 +804,7 @@ assumptions on the machine operand sequence which were valid for MachineInstr.
 Luckily, this is not the most common form of lowering done by the targets, and
 the vast majority of the MachineInstr are lowered based on the default strategy
 which preserves the original machine operand sequence.  This is especially true
-for x86, where the custom lowering logic always preserves the original (i.e.
+for x86, where the custom lowering logic always preserves the original (i.e.,
 from the MachineInstr) operand sequence.
 
 This tool currently works under the strong (and potentially incorrect)
@@ -821,7 +822,7 @@ index for every register MCOperand (or -1, if the operand didn't exist in the
 original MachineInstr). The mapping could look like this <0,1,3,2>.  Here,
 MCOperand #2 was obtained from the lowering of MachineOperand #3. etc.
 
-This information could be automatically generated via tablegen for all the
+This information could be automatically generated via TableGen for all the
 instructions whose custom lowering step breaks assumptions made by the tool on
 the register operand sequence (In general, these instructions should be the
 minority of a target's instruction set). Unfortunately, we don't have that

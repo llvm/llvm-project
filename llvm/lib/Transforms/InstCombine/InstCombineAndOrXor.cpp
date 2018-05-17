@@ -2748,7 +2748,11 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     // xor (add A, B), B  ; add -1 and flip bits if negative
     // --> (A < 0) ? -A : A
     Value *Cmp = Builder.CreateICmpSLT(A, ConstantInt::getNullValue(Ty));
-    return SelectInst::Create(Cmp, Builder.CreateNeg(A), A);
+    // Copy the nuw/nsw flags from the add to the negate.
+    auto *Add = cast<BinaryOperator>(Op0);
+    Value *Neg = Builder.CreateNeg(A, "", Add->hasNoUnsignedWrap(),
+                                   Add->hasNoSignedWrap());
+    return SelectInst::Create(Cmp, Neg, A);
   }
 
   // Eliminate a bitwise 'not' op of 'not' min/max by inverting the min/max:

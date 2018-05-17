@@ -96,7 +96,7 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 ; SI-NEXT: s_cbranch_scc1 [[ENDPGM]]
 
 ; SI: [[INFLOOP:BB[0-9]+_[0-9]+]]
-; SI: s_branch [[INFLOOP]]
+; SI: s_cbranch_vccnz [[INFLOOP]]
 
 ; SI: [[ENDPGM]]:
 ; SI: s_endpgm

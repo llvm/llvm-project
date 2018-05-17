@@ -63,6 +63,12 @@ directly into llvm-mca for analysis:
 
   $ clang foo.c -O2 -target x86_64-unknown-unknown -S -o - | llvm-mca -mcpu=btver2
 
+Or for Intel syntax:
+
+.. code-block:: bash
+
+  $ clang foo.c -O2 -target x86_64-unknown-unknown -mllvm -x86-asm-syntax=intel -S -o - | llvm-mca -mcpu=btver2
+
 OPTIONS
 -------
 
@@ -175,6 +181,16 @@ option specifies "``-``", then the output will also be sent to standard output.
 .. option:: -instruction-info
 
   Enable the instruction info view. This is enabled by default.
+
+.. option:: -all-stats
+
+  Print all hardware statistics. This enables extra statistics related to the
+  dispatch logic, the hardware schedulers, the register file(s), and the retire
+  control unit. This option is disabled by default.
+
+.. option:: -all-views
+
+  Enable all the view.
 
 .. option:: -instruction-tables
 

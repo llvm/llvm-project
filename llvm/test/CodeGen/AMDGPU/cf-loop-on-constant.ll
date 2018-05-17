@@ -2,10 +2,11 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs -O0 < %s
 
 ; GCN-LABEL: {{^}}test_loop:
+; GCN: s_and_b64 vcc, exec, -1
 ; GCN: [[LABEL:BB[0-9+]_[0-9]+]]: ; %for.body{{$}}
 ; GCN: ds_read_b32
 ; GCN: ds_write_b32
-; GCN: s_branch [[LABEL]]
+; GCN: s_cbranch_vccnz [[LABEL]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_loop(float addrspace(3)* %ptr, i32 %n) nounwind {
 entry:

@@ -156,6 +156,7 @@ def : WriteRes<WriteRMW, [JSAGU]>;
 ////////////////////////////////////////////////////////////////////////////////
 
 defm : JWriteResIntPair<WriteALU,    [JALU01], 1>;
+defm : JWriteResIntPair<WriteADC,    [JALU01], 1, [2]>;
 defm : JWriteResIntPair<WriteIMul,   [JALU1, JMul], 3, [1, 1], 2>; // i8/i16/i32 multiplication
 defm : JWriteResIntPair<WriteIMul64, [JALU1, JMul], 6, [1, 4], 2>; // i64 multiplication
 defm : X86WriteRes<WriteIMulH,       [JALU1], 6, [4], 1>;
@@ -172,6 +173,7 @@ defm : JWriteResIntPair<WriteIDiv64, [JALU1, JDiv], 41, [1, 41], 2>;
 defm : JWriteResIntPair<WriteCRC32,  [JALU01], 3, [4], 3>;
 
 defm : JWriteResIntPair<WriteCMOV,  [JALU01], 1>; // Conditional move.
+defm : JWriteResIntPair<WriteCMOV2, [JALU01], 1>; // Conditional (CF + ZF flag) move.
 defm : X86WriteRes<WriteFCMOV, [JFPU0, JFPA], 3, [1,1], 1>; // x87 conditional move.
 def  : WriteRes<WriteSETCC, [JALU01]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [JALU01,JSAGU]>;

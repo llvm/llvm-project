@@ -349,13 +349,23 @@ Status ProcessWindows::DoResume() {
 
     LLDB_LOG(log, "resuming {0} threads.", m_thread_list.GetSize());
 
+    bool failed = false;
     for (uint32_t i = 0; i < m_thread_list.GetSize(); ++i) {
       auto thread = std::static_pointer_cast<TargetThreadWindows>(
           m_thread_list.GetThreadAtIndex(i));
-      thread->DoResume();
+      Status result = thread->DoResume();
+      if (result.Fail()) {
+        failed = true;
+        LLDB_LOG(log, "Trying to resume thread at index {0}, but failed with error {1}.", i, result);
+      }
     }
 
-    SetPrivateState(eStateRunning);
+    if (failed) {
+      error.SetErrorString("ProcessWindows::DoResume failed");
+      return error;
+    } else {
+      SetPrivateState(eStateRunning);
+    }
   } else {
     LLDB_LOG(log, "error: process %I64u is in state %u.  Returning...",
              m_session_data->m_debugger->GetProcess().GetProcessId(),

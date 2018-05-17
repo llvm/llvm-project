@@ -39,6 +39,7 @@ GloballyHashedType::hashType(ArrayRef<uint8_t> RecordData,
   SHA1 S;
   S.init();
   uint32_t Off = 0;
+  S.update(RecordData.take_front(sizeof(RecordPrefix)));
   RecordData = RecordData.drop_front(sizeof(RecordPrefix));
   for (const auto &Ref : Refs) {
     // Hash any data that comes before this TiRef.

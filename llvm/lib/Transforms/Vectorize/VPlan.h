@@ -306,6 +306,8 @@ struct VPTransformState {
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
 /// A VPBlockBase can be either a VPBasicBlock or a VPRegionBlock.
 class VPBlockBase {
+  friend class VPBlockUtils;
+
 private:
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -372,6 +374,7 @@ public:
   /// for any other purpose, as the values may change as LLVM evolves.
   unsigned getVPBlockID() const { return SubclassID; }
 
+  VPRegionBlock *getParent() { return Parent; }
   const VPRegionBlock *getParent() const { return Parent; }
 
   void setParent(VPRegionBlock *P) { Parent = P; }
@@ -405,6 +408,9 @@ public:
   VPBlockBase *getSinglePredecessor() const {
     return (Predecessors.size() == 1 ? *Predecessors.begin() : nullptr);
   }
+
+  size_t getNumSuccessors() const { return Successors.size(); }
+  size_t getNumPredecessors() const { return Predecessors.size(); }
 
   /// An Enclosing Block of a block B is any block containing B, including B
   /// itself. \return the closest enclosing block starting from "this", which
@@ -449,34 +455,31 @@ public:
     return getEnclosingBlockWithPredecessors()->getSinglePredecessor();
   }
 
-  /// Sets a given VPBlockBase \p Successor as the single successor and \return
-  /// \p Successor. The parent of this Block is copied to be the parent of
-  /// \p Successor.
-  VPBlockBase *setOneSuccessor(VPBlockBase *Successor) {
+  /// Set a given VPBlockBase \p Successor as the single successor of this
+  /// VPBlockBase. This VPBlockBase is not added as predecessor of \p Successor.
+  /// This VPBlockBase must have no successors.
+  void setOneSuccessor(VPBlockBase *Successor) {
     assert(Successors.empty() && "Setting one successor when others exist.");
     appendSuccessor(Successor);
-    Successor->appendPredecessor(this);
-    Successor->Parent = Parent;
-    return Successor;
   }
 
-  /// Sets two given VPBlockBases \p IfTrue and \p IfFalse to be the two
-  /// successors. The parent of this Block is copied to be the parent of both
-  /// \p IfTrue and \p IfFalse.
+  /// Set two given VPBlockBases \p IfTrue and \p IfFalse to be the two
+  /// successors of this VPBlockBase. This VPBlockBase is not added as
+  /// predecessor of \p IfTrue or \p IfFalse. This VPBlockBase must have no
+  /// successors.
   void setTwoSuccessors(VPBlockBase *IfTrue, VPBlockBase *IfFalse) {
     assert(Successors.empty() && "Setting two successors when others exist.");
     appendSuccessor(IfTrue);
     appendSuccessor(IfFalse);
-    IfTrue->appendPredecessor(this);
-    IfFalse->appendPredecessor(this);
-    IfTrue->Parent = Parent;
-    IfFalse->Parent = Parent;
   }
 
-  void disconnectSuccessor(VPBlockBase *Successor) {
-    assert(Successor && "Successor to disconnect is null.");
-    removeSuccessor(Successor);
-    Successor->removePredecessor(this);
+  /// Set each VPBasicBlock in \p NewPreds as predecessor of this VPBlockBase.
+  /// This VPBlockBase must have no predecessors. This VPBlockBase is not added
+  /// as successor of any VPBasicBlock in \p NewPreds.
+  void setPredecessors(ArrayRef<VPBlockBase *> NewPreds) {
+    assert(Predecessors.empty() && "Block predecessors already set.");
+    for (auto *Pred : NewPreds)
+      appendPredecessor(Pred);
   }
 
   /// The method which generates the output IR that correspond to this
@@ -554,9 +557,12 @@ private:
   void generateInstruction(VPTransformState &State, unsigned Part);
 
 public:
-  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands)
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands)
       : VPUser(VPValue::VPInstructionSC, Operands),
         VPRecipeBase(VPRecipeBase::VPInstructionSC), Opcode(Opcode) {}
+
+  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands)
+      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands)) {}
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPValue *V) {
@@ -963,6 +969,9 @@ public:
     Entry->setParent(this);
     Exit->setParent(this);
   }
+  VPRegionBlock(const std::string &Name = "", bool IsReplicator = false)
+      : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exit(nullptr),
+        IsReplicator(IsReplicator) {}
 
   ~VPRegionBlock() override {
     if (Entry)
@@ -977,8 +986,26 @@ public:
   const VPBlockBase *getEntry() const { return Entry; }
   VPBlockBase *getEntry() { return Entry; }
 
+  /// Set \p EntryBlock as the entry VPBlockBase of this VPRegionBlock. \p
+  /// EntryBlock must have no predecessors.
+  void setEntry(VPBlockBase *EntryBlock) {
+    assert(EntryBlock->getPredecessors().empty() &&
+           "Entry block cannot have predecessors.");
+    Entry = EntryBlock;
+    EntryBlock->setParent(this);
+  }
+
   const VPBlockBase *getExit() const { return Exit; }
   VPBlockBase *getExit() { return Exit; }
+
+  /// Set \p ExitBlock as the exit VPBlockBase of this VPRegionBlock. \p
+  /// ExitBlock must have no successors.
+  void setExit(VPBlockBase *ExitBlock) {
+    assert(ExitBlock->getSuccessors().empty() &&
+           "Exit block cannot have successors.");
+    Exit = ExitBlock;
+    ExitBlock->setParent(this);
+  }
 
   /// An indicator whether this region is to generate multiple replicated
   /// instances of output IR corresponding to its VPBlockBases.
@@ -1007,6 +1034,13 @@ private:
   /// Holds the name of the VPlan, for printing.
   std::string Name;
 
+  /// Holds all the external definitions created for this VPlan.
+  // TODO: Introduce a specific representation for external definitions in
+  // VPlan. External definitions must be immutable and hold a pointer to its
+  // underlying IR that will be used to implement its structural comparison
+  // (operators '==' and '<').
+  SmallSet<VPValue *, 16> VPExternalDefs;
+
   /// Holds a mapping between Values and their corresponding VPValue inside
   /// VPlan.
   Value2VPValueTy Value2VPValue;
@@ -1019,6 +1053,8 @@ public:
       VPBlockBase::deleteCFG(Entry);
     for (auto &MapEntry : Value2VPValue)
       delete MapEntry.second;
+    for (VPValue *Def : VPExternalDefs)
+      delete Def;
   }
 
   /// Generate the IR code for this VPlan.
@@ -1036,6 +1072,12 @@ public:
   const std::string &getName() const { return Name; }
 
   void setName(const Twine &newName) { Name = newName.str(); }
+
+  /// Add \p VPVal to the pool of external definitions if it's not already
+  /// in the pool.
+  void addExternalDef(VPValue *VPVal) {
+    VPExternalDefs.insert(VPVal);
+  }
 
   void addVPValue(Value *V) {
     assert(V && "Trying to add a null Value to VPlan");
@@ -1184,6 +1226,70 @@ template <> struct GraphTraits<Inverse<VPBlockBase *>> {
   }
 };
 
+//===----------------------------------------------------------------------===//
+// VPlan Utilities
+//===----------------------------------------------------------------------===//
+
+/// Class that provides utilities for VPBlockBases in VPlan.
+class VPBlockUtils {
+public:
+  VPBlockUtils() = delete;
+
+  /// Insert disconnected VPBlockBase \p NewBlock after \p BlockPtr. Add \p
+  /// NewBlock as successor of \p BlockPtr and \p Block as predecessor of \p
+  /// NewBlock, and propagate \p BlockPtr parent to \p NewBlock. \p NewBlock
+  /// must have neither successors nor predecessors.
+  static void insertBlockAfter(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
+    assert(NewBlock->getSuccessors().empty() &&
+           "Can't insert new block with successors.");
+    // TODO: move successors from BlockPtr to NewBlock when this functionality
+    // is necessary. For now, setBlockSingleSuccessor will assert if BlockPtr
+    // already has successors.
+    BlockPtr->setOneSuccessor(NewBlock);
+    NewBlock->setPredecessors({BlockPtr});
+    NewBlock->setParent(BlockPtr->getParent());
+  }
+
+  /// Insert disconnected VPBlockBases \p IfTrue and \p IfFalse after \p
+  /// BlockPtr. Add \p IfTrue and \p IfFalse as succesors of \p BlockPtr and \p
+  /// BlockPtr as predecessor of \p IfTrue and \p IfFalse. Propagate \p BlockPtr
+  /// parent to \p IfTrue and \p IfFalse. \p BlockPtr must have no successors
+  /// and \p IfTrue and \p IfFalse must have neither successors nor
+  /// predecessors.
+  static void insertTwoBlocksAfter(VPBlockBase *IfTrue, VPBlockBase *IfFalse,
+                                   VPBlockBase *BlockPtr) {
+    assert(IfTrue->getSuccessors().empty() &&
+           "Can't insert IfTrue with successors.");
+    assert(IfFalse->getSuccessors().empty() &&
+           "Can't insert IfFalse with successors.");
+    BlockPtr->setTwoSuccessors(IfTrue, IfFalse);
+    IfTrue->setPredecessors({BlockPtr});
+    IfFalse->setPredecessors({BlockPtr});
+    IfTrue->setParent(BlockPtr->getParent());
+    IfFalse->setParent(BlockPtr->getParent());
+  }
+
+  /// Connect VPBlockBases \p From and \p To bi-directionally. Append \p To to
+  /// the successors of \p From and \p From to the predecessors of \p To. Both
+  /// VPBlockBases must have the same parent, which can be null. Both
+  /// VPBlockBases can be already connected to other VPBlockBases.
+  static void connectBlocks(VPBlockBase *From, VPBlockBase *To) {
+    assert((From->getParent() == To->getParent()) &&
+           "Can't connect two block with different parents");
+    assert(From->getNumSuccessors() < 2 &&
+           "Blocks can't have more than two successors.");
+    From->appendSuccessor(To);
+    To->appendPredecessor(From);
+  }
+
+  /// Disconnect VPBlockBases \p From and \p To bi-directionally. Remove \p To
+  /// from the successors of \p From and \p From from the predecessors of \p To.
+  static void disconnectBlocks(VPBlockBase *From, VPBlockBase *To) {
+    assert(To && "Successor to disconnect is null.");
+    From->removeSuccessor(To);
+    To->removePredecessor(From);
+  }
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_H

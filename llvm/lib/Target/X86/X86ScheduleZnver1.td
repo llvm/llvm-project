@@ -151,6 +151,7 @@ def : WriteRes<WriteLoad,    [ZnAGU]> { let Latency = 8; }
 def : WriteRes<WriteZero,  []>;
 def : WriteRes<WriteLEA, [ZnALU]>;
 defm : ZnWriteResPair<WriteALU,   [ZnALU], 1>;
+defm : ZnWriteResPair<WriteADC,   [ZnALU], 1>;
 defm : ZnWriteResPair<WriteIMul,   [ZnALU1, ZnMultiplier], 4>;
 defm : ZnWriteResPair<WriteIMul64, [ZnALU1, ZnMultiplier], 4, [1,1], 2>;
 defm : ZnWriteResPair<WriteShift, [ZnALU], 1>;
@@ -158,6 +159,7 @@ defm : ZnWriteResPair<WriteJump,  [ZnALU], 1>;
 defm : ZnWriteResFpuPair<WriteCRC32, [ZnFPU0], 3>;
 
 defm : ZnWriteResPair<WriteCMOV,   [ZnALU], 1>;
+defm : ZnWriteResPair<WriteCMOV2,  [ZnALU], 1>;
 def  : WriteRes<WriteSETCC,  [ZnALU]>;
 def  : WriteRes<WriteSETCCStore,  [ZnALU, ZnAGU]>;
 

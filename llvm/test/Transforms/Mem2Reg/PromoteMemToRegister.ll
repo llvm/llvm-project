@@ -1,5 +1,5 @@
 ; Simple sanity check testcase.  Both alloca's should be eliminated.
-; RUN: opt < %s -debugify -mem2reg -check-debugify -S | FileCheck %s
+; RUN: opt < %s -debugify -mem2reg -check-debugify -S 2>&1 | FileCheck %s
 
 ; CHECK-NOT: alloca
 ; CHECK: CheckModuleDebugify [{{.*}}]: PASS

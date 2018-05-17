@@ -10,10 +10,10 @@ define void @test_adcx(i32 %a0, i32* %a1, i64 %a2, i64* %a3) optsize {
 ; GENERIC-LABEL: test_adcx:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    adcxl %edi, %edi # sched: [1:0.33]
-; GENERIC-NEXT:    adcxq %rdx, %rdx # sched: [1:0.33]
-; GENERIC-NEXT:    adcxl (%rsi), %edi # sched: [6:0.50]
-; GENERIC-NEXT:    adcxq (%rcx), %rdx # sched: [6:0.50]
+; GENERIC-NEXT:    adcxl %edi, %edi # sched: [2:0.67]
+; GENERIC-NEXT:    adcxq %rdx, %rdx # sched: [2:0.67]
+; GENERIC-NEXT:    adcxl (%rsi), %edi # sched: [7:0.67]
+; GENERIC-NEXT:    adcxq (%rcx), %rdx # sched: [7:0.67]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -40,10 +40,10 @@ define void @test_adcx(i32 %a0, i32* %a1, i64 %a2, i64* %a3) optsize {
 ; KNL-LABEL: test_adcx:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    adcxl %edi, %edi # sched: [1:0.25]
-; KNL-NEXT:    adcxq %rdx, %rdx # sched: [1:0.25]
-; KNL-NEXT:    adcxl (%rsi), %edi # sched: [6:0.50]
-; KNL-NEXT:    adcxq (%rcx), %rdx # sched: [6:0.50]
+; KNL-NEXT:    adcxl %edi, %edi # sched: [2:0.50]
+; KNL-NEXT:    adcxq %rdx, %rdx # sched: [2:0.50]
+; KNL-NEXT:    adcxl (%rsi), %edi # sched: [7:0.50]
+; KNL-NEXT:    adcxq (%rcx), %rdx # sched: [7:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -63,10 +63,10 @@ define void @test_adox(i32 %a0, i32* %a1, i64 %a2, i64* %a3) optsize {
 ; GENERIC-LABEL: test_adox:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    adoxl %edi, %edi # sched: [1:0.33]
-; GENERIC-NEXT:    adoxq %rdx, %rdx # sched: [1:0.33]
-; GENERIC-NEXT:    adoxl (%rsi), %edi # sched: [6:0.50]
-; GENERIC-NEXT:    adoxq (%rcx), %rdx # sched: [6:0.50]
+; GENERIC-NEXT:    adoxl %edi, %edi # sched: [2:0.67]
+; GENERIC-NEXT:    adoxq %rdx, %rdx # sched: [2:0.67]
+; GENERIC-NEXT:    adoxl (%rsi), %edi # sched: [7:0.67]
+; GENERIC-NEXT:    adoxq (%rcx), %rdx # sched: [7:0.67]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -93,10 +93,10 @@ define void @test_adox(i32 %a0, i32* %a1, i64 %a2, i64* %a3) optsize {
 ; KNL-LABEL: test_adox:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    #APP
-; KNL-NEXT:    adoxl %edi, %edi # sched: [1:0.25]
-; KNL-NEXT:    adoxq %rdx, %rdx # sched: [1:0.25]
-; KNL-NEXT:    adoxl (%rsi), %edi # sched: [6:0.50]
-; KNL-NEXT:    adoxq (%rcx), %rdx # sched: [6:0.50]
+; KNL-NEXT:    adoxl %edi, %edi # sched: [2:0.50]
+; KNL-NEXT:    adoxq %rdx, %rdx # sched: [2:0.50]
+; KNL-NEXT:    adoxl (%rsi), %edi # sched: [7:0.50]
+; KNL-NEXT:    adoxq (%rcx), %rdx # sched: [7:0.50]
 ; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
