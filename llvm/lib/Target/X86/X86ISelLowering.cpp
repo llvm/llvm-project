@@ -23453,22 +23453,45 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
         break;
       }
       // The SSE2 shifts use the lower i64 as the same shift amount for
-      // all lanes and the upper i64 is ignored. These shuffle masks
-      // optimally zero-extend each lanes on SSE2/SSE41/AVX targets.
-      SDValue Z = getZeroVector(VT, Subtarget, DAG, dl);
-      Amt0 = DAG.getVectorShuffle(VT, dl, Amt, Z, {0, 4, -1, -1});
-      Amt1 = DAG.getVectorShuffle(VT, dl, Amt, Z, {1, 5, -1, -1});
-      Amt2 = DAG.getVectorShuffle(VT, dl, Amt, Z, {2, 6, -1, -1});
-      Amt3 = DAG.getVectorShuffle(VT, dl, Amt, Z, {3, 7, -1, -1});
+      // all lanes and the upper i64 is ignored. On AVX we're better off
+      // just zero-extending, but for SSE just duplicating the top 16-bits is
+      // cheaper and has the same effect for out of range values.
+      if (Subtarget.hasAVX()) {
+        SDValue Z = getZeroVector(VT, Subtarget, DAG, dl);
+        Amt0 = DAG.getVectorShuffle(VT, dl, Amt, Z, {0, 4, -1, -1});
+        Amt1 = DAG.getVectorShuffle(VT, dl, Amt, Z, {1, 5, -1, -1});
+        Amt2 = DAG.getVectorShuffle(VT, dl, Amt, Z, {2, 6, -1, -1});
+        Amt3 = DAG.getVectorShuffle(VT, dl, Amt, Z, {3, 7, -1, -1});
+      } else {
+        SDValue Amt01 = DAG.getBitcast(MVT::v8i16, Amt);
+        SDValue Amt23 = DAG.getVectorShuffle(MVT::v8i16, dl, Amt01, Amt01,
+                                             {4, 5, 6, 7, -1, -1, -1, -1});
+        Amt0 = DAG.getVectorShuffle(MVT::v8i16, dl, Amt01, Amt01,
+                                    {0, 1, 1, 1, -1, -1, -1, -1});
+        Amt1 = DAG.getVectorShuffle(MVT::v8i16, dl, Amt01, Amt01,
+                                    {2, 3, 3, 3, -1, -1, -1, -1});
+        Amt2 = DAG.getVectorShuffle(MVT::v8i16, dl, Amt23, Amt23,
+                                    {0, 1, 1, 1, -1, -1, -1, -1});
+        Amt3 = DAG.getVectorShuffle(MVT::v8i16, dl, Amt23, Amt23,
+                                    {2, 3, 3, 3, -1, -1, -1, -1});
+      }
     }
 
-    SDValue R0 = DAG.getNode(Opc, dl, VT, R, Amt0);
-    SDValue R1 = DAG.getNode(Opc, dl, VT, R, Amt1);
-    SDValue R2 = DAG.getNode(Opc, dl, VT, R, Amt2);
-    SDValue R3 = DAG.getNode(Opc, dl, VT, R, Amt3);
-    SDValue R02 = DAG.getVectorShuffle(VT, dl, R0, R2, {0, -1, 6, -1});
-    SDValue R13 = DAG.getVectorShuffle(VT, dl, R1, R3, {-1, 1, -1, 7});
-    return DAG.getVectorShuffle(VT, dl, R02, R13, {0, 5, 2, 7});
+    SDValue R0 = DAG.getNode(Opc, dl, VT, R, DAG.getBitcast(VT, Amt0));
+    SDValue R1 = DAG.getNode(Opc, dl, VT, R, DAG.getBitcast(VT, Amt1));
+    SDValue R2 = DAG.getNode(Opc, dl, VT, R, DAG.getBitcast(VT, Amt2));
+    SDValue R3 = DAG.getNode(Opc, dl, VT, R, DAG.getBitcast(VT, Amt3));
+
+    // Merge the shifted lane results optimally with/without PBLENDW.
+    // TODO - ideally shuffle combining would handle this.
+    if (Subtarget.hasSSE41()) {
+      SDValue R02 = DAG.getVectorShuffle(VT, dl, R0, R2, {0, -1, 6, -1});
+      SDValue R13 = DAG.getVectorShuffle(VT, dl, R1, R3, {-1, 1, -1, 7});
+      return DAG.getVectorShuffle(VT, dl, R02, R13, {0, 5, 2, 7});
+    }
+    SDValue R01 = DAG.getVectorShuffle(VT, dl, R0, R1, {0, -1, -1, 5});
+    SDValue R23 = DAG.getVectorShuffle(VT, dl, R2, R3, {2, -1, -1, 7});
+    return DAG.getVectorShuffle(VT, dl, R01, R23, {0, 3, 4, 7});
   }
 
   // It's worth extending once and using the vXi16/vXi32 shifts for smaller

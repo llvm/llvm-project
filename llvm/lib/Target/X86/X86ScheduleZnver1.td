@@ -1327,7 +1327,7 @@ def ZnWriteCVSTSI2SDr: SchedWriteRes<[ZnFPU013, ZnFPU3]> {
 }
 // CVTSI2SD.
 // x,r32/64.
-def : InstRW<[ZnWriteCVSTSI2SDr], (instregex "(V?)CVTSI2SD(64)?rr")>;
+def : InstRW<[ZnWriteCVSTSI2SDr], (instregex "(V?)CVTSI(64)?2SDrr")>;
 
 
 def ZnWriteCVSTSI2SIr: SchedWriteRes<[ZnFPU3, ZnFPU2]> {

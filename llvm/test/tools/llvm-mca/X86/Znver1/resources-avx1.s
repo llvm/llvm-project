@@ -1718,7 +1718,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 168.00 168.00  -      -      -      -      -     194.25 142.75 168.25 504.75  -
+# CHECK-NEXT: 168.00 168.00  -      -      -      -      -     194.58 143.08 168.25 505.08  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -1837,7 +1837,7 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -     vcvtsd2ss	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -     1.00    -     vcvtsd2ss	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     1.33    -     vcvtsi2sdl	%ecx, %xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -     vcvtsi2sdq	%rcx, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     1.33    -     vcvtsi2sdq	%rcx, %xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     1.00    -     vcvtsi2sdl	(%rax), %xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     1.00    -     vcvtsi2sdq	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -     vcvtsi2ssl	%ecx, %xmm0, %xmm2

@@ -2521,12 +2521,14 @@ public:
 
   uint64_t  getSP() const         { return _registers.__r[1]; }
   void      setSP(uint32_t value) { _registers.__r[1] = value; }
-  uint64_t  getIP() const         { return _registers.__r[9]; }
-  void      setIP(uint32_t value) { _registers.__r[9] = value; }
+  uint64_t  getIP() const         { return _registers.__pc; }
+  void      setIP(uint32_t value) { _registers.__pc = value; }
 
 private:
   struct or1k_thread_state_t {
-    unsigned int __r[32];
+    unsigned int __r[32]; // r0-r31
+    unsigned int __pc;    // Program counter
+    unsigned int __epcr;  // Program counter at exception
   };
 
   or1k_thread_state_t _registers;
@@ -2552,6 +2554,8 @@ inline bool Registers_or1k::validRegister(int regNum) const {
     return false;
   if (regNum <= UNW_OR1K_R31)
     return true;
+  if (regNum == UNW_OR1K_EPCR)
+    return true;
   return false;
 }
 
@@ -2561,9 +2565,11 @@ inline uint32_t Registers_or1k::getRegister(int regNum) const {
 
   switch (regNum) {
   case UNW_REG_IP:
-    return _registers.__r[9];
+    return _registers.__pc;
   case UNW_REG_SP:
     return _registers.__r[1];
+  case UNW_OR1K_EPCR:
+    return _registers.__epcr;
   }
   _LIBUNWIND_ABORT("unsupported or1k register");
 }
@@ -2576,10 +2582,13 @@ inline void Registers_or1k::setRegister(int regNum, uint32_t value) {
 
   switch (regNum) {
   case UNW_REG_IP:
-    _registers.__r[9] = value;
+    _registers.__pc = value;
     return;
   case UNW_REG_SP:
     _registers.__r[1] = value;
+    return;
+  case UNW_OR1K_EPCR:
+    _registers.__epcr = value;
     return;
   }
   _LIBUNWIND_ABORT("unsupported or1k register");
@@ -2676,6 +2685,8 @@ inline const char *Registers_or1k::getRegisterName(int regNum) {
     return "r30";
   case UNW_OR1K_R31:
     return "r31";
+  case UNW_OR1K_EPCR:
+    return "EPCR";
   default:
     return "unknown register";
   }

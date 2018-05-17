@@ -1227,6 +1227,19 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, ObjCCategoryImplDecl>
 extern const internal::VariadicDynCastAllOfMatcher<Decl, ObjCMethodDecl>
     objcMethodDecl;
 
+/// Matches block declarations.
+/// 
+/// Example matches the declaration of the nameless block printing an input
+/// integer.
+///
+/// \code
+///   myFunc(^(int p) {
+///     printf("%d", p);
+///   })
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Decl, BlockDecl>
+    blockDecl;
+
 /// Matches Objective-C instance variable declarations.
 ///
 /// Example matches _enabled
@@ -3479,7 +3492,7 @@ AST_MATCHER(CXXConstructExpr, requiresZeroInitialization) {
 }
 
 /// Matches the n'th parameter of a function or an ObjC method
-/// declaration.
+/// declaration or a block.
 ///
 /// Given
 /// \code
@@ -3500,7 +3513,8 @@ AST_MATCHER(CXXConstructExpr, requiresZeroInitialization) {
 /// matching y.
 AST_POLYMORPHIC_MATCHER_P2(hasParameter,
                            AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
-                                                           ObjCMethodDecl),
+                                                           ObjCMethodDecl,
+                                                           BlockDecl),
                            unsigned, N, internal::Matcher<ParmVarDecl>,
                            InnerMatcher) {
   return (N < Node.parameters().size()
@@ -3561,7 +3575,8 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
   return Matched;
 }
 
-/// Matches any parameter of a function or ObjC method declaration.
+/// Matches any parameter of a function or an ObjC method declaration or a
+/// block.
 ///
 /// Does not match the 'this' parameter of a method.
 ///
@@ -3582,9 +3597,19 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
 /// the matcher objcMethodDecl(hasAnyParameter(hasName("y")))
 /// matches the declaration of method f with hasParameter
 /// matching y.
+///
+/// For blocks, given
+/// \code
+///   b = ^(int y) { printf("%d", y) };
+/// \endcode
+/// 
+/// the matcher blockDecl(hasAnyParameter(hasName("y")))
+/// matches the declaration of the block b with hasParameter
+/// matching y.
 AST_POLYMORPHIC_MATCHER_P(hasAnyParameter,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
-                                                          ObjCMethodDecl),
+                                                          ObjCMethodDecl,
+                                                          BlockDecl),
                           internal::Matcher<ParmVarDecl>,
                           InnerMatcher) {
   return matchesFirstInPointerRange(InnerMatcher, Node.param_begin(),

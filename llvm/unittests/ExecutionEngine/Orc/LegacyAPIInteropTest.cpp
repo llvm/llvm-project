@@ -21,11 +21,9 @@ TEST(LegacyAPIInteropTest, QueryAgainstVSO) {
   ExecutionSession ES(std::make_shared<SymbolStringPool>());
   auto Foo = ES.getSymbolStringPool().intern("foo");
 
-  VSO V;
-  SymbolMap Defs;
+  auto &V = ES.createVSO("V");
   JITEvaluatedSymbol FooSym(0xdeadbeef, JITSymbolFlags::Exported);
-  Defs[Foo] = FooSym;
-  cantFail(V.define(std::move(Defs)));
+  cantFail(V.define(absoluteSymbols({{Foo, FooSym}})));
 
   auto LookupFlags = [&](SymbolFlagsMap &SymbolFlags,
                          const SymbolNameSet &Names) {
@@ -34,15 +32,12 @@ TEST(LegacyAPIInteropTest, QueryAgainstVSO) {
 
   auto Lookup = [&](std::shared_ptr<AsynchronousSymbolQuery> Query,
                     SymbolNameSet Symbols) {
-    auto R = V.lookup(std::move(Query), Symbols);
-    EXPECT_TRUE(R.Materializers.empty())
-        << "Query resulted in unexpected materialization work";
-    return std::move(R.UnresolvedSymbols);
+    return V.lookup(std::move(Query), Symbols);
   };
 
   auto UnderlyingResolver =
       createSymbolResolver(std::move(LookupFlags), std::move(Lookup));
-  JITSymbolResolverAdapter Resolver(ES, *UnderlyingResolver);
+  JITSymbolResolverAdapter Resolver(ES, *UnderlyingResolver, nullptr);
 
   JITSymbolResolver::LookupSet Names{StringRef("foo")};
 
@@ -90,10 +85,10 @@ TEST(LegacyAPIInteropTset, LegacyLookupHelpersFn) {
     return nullptr;
   };
 
-  SymbolStringPool SP;
-  auto Foo = SP.intern("foo");
-  auto Bar = SP.intern("bar");
-  auto Baz = SP.intern("baz");
+  ExecutionSession ES;
+  auto Foo = ES.getSymbolStringPool().intern("foo");
+  auto Bar = ES.getSymbolStringPool().intern("bar");
+  auto Baz = ES.getSymbolStringPool().intern("baz");
 
   SymbolNameSet Symbols({Foo, Bar, Baz});
 
@@ -115,24 +110,29 @@ TEST(LegacyAPIInteropTset, LegacyLookupHelpersFn) {
 
   bool OnResolvedRun = false;
   bool OnReadyRun = false;
-  auto OnResolved = [&](Expected<SymbolMap> Result) {
-    OnResolvedRun = true;
-    EXPECT_TRUE(!!Result) << "lookuWithLegacy failed to resolve";
-    EXPECT_EQ(Result->size(), 2U) << "Wrong number of symbols resolved";
-    EXPECT_EQ(Result->count(Foo), 1U) << "Result for foo missing";
-    EXPECT_EQ(Result->count(Bar), 1U) << "Result for bar missing";
-    EXPECT_EQ((*Result)[Foo].getAddress(), FooAddr) << "Wrong address for foo";
-    EXPECT_EQ((*Result)[Foo].getFlags(), FooFlags) << "Wrong flags for foo";
-    EXPECT_EQ((*Result)[Bar].getAddress(), BarAddr) << "Wrong address for bar";
-    EXPECT_EQ((*Result)[Bar].getFlags(), BarFlags) << "Wrong flags for bar";
-  };
+  auto OnResolved =
+      [&](Expected<AsynchronousSymbolQuery::ResolutionResult> Result) {
+        OnResolvedRun = true;
+        EXPECT_TRUE(!!Result) << "lookuWithLegacy failed to resolve";
+
+        auto &Resolved = Result->Symbols;
+        EXPECT_EQ(Resolved.size(), 2U) << "Wrong number of symbols resolved";
+        EXPECT_EQ(Resolved.count(Foo), 1U) << "Result for foo missing";
+        EXPECT_EQ(Resolved.count(Bar), 1U) << "Result for bar missing";
+        EXPECT_EQ(Resolved[Foo].getAddress(), FooAddr)
+            << "Wrong address for foo";
+        EXPECT_EQ(Resolved[Foo].getFlags(), FooFlags) << "Wrong flags for foo";
+        EXPECT_EQ(Resolved[Bar].getAddress(), BarAddr)
+            << "Wrong address for bar";
+        EXPECT_EQ(Resolved[Bar].getFlags(), BarFlags) << "Wrong flags for bar";
+      };
   auto OnReady = [&](Error Err) {
     EXPECT_FALSE(!!Err) << "Finalization unexpectedly failed";
     OnReadyRun = true;
   };
 
   AsynchronousSymbolQuery Q({Foo, Bar}, OnResolved, OnReady);
-  auto Unresolved = lookupWithLegacyFn(Q, Symbols, LegacyLookup);
+  auto Unresolved = lookupWithLegacyFn(ES, Q, Symbols, LegacyLookup);
 
   EXPECT_TRUE(OnResolvedRun) << "OnResolved was not run";
   EXPECT_TRUE(OnReadyRun) << "OnReady was not run";

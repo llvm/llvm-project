@@ -12,9 +12,9 @@
 namespace llvm {
 namespace orc {
 
-JITSymbolResolverAdapter::JITSymbolResolverAdapter(ExecutionSession &ES,
-                                                   SymbolResolver &R)
-    : ES(ES), R(R) {}
+JITSymbolResolverAdapter::JITSymbolResolverAdapter(
+    ExecutionSession &ES, SymbolResolver &R, MaterializationResponsibility *MR)
+    : ES(ES), R(R), MR(MR) {}
 
 Expected<JITSymbolResolverAdapter::LookupResult>
 JITSymbolResolverAdapter::lookup(const LookupSet &Symbols) {
@@ -25,26 +25,28 @@ JITSymbolResolverAdapter::lookup(const LookupSet &Symbols) {
   for (auto &S : Symbols)
     InternedSymbols.insert(ES.getSymbolStringPool().intern(S));
 
-  auto OnResolve = [&](Expected<SymbolMap> R) {
-    if (R) {
-      for (auto &KV : *R) {
-        ResolvedStrings.insert(KV.first);
-        Result[*KV.first] = KV.second;
-      }
-    } else
-      Err = joinErrors(std::move(Err), R.takeError());
-  };
+  auto OnResolve =
+      [&, this](Expected<AsynchronousSymbolQuery::ResolutionResult> RR) {
+        if (RR) {
+          // If this lookup was attached to a MaterializationResponsibility then
+          // record the dependencies.
+          if (MR)
+            MR->addDependencies(RR->Dependencies);
 
-  auto OnReady = [](Error Err) {
-    // FIXME: Report error to ExecutionSession.
-    logAllUnhandledErrors(std::move(Err), errs(),
-                          "legacy resolver received on-ready error:\n");
-  };
+          for (auto &KV : RR->Symbols) {
+            ResolvedStrings.insert(KV.first);
+            Result[*KV.first] = KV.second;
+          }
+        } else
+          Err = joinErrors(std::move(Err), RR.takeError());
+      };
+
+  auto OnReady = [this](Error Err) { ES.reportError(std::move(Err)); };
 
   auto Query = std::make_shared<AsynchronousSymbolQuery>(InternedSymbols,
                                                          OnResolve, OnReady);
 
-  auto UnresolvedSymbols = R.lookup(std::move(Query), InternedSymbols);
+  auto UnresolvedSymbols = R.lookup(Query, InternedSymbols);
 
   if (!UnresolvedSymbols.empty()) {
     std::string ErrorMsg = "Unresolved symbols: ";

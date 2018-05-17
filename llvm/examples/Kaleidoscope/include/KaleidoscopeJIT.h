@@ -45,6 +45,7 @@ public:
 
   KaleidoscopeJIT()
       : Resolver(createLegacyLookupResolver(
+            ES,
             [this](const std::string &Name) {
               return ObjectLayer.findSymbol(Name, true);
             },

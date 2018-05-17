@@ -29,7 +29,7 @@ declare x86_mmx @llvm.x86.3dnow.pavgusb(x86_mmx, x86_mmx) nounwind readnone
 define i64 @test_pf2id(x86_mmx* %a0) optsize {
 ; CHECK-LABEL: test_pf2id:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pf2id (%rdi), %mm0 # sched: [8:1.00]
+; CHECK-NEXT:    pf2id (%rdi), %mm0 # sched: [9:1.00]
 ; CHECK-NEXT:    pf2id %mm0, %mm0 # sched: [3:1.00]
 ; CHECK-NEXT:    movq %mm0, %rax # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [1:1.00]
@@ -44,7 +44,7 @@ declare x86_mmx @llvm.x86.3dnow.pf2id(x86_mmx) nounwind readnone
 define i64 @test_pf2iw(x86_mmx* %a0) optsize {
 ; CHECK-LABEL: test_pf2iw:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pf2iw (%rdi), %mm0 # sched: [8:1.00]
+; CHECK-NEXT:    pf2iw (%rdi), %mm0 # sched: [9:1.00]
 ; CHECK-NEXT:    pf2iw %mm0, %mm0 # sched: [3:1.00]
 ; CHECK-NEXT:    movq %mm0, %rax # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [1:1.00]
@@ -315,7 +315,7 @@ define i64 @test_pi2fd(x86_mmx* %a0) optsize {
 ; CHECK-LABEL: test_pi2fd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pi2fd (%rdi), %mm0 # sched: [9:1.00]
-; CHECK-NEXT:    pi2fd %mm0, %mm0 # sched: [4:1.00]
+; CHECK-NEXT:    pi2fd %mm0, %mm0 # sched: [3:1.00]
 ; CHECK-NEXT:    movq %mm0, %rax # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [1:1.00]
   %1 = load x86_mmx, x86_mmx *%a0, align 8
@@ -330,7 +330,7 @@ define i64 @test_pi2fw(x86_mmx* %a0) optsize {
 ; CHECK-LABEL: test_pi2fw:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pi2fw (%rdi), %mm0 # sched: [9:1.00]
-; CHECK-NEXT:    pi2fw %mm0, %mm0 # sched: [4:1.00]
+; CHECK-NEXT:    pi2fw %mm0, %mm0 # sched: [3:1.00]
 ; CHECK-NEXT:    movq %mm0, %rax # sched: [1:0.33]
 ; CHECK-NEXT:    retq # sched: [1:1.00]
   %1 = load x86_mmx, x86_mmx *%a0, align 8

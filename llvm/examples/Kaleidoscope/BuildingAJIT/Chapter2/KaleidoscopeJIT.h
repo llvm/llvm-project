@@ -58,6 +58,7 @@ private:
 public:
   KaleidoscopeJIT()
       : Resolver(createLegacyLookupResolver(
+            ES,
             [this](const std::string &Name) -> JITSymbol {
               if (auto Sym = OptimizeLayer.findSymbol(Name, false))
                 return Sym;

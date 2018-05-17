@@ -97,6 +97,7 @@ private:
 public:
   KaleidoscopeJIT(MyRemote &Remote)
       : Resolver(createLegacyLookupResolver(
+            ES,
             [this](const std::string &Name) -> JITSymbol {
               if (auto Sym = IndirectStubsMgr->findStub(Name, false))
                 return Sym;

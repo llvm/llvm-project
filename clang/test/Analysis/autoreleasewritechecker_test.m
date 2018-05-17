@@ -265,5 +265,17 @@ void multipleErrors(NSError *__autoreleasing* error, NSDictionary *a) {
   }];
 }
 
+typedef void (^errBlock)(NSError *__autoreleasing *error);
+
+extern void expectError(errBlock);
+
+void captureAutoreleasingVarFromBlock(NSDictionary *dict) {
+  expectError(^(NSError *__autoreleasing *err) {
+    [dict enumerateKeysAndObjectsUsingBlock:^{
+      writeIntoError(err); // expected-warning{{Capture of autoreleasing out parameter 'err'}}
+    }];
+  });
+}
+
 #endif
 

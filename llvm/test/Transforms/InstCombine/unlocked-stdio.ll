@@ -100,7 +100,7 @@ define internal void @fgets_test() {
 ; CHECK-NEXT:    [[BUF:%.*]] = alloca [10 x i8], align 1
 ; CHECK-NEXT:    [[CALL:%.*]] = call %struct._IO_FILE* @fopen(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0))
 ; CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [10 x i8], [10 x i8]* [[BUF]], i64 0, i64 0
-; CHECK-NEXT:    [[FGETS_UNLOCKED:%.*]] = call i32 @fgets_unlocked(i8* nonnull [[ARRAYDECAY]], i32 10, %struct._IO_FILE* [[CALL]])
+; CHECK-NEXT:    [[FGETS_UNLOCKED:%.*]] = call i8* @fgets_unlocked(i8* nonnull [[ARRAYDECAY]], i32 10, %struct._IO_FILE* [[CALL]])
 ; CHECK-NEXT:    ret void
 ;
   %buf = alloca [10 x i8], align 1
