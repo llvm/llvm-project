@@ -23,6 +23,10 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+static cl::opt<unsigned>
+MaxNumPhis("instcombine-max-num-phis", cl::init(512),
+           cl::desc("Maximum number phis to handle in intptr/ptrint folding"));
+
 /// The PHI arguments will be folded into a single operation with a PHI node
 /// as input. The debug location of the single operation will be the merged
 /// locations of the original PHI node arguments.
@@ -176,8 +180,12 @@ Instruction *InstCombiner::FoldIntegerTypedPHI(PHINode &PN) {
   assert(AvailablePtrVals.size() == PN.getNumIncomingValues() &&
          "Not enough available ptr typed incoming values");
   PHINode *MatchingPtrPHI = nullptr;
+  unsigned NumPhis = 0;
   for (auto II = BB->begin(), EI = BasicBlock::iterator(BB->getFirstNonPHI());
-       II != EI; II++) {
+       II != EI; II++, NumPhis++) {
+    // FIXME: consider handling this in AggressiveInstCombine
+    if (NumPhis > MaxNumPhis)
+      return nullptr;
     PHINode *PtrPHI = dyn_cast<PHINode>(II);
     if (!PtrPHI || PtrPHI == &PN || PtrPHI->getType() != IntToPtr->getType())
       continue;

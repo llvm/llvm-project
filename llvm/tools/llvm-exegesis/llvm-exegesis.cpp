@@ -70,9 +70,12 @@ static llvm::cl::opt<float>
                     llvm::cl::desc("dbscan epsilon for analysis clustering"),
                     llvm::cl::init(0.1));
 
-static llvm::cl::opt<std::string> AnalysisClustersFile("analysis-clusters-file",
-                                                       llvm::cl::desc(""),
-                                                       llvm::cl::init("-"));
+static llvm::cl::opt<std::string>
+    AnalysisClustersOutputFile("analysis-clusters-output-file",
+                               llvm::cl::desc(""), llvm::cl::init("-"));
+static llvm::cl::opt<std::string>
+    AnalysisInconsistenciesOutputFile("analysis-inconsistencies-output-file",
+                                      llvm::cl::desc(""), llvm::cl::init("-"));
 
 namespace exegesis {
 
@@ -125,7 +128,27 @@ void benchmarkMain() {
   exegesis::pfm::pfmTerminate();
 }
 
-void analysisMain() {
+// Prints the results of running analysis pass `Pass` to file `OutputFilename`
+// if OutputFilename is non-empty.
+template <typename Pass>
+static void maybeRunAnalysis(const Analysis &Analyzer, const std::string &Name,
+                      const std::string &OutputFilename) {
+  if (OutputFilename.empty())
+    return;
+  if (OutputFilename != "-") {
+    llvm::errs() << "Printing " << Name << " results to file '"
+                 << OutputFilename << "'\n";
+  }
+  std::error_code ErrorCode;
+  llvm::raw_fd_ostream ClustersOS(OutputFilename, ErrorCode,
+                                  llvm::sys::fs::F_RW);
+  if (ErrorCode)
+    llvm::report_fatal_error("cannot open out file: " + OutputFilename);
+  if (auto Err = Analyzer.run<Pass>(ClustersOS))
+    llvm::report_fatal_error(std::move(Err));
+}
+
+static void analysisMain() {
   // Read benchmarks.
   const std::vector<InstructionBenchmark> Points =
       InstructionBenchmark::readYamlsOrDie(BenchmarkFile);
@@ -152,17 +175,11 @@ void analysisMain() {
 
   const Analysis Analyzer(*TheTarget, Clustering);
 
-  std::error_code ErrorCode;
-  llvm::raw_fd_ostream ClustersOS(AnalysisClustersFile, ErrorCode,
-                                  llvm::sys::fs::F_RW);
-  if (ErrorCode)
-    llvm::report_fatal_error("cannot open out file: " + AnalysisClustersFile);
-
-  if (auto Err = Analyzer.printClusters(ClustersOS))
-    llvm::report_fatal_error(std::move(Err));
-
-  if (auto Err = Analyzer.printSchedClassInconsistencies(llvm::outs()))
-    llvm::report_fatal_error(std::move(Err));
+  maybeRunAnalysis<Analysis::PrintClusters>(Analyzer, "analysis clusters",
+                                            AnalysisClustersOutputFile);
+  maybeRunAnalysis<Analysis::PrintSchedClassInconsistencies>(
+      Analyzer, "sched class consistency analysis",
+      AnalysisInconsistenciesOutputFile);
 }
 
 } // namespace exegesis

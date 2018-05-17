@@ -228,7 +228,6 @@ public:
 
   const CXXRecordDecl *
   getThisArgumentTypeForMethod(const CXXMethodDecl *MD) override {
-    MD = MD->getCanonicalDecl();
     if (MD->isVirtual() && !isa<CXXDestructorDecl>(MD)) {
       MethodVFTableLocation ML =
           CGM.getMicrosoftVTableContext().getMethodVFTableLocation(MD);
@@ -1320,10 +1319,8 @@ void MicrosoftCXXABI::EmitCXXDestructors(const CXXDestructorDecl *D) {
 
 CharUnits
 MicrosoftCXXABI::getVirtualFunctionPrologueThisAdjustment(GlobalDecl GD) {
-  GD = GD.getCanonicalDecl();
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
 
-  GlobalDecl LookupGD = GD;
   if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
     // Complete destructors take a pointer to the complete object as a
     // parameter, thus don't need this adjustment.
@@ -1332,11 +1329,11 @@ MicrosoftCXXABI::getVirtualFunctionPrologueThisAdjustment(GlobalDecl GD) {
 
     // There's no Dtor_Base in vftable but it shares the this adjustment with
     // the deleting one, so look it up instead.
-    LookupGD = GlobalDecl(DD, Dtor_Deleting);
+    GD = GlobalDecl(DD, Dtor_Deleting);
   }
 
   MethodVFTableLocation ML =
-      CGM.getMicrosoftVTableContext().getMethodVFTableLocation(LookupGD);
+      CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
   CharUnits Adjustment = ML.VFPtrOffset;
 
   // Normal virtual instance methods need to adjust from the vfptr that first
@@ -1370,7 +1367,6 @@ Address MicrosoftCXXABI::adjustThisArgumentForVirtualFunctionCall(
     return CGF.Builder.CreateConstByteGEP(This, Adjustment);
   }
 
-  GD = GD.getCanonicalDecl();
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
 
   GlobalDecl LookupGD = GD;
@@ -1839,7 +1835,6 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
                                                     Address This,
                                                     llvm::Type *Ty,
                                                     SourceLocation Loc) {
-  GD = GD.getCanonicalDecl();
   CGBuilderTy &Builder = CGF.Builder;
 
   Ty = Ty->getPointerTo()->getPointerTo();
@@ -1878,7 +1873,7 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
     VFunc = Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
   }
 
-  CGCallee Callee(MethodDecl, VFunc);
+  CGCallee Callee(MethodDecl->getCanonicalDecl(), VFunc);
   return Callee;
 }
 
@@ -2737,7 +2732,6 @@ llvm::Constant *
 MicrosoftCXXABI::EmitMemberFunctionPointer(const CXXMethodDecl *MD) {
   assert(MD->isInstance() && "Member function must not be static!");
 
-  MD = MD->getCanonicalDecl();
   CharUnits NonVirtualBaseAdjustment = CharUnits::Zero();
   const CXXRecordDecl *RD = MD->getParent()->getMostRecentDecl();
   CodeGenTypes &Types = CGM.getTypes();

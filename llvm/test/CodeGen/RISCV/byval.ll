@@ -22,18 +22,16 @@ define void @caller() nounwind {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp)
-; RV32I-NEXT:    lui a0, %hi(foo+12)
-; RV32I-NEXT:    lw a0, %lo(foo+12)(a0)
-; RV32I-NEXT:    sw a0, 24(sp)
-; RV32I-NEXT:    lui a0, %hi(foo+8)
-; RV32I-NEXT:    lw a0, %lo(foo+8)(a0)
-; RV32I-NEXT:    sw a0, 20(sp)
-; RV32I-NEXT:    lui a0, %hi(foo+4)
-; RV32I-NEXT:    lw a0, %lo(foo+4)(a0)
-; RV32I-NEXT:    sw a0, 16(sp)
 ; RV32I-NEXT:    lui a0, %hi(foo)
-; RV32I-NEXT:    lw a0, %lo(foo)(a0)
-; RV32I-NEXT:    sw a0, 12(sp)
+; RV32I-NEXT:    lw a1, %lo(foo)(a0)
+; RV32I-NEXT:    sw a1, 12(sp)
+; RV32I-NEXT:    addi a0, a0, %lo(foo)
+; RV32I-NEXT:    lw a1, 12(a0)
+; RV32I-NEXT:    sw a1, 24(sp)
+; RV32I-NEXT:    lw a1, 8(a0)
+; RV32I-NEXT:    sw a1, 20(sp)
+; RV32I-NEXT:    lw a0, 4(a0)
+; RV32I-NEXT:    sw a0, 16(sp)
 ; RV32I-NEXT:    addi a0, sp, 12
 ; RV32I-NEXT:    call callee
 ; RV32I-NEXT:    lw ra, 28(sp)

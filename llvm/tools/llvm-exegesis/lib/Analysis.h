@@ -33,10 +33,11 @@ public:
            const InstructionBenchmarkClustering &Clustering);
 
   // Prints a csv of instructions for each cluster.
-  llvm::Error printClusters(llvm::raw_ostream &OS) const;
-
+  struct PrintClusters {};
   // Find potential errors in the scheduling information given measurements.
-  llvm::Error printSchedClassInconsistencies(llvm::raw_ostream &OS) const;
+  struct PrintSchedClassInconsistencies {};
+
+  template <typename Pass> llvm::Error run(llvm::raw_ostream &OS) const;
 
 private:
   void printInstructionRow(bool PrintSchedClass, size_t PointId,

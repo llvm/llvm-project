@@ -943,7 +943,8 @@ bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     return false;
 
   // Parse first operand
-  if (parseOperand(Operands, Name == "call"))
+  bool ForceImmediate = (Name == "call" || Name == "tail");
+  if (parseOperand(Operands, ForceImmediate))
     return true;
 
   // Parse until end of statement, consuming commas between operands

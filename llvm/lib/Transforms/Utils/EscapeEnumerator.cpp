@@ -73,8 +73,8 @@ IRBuilder<> *EscapeEnumerator::Next() {
     F.setPersonalityFn(PersFn);
   }
 
-  if (isFuncletEHPersonality(classifyEHPersonality(F.getPersonalityFn()))) {
-    report_fatal_error("Funclet EH not supported");
+  if (isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn()))) {
+    report_fatal_error("Scoped EH not supported");
   }
 
   LandingPadInst *LPad =

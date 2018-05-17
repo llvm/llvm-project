@@ -52,7 +52,7 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
   Function *Fn = CurLoop->getHeader()->getParent();
   if (Fn->hasPersonalityFn())
     if (Constant *PersonalityFn = Fn->getPersonalityFn())
-      if (isFuncletEHPersonality(classifyEHPersonality(PersonalityFn)))
+      if (isScopedEHPersonality(classifyEHPersonality(PersonalityFn)))
         SafetyInfo->BlockColors = colorEHFunclets(*Fn);
 }
 

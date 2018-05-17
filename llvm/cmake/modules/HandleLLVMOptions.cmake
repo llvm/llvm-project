@@ -639,7 +639,7 @@ macro(append_common_sanitizer_flags)
       add_flag_if_supported("-gline-tables-only" GLINE_TABLES_ONLY)
     endif()
     # Use -O1 even in debug mode, otherwise sanitizers slowdown is too large.
-    if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND LLVM_OPTIMIZE_SANITIZED_BUILDS)
       add_flag_if_supported("-O1" O1)
     endif()
   elseif (CLANG_CL)

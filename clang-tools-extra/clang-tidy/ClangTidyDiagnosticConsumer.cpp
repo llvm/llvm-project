@@ -177,9 +177,11 @@ private:
 };
 
 ClangTidyContext::ClangTidyContext(
-    std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider)
+    std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
+    bool AllowEnablingAnalyzerAlphaCheckers)
     : DiagEngine(nullptr), OptionsProvider(std::move(OptionsProvider)),
-      Profile(false) {
+      Profile(false),
+      AllowEnablingAnalyzerAlphaCheckers(AllowEnablingAnalyzerAlphaCheckers) {
   // Before the first translation unit we can get errors related to command-line
   // parsing, use empty string for the file name in this case.
   setCurrentFile("");

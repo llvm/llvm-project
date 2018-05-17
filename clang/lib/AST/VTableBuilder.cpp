@@ -2223,6 +2223,7 @@ ItaniumVTableContext::ItaniumVTableContext(ASTContext &Context)
 ItaniumVTableContext::~ItaniumVTableContext() {}
 
 uint64_t ItaniumVTableContext::getMethodVTableIndex(GlobalDecl GD) {
+  GD = GD.getCanonicalDecl();
   MethodVTableIndicesTy::iterator I = MethodVTableIndices.find(GD);
   if (I != MethodVTableIndices.end())
     return I->second;
@@ -2503,6 +2504,8 @@ private:
     for (const auto &I : MethodInfoMap) {
       const CXXMethodDecl *MD = I.first;
       const MethodInfo &MI = I.second;
+      assert(MD == MD->getCanonicalDecl());
+
       // Skip the methods that the MostDerivedClass didn't override
       // and the entries shadowed by return adjusting thunks.
       if (MD->getParent() != MostDerivedClass || MI.Shadowed)
@@ -3736,6 +3739,8 @@ MicrosoftVTableContext::getMethodVFTableLocation(GlobalDecl GD) {
          "Only use this method for virtual methods or dtors");
   if (isa<CXXDestructorDecl>(GD.getDecl()))
     assert(GD.getDtorType() == Dtor_Deleting);
+
+  GD = GD.getCanonicalDecl();
 
   MethodVFTableLocationsTy::iterator I = MethodVFTableLocations.find(GD);
   if (I != MethodVFTableLocations.end())

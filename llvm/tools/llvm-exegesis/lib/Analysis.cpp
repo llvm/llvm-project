@@ -91,7 +91,9 @@ Analysis::Analysis(const llvm::Target &Target,
     MnemonicToOpcode_.emplace(InstrInfo_->getName(I), I);
 }
 
-llvm::Error Analysis::printClusters(llvm::raw_ostream &OS) const {
+template <>
+llvm::Error
+Analysis::run<Analysis::PrintClusters>(llvm::raw_ostream &OS) const {
   if (Clustering_.getPoints().empty())
     return llvm::Error::success();
 
@@ -133,8 +135,9 @@ Analysis::makePointsPerSchedClass() const {
   return PointsPerSchedClass;
 }
 
-llvm::Error
-Analysis::printSchedClassInconsistencies(llvm::raw_ostream &OS) const {
+template <>
+llvm::Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
+    llvm::raw_ostream &OS) const {
   // All the points in a scheduling class should be in the same cluster.
   // Print any scheduling class for which this is not the case.
   for (const auto &SchedClassAndPoints : makePointsPerSchedClass()) {

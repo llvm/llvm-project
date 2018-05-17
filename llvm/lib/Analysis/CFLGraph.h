@@ -62,7 +62,7 @@ public:
 
   struct Edge {
     Node Other;
-    int64_t Offset;
+    FieldOffset Offset;
   };
 
   using EdgeList = std::vector<Edge>;
@@ -125,7 +125,7 @@ public:
     Info->Attr |= Attr;
   }
 
-  void addEdge(Node From, Node To, int64_t Offset = 0) {
+  void addEdge(Node From, Node To, FieldOffset Offset = 0) {
     auto *FromInfo = getNode(From);
     assert(FromInfo != nullptr);
     auto *ToInfo = getNode(To);
@@ -219,7 +219,7 @@ template <typename CFLAA> class CFLGraphBuilder {
         Graph.addNode(InstantiatedValue{Val, 0}, Attr);
     }
 
-    void addAssignEdge(Value *From, Value *To, int64_t Offset = 0) {
+    void addAssignEdge(Value *From, Value *To, FieldOffset Offset = 0) {
       assert(From != nullptr && To != nullptr);
       if (!From->getType()->isPointerTy() || !To->getType()->isPointerTy())
         return;
@@ -312,7 +312,7 @@ template <typename CFLAA> class CFLGraphBuilder {
     }
 
     void visitGEP(GEPOperator &GEPOp) {
-      uint64_t Offset = UnknownOffset;
+      FieldOffset Offset = UnknownOffset;
       APInt APOffset(DL.getPointerSizeInBits(GEPOp.getPointerAddressSpace()),
                      0);
       if (GEPOp.accumulateConstantOffset(DL, APOffset))
@@ -397,7 +397,7 @@ template <typename CFLAA> class CFLGraphBuilder {
           if (IRelation.hasValue()) {
             Graph.addNode(IRelation->From);
             Graph.addNode(IRelation->To);
-            Graph.addEdge(IRelation->From, IRelation->To);
+            Graph.addEdge(IRelation->From, IRelation->To, IRelation->Offset);
           }
         }
 

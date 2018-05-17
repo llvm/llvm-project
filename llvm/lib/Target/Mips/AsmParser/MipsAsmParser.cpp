@@ -350,6 +350,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool parseSetNoMtDirective();
   bool parseSetNoCRCDirective();
   bool parseSetNoVirtDirective();
+  bool parseSetNoGINVDirective();
 
   bool parseSetAssignment();
 
@@ -652,6 +653,10 @@ public:
 
   bool hasVirt() const {
     return getSTI().getFeatureBits()[Mips::FeatureVirt];
+  }
+
+  bool hasGINV() const {
+    return getSTI().getFeatureBits()[Mips::FeatureGINV];
   }
 
   /// Warn if RegIndex is the same as the current AT.
@@ -6740,6 +6745,23 @@ bool MipsAsmParser::parseSetNoVirtDirective() {
   return false;
 }
 
+bool MipsAsmParser::parseSetNoGINVDirective() {
+  MCAsmParser &Parser = getParser();
+  Parser.Lex(); // Eat "noginv".
+
+  // If this is not the end of the statement, report an error.
+  if (getLexer().isNot(AsmToken::EndOfStatement)) {
+    reportParseError("unexpected token, expected end of statement");
+    return false;
+  }
+
+  clearFeatureBits(Mips::FeatureGINV, "ginv");
+
+  getTargetStreamer().emitDirectiveSetNoGINV();
+  Parser.Lex(); // Consume the EndOfStatement.
+  return false;
+}
+
 bool MipsAsmParser::parseSetPopDirective() {
   MCAsmParser &Parser = getParser();
   SMLoc Loc = getLexer().getLoc();
@@ -6968,6 +6990,10 @@ bool MipsAsmParser::parseSetFeature(uint64_t Feature) {
   case Mips::FeatureVirt:
     setFeatureBits(Mips::FeatureVirt, "virt");
     getTargetStreamer().emitDirectiveSetVirt();
+    break;
+  case Mips::FeatureGINV:
+    setFeatureBits(Mips::FeatureGINV, "ginv");
+    getTargetStreamer().emitDirectiveSetGINV();
     break;
   }
   return false;
@@ -7281,6 +7307,10 @@ bool MipsAsmParser::parseDirectiveSet() {
     return parseSetFeature(Mips::FeatureVirt);
   } else if (Tok.getString() == "novirt") {
     return parseSetNoVirtDirective();
+  } else if (Tok.getString() == "ginv") {
+    return parseSetFeature(Mips::FeatureGINV);
+  } else if (Tok.getString() == "noginv") {
+    return parseSetNoGINVDirective();
   } else {
     // It is just an identifier, look for an assignment.
     parseSetAssignment();
@@ -7531,6 +7561,8 @@ bool MipsAsmParser::parseSSectionDirective(StringRef Section, unsigned Type) {
 ///  ::= .module nocrc
 ///  ::= .module virt
 ///  ::= .module novirt
+///  ::= .module ginv
+///  ::= .module noginv
 bool MipsAsmParser::parseDirectiveModule() {
   MCAsmParser &Parser = getParser();
   MCAsmLexer &Lexer = getLexer();
@@ -7717,6 +7749,44 @@ bool MipsAsmParser::parseDirectiveModule() {
     // If generating ELF, don't do anything (the .MIPS.abiflags section gets
     // emitted later).
     getTargetStreamer().emitDirectiveModuleNoVirt();
+
+    // If this is not the end of the statement, report an error.
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+      reportParseError("unexpected token, expected end of statement");
+      return false;
+    }
+
+    return false; // parseDirectiveModule has finished successfully.
+  } else if (Option == "ginv") {
+    setModuleFeatureBits(Mips::FeatureGINV, "ginv");
+
+    // Synchronize the ABI Flags information with the FeatureBits information we
+    // updated above.
+    getTargetStreamer().updateABIInfo(*this);
+
+    // If printing assembly, use the recently updated ABI Flags information.
+    // If generating ELF, don't do anything (the .MIPS.abiflags section gets
+    // emitted later).
+    getTargetStreamer().emitDirectiveModuleGINV();
+
+    // If this is not the end of the statement, report an error.
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+      reportParseError("unexpected token, expected end of statement");
+      return false;
+    }
+
+    return false; // parseDirectiveModule has finished successfully.
+  } else if (Option == "noginv") {
+    clearModuleFeatureBits(Mips::FeatureGINV, "ginv");
+
+    // Synchronize the ABI Flags information with the FeatureBits information we
+    // updated above.
+    getTargetStreamer().updateABIInfo(*this);
+
+    // If printing assembly, use the recently updated ABI Flags information.
+    // If generating ELF, don't do anything (the .MIPS.abiflags section gets
+    // emitted later).
+    getTargetStreamer().emitDirectiveModuleNoGINV();
 
     // If this is not the end of the statement, report an error.
     if (getLexer().isNot(AsmToken::EndOfStatement)) {

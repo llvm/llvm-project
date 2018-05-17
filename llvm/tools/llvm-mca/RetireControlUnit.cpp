@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Dispatch.h"
 #include "RetireControlUnit.h"
+#include "DispatchStage.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -23,9 +23,9 @@ using namespace llvm;
 namespace mca {
 
 RetireControlUnit::RetireControlUnit(const llvm::MCSchedModel &SM,
-                                     DispatchUnit *DU)
+                                     DispatchStage *DS)
     : NextAvailableSlotIdx(0), CurrentInstructionSlotIdx(0),
-      AvailableSlots(SM.MicroOpBufferSize), MaxRetirePerCycle(0), Owner(DU) {
+      AvailableSlots(SM.MicroOpBufferSize), MaxRetirePerCycle(0), Owner(DS) {
   // Check if the scheduling model provides extra information about the machine
   // processor. If so, then use that information to set the reorder buffer size
   // and the maximum number of instructions retired per cycle.
