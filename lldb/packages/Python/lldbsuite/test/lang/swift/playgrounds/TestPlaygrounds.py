@@ -19,6 +19,7 @@ import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
+import platform
 import unittest2
 
 
@@ -35,12 +36,14 @@ class TestSwiftPlaygrounds(TestBase):
     @decorators.swiftTest
     @decorators.skipIf(
         debug_info=decorators.no_match("dsym"),
-        bugnumber="This test only builds one way")
+        bugnumber="This test only builds one way",
+        macos_version=["<", "10.11"])
     @decorators.add_test_categories(["swiftpr"])
     def test_cross_module_extension(self):
         """Test that playgrounds work"""
         self.build()
-        self.do_test()
+        self.do_test(True)
+        self.do_test(False)
 
     def setUp(self):
         TestBase.setUp(self)
@@ -48,13 +51,19 @@ class TestSwiftPlaygrounds(TestBase):
         self.PlaygroundStub_source_spec = lldb.SBFileSpec(
             self.PlaygroundStub_source)
 
-    def do_test(self):
+    def do_test(self, force_target):
         """Test that playgrounds work"""
         exe_name = "PlaygroundStub"
         exe = self.getBuildArtifact(exe_name)
 
         # Create the target
-        target = self.dbg.CreateTarget(exe)
+        if force_target:
+            version, _, machine = platform.mac_ver()
+            triple = '%s-apple-macosx%s' % (machine, version)
+            target = self.dbg.CreateTargetWithFileAndArch(exe, triple)
+        else:
+            target = self.dbg.CreateTarget(exe)
+            
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
@@ -87,12 +96,20 @@ class TestSwiftPlaygrounds(TestBase):
         ret = self.frame.EvaluateExpression("get_output()")
 
         playground_output = ret.GetSummary()
+        if not force_target:
+            # This is expected to fail because the deployment target
+            # is less than the availability of the function being
+            # called.
+            self.assertTrue(playground_output == '""')
+            return
 
         self.assertTrue(playground_output is not None)
         self.assertTrue("a=\\'3\\'" in playground_output)
         self.assertTrue("b=\\'5\\'" in playground_output)
         self.assertTrue("=\\'8\\'" in playground_output)
+        self.assertTrue("=\\'11\\'" in playground_output)
 
+       
 if __name__ == '__main__':
     import atexit
     lldb.SBDebugger.Initialize()
