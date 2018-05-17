@@ -638,6 +638,19 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
   DEBUG(dbgs() << " }\n");
 }
 
+// Don't merge tiny functions using a thunk, since it can just end up
+// making the function larger.
+static bool isThunkProfitable(Function * F) {
+  if (F->size() == 1) {
+    if (F->front().size() <= 2) {
+      DEBUG(dbgs() << "isThunkProfitable: " << F->getName()
+                    << " is too small to bother creating a thunk for\n");
+      return false;
+    }
+  }
+  return true;
+}
+
 // Replace G with a simple tail call to bitcast(F). Also (unless
 // MergeFunctionsPDI holds) replace direct uses of G with bitcast(F),
 // delete G. Under MergeFunctionsPDI, we use G itself for creating
@@ -647,39 +660,6 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
 // For better debugability, under MergeFunctionsPDI, we do not modify G's
 // call sites to point to F even when within the same translation unit.
 void MergeFunctions::writeThunk(Function *F, Function *G) {
-  if (!G->isInterposable() && !MergeFunctionsPDI) {
-    if (G->hasGlobalUnnamedAddr()) {
-      // G might have been a key in our GlobalNumberState, and it's illegal
-      // to replace a key in ValueMap<GlobalValue *> with a non-global.
-      GlobalNumbers.erase(G);
-      // If G's address is not significant, replace it entirely.
-      Constant *BitcastF = ConstantExpr::getBitCast(F, G->getType());
-      G->replaceAllUsesWith(BitcastF);
-    } else {
-      // Redirect direct callers of G to F. (See note on MergeFunctionsPDI
-      // above).
-      replaceDirectCallers(G, F);
-    }
-  }
-
-  // If G was internal then we may have replaced all uses of G with F. If so,
-  // stop here and delete G. There's no need for a thunk. (See note on
-  // MergeFunctionsPDI above).
-  if (G->hasLocalLinkage() && G->use_empty() && !MergeFunctionsPDI) {
-    G->eraseFromParent();
-    return;
-  }
-
-  // Don't merge tiny functions using a thunk, since it can just end up
-  // making the function larger.
-  if (F->size() == 1) {
-    if (F->front().size() <= 2) {
-      DEBUG(dbgs() << "writeThunk: " << F->getName()
-                   << " is too small to bother creating a thunk for\n");
-      return;
-    }
-  }
-
   BasicBlock *GEntryBlock = nullptr;
   std::vector<Instruction *> PDIUnrelatedWL;
   BasicBlock *BB = nullptr;
@@ -754,6 +734,10 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
   if (F->isInterposable()) {
     assert(G->isInterposable());
 
+    if (!isThunkProfitable(F)) {
+      return;
+    }
+
     // Make them both thunks to the same internal function.
     Function *H = Function::Create(F->getFunctionType(), F->getLinkage(), "",
                                    F->getParent());
@@ -770,11 +754,41 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     F->setAlignment(MaxAlignment);
     F->setLinkage(GlobalValue::PrivateLinkage);
     ++NumDoubleWeak;
+    ++NumFunctionsMerged;
   } else {
-    writeThunk(F, G);
-  }
+    // For better debugability, under MergeFunctionsPDI, we do not modify G's
+    // call sites to point to F even when within the same translation unit.
+    if (!G->isInterposable() && !MergeFunctionsPDI) {
+      if (G->hasGlobalUnnamedAddr()) {
+        // G might have been a key in our GlobalNumberState, and it's illegal
+        // to replace a key in ValueMap<GlobalValue *> with a non-global.
+        GlobalNumbers.erase(G);
+        // If G's address is not significant, replace it entirely.
+        Constant *BitcastF = ConstantExpr::getBitCast(F, G->getType());
+        G->replaceAllUsesWith(BitcastF);
+      } else {
+        // Redirect direct callers of G to F. (See note on MergeFunctionsPDI
+        // above).
+        replaceDirectCallers(G, F);
+      }
+    }
 
-  ++NumFunctionsMerged;
+    // If G was internal then we may have replaced all uses of G with F. If so,
+    // stop here and delete G. There's no need for a thunk. (See note on
+    // MergeFunctionsPDI above).
+    if (G->hasLocalLinkage() && G->use_empty() && !MergeFunctionsPDI) {
+      G->eraseFromParent();
+      ++NumFunctionsMerged;
+      return;
+    }
+
+    if (!isThunkProfitable(F)) {
+      return;
+    }
+
+    writeThunk(F, G);
+    ++NumFunctionsMerged;
+  }
 }
 
 /// Replace function F by function G.
