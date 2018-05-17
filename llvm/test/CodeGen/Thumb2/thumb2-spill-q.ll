@@ -53,17 +53,17 @@ bb4:                                              ; preds = %bb193, %entry
   %4 = fadd <4 x float> %3, %part0.0.0261         ; <<4 x float>> [#uses=1]
   %5 = shufflevector <4 x float> %3, <4 x float> undef, <2 x i32> <i32 2, i32 3> ; <<2 x float>> [#uses=1]
   %6 = shufflevector <2 x float> %5, <2 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1> ; <<4 x float>> [#uses=1]
-  %7 = fmul <4 x float> %1, undef                 ; <<4 x float>> [#uses=1]
+  %7 = fmul <4 x float> %1, %1
   %8 = fadd <4 x float> %7, <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01> ; <<4 x float>> [#uses=1]
   %9 = fptosi <4 x float> %8 to <4 x i32>         ; <<4 x i32>> [#uses=1]
   %10 = sitofp <4 x i32> %9 to <4 x float>        ; <<4 x float>> [#uses=1]
   %11 = fmul <4 x float> %10, %2                  ; <<4 x float>> [#uses=1]
-  %12 = fmul <4 x float> undef, %6                ; <<4 x float>> [#uses=1]
+  %12 = fmul <4 x float> %6, %6
   %13 = fmul <4 x float> %11, %4                  ; <<4 x float>> [#uses=1]
   %14 = fsub <4 x float> %12, %13                 ; <<4 x float>> [#uses=1]
-  %15 = fsub <4 x float> %14, undef               ; <<4 x float>> [#uses=1]
+  %15 = fsub <4 x float> %14, %14
   %16 = fmul <4 x float> %15, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00> ; <<4 x float>> [#uses=1]
-  %17 = fadd <4 x float> %16, undef               ; <<4 x float>> [#uses=1]
+  %17 = fadd <4 x float> %16, %16
   %18 = fmul <4 x float> %17, %val173             ; <<4 x float>> [#uses=1]
   %19 = shufflevector <4 x float> %18, <4 x float> undef, <2 x i32> <i32 2, i32 3> ; <<2 x float>> [#uses=1]
   %20 = shufflevector <2 x float> %19, <2 x float> undef, <4 x i32> zeroinitializer ; <<4 x float>> [#uses=1]

@@ -98,6 +98,7 @@ public:
 
     // Build a resolver and associate it with the new key.
     Resolvers[K] = createLegacyLookupResolver(
+        ES,
         [this](const std::string &Name) -> JITSymbol {
           if (auto Sym = CompileLayer.findSymbol(Name, false))
             return Sym;

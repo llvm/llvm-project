@@ -1166,8 +1166,8 @@ Value *llvm::emitFGetSUnlocked(Value *Str, Value *Size, Value *File,
 
   Module *M = B.GetInsertBlock()->getModule();
   Constant *F =
-      M->getOrInsertFunction("fgets_unlocked", B.getInt32Ty(), B.getInt8PtrTy(),
-                             B.getInt32Ty(), File->getType());
+      M->getOrInsertFunction("fgets_unlocked", B.getInt8PtrTy(),
+                             B.getInt8PtrTy(), B.getInt32Ty(), File->getType());
   inferLibFuncAttributes(*M->getFunction("fgets_unlocked"), *TLI);
   CallInst *CI =
       B.CreateCall(F, {castToCStr(Str, B), Size, File}, "fgets_unlocked");

@@ -88,21 +88,10 @@ public:
     return Info.Flags & wasm::WASM_SYMBOL_VISIBILITY_MASK;
   }
 
-  void print(raw_ostream &Out) const {
-    Out << "Name=" << Info.Name
-        << ", Kind=" << toString(wasm::WasmSymbolType(Info.Kind))
-        << ", Flags=" << Info.Flags;
-    if (!isTypeData()) {
-      Out << ", ElemIndex=" << Info.ElementIndex;
-    } else if (isDefined()) {
-      Out << ", Segment=" << Info.DataRef.Segment;
-      Out << ", Offset=" << Info.DataRef.Offset;
-      Out << ", Size=" << Info.DataRef.Size;
-    }
-  }
+  void print(raw_ostream &Out) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const { print(dbgs()); }
+  LLVM_DUMP_METHOD void dump() const;
 #endif
 };
 

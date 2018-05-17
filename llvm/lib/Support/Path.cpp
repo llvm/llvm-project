@@ -726,10 +726,6 @@ static SmallString<256> remove_dots(StringRef path, bool remove_dot_dot,
   SmallString<256> buffer = path::root_path(path, style);
   for (StringRef C : components)
     path::append(buffer, style, C);
-  // If the buffer is empty, then return ".". Many other path utilities
-  // do this so it seems to be an expected result.
-  if (buffer.empty())
-    buffer.append(1, '.');
   return buffer;
 }
 

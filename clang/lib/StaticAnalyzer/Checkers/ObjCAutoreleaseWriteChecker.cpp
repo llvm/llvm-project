@@ -115,14 +115,16 @@ static void emitDiagnostics(BoundNodes &Match, const Decl *D, BugReporter &BR,
   QualType Ty = PVD->getType();
   if (Ty->getPointeeType().getObjCLifetime() != Qualifiers::OCL_Autoreleasing)
     return;
-  const char *WarningMsg = "Write to";
+  const char *ActionMsg = "Write to";
   const auto *MarkedStmt = Match.getNodeAs<Expr>(ProblematicWriteBind);
+  bool IsCapture = false;
 
   // Prefer to warn on write, but if not available, warn on capture.
   if (!MarkedStmt) {
     MarkedStmt = Match.getNodeAs<Expr>(CapturedBind);
     assert(MarkedStmt);
-    WarningMsg = "Capture of";
+    ActionMsg = "Capture of";
+    IsCapture = true;
   }
 
   SourceRange Range = MarkedStmt->getSourceRange();
@@ -130,12 +132,14 @@ static void emitDiagnostics(BoundNodes &Match, const Decl *D, BugReporter &BR,
       MarkedStmt, BR.getSourceManager(), ADC);
   bool IsMethod = Match.getNodeAs<ObjCMethodDecl>(IsMethodBind) != nullptr;
   const char *Name = IsMethod ? "method" : "function";
+
   BR.EmitBasicReport(
       ADC->getDecl(), Checker,
-      /*Name=*/(llvm::Twine(WarningMsg)
+      /*Name=*/(llvm::Twine(ActionMsg)
                 + " autoreleasing out parameter inside autorelease pool").str(),
       /*Category=*/"Memory",
-      (llvm::Twine(WarningMsg) + " autoreleasing out parameter inside " +
+      (llvm::Twine(ActionMsg) + " autoreleasing out parameter " +
+       (IsCapture ? "'" + PVD->getName() + "'" + " " : "") + "inside " +
        "autorelease pool that may exit before " + Name + " returns; consider "
        "writing first to a strong local variable declared outside of the block")
           .str(),
@@ -153,7 +157,7 @@ void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
           .bind(ParamBind);
 
   auto ReferencedParamM =
-      declRefExpr(to(parmVarDecl(DoublePointerParamM)));
+      declRefExpr(to(parmVarDecl(DoublePointerParamM))).bind(CapturedBind);
 
   // Write into a binded object, e.g. *ParamBind = X.
   auto WritesIntoM = binaryOperator(
@@ -169,7 +173,7 @@ void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
     ignoringParenImpCasts(ReferencedParamM));
   auto CapturedInParamM = stmt(anyOf(
       callExpr(ArgumentCaptureM),
-      objcMessageExpr(ArgumentCaptureM))).bind(CapturedBind);
+      objcMessageExpr(ArgumentCaptureM)));
 
   // WritesIntoM happens inside a block passed as an argument.
   auto WritesOrCapturesInBlockM = hasAnyArgument(allOf(
@@ -192,7 +196,8 @@ void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
 
   auto MatcherM = decl(anyOf(
       objcMethodDecl(HasParamAndWritesInMarkedFuncM).bind(IsMethodBind),
-      functionDecl(HasParamAndWritesInMarkedFuncM)));
+      functionDecl(HasParamAndWritesInMarkedFuncM),
+      blockDecl(HasParamAndWritesInMarkedFuncM)));
 
   auto Matches = match(MatcherM, *D, AM.getASTContext());
   for (BoundNodes Match : Matches)

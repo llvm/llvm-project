@@ -174,9 +174,10 @@ public:
             }
             return std::move(*NotFoundViaLegacyLookup);
           },
-          [LegacyLookup](std::shared_ptr<orc::AsynchronousSymbolQuery> Query,
+          [this,
+           LegacyLookup](std::shared_ptr<orc::AsynchronousSymbolQuery> Query,
                          orc::SymbolNameSet Symbols) {
-            return lookupWithLegacyFn(*Query, Symbols, LegacyLookup);
+            return lookupWithLegacyFn(ES, *Query, Symbols, LegacyLookup);
           });
 
       // Add the module to the JIT.

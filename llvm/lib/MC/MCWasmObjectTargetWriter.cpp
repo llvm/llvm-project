@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
 
 using namespace llvm;

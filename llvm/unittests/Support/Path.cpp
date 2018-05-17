@@ -1146,7 +1146,7 @@ static std::string remove_dots(StringRef path, bool remove_dot_dot,
 TEST(Support, RemoveDots) {
   EXPECT_EQ("foolz\\wat",
             remove_dots(".\\.\\\\foolz\\wat", false, path::Style::windows));
-  EXPECT_EQ(".", remove_dots(".\\\\\\\\\\", false, path::Style::windows));
+  EXPECT_EQ("", remove_dots(".\\\\\\\\\\", false, path::Style::windows));
 
   EXPECT_EQ("a\\..\\b\\c",
             remove_dots(".\\a\\..\\b\\c", false, path::Style::windows));
@@ -1163,8 +1163,7 @@ TEST(Support, RemoveDots) {
 
   EXPECT_EQ("foolz/wat",
             remove_dots("././/foolz/wat", false, path::Style::posix));
-  EXPECT_EQ(".", remove_dots("./////", false, path::Style::posix));
-  EXPECT_EQ(".", remove_dots("", false, path::Style::posix));
+  EXPECT_EQ("", remove_dots("./////", false, path::Style::posix));
 
   EXPECT_EQ("a/../b/c", remove_dots("./a/../b/c", false, path::Style::posix));
   EXPECT_EQ("b/c", remove_dots("./a/../b/c", true, path::Style::posix));

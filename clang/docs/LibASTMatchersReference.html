@@ -124,6 +124,18 @@ accessSpecDecl()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('blockDecl0')"><a name="blockDecl0Anchor">blockDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1BlockDecl.html">BlockDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="blockDecl0"><pre>Matches block declarations.
+
+Example matches the declaration of the nameless block printing an input
+integer.
+
+  myFunc(^(int p) {
+    printf("%d", p);
+  })
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('classTemplateDecl0')"><a name="classTemplateDecl0Anchor">classTemplateDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ClassTemplateDecl.html">ClassTemplateDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="classTemplateDecl0"><pre>Matches C++ class template declarations.
 
@@ -4352,6 +4364,55 @@ Example matches b (matcher = binaryOperator(hasRHS()))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1BlockDecl.html">BlockDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyParameter2')"><a name="hasAnyParameter2Anchor">hasAnyParameter</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyParameter2"><pre>Matches any parameter of a function or an ObjC method declaration or a
+block.
+
+Does not match the 'this' parameter of a method.
+
+Given
+  class X { void f(int x, int y, int z) {} };
+cxxMethodDecl(hasAnyParameter(hasName("y")))
+  matches f(int x, int y, int z) {}
+with hasAnyParameter(...)
+  matching int y
+
+For ObjectiveC, given
+  @interface I - (void) f:(int) y; @end
+
+the matcher objcMethodDecl(hasAnyParameter(hasName("y")))
+matches the declaration of method f with hasParameter
+matching y.
+
+For blocks, given
+  b = ^(int y) { printf("%d", y) };
+
+the matcher blockDecl(hasAnyParameter(hasName("y")))
+matches the declaration of the block b with hasParameter
+matching y.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1BlockDecl.html">BlockDecl</a>&gt;</td><td class="name" onclick="toggle('hasParameter2')"><a name="hasParameter2Anchor">hasParameter</a></td><td>unsigned N, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasParameter2"><pre>Matches the n'th parameter of a function or an ObjC method
+declaration or a block.
+
+Given
+  class X { void f(int x) {} };
+cxxMethodDecl(hasParameter(0, hasType(varDecl())))
+  matches f(int x) {}
+with hasParameter(...)
+  matching int x
+
+For ObjectiveC, given
+  @interface I - (void) f:(int) y; @end
+
+the matcher objcMethodDecl(hasParameter(0, hasName("y")))
+matches the declaration of method f with hasParameter
+matching y.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1BlockPointerTypeLoc.html">BlockPointerTypeLoc</a>&gt;</td><td class="name" onclick="toggle('pointeeLoc0')"><a name="pointeeLoc0Anchor">pointeeLoc</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;</td></tr>
 <tr><td colspan="4" class="doc" id="pointeeLoc0"><pre>Narrows PointerType (and similar) matchers to those where the
 pointee matches a given matcher.
@@ -5336,7 +5397,8 @@ matches 'int x = 0' in
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyParameter0')"><a name="hasAnyParameter0Anchor">hasAnyParameter</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyParameter0"><pre>Matches any parameter of a function or ObjC method declaration.
+<tr><td colspan="4" class="doc" id="hasAnyParameter0"><pre>Matches any parameter of a function or an ObjC method declaration or a
+block.
 
 Does not match the 'this' parameter of a method.
 
@@ -5352,6 +5414,13 @@ For ObjectiveC, given
 
 the matcher objcMethodDecl(hasAnyParameter(hasName("y")))
 matches the declaration of method f with hasParameter
+matching y.
+
+For blocks, given
+  b = ^(int y) { printf("%d", y) };
+
+the matcher blockDecl(hasAnyParameter(hasName("y")))
+matches the declaration of the block b with hasParameter
 matching y.
 </pre></td></tr>
 
@@ -5393,7 +5462,7 @@ with compoundStmt()
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasParameter0')"><a name="hasParameter0Anchor">hasParameter</a></td><td>unsigned N, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasParameter0"><pre>Matches the n'th parameter of a function or an ObjC method
-declaration.
+declaration or a block.
 
 Given
   class X { void f(int x) {} };
@@ -5767,7 +5836,8 @@ matches the [webView ...] message invocation.
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyParameter1')"><a name="hasAnyParameter1Anchor">hasAnyParameter</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyParameter1"><pre>Matches any parameter of a function or ObjC method declaration.
+<tr><td colspan="4" class="doc" id="hasAnyParameter1"><pre>Matches any parameter of a function or an ObjC method declaration or a
+block.
 
 Does not match the 'this' parameter of a method.
 
@@ -5784,12 +5854,19 @@ For ObjectiveC, given
 the matcher objcMethodDecl(hasAnyParameter(hasName("y")))
 matches the declaration of method f with hasParameter
 matching y.
+
+For blocks, given
+  b = ^(int y) { printf("%d", y) };
+
+the matcher blockDecl(hasAnyParameter(hasName("y")))
+matches the declaration of the block b with hasParameter
+matching y.
 </pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;</td><td class="name" onclick="toggle('hasParameter1')"><a name="hasParameter1Anchor">hasParameter</a></td><td>unsigned N, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasParameter1"><pre>Matches the n'th parameter of a function or an ObjC method
-declaration.
+declaration or a block.
 
 Given
   class X { void f(int x) {} };

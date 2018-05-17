@@ -151,7 +151,7 @@ def LOAD16_U_I32 : WebAssemblyLoad<I32, "i32.load16_u", 0x2f>;
 def LOAD8_S_I64 : WebAssemblyLoad<I64, "i64.load8_s", 0x30>;
 def LOAD8_U_I64 : WebAssemblyLoad<I64, "i64.load8_u", 0x31>;
 def LOAD16_S_I64 : WebAssemblyLoad<I64, "i64.load16_s", 0x32>;
-def LOAD16_U_I64 : WebAssemblyLoad<I64, "i64.load16_u", 0x32>;
+def LOAD16_U_I64 : WebAssemblyLoad<I64, "i64.load16_u", 0x33>;
 def LOAD32_S_I64 : WebAssemblyLoad<I64, "i64.load32_s", 0x34>;
 def LOAD32_U_I64 : WebAssemblyLoad<I64, "i64.load32_u", 0x35>;
 
