@@ -16,3 +16,10 @@ let a = 3
 let b = 5
 
 a + b
+
+@available(macOS 10.11, *) func newAPI() -> Int {
+  return 11
+}
+
+// Note that this is *not* guarded in `#if available`.
+newAPI()
