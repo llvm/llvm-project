@@ -858,11 +858,14 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
                                               : std::move(*CLOptions));
   if (HasConfigFile)
     for (auto *Opt : *CLOptions) {
+      if (Opt->getOption().matches(options::OPT_config))
+        continue;
+      unsigned Index = Args.MakeIndex(Opt->getSpelling());
       const Arg *BaseArg = &Opt->getBaseArg();
       if (BaseArg == Opt)
         BaseArg = nullptr;
       Arg *Copy = new llvm::opt::Arg(Opt->getOption(), Opt->getSpelling(),
-                                     Args.size(), BaseArg);
+                                     Index, BaseArg);
       Copy->getValues() = Opt->getValues();
       if (Opt->isClaimed())
         Copy->claim();
