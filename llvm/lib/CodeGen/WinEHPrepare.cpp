@@ -41,7 +41,7 @@ using namespace llvm;
 static cl::opt<bool> DisableDemotion(
     "disable-demotion", cl::Hidden,
     cl::desc(
-        "Clone multicolor basic blocks but do not demote cross funclet values"),
+        "Clone multicolor basic blocks but do not demote cross scopes"),
     cl::init(false));
 
 static cl::opt<bool> DisableCleanups(
@@ -106,8 +106,8 @@ bool WinEHPrepare::runOnFunction(Function &Fn) {
   // Classify the personality to see what kind of preparation we need.
   Personality = classifyEHPersonality(Fn.getPersonalityFn());
 
-  // Do nothing if this is not a funclet-based personality.
-  if (!isFuncletEHPersonality(Personality))
+  // Do nothing if this is not a scope-based personality.
+  if (!isScopedEHPersonality(Personality))
     return false;
 
   DL = &Fn.getParent()->getDataLayout();

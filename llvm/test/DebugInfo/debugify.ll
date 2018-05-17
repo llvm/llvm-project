@@ -13,13 +13,17 @@
 ; RUN: opt -enable-debugify -passes=verify -S -o - < %s | \
 ; RUN:   FileCheck %s -implicit-check-not="CheckModuleDebugify: FAIL"
 
-; RUN: opt -debugify -strip -check-debugify -S -o - < %s | \
+; RUN: opt -debugify -strip -check-debugify -S -o - < %s 2>&1 | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-FAIL
 
-; RUN: opt -enable-debugify -strip -S -o - < %s | \
+; RUN: opt -enable-debugify -strip -S -o - < %s 2>&1 | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-FAIL
 
-; RUN: opt -enable-debugify -S -o - < %s | FileCheck %s -check-prefix=PASS
+; RUN: opt -enable-debugify -S -o - < %s 2>&1 | FileCheck %s -check-prefix=PASS
+
+; Verify that debugify can be safely used with piping
+; RUN: opt -enable-debugify -O1 < %s | opt -O2 -o /dev/null
+; RUN: opt -debugify -mem2reg -check-debugify < %s | opt -O2 -o /dev/null
 
 ; CHECK-LABEL: define void @foo
 define void @foo() {

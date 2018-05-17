@@ -53,47 +53,52 @@
 
 using namespace llvm;
 
-static llvm::cl::OptionCategory ViewOptions("View Options");
+static cl::OptionCategory ToolOptions("Tool Options");
+static cl::OptionCategory ViewOptions("View Options");
 
-static cl::opt<std::string>
-    InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
+static cl::opt<std::string> InputFilename(cl::Positional,
+                                          cl::desc("<input file>"),
+                                          cl::cat(ToolOptions), cl::init("-"));
 
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
-                                           cl::init("-"),
+                                           cl::init("-"), cl::cat(ToolOptions),
                                            cl::value_desc("filename"));
 
 static cl::opt<std::string>
-    ArchName("march", cl::desc("Target arch to assemble for, "
-                               "see -version for available targets"));
+    ArchName("march",
+             cl::desc("Target arch to assemble for, "
+                      "see -version for available targets"),
+             cl::cat(ToolOptions));
 
 static cl::opt<std::string>
-    TripleName("mtriple", cl::desc("Target triple to assemble for, "
-                                   "see -version for available targets"));
+    TripleName("mtriple",
+               cl::desc("Target triple to assemble for, "
+                        "see -version for available targets"),
+               cl::cat(ToolOptions));
 
 static cl::opt<std::string>
     MCPU("mcpu",
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
-         cl::value_desc("cpu-name"), cl::init("native"));
+         cl::value_desc("cpu-name"), cl::cat(ToolOptions), cl::init("native"));
 
 static cl::opt<int>
     OutputAsmVariant("output-asm-variant",
                      cl::desc("Syntax variant to use for output printing"),
-                     cl::init(-1));
+                     cl::cat(ToolOptions), cl::init(-1));
 
 static cl::opt<unsigned> Iterations("iterations",
                                     cl::desc("Number of iterations to run"),
-                                    cl::init(0));
+                                    cl::cat(ToolOptions), cl::init(0));
 
-static cl::opt<unsigned> DispatchWidth(
-    "dispatch",
-    cl::desc("Dispatch Width. By default it is set equal to IssueWidth"),
-    cl::init(0));
+static cl::opt<unsigned>
+    DispatchWidth("dispatch", cl::desc("Override the processor dispatch width"),
+                  cl::cat(ToolOptions), cl::init(0));
 
 static cl::opt<unsigned>
     RegisterFileSize("register-file-size",
                      cl::desc("Maximum number of temporary registers which can "
                               "be used for register mappings"),
-                     cl::init(0));
+                     cl::cat(ToolOptions), cl::init(0));
 
 static cl::opt<bool>
     PrintRegisterFileStats("register-file-stats",
@@ -133,26 +138,39 @@ static cl::opt<unsigned> TimelineMaxCycles(
         "Maximum number of cycles in the timeline view. Defaults to 80 cycles"),
     cl::cat(ViewOptions), cl::init(80));
 
-static cl::opt<bool> AssumeNoAlias(
-    "noalias",
-    cl::desc("If set, it assumes that loads and stores do not alias"),
-    cl::init(true));
+static cl::opt<bool>
+    AssumeNoAlias("noalias",
+                  cl::desc("If set, assume that loads and stores do not alias"),
+                  cl::cat(ToolOptions), cl::init(true));
 
 static cl::opt<unsigned>
-    LoadQueueSize("lqueue", cl::desc("Size of the load queue"), cl::init(0));
+    LoadQueueSize("lqueue",
+                  cl::desc("Size of the load queue (unbound by default)"),
+                  cl::cat(ToolOptions), cl::init(0));
 
 static cl::opt<unsigned>
-    StoreQueueSize("squeue", cl::desc("Size of the store queue"), cl::init(0));
+    StoreQueueSize("squeue",
+                   cl::desc("Size of the store queue (unbound by default)"),
+                   cl::cat(ToolOptions), cl::init(0));
 
 static cl::opt<bool>
     PrintInstructionTables("instruction-tables",
                            cl::desc("Print instruction tables"),
-                           cl::init(false));
+                           cl::cat(ToolOptions), cl::init(false));
 
 static cl::opt<bool> PrintInstructionInfoView(
     "instruction-info",
     cl::desc("Print the instruction info view (enabled by default)"),
     cl::cat(ViewOptions), cl::init(true));
+
+static cl::opt<bool> EnableAllStats("all-stats",
+                                    cl::desc("Print all hardware statistics"),
+                                    cl::cat(ViewOptions), cl::init(false));
+
+static cl::opt<bool>
+    EnableAllViews("all-views",
+                   cl::desc("Print all views including hardware statistics"),
+                   cl::cat(ViewOptions), cl::init(false));
 
 namespace {
 
@@ -273,6 +291,32 @@ public:
 };
 } // end of anonymous namespace
 
+static void processOptionImpl(cl::opt<bool> &O, const cl::opt<bool> &Default) {
+  if (!O.getNumOccurrences() || O.getPosition() < Default.getPosition())
+    O = Default.getValue();
+}
+
+static void processViewOptions() {
+  if (!EnableAllViews.getNumOccurrences() &&
+      !EnableAllStats.getNumOccurrences())
+    return;
+
+  if (EnableAllViews.getNumOccurrences()) {
+    processOptionImpl(PrintResourcePressureView, EnableAllViews);
+    processOptionImpl(PrintTimelineView, EnableAllViews);
+    processOptionImpl(PrintInstructionInfoView, EnableAllViews);
+  }
+
+  const cl::opt<bool> &Default =
+      EnableAllViews.getPosition() < EnableAllStats.getPosition()
+          ? EnableAllStats
+          : EnableAllViews;
+  processOptionImpl(PrintRegisterFileStats, Default);
+  processOptionImpl(PrintDispatchStats, Default);
+  processOptionImpl(PrintSchedulerStats, Default);
+  processOptionImpl(PrintRetireStats, Default);
+}
+
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
@@ -284,9 +328,12 @@ int main(int argc, char **argv) {
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
+  cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions});
+
   // Parse flags and initialize target options.
   cl::ParseCommandLineOptions(argc, argv,
                               "llvm machine code performance analyzer.\n");
+
   MCTargetOptions MCOptions;
   MCOptions.PreserveAsmComments = false;
 
@@ -308,6 +355,9 @@ int main(int argc, char **argv) {
     WithColor::error() << InputFilename << ": " << EC.message() << '\n';
     return 1;
   }
+
+  // Apply overrides to llvm-mca specific options.
+  processViewOptions();
 
   SourceMgr SrcMgr;
 

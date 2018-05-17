@@ -197,6 +197,9 @@ class CRC32CB_ENC : SPECIAL3_2R_SZ_CRC<0,1>;
 class CRC32CH_ENC : SPECIAL3_2R_SZ_CRC<1,1>;
 class CRC32CW_ENC : SPECIAL3_2R_SZ_CRC<2,1>;
 
+class GINVI_ENC : SPECIAL3_GINV<0>;
+class GINVT_ENC : SPECIAL3_GINV<2>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Multiclasses
@@ -827,6 +830,22 @@ class CRC32CB_DESC : CRC_DESC_BASE<"crc32cb", GPR32Opnd, II_CRC32CB>;
 class CRC32CH_DESC : CRC_DESC_BASE<"crc32ch", GPR32Opnd, II_CRC32CH>;
 class CRC32CW_DESC : CRC_DESC_BASE<"crc32cw", GPR32Opnd, II_CRC32CW>;
 
+class GINV_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
+                     InstrItinClass itin> : MipsR6Arch<instr_asm> {
+  dag OutOperandList = (outs);
+  dag InOperandList = (ins GPROpnd:$rs, uimm2:$type_);
+  string AsmString = !strconcat(instr_asm, "\t$rs, $type_");
+  list<dag> Pattern = [];
+  InstrItinClass Itinerary = itin;
+  bit hasSideEffects = 1;
+}
+
+class GINVI_DESC : GINV_DESC_BASE<"ginvi", GPR32Opnd, II_GINVI> {
+  dag InOperandList = (ins GPR32Opnd:$rs);
+  string AsmString = "ginvi\t$rs";
+}
+class GINVT_DESC : GINV_DESC_BASE<"ginvt", GPR32Opnd, II_GINVT>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -953,6 +972,11 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def CRC32CB : R6MMR6Rel, CRC32CB_ENC, CRC32CB_DESC, ISA_MIPS32R6, ASE_CRC;
   def CRC32CH : R6MMR6Rel, CRC32CH_ENC, CRC32CH_DESC, ISA_MIPS32R6, ASE_CRC;
   def CRC32CW : R6MMR6Rel, CRC32CW_ENC, CRC32CW_DESC, ISA_MIPS32R6, ASE_CRC;
+}
+
+let AdditionalPredicates = [NotInMicroMips] in {
+  def GINVI : R6MMR6Rel, GINVI_ENC, GINVI_DESC, ISA_MIPS32R6, ASE_GINV;
+  def GINVT : R6MMR6Rel, GINVT_ENC, GINVT_DESC, ISA_MIPS32R6, ASE_GINV;
 }
 
 //===----------------------------------------------------------------------===//

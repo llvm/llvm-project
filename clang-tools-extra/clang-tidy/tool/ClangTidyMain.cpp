@@ -181,6 +181,14 @@ report to stderr.
                                         cl::init(false),
                                         cl::cat(ClangTidyCategory));
 
+/// This option allows enabling the experimental alpha checkers from the static
+/// analyzer. This option is set to false and not visible in help, because it is
+/// highly not recommended for users.
+static cl::opt<bool>
+    AllowEnablingAnalyzerAlphaCheckers("allow-enabling-analyzer-alpha-checkers",
+                                       cl::init(false), cl::Hidden,
+                                       cl::cat(ClangTidyCategory));
+
 static cl::opt<std::string> ExportFixes("export-fixes", cl::desc(R"(
 YAML file to store suggested fixes in. The
 stored fixes can be applied to the input source
@@ -335,7 +343,8 @@ static int clangTidyMain(int argc, const char **argv) {
                  << EC.message() << "\n";
   }
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
-  std::vector<std::string> EnabledChecks = getCheckNames(EffectiveOptions);
+  std::vector<std::string> EnabledChecks =
+      getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
 
   if (ExplainConfig) {
     // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
@@ -366,7 +375,8 @@ static int clangTidyMain(int argc, const char **argv) {
   }
 
   if (DumpConfig) {
-    EffectiveOptions.CheckOptions = getCheckOptions(EffectiveOptions);
+    EffectiveOptions.CheckOptions =
+        getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
     llvm::outs() << configurationAsText(
                         ClangTidyOptions::getDefaults().mergeWith(
                             EffectiveOptions))
@@ -390,7 +400,8 @@ static int clangTidyMain(int argc, const char **argv) {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();
 
-  ClangTidyContext Context(std::move(OwningOptionsProvider));
+  ClangTidyContext Context(std::move(OwningOptionsProvider),
+                           AllowEnablingAnalyzerAlphaCheckers);
   runClangTidy(Context, OptionsParser.getCompilations(), PathList, BaseFS,
                EnableCheckProfile);
   ArrayRef<ClangTidyError> Errors = Context.getErrors();

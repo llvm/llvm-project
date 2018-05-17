@@ -225,7 +225,7 @@ class WasmObjectWriter : public MCObjectWriter {
   DenseMap<const MCSectionWasm *, std::vector<WasmRelocationEntry>>
       CustomSectionsRelocations;
 
-  // Map from section to fintining function.
+  // Map from section to defining function symbol.
   DenseMap<const MCSection *, const MCSymbol *> SectionFunctions;
 
   DenseMap<WasmFunctionType, int32_t, WasmFunctionTypeDenseMapInfo>

@@ -518,91 +518,34 @@ TEST(CoreAPIsTest, FailResolution) {
   auto MU = llvm::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap(
           {{Foo, JITSymbolFlags::Weak}, {Bar, JITSymbolFlags::Weak}}),
-      [&](MaterializationResponsibility R) {
-        R.failMaterialization(
-            [&]() { return make_error<FailedToResolve>(Names); });
-      });
-
-  auto &V = ES.createVSO("V");
-
-  cantFail(V.define(MU));
-
-  auto OnResolution = [&](Expected<AsynchronousSymbolQuery::ResolutionResult>
-                              Result) {
-    handleAllErrors(Result.takeError(),
-                    [&](FailedToResolve &F) {
-                      EXPECT_EQ(F.getSymbols(), Names)
-                          << "Expected to fail on symbols in Names";
-                    },
-                    [](ErrorInfoBase &EIB) {
-                      std::string ErrMsg;
-                      {
-                        raw_string_ostream ErrOut(ErrMsg);
-                        EIB.log(ErrOut);
-                      }
-                      ADD_FAILURE()
-                          << "Expected a FailedToResolve error. Got:\n"
-                          << ErrMsg;
-                    });
-  };
-
-  auto OnReady = [](Error Err) {
-    cantFail(std::move(Err));
-    ADD_FAILURE() << "OnReady should never be called";
-  };
-
-  auto Q =
-      std::make_shared<AsynchronousSymbolQuery>(Names, OnResolution, OnReady);
-
-  V.lookup(std::move(Q), Names);
-}
-
-TEST(CoreAPIsTest, FailFinalization) {
-  ExecutionSession ES;
-  auto Foo = ES.getSymbolStringPool().intern("foo");
-  auto Bar = ES.getSymbolStringPool().intern("bar");
-
-  SymbolNameSet Names({Foo, Bar});
-
-  auto MU = llvm::make_unique<SimpleMaterializationUnit>(
-      SymbolFlagsMap(
-          {{Foo, JITSymbolFlags::Exported}, {Bar, JITSymbolFlags::Exported}}),
-      [&](MaterializationResponsibility R) {
-        constexpr JITTargetAddress FakeFooAddr = 0xdeadbeef;
-        constexpr JITTargetAddress FakeBarAddr = 0xcafef00d;
-
-        auto FooSym = JITEvaluatedSymbol(FakeFooAddr, JITSymbolFlags::Exported);
-        auto BarSym = JITEvaluatedSymbol(FakeBarAddr, JITSymbolFlags::Exported);
-        R.resolve(SymbolMap({{Foo, FooSym}, {Bar, BarSym}}));
-        R.failMaterialization(
-            [&]() { return make_error<FailedToFinalize>(Names); });
-      });
+      [&](MaterializationResponsibility R) { R.failMaterialization(); });
 
   auto &V = ES.createVSO("V");
 
   cantFail(V.define(MU));
 
   auto OnResolution =
-      [](Expected<AsynchronousSymbolQuery::ResolutionResult> Result) {
-        cantFail(std::move(Result));
+      [&](Expected<AsynchronousSymbolQuery::ResolutionResult> Result) {
+        handleAllErrors(Result.takeError(),
+                        [&](FailedToMaterialize &F) {
+                          EXPECT_EQ(F.getSymbols(), Names)
+                              << "Expected to fail on symbols in Names";
+                        },
+                        [](ErrorInfoBase &EIB) {
+                          std::string ErrMsg;
+                          {
+                            raw_string_ostream ErrOut(ErrMsg);
+                            EIB.log(ErrOut);
+                          }
+                          ADD_FAILURE()
+                              << "Expected a FailedToResolve error. Got:\n"
+                              << ErrMsg;
+                        });
       };
 
-  auto OnReady = [&](Error Err) {
-    handleAllErrors(std::move(Err),
-                    [&](FailedToFinalize &F) {
-                      EXPECT_EQ(F.getSymbols(), Names)
-                          << "Expected to fail on symbols in Names";
-                    },
-                    [](ErrorInfoBase &EIB) {
-                      std::string ErrMsg;
-                      {
-                        raw_string_ostream ErrOut(ErrMsg);
-                        EIB.log(ErrOut);
-                      }
-                      ADD_FAILURE()
-                          << "Expected a FailedToFinalize error. Got:\n"
-                          << ErrMsg;
-                    });
+  auto OnReady = [](Error Err) {
+    cantFail(std::move(Err));
+    ADD_FAILURE() << "OnReady should never be called";
   };
 
   auto Q =

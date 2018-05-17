@@ -139,6 +139,11 @@ std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
   return llvm::sys::fs::make_absolute(WorkingDir.get(), Path);
 }
 
+std::error_code FileSystem::getRealPath(const Twine &Path,
+                                        SmallVectorImpl<char> &Output) const {
+  return errc::operation_not_permitted;
+}
+
 bool FileSystem::exists(const Twine &Path) {
   auto Status = status(Path);
   return Status && Status->exists();
@@ -236,6 +241,8 @@ public:
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
+  std::error_code getRealPath(const Twine &Path,
+                              SmallVectorImpl<char> &Output) const override;
 };
 
 } // namespace
@@ -272,6 +279,12 @@ std::error_code RealFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
   // switched during runtime of the tool. Fixing this depends on having a
   // file system abstraction that allows openat() style interactions.
   return llvm::sys::fs::set_current_path(Path);
+}
+
+std::error_code
+RealFileSystem::getRealPath(const Twine &Path,
+                            SmallVectorImpl<char> &Output) const {
+  return llvm::sys::fs::real_path(Path, Output);
 }
 
 IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {

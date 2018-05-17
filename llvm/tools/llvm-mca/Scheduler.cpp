@@ -468,7 +468,7 @@ void Scheduler::notifyInstructionExecuted(const InstRef &IR) {
   LLVM_DEBUG(dbgs() << "[E] Instruction Executed: " << IR << '\n');
   Owner->notifyInstructionEvent(
       HWInstructionEvent(HWInstructionEvent::Executed, IR));
-  DU->onInstructionExecuted(IR.getInstruction()->getRCUTokenID());
+  DS->onInstructionExecuted(IR.getInstruction()->getRCUTokenID());
 }
 
 void Scheduler::notifyInstructionReady(const InstRef &IR) {

@@ -50,6 +50,10 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+bool RISCVRegisterInfo::isConstantPhysReg(unsigned PhysReg) const {
+  return PhysReg == RISCV::X0;
+}
+
 const uint32_t *RISCVRegisterInfo::getNoPreservedMask() const {
   return CSR_NoRegs_RegMask;
 }

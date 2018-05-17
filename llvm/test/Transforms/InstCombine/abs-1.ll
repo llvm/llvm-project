@@ -59,6 +59,34 @@ define i8 @shifty_abs_commute0(i8 %x) {
   ret i8 %abs
 }
 
+define i8 @shifty_abs_commute0_nsw(i8 %x) {
+; CHECK-LABEL: @shifty_abs_commute0_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 %x, 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i8 0, %x
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[TMP1]], i8 [[TMP2]], i8 %x
+; CHECK-NEXT:    ret i8 [[ABS]]
+;
+  %signbit = ashr i8 %x, 7
+  %add = add nsw i8 %signbit, %x
+  %abs = xor i8 %add, %signbit
+  ret i8 %abs
+}
+
+; The nuw flag creates a contradiction. If the shift produces all 1s, the only
+; way for the add to not wrap is for %x to be 0, but then the shift couldn't
+; have produced all 1s. We partially optimize this.
+define i8 @shifty_abs_commute0_nuw(i8 %x) {
+; CHECK-LABEL: @shifty_abs_commute0_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i8 %x, 0
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[TMP1]], i8 %x, i8 0
+; CHECK-NEXT:    ret i8 [[ABS]]
+;
+  %signbit = ashr i8 %x, 7
+  %add = add nuw i8 %signbit, %x
+  %abs = xor i8 %add, %signbit
+  ret i8 %abs
+}
+
 define <2 x i8> @shifty_abs_commute1(<2 x i8> %x) {
 ; CHECK-LABEL: @shifty_abs_commute1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> %x, zeroinitializer

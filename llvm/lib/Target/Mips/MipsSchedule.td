@@ -130,6 +130,8 @@ def II_EVPE             : InstrItinClass;
 def II_EXT              : InstrItinClass; // Any EXT instruction
 def II_FLOOR            : InstrItinClass;
 def II_FORK             : InstrItinClass;
+def II_GINVI            : InstrItinClass;
+def II_GINVT            : InstrItinClass;
 def II_HYPCALL          : InstrItinClass;
 def II_INS              : InstrItinClass; // Any INS instruction
 def II_IndirectBranchPseudo : InstrItinClass; // Indirect branch pseudo.
@@ -728,5 +730,7 @@ def MipsGenericItineraries : ProcessorItineraries<[ALU, IMULDIV], [], [
   InstrItinData<II_TLBWI           , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_TLBWR           , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_DMFGC0          , [InstrStage<2,  [ALU]>]>,
-  InstrItinData<II_DMTGC0          , [InstrStage<2,  [ALU]>]>
+  InstrItinData<II_DMTGC0          , [InstrStage<2,  [ALU]>]>,
+  InstrItinData<II_GINVI           , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_GINVT           , [InstrStage<1,  [ALU]>]>
 ]>;

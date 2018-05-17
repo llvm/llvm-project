@@ -10,6 +10,8 @@
 // This file defines the machine model for Z14 to support instruction
 // scheduling and other instruction cost heuristics.
 //
+// Pseudos expanded right after isel do not need to be modelled here.
+//
 //===----------------------------------------------------------------------===//
 
 def Z14Model : SchedMachineModel {
@@ -28,9 +30,9 @@ def Z14Model : SchedMachineModel {
 
 let SchedModel = Z14Model in  {
 
-// These definitions could be put in a subtarget common include file,
-// but it seems the include system in Tablegen currently rejects
-// multiple includes of same file.
+// These definitions need the SchedModel value. They could be put in a
+// subtarget common include file, but it seems the include system in Tablegen
+// currently (2016) rejects multiple includes of same file.
 def : WriteRes<GroupAlone, []> {
   let NumMicroOps = 0;
   let BeginGroup  = 1;

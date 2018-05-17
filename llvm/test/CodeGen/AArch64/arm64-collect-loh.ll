@@ -672,9 +672,9 @@ if.end.i:
 ; CHECK: .loh AdrpAdrp
 ; CHECK: .loh AdrpLdr
   %mul = fmul double %x, 1.000000e-06
-  %add.i.i.i = fadd double %mul, %mul
-  %sub.i.i = fsub double %add.i.i.i, undef
-  call void (i8*, ...) @callee(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.89, i64 0, i64 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.90, i64 0, i64 0), double %sub.i.i)
+  %add = fadd double %mul, %mul
+  %sub = fsub double %add, %add
+  call void (i8*, ...) @callee(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.89, i64 0, i64 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.90, i64 0, i64 0), double %sub)
   unreachable
 }
 declare void @callee(i8* nocapture readonly, ...) 

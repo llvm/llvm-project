@@ -1,4 +1,4 @@
-// RUN: %clang %s -o %t -mmacosx-version-min=10.5
+// RUN: %clang %s -o %t -mmacosx-version-min=10.6
 // RUN: %run %t
 
 int __isOSVersionAtLeast(int Major, int Minor, int Subminor);

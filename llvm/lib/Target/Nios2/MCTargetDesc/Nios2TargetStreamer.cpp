@@ -19,4 +19,4 @@ Nios2TargetStreamer::Nios2TargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
 Nios2TargetAsmStreamer::Nios2TargetAsmStreamer(MCStreamer &S,
                                                formatted_raw_ostream &OS)
-    : Nios2TargetStreamer(S), OS(OS) {}
+    : Nios2TargetStreamer(S) {}

@@ -653,6 +653,11 @@ void Sema::getUndefinedButUsed(
           !isExternalWithNoLinkageType(VD) &&
           !VD->getMostRecentDecl()->isInline())
         continue;
+
+      // Skip VarDecls that lack formal definitions but which we know are in
+      // fact defined somewhere.
+      if (VD->isKnownToBeDefined())
+        continue;
     }
 
     Undefined.push_back(std::make_pair(ND, UndefinedUse.second));

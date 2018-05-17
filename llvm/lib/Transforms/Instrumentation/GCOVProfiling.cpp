@@ -504,11 +504,11 @@ static bool functionHasLines(Function &F) {
   return false;
 }
 
-static bool isUsingFuncletBasedEH(Function &F) {
+static bool isUsingScopeBasedEH(Function &F) {
   if (!F.hasPersonalityFn()) return false;
 
   EHPersonality Personality = classifyEHPersonality(F.getPersonalityFn());
-  return isFuncletEHPersonality(Personality);
+  return isScopedEHPersonality(Personality);
 }
 
 static bool shouldKeepInEntry(BasicBlock::iterator It) {
@@ -551,8 +551,8 @@ void GCOVProfiler::emitProfileNotes() {
       DISubprogram *SP = F.getSubprogram();
       if (!SP) continue;
       if (!functionHasLines(F)) continue;
-      // TODO: Functions using funclet-based EH are currently not supported.
-      if (isUsingFuncletBasedEH(F)) continue;
+      // TODO: Functions using scope-based EH are currently not supported.
+      if (isUsingScopeBasedEH(F)) continue;
 
       // gcov expects every function to start with an entry block that has a
       // single successor, so split the entry block to make sure of that.
@@ -630,8 +630,8 @@ bool GCOVProfiler::emitProfileArcs() {
       DISubprogram *SP = F.getSubprogram();
       if (!SP) continue;
       if (!functionHasLines(F)) continue;
-      // TODO: Functions using funclet-based EH are currently not supported.
-      if (isUsingFuncletBasedEH(F)) continue;
+      // TODO: Functions using scope-based EH are currently not supported.
+      if (isUsingScopeBasedEH(F)) continue;
       if (!Result) Result = true;
 
       unsigned Edges = 0;
