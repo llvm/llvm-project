@@ -915,7 +915,7 @@ uint32_t RegisterContextDarwin_arm64::ConvertRegisterKindToRegisterNumber(
 }
 
 uint32_t RegisterContextDarwin_arm64::NumSupportedHardwareWatchpoints() {
-#if defined(__arm64__) || defined(__aarch64__)
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
   // autodetect how many watchpoints are supported dynamically...
   static uint32_t g_num_supported_hw_watchpoints = UINT32_MAX;
   if (g_num_supported_hw_watchpoints == UINT32_MAX) {
