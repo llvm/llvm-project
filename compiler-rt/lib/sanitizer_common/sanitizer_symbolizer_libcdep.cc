@@ -26,8 +26,8 @@ Symbolizer *Symbolizer::GetOrInit() {
   return symbolizer_;
 }
 
-// See sanitizer_symbolizer_fuchsia.cc.
-#if !SANITIZER_FUCHSIA
+// See sanitizer_symbolizer_markup.cc.
+#if !SANITIZER_SYMBOLIZER_MARKUP
 
 const char *ExtractToken(const char *str, const char *delims, char **result) {
   uptr prefix_len = internal_strcspn(str, delims);
@@ -489,6 +489,6 @@ bool SymbolizerProcess::WriteToSymbolizer(const char *buffer, uptr length) {
   return true;
 }
 
-#endif  // !SANITIZER_FUCHSIA
+#endif  // !SANITIZER_SYMBOLIZER_MARKUP
 
 }  // namespace __sanitizer

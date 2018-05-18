@@ -11134,15 +11134,26 @@ X86InstrInfo::getOutlininingCandidateInfo(
   std::vector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
       &RepeatedSequenceLocs) const {
+  unsigned SequenceSize = std::accumulate(
+      RepeatedSequenceLocs[0].first, std::next(RepeatedSequenceLocs[0].second),
+      0, [](unsigned Sum, const MachineInstr &MI) {
+        // FIXME: x86 doesn't implement getInstSizeInBytes, so we can't
+        // tell the cost.  Just assume each instruction is one byte.
+        if (MI.isDebugInstr() || MI.isKill())
+          return Sum;
+        return Sum + 1;
+      });
 
+  // FIXME: Use real size in bytes for call and ret instructions.
   if (RepeatedSequenceLocs[0].second->isTerminator())
-    return MachineOutlinerInfo(1, // Number of instructions to emit call.
-                               0, // Number of instructions to emit frame.
+    return MachineOutlinerInfo(SequenceSize,
+                               1, // Number of bytes to emit call.
+                               0, // Number of bytes to emit frame.
                                MachineOutlinerTailCall, // Type of call.
                                MachineOutlinerTailCall // Type of frame.
                               );
 
-  return MachineOutlinerInfo(1, 1, MachineOutlinerDefault,
+  return MachineOutlinerInfo(SequenceSize, 1, 1, MachineOutlinerDefault,
                              MachineOutlinerDefault);
 }
 

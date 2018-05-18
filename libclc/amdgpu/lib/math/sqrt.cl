@@ -26,6 +26,13 @@
 
 _CLC_DEFINE_UNARY_BUILTIN(float, sqrt, __clc_sqrt, float)
 
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+_CLC_DEFINE_UNARY_BUILTIN(half, sqrt, __clc_sqrt, half)
+
+#endif
+
 #ifdef cl_khr_fp64
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable

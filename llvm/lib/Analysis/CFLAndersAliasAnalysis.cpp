@@ -153,59 +153,11 @@ struct OffsetInstantiatedValue {
 bool operator==(OffsetInstantiatedValue LHS, OffsetInstantiatedValue RHS) {
   return LHS.IVal == RHS.IVal && LHS.Offset == RHS.Offset;
 }
-}
-
-namespace llvm {
-
-// Specialize DenseMapInfo for OffsetValue.
-template <> struct DenseMapInfo<OffsetValue> {
-  static OffsetValue getEmptyKey() {
-    return OffsetValue{DenseMapInfo<const Value *>::getEmptyKey(),
-                       DenseMapInfo<FieldOffset>::getEmptyKey()};
-  }
-  static OffsetValue getTombstoneKey() {
-    return OffsetValue{DenseMapInfo<const Value *>::getTombstoneKey(),
-                       DenseMapInfo<FieldOffset>::getEmptyKey()};
-  }
-  static unsigned getHashValue(const OffsetValue &OVal) {
-    return DenseMapInfo<std::pair<const Value *, FieldOffset>>::getHashValue(
-        std::make_pair(OVal.Val, OVal.Offset));
-  }
-  static bool isEqual(const OffsetValue &LHS, const OffsetValue &RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Specialize DenseMapInfo for OffsetInstantiatedValue.
-template <> struct DenseMapInfo<OffsetInstantiatedValue> {
-  static OffsetInstantiatedValue getEmptyKey() {
-    return OffsetInstantiatedValue{
-        DenseMapInfo<InstantiatedValue>::getEmptyKey(),
-        DenseMapInfo<FieldOffset>::getEmptyKey()};
-  }
-  static OffsetInstantiatedValue getTombstoneKey() {
-    return OffsetInstantiatedValue{
-        DenseMapInfo<InstantiatedValue>::getTombstoneKey(),
-        DenseMapInfo<FieldOffset>::getEmptyKey()};
-  }
-  static unsigned getHashValue(const OffsetInstantiatedValue &OVal) {
-    return DenseMapInfo<std::pair<InstantiatedValue, FieldOffset>>::
-        getHashValue(std::make_pair(OVal.IVal, OVal.Offset));
-  }
-  static bool isEqual(const OffsetInstantiatedValue &LHS,
-                      const OffsetInstantiatedValue &RHS) {
-    return LHS == RHS;
-  }
-};
-
-} // namespace llvm
-
-namespace {
 
 // We use ReachabilitySet to keep track of value aliases (The nonterminal "V" in
 // the paper) during the analysis.
 class ReachabilitySet {
-  using ValueStateMap = DenseMap<OffsetInstantiatedValue, StateSet>;
+  using ValueStateMap = DenseMap<InstantiatedValue, StateSet>;
   using ValueReachMap = DenseMap<InstantiatedValue, ValueStateMap>;
 
   ValueReachMap ReachMap;
@@ -214,11 +166,10 @@ public:
   using const_valuestate_iterator = ValueStateMap::const_iterator;
   using const_value_iterator = ValueReachMap::const_iterator;
 
-  // Insert edge 'From->To' at state 'State' with offset 'Offset'
-  bool insert(InstantiatedValue From, InstantiatedValue To, FieldOffset Offset,
-              MatchState State) {
+  // Insert edge 'From->To' at state 'State'
+  bool insert(InstantiatedValue From, InstantiatedValue To, MatchState State) {
     assert(From != To);
-    auto &States = ReachMap[To][OffsetInstantiatedValue{From, Offset}];
+    auto &States = ReachMap[To][From];
     auto Idx = static_cast<size_t>(State);
     if (!States.test(Idx)) {
       States.set(Idx);
@@ -303,7 +254,6 @@ public:
 struct WorkListItem {
   InstantiatedValue From;
   InstantiatedValue To;
-  FieldOffset Offset;
   MatchState State;
 };
 
@@ -311,12 +261,62 @@ struct ValueSummary {
   struct Record {
     InterfaceValue IValue;
     unsigned DerefLevel;
-    FieldOffset Offset;
   };
   SmallVector<Record, 4> FromRecords, ToRecords;
 };
 
 } // end anonymous namespace
+
+namespace llvm {
+
+// Specialize DenseMapInfo for OffsetValue.
+template <> struct DenseMapInfo<OffsetValue> {
+  static OffsetValue getEmptyKey() {
+    return OffsetValue{DenseMapInfo<const Value *>::getEmptyKey(),
+                       DenseMapInfo<int64_t>::getEmptyKey()};
+  }
+
+  static OffsetValue getTombstoneKey() {
+    return OffsetValue{DenseMapInfo<const Value *>::getTombstoneKey(),
+                       DenseMapInfo<int64_t>::getEmptyKey()};
+  }
+
+  static unsigned getHashValue(const OffsetValue &OVal) {
+    return DenseMapInfo<std::pair<const Value *, int64_t>>::getHashValue(
+        std::make_pair(OVal.Val, OVal.Offset));
+  }
+
+  static bool isEqual(const OffsetValue &LHS, const OffsetValue &RHS) {
+    return LHS == RHS;
+  }
+};
+
+// Specialize DenseMapInfo for OffsetInstantiatedValue.
+template <> struct DenseMapInfo<OffsetInstantiatedValue> {
+  static OffsetInstantiatedValue getEmptyKey() {
+    return OffsetInstantiatedValue{
+        DenseMapInfo<InstantiatedValue>::getEmptyKey(),
+        DenseMapInfo<int64_t>::getEmptyKey()};
+  }
+
+  static OffsetInstantiatedValue getTombstoneKey() {
+    return OffsetInstantiatedValue{
+        DenseMapInfo<InstantiatedValue>::getTombstoneKey(),
+        DenseMapInfo<int64_t>::getEmptyKey()};
+  }
+
+  static unsigned getHashValue(const OffsetInstantiatedValue &OVal) {
+    return DenseMapInfo<std::pair<InstantiatedValue, int64_t>>::getHashValue(
+        std::make_pair(OVal.IVal, OVal.Offset));
+  }
+
+  static bool isEqual(const OffsetInstantiatedValue &LHS,
+                      const OffsetInstantiatedValue &RHS) {
+    return LHS == RHS;
+  }
+};
+
+} // end namespace llvm
 
 class CFLAndersAAResult::FunctionInfo {
   /// Map a value to other values that may alias it
@@ -389,11 +389,9 @@ populateAliasMap(DenseMap<const Value *, std::vector<OffsetValue>> &AliasMap,
     auto Val = OuterMapping.first.Val;
     auto &AliasList = AliasMap[Val];
     for (const auto &InnerMapping : OuterMapping.second) {
-      auto OVal = InnerMapping.first;
       // Again, AliasMap only cares about top-level values
-      if (OVal.IVal.DerefLevel == 0)
-        AliasList.push_back(
-            OffsetValue{OVal.IVal.Val, negFieldOffset(OVal.Offset)});
+      if (InnerMapping.first.DerefLevel == 0)
+        AliasList.push_back(OffsetValue{InnerMapping.first.Val, UnknownOffset});
     }
 
     // Sort AliasList for faster lookup
@@ -432,27 +430,24 @@ static void populateExternalRelations(
   for (const auto &OuterMapping : ReachSet.value_mappings()) {
     if (auto Dst = getInterfaceValue(OuterMapping.first, RetVals)) {
       for (const auto &InnerMapping : OuterMapping.second) {
-        auto OVal = InnerMapping.first;
-        auto SrcIVal = OVal.IVal;
-        auto Offset = OVal.Offset;
         // If Src is a param/return value, we get a same-level assignment.
-        if (auto Src = getInterfaceValue(SrcIVal, RetVals)) {
+        if (auto Src = getInterfaceValue(InnerMapping.first, RetVals)) {
           // This may happen if both Dst and Src are return values
           if (*Dst == *Src)
             continue;
 
           if (hasReadOnlyState(InnerMapping.second))
-            ExtRelations.push_back(ExternalRelation{*Dst, *Src, Offset});
+            ExtRelations.push_back(ExternalRelation{*Dst, *Src, UnknownOffset});
           // No need to check for WriteOnly state, since ReachSet is symmetric
         } else {
           // If Src is not a param/return, add it to ValueMap
-
+          auto SrcIVal = InnerMapping.first;
           if (hasReadOnlyState(InnerMapping.second))
             ValueMap[SrcIVal.Val].FromRecords.push_back(
-                ValueSummary::Record{*Dst, SrcIVal.DerefLevel, Offset});
+                ValueSummary::Record{*Dst, SrcIVal.DerefLevel});
           if (hasWriteOnlyState(InnerMapping.second))
             ValueMap[SrcIVal.Val].ToRecords.push_back(
-                ValueSummary::Record{*Dst, SrcIVal.DerefLevel, Offset});
+                ValueSummary::Record{*Dst, SrcIVal.DerefLevel});
         }
       }
     }
@@ -471,20 +466,14 @@ static void populateExternalRelations(
         auto SrcLevel = FromRecord.IValue.DerefLevel;
         auto DstIndex = ToRecord.IValue.Index;
         auto DstLevel = ToRecord.IValue.DerefLevel;
-
-        // Offsets to be pushed to External Relations
-        auto SrcOffset = FromRecord.Offset;
-        auto DstOffset = ToRecord.Offset;
-
         if (ToLevel > FromLevel)
           SrcLevel += ToLevel - FromLevel;
         else
           DstLevel += FromLevel - ToLevel;
 
-        ExtRelations.push_back(
-            ExternalRelation{InterfaceValue{SrcIndex, SrcLevel},
-                             InterfaceValue{DstIndex, DstLevel},
-                             subFieldOffset(SrcOffset, DstOffset)});
+        ExtRelations.push_back(ExternalRelation{
+            InterfaceValue{SrcIndex, SrcLevel},
+            InterfaceValue{DstIndex, DstLevel}, UnknownOffset});
       }
     }
   }
@@ -602,14 +591,12 @@ bool CFLAndersAAResult::FunctionInfo::mayAlias(const Value *LHS,
 }
 
 static void propagate(InstantiatedValue From, InstantiatedValue To,
-                      FieldOffset Offset, MatchState State,
-                      ReachabilitySet &ReachSet,
+                      MatchState State, ReachabilitySet &ReachSet,
                       std::vector<WorkListItem> &WorkList) {
   if (From == To)
     return;
-
-  if (ReachSet.insert(From, To, Offset, State))
-    WorkList.push_back(WorkListItem{From, To, Offset, State});
+  if (ReachSet.insert(From, To, State))
+    WorkList.push_back(WorkListItem{From, To, State});
 }
 
 static void initializeWorkList(std::vector<WorkListItem> &WorkList,
@@ -623,15 +610,13 @@ static void initializeWorkList(std::vector<WorkListItem> &WorkList,
     // Insert all immediate assignment neighbors to the worklist
     for (unsigned I = 0, E = ValueInfo.getNumLevels(); I < E; ++I) {
       auto Src = InstantiatedValue{Val, I};
-      // If we have an assignment edge from X + Offset to Y, it means that
-      // (Y - Offset) is reachable from X at the state FlowToWriteOnly
-      // At the same time, (X + Offset) is reachable from Y at the state
-      // FlowFromReadOnly
+      // If there's an assignment edge from X to Y, it means Y is reachable from
+      // X at S2 and X is reachable from Y at S1
       for (auto &Edge : ValueInfo.getNodeInfoAtLevel(I).Edges) {
-        propagate(Edge.Other, Src, Edge.Offset, MatchState::FlowFromReadOnly,
-                  ReachSet, WorkList);
-        propagate(Src, Edge.Other, negFieldOffset(Edge.Offset),
-                  MatchState::FlowToWriteOnly, ReachSet, WorkList);
+        propagate(Edge.Other, Src, MatchState::FlowFromReadOnly, ReachSet,
+                  WorkList);
+        propagate(Src, Edge.Other, MatchState::FlowToWriteOnly, ReachSet,
+                  WorkList);
       }
     }
   }
@@ -650,10 +635,11 @@ static void processWorkListItem(const WorkListItem &Item, const CFLGraph &Graph,
                                 std::vector<WorkListItem> &WorkList) {
   auto FromNode = Item.From;
   auto ToNode = Item.To;
-  auto Offset = Item.Offset;
 
   auto NodeInfo = Graph.getNode(ToNode);
   assert(NodeInfo != nullptr);
+
+  // TODO: propagate field offsets
 
   // FIXME: Here is a neat trick we can do: since both ReachSet and MemSet holds
   // relations that are symmetric, we could actually cut the storage by half by
@@ -661,30 +647,25 @@ static void processWorkListItem(const WorkListItem &Item, const CFLGraph &Graph,
 
   // The newly added value alias pair may potentially generate more memory
   // alias pairs. Check for them here.
-  // MemAlias reachability can only be triggered when Offset is 0 or Unknown
-  if (Offset == 0 || Offset == UnknownOffset) {
-    auto FromNodeBelow = getNodeBelow(Graph, FromNode);
-    auto ToNodeBelow = getNodeBelow(Graph, ToNode);
-    if (FromNodeBelow && ToNodeBelow &&
-        MemSet.insert(*FromNodeBelow, *ToNodeBelow)) {
-      propagate(*FromNodeBelow, *ToNodeBelow, Offset,
-                MatchState::FlowFromMemAliasNoReadWrite, ReachSet, WorkList);
-      for (const auto &Mapping :
-           ReachSet.reachableValueAliases(*FromNodeBelow)) {
-        auto SrcOVal = Mapping.first;
-        auto MemAliasPropagate = [&](MatchState FromState, MatchState ToState) {
-          if (Mapping.second.test(static_cast<size_t>(FromState)))
-            propagate(SrcOVal.IVal, *ToNodeBelow, SrcOVal.Offset, ToState,
-                      ReachSet, WorkList);
-        };
+  auto FromNodeBelow = getNodeBelow(Graph, FromNode);
+  auto ToNodeBelow = getNodeBelow(Graph, ToNode);
+  if (FromNodeBelow && ToNodeBelow &&
+      MemSet.insert(*FromNodeBelow, *ToNodeBelow)) {
+    propagate(*FromNodeBelow, *ToNodeBelow,
+              MatchState::FlowFromMemAliasNoReadWrite, ReachSet, WorkList);
+    for (const auto &Mapping : ReachSet.reachableValueAliases(*FromNodeBelow)) {
+      auto Src = Mapping.first;
+      auto MemAliasPropagate = [&](MatchState FromState, MatchState ToState) {
+        if (Mapping.second.test(static_cast<size_t>(FromState)))
+          propagate(Src, *ToNodeBelow, ToState, ReachSet, WorkList);
+      };
 
-        MemAliasPropagate(MatchState::FlowFromReadOnly,
-                          MatchState::FlowFromMemAliasReadOnly);
-        MemAliasPropagate(MatchState::FlowToWriteOnly,
-                          MatchState::FlowToMemAliasWriteOnly);
-        MemAliasPropagate(MatchState::FlowToReadWrite,
-                          MatchState::FlowToMemAliasReadWrite);
-      }
+      MemAliasPropagate(MatchState::FlowFromReadOnly,
+                        MatchState::FlowFromMemAliasReadOnly);
+      MemAliasPropagate(MatchState::FlowToWriteOnly,
+                        MatchState::FlowToMemAliasWriteOnly);
+      MemAliasPropagate(MatchState::FlowToReadWrite,
+                        MatchState::FlowToMemAliasReadWrite);
     }
   }
 
@@ -697,23 +678,17 @@ static void processWorkListItem(const WorkListItem &Item, const CFLGraph &Graph,
   // - If Y is an alias of X, then reverse assignment edges (if there is any)
   // should precede any assignment edges on the path from X to Y.
   auto NextAssignState = [&](MatchState State) {
-    for (const auto &AssignEdge : NodeInfo->Edges) {
-      propagate(FromNode, AssignEdge.Other,
-                subFieldOffset(Offset, AssignEdge.Offset), State, ReachSet,
-                WorkList);
-    }
+    for (const auto &AssignEdge : NodeInfo->Edges)
+      propagate(FromNode, AssignEdge.Other, State, ReachSet, WorkList);
   };
   auto NextRevAssignState = [&](MatchState State) {
-    for (const auto &RevAssignEdge : NodeInfo->ReverseEdges) {
-      propagate(FromNode, RevAssignEdge.Other,
-                addFieldOffset(Offset, RevAssignEdge.Offset), State, ReachSet,
-                WorkList);
-    }
+    for (const auto &RevAssignEdge : NodeInfo->ReverseEdges)
+      propagate(FromNode, RevAssignEdge.Other, State, ReachSet, WorkList);
   };
   auto NextMemState = [&](MatchState State) {
     if (auto AliasSet = MemSet.getMemoryAliases(ToNode)) {
       for (const auto &MemAlias : *AliasSet)
-        propagate(FromNode, MemAlias, Offset, State, ReachSet, WorkList);
+        propagate(FromNode, MemAlias, State, ReachSet, WorkList);
     }
   };
 
@@ -778,7 +753,7 @@ static AliasAttrMap buildAttrMap(const CFLGraph &Graph,
 
       // Propagate attr on the same level
       for (const auto &Mapping : ReachSet.reachableValueAliases(Dst)) {
-        auto Src = Mapping.first.IVal;
+        auto Src = Mapping.first;
         if (AttrMap.add(Src, DstAttr))
           NextList.push_back(Src);
       }
@@ -813,18 +788,10 @@ CFLAndersAAResult::buildInfoFrom(const Function &Fn) {
 
   std::vector<WorkListItem> WorkList, NextList;
   initializeWorkList(WorkList, ReachSet, Graph);
-
-  bool LoopInGraph = false;
+  // TODO: make sure we don't stop before the fix point is reached
   while (!WorkList.empty()) {
     for (const auto &Item : WorkList)
       processWorkListItem(Item, Graph, ReachSet, MemSet, NextList);
-
-    if (NextList.size() == WorkList.size()) {
-      // stop if loop in CFL graph
-      if (LoopInGraph)
-        break;
-      LoopInGraph = true;
-    }
 
     NextList.swap(WorkList);
     NextList.clear();

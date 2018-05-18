@@ -223,9 +223,14 @@ entry:
 for.body:
   %iv = phi i32 [ 0, %entry ], [ %inc, %continue ]
   %acc = phi i32 [ 0, %entry ], [ %add, %continue ]
-  br label %dummy_block
-dummy_block:
-  %wrongphi = phi i32 [12, %for.body]
+  %cond = icmp ult i32 %iv, 500
+  br i1 %cond, label %dummy_block1, label %dummy_block2
+
+dummy_block1:
+  br label %dummy_block2
+
+dummy_block2:
+  %wrongphi = phi i32 [11, %for.body], [12, %dummy_block1]
   %r.chk = icmp ugt i32 %wrongphi, 2000
   br i1 %r.chk, label %fail, label %continue
 continue:

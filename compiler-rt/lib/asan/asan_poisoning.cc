@@ -182,8 +182,15 @@ int __asan_address_is_poisoned(void const volatile *addr) {
 uptr __asan_region_is_poisoned(uptr beg, uptr size) {
   if (!size) return 0;
   uptr end = beg + size;
-  if (!AddrIsInMem(beg)) return beg;
-  if (!AddrIsInMem(end)) return end;
+  if (SANITIZER_MYRIAD2) {
+    // On Myriad, address not in DRAM range need to be treated as
+    // unpoisoned.
+    if (!AddrIsInMem(beg) && !AddrIsInShadow(beg)) return 0;
+    if (!AddrIsInMem(end) && !AddrIsInShadow(end)) return 0;
+  } else {
+    if (!AddrIsInMem(beg)) return beg;
+    if (!AddrIsInMem(end)) return end;
+  }
   CHECK_LT(beg, end);
   uptr aligned_b = RoundUpTo(beg, SHADOW_GRANULARITY);
   uptr aligned_e = RoundDownTo(end, SHADOW_GRANULARITY);
@@ -452,4 +459,3 @@ bool WordIsPoisoned(uptr addr) {
   return (__asan_region_is_poisoned(addr, sizeof(uptr)) != 0);
 }
 }
-
