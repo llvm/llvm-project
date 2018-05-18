@@ -437,7 +437,6 @@ namespace {
     else if (version.getSubminor()) descriptor = 2;
     else if (version.getMinor()) descriptor = 1;
     else descriptor = 0;
-    assert(!version.usesUnderscores() && "Not a serializable version");
     writer.write<uint8_t>(descriptor);
 
     // Write the components.

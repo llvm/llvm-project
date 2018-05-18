@@ -439,8 +439,6 @@ namespace llvm {
         if (value.tryParse(scalar))
           return "not a version number in the form XX.YY";
 
-        // Canonicalize on '.' as a separator.
-        value.UseDotAsSeparator();
         return StringRef();
       }
 
