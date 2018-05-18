@@ -1011,6 +1011,16 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
   return false;
 }
 
+/// Return whether this module contains any serialized Swift ASTs.
+bool HasSwiftModules(Module &module) {
+  SymbolVendor *sym_vendor = module.GetSymbolVendor();
+  if (!sym_vendor)
+    return false;
+
+  auto ast_file_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
+  return !ast_file_datas.empty();
+}
+
 void SwiftASTContext::RemapClangImporterOptions(
     const PathMappingList &path_map) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
@@ -1335,6 +1345,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   for (size_t mi = 0; mi != num_images; ++mi) {
     ModuleSP module_sp = target.GetImages().GetModuleAtIndex(mi);
 
+    // Skip images without a serialized Swift AST. This avoids
+    // spurious warning messages.
+    if (!HasSwiftModules(*module_sp))
+      continue;
+
     SwiftASTContext *module_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
         module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
 
@@ -1532,59 +1547,60 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           }
         }
 
+        // Skip images without a serialized Swift AST.
+        if (!HasSwiftModules(*module_sp))
+          return;
+
         SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
+        if (!sym_vendor)
+          return;
 
-        if (sym_vendor) {
-          std::vector<std::string> module_names;
+        std::vector<std::string> module_names;
+        SymbolFile *sym_file = sym_vendor->GetSymbolFile();
+        if (!sym_file)
+          return;
 
-          SymbolFile *sym_file = sym_vendor->GetSymbolFile();
-          if (sym_file) {
-            Status sym_file_error;
-            SwiftASTContext *ast_context =
-                llvm::dyn_cast_or_null<SwiftASTContext>(
-                    sym_file->GetTypeSystemForLanguage(
-                        lldb::eLanguageTypeSwift));
-            if (ast_context && !ast_context->HasErrors()) {
-              if (use_all_compiler_flags ||
-                  target.GetExecutableModulePointer() == module_sp.get()) {
-                for (size_t msi = 0,
-                            mse = ast_context->GetNumModuleSearchPaths();
-                     msi < mse; ++msi) {
-                  const char *search_path =
-                      ast_context->GetModuleSearchPathAtIndex(msi);
-                  swift_ast_sp->AddModuleSearchPath(search_path);
-                }
+        Status sym_file_error;
+        SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(
+            sym_file->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+        if (ast_context && !ast_context->HasErrors()) {
+          if (use_all_compiler_flags ||
+              target.GetExecutableModulePointer() == module_sp.get()) {
+            for (size_t msi = 0, mse = ast_context->GetNumModuleSearchPaths();
+                 msi < mse; ++msi) {
+              const char *search_path =
+                  ast_context->GetModuleSearchPathAtIndex(msi);
+              swift_ast_sp->AddModuleSearchPath(search_path);
+            }
 
-                for (size_t fsi = 0,
-                            fse = ast_context->GetNumFrameworkSearchPaths();
-                     fsi < fse; ++fsi) {
-                  const char *search_path =
-                      ast_context->GetFrameworkSearchPathAtIndex(fsi);
-                  swift_ast_sp->AddFrameworkSearchPath(search_path);
-                }
+            for (size_t fsi = 0,
+                        fse = ast_context->GetNumFrameworkSearchPaths();
+                 fsi < fse; ++fsi) {
+              const char *search_path =
+                  ast_context->GetFrameworkSearchPathAtIndex(fsi);
+              swift_ast_sp->AddFrameworkSearchPath(search_path);
+            }
 
-                std::string clang_argument;
-                for (size_t osi = 0, ose = ast_context->GetNumClangArguments();
-                     osi < ose; ++osi) {
-                  // Join multi-arg -D and -U options for uniquing.
-                  clang_argument += ast_context->GetClangArgumentAtIndex(osi);
-                  if (clang_argument == "-D" || clang_argument == "-U")
-                    continue;
+            std::string clang_argument;
+            for (size_t osi = 0, ose = ast_context->GetNumClangArguments();
+                 osi < ose; ++osi) {
+              // Join multi-arg -D and -U options for uniquing.
+              clang_argument += ast_context->GetClangArgumentAtIndex(osi);
+              if (clang_argument == "-D" || clang_argument == "-U")
+                continue;
 
-                  // Enable uniquing for -D and -U options.
-                  bool force = true;
-                  if (clang_argument.size() >= 2 && clang_argument[0] == '-' &&
-                      (clang_argument[1] == 'D' || clang_argument[1] == 'U'))
-                    force = false;
+              // Enable uniquing for -D and -U options.
+              bool force = true;
+              if (clang_argument.size() >= 2 && clang_argument[0] == '-' &&
+                  (clang_argument[1] == 'D' || clang_argument[1] == 'U'))
+                force = false;
 
-                  swift_ast_sp->AddClangArgument(clang_argument, force);
-                  clang_argument.clear();
-                }
-              }
-
-              swift_ast_sp->RegisterSectionModules(*module_sp, module_names);
+              swift_ast_sp->AddClangArgument(clang_argument, force);
+              clang_argument.clear();
             }
           }
+
+          swift_ast_sp->RegisterSectionModules(*module_sp, module_names);
         }
       };
 
