@@ -66,3 +66,12 @@
 #define as_double8(x) __builtin_astype(x, double8)
 #define as_double16(x) __builtin_astype(x, double16)
 #endif
+
+#ifdef cl_khr_fp16
+#define as_half(x) __builtin_astype(x, half)
+#define as_half2(x) __builtin_astype(x, half2)
+#define as_half3(x) __builtin_astype(x, half3)
+#define as_half4(x) __builtin_astype(x, half4)
+#define as_half8(x) __builtin_astype(x, half8)
+#define as_half16(x) __builtin_astype(x, half16)
+#endif

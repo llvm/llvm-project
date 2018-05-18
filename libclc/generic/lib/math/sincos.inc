@@ -1,3 +1,5 @@
+// TODO: Enable half precision when sin/cos is implemented
+#if __CLC_FPSIZE > 16
 #define __CLC_DECLARE_SINCOS(ADDRSPACE, TYPE) \
   _CLC_OVERLOAD _CLC_DEF TYPE sincos (TYPE x, ADDRSPACE TYPE * cosval) { \
     *cosval = cos(x); \
@@ -9,3 +11,4 @@ __CLC_DECLARE_SINCOS(local, __CLC_GENTYPE)
 __CLC_DECLARE_SINCOS(private, __CLC_GENTYPE)
 
 #undef __CLC_DECLARE_SINCOS
+#endif

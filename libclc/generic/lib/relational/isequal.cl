@@ -26,5 +26,19 @@ _CLC_DEFINE_ISEQUAL(long8, isequal, double8, double8)
 _CLC_DEFINE_ISEQUAL(long16, isequal, double16, double16)
 
 #endif
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+// The scalar version of isequal(half) returns an int, but the vector versions
+// return short.
+_CLC_DEFINE_ISEQUAL(int, isequal, half, half)
+_CLC_DEFINE_ISEQUAL(short2, isequal, half2, half2)
+_CLC_DEFINE_ISEQUAL(short3, isequal, half3, half3)
+_CLC_DEFINE_ISEQUAL(short4, isequal, half4, half4)
+_CLC_DEFINE_ISEQUAL(short8, isequal, half8, half8)
+_CLC_DEFINE_ISEQUAL(short16, isequal, half16, half16)
+
+#endif
 
 #undef _CLC_DEFINE_ISEQUAL
