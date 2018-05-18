@@ -868,6 +868,11 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     if (!Sec)
       continue;
 
+    // Handle align (e.g. ".foo : ALIGN(16) { ... }").
+    if (Sec->AlignExpr)
+      Sec->Alignment =
+          std::max<uint32_t>(Sec->Alignment, Sec->AlignExpr().getValue());
+
     // A live output section means that some input section was added to it. It
     // might have been removed (if it was empty synthetic section), but we at
     // least know the flags.
@@ -906,10 +911,6 @@ void LinkerScript::adjustSectionsAfterSorting() {
           error("memory region '" + Sec->LMARegionName + "' not declared");
       }
       Sec->MemRegion = findMemoryRegion(Sec);
-      // Handle align (e.g. ".foo : ALIGN(16) { ... }").
-      if (Sec->AlignExpr)
-        Sec->Alignment =
-            std::max<uint32_t>(Sec->Alignment, Sec->AlignExpr().getValue());
     }
   }
 
