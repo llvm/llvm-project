@@ -1578,58 +1578,55 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           return;
 
         SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
+        if (!sym_vendor)
+          return;
 
-        if (sym_vendor) {
-          std::vector<std::string> module_names;
+        std::vector<std::string> module_names;
+        SymbolFile *sym_file = sym_vendor->GetSymbolFile();
+        if (!sym_file)
+          return;
 
-          SymbolFile *sym_file = sym_vendor->GetSymbolFile();
-          if (sym_file) {
-            Status sym_file_error;
-            SwiftASTContext *ast_context =
-                llvm::dyn_cast_or_null<SwiftASTContext>(
-                    sym_file->GetTypeSystemForLanguage(
-                        lldb::eLanguageTypeSwift));
-            if (ast_context && !ast_context->HasErrors()) {
-              if (use_all_compiler_flags ||
-                  target.GetExecutableModulePointer() == module_sp.get()) {
-                for (size_t msi = 0,
-                            mse = ast_context->GetNumModuleSearchPaths();
-                     msi < mse; ++msi) {
-                  const char *search_path =
-                      ast_context->GetModuleSearchPathAtIndex(msi);
-                  swift_ast_sp->AddModuleSearchPath(search_path);
-                }
+        Status sym_file_error;
+        SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(
+            sym_file->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+        if (ast_context && !ast_context->HasErrors()) {
+          if (use_all_compiler_flags ||
+              target.GetExecutableModulePointer() == module_sp.get()) {
+            for (size_t msi = 0, mse = ast_context->GetNumModuleSearchPaths();
+                 msi < mse; ++msi) {
+              const char *search_path =
+                  ast_context->GetModuleSearchPathAtIndex(msi);
+              swift_ast_sp->AddModuleSearchPath(search_path);
+            }
 
-                for (size_t fsi = 0,
-                            fse = ast_context->GetNumFrameworkSearchPaths();
-                     fsi < fse; ++fsi) {
-                  const char *search_path =
-                      ast_context->GetFrameworkSearchPathAtIndex(fsi);
-                  swift_ast_sp->AddFrameworkSearchPath(search_path);
-                }
+            for (size_t fsi = 0,
+                        fse = ast_context->GetNumFrameworkSearchPaths();
+                 fsi < fse; ++fsi) {
+              const char *search_path =
+                  ast_context->GetFrameworkSearchPathAtIndex(fsi);
+              swift_ast_sp->AddFrameworkSearchPath(search_path);
+            }
 
-                std::string clang_argument;
-                for (size_t osi = 0, ose = ast_context->GetNumClangArguments();
-                     osi < ose; ++osi) {
-                  // Join multi-arg -D and -U options for uniquing.
-                  clang_argument += ast_context->GetClangArgumentAtIndex(osi);
-                  if (clang_argument == "-D" || clang_argument == "-U")
-                    continue;
+            std::string clang_argument;
+            for (size_t osi = 0, ose = ast_context->GetNumClangArguments();
+                 osi < ose; ++osi) {
+              // Join multi-arg -D and -U options for uniquing.
+              clang_argument += ast_context->GetClangArgumentAtIndex(osi);
+              if (clang_argument == "-D" || clang_argument == "-U")
+                continue;
 
-                  // Enable uniquing for -D and -U options.
-                  bool force = true;
-                  if (clang_argument.size() >= 2 && clang_argument[0] == '-' &&
-                      (clang_argument[1] == 'D' || clang_argument[1] == 'U'))
-                    force = false;
+              // Enable uniquing for -D and -U options.
+              bool force = true;
+              if (clang_argument.size() >= 2 && clang_argument[0] == '-' &&
+                  (clang_argument[1] == 'D' || clang_argument[1] == 'U'))
+                force = false;
 
-                  swift_ast_sp->AddClangArgument(clang_argument, force);
-                  clang_argument.clear();
-                }
-              }
-
-              swift_ast_sp->RegisterSectionModules(*module_sp, module_names);
+              swift_ast_sp->AddClangArgument(clang_argument, force);
+              clang_argument.clear();
             }
           }
+
+          swift_ast_sp->RegisterSectionModules(*module_sp, module_names);
         }
       };
 
