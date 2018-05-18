@@ -26,6 +26,21 @@ _CLC_DEF _CLC_OVERLOAD double fmin(double x, double y)
 _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, fmin, double, double)
 
 #endif
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_DEF _CLC_OVERLOAD half fmin(half x, half y)
+{
+   if (isnan(x))
+      return y;
+   if (isnan(y))
+      return x;
+   return (y < x) ? y : x;
+}
+_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, fmin, half, half)
+
+#endif
 
 #define __CLC_BODY <../../../generic/lib/math/fmin.inc>
 #include <clc/math/gentype.inc>
