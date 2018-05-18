@@ -703,11 +703,6 @@ private:
   Instruction *FoldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *FoldPHIArgZextsIntoPHI(PHINode &PN);
 
-  /// If an integer typed PHI has only one use which is an IntToPtr operation,
-  /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
-  /// insert a new pointer typed PHI and replace the original one.
-  Instruction *FoldIntegerTypedPHI(PHINode &PN);
-
   /// Helper function for FoldPHIArgXIntoPHI() to set debug location for the
   /// folded operation.
   void PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN);
