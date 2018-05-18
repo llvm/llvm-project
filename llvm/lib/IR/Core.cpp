@@ -359,11 +359,9 @@ LLVMContextRef LLVMGetTypeContext(LLVMTypeRef Ty) {
   return wrap(&unwrap(Ty)->getContext());
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void LLVMDumpType(LLVMTypeRef Ty) {
-  return unwrap(Ty)->dump();
+void LLVMDumpType(LLVMTypeRef Ty) {
+  return unwrap(Ty)->print(errs(), /*IsForDebug=*/true);
 }
-#endif
 
 char *LLVMPrintTypeToString(LLVMTypeRef Ty) {
   std::string buf;
@@ -658,7 +656,7 @@ void LLVMSetValueName(LLVMValueRef Val, const char *Name) {
   unwrap(Val)->setName(Name);
 }
 
-LLVM_DUMP_METHOD void LLVMDumpValue(LLVMValueRef Val) {
+void LLVMDumpValue(LLVMValueRef Val) {
   unwrap(Val)->print(errs(), /*IsForDebug=*/true);
 }
 

@@ -2119,13 +2119,13 @@ def INSL : I<0x6D, RawFrmDst, (outs), (ins dstidx32:$dst),
 
 // Flag instructions
 let SchedRW = [WriteALU] in {
-def CLC : I<0xF8, RawFrm, (outs), (ins), "clc", [], IIC_CLC>;
-def STC : I<0xF9, RawFrm, (outs), (ins), "stc", [], IIC_STC>;
+def CLC : I<0xF8, RawFrm, (outs), (ins), "clc", [], IIC_CLC_CMC_STC>;
+def STC : I<0xF9, RawFrm, (outs), (ins), "stc", [], IIC_CLC_CMC_STC>;
 def CLI : I<0xFA, RawFrm, (outs), (ins), "cli", [], IIC_CLI>;
 def STI : I<0xFB, RawFrm, (outs), (ins), "sti", [], IIC_STI>;
 def CLD : I<0xFC, RawFrm, (outs), (ins), "cld", [], IIC_CLD>;
 def STD : I<0xFD, RawFrm, (outs), (ins), "std", [], IIC_STD>;
-def CMC : I<0xF5, RawFrm, (outs), (ins), "cmc", [], IIC_CMC>;
+def CMC : I<0xF5, RawFrm, (outs), (ins), "cmc", [], IIC_CLC_CMC_STC>;
 
 def CLTS : I<0x06, RawFrm, (outs), (ins), "clts", [], IIC_CLTS>, TB;
 }

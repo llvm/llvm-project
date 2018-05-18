@@ -2431,7 +2431,8 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     // Use APInt's rotate function.
     int64_t SH = MI.getOperand(2).getImm();
     int64_t MB = MI.getOperand(3).getImm();
-    APInt InVal(Opc == PPC::RLDICL ? 64 : 32, SExtImm, true);
+    APInt InVal((Opc == PPC::RLDICL || Opc == PPC::RLDICLo) ?
+                64 : 32, SExtImm, true);
     InVal = InVal.rotl(SH);
     uint64_t Mask = (1LLU << (63 - MB + 1)) - 1;
     InVal &= Mask;
@@ -2444,6 +2445,8 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
       Is64BitLI = Opc != PPC::RLDICL_32;
       NewImm = InVal.getSExtValue();
       SetCR = Opc == PPC::RLDICLo;
+      if (SetCR && (SExtImm & NewImm) != NewImm)
+        return false;
       break;
     }
     return false;
@@ -2471,6 +2474,8 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
       Is64BitLI = Opc == PPC::RLWINM8 || Opc == PPC::RLWINM8o;
       NewImm = InVal.getSExtValue();
       SetCR = Opc == PPC::RLWINMo || Opc == PPC::RLWINM8o;
+      if (SetCR && (SExtImm & NewImm) != NewImm)
+        return false;
       break;
     }
     return false;

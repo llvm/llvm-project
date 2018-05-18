@@ -240,13 +240,32 @@ let isCodeGenOnly = 1 in {
   def BGTZ64 : CBranchZero<"bgtz", brtarget, setgt, GPR64Opnd>, BGEZ_FM<7, 0>;
   def BLEZ64 : CBranchZero<"blez", brtarget, setle, GPR64Opnd>, BGEZ_FM<6, 0>;
   def BLTZ64 : CBranchZero<"bltz", brtarget, setlt, GPR64Opnd>, BGEZ_FM<1, 0>;
-  def JALR64Pseudo : JumpLinkRegPseudo<GPR64Opnd, JALR, RA, GPR32Opnd>;
+  let AdditionalPredicates = [NoIndirectJumpGuards] in
+    def JALR64Pseudo : JumpLinkRegPseudo<GPR64Opnd, JALR, RA, GPR32Opnd>;
+}
+let AdditionalPredicates = [NotInMicroMips],
+    DecoderNamespace = "Mips64" in {
+  def JR_HB64 : JR_HB_DESC<GPR64Opnd>, JR_HB_ENC, ISA_MIPS32_NOT_32R6_64R6;
+  def JALR_HB64 : JALR_HB_DESC<GPR64Opnd>, JALR_HB_ENC, ISA_MIPS32R2;
+}
+def PseudoReturn64 : PseudoReturnBase<GPR64Opnd>;
+
+let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
+                            NoIndirectJumpGuards] in {
+  def TAILCALLREG64 : TailCallReg<JR64, GPR64Opnd>, ISA_MIPS3_NOT_32R6_64R6,
+                      PTR_64;
+  def PseudoIndirectBranch64 : PseudoIndirectBranchBase<JR64, GPR64Opnd>,
+                               ISA_MIPS3_NOT_32R6_64R6;
 }
 
-def TAILCALLREG64 : TailCallReg<GPR64Opnd>;
-
-def PseudoReturn64 : PseudoReturnBase<GPR64Opnd>;
-def PseudoIndirectBranch64 : PseudoIndirectBranchBase<GPR64Opnd>;
+let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
+                            UseIndirectJumpsHazard] in {
+  def TAILCALLREGHB64 : TailCallReg<JR_HB64, GPR64Opnd>,
+                        ISA_MIPS32R2_NOT_32R6_64R6, PTR_64;
+  def PseudoIndirectHazardBranch64 : PseudoIndirectBranchBase<JR_HB64,
+                                                              GPR64Opnd>,
+                                     ISA_MIPS32R2_NOT_32R6_64R6;
+}
 
 /// Multiply and Divide Instructions.
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -535,6 +554,10 @@ def DMFC2 : MFC3OP<"dmfc2", GPR64Opnd, COP2Opnd, II_DMFC2>, MFC3OP_FM<0x12, 1>,
 def DMTC2 : MTC3OP<"dmtc2", COP2Opnd, GPR64Opnd, II_DMTC2>, MFC3OP_FM<0x12, 5>,
             ISA_MIPS3;
 }
+
+
+let AdditionalPredicates = [UseIndirectJumpsHazard] in
+  def JALRHB64Pseudo : JumpLinkRegPseudo<GPR64Opnd, JALR_HB64, RA_64>;
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
@@ -843,7 +866,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"dext $rt, $rs, $pos, $size",
                       (DEXTU GPR64Opnd:$rt, GPR64Opnd:$rs, uimm5_plus32:$pos,
                              uimm5_plus1:$size), 0>, ISA_MIPS64R2;
-
+  def : MipsInstAlias<"jalr.hb $rs", (JALR_HB64 RA_64, GPR64Opnd:$rs), 1>,
+        ISA_MIPS64;
 // Two operand (implicit 0 selector) versions:
   def : MipsInstAlias<"dmtc0 $rt, $rd",
                       (DMTC0 COP0Opnd:$rd, GPR64Opnd:$rt, 0), 0>;

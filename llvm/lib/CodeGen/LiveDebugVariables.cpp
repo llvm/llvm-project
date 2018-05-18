@@ -557,8 +557,11 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
       getUserValue(Var, Expr, MI.getDebugLoc());
   if (!Discard)
     UV->addDef(Idx, MI.getOperand(0), IsIndirect);
-  else
-    UV->addDef(Idx, MachineOperand::CreateReg(0U, RegState::Debug), false);
+  else {
+    MachineOperand MO = MachineOperand::CreateReg(0U, false);
+    MO.setIsDebug();
+    UV->addDef(Idx, MO, false);
+  }
   return true;
 }
 
