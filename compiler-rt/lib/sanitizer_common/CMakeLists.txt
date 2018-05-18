@@ -30,6 +30,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_procmaps_linux.cc
   sanitizer_procmaps_mac.cc
   sanitizer_procmaps_solaris.cc
+  sanitizer_rtems.cc
   sanitizer_solaris.cc
   sanitizer_stoptheworld_mac.cc
   sanitizer_suppressions.cc
@@ -140,6 +141,7 @@ set(SANITIZER_HEADERS
   sanitizer_procmaps.h
   sanitizer_quarantine.h
   sanitizer_report_decorator.h
+  sanitizer_rtems.h
   sanitizer_stackdepot.h
   sanitizer_stackdepotbase.h
   sanitizer_stacktrace.h

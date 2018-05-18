@@ -70,6 +70,10 @@ static bool CanProveNotTakenFirstIteration(BasicBlock *ExitBlock,
   auto *BI = dyn_cast<BranchInst>(CondExitBlock->getTerminator());
   if (!BI || !BI->isConditional())
     return false;
+  // If condition is constant and false leads to ExitBlock then we always
+  // execute the true branch.
+  if (auto *Cond = dyn_cast<ConstantInt>(BI->getCondition()))
+    return BI->getSuccessor(Cond->getZExtValue() ? 1 : 0) == ExitBlock;
   auto *Cond = dyn_cast<CmpInst>(BI->getCondition());
   if (!Cond)
     return false;

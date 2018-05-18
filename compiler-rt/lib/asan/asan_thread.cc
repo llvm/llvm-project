@@ -236,9 +236,10 @@ void AsanThread::Init(const InitOptions *options) {
           &local);
 }
 
-// Fuchsia doesn't use ThreadStart.
-// asan_fuchsia.c defines CreateMainThread and SetThreadStackAndTls.
-#if !SANITIZER_FUCHSIA
+// Fuchsia and RTEMS don't use ThreadStart.
+// asan_fuchsia.c/asan_rtems.c define CreateMainThread and
+// SetThreadStackAndTls.
+#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
 
 thread_return_t AsanThread::ThreadStart(
     tid_t os_id, atomic_uintptr_t *signal_thread_is_registered) {
@@ -298,7 +299,7 @@ void AsanThread::SetThreadStackAndTls(const InitOptions *options) {
   CHECK(AddrIsInStack((uptr)&local));
 }
 
-#endif  // !SANITIZER_FUCHSIA
+#endif  // !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
 
 void AsanThread::ClearShadowForThreadStackAndTLS() {
   PoisonShadow(stack_bottom_, stack_top_ - stack_bottom_, 0);

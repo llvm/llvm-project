@@ -117,7 +117,7 @@ void ReportMmapWriteExec(int prot) {
 #endif
 }
 
-#if !SANITIZER_FUCHSIA && !SANITIZER_GO
+#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS && !SANITIZER_GO
 void StartReportDeadlySignal() {
   // Write the first message using fd=2, just in case.
   // It may actually fail to write in case stderr is closed.

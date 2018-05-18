@@ -200,7 +200,7 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
 
   if (Name.empty() || Name[0] != '.') return K;
 
-  // Some lame default implementation based on some magic section names.
+  // Default implementation based on some magic section names.
   if (Name == ".bss" ||
       Name.startswith(".bss.") ||
       Name.startswith(".gnu.linkonce.b.") ||

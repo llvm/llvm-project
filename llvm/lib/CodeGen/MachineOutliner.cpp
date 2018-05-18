@@ -210,17 +210,22 @@ public:
     return getOccurrenceCount();
   }
 
-  /// Return the number of instructions it would take to outline this
+  /// Return the number of bytes it would take to outline this
   /// function.
   unsigned getOutliningCost() {
-    return (OccurrenceCount * MInfo.CallOverhead) + Sequence.size() +
+    return (OccurrenceCount * MInfo.CallOverhead) + MInfo.SequenceSize +
            MInfo.FrameOverhead;
+  }
+
+  /// Return the size in bytes of the unoutlined sequences.
+  unsigned getNotOutlinedCost() {
+    return OccurrenceCount * MInfo.SequenceSize;
   }
 
   /// Return the number of instructions that would be saved by outlining
   /// this function.
   unsigned getBenefit() {
-    unsigned NotOutlinedCost = OccurrenceCount * Sequence.size();
+    unsigned NotOutlinedCost = getNotOutlinedCost();
     unsigned OutlinedCost = getOutliningCost();
     return (NotOutlinedCost < OutlinedCost) ? 0
                                             : NotOutlinedCost - OutlinedCost;
@@ -1054,10 +1059,10 @@ unsigned MachineOutliner::findCandidates(
         R << "Did not outline " << NV("Length", StringLen) << " instructions"
           << " from " << NV("NumOccurrences", RepeatedSequenceLocs.size())
           << " locations."
-          << " Instructions from outlining all occurrences ("
+          << " Bytes from outlining all occurrences ("
           << NV("OutliningCost", OF.getOutliningCost()) << ")"
-          << " >= Unoutlined instruction count ("
-          << NV("NotOutliningCost", StringLen * OF.getOccurrenceCount()) << ")"
+          << " >= Unoutlined instruction bytes ("
+          << NV("NotOutliningCost", OF.getNotOutlinedCost()) << ")"
           << " (Also found at: ";
 
         // Tell the user the other places the candidate was found.
@@ -1378,7 +1383,7 @@ bool MachineOutliner::outline(
       MachineOptimizationRemark R(DEBUG_TYPE, "OutlinedFunction",
                                   MBB->findDebugLoc(MBB->begin()), MBB);
       R << "Saved " << NV("OutliningBenefit", OF.getBenefit())
-        << " instructions by "
+        << " bytes by "
         << "outlining " << NV("Length", OF.Sequence.size()) << " instructions "
         << "from " << NV("NumOccurrences", OF.getOccurrenceCount())
         << " locations. "

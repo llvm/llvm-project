@@ -99,7 +99,8 @@ public:
   virtual bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
                                             uint64_t Value,
                                             const MCRelaxableFragment *DF,
-                                            const MCAsmLayout &Layout) const;
+                                            const MCAsmLayout &Layout,
+                                            const bool WasForced) const;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   virtual bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,

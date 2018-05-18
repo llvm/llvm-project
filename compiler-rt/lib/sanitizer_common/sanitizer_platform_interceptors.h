@@ -28,7 +28,7 @@
 # define SI_WINDOWS 1
 #endif
 
-#if (SI_POSIX != 0) == (SI_WINDOWS != 0) && !SANITIZER_FUCHSIA
+#if SI_WINDOWS && SI_POSIX
 # error "Windows is not POSIX!"
 #endif
 

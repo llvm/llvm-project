@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -DUSE_64 -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +clzero -target-feature +ibt -target-feature +shstk -target-feature +wbnoinvd -target-feature +cldemote -emit-llvm -o %t %s
-// RUN: %clang_cc1 -DUSE_ALL -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +ibt -target-feature +shstk -target-feature +clzero -target-feature +wbnoinvd -target-feature +cldemote -fsyntax-only -o %t %s
+// RUN: %clang_cc1 -DUSE_64 -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +clzero -target-feature +shstk -target-feature +wbnoinvd -target-feature +cldemote -emit-llvm -o %t %s
+// RUN: %clang_cc1 -DUSE_ALL -triple x86_64-unknown-unknown -target-feature +fxsr -target-feature +avx -target-feature +xsaveopt -target-feature +xsaves -target-feature +xsavec -target-feature +mwaitx -target-feature +shstk -target-feature +clzero -target-feature +wbnoinvd -target-feature +cldemote -fsyntax-only -o %t %s
 
 #ifdef USE_ALL
 #define USE_3DNOW

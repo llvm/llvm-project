@@ -2525,14 +2525,14 @@ bool AppleObjCRuntimeV2::GetCFBooleanValuesIfNeeded() {
   if (m_CFBoolean_values)
     return true;
 
-  static ConstString g_kCFBooleanFalse("kCFBooleanFalse");
-  static ConstString g_kCFBooleanTrue("kCFBooleanTrue");
+  static ConstString g_kCFBooleanFalse("__kCFBooleanFalse");
+  static ConstString g_kCFBooleanTrue("__kCFBooleanTrue");
 
   std::function<lldb::addr_t(ConstString)> get_symbol =
       [this](ConstString sym) -> lldb::addr_t {
     SymbolContextList sc_list;
     if (GetProcess()->GetTarget().GetImages().FindSymbolsWithNameAndType(
-            g_kCFBooleanFalse, lldb::eSymbolTypeData, sc_list) == 1) {
+            sym, lldb::eSymbolTypeData, sc_list) == 1) {
       SymbolContext sc;
       sc_list.GetContextAtIndex(0, sc);
       if (sc.symbol)
