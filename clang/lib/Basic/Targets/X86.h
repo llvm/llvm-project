@@ -81,7 +81,6 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasSHA = false;
   bool HasMPX = false;
   bool HasSHSTK = false;
-  bool HasIBT = false;
   bool HasSGX = false;
   bool HasCX16 = false;
   bool HasFXSR = false;
@@ -171,10 +170,15 @@ public:
   bool validateInputSize(StringRef Constraint, unsigned Size) const override;
 
   virtual bool
-  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override;
+  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
+    return true;
+  };
 
   virtual bool
-  checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const override;
+  checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const override {
+    return true;
+  };
+
 
   virtual bool validateOperandSize(StringRef Constraint, unsigned Size) const;
 

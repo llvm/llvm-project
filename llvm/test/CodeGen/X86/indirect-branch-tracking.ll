@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+ibt < %s | FileCheck %s --check-prefix=ALL --check-prefix=X86_64
-; RUN: llc -mtriple=i386-unknown-unknown -mattr=+ibt < %s | FileCheck %s --check-prefix=ALL --check-prefix=X86
-; RUN: llc -mtriple i386-windows-gnu -mattr=+ibt -exception-model sjlj < %s | FileCheck %s --check-prefix=SJLJ
+; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s --check-prefix=ALL --check-prefix=X86_64
+; RUN: llc -mtriple=i386-unknown-unknown < %s | FileCheck %s --check-prefix=ALL --check-prefix=X86
+; RUN: llc -mtriple i386-windows-gnu -exception-model sjlj < %s | FileCheck %s --check-prefix=SJLJ
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Test1

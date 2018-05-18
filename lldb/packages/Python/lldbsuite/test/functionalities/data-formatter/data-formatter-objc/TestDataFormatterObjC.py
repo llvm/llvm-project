@@ -186,16 +186,18 @@ class ObjCDataFormatterTestCase(TestBase):
 
     def nsnumber_data_formatter_commands(self):
         # Now enable AppKit and check we are displaying Cocoa classes correctly
-        self.expect('frame variable num1 num2 num3 num5 num6 num7 num9',
+        self.expect('frame variable num1 num2 num3 num5 num6 num7 num8_Y num8_N num9',
                     substrs=['(NSNumber *) num1 = ', ' (int)5',
                              '(NSNumber *) num2 = ', ' (float)3.1',
                              '(NSNumber *) num3 = ', ' (double)3.14',
                              '(NSNumber *) num5 = ', ' (char)65',
                              '(NSNumber *) num6 = ', ' (long)255',
                              '(NSNumber *) num7 = ', '2000000',
+                             '(NSNumber *) num8_Y = ', 'YES',
+                             '(NSNumber *) num8_N = ', 'NO',
                              '(NSNumber *) num9 = ', ' (short)-31616'])
 
-        
+
         self.runCmd('frame variable num4', check=True)
         output = self.res.GetOutput()
         i128_handled_correctly = False

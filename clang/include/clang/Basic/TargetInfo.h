@@ -1075,15 +1075,11 @@ public:
 
   /// Check if the target supports CFProtection branch.
   virtual bool
-  checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const {
-    return false;
-  }
+  checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const;
 
   /// Check if the target supports CFProtection branch.
   virtual bool
-  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const {
-    return false;
-  }
+  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const;
 
   /// Whether target allows to overalign ABI-specified preferred alignment
   virtual bool allowsLargerPreferedTypeAlignment() const { return true; }
