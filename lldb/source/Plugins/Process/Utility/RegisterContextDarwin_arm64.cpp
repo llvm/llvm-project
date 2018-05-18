@@ -8,14 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__APPLE__)
-
 #include "RegisterContextDarwin_arm64.h"
-
-// C Includes
-#include <mach/mach_types.h>
-#include <mach/thread_act.h>
-#include <sys/sysctl.h>
+#include "RegisterContextDarwinConstants.h"
 
 // C++ Includes
 // Other libraries and framework includes
@@ -1043,5 +1037,3 @@ bool RegisterContextDarwin_arm64::ClearHardwareWatchpoint(uint32_t hw_index) {
   }
   return false;
 }
-
-#endif
