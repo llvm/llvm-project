@@ -102,15 +102,15 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   EXPECT_LT(Forbidden.evaluate(), Default.evaluate());
 
   SymbolRelevanceSignals PoorNameMatch;
-  PoorNameMatch.NameMatch = 0.2;
+  PoorNameMatch.NameMatch = 0.2f;
   EXPECT_LT(PoorNameMatch.evaluate(), Default.evaluate());
 }
 
 TEST(QualityTests, SortText) {
-  EXPECT_LT(sortText(std::numeric_limits<float>::infinity()), sortText(1000.2));
-  EXPECT_LT(sortText(1000.2), sortText(1));
-  EXPECT_LT(sortText(1), sortText(0.3));
-  EXPECT_LT(sortText(0.3), sortText(0));
+  EXPECT_LT(sortText(std::numeric_limits<float>::infinity()), sortText(1000.2f));
+  EXPECT_LT(sortText(1000.2f), sortText(1));
+  EXPECT_LT(sortText(1), sortText(0.3f));
+  EXPECT_LT(sortText(0.3f), sortText(0));
   EXPECT_LT(sortText(0), sortText(-10));
   EXPECT_LT(sortText(-10), sortText(-std::numeric_limits<float>::infinity()));
 
