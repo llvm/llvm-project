@@ -33,6 +33,7 @@
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/CleanUp.h"
 
+#include "llvm/Support/raw_ostream.h"
 #include "swift/Basic/Version.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/IDE/REPLCodeCompletion.h"
@@ -115,18 +116,29 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
     return nullptr;
   }
 
-  const char *target_triple = nullptr;
+  llvm::Triple target_triple = HostInfo::GetArchitecture().GetTriple();
+  llvm::SmallString<16> os_name;
+  llvm::raw_svector_ostream os(os_name);
+  // Use the most generic sub-architecture.
+  target_triple.setArch(target_triple.getArch());
+  // Override the stub's minimum deployment target to the host os version.
+  uint32_t major, minor, patch;
+  HostInfo::GetOSVersion(major, minor, patch);
+  os << llvm::Triple::getOSTypeName(target_triple.getOS());
+  os << major << '.' << minor << '.' << patch;
+  target_triple.setOSName(os.str());
+
   bool add_dependent_modules = true;
   TargetSP target_sp;
   err = debugger.GetTargetList().CreateTarget(
-      debugger, repl_exe_path.c_str(), target_triple, add_dependent_modules,
-      nullptr, target_sp);
+      debugger, repl_exe_path.c_str(), target_triple.getTriple(),
+      add_dependent_modules, nullptr, target_sp);
   if (!err.Success()) {
     err.SetErrorStringWithFormat("failed to create REPL target: %s",
                                  err.AsCString());
     return nullptr;
   }
-
+  
   // Limit the breakpoint to our executable module
   ModuleSP exe_module_sp(target_sp->GetExecutableModule());
   if (!exe_module_sp) {
