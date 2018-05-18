@@ -187,6 +187,15 @@ bool runToolOnCodeWithArgs(
         std::make_shared<PCHContainerOperations>(),
     const FileContentMappings &VirtualMappedFiles = FileContentMappings());
 
+// Similar to the overload except this takes a VFS.
+bool runToolOnCodeWithArgs(
+    FrontendAction *ToolAction, const Twine &Code,
+    llvm::IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+    const std::vector<std::string> &Args, const Twine &FileName = "input.cc",
+    const Twine &ToolName = "clang-tool",
+    std::shared_ptr<PCHContainerOperations> PCHContainerOps =
+        std::make_shared<PCHContainerOperations>());
+
 /// Builds an AST for 'Code'.
 ///
 /// \param Code C++ code.

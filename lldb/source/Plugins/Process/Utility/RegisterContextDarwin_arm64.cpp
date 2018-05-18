@@ -33,7 +33,7 @@
 #endif
 
 // Project includes
-#include "ARM64_DWARF_Registers.h"
+#include "Utility/ARM64_DWARF_Registers.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -293,8 +293,9 @@ int RegisterContextDarwin_arm64::WriteRegisterSet(uint32_t set) {
 void RegisterContextDarwin_arm64::LogDBGRegisters(Log *log, const DBG &dbg) {
   if (log) {
     for (uint32_t i = 0; i < 16; i++)
-      log->Printf("BVR%-2u/BCR%-2u = { 0x%8.8llx, 0x%8.8llx } WVR%-2u/WCR%-2u "
-                  "= { 0x%8.8llx, 0x%8.8llx }",
+      log->Printf("BVR%-2u/BCR%-2u = { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64
+                  " } WVR%-2u/WCR%-2u "
+                  "= { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64 " }",
                   i, i, dbg.bvr[i], dbg.bcr[i], i, i, dbg.wvr[i], dbg.wcr[i]);
   }
 }

@@ -792,6 +792,10 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
                "      a = 42;\n"
                "    }];");
 
+  // Space between cast rparen and selector name component.
+  verifyFormat("[((Foo *)foo) bar];");
+  verifyFormat("[((Foo *)foo) bar:1 blech:2];");
+
   // Message receiver taking multiple lines.
   Style.ColumnLimit = 20;
   // Non-corner case.
