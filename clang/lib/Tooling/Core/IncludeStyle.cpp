@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Inclusions/IncludeStyle.h"
+#include "clang/Tooling/Core/IncludeStyle.h"
+
 
 using clang::tooling::IncludeStyle;
 

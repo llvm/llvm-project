@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Inclusions/HeaderIncludes.h"
+#include "clang/Tooling/Core/HeaderIncludes.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 

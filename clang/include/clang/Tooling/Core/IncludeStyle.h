@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_INCLUSIONS_INCLUDESTYLE_H
-#define LLVM_CLANG_TOOLING_INCLUSIONS_INCLUDESTYLE_H
+#ifndef LLVM_CLANG_TOOLING_CORE_INCLUDESTYLE_H
+#define LLVM_CLANG_TOOLING_CORE_INCLUDESTYLE_H
 
 #include "llvm/Support/YAMLTraits.h"
 #include <string>
@@ -130,4 +130,4 @@ struct ScalarEnumerationTraits<
 } // namespace yaml
 } // namespace llvm
 
-#endif // LLVM_CLANG_TOOLING_INCLUSIONS_INCLUDESTYLE_H
+#endif // LLVM_CLANG_TOOLING_CORE_INCLUDESTYLE_H
