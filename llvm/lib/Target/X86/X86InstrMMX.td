@@ -170,7 +170,7 @@ def MMX_MOVD64rm : MMXI<0x6E, MRMSrcMem, (outs VR64:$dst), (ins i32mem:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(set VR64:$dst,
                         (x86mmx (scalar_to_vector (loadi32 addr:$src))))]>,
-                        Sched<[WriteLoad]>;
+                        Sched<[WriteVecLoad]>;
 
 let Predicates = [HasMMX] in {
   let AddedComplexity = 15 in
@@ -187,7 +187,7 @@ let Predicates = [HasMMX] in {
 let mayStore = 1 in
 def MMX_MOVD64mr : MMXI<0x7E, MRMDestMem, (outs), (ins i32mem:$dst, VR64:$src),
                         "movd\t{$src, $dst|$dst, $src}", []>,
-                   Sched<[WriteStore]>;
+                   Sched<[WriteVecStore]>;
 
 def MMX_MOVD64grr : MMXI<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR64:$src),
                          "movd\t{$src, $dst|$dst, $src}",

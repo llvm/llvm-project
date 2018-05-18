@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+ibt -x86-indirect-branch-tracking < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -x86-indirect-branch-tracking < %s | FileCheck %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; This test verify the handling of ''nocf_check'' attribute by the backend. ;;

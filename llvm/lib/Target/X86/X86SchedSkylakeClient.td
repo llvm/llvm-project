@@ -602,13 +602,7 @@ def SKLWriteResGroup11 : SchedWriteRes<[SKLPort4,SKLPort237]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[SKLWriteResGroup11], (instregex "FBSTPm",
-                                             "MMX_MOVD64mr",
                                              "ST_FP(32|64|80)m",
-                                             "(V?)MOV(H|L)(PD|PS)mr",
-                                             "(V?)MOVPDI2DImr",
-                                             "(V?)MOVPQI2QImr",
-                                             "(V?)MOVPQIto64mr",
-                                             "(V?)MOV(SD|SS)mr",
                                              "VMPTRSTm")>;
 
 def SKLWriteResGroup12 : SchedWriteRes<[SKLPort0]> {

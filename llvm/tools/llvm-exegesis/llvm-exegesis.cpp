@@ -49,7 +49,7 @@ static llvm::cl::opt<std::string>
 
 enum class BenchmarkModeE { Latency, Uops, Analysis };
 static llvm::cl::opt<BenchmarkModeE> BenchmarkMode(
-    "benchmark-mode", llvm::cl::desc("the benchmark mode to run"),
+    "mode", llvm::cl::desc("the mode to run"),
     llvm::cl::values(
         clEnumValN(BenchmarkModeE::Latency, "latency", "Instruction Latency"),
         clEnumValN(BenchmarkModeE::Uops, "uops", "Uop Decomposition"),

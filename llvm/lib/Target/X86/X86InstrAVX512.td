@@ -3409,26 +3409,26 @@ defm VMOVDQU64 : avx512_load_vl<0x6F, "vmovdqu64", avx512vl_i64_info, HasAVX512,
 // to load or store from a ZMM register instead. These are converted in
 // expandPostRAPseudos.
 let isReMaterializable = 1, canFoldAsLoad = 1,
-    isPseudo = 1, SchedRW = [WriteLoad], mayLoad = 1, hasSideEffects = 0 in {
+    isPseudo = 1, mayLoad = 1, hasSideEffects = 0 in {
 def VMOVAPSZ128rm_NOVLX : I<0, Pseudo, (outs VR128X:$dst), (ins f128mem:$src),
-                            "", []>;
+                            "", []>, Sched<[WriteFLoadX]>;
 def VMOVAPSZ256rm_NOVLX : I<0, Pseudo, (outs VR256X:$dst), (ins f256mem:$src),
-                            "", []>;
+                            "", []>, Sched<[WriteFLoadY]>;
 def VMOVUPSZ128rm_NOVLX : I<0, Pseudo, (outs VR128X:$dst), (ins f128mem:$src),
-                            "", []>;
+                            "", []>, Sched<[WriteFLoadX]>;
 def VMOVUPSZ256rm_NOVLX : I<0, Pseudo, (outs VR256X:$dst), (ins f256mem:$src),
-                            "", []>;
+                            "", []>, Sched<[WriteFLoadY]>;
 }
 
-let isPseudo = 1, SchedRW = [WriteStore], mayStore = 1, hasSideEffects = 0 in {
+let isPseudo = 1, mayStore = 1, hasSideEffects = 0 in {
 def VMOVAPSZ128mr_NOVLX : I<0, Pseudo, (outs), (ins f128mem:$dst, VR128X:$src),
-                            "", []>;
+                            "", []>, Sched<[WriteFStoreX]>;
 def VMOVAPSZ256mr_NOVLX : I<0, Pseudo, (outs), (ins f256mem:$dst, VR256X:$src),
-                            "", []>;
+                            "", []>, Sched<[WriteFStoreY]>;
 def VMOVUPSZ128mr_NOVLX : I<0, Pseudo, (outs), (ins f128mem:$dst, VR128X:$src),
-                            "", []>;
+                            "", []>, Sched<[WriteFStoreX]>;
 def VMOVUPSZ256mr_NOVLX : I<0, Pseudo, (outs), (ins f256mem:$dst, VR256X:$src),
-                            "", []>;
+                            "", []>, Sched<[WriteFStoreY]>;
 }
 
 def : Pat<(v8i64 (vselect VK8WM:$mask, (bc_v8i64 (v16i32 immAllZerosV)),
@@ -3622,7 +3622,7 @@ def VMOVDI2PDIZrm : AVX512BI<0x6E, MRMSrcMem, (outs VR128X:$dst), (ins i32mem:$s
                       "vmovd\t{$src, $dst|$dst, $src}",
                       [(set VR128X:$dst,
                         (v4i32 (scalar_to_vector (loadi32 addr:$src))))]>,
-                      EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteLoad]>;
+                      EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteVecLoad]>;
 def VMOV64toPQIZrr : AVX512BI<0x6E, MRMSrcReg, (outs VR128X:$dst), (ins GR64:$src),
                       "vmovq\t{$src, $dst|$dst, $src}",
                         [(set VR128X:$dst,
@@ -3632,7 +3632,7 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayLoad = 1 in
 def VMOV64toPQIZrm : AVX512BI<0x6E, MRMSrcMem, (outs VR128X:$dst),
                       (ins i64mem:$src),
                       "vmovq\t{$src, $dst|$dst, $src}", []>,
-                      EVEX, VEX_W, EVEX_CD8<64, CD8VT1>, Sched<[WriteLoad]>;
+                      EVEX, VEX_W, EVEX_CD8<64, CD8VT1>, Sched<[WriteVecLoad]>;
 let isCodeGenOnly = 1 in {
 def VMOV64toSDZrr : AVX512BI<0x6E, MRMSrcReg, (outs FR64X:$dst), (ins GR64:$src),
                        "vmovq\t{$src, $dst|$dst, $src}",
@@ -3641,7 +3641,7 @@ def VMOV64toSDZrr : AVX512BI<0x6E, MRMSrcReg, (outs FR64X:$dst), (ins GR64:$src)
 def VMOV64toSDZrm : AVX512XSI<0x7E, MRMSrcMem, (outs FR64X:$dst), (ins i64mem:$src),
                       "vmovq\t{$src, $dst|$dst, $src}",
                       [(set FR64X:$dst, (bitconvert (loadi64 addr:$src)))]>,
-                      EVEX, VEX_W, EVEX_CD8<8, CD8VT8>, Sched<[WriteLoad]>;
+                      EVEX, VEX_W, EVEX_CD8<8, CD8VT8>, Sched<[WriteVecLoad]>;
 def VMOVSDto64Zrr : AVX512BI<0x7E, MRMDestReg, (outs GR64:$dst), (ins FR64X:$src),
                          "vmovq\t{$src, $dst|$dst, $src}",
                          [(set GR64:$dst, (bitconvert FR64X:$src))]>,
@@ -3649,7 +3649,7 @@ def VMOVSDto64Zrr : AVX512BI<0x7E, MRMDestReg, (outs GR64:$dst), (ins FR64X:$src
 def VMOVSDto64Zmr : AVX512BI<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, FR64X:$src),
                          "vmovq\t{$src, $dst|$dst, $src}",
                          [(store (i64 (bitconvert FR64X:$src)), addr:$dst)]>,
-                         EVEX, VEX_W, Sched<[WriteStore]>,
+                         EVEX, VEX_W, Sched<[WriteVecStore]>,
                          EVEX_CD8<64, CD8VT1>;
 }
 } // ExeDomain = SSEPackedInt
@@ -3665,7 +3665,7 @@ def VMOVDI2SSZrr  : AVX512BI<0x6E, MRMSrcReg, (outs FR32X:$dst), (ins GR32:$src)
 def VMOVDI2SSZrm  : AVX512BI<0x6E, MRMSrcMem, (outs FR32X:$dst), (ins i32mem:$src),
                       "vmovd\t{$src, $dst|$dst, $src}",
                       [(set FR32X:$dst, (bitconvert (loadi32 addr:$src)))]>,
-                      EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteLoad]>;
+                      EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteVecLoad]>;
 } // ExeDomain = SSEPackedInt, isCodeGenOnly = 1
 
 // Move doubleword from xmm register to r/m32
@@ -3681,7 +3681,7 @@ def VMOVPDI2DIZmr  : AVX512BI<0x7E, MRMDestMem, (outs),
                        "vmovd\t{$src, $dst|$dst, $src}",
                        [(store (i32 (extractelt (v4i32 VR128X:$src),
                                      (iPTR 0))), addr:$dst)]>,
-                       EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteStore]>;
+                       EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteVecStore]>;
 } // ExeDomain = SSEPackedInt
 
 // Move quadword from xmm1 register to r/m64
@@ -3697,7 +3697,7 @@ def VMOVPQIto64Zrr : I<0x7E, MRMDestReg, (outs GR64:$dst), (ins VR128X:$src),
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
 def VMOVPQIto64Zmr : I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128X:$src),
                       "vmovq\t{$src, $dst|$dst, $src}", []>, PD,
-                      EVEX, VEX_W, Sched<[WriteStore]>,
+                      EVEX, VEX_W, Sched<[WriteVecStore]>,
                       Requires<[HasAVX512, In64BitMode]>;
 
 def VMOVPQI2QIZmr : I<0xD6, MRMDestMem, (outs),
@@ -3706,7 +3706,7 @@ def VMOVPQI2QIZmr : I<0xD6, MRMDestMem, (outs),
                       [(store (extractelt (v2i64 VR128X:$src), (iPTR 0)),
                               addr:$dst)]>,
                       EVEX, PD, VEX_W, EVEX_CD8<64, CD8VT1>,
-                      Sched<[WriteStore]>, Requires<[HasAVX512, In64BitMode]>;
+                      Sched<[WriteVecStore]>, Requires<[HasAVX512, In64BitMode]>;
 
 let hasSideEffects = 0 in
 def VMOVPQI2QIZrr : AVX512BI<0xD6, MRMDestReg, (outs VR128X:$dst),
@@ -3727,7 +3727,7 @@ def VMOVSS2DIZmr  : AVX512BI<0x7E, MRMDestMem, (outs),
                       (ins i32mem:$dst, FR32X:$src),
                       "vmovd\t{$src, $dst|$dst, $src}",
                       [(store (i32 (bitconvert FR32X:$src)), addr:$dst)]>,
-                      EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteStore]>;
+                      EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteVecStore]>;
 } // ExeDomain = SSEPackedInt, isCodeGenOnly = 1
 
 // Move Quadword Int to Packed Quadword Int
@@ -3738,7 +3738,7 @@ def VMOVQI2PQIZrm : AVX512XSI<0x7E, MRMSrcMem, (outs VR128X:$dst),
                       "vmovq\t{$src, $dst|$dst, $src}",
                       [(set VR128X:$dst,
                         (v2i64 (scalar_to_vector (loadi64 addr:$src))))]>,
-                      EVEX, VEX_W, EVEX_CD8<8, CD8VT8>, Sched<[WriteLoad]>;
+                      EVEX, VEX_W, EVEX_CD8<8, CD8VT8>, Sched<[WriteVecLoad]>;
 } // ExeDomain = SSEPackedInt
 
 // Allow "vmovd" but print "vmovq".
@@ -3779,29 +3779,29 @@ multiclass avx512_move_scalar<string asm, SDNode OpNode,
   def rm : AVX512PI<0x10, MRMSrcMem, (outs _.FRC:$dst), (ins _.ScalarMemOp:$src),
              !strconcat(asm, "\t{$src, $dst|$dst, $src}"),
              [(set _.FRC:$dst, (_.ScalarLdFrag addr:$src))],
-             _.ExeDomain>, EVEX, Sched<[WriteLoad]>;
+             _.ExeDomain>, EVEX, Sched<[WriteFLoad]>;
   let mayLoad = 1, hasSideEffects = 0 in {
     let Constraints = "$src0 = $dst" in
     def rmk : AVX512PI<0x10, MRMSrcMem, (outs _.RC:$dst),
                (ins _.RC:$src0, _.KRCWM:$mask, _.ScalarMemOp:$src),
                !strconcat(asm, "\t{$src, $dst {${mask}}|",
                "$dst {${mask}}, $src}"),
-               [], _.ExeDomain>, EVEX, EVEX_K, Sched<[WriteLoad]>;
+               [], _.ExeDomain>, EVEX, EVEX_K, Sched<[WriteFLoad]>;
     def rmkz : AVX512PI<0x10, MRMSrcMem, (outs _.RC:$dst),
                (ins _.KRCWM:$mask, _.ScalarMemOp:$src),
                !strconcat(asm, "\t{$src, $dst {${mask}} {z}|",
                "$dst {${mask}} {z}, $src}"),
-               [], _.ExeDomain>, EVEX, EVEX_KZ, Sched<[WriteLoad]>;
+               [], _.ExeDomain>, EVEX, EVEX_KZ, Sched<[WriteFLoad]>;
   }
   def mr: AVX512PI<0x11, MRMDestMem, (outs), (ins _.ScalarMemOp:$dst, _.FRC:$src),
              !strconcat(asm, "\t{$src, $dst|$dst, $src}"),
              [(store _.FRC:$src, addr:$dst)],  _.ExeDomain>,
-             EVEX, Sched<[WriteStore]>;
+             EVEX, Sched<[WriteFStore]>;
   let mayStore = 1, hasSideEffects = 0 in
   def mrk: AVX512PI<0x11, MRMDestMem, (outs),
               (ins _.ScalarMemOp:$dst, VK1WM:$mask, _.FRC:$src),
               !strconcat(asm, "\t{$src, $dst {${mask}}|$dst {${mask}}, $src}"),
-              [], _.ExeDomain>, EVEX, EVEX_K, Sched<[WriteStore]>;
+              [], _.ExeDomain>, EVEX, EVEX_K, Sched<[WriteFStore]>;
 }
 
 defm VMOVSSZ : avx512_move_scalar<"vmovss", X86Movss, f32x_info>,
@@ -6253,7 +6253,7 @@ let Predicates = [HasAVX512] in {
           (VMOVLPDZ128rm VR128X:$src1, addr:$src2)>;
 }
 
-let SchedRW = [WriteStore] in {
+let SchedRW = [WriteFStore] in {
 def VMOVHPSZ128mr : AVX512PSI<0x17, MRMDestMem, (outs),
                        (ins f64mem:$dst, VR128X:$src),
                        "vmovhps\t{$src, $dst|$dst, $src}",

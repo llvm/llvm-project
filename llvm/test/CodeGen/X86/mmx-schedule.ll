@@ -953,7 +953,7 @@ define void @test_movq(i64 *%a0) {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movq (%rdi), %mm0 # sched: [5:1.00]
 ; BTVER2-NEXT:    paddd %mm0, %mm0 # sched: [1:0.50]
-; BTVER2-NEXT:    movq %mm0, (%rdi) # sched: [1:1.00]
+; BTVER2-NEXT:    movq %mm0, (%rdi) # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movq:

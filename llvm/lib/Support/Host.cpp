@@ -1264,8 +1264,6 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["movdiri"]         = HasLeaf7 && ((ECX >> 27) & 1);
   Features["movdir64b"]       = HasLeaf7 && ((ECX >> 28) & 1);
 
-  Features["ibt"] = HasLeaf7 && ((EDX >> 20) & 1);
-
   // There are two CPUID leafs which information associated with the pconfig
   // instruction:
   // EAX=0x7, ECX=0x0 indicates the availability of the instruction (via the 18th

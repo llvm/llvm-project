@@ -786,13 +786,7 @@ def HWWriteResGroup1 : SchedWriteRes<[HWPort4,HWPort237]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[HWWriteResGroup1], (instregex "FBSTPm",
-                                           "MMX_MOVD64mr",
                                            "ST_FP(32|64|80)m",
-                                           "(V?)MOV(H|L)(PD|PS)mr",
-                                           "(V?)MOVPDI2DImr",
-                                           "(V?)MOVPQI2QImr",
-                                           "(V?)MOVPQIto64mr",
-                                           "(V?)MOV(SD|SS)mr",
                                            "VMPTRSTm")>;
 
 def HWWriteResGroup2 : SchedWriteRes<[HWPort0]> {

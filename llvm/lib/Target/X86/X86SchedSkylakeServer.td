@@ -627,17 +627,7 @@ def SKXWriteResGroup11 : SchedWriteRes<[SKXPort4,SKXPort237]> {
 }
 def: InstRW<[SKXWriteResGroup11], (instregex "FBSTPm",
                                              "KMOV(B|D|Q|W)mk",
-                                             "MMX_MOVD64mr",
                                              "ST_FP(32|64|80)m",
-                                             "VMOV(H|L)(PD|PS)Z128mr(b?)",
-                                             "(V?)MOV(H|L)(PD|PS)mr",
-                                             "VMOVPDI2DIZmr(b?)",
-                                             "(V?)MOVPDI2DImr",
-                                             "VMOVPQI(2QI|to64)Zmr(b?)",
-                                             "(V?)MOVPQI2QImr",
-                                             "(V?)MOVPQIto64mr",
-                                             "VMOV(SD|SS)Zmr(b?)",
-                                             "(V?)MOV(SD|SS)mr",
                                              "VMPTRSTm")>;
 
 def SKXWriteResGroup12 : SchedWriteRes<[SKXPort0]> {

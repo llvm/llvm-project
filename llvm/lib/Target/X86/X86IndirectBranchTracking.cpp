@@ -89,10 +89,6 @@ bool X86IndirectBranchTrackingPass::addENDBR(MachineBasicBlock &MBB) const {
 bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
   const X86Subtarget &SubTarget = MF.getSubtarget<X86Subtarget>();
 
-  // Make sure that the target supports IBT instruction.
-  if (!SubTarget.hasIBT())
-    return false;
-
   // Check that the cf-protection-branch is enabled.
   Metadata *isCFProtectionSupported =
       MF.getMMI().getModule()->getModuleFlag("cf-protection-branch");

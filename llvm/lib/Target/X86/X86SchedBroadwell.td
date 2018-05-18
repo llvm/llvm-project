@@ -600,13 +600,7 @@ def BWWriteResGroup10 : SchedWriteRes<[BWPort4,BWPort237]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[BWWriteResGroup10], (instregex "FBSTPm",
-                                            "MMX_MOVD64mr",
-                                            "ST_FP(32|64|80)m",
-                                            "(V?)MOV(H|L)(PD|PS)mr",
-                                            "(V?)MOVPDI2DImr",
-                                            "(V?)MOVPQI2QImr",
-                                            "(V?)MOVPQIto64mr",
-                                            "(V?)MOV(SD|SS)mr")>;
+                                            "ST_FP(32|64|80)m")>;
 
 def BWWriteResGroup12 : SchedWriteRes<[BWPort01]> {
   let Latency = 2;
