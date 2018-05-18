@@ -1037,6 +1037,16 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
   return false;
 }
 
+/// Return whether this module contains any serialized Swift ASTs.
+bool HasSwiftModules(Module &module) {
+  SymbolVendor *sym_vendor = module.GetSymbolVendor();
+  if (!sym_vendor)
+    return false;
+
+  auto ast_file_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
+  return !ast_file_datas.empty();
+}
+
 void SwiftASTContext::RemapClangImporterOptions(
     const PathMappingList &path_map) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
@@ -1361,6 +1371,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   for (size_t mi = 0; mi != num_images; ++mi) {
     ModuleSP module_sp = target.GetImages().GetModuleAtIndex(mi);
 
+    // Skip images without a serialized Swift AST. This avoids
+    // spurious warning messages.
+    if (!HasSwiftModules(*module_sp))
+      continue;
+
     SwiftASTContext *module_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
         module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
 
@@ -1557,6 +1572,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
             }
           }
         }
+
+        // Skip images without a serialized Swift AST.
+        if (!HasSwiftModules(*module_sp))
+          return;
 
         SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
 
