@@ -24,10 +24,6 @@ namespace clang {
 namespace move {
 namespace {
 
-const char TestHeaderName[] = "foo.h";
-
-const char TestCCName[] = "foo.cc";
-
 const char TestHeader[] = "namespace a {\n"
                           "class C1; // test\n"
                           "template <typename T> class C2;\n"
@@ -196,6 +192,15 @@ const char ExpectedNewCC[] = "namespace a {\n"
                              "} // namespace b\n"
                              "} // namespace a\n";
 
+#ifdef _WIN32
+const char WorkingDir[] = "C:\\test";
+#else
+const char WorkingDir[] = "/test";
+#endif
+
+const char TestHeaderName[] = "foo.h";
+const char TestCCName[] = "foo.cc";
+
 std::map<std::string, std::string>
 runClangMoveOnCode(const move::MoveDefinitionSpec &Spec,
                    const char *const Header = TestHeader,
@@ -203,9 +208,9 @@ runClangMoveOnCode(const move::MoveDefinitionSpec &Spec,
                    DeclarationReporter *const Reporter = nullptr) {
   clang::RewriterTestContext Context;
 
+  Context.InMemoryFileSystem->setCurrentWorkingDirectory(WorkingDir);
+
   std::map<llvm::StringRef, clang::FileID> FileToFileID;
-  std::vector<std::pair<std::string, std::string>> FileToSourceText = {
-      {TestHeaderName, Header}, {TestCCName, CC}};
 
   auto CreateFiles = [&Context, &FileToFileID](llvm::StringRef Name,
                                                llvm::StringRef Code) {
@@ -215,25 +220,21 @@ runClangMoveOnCode(const move::MoveDefinitionSpec &Spec,
   };
   CreateFiles(Spec.NewCC, "");
   CreateFiles(Spec.NewHeader, "");
-  CreateFiles(Spec.OldHeader, Header);
-  CreateFiles(Spec.OldCC, CC);
+  CreateFiles(TestHeaderName, Header);
+  CreateFiles(TestCCName, CC);
 
   std::map<std::string, tooling::Replacements> FileToReplacements;
-  llvm::SmallString<128> InitialDirectory;
-  std::error_code EC = llvm::sys::fs::current_path(InitialDirectory);
-  assert(!EC);
-  (void)EC;
-  ClangMoveContext MoveContext = {Spec, FileToReplacements,
-                                  InitialDirectory.str(), "LLVM",
+  ClangMoveContext MoveContext = {Spec, FileToReplacements, WorkingDir, "LLVM",
                                   Reporter != nullptr};
 
   auto Factory = llvm::make_unique<clang::move::ClangMoveActionFactory>(
       &MoveContext, Reporter);
 
+ // std::string IncludeArg = Twine("-I" + WorkingDir;
   tooling::runToolOnCodeWithArgs(
-      Factory->create(), CC, {"-std=c++11", "-fparse-all-comments"},
-      TestCCName, "clang-move", std::make_shared<PCHContainerOperations>(),
-      FileToSourceText);
+      Factory->create(), CC, Context.InMemoryFileSystem,
+      {"-std=c++11", "-fparse-all-comments", "-I."}, TestCCName, "clang-move",
+      std::make_shared<PCHContainerOperations>());
   formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite, "llvm");
   // The Key is file name, value is the new code after moving the class.
   std::map<std::string, std::string> Results;
