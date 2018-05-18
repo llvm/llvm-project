@@ -128,7 +128,7 @@ class InstSE<dag outs, dag ins, string asmstr, list<dag> pattern,
 // Mips Pseudo Instructions Format
 class MipsPseudo<dag outs, dag ins, list<dag> pattern,
                  InstrItinClass itin = IIPseudo> :
-  MipsInst<outs, ins, "", pattern, itin, Pseudo> {
+  MipsInst<outs, ins, "", pattern, itin, Pseudo>, PredicateControl {
   let isCodeGenOnly = 1;
   let isPseudo = 1;
 }
@@ -136,7 +136,7 @@ class MipsPseudo<dag outs, dag ins, list<dag> pattern,
 // Mips32/64 Pseudo Instruction Format
 class PseudoSE<dag outs, dag ins, list<dag> pattern,
                InstrItinClass itin = IIPseudo> :
-  MipsPseudo<outs, ins, pattern, itin>, PredicateControl {
+  MipsPseudo<outs, ins, pattern, itin> {
   let EncodingPredicates = [HasStdEnc];
 }
 
