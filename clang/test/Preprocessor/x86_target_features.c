@@ -380,10 +380,6 @@
 
 // SHSTK: #define __SHSTK__ 1
 
-// RUN: %clang -target i386-unknown-unknown -mibt -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=IBT %s
-
-// IBT: #define __IBT__ 1
-
 // RUN: %clang -target i386-unknown-unknown -march=atom -mrdseed -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=RDSEED %s
 
 // RDSEED: #define __RDSEED__ 1

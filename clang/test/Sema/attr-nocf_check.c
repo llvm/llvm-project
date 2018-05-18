@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -verify -fcf-protection=branch -target-feature +ibt -fsyntax-only %s
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -verify -fcf-protection=branch -fsyntax-only %s
 
 // Function pointer definition.
 typedef void (*FuncPointerWithNoCfCheck)(void) __attribute__((nocf_check)); // no-warning

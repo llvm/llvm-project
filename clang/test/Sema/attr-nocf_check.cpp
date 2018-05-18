@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=i386-unknown-unknown -verify -fcf-protection=branch -target-feature +ibt -std=c++11 -fsyntax-only %s
+// RUN: %clang_cc1 -triple=i386-unknown-unknown -verify -fcf-protection=branch -std=c++11 -fsyntax-only %s
 
 // Function pointer definition.
 [[gnu::nocf_check]] typedef void (*FuncPointerWithNoCfCheck)(void); // no-warning

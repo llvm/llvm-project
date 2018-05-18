@@ -67,6 +67,21 @@ public:
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
     return std::error_code();
   }
+  // Map any symlink to "/symlink".
+  std::error_code getRealPath(const Twine &Path,
+                              SmallVectorImpl<char> &Output) const override {
+    auto I = FilesAndDirs.find(Path.str());
+    if (I == FilesAndDirs.end())
+      return make_error_code(llvm::errc::no_such_file_or_directory);
+    if (I->second.isSymlink()) {
+      Output.clear();
+      Twine("/symlink").toVector(Output);
+      return std::error_code();
+    }
+    Output.clear();
+    Path.toVector(Output);
+    return std::error_code();
+  }
 
   struct DirIterImpl : public clang::vfs::detail::DirIterImpl {
     std::map<std::string, vfs::Status> &FilesAndDirs;
@@ -194,6 +209,35 @@ TEST(VirtualFileSystemTest, BaseOnlyOverlay) {
   Status2 = O->status("/foo");
   EXPECT_FALSE(Status2.getError());
   EXPECT_TRUE(Status->equivalent(*Status2));
+}
+
+TEST(VirtualFileSystemTest, GetRealPathInOverlay) {
+  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  Lower->addRegularFile("/foo");
+  Lower->addSymlink("/lower_link");
+  IntrusiveRefCntPtr<DummyFileSystem> Upper(new DummyFileSystem());
+
+  IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
+      new vfs::OverlayFileSystem(Lower));
+  O->pushOverlay(Upper);
+
+  // Regular file.
+  SmallString<16> RealPath;
+  EXPECT_FALSE(O->getRealPath("/foo", RealPath));
+  EXPECT_EQ(RealPath.str(), "/foo");
+
+  // Expect no error getting real path for symlink in lower overlay.
+  EXPECT_FALSE(O->getRealPath("/lower_link", RealPath));
+  EXPECT_EQ(RealPath.str(), "/symlink");
+
+  // Try a non-existing link.
+  EXPECT_EQ(O->getRealPath("/upper_link", RealPath),
+            errc::no_such_file_or_directory);
+
+  // Add a new symlink in upper.
+  Upper->addSymlink("/upper_link");
+  EXPECT_FALSE(O->getRealPath("/upper_link", RealPath));
+  EXPECT_EQ(RealPath.str(), "/symlink");
 }
 
 TEST(VirtualFileSystemTest, OverlayFiles) {

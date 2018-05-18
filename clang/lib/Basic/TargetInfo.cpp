@@ -14,6 +14,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
@@ -114,6 +115,18 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
 
 // Out of line virtual dtor for TargetInfo.
 TargetInfo::~TargetInfo() {}
+
+bool
+TargetInfo::checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const {
+  Diags.Report(diag::err_opt_not_valid_on_target) << "cf-protection=branch";
+  return false;
+}
+
+bool
+TargetInfo::checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const {
+  Diags.Report(diag::err_opt_not_valid_on_target) << "cf-protection=return";
+  return false;
+}
 
 /// getTypeName - Return the user string for the specified integer type enum.
 /// For example, SignedShort -> "short".

@@ -102,26 +102,6 @@ bool X86TargetInfo::setFPMath(StringRef Name) {
   return false;
 }
 
-bool X86TargetInfo::checkCFProtectionReturnSupported(
-    DiagnosticsEngine &Diags) const {
-  if (HasSHSTK)
-    return true;
-
-  Diags.Report(diag::err_opt_not_valid_without_opt) << "cf-protection=return"
-                                                    << "-mshstk";
-  return false;
-}
-
-bool X86TargetInfo::checkCFProtectionBranchSupported(
-    DiagnosticsEngine &Diags) const {
-  if (HasIBT)
-    return true;
-
-  Diags.Report(diag::err_opt_not_valid_without_opt) << "cf-protection=branch"
-                                                    << "-mibt";
-  return false;
-}
-
 bool X86TargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
@@ -781,8 +761,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasMPX = true;
     } else if (Feature == "+shstk") {
       HasSHSTK = true;
-    } else if (Feature == "+ibt") {
-      HasIBT = true;
     } else if (Feature == "+movbe") {
       HasMOVBE = true;
     } else if (Feature == "+sgx") {
@@ -1175,8 +1153,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__MPX__");
   if (HasSHSTK)
     Builder.defineMacro("__SHSTK__");
-  if (HasIBT)
-    Builder.defineMacro("__IBT__");
   if (HasSGX)
     Builder.defineMacro("__SGX__");
   if (HasPREFETCHWT1)
@@ -1394,7 +1370,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("fsgsbase", HasFSGSBASE)
       .Case("fxsr", HasFXSR)
       .Case("gfni", HasGFNI)
-      .Case("ibt", HasIBT)
       .Case("lwp", HasLWP)
       .Case("lzcnt", HasLZCNT)
       .Case("mm3dnow", MMX3DNowLevel >= AMD3DNow)
