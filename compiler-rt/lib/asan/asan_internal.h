@@ -36,7 +36,7 @@
 // If set, values like allocator chunk size, as well as defaults for some flags
 // will be changed towards less memory overhead.
 #ifndef ASAN_LOW_MEMORY
-# if SANITIZER_IOS || SANITIZER_ANDROID
+# if SANITIZER_IOS || SANITIZER_ANDROID || SANITIZER_RTEMS
 #  define ASAN_LOW_MEMORY 1
 # else
 #  define ASAN_LOW_MEMORY 0
@@ -78,7 +78,7 @@ void InitializeShadowMemory();
 // asan_malloc_linux.cc / asan_malloc_mac.cc
 void ReplaceSystemMalloc();
 
-// asan_linux.cc / asan_mac.cc / asan_win.cc
+// asan_linux.cc / asan_mac.cc / asan_rtems.cc / asan_win.cc
 uptr FindDynamicShadowStart();
 void *AsanDoesNotSupportStaticLinkage();
 void AsanCheckDynamicRTPrereqs();

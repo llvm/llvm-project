@@ -144,8 +144,12 @@ macro(test_target_arch arch def)
       endif()
       set(SAVED_CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${argstring}")
+      if(SANITIZER_CXX_ABI_SYSTEM)
+        set(FLAG_LINK_LIBRARIES ${SANITIZER_CXX_ABI_LIBRARY})
+      endif()
       try_compile(CAN_TARGET_${arch} ${CMAKE_BINARY_DIR} ${SIMPLE_SOURCE}
                   COMPILE_DEFINITIONS "${TARGET_${arch}_CFLAGS} ${FLAG_NO_EXCEPTIONS}"
+                  LINK_LIBRARIES ${FLAG_LINK_LIBRARIES}
                   OUTPUT_VARIABLE TARGET_${arch}_OUTPUT)
       set(CMAKE_EXE_LINKER_FLAGS ${SAVED_CMAKE_EXE_LINKER_FLAGS})
     endif()
@@ -313,4 +317,63 @@ function(filter_builtin_sources output_var exclude_or_include excluded_list)
     endif ()
   endforeach ()
   set(${output_var} ${intermediate} PARENT_SCOPE)
+endfunction()
+
+function(check_runtime_library variable)
+  set(COMPILER_COMMAND ${CMAKE_CXX_COMPILER} ${SANITIZER_COMMON_CFLAGS}
+      "--print-libgcc-file-name")
+  if (CMAKE_CXX_COMPILER_ID MATCHES Clang AND CMAKE_CXX_COMPILER_TARGET)
+    list(APPEND COMPILER_COMMAND "--target=${CMAKE_CXX_COMPILER_TARGET}")
+  endif()
+  execute_process(
+      COMMAND ${COMPILER_COMMAND}
+      RESULT_VARIABLE COMMAND_RESULT
+      OUTPUT_VARIABLE LIBRARY_FILE
+  )
+  string(STRIP "${LIBRARY_FILE}" LIBRARY_FILE)
+  if(COMMAND_RESULT EQUAL 0)
+    set(${variable} "${LIBRARY_FILE}" PARENT_SCOPE)
+  endif()
+endfunction()
+
+function(check_link_libraries variable)
+  set(COMPILER_COMMAND "${CMAKE_CXX_COMPILER}" "${SANITIZER_COMMON_CFLAGS}"
+    "${CMAKE_ROOT}/Modules/DummyCXXFile.cxx" "-###")
+  if (CMAKE_CXX_COMPILER_ID MATCHES Clang AND CMAKE_CXX_COMPILER_TARGET)
+    list(APPEND COMPILER_COMMAND "--target=${CMAKE_CXX_COMPILER_TARGET}")
+  endif()
+  execute_process(
+      COMMAND ${COMPILER_COMMAND}
+      RESULT_VARIABLE COMMAND_RESULT
+      ERROR_VARIABLE COMMAND_OUTPUT
+  )
+  if(COMMAND_RESULT EQUAL 0)
+    get_filename_component(linker ${CMAKE_LINKER} NAME)
+    string(REGEX REPLACE "([][+.*?()^$])" "\\\\\\1" linker "${linker}")
+    set(LINKER_REGEX "^( *|.*[/\\])(${linker}|([^/\\]+-)?ld|collect2)[^/\\]*( |$)")
+    set(EXCLUDE_REGEX "collect2 version |^[A-Za-z0-9_]+=")
+    string(REGEX REPLACE "\r?\n" ";" output_lines "${COMMAND_OUTPUT}")
+    foreach(line IN LISTS output_lines)
+      if(line MATCHES "${LINKER_REGEX}" AND NOT line MATCHES "${EXCLUDE_REGEX}")
+        if(UNIX)
+          separate_arguments(args UNIX_COMMAND "${line}")
+        else()
+          separate_arguments(args WINDOWS_COMMAND "${line}")
+        endif()
+        list(GET args 0 cmd)
+      endif()
+      if("${cmd}" MATCHES "${LINKER_REGEX}")
+        foreach(arg IN LISTS args)
+          if("${arg}" MATCHES "^-l([^:].*)$")
+            set(lib "${CMAKE_MATCH_1}")
+            list(APPEND libs ${lib})
+          elseif("${arg}" MATCHES "^(.:)?[/\\].*\\.a$")
+            list(APPEND libs ${arg})
+          endif()
+        endforeach()
+        break()
+      endif()
+    endforeach()
+    set(${variable} "${libs}" PARENT_SCOPE)
+  endif()
 endfunction()

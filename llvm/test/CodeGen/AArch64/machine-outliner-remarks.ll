@@ -1,10 +1,10 @@
 ; RUN: llc %s -enable-machine-outliner -mtriple=aarch64-unknown-unknown -pass-remarks=machine-outliner -pass-remarks-missed=machine-outliner -o /dev/null 2>&1 | FileCheck %s
 ; CHECK: machine-outliner-remarks.ll:5:9:
 ; CHECK-SAME: Did not outline 2 instructions from 2 locations.
-; CHECK-SAME: Instructions from outlining all occurrences (9) >=
-; CHECK-SAME: Unoutlined instruction count (4)
+; CHECK-SAME: Bytes from outlining all occurrences (36) >=
+; CHECK-SAME: Unoutlined instruction bytes (16)
 ; CHECK-SAME: (Also found at: machine-outliner-remarks.ll:13:9)
-; CHECK: remark: <unknown>:0:0: Saved 5 instructions by outlining 12 instructions
+; CHECK: remark: <unknown>:0:0: Saved 20 bytes by outlining 12 instructions
 ; CHECK-SAME: from 2 locations. (Found at: machine-outliner-remarks.ll:36:1,
 ; CHECK-SAME: machine-outliner-remarks.ll:27:9)
 ; RUN: llc %s -enable-machine-outliner -mtriple=aarch64-unknown-unknown -o /dev/null -pass-remarks-missed=machine-outliner -pass-remarks-output=%t.yaml
@@ -21,11 +21,11 @@
 ; YAML-NEXT:   - String:          ' from '
 ; YAML-NEXT:   - NumOccurrences:  '2'
 ; YAML-NEXT:   - String:          ' locations.'
-; YAML-NEXT:   - String:          ' Instructions from outlining all occurrences ('
-; YAML-NEXT:   - OutliningCost:   '9'
+; YAML-NEXT:   - String:          ' Bytes from outlining all occurrences ('
+; YAML-NEXT:   - OutliningCost:   '36'
 ; YAML-NEXT:   - String:          ')'
-; YAML-NEXT:   - String:          ' >= Unoutlined instruction count ('
-; YAML-NEXT:   - NotOutliningCost: '4'
+; YAML-NEXT:   - String:          ' >= Unoutlined instruction bytes ('
+; YAML-NEXT:   - NotOutliningCost: '16'
 ; YAML-NEXT:   - String:          ')'
 ; YAML-NEXT:   - String:          ' (Also found at: '
 ; YAML-NEXT:   - OtherStartLoc1:  'machine-outliner-remarks.ll:13:9'
@@ -37,8 +37,8 @@
 ; YAML-NEXT: Function:        OUTLINED_FUNCTION_0
 ; YAML-NEXT: Args:            
 ; YAML-NEXT:   - String:          'Saved '
-; YAML-NEXT:   - OutliningBenefit: '5'
-; YAML-NEXT:   - String:          ' instructions by '
+; YAML-NEXT:   - OutliningBenefit: '20'
+; YAML-NEXT:   - String:          ' bytes by '
 ; YAML-NEXT:   - String:          'outlining '
 ; YAML-NEXT:   - Length:          '12'
 ; YAML-NEXT:   - String:          ' instructions '

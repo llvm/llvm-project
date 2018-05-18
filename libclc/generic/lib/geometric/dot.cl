@@ -37,3 +37,25 @@ _CLC_OVERLOAD _CLC_DEF double dot(double4 p0, double4 p1) {
 }
 
 #endif
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_OVERLOAD _CLC_DEF half dot(half p0, half p1) {
+  return p0*p1;
+}
+
+_CLC_OVERLOAD _CLC_DEF half dot(half2 p0, half2 p1) {
+  return p0.x*p1.x + p0.y*p1.y;
+}
+
+_CLC_OVERLOAD _CLC_DEF half dot(half3 p0, half3 p1) {
+  return p0.x*p1.x + p0.y*p1.y + p0.z*p1.z;
+}
+
+_CLC_OVERLOAD _CLC_DEF half dot(half4 p0, half4 p1) {
+  return p0.x*p1.x + p0.y*p1.y + p0.z*p1.z + p0.w*p1.w;
+}
+
+#endif

@@ -20,16 +20,21 @@
  * THE SOFTWARE.
  */
 
-#if __CLC_FPSIZE == 32
-#define MIN_CONSTANT 0x1.fffffep-1f
-#else
+#if __CLC_FPSIZE == 64
 #define MIN_CONSTANT 0x1.fffffffffffffp-1
+#define ZERO 0.0
+#elif __CLC_FPSIZE == 32
+#define MIN_CONSTANT 0x1.fffffep-1f
+#define ZERO 0.0f
+#elif __CLC_FPSIZE == 16
+#define MIN_CONSTANT 0x1.ffcp-1h
+#define ZERO 0.0h
 #endif
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE fract(__CLC_GENTYPE x, private __CLC_GENTYPE *iptr) {
   *iptr = floor(x);
   __CLC_GENTYPE r = fmin(x - *iptr, MIN_CONSTANT);
-  r = isinf(x) ? 0.0f : r;
+  r = isinf(x) ? ZERO : r;
   r = isnan(x) ? x : r;
   return r;
 }
@@ -47,3 +52,4 @@ FRACT_DEF(local);
 FRACT_DEF(global);
 
 #undef MIN_CONSTANT
+#undef ZERO

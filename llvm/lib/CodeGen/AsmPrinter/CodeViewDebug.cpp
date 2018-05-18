@@ -589,7 +589,7 @@ void CodeViewDebug::emitTypeGlobalHashes() {
   OS.AddComment("Section Version");
   OS.EmitIntValue(0, 2);
   OS.AddComment("Hash Algorithm");
-  OS.EmitIntValue(uint16_t(GlobalTypeHashAlg::SHA1), 2);
+  OS.EmitIntValue(uint16_t(GlobalTypeHashAlg::SHA1_8), 2);
 
   TypeIndex TI(TypeIndex::FirstNonSimpleIndex);
   for (const auto &GHR : TypeTable.hashes()) {
@@ -602,7 +602,7 @@ void CodeViewDebug::emitTypeGlobalHashes() {
       OS.AddComment(Comment);
       ++TI;
     }
-    assert(GHR.Hash.size() % 20 == 0);
+    assert(GHR.Hash.size() == 8);
     StringRef S(reinterpret_cast<const char *>(GHR.Hash.data()),
                 GHR.Hash.size());
     OS.EmitBinaryData(S);

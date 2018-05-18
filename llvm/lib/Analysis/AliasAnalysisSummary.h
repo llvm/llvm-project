@@ -134,29 +134,16 @@ inline bool operator>=(InterfaceValue LHS, InterfaceValue RHS) {
   return !(LHS < RHS);
 }
 
-using FieldOffset = int64_t;
 // We use UnknownOffset to represent pointer offsets that cannot be determined
 // at compile time. Note that MemoryLocation::UnknownSize cannot be used here
 // because we require a signed value.
-static const FieldOffset UnknownOffset =
-    std::numeric_limits<FieldOffset>::max();
+static const int64_t UnknownOffset = INT64_MAX;
 
-inline FieldOffset addFieldOffset(FieldOffset LHS, FieldOffset RHS) {
+inline int64_t addOffset(int64_t LHS, int64_t RHS) {
   if (LHS == UnknownOffset || RHS == UnknownOffset)
     return UnknownOffset;
-
+  // FIXME: Do we need to guard against integer overflow here?
   return LHS + RHS;
-}
-
-inline FieldOffset subFieldOffset(FieldOffset LHS, FieldOffset RHS) {
-  if (LHS == UnknownOffset || RHS == UnknownOffset)
-    return UnknownOffset;
-
-  return LHS - RHS;
-}
-
-inline FieldOffset negFieldOffset(FieldOffset Offset) {
-  return subFieldOffset(0, Offset);
 }
 
 /// We use ExternalRelation to describe an externally visible aliasing relations
