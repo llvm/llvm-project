@@ -750,8 +750,7 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
       Changed = true;
     }
 
-  for (auto I : Converters)
-    delete I.second;
+  DeleteContainerSeconds(Converters);
 
   DEBUG(dbgs() << "***** Machine Function after Domain Reassignment *****\n");
   DEBUG(MF.print(dbgs()));
