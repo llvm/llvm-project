@@ -16,3 +16,16 @@ _CLC_DEF _CLC_OVERLOAD int isfinite(double x) {
 _CLC_DEFINE_RELATIONAL_UNARY_VEC_ALL(long, isfinite, double)
 
 #endif
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+// The scalar version of isfinite(half) returns an int, but the vector versions
+// return short.
+_CLC_DEF _CLC_OVERLOAD int isfinite(half x) {
+  return __builtin_isfinite(x);
+}
+
+_CLC_DEFINE_RELATIONAL_UNARY_VEC_ALL(short, isfinite, half)
+
+#endif

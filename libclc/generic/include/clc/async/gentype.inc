@@ -204,4 +204,29 @@
 
 #endif
 
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16: enable
+
+#define __CLC_GENTYPE half
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
+#define __CLC_GENTYPE half2
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
+#define __CLC_GENTYPE half4
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
+#define __CLC_GENTYPE half8
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
+#define __CLC_GENTYPE half16
+#include __CLC_BODY
+#undef __CLC_GENTYPE
+
+#endif
+
 #undef __CLC_BODY

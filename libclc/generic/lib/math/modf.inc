@@ -20,9 +20,17 @@
  * THE SOFTWARE.
  */
 
+#if __CLC_FPSIZE == 64
+#define ZERO 0.0
+#elif __CLC_FPSIZE == 32
+#define ZERO 0.0f
+#elif __CLC_FPSIZE == 16
+#define ZERO 0.0h
+#endif
+
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE modf(__CLC_GENTYPE x, __CLC_GENTYPE *iptr) {
   *iptr = trunc(x);
-  return copysign(isinf(x) ? 0.0f : x - *iptr, x);
+  return copysign(isinf(x) ? ZERO : x - *iptr, x);
 }
 
 #define MODF_DEF(addrspace) \
@@ -35,3 +43,5 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE modf(__CLC_GENTYPE x, __CLC_GENTYPE *iptr) 
 
 MODF_DEF(local);
 MODF_DEF(global);
+
+#undef ZERO

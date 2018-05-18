@@ -34,10 +34,10 @@ void InitializePlatformInterceptors();
 
 }  // namespace __asan
 
-// There is no general interception at all on Fuchsia.
+// There is no general interception at all on Fuchsia and RTEMS.
 // Only the functions in asan_interceptors_memintrinsics.h are
 // really defined to replace libc functions.
-#if !SANITIZER_FUCHSIA
+#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
 
 // Use macro to describe if specific function should be
 // intercepted on a given platform.

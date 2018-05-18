@@ -37,3 +37,10 @@ _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_nextafter, float, flo
 NEXTAFTER(double, ulong, long)
 _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_nextafter, double, double)
 #endif
+
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+NEXTAFTER(half, ushort, short)
+_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_nextafter, half, half)
+#endif

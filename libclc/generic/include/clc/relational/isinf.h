@@ -17,5 +17,10 @@ _CLC_ISINF_DECL(int, double)
 _CLC_VECTOR_ISINF_DECL(long, double)
 #endif
 
+#ifdef cl_khr_fp16
+_CLC_ISINF_DECL(int, half)
+_CLC_VECTOR_ISINF_DECL(short, half)
+#endif
+
 #undef _CLC_ISINF_DECL
 #undef _CLC_VECTOR_ISINF_DECL

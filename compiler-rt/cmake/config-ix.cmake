@@ -13,7 +13,10 @@ function(check_linker_flag flag out_var)
 endfunction()
 
 check_library_exists(c fopen "" COMPILER_RT_HAS_LIBC)
-if (NOT SANITIZER_USE_COMPILER_RT)
+if (COMPILER_RT_RUNTIME_LIBRARY STREQUAL "compiler-rt")
+  include(HandleCompilerRT)
+  find_compiler_rt_library(builtins COMPILER_RT_BUILTINS_LIBRARY)
+else()
   if (ANDROID)
     check_library_exists(gcc __gcc_personality_v0 "" COMPILER_RT_HAS_GCC_LIB)
   else()
@@ -27,9 +30,7 @@ if (COMPILER_RT_HAS_NODEFAULTLIBS_FLAG)
   if (COMPILER_RT_HAS_LIBC)
     list(APPEND CMAKE_REQUIRED_LIBRARIES c)
   endif ()
-  if (SANITIZER_USE_COMPILER_RT)
-    list(APPEND CMAKE_REQUIRED_FLAGS -rtlib=compiler-rt)
-    find_compiler_rt_library(builtins COMPILER_RT_BUILTINS_LIBRARY)
+  if (COMPILER_RT_RUNTIME_LIBRARY STREQUAL "compiler-rt")
     list(APPEND CMAKE_REQUIRED_LIBRARIES "${COMPILER_RT_BUILTINS_LIBRARY}")
   elseif (COMPILER_RT_HAS_GCC_S_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES gcc_s)
@@ -125,7 +126,7 @@ set(COMPILER_RT_SUPPORTED_ARCH)
 # platform. We use the results of these tests to build only the various target
 # runtime libraries supported by our current compilers cross-compiling
 # abilities.
-set(SIMPLE_SOURCE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/simple.cc)
+set(SIMPLE_SOURCE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/simple.c)
 file(WRITE ${SIMPLE_SOURCE} "#include <stdlib.h>\n#include <stdio.h>\nint main() { printf(\"hello, world\"); }\n")
 
 # Detect whether the current target platform is 32-bit or 64-bit, and setup
