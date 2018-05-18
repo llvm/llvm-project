@@ -331,7 +331,7 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -     232.00 8.00   61.00  46.00  2.00   2.00   67.00
+# CHECK-NEXT:  -     232.00 8.00   61.00  46.00  0.50   0.50   67.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -386,15 +386,15 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   movaps	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     movhlps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     movlhps	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   movhps	%xmm0, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   movhps	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   movhps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   movlps	%xmm0, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   movlps	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   movlps	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     movmskps	%xmm0, %ecx
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   movntps	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   movntq	%mm0, (%rax)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     movss	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   movss	%xmm0, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   movss	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   movss	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     movups	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   movups	%xmm0, (%rax)

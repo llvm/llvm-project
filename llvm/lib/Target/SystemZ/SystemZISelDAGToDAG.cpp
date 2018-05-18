@@ -1509,7 +1509,13 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
       CCMask = CurDAG->getConstant(ConstCCValid ^ ConstCCMask, SDLoc(Node),
                                    CCMask.getValueType());
       SDValue Op4 = Node->getOperand(4);
-      Node = CurDAG->UpdateNodeOperands(Node, Op1, Op0, CCValid, CCMask, Op4);
+      SDNode *UpdatedNode =
+        CurDAG->UpdateNodeOperands(Node, Op1, Op0, CCValid, CCMask, Op4);
+      if (UpdatedNode != Node) {
+        // In case this node already exists then replace Node with it.
+        ReplaceNode(Node, UpdatedNode);
+        Node = UpdatedNode;
+      }
     }
     break;
   }

@@ -21,10 +21,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
-
-#if defined(__APPLE__)
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
-#endif
 
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
@@ -82,6 +79,7 @@ void SystemInitializerCommon::Initialize() {
   // Initialize plug-ins
   ObjectContainerBSDArchive::Initialize();
   ObjectFileELF::Initialize();
+  ObjectFileMachO::Initialize();
   ObjectFilePECOFF::Initialize();
 
   EmulateInstructionARM::Initialize();
@@ -93,9 +91,6 @@ void SystemInitializerCommon::Initialize() {
   //----------------------------------------------------------------------
   ObjectContainerUniversalMachO::Initialize();
 
-#if defined(__APPLE__)
-  ObjectFileMachO::Initialize();
-#endif
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
   ProcessPOSIXLog::Initialize();
 #endif
@@ -109,6 +104,7 @@ void SystemInitializerCommon::Terminate() {
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
   ObjectContainerBSDArchive::Terminate();
   ObjectFileELF::Terminate();
+  ObjectFileMachO::Terminate();
   ObjectFilePECOFF::Terminate();
 
   EmulateInstructionARM::Terminate();
@@ -116,9 +112,6 @@ void SystemInitializerCommon::Terminate() {
   EmulateInstructionMIPS64::Terminate();
 
   ObjectContainerUniversalMachO::Terminate();
-#if defined(__APPLE__)
-  ObjectFileMachO::Terminate();
-#endif
 
 #if defined(_MSC_VER)
   ProcessWindowsLog::Terminate();

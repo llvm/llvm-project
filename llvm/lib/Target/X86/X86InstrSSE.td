@@ -201,7 +201,7 @@ multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
   def V#NAME#mr : SI<0x11, MRMDestMem, (outs), (ins x86memop:$dst, RC:$src),
                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                      [(store RC:$src, addr:$dst)], d>,
-                     VEX, VEX_LIG, Sched<[WriteStore]>, VEX_WIG;
+                     VEX, VEX_LIG, Sched<[WriteFStore]>, VEX_WIG;
   // SSE1 & 2
   let Constraints = "$src1 = $dst" in {
     defm NAME : sse12_move_rr<OpNode, vt, x86memop, OpcodeStr,
@@ -211,7 +211,7 @@ multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
   def NAME#mr   : SI<0x11, MRMDestMem, (outs), (ins x86memop:$dst, RC:$src),
                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                      [(store RC:$src, addr:$dst)], d>,
-                     Sched<[WriteStore]>;
+                     Sched<[WriteFStore]>;
 }
 
 // Loading from memory automatically zeroing upper bits.
@@ -220,11 +220,11 @@ multiclass sse12_move_rm<RegisterClass RC, X86MemOperand x86memop,
   def V#NAME#rm : SI<0x10, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src),
                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                      [(set RC:$dst, (mem_pat addr:$src))], d>,
-                     VEX, VEX_LIG, Sched<[WriteLoad]>, VEX_WIG;
+                     VEX, VEX_LIG, Sched<[WriteFLoad]>, VEX_WIG;
   def NAME#rm   : SI<0x10, MRMSrcMem, (outs RC:$dst), (ins x86memop:$src),
                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                      [(set RC:$dst, (mem_pat addr:$src))], d>,
-                     Sched<[WriteLoad]>;
+                     Sched<[WriteFLoad]>;
 }
 
 defm MOVSS : sse12_move<FR32, X86Movss, v4f32, f32mem, "movss",
@@ -689,7 +689,7 @@ let AddedComplexity = 20 in {
   defm MOVL : sse12_mov_hilo_packed<0x12, X86Movlps, X86Movlpd, "movlp">;
 }
 
-let SchedRW = [WriteStore] in {
+let SchedRW = [WriteFStore] in {
 let Predicates = [UseAVX] in {
 def VMOVLPSmr : VPSI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                      "movlps\t{$src, $dst|$dst, $src}",
@@ -774,7 +774,7 @@ let AddedComplexity = 20 in {
   defm MOVH : sse12_mov_hilo_packed<0x16, X86Movlhps, X86Unpckl, "movhp">;
 }
 
-let SchedRW = [WriteStore] in {
+let SchedRW = [WriteFStore] in {
 // v2f64 extract element 1 is always custom lowered to unpack high to low
 // and extract element 0 so the non-store version isn't too horrible.
 let Predicates = [UseAVX] in {
@@ -3080,7 +3080,7 @@ def MOVNTI_64mr : RI<0xC3, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
                      "movnti{q}\t{$src, $dst|$dst, $src}",
                      [(nontemporalstore (i64 GR64:$src), addr:$dst)]>,
                   PS, Requires<[HasSSE2]>;
-} // SchedRW = [WriteStore]
+} // SchedRW = [WriteStoreNT]
 
 let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(alignednontemporalstore (v8i32 VR256:$src), addr:$dst),
@@ -4062,6 +4062,7 @@ def MOVPDI2DImr  : S2I<0x7E, MRMDestMem, (outs), (ins i32mem:$dst, VR128:$src),
                                      (iPTR 0))), addr:$dst)]>,
                        Sched<[WriteStore]>;
 } // ExeDomain = SSEPackedInt
+
 //===---------------------------------------------------------------------===//
 // Move Packed Doubleword Int first element to Doubleword Int
 //
