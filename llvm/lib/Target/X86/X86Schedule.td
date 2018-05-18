@@ -250,6 +250,8 @@ def  WriteVecMaskedStoreY : SchedWrite;
 def  WriteVecMove         : SchedWrite;
 def  WriteVecMoveX        : SchedWrite;
 def  WriteVecMoveY        : SchedWrite;
+def  WriteVecMoveToGpr    : SchedWrite;
+def  WriteVecMoveFromGpr  : SchedWrite;
 
 defm WriteVecALU    : X86SchedWritePair; // Vector integer ALU op, no logicals.
 defm WriteVecALUX   : X86SchedWritePair; // Vector integer ALU op, no logicals (XMM).

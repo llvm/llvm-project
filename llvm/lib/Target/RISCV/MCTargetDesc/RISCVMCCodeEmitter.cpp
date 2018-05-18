@@ -113,12 +113,12 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI, raw_ostream &OS,
                 .addReg(Ra)
                 .addOperand(MCOperand::createExpr(CallExpr));
   Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-  support::endian::Writer<support::little>(OS).write(Binary);
+  support::endian::write(OS, Binary, support::little);
 
   // Emit JALR Ra, Ra, 0
   TmpInst = MCInstBuilder(RISCV::JALR).addReg(Ra).addReg(Ra).addImm(0);
   Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-  support::endian::Writer<support::little>(OS).write(Binary);
+  support::endian::write(OS, Binary, support::little);
 }
 
 void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
@@ -140,12 +140,12 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     llvm_unreachable("Unhandled encodeInstruction length!");
   case 2: {
     uint16_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-    support::endian::Writer<support::little>(OS).write<uint16_t>(Bits);
+    support::endian::write<uint16_t>(OS, Bits, support::little);
     break;
   }
   case 4: {
     uint32_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-    support::endian::Writer<support::little>(OS).write(Bits);
+    support::endian::write(OS, Bits, support::little);
     break;
   }
   }

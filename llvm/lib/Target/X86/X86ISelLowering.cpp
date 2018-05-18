@@ -15032,10 +15032,15 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
     return SDValue();
 
   case MVT::v8i16:
-  case MVT::v16i16:
-    // FIXME: We should custom lower this by fixing the condition and using i8
-    // blends.
-    return SDValue();
+  case MVT::v16i16: {
+    // Bitcast everything to the vXi8 type and use a vXi8 vselect.
+    MVT CastVT = MVT::getVectorVT(MVT::i8, VT.getVectorNumElements() * 2);
+    SDValue Cond = DAG.getBitcast(CastVT, Op->getOperand(0));
+    SDValue LHS = DAG.getBitcast(CastVT, Op->getOperand(1));
+    SDValue RHS = DAG.getBitcast(CastVT, Op->getOperand(2));
+    SDValue Select = DAG.getNode(ISD::VSELECT, dl, CastVT, Cond, LHS, RHS);
+    return DAG.getBitcast(VT, Select);
+  }
   }
 }
 

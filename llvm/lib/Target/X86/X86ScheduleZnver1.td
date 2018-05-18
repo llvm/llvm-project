@@ -301,7 +301,9 @@ defm : X86WriteRes<WriteVecMaskedStore,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
 defm : X86WriteRes<WriteVecMaskedStoreY, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
 defm : X86WriteRes<WriteVecMove,         [ZnFPU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [ZnFPU], 1, [1], 1>;
-defm : X86WriteRes<WriteVecMoveY,        [ZnFPU], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveY,        [ZnFPU], 2, [1], 2>;
+defm : X86WriteRes<WriteVecMoveToGpr,    [ZnFPU2], 2, [1], 1>;
+defm : X86WriteRes<WriteVecMoveFromGpr,  [ZnFPU2], 3, [1], 1>;
 defm : X86WriteRes<WriteEMMS,            [ZnFPU], 2, [1], 1>;
 
 defm : ZnWriteResFpuPair<WriteVecShift,   [ZnFPU],   1>;
@@ -922,50 +924,6 @@ def : InstRW<[WriteMicrocoded], (instrs FNCLEX)>;
 def : InstRW<[WriteMicrocoded], (instrs FNINIT)>;
 
 //=== Integer MMX and XMM Instructions ===//
-//-- Move instructions --//
-
-// Moves from GPR to FPR incurs a penalty
-def ZnWriteFPU2 : SchedWriteRes<[ZnFPU2]> {
-  let Latency = 3;
-}
-
-// Move to ALU doesn't incur penalty
-def ZnWriteToALU2 : SchedWriteRes<[ZnFPU2]> {
-  let Latency = 2;
-}
-
-def ZnWriteFPU : SchedWriteRes<[ZnFPU]>;
-def ZnWriteFPUY : SchedWriteRes<[ZnFPU]> {
-  let NumMicroOps = 2;
-  let Latency=2;
-}
-
-// MOVD.
-// r32/64 <- (x)mm.
-def : InstRW<[ZnWriteToALU2], (instrs MMX_MOVD64grr,
-                                      MMX_MOVD64from64rr,
-                                      MOVPDI2DIrr,
-                                      VMOVPDI2DIrr)>;
-
-// (x)mm <- r32/64.
-def : InstRW<[ZnWriteFPU2], (instrs MMX_MOVD64rr,
-                                    MMX_MOVD64to64rr,
-                                    MOVDI2PDIrr,
-                                    VMOVDI2PDIrr)>;
-
-// MOVQ.
-// r64 <- (x)mm.
-def : InstRW<[ZnWriteToALU2], (instrs VMOVPQIto64rr)>;
-
-// (x)mm <- r64.
-def : InstRW<[ZnWriteFPU2], (instrs VMOV64toPQIrr)>;
-
-// (x)mm <- (x)mm.
-def : InstRW<[ZnWriteFPU], (instregex "MMX_MOVQ64rr")>;
-
-// (V)MOVDQA/U.
-// y <- y.
-def : InstRW<[ZnWriteFPUY], (instregex "VMOVDQ(A|U)Yrr")>;
 
 // PACKSSWB/DW.
 // mm <- mm.

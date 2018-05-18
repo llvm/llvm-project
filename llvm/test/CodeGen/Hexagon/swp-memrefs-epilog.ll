@@ -10,8 +10,7 @@
 ; to r29+32. If the memoperands are updated incorrectly, these are swapped.
 
 ; CHECK: [[REG0:r([0-9]+)]] = add(r29,#24)
-; CHECK: [[REG1:r([0-9]+)]] = add([[REG0]],#4)
-; CHECK: memw([[REG1]]+#{{[0-9]}}) = r{{[0-9]+}}
+; CHECK: memw([[REG0]]++#4) = r{{[0-9]+}}
 ; CHECK: r{{[0-9]+}} = memw(r29+#{{[0-9]+}})
 
 %s.0 = type { %s.1 }

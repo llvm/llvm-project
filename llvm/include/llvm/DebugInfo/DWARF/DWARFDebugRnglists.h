@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_DWARFDEBUGRNGLISTS_H
 #define LLVM_DEBUGINFO_DWARFDEBUGRNGLISTS_H
 
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
@@ -30,6 +31,8 @@ public:
     uint32_t Offset;
     /// The DWARF encoding (DW_RLE_*).
     uint8_t EntryKind;
+    /// The index of the section this range belongs to.
+    uint64_t SectionIndex;
     /// The values making up the range list entry. Most represent a range with
     /// a start and end address or a start address and a length. Others are
     /// single value base addresses or end-of-list with no values. The unneeded
@@ -51,6 +54,9 @@ public:
   void clear() { Entries.clear(); }
   Error extract(DWARFDataExtractor Data, uint32_t HeaderOffset, uint32_t End,
                 uint32_t *OffsetPtr);
+  /// Build a DWARFAddressRangesVector from a rangelist.
+  DWARFAddressRangesVector
+  getAbsoluteRanges(llvm::Optional<BaseAddress> BaseAddr) const;
 };
 
 /// A class representing a table of range lists as specified in DWARF v5.
@@ -77,6 +83,7 @@ public:
   };
 
 private:
+  dwarf::DwarfFormat Format;
   uint32_t HeaderOffset;
   Header HeaderData;
   std::vector<uint32_t> Offsets;
@@ -88,8 +95,31 @@ public:
   Error extractHeaderAndOffsets(DWARFDataExtractor Data, uint32_t *OffsetPtr);
   /// Extract an entire table, including all rangelists.
   Error extract(DWARFDataExtractor Data, uint32_t *OffsetPtr);
+  /// Look up a rangelist based on a given offset. Extract it and enter it into
+  /// the ranges map if necessary.
+  Optional<DWARFDebugRnglist> findRangeList(DWARFDataExtractor Data,
+                                            uint32_t Offset);
   uint32_t getHeaderOffset() const { return HeaderOffset; }
+  uint8_t getAddrSize() const { return HeaderData.AddrSize; }
   void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
+  /// Return the contents of the offset entry designated by a given index.
+  Optional<uint32_t> getOffsetEntry(uint32_t Index) const {
+    if (Index < Offsets.size())
+      return Offsets[Index];
+    return None;
+  }
+  /// Return the size of the table header including the length but not including
+  /// the offsets. This is dependent on the table format, which is unambiguously
+  /// derived from parsing the table.
+  uint8_t getHeaderSize() const {
+    switch (Format) {
+    case dwarf::DwarfFormat::DWARF32:
+      return 12;
+    case dwarf::DwarfFormat::DWARF64:
+      return 20;
+    }
+    llvm_unreachable("Invalid DWARF format (expected DWARF32 or DWARF64");
+  }
 
   /// Returns the length of this table, including the length field, or 0 if the
   /// length has not been determined (e.g. because the table has not yet been

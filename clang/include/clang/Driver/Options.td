@@ -586,6 +586,8 @@ def fno_cuda_rdc : Flag<["-"], "fno-cuda-rdc">;
 def fcuda_short_ptr : Flag<["-"], "fcuda-short-ptr">, Flags<[CC1Option]>,
   HelpText<"Use 32-bit pointers for accessing const/local/shared address spaces.">;
 def fno_cuda_short_ptr : Flag<["-"], "fno-cuda-short-ptr">;
+def fhip_dump_offload_linker_script : Flag<["-"], "fhip-dump-offload-linker-script">,
+  Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>;
 def dA : Flag<["-"], "dA">, Group<d_Group>;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
   HelpText<"Print macro definitions in -E mode in addition to normal output">;

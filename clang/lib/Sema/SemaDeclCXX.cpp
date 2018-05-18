@@ -2231,20 +2231,6 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
   CXXRecordDecl *CXXBaseDecl = cast<CXXRecordDecl>(BaseDecl);
   assert(CXXBaseDecl && "Base type is not a C++ type");
 
-  // Microsoft docs say:
-  // "If a base-class has a code_seg attribute, derived classes must have the
-  // same attribute."
-   const auto *BaseSA = CXXBaseDecl->getAttr<SectionAttr>();
-   const auto *DerivedSA = Class->getAttr<SectionAttr>();
-   if (BaseSA || DerivedSA) {
-     if (!BaseSA || !DerivedSA || BaseSA->getName() != DerivedSA->getName()) {
-       Diag(Class->getLocation(), diag::err_mismatched_code_seg_base);
-       Diag(CXXBaseDecl->getLocation(), diag::note_base_class_specified_here)
-         << CXXBaseDecl;
-       return nullptr;
-     }
-   }
-
   // A class which contains a flexible array member is not suitable for use as a
   // base class:
   //   - If the layout determines that a base comes before another base,
@@ -5590,16 +5576,6 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
   }
 }
 
-void Sema::checkClassLevelSectionAttribute(CXXRecordDecl *Class) {
-  // Mark any compiler-generated routines with the implicit Section attribute.
-  for (auto *Method : Class->methods()) {
-    if (Method->isUserProvided())
-      continue;
-    if (Attr *A = getImplicitSectionAttrForFunction(Method))
-      Method->addAttr(A);
-  }
-}
-
 /// Check class-level dllimport/dllexport attribute.
 void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   Attr *ClassAttr = getDLLAttr(Class);
@@ -6103,7 +6079,6 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   }
 
   checkClassLevelDLLAttribute(Record);
-  checkClassLevelSectionAttribute(Record);
 
   bool ClangABICompat4 =
       Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver4;
@@ -14555,16 +14530,6 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
         Diag(Old->getParamDecl(I)->getLocation(),
              diag::note_overridden_marked_noescape);
       }
-  }
-  // Virtual overrides must have the same code_seg.
-  const auto *OldSA = Old->getAttr<SectionAttr>();
-  const auto *NewSA = New->getAttr<SectionAttr>();
-  if (OldSA || NewSA) {
-    if (!OldSA || !NewSA || NewSA->getName() != OldSA->getName()) {
-      Diag(New->getLocation(), diag::err_mismatched_code_seg_override);
-      Diag(Old->getLocation(), diag::note_previous_declaration);
-      return true;
-    }
   }
 
   CallingConv NewCC = NewFT->getCallConv(), OldCC = OldFT->getCallConv();

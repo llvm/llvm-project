@@ -91,9 +91,9 @@ guidance below to help you know what to expect.
 
 Each toolchain provides a good reference for what it accepts:
 
-* Clang: http://clang.llvm.org/cxx_status.html
-* GCC: http://gcc.gnu.org/projects/cxx0x.html
-* MSVC: http://msdn.microsoft.com/en-us/library/hh567368.aspx
+* Clang: https://clang.llvm.org/cxx_status.html
+* GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx11
+* MSVC: https://msdn.microsoft.com/en-us/library/hh567368.aspx
 
 In most cases, the MSVC list will be the dominating factor. Here is a summary
 of the features that are expected to work. Features not on this list are
@@ -184,7 +184,7 @@ you hit a type trait which doesn't work we can then add support to LLVM's
 traits header to emulate it.
 
 .. _the libstdc++ manual:
-  http://gcc.gnu.org/onlinedocs/gcc-4.8.0/libstdc++/manual/manual/status.html#status.iso.2011
+  https://gcc.gnu.org/onlinedocs/gcc-4.8.0/libstdc++/manual/manual/status.html#status.iso.2011
 
 Other Languages
 ---------------
@@ -591,7 +591,7 @@ understood for formatting nested function calls. Examples:
 This formatting scheme also makes it particularly easy to get predictable,
 consistent, and automatic formatting with tools like `Clang Format`_.
 
-.. _Clang Format: http://clang.llvm.org/docs/ClangFormat.html
+.. _Clang Format: https://clang.llvm.org/docs/ClangFormat.html
 
 Language and Compiler Issues
 ----------------------------
@@ -667,14 +667,14 @@ Do not use Static Constructors
 Static constructors and destructors (e.g. global variables whose types have a
 constructor or destructor) should not be added to the code base, and should be
 removed wherever possible.  Besides `well known problems
-<http://yosefk.com/c++fqa/ctors.html#fqa-10.12>`_ where the order of
+<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`_ where the order of
 initialization is undefined between globals in different source files, the
 entire concept of static constructors is at odds with the common use case of
 LLVM as a library linked into a larger application.
   
 Consider the use of LLVM as a JIT linked into another application (perhaps for
-`OpenGL, custom languages <http://llvm.org/Users.html>`_, `shaders in movies
-<http://llvm.org/devmtg/2010-11/Gritz-OpenShadingLang.pdf>`_, etc). Due to the
+`OpenGL, custom languages <https://llvm.org/Users.html>`_, `shaders in movies
+<https://llvm.org/devmtg/2010-11/Gritz-OpenShadingLang.pdf>`_, etc). Due to the
 design of static constructors, they must be executed at startup time of the
 entire application, regardless of whether or how LLVM is used in that larger
 application.  There are two problems with this:
@@ -692,7 +692,7 @@ target or other library into an application, but static constructors violate
 this goal.
   
 That said, LLVM unfortunately does contain static constructors.  It would be a
-`great project <http://llvm.org/PR11944>`_ for someone to purge all static
+`great project <https://llvm.org/PR11944>`_ for someone to purge all static
 constructors from LLVM, and then enable the ``-Wglobal-constructors`` warning
 flag (when building with Clang) to ensure we do not regress in the future.
 
@@ -1697,12 +1697,12 @@ A lot of these comments and recommendations have been culled from other sources.
 Two particularly important books for our work are:
 
 #. `Effective C++
-   <http://www.amazon.com/Effective-Specific-Addison-Wesley-Professional-Computing/dp/0321334876>`_
+   <https://www.amazon.com/Effective-Specific-Addison-Wesley-Professional-Computing/dp/0321334876>`_
    by Scott Meyers.  Also interesting and useful are "More Effective C++" and
    "Effective STL" by the same author.
 
 #. `Large-Scale C++ Software Design
-   <http://www.amazon.com/Large-Scale-Software-Design-John-Lakos/dp/0201633620/ref=sr_1_1>`_
+   <https://www.amazon.com/Large-Scale-Software-Design-John-Lakos/dp/0201633620>`_
    by John Lakos
 
 If you get some free time, and you haven't read them: do so, you might learn

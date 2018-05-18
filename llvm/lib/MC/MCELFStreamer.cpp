@@ -41,9 +41,10 @@ using namespace llvm;
 
 MCELFStreamer::MCELFStreamer(MCContext &Context,
                              std::unique_ptr<MCAsmBackend> TAB,
-                             raw_pwrite_stream &OS,
+                             std::unique_ptr<MCObjectWriter> OW,
                              std::unique_ptr<MCCodeEmitter> Emitter)
-    : MCObjectStreamer(Context, std::move(TAB), OS, std::move(Emitter)) {}
+    : MCObjectStreamer(Context, std::move(TAB), std::move(OW),
+                       std::move(Emitter)) {}
 
 bool MCELFStreamer::isBundleLocked() const {
   return getCurrentSectionOnly()->isBundleLocked();
@@ -652,11 +653,11 @@ void MCELFStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 
 MCStreamer *llvm::createELFStreamer(MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
-                                    raw_pwrite_stream &OS,
+                                    std::unique_ptr<MCObjectWriter> &&OW,
                                     std::unique_ptr<MCCodeEmitter> &&CE,
                                     bool RelaxAll) {
   MCELFStreamer *S =
-      new MCELFStreamer(Context, std::move(MAB), OS, std::move(CE));
+      new MCELFStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);
   return S;

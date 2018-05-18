@@ -295,10 +295,13 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
     return cast<MCCompactEncodedInstFragment>(F).getContents().size();
   case MCFragment::FT_Fill: {
     auto &FF = cast<MCFillFragment>(F);
-    int64_t Size = 0;
-    if (!FF.getSize().evaluateAsAbsolute(Size, Layout))
+    int64_t NumValues = 0;
+    if (!FF.getNumValues().evaluateAsAbsolute(NumValues, Layout)) {
       getContext().reportError(FF.getLoc(),
                                "expected assembly-time absolute expression");
+      return 0;
+    }
+    int64_t Size = NumValues * FF.getValueSize();
     if (Size < 0) {
       getContext().reportError(FF.getLoc(), "invalid number of bytes");
       return 0;
@@ -557,19 +560,35 @@ static void writeFragment(const MCAssembler &Asm, const MCAsmLayout &Layout,
   case MCFragment::FT_Fill: {
     ++stats::EmittedFillFragments;
     const MCFillFragment &FF = cast<MCFillFragment>(F);
-    uint8_t V = FF.getValue();
+    uint64_t V = FF.getValue();
+    unsigned VSize = FF.getValueSize();
     const unsigned MaxChunkSize = 16;
     char Data[MaxChunkSize];
-    memcpy(Data, &V, 1);
-    for (unsigned I = 1; I < MaxChunkSize; ++I)
-      Data[I] = Data[0];
+    // Duplicate V into Data as byte vector to reduce number of
+    // writes done. As such, do endian conversion here, not in OW.
+    const bool isLittleEndian = Asm.getContext().getAsmInfo()->isLittleEndian();
+    for (unsigned I = 0; I != VSize; ++I) {
+      unsigned index = isLittleEndian ? I : (VSize - I - 1);
+      Data[I] = uint8_t(V >> (index * 8));
+    }
+    for (unsigned I = VSize; I < MaxChunkSize; ++I)
+      Data[I] = Data[I - VSize];
 
-    uint64_t Size = FragmentSize;
-    for (unsigned ChunkSize = MaxChunkSize; ChunkSize; ChunkSize /= 2) {
-      StringRef Ref(Data, ChunkSize);
-      for (uint64_t I = 0, E = Size / ChunkSize; I != E; ++I)
-        OW->writeBytes(Ref);
-      Size = Size % ChunkSize;
+    // Set to largest multiple of VSize in Data.
+    const unsigned NumPerChunk = MaxChunkSize / VSize;
+    // Set ChunkSize to largest multiple of VSize in Data
+    const unsigned ChunkSize = VSize * NumPerChunk;
+
+    // Do copies by chunk.
+    StringRef Ref(Data, ChunkSize);
+    for (uint64_t I = 0, E = FragmentSize / ChunkSize; I != E; ++I)
+      OW->writeBytes(Ref);
+
+    // do remainder if needed.
+    unsigned TrailingCount = FragmentSize % ChunkSize;
+    if (TrailingCount) {
+      StringRef RefTail(Data, TrailingCount);
+      OW->writeBytes(RefTail);
     }
     break;
   }

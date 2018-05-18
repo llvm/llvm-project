@@ -1178,10 +1178,12 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
   // Clang <= 6 incorrectly applied the 'packed' attribute to base classes.
   // Per GCC's documentation, it only applies to non-static data members.
   CharUnits UnpackedBaseAlign = Layout.getNonVirtualAlignment();
-  CharUnits BaseAlign = (Packed && Context.getLangOpts().getClangABICompat() <=
-                                       LangOptions::ClangABI::Ver6)
-                            ? CharUnits::One()
-                            : UnpackedBaseAlign;
+  CharUnits BaseAlign =
+      (Packed && ((Context.getLangOpts().getClangABICompat() <=
+                   LangOptions::ClangABI::Ver6) ||
+                  Context.getTargetInfo().getTriple().isPS4()))
+          ? CharUnits::One()
+          : UnpackedBaseAlign;
 
   // If we have an empty base class, try to place it at offset 0.
   if (Base->Class->isEmpty() &&

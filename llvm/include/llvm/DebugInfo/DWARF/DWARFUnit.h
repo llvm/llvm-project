@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
@@ -261,6 +262,9 @@ class DWARFUnit {
   /// offsets table (DWARF v5).
   Optional<StrOffsetsContributionDescriptor> StringOffsetsTableContribution;
 
+  /// A table of range lists (DWARF v5 and later).
+  Optional<DWARFDebugRnglistTable> RngListTable;
+
   mutable const DWARFAbbreviationDeclarationSet *Abbrevs;
   llvm::Optional<BaseAddress> BaseAddr;
   /// The compile unit debug information entry items.
@@ -429,6 +433,24 @@ public:
 
   const char *getCompilationDir();
   Optional<uint64_t> getDWOId();
+
+  /// Return a vector of address ranges resulting from a (possibly encoded)
+  /// range list starting at a given offset in the appropriate ranges section.
+  DWARFAddressRangesVector findRnglistFromOffset(uint32_t Offset);
+
+  /// Return a vector of address ranges retrieved from an encoded range
+  /// list whose offset is found via a table lookup given an index (DWARF v5
+  /// and later).
+  DWARFAddressRangesVector findRnglistFromIndex(uint32_t Index);
+
+  /// Return a rangelist's offset based on an index. The index designates
+  /// an entry in the rangelist table's offset array and is supplied by
+  /// DW_FORM_rnglistx.
+  Optional<uint32_t> getRnglistOffset(uint32_t Index) {
+    if (RngListTable)
+      return RngListTable->getOffsetEntry(Index);
+    return None;
+  }
 
   void collectAddressRanges(DWARFAddressRangesVector &CURanges);
 

@@ -207,6 +207,11 @@ public:
   /// @returns the module identifier as a string
   const std::string &getModuleIdentifier() const { return ModuleID; }
 
+  /// Returns the number of non-debug IR instructions in the module.
+  /// This is equivalent to the sum of the IR instruction counts of each
+  /// function contained in the module.
+  unsigned getInstructionCount();
+
   /// Get the module's original source file name. When compiling from
   /// bitcode, this is taken from a bitcode record where it was recorded.
   /// For other compiles it is the same as the ModuleID, which would

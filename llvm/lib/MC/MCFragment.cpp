@@ -388,7 +388,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_Fill:  {
     const MCFillFragment *FF = cast<MCFillFragment>(this);
     OS << " Value:" << static_cast<unsigned>(FF->getValue())
-       << " Size:" << FF->getSize();
+       << " ValueSize:" << static_cast<unsigned>(FF->getValueSize())
+       << " NumValues:" << FF->getNumValues();
     break;
   }
   case MCFragment::FT_Relaxable:  {

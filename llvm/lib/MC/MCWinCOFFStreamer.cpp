@@ -25,6 +25,7 @@
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
@@ -44,8 +45,8 @@ using namespace llvm;
 MCWinCOFFStreamer::MCWinCOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> MAB,
                                      std::unique_ptr<MCCodeEmitter> CE,
-                                     raw_pwrite_stream &OS)
-    : MCObjectStreamer(Context, std::move(MAB), OS, std::move(CE)),
+                                     std::unique_ptr<MCObjectWriter> OW)
+    : MCObjectStreamer(Context, std::move(MAB), std::move(OW), std::move(CE)),
       CurSymbol(nullptr) {}
 
 void MCWinCOFFStreamer::EmitInstToData(const MCInst &Inst,

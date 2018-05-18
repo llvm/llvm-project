@@ -2853,13 +2853,6 @@ static void handleVecTypeHint(Sema &S, Decl *D, const AttributeList &AL) {
 SectionAttr *Sema::mergeSectionAttr(Decl *D, SourceRange Range,
                                     StringRef Name,
                                     unsigned AttrSpellingListIndex) {
-  // Explicit or partial specializations do not inherit
-  // the code_seg attribute from the primary template.
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)){
-    if (FD->isFunctionTemplateSpecialization())
-      return nullptr;
-  }
-
   if (SectionAttr *ExistingAttr = D->getAttr<SectionAttr>()) {
     if (ExistingAttr->getName() == Name)
       return nullptr;
@@ -2947,27 +2940,6 @@ static void handleTargetAttr(Sema &S, Decl *D, const AttributeList &AL) {
   TargetAttr *NewAttr =
       ::new (S.Context) TargetAttr(AL.getRange(), S.Context, Str, Index);
   D->addAttr(NewAttr);
-}
-
-static void handleCodeSegAttr(Sema &S, Decl *D, const AttributeList &AL) {
-  StringRef Str;
-  SourceLocation LiteralLoc;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc))
-    return;
-  if (!S.checkSectionName(LiteralLoc, Str))
-    return;
-  if (const auto *ExistingAttr = D->getAttr<SectionAttr>()) {
-    if (!ExistingAttr->isImplicit()) {
-      S.Diag(AL.getLoc(), 
-             ExistingAttr->getName() == Str 
-             ? diag::warn_duplicate_codeseg_attribute
-             : diag::err_conflicting_codeseg_attribute);	    
-      return;
-    }
-    D->dropAttr<SectionAttr>();
-  }
-  D->addAttr(::new (S.Context) SectionAttr(
-      AL.getRange(), S.Context, Str, AL.getAttributeSpellingListIndex()));
 }
 
 static void handleCleanupAttr(Sema &S, Decl *D, const AttributeList &AL) {
@@ -6324,9 +6296,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_Uuid:
     handleUuidAttr(S, D, AL);
-    break;
-  case AttributeList::AT_CodeSeg:
-    handleCodeSegAttr(S, D, AL);
     break;
   case AttributeList::AT_MSInheritance:
     handleMSInheritanceAttr(S, D, AL);

@@ -417,6 +417,21 @@ entry:
 ; CHECK-NOT: icmp
 ; CHECK: ret i32
 
+; Check that fdiv, unlike udiv, simply propagates shadow.
+
+define float @FDiv(float %a, float %b) nounwind uwtable readnone sanitize_memory {
+entry:
+  %c = fdiv float %a, %b
+  ret float %c
+}
+
+; CHECK-LABEL: @FDiv
+; CHECK: %[[SA:.*]] = load i32,{{.*}}@__msan_param_tls
+; CHECK: %[[SB:.*]] = load i32,{{.*}}@__msan_param_tls
+; CHECK: %[[SC:.*]] = or i32 %[[SB]], %[[SA]]
+; CHECK: = fdiv float
+; CHECK: store i32 %[[SC]], i32* {{.*}}@__msan_retval_tls
+; CHECK: ret float
 
 ; Check that we propagate shadow for x<0, x>=0, etc (i.e. sign bit tests)
 

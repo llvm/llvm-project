@@ -123,27 +123,27 @@ public:
   void write8(uint8_t Value) { *OS << char(Value); }
 
   void writeLE16(uint16_t Value) {
-    support::endian::Writer<support::little>(*OS).write(Value);
+    support::endian::write(*OS, Value, support::little);
   }
 
   void writeLE32(uint32_t Value) {
-    support::endian::Writer<support::little>(*OS).write(Value);
+    support::endian::write(*OS, Value, support::little);
   }
 
   void writeLE64(uint64_t Value) {
-    support::endian::Writer<support::little>(*OS).write(Value);
+    support::endian::write(*OS, Value, support::little);
   }
 
   void writeBE16(uint16_t Value) {
-    support::endian::Writer<support::big>(*OS).write(Value);
+    support::endian::write(*OS, Value, support::big);
   }
 
   void writeBE32(uint32_t Value) {
-    support::endian::Writer<support::big>(*OS).write(Value);
+    support::endian::write(*OS, Value, support::big);
   }
 
   void writeBE64(uint64_t Value) {
-    support::endian::Writer<support::big>(*OS).write(Value);
+    support::endian::write(*OS, Value, support::big);
   }
 
   void write16(uint16_t Value) {
