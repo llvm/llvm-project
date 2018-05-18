@@ -87,10 +87,10 @@ enum StripID {
 static const opt::OptTable::Info StripInfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,          NAME,         HELPTEXT,                                    \
-   METAVAR,         STRIP_##ID, opt::Option::KIND##Class,                      \
-   PARAM,           FLAGS,        STRIP_##GROUP,                               \
-   STRIP_##ALIAS, ALIASARGS,    VALUES},
+  {PREFIX,        NAME,       HELPTEXT,                                        \
+   METAVAR,       STRIP_##ID, opt::Option::KIND##Class,                        \
+   PARAM,         FLAGS,      STRIP_##GROUP,                                   \
+   STRIP_##ALIAS, ALIASARGS,  VALUES},
 #include "StripOpts.inc"
 #undef OPTION
 };
@@ -422,12 +422,12 @@ CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
-  
+
   if (InputArgs.size() == 0) {
     T.PrintHelp(errs(), "llvm-objcopy <input> [ <output> ]", "objcopy tool");
     exit(1);
   }
-  
+
   if (InputArgs.hasArg(OBJCOPY_help)) {
     T.PrintHelp(outs(), "llvm-objcopy <input> [ <output> ]", "objcopy tool");
     exit(0);
@@ -511,7 +511,7 @@ CopyConfig ParseStripOptions(ArrayRef<const char *> ArgsArr) {
     T.PrintHelp(errs(), "llvm-strip <input> [ <output> ]", "strip tool");
     exit(1);
   }
-  
+
   if (InputArgs.hasArg(STRIP_help)) {
     T.PrintHelp(outs(), "llvm-strip <input> [ <output> ]", "strip tool");
     exit(0);
@@ -537,7 +537,7 @@ CopyConfig ParseStripOptions(ArrayRef<const char *> ArgsArr) {
   Config.StripDebug = InputArgs.hasArg(STRIP_strip_debug);
   if (!Config.StripDebug)
     Config.StripAll = true;
-  
+
   for (auto Arg : InputArgs.filtered(STRIP_remove_section))
     Config.ToRemove.push_back(Arg->getValue());
 

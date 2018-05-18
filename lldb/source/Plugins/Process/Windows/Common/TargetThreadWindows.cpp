@@ -98,11 +98,11 @@ Unwind *TargetThreadWindows::GetUnwinder() {
   return m_unwinder_ap.get();
 }
 
-bool TargetThreadWindows::DoResume() {
+Status TargetThreadWindows::DoResume() {
   StateType resume_state = GetTemporaryResumeState();
   StateType current_state = GetState();
   if (resume_state == current_state)
-    return true;
+    return Status();
 
   if (resume_state == eStateStepping) {
     uint32_t flags_index =
@@ -118,8 +118,16 @@ bool TargetThreadWindows::DoResume() {
     DWORD previous_suspend_count = 0;
     HANDLE thread_handle = m_host_thread.GetNativeThread().GetSystemHandle();
     do {
+      // ResumeThread returns -1 on error, or the thread's *previous* suspend count on success.
+      // This means that the return value is 1 when the thread was restarted.
+      // Note that DWORD is an unsigned int, so we need to explicitly compare with -1.
       previous_suspend_count = ::ResumeThread(thread_handle);
-    } while (previous_suspend_count > 0);
+
+      if (previous_suspend_count == (DWORD)-1)
+        return Status(::GetLastError(), eErrorTypeWin32);
+
+    } while (previous_suspend_count > 1);
   }
-  return true;
+
+  return Status();
 }

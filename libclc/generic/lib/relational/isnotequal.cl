@@ -19,5 +19,15 @@ _CLC_DEFINE_ISNOTEQUAL(int, isnotequal, double, double)
 _CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(long, isnotequal, double, double)
 
 #endif
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+// The scalar version of isnotequal(half, half) returns an int, but the vector versions
+// return short.
+
+_CLC_DEFINE_ISNOTEQUAL(int, isnotequal, half, half)
+_CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(short, isnotequal, half, half)
+
+#endif
 
 #undef _CLC_DEFINE_ISNOTEQUAL

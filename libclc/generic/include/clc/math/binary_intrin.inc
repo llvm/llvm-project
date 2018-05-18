@@ -15,5 +15,15 @@ _CLC_OVERLOAD double8 __CLC_FUNCTION(double8, double8) __asm(__CLC_INTRINSIC ".v
 _CLC_OVERLOAD double16 __CLC_FUNCTION(double16, double16) __asm(__CLC_INTRINSIC ".v16f64");
 #endif
 
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+_CLC_OVERLOAD half __CLC_FUNCTION(half, half) __asm(__CLC_INTRINSIC ".f16");
+_CLC_OVERLOAD half2 __CLC_FUNCTION(half2, half2) __asm(__CLC_INTRINSIC ".v2f16");
+_CLC_OVERLOAD half3 __CLC_FUNCTION(half3, half3) __asm(__CLC_INTRINSIC ".v3f16");
+_CLC_OVERLOAD half4 __CLC_FUNCTION(half4, half4) __asm(__CLC_INTRINSIC ".v4f16");
+_CLC_OVERLOAD half8 __CLC_FUNCTION(half8, half8) __asm(__CLC_INTRINSIC ".v8f16");
+_CLC_OVERLOAD half16 __CLC_FUNCTION(half16, half16) __asm(__CLC_INTRINSIC ".v16f16");
+#endif
+
 #undef __CLC_FUNCTION
 #undef __CLC_INTRINSIC

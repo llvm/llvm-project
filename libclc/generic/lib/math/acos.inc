@@ -11,10 +11,15 @@
  * precision of #4 may be better.
  */
 
-#if __CLC_FPSIZE == 32
-#define __CLC_CONST(x) x ## f
-#else
+// TODO: Enable half precision when atan2 is implemented
+#if __CLC_FPSIZE > 16
+
+#if __CLC_FPSIZE == 64
 #define __CLC_CONST(x) x
+#elif __CLC_FPSIZE == 32
+#define __CLC_CONST(x) x ## f
+#elif __CLC_FPSIZE == 16
+#define __CLC_CONST(x) x ## h
 #endif
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE acos(__CLC_GENTYPE x) {
@@ -27,3 +32,5 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE acos(__CLC_GENTYPE x) {
 }
 
 #undef __CLC_CONST
+
+#endif

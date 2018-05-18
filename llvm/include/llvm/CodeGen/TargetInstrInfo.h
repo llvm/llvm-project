@@ -1598,6 +1598,10 @@ public:
   /// Describes the number of instructions that it will take to call and
   /// construct a frame for a given outlining candidate.
   struct MachineOutlinerInfo {
+    /// Represents the size of a sequence in bytes. (Some instructions vary
+    /// widely in size, so just counting the instructions isn't very useful.)
+    unsigned SequenceSize;
+
     /// Number of instructions to call an outlined function for this candidate.
     unsigned CallOverhead;
 
@@ -1614,10 +1618,11 @@ public:
     unsigned FrameConstructionID;
 
     MachineOutlinerInfo() {}
-    MachineOutlinerInfo(unsigned CallOverhead, unsigned FrameOverhead,
-                        unsigned CallConstructionID,
+    MachineOutlinerInfo(unsigned SequenceSize, unsigned CallOverhead,
+                        unsigned FrameOverhead, unsigned CallConstructionID,
                         unsigned FrameConstructionID)
-        : CallOverhead(CallOverhead), FrameOverhead(FrameOverhead),
+        : SequenceSize(SequenceSize), CallOverhead(CallOverhead),
+          FrameOverhead(FrameOverhead),
           CallConstructionID(CallConstructionID),
           FrameConstructionID(FrameConstructionID) {}
   };

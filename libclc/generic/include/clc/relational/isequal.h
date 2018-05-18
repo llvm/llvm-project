@@ -15,6 +15,10 @@ _CLC_VECTOR_ISEQUAL_DECL(float, int)
 _CLC_ISEQUAL_DECL(double, int)
 _CLC_VECTOR_ISEQUAL_DECL(double, long)
 #endif
+#ifdef cl_khr_fp16
+_CLC_ISEQUAL_DECL(half, int)
+_CLC_VECTOR_ISEQUAL_DECL(half, short)
+#endif
 
 #undef _CLC_ISEQUAL_DECL
 #undef _CLC_VECTOR_ISEQUAL_DEC
