@@ -53,7 +53,15 @@ public:
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override;
+                            const MCAsmLayout &Layout) const override {
+    llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
+  }
+
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
+                                    uint64_t Value,
+                                    const MCRelaxableFragment *DF,
+                                    const MCAsmLayout &Layout,
+                                    const bool WasForced) const override;
 
   unsigned getNumFixupKinds() const override {
     return RISCV::NumTargetFixupKinds;
@@ -96,10 +104,19 @@ public:
 };
 
 
-bool RISCVAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                           uint64_t Value,
-                                           const MCRelaxableFragment *DF,
-                                           const MCAsmLayout &Layout) const {
+bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
+                                                   bool Resolved,
+                                                   uint64_t Value,
+                                                   const MCRelaxableFragment *DF,
+                                                   const MCAsmLayout &Layout,
+                                                   const bool WasForced) const {
+  // Return true if the symbol is actually unresolved.
+  // Resolved could be always false when shouldForceRelocation return true.
+  // We use !WasForced to indicate that the symbol is unresolved and not forced
+  // by shouldForceRelocation.
+  if (!Resolved && !WasForced)
+    return true;
+
   int64_t Offset = int64_t(Value);
   switch ((unsigned)Fixup.getKind()) {
   default:

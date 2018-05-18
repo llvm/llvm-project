@@ -44,9 +44,9 @@ private:
 TEST_F(RegisterAliasingTest, TrackSimpleRegister) {
   const auto &RegInfo = getMCRegInfo();
   const RegisterAliasingTracker tracker(RegInfo, llvm::X86::EAX);
-  const std::set<llvm::MCPhysReg> ActualAliasedRegisters(
-      tracker.aliasedBits().set_bits().begin(),
-      tracker.aliasedBits().set_bits().end());
+  std::set<llvm::MCPhysReg> ActualAliasedRegisters;
+  for (unsigned I : tracker.aliasedBits().set_bits())
+    ActualAliasedRegisters.insert(static_cast<llvm::MCPhysReg>(I));
   const std::set<llvm::MCPhysReg> ExpectedAliasedRegisters = {
       llvm::X86::AL,  llvm::X86::AH,  llvm::X86::AX,
       llvm::X86::EAX, llvm::X86::HAX, llvm::X86::RAX};
