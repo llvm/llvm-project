@@ -13,7 +13,7 @@ add_llvm_tool(llvm-mca
   Backend.cpp
   BackendPrinter.cpp
   CodeRegion.cpp
-  Dispatch.cpp
+  DispatchStage.cpp
   DispatchStatistics.cpp
   FetchStage.cpp
   HWEventListener.cpp

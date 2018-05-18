@@ -43,9 +43,8 @@ static const char *ARCBRCondCodeToString(ARCCC::BRCondCode BRCC) {
     return "lo";
   case ARCCC::BRHS:
     return "hs";
-  default:
-    llvm_unreachable("Unhandled ARCCC::BRCondCode");
   }
+  llvm_unreachable("Unhandled ARCCC::BRCondCode");
 }
 
 static const char *ARCCondCodeToString(ARCCC::CondCode CC) {

@@ -25,16 +25,15 @@ class ARCFunctionInfo : public MachineFunctionInfo {
   virtual void anchor();
   bool ReturnStackOffsetSet;
   int VarArgsFrameIndex;
-  unsigned VarArgFrameBytes;
   unsigned ReturnStackOffset;
 
 public:
   ARCFunctionInfo()
-      : ReturnStackOffsetSet(false), VarArgsFrameIndex(0), VarArgFrameBytes(0),
+      : ReturnStackOffsetSet(false), VarArgsFrameIndex(0),
         ReturnStackOffset(-1U), MaxCallStackReq(0) {}
 
   explicit ARCFunctionInfo(MachineFunction &MF)
-      : ReturnStackOffsetSet(false), VarArgsFrameIndex(0), VarArgFrameBytes(0),
+      : ReturnStackOffsetSet(false), VarArgsFrameIndex(0),
         ReturnStackOffset(-1U), MaxCallStackReq(0) {
     // Functions are 4-byte (2**2) aligned.
     MF.setAlignment(2);

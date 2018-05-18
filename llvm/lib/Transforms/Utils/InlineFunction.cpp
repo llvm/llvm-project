@@ -1569,7 +1569,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   Instruction *CallSiteEHPad = nullptr;
   if (CallerPersonality) {
     EHPersonality Personality = classifyEHPersonality(CallerPersonality);
-    if (isFuncletEHPersonality(Personality)) {
+    if (isScopedEHPersonality(Personality)) {
       Optional<OperandBundleUse> ParentFunclet =
           CS.getOperandBundle(LLVMContext::OB_funclet);
       if (ParentFunclet)

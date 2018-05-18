@@ -513,36 +513,30 @@ define <4 x i32> @fptoui_4f64_to_2i32(<2 x double> %a) {
 ; SSE-NEXT:    subsd %xmm2, %xmm3
 ; SSE-NEXT:    cvttsd2si %xmm3, %rax
 ; SSE-NEXT:    xorq %rcx, %rax
-; SSE-NEXT:    cvttsd2si %xmm0, %rdx
+; SSE-NEXT:    cvttsd2si %xmm0, %rcx
 ; SSE-NEXT:    ucomisd %xmm2, %xmm0
-; SSE-NEXT:    cmovaeq %rax, %rdx
-; SSE-NEXT:    movq %rdx, %xmm0
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE-NEXT:    cvttsd2si %xmm0, %rax
-; SSE-NEXT:    xorq %rax, %rcx
-; SSE-NEXT:    ucomisd %xmm2, %xmm0
-; SSE-NEXT:    cmovbq %rax, %rcx
+; SSE-NEXT:    cmovaeq %rax, %rcx
 ; SSE-NEXT:    movq %rcx, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm0[0,2]
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE-NEXT:    pxor %xmm0, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm0[2,3]
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; VEX-LABEL: fptoui_4f64_to_2i32:
 ; VEX:       # %bb.0:
-; VEX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; VEX-NEXT:    vcvttsd2si %xmm1, %rax
-; VEX-NEXT:    vcvttsd2si %xmm0, %rcx
-; VEX-NEXT:    vmovd %ecx, %xmm0
-; VEX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; VEX-NEXT:    vcvttsd2si %xmm0, %rax
-; VEX-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; VEX-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; VEX-NEXT:    vmovd %eax, %xmm1
+; VEX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; VEX-NEXT:    vcvttsd2si %xmm0, %rax
+; VEX-NEXT:    vmovd %eax, %xmm0
+; VEX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; VEX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; VEX-NEXT:    retq
 ;
 ; AVX512F-LABEL: fptoui_4f64_to_2i32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvttpd2udq %zmm0, %ymm0
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512F-NEXT:    vzeroupper
@@ -550,14 +544,14 @@ define <4 x i32> @fptoui_4f64_to_2i32(<2 x double> %a) {
 ;
 ; AVX512VL-LABEL: fptoui_4f64_to_2i32:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512VL-NEXT:    vcvttpd2udq %ymm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: fptoui_4f64_to_2i32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vcvttpd2udq %zmm0, %ymm0
 ; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -565,11 +559,11 @@ define <4 x i32> @fptoui_4f64_to_2i32(<2 x double> %a) {
 ;
 ; AVX512VLDQ-LABEL: fptoui_4f64_to_2i32:
 ; AVX512VLDQ:       # %bb.0:
-; AVX512VLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VLDQ-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    vcvttpd2udq %ymm0, %xmm0
 ; AVX512VLDQ-NEXT:    vzeroupper
 ; AVX512VLDQ-NEXT:    retq
-  %ext = shufflevector <2 x double> %a, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %ext = shufflevector <2 x double> %a, <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %cvt = fptoui <4 x double> %ext to <4 x i32>
   ret <4 x i32> %cvt
 }
@@ -2242,12 +2236,12 @@ define <4 x i32> @fptosi_2f16_to_4i32(<2 x half> %a) nounwind {
 ; SSE-LABEL: fptosi_2f16_to_4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    movss %xmm1, {{[0-9]+}}(%rsp) # 4-byte Spill
+; SSE-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SSE-NEXT:    callq __gnu_f2h_ieee
 ; SSE-NEXT:    movzwl %ax, %edi
 ; SSE-NEXT:    callq __gnu_h2f_ieee
 ; SSE-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
-; SSE-NEXT:    movss {{[0-9]+}}(%rsp), %xmm0 # 4-byte Reload
+; SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    callq __gnu_f2h_ieee
 ; SSE-NEXT:    movzwl %ax, %edi
@@ -2265,12 +2259,12 @@ define <4 x i32> @fptosi_2f16_to_4i32(<2 x half> %a) nounwind {
 ; VEX-LABEL: fptosi_2f16_to_4i32:
 ; VEX:       # %bb.0:
 ; VEX-NEXT:    pushq %rax
-; VEX-NEXT:    vmovss %xmm1, {{[0-9]+}}(%rsp) # 4-byte Spill
+; VEX-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; VEX-NEXT:    callq __gnu_f2h_ieee
 ; VEX-NEXT:    movzwl %ax, %edi
 ; VEX-NEXT:    callq __gnu_h2f_ieee
 ; VEX-NEXT:    vmovss %xmm0, (%rsp) # 4-byte Spill
-; VEX-NEXT:    vmovss {{[0-9]+}}(%rsp), %xmm0 # 4-byte Reload
+; VEX-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; VEX-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; VEX-NEXT:    callq __gnu_f2h_ieee
 ; VEX-NEXT:    movzwl %ax, %edi

@@ -323,17 +323,19 @@ static Value* GEPToVectorIndex(GetElementPtrInst *GEP) {
 static bool canVectorizeInst(Instruction *Inst, User *User) {
   switch (Inst->getOpcode()) {
   case Instruction::Load: {
+    // Currently only handle the case where the Pointer Operand is a GEP.
+    // Also we could not vectorize volatile or atomic loads.
     LoadInst *LI = cast<LoadInst>(Inst);
-    // Currently only handle the case where the Pointer Operand is a GEP so check for that case.
-    return isa<GetElementPtrInst>(LI->getPointerOperand()) && !LI->isVolatile();
+    return isa<GetElementPtrInst>(LI->getPointerOperand()) && LI->isSimple();
   }
   case Instruction::BitCast:
     return true;
   case Instruction::Store: {
     // Must be the stored pointer operand, not a stored value, plus
     // since it should be canonical form, the User should be a GEP.
+    // Also we could not vectorize volatile or atomic stores.
     StoreInst *SI = cast<StoreInst>(Inst);
-    return (SI->getPointerOperand() == User) && isa<GetElementPtrInst>(User) && !SI->isVolatile();
+    return (SI->getPointerOperand() == User) && isa<GetElementPtrInst>(User) && SI->isSimple();
   }
   default:
     return false;

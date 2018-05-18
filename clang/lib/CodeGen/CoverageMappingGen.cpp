@@ -1372,8 +1372,7 @@ void CoverageMappingModuleGen::emit() {
   // and coverage mappings is a multiple of 8.
   if (size_t Rem = OS.str().size() % 8) {
     CoverageMappingSize += 8 - Rem;
-    for (size_t I = 0, S = 8 - Rem; I < S; ++I)
-      OS << '\0';
+    OS.write_zeros(8 - Rem);
   }
   auto *FilenamesAndMappingsVal =
       llvm::ConstantDataArray::getString(Ctx, OS.str(), false);

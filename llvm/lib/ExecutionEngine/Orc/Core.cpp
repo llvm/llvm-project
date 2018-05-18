@@ -20,8 +20,6 @@ namespace llvm {
 namespace orc {
 
 char FailedToMaterialize::ID = 0;
-char FailedToResolve::ID = 0;
-char FailedToFinalize::ID = 0;
 
 void MaterializationUnit::anchor() {}
 void SymbolResolver::anchor() {}
@@ -99,30 +97,17 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolDependenceMap &Deps) {
   return OS;
 }
 
-FailedToResolve::FailedToResolve(SymbolNameSet Symbols)
+FailedToMaterialize::FailedToMaterialize(SymbolNameSet Symbols)
     : Symbols(std::move(Symbols)) {
   assert(!this->Symbols.empty() && "Can not fail to resolve an empty set");
 }
 
-std::error_code FailedToResolve::convertToErrorCode() const {
+std::error_code FailedToMaterialize::convertToErrorCode() const {
   return orcError(OrcErrorCode::UnknownORCError);
 }
 
-void FailedToResolve::log(raw_ostream &OS) const {
-  OS << "Failed to resolve symbols: " << Symbols;
-}
-
-FailedToFinalize::FailedToFinalize(SymbolNameSet Symbols)
-    : Symbols(std::move(Symbols)) {
-  assert(!this->Symbols.empty() && "Can not fail to finalize an empty set");
-}
-
-std::error_code FailedToFinalize::convertToErrorCode() const {
-  return orcError(OrcErrorCode::UnknownORCError);
-}
-
-void FailedToFinalize::log(raw_ostream &OS) const {
-  OS << "Failed to finalize symbols: " << Symbols;
+void FailedToMaterialize::log(raw_ostream &OS) const {
+  OS << "Failed to materialize symbols: " << Symbols;
 }
 
 void ExecutionSessionBase::failQuery(AsynchronousSymbolQuery &Q, Error Err) {
@@ -266,9 +251,13 @@ Error MaterializationResponsibility::defineMaterializing(
   return V.defineMaterializing(NewSymbolFlags);
 }
 
-void MaterializationResponsibility::failMaterialization(
-    std::function<Error()> GenerateError) {
-  V.notifyFailed(SymbolFlags, std::move(GenerateError));
+void MaterializationResponsibility::failMaterialization() {
+
+  SymbolNameSet FailedSymbols;
+  for (auto &KV : SymbolFlags)
+    FailedSymbols.insert(KV.first);
+
+  V.notifyFailed(FailedSymbols);
   SymbolFlags.clear();
 }
 
@@ -550,14 +539,14 @@ void VSO::finalize(const SymbolFlagsMap &Finalized) {
   }
 }
 
-void VSO::notifyFailed(const SymbolFlagsMap &Failed,
-                       std::function<Error()> GenerateError) {
+void VSO::notifyFailed(const SymbolNameSet &FailedSymbols) {
+
+  // FIXME: This should fail any transitively dependant symbols too.
+
   auto FailedQueriesToNotify = ES.runSessionLocked([&, this]() {
     AsynchronousSymbolQuerySet FailedQueries;
 
-    for (auto &KV : Failed) {
-      const auto &Name = KV.first;
-
+    for (auto &Name : FailedSymbols) {
       auto I = Symbols.find(Name);
       assert(I != Symbols.end() && "Symbol not present in this VSO");
       Symbols.erase(I);
@@ -589,7 +578,7 @@ void VSO::notifyFailed(const SymbolFlagsMap &Failed,
   });
 
   for (auto &Q : FailedQueriesToNotify)
-    Q->handleFailed(GenerateError());
+    Q->handleFailed(make_error<FailedToMaterialize>(FailedSymbols));
 }
 
 SymbolNameSet VSO::lookupFlags(SymbolFlagsMap &Flags,

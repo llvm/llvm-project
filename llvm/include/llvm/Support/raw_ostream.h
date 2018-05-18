@@ -242,6 +242,9 @@ public:
   /// indent - Insert 'NumSpaces' spaces.
   raw_ostream &indent(unsigned NumSpaces);
 
+  /// write_zeros - Insert 'NumZeros' nulls.
+  raw_ostream &write_zeros(unsigned NumZeros);
+
   /// Changes the foreground color of text that will be output from this point
   /// forward.
   /// @param Color ANSI color to use, the special SAVEDCOLOR can be used to

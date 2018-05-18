@@ -1247,7 +1247,7 @@ std::string elf::replaceThinLTOSuffix(StringRef Path) {
 
   if (!Path.endswith(Suffix)) {
     error("-thinlto-object-suffix-replace=" + Suffix + ";" + Repl +
-          " was given, but " + Path + " does not ends with the suffix");
+          " was given, but " + Path + " does not end with the suffix");
     return "";
   }
   return (Path.drop_back(Suffix.size()) + Repl).str();

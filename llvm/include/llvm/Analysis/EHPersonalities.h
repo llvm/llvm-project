@@ -32,7 +32,8 @@ enum class EHPersonality {
   MSVC_Win64SEH,
   MSVC_CXX,
   CoreCLR,
-  Rust
+  Rust,
+  Wasm_CXX
 };
 
 /// See if the given exception handling personality function is one
@@ -67,6 +68,22 @@ inline bool isFuncletEHPersonality(EHPersonality Pers) {
   case EHPersonality::MSVC_X86SEH:
   case EHPersonality::MSVC_Win64SEH:
   case EHPersonality::CoreCLR:
+    return true;
+  default:
+    return false;
+  }
+  llvm_unreachable("invalid enum");
+}
+
+/// Returns true if this personality uses scope-style EH IR instructions:
+/// catchswitch, catchpad/ret, and cleanuppad/ret.
+inline bool isScopedEHPersonality(EHPersonality Pers) {
+  switch (Pers) {
+  case EHPersonality::MSVC_CXX:
+  case EHPersonality::MSVC_X86SEH:
+  case EHPersonality::MSVC_Win64SEH:
+  case EHPersonality::CoreCLR:
+  case EHPersonality::Wasm_CXX:
     return true;
   default:
     return false;
