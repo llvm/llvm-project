@@ -134,6 +134,11 @@ public:
     void reverse() noexcept;
 };
 
+
+template <class InputIterator, class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
+    forward_list(InputIterator, InputIterator, Allocator = Allocator())
+    -> forward_list<typename iterator_traits<InputIterator>::value_type, Allocator>;  // C++17
+
 template <class T, class Allocator>
     bool operator==(const forward_list<T, Allocator>& x,
                     const forward_list<T, Allocator>& y);
@@ -844,6 +849,23 @@ private:
         __node_pointer
         __sort(__node_pointer __f, difference_type __sz, _Compare& __comp);
 };
+
+
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _InputIterator,
+         class _Alloc = typename std::allocator<typename iterator_traits<_InputIterator>::value_type>,
+         class = typename enable_if<__is_allocator<_Alloc>::value, void>::type
+         >
+forward_list(_InputIterator, _InputIterator)
+  -> forward_list<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+
+template<class _InputIterator,
+         class _Alloc,
+         class = typename enable_if<__is_allocator<_Alloc>::value, void>::type
+         >
+forward_list(_InputIterator, _InputIterator, _Alloc)
+  -> forward_list<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+#endif
 
 template <class _Tp, class _Alloc>
 inline
