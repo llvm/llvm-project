@@ -100,10 +100,8 @@ public:
   };
 
   enum RTTIMode {
-    RM_EnabledExplicitly,
-    RM_EnabledImplicitly,
-    RM_DisabledExplicitly,
-    RM_DisabledImplicitly
+    RM_Enabled,
+    RM_Disabled,
   };
 
 private:

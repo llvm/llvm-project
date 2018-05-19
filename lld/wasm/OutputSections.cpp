@@ -85,8 +85,9 @@ CodeSection::CodeSection(ArrayRef<InputFunction *> Functions)
   OS.flush();
   BodySize = CodeSectionHeader.size();
 
-  for (InputChunk *Func : Functions) {
+  for (InputFunction *Func : Functions) {
     Func->OutputOffset = BodySize;
+    Func->calculateSize();
     BodySize += Func->getSize();
   }
 

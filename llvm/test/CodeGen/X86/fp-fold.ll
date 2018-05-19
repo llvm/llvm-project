@@ -2,38 +2,89 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown                        | FileCheck %s --check-prefixes=ANY,STRICT
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -enable-unsafe-fp-math | FileCheck %s --check-prefixes=ANY,UNSAFE
 
-; This is duplicated from tests for InstSimplify. If you're
-; adding something here, you should probably add it there too.
+define float @fadd_zero(float %x) {
+; STRICT-LABEL: fadd_zero:
+; STRICT:       # %bb.0:
+; STRICT-NEXT:    xorps %xmm1, %xmm1
+; STRICT-NEXT:    addss %xmm1, %xmm0
+; STRICT-NEXT:    retq
+;
+; UNSAFE-LABEL: fadd_zero:
+; UNSAFE:       # %bb.0:
+; UNSAFE-NEXT:    retq
+  %r = fadd float %x, 0.0
+  ret float %r
+}
 
-define float @fadd_zero_1(float %x) {
-; ANY-LABEL: fadd_zero_1:
+define float @fadd_negzero(float %x) {
+; STRICT-LABEL: fadd_negzero:
+; STRICT:       # %bb.0:
+; STRICT-NEXT:    addss {{.*}}(%rip), %xmm0
+; STRICT-NEXT:    retq
+;
+; UNSAFE-LABEL: fadd_negzero:
+; UNSAFE:       # %bb.0:
+; UNSAFE-NEXT:    retq
+  %r = fadd float %x, -0.0
+  ret float %r
+}
+
+define float @fadd_zero_nsz(float %x) {
+; ANY-LABEL: fadd_zero_nsz:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    retq
   %r = fadd nsz float %x, 0.0
   ret float %r
 }
 
-define float @fadd_zero_2(float %x) {
-; ANY-LABEL: fadd_zero_2:
+define float @fadd_negzero_nsz(float %x) {
+; ANY-LABEL: fadd_negzero_nsz:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    retq
   %r = fadd nsz float %x, -0.0
   ret float %r
 }
 
-define float @fsub_zero_1(float %x) {
-; UNSAFE-LABEL: fsub_zero_1:
+define float @fsub_zero(float %x) {
+; STRICT-LABEL: fsub_zero:
+; STRICT:       # %bb.0:
+; STRICT-NEXT:    addss {{.*}}(%rip), %xmm0
+; STRICT-NEXT:    retq
+;
+; UNSAFE-LABEL: fsub_zero:
 ; UNSAFE:       # %bb.0:
 ; UNSAFE-NEXT:    retq
   %r = fsub float %x, 0.0
   ret float %r
 }
 
-define float @fsub_zero_2(float %x) {
-; UNSAFE-LABEL: fsub_zero_2:
+define float @fsub_negzero(float %x) {
+; STRICT-LABEL: fsub_negzero:
+; STRICT:       # %bb.0:
+; STRICT-NEXT:    xorps %xmm1, %xmm1
+; STRICT-NEXT:    addss %xmm1, %xmm0
+; STRICT-NEXT:    retq
+;
+; UNSAFE-LABEL: fsub_negzero:
 ; UNSAFE:       # %bb.0:
 ; UNSAFE-NEXT:    retq
   %r = fsub float %x, -0.0
+  ret float %r
+}
+
+define float @fsub_zero_nsz(float %x) {
+; ANY-LABEL: fsub_zero_nsz:
+; ANY:       # %bb.0:
+; ANY-NEXT:    retq
+  %r = fsub nsz float %x, 0.0
+  ret float %r
+}
+
+define float @fsub_negzero_nsz(float %x) {
+; ANY-LABEL: fsub_negzero_nsz:
+; ANY:       # %bb.0:
+; ANY-NEXT:    retq
+  %r = fsub nsz float %x, -0.0
   ret float %r
 }
 
@@ -41,13 +92,13 @@ define float @fsub_zero_2(float %x) {
 define float @fmul_zero(float %x) {
 ; STRICT-LABEL: fmul_zero:
 ; STRICT:       # %bb.0:
-; STRICT:         xorps	%xmm1, %xmm1
-; STRICT:         mulss	%xmm1, %xmm0
+; STRICT-NEXT:    xorps %xmm1, %xmm1
+; STRICT-NEXT:    mulss %xmm1, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; UNSAFE-LABEL: fmul_zero:
 ; UNSAFE:       # %bb.0:
-; UNSAFE:         xorps	%xmm0, %xmm0
+; UNSAFE-NEXT:    xorps %xmm0, %xmm0
 ; UNSAFE-NEXT:    retq
   %r = fmul nnan nsz float %x, 0.0
   ret float %r

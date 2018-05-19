@@ -412,7 +412,6 @@ static void addExceptionArgs(const ArgList &Args, types::ID InputType,
                              const ToolChain &TC, bool KernelOrKext,
                              const ObjCRuntime &objcRuntime,
                              ArgStringList &CmdArgs) {
-  const Driver &D = TC.getDriver();
   const llvm::Triple &Triple = TC.getTriple();
 
   if (KernelOrKext) {
@@ -454,21 +453,6 @@ static void addExceptionArgs(const ArgList &Args, types::ID InputType,
           ExceptionArg->getOption().matches(options::OPT_fexceptions);
 
     if (CXXExceptionsEnabled) {
-      if (Triple.isPS4CPU()) {
-        ToolChain::RTTIMode RTTIMode = TC.getRTTIMode();
-        assert(ExceptionArg &&
-               "On the PS4 exceptions should only be enabled if passing "
-               "an argument");
-        if (RTTIMode == ToolChain::RM_DisabledExplicitly) {
-          const Arg *RTTIArg = TC.getRTTIArg();
-          assert(RTTIArg && "RTTI disabled explicitly but no RTTIArg!");
-          D.Diag(diag::err_drv_argument_not_allowed_with)
-              << RTTIArg->getAsString(Args) << ExceptionArg->getAsString(Args);
-        } else if (RTTIMode == ToolChain::RM_EnabledImplicitly)
-          D.Diag(diag::warn_drv_enabling_rtti_with_exceptions);
-      } else
-        assert(TC.getRTTIMode() != ToolChain::RM_DisabledImplicitly);
-
       CmdArgs.push_back("-fcxx-exceptions");
 
       EH = true;
@@ -4191,8 +4175,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   ToolChain::RTTIMode RTTIMode = getToolChain().getRTTIMode();
 
   if (KernelOrKext || (types::isCXX(InputType) &&
-                       (RTTIMode == ToolChain::RM_DisabledExplicitly ||
-                        RTTIMode == ToolChain::RM_DisabledImplicitly)))
+                       (RTTIMode == ToolChain::RM_Disabled)))
     CmdArgs.push_back("-fno-rtti");
 
   // -fshort-enums=0 is default for all architectures except Hexagon.

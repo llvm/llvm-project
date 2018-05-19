@@ -38,9 +38,9 @@ class Dtor {
 union U1 {
   Virtual v; // expected-error {{union member 'v' has a non-trivial copy constructor}}
   VirtualBase vbase; // expected-error {{union member 'vbase' has a non-trivial copy constructor}}
-  Ctor ctor; // expected-error {{union member 'ctor' has a non-trivial constructor}}
-  Ctor2 ctor2; // expected-error {{union member 'ctor2' has a non-trivial constructor}}
-  CtorTmpl ctortmpl; // expected-error {{union member 'ctortmpl' has a non-trivial constructor}}
+  Ctor ctor; // expected-error {{union member 'ctor' has a non-trivial default constructor}}
+  Ctor2 ctor2; // expected-error {{union member 'ctor2' has a non-trivial default constructor}}
+  CtorTmpl ctortmpl; // expected-error {{union member 'ctortmpl' has a non-trivial default constructor}}
   CopyCtor copyctor; // expected-error {{union member 'copyctor' has a non-trivial copy constructor}}
   CopyAssign copyassign; // expected-error {{union member 'copyassign' has a non-trivial copy assignment operator}}
   Dtor dtor; // expected-error {{union member 'dtor' has a non-trivial destructor}}
@@ -56,10 +56,10 @@ union U2 {
   } m2; // expected-error {{union member 'm2' has a non-trivial copy constructor}}
   struct {
     Ctor ctor; // expected-note {{because field of type 'Ctor' has a user-provided default constructor}}
-  } m3; // expected-error {{union member 'm3' has a non-trivial constructor}}
+  } m3; // expected-error {{union member 'm3' has a non-trivial default constructor}}
   struct {
     Ctor2 ctor2; // expected-note {{because field of type 'Ctor2' has a user-provided default constructor}}
-  } m3a; // expected-error {{union member 'm3a' has a non-trivial constructor}}
+  } m3a; // expected-error {{union member 'm3a' has a non-trivial default constructor}}
   struct { // expected-note {{no constructor can be used to copy an object of type 'const}}
     CopyCtor copyctor;
   } m4; // expected-error {{union member 'm4' has a non-trivial copy constructor}}
@@ -80,9 +80,9 @@ union U3 {
   struct s2 : VirtualBase { // expected-note {{because the function selected to copy base class of type 'VirtualBase' is not trivial}}
   } m2; // expected-error {{union member 'm2' has a non-trivial copy constructor}}
   struct s3 : Ctor { // expected-note {{because base class of type 'Ctor' has a user-provided default constructor}}
-  } m3; // expected-error {{union member 'm3' has a non-trivial constructor}}
+  } m3; // expected-error {{union member 'm3' has a non-trivial default constructor}}
   struct s3a : Ctor2 { // expected-note {{because base class of type 'Ctor2' has a user-provided default constructor}}
-  } m3a; // expected-error {{union member 'm3a' has a non-trivial constructor}}
+  } m3a; // expected-error {{union member 'm3a' has a non-trivial default constructor}}
   struct s4 : CopyCtor { // expected-note {{because no constructor can be used to copy an object of type 'const U3::s4'}}
   } m4; // expected-error {{union member 'm4' has a non-trivial copy constructor}}
   struct s5 : CopyAssign { // expected-note {{because no assignment operator can be used to copy an object of type 'const U3::s5'}}
@@ -93,7 +93,7 @@ union U3 {
   } m7;
   struct s8 {
     s8(...) = delete; // expected-note {{because it is a variadic function}} expected-warning {{C++11}}
-  } m8; // expected-error {{union member 'm8' has a non-trivial constructor}}
+  } m8; // expected-error {{union member 'm8' has a non-trivial default constructor}}
 };
 
 union U4 {

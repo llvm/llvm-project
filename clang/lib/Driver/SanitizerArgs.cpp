@@ -288,19 +288,18 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       // Test for -fno-rtti + explicit -fsanitizer=vptr before expanding groups
       // so we don't error out if -fno-rtti and -fsanitize=undefined were
       // passed.
-      if (Add & Vptr &&
-          (RTTIMode == ToolChain::RM_DisabledImplicitly ||
-           RTTIMode == ToolChain::RM_DisabledExplicitly)) {
-        if (RTTIMode == ToolChain::RM_DisabledImplicitly)
-          // Warn about not having rtti enabled if the vptr sanitizer is
-          // explicitly enabled
-          D.Diag(diag::warn_drv_disabling_vptr_no_rtti_default);
-        else {
-          const llvm::opt::Arg *NoRTTIArg = TC.getRTTIArg();
-          assert(NoRTTIArg &&
-                 "RTTI disabled explicitly but we have no argument!");
+      if ((Add & Vptr) && (RTTIMode == ToolChain::RM_Disabled)) {
+        if (const llvm::opt::Arg *NoRTTIArg = TC.getRTTIArg()) {
+          assert(NoRTTIArg->getOption().matches(options::OPT_fno_rtti) &&
+                  "RTTI disabled without -fno-rtti option?");
+          // The user explicitly passed -fno-rtti with -fsanitize=vptr, but
+          // the vptr sanitizer requires RTTI, so this is a user error.
           D.Diag(diag::err_drv_argument_not_allowed_with)
               << "-fsanitize=vptr" << NoRTTIArg->getAsString(Args);
+        } else {
+          // The vptr sanitizer requires RTTI, but RTTI is disabled (by 
+          // default). Warn that the vptr sanitizer is being disabled.
+          D.Diag(diag::warn_drv_disabling_vptr_no_rtti_default);
         }
 
         // Take out the Vptr sanitizer from the enabled sanitizers
@@ -372,9 +371,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   // We disable the vptr sanitizer if it was enabled by group expansion but RTTI
   // is disabled.
-  if ((Kinds & Vptr) &&
-      (RTTIMode == ToolChain::RM_DisabledImplicitly ||
-       RTTIMode == ToolChain::RM_DisabledExplicitly)) {
+  if ((Kinds & Vptr) && (RTTIMode == ToolChain::RM_Disabled)) {
     Kinds &= ~Vptr;
   }
 
