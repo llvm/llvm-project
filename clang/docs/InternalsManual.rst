@@ -319,6 +319,32 @@ they should be discussed before they are added.  If you are creating a lot of
 repetitive diagnostics and/or have an idea for a useful formatter, please bring
 it up on the cfe-dev mailing list.
 
+**"sub" format**
+
+Example:
+  Given the following record definition of type ``TextSubstitution``:
+
+  .. code-block:: text
+
+    def select_ovl_candidate : TextSubstitution<
+      "%select{function|constructor}0%select{| template| %2}1">;
+
+  which can be used as
+
+  .. code-block:: text
+
+    def note_ovl_candidate : Note<
+      "candidate %sub{select_ovl_candidate}3,2,1 not viable">;
+
+  and will act as if it was written
+  ``"candidate %select{function|constructor}3%select{| template| %1}2 not viable"``.
+Description:
+  This format specifier is used to avoid repeating strings verbatim in multiple
+  diagnostics. The argument to ``%sub`` must name a ``TextSubstitution`` tblgen
+  record. The substitution must specify all arguments used by the substitution,
+  and the modifier indexes in the substitution are re-numbered accordingly. The
+  substituted text must itself be a valid format string before substitution.
+
 .. _internals-producing-diag:
 
 Producing the Diagnostic

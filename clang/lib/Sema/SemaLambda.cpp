@@ -910,10 +910,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   AddRangeBasedOptnone(Method);
   
   // Attributes on the lambda apply to the method.  
-  if (Attr *A = getImplicitSectionAttrForFunction(Method))
-    Method->addAttr(A);
-  
-  // Attributes on the lambda apply to the method.
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
 
   // CUDA lambdas get implicit attributes based on the scope in which they're
