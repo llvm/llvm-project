@@ -3965,7 +3965,7 @@ def VMOVDI2PDIrr : VS2I<0x6E, MRMSrcReg, (outs VR128:$dst), (ins GR32:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(set VR128:$dst,
                           (v4i32 (scalar_to_vector GR32:$src)))]>,
-                          VEX, Sched<[WriteMove]>;
+                          VEX, Sched<[WriteVecMoveFromGpr]>;
 def VMOVDI2PDIrm : VS2I<0x6E, MRMSrcMem, (outs VR128:$dst), (ins i32mem:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(set VR128:$dst,
@@ -3975,7 +3975,7 @@ def VMOV64toPQIrr : VRS2I<0x6E, MRMSrcReg, (outs VR128:$dst), (ins GR64:$src),
                           "movq\t{$src, $dst|$dst, $src}",
                           [(set VR128:$dst,
                             (v2i64 (scalar_to_vector GR64:$src)))]>,
-                          VEX, Sched<[WriteMove]>;
+                          VEX, Sched<[WriteVecMoveFromGpr]>;
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayLoad = 1 in
 def VMOV64toPQIrm : VRS2I<0x6E, MRMSrcMem, (outs VR128:$dst), (ins i64mem:$src),
                           "movq\t{$src, $dst|$dst, $src}", []>,
@@ -3984,13 +3984,13 @@ let isCodeGenOnly = 1 in
 def VMOV64toSDrr : VRS2I<0x6E, MRMSrcReg, (outs FR64:$dst), (ins GR64:$src),
                          "movq\t{$src, $dst|$dst, $src}",
                          [(set FR64:$dst, (bitconvert GR64:$src))]>,
-                         VEX, Sched<[WriteMove]>;
+                         VEX, Sched<[WriteVecMoveFromGpr]>;
 
 def MOVDI2PDIrr : S2I<0x6E, MRMSrcReg, (outs VR128:$dst), (ins GR32:$src),
                       "movd\t{$src, $dst|$dst, $src}",
                       [(set VR128:$dst,
                         (v4i32 (scalar_to_vector GR32:$src)))]>,
-                      Sched<[WriteMove]>;
+                      Sched<[WriteVecMoveFromGpr]>;
 def MOVDI2PDIrm : S2I<0x6E, MRMSrcMem, (outs VR128:$dst), (ins i32mem:$src),
                       "movd\t{$src, $dst|$dst, $src}",
                       [(set VR128:$dst,
@@ -4000,7 +4000,7 @@ def MOV64toPQIrr : RS2I<0x6E, MRMSrcReg, (outs VR128:$dst), (ins GR64:$src),
                         "movq\t{$src, $dst|$dst, $src}",
                         [(set VR128:$dst,
                           (v2i64 (scalar_to_vector GR64:$src)))]>,
-                        Sched<[WriteMove]>;
+                        Sched<[WriteVecMoveFromGpr]>;
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayLoad = 1 in
 def MOV64toPQIrm : RS2I<0x6E, MRMSrcMem, (outs VR128:$dst), (ins i64mem:$src),
                         "movq\t{$src, $dst|$dst, $src}", []>,
@@ -4009,7 +4009,7 @@ let isCodeGenOnly = 1 in
 def MOV64toSDrr : RS2I<0x6E, MRMSrcReg, (outs FR64:$dst), (ins GR64:$src),
                        "movq\t{$src, $dst|$dst, $src}",
                        [(set FR64:$dst, (bitconvert GR64:$src))]>,
-                       Sched<[WriteMove]>;
+                       Sched<[WriteVecMoveFromGpr]>;
 } // ExeDomain = SSEPackedInt
 
 //===---------------------------------------------------------------------===//
@@ -4019,7 +4019,7 @@ let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
   def VMOVDI2SSrr  : VS2I<0x6E, MRMSrcReg, (outs FR32:$dst), (ins GR32:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(set FR32:$dst, (bitconvert GR32:$src))]>,
-                        VEX, Sched<[WriteMove]>;
+                        VEX, Sched<[WriteVecMoveFromGpr]>;
 
   def VMOVDI2SSrm  : VS2I<0x6E, MRMSrcMem, (outs FR32:$dst), (ins i32mem:$src),
                         "movd\t{$src, $dst|$dst, $src}",
@@ -4028,7 +4028,7 @@ let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
   def MOVDI2SSrr  : S2I<0x6E, MRMSrcReg, (outs FR32:$dst), (ins GR32:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(set FR32:$dst, (bitconvert GR32:$src))]>,
-                        Sched<[WriteMove]>;
+                        Sched<[WriteVecMoveFromGpr]>;
 
   def MOVDI2SSrm  : S2I<0x6E, MRMSrcMem, (outs FR32:$dst), (ins i32mem:$src),
                         "movd\t{$src, $dst|$dst, $src}",
@@ -4044,7 +4044,7 @@ def VMOVPDI2DIrr  : VS2I<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR128:$src),
                          "movd\t{$src, $dst|$dst, $src}",
                          [(set GR32:$dst, (extractelt (v4i32 VR128:$src),
                                           (iPTR 0)))]>, VEX,
-                         Sched<[WriteMove]>;
+                         Sched<[WriteVecMoveToGpr]>;
 def VMOVPDI2DImr  : VS2I<0x7E, MRMDestMem, (outs),
                          (ins i32mem:$dst, VR128:$src),
                          "movd\t{$src, $dst|$dst, $src}",
@@ -4055,7 +4055,7 @@ def MOVPDI2DIrr  : S2I<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR128:$src),
                        "movd\t{$src, $dst|$dst, $src}",
                        [(set GR32:$dst, (extractelt (v4i32 VR128:$src),
                                         (iPTR 0)))]>,
-                   Sched<[WriteMove]>;
+                   Sched<[WriteVecMoveToGpr]>;
 def MOVPDI2DImr  : S2I<0x7E, MRMDestMem, (outs), (ins i32mem:$dst, VR128:$src),
                        "movd\t{$src, $dst|$dst, $src}",
                        [(store (i32 (extractelt (v4i32 VR128:$src),
@@ -4067,7 +4067,7 @@ def MOVPDI2DImr  : S2I<0x7E, MRMDestMem, (outs), (ins i32mem:$dst, VR128:$src),
 // Move Packed Doubleword Int first element to Doubleword Int
 //
 let ExeDomain = SSEPackedInt in {
-let SchedRW = [WriteMove] in {
+let SchedRW = [WriteVecMoveToGpr] in {
 def VMOVPQIto64rr : VRS2I<0x7E, MRMDestReg, (outs GR64:$dst), (ins VR128:$src),
                           "movq\t{$src, $dst|$dst, $src}",
                           [(set GR64:$dst, (extractelt (v2i64 VR128:$src),
@@ -4103,7 +4103,7 @@ let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
   def VMOVSDto64rr : VRS2I<0x7E, MRMDestReg, (outs GR64:$dst), (ins FR64:$src),
                            "movq\t{$src, $dst|$dst, $src}",
                            [(set GR64:$dst, (bitconvert FR64:$src))]>,
-                           VEX, Sched<[WriteMove]>;
+                           VEX, Sched<[WriteVecMoveToGpr]>;
   def VMOVSDto64mr : VRS2I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, FR64:$src),
                            "movq\t{$src, $dst|$dst, $src}",
                            [(store (i64 (bitconvert FR64:$src)), addr:$dst)]>,
@@ -4116,7 +4116,7 @@ let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
   def MOVSDto64rr : RS2I<0x7E, MRMDestReg, (outs GR64:$dst), (ins FR64:$src),
                          "movq\t{$src, $dst|$dst, $src}",
                          [(set GR64:$dst, (bitconvert FR64:$src))]>,
-                         Sched<[WriteMove]>;
+                         Sched<[WriteVecMoveToGpr]>;
   def MOVSDto64mr : RS2I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, FR64:$src),
                          "movq\t{$src, $dst|$dst, $src}",
                          [(store (i64 (bitconvert FR64:$src)), addr:$dst)]>,
@@ -4130,7 +4130,7 @@ let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
   def VMOVSS2DIrr  : VS2I<0x7E, MRMDestReg, (outs GR32:$dst), (ins FR32:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(set GR32:$dst, (bitconvert FR32:$src))]>,
-                        VEX, Sched<[WriteMove]>;
+                        VEX, Sched<[WriteVecMoveToGpr]>;
   def VMOVSS2DImr  : VS2I<0x7E, MRMDestMem, (outs), (ins i32mem:$dst, FR32:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(store (i32 (bitconvert FR32:$src)), addr:$dst)]>,
@@ -4138,7 +4138,7 @@ let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
   def MOVSS2DIrr  : S2I<0x7E, MRMDestReg, (outs GR32:$dst), (ins FR32:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(set GR32:$dst, (bitconvert FR32:$src))]>,
-                        Sched<[WriteMove]>;
+                        Sched<[WriteVecMoveToGpr]>;
   def MOVSS2DImr  : S2I<0x7E, MRMDestMem, (outs), (ins i32mem:$dst, FR32:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(store (i32 (bitconvert FR32:$src)), addr:$dst)]>,

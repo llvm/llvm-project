@@ -100,7 +100,7 @@ void TraceConverter::exportAsYAML(const Trace &Records, raw_ostream &OS) {
 void TraceConverter::exportAsRAWv1(const Trace &Records, raw_ostream &OS) {
   // First write out the file header, in the correct endian-appropriate format
   // (XRay assumes currently little endian).
-  support::endian::Writer<support::endianness::little> Writer(OS);
+  support::endian::Writer Writer(OS, support::endianness::little);
   const auto &FH = Records.getFileHeader();
   Writer.write(FH.Version);
   Writer.write(FH.Type);

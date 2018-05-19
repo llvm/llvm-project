@@ -148,11 +148,11 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
 }
 
 void R600MCCodeEmitter::Emit(uint32_t Value, raw_ostream &OS) const {
-  support::endian::Writer<support::little>(OS).write(Value);
+  support::endian::write(OS, Value, support::little);
 }
 
 void R600MCCodeEmitter::Emit(uint64_t Value, raw_ostream &OS) const {
-  support::endian::Writer<support::little>(OS).write(Value);
+  support::endian::write(OS, Value, support::little);
 }
 
 unsigned R600MCCodeEmitter::getHWReg(unsigned RegNo) const {

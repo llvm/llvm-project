@@ -248,6 +248,28 @@ static void dumpStringOffsetsSection(
   }
 }
 
+// Dump the .debug_rnglists or .debug_rnglists.dwo section (DWARF v5).
+static void dumpRnglistsSection(raw_ostream &OS,
+                                DWARFDataExtractor &rnglistData,
+                                DIDumpOptions DumpOpts) {
+  uint32_t Offset = 0;
+  while (rnglistData.isValidOffset(Offset)) {
+    llvm::DWARFDebugRnglistTable Rnglists;
+    uint32_t TableOffset = Offset;
+    if (Error Err = Rnglists.extract(rnglistData, &Offset)) {
+      WithColor::error() << toString(std::move(Err)) << '\n';
+      uint64_t Length = Rnglists.length();
+      // Keep going after an error, if we can, assuming that the length field
+      // could be read. If it couldn't, stop reading the section.
+      if (Length == 0)
+        break;
+      Offset = TableOffset + Length;
+    } else {
+      Rnglists.dump(OS, DumpOpts);
+    }
+  }
+}
+
 void DWARFContext::dump(
     raw_ostream &OS, DIDumpOptions DumpOpts,
     std::array<Optional<uint64_t>, DIDT_ID_Count> DumpOffsets) {
@@ -455,24 +477,16 @@ void DWARFContext::dump(
 
   if (shouldDump(Explicit, ".debug_rnglists", DIDT_ID_DebugRnglists,
                  DObj->getRnglistsSection().Data)) {
-    DWARFDataExtractor rnglistData(*DObj, DObj->getRnglistsSection(),
+    DWARFDataExtractor RnglistData(*DObj, DObj->getRnglistsSection(),
                                    isLittleEndian(), 0);
-    uint32_t Offset = 0;
-    while (rnglistData.isValidOffset(Offset)) {
-      DWARFDebugRnglistTable Rnglists;
-      uint32_t TableOffset = Offset;
-      if (Error Err = Rnglists.extract(rnglistData, &Offset)) {
-        WithColor::error() << toString(std::move(Err)) << '\n';
-        uint64_t Length = Rnglists.length();
-        // Keep going after an error, if we can, assuming that the length field
-        // could be read. If it couldn't, stop reading the section.
-        if (Length == 0)
-          break;
-        Offset = TableOffset + Length;
-      } else {
-        Rnglists.dump(OS, DumpOpts);
-      }
-    }
+    dumpRnglistsSection(OS, RnglistData, DumpOpts);
+  }
+
+  if (shouldDump(ExplicitDWO, ".debug_rnglists.dwo", DIDT_ID_DebugRnglists,
+                 DObj->getRnglistsDWOSection().Data)) {
+    DWARFDataExtractor RnglistData(*DObj, DObj->getRnglistsDWOSection(),
+                                   isLittleEndian(), 0);
+    dumpRnglistsSection(OS, RnglistData, DumpOpts);
   }
 
   if (shouldDump(Explicit, ".debug_pubnames", DIDT_ID_DebugPubnames,
@@ -1173,6 +1187,7 @@ class DWARFObjInMemory final : public DWARFObject {
   DWARFSectionMap LocDWOSection;
   DWARFSectionMap StringOffsetDWOSection;
   DWARFSectionMap RangeDWOSection;
+  DWARFSectionMap RnglistsDWOSection;
   DWARFSectionMap AddrSection;
   DWARFSectionMap AppleNamesSection;
   DWARFSectionMap AppleTypesSection;
@@ -1192,6 +1207,7 @@ class DWARFObjInMemory final : public DWARFObject {
         .Case("debug_loc.dwo", &LocDWOSection)
         .Case("debug_line.dwo", &LineDWOSection)
         .Case("debug_names", &DebugNamesSection)
+        .Case("debug_rnglists.dwo", &RnglistsDWOSection)
         .Case("debug_str_offsets.dwo", &StringOffsetDWOSection)
         .Case("debug_addr", &AddrSection)
         .Case("apple_names", &AppleNamesSection)
@@ -1449,6 +1465,9 @@ public:
   }
   const DWARFSection &getRangeDWOSection() const override {
     return RangeDWOSection;
+  }
+  const DWARFSection &getRnglistsDWOSection() const override {
+    return RnglistsDWOSection;
   }
   const DWARFSection &getAddrSection() const override { return AddrSection; }
   StringRef getCUIndexSection() const override { return CUIndexSection; }

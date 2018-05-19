@@ -572,7 +572,7 @@ void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   }
 
   uint64_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);
-  support::endian::Writer<support::little>(OS).write<uint32_t>(Binary);
+  support::endian::write<uint32_t>(OS, Binary, support::little);
   ++MCNumEmitted; // Keep track of the # of mi's emitted.
 }
 

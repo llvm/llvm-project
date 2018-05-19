@@ -416,6 +416,8 @@ defm : X86WriteRes<WriteVecMaskedStoreY,  [JSAGU, JFPU01, JVALU], 6, [2, 2, 4], 
 defm : X86WriteRes<WriteVecMove,          [JFPU01, JVALU], 1, [1, 1], 1>;
 defm : X86WriteRes<WriteVecMoveX,         [JFPU01, JVALU], 1, [1, 1], 1>;
 defm : X86WriteRes<WriteVecMoveY,         [JFPU01, JVALU], 1, [2, 2], 2>;
+defm : X86WriteRes<WriteVecMoveToGpr,     [JFPU0, JFPA, JALU0], 4, [1, 1, 1], 1>;
+defm : X86WriteRes<WriteVecMoveFromGpr,   [JFPU01, JFPX], 8, [1, 1], 2>;
 
 defm : JWriteResFpuPair<WriteVecALU,      [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecALUX,     [JFPU01, JVALU], 1>;
@@ -461,9 +463,10 @@ defm : JWriteResFpuPair<WriteVarVecShiftY,[JFPU01, JVALU], 1>; // NOTE: Doesn't 
 // Vector insert/extract operations.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteVecInsert,   [JFPU01, JVALU], 1>;
-def  : WriteRes<WriteVecExtract,     [JFPU0, JFPA, JALU0]> { let Latency = 3; }
-def  : WriteRes<WriteVecExtractSt,   [JFPU1, JSTC, JSAGU]> { let Latency = 3; }
+defm : X86WriteRes<WriteVecInsert,      [JFPU01, JVALU], 7, [1,1], 2>;
+defm : X86WriteRes<WriteVecInsertLd,    [JFPU01, JVALU, JLAGU], 4, [1,1,1], 1>;
+defm : X86WriteRes<WriteVecExtract,     [JFPU0, JFPA, JALU0], 3, [1,1,1], 1>;
+defm : X86WriteRes<WriteVecExtractSt,   [JFPU1, JSTC, JSAGU], 3, [1,1,1], 1>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SSE42 String instructions.

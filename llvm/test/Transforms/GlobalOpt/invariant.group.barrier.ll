@@ -76,4 +76,4 @@ declare void @changeTmp3ValAndCallBarrierInside()
 
 declare i8* @llvm.launder.invariant.group(i8*)
 
-!0 = !{!"something"}
+!0 = !{}

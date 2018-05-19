@@ -29,6 +29,7 @@
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -248,10 +249,10 @@ createMCAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
 
 static MCStreamer *createMCStreamer(Triple const &T, MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
-                                    raw_pwrite_stream &OS,
+                                    std::unique_ptr<MCObjectWriter> &&OW,
                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
                                     bool RelaxAll) {
-  return createHexagonELFStreamer(T, Context, std::move(MAB), OS,
+  return createHexagonELFStreamer(T, Context, std::move(MAB), std::move(OW),
                                   std::move(Emitter));
 }
 

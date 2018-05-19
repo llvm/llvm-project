@@ -80,3 +80,28 @@ loop:
 leave:
   ret void
 }
+
+define void @checkLaunder(i8* align 4 dereferenceable(1024) %p) {
+; CHECK-LABEL: @checkLaunder(
+; CHECK: entry:
+; CHECK:  %l = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
+; CHECK:  %val = load i8, i8* %l
+; CHECK:  br label %loop
+; CHECK: loop:
+; CHECK:  call void @use(i32 0)
+; CHECK-NEXT:  call void @use8(i8 %val)
+
+entry:
+  %l = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
+  br label %loop
+
+loop:
+  call void @use(i32 0)
+  %val = load i8, i8* %l, !invariant.load !{}
+  call void @use8(i8 %val)
+  br label %loop
+}
+
+declare i8* @llvm.launder.invariant.group.p0i8(i8*)
+
+declare void @use8(i8)

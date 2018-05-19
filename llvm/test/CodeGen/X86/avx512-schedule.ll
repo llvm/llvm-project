@@ -1981,12 +1981,12 @@ entry:
 define double @long_to_double(i64 %x) {
 ; GENERIC-LABEL: long_to_double:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmovq %rdi, %xmm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vmovq %rdi, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: long_to_double:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmovq %rdi, %xmm0 # sched: [1:0.25]
+; SKX-NEXT:    vmovq %rdi, %xmm0 # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
    %res = bitcast i64 %x to double
    ret double %res
@@ -1995,12 +1995,12 @@ define double @long_to_double(i64 %x) {
 define i64 @double_to_long(double %x) {
 ; GENERIC-LABEL: double_to_long:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmovq %xmm0, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    vmovq %xmm0, %rax # sched: [2:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: double_to_long:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmovq %xmm0, %rax # sched: [1:0.25]
+; SKX-NEXT:    vmovq %xmm0, %rax # sched: [2:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
    %res = bitcast double %x to i64
    ret i64 %res
@@ -2009,12 +2009,12 @@ define i64 @double_to_long(double %x) {
 define float @int_to_float(i32 %x) {
 ; GENERIC-LABEL: int_to_float:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmovd %edi, %xmm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vmovd %edi, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: int_to_float:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmovd %edi, %xmm0 # sched: [1:0.25]
+; SKX-NEXT:    vmovd %edi, %xmm0 # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
    %res = bitcast i32 %x to float
    ret float %res
@@ -2023,12 +2023,12 @@ define float @int_to_float(i32 %x) {
 define i32 @float_to_int(float %x) {
 ; GENERIC-LABEL: float_to_int:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmovd %xmm0, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    vmovd %xmm0, %eax # sched: [2:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: float_to_int:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmovd %xmm0, %eax # sched: [1:0.25]
+; SKX-NEXT:    vmovd %xmm0, %eax # sched: [2:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
    %res = bitcast float %x to i32
    ret i32 %res
@@ -5877,12 +5877,12 @@ entry:
 define i32 @mov_test1(float %x) {
 ; GENERIC-LABEL: mov_test1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmovd %xmm0, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    vmovd %xmm0, %eax # sched: [2:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mov_test1:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmovd %xmm0, %eax # sched: [1:0.25]
+; SKX-NEXT:    vmovd %xmm0, %eax # sched: [2:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
    %res = bitcast float %x to i32
    ret i32 %res

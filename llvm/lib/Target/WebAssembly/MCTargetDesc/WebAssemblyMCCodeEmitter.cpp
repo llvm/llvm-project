@@ -118,11 +118,11 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         // TODO: MC converts all floating point immediate operands to double.
         // This is fine for numeric values, but may cause NaNs to change bits.
         float f = float(MO.getFPImm());
-        support::endian::Writer<support::little>(OS).write<float>(f);
+        support::endian::write<float>(OS, f, support::little);
       } else {
         assert(Info.OperandType == WebAssembly::OPERAND_F64IMM);
         double d = MO.getFPImm();
-        support::endian::Writer<support::little>(OS).write<double>(d);
+        support::endian::write<double>(OS, d, support::little);
       }
     } else if (MO.isExpr()) {
       const MCOperandInfo &Info = Desc.OpInfo[i];

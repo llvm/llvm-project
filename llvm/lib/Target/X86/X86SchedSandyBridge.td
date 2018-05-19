@@ -290,6 +290,8 @@ defm : X86WriteRes<WriteVecMaskedStoreY, [SBPort4,SBPort01,SBPort23], 5, [1,1,1]
 defm : X86WriteRes<WriteVecMove,         [SBPort05], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [SBPort05], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [SBPort05], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveToGpr,    [SBPort0], 2, [1], 1>;
+defm : X86WriteRes<WriteVecMoveFromGpr,  [SBPort5], 1, [1], 1>;
 
 defm : SBWriteResPair<WriteVecLogic, [SBPort015], 1, [1], 1, 5>;
 defm : SBWriteResPair<WriteVecLogicX,[SBPort015], 1, [1], 1, 6>;
@@ -497,8 +499,6 @@ def: InstRW<[SBWriteResGroup2], (instrs FDECSTP, FINCSTP, FFREE, FFREEP, FNOP,
                                         LD_Frr, ST_Frr, ST_FPrr)>;
 def: InstRW<[SBWriteResGroup2], (instrs LOOP, LOOPE, LOOPNE)>; // FIXME: This seems wrong compared to other Intel CPUs.
 def: InstRW<[SBWriteResGroup2], (instrs RETQ)>;
-def: InstRW<[SBWriteResGroup2], (instregex "(V?)MOV64toPQIrr",
-                                           "(V?)MOVDI2PDIrr")>;
 
 def SBWriteResGroup4 : SchedWriteRes<[SBPort05]> {
   let Latency = 1;
@@ -533,14 +533,6 @@ def SBWriteResGroup6 : SchedWriteRes<[SBPort015]> {
 }
 def: InstRW<[SBWriteResGroup6], (instregex "MMX_MOVQ2DQrr",
                                            "MOVDQ(A|U)rr")>; // NOTE: Different port requirements to VEX equivalents
-
-def SBWriteResGroup7 : SchedWriteRes<[SBPort0]> {
-  let Latency = 2;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-def: InstRW<[SBWriteResGroup7], (instregex "(V?)MOVPDI2DIrr",
-                                           "(V?)MOVPQIto64rr")>;
 
 def SBWriteResGroup9 : SchedWriteRes<[SBPort05]> {
   let Latency = 2;

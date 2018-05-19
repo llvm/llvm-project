@@ -938,7 +938,7 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
   if (C == A || C == B) {
     // MAX(MAX(A, B), B) -> MAX(A, B)
     // MIN(MIN(a, b), a) -> MIN(a, b)
-    if (SPF1 == SPF2)
+    if (SPF1 == SPF2 && SelectPatternResult::isMinOrMax(SPF1))
       return replaceInstUsesWith(Outer, Inner);
 
     // MAX(MIN(a, b), a) -> a

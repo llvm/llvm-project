@@ -24,6 +24,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.inc"
@@ -701,9 +702,9 @@ int main(int argc, char **argv) {
 
   MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(
-      TheTriple, MC, std::unique_ptr<MCAsmBackend>(MAB), OutFile,
-      std::unique_ptr<MCCodeEmitter>(MCE), *MSTI, MCOptions.MCRelaxAll,
-      MCOptions.MCIncrementalLinkerCompatible,
+      TheTriple, MC, std::unique_ptr<MCAsmBackend>(MAB),
+      MAB->createObjectWriter(OutFile), std::unique_ptr<MCCodeEmitter>(MCE),
+      *MSTI, MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ false));
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);

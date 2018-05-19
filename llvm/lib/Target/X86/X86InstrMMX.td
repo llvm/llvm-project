@@ -165,7 +165,7 @@ def MMX_MOVD64rr : MMXI<0x6E, MRMSrcReg, (outs VR64:$dst), (ins GR32:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(set VR64:$dst,
                          (x86mmx (scalar_to_vector GR32:$src)))]>,
-                        Sched<[WriteMove]>;
+                        Sched<[WriteVecMoveFromGpr]>;
 def MMX_MOVD64rm : MMXI<0x6E, MRMSrcMem, (outs VR64:$dst), (ins i32mem:$src),
                         "movd\t{$src, $dst|$dst, $src}",
                         [(set VR64:$dst,
@@ -193,13 +193,13 @@ def MMX_MOVD64grr : MMXI<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR64:$src),
                          "movd\t{$src, $dst|$dst, $src}",
                          [(set GR32:$dst,
                           (MMX_X86movd2w (x86mmx VR64:$src)))]>,
-                         Sched<[WriteMove]>, FoldGenData<"MMX_MOVD64rr">;
+                         Sched<[WriteVecMoveToGpr]>, FoldGenData<"MMX_MOVD64rr">;
 
 let isBitcast = 1 in
 def MMX_MOVD64to64rr : MMXRI<0x6E, MRMSrcReg, (outs VR64:$dst), (ins GR64:$src),
                              "movq\t{$src, $dst|$dst, $src}",
                              [(set VR64:$dst, (bitconvert GR64:$src))]>,
-                             Sched<[WriteMove]>;
+                             Sched<[WriteVecMoveFromGpr]>;
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayLoad = 1 in
 def MMX_MOVD64to64rm : MMXRI<0x6E, MRMSrcMem, (outs VR64:$dst),
@@ -209,20 +209,21 @@ def MMX_MOVD64to64rm : MMXRI<0x6E, MRMSrcMem, (outs VR64:$dst),
 // These are 64 bit moves, but since the OS X assembler doesn't
 // recognize a register-register movq, we write them as
 // movd.
-let SchedRW = [WriteMove], isBitcast = 1 in {
+let isBitcast = 1 in {
 def MMX_MOVD64from64rr : MMXRI<0x7E, MRMDestReg,
                                (outs GR64:$dst), (ins VR64:$src),
                                "movq\t{$src, $dst|$dst, $src}",
-                             [(set GR64:$dst, (bitconvert VR64:$src))]>;
-let hasSideEffects = 0 in
+                               [(set GR64:$dst, (bitconvert VR64:$src))]>,
+                               Sched<[WriteVecMoveToGpr]>;
+let SchedRW = [WriteVecMove], hasSideEffects = 0 in {
 def MMX_MOVQ64rr : MMXI<0x6F, MRMSrcReg, (outs VR64:$dst), (ins VR64:$src),
                         "movq\t{$src, $dst|$dst, $src}", []>;
-let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
+let isCodeGenOnly = 1, ForceDisassemble = 1 in
 def MMX_MOVQ64rr_REV : MMXI<0x7F, MRMDestReg, (outs VR64:$dst), (ins VR64:$src),
                             "movq\t{$src, $dst|$dst, $src}", []>,
                             FoldGenData<"MMX_MOVQ64rr">;
-}
-} // SchedRW
+} // SchedRW, hasSideEffects
+} // isBitcast
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
 def MMX_MOVD64from64rm : MMXRI<0x7E, MRMDestMem,

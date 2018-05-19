@@ -419,22 +419,23 @@ public:
 
 class MCFillFragment : public MCFragment {
   /// Value to use for filling bytes.
-  uint8_t Value;
-
+  uint64_t Value;
+  uint8_t ValueSize;
   /// The number of bytes to insert.
-  const MCExpr &Size;
+  const MCExpr &NumValues;
 
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
 
 public:
-  MCFillFragment(uint8_t Value, const MCExpr &Size, SMLoc Loc,
-                 MCSection *Sec = nullptr)
-      : MCFragment(FT_Fill, false, 0, Sec), Value(Value), Size(Size), Loc(Loc) {
-  }
+  MCFillFragment(uint64_t Value, uint8_t VSize, const MCExpr &NumValues,
+                 SMLoc Loc, MCSection *Sec = nullptr)
+      : MCFragment(FT_Fill, false, 0, Sec), Value(Value), ValueSize(VSize),
+        NumValues(NumValues), Loc(Loc) {}
 
-  uint8_t getValue() const { return Value; }
-  const MCExpr &getSize() const { return Size; }
+  uint64_t getValue() const { return Value; }
+  uint8_t getValueSize() const { return ValueSize; }
+  const MCExpr &getNumValues() const { return NumValues; }
 
   SMLoc getLoc() const { return Loc; }
 

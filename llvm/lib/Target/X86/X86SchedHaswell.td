@@ -300,6 +300,8 @@ defm : X86WriteRes<WriteVecMaskedStoreY, [HWPort0,HWPort4,HWPort237,HWPort15], 5
 defm : X86WriteRes<WriteVecMove,         [HWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [HWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [HWPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveToGpr,    [HWPort0], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveFromGpr,  [HWPort5], 1, [1], 1>;
 
 defm : HWWriteResPair<WriteVecLogic, [HWPort015], 1, [1], 1, 5>;
 defm : HWWriteResPair<WriteVecLogicX,[HWPort015], 1, [1], 1, 6>;
@@ -794,11 +796,7 @@ def HWWriteResGroup2 : SchedWriteRes<[HWPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[HWWriteResGroup2], (instregex "MMX_MOVD64from64rr",
-                                           "MMX_MOVD64grr",
-                                           "(V?)MOVPDI2DIrr",
-                                           "(V?)MOVPQIto64rr",
-                                           "VPSLLVQ(Y?)rr",
+def: InstRW<[HWWriteResGroup2], (instregex "VPSLLVQ(Y?)rr",
                                            "VPSRLVQ(Y?)rr")>;
 
 def HWWriteResGroup3 : SchedWriteRes<[HWPort1]> {
@@ -814,11 +812,7 @@ def HWWriteResGroup4 : SchedWriteRes<[HWPort5]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[HWWriteResGroup4], (instregex "MMX_MOVD64rr",
-                                           "MMX_MOVD64to64rr",
-                                           "MMX_MOVQ2DQrr",
-                                           "(V?)MOV64toPQIrr",
-                                           "(V?)MOVDI2PDIrr")>;
+def: InstRW<[HWWriteResGroup4], (instregex "MMX_MOVQ2DQrr")>;
 
 def HWWriteResGroup5 : SchedWriteRes<[HWPort6]> {
   let Latency = 1;
@@ -864,8 +858,7 @@ def HWWriteResGroup9 : SchedWriteRes<[HWPort015]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[HWWriteResGroup9], (instregex "MMX_MOVQ64rr",
-                                           "VPBLENDD(Y?)rri")>;
+def: InstRW<[HWWriteResGroup9], (instregex "VPBLENDD(Y?)rri")>;
 
 def HWWriteResGroup10 : SchedWriteRes<[HWPort0156]> {
   let Latency = 1;

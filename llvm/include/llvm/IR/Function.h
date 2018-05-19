@@ -141,6 +141,11 @@ public:
   // Provide fast operand accessors.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
+  /// Returns the number of non-debug IR instructions in this function.
+  /// This is equivalent to the sum of the sizes of each basic block contained
+  /// within this function.
+  unsigned getInstructionCount();
+
   /// Returns the FunctionType for me.
   FunctionType *getFunctionType() const {
     return cast<FunctionType>(getValueType());

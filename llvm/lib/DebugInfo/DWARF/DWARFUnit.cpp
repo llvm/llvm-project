@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/Support/DataExtractor.h"
@@ -150,6 +151,29 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   return true;
 }
 
+// Parse the rangelist table header, including the optional array of offsets
+// following it (DWARF v5 and later).
+static Expected<DWARFDebugRnglistTable>
+parseRngListTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
+  // TODO: Support DWARF64
+  // We are expected to be called with Offset 0 or pointing just past the table
+  // header, which is 12 bytes long for DWARF32.
+  if (Offset > 0) {
+    if (Offset < 12U) {
+      std::string Buffer;
+      raw_string_ostream Stream(Buffer);
+      Stream << format(
+          "Did not detect a valid range list table with base = 0x%x", Offset);
+      return make_error<StringError>(Stream.str(), inconvertibleErrorCode());
+    }
+    Offset -= 12U;
+  }
+  llvm::DWARFDebugRnglistTable Table;
+  if (Error E = Table.extractHeaderAndOffsets(DA, &Offset))
+    return std::move(E);
+  return Table;
+}
+
 bool DWARFUnit::extractRangeList(uint32_t RangeListOffset,
                                  DWARFDebugRangeList &RangeList) const {
   // Require that compile unit is extracted.
@@ -281,6 +305,32 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
       StringOffsetsTableContribution = determineStringOffsetsTableContribution(
           DA, StringOffsetsContributionBase);
 
+    // DWARF v5 uses the .debug_rnglists and .debug_rnglists.dwo sections to
+    // describe address ranges.
+    if (getVersion() >= 5) {
+      if (isDWO)
+        setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
+      else
+        setRangesSection(&Context.getDWARFObj().getRnglistsSection(),
+                         toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0));
+      // Parse the range list table header. Individual range lists are
+      // extracted lazily.
+      DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
+                                  isLittleEndian, 0);
+      if (auto TableOrError =
+              parseRngListTableHeader(RangesDA, RangeSectionBase))
+        RngListTable = TableOrError.get();
+      else
+        WithColor::error() << "parsing a range list table: "
+                           << toString(TableOrError.takeError())
+                           << '\n';
+
+      // In a split dwarf unit, there is no DW_AT_rnglists_base attribute.
+      // Adjust RangeSectionBase to point past the table header.
+      if (isDWO && RngListTable)
+        RangeSectionBase = RngListTable->getHeaderSize();
+    }
+
     // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
     // skeleton CU DIE, so that DWARF users not aware of it are not broken.
   }
@@ -319,8 +369,23 @@ bool DWARFUnit::parseDWO() {
   DWO = std::shared_ptr<DWARFCompileUnit>(std::move(DWOContext), DWOCU);
   // Share .debug_addr and .debug_ranges section with compile unit in .dwo
   DWO->setAddrOffsetSection(AddrOffsetSection, AddrOffsetSectionBase);
-  auto DWORangesBase = UnitDie.getRangesBaseAttribute();
-  DWO->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
+  if (getVersion() >= 5) {
+    DWO->setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
+    DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
+                                isLittleEndian, 0);
+    if (auto TableOrError = parseRngListTableHeader(RangesDA, RangeSectionBase))
+      DWO->RngListTable = TableOrError.get();
+    else
+      WithColor::error() << "parsing a range list table: "
+                         << toString(TableOrError.takeError())
+                         << '\n';
+    if (DWO->RngListTable)
+      DWO->RangeSectionBase = DWO->RngListTable->getHeaderSize();
+  } else {
+    auto DWORangesBase = UnitDie.getRangesBaseAttribute();
+    DWO->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
+  }
+
   return true;
 }
 
@@ -329,6 +394,28 @@ void DWARFUnit::clearDIEs(bool KeepCUDie) {
     DieArray.resize((unsigned)KeepCUDie);
     DieArray.shrink_to_fit();
   }
+}
+
+DWARFAddressRangesVector DWARFUnit::findRnglistFromOffset(uint32_t Offset) {
+  if (getVersion() <= 4) {
+    DWARFDebugRangeList RangeList;
+    if (extractRangeList(Offset, RangeList))
+      return RangeList.getAbsoluteRanges(getBaseAddress());
+    return DWARFAddressRangesVector();
+  }
+  if (RngListTable) {
+    DWARFDataExtractor RangesData(Context.getDWARFObj(), *RangeSection,
+                                  isLittleEndian, RngListTable->getAddrSize());
+    if (auto RangeList = RngListTable->findRangeList(RangesData, Offset))
+      return RangeList->getAbsoluteRanges(getBaseAddress());
+  }
+  return DWARFAddressRangesVector();
+}
+
+DWARFAddressRangesVector DWARFUnit::findRnglistFromIndex(uint32_t Index) {
+  if (auto Offset = getRnglistOffset(Index))
+    return findRnglistFromOffset(*Offset + RangeSectionBase);
+  return DWARFAddressRangesVector();
 }
 
 void DWARFUnit::collectAddressRanges(DWARFAddressRangesVector &CURanges) {

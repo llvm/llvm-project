@@ -33,6 +33,7 @@
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -441,9 +442,9 @@ public:
   friend class ARMTargetELFStreamer;
 
   ARMELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
-                 raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter,
+                 std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
                  bool IsThumb)
-      : MCELFStreamer(Context, std::move(TAB), OS, std::move(Emitter)),
+      : MCELFStreamer(Context, std::move(TAB), std::move(OW), std::move(Emitter)),
         IsThumb(IsThumb) {
     EHReset();
   }
@@ -1494,10 +1495,10 @@ MCTargetStreamer *createARMObjectTargetStreamer(MCStreamer &S,
 
 MCELFStreamer *createARMELFStreamer(MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> TAB,
-                                    raw_pwrite_stream &OS,
+                                    std::unique_ptr<MCObjectWriter> OW,
                                     std::unique_ptr<MCCodeEmitter> Emitter,
                                     bool RelaxAll, bool IsThumb) {
-  ARMELFStreamer *S = new ARMELFStreamer(Context, std::move(TAB), OS,
+  ARMELFStreamer *S = new ARMELFStreamer(Context, std::move(TAB), std::move(OW),
                                          std::move(Emitter), IsThumb);
   // FIXME: This should eventually end up somewhere else where more
   // intelligent flag decisions can be made. For now we are just maintaining

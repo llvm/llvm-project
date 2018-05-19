@@ -280,6 +280,9 @@ defm : X86WriteRes<WriteVecMaskedStoreY, [BWPort0,BWPort4,BWPort237,BWPort15], 5
 defm : X86WriteRes<WriteVecMove,         [BWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [BWPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [BWPort015], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveToGpr,    [BWPort0], 1, [1], 1>;
+defm : X86WriteRes<WriteVecMoveFromGpr,  [BWPort5], 1, [1], 1>;
+
 defm : X86WriteRes<WriteEMMS,            [BWPort01,BWPort15,BWPort015,BWPort0156], 31, [8,1,21,1], 31>;
 
 defm : BWWriteResPair<WriteVecALU,   [BWPort15], 1, [1], 1, 5>; // Vector integer ALU op, no logicals.
@@ -508,11 +511,7 @@ def BWWriteResGroup1 : SchedWriteRes<[BWPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[BWWriteResGroup1], (instregex "MMX_MOVD64from64rr",
-                                           "MMX_MOVD64grr",
-                                           "(V?)MOVPDI2DIrr",
-                                           "(V?)MOVPQIto64rr",
-                                           "VPSLLVQ(Y?)rr",
+def: InstRW<[BWWriteResGroup1], (instregex "VPSLLVQ(Y?)rr",
                                            "VPSRLVQ(Y?)rr")>;
 
 def BWWriteResGroup2 : SchedWriteRes<[BWPort1]> {
@@ -528,11 +527,7 @@ def BWWriteResGroup3 : SchedWriteRes<[BWPort5]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[BWWriteResGroup3], (instregex "MMX_MOVD64rr",
-                                           "MMX_MOVD64to64rr",
-                                           "MMX_MOVQ2DQrr",
-                                           "(V?)MOV64toPQIrr",
-                                           "(V?)MOVDI2PDIrr")>;
+def: InstRW<[BWWriteResGroup3], (instregex "MMX_MOVQ2DQrr")>;
 
 def BWWriteResGroup4 : SchedWriteRes<[BWPort6]> {
   let Latency = 1;
@@ -578,8 +573,7 @@ def BWWriteResGroup8 : SchedWriteRes<[BWPort015]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[BWWriteResGroup8], (instregex "MMX_MOVQ64rr",
-                                           "VPBLENDD(Y?)rri")>;
+def: InstRW<[BWWriteResGroup8], (instregex "VPBLENDD(Y?)rri")>;
 
 def BWWriteResGroup9 : SchedWriteRes<[BWPort0156]> {
   let Latency = 1;

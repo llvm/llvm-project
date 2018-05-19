@@ -403,6 +403,15 @@ public:
       InheritedAnalysis[Index++] = (*I)->getAvailableAnalysis();
   }
 
+  /// Set the initial size of the module if the user has specified that they
+  /// want remarks for size.
+  /// Returns 0 if the remark was not requested.
+  unsigned initSizeRemarkInfo(Module &M);
+
+  /// Emit a remark signifying that the number of IR instructions in the module
+  /// changed.
+  void emitInstrCountChangedRemark(Pass *P, Module &M, unsigned CountBefore);
+
 protected:
   // Top level manager.
   PMTopLevelManager *TPM;
