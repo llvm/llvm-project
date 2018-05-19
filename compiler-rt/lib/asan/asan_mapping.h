@@ -307,7 +307,7 @@ namespace __asan {
 
 static inline bool AddrIsInLowMem(uptr a) {
   PROFILE_ASAN_MAPPING();
-  return a >= kLowMemBeg && a <= kLowMemEnd;
+  return a <= kLowMemEnd;
 }
 
 static inline bool AddrIsInLowShadow(uptr a) {

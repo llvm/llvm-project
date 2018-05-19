@@ -859,13 +859,14 @@ __vmi_class_type_info::search_below_dst(__dynamic_cast_info* info,
             // Record the access path that got us here
             //   If there is more than one dst_type this path doesn't matter.
             info->path_dynamic_ptr_to_dst_ptr = path_below;
+            bool does_dst_type_point_to_our_static_type = false;
             // Only search above here if dst_type derives from static_type, or
             //    if it is unknown if dst_type derives from static_type.
             if (info->is_dst_type_derived_from_static_type != no)
             {
                 // Set up flags to record results from all base classes
                 bool is_dst_type_derived_from_static_type = false;
-                bool does_dst_type_point_to_our_static_type = false;
+
                 // We've found a dst_type with a potentially public path to here.
                 // We have to assume the path is public because it may become
                 //   public later (if we get back to here with a public path).
@@ -909,21 +910,6 @@ __vmi_class_type_info::search_below_dst(__dynamic_cast_info* info,
                         }
                     }
                 }
-                if (!does_dst_type_point_to_our_static_type)
-                {
-                    // We found a dst_type that doesn't point to (static_ptr, static_type)
-                    // So record the address of this dst_ptr and increment the
-                    // count of the number of such dst_types found in the tree.
-                    info->dst_ptr_not_leading_to_static_ptr = current_ptr;
-                    info->number_to_dst_ptr += 1;
-                    // If there exists another dst with a private path to
-                    //    (static_ptr, static_type), then the cast from 
-                    //     (dynamic_ptr, dynamic_type) to dst_type is now ambiguous,
-                    //      so stop search.
-                    if (info->number_to_static_ptr == 1 &&
-                            info->path_dst_ptr_to_static_ptr == not_public_path)
-                        info->search_done = true;
-                }
                 // If we found no static_type,s then dst_type doesn't derive
                 //   from static_type, else it does.  Record this result so that
                 //   next time we hit a dst_type we will know not to search above
@@ -932,7 +918,22 @@ __vmi_class_type_info::search_below_dst(__dynamic_cast_info* info,
                     info->is_dst_type_derived_from_static_type = yes;
                 else
                     info->is_dst_type_derived_from_static_type = no;
-            }
+              }
+              if (!does_dst_type_point_to_our_static_type)
+              {
+                  // We found a dst_type that doesn't point to (static_ptr, static_type)
+                  // So record the address of this dst_ptr and increment the
+                  // count of the number of such dst_types found in the tree.
+                  info->dst_ptr_not_leading_to_static_ptr = current_ptr;
+                  info->number_to_dst_ptr += 1;
+                  // If there exists another dst with a private path to
+                  //    (static_ptr, static_type), then the cast from
+                  //     (dynamic_ptr, dynamic_type) to dst_type is now ambiguous,
+                  //      so stop search.
+                  if (info->number_to_static_ptr == 1 &&
+                          info->path_dst_ptr_to_static_ptr == not_public_path)
+                      info->search_done = true;
+              }
         }
     }
     else
@@ -1030,13 +1031,13 @@ __si_class_type_info::search_below_dst(__dynamic_cast_info* info,
             // Record the access path that got us here
             //   If there is more than one dst_type this path doesn't matter.
             info->path_dynamic_ptr_to_dst_ptr = path_below;
+            bool does_dst_type_point_to_our_static_type = false;
             // Only search above here if dst_type derives from static_type, or
             //    if it is unknown if dst_type derives from static_type.
             if (info->is_dst_type_derived_from_static_type != no)
             {
                 // Set up flags to record results from all base classes
                 bool is_dst_type_derived_from_static_type = false;
-                bool does_dst_type_point_to_our_static_type = false;
                 // Zero out found flags
                 info->found_our_static_ptr = false;
                 info->found_any_static_type = false;
@@ -1047,20 +1048,6 @@ __si_class_type_info::search_below_dst(__dynamic_cast_info* info,
                     if (info->found_our_static_ptr)
                         does_dst_type_point_to_our_static_type = true;
                 }
-                if (!does_dst_type_point_to_our_static_type)
-                {
-                    // We found a dst_type that doesn't point to (static_ptr, static_type)
-                    // So record the address of this dst_ptr and increment the
-                    // count of the number of such dst_types found in the tree.
-                    info->dst_ptr_not_leading_to_static_ptr = current_ptr;
-                    info->number_to_dst_ptr += 1;
-                    // If there exists another dst with a private path to
-                    //    (static_ptr, static_type), then the cast from 
-                    //     (dynamic_ptr, dynamic_type) to dst_type is now ambiguous.
-                    if (info->number_to_static_ptr == 1 &&
-                            info->path_dst_ptr_to_static_ptr == not_public_path)
-                        info->search_done = true;
-                }
                 // If we found no static_type,s then dst_type doesn't derive
                 //   from static_type, else it does.  Record this result so that
                 //   next time we hit a dst_type we will know not to search above
@@ -1069,6 +1056,20 @@ __si_class_type_info::search_below_dst(__dynamic_cast_info* info,
                     info->is_dst_type_derived_from_static_type = yes;
                 else
                     info->is_dst_type_derived_from_static_type = no;
+            }
+            if (!does_dst_type_point_to_our_static_type)
+            {
+                // We found a dst_type that doesn't point to (static_ptr, static_type)
+                // So record the address of this dst_ptr and increment the
+                // count of the number of such dst_types found in the tree.
+                info->dst_ptr_not_leading_to_static_ptr = current_ptr;
+                info->number_to_dst_ptr += 1;
+                // If there exists another dst with a private path to
+                //    (static_ptr, static_type), then the cast from
+                //     (dynamic_ptr, dynamic_type) to dst_type is now ambiguous.
+                if (info->number_to_static_ptr == 1 &&
+                        info->path_dst_ptr_to_static_ptr == not_public_path)
+                    info->search_done = true;
             }
         }
     }
@@ -1181,6 +1182,8 @@ __vmi_class_type_info::search_above_dst(__dynamic_cast_info* info,
         info->found_our_static_ptr = false;
         info->found_any_static_type = false;
         p->search_above_dst(info, dst_ptr, current_ptr, path_below, use_strcmp);
+        found_our_static_ptr |= info->found_our_static_ptr;
+        found_any_static_type |= info->found_any_static_type;
         if (++p < e)
         {
             do
@@ -1210,6 +1213,8 @@ __vmi_class_type_info::search_above_dst(__dynamic_cast_info* info,
                 info->found_our_static_ptr = false;
                 info->found_any_static_type = false;
                 p->search_above_dst(info, dst_ptr, current_ptr, path_below, use_strcmp);
+                found_our_static_ptr |= info->found_our_static_ptr;
+                found_any_static_type |= info->found_any_static_type;
             } while (++p < e);
         }
         // Restore flags
