@@ -5969,9 +5969,6 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
         uuid.SetBytes(sharedCacheUUID_address);
       }
     }
-<<<<<<< HEAD
-  }
-=======
   } else {
     // Exists in macOS 10.12 and later, iOS 10.0 and later - dyld SPI
     dyld_process_info (*dyld_process_info_create)(unsigned int /* task_t */ task, uint64_t timestamp, unsigned int /*kern_return_t*/ *kernelError);
@@ -6003,7 +6000,6 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_PROCESS));
   if (log && uuid.IsValid())
     log->Printf("lldb's in-memory shared cache has a UUID of %s base address of 0x%" PRIx64, uuid.GetAsString().c_str(), base_addr);
->>>>>>> 83c5f870a1e... The on-ios-device command line lldb has an optimization where
 #endif
 }
 
