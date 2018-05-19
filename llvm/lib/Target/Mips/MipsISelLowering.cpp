@@ -3868,7 +3868,7 @@ MipsTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(0U, nullptr);
     case 'l': // use the `lo` register to store values
               // that are no bigger than a word
-      if (VT == MVT::i32)
+      if (VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8)
         return std::make_pair((unsigned)Mips::LO0, &Mips::LO32RegClass);
       return std::make_pair((unsigned)Mips::LO0_64, &Mips::LO64RegClass);
     case 'x': // use the concatenated `hi` and `lo` registers
