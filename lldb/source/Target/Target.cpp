@@ -2160,17 +2160,18 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
                                     .GetFilename()
                                     .AsCString();
             if (m_use_scratch_typesystem_per_module)
-              errs->Printf(
-                  "\nnote: Swift header search options for %s conflict with "
-                  "options found in other modules. Symbols from other modules "
-                  "may not be available.",
-                  module_name);
-            else
+              errs->Printf("\nnote: Swift compiler options for %s "
+                           "conflict with options found in other modules;\n"
+                           "      Switching to a new expression evaluator for "
+                           "%s, old $R variables are lost.\n",
+                           module_name, module_name);
+            else {
               errs->Printf("Shared Swift state for %s has developed fatal "
                            "errors and is being discarded.\n",
                            module_name);
-            errs->PutCString("REPL definitions and persistent names/types will "
-                             "be lost.\n\n");
+              errs->PutCString("REPL definitions and persistent names/types "
+                               "will be lost.\n\n");
+            }
             errs->Flush();
           }
         }
