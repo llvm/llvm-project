@@ -43,12 +43,12 @@ int main()
     }
 
     {
-    const long arr[] = {INT_MAX, 1L + INT_MAX, 2L, 3L };
+    const long arr[] = {INT_MAX, 1L, 2L, 3L };
     std::deque deq(std::begin(arr), std::end(arr), std::allocator<long>());
     static_assert(std::is_same_v<decltype(deq)::value_type, long>, "");
     assert(deq.size() == 4);
     assert(deq[0] == INT_MAX);
-    assert(deq[1] == 1L + INT_MAX);
+    assert(deq[1] == 1L);
     assert(deq[2] == 2L);
     }
     

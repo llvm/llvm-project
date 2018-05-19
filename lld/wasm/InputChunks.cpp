@@ -273,7 +273,7 @@ void InputFunction::writeTo(uint8_t *Buf) const {
     return InputChunk::writeTo(Buf);
 
   Buf += OutputOffset;
-  uint8_t *Orig = Buf;
+  uint8_t *Orig = Buf; (void)Orig;
 
   const uint8_t *SecStart = File->CodeSection->Content.data();
   const uint8_t *FuncStart = SecStart + getInputSectionOffset();
