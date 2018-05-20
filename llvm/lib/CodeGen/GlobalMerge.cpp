@@ -445,6 +445,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
   LLVM_DEBUG(dbgs() << " Trying to merge set, starts with #"
                     << GlobalSet.find_first() << "\n");
 
+  bool Changed = false;
   ssize_t i = GlobalSet.find_first();
   while (i != -1) {
     ssize_t j = 0;
@@ -467,6 +468,12 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
         HasExternal = true;
         FirstExternalName = Globals[j]->getName();
       }
+    }
+
+    // Exit early if there is only one global to merge.
+    if (Tys.size() < 2) {
+      i = j;
+      continue;
     }
 
     // If merged variables doesn't have external linkage, we needn't to expose
@@ -526,10 +533,11 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
 
       NumMerged++;
     }
+    Changed = true;
     i = j;
   }
 
-  return true;
+  return Changed;
 }
 
 void GlobalMerge::collectUsedGlobalVariables(Module &M) {
