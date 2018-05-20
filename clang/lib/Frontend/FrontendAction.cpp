@@ -88,8 +88,10 @@ public:
 
   void DeclRead(serialization::DeclID ID, const Decl *D) override {
     llvm::outs() << "PCH DECL: " << D->getDeclKindName();
-    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
-      llvm::outs() << " - " << *ND;
+    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
+      llvm::outs() << " - ";
+      ND->printQualifiedName(llvm::outs());
+    }
     llvm::outs() << "\n";
 
     DelegatingDeserializationListener::DeclRead(ID, D);

@@ -1496,14 +1496,14 @@ LLVMValueKind LLVMGetValueKind(LLVMValueRef Val);
  *
  * @see llvm::Value::getName()
  */
-const char *LLVMGetValueName(LLVMValueRef Val);
+const char *LLVMGetValueName2(LLVMValueRef Val, size_t *Length);
 
 /**
  * Set the string name of a value.
  *
  * @see llvm::Value::setName()
  */
-void LLVMSetValueName(LLVMValueRef Val, const char *Name);
+void LLVMSetValueName2(LLVMValueRef Val, const char *Name, size_t NameLen);
 
 /**
  * Dump a representation of a value to stderr.
@@ -1554,6 +1554,11 @@ LLVM_FOR_EACH_VALUE_SUBCLASS(LLVM_DECLARE_VALUE_CAST)
 
 LLVMValueRef LLVMIsAMDNode(LLVMValueRef Val);
 LLVMValueRef LLVMIsAMDString(LLVMValueRef Val);
+
+/** Deprecated: Use LLVMGetValueName2 instead. */
+const char *LLVMGetValueName(LLVMValueRef Val);
+/** Deprecated: Use LLVMSetValueName2 instead. */
+void LLVMSetValueName(LLVMValueRef Val, const char *Name);
 
 /**
  * @}
