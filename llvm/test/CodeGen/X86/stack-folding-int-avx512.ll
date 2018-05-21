@@ -599,16 +599,16 @@ define <64 x i8> @stack_fold_permbvar(<64 x i8> %a0, <64 x i8> %a1) {
   ;CHECK-LABEL: stack_fold_permbvar
   ;CHECK:   vpermb {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <64 x i8> @llvm.x86.avx512.mask.permvar.qi.512(<64 x i8> %a1, <64 x i8> %a0, <64 x i8> undef, i64 -1)
+  %2 = call <64 x i8> @llvm.x86.avx512.permvar.qi.512(<64 x i8> %a1, <64 x i8> %a0)
   ret <64 x i8> %2
 }
-declare <64 x i8> @llvm.x86.avx512.mask.permvar.qi.512(<64 x i8>, <64 x i8>, <64 x i8>, i64) nounwind readonly
+declare <64 x i8> @llvm.x86.avx512.permvar.qi.512(<64 x i8>, <64 x i8>) nounwind readonly
 
 define <64 x i8> @stack_fold_permbvar_mask(<64 x i8>* %passthru, <64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
   ;CHECK-LABEL: stack_fold_permbvar_mask
   ;CHECK:   vpermb {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <64 x i8> @llvm.x86.avx512.mask.permvar.qi.512(<64 x i8> %a1, <64 x i8> %a0, <64 x i8> undef, i64 -1)
+  %2 = call <64 x i8> @llvm.x86.avx512.permvar.qi.512(<64 x i8> %a1, <64 x i8> %a0)
   %3 = bitcast i64 %mask to <64 x i1>
   ; load needed to keep the operation from being scheduled above the asm block
   %4 = load <64 x i8>, <64 x i8>* %passthru
@@ -620,7 +620,7 @@ define <64 x i8> @stack_fold_permbvar_maskz(<64 x i8> %a0, <64 x i8> %a1, i64 %m
   ;CHECK-LABEL: stack_fold_permbvar_maskz
   ;CHECK:   vpermb {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {z} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <64 x i8> @llvm.x86.avx512.mask.permvar.qi.512(<64 x i8> %a1, <64 x i8> %a0, <64 x i8> undef, i64 -1)
+  %2 = call <64 x i8> @llvm.x86.avx512.permvar.qi.512(<64 x i8> %a1, <64 x i8> %a0)
   %3 = bitcast i64 %mask to <64 x i1>
   %4 = select <64 x i1> %3, <64 x i8> %2, <64 x i8> zeroinitializer
   ret <64 x i8> %4
@@ -630,12 +630,12 @@ define <16 x i32> @stack_fold_permd(<16 x i32> %a0, <16 x i32> %a1) {
   ;CHECK-LABEL: stack_fold_permd
   ;CHECK:   vpermd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32> %a1, <16 x i32> %a0, <16 x i32> undef, i16 -1)
+  %2 = call <16 x i32> @llvm.x86.avx512.permvar.si.512(<16 x i32> %a1, <16 x i32> %a0)
   ; add forces execution domain
   %3 = add <16 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <16 x i32> %3
 }
-declare <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32>, <16 x i32>, <16 x i32>, i16) nounwind readonly
+declare <16 x i32> @llvm.x86.avx512.permvar.si.512(<16 x i32>, <16 x i32>) nounwind readonly
 
 define <64 x i8> @stack_fold_vpermi2b(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %x2) {
   ;CHECK-LABEL: stack_fold_vpermi2b
@@ -711,18 +711,18 @@ define <8 x i64> @stack_fold_permqvar(<8 x i64> %a0, <8 x i64> %a1) {
   ;CHECK-LABEL: stack_fold_permqvar
   ;CHECK:   vpermq {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <8 x i64> @llvm.x86.avx512.mask.permvar.di.512(<8 x i64> %a1, <8 x i64> %a0, <8 x i64> undef, i8 -1)
+  %2 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %a1, <8 x i64> %a0)
   ; add forces execution domain
   %3 = add <8 x i64> %2, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
   ret <8 x i64> %3
 }
-declare <8 x i64> @llvm.x86.avx512.mask.permvar.di.512(<8 x i64>, <8 x i64>, <8 x i64>, i8) nounwind readonly
+declare <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64>, <8 x i64>) nounwind readonly
 
 define <8 x i64> @stack_fold_permqvar_mask(<8 x i64>* %passthru, <8 x i64> %a0, <8 x i64> %a1, i8 %mask) {
   ;CHECK-LABEL: stack_fold_permqvar_mask
   ;CHECK:   vpermq {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <8 x i64> @llvm.x86.avx512.mask.permvar.di.512(<8 x i64> %a1, <8 x i64> %a0, <8 x i64> undef, i8 -1)
+  %2 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %a1, <8 x i64> %a0)
   %3 = bitcast i8 %mask to <8 x i1>
   ; load needed to keep the operation from being scheduled above the asm block
   %4 = load <8 x i64>, <8 x i64>* %passthru
@@ -772,16 +772,16 @@ define <32 x i16> @stack_fold_permwvar(<32 x i16> %a0, <32 x i16> %a1) {
   ;CHECK-LABEL: stack_fold_permwvar
   ;CHECK:   vpermw {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <32 x i16> @llvm.x86.avx512.mask.permvar.hi.512(<32 x i16> %a1, <32 x i16> %a0, <32 x i16> undef, i32 -1)
+  %2 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %a1, <32 x i16> %a0)
   ret <32 x i16> %2
 }
-declare <32 x i16> @llvm.x86.avx512.mask.permvar.hi.512(<32 x i16>, <32 x i16>, <32 x i16>, i32) nounwind readonly
+declare <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16>, <32 x i16>) nounwind readonly
 
 define <32 x i16> @stack_fold_permwvar_mask(<32 x i16>* %passthru, <32 x i16> %a0, <32 x i16> %a1, i32 %mask) {
   ;CHECK-LABEL: stack_fold_permwvar_mask
   ;CHECK:   vpermw {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <32 x i16> @llvm.x86.avx512.mask.permvar.hi.512(<32 x i16> %a1, <32 x i16> %a0, <32 x i16> undef, i32 -1)
+  %2 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %a1, <32 x i16> %a0)
   %3 = bitcast i32 %mask to <32 x i1>
   ; load needed to keep the operation from being scheduled above the asm block
   %4 = load <32 x i16>, <32 x i16>* %passthru
@@ -793,7 +793,7 @@ define <32 x i16> @stack_fold_permwvar_maskz(<32 x i16> %a0, <32 x i16> %a1, i32
   ;CHECK-LABEL: stack_fold_permwvar_maskz
   ;CHECK:   vpermw {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}}, {{%zmm[0-9][0-9]*}} {{{%k[0-7]}}} {z} {{.*#+}} 64-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <32 x i16> @llvm.x86.avx512.mask.permvar.hi.512(<32 x i16> %a1, <32 x i16> %a0, <32 x i16> undef, i32 -1)
+  %2 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %a1, <32 x i16> %a0)
   %3 = bitcast i32 %mask to <32 x i1>
   %4 = select <32 x i1> %3, <32 x i16> %2, <32 x i16> zeroinitializer
   ret <32 x i16> %4

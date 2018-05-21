@@ -234,6 +234,9 @@ class SDC2_MMR6_ENC : POOL32B_LDWC2_SDWC2_FM_MMR6<"sdc2", 0b1010>;
 class LWC2_MMR6_ENC : POOL32B_LDWC2_SDWC2_FM_MMR6<"lwc2", 0b0000>;
 class SWC2_MMR6_ENC : POOL32B_LDWC2_SDWC2_FM_MMR6<"swc2", 0b1000>;
 
+class LL_MMR6_ENC  : POOL32C_LL_E_SC_E_FM_MMR6<"ll", 0b0011, 0b000>;
+class SC_MMR6_ENC  : POOL32C_LL_E_SC_E_FM_MMR6<"sc", 0b1011, 0b000>;
+
 /// Floating Point Instructions
 class FADD_S_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"add.s", 0, 0b00110000>;
 class FSUB_S_MMR6_ENC : POOL32F_ARITH_FM_MMR6<"sub.s", 0, 0b01110000>;
@@ -846,6 +849,30 @@ class GINVI_MMR6_DESC : GINV_MMR6_DESC_BASE<"ginvi", GPR32Opnd,
 }
 class GINVT_MMR6_DESC : GINV_MMR6_DESC_BASE<"ginvt", GPR32Opnd,
                                             II_GINVT>;
+
+class SC_MMR6_DESC_BASE<string opstr, InstrItinClass itin> {
+  dag OutOperandList = (outs GPR32Opnd:$dst);
+  dag InOperandList = (ins GPR32Opnd:$rt, mem_mm_9:$addr);
+  string AsmString = !strconcat(opstr, "\t$rt, $addr");
+  InstrItinClass Itinerary = itin;
+  string BaseOpcode = opstr;
+  bit mayStore = 1;
+  string Constraints = "$rt = $dst";
+  string DecoderMethod = "DecodeMemMMImm9";
+}
+
+class LL_MMR6_DESC_BASE<string opstr, InstrItinClass itin> {
+  dag OutOperandList = (outs GPR32Opnd:$rt);
+  dag InOperandList = (ins mem_mm_9:$addr);
+  string AsmString = !strconcat(opstr, "\t$rt, $addr");
+  InstrItinClass Itinerary = itin;
+  string BaseOpcode = opstr;
+  bit mayLoad = 1;
+  string DecoderMethod = "DecodeMemMMImm9";
+}
+
+class SC_MMR6_DESC : SC_MMR6_DESC_BASE<"sc", II_SC>;
+class LL_MMR6_DESC : LL_MMR6_DESC_BASE<"ll", II_LL>;
 
 /// Floating Point Instructions
 class FARITH_MMR6_DESC_BASE<string instr_asm, RegisterOperand RC,
@@ -1593,6 +1620,8 @@ def LDC2_MMR6 : StdMMR6Rel, LDC2_MMR6_ENC, LDC2_MMR6_DESC, ISA_MICROMIPS32R6;
 def SDC2_MMR6 : StdMMR6Rel, SDC2_MMR6_ENC, SDC2_MMR6_DESC, ISA_MICROMIPS32R6;
 def LWC2_MMR6 : StdMMR6Rel, LWC2_MMR6_ENC, LWC2_MMR6_DESC, ISA_MICROMIPS32R6;
 def SWC2_MMR6 : StdMMR6Rel, SWC2_MMR6_ENC, SWC2_MMR6_DESC, ISA_MICROMIPS32R6;
+def LL_MMR6   : R6MMR6Rel, LL_MMR6_ENC, LL_MMR6_DESC, ISA_MICROMIPS32R6;
+def SC_MMR6   : R6MMR6Rel, SC_MMR6_ENC, SC_MMR6_DESC, ISA_MICROMIPS32R6;
 }
 
 def BOVC_MMR6 : R6MMR6Rel, BOVC_MMR6_ENC, BOVC_MMR6_DESC, ISA_MICROMIPS32R6,
