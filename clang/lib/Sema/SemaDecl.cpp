@@ -15594,6 +15594,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     if (!Completed)
       Record->completeDefinition();
 
+    // Handle attributes before checking the layout.
+    if (Attr)
+      ProcessDeclAttributeList(S, Record, Attr);
+
     // We may have deferred checking for a deleted destructor. Check now.
     if (CXXRecordDecl *CXXRecord = dyn_cast<CXXRecordDecl>(Record)) {
       auto *Dtor = CXXRecord->getDestructor();
@@ -15724,9 +15728,6 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       CDecl->setIvarRBraceLoc(RBrac);
     }
   }
-
-  if (Attr)
-    ProcessDeclAttributeList(S, Record, Attr);
 }
 
 /// Determine whether the given integral value is representable within

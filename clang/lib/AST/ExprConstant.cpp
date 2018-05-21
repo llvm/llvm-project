@@ -10312,12 +10312,6 @@ bool Expr::EvaluateAsBooleanCondition(bool &Result,
          HandleConversionToBool(Scratch.Val, Result);
 }
 
-static bool hasUnacceptableSideEffect(Expr::EvalStatus &Result,
-                                      Expr::SideEffectsKind SEK) {
-  return (SEK < Expr::SE_AllowSideEffects && Result.HasSideEffects) ||
-         (SEK < Expr::SE_AllowUndefinedBehavior && Result.HasUndefinedBehavior);
-}
-
 bool Expr::EvaluateAsInt(APSInt &Result, const ASTContext &Ctx,
                          SideEffectsKind AllowSideEffects) const {
   if (!getType()->isIntegralOrEnumerationType())
@@ -10325,7 +10319,7 @@ bool Expr::EvaluateAsInt(APSInt &Result, const ASTContext &Ctx,
 
   EvalResult ExprResult;
   if (!EvaluateAsRValue(ExprResult, Ctx) || !ExprResult.Val.isInt() ||
-      hasUnacceptableSideEffect(ExprResult, AllowSideEffects))
+      ExprResult.hasUnacceptableSideEffect(AllowSideEffects))
     return false;
 
   Result = ExprResult.Val.getInt();
@@ -10339,7 +10333,7 @@ bool Expr::EvaluateAsFloat(APFloat &Result, const ASTContext &Ctx,
 
   EvalResult ExprResult;
   if (!EvaluateAsRValue(ExprResult, Ctx) || !ExprResult.Val.isFloat() ||
-      hasUnacceptableSideEffect(ExprResult, AllowSideEffects))
+      ExprResult.hasUnacceptableSideEffect(AllowSideEffects))
     return false;
 
   Result = ExprResult.Val.getFloat();
@@ -10417,7 +10411,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
 bool Expr::isEvaluatable(const ASTContext &Ctx, SideEffectsKind SEK) const {
   EvalResult Result;
   return EvaluateAsRValue(Result, Ctx) &&
-         !hasUnacceptableSideEffect(Result, SEK);
+         !Result.hasUnacceptableSideEffect(SEK);
 }
 
 APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx,

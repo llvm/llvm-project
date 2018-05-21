@@ -919,7 +919,7 @@ void MachObjectWriter::writeObject(MCAssembler &Asm,
 
   // Write the actual section data.
   for (const MCSection &Sec : Asm) {
-    Asm.writeSectionData(&Sec, Layout);
+    Asm.writeSectionData(getStream(), &Sec, Layout);
 
     uint64_t Pad = getPaddingSize(&Sec, Layout);
     WriteZeros(Pad);

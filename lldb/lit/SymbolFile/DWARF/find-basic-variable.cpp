@@ -10,6 +10,16 @@
 // RUN:   FileCheck --check-prefix=REGEX %s
 // RUN: lldb-test symbols --name=not_there --find=variable %t | \
 // RUN:   FileCheck --check-prefix=EMPTY %s
+//
+// RUN: clang %s -g -c -o %t --target=x86_64-apple-macosx
+// RUN: lldb-test symbols --name=foo --find=variable --context=context %t | \
+// RUN:   FileCheck --check-prefix=CONTEXT %s
+// RUN: lldb-test symbols --name=foo --find=variable %t | \
+// RUN:   FileCheck --check-prefix=NAME %s
+// RUN: lldb-test symbols --regex --name=foo --find=variable %t | \
+// RUN:   FileCheck --check-prefix=REGEX %s
+// RUN: lldb-test symbols --name=not_there --find=variable %t | \
+// RUN:   FileCheck --check-prefix=EMPTY %s
 
 // EMPTY: Found 0 variables:
 // NAME: Found 4 variables:

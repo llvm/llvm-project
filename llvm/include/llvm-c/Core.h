@@ -1496,14 +1496,14 @@ LLVMValueKind LLVMGetValueKind(LLVMValueRef Val);
  *
  * @see llvm::Value::getName()
  */
-const char *LLVMGetValueName(LLVMValueRef Val);
+const char *LLVMGetValueName2(LLVMValueRef Val, size_t *Length);
 
 /**
  * Set the string name of a value.
  *
  * @see llvm::Value::setName()
  */
-void LLVMSetValueName(LLVMValueRef Val, const char *Name);
+void LLVMSetValueName2(LLVMValueRef Val, const char *Name, size_t NameLen);
 
 /**
  * Dump a representation of a value to stderr.
@@ -1554,6 +1554,11 @@ LLVM_FOR_EACH_VALUE_SUBCLASS(LLVM_DECLARE_VALUE_CAST)
 
 LLVMValueRef LLVMIsAMDNode(LLVMValueRef Val);
 LLVMValueRef LLVMIsAMDString(LLVMValueRef Val);
+
+/** Deprecated: Use LLVMGetValueName2 instead. */
+const char *LLVMGetValueName(LLVMValueRef Val);
+/** Deprecated: Use LLVMSetValueName2 instead. */
+void LLVMSetValueName(LLVMValueRef Val, const char *Name);
 
 /**
  * @}
@@ -2111,6 +2116,56 @@ void LLVMSetExternallyInitialized(LLVMValueRef GlobalVar, LLVMBool IsExtInit);
  */
 LLVMValueRef LLVMAddAlias(LLVMModuleRef M, LLVMTypeRef Ty, LLVMValueRef Aliasee,
                           const char *Name);
+
+/**
+ * Obtain a GlobalAlias value from a Module by its name.
+ *
+ * The returned value corresponds to a llvm::GlobalAlias value.
+ *
+ * @see llvm::Module::getNamedAlias()
+ */
+LLVMValueRef LLVMGetNamedGlobalAlias(LLVMModuleRef M,
+                                     const char *Name, size_t NameLen);
+
+/**
+ * Obtain an iterator to the first GlobalAlias in a Module.
+ *
+ * @see llvm::Module::alias_begin()
+ */
+LLVMValueRef LLVMGetFirstGlobalAlias(LLVMModuleRef M);
+
+/**
+ * Obtain an iterator to the last GlobalAlias in a Module.
+ *
+ * @see llvm::Module::alias_end()
+ */
+LLVMValueRef LLVMGetLastGlobalAlias(LLVMModuleRef M);
+
+/**
+ * Advance a GlobalAlias iterator to the next GlobalAlias.
+ *
+ * Returns NULL if the iterator was already at the end and there are no more
+ * global aliases.
+ */
+LLVMValueRef LLVMGetNextGlobalAlias(LLVMValueRef GA);
+
+/**
+ * Decrement a GlobalAlias iterator to the previous GlobalAlias.
+ *
+ * Returns NULL if the iterator was already at the beginning and there are
+ * no previous global aliases.
+ */
+LLVMValueRef LLVMGetPreviousGlobalAlias(LLVMValueRef GA);
+
+/**
+ * Retrieve the target value of an alias.
+ */
+LLVMValueRef LLVMAliasGetAliasee(LLVMValueRef Alias);
+
+/**
+ * Set the target value of an alias.
+ */
+void LLVMAliasSetAliasee(LLVMValueRef Alias, LLVMValueRef Aliasee);
 
 /**
  * @}

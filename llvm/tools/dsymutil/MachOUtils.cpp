@@ -516,7 +516,7 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
 
     uint64_t Pos = OutFile.tell();
     Writer.WriteZeros(alignTo(Pos, Sec.getAlignment()) - Pos);
-    MCAsm.writeSectionData(&Sec, Layout);
+    MCAsm.writeSectionData(OutFile, &Sec, Layout);
   }
 
   return true;

@@ -18,10 +18,8 @@
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend() : CodePadder(new MCCodePadder()) {}
-
-MCAsmBackend::MCAsmBackend(std::unique_ptr<MCCodePadder> TargetCodePadder)
-    : CodePadder(std::move(TargetCodePadder)) {}
+MCAsmBackend::MCAsmBackend(support::endianness Endian)
+    : CodePadder(new MCCodePadder()), Endian(Endian) {}
 
 MCAsmBackend::~MCAsmBackend() = default;
 

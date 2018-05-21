@@ -93,11 +93,11 @@ define <8 x i32> @var_shift_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vcvttps2dq %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; AVX1-NEXT:    vpmulld %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpmulld %xmm2, %xmm4, %xmm2
 ; AVX1-NEXT:    vpslld $23, %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vcvttps2dq %xmm1, %xmm1
-; AVX1-NEXT:    vpmulld %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -138,11 +138,11 @@ define <8 x i32> @var_shift_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; X32-AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
 ; X32-AVX1-NEXT:    vcvttps2dq %xmm2, %xmm2
 ; X32-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; X32-AVX1-NEXT:    vpmulld %xmm4, %xmm2, %xmm2
+; X32-AVX1-NEXT:    vpmulld %xmm2, %xmm4, %xmm2
 ; X32-AVX1-NEXT:    vpslld $23, %xmm1, %xmm1
 ; X32-AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
 ; X32-AVX1-NEXT:    vcvttps2dq %xmm1, %xmm1
-; X32-AVX1-NEXT:    vpmulld %xmm0, %xmm1, %xmm0
+; X32-AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; X32-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; X32-AVX1-NEXT:    retl
 ;

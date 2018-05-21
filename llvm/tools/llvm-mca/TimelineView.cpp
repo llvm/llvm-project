@@ -179,15 +179,18 @@ void TimelineView::printTimelineViewEntry(formatted_raw_ostream &OS,
 
 static void printTimelineHeader(formatted_raw_ostream &OS, unsigned Cycles) {
   OS << "\n\nTimeline view:\n";
-  OS.PadToColumn(10);
-  for (unsigned I = 0; I <= Cycles; ++I) {
-    if (((I / 10) & 1) == 0)
-      OS << ' ';
-    else
-      OS << I % 10;
+  if (Cycles >= 10) {
+    OS.PadToColumn(10);
+    for (unsigned I = 0; I <= Cycles; ++I) {
+      if (((I / 10) & 1) == 0)
+        OS << ' ';
+      else
+        OS << I % 10;
+    }
+    OS << '\n';
   }
 
-  OS << "\nIndex";
+  OS << "Index";
   OS.PadToColumn(10);
   for (unsigned I = 0; I <= Cycles; ++I) {
     if (((I / 10) & 1) == 0)

@@ -57,12 +57,12 @@ add %eax, %eax
 # ALL-NEXT: Total number of mappings created:    200
 # ALL-NEXT: Max number of mappings used:         44
 
-# ALL:      *  Register File #1 -- FpuPRF:
+# ALL:      *  Register File #1 -- JFpuPRF:
 # ALL-NEXT:    Number of physical registers:     72
 # ALL-NEXT:    Total number of mappings created: 0
 # ALL-NEXT:    Max number of mappings used:      0
 
-# ALL:      *  Register File #2 -- IntegerPRF:
+# ALL:      *  Register File #2 -- JIntegerPRF:
 # ALL-NEXT:    Number of physical registers:     64
 # ALL-NEXT:    Total number of mappings created: 200
 # ALL-NEXT:    Max number of mappings used:      44

@@ -3989,6 +3989,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if (!Args.hasFlag(options::OPT_fopenmp_use_tls,
                         options::OPT_fnoopenmp_use_tls, /*Default=*/true))
         CmdArgs.push_back("-fnoopenmp-use-tls");
+      Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                      options::OPT_fno_openmp_simd);
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
 
       // When in OpenMP offloading mode with NVPTX target, forward

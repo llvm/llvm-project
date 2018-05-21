@@ -276,9 +276,9 @@ void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   bool microMipsLEByteOrder = needsMMLEByteOrder((unsigned) Kind);
 
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned Idx = IsLittle ? (microMipsLEByteOrder ? calculateMMLEIndex(i)
-                                                    : i)
-                            : (FullSize - 1 - i);
+    unsigned Idx = Endian == support::little
+                       ? (microMipsLEByteOrder ? calculateMMLEIndex(i) : i)
+                       : (FullSize - 1 - i);
     CurVal |= (uint64_t)((uint8_t)Data[Offset + Idx]) << (i*8);
   }
 
@@ -288,9 +288,9 @@ void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
   // Write out the fixed up bytes back to the code/data bits.
   for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned Idx = IsLittle ? (microMipsLEByteOrder ? calculateMMLEIndex(i)
-                                                    : i)
-                            : (FullSize - 1 - i);
+    unsigned Idx = Endian == support::little
+                       ? (microMipsLEByteOrder ? calculateMMLEIndex(i) : i)
+                       : (FullSize - 1 - i);
     Data[Offset + Idx] = (uint8_t)((CurVal >> (i*8)) & 0xff);
   }
 }
@@ -458,7 +458,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
   assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
           "Invalid kind!");
 
-  if (IsLittle)
+  if (Endian == support::little)
     return LittleEndianInfos[Kind - FirstTargetFixupKind];
   return BigEndianInfos[Kind - FirstTargetFixupKind];
 }
@@ -468,7 +468,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
 /// it should return an error.
 ///
 /// \return - True on success.
-bool MipsAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
+bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   // Check for a less than instruction size number of bytes
   // FIXME: 16 bit instructions are not handled yet here.
   // We shouldn't be using a hard coded number for instruction size.
@@ -476,7 +476,7 @@ bool MipsAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   // If the count is not 4-byte aligned, we must be writing data into the text
   // section (otherwise we have unaligned instructions, and thus have far
   // bigger problems), so just write zeros instead.
-  OW->WriteZeros(Count);
+  OS.write_zeros(Count);
   return true;
 }
 

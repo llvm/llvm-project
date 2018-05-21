@@ -6180,73 +6180,81 @@ __m512i test_mm512_maskz_permutex_epi64(__mmask8 __M, __m512i __X) {
 
 __m512d test_mm512_permutexvar_pd(__m512i __X, __m512d __Y) {
   // CHECK-LABEL: @test_mm512_permutexvar_pd
-  // CHECK: @llvm.x86.avx512.mask.permvar.df.512
+  // CHECK: @llvm.x86.avx512.permvar.df.512
   return _mm512_permutexvar_pd(__X, __Y); 
 }
 
 __m512d test_mm512_mask_permutexvar_pd(__m512d __W, __mmask8 __U, __m512i __X, __m512d __Y) {
   // CHECK-LABEL: @test_mm512_mask_permutexvar_pd
-  // CHECK: @llvm.x86.avx512.mask.permvar.df.512
+  // CHECK: @llvm.x86.avx512.permvar.df.512
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_permutexvar_pd(__W, __U, __X, __Y); 
 }
 
 __m512d test_mm512_maskz_permutexvar_pd(__mmask8 __U, __m512i __X, __m512d __Y) {
   // CHECK-LABEL: @test_mm512_maskz_permutexvar_pd
-  // CHECK: @llvm.x86.avx512.mask.permvar.df.512
+  // CHECK: @llvm.x86.avx512.permvar.df.512
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_maskz_permutexvar_pd(__U, __X, __Y); 
 }
 
 __m512i test_mm512_maskz_permutexvar_epi64(__mmask8 __M, __m512i __X, __m512i __Y) {
   // CHECK-LABEL: @test_mm512_maskz_permutexvar_epi64
-  // CHECK: @llvm.x86.avx512.mask.permvar.di.512
+  // CHECK: @llvm.x86.avx512.permvar.di.512
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_maskz_permutexvar_epi64(__M, __X, __Y); 
 }
 
 __m512i test_mm512_permutexvar_epi64(__m512i __X, __m512i __Y) {
   // CHECK-LABEL: @test_mm512_permutexvar_epi64
-  // CHECK: @llvm.x86.avx512.mask.permvar.di.512
+  // CHECK: @llvm.x86.avx512.permvar.di.512
   return _mm512_permutexvar_epi64(__X, __Y); 
 }
 
 __m512i test_mm512_mask_permutexvar_epi64(__m512i __W, __mmask8 __M, __m512i __X, __m512i __Y) {
   // CHECK-LABEL: @test_mm512_mask_permutexvar_epi64
-  // CHECK: @llvm.x86.avx512.mask.permvar.di.512
+  // CHECK: @llvm.x86.avx512.permvar.di.512
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_mask_permutexvar_epi64(__W, __M, __X, __Y); 
 }
 
 __m512 test_mm512_permutexvar_ps(__m512i __X, __m512 __Y) {
   // CHECK-LABEL: @test_mm512_permutexvar_ps
-  // CHECK: @llvm.x86.avx512.mask.permvar.sf.512
+  // CHECK: @llvm.x86.avx512.permvar.sf.512
   return _mm512_permutexvar_ps(__X, __Y); 
 }
 
 __m512 test_mm512_mask_permutexvar_ps(__m512 __W, __mmask16 __U, __m512i __X, __m512 __Y) {
   // CHECK-LABEL: @test_mm512_mask_permutexvar_ps
-  // CHECK: @llvm.x86.avx512.mask.permvar.sf.512
+  // CHECK: @llvm.x86.avx512.permvar.sf.512
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_permutexvar_ps(__W, __U, __X, __Y); 
 }
 
 __m512 test_mm512_maskz_permutexvar_ps(__mmask16 __U, __m512i __X, __m512 __Y) {
   // CHECK-LABEL: @test_mm512_maskz_permutexvar_ps
-  // CHECK: @llvm.x86.avx512.mask.permvar.sf.512
+  // CHECK: @llvm.x86.avx512.permvar.sf.512
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_permutexvar_ps(__U, __X, __Y); 
 }
 
 __m512i test_mm512_maskz_permutexvar_epi32(__mmask16 __M, __m512i __X, __m512i __Y) {
   // CHECK-LABEL: @test_mm512_maskz_permutexvar_epi32
-  // CHECK: @llvm.x86.avx512.mask.permvar.si.512
+  // CHECK: @llvm.x86.avx512.permvar.si.512
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_permutexvar_epi32(__M, __X, __Y); 
 }
 
 __m512i test_mm512_permutexvar_epi32(__m512i __X, __m512i __Y) {
   // CHECK-LABEL: @test_mm512_permutexvar_epi32
-  // CHECK: @llvm.x86.avx512.mask.permvar.si.512
+  // CHECK: @llvm.x86.avx512.permvar.si.512
   return _mm512_permutexvar_epi32(__X, __Y); 
 }
 
 __m512i test_mm512_mask_permutexvar_epi32(__m512i __W, __mmask16 __M, __m512i __X, __m512i __Y) {
   // CHECK-LABEL: @test_mm512_mask_permutexvar_epi32
-  // CHECK: @llvm.x86.avx512.mask.permvar.si.512
+  // CHECK: @llvm.x86.avx512.permvar.si.512
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_permutexvar_epi32(__W, __M, __X, __Y); 
 }
 

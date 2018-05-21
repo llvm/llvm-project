@@ -39,6 +39,15 @@ def SFINAE_Suppress            : SFINAEResponse;
 def SFINAE_Report              : SFINAEResponse;
 def SFINAE_AccessControl       : SFINAEResponse;
 
+// Textual substitutions which may be performed on the text of diagnostics
+class TextSubstitution<string Text> {
+  string Substitution = Text;
+  // TODO: These are only here to allow substitutions to be declared inline with
+  // diagnostics
+  string Component = "";
+  string CategoryName = "";
+}
+
 // Diagnostic Categories.  These can be applied to groups or individual
 // diagnostics to specify a category.
 class DiagCategory<string Name> {

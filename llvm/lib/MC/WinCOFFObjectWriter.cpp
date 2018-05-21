@@ -608,15 +608,7 @@ uint32_t WinCOFFObjectWriter::writeSectionContents(MCAssembler &Asm,
   // to CRC the data before we dump it into the object file.
   SmallVector<char, 128> Buf;
   raw_svector_ostream VecOS(Buf);
-  raw_pwrite_stream &OldStream = getStream();
-
-  // Redirect the output stream to our buffer and fill our buffer with
-  // the section data.
-  setStream(VecOS);
-  Asm.writeSectionData(&MCSec, Layout);
-
-  // Reset the stream back to what it was before.
-  setStream(OldStream);
+  Asm.writeSectionData(VecOS, &MCSec, Layout);
 
   // Write the section contents to the object file.
   getStream() << Buf;

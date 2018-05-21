@@ -16,6 +16,7 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFragment.h"
+#include "llvm/Support/Endian.h"
 #include <cstdint>
 #include <memory>
 
@@ -41,13 +42,14 @@ class MCAsmBackend {
   std::unique_ptr<MCCodePadder> CodePadder;
 
 protected: // Can only create subclasses.
-  MCAsmBackend();
-  MCAsmBackend(std::unique_ptr<MCCodePadder> TargetCodePadder);
+  MCAsmBackend(support::endianness Endian);
 
 public:
   MCAsmBackend(const MCAsmBackend &) = delete;
   MCAsmBackend &operator=(const MCAsmBackend &) = delete;
   virtual ~MCAsmBackend();
+
+  const support::endianness Endian;
 
   /// lifetime management
   virtual void reset() {}
@@ -128,7 +130,7 @@ public:
   /// target cannot generate such a sequence, it should return an error.
   ///
   /// \return - True on success.
-  virtual bool writeNopData(uint64_t Count, MCObjectWriter *OW) const = 0;
+  virtual bool writeNopData(raw_ostream &OS, uint64_t Count) const = 0;
 
   /// Give backend an opportunity to finish layout after relaxation
   virtual void finishLayout(MCAssembler const &Asm,

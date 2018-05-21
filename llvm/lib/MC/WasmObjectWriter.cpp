@@ -853,7 +853,7 @@ void WasmObjectWriter::writeCodeSection(const MCAssembler &Asm,
 
     encodeULEB128(Size, getStream());
     FuncSection.setSectionOffset(getStream().tell() - Section.ContentsOffset);
-    Asm.writeSectionData(&FuncSection, Layout);
+    Asm.writeSectionData(getStream(), &FuncSection, Layout);
   }
 
   // Apply fixups.
@@ -1016,7 +1016,7 @@ void WasmObjectWriter::writeCustomSections(const MCAssembler &Asm,
     startCustomSection(Section, CustomSection.Name);
 
     Sec->setSectionOffset(getStream().tell() - Section.ContentsOffset);
-    Asm.writeSectionData(Sec, Layout);
+    Asm.writeSectionData(getStream(), Sec, Layout);
 
     CustomSection.OutputContentsOffset = Section.ContentsOffset;
     CustomSection.OutputIndex = Section.Index;

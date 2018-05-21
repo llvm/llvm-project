@@ -8,13 +8,13 @@ declare i64 @labs(i64)
 declare i64 @llabs(i64)
 
 ; Test that the abs library call simplifier works correctly.
-; abs(x) -> x >s -1 ? x : -x.
+; abs(x) -> x <s 0 ? -x : x.
 
 define i32 @test_abs(i32 %x) {
 ; CHECK-LABEL: @test_abs(
-; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp slt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISPOS]], i32 [[X]], i32 [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISPOS]], i32 [[NEG]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %ret = call i32 @abs(i32 %x)
@@ -23,9 +23,9 @@ define i32 @test_abs(i32 %x) {
 
 define i64 @test_labs(i64 %x) {
 ; CHECK-LABEL: @test_labs(
-; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i64 [[X:%.*]], -1
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp slt i64 [[X:%.*]], 0
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[X]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISPOS]], i64 [[X]], i64 [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISPOS]], i64 [[NEG]], i64 [[X]]
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %ret = call i64 @labs(i64 %x)
@@ -34,22 +34,22 @@ define i64 @test_labs(i64 %x) {
 
 define i64 @test_llabs(i64 %x) {
 ; CHECK-LABEL: @test_llabs(
-; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i64 [[X:%.*]], -1
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp slt i64 [[X:%.*]], 0
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[X]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISPOS]], i64 [[X]], i64 [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISPOS]], i64 [[NEG]], i64 [[X]]
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %ret = call i64 @llabs(i64 %x)
   ret i64 %ret
 }
 
-; FIXME: We should have a canonical form of abs to make CSE easier.
+; We have a canonical form of abs to make CSE easier.
 
 define i8 @abs_canonical_1(i8 %x) {
 ; CHECK-LABEL: @abs_canonical_1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i8 [[X]], i8 [[NEG]]
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i8 [[NEG]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[ABS]]
 ;
   %cmp = icmp sgt i8 %x, 0
@@ -58,13 +58,13 @@ define i8 @abs_canonical_1(i8 %x) {
   ret i8 %abs
 }
 
-; FIXME: Vectors should work too.
+; Vectors should work too.
 
 define <2 x i8> @abs_canonical_2(<2 x i8> %x) {
 ; CHECK-LABEL: @abs_canonical_2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[X]], <2 x i8> [[NEG]]
+; CHECK-NEXT:    [[ABS:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[NEG]], <2 x i8> [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[ABS]]
 ;
   %cmp = icmp sgt <2 x i8> %x, <i8 -1, i8 -1>
@@ -90,7 +90,7 @@ define i8 @abs_canonical_3(i8 %x) {
 
 define i8 @abs_canonical_4(i8 %x) {
 ; CHECK-LABEL: @abs_canonical_4(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X]]
 ; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i8 [[NEG]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[ABS]]
@@ -101,13 +101,13 @@ define i8 @abs_canonical_4(i8 %x) {
   ret i8 %abs
 }
 
-; FIXME: We should have a canonical form of nabs to make CSE easier.
+; We have a canonical form of nabs to make CSE easier.
 
 define i8 @nabs_canonical_1(i8 %x) {
 ; CHECK-LABEL: @nabs_canonical_1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i8 [[NEG]], i8 [[X]]
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i8 [[X]], i8 [[NEG]]
 ; CHECK-NEXT:    ret i8 [[ABS]]
 ;
   %cmp = icmp sgt i8 %x, 0
@@ -116,13 +116,13 @@ define i8 @nabs_canonical_1(i8 %x) {
   ret i8 %abs
 }
 
-; FIXME: Vectors should work too.
+; Vectors should work too.
 
 define <2 x i8> @nabs_canonical_2(<2 x i8> %x) {
 ; CHECK-LABEL: @nabs_canonical_2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[NEG]], <2 x i8> [[X]]
+; CHECK-NEXT:    [[ABS:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[X]], <2 x i8> [[NEG]]
 ; CHECK-NEXT:    ret <2 x i8> [[ABS]]
 ;
   %cmp = icmp sgt <2 x i8> %x, <i8 -1, i8 -1>
@@ -148,7 +148,7 @@ define i8 @nabs_canonical_3(i8 %x) {
 
 define i8 @nabs_canonical_4(i8 %x) {
 ; CHECK-LABEL: @nabs_canonical_4(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X]]
 ; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i8 [[X]], i8 [[NEG]]
 ; CHECK-NEXT:    ret i8 [[ABS]]

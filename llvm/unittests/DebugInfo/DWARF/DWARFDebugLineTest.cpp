@@ -25,14 +25,17 @@ using namespace testing;
 namespace {
 struct CommonFixture {
   CommonFixture()
-      : LineData("", true, 0),
-        RecordIssue(std::bind(&CommonFixture::recordIssue, this,
-                              std::placeholders::_1)),
-        FoundError(Error::success()),
-        RecordError(std::bind(&CommonFixture::recordError, this,
-                              std::placeholders::_1)){};
+      : LineData("", true, 0), Recoverable(Error::success()),
+        RecordRecoverable(std::bind(&CommonFixture::recordRecoverable, this,
+                                    std::placeholders::_1)),
+        Unrecoverable(Error::success()),
+        RecordUnrecoverable(std::bind(&CommonFixture::recordUnrecoverable, this,
+                                      std::placeholders::_1)){};
 
-  ~CommonFixture() { EXPECT_FALSE(FoundError); }
+  ~CommonFixture() {
+    EXPECT_FALSE(Recoverable);
+    EXPECT_FALSE(Unrecoverable);
+  }
 
   bool setupGenerator(uint16_t Version = 4) {
     Triple T = getHostTripleForAddrSize(8);
@@ -82,9 +85,11 @@ struct CommonFixture {
     return DWARFDebugLine::SectionParser(LineData, *Context, CUs, TUs);
   }
 
-  void recordIssue(StringRef Message) { IssueMessage = Message; }
-  void recordError(Error Err) {
-    FoundError = joinErrors(std::move(FoundError), std::move(Err));
+  void recordRecoverable(Error Err) {
+    Recoverable = joinErrors(std::move(Recoverable), std::move(Err));
+  }
+  void recordUnrecoverable(Error Err) {
+    Unrecoverable = joinErrors(std::move(Unrecoverable), std::move(Err));
   }
 
   void checkError(ArrayRef<StringRef> ExpectedMsgs, Error Err) {
@@ -108,9 +113,9 @@ struct CommonFixture {
   void checkGetOrParseLineTableEmitsError(StringRef ExpectedMsg,
                                           uint64_t Offset = 0) {
     auto ExpectedLineTable = Line.getOrParseLineTable(
-        LineData, Offset, *Context, nullptr, RecordIssue);
+        LineData, Offset, *Context, nullptr, RecordRecoverable);
     EXPECT_FALSE(ExpectedLineTable);
-    EXPECT_TRUE(IssueMessage.empty());
+    EXPECT_FALSE(Recoverable);
 
     checkError(ExpectedMsg, ExpectedLineTable.takeError());
   }
@@ -119,10 +124,10 @@ struct CommonFixture {
   std::unique_ptr<DWARFContext> Context;
   DWARFDataExtractor LineData;
   DWARFDebugLine Line;
-  std::string IssueMessage;
-  std::function<void(StringRef)> RecordIssue;
-  Error FoundError;
-  std::function<void(Error)> RecordError;
+  Error Recoverable;
+  std::function<void(Error)> RecordRecoverable;
+  Error Unrecoverable;
+  std::function<void(Error)> RecordUnrecoverable;
 
   SmallVector<std::unique_ptr<DWARFCompileUnit>, 2> CUs;
   std::deque<DWARFUnitSection<DWARFTypeUnit>> TUs;
@@ -240,21 +245,21 @@ TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
 
   generate();
 
-  auto ExpectedLineTable =
-      Line.getOrParseLineTable(LineData, 0, *Context, nullptr, RecordIssue);
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
   ASSERT_TRUE(ExpectedLineTable.operator bool());
-  EXPECT_TRUE(IssueMessage.empty());
+  EXPECT_FALSE(Recoverable);
   const DWARFDebugLine::LineTable *Expected = *ExpectedLineTable;
   checkDefaultPrologue(Version, Format, Expected->Prologue, 16);
   EXPECT_EQ(Expected->Sequences.size(), 1u);
 
   uint64_t SecondOffset =
       Expected->Prologue.sizeofTotalLength() + Expected->Prologue.TotalLength;
-  IssueMessage.clear();
+  Recoverable = Error::success();
   auto ExpectedLineTable2 = Line.getOrParseLineTable(
-      LineData, SecondOffset, *Context, nullptr, RecordIssue);
+      LineData, SecondOffset, *Context, nullptr, RecordRecoverable);
   ASSERT_TRUE(ExpectedLineTable2.operator bool());
-  EXPECT_TRUE(IssueMessage.empty());
+  EXPECT_FALSE(Recoverable);
   const DWARFDebugLine::LineTable *Expected2 = *ExpectedLineTable2;
   checkDefaultPrologue(Version, Format, Expected2->Prologue, 32);
   EXPECT_EQ(Expected2->Sequences.size(), 2u);
@@ -263,18 +268,18 @@ TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
 
   // Check that if the same offset is requested, the exact same pointer is
   // returned.
-  IssueMessage.clear();
-  auto ExpectedLineTable3 =
-      Line.getOrParseLineTable(LineData, 0, *Context, nullptr, RecordIssue);
+  Recoverable = Error::success();
+  auto ExpectedLineTable3 = Line.getOrParseLineTable(
+      LineData, 0, *Context, nullptr, RecordRecoverable);
   ASSERT_TRUE(ExpectedLineTable3.operator bool());
-  EXPECT_TRUE(IssueMessage.empty());
+  EXPECT_FALSE(Recoverable);
   EXPECT_EQ(Expected, *ExpectedLineTable3);
 
-  IssueMessage.clear();
+  Recoverable = Error::success();
   auto ExpectedLineTable4 = Line.getOrParseLineTable(
-      LineData, SecondOffset, *Context, nullptr, RecordIssue);
+      LineData, SecondOffset, *Context, nullptr, RecordRecoverable);
   ASSERT_TRUE(ExpectedLineTable4.operator bool());
-  EXPECT_TRUE(IssueMessage.empty());
+  EXPECT_FALSE(Recoverable);
   EXPECT_EQ(Expected2, *ExpectedLineTable4);
 
   // TODO: Add tests that show that the body of the programs have been read
@@ -404,7 +409,7 @@ INSTANTIATE_TEST_CASE_P(
                2, DWARF32), // Test lower-bound of v2-3 fields and DWARF32.
            std::make_pair(3, DWARF32), // Test upper-bound of v2-3 fields.
            std::make_pair(4, DWARF64), // Test v4 fields and DWARF64.
-           std::make_pair(5, DWARF32), std::make_pair(5, DWARF64)),);
+           std::make_pair(5, DWARF32), std::make_pair(5, DWARF64)), );
 
 TEST_F(DebugLineBasicFixture, ErrorForInvalidExtendedOpcodeLength) {
   if (!setupGenerator())
@@ -455,10 +460,10 @@ TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
 
   generate();
 
-  auto ExpectedLineTable =
-      Line.getOrParseLineTable(LineData, 0, *Context, nullptr, RecordIssue);
-  EXPECT_EQ(IssueMessage,
-            "last sequence in debug line table is not terminated!");
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  checkError("last sequence in debug line table is not terminated!",
+             std::move(Recoverable));
   ASSERT_TRUE(ExpectedLineTable.operator bool());
   EXPECT_EQ((*ExpectedLineTable)->Rows.size(), 6u);
   // The unterminated sequence is not added to the sequence list.
@@ -474,21 +479,22 @@ TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
   EXPECT_EQ(Parser.getOffset(), 0u);
   ASSERT_FALSE(Parser.done());
 
-  DWARFDebugLine::LineTable Parsed = Parser.parseNext(RecordIssue, RecordError);
+  DWARFDebugLine::LineTable Parsed =
+      Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
   checkDefaultPrologue(4, DWARF32, Parsed.Prologue, 16);
   EXPECT_EQ(Parsed.Sequences.size(), 1u);
   EXPECT_EQ(Parser.getOffset(), 62u);
   ASSERT_FALSE(Parser.done());
 
   DWARFDebugLine::LineTable Parsed2 =
-      Parser.parseNext(RecordIssue, RecordError);
+      Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
   checkDefaultPrologue(4, DWARF64, Parsed2.Prologue, 16);
   EXPECT_EQ(Parsed2.Sequences.size(), 1u);
   EXPECT_EQ(Parser.getOffset(), 136u);
   EXPECT_TRUE(Parser.done());
 
-  EXPECT_TRUE(IssueMessage.empty());
-  EXPECT_FALSE(FoundError);
+  EXPECT_FALSE(Recoverable);
+  EXPECT_FALSE(Unrecoverable);
 }
 
 TEST_F(DebugLineBasicFixture, ParserSkipsCorrectly) {
@@ -500,15 +506,15 @@ TEST_F(DebugLineBasicFixture, ParserSkipsCorrectly) {
   EXPECT_EQ(Parser.getOffset(), 0u);
   ASSERT_FALSE(Parser.done());
 
-  Parser.skip(RecordError);
+  Parser.skip(RecordUnrecoverable);
   EXPECT_EQ(Parser.getOffset(), 62u);
   ASSERT_FALSE(Parser.done());
 
-  Parser.skip(RecordError);
+  Parser.skip(RecordUnrecoverable);
   EXPECT_EQ(Parser.getOffset(), 136u);
   EXPECT_TRUE(Parser.done());
 
-  EXPECT_FALSE(FoundError);
+  EXPECT_FALSE(Unrecoverable);
 }
 
 TEST_F(DebugLineBasicFixture, ParserAlwaysDoneForEmptySection) {
@@ -531,15 +537,15 @@ TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenParsing) {
   generate();
 
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
-  Parser.parseNext(RecordIssue, RecordError);
+  Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
 
   EXPECT_EQ(Parser.getOffset(), 4u);
   EXPECT_TRUE(Parser.done());
-  EXPECT_TRUE(IssueMessage.empty());
+  EXPECT_FALSE(Recoverable);
 
   checkError("parsing line table prologue at offset 0x00000000 unsupported "
              "reserved unit length found of value 0xffffff00",
-             std::move(FoundError));
+             std::move(Unrecoverable));
 }
 
 TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenSkipping) {
@@ -552,14 +558,14 @@ TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenSkipping) {
   generate();
 
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
-  Parser.skip(RecordError);
+  Parser.skip(RecordUnrecoverable);
 
   EXPECT_EQ(Parser.getOffset(), 4u);
   EXPECT_TRUE(Parser.done());
 
   checkError("parsing line table prologue at offset 0x00000000 unsupported "
              "reserved unit length found of value 0xffffff00",
-             std::move(FoundError));
+             std::move(Unrecoverable));
 }
 
 TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
@@ -573,18 +579,18 @@ TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
   generate();
 
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
-  Parser.parseNext(RecordIssue, RecordError);
+  Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
   ASSERT_FALSE(Parser.done());
-  Parser.parseNext(RecordIssue, RecordError);
+  Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
 
   EXPECT_TRUE(Parser.done());
-  EXPECT_TRUE(IssueMessage.empty());
+  EXPECT_FALSE(Recoverable);
 
   checkError({"parsing line table prologue at offset 0x00000000 found "
               "unsupported version 0x00",
               "parsing line table prologue at offset 0x00000006 found "
               "unsupported version 0x01"},
-             std::move(FoundError));
+             std::move(Unrecoverable));
 }
 
 TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
@@ -601,21 +607,21 @@ TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
   generate();
 
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
-  Parser.parseNext(RecordIssue, RecordError);
-  EXPECT_TRUE(IssueMessage.empty());
+  Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
+  EXPECT_FALSE(Recoverable);
   ASSERT_FALSE(Parser.done());
   checkError(
       "unexpected line op length at offset 0x00000030 expected 0x42 found 0x01",
-      std::move(FoundError));
+      std::move(Unrecoverable));
 
   // Reset the error state so that it does not confuse the next set of checks.
-  FoundError = Error::success();
-  Parser.parseNext(RecordIssue, RecordError);
+  Unrecoverable = Error::success();
+  Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
 
   EXPECT_TRUE(Parser.done());
-  EXPECT_EQ(IssueMessage,
-            "last sequence in debug line table is not terminated!");
-  EXPECT_TRUE(!FoundError);
+  checkError("last sequence in debug line table is not terminated!",
+             std::move(Recoverable));
+  EXPECT_FALSE(Unrecoverable);
 }
 
 TEST_F(DebugLineBasicFixture,
@@ -630,9 +636,9 @@ TEST_F(DebugLineBasicFixture,
   generate();
 
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
-  Parser.skip(RecordError);
+  Parser.skip(RecordUnrecoverable);
   ASSERT_FALSE(Parser.done());
-  Parser.skip(RecordError);
+  Parser.skip(RecordUnrecoverable);
 
   EXPECT_TRUE(Parser.done());
 
@@ -640,7 +646,7 @@ TEST_F(DebugLineBasicFixture,
               "unsupported version 0x00",
               "parsing line table prologue at offset 0x00000006 found "
               "unsupported version 0x01"},
-             std::move(FoundError));
+             std::move(Unrecoverable));
 }
 
 TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {
@@ -652,10 +658,10 @@ TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {
   generate();
 
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
-  Parser.skip(RecordError);
+  Parser.skip(RecordUnrecoverable);
 
   EXPECT_TRUE(Parser.done());
-  EXPECT_TRUE(!FoundError);
+  EXPECT_FALSE(Unrecoverable);
 }
 
 } // end anonymous namespace

@@ -996,7 +996,7 @@ void ELFObjectWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
       MAI->compressDebugSections() != DebugCompressionType::None;
   if (!CompressionEnabled || !SectionName.startswith(".debug_") ||
       SectionName == ".debug_frame") {
-    Asm.writeSectionData(&Section, Layout);
+    Asm.writeSectionData(getStream(), &Section, Layout);
     return;
   }
 
@@ -1006,10 +1006,7 @@ void ELFObjectWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
 
   SmallVector<char, 128> UncompressedData;
   raw_svector_ostream VecOS(UncompressedData);
-  raw_pwrite_stream &OldStream = getStream();
-  setStream(VecOS);
-  Asm.writeSectionData(&Section, Layout);
-  setStream(OldStream);
+  Asm.writeSectionData(VecOS, &Section, Layout);
 
   SmallVector<char, 128> CompressedContents;
   if (Error E = zlib::compress(

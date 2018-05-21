@@ -118,7 +118,7 @@ Nios2AsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
                                     MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
-bool Nios2AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
+bool Nios2AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   return true;
 }
 
