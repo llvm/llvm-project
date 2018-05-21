@@ -48,6 +48,7 @@ class DebugMapModule;
 class DWARFAbbreviationDeclaration;
 class DWARFAbbreviationDeclarationSet;
 class DWARFileUnit;
+class DWARCompileUnit;
 class DWARFDebugAbbrev;
 class DWARFDebugAranges;
 class DWARFDebugInfo;
