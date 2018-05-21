@@ -267,6 +267,7 @@
 		26680336116005EF008E1FE4 /* SBBreakpointLocation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AF16CC7114086A1007A7B3F /* SBBreakpointLocation.cpp */; };
 		26680337116005F1008E1FE4 /* SBBreakpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AF16A9C11402D5B007A7B3F /* SBBreakpoint.cpp */; };
 		2668035C11601108008E1FE4 /* LLDB.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26680207115FD0ED008E1FE4 /* LLDB.framework */; };
+		2668A2EE20AF417D00D94111 /* PathMappingListTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */; };
 		266942001A6DC2AC0063BE93 /* MICmdArgContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266941601A6DC2AB0063BE93 /* MICmdArgContext.cpp */; };
 		266942011A6DC2AC0063BE93 /* MICmdArgSet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266941621A6DC2AB0063BE93 /* MICmdArgSet.cpp */; };
 		266942021A6DC2AC0063BE93 /* MICmdArgValBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266941641A6DC2AB0063BE93 /* MICmdArgValBase.cpp */; };
@@ -1755,6 +1756,7 @@
 		2666ADC31B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HexagonDYLDRendezvous.cpp; sourceTree = "<group>"; };
 		2666ADC41B3CB675001FAFD3 /* HexagonDYLDRendezvous.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HexagonDYLDRendezvous.h; sourceTree = "<group>"; };
 		26680207115FD0ED008E1FE4 /* LLDB.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LLDB.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathMappingListTest.cpp; path = Target/PathMappingListTest.cpp; sourceTree = "<group>"; };
 		2669415B1A6DC2AB0063BE93 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = CMakeLists.txt; path = "tools/lldb-mi/CMakeLists.txt"; sourceTree = SOURCE_ROOT; };
 		2669415E1A6DC2AB0063BE93 /* lldb-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "lldb-Info.plist"; path = "tools/lldb-mi/lldb-Info.plist"; sourceTree = SOURCE_ROOT; };
 		2669415F1A6DC2AB0063BE93 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = "tools/lldb-mi/Makefile"; sourceTree = SOURCE_ROOT; };
@@ -6709,6 +6711,7 @@
 			children = (
 				9A2057061F3B818600F6C293 /* MemoryRegionInfoTest.cpp */,
 				AFAFD8091E57E1B90017A14F /* ModuleCacheTest.cpp */,
+				2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */,
 			);
 			name = Target;
 			sourceTree = "<group>";
@@ -7351,6 +7354,7 @@
 				23CB15341D66DA9300EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */,
 				9A2057381F3B8E7E00F6C293 /* FileSystemTest.cpp in Sources */,
 				9A2057201F3B8D2500F6C293 /* UnixSignalsTest.cpp in Sources */,
+				2668A2EE20AF417D00D94111 /* PathMappingListTest.cpp in Sources */,
 				AFAFD80A1E57E1B90017A14F /* ModuleCacheTest.cpp in Sources */,
 				9A3D43DA1F3151C400EB767C /* StructuredDataTest.cpp in Sources */,
 				9A2057121F3B824B00F6C293 /* SymbolFileDWARFTests.cpp in Sources */,
