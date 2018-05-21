@@ -8,7 +8,7 @@ struct foo {
 // CHECK: @u = global %union.anon zeroinitializer
 union { int i; float f; } u = { };
 
-// CHECK: @u2 = global { i32, [4 x i8] } { i32 0, [4 x i8] undef }
+// CHECK: @u2 = global %union.anon.0 zeroinitializer
 union { int i; double f; } u2 = { };
 
 // CHECK: @u3 = global  %union.anon.1 zeroinitializer

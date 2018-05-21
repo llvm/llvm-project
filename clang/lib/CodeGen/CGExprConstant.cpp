@@ -1392,20 +1392,40 @@ static QualType getNonMemoryType(CodeGenModule &CGM, QualType type) {
   return type;
 }
 
+/// Checks if the specified initializer is equivalent to zero initialization.
+static bool isZeroInitializer(ConstantEmitter &CE, const Expr *Init) {
+  if (auto *E = dyn_cast_or_null<CXXConstructExpr>(Init)) {
+    CXXConstructorDecl *CD = E->getConstructor();
+    return CD->isDefaultConstructor() && CD->isTrivial();
+  }
+
+  if (auto *IL = dyn_cast_or_null<InitListExpr>(Init)) {
+    for (auto I : IL->inits())
+      if (!isZeroInitializer(CE, I))
+        return false;
+    if (const Expr *Filler = IL->getArrayFiller())
+      return isZeroInitializer(CE, Filler);
+    return true;
+  }
+
+  QualType InitTy = Init->getType();
+  if (InitTy->isIntegralOrEnumerationType() || InitTy->isPointerType()) {
+    Expr::EvalResult Result;
+    if (Init->EvaluateAsRValue(Result, CE.CGM.getContext()) &&
+        !Result.hasUnacceptableSideEffect(Expr::SE_NoSideEffects))
+      return (Result.Val.isInt() && Result.Val.getInt().isNullValue()) ||
+             (Result.Val.isLValue() && Result.Val.isNullPointer());
+  }
+
+  return false;
+}
+
 llvm::Constant *ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
   // Make a quick check if variable can be default NULL initialized
   // and avoid going through rest of code which may do, for c++11,
   // initialization of memory to all NULLs.
-  if (!D.hasLocalStorage()) {
-    QualType Ty = CGM.getContext().getBaseElementType(D.getType());
-    if (Ty->isRecordType())
-      if (const CXXConstructExpr *E =
-          dyn_cast_or_null<CXXConstructExpr>(D.getInit())) {
-        const CXXConstructorDecl *CD = E->getConstructor();
-        if (CD->isTrivial() && CD->isDefaultConstructor())
-          return CGM.EmitNullConstant(D.getType());
-      }
-  }
+  if (!D.hasLocalStorage() && isZeroInitializer(*this, D.getInit()))
+    return CGM.EmitNullConstant(D.getType());
 
   QualType destType = D.getType();
 

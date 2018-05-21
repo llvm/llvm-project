@@ -273,3 +273,50 @@ TEST(FileSpecTest, FormatFileSpec) {
   EXPECT_EQ("(empty)", llvm::formatv("{0:D}", F).str());
 }
 
+TEST(FileSpecTest, IsRelative) {
+  llvm::StringRef not_relative[] = {
+    "/",
+    "/a",
+    "/a/",
+    "/a/b",
+    "/a/b/",
+    "//",
+    "//a",
+    "//a/",
+    "//a/b",
+    "//a/b/",
+    "~",
+    "~/",
+    "~/a",
+    "~/a/",
+    "~/a/b"
+    "~/a/b/",
+    "/foo/.",
+    "/foo/..",
+    "/foo/../",
+    "/foo/../.",
+  };
+  for (const auto &path: not_relative) {
+    FileSpec spec(path, false, FileSpec::Style::posix);
+    EXPECT_FALSE(spec.IsRelative());
+  }
+  llvm::StringRef is_relative[] = {
+    ".",
+    "./",
+    ".///",
+    "a",
+    "./a",
+    "./a/",
+    "./a/",
+    "./a/b",
+    "./a/b/",
+    "../foo",
+    "foo/bar.c",
+    "./foo/bar.c"
+  };
+  for (const auto &path: is_relative) {
+    FileSpec spec(path, false, FileSpec::Style::posix);
+    EXPECT_TRUE(spec.IsRelative());
+  }
+}
+

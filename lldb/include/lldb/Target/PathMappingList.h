@@ -90,7 +90,7 @@ public:
   bool RemapPath(llvm::StringRef path, std::string &new_path) const;
   bool RemapPath(const char *, std::string &) const = delete;
 
-  bool ReverseRemapPath(const ConstString &path, ConstString &new_path) const;
+  bool ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const;
 
   //------------------------------------------------------------------
   /// Finds a source file given a file spec using the path remappings.

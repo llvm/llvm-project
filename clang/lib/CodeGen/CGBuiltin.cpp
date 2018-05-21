@@ -10088,6 +10088,49 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     CI->setConvergent();
     return CI;
   }
+  case AMDGPU::BI__builtin_amdgcn_ds_faddf:
+  case AMDGPU::BI__builtin_amdgcn_ds_fminf:
+  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf: {
+    llvm::SmallVector<llvm::Value *, 5> Args;
+    for (unsigned I = 0; I != 5; ++I)
+      Args.push_back(EmitScalarExpr(E->getArg(I)));
+    const llvm::Type *PtrTy = Args[0]->getType();
+    // check pointer parameter
+    if (!PtrTy->isPointerTy() ||
+        E->getArg(0)
+                ->getType()
+                ->getPointeeType()
+                .getQualifiers()
+                .getAddressSpace() != LangAS::opencl_local ||
+        !PtrTy->getPointerElementType()->isFloatTy()) {
+       CGM.Error(E->getArg(0)->getLocStart(),
+                "parameter should have type \"local float*\"");
+      return nullptr;
+    }
+    // check float parameter
+    if (!Args[1]->getType()->isFloatTy()) {
+      CGM.Error(E->getArg(1)->getLocStart(),
+                "parameter should have type \"float\"");
+      return nullptr;
+    }
+
+    Intrinsic::ID ID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_ds_faddf:
+      ID = Intrinsic::amdgcn_ds_fadd;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_fminf:
+      ID = Intrinsic::amdgcn_ds_fmin;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
+      ID = Intrinsic::amdgcn_ds_fmax;
+      break;
+    default:
+      llvm_unreachable("Unknown BuiltinID");
+    }
+    Value *F = CGM.getIntrinsic(ID);
+    return Builder.CreateCall(F, Args);
+  }
 
   // amdgcn workitem
   case AMDGPU::BI__builtin_amdgcn_workitem_id_x:
