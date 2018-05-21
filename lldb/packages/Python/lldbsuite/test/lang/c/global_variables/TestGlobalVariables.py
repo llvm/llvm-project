@@ -39,6 +39,12 @@ class GlobalVariablesTestCase(TestBase):
         environment = self.registerSharedLibrariesWithTarget(
             target, self.shlib_names)
 
+        # Test that static initialized variables can be inspected without process.
+        self.expect("target variable g_ptr", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['(int *)'])
+        self.expect("target variable *g_ptr", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['42'])
+
         # Now launch the process, and do not stop at entry point.
         process = target.LaunchSimple(
             None, environment, self.get_process_working_directory())
@@ -54,17 +60,21 @@ class GlobalVariablesTestCase(TestBase):
                     substrs=[' resolved, hit count = 1'])
 
         # Check that GLOBAL scopes are indicated for the variables.
+        self.runCmd("frame variable --show-types --scope --show-globals --no-args")
         self.expect(
             "frame variable --show-types --scope --show-globals --no-args",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=[
-                'GLOBAL: (int) g_file_global_int = 42',
                 'STATIC: (const int) g_file_static_int = 2',
+                'STATIC: (const char *) g_func_static_cstr',
                 'GLOBAL: (const char *) g_file_global_cstr',
                 '"g_file_global_cstr"',
+                'GLOBAL: (int) g_file_global_int = 42',
+                'GLOBAL: (int) g_common_1 = 21',
+                'GLOBAL: (int *) g_ptr',
                 'STATIC: (const char *) g_file_static_cstr',
-                '"g_file_static_cstr"',
-                'GLOBAL: (int) g_common_1 = 21'])
+                '"g_file_static_cstr"'
+            ])
 
         # 'frame variable' should support address-of operator.
         self.runCmd("frame variable &g_file_global_int")
@@ -95,3 +105,8 @@ class GlobalVariablesTestCase(TestBase):
             VARIABLES_DISPLAYED_CORRECTLY,
             matching=False,
             substrs=["can't be resolved"])
+
+        # Test that the statically initialized variable can also be
+        # inspected *with* a process.
+        self.expect("target variable *g_ptr", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['42'])
