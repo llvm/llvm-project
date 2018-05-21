@@ -706,7 +706,7 @@ void RegisterPollyPasses(PassBuilder &PB) {
 } // namespace polly
 
 // Plugin Entrypoint:
-extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK LLVM_PLUGIN_EXPORT
+extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
 llvmGetPassPluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "Polly", LLVM_VERSION_STRING,
           polly::RegisterPollyPasses};

@@ -538,5 +538,5 @@ PWACtx SCEVAffinator::complexityBailout() {
   // and return a constant zero.
   const DebugLoc &Loc = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
   S->invalidate(COMPLEXITY, Loc);
-  return visit(SE.getZero(Type::getInt32Ty(BB->getContext())));
+  return visit(SE.getZero(Type::getInt32Ty(S->getFunction().getContext())));
 }
