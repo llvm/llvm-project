@@ -3616,10 +3616,16 @@ LLVMValueRef LLVMBuildCatchSwitch(LLVMBuilderRef B, LLVMValueRef ParentPad,
                                   unsigned NumHandlers, const char *Name);
 
 /* Tapir */
-LLVMValueRef LLVMBuildDetach(LLVMBuilderRef,
-                             LLVMBasicBlockRef Child, LLVMBasicBlockRef Parent);
-LLVMValueRef LLVMBuildReattach(LLVMBuilderRef);
-LLVMValueRef LLVMBuildSync(LLVMBuilderRef, LLVMBasicBlockRef Continue);
+LLVMValueRef LLVMBuildDetach(LLVMBuilderRef B,
+                             LLVMBasicBlockRef DetachBB,
+                             LLVMBasicBlockRef ContinueBB,
+                             LLVMValueRef SyncRegion);
+LLVMValueRef LLVMBuildReattach(LLVMBuilderRef B,
+                               LLVMBasicBlockRef ReattachBB,
+                               LLVMValueRef SyncRegion);
+LLVMValueRef LLVMBuildSync(LLVMBuilderRef B,
+                           LLVMBasicBlockRef ContinueBB,
+                           LLVMValueRef SyncRegion);
 
 /* Add a case to the switch instruction */
 void LLVMAddCase(LLVMValueRef Switch, LLVMValueRef OnVal,

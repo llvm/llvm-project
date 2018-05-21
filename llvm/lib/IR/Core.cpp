@@ -3761,6 +3761,34 @@ LLVMValueRef LLVMBuildFCmp(LLVMBuilderRef B, LLVMRealPredicate Op,
                                     unwrap(LHS), unwrap(RHS), Name));
 }
 
+/*--.. Parallel constructs .................................................--*/
+
+LLVMValueRef LLVMBuildDetach(LLVMBuilderRef B,
+                             LLVMBasicBlockRef DetachBB,
+                             LLVMBasicBlockRef ContinueBB,
+                             LLVMValueRef SyncRegion)
+{
+    return wrap(unwrap(B)->CreateDetach(unwrap(DetachBB),
+                                        unwrap(ContinueBB),
+                                        unwrap(SyncRegion)));
+}
+
+LLVMValueRef LLVMBuildReattach(LLVMBuilderRef B,
+                               LLVMBasicBlockRef ReattachBB,
+                               LLVMValueRef SyncRegion)
+{
+    return wrap(unwrap(B)->CreateReattach(unwrap(ReattachBB),
+                                          unwrap(SyncRegion)));
+}
+
+LLVMValueRef LLVMBuildSync(LLVMBuilderRef B,
+                           LLVMBasicBlockRef ContinueBB,
+                           LLVMValueRef SyncRegion)
+{
+    return wrap(unwrap(B)->CreateSync(unwrap(ContinueBB),
+                                      unwrap(SyncRegion)));
+}
+
 /*--.. Miscellaneous instructions ..........................................--*/
 
 LLVMValueRef LLVMBuildPhi(LLVMBuilderRef B, LLVMTypeRef Ty, const char *Name) {
