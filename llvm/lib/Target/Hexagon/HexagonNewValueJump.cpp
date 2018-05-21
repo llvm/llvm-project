@@ -160,7 +160,7 @@ static bool canBeFeederToNewValueJump(const HexagonInstrInfo *QII,
   assert(HadDef);
 
   // Make sure there is no 'def' or 'use' of any of the uses of
-  // feeder insn between it's definition, this MI and jump, jmpInst
+  // feeder insn between its definition, this MI and jump, jmpInst
   // skipping compare, cmpInst.
   // Here's the example.
   //    r21=memub(r22+r24<<#0)

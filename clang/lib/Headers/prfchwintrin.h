@@ -28,7 +28,6 @@
 #ifndef __PRFCHWINTRIN_H
 #define __PRFCHWINTRIN_H
 
-#if defined(__PRFCHW__) || defined(__3dNOW__)
 /// Loads a memory sequence containing the specified memory address into
 ///    all data cache levels. The cache-coherency state is set to exclusive.
 ///    Data can be read from and written to the cache line without additional
@@ -66,6 +65,5 @@ _m_prefetchw(void *__P)
 {
   __builtin_prefetch (__P, 1, 3 /* _MM_HINT_T0 */);
 }
-#endif
 
 #endif /* __PRFCHWINTRIN_H */

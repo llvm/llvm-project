@@ -2,17 +2,14 @@
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+avx512vbmi,+avx512vl | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512vbmi,+avx512vl | FileCheck %s --check-prefix=X64
 
-declare <16 x i8> @llvm.x86.avx512.mask.permvar.qi.128(<16 x i8>, <16 x i8>, <16 x i8>, i16)
 declare <16 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.128(<16 x i8>, <16 x i8>, <16 x i8>, i16)
 declare <16 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.128(<16 x i8>, <16 x i8>, <16 x i8>, i16)
 declare <16 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.128(<16 x i8>, <16 x i8>, <16 x i8>, i16)
 
-declare <32 x i8> @llvm.x86.avx512.mask.permvar.qi.256(<32 x i8>, <32 x i8>, <32 x i8>, i32)
 declare <32 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.256(<32 x i8>, <32 x i8>, <32 x i8>, i32)
 declare <32 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.256(<32 x i8>, <32 x i8>, <32 x i8>, i32)
 declare <32 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.256(<32 x i8>, <32 x i8>, <32 x i8>, i32)
 
-declare <64 x i8> @llvm.x86.avx512.mask.permvar.qi.512(<64 x i8>, <64 x i8>, <64 x i8>, i64)
 declare <64 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.512(<64 x i8>, <64 x i8>, <64 x i8>, i64)
 declare <64 x i8> @llvm.x86.avx512.mask.vpermt2var.qi.512(<64 x i8>, <64 x i8>, <64 x i8>, i64)
 declare <64 x i8> @llvm.x86.avx512.maskz.vpermt2var.qi.512(<64 x i8>, <64 x i8>, <64 x i8>, i64)

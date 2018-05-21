@@ -429,17 +429,6 @@ class LowerTypeTestsModule {
 
   void createJumpTable(Function *F, ArrayRef<GlobalTypeMember *> Functions);
 
-  /// replaceCfiUses - Go through the uses list for this definition
-  /// and make each use point to "V" instead of "this" when the use is outside
-  /// the block. 'This's use list is expected to have at least one element.
-  /// Unlike replaceAllUsesWith this function skips blockaddr and direct call
-  /// uses.
-  void replaceCfiUses(Value *Old, Value *New);
-
-  /// replaceDirectCalls - Go through the uses list for this definition and
-  /// replace each use, which is a direct function call.
-  void replaceDirectCalls(Value *Old, Value *New);
-
 public:
   LowerTypeTestsModule(Module &M, ModuleSummaryIndex *ExportSummary,
                        const ModuleSummaryIndex *ImportSummary);
@@ -978,19 +967,14 @@ void LowerTypeTestsModule::importTypeTest(CallInst *CI) {
 void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
   assert(F->getType()->getAddressSpace() == 0);
 
+  // Declaration of a local function - nothing to do.
+  if (F->isDeclarationForLinker() && isDefinition)
+    return;
+
   GlobalValue::VisibilityTypes Visibility = F->getVisibility();
   std::string Name = F->getName();
-
-  if (F->isDeclarationForLinker() && isDefinition) {
-    Function *RealF = Function::Create(F->getFunctionType(),
-                                       GlobalValue::ExternalLinkage,
-                                       Name + ".cfi", &M);
-    RealF->setVisibility(Visibility);
-    replaceDirectCalls(F, RealF);
-    return;
-  }
-
   Function *FDecl;
+
   if (F->isDeclarationForLinker() && !isDefinition) {
     // Declaration of an external function.
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
@@ -1030,7 +1014,7 @@ void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
   if (F->isWeakForLinker())
     replaceWeakDeclarationWithJumpTablePtr(F, FDecl);
   else
-    replaceCfiUses(F, FDecl);
+    F->replaceUsesExceptBlockAddr(FDecl);
 }
 
 void LowerTypeTestsModule::lowerTypeTestCalls(
@@ -1225,7 +1209,7 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   Function *PlaceholderFn =
       Function::Create(cast<FunctionType>(F->getValueType()),
                        GlobalValue::ExternalWeakLinkage, "", &M);
-  replaceCfiUses(F, PlaceholderFn);
+  F->replaceAllUsesWith(PlaceholderFn);
 
   Constant *Target = ConstantExpr::getSelect(
       ConstantExpr::getICmp(CmpInst::ICMP_NE, F,
@@ -1449,7 +1433,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
       if (F->isWeakForLinker())
         replaceWeakDeclarationWithJumpTablePtr(F, CombinedGlobalElemPtr);
       else
-        replaceCfiUses(F, CombinedGlobalElemPtr);
+        F->replaceAllUsesWith(CombinedGlobalElemPtr);
     } else {
       assert(F->getType()->getAddressSpace() == 0);
 
@@ -1459,8 +1443,10 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
       FAlias->takeName(F);
       if (FAlias->hasName())
         F->setName(FAlias->getName() + ".cfi");
-      replaceCfiUses(F, FAlias);
+      F->replaceUsesExceptBlockAddr(FAlias);
     }
+    if (!F->isDeclarationForLinker())
+      F->setLinkage(GlobalValue::InternalLinkage);
   }
 
   createJumpTable(JumpTableFn, Functions);
@@ -1614,63 +1600,6 @@ bool LowerTypeTestsModule::runForTesting(Module &M) {
   }
 
   return Changed;
-}
-
-static bool isDirectCall(Use& U) {
-  auto *Usr = dyn_cast<CallInst>(U.getUser());
-  if (Usr) {
-    CallSite CS(Usr);
-    if (CS.isCallee(&U))
-      return true;
-  }
-  return false;
-}
-
-void LowerTypeTestsModule::replaceCfiUses(Value *Old, Value *New) {
-  SmallSetVector<Constant *, 4> Constants;
-  auto UI = Old->use_begin(), E = Old->use_end();
-  for (; UI != E;) {
-    Use &U = *UI;
-    ++UI;
-
-    // Skip block addresses
-    if (isa<BlockAddress>(U.getUser()))
-      continue;
-
-    // Skip direct calls
-    if (isDirectCall(U))
-      continue;
-
-    // Must handle Constants specially, we cannot call replaceUsesOfWith on a
-    // constant because they are uniqued.
-    if (auto *C = dyn_cast<Constant>(U.getUser())) {
-      if (!isa<GlobalValue>(C)) {
-        // Save unique users to avoid processing operand replacement
-        // more than once.
-        Constants.insert(C);
-        continue;
-      }
-    }
-
-    U.set(New);
-  }
-
-  // Process operand replacement of saved constants.
-  for (auto *C : Constants)
-    C->handleOperandChange(Old, New);
-}
-
-void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
-  auto UI = Old->use_begin(), E = Old->use_end();
-  for (; UI != E;) {
-    Use &U = *UI;
-    ++UI;
-
-    if (!isDirectCall(U))
-      continue;
-
-    U.set(New);
-  }
 }
 
 bool LowerTypeTestsModule::lower() {

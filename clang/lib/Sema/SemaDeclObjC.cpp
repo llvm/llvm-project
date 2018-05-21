@@ -4838,12 +4838,17 @@ VarDecl *Sema::BuildObjCExceptionDecl(TypeSourceInfo *TInfo, QualType T,
     // Don't do any further checking.
   } else if (T->isDependentType()) {
     // Okay: we don't know what this type will instantiate to.
-  } else if (!T->isObjCObjectPointerType()) {
-    Invalid = true;
-    Diag(IdLoc ,diag::err_catch_param_not_objc_type);
   } else if (T->isObjCQualifiedIdType()) {
     Invalid = true;
     Diag(IdLoc, diag::err_illegal_qualifiers_on_catch_parm);
+  } else if (T->isObjCIdType()) {
+    // Okay: we don't know what this type will instantiate to.
+  } else if (!T->isObjCObjectPointerType()) {
+    Invalid = true;
+    Diag(IdLoc, diag::err_catch_param_not_objc_type);
+  } else if (!T->getAs<ObjCObjectPointerType>()->getInterfaceType()) {
+    Invalid = true;
+    Diag(IdLoc, diag::err_catch_param_not_objc_type);
   }
   
   VarDecl *New = VarDecl::Create(Context, CurContext, StartLoc, IdLoc, Id,

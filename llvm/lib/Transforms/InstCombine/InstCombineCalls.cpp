@@ -2785,28 +2785,20 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
   case Intrinsic::x86_avx2_permd:
   case Intrinsic::x86_avx2_permps:
+  case Intrinsic::x86_avx512_permvar_df_256:
+  case Intrinsic::x86_avx512_permvar_df_512:
+  case Intrinsic::x86_avx512_permvar_di_256:
+  case Intrinsic::x86_avx512_permvar_di_512:
+  case Intrinsic::x86_avx512_permvar_hi_128:
+  case Intrinsic::x86_avx512_permvar_hi_256:
+  case Intrinsic::x86_avx512_permvar_hi_512:
+  case Intrinsic::x86_avx512_permvar_qi_128:
+  case Intrinsic::x86_avx512_permvar_qi_256:
+  case Intrinsic::x86_avx512_permvar_qi_512:
+  case Intrinsic::x86_avx512_permvar_sf_512:
+  case Intrinsic::x86_avx512_permvar_si_512:
     if (Value *V = simplifyX86vpermv(*II, Builder))
       return replaceInstUsesWith(*II, V);
-    break;
-
-  case Intrinsic::x86_avx512_mask_permvar_df_256:
-  case Intrinsic::x86_avx512_mask_permvar_df_512:
-  case Intrinsic::x86_avx512_mask_permvar_di_256:
-  case Intrinsic::x86_avx512_mask_permvar_di_512:
-  case Intrinsic::x86_avx512_mask_permvar_hi_128:
-  case Intrinsic::x86_avx512_mask_permvar_hi_256:
-  case Intrinsic::x86_avx512_mask_permvar_hi_512:
-  case Intrinsic::x86_avx512_mask_permvar_qi_128:
-  case Intrinsic::x86_avx512_mask_permvar_qi_256:
-  case Intrinsic::x86_avx512_mask_permvar_qi_512:
-  case Intrinsic::x86_avx512_mask_permvar_sf_512:
-  case Intrinsic::x86_avx512_mask_permvar_si_512:
-    if (Value *V = simplifyX86vpermv(*II, Builder)) {
-      // We simplified the permuting, now create a select for the masking.
-      V = emitX86MaskSelect(II->getArgOperand(3), V, II->getArgOperand(2),
-                            Builder);
-      return replaceInstUsesWith(*II, V);
-    }
     break;
 
   case Intrinsic::x86_avx_maskload_ps:

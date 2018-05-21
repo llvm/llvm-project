@@ -28,14 +28,14 @@ declare void @external()
 declare extern_weak void @external_weak()
 
 ; CHECK:      define hidden i8 @local_a.cfi() {
-; CHECK-NEXT:   call void @external()
-; CHECK-NEXT:   call void @external_weak()
+; CHECK-NEXT:   call void @external.cfi_jt()
+; CHECK-NEXT:   call void select (i1 icmp ne (void ()* @external_weak, void ()* null), void ()* @external_weak.cfi_jt, void ()* null)()
 ; CHECK-NEXT:   ret i8 1
 ; CHECK-NEXT: }
 
 ; internal @local_b is not the same function as "local_b" in the summary.
 ; CHECK:      define internal i8 @local_b() {
-; CHECK-NEXT:   call i8 @local_a.cfi()
+; CHECK-NEXT:   call i8 @local_a()
 
 ; CHECK:      define void @local_decl()
 ; CHECK-NEXT:   call void @local_decl()
