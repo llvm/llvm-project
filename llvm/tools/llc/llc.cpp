@@ -66,6 +66,11 @@ InputLanguage("x", cl::desc("Input language ('ir' or 'mir')"));
 static cl::opt<std::string>
 OutputFilename("o", cl::desc("Output filename"), cl::value_desc("filename"));
 
+static cl::opt<std::string>
+    SplitDwarfOutputFile("split-dwarf-output",
+                         cl::desc(".dwo output filename"),
+                         cl::value_desc("filename"));
+
 static cl::opt<unsigned>
 TimeCompilations("time-compilations", cl::Hidden, cl::init(1u),
                  cl::value_desc("N"),
@@ -463,6 +468,17 @@ static int compileModule(char **argv, LLVMContext &Context) {
       GetOutputStream(TheTarget->getName(), TheTriple.getOS(), argv[0]);
   if (!Out) return 1;
 
+  std::unique_ptr<ToolOutputFile> DwoOut;
+  if (!SplitDwarfOutputFile.empty()) {
+    std::error_code EC;
+    DwoOut = llvm::make_unique<ToolOutputFile>(SplitDwarfOutputFile, EC,
+                                               sys::fs::F_None);
+    if (EC) {
+      errs() << EC.message() << '\n';
+      return 1;
+    }
+  }
+
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;
 
@@ -541,7 +557,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
       TPC.setInitialized();
       PM.add(createPrintMIRPass(*OS));
       PM.add(createFreeMachineFunctionPass());
-    } else if (Target->addPassesToEmitFile(PM, *OS, FileType, NoVerify, MMI)) {
+    } else if (Target->addPassesToEmitFile(PM, *OS,
+                                           DwoOut ? &DwoOut->os() : nullptr,
+                                           FileType, NoVerify, MMI)) {
       errs() << argv0 << ": target does not support generation of this"
              << " file type!\n";
       return 1;
@@ -598,6 +616,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   // Declare success.
   Out->keep();
+  if (DwoOut)
+    DwoOut->keep();
 
   return 0;
 }

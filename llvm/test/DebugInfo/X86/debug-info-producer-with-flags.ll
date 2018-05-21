@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -o %t -filetype=obj
 ; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 ;
-; Test the DW_AT_producer DWARG attribute.
+; Test the DW_AT_producer DWARF attribute.
 ; When producer and flags are both given in DIComileUnit, set DW_AT_producer
 ; as two values combined.
 ;

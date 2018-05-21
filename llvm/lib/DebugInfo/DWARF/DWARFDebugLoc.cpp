@@ -40,13 +40,15 @@ static void dumpExpression(raw_ostream &OS, ArrayRef<char> Data,
 void DWARFDebugLoc::LocationList::dump(raw_ostream &OS, bool IsLittleEndian,
                                        unsigned AddressSize,
                                        const MCRegisterInfo *MRI,
+                                       uint64_t BaseAddress,
                                        unsigned Indent) const {
   for (const Entry &E : Entries) {
     OS << '\n';
     OS.indent(Indent);
     OS << format("[0x%*.*" PRIx64 ", ", AddressSize * 2, AddressSize * 2,
-                 E.Begin)
-       << format(" 0x%*.*" PRIx64 ")", AddressSize * 2, AddressSize * 2, E.End);
+                 BaseAddress + E.Begin);
+    OS << format(" 0x%*.*" PRIx64 ")", AddressSize * 2, AddressSize * 2,
+                 BaseAddress + E.End);
     OS << ": ";
 
     dumpExpression(OS, E.Loc, IsLittleEndian, AddressSize, MRI);
@@ -67,7 +69,7 @@ void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
                          Optional<uint64_t> Offset) const {
   auto DumpLocationList = [&](const LocationList &L) {
     OS << format("0x%8.8x: ", L.Offset);
-    L.dump(OS, IsLittleEndian, AddressSize, MRI, 12);
+    L.dump(OS, IsLittleEndian, AddressSize, MRI, 0, 12);
     OS << "\n\n";
   };
 

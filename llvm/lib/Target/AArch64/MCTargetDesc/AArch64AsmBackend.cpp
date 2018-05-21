@@ -33,11 +33,9 @@ class AArch64AsmBackend : public MCAsmBackend {
   Triple TheTriple;
 
 public:
-  bool IsLittleEndian;
-
-public:
   AArch64AsmBackend(const Target &T, const Triple &TT, bool IsLittleEndian)
-      : MCAsmBackend(), TheTriple(TT), IsLittleEndian(IsLittleEndian) {}
+      : MCAsmBackend(IsLittleEndian ? support::little : support::big),
+        TheTriple(TT) {}
 
   unsigned getNumFixupKinds() const override {
     return AArch64::NumTargetFixupKinds;
@@ -83,7 +81,7 @@ public:
                             const MCAsmLayout &Layout) const override;
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override;
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 
   void HandleAssemblerFlag(MCAssemblerFlag Flag) {}
 
@@ -248,7 +246,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 /// getFixupKindContainereSizeInBytes - The number of bytes of the
 /// container involved in big endian or 0 if the item is little endian
 unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) const {
-  if (IsLittleEndian)
+  if (Endian == support::little)
     return 0;
 
   switch (Kind) {
@@ -344,16 +342,16 @@ void AArch64AsmBackend::relaxInstruction(const MCInst &Inst,
   llvm_unreachable("AArch64AsmBackend::relaxInstruction() unimplemented");
 }
 
-bool AArch64AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
+bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   // If the count is not 4-byte aligned, we must be writing data into the text
   // section (otherwise we have unaligned instructions, and thus have far
   // bigger problems), so just write zeros instead.
-  OW->WriteZeros(Count % 4);
+  OS.write_zeros(Count % 4);
 
   // We are properly aligned, so write NOPs as requested.
   Count /= 4;
   for (uint64_t i = 0; i != Count; ++i)
-    OW->write32(0xd503201f);
+    support::endian::write<uint32_t>(OS, 0xd503201f, Endian);
   return true;
 }
 
@@ -432,9 +430,9 @@ public:
                           const MCRegisterInfo &MRI)
       : AArch64AsmBackend(T, TT, /*IsLittleEndian*/ true), MRI(MRI) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createAArch64MachObjectWriter(OS, MachO::CPU_TYPE_ARM64,
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createAArch64MachObjectWriter(MachO::CPU_TYPE_ARM64,
                                          MachO::CPU_SUBTYPE_ARM64_ALL);
   }
 
@@ -583,9 +581,9 @@ public:
       : AArch64AsmBackend(T, TT, IsLittleEndian), OSABI(OSABI),
         IsILP32(IsILP32) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createAArch64ELFObjectWriter(OS, OSABI, IsLittleEndian, IsILP32);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createAArch64ELFObjectWriter(OSABI, IsILP32);
   }
 };
 
@@ -597,9 +595,9 @@ public:
   COFFAArch64AsmBackend(const Target &T, const Triple &TheTriple)
       : AArch64AsmBackend(T, TheTriple, /*IsLittleEndian*/ true) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createAArch64WinCOFFObjectWriter(OS);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createAArch64WinCOFFObjectWriter();
   }
 };
 }

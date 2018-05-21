@@ -56,6 +56,7 @@
 
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "LoopVectorizationPlanner.h"
+#include "VPlanHCFGBuilder.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -243,6 +244,17 @@ static cl::opt<bool> EnableVPlanNativePath(
     "enable-vplan-native-path", cl::init(false), cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
              "support for outer loop vectorization."));
+
+// This flag enables the stress testing of the VPlan H-CFG construction in the
+// VPlan-native vectorization path. It must be used in conjuction with
+// -enable-vplan-native-path. -vplan-verify-hcfg can also be used to enable the
+// verification of the H-CFGs built.
+static cl::opt<bool> VPlanBuildStressTest(
+    "vplan-build-stress-test", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Build VPlan for every supported loop nest in the function and bail "
+        "out right after the build (stress test the VPlan H-CFG construction "
+        "in the VPlan-native vectorization path)."));
 
 /// A helper function for converting Scalar types to vector types.
 /// If the incoming type is void, we return void. If the VF is 1, we return
@@ -1653,8 +1665,11 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
                                   OptimizationRemarkEmitter *ORE,
                                   SmallVectorImpl<Loop *> &V) {
   // Collect inner loops and outer loops without irreducible control flow. For
-  // now, only collect outer loops that have explicit vectorization hints.
-  if (L.empty() || (EnableVPlanNativePath && isExplicitVecOuterLoop(&L, ORE))) {
+  // now, only collect outer loops that have explicit vectorization hints. If we
+  // are stress testing the VPlan H-CFG construction, we collect the outermost
+  // loop of every loop nest.
+  if (L.empty() || VPlanBuildStressTest ||
+      (EnableVPlanNativePath && isExplicitVecOuterLoop(&L, ORE))) {
     LoopBlocksRPO RPOT(&L);
     RPOT.perform(LI);
     if (!containsIrreducibleCFG<const BasicBlock *>(RPOT, *LI)) {
@@ -6254,7 +6269,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 VectorizationFactor
 LoopVectorizationPlanner::planInVPlanNativePath(bool OptForSize,
                                                 unsigned UserVF) {
-  // Width 1 means no vectorize, cost 0 means uncomputed cost.
+  // Width 1 means no vectorization, cost 0 means uncomputed cost.
   const VectorizationFactor NoVectorization = {1U, 0U};
 
   // Outer loop handling: They may require CFG and instruction level
@@ -6262,11 +6277,21 @@ LoopVectorizationPlanner::planInVPlanNativePath(bool OptForSize,
   // Since we cannot modify the incoming IR, we need to build VPlan upfront in
   // the vectorization pipeline.
   if (!OrigLoop->empty()) {
+    // TODO: If UserVF is not provided, we set UserVF to 4 for stress testing.
+    // This won't be necessary when UserVF is not required in the VPlan-native
+    // path.
+    if (VPlanBuildStressTest && !UserVF)
+      UserVF = 4;
+
     assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
     assert(UserVF && "Expected UserVF for outer loop vectorization.");
     assert(isPowerOf2_32(UserVF) && "VF needs to be a power of two");
     LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
     buildVPlans(UserVF, UserVF);
+
+    // For VPlan build stress testing, we bail out after VPlan construction.
+    if (VPlanBuildStressTest)
+      return NoVectorization;
 
     return {UserVF, 0};
   }
@@ -6280,7 +6305,7 @@ LoopVectorizationPlanner::planInVPlanNativePath(bool OptForSize,
 VectorizationFactor
 LoopVectorizationPlanner::plan(bool OptForSize, unsigned UserVF) {
   assert(OrigLoop->empty() && "Inner loop expected.");
-  // Width 1 means no vectorize, cost 0 means uncomputed cost.
+  // Width 1 means no vectorization, cost 0 means uncomputed cost.
   const VectorizationFactor NoVectorization = {1U, 0U};
   Optional<unsigned> MaybeMaxVF = CM.computeMaxVF(OptForSize);
   if (!MaybeMaxVF.hasValue()) // Cases considered too costly to vectorize.
@@ -6806,9 +6831,11 @@ VPBasicBlock *LoopVectorizationPlanner::handleReplication(
          "VPBB has successors when handling predicated replication.");
   // Record predicated instructions for above packing optimizations.
   PredInst2Recipe[I] = Recipe;
-  VPBlockBase *Region =
-    VPBB->setOneSuccessor(createReplicateRegion(I, Recipe, Plan));
-  return cast<VPBasicBlock>(Region->setOneSuccessor(new VPBasicBlock()));
+  VPBlockBase *Region = createReplicateRegion(I, Recipe, Plan);
+  VPBlockUtils::insertBlockAfter(Region, VPBB);
+  auto *RegSucc = new VPBasicBlock();
+  VPBlockUtils::insertBlockAfter(RegSucc, Region);
+  return RegSucc;
 }
 
 VPRegionBlock *
@@ -6834,8 +6861,8 @@ LoopVectorizationPlanner::createReplicateRegion(Instruction *Instr,
 
   // Note: first set Entry as region entry and then connect successors starting
   // from it in order, to propagate the "parent" of each VPBasicBlock.
-  Entry->setTwoSuccessors(Pred, Exit);
-  Pred->setOneSuccessor(Exit);
+  VPBlockUtils::insertTwoBlocksAfter(Pred, Exit, Entry);
+  VPBlockUtils::connectBlocks(Pred, Exit);
 
   return Region;
 }
@@ -6852,6 +6879,11 @@ LoopVectorizationPlanner::buildVPlan(VFRange &Range,
 
     // Create new empty VPlan
     auto Plan = llvm::make_unique<VPlan>();
+
+    // Build hierarchical CFG
+    VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI);
+    HCFGBuilder.buildHierarchicalCFG(*Plan.get());
+
     return Plan;
   }
 
@@ -6893,7 +6925,7 @@ LoopVectorizationPlanner::buildVPlan(VFRange &Range,
     // ingredients and fill a new VPBasicBlock.
     unsigned VPBBsForBB = 0;
     auto *FirstVPBBForBB = new VPBasicBlock(BB->getName());
-    VPBB->setOneSuccessor(FirstVPBBForBB);
+    VPBlockUtils::insertBlockAfter(FirstVPBBForBB, VPBB);
     VPBB = FirstVPBBForBB;
     Builder.setInsertPoint(VPBB);
 
@@ -6997,7 +7029,7 @@ LoopVectorizationPlanner::buildVPlan(VFRange &Range,
   VPBasicBlock *PreEntry = cast<VPBasicBlock>(Plan->getEntry());
   assert(PreEntry->empty() && "Expecting empty pre-entry block.");
   VPBlockBase *Entry = Plan->setEntry(PreEntry->getSingleSuccessor());
-  PreEntry->disconnectSuccessor(Entry);
+  VPBlockUtils::disconnectBlocks(PreEntry, Entry);
   delete PreEntry;
 
   std::string PlanName;

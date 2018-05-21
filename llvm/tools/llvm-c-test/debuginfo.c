@@ -17,6 +17,17 @@
 #include <stdio.h>
 #include <string.h>
 
+static LLVMMetadataRef
+declare_objc_class(LLVMDIBuilderRef DIB, LLVMMetadataRef File) {
+  LLVMMetadataRef Decl = LLVMDIBuilderCreateStructType(DIB, File, "TestClass", 9, File, 42, 64, 0, LLVMDIFlagObjcClassComplete, NULL, NULL, 0, 0, NULL, NULL, 0);
+  LLVMMetadataRef SuperDecl = LLVMDIBuilderCreateStructType(DIB, File, "TestSuperClass", 14, File, 42, 64, 0, LLVMDIFlagObjcClassComplete, NULL, NULL, 0, 0, NULL, NULL, 0);
+  LLVMDIBuilderCreateInheritance(DIB, Decl, SuperDecl, 0, 0, 0);
+  LLVMMetadataRef TestProperty =
+      LLVMDIBuilderCreateObjCProperty(DIB, "test", 4, File, 42, "getTest", 7, "setTest", 7, 0x20 /*copy*/ | 0x40 /*nonatomic*/, SuperDecl);
+  LLVMDIBuilderCreateObjCIVar(DIB, "_test", 5, File, 42, 64, 0, 64, LLVMDIFlagPublic, SuperDecl, TestProperty);
+  return Decl;
+}
+
 int llvm_test_dibuilder(void) {
   const char *Filename = "debuginfo.c";
   LLVMModuleRef M = LLVMModuleCreateWithName(Filename);
@@ -47,6 +58,14 @@ int llvm_test_dibuilder(void) {
                                                 File, 42);
   LLVMDIBuilderCreateImportedModuleFromAlias(DIB, Module, ImportedModule,
                                              File, 42);
+
+  LLVMMetadataRef ClassTy = declare_objc_class(DIB, File);
+  LLVMMetadataRef GlobalClassValueExpr =
+    LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
+  LLVMDIBuilderCreateGlobalVariableExpression(DIB, Module, "globalClass", 11,
+                                              "", 0, File, 1, ClassTy,
+                                              true, GlobalClassValueExpr,
+                                              NULL, 0);
 
   LLVMMetadataRef Int64Ty =
     LLVMDIBuilderCreateBasicType(DIB, "Int64", 5, 64, 0);

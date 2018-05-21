@@ -3,15 +3,14 @@
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext  \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
-; RUN:    --plugin-opt=objcopy=%llvm-objcopy \
 ; RUN:    --plugin-opt=dwo_dir=%t/dwo_dir \
 ; RUN:    %t/split-dwarf.o --shared -o %t/split-dwarf
 
 ; RUN: llvm-dwarfdump -debug-info %t/split-dwarf | FileCheck %s
-; CHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/split-dwarf.{{.*}}
+; CHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/1.dwo
 ; CHECK-NOT: DW_TAG_subprogram
-; RUN: llvm-dwarfdump -debug-info %t/dwo_dir/split-dwarf.* | FileCheck --check-prefix DWOCHECK %s
-; DWOCHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/split-dwarf.o{{.*}}
+; RUN: llvm-dwarfdump -debug-info %t/dwo_dir/1.dwo | FileCheck --check-prefix DWOCHECK %s
+; DWOCHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/1.dwo
 ; DWOCHECK: DW_AT_name{{.*}}split-dwarf.c
 ; DWOCHECK: DW_TAG_subprogram
 
@@ -20,15 +19,14 @@
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext  \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
-; RUN:    --plugin-opt=objcopy=%llvm-objcopy \
 ; RUN:    --plugin-opt=dwo_dir=%t/dwo_dir \
 ; RUN:    %t/split-dwarf.o --shared -o %t/split-dwarf
 
 ; RUN: llvm-dwarfdump -debug-info %t/split-dwarf | FileCheck --check-prefix LTOCHECK %s
-; LTOCHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/ld-temp.{{.*}}
+; LTOCHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/0.dwo
 ; LTOCHECK-NOT: DW_TAG_subprogram
-; RUN: llvm-dwarfdump -debug-info %t/dwo_dir/ld-temp.* | FileCheck --check-prefix LTODWOCHECK %s
-; LTODWOCHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/ld-temp.o{{.*}}
+; RUN: llvm-dwarfdump -debug-info %t/dwo_dir/0.dwo | FileCheck --check-prefix LTODWOCHECK %s
+; LTODWOCHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/0.dwo
 ; LTODWOCHECK: DW_AT_name{{.*}}split-dwarf.c
 ; LTODWOCHECK: DW_TAG_subprogram
 

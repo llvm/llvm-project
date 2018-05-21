@@ -4574,6 +4574,8 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   if (match(CmpRHS, m_APInt(C1))) {
     if ((CmpLHS == TrueVal && match(FalseVal, m_Neg(m_Specific(CmpLHS)))) ||
         (CmpLHS == FalseVal && match(TrueVal, m_Neg(m_Specific(CmpLHS))))) {
+      // Set RHS to the negate operand. LHS was assigned to CmpLHS earlier.
+      RHS = (CmpLHS == TrueVal) ? FalseVal : TrueVal;
 
       // ABS(X) ==> (X >s 0) ? X : -X and (X >s -1) ? X : -X
       // NABS(X) ==> (X >s 0) ? -X : X and (X >s -1) ? -X : X

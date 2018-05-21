@@ -269,10 +269,6 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
   // If CU DIE was just parsed, copy several attribute values from it.
   if (!HasCUDie) {
     DWARFDie UnitDie = getUnitDIE();
-    Optional<DWARFFormValue> PC = UnitDie.find({DW_AT_low_pc, DW_AT_entry_pc});
-    if (Optional<uint64_t> Addr = toAddress(PC))
-        setBaseAddress({*Addr, PC->getSectionIndex()});
-
     if (!isDWO) {
       assert(AddrOffsetSectionBase == 0);
       assert(RangeSectionBase == 0);
@@ -576,6 +572,18 @@ const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
   if (!Abbrevs)
     Abbrevs = Abbrev->getAbbreviationDeclarationSet(Header.getAbbrOffset());
   return Abbrevs;
+}
+
+llvm::Optional<BaseAddress> DWARFUnit::getBaseAddress() {
+  if (BaseAddr)
+    return BaseAddr;
+
+  DWARFDie UnitDie = getUnitDIE();
+  Optional<DWARFFormValue> PC = UnitDie.find({DW_AT_low_pc, DW_AT_entry_pc});
+  if (Optional<uint64_t> Addr = toAddress(PC))
+    BaseAddr = {*Addr, PC->getSectionIndex()};
+
+  return BaseAddr;
 }
 
 Optional<StrOffsetsContributionDescriptor>

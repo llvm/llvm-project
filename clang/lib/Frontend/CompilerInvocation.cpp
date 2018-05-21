@@ -2562,9 +2562,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // Check if -fopenmp is specified.
   Opts.OpenMP = Args.hasArg(options::OPT_fopenmp) ? 1 : 0;
   // Check if -fopenmp-simd is specified.
-  Opts.OpenMPSimd = !Opts.OpenMP && Args.hasFlag(options::OPT_fopenmp_simd,
-                                                 options::OPT_fno_openmp_simd,
-                                                 /*Default=*/false);
+  bool IsSimdSpecified =
+      Args.hasFlag(options::OPT_fopenmp_simd, options::OPT_fno_openmp_simd,
+                   /*Default=*/false);
+  Opts.OpenMPSimd = !Opts.OpenMP && IsSimdSpecified;
   Opts.OpenMPUseTLS =
       Opts.OpenMP && !Args.hasArg(options::OPT_fnoopenmp_use_tls);
   Opts.OpenMPIsDevice =
@@ -2573,9 +2574,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   if (Opts.OpenMP || Opts.OpenMPSimd) {
     if (int Version =
             getLastArgIntValue(Args, OPT_fopenmp_version_EQ,
-                               Opts.OpenMPSimd ? 45 : Opts.OpenMP, Diags))
+                               IsSimdSpecified ? 45 : Opts.OpenMP, Diags))
       Opts.OpenMP = Version;
-    else if (Opts.OpenMPSimd)
+    else if (IsSimdSpecified)
       Opts.OpenMP = 45;
     // Provide diagnostic when a given target is not expected to be an OpenMP
     // device or host.

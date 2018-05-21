@@ -249,7 +249,7 @@ public:
     /// Parse prologue and all rows.
     Error parse(DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
                 const DWARFContext &Ctx, const DWARFUnit *U,
-                std::function<void(StringRef)> WarnCallback = warn,
+                std::function<void(Error)> RecoverableErrorCallback = warn,
                 raw_ostream *OS = nullptr);
 
     using RowVector = std::vector<Row>;
@@ -270,10 +270,10 @@ public:
   };
 
   const LineTable *getLineTable(uint32_t Offset) const;
-  Expected<const LineTable *>
-  getOrParseLineTable(DWARFDataExtractor &DebugLineData, uint32_t Offset,
-                      const DWARFContext &Ctx, const DWARFUnit *U,
-                      std::function<void(StringRef)> WarnCallback = warn);
+  Expected<const LineTable *> getOrParseLineTable(
+      DWARFDataExtractor &DebugLineData, uint32_t Offset,
+      const DWARFContext &Ctx, const DWARFUnit *U,
+      std::function<void(Error)> RecoverableErrorCallback = warn);
 
   /// Helper to allow for parsing of an entire .debug_line section in sequence.
   class SectionParser {
@@ -289,23 +289,23 @@ public:
     /// Get the next line table from the section. Report any issues via the
     /// callbacks.
     ///
-    /// \param StringCallback - any issues that don't indicate that the line
-    /// table is invalid are reported using this function.
-    /// \param ErrorCallback - any issues that mean that the line table is
-    /// invalid are reported using this callback.
+    /// \param RecoverableErrorCallback - any issues that don't prevent further
+    /// parsing of the table will be reported through this callback.
+    /// \param UnrecoverableErrorCallback - any issues that prevent further
+    /// parsing of the table will be reported through this callback.
     /// \param OS - if not null, the parser will print information about the
     /// table as it parses it.
-    LineTable parseNext(
-        function_ref<void(StringRef)> StringCallback = warn,
-        function_ref<void(Error)> ErrorCallback = warnForError,
-        raw_ostream *OS = nullptr);
+    LineTable
+    parseNext(function_ref<void(Error)> RecoverableErrorCallback = warn,
+              function_ref<void(Error)> UnrecoverableErrorCallback = warn,
+              raw_ostream *OS = nullptr);
 
     /// Skip the current line table and go to the following line table (if
     /// present) immediately.
     ///
     /// \param ErrorCallback - report any prologue parsing issues via this
     /// callback.
-    void skip(function_ref<void(Error)> ErrorCallback = warnForError);
+    void skip(function_ref<void(Error)> ErrorCallback = warn);
 
     /// Indicates if the parser has parsed as much as possible.
     ///
@@ -328,17 +328,11 @@ public:
     bool Done = false;
   };
 
-  /// Helper function for DWARFDebugLine parse functions, to report issues that
-  /// don't prevent parsing the remainder of the table as warnings.
-  ///
-  /// \param Message The message to report.
-  static void warn(StringRef Message);
-  
-  /// Helper function for DWARFDebugLine parse functions, to report issues that
-  /// prevent parsing the remainder of the table as warnings.
+  /// Helper function for DWARFDebugLine parse functions, to report issues
+  /// identified during parsing.
   ///
   /// \param Err The Error to report.
-  static void warnForError(Error Err);
+  static void warn(Error Err);
 
 private:
   struct ParsingState {

@@ -61,13 +61,14 @@ class HexagonAsmBackend : public MCAsmBackend {
 
 public:
   HexagonAsmBackend(const Target &T, const Triple &TT, uint8_t OSABI,
-      StringRef CPU) :
-      OSABI(OSABI), CPU(CPU), MCII(T.createMCInstrInfo()),
-      RelaxTarget(new MCInst *), Extender(nullptr) {}
+                    StringRef CPU)
+      : MCAsmBackend(support::little), OSABI(OSABI), CPU(CPU),
+        MCII(T.createMCInstrInfo()), RelaxTarget(new MCInst *),
+        Extender(nullptr) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createHexagonELFObjectWriter(OS, OSABI, CPU);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createHexagonELFObjectWriter(OSABI, CPU);
   }
 
   void setExtender(MCContext &Context) const {
@@ -681,8 +682,7 @@ public:
     assert(Update && "Didn't find relaxation target");
   }
 
-  bool writeNopData(uint64_t Count,
-                    MCObjectWriter * OW) const override {
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
     static const uint32_t Nopcode  = 0x7f000000, // Hard-coded NOP.
                           ParseIn  = 0x00004000, // In packet parse-bits.
                           ParseEnd = 0x0000c000; // End of packet parse-bits.
@@ -692,7 +692,7 @@ public:
                         << Count % HEXAGON_INSTR_SIZE << "/"
                         << HEXAGON_INSTR_SIZE << "\n");
       --Count;
-      OW->write8(0);
+      OS << '\0';
     }
 
     while(Count) {
@@ -700,7 +700,7 @@ public:
       // Close the packet whenever a multiple of the maximum packet size remains
       uint32_t ParseBits = (Count % (HEXAGON_PACKET_SIZE * HEXAGON_INSTR_SIZE))?
                            ParseIn: ParseEnd;
-      OW->write32(Nopcode | ParseBits);
+      support::endian::write<uint32_t>(OS, Nopcode | ParseBits, Endian);
     }
     return true;
   }

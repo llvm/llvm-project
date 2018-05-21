@@ -373,8 +373,9 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
     bool Backref =
         Config->WarnBackrefs && File && S->File->GroupId < File->GroupId;
     fetchLazy<ELFT>(S);
+
     // We don't report backward references to weak symbols as they can be
-    // overriden later.
+    // overridden later.
     if (Backref && S->Binding != STB_WEAK)
       warn("backward reference detected: " + Name + " in " + toString(File) +
            " refers to " + toString(S->File));

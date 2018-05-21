@@ -152,10 +152,8 @@ unsigned AVRELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-createAVRELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI) {
-  std::unique_ptr<MCELFObjectTargetWriter> MOTW(new AVRELFObjectWriter(OSABI));
-  return createELFObjectWriter(std::move(MOTW), OS, true);
+std::unique_ptr<MCObjectTargetWriter> createAVRELFObjectWriter(uint8_t OSABI) {
+  return make_unique<AVRELFObjectWriter>(OSABI);
 }
 
 } // end of namespace llvm

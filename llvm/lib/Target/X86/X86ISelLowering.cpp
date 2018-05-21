@@ -20631,23 +20631,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                               Src2, Src3, Src1),
                                   Mask, PassThru, Subtarget, DAG);
     }
-    case TERLOG_OP_MASK:
-    case TERLOG_OP_MASKZ: {
-      SDValue Src1 = Op.getOperand(1);
-      SDValue Src2 = Op.getOperand(2);
-      SDValue Src3 = Op.getOperand(3);
-      SDValue Src4 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Op.getOperand(4));
-      SDValue Mask = Op.getOperand(5);
-      MVT VT = Op.getSimpleValueType();
-      SDValue PassThru = Src1;
-      // Set PassThru element.
-      if (IntrData->Type == TERLOG_OP_MASKZ)
-        PassThru = getZeroVector(VT, Subtarget, DAG, dl);
-
-      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,
-                                              Src1, Src2, Src3, Src4),
-                                  Mask, PassThru, Subtarget, DAG);
-    }
     case CVTPD2PS:
       // ISD::FP_ROUND has a second argument that indicates if the truncation
       // does not change the value. Set it to 0 since it can change.
@@ -23825,6 +23808,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   // to v2i64 results at a time. The upper 32-bits contain the wrapped bits
   // that can then be OR'd with the lower 32-bits.
   Amt = convertShiftLeftToScale(Amt, DL, Subtarget, DAG);
+  assert(Amt && "Failed to convert ROTL amount to scale");
 
   static const int OddMask[] = {1, -1, 3, -1};
   SDValue R13 = DAG.getVectorShuffle(VT, DL, R, R, OddMask);

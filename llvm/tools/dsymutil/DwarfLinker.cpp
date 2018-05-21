@@ -3607,7 +3607,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
 
   Error Err = LineTable.parse(LineExtractor, &StmtOffset, OrigDwarf,
                               &Unit.getOrigUnit());
-  DWARFDebugLine::warnForError(std::move(Err));
+  DWARFDebugLine::warn(std::move(Err));
 
   // This vector is the output line table.
   std::vector<DWARFDebugLine::Row> NewRows;

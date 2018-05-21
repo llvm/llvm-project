@@ -67,6 +67,31 @@ void Denormalize(llvm::SmallVectorImpl<char> &path, FileSpec::Style style) {
 
   std::replace(path.begin(), path.end(), '/', '\\');
 }
+  
+bool PathIsRelative(llvm::StringRef path, FileSpec::Style style) {
+  
+  if (path.empty())
+    return false;
+
+  if (PathStyleIsPosix(style)) {
+    // If the path doesn't start with '/' or '~', return true
+    switch (path[0]) {
+      case '/':
+      case '~':
+        return false;
+      default:
+        return true;
+    }
+  } else {
+    if (path.size() >= 2 && path[1] == ':')
+      return false;
+    if (path[0] == '/')
+      return false;
+    return true;
+  }
+  return false;
+}
+
 } // end anonymous namespace
 
 void FileSpec::Resolve(llvm::SmallVectorImpl<char> &path) {
@@ -814,31 +839,10 @@ bool FileSpec::IsSourceImplementationFile() const {
 }
 
 bool FileSpec::IsRelative() const {
-  const char *dir = m_directory.GetCString();
-  llvm::StringRef directory(dir ? dir : "");
-
-  if (directory.size() > 0) {
-    if (PathStyleIsPosix(m_style)) {
-      // If the path doesn't start with '/' or '~', return true
-      switch (directory[0]) {
-      case '/':
-      case '~':
-        return false;
-      default:
-        return true;
-      }
-    } else {
-      if (directory.size() >= 2 && directory[1] == ':')
-        return false;
-      if (directory[0] == '/')
-        return false;
-      return true;
-    }
-  } else if (m_filename) {
-    // No directory, just a basename, return true
-    return true;
-  }
-  return false;
+  if (m_directory)
+    return PathIsRelative(m_directory.GetStringRef(), m_style);
+  else
+    return PathIsRelative(m_filename.GetStringRef(), m_style);
 }
 
 bool FileSpec::IsAbsolute() const { return !FileSpec::IsRelative(); }

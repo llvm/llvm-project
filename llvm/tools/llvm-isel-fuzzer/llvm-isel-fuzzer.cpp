@@ -99,7 +99,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   TargetLibraryInfoImpl TLII(TM->getTargetTriple());
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   raw_null_ostream OS;
-  TM->addPassesToEmitFile(PM, OS, TargetMachine::CGFT_Null);
+  TM->addPassesToEmitFile(PM, OS, nullptr, TargetMachine::CGFT_Null);
   PM.run(*M);
 
   return 0;

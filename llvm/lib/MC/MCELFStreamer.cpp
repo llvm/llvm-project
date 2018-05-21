@@ -69,13 +69,8 @@ void MCELFStreamer::mergeFragment(MCDataFragment *DF,
     if (RequiredBundlePadding > 0) {
       SmallString<256> Code;
       raw_svector_ostream VecOS(Code);
-      {
-        auto OW = Assembler.getBackend().createObjectWriter(VecOS);
-
-        EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
-
-        Assembler.writeFragmentPadding(*EF, FSize, OW.get());
-      }
+      EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
+      Assembler.writeFragmentPadding(VecOS, *EF, FSize);
 
       DF->getContents().append(Code.begin(), Code.end());
     }

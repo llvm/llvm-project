@@ -347,19 +347,21 @@ __m512i test_mm512_maskz_cvt_roundps_epu64(__mmask8 __U, __m256 __A) {
 
 __m512d test_mm512_cvtepi64_pd(__m512i __A) {
   // CHECK-LABEL: @test_mm512_cvtepi64_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtqq2pd.512
+  // CHECK: sitofp <8 x i64> %{{.*}} to <8 x double>
   return _mm512_cvtepi64_pd(__A); 
 }
 
 __m512d test_mm512_mask_cvtepi64_pd(__m512d __W, __mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtepi64_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtqq2pd.512
+  // CHECK: sitofp <8 x i64> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_cvtepi64_pd(__W, __U, __A); 
 }
 
 __m512d test_mm512_maskz_cvtepi64_pd(__mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_cvtepi64_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtqq2pd.512
+  // CHECK: sitofp <8 x i64> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_maskz_cvtepi64_pd(__U, __A); 
 }
 
@@ -563,19 +565,21 @@ __m512i test_mm512_maskz_cvtt_roundps_epu64(__mmask8 __U, __m256 __A) {
 
 __m512d test_mm512_cvtepu64_pd(__m512i __A) {
   // CHECK-LABEL: @test_mm512_cvtepu64_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtuqq2pd.512
+  // CHECK: uitofp <8 x i64> %{{.*}} to <8 x double>
   return _mm512_cvtepu64_pd(__A); 
 }
 
 __m512d test_mm512_mask_cvtepu64_pd(__m512d __W, __mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtepu64_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtuqq2pd.512
+  // CHECK: uitofp <8 x i64> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_cvtepu64_pd(__W, __U, __A); 
 }
 
 __m512d test_mm512_maskz_cvtepu64_pd(__mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_cvtepu64_pd
-  // CHECK: @llvm.x86.avx512.mask.cvtuqq2pd.512
+  // CHECK: uitofp <8 x i64> %{{.*}} to <8 x double>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_maskz_cvtepu64_pd(__U, __A); 
 }
 

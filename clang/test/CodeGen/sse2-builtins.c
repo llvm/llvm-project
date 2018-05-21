@@ -468,7 +468,7 @@ __m128d test_mm_cvtepi32_pd(__m128i A) {
 
 __m128 test_mm_cvtepi32_ps(__m128i A) {
   // CHECK-LABEL: test_mm_cvtepi32_ps
-  // CHECK: call <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32> %{{.*}})
+  // CHECK: sitofp <4 x i32> %{{.*}} to <4 x float>
   return _mm_cvtepi32_ps(A);
 }
 

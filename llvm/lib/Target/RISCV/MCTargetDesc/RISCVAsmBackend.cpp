@@ -33,15 +33,16 @@ class RISCVAsmBackend : public MCAsmBackend {
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit)
-      : MCAsmBackend(), STI(STI), OSABI(OSABI), Is64Bit(Is64Bit) {}
+      : MCAsmBackend(support::little), STI(STI), OSABI(OSABI),
+        Is64Bit(Is64Bit) {}
   ~RISCVAsmBackend() override {}
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved) const override;
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
 
   // If linker relaxation is enabled, always emit relocations even if the fixup
   // can be resolved. This is necessary for correctness as offsets may change
@@ -100,7 +101,7 @@ public:
                         MCInst &Res) const override;
 
 
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 };
 
 
@@ -188,7 +189,7 @@ bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst) const {
   return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
 }
 
-bool RISCVAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
+bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   bool HasStdExtC = STI.getFeatureBits()[RISCV::FeatureStdExtC];
   unsigned MinNopLen = HasStdExtC ? 2 : 4;
 
@@ -198,13 +199,13 @@ bool RISCVAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   // The canonical nop on RISC-V is addi x0, x0, 0.
   uint64_t Nop32Count = Count / 4;
   for (uint64_t i = Nop32Count; i != 0; --i)
-    OW->write32(0x13);
+    OS.write("\x13\0\0\0", 4);
 
   // The canonical nop on RVC is c.nop.
   if (HasStdExtC) {
     uint64_t Nop16Count = (Count - Nop32Count * 4) / 2;
     for (uint64_t i = Nop16Count; i != 0; --i)
-      OW->write16(0x01);
+      OS.write("\x01\0", 2);
   }
 
   return true;
@@ -334,9 +335,9 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-RISCVAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createRISCVELFObjectWriter(OS, OSABI, Is64Bit);
+std::unique_ptr<MCObjectTargetWriter>
+RISCVAsmBackend::createObjectTargetWriter() const {
+  return createRISCVELFObjectWriter(OSABI, Is64Bit);
 }
 
 } // end anonymous namespace

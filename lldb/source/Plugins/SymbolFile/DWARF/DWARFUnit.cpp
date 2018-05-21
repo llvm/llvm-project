@@ -22,6 +22,7 @@
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "LogChannelDWARF.h"
+#include "NameToDIE.h"
 #include "SymbolFileDWARFDebugMap.h"
 #include "SymbolFileDWARFDwo.h"
 

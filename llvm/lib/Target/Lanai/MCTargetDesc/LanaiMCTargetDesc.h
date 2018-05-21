@@ -24,7 +24,7 @@ class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
 class MCInstrAnalysis;
-class MCObjectWriter;
+class MCObjectTargetWriter;
 class MCRelocationInfo;
 class MCSubtargetInfo;
 class Target;
@@ -42,8 +42,7 @@ MCAsmBackend *createLanaiAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 
-std::unique_ptr<MCObjectWriter>
-createLanaiELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI);
+std::unique_ptr<MCObjectTargetWriter> createLanaiELFObjectWriter(uint8_t OSABI);
 } // namespace llvm
 
 // Defines symbolic names for Lanai registers.  This defines a mapping from

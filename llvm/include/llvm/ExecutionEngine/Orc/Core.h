@@ -79,6 +79,20 @@ private:
   SymbolNameSet Symbols;
 };
 
+/// Used to notify clients when symbols can not be found during a lookup.
+class SymbolsNotFound : public ErrorInfo<SymbolsNotFound> {
+public:
+  static char ID;
+
+  SymbolsNotFound(SymbolNameSet Symbols);
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+  const SymbolNameSet &getSymbols() const { return Symbols; }
+
+private:
+  SymbolNameSet Symbols;
+};
+
 /// Tracks responsibility for materialization, and mediates interactions between
 /// MaterializationUnits and VSOs.
 ///
@@ -366,6 +380,8 @@ private:
 
   void removeQueryDependence(VSO &V, const SymbolStringPtr &Name);
 
+  bool canStillFail();
+
   void handleFailed(Error Err);
 
   void detach();
@@ -614,19 +630,11 @@ private:
 /// VSOs will be searched in order and no VSO pointer may be null.
 /// All symbols must be found within the given VSOs or an error
 /// will be returned.
-///
-/// If this lookup is being performed on behalf of a
-/// MaterializationResponsibility then it must be passed in as R
-/// (in order to record the symbol dependencies).
-/// If this lookup is not being performed on behalf of a
-/// MaterializationResponsibility then R should be left null.
-Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names,
-                           MaterializationResponsibility *R);
+Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names);
 
 /// Look up a symbol by searching a list of VSOs.
 Expected<JITEvaluatedSymbol> lookup(const std::vector<VSO *> VSOs,
-                                    SymbolStringPtr Name,
-                                    MaterializationResponsibility *R);
+                                    SymbolStringPtr Name);
 
 } // End namespace orc
 } // End namespace llvm

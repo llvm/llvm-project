@@ -1593,23 +1593,6 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
     }
   }
 
-  // (fptrunc (select cond, R1, Cst)) -->
-  // (select cond, (fptrunc R1), (fptrunc Cst))
-  //
-  //  - but only if this isn't part of a min/max operation, else we'll
-  // ruin min/max canonical form which is to have the select and
-  // compare's operands be of the same type with no casts to look through.
-  Value *LHS, *RHS;
-  SelectInst *SI = dyn_cast<SelectInst>(FPT.getOperand(0));
-  if (SI &&
-      (isa<ConstantFP>(SI->getOperand(1)) ||
-       isa<ConstantFP>(SI->getOperand(2))) &&
-      matchSelectPattern(SI, LHS, RHS).Flavor == SPF_UNKNOWN) {
-    Value *LHSTrunc = Builder.CreateFPTrunc(SI->getOperand(1), Ty);
-    Value *RHSTrunc = Builder.CreateFPTrunc(SI->getOperand(2), Ty);
-    return SelectInst::Create(SI->getOperand(0), LHSTrunc, RHSTrunc);
-  }
-
   if (auto *II = dyn_cast<IntrinsicInst>(FPT.getOperand(0))) {
     switch (II->getIntrinsicID()) {
     default: break;

@@ -43,8 +43,8 @@
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
 ; CHECK:       DW_AT_location [DW_FORM_sec_offset]   ({{.*}}
-; CHECK-NEXT:    [0x00000000, 0x00000017): DW_OP_breg0 EAX+0, DW_OP_deref
-; CHECK-NEXT:    [0x00000017, 0x00000043): DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
+; CHECK-NEXT:    [0x00000020, 0x00000037): DW_OP_breg0 EAX+0, DW_OP_deref
+; CHECK-NEXT:    [0x00000037, 0x00000063): DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
 ; CHECK-NEXT:  DW_AT_name [DW_FORM_strp]{{.*}}"a"
 
 ; CHECK: DW_TAG_variable

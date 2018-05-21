@@ -241,6 +241,7 @@ public:
 INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISel, "isel",
                       "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfo)
+INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
 INITIALIZE_PASS_END(AMDGPUDAGToDAGISel, "isel",
                     "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
 

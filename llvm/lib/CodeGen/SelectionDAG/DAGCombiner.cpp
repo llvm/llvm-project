@@ -4823,7 +4823,8 @@ bool DAGCombiner::MatchRotateHalf(SDValue Op, SDValue &Shift, SDValue &Mask) {
 // reduces to a rotate in direction shift2 by Pos or (equivalently) a rotate
 // in direction shift1 by Neg.  The range [0, EltSize) means that we only need
 // to consider shift amounts with defined behavior.
-static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize) {
+static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize,
+                           SelectionDAG &DAG) {
   // If EltSize is a power of 2 then:
   //
   //  (a) (Pos == 0 ? 0 : EltSize - Pos) == (EltSize - Pos) & (EltSize - 1)
@@ -4858,9 +4859,13 @@ static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize) {
   unsigned MaskLoBits = 0;
   if (Neg.getOpcode() == ISD::AND && isPowerOf2_64(EltSize)) {
     if (ConstantSDNode *NegC = isConstOrConstSplat(Neg.getOperand(1))) {
-      if (NegC->getAPIntValue() == EltSize - 1) {
+      KnownBits Known;
+      DAG.computeKnownBits(Neg.getOperand(0), Known);
+      unsigned Bits = Log2_64(EltSize);
+      if (NegC->getAPIntValue().getActiveBits() <= Bits &&
+          ((NegC->getAPIntValue() | Known.Zero).countTrailingOnes() >= Bits)) {
         Neg = Neg.getOperand(0);
-        MaskLoBits = Log2_64(EltSize);
+        MaskLoBits = Bits;
       }
     }
   }
@@ -4875,10 +4880,16 @@ static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize) {
 
   // On the RHS of [A], if Pos is Pos' & (EltSize - 1), just replace Pos with
   // Pos'.  The truncation is redundant for the purpose of the equality.
-  if (MaskLoBits && Pos.getOpcode() == ISD::AND)
-    if (ConstantSDNode *PosC = isConstOrConstSplat(Pos.getOperand(1)))
-      if (PosC->getAPIntValue() == EltSize - 1)
+  if (MaskLoBits && Pos.getOpcode() == ISD::AND) {
+    if (ConstantSDNode *PosC = isConstOrConstSplat(Pos.getOperand(1))) {
+      KnownBits Known;
+      DAG.computeKnownBits(Pos.getOperand(0), Known);
+      if (PosC->getAPIntValue().getActiveBits() <= MaskLoBits &&
+          ((PosC->getAPIntValue() | Known.Zero).countTrailingOnes() >=
+           MaskLoBits))
         Pos = Pos.getOperand(0);
+    }
+  }
 
   // The condition we need is now:
   //
@@ -4934,7 +4945,7 @@ SDNode *DAGCombiner::MatchRotatePosNeg(SDValue Shifted, SDValue Pos,
   //          (srl x, (*ext y))) ->
   //   (rotr x, y) or (rotl x, (sub 32, y))
   EVT VT = Shifted.getValueType();
-  if (matchRotateSub(InnerPos, InnerNeg, VT.getScalarSizeInBits())) {
+  if (matchRotateSub(InnerPos, InnerNeg, VT.getScalarSizeInBits(), DAG)) {
     bool HasPos = TLI.isOperationLegalOrCustom(PosOpcode, VT);
     return DAG.getNode(HasPos ? PosOpcode : NegOpcode, DL, VT, Shifted,
                        HasPos ? Pos : Neg).getNode();

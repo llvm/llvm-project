@@ -374,10 +374,8 @@ void PPCMachObjectWriter::RecordPPCRelocation(
   Writer->addRelocation(RelSymbol, Fragment->getParent(), MRE);
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createPPCMachObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
-                                uint32_t CPUType, uint32_t CPUSubtype) {
-  return createMachObjectWriter(
-      llvm::make_unique<PPCMachObjectWriter>(Is64Bit, CPUType, CPUSubtype), OS,
-      /*IsLittleEndian=*/false);
+std::unique_ptr<MCObjectTargetWriter>
+llvm::createPPCMachObjectWriter(bool Is64Bit, uint32_t CPUType,
+                                uint32_t CPUSubtype) {
+  return llvm::make_unique<PPCMachObjectWriter>(Is64Bit, CPUType, CPUSubtype);
 }

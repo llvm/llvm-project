@@ -155,10 +155,13 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
   SelectPatternFlavor SPF = matchSelectPattern(Inst, A, B).Flavor;
   // TODO: We should also detect FP min/max.
   if (SPF == SPF_SMIN || SPF == SPF_SMAX ||
-      SPF == SPF_UMIN || SPF == SPF_UMAX ||
-      SPF == SPF_ABS || SPF == SPF_NABS) {
+      SPF == SPF_UMIN || SPF == SPF_UMAX) {
     if (A > B)
       std::swap(A, B);
+    return hash_combine(Inst->getOpcode(), SPF, A, B);
+  }
+  if (SPF == SPF_ABS || SPF == SPF_NABS) {
+    // ABS/NABS always puts the input in A and its negation in B.
     return hash_combine(Inst->getOpcode(), SPF, A, B);
   }
 
@@ -230,8 +233,13 @@ bool DenseMapInfo<SimpleValue>::isEqual(SimpleValue LHS, SimpleValue RHS) {
       LSPF == SPF_ABS || LSPF == SPF_NABS) {
     Value *RHSA, *RHSB;
     SelectPatternFlavor RSPF = matchSelectPattern(RHSI, RHSA, RHSB).Flavor;
-    return (LSPF == RSPF && ((LHSA == RHSA && LHSB == RHSB) ||
-                             (LHSA == RHSB && LHSB == RHSA)));
+    if (LSPF == RSPF) {
+      // Abs results are placed in a defined order by matchSelectPattern.
+      if (LSPF == SPF_ABS || LSPF == SPF_NABS)
+        return LHSA == RHSA && LHSB == RHSB;
+      return ((LHSA == RHSA && LHSB == RHSB) ||
+              (LHSA == RHSB && LHSB == RHSA));
+    }
   }
 
   return false;

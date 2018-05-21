@@ -30,7 +30,7 @@ static void codegen(Module *M, llvm::raw_pwrite_stream &OS,
                     TargetMachine::CodeGenFileType FileType) {
   std::unique_ptr<TargetMachine> TM = TMFactory();
   legacy::PassManager CodeGenPasses;
-  if (TM->addPassesToEmitFile(CodeGenPasses, OS, FileType))
+  if (TM->addPassesToEmitFile(CodeGenPasses, OS, nullptr, FileType))
     report_fatal_error("Failed to setup codegen");
   CodeGenPasses.run(*M);
 }

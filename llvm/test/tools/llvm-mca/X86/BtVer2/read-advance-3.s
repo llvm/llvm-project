@@ -25,8 +25,7 @@
 # CHECK-NEXT:  1      1     0.50                        addq	%rdx, %r8
 
 # CHECK:      Timeline view:
-
-# CHECK:      Index     0123456
+# CHECK-NEXT: Index     0123456
 
 # CHECK:      [0,0]     DeER ..   addq	%rdi, %rsi
 # CHECK-NEXT: [0,1]     DeeeeER   addq	(%rsp), %rsi

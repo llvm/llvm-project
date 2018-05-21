@@ -1027,19 +1027,21 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   //   macro name is defined to have the decimal value yyyymm where
   //   yyyy and mm are the year and the month designations of the
   //   version of the OpenMP API that the implementation support.
-  switch (LangOpts.OpenMP) {
-  case 0:
-    break;
-  case 40:
-    Builder.defineMacro("_OPENMP", "201307");
-    break;
-  case 45:
-    Builder.defineMacro("_OPENMP", "201511");
-    break;
-  default:
-    // Default version is OpenMP 3.1, in Simd only mode - 4.5
-    Builder.defineMacro("_OPENMP", LangOpts.OpenMPSimd ? "201511" : "201107");
-    break;
+  if (!LangOpts.OpenMPSimd) {
+    switch (LangOpts.OpenMP) {
+    case 0:
+      break;
+    case 40:
+      Builder.defineMacro("_OPENMP", "201307");
+      break;
+    case 45:
+      Builder.defineMacro("_OPENMP", "201511");
+      break;
+    default:
+      // Default version is OpenMP 3.1
+      Builder.defineMacro("_OPENMP", "201107");
+      break;
+    }
   }
 
   // CUDA device path compilaton
