@@ -42,7 +42,8 @@ public:
     SmallVector<Entry, 2> Entries;
     /// Dump this list on OS.
     void dump(raw_ostream &OS, bool IsLittleEndian, unsigned AddressSize,
-              const MCRegisterInfo *MRI, unsigned Indent) const;
+              const MCRegisterInfo *MRI, uint64_t BaseAddress,
+              unsigned Indent) const;
   };
 
 private:

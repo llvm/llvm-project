@@ -403,9 +403,7 @@ public:
     llvm_unreachable("Invalid UnitType.");
   }
 
-  llvm::Optional<BaseAddress> getBaseAddress() const { return BaseAddr; }
-
-  void setBaseAddress(BaseAddress BaseAddr) { this->BaseAddr = BaseAddr; }
+  llvm::Optional<BaseAddress> getBaseAddress();
 
   DWARFDie getUnitDIE(bool ExtractUnitDIEOnly = true) {
     extractDIEsIfNeeded(ExtractUnitDIEOnly);
