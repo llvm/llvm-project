@@ -182,8 +182,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "avx512.mask.cvtps2pd.128" || // Added in 7.0
       Name == "avx512.mask.cvtps2pd.256" || // Added in 7.0
       Name == "avx512.cvtusi2sd" || // Added in 7.0
-      Name == "avx512.mask.permvar.sf.256" || // Added in 7.0
-      Name == "avx512.mask.permvar.si.256" || // Added in 7.0
+      Name.startswith("avx512.mask.permvar.") || // Added in 7.0
+      Name.startswith("avx512.mask.permvar.") || // Added in 7.0
       Name == "sse2.pmulu.dq" || // Added in 7.0
       Name == "sse41.pmuldq" || // Added in 7.0
       Name == "avx2.pmulu.dq" || // Added in 7.0
@@ -1207,10 +1207,38 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
     IID = Intrinsic::x86_sse2_cvttps2dq;
   } else if (Name == "cvttps2dq.256") {
     IID = Intrinsic::x86_avx_cvtt_ps2dq_256;
-  } else if (Name == "permvar.sf.256") {
-    IID = Intrinsic::x86_avx2_permps;
-  } else if (Name == "permvar.si.256") {
-    IID = Intrinsic::x86_avx2_permd;
+  } else if (Name.startswith("permvar.")) {
+    bool IsFloat = CI.getType()->isFPOrFPVectorTy();
+    if (VecWidth == 256 && EltWidth == 32 && IsFloat)
+      IID = Intrinsic::x86_avx2_permps;
+    else if (VecWidth == 256 && EltWidth == 32 && !IsFloat)
+      IID = Intrinsic::x86_avx2_permd;
+    else if (VecWidth == 256 && EltWidth == 64 && IsFloat)
+      IID = Intrinsic::x86_avx512_permvar_df_256;
+    else if (VecWidth == 256 && EltWidth == 64 && !IsFloat)
+      IID = Intrinsic::x86_avx512_permvar_di_256;
+    else if (VecWidth == 512 && EltWidth == 32 && IsFloat)
+      IID = Intrinsic::x86_avx512_permvar_sf_512;
+    else if (VecWidth == 512 && EltWidth == 32 && !IsFloat)
+      IID = Intrinsic::x86_avx512_permvar_si_512;
+    else if (VecWidth == 512 && EltWidth == 64 && IsFloat)
+      IID = Intrinsic::x86_avx512_permvar_df_512;
+    else if (VecWidth == 512 && EltWidth == 64 && !IsFloat)
+      IID = Intrinsic::x86_avx512_permvar_di_512;
+    else if (VecWidth == 128 && EltWidth == 16)
+      IID = Intrinsic::x86_avx512_permvar_hi_128;
+    else if (VecWidth == 256 && EltWidth == 16)
+      IID = Intrinsic::x86_avx512_permvar_hi_256;
+    else if (VecWidth == 512 && EltWidth == 16)
+      IID = Intrinsic::x86_avx512_permvar_hi_512;
+    else if (VecWidth == 128 && EltWidth == 8)
+      IID = Intrinsic::x86_avx512_permvar_qi_128;
+    else if (VecWidth == 256 && EltWidth == 8)
+      IID = Intrinsic::x86_avx512_permvar_qi_256;
+    else if (VecWidth == 512 && EltWidth == 8)
+      IID = Intrinsic::x86_avx512_permvar_qi_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
   } else
     return false;
 

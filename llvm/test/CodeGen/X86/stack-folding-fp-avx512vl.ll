@@ -721,12 +721,12 @@ define <4 x double> @stack_fold_permpdvar(<4 x i64> %a0, <4 x double> %a1) {
   ;CHECK-LABEL: stack_fold_permpdvar
   ;CHECK:   vpermpd {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <4 x double> @llvm.x86.avx512.mask.permvar.df.256(<4 x double> %a1, <4 x i64> %a0, <4 x double> undef, i8 -1)
+  %2 = call <4 x double> @llvm.x86.avx512.permvar.df.256(<4 x double> %a1, <4 x i64> %a0)
   ; fadd forces execution domain
-  %3 = fadd <4 x double> %2, <double 0x0, double 0x0, double 0x0, double 0x0>
+  %3 = fadd <4 x double> %2, zeroinitializer
   ret <4 x double> %3
 }
-declare <4 x double> @llvm.x86.avx512.mask.permvar.df.256(<4 x double>, <4 x i64>, <4 x double>, i8) nounwind readonly
+declare <4 x double> @llvm.x86.avx512.permvar.df.256(<4 x double>, <4 x i64>) nounwind readonly
 
 define <8 x float> @stack_fold_permps(<8 x i32> %a0, <8 x float> %a1) {
   ;CHECK-LABEL: stack_fold_permps

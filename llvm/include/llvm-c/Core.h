@@ -2118,6 +2118,56 @@ LLVMValueRef LLVMAddAlias(LLVMModuleRef M, LLVMTypeRef Ty, LLVMValueRef Aliasee,
                           const char *Name);
 
 /**
+ * Obtain a GlobalAlias value from a Module by its name.
+ *
+ * The returned value corresponds to a llvm::GlobalAlias value.
+ *
+ * @see llvm::Module::getNamedAlias()
+ */
+LLVMValueRef LLVMGetNamedGlobalAlias(LLVMModuleRef M,
+                                     const char *Name, size_t NameLen);
+
+/**
+ * Obtain an iterator to the first GlobalAlias in a Module.
+ *
+ * @see llvm::Module::alias_begin()
+ */
+LLVMValueRef LLVMGetFirstGlobalAlias(LLVMModuleRef M);
+
+/**
+ * Obtain an iterator to the last GlobalAlias in a Module.
+ *
+ * @see llvm::Module::alias_end()
+ */
+LLVMValueRef LLVMGetLastGlobalAlias(LLVMModuleRef M);
+
+/**
+ * Advance a GlobalAlias iterator to the next GlobalAlias.
+ *
+ * Returns NULL if the iterator was already at the end and there are no more
+ * global aliases.
+ */
+LLVMValueRef LLVMGetNextGlobalAlias(LLVMValueRef GA);
+
+/**
+ * Decrement a GlobalAlias iterator to the previous GlobalAlias.
+ *
+ * Returns NULL if the iterator was already at the beginning and there are
+ * no previous global aliases.
+ */
+LLVMValueRef LLVMGetPreviousGlobalAlias(LLVMValueRef GA);
+
+/**
+ * Retrieve the target value of an alias.
+ */
+LLVMValueRef LLVMAliasGetAliasee(LLVMValueRef Alias);
+
+/**
+ * Set the target value of an alias.
+ */
+void LLVMAliasSetAliasee(LLVMValueRef Alias, LLVMValueRef Aliasee);
+
+/**
  * @}
  */
 

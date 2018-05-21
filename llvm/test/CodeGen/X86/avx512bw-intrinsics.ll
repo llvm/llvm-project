@@ -1573,33 +1573,37 @@ define <32 x i16>@test_int_x86_avx512_mask_psllv32hi(<32 x i16> %x0, <32 x i16> 
   ret <32 x i16> %res4
 }
 
-declare <32 x i16> @llvm.x86.avx512.mask.permvar.hi.512(<32 x i16>, <32 x i16>, <32 x i16>, i32)
+declare <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16>, <32 x i16>)
 
 define <32 x i16>@test_int_x86_avx512_mask_permvar_hi_512(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 %x3) {
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_permvar_hi_512:
 ; AVX512BW:       ## %bb.0:
+; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm3
 ; AVX512BW-NEXT:    kmovd %edi, %k1
 ; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm2 {%k1}
-; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm3 {%k1} {z}
-; AVX512BW-NEXT:    vpaddw %zmm3, %zmm2, %zmm2
-; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; AVX512BW-NEXT:    vpaddw %zmm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    vpaddw %zmm3, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_int_x86_avx512_mask_permvar_hi_512:
 ; AVX512F-32:       # %bb.0:
+; AVX512F-32-NEXT:    vpermw %zmm0, %zmm1, %zmm3
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vpermw %zmm0, %zmm1, %zmm2 {%k1}
-; AVX512F-32-NEXT:    vpermw %zmm0, %zmm1, %zmm3 {%k1} {z}
-; AVX512F-32-NEXT:    vpaddw %zmm3, %zmm2, %zmm2
-; AVX512F-32-NEXT:    vpermw %zmm0, %zmm1, %zmm0
+; AVX512F-32-NEXT:    vpermw %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm2, %zmm0
+; AVX512F-32-NEXT:    vpaddw %zmm3, %zmm0, %zmm0
 ; AVX512F-32-NEXT:    retl
-  %res = call <32 x i16> @llvm.x86.avx512.mask.permvar.hi.512(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 %x3)
-  %res1 = call <32 x i16> @llvm.x86.avx512.mask.permvar.hi.512(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> zeroinitializer, i32 %x3)
-  %res2 = call <32 x i16> @llvm.x86.avx512.mask.permvar.hi.512(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x2, i32 -1)
-  %res3 = add <32 x i16> %res, %res1
-  %res4 = add <32 x i16> %res3, %res2
+  %1 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %x0, <32 x i16> %x1)
+  %2 = bitcast i32 %x3 to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> %x2
+  %4 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %x0, <32 x i16> %x1)
+  %5 = bitcast i32 %x3 to <32 x i1>
+  %6 = select <32 x i1> %5, <32 x i16> %4, <32 x i16> zeroinitializer
+  %7 = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %x0, <32 x i16> %x1)
+  %res3 = add <32 x i16> %3, %6
+  %res4 = add <32 x i16> %res3, %7
   ret <32 x i16> %res4
 }
 

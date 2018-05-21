@@ -67,7 +67,7 @@ private:
   /// The data for the section this fragment is in.
   MCSection *Parent;
 
-  /// Atom - The atom this fragment is in, as represented by it's defining
+  /// Atom - The atom this fragment is in, as represented by its defining
   /// symbol.
   const MCSymbol *Atom;
 

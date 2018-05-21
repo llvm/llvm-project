@@ -899,6 +899,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SHL,              VT, Custom);
       setOperationAction(ISD::SRA,              VT, Custom);
     }
+
+    setOperationAction(ISD::ROTL,               MVT::v4i32, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSSE3()) {
@@ -1029,6 +1031,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SHL, VT, Custom);
       setOperationAction(ISD::SRA, VT, Custom);
     }
+
+    setOperationAction(ISD::ROTL,              MVT::v8i32, Custom);
 
     setOperationAction(ISD::SELECT,            MVT::v4f64, Custom);
     setOperationAction(ISD::SELECT,            MVT::v4i64, Custom);
@@ -20508,15 +20512,12 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                               Src1, Src2, Src3),
                                   Mask, PassThru, Subtarget, DAG);
     }
-    case VPERM_2OP_MASK : {
+    case VPERM_2OP : {
       SDValue Src1 = Op.getOperand(1);
       SDValue Src2 = Op.getOperand(2);
-      SDValue PassThru = Op.getOperand(3);
-      SDValue Mask = Op.getOperand(4);
 
       // Swap Src1 and Src2 in the node creation
-      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,Src2, Src1),
-                                  Mask, PassThru, Subtarget, DAG);
+      return DAG.getNode(IntrData->Opc0, dl, VT,Src2, Src1);
     }
     case VPERM_3OP_MASKZ:
     case VPERM_3OP_MASK:{
@@ -20913,13 +20914,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   switch (IntNo) {
   default: return SDValue();    // Don't custom lower most intrinsics.
-
-  case Intrinsic::x86_avx2_permd:
-  case Intrinsic::x86_avx2_permps:
-    // Operands intentionally swapped. Mask is last operand to intrinsic,
-    // but second operand for node/instruction.
-    return DAG.getNode(X86ISD::VPERMV, dl, Op.getValueType(),
-                       Op.getOperand(2), Op.getOperand(1));
 
   // ptest and testp intrinsics. The intrinsic these come from are designed to
   // return an integer value, not just an instruction so lower it to the ptest
@@ -23257,6 +23251,51 @@ static SDValue LowerScalarVariableShift(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Convert a shift/rotate left amount to a multiplication scale factor.
+static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
+                                       const X86Subtarget &Subtarget,
+                                       SelectionDAG &DAG) {
+  MVT VT = Amt.getSimpleValueType();
+  bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
+
+  if (ConstantAmt && (VT == MVT::v8i16 || VT == MVT::v4i32 ||
+                      (Subtarget.hasInt256() && VT == MVT::v16i16))) {
+    SmallVector<SDValue, 8> Elts;
+    MVT SVT = VT.getVectorElementType();
+    unsigned SVTBits = SVT.getSizeInBits();
+    APInt One(SVTBits, 1);
+    unsigned NumElems = VT.getVectorNumElements();
+
+    for (unsigned i = 0; i != NumElems; ++i) {
+      SDValue Op = Amt->getOperand(i);
+      if (Op->isUndef()) {
+        Elts.push_back(Op);
+        continue;
+      }
+
+      ConstantSDNode *ND = cast<ConstantSDNode>(Op);
+      APInt C(SVTBits, ND->getAPIntValue().getZExtValue());
+      uint64_t ShAmt = C.getZExtValue();
+      if (ShAmt >= SVTBits) {
+        Elts.push_back(DAG.getUNDEF(SVT));
+        continue;
+      }
+      Elts.push_back(DAG.getConstant(One.shl(ShAmt), dl, SVT));
+    }
+    return DAG.getBuildVector(VT, dl, Elts);
+  }
+
+  if (VT == MVT::v4i32) {
+    Amt = DAG.getNode(ISD::SHL, dl, VT, Amt, DAG.getConstant(23, dl, VT));
+    Amt = DAG.getNode(ISD::ADD, dl, VT, Amt,
+                      DAG.getConstant(0x3f800000U, dl, VT));
+    Amt = DAG.getBitcast(MVT::v4f32, Amt);
+    return DAG.getNode(ISD::FP_TO_SINT, dl, VT, Amt);
+  }
+
+  return SDValue();
+}
+
 static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
                           SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
@@ -23318,46 +23357,9 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
 
   // If possible, lower this packed shift into a vector multiply instead of
   // expanding it into a sequence of scalar shifts.
-  // Do this only if the vector shift count is a constant build_vector.
-  if (ConstantAmt && Op.getOpcode() == ISD::SHL &&
-      (VT == MVT::v8i16 || VT == MVT::v4i32 ||
-       (Subtarget.hasInt256() && VT == MVT::v16i16))) {
-    SmallVector<SDValue, 8> Elts;
-    MVT SVT = VT.getVectorElementType();
-    unsigned SVTBits = SVT.getSizeInBits();
-    APInt One(SVTBits, 1);
-    unsigned NumElems = VT.getVectorNumElements();
-
-    for (unsigned i=0; i !=NumElems; ++i) {
-      SDValue Op = Amt->getOperand(i);
-      if (Op->isUndef()) {
-        Elts.push_back(Op);
-        continue;
-      }
-
-      ConstantSDNode *ND = cast<ConstantSDNode>(Op);
-      APInt C(SVTBits, ND->getAPIntValue().getZExtValue());
-      uint64_t ShAmt = C.getZExtValue();
-      if (ShAmt >= SVTBits) {
-        Elts.push_back(DAG.getUNDEF(SVT));
-        continue;
-      }
-      Elts.push_back(DAG.getConstant(One.shl(ShAmt), dl, SVT));
-    }
-    SDValue BV = DAG.getBuildVector(VT, dl, Elts);
-    return DAG.getNode(ISD::MUL, dl, VT, R, BV);
-  }
-
-  // Lower SHL with variable shift amount.
-  if (VT == MVT::v4i32 && Op->getOpcode() == ISD::SHL) {
-    Op = DAG.getNode(ISD::SHL, dl, VT, Amt, DAG.getConstant(23, dl, VT));
-
-    Op = DAG.getNode(ISD::ADD, dl, VT, Op,
-                     DAG.getConstant(0x3f800000U, dl, VT));
-    Op = DAG.getBitcast(MVT::v4f32, Op);
-    Op = DAG.getNode(ISD::FP_TO_SINT, dl, VT, Op);
-    return DAG.getNode(ISD::MUL, dl, VT, Op, R);
-  }
+  if (Op.getOpcode() == ISD::SHL)
+    if (SDValue Scale = convertShiftLeftToScale(Amt, dl, Subtarget, DAG))
+      return DAG.getNode(ISD::MUL, dl, VT, R, Scale);
 
   // If possible, lower this shift as a sequence of two shifts by
   // constant plus a MOVSS/MOVSD/PBLEND instead of scalarizing it.
@@ -23733,6 +23735,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
 static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
                            SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
+  assert(VT.isVector() && "Custom lowering only for vector rotates!");
+
   SDLoc DL(Op);
   SDValue R = Op.getOperand(0);
   SDValue Amt = Op.getOperand(1);
@@ -23758,31 +23762,86 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return Op;
   }
 
-  assert(VT.isVector() && "Custom lowering only for vector rotates!");
-  assert(Subtarget.hasXOP() && "XOP support required for vector rotates!");
   assert((Opcode == ISD::ROTL) && "Only ROTL supported");
 
   // XOP has 128-bit vector variable + immediate rotates.
   // +ve/-ve Amt = rotate left/right - just need to handle ISD::ROTL.
+  if (Subtarget.hasXOP()) {
+    // Split 256-bit integers.
+    if (VT.is256BitVector())
+      return Lower256IntArith(Op, DAG);
+    assert(VT.is128BitVector() && "Only rotate 128-bit vectors!");
 
-  // Split 256-bit integers.
-  if (VT.is256BitVector())
+    // Attempt to rotate by immediate.
+    if (auto *BVAmt = dyn_cast<BuildVectorSDNode>(Amt)) {
+      if (auto *RotateConst = BVAmt->getConstantSplatNode()) {
+        uint64_t RotateAmt = RotateConst->getAPIntValue().getZExtValue();
+        assert(RotateAmt < EltSizeInBits && "Rotation out of range");
+        return DAG.getNode(X86ISD::VROTLI, DL, VT, R,
+                           DAG.getConstant(RotateAmt, DL, MVT::i8));
+      }
+    }
+
+    // Use general rotate by variable (per-element).
+    return Op;
+  }
+
+  // Split 256-bit integers on pre-AVX2 targets.
+  if (VT.is256BitVector() && !Subtarget.hasAVX2())
     return Lower256IntArith(Op, DAG);
 
-  assert(VT.is128BitVector() && "Only rotate 128-bit vectors!");
+  assert((VT == MVT::v4i32 || (VT == MVT::v8i32 && Subtarget.hasAVX2())) &&
+         "Only v4i32/v8i32 vector rotates supported");
 
-  // Attempt to rotate by immediate.
+  // Rotate by an uniform constant - expand back to shifts.
+  // TODO - legalizers should be able to handle this.
   if (auto *BVAmt = dyn_cast<BuildVectorSDNode>(Amt)) {
     if (auto *RotateConst = BVAmt->getConstantSplatNode()) {
       uint64_t RotateAmt = RotateConst->getAPIntValue().getZExtValue();
       assert(RotateAmt < EltSizeInBits && "Rotation out of range");
-      return DAG.getNode(X86ISD::VROTLI, DL, VT, R,
-                         DAG.getConstant(RotateAmt, DL, MVT::i8));
+      if (RotateAmt == 0)
+        return R;
+
+      SDValue SHL = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, VT, R,
+                                               RotateAmt, DAG);
+      SDValue SRL = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, VT, R,
+                                               EltSizeInBits - RotateAmt, DAG);
+      return DAG.getNode(ISD::OR, DL, VT, SHL, SRL);
     }
   }
 
-  // Use general rotate by variable (per-element).
-  return Op;
+  // AVX2 - best to fallback to variable shifts.
+  // TODO - legalizers should be able to handle this.
+  if (Subtarget.hasAVX2()) {
+    SDValue AmtR = DAG.getConstant(EltSizeInBits, DL, VT);
+    AmtR = DAG.getNode(ISD::SUB, DL, VT, AmtR, Amt);
+    SDValue SHL = DAG.getNode(ISD::SHL, DL, VT, R, Amt);
+    SDValue SRL = DAG.getNode(ISD::SRL, DL, VT, R, AmtR);
+    return DAG.getNode(ISD::OR, DL, VT, SHL, SRL);
+  }
+
+  // As with shifts, convert the rotation amount to a multiplication factor,
+  // and make use of the PMULUDQ instruction to multiply 2 lanes of v4i32
+  // to v2i64 results at a time. The upper 32-bits contain the wrapped bits
+  // that can then be OR'd with the lower 32-bits.
+  Amt = convertShiftLeftToScale(Amt, DL, Subtarget, DAG);
+
+  static const int OddMask[] = {1, -1, 3, -1};
+  SDValue R13 = DAG.getVectorShuffle(VT, DL, R, R, OddMask);
+  SDValue Amt13 = DAG.getVectorShuffle(VT, DL, Amt, Amt, OddMask);
+
+  SDValue Res02 = DAG.getNode(X86ISD::PMULUDQ, DL, MVT::v2i64,
+                              DAG.getBitcast(MVT::v2i64, R),
+                              DAG.getBitcast(MVT::v2i64, Amt));
+  SDValue Res13 = DAG.getNode(X86ISD::PMULUDQ, DL, MVT::v2i64,
+                              DAG.getBitcast(MVT::v2i64, R13),
+                              DAG.getBitcast(MVT::v2i64, Amt13));
+  Res02 = DAG.getBitcast(VT, Res02);
+  Res13 = DAG.getBitcast(VT, Res13);
+
+  return DAG.getNode(ISD::OR, DL, VT,
+                     DAG.getVectorShuffle(VT, DL, Res02, Res13, {0, 4, 2, 6}),
+                     DAG.getVectorShuffle(VT, DL, Res02, Res13, {1, 5, 3, 7}));
 }
 
 static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {

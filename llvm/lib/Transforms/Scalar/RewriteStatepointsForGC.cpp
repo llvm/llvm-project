@@ -2031,7 +2031,7 @@ static void rematerializeLiveValues(CallSite CS,
   SmallVector<Value *, 32> LiveValuesToBeDeleted;
 
   for (Value *LiveValue: Info.LiveSet) {
-    // For each live pointer find it's defining chain
+    // For each live pointer find its defining chain
     SmallVector<Instruction *, 3> ChainToBase;
     assert(Info.PointerToBase.count(LiveValue));
     Value *RootOfChain =
