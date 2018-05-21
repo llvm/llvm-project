@@ -88,7 +88,7 @@ public:
 
   void EmitData(raw_ostream& Out) {
     using namespace llvm::support;
-    endian::Writer<little> LE(Out);
+    endian::Writer LE(Out, little);
     switch (Kind) {
     case IsFE: {
       // Emit stat information.
@@ -135,7 +135,7 @@ public:
   EmitKeyDataLength(raw_ostream& Out, PTHEntryKeyVariant V,
                     const PTHEntry& E) {
     using namespace llvm::support;
-    endian::Writer<little> LE(Out);
+    endian::Writer LE(Out, little);
 
     unsigned n = V.getString().size() + 1 + 1;
     LE.write<uint16_t>(n);
@@ -149,7 +149,7 @@ public:
   static void EmitKey(raw_ostream& Out, PTHEntryKeyVariant V, unsigned n){
     using namespace llvm::support;
     // Emit the entry kind.
-    endian::Writer<little>(Out).write<uint8_t>((unsigned)V.getKind());
+    Out << char(V.getKind());
     // Emit the string.
     Out.write(V.getString().data(), n - 1);
   }
@@ -157,7 +157,7 @@ public:
   static void EmitData(raw_ostream& Out, PTHEntryKeyVariant V,
                        const PTHEntry& E, unsigned) {
     using namespace llvm::support;
-    endian::Writer<little> LE(Out);
+    endian::Writer LE(Out, little);
 
     // For file entries emit the offsets into the PTH file for token data
     // and the preprocessor blocks table.
@@ -205,18 +205,17 @@ class PTHWriter {
   void EmitToken(const Token& T);
 
   void Emit8(uint32_t V) {
-    using namespace llvm::support;
-    endian::Writer<little>(Out).write<uint8_t>(V);
+    Out << char(V);
   }
 
   void Emit16(uint32_t V) {
     using namespace llvm::support;
-    endian::Writer<little>(Out).write<uint16_t>(V);
+    endian::write<uint16_t>(Out, V, little);
   }
 
   void Emit32(uint32_t V) {
     using namespace llvm::support;
-    endian::Writer<little>(Out).write<uint32_t>(V);
+    endian::write<uint32_t>(Out, V, little);
   }
 
   void EmitBuf(const char *Ptr, unsigned NumBytes) {
@@ -225,7 +224,7 @@ class PTHWriter {
 
   void EmitString(StringRef V) {
     using namespace llvm::support;
-    endian::Writer<little>(Out).write<uint16_t>(V.size());
+    endian::write<uint16_t>(Out, V.size(), little);
     EmitBuf(V.data(), V.size());
   }
 
@@ -299,7 +298,7 @@ PTHEntry PTHWriter::LexTokens(Lexer& L) {
   // Pad 0's so that we emit tokens to a 4-byte alignment.
   // This speed up reading them back in.
   using namespace llvm::support;
-  endian::Writer<little> LE(Out);
+  endian::Writer LE(Out, little);
   uint32_t TokenOff = Out.tell();
   for (uint64_t N = llvm::OffsetToAlignment(TokenOff, 4); N; --N, ++TokenOff)
     LE.write<uint8_t>(0);
@@ -632,7 +631,7 @@ public:
   EmitKeyDataLength(raw_ostream& Out, const PTHIdKey* key, uint32_t) {
     using namespace llvm::support;
     unsigned n = key->II->getLength() + 1;
-    endian::Writer<little>(Out).write<uint16_t>(n);
+    endian::write<uint16_t>(Out, n, little);
     return std::make_pair(n, sizeof(uint32_t));
   }
 
@@ -646,7 +645,7 @@ public:
   static void EmitData(raw_ostream& Out, PTHIdKey*, uint32_t pID,
                        unsigned) {
     using namespace llvm::support;
-    endian::Writer<little>(Out).write<uint32_t>(pID);
+    endian::write<uint32_t>(Out, pID, little);
   }
 };
 } // end anonymous namespace

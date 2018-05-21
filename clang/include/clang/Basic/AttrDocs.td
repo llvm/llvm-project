@@ -306,18 +306,6 @@ An example of how to use ``alloc_size``
   }];
 }
 
-def CodeSegDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``__declspec(code_seg)`` attribute enables the placement of code into separate
-named segments that can be paged or locked in memory individually. This attribute
-is used to control the placement of instantiated templates and compiler-generated
-code. See the documentation for `__declspec(code_seg)`_ on MSDN.
-
-.. _`__declspec(code_seg)`: http://msdn.microsoft.com/en-us/library/dn636922.aspx
-  }];
-}
-
 def AllocAlignDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

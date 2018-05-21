@@ -136,10 +136,8 @@ static bool isBSDLike(object::Archive::Kind Kind) {
 
 template <class T>
 static void print(raw_ostream &Out, object::Archive::Kind Kind, T Val) {
-  if (isBSDLike(Kind))
-    support::endian::Writer<support::little>(Out).write(Val);
-  else
-    support::endian::Writer<support::big>(Out).write(Val);
+  support::endian::write(Out, Val,
+                         isBSDLike(Kind) ? support::little : support::big);
 }
 
 static void printRestOfMemberHeader(

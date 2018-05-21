@@ -198,11 +198,11 @@ void MCWasmStreamer::FinishImpl() {
 
 MCStreamer *llvm::createWasmStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
-                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&CE,
                                      bool RelaxAll) {
   MCWasmStreamer *S =
-      new MCWasmStreamer(Context, std::move(MAB), OS, std::move(CE));
+      new MCWasmStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);
   return S;

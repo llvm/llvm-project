@@ -20,6 +20,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -103,30 +104,30 @@ static MCInstPrinter *createAArch64MCInstPrinter(const Triple &T,
 
 static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                      std::unique_ptr<MCAsmBackend> &&TAB,
-                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&Emitter,
                                      bool RelaxAll) {
-  return createAArch64ELFStreamer(Ctx, std::move(TAB), OS, std::move(Emitter),
-                                  RelaxAll);
+  return createAArch64ELFStreamer(Ctx, std::move(TAB), std::move(OW),
+                                  std::move(Emitter), RelaxAll);
 }
 
 static MCStreamer *createMachOStreamer(MCContext &Ctx,
                                        std::unique_ptr<MCAsmBackend> &&TAB,
-                                       raw_pwrite_stream &OS,
+                                       std::unique_ptr<MCObjectWriter> &&OW,
                                        std::unique_ptr<MCCodeEmitter> &&Emitter,
                                        bool RelaxAll,
                                        bool DWARFMustBeAtTheEnd) {
-  return createMachOStreamer(Ctx, std::move(TAB), OS, std::move(Emitter),
-                             RelaxAll, DWARFMustBeAtTheEnd,
+  return createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
+                             std::move(Emitter), RelaxAll, DWARFMustBeAtTheEnd,
                              /*LabelSections*/ true);
 }
 
 static MCStreamer *
 createWinCOFFStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
-                      raw_pwrite_stream &OS,
+                      std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll,
                       bool IncrementalLinkerCompatible) {
-  return createAArch64WinCOFFStreamer(Ctx, std::move(TAB), OS,
+  return createAArch64WinCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
                                       std::move(Emitter), RelaxAll,
                                       IncrementalLinkerCompatible);
 }

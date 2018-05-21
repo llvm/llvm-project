@@ -39,6 +39,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPULibCalls.cpp
   AMDGPULibFunc.cpp
   AMDGPULowerIntrinsics.cpp
+  AMDGPULowerKernelAttributes.cpp
   AMDGPULowerKernelCalls.cpp
   AMDGPUMachineCFGStructurizer.cpp
   AMDGPUMachineFunction.cpp

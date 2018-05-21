@@ -174,8 +174,9 @@ static ValueMap clone_params(LLVMValueRef Src, LLVMValueRef Dst) {
   LLVMValueRef SrcNext = nullptr;
   LLVMValueRef DstNext = nullptr;
   while (true) {
-    const char *Name = LLVMGetValueName(SrcCur);
-    LLVMSetValueName(DstCur, Name);
+    size_t NameLen;
+    const char *Name = LLVMGetValueName2(SrcCur, &NameLen);
+    LLVMSetValueName2(DstCur, Name, NameLen);
 
     VMap[SrcCur] = DstCur;
 
@@ -232,7 +233,8 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
 
   // Maybe it is a symbol
   if (LLVMIsAGlobalValue(Cst)) {
-    const char *Name = LLVMGetValueName(Cst);
+    size_t NameLen;
+    const char *Name = LLVMGetValueName2(Cst, &NameLen);
 
     // Try function
     if (LLVMIsAFunction(Cst)) {
@@ -402,7 +404,8 @@ struct FunCloner {
     if (!LLVMIsAInstruction(Src))
       report_fatal_error("Expected an instruction");
 
-    const char *Name = LLVMGetValueName(Src);
+    size_t NameLen;
+    const char *Name = LLVMGetValueName2(Src, &NameLen);
 
     // Check if this is something we already computed.
     {
@@ -734,7 +737,8 @@ struct FunCloner {
       report_fatal_error("Basic block is not a basic block");
 
     const char *Name = LLVMGetBasicBlockName(Src);
-    const char *VName = LLVMGetValueName(V);
+    size_t NameLen;
+    const char *VName = LLVMGetValueName2(V, &NameLen);
     if (Name != VName)
       report_fatal_error("Basic block name mismatch");
 
@@ -830,7 +834,8 @@ static void declare_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
   }
 
   while (true) {
-    const char *Name = LLVMGetValueName(Cur);
+    size_t NameLen;
+    const char *Name = LLVMGetValueName2(Cur, &NameLen);
     if (LLVMGetNamedGlobal(M, Name))
       report_fatal_error("GlobalVariable already cloned");
     LLVMAddGlobal(M, LLVMGetElementType(TypeCloner(M).Clone(Cur)), Name);
@@ -863,7 +868,8 @@ FunDecl:
   Cur = Begin;
   Next = nullptr;
   while (true) {
-    const char *Name = LLVMGetValueName(Cur);
+    size_t NameLen;
+    const char *Name = LLVMGetValueName2(Cur, &NameLen);
     if (LLVMGetNamedFunction(M, Name))
       report_fatal_error("Function already cloned");
     auto Ty = LLVMGetElementType(TypeCloner(M).Clone(Cur));
@@ -909,7 +915,8 @@ static void clone_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
   }
 
   while (true) {
-    const char *Name = LLVMGetValueName(Cur);
+    size_t NameLen;
+    const char *Name = LLVMGetValueName2(Cur, &NameLen);
     LLVMValueRef G = LLVMGetNamedGlobal(M, Name);
     if (!G)
       report_fatal_error("GlobalVariable must have been declared already");
@@ -952,13 +959,16 @@ FunClone:
   Cur = Begin;
   Next = nullptr;
   while (true) {
-    const char *Name = LLVMGetValueName(Cur);
+    size_t NameLen;
+    const char *Name = LLVMGetValueName2(Cur, &NameLen);
     LLVMValueRef Fun = LLVMGetNamedFunction(M, Name);
     if (!Fun)
       report_fatal_error("Function must have been declared already");
 
     if (LLVMHasPersonalityFn(Cur)) {
-      const char *FName = LLVMGetValueName(LLVMGetPersonalityFn(Cur));
+      size_t FNameLen;
+      const char *FName = LLVMGetValueName2(LLVMGetPersonalityFn(Cur),
+                                           &FNameLen);
       LLVMValueRef P = LLVMGetNamedFunction(M, FName);
       if (!P)
         report_fatal_error("Could not find personality function");

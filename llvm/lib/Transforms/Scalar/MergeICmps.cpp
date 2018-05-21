@@ -768,6 +768,10 @@ PreservedAnalyses MergeICmps::runImpl(Function &F, const TargetLibraryInfo *TLI,
   // The rationale is to avoid turning small chains into memcmp calls.
   if (!TTI->enableMemCmpExpansion(true)) return PreservedAnalyses::all();
 
+  // If we don't have memcmp avaiable we can't emit calls to it.
+  if (!TLI->has(LibFunc_memcmp))
+    return PreservedAnalyses::all();
+
   bool MadeChange = false;
 
   for (auto BBIt = ++F.begin(); BBIt != F.end(); ++BBIt) {

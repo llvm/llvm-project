@@ -312,7 +312,7 @@ public:
 
     // Write our header information.
     {
-      endian::Writer<little> Writer(OutStream);
+      endian::Writer Writer(OutStream, little);
 
       // Reserve four bytes for the bucket offset.
       Writer.write<uint32_t>(0);

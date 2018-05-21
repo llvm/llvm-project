@@ -61,26 +61,13 @@ static ToolChain::RTTIMode CalculateRTTIMode(const ArgList &Args,
   // Explicit rtti/no-rtti args
   if (CachedRTTIArg) {
     if (CachedRTTIArg->getOption().matches(options::OPT_frtti))
-      return ToolChain::RM_EnabledExplicitly;
+      return ToolChain::RM_Enabled;
     else
-      return ToolChain::RM_DisabledExplicitly;
+      return ToolChain::RM_Disabled;
   }
 
   // -frtti is default, except for the PS4 CPU.
-  if (!Triple.isPS4CPU())
-    return ToolChain::RM_EnabledImplicitly;
-
-  // On the PS4, turning on c++ exceptions turns on rtti.
-  // We're assuming that, if we see -fexceptions, rtti gets turned on.
-  Arg *Exceptions = Args.getLastArgNoClaim(
-      options::OPT_fcxx_exceptions, options::OPT_fno_cxx_exceptions,
-      options::OPT_fexceptions, options::OPT_fno_exceptions);
-  if (Exceptions &&
-      (Exceptions->getOption().matches(options::OPT_fexceptions) ||
-       Exceptions->getOption().matches(options::OPT_fcxx_exceptions)))
-    return ToolChain::RM_EnabledImplicitly;
-
-  return ToolChain::RM_DisabledImplicitly;
+  return (Triple.isPS4CPU()) ? ToolChain::RM_Disabled : ToolChain::RM_Enabled;
 }
 
 ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,

@@ -183,10 +183,8 @@ public:
   }
 
   template <typename T> void write(T Val) {
-    if (IsLittleEndian)
-      support::endian::Writer<support::little>(getStream()).write(Val);
-    else
-      support::endian::Writer<support::big>(getStream()).write(Val);
+    support::endian::write(getStream(), Val,
+                           IsLittleEndian ? support::little : support::big);
   }
 
   void writeHeader(const MCAssembler &Asm);

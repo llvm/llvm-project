@@ -12,13 +12,28 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCObjectWriter.h"
 
 using namespace llvm;
 
+namespace {
+
+class AMDGPUELFStreamer : public MCELFStreamer {
+public:
+  AMDGPUELFStreamer(const Triple &T, MCContext &Context,
+                    std::unique_ptr<MCAsmBackend> MAB,
+                    std::unique_ptr<MCObjectWriter> OW,
+                    std::unique_ptr<MCCodeEmitter> Emitter)
+      : MCELFStreamer(Context, std::move(MAB), std::move(OW),
+                      std::move(Emitter)) {}
+};
+
+}
+
 MCELFStreamer *llvm::createAMDGPUELFStreamer(
     const Triple &T, MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-    raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter,
+    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
     bool RelaxAll) {
-  return new AMDGPUELFStreamer(T, Context, std::move(MAB), OS,
+  return new AMDGPUELFStreamer(T, Context, std::move(MAB), std::move(OW),
                                std::move(Emitter));
 }

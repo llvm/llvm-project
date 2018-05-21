@@ -199,9 +199,62 @@ struct MCExtraProcessorInfo {
 /// provides a detailed reservation table describing each cycle of instruction
 /// execution. Subtargets may define any or all of the above categories of data
 /// depending on the type of CPU and selected scheduler.
+///
+/// The machine independent properties defined here are used by the scheduler as
+/// an abstract machine model. A real micro-architecture has a number of
+/// buffers, queues, and stages. Declaring that a given machine-independent
+/// abstract property corresponds to a specific physical property across all
+/// subtargets can't be done. Nonetheless, the abstract model is
+/// useful. Futhermore, subtargets typically extend this model with processor
+/// specific resources to model any hardware features that can be exploited by
+/// sceduling heuristics and aren't sufficiently represented in the abstract.
+///
+/// The abstract pipeline is built around the notion of an "issue point". This
+/// is merely a reference point for counting machine cycles. The physical
+/// machine will have pipeline stages that delay execution. The scheduler does
+/// not model those delays because they are irrelevant as long as they are
+/// consistent. Inaccuracies arise when instructions have different execution
+/// delays relative to each other, in addition to their intrinsic latency. Those
+/// special cases can be handled by TableGen constructs such as, ReadAdvance,
+/// which reduces latency when reading data, and ResourceCycles, which consumes
+/// a processor resource when writing data for a number of abstract
+/// cycles.
+///
+/// TODO: One tool currently missing is the ability to add a delay to
+/// ResourceCycles. That would be easy to add and would likely cover all cases
+/// currently handled by the legacy itinerary tables.
+///
+/// A note on out-of-order execution and, more generally, instruction
+/// buffers. Part of the CPU pipeline is always in-order. The issue point, which
+/// is the point of reference for counting cycles, only makes sense as an
+/// in-order part of the pipeline. Other parts of the pipeline are sometimes
+/// falling behind and sometimes catching up. It's only interesting to model
+/// those other, decoupled parts of the pipeline if they may be predictably
+/// resource constrained in a way that the scheduler can exploit.
+///
+/// The LLVM machine model distinguishes between in-order constraints and
+/// out-of-order constraints so that the target's scheduling strategy can apply
+/// appropriate heuristics. For a well-balanced CPU pipeline, out-of-order
+/// resources would not typically be treated as a hard scheduling
+/// constraint. For example, in the GenericScheduler, a delay caused by limited
+/// out-of-order resources is not directly reflected in the number of cycles
+/// that the scheduler sees between issuing an instruction and its dependent
+/// instructions. In other words, out-of-order resources don't directly increase
+/// the latency between pairs of instructions. However, they can still be used
+/// to detect potential bottlenecks across a sequence of instructions and bias
+/// the scheduling heuristics appropriately.
 struct MCSchedModel {
   // IssueWidth is the maximum number of instructions that may be scheduled in
-  // the same per-cycle group.
+  // the same per-cycle group. This is meant to be a hard in-order constraint
+  // (a.k.a. "hazard"). In the GenericScheduler strategy, no more than
+  // IssueWidth micro-ops can ever be scheduled in a particular cycle.
+  //
+  // In practice, IssueWidth is useful to model any bottleneck between the
+  // decoder (after micro-op expansion) and the out-of-order reservation
+  // stations or the decoder bandwidth itself. If the total number of
+  // reservation stations is also a bottleneck, or if any other pipeline stage
+  // has a bandwidth limitation, then that can be naturally modeled by adding an
+  // out-of-order processor resource.
   unsigned IssueWidth;
   static const unsigned DefaultIssueWidth = 1;
 

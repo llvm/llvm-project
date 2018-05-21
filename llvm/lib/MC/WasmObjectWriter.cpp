@@ -630,10 +630,11 @@ static void addData(SmallVectorImpl<char> &DataBytes,
                                              Align->getMaxBytesToEmit());
       DataBytes.resize(Size, Value);
     } else if (auto *Fill = dyn_cast<MCFillFragment>(&Frag)) {
-      int64_t Size;
-      if (!Fill->getSize().evaluateAsAbsolute(Size))
+      int64_t NumValues;
+      if (!Fill->getNumValues().evaluateAsAbsolute(NumValues))
         llvm_unreachable("The fill should be an assembler constant");
-      DataBytes.insert(DataBytes.end(), Size, Fill->getValue());
+      DataBytes.insert(DataBytes.end(), Fill->getValueSize() * NumValues,
+                       Fill->getValue());
     } else {
       const auto &DataFrag = cast<MCDataFragment>(Frag);
       const SmallVectorImpl<char> &Contents = DataFrag.getContents();

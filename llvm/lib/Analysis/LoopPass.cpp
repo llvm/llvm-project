@@ -151,6 +151,7 @@ void LPPassManager::markLoopAsDeleted(Loop &L) {
 bool LPPassManager::runOnFunction(Function &F) {
   auto &LIWP = getAnalysis<LoopInfoWrapperPass>();
   LI = &LIWP.getLoopInfo();
+  Module &M = *F.getParent();
 #if 0
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 #endif
@@ -200,8 +201,9 @@ bool LPPassManager::runOnFunction(Function &F) {
       {
         PassManagerPrettyStackEntry X(P, *CurrentLoop->getHeader());
         TimeRegion PassTimer(getPassTimer(P));
-
+        unsigned InstrCount = initSizeRemarkInfo(M);
         Changed |= P->runOnLoop(CurrentLoop, *this);
+        emitInstrCountChangedRemark(P, M, InstrCount);
       }
 
       if (Changed)

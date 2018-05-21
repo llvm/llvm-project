@@ -277,9 +277,9 @@ define i32 @abs_of_min_of_not(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[YADD:%.*]] = add i32 [[Y:%.*]], 2
 ; CHECK-NEXT:    [[COND_I:%.*]] = icmp slt i32 [[YADD]], [[XORD]]
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[COND_I]], i32 [[YADD]], i32 [[XORD]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[MIN]], -1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[MIN]], 0
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[MIN]]
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP2]], i32 [[MIN]], i32 [[SUB]]
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP2]], i32 [[SUB]], i32 [[MIN]]
 ; CHECK-NEXT:    ret i32 [[ABS]]
 ;
 

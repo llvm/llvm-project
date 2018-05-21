@@ -1,13 +1,13 @@
 // RUN: echo "GPU binary would be here" > %t
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - \
-// RUN:   | FileCheck %s --check-prefixes=ALL,NORDC,CUDA
+// RUN:   | FileCheck %s --check-prefixes=ALL,NORDC,CUDA,CUDANORDC
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o -  -DNOGLOBALS \
-// RUN:   | FileCheck %s -check-prefix=NOGLOBALS
+// RUN:   | FileCheck %s -check-prefixes=NOGLOBALS,CUDANOGLOBALS
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-rdc -fcuda-include-gpubinary %t -o - \
-// RUN:   | FileCheck %s --check-prefixes=ALL,RDC,CUDA
+// RUN:   | FileCheck %s --check-prefixes=ALL,RDC,CUDA,CUDARDC
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - \
 // RUN:   | FileCheck %s -check-prefix=NOGPUBIN
 
@@ -16,10 +16,10 @@
 // RUN:   | FileCheck %s --check-prefixes=ALL,NORDC,HIP
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o -  -DNOGLOBALS -x hip \
-// RUN:   | FileCheck %s -check-prefix=NOGLOBALS
+// RUN:   | FileCheck %s -check-prefixes=NOGLOBALS,HIPNOGLOBALS
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-rdc -fcuda-include-gpubinary %t -o - -x hip \
-// RUN:   | FileCheck %s --check-prefixes=ALL,RDC,HIP
+// RUN:   | FileCheck %s --check-prefixes=ALL,RDC,HIP,HIPRDC
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - -x hip\
 // RUN:   | FileCheck %s -check-prefix=NOGPUBIN
 
@@ -64,21 +64,26 @@ void use_pointers() {
 // * constant unnamed string with the kernel name
 // ALL: private unnamed_addr constant{{.*}}kernelfunc{{.*}}\00"
 // * constant unnamed string with GPU binary
-// ALL: private unnamed_addr constant{{.*GPU binary would be here.*}}\00"
-// NORDC-SAME: section ".nv_fatbin", align 8
-// RDC-SAME: section "__nv_relfatbin", align 8
+// HIP: @[[FATBIN:__hip_fatbin]] = external constant i8, section ".hip_fatbin"
+// CUDA: @[[FATBIN:.*]] = private unnamed_addr constant{{.*GPU binary would be here.*}}\00",
+// CUDANORDC-SAME: section ".nv_fatbin", align 8
+// CUDARDC-SAME: section "__nv_relfatbin", align 8
 // * constant struct that wraps GPU binary
-// CUDA: @__[[PREFIX:cuda]]_fatbin_wrapper = internal constant
-// CUDA-SAME: { i32, i32, i8*, i8* }
-// HIP: @__[[PREFIX:hip]]_fatbin_wrapper = internal constant
-// HIP-SAME:  { i32, i32, i8*, i8* }
-// ALL-SAME: { i32 1180844977, i32 1, {{.*}}, i8* null }
-// ALL-SAME: section ".nvFatBinSegment"
+// ALL: @__[[PREFIX:cuda|hip]]_fatbin_wrapper = internal constant
+// ALL-SAME: { i32, i32, i8*, i8* }
+// CUDA-SAME: { i32 1180844977, i32 1,
+// HIP-SAME: { i32 1212764230, i32 1,
+// CUDA-SAME: i8* getelementptr inbounds ({{.*}}@[[FATBIN]], i64 0, i64 0),
+// HIP-SAME:  i8* @[[FATBIN]],
+// ALL-SAME: i8* null }
+// CUDA-SAME: section ".nvFatBinSegment"
+// HIP-SAME: section ".hipFatBinSegment"
 // * variable to save GPU binary handle after initialization
 // NORDC: @__[[PREFIX]]_gpubin_handle = internal global i8** null
 // * constant unnamed string with NVModuleID
 // RDC: [[MODULE_ID_GLOBAL:@.*]] = private unnamed_addr constant
-// RDC-SAME: c"[[MODULE_ID:.+]]\00", section "__nv_module_id", align 32
+// CUDARDC-SAME: c"[[MODULE_ID:.+]]\00", section "__nv_module_id", align 32
+// HIPRDC-SAME: c"[[MODULE_ID:.+]]\00", section "__hip_module_id", align 32
 // * Make sure our constructor was added to global ctor list.
 // ALL: @llvm.global_ctors = appending global {{.*}}@__[[PREFIX]]_module_ctor
 // * In separate mode we also register a destructor.
@@ -136,9 +141,10 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // There should be no __[[PREFIX]]_register_globals if we have no
 // device-side globals, but we still need to register GPU binary.
 // Skip GPU binary string first.
-// NOGLOBALS: @0 = private unnamed_addr constant{{.*}}
+// CUDANOGLOBALS: @{{.*}} = private unnamed_addr constant{{.*}}
+// HIPNOGLOBALS: @{{.*}} = external constant{{.*}}
 // NOGLOBALS-NOT: define internal void @__{{.*}}_register_globals
-// NOGLOBALS: define internal void @__[[PREFIX:.*]]_module_ctor
+// NOGLOBALS: define internal void @__[[PREFIX:cuda|hip]]_module_ctor
 // NOGLOBALS: call{{.*}}[[PREFIX]]RegisterFatBinary{{.*}}__[[PREFIX]]_fatbin_wrapper
 // NOGLOBALS-NOT: call void @__[[PREFIX]]_register_globals
 // NOGLOBALS: define internal void @__[[PREFIX]]_module_dtor

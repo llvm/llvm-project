@@ -1041,13 +1041,13 @@ let DecoderNamespace = "MicroMips" in {
                  TEQI_FM_MM<0x0a>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def TNEI_MM  : MMRel, TEQI_FT<"tnei", GPR32Opnd, II_TNEI>, TEQI_FM_MM<0x0c>,
                  ISA_MICROMIPS32_NOT_MIPS32R6;
-}
-let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
+
   /// Load-linked, Store-conditional
-  def LL_MM : LLBaseMM<"ll", GPR32Opnd>, LL_FM_MM<0x3>;
-  def SC_MM : SCBaseMM<"sc", GPR32Opnd>, LL_FM_MM<0xb>;
-}
-let DecoderNamespace = "MicroMips" in {
+  def LL_MM : LLBaseMM<"ll", GPR32Opnd>, LL_FM_MM<0x3>,
+              ISA_MICROMIPS32_NOT_MIPS32R6;
+  def SC_MM : SCBaseMM<"sc", GPR32Opnd>, LL_FM_MM<0xb>,
+              ISA_MICROMIPS32_NOT_MIPS32R6;
+
   def LLE_MM : MMRel, LLEBaseMM<"lle", GPR32Opnd>, LLE_FM_MM<0x6>,
                ISA_MICROMIPS, ASE_EVA;
   def SCE_MM : MMRel, SCEBaseMM<"sce", GPR32Opnd>, LLE_FM_MM<0xA>,

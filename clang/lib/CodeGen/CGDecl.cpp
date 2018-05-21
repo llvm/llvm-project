@@ -1244,17 +1244,30 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   return emission;
 }
 
+static bool isCapturedBy(const VarDecl &, const Expr *);
+
+/// Determines whether the given __block variable is potentially
+/// captured by the given statement.
+static bool isCapturedBy(const VarDecl &Var, const Stmt *S) {
+  if (const Expr *E = dyn_cast<Expr>(S))
+    return isCapturedBy(Var, E);
+  for (const Stmt *SubStmt : S->children())
+    if (isCapturedBy(Var, SubStmt))
+      return true;
+  return false;
+}
+
 /// Determines whether the given __block variable is potentially
 /// captured by the given expression.
-static bool isCapturedBy(const VarDecl &var, const Expr *e) {
+static bool isCapturedBy(const VarDecl &Var, const Expr *E) {
   // Skip the most common kinds of expressions that make
   // hierarchy-walking expensive.
-  e = e->IgnoreParenCasts();
+  E = E->IgnoreParenCasts();
 
-  if (const BlockExpr *be = dyn_cast<BlockExpr>(e)) {
-    const BlockDecl *block = be->getBlockDecl();
-    for (const auto &I : block->captures()) {
-      if (I.getVariable() == &var)
+  if (const BlockExpr *BE = dyn_cast<BlockExpr>(E)) {
+    const BlockDecl *Block = BE->getBlockDecl();
+    for (const auto &I : Block->captures()) {
+      if (I.getVariable() == &Var)
         return true;
     }
 
@@ -1262,19 +1275,19 @@ static bool isCapturedBy(const VarDecl &var, const Expr *e) {
     return false;
   }
 
-  if (const StmtExpr *SE = dyn_cast<StmtExpr>(e)) {
+  if (const StmtExpr *SE = dyn_cast<StmtExpr>(E)) {
     const CompoundStmt *CS = SE->getSubStmt();
     for (const auto *BI : CS->body())
-      if (const auto *E = dyn_cast<Expr>(BI)) {
-        if (isCapturedBy(var, E))
-            return true;
+      if (const auto *BIE = dyn_cast<Expr>(BI)) {
+        if (isCapturedBy(Var, BIE))
+          return true;
       }
       else if (const auto *DS = dyn_cast<DeclStmt>(BI)) {
           // special case declarations
           for (const auto *I : DS->decls()) {
               if (const auto *VD = dyn_cast<VarDecl>((I))) {
                 const Expr *Init = VD->getInit();
-                if (Init && isCapturedBy(var, Init))
+                if (Init && isCapturedBy(Var, Init))
                   return true;
               }
           }
@@ -1286,8 +1299,8 @@ static bool isCapturedBy(const VarDecl &var, const Expr *e) {
     return false;
   }
 
-  for (const Stmt *SubStmt : e->children())
-    if (isCapturedBy(var, cast<Expr>(SubStmt)))
+  for (const Stmt *SubStmt : E->children())
+    if (isCapturedBy(Var, SubStmt))
       return true;
 
   return false;

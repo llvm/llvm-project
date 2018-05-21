@@ -75,7 +75,7 @@ entry:
   %2 = bitcast %struct.A* %1 to i8***
   
 ; CHECK: %vtable = load {{.*}} !invariant.group
-  %vtable = load i8**, i8*** %2, align 8, !invariant.group !2
+  %vtable = load i8**, i8*** %2, align 8, !invariant.group !0
   %cmp.vtables = icmp eq i8** %vtable, getelementptr inbounds ([3 x i8*], [3 x i8*]* @_ZTV1A, i64 0, i64 2)
   call void @llvm.assume(i1 %cmp.vtables)
   
@@ -84,7 +84,7 @@ entry:
   %4 = bitcast %struct.A* %3 to void (%struct.A*)***
 
 ; CHECK: call void @_ZN1A3fooEv(
-  %vtable1 = load void (%struct.A*)**, void (%struct.A*)*** %4, align 8, !invariant.group !2
+  %vtable1 = load void (%struct.A*)**, void (%struct.A*)*** %4, align 8, !invariant.group !0
   %vfn = getelementptr inbounds void (%struct.A*)*, void (%struct.A*)** %vtable1, i64 0
   %5 = load void (%struct.A*)*, void (%struct.A*)** %vfn, align 8
   call void %5(%struct.A* %3)
@@ -92,7 +92,7 @@ entry:
   %7 = bitcast %struct.A* %6 to void (%struct.A*)***
 
 ; CHECK: call void @_ZN1A3fooEv(
-  %vtable2 = load void (%struct.A*)**, void (%struct.A*)*** %7, align 8, !invariant.group !2
+  %vtable2 = load void (%struct.A*)**, void (%struct.A*)*** %7, align 8, !invariant.group !0
   %vfn3 = getelementptr inbounds void (%struct.A*)*, void (%struct.A*)** %vtable2, i64 0
   %8 = load void (%struct.A*)*, void (%struct.A*)** %vfn3, align 8
   
@@ -100,13 +100,13 @@ entry:
   %9 = load %struct.A*, %struct.A** %a, align 8
   %10 = bitcast %struct.A* %9 to void (%struct.A*)***
   
-  %vtable4 = load void (%struct.A*)**, void (%struct.A*)*** %10, align 8, !invariant.group !2
+  %vtable4 = load void (%struct.A*)**, void (%struct.A*)*** %10, align 8, !invariant.group !0
   %vfn5 = getelementptr inbounds void (%struct.A*)*, void (%struct.A*)** %vtable4, i64 0
   %11 = load void (%struct.A*)*, void (%struct.A*)** %vfn5, align 8
 ; CHECK: call void @_ZN1A3fooEv(
   call void %11(%struct.A* %9)
  
-  %vtable5 = load i8**, i8*** %2, align 8, !invariant.group !2
+  %vtable5 = load i8**, i8*** %2, align 8, !invariant.group !0
   %vfn6 = getelementptr inbounds i8*, i8** %vtable5, i64 0
   %12 = bitcast i8** %vfn6 to void (%struct.A*)**
   %13 = load void (%struct.A*)*, void (%struct.A*)** %12, align 8
@@ -128,7 +128,7 @@ entry:
   %2 = bitcast %struct.A* %1 to i8***
   
 ; CHECK: %vtable = load {{.*}} !invariant.group
-  %vtable = load i8**, i8*** %2, align 8, !invariant.group !2
+  %vtable = load i8**, i8*** %2, align 8, !invariant.group !0
   %cmp.vtables = icmp eq i8** %vtable, getelementptr inbounds ([3 x i8*], [3 x i8*]* @_ZTV1A, i64 0, i64 2)
   
   store %struct.A* %1, %struct.A** %a, align 8
@@ -136,7 +136,7 @@ entry:
   %3 = load %struct.A*, %struct.A** %a, align 8
   %4 = bitcast %struct.A* %3 to void (%struct.A*)***
 
-  %vtable1 = load void (%struct.A*)**, void (%struct.A*)*** %4, align 8, !invariant.group !2
+  %vtable1 = load void (%struct.A*)**, void (%struct.A*)*** %4, align 8, !invariant.group !0
   %vfn = getelementptr inbounds void (%struct.A*)*, void (%struct.A*)** %vtable1, i64 0
   %5 = load void (%struct.A*)*, void (%struct.A*)** %vfn, align 8
   call void %5(%struct.A* %3)
@@ -153,7 +153,7 @@ enter:
 ; CHECK: %[[A:.*]] = load i8, i8* %ptr, !invariant.group
   %a = load i8, i8* %ptr, !invariant.group !0
 ; CHECK-NOT: load
-  %b = load i8, i8* %ptr, !invariant.group !1
+  %b = load i8, i8* %ptr, !invariant.group !0
 ; CHECK: call void @bar(i8 %[[A]])
   call void @bar(i8 %a)
 ; CHECK: call void @bar(i8 %[[A]])
@@ -170,7 +170,7 @@ enter:
 ; CHECK: %[[D:.*]] = load i8, i8* %ptr, !invariant.group
   %c = load i8, i8* %ptr
 ; CHECK-NOT: load
-  %d = load i8, i8* %ptr, !invariant.group !1
+  %d = load i8, i8* %ptr, !invariant.group !0
 ; CHECK: call void @bar(i8 %[[D]])
   call void @bar(i8 %c)
 ; CHECK: call void @bar(i8 %[[D]])
@@ -185,7 +185,7 @@ enter:
   store i8 42, i8* %ptr
   call void @foo(i8* %ptr)
 ; CHECK: %[[E:.*]] = load i8, i8* %ptr, !invariant.group
-  %e = load i8, i8* %ptr, !invariant.group !1
+  %e = load i8, i8* %ptr, !invariant.group !0
 ; CHECK-NOT: load
   %f = load i8, i8* %ptr
 ; CHECK: call void @bar(i8 %[[E]])
@@ -201,10 +201,10 @@ enter:
   %ptr = alloca i8
   store i8 42, i8* %ptr
   call void @foo(i8* %ptr)
-; CHECK: %[[E:.*]] = load i8, i8* %ptr, !invariant.group ![[OneMD:[0-9]]]
-  %e = load i8, i8* %ptr, !invariant.group !1
+; CHECK: %[[E:.*]] = load i8, i8* %ptr, !invariant.group
+  %e = load i8, i8* %ptr, !invariant.group !0
 ; CHECK-NOT: load
-  %f = load i8, i8* %ptr, !invariant.group !1
+  %f = load i8, i8* %ptr, !invariant.group !0
 ; CHECK: call void @bar(i8 %[[E]])
   call void @bar(i8 %e)
 ; CHECK: call void @bar(i8 %[[E]])
@@ -244,6 +244,7 @@ entry:
     %ptr = alloca i8
     store i8 42, i8* %ptr, !invariant.group !0
     %ptr2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
+; CHECK-NOT: load
     %a = load i8, i8* %ptr2, !invariant.group !0
     
 ; CHECK: ret i8 42
@@ -298,12 +299,7 @@ entry:
     %a = load i8, i8* %ptr, !invariant.group !0 ; Can assume that value under %ptr didn't change
 ; CHECK: call void @bar(i8 42)
     call void @bar(i8 %a)
-    
-    call void @foo(i8* %ptr)
-    %b = load i8, i8* %ptr, !invariant.group !1 ; Can't assume anything, because group changed
-; CHECK: call void @bar(i8 %b)
-    call void @bar(i8 %b)
-    
+
     %newPtr = call i8* @getPointer(i8* %ptr) 
     %c = load i8, i8* %newPtr, !invariant.group !0 ; Can't assume anything, because we only have information about %ptr
 ; CHECK: call void @bar(i8 %c)
@@ -448,7 +444,4 @@ declare void @llvm.assume(i1 %cmp.vtables) #0
 
 
 attributes #0 = { nounwind }
-; CHECK: ![[OneMD]] = !{!"other ptr"}
-!0 = !{!"magic ptr"}
-!1 = !{!"other ptr"}
-!2 = !{!"vtable_of_a"}
+!0 = !{}

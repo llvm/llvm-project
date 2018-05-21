@@ -257,6 +257,16 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
       dumpApplePropertyAttribute(OS, *OptVal);
   } else if (Attr == DW_AT_ranges) {
     const DWARFObject &Obj = Die.getDwarfUnit()->getContext().getDWARFObj();
+    // For DW_FORM_rnglistx we need to dump the offset separately, since
+    // we have only dumped the index so far.
+    Optional<DWARFFormValue> Value = Die.find(DW_AT_ranges);
+    if (Value && Value->getForm() == DW_FORM_rnglistx)
+      if (auto RangeListOffset =
+              U->getRnglistOffset(*Value->getAsSectionOffset())) {
+        DWARFFormValue FV(dwarf::DW_FORM_sec_offset);
+        FV.setUValue(*RangeListOffset);
+        FV.dump(OS, DumpOpts);
+      }
     dumpRanges(Obj, OS, Die.getAddressRanges(), U->getAddressByteSize(),
                sizeof(BaseIndent) + Indent + 4, DumpOpts);
   }
@@ -380,12 +390,11 @@ DWARFAddressRangesVector DWARFDie::getAddressRanges() const {
   if (getLowAndHighPC(LowPC, HighPC, Index))
     return {{LowPC, HighPC, Index}};
 
-  // Multiple ranges from .debug_ranges section.
-  auto RangesOffset = toSectionOffset(find(DW_AT_ranges));
-  if (RangesOffset) {
-    DWARFDebugRangeList RangeList;
-    if (U->extractRangeList(*RangesOffset, RangeList))
-      return RangeList.getAbsoluteRanges(U->getBaseAddress());
+  Optional<DWARFFormValue> Value = find(DW_AT_ranges);
+  if (Value) {
+    if (Value->getForm() == DW_FORM_rnglistx)
+      return U->findRnglistFromIndex(*Value->getAsSectionOffset());
+    return U->findRnglistFromOffset(*Value->getAsSectionOffset());
   }
   return DWARFAddressRangesVector();
 }

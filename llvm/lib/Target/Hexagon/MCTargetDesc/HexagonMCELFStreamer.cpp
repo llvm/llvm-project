@@ -25,6 +25,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -47,15 +48,15 @@ static cl::opt<unsigned> GPSize
 
 HexagonMCELFStreamer::HexagonMCELFStreamer(
     MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
-    raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter)
-    : MCELFStreamer(Context, std::move(TAB), OS, std::move(Emitter)),
+    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter)
+    : MCELFStreamer(Context, std::move(TAB), std::move(OW), std::move(Emitter)),
       MCII(createHexagonMCInstrInfo()) {}
 
 HexagonMCELFStreamer::HexagonMCELFStreamer(
     MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
-    raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter,
+    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
     MCAssembler *Assembler)
-    : MCELFStreamer(Context, std::move(TAB), OS, std::move(Emitter)),
+    : MCELFStreamer(Context, std::move(TAB), std::move(OW), std::move(Emitter)),
       MCII(createHexagonMCInstrInfo()) {}
 
 void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCB,
@@ -151,9 +152,10 @@ void HexagonMCELFStreamer::HexagonMCEmitLocalCommonSymbol(MCSymbol *Symbol,
 namespace llvm {
 MCStreamer *createHexagonELFStreamer(Triple const &TT, MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> MAB,
-                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCObjectWriter> OW,
                                      std::unique_ptr<MCCodeEmitter> CE) {
-  return new HexagonMCELFStreamer(Context, std::move(MAB), OS, std::move(CE));
+  return new HexagonMCELFStreamer(Context, std::move(MAB), std::move(OW),
+                                  std::move(CE));
   }
 
 } // end namespace llvm

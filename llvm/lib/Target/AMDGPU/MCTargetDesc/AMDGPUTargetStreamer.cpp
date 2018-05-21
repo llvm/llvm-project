@@ -298,7 +298,7 @@ void AMDGPUTargetELFStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
                                                    unsigned Type) {
   MCSymbolELF *Symbol = cast<MCSymbolELF>(
       getStreamer().getContext().getOrCreateSymbol(SymbolName));
-  Symbol->setType(ELF::STT_AMDGPU_HSA_KERNEL);
+  Symbol->setType(Type);
 }
 
 bool AMDGPUTargetELFStreamer::EmitISAVersion(StringRef IsaVersionString) {

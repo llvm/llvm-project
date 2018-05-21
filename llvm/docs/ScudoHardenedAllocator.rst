@@ -18,7 +18,8 @@ Currently, the allocator supports (was tested on) the following architectures:
 - i386 (& i686) (32-bit);
 - x86_64 (64-bit);
 - armhf (32-bit);
-- AArch64 (64-bit).
+- AArch64 (64-bit);
+- MIPS (32-bit & 64-bit).
 
 The name "Scudo" has been retained from the initial implementation (Escudo
 meaning Shield in Spanish and Portuguese).
@@ -87,7 +88,7 @@ Randomness
 ----------
 It is important for the allocator to not make use of fixed addresses. We use
 the dynamic base option for the SizeClassAllocator, allowing us to benefit
-from the randomness of mmap.
+from the randomness of the system memory mapping functions.
 
 Usage
 =====
@@ -111,14 +112,14 @@ You may also build Scudo like this:
 
   cd $LLVM/projects/compiler-rt/lib
   clang++ -fPIC -std=c++11 -msse4.2 -O2 -I. scudo/*.cpp \
-    $(\ls sanitizer_common/*.{cc,S} | grep -v "sanitizer_termination\|sanitizer_common_nolibc") \
-    -shared -o scudo-allocator.so -pthread
+    $(\ls sanitizer_common/*.{cc,S} | grep -v "sanitizer_termination\|sanitizer_common_nolibc\|sancov_\|sanitizer_unwind\|sanitizer_symbol") \
+    -shared -o libscudo.so -pthread
 
 and then use it with existing binaries as follows:
 
 .. code::
 
-  LD_PRELOAD=`pwd`/scudo-allocator.so ./a.out
+  LD_PRELOAD=`pwd`/libscudo.so ./a.out
 
 Clang
 -----
@@ -130,15 +131,20 @@ Scudo will also enforce PIE for the output binary.
 
 Options
 -------
-Several aspects of the allocator can be configured through the following ways:
+Several aspects of the allocator can be configured on a per process basis
+through the following ways:
+
+- at compile time, by defining ``SCUDO_DEFAULT_OPTIONS`` to the options string
+  you want set by default;
 
 - by defining a ``__scudo_default_options`` function in one's program that
   returns the options string to be parsed. Said function must have the following
-  prototype: ``extern "C" const char* __scudo_default_options(void)``.
+  prototype: ``extern "C" const char* __scudo_default_options(void)``, with a
+  default visibility. This will override the compile time define;
 
 - through the environment variable SCUDO_OPTIONS, containing the options string
   to be parsed. Options defined this way will override any definition made
-  through ``__scudo_default_options``;
+  through ``__scudo_default_options``.
 
 The options string follows a syntax similar to ASan, where distinct options
 can be assigned in the same string, separated by colons.
@@ -167,7 +173,9 @@ The following options are available:
 |                             |                |                | the actual deallocation of chunks. Lower value |
 |                             |                |                | may reduce memory usage but decrease the       |
 |                             |                |                | effectiveness of the mitigation; a negative    |
-|                             |                |                | value will fallback to the defaults.           |
+|                             |                |                | value will fallback to the defaults. Setting   |
+|                             |                |                | *both* this and ThreadLocalQuarantineSizeKb to |
+|                             |                |                | zero will disable the quarantine entirely.     |
 +-----------------------------+----------------+----------------+------------------------------------------------+
 | QuarantineChunksUpToSize    | 2048           | 512            | Size (in bytes) up to which chunks can be      |
 |                             |                |                | quarantined.                                   |
@@ -175,7 +183,9 @@ The following options are available:
 | ThreadLocalQuarantineSizeKb | 1024           | 256            | The size (in Kb) of per-thread cache use to    |
 |                             |                |                | offload the global quarantine. Lower value may |
 |                             |                |                | reduce memory usage but might increase         |
-|                             |                |                | contention on the global quarantine.           |
+|                             |                |                | contention on the global quarantine. Setting   |
+|                             |                |                | *both* this and QuarantineSizeKb to zero will  |
+|                             |                |                | disable the quarantine entirely.               |
 +-----------------------------+----------------+----------------+------------------------------------------------+
 | DeallocationTypeMismatch    | true           | true           | Whether or not we report errors on             |
 |                             |                |                | malloc/delete, new/free, new/delete[], etc.    |
@@ -188,7 +198,6 @@ The following options are available:
 +-----------------------------+----------------+----------------+------------------------------------------------+
 
 Allocator related common Sanitizer options can also be passed through Scudo
-options, such as ``allocator_may_return_null``. A detailed list including those
-can be found here:
+options, such as ``allocator_may_return_null`` or ``abort_on_error``. A detailed
+list including those can be found here:
 https://github.com/google/sanitizers/wiki/SanitizerCommonFlags.
-

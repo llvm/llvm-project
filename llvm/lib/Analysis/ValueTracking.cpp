@@ -1953,9 +1953,12 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
       if (LI->getMetadata(LLVMContext::MD_nonnull))
         return true;
 
-    if (auto CS = ImmutableCallSite(V))
+    if (auto CS = ImmutableCallSite(V)) {
       if (CS.isReturnNonNull())
         return true;
+      if (CS.getIntrinsicID() == Intrinsic::ID::launder_invariant_group)
+        return isKnownNonZero(CS->getOperand(0), Depth + 1, Q);
+    }
   }
 
   // The remaining tests are all recursive, so bail out if we hit the limit.
