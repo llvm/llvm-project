@@ -2498,7 +2498,7 @@ static bool SimplifyCondBranchToTwoReturns(BranchInst *BI,
 
 /// Return true if the given instruction is available
 /// in its predecessor block. If yes, the instruction will be removed.
-static bool checkCSEInPredecessor(Instruction *Inst, BasicBlock *PB) {
+static bool tryCSEWithPredecessor(Instruction *Inst, BasicBlock *PB) {
   if (!isa<BinaryOperator>(Inst) && !isa<CmpInst>(Inst))
     return false;
   for (Instruction &I : *PB) {
@@ -2555,14 +2555,16 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
         if (PBI->isConditional() &&
             (BI->getSuccessor(0) == PBI->getSuccessor(0) ||
              BI->getSuccessor(0) == PBI->getSuccessor(1))) {
-          for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
+          for (auto I = BB->instructionsWithoutDebug().begin(),
+                    E = BB->instructionsWithoutDebug().end();
+               I != E;) {
             Instruction *Curr = &*I++;
             if (isa<CmpInst>(Curr)) {
               Cond = Curr;
               break;
             }
             // Quit if we can't remove this instruction.
-            if (!checkCSEInPredecessor(Curr, PB))
+            if (!tryCSEWithPredecessor(Curr, PB))
               return false;
           }
         }

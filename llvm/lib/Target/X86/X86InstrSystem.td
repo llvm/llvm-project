@@ -450,7 +450,8 @@ def WBNOINVD : I<0x09, RawFrm, (outs), (ins), "wbnoinvd",
 
 //===----------------------------------------------------------------------===//
 // CET instructions
-let SchedRW = [WriteSystem], Predicates = [HasSHSTK]  in{
+// Use with caution, availability is not predicated on features.
+let SchedRW = [WriteSystem] in {
   let Uses = [SSP] in {
     let Defs = [SSP] in {
       def INCSSPD : I<0xAE, MRM5r, (outs), (ins GR32:$src), "incsspd\t$src",
@@ -500,12 +501,12 @@ let SchedRW = [WriteSystem], Predicates = [HasSHSTK]  in{
                      "clrssbsy\t$src",
                      [(int_x86_clrssbsy addr:$src)]>, XS;
   } // Defs SSP
-} // SchedRW && HasSHSTK
+} // SchedRW
 
-let SchedRW = [WriteSystem], Predicates = [HasIBT]  in {
+let SchedRW = [WriteSystem] in {
     def ENDBR64 : I<0x1E, MRM_FA, (outs), (ins), "endbr64", []>, XS;
     def ENDBR32 : I<0x1E, MRM_FB, (outs), (ins), "endbr32", []>, XS;
-} // SchedRW && HasIBT
+} // SchedRW
 
 //===----------------------------------------------------------------------===//
 // XSAVE instructions

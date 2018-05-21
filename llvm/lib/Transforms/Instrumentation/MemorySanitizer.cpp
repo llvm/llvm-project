@@ -1841,7 +1841,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitSub(BinaryOperator &I) { handleShadowOr(I); }
   void visitXor(BinaryOperator &I) { handleShadowOr(I); }
 
-  void handleDiv(Instruction &I) {
+  void handleIntegerDiv(Instruction &I) {
     IRBuilder<> IRB(&I);
     // Strict on the second argument.
     insertShadowCheck(I.getOperand(1), &I);
@@ -1849,12 +1849,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
-  void visitUDiv(BinaryOperator &I) { handleDiv(I); }
-  void visitSDiv(BinaryOperator &I) { handleDiv(I); }
-  void visitFDiv(BinaryOperator &I) { handleDiv(I); }
-  void visitURem(BinaryOperator &I) { handleDiv(I); }
-  void visitSRem(BinaryOperator &I) { handleDiv(I); }
-  void visitFRem(BinaryOperator &I) { handleDiv(I); }
+  void visitUDiv(BinaryOperator &I) { handleIntegerDiv(I); }
+  void visitSDiv(BinaryOperator &I) { handleIntegerDiv(I); }
+  void visitURem(BinaryOperator &I) { handleIntegerDiv(I); }
+  void visitSRem(BinaryOperator &I) { handleIntegerDiv(I); }
+
+  // Floating point division is side-effect free. We can not require that the
+  // divisor is fully initialized and must propagate shadow. See PR37523.
+  void visitFDiv(BinaryOperator &I) { handleShadowOr(I); }
+  void visitFRem(BinaryOperator &I) { handleShadowOr(I); }
 
   /// Instrument == and != comparisons.
   ///

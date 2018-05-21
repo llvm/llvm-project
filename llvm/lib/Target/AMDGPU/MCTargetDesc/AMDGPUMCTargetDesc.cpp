@@ -22,6 +22,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -81,10 +82,10 @@ static MCTargetStreamer * createAMDGPUObjectTargetStreamer(
 
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
-                                    raw_pwrite_stream &OS,
+                                    std::unique_ptr<MCObjectWriter> &&OW,
                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
                                     bool RelaxAll) {
-  return createAMDGPUELFStreamer(T, Context, std::move(MAB), OS,
+  return createAMDGPUELFStreamer(T, Context, std::move(MAB), std::move(OW),
                                  std::move(Emitter), RelaxAll);
 }
 

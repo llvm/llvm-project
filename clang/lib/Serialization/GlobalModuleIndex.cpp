@@ -703,7 +703,7 @@ public:
   std::pair<unsigned,unsigned>
   EmitKeyDataLength(raw_ostream& Out, key_type_ref Key, data_type_ref Data) {
     using namespace llvm::support;
-    endian::Writer<little> LE(Out);
+    endian::Writer LE(Out, little);
     unsigned KeyLen = Key.size();
     unsigned DataLen = Data.size() * 4;
     LE.write<uint16_t>(KeyLen);
@@ -719,7 +719,7 @@ public:
                 unsigned DataLen) {
     using namespace llvm::support;
     for (unsigned I = 0, N = Data.size(); I != N; ++I)
-      endian::Writer<little>(Out).write<uint32_t>(Data[I]);
+      endian::write<uint32_t>(Out, Data[I], little);
   }
 };
 
@@ -797,7 +797,7 @@ bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
       using namespace llvm::support;
       llvm::raw_svector_ostream Out(IdentifierTable);
       // Make sure that no bucket is at offset 0
-      endian::Writer<little>(Out).write<uint32_t>(0);
+      endian::write<uint32_t>(Out, 0, little);
       BucketOffset = Generator.Emit(Out, Trait);
     }
 

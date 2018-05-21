@@ -197,7 +197,8 @@ const MCSymbol *MCAssembler::getAtom(const MCSymbol &S) const {
 
 bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
                                 const MCFixup &Fixup, const MCFragment *DF,
-                                MCValue &Target, uint64_t &Value) const {
+                                MCValue &Target, uint64_t &Value,
+                                bool &WasForced) const {
   ++stats::evaluateFixup;
 
   // FIXME: This code has some duplication with recordRelocation. We should
@@ -209,6 +210,7 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
   const MCExpr *Expr = Fixup.getValue();
   MCContext &Ctx = getContext();
   Value = 0;
+  WasForced = false;
   if (!Expr->evaluateAsRelocatable(Target, &Layout, &Fixup)) {
     Ctx.reportError(Fixup.getLoc(), "expected relocatable expression");
     return true;
@@ -273,8 +275,10 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
   }
 
   // Let the backend force a relocation if needed.
-  if (IsResolved && getBackend().shouldForceRelocation(*this, Fixup, Target))
+  if (IsResolved && getBackend().shouldForceRelocation(*this, Fixup, Target)) {
     IsResolved = false;
+    WasForced = true;
+  }
 
   return IsResolved;
 }
@@ -291,10 +295,13 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
     return cast<MCCompactEncodedInstFragment>(F).getContents().size();
   case MCFragment::FT_Fill: {
     auto &FF = cast<MCFillFragment>(F);
-    int64_t Size = 0;
-    if (!FF.getSize().evaluateAsAbsolute(Size, Layout))
+    int64_t NumValues = 0;
+    if (!FF.getNumValues().evaluateAsAbsolute(NumValues, Layout)) {
       getContext().reportError(FF.getLoc(),
                                "expected assembly-time absolute expression");
+      return 0;
+    }
+    int64_t Size = NumValues * FF.getValueSize();
     if (Size < 0) {
       getContext().reportError(FF.getLoc(), "invalid number of bytes");
       return 0;
@@ -553,19 +560,35 @@ static void writeFragment(const MCAssembler &Asm, const MCAsmLayout &Layout,
   case MCFragment::FT_Fill: {
     ++stats::EmittedFillFragments;
     const MCFillFragment &FF = cast<MCFillFragment>(F);
-    uint8_t V = FF.getValue();
+    uint64_t V = FF.getValue();
+    unsigned VSize = FF.getValueSize();
     const unsigned MaxChunkSize = 16;
     char Data[MaxChunkSize];
-    memcpy(Data, &V, 1);
-    for (unsigned I = 1; I < MaxChunkSize; ++I)
-      Data[I] = Data[0];
+    // Duplicate V into Data as byte vector to reduce number of
+    // writes done. As such, do endian conversion here, not in OW.
+    const bool isLittleEndian = Asm.getContext().getAsmInfo()->isLittleEndian();
+    for (unsigned I = 0; I != VSize; ++I) {
+      unsigned index = isLittleEndian ? I : (VSize - I - 1);
+      Data[I] = uint8_t(V >> (index * 8));
+    }
+    for (unsigned I = VSize; I < MaxChunkSize; ++I)
+      Data[I] = Data[I - VSize];
 
-    uint64_t Size = FragmentSize;
-    for (unsigned ChunkSize = MaxChunkSize; ChunkSize; ChunkSize /= 2) {
-      StringRef Ref(Data, ChunkSize);
-      for (uint64_t I = 0, E = Size / ChunkSize; I != E; ++I)
-        OW->writeBytes(Ref);
-      Size = Size % ChunkSize;
+    // Set to largest multiple of VSize in Data.
+    const unsigned NumPerChunk = MaxChunkSize / VSize;
+    // Set ChunkSize to largest multiple of VSize in Data
+    const unsigned ChunkSize = VSize * NumPerChunk;
+
+    // Do copies by chunk.
+    StringRef Ref(Data, ChunkSize);
+    for (uint64_t I = 0, E = FragmentSize / ChunkSize; I != E; ++I)
+      OW->writeBytes(Ref);
+
+    // do remainder if needed.
+    unsigned TrailingCount = FragmentSize % ChunkSize;
+    if (TrailingCount) {
+      StringRef RefTail(Data, TrailingCount);
+      OW->writeBytes(RefTail);
     }
     break;
   }
@@ -689,7 +712,9 @@ MCAssembler::handleFixup(const MCAsmLayout &Layout, MCFragment &F,
   // Evaluate the fixup.
   MCValue Target;
   uint64_t FixedValue;
-  bool IsResolved = evaluateFixup(Layout, Fixup, &F, Target, FixedValue);
+  bool WasForced;
+  bool IsResolved = evaluateFixup(Layout, Fixup, &F, Target, FixedValue,
+                                  WasForced);
   if (!IsResolved) {
     // The fixup was unresolved, we need a relocation. Inform the object
     // writer of the relocation, and give it an opportunity to adjust the
@@ -804,13 +829,14 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   assert(getBackendPtr() && "Expected assembler backend");
   MCValue Target;
   uint64_t Value;
-  bool Resolved = evaluateFixup(Layout, Fixup, DF, Target, Value);
+  bool WasForced;
+  bool Resolved = evaluateFixup(Layout, Fixup, DF, Target, Value, WasForced);
   if (Target.getSymA() &&
       Target.getSymA()->getKind() == MCSymbolRefExpr::VK_X86_ABS8 &&
       Fixup.getKind() == FK_Data_1)
     return false;
   return getBackend().fixupNeedsRelaxationAdvanced(Fixup, Resolved, Value, DF,
-                                                   Layout);
+                                                   Layout, WasForced);
 }
 
 bool MCAssembler::fragmentNeedsRelaxation(const MCRelaxableFragment *F,

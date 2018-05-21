@@ -252,6 +252,8 @@ def  : WriteRes<WriteVecMaskedStoreY, [SLM_MEC_RSV]>;
 def  : WriteRes<WriteVecMove,         [SLM_FPC_RSV01]>;
 def  : WriteRes<WriteVecMoveX,        [SLM_FPC_RSV01]>;
 def  : WriteRes<WriteVecMoveY,        [SLM_FPC_RSV01]>;
+def  : WriteRes<WriteVecMoveToGpr,    [SLM_IEC_RSV01]>;
+def  : WriteRes<WriteVecMoveFromGpr,  [SLM_IEC_RSV01]>;
 
 defm : SLMWriteResPair<WriteVecShift,    [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecShiftX,   [SLM_FPC_RSV0],  1>;

@@ -48,9 +48,10 @@ namespace llvm {
 // back patching.
 class ProfOStream {
 public:
-  ProfOStream(raw_fd_ostream &FD) : IsFDOStream(true), OS(FD), LE(FD) {}
+  ProfOStream(raw_fd_ostream &FD)
+      : IsFDOStream(true), OS(FD), LE(FD, support::little) {}
   ProfOStream(raw_string_ostream &STR)
-      : IsFDOStream(false), OS(STR), LE(STR) {}
+      : IsFDOStream(false), OS(STR), LE(STR, support::little) {}
 
   uint64_t tell() { return OS.tell(); }
   void write(uint64_t V) { LE.write<uint64_t>(V); }
@@ -85,7 +86,7 @@ public:
   // true. Otherwise, \c OS will be an raw_string_ostream.
   bool IsFDOStream;
   raw_ostream &OS;
-  support::endian::Writer<support::little> LE;
+  support::endian::Writer LE;
 };
 
 class InstrProfRecordWriterTrait {
@@ -112,7 +113,7 @@ public:
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     using namespace support;
 
-    endian::Writer<little> LE(Out);
+    endian::Writer LE(Out, little);
 
     offset_type N = K.size();
     LE.write<offset_type>(N);
@@ -139,7 +140,7 @@ public:
   void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V, offset_type) {
     using namespace support;
 
-    endian::Writer<little> LE(Out);
+    endian::Writer LE(Out, little);
     for (const auto &ProfileData : *V) {
       const InstrProfRecord &ProfRecord = ProfileData.second;
       SummaryBuilder->addRecord(ProfRecord);

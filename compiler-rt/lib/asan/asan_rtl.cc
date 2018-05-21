@@ -56,7 +56,8 @@ static void AsanDie() {
       UnmapOrDie((void*)kLowShadowBeg, kMidMemBeg - kLowShadowBeg);
       UnmapOrDie((void*)kMidMemEnd, kHighShadowEnd - kMidMemEnd);
     } else {
-      UnmapOrDie((void*)kLowShadowBeg, kHighShadowEnd - kLowShadowBeg);
+      if (kHighShadowEnd)
+        UnmapOrDie((void*)kLowShadowBeg, kHighShadowEnd - kLowShadowBeg);
     }
   }
 }
@@ -140,6 +141,8 @@ ASAN_REPORT_ERROR_N(load, false)
 ASAN_REPORT_ERROR_N(store, true)
 
 #define ASAN_MEMORY_ACCESS_CALLBACK_BODY(type, is_write, size, exp_arg, fatal) \
+    if (SANITIZER_MYRIAD2 && !AddrIsInMem(addr) && !AddrIsInShadow(addr))      \
+      return;                                                                  \
     uptr sp = MEM_TO_SHADOW(addr);                                             \
     uptr s = size <= SHADOW_GRANULARITY ? *reinterpret_cast<u8 *>(sp)          \
                                         : *reinterpret_cast<u16 *>(sp);        \
@@ -306,6 +309,7 @@ static void asan_atexit() {
 }
 
 static void InitializeHighMemEnd() {
+#if !SANITIZER_MYRIAD2
 #if !ASAN_FIXED_MAPPING
   kHighMemEnd = GetMaxUserVirtualAddress();
   // Increase kHighMemEnd to make sure it's properly
@@ -313,13 +317,16 @@ static void InitializeHighMemEnd() {
   kHighMemEnd |= SHADOW_GRANULARITY * GetMmapGranularity() - 1;
 #endif  // !ASAN_FIXED_MAPPING
   CHECK_EQ((kHighMemBeg % GetMmapGranularity()), 0);
+#endif  // !SANITIZER_MYRIAD2
 }
 
 void PrintAddressSpaceLayout() {
-  Printf("|| `[%p, %p]` || HighMem    ||\n",
-         (void*)kHighMemBeg, (void*)kHighMemEnd);
-  Printf("|| `[%p, %p]` || HighShadow ||\n",
-         (void*)kHighShadowBeg, (void*)kHighShadowEnd);
+  if (kHighMemBeg) {
+    Printf("|| `[%p, %p]` || HighMem    ||\n",
+           (void*)kHighMemBeg, (void*)kHighMemEnd);
+    Printf("|| `[%p, %p]` || HighShadow ||\n",
+           (void*)kHighShadowBeg, (void*)kHighShadowEnd);
+  }
   if (kMidMemBeg) {
     Printf("|| `[%p, %p]` || ShadowGap3 ||\n",
            (void*)kShadowGap3Beg, (void*)kShadowGap3End);
@@ -338,11 +345,14 @@ void PrintAddressSpaceLayout() {
     Printf("|| `[%p, %p]` || LowMem     ||\n",
            (void*)kLowMemBeg, (void*)kLowMemEnd);
   }
-  Printf("MemToShadow(shadow): %p %p %p %p",
+  Printf("MemToShadow(shadow): %p %p",
          (void*)MEM_TO_SHADOW(kLowShadowBeg),
-         (void*)MEM_TO_SHADOW(kLowShadowEnd),
-         (void*)MEM_TO_SHADOW(kHighShadowBeg),
-         (void*)MEM_TO_SHADOW(kHighShadowEnd));
+         (void*)MEM_TO_SHADOW(kLowShadowEnd));
+  if (kHighMemBeg) {
+    Printf(" %p %p",
+           (void*)MEM_TO_SHADOW(kHighShadowBeg),
+           (void*)MEM_TO_SHADOW(kHighShadowEnd));
+  }
   if (kMidMemBeg) {
     Printf(" %p %p",
            (void*)MEM_TO_SHADOW(kMidShadowBeg),

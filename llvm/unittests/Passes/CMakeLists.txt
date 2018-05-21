@@ -9,10 +9,14 @@ if (LLVM_ENABLE_PLUGINS)
   add_definitions(-DLLVM_ENABLE_PLUGINS)
 endif()
 
-add_llvm_unittest(PluginsTests PluginsTest.cpp)
+add_llvm_unittest(PluginsTests
+  PluginsTest.cpp
+  )
 export_executable_symbols(PluginsTests)
 
-add_library(TestPlugin MODULE TestPlugin.cpp)
+add_library(TestPlugin MODULE
+  TestPlugin.cpp
+  )
 
 set_output_directory(TestPlugin
   BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}

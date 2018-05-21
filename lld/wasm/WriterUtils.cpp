@@ -70,7 +70,7 @@ void wasm::writeU8(raw_ostream &OS, uint8_t Byte, const Twine &Msg) {
 
 void wasm::writeU32(raw_ostream &OS, uint32_t Number, const Twine &Msg) {
   debugWrite(OS.tell(), Msg + "[0x" + utohexstr(Number) + "]");
-  support::endian::Writer<support::little>(OS).write(Number);
+  support::endian::write(OS, Number, support::little);
 }
 
 void wasm::writeValueType(raw_ostream &OS, uint8_t Type, const Twine &Msg) {

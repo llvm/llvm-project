@@ -120,6 +120,7 @@ bool CGPassManager::RunPassOnSCC(Pass *P, CallGraphSCC &CurSCC,
                                  bool &DevirtualizedCall) {
   bool Changed = false;
   PMDataManager *PM = P->getAsPMDataManager();
+  Module &M = CG.getModule();
 
   if (!PM) {
     CallGraphSCCPass *CGSP = (CallGraphSCCPass*)P;
@@ -130,7 +131,12 @@ bool CGPassManager::RunPassOnSCC(Pass *P, CallGraphSCC &CurSCC,
 
     {
       TimeRegion PassTimer(getPassTimer(CGSP));
+      unsigned InstrCount = initSizeRemarkInfo(M);
       Changed = CGSP->runOnSCC(CurSCC);
+
+      // If the pass modified the module, it may have modified the instruction
+      // count of the module. Try emitting a remark.
+      emitInstrCountChangedRemark(P, M, InstrCount);
     }
     
     // After the CGSCCPass is done, when assertions are enabled, use

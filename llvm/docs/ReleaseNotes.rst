@@ -109,6 +109,8 @@ Changes to the LLVM IR
 
 * invariant.group.barrier has been renamed to launder.invariant.group.
 
+* invariant.group metadata can now refer only empty metadata nodes.
+
 Changes to the ARM Backend
 --------------------------
 

@@ -95,7 +95,7 @@ MCTargetStreamer *createX86ObjectTargetStreamer(MCStreamer &OS,
 /// Takes ownership of \p AB and \p CE.
 MCStreamer *createX86WinCOFFStreamer(MCContext &C,
                                      std::unique_ptr<MCAsmBackend> &&AB,
-                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&CE,
                                      bool RelaxAll,
                                      bool IncrementalLinkerCompatible);

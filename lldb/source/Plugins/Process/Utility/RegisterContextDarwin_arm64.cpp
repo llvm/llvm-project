@@ -8,14 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__APPLE__)
-
 #include "RegisterContextDarwin_arm64.h"
-
-// C Includes
-#include <mach/mach_types.h>
-#include <mach/thread_act.h>
-#include <sys/sysctl.h>
+#include "RegisterContextDarwinConstants.h"
 
 // C++ Includes
 // Other libraries and framework includes
@@ -39,7 +33,7 @@
 #endif
 
 // Project includes
-#include "ARM64_DWARF_Registers.h"
+#include "Utility/ARM64_DWARF_Registers.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -299,8 +293,9 @@ int RegisterContextDarwin_arm64::WriteRegisterSet(uint32_t set) {
 void RegisterContextDarwin_arm64::LogDBGRegisters(Log *log, const DBG &dbg) {
   if (log) {
     for (uint32_t i = 0; i < 16; i++)
-      log->Printf("BVR%-2u/BCR%-2u = { 0x%8.8llx, 0x%8.8llx } WVR%-2u/WCR%-2u "
-                  "= { 0x%8.8llx, 0x%8.8llx }",
+      log->Printf("BVR%-2u/BCR%-2u = { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64
+                  " } WVR%-2u/WCR%-2u "
+                  "= { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64 " }",
                   i, i, dbg.bvr[i], dbg.bcr[i], i, i, dbg.wvr[i], dbg.wcr[i]);
   }
 }
@@ -921,7 +916,7 @@ uint32_t RegisterContextDarwin_arm64::ConvertRegisterKindToRegisterNumber(
 }
 
 uint32_t RegisterContextDarwin_arm64::NumSupportedHardwareWatchpoints() {
-#if defined(__arm64__) || defined(__aarch64__)
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
   // autodetect how many watchpoints are supported dynamically...
   static uint32_t g_num_supported_hw_watchpoints = UINT32_MAX;
   if (g_num_supported_hw_watchpoints == UINT32_MAX) {
@@ -1043,5 +1038,3 @@ bool RegisterContextDarwin_arm64::ClearHardwareWatchpoint(uint32_t hw_index) {
   }
   return false;
 }
-
-#endif

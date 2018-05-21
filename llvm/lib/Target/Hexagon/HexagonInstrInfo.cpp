@@ -2585,6 +2585,8 @@ bool HexagonInstrInfo::isValidAutoIncImm(const EVT VT, int Offset) const {
     case MVT::i16:
     case MVT::i32:
     case MVT::i64:
+    case MVT::f32:
+    case MVT::f64:
     case MVT::v2i16:
     case MVT::v2i32:
     case MVT::v4i8:

@@ -11,7 +11,7 @@ enter:
   %val = load i8, i8* @tmp, !invariant.group !0, !tbaa !{!1, !1, i64 0}
   %ptr = call i8* @llvm.launder.invariant.group.p0i8(i8* @tmp)
   
-  ; CHECK: store i8 42, i8* @tmp
+  ; CHECK: store i8 42, i8* @tmp{{$}}
   store i8 42, i8* %ptr, !invariant.group !0
   
   ret void
@@ -20,5 +20,5 @@ enter:
 
 declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 
-!0 = !{!"something"}
+!0 = !{}
 !1 = !{!"x", !0}

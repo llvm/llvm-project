@@ -58,7 +58,8 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
 bool MCAsmBackend::fixupNeedsRelaxationAdvanced(
     const MCFixup &Fixup, bool Resolved, uint64_t Value,
-    const MCRelaxableFragment *DF, const MCAsmLayout &Layout) const {
+    const MCRelaxableFragment *DF, const MCAsmLayout &Layout,
+    const bool WasForced) const {
   if (!Resolved)
     return true;
   return fixupNeedsRelaxation(Fixup, Value, DF, Layout);

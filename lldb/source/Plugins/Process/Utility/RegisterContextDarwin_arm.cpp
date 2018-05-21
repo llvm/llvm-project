@@ -7,13 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__APPLE__)
-
 #include "RegisterContextDarwin_arm.h"
-
-// C Includes
-#include <mach/mach_types.h>
-#include <mach/thread_act.h>
+#include "RegisterContextDarwinConstants.h"
 
 // C++ Includes
 // Other libraries and framework includes
@@ -34,7 +29,7 @@
 #endif
 
 // Project includes
-#include "ARM_DWARF_Registers.h"
+#include "Utility/ARM_DWARF_Registers.h"
 #include "Utility/ARM_ehframe_Registers.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -1510,7 +1505,7 @@ uint32_t RegisterContextDarwin_arm::ConvertRegisterKindToRegisterNumber(
 }
 
 uint32_t RegisterContextDarwin_arm::NumSupportedHardwareBreakpoints() {
-#if defined(__arm__)
+#if defined(__APPLE__) && defined(__arm__)
   // Set the init value to something that will let us know that we need to
   // autodetect how many breakpoints are supported dynamically...
   static uint32_t g_num_supported_hw_breakpoints = UINT32_MAX;
@@ -1642,7 +1637,7 @@ bool RegisterContextDarwin_arm::ClearHardwareBreakpoint(uint32_t hw_index) {
 }
 
 uint32_t RegisterContextDarwin_arm::NumSupportedHardwareWatchpoints() {
-#if defined(__arm__)
+#if defined(__APPLE__) && defined(__arm__)
   // Set the init value to something that will let us know that we need to
   // autodetect how many watchpoints are supported dynamically...
   static uint32_t g_num_supported_hw_watchpoints = UINT32_MAX;
@@ -1766,5 +1761,3 @@ bool RegisterContextDarwin_arm::ClearHardwareWatchpoint(uint32_t hw_index) {
   }
   return false;
 }
-
-#endif

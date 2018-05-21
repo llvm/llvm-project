@@ -245,15 +245,15 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00    *                   movaps	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        movhlps	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     0.50                        movlhps	%xmm0, %xmm2
-# CHECK-NEXT:  1      1     1.00           *            movhps	%xmm0, (%rax)
+# CHECK-NEXT:  1      2     1.00           *            movhps	%xmm0, (%rax)
 # CHECK-NEXT:  1      6     1.00    *                   movhps	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00           *            movlps	%xmm0, (%rax)
+# CHECK-NEXT:  1      2     1.00           *            movlps	%xmm0, (%rax)
 # CHECK-NEXT:  1      6     1.00    *                   movlps	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        movmskps	%xmm0, %ecx
 # CHECK-NEXT:  1      3     1.00           *            movntps	%xmm0, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *      *     movntq	%mm0, (%rax)
 # CHECK-NEXT:  1      1     0.50                        movss	%xmm0, %xmm2
-# CHECK-NEXT:  1      1     1.00           *            movss	%xmm0, (%rax)
+# CHECK-NEXT:  1      2     1.00           *            movss	%xmm0, (%rax)
 # CHECK-NEXT:  1      5     1.00    *                   movss	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        movups	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00           *            movups	%xmm0, (%rax)
@@ -269,8 +269,8 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        pavgw	%mm0, %mm2
 # CHECK-NEXT:  1      6     1.00    *                   pavgw	(%rax), %mm2
 # CHECK-NEXT:  1      3     1.00                        pextrw	$1, %mm0, %ecx
-# CHECK-NEXT:  1      1     0.50                        pinsrw	$1, %eax, %mm2
-# CHECK-NEXT:  1      6     1.00    *                   pinsrw	$1, (%rax), %mm2
+# CHECK-NEXT:  2      7     0.50                        pinsrw	$1, %eax, %mm2
+# CHECK-NEXT:  1      4     1.00    *                   pinsrw	$1, (%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pmaxsw	%mm0, %mm2
 # CHECK-NEXT:  1      6     1.00    *                   pmaxsw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pmaxub	%mm0, %mm2
@@ -337,7 +337,7 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 15.00   -      -     46.50  183.50 50.00  63.00  58.00   -     9.00   22.00  9.50   9.50   2.00
+# CHECK-NEXT: 15.00   -      -     47.00  184.00 50.50  66.50  58.00   -     9.00   25.00  9.50   9.50   2.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -392,16 +392,16 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     movaps	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     movhlps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     movlhps	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     movhps	%xmm0, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movhps	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     movhps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     movlps	%xmm0, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movlps	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     movlps	(%rax), %xmm2
 # CHECK-NEXT: 1.00    -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     movmskps	%xmm0, %ecx
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movntps	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movntq	%mm0, (%rax)
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     movss	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     movss	%xmm0, (%rax)
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     movss	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movss	%xmm0, (%rax)
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     movss	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     movups	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movups	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     movups	(%rax), %xmm2

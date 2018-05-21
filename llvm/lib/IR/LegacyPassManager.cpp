@@ -13,6 +13,7 @@
 
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManagers.h"
@@ -134,8 +135,66 @@ bool PMDataManager::isPassDebuggingExecutionsOrMore() const {
   return PassDebugging >= Executions;
 }
 
+unsigned PMDataManager::initSizeRemarkInfo(Module &M) {
+  // Only calculate getInstructionCount if the size-info remark is requested.
+  if (M.getContext().getDiagHandlerPtr()->isAnalysisRemarkEnabled("size-info"))
+    return M.getInstructionCount();
+  return 0;
+}
 
+void PMDataManager::emitInstrCountChangedRemark(Pass *P, Module &M,
+                                                unsigned CountBefore) {
+  // Did the user request the remark? If not, quit.
+  if (!M.getContext().getDiagHandlerPtr()->isAnalysisRemarkEnabled("size-info"))
+    return;
 
+  // We need a function containing at least one basic block in order to output
+  // remarks. Since it's possible that the first function in the module doesn't
+  // actually contain a basic block, we have to go and find one that's suitable
+  // for emitting remarks.
+  auto It = std::find_if(M.begin(), M.end(),
+                         [](const Function &Fn) { return !Fn.empty(); });
+
+  // Didn't find a function. Quit.
+  if (It == M.end())
+    return;
+
+  // We found a function containing at least one basic block.
+  Function *F = &*It;
+
+  // How many instructions are in the module now?
+  unsigned CountAfter = M.getInstructionCount();
+
+  // If there was no change, don't emit a remark.
+  if (CountBefore == CountAfter)
+    return;
+
+  // If it's a pass manager, don't emit a remark. (This hinges on the assumption
+  // that the only passes that return non-null with getAsPMDataManager are pass
+  // managers.) The reason we have to do this is to avoid emitting remarks for
+  // CGSCC passes.
+  if (P->getAsPMDataManager())
+    return;
+
+  // Compute a possibly negative delta between the instruction count before
+  // running P, and after running P.
+  int64_t Delta =
+      static_cast<int64_t>(CountAfter) - static_cast<int64_t>(CountBefore);
+
+  BasicBlock &BB = *F->begin();
+  OptimizationRemarkAnalysis R("size-info", "IRSizeChange",
+                               DiagnosticLocation(), &BB);
+  // FIXME: Move ore namespace to DiagnosticInfo so that we can use it. This
+  // would let us use NV instead of DiagnosticInfoOptimizationBase::Argument.
+  R << DiagnosticInfoOptimizationBase::Argument("Pass", P->getPassName())
+    << ": IR instruction count changed from "
+    << DiagnosticInfoOptimizationBase::Argument("IRInstrsBefore", CountBefore)
+    << " to "
+    << DiagnosticInfoOptimizationBase::Argument("IRInstrsAfter", CountAfter)
+    << "; Delta: "
+    << DiagnosticInfoOptimizationBase::Argument("DeltaInstrCount", Delta);
+  F->getContext().diagnose(R); // Not using ORE for layering reasons.
+}
 
 void PassManagerPrettyStackEntry::print(raw_ostream &OS) const {
   if (!V && !M)
@@ -1284,6 +1343,7 @@ bool BBPassManager::runOnFunction(Function &F) {
     return false;
 
   bool Changed = doInitialization(F);
+  Module &M = *F.getParent();
 
   for (BasicBlock &BB : F)
     for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
@@ -1299,8 +1359,9 @@ bool BBPassManager::runOnFunction(Function &F) {
         // If the pass crashes, remember this.
         PassManagerPrettyStackEntry X(BP, BB);
         TimeRegion PassTimer(getPassTimer(BP));
-
+        unsigned InstrCount = initSizeRemarkInfo(M);
         LocalChanged |= BP->runOnBasicBlock(BB);
+        emitInstrCountChangedRemark(BP, M, InstrCount);
       }
 
       Changed |= LocalChanged;
@@ -1500,7 +1561,7 @@ bool FPPassManager::runOnFunction(Function &F) {
     return false;
 
   bool Changed = false;
-
+  Module &M = *F.getParent();
   // Collect inherited analysis from Module level pass manager.
   populateInheritedAnalysis(TPM->activeStack);
 
@@ -1516,8 +1577,9 @@ bool FPPassManager::runOnFunction(Function &F) {
     {
       PassManagerPrettyStackEntry X(FP, F);
       TimeRegion PassTimer(getPassTimer(FP));
-
+      unsigned InstrCount = initSizeRemarkInfo(M);
       LocalChanged |= FP->runOnFunction(F);
+      emitInstrCountChangedRemark(FP, M, InstrCount);
     }
 
     Changed |= LocalChanged;
@@ -1594,7 +1656,9 @@ MPPassManager::runOnModule(Module &M) {
       PassManagerPrettyStackEntry X(MP, M);
       TimeRegion PassTimer(getPassTimer(MP));
 
+      unsigned InstrCount = initSizeRemarkInfo(M);
       LocalChanged |= MP->runOnModule(M);
+      emitInstrCountChangedRemark(MP, M, InstrCount);
     }
 
     Changed |= LocalChanged;

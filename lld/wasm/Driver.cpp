@@ -290,6 +290,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
   Config->ImportTable = Args.hasArg(OPT_import_table);
+  Config->Optimize = args::getInteger(Args, OPT_O, 0);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->GcSections =
@@ -311,6 +312,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->MaxMemory = args::getInteger(Args, OPT_max_memory, 0);
   Config->ZStackSize =
       args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
+
+  Config->CompressRelocTargets = Config->Optimize > 0 && !Config->Relocatable;
 
   if (auto *Arg = Args.getLastArg(OPT_allow_undefined_file))
     readImportFile(Arg->getValue());

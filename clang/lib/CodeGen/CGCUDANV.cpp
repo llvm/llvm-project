@@ -27,6 +27,8 @@ using namespace clang;
 using namespace CodeGen;
 
 namespace {
+constexpr unsigned CudaFatMagic = 0x466243b1;
+constexpr unsigned HIPFatMagic = 0x48495046; // "HIPF"
 
 class CGNVCUDARuntime : public CGCUDARuntime {
 
@@ -310,19 +312,20 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
 /// }
 /// \endcode
 llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
+  bool IsHIP = CGM.getLangOpts().HIP;
   // No need to generate ctors/dtors if there is no GPU binary.
-  std::string GpuBinaryFileName = CGM.getCodeGenOpts().CudaGpuBinaryFileName;
-  if (GpuBinaryFileName.empty())
+  StringRef CudaGpuBinaryFileName = CGM.getCodeGenOpts().CudaGpuBinaryFileName;
+  if (CudaGpuBinaryFileName.empty() && !IsHIP)
     return nullptr;
 
-  // void __cuda_register_globals(void* handle);
+  // void __{cuda|hip}_register_globals(void* handle);
   llvm::Function *RegisterGlobalsFunc = makeRegisterGlobalsFn();
   // We always need a function to pass in as callback. Create a dummy
   // implementation if we don't need to register anything.
   if (RelocatableDeviceCode && !RegisterGlobalsFunc)
     RegisterGlobalsFunc = makeDummyFunction(getRegisterGlobalsFnTy());
 
-  // void ** __cudaRegisterFatBinary(void *);
+  // void ** __{cuda|hip}RegisterFatBinary(void *);
   llvm::Constant *RegisterFatbinFunc = CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(VoidPtrPtrTy, VoidPtrTy, false),
       addUnderscoredPrefixToName("RegisterFatBinary"));
@@ -334,12 +337,16 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   // global variable and save a reference in GpuBinaryHandle to be cleaned up
   // in destructor on exit. Then associate all known kernels with the GPU binary
   // handle so CUDA runtime can figure out what to call on the GPU side.
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> GpuBinaryOrErr =
-      llvm::MemoryBuffer::getFileOrSTDIN(GpuBinaryFileName);
-  if (std::error_code EC = GpuBinaryOrErr.getError()) {
-    CGM.getDiags().Report(diag::err_cannot_open_file)
-        << GpuBinaryFileName << EC.message();
-    return nullptr;
+  std::unique_ptr<llvm::MemoryBuffer> CudaGpuBinary;
+  if (!IsHIP) {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> CudaGpuBinaryOrErr =
+        llvm::MemoryBuffer::getFileOrSTDIN(CudaGpuBinaryFileName);
+    if (std::error_code EC = CudaGpuBinaryOrErr.getError()) {
+      CGM.getDiags().Report(diag::err_cannot_open_file)
+          << CudaGpuBinaryFileName << EC.message();
+      return nullptr;
+    }
+    CudaGpuBinary = std::move(CudaGpuBinaryOrErr.get());
   }
 
   llvm::Function *ModuleCtorFunc = llvm::Function::Create(
@@ -353,28 +360,60 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   CtorBuilder.SetInsertPoint(CtorEntryBB);
 
   const char *FatbinConstantName;
-  if (RelocatableDeviceCode)
+  const char *FatbinSectionName;
+  const char *ModuleIDSectionName;
+  StringRef ModuleIDPrefix;
+  llvm::Constant *FatBinStr;
+  unsigned FatMagic;
+  if (IsHIP) {
+    FatbinConstantName = ".hip_fatbin";
+    FatbinSectionName = ".hipFatBinSegment";
+
+    ModuleIDSectionName = "__hip_module_id";
+    ModuleIDPrefix = "__hip_";
+
+    // For HIP, create an external symbol __hip_fatbin in section .hip_fatbin.
+    // The external symbol is supposed to contain the fat binary but will be
+    // populated somewhere else, e.g. by lld through link script.
+    FatBinStr = new llvm::GlobalVariable(
+        CGM.getModule(), CGM.Int8Ty,
+        /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, nullptr,
+        "__hip_fatbin", nullptr,
+        llvm::GlobalVariable::NotThreadLocal);
+    cast<llvm::GlobalVariable>(FatBinStr)->setSection(FatbinConstantName);
+
+    FatMagic = HIPFatMagic;
+  } else {
+    if (RelocatableDeviceCode)
+      // TODO: Figure out how this is called on mac OS!
+      FatbinConstantName = "__nv_relfatbin";
+    else
+      FatbinConstantName =
+          CGM.getTriple().isMacOSX() ? "__NV_CUDA,__nv_fatbin" : ".nv_fatbin";
+    // NVIDIA's cuobjdump looks for fatbins in this section.
+    FatbinSectionName =
+        CGM.getTriple().isMacOSX() ? "__NV_CUDA,__fatbin" : ".nvFatBinSegment";
+
     // TODO: Figure out how this is called on mac OS!
-    FatbinConstantName = "__nv_relfatbin";
-  else
-    FatbinConstantName =
-        CGM.getTriple().isMacOSX() ? "__NV_CUDA,__nv_fatbin" : ".nv_fatbin";
-  // NVIDIA's cuobjdump looks for fatbins in this section.
-  const char *FatbinSectionName =
-      CGM.getTriple().isMacOSX() ? "__NV_CUDA,__fatbin" : ".nvFatBinSegment";
-  // TODO: Figure out how this is called on mac OS!
-  const char *NVModuleIDSectionName = "__nv_module_id";
+    ModuleIDSectionName = "__nv_module_id";
+    ModuleIDPrefix = "__nv_";
+
+    // For CUDA, create a string literal containing the fat binary loaded from
+    // the given file.
+    FatBinStr = makeConstantString(CudaGpuBinary->getBuffer(), "",
+                                   FatbinConstantName, 8);
+    FatMagic = CudaFatMagic;
+  }
 
   // Create initialized wrapper structure that points to the loaded GPU binary
   ConstantInitBuilder Builder(CGM);
   auto Values = Builder.beginStruct(FatbinWrapperTy);
   // Fatbin wrapper magic.
-  Values.addInt(IntTy, 0x466243b1);
+  Values.addInt(IntTy, FatMagic);
   // Fatbin version.
   Values.addInt(IntTy, 1);
   // Data.
-  Values.add(makeConstantString(GpuBinaryOrErr.get()->getBuffer(), "",
-                                FatbinConstantName, 8));
+  Values.add(FatBinStr);
   // Unused in fatbin v1.
   Values.add(llvm::ConstantPointerNull::get(VoidPtrTy));
   llvm::GlobalVariable *FatbinWrapper = Values.finishAndCreateGlobal(
@@ -382,10 +421,10 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       /*constant*/ true);
   FatbinWrapper->setSection(FatbinSectionName);
 
-  // Register binary with CUDA runtime. This is substantially different in
+  // Register binary with CUDA/HIP runtime. This is substantially different in
   // default mode vs. separate compilation!
   if (!RelocatableDeviceCode) {
-    // GpuBinaryHandle = __cudaRegisterFatBinary(&FatbinWrapper);
+    // GpuBinaryHandle = __{cuda|hip}RegisterFatBinary(&FatbinWrapper);
     llvm::CallInst *RegisterFatbinCall = CtorBuilder.CreateCall(
         RegisterFatbinFunc,
         CtorBuilder.CreateBitCast(FatbinWrapper, VoidPtrTy));
@@ -397,34 +436,34 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     CtorBuilder.CreateAlignedStore(RegisterFatbinCall, GpuBinaryHandle,
                                    CGM.getPointerAlign());
 
-    // Call __cuda_register_globals(GpuBinaryHandle);
+    // Call __{cuda|hip}_register_globals(GpuBinaryHandle);
     if (RegisterGlobalsFunc)
       CtorBuilder.CreateCall(RegisterGlobalsFunc, RegisterFatbinCall);
   } else {
     // Generate a unique module ID.
-    SmallString<64> NVModuleID;
-    llvm::raw_svector_ostream OS(NVModuleID);
-    OS << "__nv_" << llvm::format("%x", FatbinWrapper->getGUID());
-    llvm::Constant *NVModuleIDConstant =
-        makeConstantString(NVModuleID.str(), "", NVModuleIDSectionName, 32);
+    SmallString<64> ModuleID;
+    llvm::raw_svector_ostream OS(ModuleID);
+    OS << ModuleIDPrefix << llvm::format("%x", FatbinWrapper->getGUID());
+    llvm::Constant *ModuleIDConstant =
+        makeConstantString(ModuleID.str(), "", ModuleIDSectionName, 32);
 
-    // Create an alias for the FatbinWrapper that nvcc will look for.
+    // Create an alias for the FatbinWrapper that nvcc or hip backend will
+    // look for.
     llvm::GlobalAlias::create(llvm::GlobalValue::ExternalLinkage,
-                              Twine("__fatbinwrap") + NVModuleID,
-                              FatbinWrapper);
+                              Twine("__fatbinwrap") + ModuleID, FatbinWrapper);
 
-    // void __cudaRegisterLinkedBinary%NVModuleID%(void (*)(void *), void *,
+    // void __{cuda|hip}RegisterLinkedBinary%ModuleID%(void (*)(void *), void *,
     // void *, void (*)(void **))
     SmallString<128> RegisterLinkedBinaryName(
         addUnderscoredPrefixToName("RegisterLinkedBinary"));
-    RegisterLinkedBinaryName += NVModuleID;
+    RegisterLinkedBinaryName += ModuleID;
     llvm::Constant *RegisterLinkedBinaryFunc = CGM.CreateRuntimeFunction(
         getRegisterLinkedBinaryFnTy(), RegisterLinkedBinaryName);
 
     assert(RegisterGlobalsFunc && "Expecting at least dummy function!");
     llvm::Value *Args[] = {RegisterGlobalsFunc,
                            CtorBuilder.CreateBitCast(FatbinWrapper, VoidPtrTy),
-                           NVModuleIDConstant,
+                           ModuleIDConstant,
                            makeDummyFunction(getCallbackFnTy())};
     CtorBuilder.CreateCall(RegisterLinkedBinaryFunc, Args);
   }

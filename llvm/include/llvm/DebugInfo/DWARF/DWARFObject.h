@@ -63,6 +63,7 @@ public:
     return Dummy;
   }
   virtual const DWARFSection &getRangeDWOSection() const { return Dummy; }
+  virtual const DWARFSection &getRnglistsDWOSection() const { return Dummy; }
   virtual const DWARFSection &getAddrSection() const { return Dummy; }
   virtual const DWARFSection &getAppleNamesSection() const { return Dummy; }
   virtual const DWARFSection &getAppleTypesSection() const { return Dummy; }

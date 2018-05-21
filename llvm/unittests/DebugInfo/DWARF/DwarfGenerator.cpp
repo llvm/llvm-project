@@ -22,6 +22,7 @@
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -400,9 +401,9 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
   Stream = make_unique<raw_svector_ostream>(FileBytes);
 
   MS = TheTarget->createMCObjectStreamer(
-      TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB), *Stream,
-      std::unique_ptr<MCCodeEmitter>(MCE), *MSTI, MCOptions.MCRelaxAll,
-      MCOptions.MCIncrementalLinkerCompatible,
+      TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB),
+      MAB->createObjectWriter(*Stream), std::unique_ptr<MCCodeEmitter>(MCE),
+      *MSTI, MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ false);
   if (!MS)
     return make_error<StringError>("no object streamer for target " +
