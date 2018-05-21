@@ -453,15 +453,20 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
                                       const Twine &Suffix = "") {
   assert((!LI.isAtomic() || isSupportedAtomicType(NewTy)) &&
          "can't fold an atomic load to requested type");
-  
+
   Value *Ptr = LI.getPointerOperand();
   unsigned AS = LI.getPointerAddressSpace();
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
   LI.getAllMetadata(MD);
 
+  Value *NewPtr = nullptr;
+  if (!(match(Ptr, m_BitCast(m_Value(NewPtr))) &&
+        NewPtr->getType()->getPointerElementType() == NewTy &&
+        NewPtr->getType()->getPointerAddressSpace() == AS))
+    NewPtr = IC.Builder.CreateBitCast(Ptr, NewTy->getPointerTo(AS));
+
   LoadInst *NewLoad = IC.Builder.CreateAlignedLoad(
-      IC.Builder.CreateBitCast(Ptr, NewTy->getPointerTo(AS)),
-      LI.getAlignment(), LI.isVolatile(), LI.getName() + Suffix);
+      NewPtr, LI.getAlignment(), LI.isVolatile(), LI.getName() + Suffix);
   NewLoad->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
   MDBuilder MDB(NewLoad->getContext());
   for (const auto &MDPair : MD) {

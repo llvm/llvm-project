@@ -517,6 +517,9 @@ class Value;
   /// Pattern match integer [SU]MIN, [SU]MAX and ABS idioms, returning the kind
   /// and providing the out parameter results if we successfully match.
   ///
+  /// For ABS/NABS, LHS will be set to the input to the abs idiom. RHS will be
+  /// the negation instruction from the idiom.
+  ///
   /// If CastOp is not nullptr, also match MIN/MAX idioms where the type does
   /// not match that of the original select. If this is the case, the cast
   /// operation (one of Trunc,SExt,Zext) that must be done to transform the

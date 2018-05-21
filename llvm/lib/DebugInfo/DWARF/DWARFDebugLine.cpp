@@ -287,6 +287,10 @@ static Error createError(char const *Fmt, const Ts &... Vals) {
                                  inconvertibleErrorCode());
 }
 
+static Error createError(char const *Msg) {
+  return make_error<StringError>(Msg, inconvertibleErrorCode());
+}
+
 Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
                                       uint32_t *OffsetPtr,
                                       const DWARFContext &Ctx,
@@ -464,7 +468,7 @@ DWARFDebugLine::getLineTable(uint32_t Offset) const {
 
 Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
     DWARFDataExtractor &DebugLineData, uint32_t Offset, const DWARFContext &Ctx,
-    const DWARFUnit *U, std::function<void(StringRef)> WarnCallback) {
+    const DWARFUnit *U, std::function<void(Error)> RecoverableErrorCallback) {
   if (!DebugLineData.isValidOffset(Offset))
     return createError("offset 0x%8.8" PRIx32
                        " is not a valid debug line section offset",
@@ -474,7 +478,8 @@ Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
       LineTableMap.insert(LineTableMapTy::value_type(Offset, LineTable()));
   LineTable *LT = &Pos.first->second;
   if (Pos.second) {
-    if (Error Err = LT->parse(DebugLineData, &Offset, Ctx, U, WarnCallback))
+    if (Error Err =
+            LT->parse(DebugLineData, &Offset, Ctx, U, RecoverableErrorCallback))
       return std::move(Err);
     return LT;
   }
@@ -484,7 +489,7 @@ Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
 Error DWARFDebugLine::LineTable::parse(
     DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
     const DWARFContext &Ctx, const DWARFUnit *U,
-    std::function<void(StringRef)> WarnCallback, raw_ostream *OS) {
+    std::function<void(Error)> RecoverableErrorCallback, raw_ostream *OS) {
   const uint32_t DebugLineOffset = *OffsetPtr;
 
   clear();
@@ -841,7 +846,8 @@ Error DWARFDebugLine::LineTable::parse(
   }
 
   if (!State.Sequence.Empty)
-    WarnCallback("last sequence in debug line table is not terminated!");
+    RecoverableErrorCallback(
+        createError("last sequence in debug line table is not terminated!"));
 
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {
@@ -1069,15 +1075,16 @@ bool DWARFDebugLine::Prologue::totalLengthIsValid() const {
 }
 
 DWARFDebugLine::LineTable DWARFDebugLine::SectionParser::parseNext(
-    function_ref<void(StringRef)> StringCallback,
-    function_ref<void(Error)> ErrorCallback, raw_ostream *OS) {
+    function_ref<void(Error)> RecoverableErrorCallback,
+    function_ref<void(Error)> UnrecoverableErrorCallback, raw_ostream *OS) {
   assert(DebugLineData.isValidOffset(Offset) &&
          "parsing should have terminated");
   DWARFUnit *U = prepareToParse(Offset);
   uint32_t OldOffset = Offset;
   LineTable LT;
-  Error Err = LT.parse(DebugLineData, &Offset, Context, U, StringCallback, OS);
-  ErrorCallback(std::move(Err));
+  if (Error Err = LT.parse(DebugLineData, &Offset, Context, U,
+                           RecoverableErrorCallback, OS))
+    UnrecoverableErrorCallback(std::move(Err));
   moveToNextTable(OldOffset, LT.Prologue);
   return LT;
 }
@@ -1089,8 +1096,8 @@ void DWARFDebugLine::SectionParser::skip(
   DWARFUnit *U = prepareToParse(Offset);
   uint32_t OldOffset = Offset;
   LineTable LT;
-  Error Err = LT.Prologue.parse(DebugLineData, &Offset, Context, U);
-  ErrorCallback(std::move(Err));
+  if (Error Err = LT.Prologue.parse(DebugLineData, &Offset, Context, U))
+    ErrorCallback(std::move(Err));
   moveToNextTable(OldOffset, LT.Prologue);
 }
 
@@ -1119,11 +1126,8 @@ void DWARFDebugLine::SectionParser::moveToNextTable(uint32_t OldOffset,
   }
 }
 
-void DWARFDebugLine::warn(StringRef Message) {
-  WithColor::warning() << Message << '\n';
-}
-
-void DWARFDebugLine::warnForError(Error Err) {
-  handleAllErrors(std::move(Err),
-                  [](ErrorInfoBase &Info) { warn(Info.message()); });
+void DWARFDebugLine::warn(Error Err) {
+  handleAllErrors(std::move(Err), [](ErrorInfoBase &Info) {
+    WithColor::warning() << Info.message() << '\n';
+  });
 }

@@ -385,8 +385,7 @@ void DWARFContext::dump(
       }
       OS << "debug_line[" << format("0x%8.8x", Parser.getOffset()) << "]\n";
       if (DumpOpts.Verbose) {
-        Parser.parseNext(DWARFDebugLine::warn, DWARFDebugLine::warnForError,
-                         &OS);
+        Parser.parseNext(DWARFDebugLine::warn, DWARFDebugLine::warn, &OS);
       } else {
         DWARFDebugLine::LineTable LineTable = Parser.parseNext();
         LineTable.dump(OS, DumpOpts);
@@ -764,15 +763,14 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
   Expected<const DWARFDebugLine::LineTable *> ExpectedLineTable =
       getLineTableForUnit(U, DWARFDebugLine::warn);
   if (!ExpectedLineTable) {
-    DWARFDebugLine::warnForError(ExpectedLineTable.takeError());
+    DWARFDebugLine::warn(ExpectedLineTable.takeError());
     return nullptr;
   }
   return *ExpectedLineTable;
 }
 
-Expected<const DWARFDebugLine::LineTable *>
-DWARFContext::getLineTableForUnit(DWARFUnit *U,
-                                  std::function<void(StringRef)> WarnCallback) {
+Expected<const DWARFDebugLine::LineTable *> DWARFContext::getLineTableForUnit(
+    DWARFUnit *U, std::function<void(Error)> RecoverableErrorCallback) {
   if (!Line)
     Line.reset(new DWARFDebugLine);
 
@@ -797,7 +795,7 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U,
   DWARFDataExtractor lineData(*DObj, U->getLineSection(), isLittleEndian(),
                               U->getAddressByteSize());
   return Line->getOrParseLineTable(lineData, stmtOffset, *this, U,
-                                   WarnCallback);
+                                   RecoverableErrorCallback);
 }
 
 void DWARFContext::parseCompileUnits() {

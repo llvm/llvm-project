@@ -196,7 +196,7 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
       ft = TargetMachine::CGFT_ObjectFile;
       break;
   }
-  if (TM->addPassesToEmitFile(pass, OS, ft)) {
+  if (TM->addPassesToEmitFile(pass, OS, nullptr, ft)) {
     error = "TargetMachine can't emit a file of this type";
     *ErrorMessage = strdup(error.c_str());
     return true;

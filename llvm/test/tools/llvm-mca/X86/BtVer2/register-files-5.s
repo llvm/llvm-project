@@ -58,12 +58,12 @@
 # CHECK-NEXT: Total number of mappings created:    66
 # CHECK-NEXT: Max number of mappings used:         64
 
-# CHECK:      *  Register File #1 -- FpuPRF:
+# CHECK:      *  Register File #1 -- JFpuPRF:
 # CHECK-NEXT:    Number of physical registers:     72
 # CHECK-NEXT:    Total number of mappings created: 66
 # CHECK-NEXT:    Max number of mappings used:      64
 
-# CHECK:      *  Register File #2 -- IntegerPRF:
+# CHECK:      *  Register File #2 -- JIntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     64
 # CHECK-NEXT:    Total number of mappings created: 0
 # CHECK-NEXT:    Max number of mappings used:      0

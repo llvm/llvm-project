@@ -26,7 +26,7 @@ class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCObjectWriter;
+class MCObjectTargetWriter;
 class MCSubtargetInfo;
 class MVT;
 class Target;
@@ -40,13 +40,11 @@ MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII);
 
 MCAsmBackend *createWebAssemblyAsmBackend(const Triple &TT);
 
-std::unique_ptr<MCObjectWriter>
-createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,
-                                 bool Is64Bit, uint8_t OSABI);
+std::unique_ptr<MCObjectTargetWriter>
+createWebAssemblyELFObjectWriter(bool Is64Bit, uint8_t OSABI);
 
-std::unique_ptr<MCObjectWriter>
-createWebAssemblyWasmObjectWriter(raw_pwrite_stream &OS,
-                                  bool Is64Bit);
+std::unique_ptr<MCObjectTargetWriter>
+createWebAssemblyWasmObjectWriter(bool Is64Bit);
 
 namespace WebAssembly {
 enum OperandType {

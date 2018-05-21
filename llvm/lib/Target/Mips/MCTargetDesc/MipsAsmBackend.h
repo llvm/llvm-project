@@ -29,16 +29,16 @@ class Target;
 
 class MipsAsmBackend : public MCAsmBackend {
   Triple TheTriple;
-  bool IsLittle; // Big or little endian
   bool IsN32;
 
 public:
   MipsAsmBackend(const Target &T, const MCRegisterInfo &MRI, const Triple &TT,
                  StringRef CPU, bool N32)
-      : TheTriple(TT), IsLittle(TT.isLittleEndian()), IsN32(N32) {}
+      : MCAsmBackend(TT.isLittleEndian() ? support::little : support::big),
+        TheTriple(TT), IsN32(N32) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -83,7 +83,7 @@ public:
 
   /// @}
 
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 
 }; // class MipsAsmBackend
 

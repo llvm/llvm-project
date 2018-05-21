@@ -352,10 +352,9 @@ void AVRAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-AVRAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createAVRELFObjectWriter(OS,
-                                  MCELFObjectTargetWriter::getOSABI(OSType));
+std::unique_ptr<MCObjectTargetWriter>
+AVRAsmBackend::createObjectTargetWriter() const {
+  return createAVRELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
 void AVRAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
@@ -453,13 +452,13 @@ MCFixupKindInfo const &AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-bool AVRAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
+bool AVRAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   // If the count is not 2-byte aligned, we must be writing data into the text
   // section (otherwise we have unaligned instructions, and thus have far
   // bigger problems), so just write zeros instead.
   assert((Count % 2) == 0 && "NOP instructions must be 2 bytes");
 
-  OW->WriteZeros(Count);
+  OS.write_zeros(Count);
   return true;
 }
 

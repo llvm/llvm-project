@@ -144,12 +144,8 @@ macro(test_target_arch arch def)
       endif()
       set(SAVED_CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${argstring}")
-      if(SANITIZER_CXX_ABI_SYSTEM)
-        set(FLAG_LINK_LIBRARIES ${SANITIZER_CXX_ABI_LIBRARY})
-      endif()
       try_compile(CAN_TARGET_${arch} ${CMAKE_BINARY_DIR} ${SIMPLE_SOURCE}
                   COMPILE_DEFINITIONS "${TARGET_${arch}_CFLAGS} ${FLAG_NO_EXCEPTIONS}"
-                  LINK_LIBRARIES ${FLAG_LINK_LIBRARIES}
                   OUTPUT_VARIABLE TARGET_${arch}_OUTPUT)
       set(CMAKE_EXE_LINKER_FLAGS ${SAVED_CMAKE_EXE_LINKER_FLAGS})
     endif()

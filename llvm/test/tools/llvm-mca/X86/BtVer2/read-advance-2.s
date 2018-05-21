@@ -26,8 +26,7 @@
 # CHECK-NEXT:  2      6     1.00    *                   imull	(%rdi)
 
 # CHECK:      Timeline view:
-
-# CHECK:      Index     0123456789
+# CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeER   .   imull	%esi
 # CHECK-NEXT: [0,1]     .DeeeeeeER   imull	(%rdi)

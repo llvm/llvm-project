@@ -224,7 +224,7 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   } else {
     const TargetRegisterClass *RC = TRI.getRegClassForReg(MRI, DstReg);
     IsSgpr = TRI.isSGPRClass(RC);
-    Size = RC->MC->getPhysRegSize() * 8;
+    Size = TRI.getRegSizeInBits(*RC);
   }
 
   if (Size != 32 && Size != 64)

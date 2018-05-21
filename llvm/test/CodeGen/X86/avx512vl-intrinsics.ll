@@ -2222,20 +2222,23 @@ define <8 x float>@test_int_x86_avx512_mask_getmant_ps_256(<8 x float> %x0, <8 x
   ret <8 x float> %res2
 }
 
-declare <4 x i32> @llvm.x86.avx512.mask.pternlog.d.128(<4 x i32>, <4 x i32>, <4 x i32>, i32, i8)
+declare <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32>, <4 x i32>, <4 x i32>, i32)
 
 define <4 x i32>@test_int_x86_avx512_mask_pternlog_d_128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pternlog_d_128:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vmovdqa %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xd8]
 ; CHECK-NEXT:    vpternlogd $33, %xmm2, %xmm1, %xmm3 ## encoding: [0x62,0xf3,0x75,0x08,0x25,0xda,0x21]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpternlogd $33, %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf3,0x75,0x09,0x25,0xc2,0x21]
 ; CHECK-NEXT:    vpaddd %xmm3, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xfe,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx512.mask.pternlog.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i32 33, i8 %x4)
-  %res1 = call <4 x i32> @llvm.x86.avx512.mask.pternlog.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i32 33, i8 -1)
-  %res2 = add <4 x i32> %res, %res1
+  %1 = call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i32 33)
+  %2 = bitcast i8 %x4 to <8 x i1>
+  %extract = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = select <4 x i1> %extract, <4 x i32> %1, <4 x i32> %x0
+  %4 = call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i32 33)
+  %res2 = add <4 x i32> %3, %4
   ret <4 x i32> %res2
 }
 
@@ -2244,32 +2247,37 @@ declare <4 x i32> @llvm.x86.avx512.maskz.pternlog.d.128(<4 x i32>, <4 x i32>, <4
 define <4 x i32>@test_int_x86_avx512_maskz_pternlog_d_128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_pternlog_d_128:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vmovdqa %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xd8]
 ; CHECK-NEXT:    vpternlogd $33, %xmm2, %xmm1, %xmm3 ## encoding: [0x62,0xf3,0x75,0x08,0x25,0xda,0x21]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpternlogd $33, %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x75,0x89,0x25,0xc2,0x21]
 ; CHECK-NEXT:    vpaddd %xmm3, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xfe,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx512.maskz.pternlog.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i32 33, i8 %x4)
-  %res1 = call <4 x i32> @llvm.x86.avx512.maskz.pternlog.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i32 33, i8 -1)
-  %res2 = add <4 x i32> %res, %res1
+  %1 = call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i32 33)
+  %2 = bitcast i8 %x4 to <8 x i1>
+  %extract = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = select <4 x i1> %extract, <4 x i32> %1, <4 x i32> zeroinitializer
+  %4 = call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2, i32 33)
+  %res2 = add <4 x i32> %3, %4
   ret <4 x i32> %res2
 }
 
-declare <8 x i32> @llvm.x86.avx512.mask.pternlog.d.256(<8 x i32>, <8 x i32>, <8 x i32>, i32, i8)
+declare <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32>, <8 x i32>, <8 x i32>, i32)
 
 define <8 x i32>@test_int_x86_avx512_mask_pternlog_d_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pternlog_d_256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vmovdqa %ymm0, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xd8]
 ; CHECK-NEXT:    vpternlogd $33, %ymm2, %ymm1, %ymm3 ## encoding: [0x62,0xf3,0x75,0x28,0x25,0xda,0x21]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpternlogd $33, %ymm2, %ymm1, %ymm0 {%k1} ## encoding: [0x62,0xf3,0x75,0x29,0x25,0xc2,0x21]
 ; CHECK-NEXT:    vpaddd %ymm3, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xfe,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx512.mask.pternlog.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i32 33, i8 %x4)
-  %res1 = call <8 x i32> @llvm.x86.avx512.mask.pternlog.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i32 33, i8 -1)
-  %res2 = add <8 x i32> %res, %res1
+  %1 = call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i32 33)
+  %2 = bitcast i8 %x4 to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i32> %1, <8 x i32> %x0
+  %4 = call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i32 33)
+  %res2 = add <8 x i32> %3, %4
   ret <8 x i32> %res2
 }
 
@@ -2278,83 +2286,93 @@ declare <8 x i32> @llvm.x86.avx512.maskz.pternlog.d.256(<8 x i32>, <8 x i32>, <8
 define <8 x i32>@test_int_x86_avx512_maskz_pternlog_d_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_pternlog_d_256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vmovdqa %ymm0, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xd8]
 ; CHECK-NEXT:    vpternlogd $33, %ymm2, %ymm1, %ymm3 ## encoding: [0x62,0xf3,0x75,0x28,0x25,0xda,0x21]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpternlogd $33, %ymm2, %ymm1, %ymm0 {%k1} {z} ## encoding: [0x62,0xf3,0x75,0xa9,0x25,0xc2,0x21]
 ; CHECK-NEXT:    vpaddd %ymm3, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xfe,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx512.maskz.pternlog.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i32 33, i8 %x4)
-  %res1 = call <8 x i32> @llvm.x86.avx512.maskz.pternlog.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i32 33, i8 -1)
-  %res2 = add <8 x i32> %res, %res1
+  %1 = call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i32 33)
+  %2 = bitcast i8 %x4 to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i32> %1, <8 x i32> zeroinitializer
+  %4 = call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2, i32 33)
+  %res2 = add <8 x i32> %3, %4
   ret <8 x i32> %res2
 }
 
-declare <2 x i64> @llvm.x86.avx512.mask.pternlog.q.128(<2 x i64>, <2 x i64>, <2 x i64>, i32, i8)
+declare <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64>, <2 x i64>, <2 x i64>, i32)
 
 define <2 x i64>@test_int_x86_avx512_mask_pternlog_q_128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pternlog_q_128:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vmovdqa %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xd8]
 ; CHECK-NEXT:    vpternlogq $33, %xmm2, %xmm1, %xmm3 ## encoding: [0x62,0xf3,0xf5,0x08,0x25,0xda,0x21]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpternlogq $33, %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf3,0xf5,0x09,0x25,0xc2,0x21]
 ; CHECK-NEXT:    vpaddq %xmm3, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd4,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.avx512.mask.pternlog.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i32 33, i8 %x4)
-  %res1 = call <2 x i64> @llvm.x86.avx512.mask.pternlog.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i32 33, i8 -1)
-  %res2 = add <2 x i64> %res, %res1
+  %1 = call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i32 33)
+  %2 = bitcast i8 %x4 to <8 x i1>
+  %extract = shufflevector <8 x i1> %2, <8 x i1> %2, <2 x i32> <i32 0, i32 1>
+  %3 = select <2 x i1> %extract, <2 x i64> %1, <2 x i64> %x0
+  %4 = call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i32 33)
+  %res2 = add <2 x i64> %3, %4
   ret <2 x i64> %res2
 }
-
-declare <2 x i64> @llvm.x86.avx512.maskz.pternlog.q.128(<2 x i64>, <2 x i64>, <2 x i64>, i32, i8)
 
 define <2 x i64>@test_int_x86_avx512_maskz_pternlog_q_128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_pternlog_q_128:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vmovdqa %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xd8]
 ; CHECK-NEXT:    vpternlogq $33, %xmm2, %xmm1, %xmm3 ## encoding: [0x62,0xf3,0xf5,0x08,0x25,0xda,0x21]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpternlogq $33, %xmm2, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf3,0xf5,0x89,0x25,0xc2,0x21]
 ; CHECK-NEXT:    vpaddq %xmm3, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd4,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.avx512.maskz.pternlog.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i32 33, i8 %x4)
-  %res1 = call <2 x i64> @llvm.x86.avx512.maskz.pternlog.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i32 33, i8 -1)
-  %res2 = add <2 x i64> %res, %res1
+  %1 = call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i32 33)
+  %2 = bitcast i8 %x4 to <8 x i1>
+  %extract = shufflevector <8 x i1> %2, <8 x i1> %2, <2 x i32> <i32 0, i32 1>
+  %3 = select <2 x i1> %extract, <2 x i64> %1, <2 x i64> zeroinitializer
+  %4 = call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i32 33)
+  %res2 = add <2 x i64> %3, %4
   ret <2 x i64> %res2
 }
 
-declare <4 x i64> @llvm.x86.avx512.mask.pternlog.q.256(<4 x i64>, <4 x i64>, <4 x i64>, i32, i8)
+declare <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64>, <4 x i64>, <4 x i64>, i32)
 
 define <4 x i64>@test_int_x86_avx512_mask_pternlog_q_256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pternlog_q_256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vmovdqa %ymm0, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xd8]
 ; CHECK-NEXT:    vpternlogq $33, %ymm2, %ymm1, %ymm3 ## encoding: [0x62,0xf3,0xf5,0x28,0x25,0xda,0x21]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpternlogq $33, %ymm2, %ymm1, %ymm0 {%k1} ## encoding: [0x62,0xf3,0xf5,0x29,0x25,0xc2,0x21]
 ; CHECK-NEXT:    vpaddq %ymm3, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd4,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx512.mask.pternlog.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i32 33, i8 %x4)
-  %res1 = call <4 x i64> @llvm.x86.avx512.mask.pternlog.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i32 33, i8 -1)
-  %res2 = add <4 x i64> %res, %res1
+  %1 = call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i32 33)
+  %2 = bitcast i8 %x4 to <8 x i1>
+  %extract = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = select <4 x i1> %extract, <4 x i64> %1, <4 x i64> %x0
+  %4 = call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i32 33)
+  %res2 = add <4 x i64> %3, %4
   ret <4 x i64> %res2
 }
-
-declare <4 x i64> @llvm.x86.avx512.maskz.pternlog.q.256(<4 x i64>, <4 x i64>, <4 x i64>, i32, i8)
 
 define <4 x i64>@test_int_x86_avx512_maskz_pternlog_q_256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_pternlog_q_256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vmovdqa %ymm0, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xd8]
 ; CHECK-NEXT:    vpternlogq $33, %ymm2, %ymm1, %ymm3 ## encoding: [0x62,0xf3,0xf5,0x28,0x25,0xda,0x21]
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vpternlogq $33, %ymm2, %ymm1, %ymm0 {%k1} {z} ## encoding: [0x62,0xf3,0xf5,0xa9,0x25,0xc2,0x21]
 ; CHECK-NEXT:    vpaddq %ymm3, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd4,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx512.maskz.pternlog.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i32 33, i8 %x4)
-  %res1 = call <4 x i64> @llvm.x86.avx512.maskz.pternlog.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i32 33, i8 -1)
-  %res2 = add <4 x i64> %res, %res1
+  %1 = call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i32 33)
+  %2 = bitcast i8 %x4 to <8 x i1>
+  %extract = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = select <4 x i1> %extract, <4 x i64> %1, <4 x i64> zeroinitializer
+  %4 = call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> %x0, <4 x i64> %x1, <4 x i64> %x2, i32 33)
+  %res2 = add <4 x i64> %3, %4
   ret <4 x i64> %res2
 }
 

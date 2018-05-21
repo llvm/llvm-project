@@ -536,6 +536,9 @@ void NOINLINE __asan_handle_no_return() {
   if (curr_thread) {
     top = curr_thread->stack_top();
     bottom = ((uptr)&local_stack - PageSize) & ~(PageSize - 1);
+  } else if (SANITIZER_RTEMS) {
+    // Give up On RTEMS.
+    return;
   } else {
     CHECK(!SANITIZER_FUCHSIA);
     // If we haven't seen this thread, try asking the OS for stack bounds.

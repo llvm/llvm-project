@@ -102,15 +102,18 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
     const DWARFSection &LocSection = Obj.getLocSection();
     const DWARFSection &LocDWOSection = Obj.getLocDWOSection();
     uint32_t Offset = *FormValue.getAsSectionOffset();
-
     if (!LocSection.Data.empty()) {
       DWARFDebugLoc DebugLoc;
       DWARFDataExtractor Data(Obj, LocSection, Ctx.isLittleEndian(),
                               Obj.getAddressSize());
       auto LL = DebugLoc.parseOneLocationList(Data, &Offset);
-      if (LL)
-        LL->dump(OS, Ctx.isLittleEndian(), Obj.getAddressSize(), MRI, Indent);
-      else
+      if (LL) {
+        uint64_t BaseAddr = 0;
+        if (Optional<BaseAddress> BA = U->getBaseAddress())
+          BaseAddr = BA->Address;
+        LL->dump(OS, Ctx.isLittleEndian(), Obj.getAddressSize(), MRI, BaseAddr,
+                 Indent);
+      } else
         OS << "error extracting location list.";
     } else if (!LocDWOSection.Data.empty()) {
       DataExtractor Data(LocDWOSection.Data, Ctx.isLittleEndian(), 0);

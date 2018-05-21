@@ -27,7 +27,7 @@ class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCObjectWriter;
+class MCObjectTargetWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
@@ -65,9 +65,8 @@ MCAsmBackend *createHexagonAsmBackend(const Target &T,
                                       const MCRegisterInfo &MRI,
                                       const MCTargetOptions &Options);
 
-std::unique_ptr<MCObjectWriter>
-createHexagonELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
-                             StringRef CPU);
+std::unique_ptr<MCObjectTargetWriter>
+createHexagonELFObjectWriter(uint8_t OSABI, StringRef CPU);
 
 unsigned HexagonGetLastSlot();
 
