@@ -833,26 +833,22 @@ entry:
 define <2 x i64> @test_mm256_mask_cvtepi16_epi8(<2 x i64> %__O, i16 zeroext %__M, <4 x i64> %__A) {
 ; X32-LABEL: test_mm256_mask_cvtepi16_epi8:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movzbl %al, %eax
-; X32-NEXT:    kmovd %eax, %k1
+; X32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpmovwb %ymm1, %xmm0 {%k1}
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_mask_cvtepi16_epi8:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    kmovd %eax, %k1
+; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpmovwb %ymm1, %xmm0 {%k1}
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
-  %conv1.i = and i16 %__M, 255
   %0 = bitcast <4 x i64> %__A to <16 x i16>
   %conv.i.i = trunc <16 x i16> %0 to <16 x i8>
   %1 = bitcast <2 x i64> %__O to <16 x i8>
-  %2 = bitcast i16 %conv1.i to <16 x i1>
+  %2 = bitcast i16 %__M to <16 x i1>
   %3 = select <16 x i1> %2, <16 x i8> %conv.i.i, <16 x i8> %1
   %4 = bitcast <16 x i8> %3 to <2 x i64>
   ret <2 x i64> %4
@@ -861,25 +857,21 @@ entry:
 define <2 x i64> @test_mm256_maskz_cvtepi16_epi8(i16 zeroext %__M, <4 x i64> %__A) {
 ; X32-LABEL: test_mm256_maskz_cvtepi16_epi8:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movzbl %al, %eax
-; X32-NEXT:    kmovd %eax, %k1
+; X32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpmovwb %ymm0, %xmm0 {%k1} {z}
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_maskz_cvtepi16_epi8:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    kmovd %eax, %k1
+; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpmovwb %ymm0, %xmm0 {%k1} {z}
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
-  %conv1.i = and i16 %__M, 255
   %0 = bitcast <4 x i64> %__A to <16 x i16>
   %conv.i.i = trunc <16 x i16> %0 to <16 x i8>
-  %1 = bitcast i16 %conv1.i to <16 x i1>
+  %1 = bitcast i16 %__M to <16 x i1>
   %2 = select <16 x i1> %1, <16 x i8> %conv.i.i, <16 x i8> zeroinitializer
   %3 = bitcast <16 x i8> %2 to <2 x i64>
   ret <2 x i64> %3

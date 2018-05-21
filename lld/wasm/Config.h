@@ -19,6 +19,7 @@ namespace wasm {
 
 struct Configuration {
   bool AllowUndefined;
+  bool CompressRelocTargets;
   bool Demangle;
   bool ExportTable;
   bool GcSections;
@@ -33,6 +34,7 @@ struct Configuration {
   uint32_t GlobalBase;
   uint32_t InitialMemory;
   uint32_t MaxMemory;
+  uint32_t Optimize;
   uint32_t ZStackSize;
   llvm::StringRef Entry;
   llvm::StringRef OutputFile;

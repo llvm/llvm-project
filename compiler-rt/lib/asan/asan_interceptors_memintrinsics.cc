@@ -33,12 +33,12 @@ void *__asan_memmove(void *to, const void *from, uptr size) {
 
 #if SANITIZER_FUCHSIA || SANITIZER_RTEMS
 
-// Fuchsia doesn't use sanitizer_common_interceptors.inc, but the only
-// things there it wants are these three.  Just define them as aliases
-// here rather than repeating the contents.
+// Fuchsia and RTEMS don't use sanitizer_common_interceptors.inc, but
+// the only things there it wants are these three.  Just define them
+// as aliases here rather than repeating the contents.
 
-decltype(__asan_memcpy) memcpy[[gnu::alias("__asan_memcpy")]];
-decltype(__asan_memmove) memmove[[gnu::alias("__asan_memmove")]];
-decltype(__asan_memset) memset[[gnu::alias("__asan_memset")]];
+extern "C" decltype(__asan_memcpy) memcpy[[gnu::alias("__asan_memcpy")]];
+extern "C" decltype(__asan_memmove) memmove[[gnu::alias("__asan_memmove")]];
+extern "C" decltype(__asan_memset) memset[[gnu::alias("__asan_memset")]];
 
 #endif  // SANITIZER_FUCHSIA || SANITIZER_RTEMS

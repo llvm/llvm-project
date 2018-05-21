@@ -42,7 +42,7 @@ float SymbolQualitySignals::evaluate() const {
     Score *= 2 - std::min<float>(80, SemaCCPriority) / 40;
 
   if (Deprecated)
-    Score *= 0.1;
+    Score *= 0.1f;
 
   return Score;
 }

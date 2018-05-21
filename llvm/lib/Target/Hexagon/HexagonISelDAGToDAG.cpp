@@ -93,11 +93,13 @@ void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
       Opcode = IsValidInc ? Hexagon::L2_loadrh_pi : Hexagon::L2_loadrh_io;
     break;
   case MVT::i32:
+  case MVT::f32:
   case MVT::v2i16:
   case MVT::v4i8:
     Opcode = IsValidInc ? Hexagon::L2_loadri_pi : Hexagon::L2_loadri_io;
     break;
   case MVT::i64:
+  case MVT::f64:
   case MVT::v2i32:
   case MVT::v4i16:
   case MVT::v8i8:
@@ -483,11 +485,13 @@ void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
     Opcode = IsValidInc ? Hexagon::S2_storerh_pi : Hexagon::S2_storerh_io;
     break;
   case MVT::i32:
+  case MVT::f32:
   case MVT::v2i16:
   case MVT::v4i8:
     Opcode = IsValidInc ? Hexagon::S2_storeri_pi : Hexagon::S2_storeri_io;
     break;
   case MVT::i64:
+  case MVT::f64:
   case MVT::v2i32:
   case MVT::v4i16:
   case MVT::v8i8:

@@ -452,7 +452,7 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(const MCInst &MI,
 
     Binary |= SubBits0 | (SubBits1 << 16);
   }
-  support::endian::Writer<support::little>(OS).write<uint32_t>(Binary);
+  support::endian::write<uint32_t>(OS, Binary, support::little);
   ++MCNumEmitted;
 }
 

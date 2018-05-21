@@ -7,9 +7,9 @@ define arm_aapcscc i32 @_abs(i32 %i) nounwind readnone {
 ; CHECK: _abs
   %call = tail call arm_aapcscc i32 @abs(i32 %i) nounwind readnone
   ret i32 %call
-; CHECK: %[[ISPOS:.*]] = icmp sgt i32 %i, -1
+; CHECK: %[[ISPOS:.*]] = icmp slt i32 %i, 0
 ; CHECK: %[[NEG:.*]] = sub i32 0, %i
-; CHECK: %[[RET:.*]] = select i1 %[[ISPOS]], i32 %i, i32 %[[NEG]]
+; CHECK: %[[RET:.*]] = select i1 %[[ISPOS]], i32 %[[NEG]], i32 %i
 ; CHECK: ret i32 %[[RET]]
 }
 
@@ -19,9 +19,9 @@ define arm_aapcscc i32 @_labs(i32 %i) nounwind readnone {
 ; CHECK: _labs
   %call = tail call arm_aapcscc i32 @labs(i32 %i) nounwind readnone
   ret i32 %call
-; CHECK: %[[ISPOS:.*]] = icmp sgt i32 %i, -1
+; CHECK: %[[ISPOS:.*]] = icmp slt i32 %i, 0
 ; CHECK: %[[NEG:.*]] = sub i32 0, %i
-; CHECK: %[[RET:.*]] = select i1 %[[ISPOS]], i32 %i, i32 %[[NEG]]
+; CHECK: %[[RET:.*]] = select i1 %[[ISPOS]], i32 %[[NEG]], i32 %i
 ; CHECK: ret i32 %[[RET]]
 }
 

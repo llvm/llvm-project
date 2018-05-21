@@ -281,3 +281,67 @@ define void @rotate_right_m16(i16* %p, i32 %amount) {
   ret void
 }
 
+define i32 @rotate_demanded_bits(i32, i32) {
+; CHECK-LABEL: rotate_demanded_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    andl $30, %ecx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    negl %ecx
+; CHECK-NEXT:    andb $30, %cl
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shrl %cl, %edi
+; CHECK-NEXT:    orl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %3 = and i32 %1, 30
+  %4 = shl i32 %0, %3
+  %5 = sub nsw i32 0, %3
+  %6 = and i32 %5, 30
+  %7 = lshr i32 %0, %6
+  %8 = or i32 %7, %4
+  ret i32 %8
+}
+
+define i32 @rotate_demanded_bits_2(i32, i32) {
+; CHECK-LABEL: rotate_demanded_bits_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andb $23, %sil
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    roll %cl, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %3 = and i32 %1, 23
+  %4 = shl i32 %0, %3
+  %5 = sub nsw i32 0, %3
+  %6 = and i32 %5, 31
+  %7 = lshr i32 %0, %6
+  %8 = or i32 %7, %4
+  ret i32 %8
+}
+
+define i32 @rotate_demanded_bits_3(i32, i32) {
+; CHECK-LABEL: rotate_demanded_bits_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addl %esi, %esi
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    andb $30, %cl
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    negl %esi
+; CHECK-NEXT:    andb $30, %sil
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    shrl %cl, %edi
+; CHECK-NEXT:    orl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %3 = shl i32 %1, 1
+  %4 = and i32 %3, 30
+  %5 = shl i32 %0, %4
+  %6 = sub i32 0, %3
+  %7 = and i32 %6, 30
+  %8 = lshr i32 %0, %7
+  %9 = or i32 %5, %8
+  ret i32 %9
+}

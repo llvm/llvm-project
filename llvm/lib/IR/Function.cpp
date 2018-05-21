@@ -194,6 +194,14 @@ LLVMContext &Function::getContext() const {
   return getType()->getContext();
 }
 
+unsigned Function::getInstructionCount() {
+  unsigned NumInstrs = 0;
+  for (BasicBlock &BB : BasicBlocks)
+    NumInstrs += std::distance(BB.instructionsWithoutDebug().begin(),
+                               BB.instructionsWithoutDebug().end());
+  return NumInstrs;
+}
+
 void Function::removeFromParent() {
   getParent()->getFunctionList().remove(getIterator());
 }

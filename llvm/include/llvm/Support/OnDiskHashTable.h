@@ -150,7 +150,7 @@ public:
   /// Uses the provided Info instead of a stack allocated one.
   offset_type Emit(raw_ostream &Out, Info &InfoObj) {
     using namespace llvm::support;
-    endian::Writer<little> LE(Out);
+    endian::Writer LE(Out, little);
 
     // Now we're done adding entries, resize the bucket list if it's
     // significantly too large. (This only happens if the number of

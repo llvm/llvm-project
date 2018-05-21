@@ -154,6 +154,10 @@
   sra $3, 32               # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
   srl $3, -1               # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
   srl $3, 32               # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
+  ll $33, 8($5)            # CHECK: :[[@LINE]]:6: error: invalid register number
+  ll $4, 8($33)            # CHECK: :[[@LINE]]:12: error: invalid register number
+  ll $4, 512($5)           # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  ll $4, -513($5)          # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   lle $33, 8($5)           # CHECK: :[[@LINE]]:7: error: invalid register number
   lle $4, 8($33)           # CHECK: :[[@LINE]]:13: error: invalid register number
   lle $4, 512($5)          # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
@@ -166,6 +170,10 @@
   sbe $4, 8($33)           # CHECK: :[[@LINE]]:13: error: invalid register number
   sbe $4, 512($5)          # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
   sbe $4, -513($5)         # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  sc $33, 8($5)            # CHECK: :[[@LINE]]:6: error: invalid register number
+  sc $4, 8($33)            # CHECK: :[[@LINE]]:12: error: invalid register number
+  sc $4, 512($5)           # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  sc $4, -513($5)          # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   sce $33, 8($5)           # CHECK: :[[@LINE]]:7: error: invalid register number
   sce $4, 8($33)           # CHECK: :[[@LINE]]:13: error: invalid register number
   sce $4, 512($5)          # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset

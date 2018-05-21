@@ -503,22 +503,4 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_ENABLE_EXCEPTIONS 1
 #endif
 
-/// \macro LLVM_PLUGIN_IMPORT
-/// Used to import the well-known entry point for registering loaded pass
-/// plugins
-#ifdef WIN32
-#define LLVM_PLUGIN_IMPORT __declspec(dllimport)
-#else
-#define LLVM_PLUGIN_IMPORT
-#endif
-
-/// \macro LLVM_PLUGIN_EXPORT
-/// Used to export the well-known entry point for registering loaded pass
-/// plugins
-#ifdef WIN32
-#define LLVM_PLUGIN_EXPORT __declspec(dllexport)
-#else
-#define LLVM_PLUGIN_EXPORT
-#endif
-
 #endif

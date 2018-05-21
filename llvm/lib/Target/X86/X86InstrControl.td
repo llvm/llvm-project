@@ -141,7 +141,8 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
                      [(brind (loadi64 addr:$dst))]>, Requires<[In64BitMode]>,
                      Sched<[WriteJumpLd]>;
 
-  let isCodeGenOnly = 1, Predicates = [HasIBT] in {
+  // Non-tracking jumps for IBT, use with caution.
+  let isCodeGenOnly = 1 in {
     def JMP16r_NT : I<0xFF, MRM4r, (outs), (ins GR16 : $dst), "jmp{w}\t{*}$dst",
                       [(X86NoTrackBrind GR16 : $dst)]>, Requires<[Not64BitMode]>,
                       OpSize16, Sched<[WriteJump]>, NOTRACK;
@@ -228,7 +229,8 @@ let isCall = 1 in
                         Requires<[Not64BitMode,FavorMemIndirectCall,NotUseRetpoline]>,
                         Sched<[WriteJumpLd]>;
 
-    let isCodeGenOnly = 1, Predicates = [HasIBT] in {
+    // Non-tracking calls for IBT, use with caution.
+    let isCodeGenOnly = 1 in {
       def CALL16r_NT : I<0xFF, MRM2r, (outs), (ins GR16 : $dst),
                         "call{w}\t{*}$dst",[(X86NoTrackCall GR16 : $dst)]>,
                         OpSize16, Requires<[Not64BitMode]>, Sched<[WriteJump]>, NOTRACK;
@@ -324,7 +326,8 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
                       Requires<[In64BitMode,FavorMemIndirectCall,
                                 NotUseRetpoline]>;
 
-  let isCodeGenOnly = 1, Predicates = [HasIBT] in{
+  // Non-tracking calls for IBT, use with caution.
+  let isCodeGenOnly = 1 in {
     def CALL64r_NT : I<0xFF, MRM2r, (outs), (ins GR64 : $dst),
                       "call{q}\t{*}$dst",[(X86NoTrackCall GR64 : $dst)]>,
                       Requires<[In64BitMode]>, NOTRACK;

@@ -21,6 +21,7 @@
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -205,21 +206,21 @@ static MCAsmInfo *createARMMCAsmInfo(const MCRegisterInfo &MRI,
 
 static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
-                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&Emitter,
                                      bool RelaxAll) {
   return createARMELFStreamer(
-      Ctx, std::move(MAB), OS, std::move(Emitter), false,
+      Ctx, std::move(MAB), std::move(OW), std::move(Emitter), false,
       (T.getArch() == Triple::thumb || T.getArch() == Triple::thumbeb));
 }
 
 static MCStreamer *
 createARMMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&MAB,
-                       raw_pwrite_stream &OS,
+                       std::unique_ptr<MCObjectWriter> &&OW,
                        std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll,
                        bool DWARFMustBeAtTheEnd) {
-  return createMachOStreamer(Ctx, std::move(MAB), OS, std::move(Emitter), false,
-                             DWARFMustBeAtTheEnd);
+  return createMachOStreamer(Ctx, std::move(MAB), std::move(OW),
+                             std::move(Emitter), false, DWARFMustBeAtTheEnd);
 }
 
 static MCInstPrinter *createARMMCInstPrinter(const Triple &T,

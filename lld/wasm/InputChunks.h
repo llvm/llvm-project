@@ -48,11 +48,11 @@ public:
 
   Kind kind() const { return SectionKind; }
 
-  uint32_t getSize() const { return data().size(); }
+  virtual uint32_t getSize() const { return data().size(); }
 
   void copyRelocations(const WasmSection &Section);
 
-  void writeTo(uint8_t *SectionStart) const;
+  virtual void writeTo(uint8_t *SectionStart) const;
 
   ArrayRef<WasmRelocation> getRelocations() const { return Relocations; }
 
@@ -78,6 +78,7 @@ protected:
   virtual ~InputChunk() = default;
   virtual ArrayRef<uint8_t> data() const = 0;
   virtual uint32_t getInputSectionOffset() const = 0;
+  virtual uint32_t getInputSize() const { return getSize(); };
 
   // Verifies the existing data at relocation targets matches our expectations.
   // This is performed only debug builds as an extra sanity check.
@@ -131,11 +132,19 @@ public:
            C->kind() == InputChunk::SyntheticFunction;
   }
 
+  void writeTo(uint8_t *SectionStart) const override;
   StringRef getName() const override { return Function->SymbolName; }
   StringRef getDebugName() const override { return Function->DebugName; }
   uint32_t getComdat() const override { return Function->Comdat; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
   uint32_t getFunctionCodeOffset() const { return Function->CodeOffset; }
+  uint32_t getSize() const override {
+    if (Config->CompressRelocTargets && File) {
+      assert(CompressedSize);
+      return CompressedSize;
+    }
+    return data().size();
+  }
   uint32_t getFunctionIndex() const { return FunctionIndex.getValue(); }
   bool hasFunctionIndex() const { return FunctionIndex.hasValue(); }
   void setFunctionIndex(uint32_t Index);
@@ -143,13 +152,23 @@ public:
   bool hasTableIndex() const { return TableIndex.hasValue(); }
   void setTableIndex(uint32_t Index);
 
+  // The size of a given input function can depend on the values of the
+  // LEB relocations within it.  This finalizeContents method is called after
+  // all the symbol values have be calcualted but before getSize() is ever
+  // called.
+  void calculateSize();
+
   const WasmSignature &Signature;
 
 protected:
   ArrayRef<uint8_t> data() const override {
+    assert(!Config->CompressRelocTargets);
     return File->CodeSection->Content.slice(getInputSectionOffset(),
                                             Function->Size);
   }
+
+  uint32_t getInputSize() const override { return Function->Size; }
+
   uint32_t getInputSectionOffset() const override {
     return Function->CodeSectionOffset;
   }
@@ -157,6 +176,8 @@ protected:
   const WasmFunction *Function;
   llvm::Optional<uint32_t> FunctionIndex;
   llvm::Optional<uint32_t> TableIndex;
+  uint32_t CompressedFuncSize = 0;
+  uint32_t CompressedSize = 0;
 };
 
 class SyntheticFunction : public InputFunction {

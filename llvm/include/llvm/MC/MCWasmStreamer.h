@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/DataTypes.h"
 
@@ -27,8 +28,10 @@ class raw_ostream;
 class MCWasmStreamer : public MCObjectStreamer {
 public:
   MCWasmStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
-                 raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter)
-      : MCObjectStreamer(Context, std::move(TAB), OS, std::move(Emitter)),
+                 std::unique_ptr<MCObjectWriter> OW,
+                 std::unique_ptr<MCCodeEmitter> Emitter)
+      : MCObjectStreamer(Context, std::move(TAB), std::move(OW),
+                         std::move(Emitter)),
         SeenIdent(false) {}
 
   ~MCWasmStreamer() override;

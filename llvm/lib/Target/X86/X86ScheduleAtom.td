@@ -323,9 +323,11 @@ def  : WriteRes<WriteVecStoreNTY,     [AtomPort0]>;
 def  : WriteRes<WriteVecMaskedStore,  [AtomPort0]>;
 def  : WriteRes<WriteVecMaskedStoreY, [AtomPort0]>;
 
-def  : WriteRes<WriteVecMove,         [AtomPort01]>;
+def  : WriteRes<WriteVecMove,          [AtomPort0]>;
 def  : WriteRes<WriteVecMoveX,        [AtomPort01]>;
 def  : WriteRes<WriteVecMoveY,        [AtomPort01]>;
+defm : X86WriteRes<WriteVecMoveToGpr,   [AtomPort0], 3, [3], 1>;
+defm : X86WriteRes<WriteVecMoveFromGpr, [AtomPort0], 1, [1], 1>;
 
 defm : AtomWriteResPair<WriteVecALU,       [AtomPort01],  [AtomPort0], 1, 1>;
 defm : AtomWriteResPair<WriteVecALUX,      [AtomPort01],  [AtomPort0], 1, 1>;
@@ -435,25 +437,11 @@ def AtomWrite0_1 : SchedWriteRes<[AtomPort0]> {
 }
 def : InstRW<[AtomWrite0_1], (instrs FXAM, LD_Frr,
                                      BSWAP32r, BSWAP64r,
-                                     MOVSX64rr32,
-                                     MMX_MOVD64rr,
-                                     MMX_MOVD64to64rr,
-                                     MOVDI2PDIrr,
-                                     MOVDI2SSrr,
-                                     MOV64toPQIrr,
-                                     MOV64toSDrr)>;
+                                     MOVSX64rr32)>;
 def : SchedAlias<WriteALURMW, AtomWrite0_1>;
 def : SchedAlias<WriteADCRMW, AtomWrite0_1>;
 def : InstRW<[AtomWrite0_1], (instregex "(RCL|RCR|ROL|ROR|SAR|SHL|SHR)(8|16|32|64)m",
                                         "MOV(S|Z)X(32|64)rr(8|8_NOREX|16)")>;
-
-def AtomWrite0_3 : SchedWriteRes<[AtomPort0]> {
-  let Latency = 3;
-  let ResourceCycles = [3];
-}
-def : InstRW<[AtomWrite0_3], (instrs MMX_MOVD64from64rr, MMX_MOVD64grr,
-                                     MOVPDI2DIrr, MOVPQIto64rr,
-                                     MOVSDto64rr, MOVSS2DIrr)>;
 
 def AtomWrite0_5 : SchedWriteRes<[AtomPort0]> {
   let Latency = 5;

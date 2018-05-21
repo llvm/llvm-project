@@ -72,6 +72,9 @@ struct array
     const T* data() const noexcept;
 };
 
+  template <class T, class... U>
+    array(T, U...) -> array<T, 1 + sizeof...(U)>;
+
 template <class T, size_t N>
   bool operator==(const array<T,N>& x, const array<T,N>& y);
 template <class T, size_t N>
@@ -86,7 +89,7 @@ template <class T, size_t N>
   bool operator>=(const array<T,N>& x, const array<T,N>& y);
 
 template <class T, size_t N >
-  void swap(array<T,N>& x, array<T,N>& y) noexcept(noexcept(x.swap(y)));
+  void swap(array<T,N>& x, array<T,N>& y) noexcept(noexcept(x.swap(y))); // C++17
 
 template <class T> class tuple_size;
 template <size_t I, class T> class tuple_element;
@@ -353,6 +356,14 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
     const value_type* data() const _NOEXCEPT {return reinterpret_cast<const value_type*>(__elems_);}
 };
 
+
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _Tp, class... _Args,
+         class = typename enable_if<(is_same_v<_Tp, _Args> && ...), void>::type
+         >
+array(_Tp, _Args...)
+  -> array<_Tp, 1 + sizeof...(_Args)>;
+#endif
 
 template <class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY

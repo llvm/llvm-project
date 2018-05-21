@@ -28,7 +28,8 @@ foo3:
 # nop is a fixed size instruction so this should pass.
 	
 # OBJTEXT: Contents of section .text
-# OBJTEXT-NEXT: 0000 9090ff34 25
+# OBJTEXT-NEXT: 0000 9090ff34 25000000 00909090 78563412
+# OBJTEXT-NEXT: 0010 78563412 90
 
 .text
 	
@@ -41,7 +42,23 @@ text1:
 	ret
 .endif
 	push gs
-
+	nop
+	nop
+	nop
 # No additional errors.
 #	
 # ASM-ERR-NOT: {{[0-9]+}}:{{[0-9]+}}: error:
+
+	
+
+text2:
+	.long 0x12345678
+text3:
+	.fill (text3-text2)/4, 4, 0x12345678
+	nop
+
+
+
+
+
+	

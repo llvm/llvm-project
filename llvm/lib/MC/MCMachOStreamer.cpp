@@ -24,6 +24,7 @@
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
@@ -63,9 +64,11 @@ private:
 
 public:
   MCMachOStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-                  raw_pwrite_stream &OS, std::unique_ptr<MCCodeEmitter> Emitter,
+                  std::unique_ptr<MCObjectWriter> OW,
+                  std::unique_ptr<MCCodeEmitter> Emitter,
                   bool DWARFMustBeAtTheEnd, bool label)
-      : MCObjectStreamer(Context, std::move(MAB), OS, std::move(Emitter)),
+      : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
+                         std::move(Emitter)),
         LabelSections(label), DWARFMustBeAtTheEnd(DWARFMustBeAtTheEnd),
         CreatedADWARFSection(false) {}
 
@@ -462,12 +465,12 @@ void MCMachOStreamer::FinishImpl() {
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
                                       std::unique_ptr<MCAsmBackend> &&MAB,
-                                      raw_pwrite_stream &OS,
+                                      std::unique_ptr<MCObjectWriter> &&OW,
                                       std::unique_ptr<MCCodeEmitter> &&CE,
                                       bool RelaxAll, bool DWARFMustBeAtTheEnd,
                                       bool LabelSections) {
   MCMachOStreamer *S =
-      new MCMachOStreamer(Context, std::move(MAB), OS, std::move(CE),
+      new MCMachOStreamer(Context, std::move(MAB), std::move(OW), std::move(CE),
                           DWARFMustBeAtTheEnd, LabelSections);
   const Triple &Target = Context.getObjectFileInfo()->getTargetTriple();
   S->EmitVersionForTarget(Target);

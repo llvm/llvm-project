@@ -796,6 +796,16 @@ LLVMValueKind LLVMGetValueKind(LLVMValueRef Val) {
   }
 }
 
+const char *LLVMGetValueName2(LLVMValueRef Val, size_t *Length) {
+  auto *V = unwrap(Val);
+  *Length = V->getName().size();
+  return V->getName().data();
+}
+
+void LLVMSetValueName2(LLVMValueRef Val, const char *Name, size_t NameLen) {
+  unwrap(Val)->setName(StringRef(Name, NameLen));
+}
+
 const char *LLVMGetValueName(LLVMValueRef Val) {
   return unwrap(Val)->getName().data();
 }
