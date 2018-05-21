@@ -147,6 +147,11 @@ public:
     void reverse() noexcept;
 };
 
+
+template <class InputIterator, class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
+    list(InputIterator, InputIterator, Allocator = Allocator())
+    -> list<typename iterator_traits<InputIterator>::value_type, Allocator>;  // C++17
+
 template <class T, class Alloc>
     bool operator==(const list<T,Alloc>& x, const list<T,Alloc>& y);
 template <class T, class Alloc>
@@ -527,11 +532,12 @@ class __list_imp
 {
     __list_imp(const __list_imp&);
     __list_imp& operator=(const __list_imp&);
-protected:
-    typedef _Tp                                                     value_type;
+public:
     typedef _Alloc                                                  allocator_type;
     typedef allocator_traits<allocator_type>                        __alloc_traits;
     typedef typename __alloc_traits::size_type                      size_type;
+protected:
+    typedef _Tp                                                     value_type;
     typedef typename __alloc_traits::void_pointer                   __void_pointer;
     typedef __list_iterator<value_type, __void_pointer>             iterator;
     typedef __list_const_iterator<value_type, __void_pointer>       const_iterator;
@@ -1105,6 +1111,22 @@ private:
         _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value);
     void __move_assign(list& __c, false_type);
 };
+
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _InputIterator,
+         class _Alloc = typename std::allocator<typename iterator_traits<_InputIterator>::value_type>,
+         class = typename enable_if<__is_allocator<_Alloc>::value, void>::type
+         >
+list(_InputIterator, _InputIterator)
+  -> list<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+
+template<class _InputIterator,
+         class _Alloc,
+         class = typename enable_if<__is_allocator<_Alloc>::value, void>::type
+         >
+list(_InputIterator, _InputIterator, _Alloc)
+  -> list<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+#endif
 
 // Link in nodes [__f, __l] just prior to __p
 template <class _Tp, class _Alloc>
