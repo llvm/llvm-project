@@ -2505,21 +2505,40 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
       }
     }
 
+    auto is_simulator = [&]() -> bool {
+      return triple.getEnvironment() == llvm::Triple::Simulator ||
+             !triple.getArchName().startswith("arm");
+    };
+
     if (!set_sdk) {
-      if (triple.getOS() == llvm::Triple::OSType::MacOSX ||
-          triple.getOS() == llvm::Triple::OSType::Darwin) {
+      switch (triple.getOS()) {
+      case llvm::Triple::OSType::MacOSX:
+      case llvm::Triple::OSType::Darwin:
         search_path_opts.SDKPath = GetSDKDirectory(SDKType::MacOSX, 10, 10)
-                                       .AsCString(""); // we need the 10.10 SDK
-      } else if (triple.getOS() == llvm::Triple::OSType::IOS) {
-        if (triple.getArchName().startswith("arm")) {
-          search_path_opts.SDKPath =
-              GetSDKDirectory(SDKType::iPhoneOS, 8, 0).AsCString("");
-        } else {
-          search_path_opts.SDKPath =
-              GetSDKDirectory(SDKType::iPhoneSimulator, 8, 0).AsCString("");
-        }
+                                       .AsCString("");
+        break;
+      case llvm::Triple::OSType::IOS:
+        search_path_opts.SDKPath =
+            is_simulator()
+                ? GetSDKDirectory(SDKType::iPhoneSimulator, 8, 0).AsCString("")
+                : GetSDKDirectory(SDKType::iPhoneOS, 8, 0).AsCString("");
+        break;
+      case llvm::Triple::OSType::TvOS:
+        search_path_opts.SDKPath =
+            is_simulator()
+                ? GetSDKDirectory(SDKType::AppleTVSimulator, 9, 0).AsCString("")
+                : GetSDKDirectory(SDKType::AppleTVOS, 9, 0).AsCString("");
+        break;
+      case llvm::Triple::OSType::WatchOS:
+        search_path_opts.SDKPath =
+            is_simulator()
+                ? GetSDKDirectory(SDKType::WatchSimulator, 2, 0).AsCString("")
+                : GetSDKDirectory(SDKType::watchOS, 2, 0).AsCString("");
+        break;
+      default:
+        // Explicitly leave the SDKPath blank on other platforms.
+        break;
       }
-      // explicitly leave the SDKPath blank on other platforms
     }
 
     if (!set_resource_dir) {
