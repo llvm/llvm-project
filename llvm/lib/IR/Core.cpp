@@ -1965,6 +1965,51 @@ LLVMValueRef LLVMAddAlias(LLVMModuleRef M, LLVMTypeRef Ty, LLVMValueRef Aliasee,
                                   unwrap<Constant>(Aliasee), unwrap(M)));
 }
 
+LLVMValueRef LLVMGetNamedGlobalAlias(LLVMModuleRef M,
+                                     const char *Name, size_t NameLen) {
+  return wrap(unwrap(M)->getNamedAlias(Name));
+}
+
+LLVMValueRef LLVMGetFirstGlobalAlias(LLVMModuleRef M) {
+  Module *Mod = unwrap(M);
+  Module::alias_iterator I = Mod->alias_begin();
+  if (I == Mod->alias_end())
+    return nullptr;
+  return wrap(&*I);
+}
+
+LLVMValueRef LLVMGetLastGlobalAlias(LLVMModuleRef M) {
+  Module *Mod = unwrap(M);
+  Module::alias_iterator I = Mod->alias_end();
+  if (I == Mod->alias_begin())
+    return nullptr;
+  return wrap(&*--I);
+}
+
+LLVMValueRef LLVMGetNextGlobalAlias(LLVMValueRef GA) {
+  GlobalAlias *Alias = unwrap<GlobalAlias>(GA);
+  Module::alias_iterator I(Alias);
+  if (++I == Alias->getParent()->alias_end())
+    return nullptr;
+  return wrap(&*I);
+}
+
+LLVMValueRef LLVMGetPreviousGlobalAlias(LLVMValueRef GA) {
+  GlobalAlias *Alias = unwrap<GlobalAlias>(GA);
+  Module::alias_iterator I(Alias);
+  if (I == Alias->getParent()->alias_begin())
+    return nullptr;
+  return wrap(&*--I);
+}
+
+LLVMValueRef LLVMAliasGetAliasee(LLVMValueRef Alias) {
+  return wrap(unwrap<GlobalAlias>(Alias)->getAliasee());
+}
+
+void LLVMAliasSetAliasee(LLVMValueRef Alias, LLVMValueRef Aliasee) {
+  unwrap<GlobalAlias>(Alias)->setAliasee(unwrap<Constant>(Aliasee));
+}
+
 /*--.. Operations on functions .............................................--*/
 
 LLVMValueRef LLVMAddFunction(LLVMModuleRef M, const char *Name,

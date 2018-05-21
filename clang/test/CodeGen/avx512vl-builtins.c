@@ -7035,31 +7035,35 @@ __m256i test_mm256_maskz_permutex_epi64(__mmask8 __M, __m256i __X) {
 
 __m256d test_mm256_permutexvar_pd(__m256i __X, __m256d __Y) {
   // CHECK-LABEL: @test_mm256_permutexvar_pd
-  // CHECK: @llvm.x86.avx512.mask.permvar.df.256
+  // CHECK: @llvm.x86.avx512.permvar.df.256
   return _mm256_permutexvar_pd(__X, __Y);
 }
 
 __m256d test_mm256_mask_permutexvar_pd(__m256d __W, __mmask8 __U, __m256i __X, __m256d __Y) {
   // CHECK-LABEL: @test_mm256_mask_permutexvar_pd
-  // CHECK: @llvm.x86.avx512.mask.permvar.df.256
+  // CHECK: @llvm.x86.avx512.permvar.df.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_mask_permutexvar_pd(__W, __U, __X, __Y);
 }
 
 __m256d test_mm256_maskz_permutexvar_pd(__mmask8 __U, __m256i __X, __m256d __Y) {
   // CHECK-LABEL: @test_mm256_maskz_permutexvar_pd
-  // CHECK: @llvm.x86.avx512.mask.permvar.df.256
+  // CHECK: @llvm.x86.avx512.permvar.df.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
   return _mm256_maskz_permutexvar_pd(__U, __X, __Y);
 }
 
 __m256i test_mm256_maskz_permutexvar_epi64(__mmask8 __M, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: @test_mm256_maskz_permutexvar_epi64
-  // CHECK: @llvm.x86.avx512.mask.permvar.di.256
+  // CHECK: @llvm.x86.avx512.permvar.di.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_maskz_permutexvar_epi64(__M, __X, __Y);
 }
 
 __m256i test_mm256_mask_permutexvar_epi64(__m256i __W, __mmask8 __M, __m256i __X, __m256i __Y) {
   // CHECK-LABEL: @test_mm256_mask_permutexvar_epi64
-  // CHECK: @llvm.x86.avx512.mask.permvar.di.256
+  // CHECK: @llvm.x86.avx512.permvar.di.256
+  // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
   return _mm256_mask_permutexvar_epi64(__W, __M, __X, __Y);
 }
 

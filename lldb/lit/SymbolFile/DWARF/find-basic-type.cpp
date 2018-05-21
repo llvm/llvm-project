@@ -8,6 +8,14 @@
 // RUN:   FileCheck --check-prefix=CONTEXT %s
 // RUN: lldb-test symbols --name=not_there --find=type %t | \
 // RUN:   FileCheck --check-prefix=EMPTY %s
+//
+// RUN: clang %s -g -c -o %t --target=x86_64-apple-macosx
+// RUN: lldb-test symbols --name=foo --find=type %t | \
+// RUN:   FileCheck --check-prefix=NAME %s
+// RUN: lldb-test symbols --name=foo --context=context --find=type %t | \
+// RUN:   FileCheck --check-prefix=CONTEXT %s
+// RUN: lldb-test symbols --name=not_there --find=type %t | \
+// RUN:   FileCheck --check-prefix=EMPTY %s
 
 // EMPTY: Found 0 types:
 // NAME: Found 4 types:

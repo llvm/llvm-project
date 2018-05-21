@@ -4010,3 +4010,43 @@ define <8 x i32>@test_int_x86_avx512_mask_pmaddw_d_256(<16 x i16> %x0, <16 x i16
   %res2 = add <8 x i32> %res, %res1
   ret <8 x i32> %res2
 }
+
+declare <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16>, <8 x i16>, <8 x i16>, i8)
+
+define <8 x i16>@test_int_x86_avx512_mask_permvar_hi_128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_permvar_hi_128:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpermw %xmm0, %xmm1, %xmm3 ## encoding: [0x62,0xf2,0xf5,0x08,0x8d,0xd8]
+; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
+; CHECK-NEXT:    vpermw %xmm0, %xmm1, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xf5,0x09,0x8d,0xd0]
+; CHECK-NEXT:    vpermw %xmm0, %xmm1, %xmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xf5,0x89,0x8d,0xc0]
+; CHECK-NEXT:    vpaddw %xmm3, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xfd,0xc3]
+; CHECK-NEXT:    vpaddw %xmm0, %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xe9,0xfd,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 %x3)
+  %res1 = call <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> zeroinitializer, i8 %x3)
+  %res2 = call <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16> %x0, <8 x i16> %x1, <8 x i16> %x2, i8 -1)
+  %res3 = add <8 x i16> %res, %res1
+  %res4 = add <8 x i16> %res3, %res2
+  ret <8 x i16> %res4
+}
+
+declare <16 x i16> @llvm.x86.avx512.mask.permvar.hi.256(<16 x i16>, <16 x i16>, <16 x i16>, i16)
+
+define <16 x i16>@test_int_x86_avx512_mask_permvar_hi_256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_permvar_hi_256:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpermw %ymm0, %ymm1, %ymm3 ## encoding: [0x62,0xf2,0xf5,0x28,0x8d,0xd8]
+; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
+; CHECK-NEXT:    vpermw %ymm0, %ymm1, %ymm2 {%k1} ## encoding: [0x62,0xf2,0xf5,0x29,0x8d,0xd0]
+; CHECK-NEXT:    vpermw %ymm0, %ymm1, %ymm0 {%k1} {z} ## encoding: [0x62,0xf2,0xf5,0xa9,0x8d,0xc0]
+; CHECK-NEXT:    vpaddw %ymm3, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xfd,0xc3]
+; CHECK-NEXT:    vpaddw %ymm0, %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xed,0xfd,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x i16> @llvm.x86.avx512.mask.permvar.hi.256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 %x3)
+  %res1 = call <16 x i16> @llvm.x86.avx512.mask.permvar.hi.256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> zeroinitializer, i16 %x3)
+  %res2 = call <16 x i16> @llvm.x86.avx512.mask.permvar.hi.256(<16 x i16> %x0, <16 x i16> %x1, <16 x i16> %x2, i16 -1)
+  %res3 = add <16 x i16> %res, %res1
+  %res4 = add <16 x i16> %res3, %res2
+  ret <16 x i16> %res4
+}
