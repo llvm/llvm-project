@@ -2343,6 +2343,30 @@ CAMLprim LLVMValueRef llvm_build_fcmp(value Pred,
                        String_val(Name));
 }
 
+/*--.. Parallel constructs .................................................--*/
+
+/* llbasicblock -> llbasicblock -> llvalue -> llbuilder -> llvalue */
+CAMLprim LLVMValueRef llvm_build_detach(LLVMBasicBlockRef DetachBB,
+                                        LLVMBasicBlockRef ContinueBB,
+                                        LLVMValueRef SyncRegion,
+                                        LLVMBuilderRef B) {
+    return LLVMBuildDetach(Builder_val(B), DetachBB, ContinueBB, SyncRegion);
+}
+
+/* llbasicblock -> llvalue -> llbuilder -> llvalue */
+CAMLprim LLVMValueRef llvm_build_reattach(LLVMBasicBlockRef ReattachBB,
+                                          LLVMValueRef SyncRegion,
+                                          LLVMBuilderRef B) {
+    return LLVMBuildReattach(Builder_val(B), ReattachBB, SyncRegion);
+}
+
+/* llbasicblock -> llvalue -> llbuilder -> llvalue */
+CAMLprim LLVMValueRef llvm_build_sync(LLVMBasicBlockRef ContinueBB,
+                                      LLVMValueRef SyncRegion,
+                                      LLVMBuilderRef B) {
+    return LLVMBuildSync(Builder_val(B), ContinueBB, SyncRegion);
+}
+
 /*--... Miscellaneous instructions .........................................--*/
 
 /* (llvalue * llbasicblock) list -> string -> llbuilder -> llvalue */

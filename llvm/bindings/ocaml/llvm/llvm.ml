@@ -1327,6 +1327,15 @@ external build_icmp : Icmp.t -> llvalue -> llvalue -> string ->
 external build_fcmp : Fcmp.t -> llvalue -> llvalue -> string ->
                       llbuilder -> llvalue = "llvm_build_fcmp"
 
+(*--.. Parallel constructs .................................................--*)
+
+external build_detach : llbasicblock -> llbasicblock -> llvalue -> llbuilder ->
+                        llvalue = "llvm_build_detach"
+external build_reattach : llbasicblock -> llvalue -> llbuilder -> llvalue
+                        = "llvm_build_reattach"
+external build_sync : llbasicblock -> llvalue -> llbuilder -> llvalue
+                    = "llvm_build_sync"
+
 (*--... Miscellaneous instructions .........................................--*)
 external build_phi : (llvalue * llbasicblock) list -> string -> llbuilder ->
                      llvalue = "llvm_build_phi"

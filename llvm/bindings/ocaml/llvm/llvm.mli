@@ -2503,6 +2503,27 @@ val build_fcmp : Fcmp.t -> llvalue -> llvalue -> string ->
                       llbuilder -> llvalue
 
 
+(** {Parllel constructs} *)
+
+(** [build_detach dbb cbb r b] creates a
+    [detach within %r, %dbb, %cbb]
+    instruction at the position specified by the instruction builder [b].
+    See the method [llvm::LLVMBuilder::CreateDetach]. *)
+val build_detach : llbasicblock -> llbasicblock -> llvalue -> llbuilder ->
+                   llvalue
+
+(** [build_reattach bb r b] creates a
+    [reattach within %r, %bb]
+    instruction at the position specified by the instruction builder [b].
+    See the method [llvm::LLVMBuilder::CreateReattach]. *)
+val build_reattach : llbasicblock -> llvalue -> llbuilder -> llvalue
+
+(** [build_sync bb r b] creates a
+    [sync within %r, %bb]
+    instruction at the position specified by the instruction builder [b].
+    See the method [llvm::LLVMBuilder::CreateSync]. *)
+val build_sync : llbasicblock -> llvalue -> llbuilder -> llvalue
+
 (** {7 Miscellaneous instructions} *)
 
 (** [build_phi incoming name b] creates a
