@@ -3,6 +3,12 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -o - -std=c++11 | FileCheck %s --check-prefix=CHECK-CXX11
 // expected-no-diagnostics
 
+#if __cplusplus >= 201103L
+// CHECK-CXX11: @_ZZ15InitRefWithListvE1r = internal constant i32* @_ZGRZ15InitRefWithListvE1r_
+// CHECK-CXX11: @_ZGRZ15InitRefWithListvE1r_ = internal constant i32 123
+int InitRefWithList() { static const int &r = {123}; return r; }
+#endif
+
 struct XPTParamDescriptor {};
 struct nsXPTParamInfo {
   nsXPTParamInfo(const XPTParamDescriptor& desc);

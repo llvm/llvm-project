@@ -338,7 +338,6 @@ void f0() {
   tmp_V2LLi = __builtin_ia32_psadbw128(tmp_V16c, tmp_V16c);
   tmp_V2d = __builtin_ia32_sqrtpd(tmp_V2d);
   tmp_V2d = __builtin_ia32_sqrtsd(tmp_V2d);
-  tmp_V4f = __builtin_ia32_cvtdq2ps(tmp_V4i);
   tmp_V2LLi = __builtin_ia32_cvtpd2dq(tmp_V2d);
   tmp_V2i = __builtin_ia32_cvtpd2pi(tmp_V2d);
   tmp_V4f = __builtin_ia32_cvtpd2ps(tmp_V2d);

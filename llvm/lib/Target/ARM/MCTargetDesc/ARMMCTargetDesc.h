@@ -25,6 +25,7 @@ class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
 class MCInstPrinter;
+class MCObjectTargetWriter;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
@@ -86,19 +87,16 @@ MCStreamer *createARMWinCOFFStreamer(MCContext &Context,
                                      bool IncrementalLinkerCompatible);
 
 /// Construct an ELF Mach-O object writer.
-std::unique_ptr<MCObjectWriter> createARMELFObjectWriter(raw_pwrite_stream &OS,
-                                                         uint8_t OSABI,
-                                                         bool IsLittleEndian);
+std::unique_ptr<MCObjectTargetWriter> createARMELFObjectWriter(uint8_t OSABI);
 
 /// Construct an ARM Mach-O object writer.
-std::unique_ptr<MCObjectWriter> createARMMachObjectWriter(raw_pwrite_stream &OS,
-                                                          bool Is64Bit,
-                                                          uint32_t CPUType,
-                                                          uint32_t CPUSubtype);
+std::unique_ptr<MCObjectTargetWriter>
+createARMMachObjectWriter(bool Is64Bit, uint32_t CPUType,
+                          uint32_t CPUSubtype);
 
 /// Construct an ARM PE/COFF object writer.
-std::unique_ptr<MCObjectWriter>
-createARMWinCOFFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit);
+std::unique_ptr<MCObjectTargetWriter>
+createARMWinCOFFObjectWriter(bool Is64Bit);
 
 /// Construct ARM Mach-O relocation info.
 MCRelocationInfo *createARMMachORelocationInfo(MCContext &Ctx);

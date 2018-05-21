@@ -39,8 +39,7 @@
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -     b	t
 
 # CHECK:      Timeline view:
-
-# CHECK:      Index     0123456
+# CHECK-NEXT: Index     0123456
 
 # CHECK:      [0,0]     DeER ..   b	t
 # CHECK-NEXT: [1,0]     D=eER..   b	t

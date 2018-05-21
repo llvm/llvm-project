@@ -112,13 +112,12 @@ Nios2AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-std::unique_ptr<MCObjectWriter>
-Nios2AsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createNios2ELFObjectWriter(OS,
-                                    MCELFObjectTargetWriter::getOSABI(OSType));
+std::unique_ptr<MCObjectTargetWriter>
+Nios2AsmBackend::createObjectTargetWriter() const {
+  return createNios2ELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
-bool Nios2AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
+bool Nios2AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   return true;
 }
 

@@ -298,6 +298,15 @@ void TracePC::PrintCoverage() {
   IterateCoveredFunctions(CoveredFunctionCallback);
 }
 
+void TracePC::DumpCoverage() {
+  if (EF->__sanitizer_dump_coverage) {
+    Vector<uintptr_t> PCsCopy(GetNumPCs());
+    for (size_t i = 0; i < GetNumPCs(); i++)
+      PCsCopy[i] = PCs()[i] ? GetPreviousInstructionPc(PCs()[i]) : 0;
+    EF->__sanitizer_dump_coverage(PCsCopy.data(), PCsCopy.size());
+  }
+}
+
 // Value profile.
 // We keep track of various values that affect control flow.
 // These values are inserted into a bit-set-based hash map.

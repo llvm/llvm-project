@@ -417,9 +417,7 @@ bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createPPCELFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
-                               bool IsLittleEndian, uint8_t OSABI) {
-  auto MOTW = llvm::make_unique<PPCELFObjectWriter>(Is64Bit, OSABI);
-  return createELFObjectWriter(std::move(MOTW), OS, IsLittleEndian);
+std::unique_ptr<MCObjectTargetWriter>
+llvm::createPPCELFObjectWriter(bool Is64Bit, uint8_t OSABI) {
+  return llvm::make_unique<PPCELFObjectWriter>(Is64Bit, OSABI);
 }

@@ -328,11 +328,7 @@ BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
                                       bool hardware,
                                       LazyBool move_to_nearest_code) {
   FileSpec remapped_file;
-  ConstString remapped_path;
-  if (GetSourcePathMap().ReverseRemapPath(ConstString(file.GetPath().c_str()),
-                                          remapped_path))
-    remapped_file.SetFile(remapped_path.AsCString(), false);
-  else
+  if (!GetSourcePathMap().ReverseRemapPath(file, remapped_file))
     remapped_file = file;
 
   if (check_inlines == eLazyBoolCalculate) {

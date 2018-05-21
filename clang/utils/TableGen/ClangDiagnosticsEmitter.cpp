@@ -492,6 +492,8 @@ static StringRef getModifierName(ModifierType MT) {
   case MT_Unknown:
     llvm_unreachable("invalid modifier type");
   }
+  // Unhandled case
+  llvm_unreachable("invalid modifier type");
 }
 
 struct Piece {

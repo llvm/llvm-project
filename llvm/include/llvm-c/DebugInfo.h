@@ -632,6 +632,50 @@ LLVMDIBuilderCreateMemberPointerType(LLVMDIBuilderRef Builder,
                                      uint64_t SizeInBits,
                                      uint32_t AlignInBits,
                                      LLVMDIFlags Flags);
+/**
+ * Create debugging information entry for Objective-C instance variable.
+ * \param Builder      The DIBuilder.
+ * \param Name         Member name.
+ * \param NameLen      The length of the C string passed to \c Name.
+ * \param File         File where this member is defined.
+ * \param LineNo       Line number.
+ * \param SizeInBits   Member size.
+ * \param AlignInBits  Member alignment.
+ * \param OffsetInBits Member offset.
+ * \param Flags        Flags to encode member attribute, e.g. private
+ * \param Ty           Parent type.
+ * \param PropertyNode Property associated with this ivar.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateObjCIVar(LLVMDIBuilderRef Builder,
+                            const char *Name, size_t NameLen,
+                            LLVMMetadataRef File, unsigned LineNo,
+                            uint64_t SizeInBits, uint32_t AlignInBits,
+                            uint64_t OffsetInBits, LLVMDIFlags Flags,
+                            LLVMMetadataRef Ty, LLVMMetadataRef PropertyNode);
+
+/**
+ * Create debugging information entry for Objective-C property.
+ * \param Builder            The DIBuilder.
+ * \param Name               Property name.
+ * \param NameLen            The length of the C string passed to \c Name.
+ * \param File               File where this property is defined.
+ * \param LineNo             Line number.
+ * \param GetterName         Name of the Objective C property getter selector.
+ * \param GetterNameLen      The length of the C string passed to \c GetterName.
+ * \param SetterName         Name of the Objective C property setter selector.
+ * \param SetterNameLen      The length of the C string passed to \c SetterName.
+ * \param PropertyAttributes Objective C property attributes.
+ * \param Ty                 Type.
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateObjCProperty(LLVMDIBuilderRef Builder,
+                                const char *Name, size_t NameLen,
+                                LLVMMetadataRef File, unsigned LineNo,
+                                const char *GetterName, size_t GetterNameLen,
+                                const char *SetterName, size_t SetterNameLen,
+                                unsigned PropertyAttributes,
+                                LLVMMetadataRef Ty);
 
 /**
  * Create a new DIType* with the "object pointer"
@@ -681,12 +725,28 @@ LLVMDIBuilderCreateNullPtrType(LLVMDIBuilderRef Builder);
  * \param File       File where this type is defined.
  * \param LineNo     Line number.
  * \param Scope      The surrounding context for the typedef.
-*/
+ */
 LLVMMetadataRef
 LLVMDIBuilderCreateTypedef(LLVMDIBuilderRef Builder, LLVMMetadataRef Type,
                            const char *Name, size_t NameLen,
                            LLVMMetadataRef File, unsigned LineNo,
                            LLVMMetadataRef Scope);
+
+/**
+ * Create debugging information entry to establish inheritance relationship
+ * between two types.
+ * \param Builder       The DIBuilder.
+ * \param Ty            Original type.
+ * \param BaseTy        Base type. Ty is inherits from base.
+ * \param BaseOffset    Base offset.
+ * \param VBPtrOffset  Virtual base pointer offset.
+ * \param Flags         Flags to describe inheritance attribute, e.g. private
+ */
+LLVMMetadataRef
+LLVMDIBuilderCreateInheritance(LLVMDIBuilderRef Builder,
+                               LLVMMetadataRef Ty, LLVMMetadataRef BaseTy,
+                               uint64_t BaseOffset, uint32_t VBPtrOffset,
+                               LLVMDIFlags Flags);
 
 /**
  * Create a permanent forward-declared type.

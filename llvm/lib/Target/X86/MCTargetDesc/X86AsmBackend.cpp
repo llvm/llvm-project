@@ -71,7 +71,7 @@ class X86AsmBackend : public MCAsmBackend {
   const MCSubtargetInfo &STI;
 public:
   X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
-      : MCAsmBackend(), STI(STI) {}
+      : MCAsmBackend(support::little), STI(STI) {}
 
   unsigned getNumFixupKinds() const override {
     return X86::NumTargetFixupKinds;
@@ -126,7 +126,7 @@ public:
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override;
 
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 };
 } // end anonymous namespace
 
@@ -315,35 +315,35 @@ void X86AsmBackend::relaxInstruction(const MCInst &Inst,
 /// Write a sequence of optimal nops to the output, covering \p Count
 /// bytes.
 /// \return - true on success, false on failure
-bool X86AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
-  static const uint8_t Nops[10][10] = {
+bool X86AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+  static const char Nops[10][11] = {
     // nop
-    {0x90},
+    "\x90",
     // xchg %ax,%ax
-    {0x66, 0x90},
+    "\x66\x90",
     // nopl (%[re]ax)
-    {0x0f, 0x1f, 0x00},
+    "\x0f\x1f\x00",
     // nopl 0(%[re]ax)
-    {0x0f, 0x1f, 0x40, 0x00},
+    "\x0f\x1f\x40\x00",
     // nopl 0(%[re]ax,%[re]ax,1)
-    {0x0f, 0x1f, 0x44, 0x00, 0x00},
+    "\x0f\x1f\x44\x00\x00",
     // nopw 0(%[re]ax,%[re]ax,1)
-    {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00},
+    "\x66\x0f\x1f\x44\x00\x00",
     // nopl 0L(%[re]ax)
-    {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00},
+    "\x0f\x1f\x80\x00\x00\x00\x00",
     // nopl 0L(%[re]ax,%[re]ax,1)
-    {0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
+    "\x0f\x1f\x84\x00\x00\x00\x00\x00",
     // nopw 0L(%[re]ax,%[re]ax,1)
-    {0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
+    "\x66\x0f\x1f\x84\x00\x00\x00\x00\x00",
     // nopw %cs:0L(%[re]ax,%[re]ax,1)
-    {0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
+    "\x66\x2e\x0f\x1f\x84\x00\x00\x00\x00\x00",
   };
 
   // This CPU doesn't support long nops. If needed add more.
   // FIXME: We could generated something better than plain 0x90.
   if (!STI.getFeatureBits()[X86::FeatureNOPL]) {
     for (uint64_t i = 0; i < Count; ++i)
-      OW->write8(0x90);
+      OS << '\x90';
     return true;
   }
 
@@ -363,10 +363,10 @@ bool X86AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
     const uint8_t ThisNopLength = (uint8_t) std::min(Count, MaxNopLength);
     const uint8_t Prefixes = ThisNopLength <= 10 ? 0 : ThisNopLength - 10;
     for (uint8_t i = 0; i < Prefixes; i++)
-      OW->write8(0x66);
+      OS << '\x66';
     const uint8_t Rest = ThisNopLength - Prefixes;
-    for (uint8_t i = 0; i < Rest; i++)
-      OW->write8(Nops[Rest - 1][i]);
+    if (Rest != 0)
+      OS.write(Nops[Rest - 1], Rest);
     Count -= ThisNopLength;
   } while (Count != 0);
 
@@ -390,9 +390,9 @@ public:
                       const MCSubtargetInfo &STI)
     : ELFX86AsmBackend(T, OSABI, STI) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createX86ELFObjectWriter(OS, /*IsELF64*/ false, OSABI, ELF::EM_386);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createX86ELFObjectWriter(/*IsELF64*/ false, OSABI, ELF::EM_386);
   }
 };
 
@@ -402,9 +402,9 @@ public:
                        const MCSubtargetInfo &STI)
       : ELFX86AsmBackend(T, OSABI, STI) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createX86ELFObjectWriter(OS, /*IsELF64*/ false, OSABI,
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createX86ELFObjectWriter(/*IsELF64*/ false, OSABI,
                                     ELF::EM_X86_64);
   }
 };
@@ -415,9 +415,9 @@ public:
                          const MCSubtargetInfo &STI)
       : ELFX86AsmBackend(T, OSABI, STI) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createX86ELFObjectWriter(OS, /*IsELF64*/ false, OSABI,
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createX86ELFObjectWriter(/*IsELF64*/ false, OSABI,
                                     ELF::EM_IAMCU);
   }
 };
@@ -428,9 +428,9 @@ public:
                       const MCSubtargetInfo &STI)
     : ELFX86AsmBackend(T, OSABI, STI) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createX86ELFObjectWriter(OS, /*IsELF64*/ true, OSABI, ELF::EM_X86_64);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createX86ELFObjectWriter(/*IsELF64*/ true, OSABI, ELF::EM_X86_64);
   }
 };
 
@@ -452,9 +452,9 @@ public:
         .Default(MCAsmBackend::getFixupKind(Name));
   }
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createX86WinCOFFObjectWriter(OS, Is64Bit);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createX86WinCOFFObjectWriter(Is64Bit);
   }
 };
 
@@ -813,9 +813,9 @@ public:
                          const MCSubtargetInfo &STI)
       : DarwinX86AsmBackend(T, MRI, STI, false) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createX86MachObjectWriter(OS, /*Is64Bit=*/false,
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createX86MachObjectWriter(/*Is64Bit=*/false,
                                      MachO::CPU_TYPE_I386,
                                      MachO::CPU_SUBTYPE_I386_ALL);
   }
@@ -834,10 +834,10 @@ public:
                          const MCSubtargetInfo &STI, MachO::CPUSubTypeX86 st)
       : DarwinX86AsmBackend(T, MRI, STI, true), Subtype(st) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createX86MachObjectWriter(OS, /*Is64Bit=*/true,
-                                     MachO::CPU_TYPE_X86_64, Subtype);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createX86MachObjectWriter(/*Is64Bit=*/true, MachO::CPU_TYPE_X86_64,
+                                     Subtype);
   }
 
   /// Generate the compact unwind encoding for the CFI instructions.

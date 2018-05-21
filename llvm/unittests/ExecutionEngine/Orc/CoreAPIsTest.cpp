@@ -641,7 +641,7 @@ TEST(CoreAPIsTest, TestLookupWithUnthreadedMaterialization) {
 
   cantFail(V.define(MU));
 
-  auto FooLookupResult = cantFail(lookup({&V}, Foo, nullptr));
+  auto FooLookupResult = cantFail(lookup({&V}, Foo));
 
   EXPECT_EQ(FooLookupResult.getAddress(), FooSym.getAddress())
       << "lookup returned an incorrect address";
@@ -668,7 +668,7 @@ TEST(CoreAPIsTest, TestLookupWithThreadedMaterialization) {
   auto &V = ES.createVSO("V");
   cantFail(V.define(absoluteSymbols({{Foo, FooSym}})));
 
-  auto FooLookupResult = cantFail(lookup({&V}, Foo, nullptr));
+  auto FooLookupResult = cantFail(lookup({&V}, Foo));
 
   EXPECT_EQ(FooLookupResult.getAddress(), FooSym.getAddress())
       << "lookup returned an incorrect address";

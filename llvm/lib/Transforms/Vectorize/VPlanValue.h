@@ -37,13 +37,34 @@ class VPUser;
 // coming from the input IR, instructions which VPlan will generate if executed
 // and live-outs which the VPlan will need to fix accordingly.
 class VPValue {
+  friend class VPBuilder;
 private:
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
   SmallVector<VPUser *, 1> Users;
 
 protected:
-  VPValue(const unsigned char SC) : SubclassID(SC) {}
+  // Hold the underlying Value, if any, attached to this VPValue.
+  Value *UnderlyingVal;
+
+  VPValue(const unsigned char SC, Value *UV = nullptr)
+      : SubclassID(SC), UnderlyingVal(UV) {}
+
+  // DESIGN PRINCIPLE: Access to the underlying IR must be strictly limited to
+  // the front-end and back-end of VPlan so that the middle-end is as
+  // independent as possible of the underlying IR. We grant access to the
+  // underlying IR using friendship. In that way, we should be able to use VPlan
+  // for multiple underlying IRs (Polly?) by providing a new VPlan front-end,
+  // back-end and analysis information for the new IR.
+
+  /// Return the underlying Value attached to this VPValue.
+  Value *getUnderlyingValue() { return UnderlyingVal; }
+
+  // Set \p Val as the underlying Value of this VPValue.
+  void setUnderlyingValue(Value *Val) {
+    assert(!UnderlyingVal && "Underlying Value is already set.");
+    UnderlyingVal = Val;
+  }
 
 public:
   /// An enumeration for keeping track of the concrete subclass of VPValue that
@@ -52,7 +73,7 @@ public:
   /// type identification.
   enum { VPValueSC, VPUserSC, VPInstructionSC };
 
-  VPValue() : SubclassID(VPValueSC) {}
+  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV) {}
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
 
@@ -94,11 +115,6 @@ class VPUser : public VPValue {
 private:
   SmallVector<VPValue *, 2> Operands;
 
-  void addOperand(VPValue *Operand) {
-    Operands.push_back(Operand);
-    Operand->addUser(*this);
-  }
-
 protected:
   VPUser(const unsigned char SC) : VPValue(SC) {}
   VPUser(const unsigned char SC, ArrayRef<VPValue *> Operands) : VPValue(SC) {
@@ -118,6 +134,11 @@ public:
   static inline bool classof(const VPValue *V) {
     return V->getVPValueID() >= VPUserSC &&
            V->getVPValueID() <= VPInstructionSC;
+  }
+
+  void addOperand(VPValue *Operand) {
+    Operands.push_back(Operand);
+    Operand->addUser(*this);
   }
 
   unsigned getNumOperands() const { return Operands.size(); }

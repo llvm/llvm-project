@@ -45,9 +45,13 @@ using namespace llvm;
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("Output filename"),
-               cl::value_desc("filename"));
+static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
+                                           cl::value_desc("filename"),
+                                           cl::init("-"));
+
+static cl::opt<std::string> SplitDwarfFile("split-dwarf-file",
+                                           cl::desc("DWO output filename"),
+                                           cl::value_desc("filename"));
 
 static cl::opt<bool>
 ShowEncoding("show-encoding", cl::desc("Show instruction encodings"));
@@ -197,13 +201,9 @@ static const Target *GetTarget(const char *ProgName) {
   return TheTarget;
 }
 
-static std::unique_ptr<ToolOutputFile> GetOutputStream() {
-  if (OutputFilename == "")
-    OutputFilename = "-";
-
+static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path) {
   std::error_code EC;
-  auto Out =
-      llvm::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::F_None);
+  auto Out = llvm::make_unique<ToolOutputFile>(Path, EC, sys::fs::F_None);
   if (EC) {
     WithColor::error() << EC.message() << '\n';
     return nullptr;
@@ -411,9 +411,20 @@ int main(int argc, char **argv) {
     FeaturesStr = Features.getString();
   }
 
-  std::unique_ptr<ToolOutputFile> Out = GetOutputStream();
+  std::unique_ptr<ToolOutputFile> Out = GetOutputStream(OutputFilename);
   if (!Out)
     return 1;
+
+  std::unique_ptr<ToolOutputFile> DwoOut;
+  if (!SplitDwarfFile.empty()) {
+    if (FileType != OFT_ObjectFile) {
+      WithColor::error() << "dwo output only supported with object files\n";
+      return 1;
+    }
+    DwoOut = GetOutputStream(SplitDwarfFile);
+    if (!DwoOut)
+      return 1;
+  }
 
   std::unique_ptr<buffer_ostream> BOS;
   raw_pwrite_stream *OS = &Out->os();
@@ -469,8 +480,10 @@ int main(int argc, char **argv) {
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions);
     Str.reset(TheTarget->createMCObjectStreamer(
         TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
-        MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(CE), *STI,
-        MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
+        DwoOut ? MAB->createDwoObjectWriter(*OS, DwoOut->os())
+               : MAB->createObjectWriter(*OS),
+        std::unique_ptr<MCCodeEmitter>(CE), *STI, MCOptions.MCRelaxAll,
+        MCOptions.MCIncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ false));
     if (NoExecStack)
       Str->InitSections(true);
@@ -503,6 +516,10 @@ int main(int argc, char **argv) {
                                     *Buffer, SrcMgr, Out->os());
 
   // Keep output if no errors.
-  if (Res == 0) Out->keep();
+  if (Res == 0) {
+    Out->keep();
+    if (DwoOut)
+      DwoOut->keep();
+  }
   return Res;
 }

@@ -263,10 +263,10 @@ public:
   const DWARFDebugLine::LineTable *getLineTableForUnit(DWARFUnit *U);
 
   /// Get a pointer to a parsed line table corresponding to a compile unit.
-  /// Report any parsing warnings using the callback.
+  /// Report any recoverable parsing problems using the callback.
   Expected<const DWARFDebugLine::LineTable *>
   getLineTableForUnit(DWARFUnit *U,
-                      std::function<void(StringRef)> WarnCallback);
+                      std::function<void(Error)> RecoverableErrorCallback);
 
   DataExtractor getStringExtractor() const {
     return DataExtractor(DObj->getStringSection(), false, 0);

@@ -199,8 +199,6 @@ namespace options {
   static bool new_pass_manager = false;
   // Debug new pass manager
   static bool debug_pass_manager = false;
-  // Objcopy for debug fission.
-  static std::string objcopy;
   // Directory to store the .dwo files.
   static std::string dwo_dir;
   /// Statistics output filename.
@@ -272,8 +270,6 @@ namespace options {
       new_pass_manager = true;
     } else if (opt == "debug-pass-manager") {
       debug_pass_manager = true;
-    } else if (opt.startswith("objcopy=")) {
-      objcopy = opt.substr(strlen("objcopy="));
     } else if (opt.startswith("dwo_dir=")) {
       dwo_dir = opt.substr(strlen("dwo_dir="));
     } else if (opt.startswith("opt-remarks-filename=")) {
@@ -891,8 +887,6 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
     Conf.SampleProfile = options::sample_profile;
 
   Conf.DwoDir = options::dwo_dir;
-
-  Conf.Objcopy = options::objcopy;
 
   // Set up optimization remarks handling.
   Conf.RemarksFilename = options::OptRemarksFilename;
