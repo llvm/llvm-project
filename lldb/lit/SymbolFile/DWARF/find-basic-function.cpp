@@ -14,6 +14,16 @@
 // RUN:   FileCheck --check-prefix=CONTEXT %s
 // RUN: lldb-test symbols --name=not_there --find=function %t | \
 // RUN:   FileCheck --check-prefix=EMPTY %s
+//
+// RUN: clang %s -g -c -o %t --target=x86_64-apple-macosx
+// RUN: lldb-test symbols --name=foo --find=function --function-flags=full %t | \
+// RUN:   FileCheck --check-prefix=FULL %s
+// RUN: lldb-test symbols --name=_Z3fooi --find=function --function-flags=full %t | \
+// RUN:   FileCheck --check-prefix=FULL-MANGLED %s
+// RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
+// RUN:   FileCheck --check-prefix=CONTEXT %s
+// RUN: lldb-test symbols --name=not_there --find=function %t | \
+// RUN:   FileCheck --check-prefix=EMPTY %s
 
 // BASE: Found 4 functions:
 // BASE-DAG: name = "foo()", mangled = "_Z3foov"

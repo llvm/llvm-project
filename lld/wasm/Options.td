@@ -65,6 +65,8 @@ def no_fatal_warnings: F<"no-fatal-warnings">;
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
+def O: JoinedOrSeparate<["-"], "O">, HelpText<"Optimize output file size">;
+
 defm print_gc_sections: B<"print-gc-sections",
     "List removed unused sections",
     "Do not list removed unused sections">;

@@ -8,6 +8,14 @@
 // RUN:   FileCheck --check-prefix=CONTEXT %s
 // RUN: lldb-test symbols --name=not_there --find=namespace %t | \
 // RUN:   FileCheck --check-prefix=EMPTY %s
+//
+// RUN: clang %s -g -c -o %t --target=x86_64-apple-macosx
+// RUN: lldb-test symbols --name=foo --find=namespace %t | \
+// RUN:   FileCheck --check-prefix=FOO %s
+// RUN: lldb-test symbols --name=foo --find=namespace --context=context %t | \
+// RUN:   FileCheck --check-prefix=CONTEXT %s
+// RUN: lldb-test symbols --name=not_there --find=namespace %t | \
+// RUN:   FileCheck --check-prefix=EMPTY %s
 
 // FOO: Found namespace: foo
 
