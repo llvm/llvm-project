@@ -8,6 +8,7 @@
 file(GLOB cl_sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/async/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/devenq/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometric/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/image/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/integer/*.cl
