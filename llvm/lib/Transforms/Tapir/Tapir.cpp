@@ -37,12 +37,12 @@ void LLVMInitializeTapirOpts(LLVMPassRegistryRef R) {
   initializeTapirOpts(*unwrap(R));
 }
 
-/*
-void LLVMAddLoopSpawningPass(LLVMPassManagerRef PM, TapirTargetID ID) {
-  unwrap(PM)->add(createLoopSpawningPass(ID));
+void LLVMAddLowerTapirToTargetPass(LLVMPassManagerRef PM)
+{
+    unwrap(PM)->add(createLowerTapirToTargetPass());
 }
 
-void LLVMAddLowerTapirToTargetPass(LLVMPassManagerRef PM, TapirTargetID ID) {
-  unwrap(PM)->add(createLowerTapirToTargetPass(ID));
+void LLVMAddLoopSpawningPass(LLVMPassManagerRef PM)
+{
+    unwrap(PM)->add(createLoopSpawningTIPass());
 }
-*/
