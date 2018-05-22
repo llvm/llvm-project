@@ -66,6 +66,9 @@ FunctionPass *createX86OptimizeLEAs();
 /// Return a pass that transforms setcc + movzx pairs into xor + setcc.
 FunctionPass *createX86FixupSetCC();
 
+/// Return a pass that lowers EFLAGS copy pseudo instructions.
+FunctionPass *createX86FlagsCopyLoweringPass();
+
 /// Return a pass that expands WinAlloca pseudo-instructions.
 FunctionPass *createX86WinAllocaExpander();
 
