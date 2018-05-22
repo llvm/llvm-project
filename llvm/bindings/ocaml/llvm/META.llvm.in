@@ -61,6 +61,14 @@ package "scalar_opts" (
     archive(native) = "llvm_scalar_opts.cmxa"
 )
 
+package "tapir_opts" (
+    requires = "llvm"
+    version = "@PACKAGE_VERSION@"
+    description = "Tapir Transforms for LLVM"
+    archive(byte) = "llvm_tapir_opts.cma"
+    archive(native) = "llvm_tapir_opts.cmxa"
+)
+
 package "transform_utils" (
     requires = "llvm"
     version = "@PACKAGE_VERSION@"

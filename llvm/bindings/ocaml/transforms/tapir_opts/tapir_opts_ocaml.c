@@ -13,7 +13,10 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "caml/custom.h"
+#include "llvm-c/Transforms/PassManagerBuilder.h"
 #include "llvm-c/Transforms/Tapir.h"
+
+#define TapirTarget_val(v) (*(TapirTargetRef *)(Data_custom_val(v)))
 
 /* [`Module] Llvm.PassManager.t -> unit
  */
