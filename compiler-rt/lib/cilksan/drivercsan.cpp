@@ -2,12 +2,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cstdarg>
 #include <dlfcn.h>
 #include <execinfo.h>
 // #include <internal/abi.h>
 #include <malloc.h>
 #include <unistd.h>
 #include <unordered_map>
+#include <sys/mman.h>
 
 #include "cilksan_internal.h"
 #include "debug_util.h"
@@ -436,31 +438,118 @@ void __csan_large_store(csi_id_t store_id, void *addr, size_t size,
 }
 
 static std::unordered_map<uintptr_t, size_t> malloc_sizes;
+static std::map<uintptr_t, size_t> pages_to_clear;
 
+// Flag to manage initialization of memory functions.  We need this flag because
+// dlsym uses some of the memory functions we are trying to interpose, which
+// means that calling dlysm directly will lead to infinite recursion and a
+// segfault.  Fortunately, dlsym can make do with memory-allocation functions
+// returning NULL, so we return NULL when we detect this inifinite recursion.
+//
+// This trick seems questionable, but it also seems to be standard practice.
+// It's the same trick used by memusage.c in glibc, and there's little
+// documentation on better tricks.
+static int mem_initialized = 0;
+
+// Pointer to real memory functions.
 typedef void*(*malloc_t)(size_t);
 static malloc_t real_malloc = NULL;
 
-CILKSAN_API void* malloc(size_t s) {
+typedef void*(*calloc_t)(size_t, size_t);
+static calloc_t real_calloc = NULL;
 
+typedef void*(*realloc_t)(void*, size_t);
+static realloc_t real_realloc = NULL;
+
+typedef void(*free_t)(void*);
+static free_t real_free = NULL;
+
+typedef void*(*mmap_t)(void*, size_t, int, int, int, off_t);
+static mmap_t real_mmap = NULL;
+
+typedef void*(*mmap64_t)(void*, size_t, int, int, int, off64_t);
+static mmap64_t real_mmap64 = NULL;
+
+typedef int(*munmap_t)(void*, size_t);
+static munmap_t real_munmap = NULL;
+
+typedef void*(*mremap_t)(void*, size_t, size_t, int, void*);
+static mremap_t real_mremap = NULL;
+
+// Helper function to get real implementations of memory functions via dlsym.
+static void initialize_memory_functions() {
+  disable_checking();
+  mem_initialized = -1;
+
+  real_malloc = (malloc_t)dlsym(RTLD_NEXT, "malloc");
+  char *error = dlerror();
+  if (error != NULL)
+    goto error_exit;
+
+  real_calloc = (calloc_t)dlsym(RTLD_NEXT, "calloc");
+  error = dlerror();
+  if (error != NULL)
+    goto error_exit;
+
+  real_realloc = (realloc_t)dlsym(RTLD_NEXT, "realloc");
+  error = dlerror();
+  if (error != NULL)
+    goto error_exit;
+
+  real_free = (free_t)dlsym(RTLD_NEXT, "free");
+  error = dlerror();
+  if (error != NULL)
+    goto error_exit;
+
+  real_mmap = (mmap_t)dlsym(RTLD_NEXT, "mmap");
+  error = dlerror();
+  if (error != NULL)
+    goto error_exit;
+
+  real_mmap64 = (mmap64_t)dlsym(RTLD_NEXT, "mmap64");
+  error = dlerror();
+  if (error != NULL)
+    goto error_exit;
+
+  real_munmap = (munmap_t)dlsym(RTLD_NEXT, "munmap");
+  error = dlerror();
+  if (error != NULL)
+    goto error_exit;
+
+  real_mremap = (mremap_t)dlsym(RTLD_NEXT, "mremap");
+  error = dlerror();
+  if (error != NULL)
+    goto error_exit;
+
+  mem_initialized = 1;
+  enable_checking();
+  return;
+
+ error_exit:
+  fputs(error, err_io);
+  fflush(err_io);
+  abort();
+  enable_checking();
+  return;
+}
+
+CILKSAN_API void* malloc(size_t s) {
+  // Don't try to init, since that needs malloc.
+  if (__builtin_expect(real_malloc == NULL, 0)) {
+    if (-1 == mem_initialized)
+      return NULL;
+    initialize_memory_functions();
+  }
+
+  disable_checking();
   // align the allocation to simplify erasing from shadow mem
   // uint64_t new_size = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(s);
   size_t new_size = ALIGN_FOR_MALLOC(s);
   assert(s == new_size);
-  disable_checking();
-
-  // Don't try to init, since that needs malloc.
-  if (real_malloc == NULL) {
-    real_malloc = (malloc_t)dlsym(RTLD_NEXT, "malloc");
-    char *error = dlerror();
-    if (error != NULL) {
-      fputs(error, err_io);
-      fflush(err_io);
-      abort();
-    }
-  }
+  // call the real malloc
   void *r = real_malloc(new_size);
   enable_checking();
-  //printf("%d\n", should_check());
+
   if (TOOL_INITIALIZED && should_check()) {
     disable_checking();
     malloc_sizes.insert({(uintptr_t)r, new_size});
@@ -472,25 +561,39 @@ CILKSAN_API void* malloc(size_t s) {
   return r;
 }
 
-typedef void(*free_t)(void*);
-static free_t real_free = NULL;
-
-CILKSAN_API void free(void *ptr) {
+CILKSAN_API void* calloc(size_t num, size_t s) {
+  if (__builtin_expect(real_calloc == NULL, 0)) {
+    if (-1 == mem_initialized)
+      return NULL;
+    initialize_memory_functions();
+  }
 
   disable_checking();
-  if (real_free == NULL) {
-    real_free = (free_t)dlsym(RTLD_NEXT, "free");
-    char *error = dlerror();
-    if (error != NULL) {
-      fputs(error, err_io);
-      fflush(err_io);
-      abort();
-    }
+  void *r = real_calloc(num, s);
+  enable_checking();
+
+  if (TOOL_INITIALIZED && should_check()) {
+    disable_checking();
+    malloc_sizes.insert({(uintptr_t)r, s});
+    // cilksan_clear_shadow_memory((size_t)r, (size_t)r+malloc_usable_size(r)-1);
+    cilksan_clear_shadow_memory((size_t)r, s);
+    enable_checking();
   }
+
+  return r;
+}
+
+CILKSAN_API void free(void *ptr) {
+  if (__builtin_expect(real_free == NULL, 0)) {
+    if (-1 == mem_initialized)
+      return;
+    initialize_memory_functions();
+  }
+
+  disable_checking();
   real_free(ptr);
   enable_checking();
 
-  //printf("%d\n", should_check());
   if (TOOL_INITIALIZED && should_check()) {
     disable_checking();
     auto iter = malloc_sizes.find((uintptr_t)ptr);
@@ -505,6 +608,155 @@ CILKSAN_API void free(void *ptr) {
     }
     enable_checking();
   }
+}
+
+CILKSAN_API void* realloc(void *ptr, size_t s) {
+  if (__builtin_expect(real_realloc == NULL, 0)) {
+    if (-1 == mem_initialized)
+      return NULL;
+    initialize_memory_functions();
+  }
+
+  disable_checking();
+  void *r = real_realloc(ptr, s);
+  enable_checking();
+
+  if (TOOL_INITIALIZED && should_check()) {
+    disable_checking();
+    // Treat the old pointer ptr as freed and the new pointer r as freshly
+    // malloc'd.
+    auto iter = malloc_sizes.find((uintptr_t)ptr);
+    if (iter != malloc_sizes.end()) {
+      cilksan_do_write(UNKNOWN_CSI_ID, (uintptr_t)ptr, iter->second);
+      malloc_sizes.erase(iter);
+    }
+    malloc_sizes.insert({(uintptr_t)r, s});
+    // cilksan_clear_shadow_memory((size_t)r, (size_t)r+malloc_usable_size(r)-1);
+    cilksan_clear_shadow_memory((size_t)r, s);
+    enable_checking();
+  }
+
+  return r;
+}
+
+CILKSAN_API
+void *mmap(void *start, size_t len, int prot, int flags, int fd, off_t offset) {
+  if (__builtin_expect(real_mmap == NULL, 0)) {
+    if (-1 == mem_initialized)
+      return NULL;
+    initialize_memory_functions();
+  }
+
+  disable_checking();
+  void *r = real_mmap(start, len, prot, flags, fd, offset);
+  enable_checking();
+
+  if (TOOL_INITIALIZED && should_check()) {
+    disable_checking();
+    pages_to_clear.insert({(uintptr_t)r, len});
+    if (!(flags & MAP_ANONYMOUS))
+      // This mmap is backed by a file.  Initialize the shadow memory with a
+      // write to the page.
+      cilksan_do_write(UNKNOWN_CSI_ID, (uintptr_t)r, len);
+    enable_checking();
+  }
+
+  return r;
+}
+
+CILKSAN_API
+void *mmap64(void *start, size_t len, int prot, int flags, int fd, off64_t offset) {
+  if (__builtin_expect(real_mmap64 == NULL, 0)) {
+    if (-1 == mem_initialized)
+      return NULL;
+    initialize_memory_functions();
+  }
+
+  disable_checking();
+  void *r = real_mmap64(start, len, prot, flags, fd, offset);
+  enable_checking();
+
+  if (TOOL_INITIALIZED && should_check()) {
+    disable_checking();
+    pages_to_clear.insert({(uintptr_t)r, len});
+    if (!(flags & MAP_ANONYMOUS))
+      // This mmap is backed by a file.  Initialize the shadow memory with a
+      // write to the page.
+      cilksan_do_write(UNKNOWN_CSI_ID, (uintptr_t)r, len);
+    enable_checking();
+  }
+
+  return r;
+}
+
+CILKSAN_API
+int munmap(void *start, size_t len) {
+  if (__builtin_expect(real_munmap == NULL, 0)) {
+    if (-1 == mem_initialized)
+      return -1;
+    initialize_memory_functions();
+  }
+
+  disable_checking();
+  int result = real_munmap(start, len);
+  enable_checking();
+
+  if (TOOL_INITIALIZED && should_check() && (0 == result)) {
+    disable_checking();
+    auto first_page = pages_to_clear.lower_bound((uintptr_t)start);
+    auto last_page = pages_to_clear.upper_bound((uintptr_t)start + len);
+    for (auto curr_page = first_page; curr_page != last_page; ++curr_page) {
+      // TODO: Treat unmap more like free and record a write operation on the
+      // page.  Need to take care only to write pages that have content in the
+      // shadow memory.  Otherwise, if the application mmap's more virtual
+      // memory than physical memory, then the writes that model page unmapping
+      // can blow out physical memory.
+      cilksan_clear_shadow_memory((size_t)curr_page->first, curr_page->second);
+      // cilksan_do_write(UNKNOWN_CSI_ID, curr_page->first, curr_page->second);
+    }
+    pages_to_clear.erase(first_page, last_page);
+    enable_checking();
+  }
+
+  return result;
+}
+
+CILKSAN_API
+void *mremap(void *start, size_t old_len, size_t len, int flags, ...) {
+  va_list ap;
+  va_start (ap, flags);
+  void *newaddr = (flags & MREMAP_FIXED) ? va_arg (ap, void *) : NULL;
+  va_end (ap);
+
+  if (__builtin_expect(real_mremap == NULL, 0)) {
+    if (-1 == mem_initialized)
+      return NULL;
+    initialize_memory_functions();
+  }
+
+  disable_checking();
+  void *r = real_mremap(start, old_len, len, flags, newaddr);
+  enable_checking();
+
+  if (TOOL_INITIALIZED && should_check()) {
+    disable_checking();
+    auto iter = pages_to_clear.find((uintptr_t)start);
+    if (iter != pages_to_clear.end()) {
+      // TODO: Treat unmap more like free and record a write operation on the
+      // page.  Need to take care only to write pages that have content in the
+      // shadow memory.  Otherwise, if the application mmap's more virtual
+      // memory than physical memory, then the writes that model page unmapping
+      // can blow out physical memory.
+      cilksan_clear_shadow_memory((size_t)iter->first, iter->second);
+      // cilksan_do_write(UNKNOWN_CSI_ID, iter->first, iter->second);
+      pages_to_clear.erase(iter);
+    }
+    // Record the new mapping.
+    pages_to_clear.insert({(uintptr_t)r, len});
+    enable_checking();
+  }
+
+  return r;
 }
 
 // typedef void(*__cilkrts_hyper_create_t)(__cilkrts_hyperobject_base *);
