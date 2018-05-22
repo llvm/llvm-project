@@ -188,17 +188,6 @@ static unsigned CombineSymbolTypes(unsigned T1, unsigned T2) {
 
 bool MCELFStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolELF>(S);
-  // Indirect symbols are handled differently, to match how 'as' handles
-  // them. This makes writing matching .o files easier.
-  if (Attribute == MCSA_IndirectSymbol) {
-    // Note that we intentionally cannot use the symbol data here; this is
-    // important for matching the string table that 'as' generates.
-    IndirectSymbolData ISD;
-    ISD.Symbol = Symbol;
-    ISD.Section = getCurrentSectionOnly();
-    getAssembler().getIndirectSymbols().push_back(ISD);
-    return true;
-  }
 
   // Adding a symbol attribute always introduces the symbol, note that an
   // important side effect of calling registerSymbol here is to register

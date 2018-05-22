@@ -700,14 +700,22 @@ bool WebAssemblyFastISel::fastLowerArguments() {
   MRI.addLiveIn(WebAssembly::ARGUMENTS);
 
   auto *MFI = MF->getInfo<WebAssemblyFunctionInfo>();
-  for (auto const &Arg : F->args())
-    MFI->addParam(getLegalType(getSimpleType(Arg.getType())));
+  for (auto const &Arg : F->args()) {
+    MVT::SimpleValueType ArgTy = getLegalType(getSimpleType(Arg.getType()));
+    if (ArgTy == MVT::INVALID_SIMPLE_VALUE_TYPE) {
+      MFI->clearParamsAndResults();
+      return false;
+    }
+    MFI->addParam(ArgTy);
+  }
 
   if (!F->getReturnType()->isVoidTy()) {
-    MVT::SimpleValueType RetTy = getSimpleType(F->getReturnType());
-    if (RetTy == MVT::INVALID_SIMPLE_VALUE_TYPE)
+    MVT::SimpleValueType RetTy = getLegalType(getSimpleType(F->getReturnType()));
+    if (RetTy == MVT::INVALID_SIMPLE_VALUE_TYPE) {
+      MFI->clearParamsAndResults();
       return false;
-    MFI->addResult(getLegalType(RetTy));
+    }
+    MFI->addResult(RetTy);
   }
 
   return true;

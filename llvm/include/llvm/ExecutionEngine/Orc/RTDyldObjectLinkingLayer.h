@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/Orc/Legacy.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Object/ObjectFile.h"
@@ -34,6 +35,59 @@
 
 namespace llvm {
 namespace orc {
+
+class RTDyldObjectLinkingLayer2 : public ObjectLayer {
+public:
+  /// Functor for receiving object-loaded notifications.
+  using NotifyLoadedFunction =
+      std::function<void(VModuleKey, const object::ObjectFile &Obj,
+                         const RuntimeDyld::LoadedObjectInfo &)>;
+
+  /// Functor for receiving finalization notifications.
+  using NotifyFinalizedFunction = std::function<void(VModuleKey)>;
+
+  struct Resources {
+    std::shared_ptr<RuntimeDyld::MemoryManager> MemMgr;
+    std::shared_ptr<SymbolResolver> Resolver;
+  };
+
+  using ResourcesGetterFunction = std::function<Resources(VModuleKey)>;
+
+  /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
+  ///        and NotifyFinalized functors.
+  RTDyldObjectLinkingLayer2(
+      ExecutionSession &ES, ResourcesGetterFunction GetResources,
+      NotifyLoadedFunction NotifyLoaded = NotifyLoadedFunction(),
+      NotifyFinalizedFunction NotifyFinalized = NotifyFinalizedFunction());
+
+  /// Emit the object.
+  void emit(MaterializationResponsibility R, VModuleKey K,
+            std::unique_ptr<MemoryBuffer> O) override;
+
+  /// Map section addresses for the object associated with the
+  ///        VModuleKey K.
+  void mapSectionAddress(VModuleKey K, const void *LocalAddress,
+                         JITTargetAddress TargetAddr) const;
+
+  /// Set the 'ProcessAllSections' flag.
+  ///
+  /// If set to true, all sections in each object file will be allocated using
+  /// the memory manager, rather than just the sections required for execution.
+  ///
+  /// This is kludgy, and may be removed in the future.
+  void setProcessAllSections(bool ProcessAllSections) {
+    this->ProcessAllSections = ProcessAllSections;
+  }
+
+private:
+  mutable std::mutex RTDyldLayerMutex;
+  ResourcesGetterFunction GetResources;
+  NotifyLoadedFunction NotifyLoaded;
+  NotifyFinalizedFunction NotifyFinalized;
+  bool ProcessAllSections;
+  std::map<VModuleKey, RuntimeDyld *> ActiveRTDylds;
+  std::map<VModuleKey, std::shared_ptr<RuntimeDyld::MemoryManager>> MemMgrs;
+};
 
 class RTDyldObjectLinkingLayerBase {
 public:

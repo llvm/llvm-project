@@ -4751,26 +4751,39 @@ bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(
 }
 
 bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
-  // A mask and compare against constant is ok for an 'andn' too
-  // even though the BMI instruction doesn't have an immediate form.
+  EVT VT = Y.getValueType();
+
+  if (VT.isVector())
+    return false;
 
   if (!Subtarget.hasBMI())
     return false;
 
   // There are only 32-bit and 64-bit forms for 'andn'.
-  EVT VT = Y.getValueType();
   if (VT != MVT::i32 && VT != MVT::i64)
     return false;
+
+  // A mask and compare against constant is ok for an 'andn' too
+  // even though the BMI instruction doesn't have an immediate form.
 
   return true;
 }
 
 bool X86TargetLowering::hasAndNot(SDValue Y) const {
-  // x86 can't form 'andn' with an immediate.
-  if (isa<ConstantSDNode>(Y))
+  EVT VT = Y.getValueType();
+
+  if (!VT.isVector()) // x86 can't form 'andn' with an immediate.
+    return !isa<ConstantSDNode>(Y) && hasAndNotCompare(Y);
+
+  // Vector.
+
+  if (!Subtarget.hasSSE1() || VT.getSizeInBits() < 128)
     return false;
 
-  return hasAndNotCompare(Y);
+  if (VT == MVT::v4i32)
+    return true;
+
+  return Subtarget.hasSSE2();
 }
 
 MVT X86TargetLowering::hasFastEqualityCompare(unsigned NumBits) const {

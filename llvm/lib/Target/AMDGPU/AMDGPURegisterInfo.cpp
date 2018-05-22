@@ -14,7 +14,9 @@
 
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 
 using namespace llvm;
 

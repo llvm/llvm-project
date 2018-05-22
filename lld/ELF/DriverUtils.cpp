@@ -88,6 +88,29 @@ static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &Args) {
   return cl::TokenizeGNUCommandLine;
 }
 
+// Gold LTO plugin takes a `--plugin-opt foo=bar` option as an alias for
+// `--plugin-opt=foo=bar`. We want to handle `--plugin-opt=foo=` as an
+// option name and `bar` as a value. Unfortunately, OptParser cannot
+// handle an option with a space in it.
+//
+// In this function, we concatenate command line arguments so that
+// `--plugin-opt <foo>` is converted to `--plugin-opt=<foo>`. This is a
+// bit hacky, but looks like it is still better than handling --plugin-opt
+// options by hand.
+static void concatLTOPluginOptions(SmallVectorImpl<const char *> &Args) {
+  SmallVector<const char *, 256> V;
+  for (size_t I = 0, E = Args.size(); I != E; ++I) {
+    StringRef S = Args[I];
+    if ((S == "-plugin-opt" || S == "--plugin-opt") && I + 1 != E) {
+      V.push_back(Saver.save(S + "=" + Args[I + 1]).data());
+      ++I;
+    } else {
+      V.push_back(Args[I]);
+    }
+  }
+  Args = std::move(V);
+}
+
 // Parses a given list of options.
 opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   // Make InputArgList from string vectors.
@@ -103,6 +126,7 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
   cl::ExpandResponseFiles(Saver, getQuotingStyle(Args), Vec);
+  concatLTOPluginOptions(Vec);
   Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
 
   handleColorDiagnostics(Args);

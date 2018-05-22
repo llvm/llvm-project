@@ -753,6 +753,9 @@
 		4CCA645613B40B82003BDF98 /* AppleObjCTrampolineHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CCA644813B40B82003BDF98 /* AppleObjCTrampolineHandler.cpp */; };
 		4CCA645813B40B82003BDF98 /* AppleThreadPlanStepThroughObjCTrampoline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CCA644A13B40B82003BDF98 /* AppleThreadPlanStepThroughObjCTrampoline.cpp */; };
 		4CD0BD0F134BFADF00CB44D4 /* ValueObjectDynamicValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD0BD0E134BFADF00CB44D4 /* ValueObjectDynamicValue.cpp */; };
+		4CD44CFB20B37C440003557C /* DWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CF820B37C440003557C /* DWARFIndex.cpp */; };
+		4CD44CFC20B37C440003557C /* ManualDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CF920B37C440003557C /* ManualDWARFIndex.cpp */; };
+		4CD44CFD20B37C440003557C /* AppleDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CFA20B37C440003557C /* AppleDWARFIndex.cpp */; };
 		4CDB8D6D1DBA91B6006C5B13 /* LibStdcppUniquePointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */; };
 		4CDB8D6E1DBA91B6006C5B13 /* LibStdcppTuple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */; };
 		4CE4EFAA1E8999B900A80C06 /* PlatformOpenBSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4EFA61E8999B000A80C06 /* PlatformOpenBSD.cpp */; };
@@ -2653,6 +2656,12 @@
 		4CCA644B13B40B82003BDF98 /* AppleThreadPlanStepThroughObjCTrampoline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleThreadPlanStepThroughObjCTrampoline.h; sourceTree = "<group>"; };
 		4CD0BD0C134BFAB600CB44D4 /* ValueObjectDynamicValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ValueObjectDynamicValue.h; path = include/lldb/Core/ValueObjectDynamicValue.h; sourceTree = "<group>"; };
 		4CD0BD0E134BFADF00CB44D4 /* ValueObjectDynamicValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ValueObjectDynamicValue.cpp; path = source/Core/ValueObjectDynamicValue.cpp; sourceTree = "<group>"; };
+		4CD44CF820B37C440003557C /* DWARFIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFIndex.cpp; sourceTree = "<group>"; };
+		4CD44CF920B37C440003557C /* ManualDWARFIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ManualDWARFIndex.cpp; sourceTree = "<group>"; };
+		4CD44CFA20B37C440003557C /* AppleDWARFIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleDWARFIndex.cpp; sourceTree = "<group>"; };
+		4CD44CFE20B37C570003557C /* DWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DWARFIndex.h; sourceTree = "<group>"; };
+		4CD44CFF20B37C580003557C /* AppleDWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppleDWARFIndex.h; sourceTree = "<group>"; };
+		4CD44D0020B37C580003557C /* ManualDWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ManualDWARFIndex.h; sourceTree = "<group>"; };
 		4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppUniquePointer.cpp; path = Language/CPlusPlus/LibStdcppUniquePointer.cpp; sourceTree = "<group>"; };
 		4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppTuple.cpp; path = Language/CPlusPlus/LibStdcppTuple.cpp; sourceTree = "<group>"; };
 		4CE4EFA61E8999B000A80C06 /* PlatformOpenBSD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformOpenBSD.cpp; sourceTree = "<group>"; };
@@ -3914,6 +3923,8 @@
 		260C89B210F57C5600BB2B04 /* DWARF */ = {
 			isa = PBXGroup;
 			children = (
+				4CD44CFA20B37C440003557C /* AppleDWARFIndex.cpp */,
+				4CD44CFF20B37C580003557C /* AppleDWARFIndex.h */,
 				6D95DC031B9DC06F000E318A /* DIERef.h */,
 				6D95DC041B9DC06F000E318A /* SymbolFileDWARFDwo.h */,
 				6D95DBFD1B9DC057000E318A /* DIERef.cpp */,
@@ -3966,11 +3977,15 @@
 				260C89D210F57C5600BB2B04 /* DWARFDIECollection.h */,
 				260C89D310F57C5600BB2B04 /* DWARFFormValue.cpp */,
 				260C89D410F57C5600BB2B04 /* DWARFFormValue.h */,
+				4CD44CF820B37C440003557C /* DWARFIndex.cpp */,
+				4CD44CFE20B37C570003557C /* DWARFIndex.h */,
 				7F2AAA5920601BE000A422D8 /* DWARFUnit.cpp */,
 				7F2AAA5820601BDF00A422D8 /* DWARFUnit.h */,
 				26A0DA4D140F721D006DA411 /* HashedNameToDIE.h */,
 				26109B3B1155D70100CC3529 /* LogChannelDWARF.cpp */,
 				26109B3C1155D70100CC3529 /* LogChannelDWARF.h */,
+				4CD44CF920B37C440003557C /* ManualDWARFIndex.cpp */,
+				4CD44D0020B37C580003557C /* ManualDWARFIndex.h */,
 				2618D9EA12406FE600F2B8FE /* NameToDIE.cpp */,
 				2618D957124056C700F2B8FE /* NameToDIE.h */,
 				260C89D910F57C5600BB2B04 /* SymbolFileDWARF.cpp */,
@@ -7886,6 +7901,7 @@
 				268900F913353E6F00698AC0 /* Thread.cpp in Sources */,
 				268900FA13353E6F00698AC0 /* ThreadList.cpp in Sources */,
 				268900FB13353E6F00698AC0 /* ThreadPlan.cpp in Sources */,
+				4CD44CFD20B37C440003557C /* AppleDWARFIndex.cpp in Sources */,
 				256CBDBC1ADD107200BC6CDC /* RegisterContextLinux_mips64.cpp in Sources */,
 				26BF51F31B3C754400016294 /* ABISysV_hexagon.cpp in Sources */,
 				232CB619191E00CD00EF39FC /* NativeProcessProtocol.cpp in Sources */,
@@ -7901,6 +7917,7 @@
 				2689010013353E6F00698AC0 /* ThreadPlanStepInstruction.cpp in Sources */,
 				AFC2DCE71E6E2ED000283714 /* FastDemangle.cpp in Sources */,
 				232CB61B191E00CD00EF39FC /* NativeThreadProtocol.cpp in Sources */,
+				4CD44CFB20B37C440003557C /* DWARFIndex.cpp in Sources */,
 				2689010113353E6F00698AC0 /* ThreadPlanStepOut.cpp in Sources */,
 				2689010213353E6F00698AC0 /* ThreadPlanStepOverBreakpoint.cpp in Sources */,
 				3FDFED2919BA6D96009756A7 /* ThreadLauncher.cpp in Sources */,
@@ -8136,6 +8153,7 @@
 				94CB257216B0A4270059775D /* TypeSynthetic.cpp in Sources */,
 				94CB257416B1D3880059775D /* FormatCache.cpp in Sources */,
 				AF6335E21C87B21E00F7D554 /* SymbolFilePDB.cpp in Sources */,
+				4CD44CFC20B37C440003557C /* ManualDWARFIndex.cpp in Sources */,
 				A36FF33C17D8E94600244D40 /* OptionParser.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

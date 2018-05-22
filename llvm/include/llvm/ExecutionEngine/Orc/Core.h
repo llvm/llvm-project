@@ -468,6 +468,7 @@ createSymbolResolver(LookupFlagsFn &&LookupFlags, LookupFn &&Lookup) {
 class VSO {
   friend class AsynchronousSymbolQuery;
   friend class ExecutionSession;
+  friend class MaterializationResponsibility;
 public:
   using AsynchronousSymbolQuerySet =
       std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
@@ -511,40 +512,6 @@ public:
       return Error::success();
     });
   }
-
-  /// Define a set of symbols already in the materializing state.
-  Error defineMaterializing(const SymbolFlagsMap &SymbolFlags);
-
-  /// Replace the definition of a set of materializing symbols with a new
-  /// MaterializationUnit.
-  ///
-  /// All symbols being replaced must be in the materializing state. If any
-  /// symbol being replaced has pending queries then the MU will be returned
-  /// for materialization. Otherwise it will be stored in the VSO and all
-  /// symbols covered by MU moved back to the lazy state.
-  void replace(std::unique_ptr<MaterializationUnit> MU);
-
-  /// Record dependencies between symbols in this VSO and symbols in
-  ///        other VSOs.
-  void addDependencies(const SymbolFlagsMap &Dependents,
-                       const SymbolDependenceMap &Dependencies);
-
-  /// Resolve the given symbols.
-  ///
-  /// Returns the list of queries that become fully resolved as a consequence of
-  /// this operation.
-  void resolve(const SymbolMap &Resolved);
-
-  /// Finalize the given symbols.
-  ///
-  /// Returns the list of queries that become fully ready as a consequence of
-  /// this operation.
-  void finalize(const SymbolFlagsMap &Finalized);
-
-  /// Fail to materialize the given symbols.
-  ///
-  /// Returns the list of queries that fail as a consequence.
-  void notifyFailed(const SymbolNameSet &FailedSymbols);
 
   /// Search the given VSO for the symbols in Symbols. If found, store
   ///        the flags for each symbol in Flags. Returns any unresolved symbols.
@@ -603,6 +570,19 @@ private:
   void transferFinalizedNodeDependencies(MaterializingInfo &DependantMI,
                                          const SymbolStringPtr &DependantName,
                                          MaterializingInfo &FinalizedMI);
+
+  Error defineMaterializing(const SymbolFlagsMap &SymbolFlags);
+
+  void replace(std::unique_ptr<MaterializationUnit> MU);
+
+  void addDependencies(const SymbolFlagsMap &Dependents,
+                       const SymbolDependenceMap &Dependencies);
+
+  void resolve(const SymbolMap &Resolved);
+
+  void finalize(const SymbolFlagsMap &Finalized);
+
+  void notifyFailed(const SymbolNameSet &FailedSymbols);
 };
 
 /// An ExecutionSession represents a running JIT program.
