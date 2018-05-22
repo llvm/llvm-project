@@ -17,6 +17,7 @@
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
@@ -1562,6 +1563,11 @@ const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
   if (hasRegUnit(AMDGPU::M0, RegUnit))
     return Empty;
   return AMDGPURegisterInfo::getRegUnitPressureSets(RegUnit);
+}
+
+unsigned SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {
+  // Not a callee saved register.
+  return AMDGPU::SGPR30_SGPR31;
 }
 
 const TargetRegisterClass *

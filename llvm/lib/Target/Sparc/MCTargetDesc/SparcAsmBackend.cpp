@@ -291,11 +291,10 @@ namespace {
       }
     }
 
-    std::unique_ptr<MCObjectWriter>
-    createObjectWriter(raw_pwrite_stream &OS) const override {
+    std::unique_ptr<MCObjectTargetWriter>
+    createObjectTargetWriter() const override {
       uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(OSType);
-      return createSparcELFObjectWriter(OS, Is64Bit,
-                                        Endian == support::little, OSABI);
+      return createSparcELFObjectWriter(Is64Bit, OSABI);
     }
   };
 

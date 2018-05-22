@@ -33,8 +33,8 @@ public:
   Nios2AsmBackend(const Target &T, Triple::OSType OSType)
       : MCAsmBackend(support::little), OSType(OSType) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 

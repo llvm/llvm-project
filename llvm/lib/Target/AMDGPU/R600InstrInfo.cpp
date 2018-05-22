@@ -19,6 +19,7 @@
 #include "R600Defines.h"
 #include "R600FrameLowering.h"
 #include "R600RegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallSet.h"

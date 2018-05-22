@@ -284,15 +284,9 @@ define void @rotate_right_m16(i16* %p, i32 %amount) {
 define i32 @rotate_demanded_bits(i32, i32) {
 ; CHECK-LABEL: rotate_demanded_bits:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andb $30, %sil
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    andl $30, %ecx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    negl %ecx
-; CHECK-NEXT:    andb $30, %cl
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrl %cl, %edi
-; CHECK-NEXT:    orl %eax, %edi
+; CHECK-NEXT:    roll %cl, %edi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %3 = and i32 %1, 30
@@ -324,16 +318,10 @@ define i32 @rotate_demanded_bits_2(i32, i32) {
 define i32 @rotate_demanded_bits_3(i32, i32) {
 ; CHECK-LABEL: rotate_demanded_bits_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addl %esi, %esi
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    andb $30, %cl
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    negl %esi
+; CHECK-NEXT:    addb %sil, %sil
 ; CHECK-NEXT:    andb $30, %sil
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shrl %cl, %edi
-; CHECK-NEXT:    orl %eax, %edi
+; CHECK-NEXT:    roll %cl, %edi
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %3 = shl i32 %1, 1

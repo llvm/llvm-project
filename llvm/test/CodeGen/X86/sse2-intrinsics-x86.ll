@@ -209,27 +209,6 @@ define i32 @test_x86_sse2_comineq_sd(<2 x double> %a0, <2 x double> %a1) {
 declare i32 @llvm.x86.sse2.comineq.sd(<2 x double>, <2 x double>) nounwind readnone
 
 
-define <4 x float> @test_x86_sse2_cvtdq2ps(<4 x i32> %a0) {
-; SSE-LABEL: test_x86_sse2_cvtdq2ps:
-; SSE:       ## %bb.0:
-; SSE-NEXT:    cvtdq2ps %xmm0, %xmm0 ## encoding: [0x0f,0x5b,0xc0]
-; SSE-NEXT:    retl ## encoding: [0xc3]
-;
-; AVX2-LABEL: test_x86_sse2_cvtdq2ps:
-; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x5b,0xc0]
-; AVX2-NEXT:    retl ## encoding: [0xc3]
-;
-; SKX-LABEL: test_x86_sse2_cvtdq2ps:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vcvtdq2ps %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x5b,0xc0]
-; SKX-NEXT:    retl ## encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32> %a0) ; <<4 x float>> [#uses=1]
-  ret <4 x float> %res
-}
-declare <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32>) nounwind readnone
-
-
 define <4 x i32> @test_x86_sse2_cvtpd2dq(<2 x double> %a0) {
 ; SSE-LABEL: test_x86_sse2_cvtpd2dq:
 ; SSE:       ## %bb.0:
@@ -694,21 +673,21 @@ define <8 x i16> @test_x86_sse2_packssdw_128_fold() {
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,32767,32767,65535,32768]
 ; SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
-; SSE-NEXT:    ## fixup A - offset: 3, value: LCPI31_0, kind: FK_Data_4
+; SSE-NEXT:    ## fixup A - offset: 3, value: LCPI30_0, kind: FK_Data_4
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; AVX2-LABEL: test_x86_sse2_packssdw_128_fold:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,32767,32767,65535,32768]
 ; AVX2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
-; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI31_0, kind: FK_Data_4
+; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI30_0, kind: FK_Data_4
 ; AVX2-NEXT:    retl ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test_x86_sse2_packssdw_128_fold:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vmovaps LCPI31_0, %xmm0 ## EVEX TO VEX Compression xmm0 = [0,0,0,0,32767,32767,65535,32768]
+; SKX-NEXT:    vmovaps LCPI30_0, %xmm0 ## EVEX TO VEX Compression xmm0 = [0,0,0,0,32767,32767,65535,32768]
 ; SKX-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
-; SKX-NEXT:    ## fixup A - offset: 4, value: LCPI31_0, kind: FK_Data_4
+; SKX-NEXT:    ## fixup A - offset: 4, value: LCPI30_0, kind: FK_Data_4
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> zeroinitializer, <4 x i32> <i32 65535, i32 65536, i32 -1, i32 -131072>)
   ret <8 x i16> %res
@@ -741,21 +720,21 @@ define <16 x i8> @test_x86_sse2_packsswb_128_fold() {
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
 ; SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
-; SSE-NEXT:    ## fixup A - offset: 3, value: LCPI33_0, kind: FK_Data_4
+; SSE-NEXT:    ## fixup A - offset: 3, value: LCPI32_0, kind: FK_Data_4
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; AVX2-LABEL: test_x86_sse2_packsswb_128_fold:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
 ; AVX2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
-; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI33_0, kind: FK_Data_4
+; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI32_0, kind: FK_Data_4
 ; AVX2-NEXT:    retl ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test_x86_sse2_packsswb_128_fold:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vmovaps LCPI33_0, %xmm0 ## EVEX TO VEX Compression xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
+; SKX-NEXT:    vmovaps LCPI32_0, %xmm0 ## EVEX TO VEX Compression xmm0 = [0,127,127,255,255,128,128,128,0,0,0,0,0,0,0,0]
 ; SKX-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
-; SKX-NEXT:    ## fixup A - offset: 4, value: LCPI33_0, kind: FK_Data_4
+; SKX-NEXT:    ## fixup A - offset: 4, value: LCPI32_0, kind: FK_Data_4
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16> <i16 0, i16 255, i16 256, i16 65535, i16 -1, i16 -255, i16 -256, i16 -32678>, <8 x i16> zeroinitializer)
   ret <16 x i8> %res
@@ -788,21 +767,21 @@ define <16 x i8> @test_x86_sse2_packuswb_128_fold() {
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; SSE-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
-; SSE-NEXT:    ## fixup A - offset: 3, value: LCPI35_0, kind: FK_Data_4
+; SSE-NEXT:    ## fixup A - offset: 3, value: LCPI34_0, kind: FK_Data_4
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; AVX2-LABEL: test_x86_sse2_packuswb_128_fold:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
-; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI35_0, kind: FK_Data_4
+; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI34_0, kind: FK_Data_4
 ; AVX2-NEXT:    retl ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test_x86_sse2_packuswb_128_fold:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vmovaps LCPI35_0, %xmm0 ## EVEX TO VEX Compression xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; SKX-NEXT:    vmovaps LCPI34_0, %xmm0 ## EVEX TO VEX Compression xmm0 = [0,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; SKX-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
-; SKX-NEXT:    ## fixup A - offset: 4, value: LCPI35_0, kind: FK_Data_4
+; SKX-NEXT:    ## fixup A - offset: 4, value: LCPI34_0, kind: FK_Data_4
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %res = call <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16> <i16 0, i16 255, i16 256, i16 65535, i16 -1, i16 -255, i16 -256, i16 -32678>, <8 x i16> zeroinitializer)
   ret <16 x i8> %res

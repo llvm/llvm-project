@@ -610,3 +610,14 @@ define <8 x i32> @test_x86_avx_vperm2f128_si_256(<8 x i32> %a0, <8 x i32> %a1) {
   ret <8 x i32> %res
 }
 declare <8 x i32> @llvm.x86.avx.vperm2f128.si.256(<8 x i32>, <8 x i32>, i8) nounwind readnone
+
+
+define <8 x float> @test_x86_avx_cvtdq2_ps_256(<8 x i32> %a0) {
+; CHECK-LABEL: test_x86_avx_cvtdq2_ps_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32> %a0) ; <<8 x float>> [#uses=1]
+  ret <8 x float> %res
+}
+declare <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32>) nounwind readnone

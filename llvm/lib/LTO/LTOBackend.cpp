@@ -285,79 +285,36 @@ bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
-void codegenWithSplitDwarf(Config &Conf, TargetMachine *TM,
-                           AddStreamFn AddStream, unsigned Task, Module &Mod) {
-  SmallString<128> TempFile;
-  int FD = -1;
-  if (auto EC =
-      sys::fs::createTemporaryFile("lto-llvm-fission", "o", FD, TempFile))
-    report_fatal_error("Could not create temporary file " +
-        TempFile.str() + ": " + EC.message());
-  llvm::raw_fd_ostream OS(FD, true);
-  SmallString<1024> DwarfFile(Conf.DwoDir);
-  std::string DwoName = sys::path::filename(Mod.getModuleIdentifier()).str() +
-      "-" + std::to_string(Task) + "-";
-  size_t index = TempFile.str().rfind("lto-llvm-fission");
-  StringRef TempID = TempFile.str().substr(index + 17, 6);
-  DwoName += TempID.str() + ".dwo";
-  sys::path::append(DwarfFile, DwoName);
-  TM->Options.MCOptions.SplitDwarfFile = DwarfFile.str().str();
-
-  legacy::PassManager CodeGenPasses;
-  if (TM->addPassesToEmitFile(CodeGenPasses, OS, Conf.CGFileType))
-    report_fatal_error("Failed to setup codegen");
-  CodeGenPasses.run(Mod);
-
-  if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
-    report_fatal_error("Failed to create directory " +
-		       Conf.DwoDir + ": " + EC.message());
-
-  SmallVector<const char*, 5> ExtractArgs, StripArgs;
-  ExtractArgs.push_back(Conf.Objcopy.c_str());
-  ExtractArgs.push_back("--extract-dwo");
-  ExtractArgs.push_back(TempFile.c_str());
-  ExtractArgs.push_back(TM->Options.MCOptions.SplitDwarfFile.c_str());
-  ExtractArgs.push_back(nullptr);
-  StripArgs.push_back(Conf.Objcopy.c_str());
-  StripArgs.push_back("--strip-dwo");
-  StripArgs.push_back(TempFile.c_str());
-  StripArgs.push_back(nullptr);
-
-  if (auto Ret = sys::ExecuteAndWait(Conf.Objcopy, ExtractArgs.data())) {
-    report_fatal_error("Failed to extract dwo from " + TempFile.str() +
-        ". Exit code " + std::to_string(Ret));
-  }
-  if (auto Ret = sys::ExecuteAndWait(Conf.Objcopy, StripArgs.data())) {
-    report_fatal_error("Failed to strip dwo from " + TempFile.str() +
-        ". Exit code " + std::to_string(Ret));
-  }
-
-  auto Stream = AddStream(Task);
-  auto Buffer = MemoryBuffer::getFile(TempFile);
-  if (auto EC = Buffer.getError())
-    report_fatal_error("Failed to load file " +
-                       TempFile.str() + ": " + EC.message());
-  *Stream->OS << Buffer.get()->getBuffer();
-  if (auto EC = sys::fs::remove(TempFile))
-    report_fatal_error("Failed to delete file " +
-                       TempFile.str() + ": " + EC.message());
-}
-
 void codegen(Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
              unsigned Task, Module &Mod) {
   if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
 
+  std::unique_ptr<ToolOutputFile> DwoOut;
   if (!Conf.DwoDir.empty()) {
-    codegenWithSplitDwarf(Conf, TM, AddStream, Task, Mod);
-    return;
+    std::error_code EC;
+    if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
+      report_fatal_error("Failed to create directory " + Conf.DwoDir + ": " +
+                         EC.message());
+
+    SmallString<1024> DwoFile(Conf.DwoDir);
+    sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
+    TM->Options.MCOptions.SplitDwarfFile = DwoFile.str().str();
+    DwoOut = llvm::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::F_None);
+    if (EC)
+      report_fatal_error("Failed to open " + DwoFile + ": " + EC.message());
   }
 
   auto Stream = AddStream(Task);
   legacy::PassManager CodeGenPasses;
-  if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS, Conf.CGFileType))
+  if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
+                              DwoOut ? &DwoOut->os() : nullptr,
+                              Conf.CGFileType))
     report_fatal_error("Failed to setup codegen");
   CodeGenPasses.run(Mod);
+
+  if (DwoOut)
+    DwoOut->keep();
 }
 
 void splitCodeGen(Config &C, TargetMachine *TM, AddStreamFn AddStream,

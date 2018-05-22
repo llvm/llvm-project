@@ -24,6 +24,7 @@
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -241,6 +242,7 @@ public:
 INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISel, "isel",
                       "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfo)
+INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
 INITIALIZE_PASS_END(AMDGPUDAGToDAGISel, "isel",
                     "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
 

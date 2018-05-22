@@ -23,9 +23,9 @@ public:
                       const MCRegisterInfo &MRI, MachO::CPUSubTypeARM st)
       : ARMAsmBackend(T, STI, support::little), MRI(MRI), Subtype(st) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createARMMachObjectWriter(OS, /*Is64Bit=*/false, MachO::CPU_TYPE_ARM,
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createARMMachObjectWriter(/*Is64Bit=*/false, MachO::CPU_TYPE_ARM,
                                      Subtype);
   }
 

@@ -8445,6 +8445,37 @@ static Value *EmitX86Muldq(CodeGenFunction &CGF, bool IsSigned,
   return CGF.Builder.CreateMul(LHS, RHS);
 }
 
+// Emit a masked pternlog intrinsic. This only exists because the header has to
+// use a macro and we aren't able to pass the input argument to a pternlog
+// builtin and a select builtin without evaluating it twice.
+static Value *EmitX86Ternlog(CodeGenFunction &CGF, bool ZeroMask,
+                             ArrayRef<Value *> Ops) {
+  llvm::Type *Ty = Ops[0]->getType();
+
+  unsigned VecWidth = Ty->getPrimitiveSizeInBits();
+  unsigned EltWidth = Ty->getScalarSizeInBits();
+  Intrinsic::ID IID;
+  if (VecWidth == 128 && EltWidth == 32)
+    IID = Intrinsic::x86_avx512_pternlog_d_128;
+  else if (VecWidth == 256 && EltWidth == 32)
+    IID = Intrinsic::x86_avx512_pternlog_d_256;
+  else if (VecWidth == 512 && EltWidth == 32)
+    IID = Intrinsic::x86_avx512_pternlog_d_512;
+  else if (VecWidth == 128 && EltWidth == 64)
+    IID = Intrinsic::x86_avx512_pternlog_q_128;
+  else if (VecWidth == 256 && EltWidth == 64)
+    IID = Intrinsic::x86_avx512_pternlog_q_256;
+  else if (VecWidth == 512 && EltWidth == 64)
+    IID = Intrinsic::x86_avx512_pternlog_q_512;
+  else
+    llvm_unreachable("Unexpected intrinsic");
+
+  Value *Ternlog = CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(IID),
+                                          Ops.drop_back());
+  Value *PassThru = ZeroMask ? ConstantAggregateZero::get(Ty) : Ops[0];
+  return EmitX86Select(CGF, Ops[4], Ternlog, PassThru);
+}
+
 static Value *EmitX86SExtMask(CodeGenFunction &CGF, Value *Op, 
                               llvm::Type *DstTy) {
   unsigned NumberOfElements = DstTy->getVectorNumElements();
@@ -9158,6 +9189,22 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pmuldq256:
   case X86::BI__builtin_ia32_pmuldq512:
     return EmitX86Muldq(*this, /*IsSigned*/true, Ops);
+
+  case X86::BI__builtin_ia32_pternlogd512_mask:
+  case X86::BI__builtin_ia32_pternlogq512_mask:
+  case X86::BI__builtin_ia32_pternlogd128_mask:
+  case X86::BI__builtin_ia32_pternlogd256_mask:
+  case X86::BI__builtin_ia32_pternlogq128_mask:
+  case X86::BI__builtin_ia32_pternlogq256_mask:
+    return EmitX86Ternlog(*this, /*ZeroMask*/false, Ops);
+
+  case X86::BI__builtin_ia32_pternlogd512_maskz:
+  case X86::BI__builtin_ia32_pternlogq512_maskz:
+  case X86::BI__builtin_ia32_pternlogd128_maskz:
+  case X86::BI__builtin_ia32_pternlogd256_maskz:
+  case X86::BI__builtin_ia32_pternlogq128_maskz:
+  case X86::BI__builtin_ia32_pternlogq256_maskz:
+    return EmitX86Ternlog(*this, /*ZeroMask*/true, Ops);
 
   // 3DNow!
   case X86::BI__builtin_ia32_pswapdsf:

@@ -102,6 +102,7 @@ class TracePC {
   void PrintModuleInfo();
 
   void PrintCoverage();
+  void DumpCoverage();
 
   template<class CallBack>
   void IterateCoveredFunctions(CallBack CB);

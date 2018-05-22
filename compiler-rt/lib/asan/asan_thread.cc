@@ -394,6 +394,9 @@ static bool ThreadStackContainsAddress(ThreadContextBase *tctx_base,
 }
 
 AsanThread *GetCurrentThread() {
+  if (SANITIZER_RTEMS && !asan_inited)
+    return nullptr;
+
   AsanThreadContext *context =
       reinterpret_cast<AsanThreadContext *>(AsanTSDGet());
   if (!context) {

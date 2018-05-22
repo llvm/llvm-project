@@ -597,10 +597,9 @@ define <8 x float> @test_mm256_cvtepi32_ps(<4 x i64> %a0) nounwind {
 ; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
-  %res = call <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32> %arg0)
+  %res = sitofp <8 x i32> %arg0 to <8 x float>
   ret <8 x float> %res
 }
-declare <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32>) nounwind readnone
 
 define <2 x i64> @test_mm256_cvtpd_epi32(<4 x double> %a0) nounwind {
 ; X32-LABEL: test_mm256_cvtpd_epi32:

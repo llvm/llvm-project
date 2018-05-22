@@ -14,7 +14,9 @@
 
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"

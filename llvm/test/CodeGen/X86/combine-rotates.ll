@@ -57,3 +57,69 @@ define <4 x i32> @combine_vec_rot_rot_splat_zero(<4 x i32> %x) {
   %6 = or <4 x i32> %4, %5
   ret <4 x i32> %6
 }
+
+define <4 x i32> @rotate_demanded_bits(<4 x i32>, <4 x i32>) {
+; XOP-LABEL: rotate_demanded_bits:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vprotd %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: rotate_demanded_bits:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vprolvd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %3 = and <4 x i32> %1, <i32 30, i32 30, i32 30, i32 30>
+  %4 = shl <4 x i32> %0, %3
+  %5 = sub nsw <4 x i32> zeroinitializer, %3
+  %6 = and <4 x i32> %5, <i32 30, i32 30, i32 30, i32 30>
+  %7 = lshr <4 x i32> %0, %6
+  %8 = or <4 x i32> %7, %4
+  ret <4 x i32> %8
+}
+
+define <4 x i32> @rotate_demanded_bits_2(<4 x i32>, <4 x i32>) {
+; XOP-LABEL: rotate_demanded_bits_2:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vprotd %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: rotate_demanded_bits_2:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vprolvd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %3 = and <4 x i32> %1, <i32 23, i32 23, i32 23, i32 23>
+  %4 = shl <4 x i32> %0, %3
+  %5 = sub nsw <4 x i32> zeroinitializer, %3
+  %6 = and <4 x i32> %5, <i32 31, i32 31, i32 31, i32 31>
+  %7 = lshr <4 x i32> %0, %6
+  %8 = or <4 x i32> %7, %4
+  ret <4 x i32> %8
+}
+
+define <4 x i32> @rotate_demanded_bits_3(<4 x i32>, <4 x i32>) {
+; XOP-LABEL: rotate_demanded_bits_3:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpaddd %xmm1, %xmm1, %xmm1
+; XOP-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vprotd %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: rotate_demanded_bits_3:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpaddd %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vprolvd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %3 = shl <4 x i32> %1, <i32 1, i32 1, i32 1, i32 1>
+  %4 = and <4 x i32> %3, <i32 30, i32 30, i32 30, i32 30>
+  %5 = shl <4 x i32> %0, %4
+  %6 = sub <4 x i32> zeroinitializer, %3
+  %7 = and <4 x i32> %6, <i32 30, i32 30, i32 30, i32 30>
+  %8 = lshr <4 x i32> %0, %7
+  %9 = or <4 x i32> %5, %8
+  ret <4 x i32> %9
+}

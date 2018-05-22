@@ -19,9 +19,9 @@ class ARMAsmBackendWinCOFF : public ARMAsmBackend {
 public:
   ARMAsmBackendWinCOFF(const Target &T, const MCSubtargetInfo &STI)
       : ARMAsmBackend(T, STI, support::little) {}
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createARMWinCOFFObjectWriter(OS, /*Is64Bit=*/false);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createARMWinCOFFObjectWriter(/*Is64Bit=*/false);
   }
 };
 }

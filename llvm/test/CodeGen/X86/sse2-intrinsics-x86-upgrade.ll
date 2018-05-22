@@ -305,3 +305,14 @@ define <2 x double> @test_x86_sse2_cvtss2sd_load_optsize(<2 x double> %a0, <4 x 
   %res = call <2 x double> @llvm.x86.sse2.cvtss2sd(<2 x double> %a0, <4 x float> %a1) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
 }
+
+
+define <4 x float> @test_x86_sse2_cvtdq2ps(<4 x i32> %a0) {
+; CHECK-LABEL: test_x86_sse2_cvtdq2ps:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-NEXT:    retl
+  %res = call <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32> %a0) ; <<4 x float>> [#uses=1]
+  ret <4 x float> %res
+}
+declare <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32>) nounwind readnone

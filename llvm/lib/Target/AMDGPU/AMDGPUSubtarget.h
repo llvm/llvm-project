@@ -23,7 +23,6 @@
 #include "SIFrameLowering.h"
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
-#include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
@@ -383,10 +382,7 @@ public:
   /// the given LDS memory size is the only constraint.
   unsigned getOccupancyWithLocalMemSize(uint32_t Bytes, const Function &) const;
 
-  unsigned getOccupancyWithLocalMemSize(const MachineFunction &MF) const {
-    const auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    return getOccupancyWithLocalMemSize(MFI->getLDSSize(), MF.getFunction());
-  }
+  unsigned getOccupancyWithLocalMemSize(const MachineFunction &MF) const;
 
   bool hasFP16Denormals() const {
     return FP64FP16Denormals;

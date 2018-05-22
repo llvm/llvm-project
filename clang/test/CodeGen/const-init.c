@@ -167,7 +167,7 @@ void g30() {
     int : 1;
     int x;
   } a = {};
-  // CHECK: @g30.a = internal global %struct.anon.1 zeroinitializer, align 1
+  // CHECK: @g30.a = internal global %struct.anon.1 <{ i8 undef, i32 0 }>, align 1
 #pragma pack()
 }
 

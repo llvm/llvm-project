@@ -145,10 +145,13 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt(<2 x half> %src0, <2 x half> %s
 ; FIXME: Should be packed into 2 registers per argument?
 ; GCN-LABEL: {{^}}v_mad_mix_v3f32_clamp_postcvt:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mixlo_f16 v2, v2, v5, v8 op_sel_hi:[1,1,1] clamp
-; GFX9-NEXT: v_mad_mixhi_f16 v2, v0, v0, v0 clamp
+; GFX9-NEXT: v_mad_mixlo_f16 v2, v2, v5, v8 op_sel_hi:[1,1,1]
 ; GFX9-NEXT: v_mad_mixlo_f16 v0, v0, v3, v6 op_sel_hi:[1,1,1] clamp
+; GFX9-NEXT: s_movk_i32 s6, 0x7e00
+; GFX9-NEXT: v_and_b32_e32 v2, 0xffff, v2
+; GFX9-NEXT: v_lshl_or_b32 v2, s6, 16, v2
 ; GFX9-NEXT: v_mad_mixhi_f16 v0, v1, v4, v7 op_sel_hi:[1,1,1] clamp
+; GFX9-NEXT: v_pk_max_f16 v2, v2, v2 clamp
 ; GFX9-NEXT: v_lshrrev_b32_e32 v1, 16, v0
 ; GFX9-NEXT: s_setpc_b64
 define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %src1, <3 x half> %src2) #0 {

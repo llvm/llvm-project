@@ -4751,26 +4751,39 @@ bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(
 }
 
 bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
-  // A mask and compare against constant is ok for an 'andn' too
-  // even though the BMI instruction doesn't have an immediate form.
+  EVT VT = Y.getValueType();
+
+  if (VT.isVector())
+    return false;
 
   if (!Subtarget.hasBMI())
     return false;
 
   // There are only 32-bit and 64-bit forms for 'andn'.
-  EVT VT = Y.getValueType();
   if (VT != MVT::i32 && VT != MVT::i64)
     return false;
+
+  // A mask and compare against constant is ok for an 'andn' too
+  // even though the BMI instruction doesn't have an immediate form.
 
   return true;
 }
 
 bool X86TargetLowering::hasAndNot(SDValue Y) const {
-  // x86 can't form 'andn' with an immediate.
-  if (isa<ConstantSDNode>(Y))
+  EVT VT = Y.getValueType();
+
+  if (!VT.isVector()) // x86 can't form 'andn' with an immediate.
+    return !isa<ConstantSDNode>(Y) && hasAndNotCompare(Y);
+
+  // Vector.
+
+  if (!Subtarget.hasSSE1() || VT.getSizeInBits() < 128)
     return false;
 
-  return hasAndNotCompare(Y);
+  if (VT == MVT::v4i32)
+    return true;
+
+  return Subtarget.hasSSE2();
 }
 
 MVT X86TargetLowering::hasFastEqualityCompare(unsigned NumBits) const {
@@ -20629,23 +20642,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return getVectorMaskingNode(DAG.getNode(IntrData->Opc0,
                                               dl, Op.getValueType(),
                                               Src2, Src3, Src1),
-                                  Mask, PassThru, Subtarget, DAG);
-    }
-    case TERLOG_OP_MASK:
-    case TERLOG_OP_MASKZ: {
-      SDValue Src1 = Op.getOperand(1);
-      SDValue Src2 = Op.getOperand(2);
-      SDValue Src3 = Op.getOperand(3);
-      SDValue Src4 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Op.getOperand(4));
-      SDValue Mask = Op.getOperand(5);
-      MVT VT = Op.getSimpleValueType();
-      SDValue PassThru = Src1;
-      // Set PassThru element.
-      if (IntrData->Type == TERLOG_OP_MASKZ)
-        PassThru = getZeroVector(VT, Subtarget, DAG, dl);
-
-      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,
-                                              Src1, Src2, Src3, Src4),
                                   Mask, PassThru, Subtarget, DAG);
     }
     case CVTPD2PS:

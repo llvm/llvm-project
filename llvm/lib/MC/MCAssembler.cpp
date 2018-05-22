@@ -815,13 +815,8 @@ void MCAssembler::Finish() {
   MCAsmLayout Layout(*this);
   layout(Layout);
 
-  raw_ostream &OS = getWriter().getStream();
-  uint64_t StartOffset = OS.tell();
-
   // Write the object file.
-  getWriter().writeObject(*this, Layout);
-
-  stats::ObjectBytes += OS.tell() - StartOffset;
+  stats::ObjectBytes += getWriter().writeObject(*this, Layout);
 }
 
 bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,

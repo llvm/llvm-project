@@ -27,7 +27,7 @@
 ; RUN: not ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only \
 ; RUN: --plugin-opt=thinlto-object-suffix-replace="abc:def" -shared %t1.thinlink.bc \
 ; RUN: -o %t3 2>&1 | FileCheck %s --check-prefix=ERR1
-; ERR1: thinlto-object-suffix-replace expects 'old;new' format, but got abc:def
+; ERR1: --plugin-opt=thinlto-object-suffix-replace= expects 'old;new' format, but got abc:def
 
 ; Ensure lld generates error if old suffix doesn't exist in file name
 ; RUN: rm -f %t1.o

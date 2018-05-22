@@ -167,8 +167,8 @@ void assembleToStream(std::unique_ptr<llvm::LLVMTargetMachine> TM,
   TPC->setInitialized();
 
   // AsmPrinter is responsible for generating the assembly into AsmBuffer.
-  if (TM->addAsmPrinter(PM, AsmStream, llvm::TargetMachine::CGFT_ObjectFile,
-                        MCContext))
+  if (TM->addAsmPrinter(PM, AsmStream, nullptr,
+                        llvm::TargetMachine::CGFT_ObjectFile, MCContext))
     llvm::report_fatal_error("Cannot add AsmPrinter passes");
 
   PM.run(*Module); // Run all the passes

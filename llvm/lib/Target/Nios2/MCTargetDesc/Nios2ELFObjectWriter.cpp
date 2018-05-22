@@ -37,8 +37,7 @@ unsigned Nios2ELFObjectWriter::getRelocType(MCContext &Ctx,
   return 0;
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createNios2ELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI) {
-  auto MOTW = llvm::make_unique<Nios2ELFObjectWriter>(OSABI);
-  return createELFObjectWriter(std::move(MOTW), OS, true);
+std::unique_ptr<MCObjectTargetWriter>
+llvm::createNios2ELFObjectWriter(uint8_t OSABI) {
+  return llvm::make_unique<Nios2ELFObjectWriter>(OSABI);
 }

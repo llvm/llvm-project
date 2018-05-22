@@ -66,9 +66,9 @@ public:
         MCII(T.createMCInstrInfo()), RelaxTarget(new MCInst *),
         Extender(nullptr) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createHexagonELFObjectWriter(OS, OSABI, CPU);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createHexagonELFObjectWriter(OSABI, CPU);
   }
 
   void setExtender(MCContext &Context) const {

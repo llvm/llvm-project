@@ -18,6 +18,7 @@
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "InstPrinter/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"

@@ -202,11 +202,10 @@ namespace {
   public:
     DarwinPPCAsmBackend(const Target &T) : PPCAsmBackend(T, support::big) { }
 
-    std::unique_ptr<MCObjectWriter>
-    createObjectWriter(raw_pwrite_stream &OS) const override {
+    std::unique_ptr<MCObjectTargetWriter>
+    createObjectTargetWriter() const override {
       bool is64 = getPointerSize() == 8;
       return createPPCMachObjectWriter(
-          OS,
           /*Is64Bit=*/is64,
           (is64 ? MachO::CPU_TYPE_POWERPC64 : MachO::CPU_TYPE_POWERPC),
           MachO::CPU_SUBTYPE_POWERPC_ALL);
@@ -220,11 +219,10 @@ namespace {
                      uint8_t OSABI)
         : PPCAsmBackend(T, Endian), OSABI(OSABI) {}
 
-    std::unique_ptr<MCObjectWriter>
-    createObjectWriter(raw_pwrite_stream &OS) const override {
+    std::unique_ptr<MCObjectTargetWriter>
+    createObjectTargetWriter() const override {
       bool is64 = getPointerSize() == 8;
-      return createPPCELFObjectWriter(OS, is64, Endian == support::little,
-                                      OSABI);
+      return createPPCELFObjectWriter(is64, OSABI);
     }
   };
 

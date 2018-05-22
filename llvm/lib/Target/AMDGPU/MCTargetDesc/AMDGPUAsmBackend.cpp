@@ -188,9 +188,9 @@ public:
     }
   }
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createAMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend, OS);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createAMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend);
   }
 };
 

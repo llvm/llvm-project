@@ -24,9 +24,9 @@ public:
                    support::endianness Endian)
       : ARMAsmBackend(T, STI, Endian), OSABI(OSABI) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createARMELFObjectWriter(OS, OSABI, Endian);
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createARMELFObjectWriter(OSABI);
   }
 };
 }

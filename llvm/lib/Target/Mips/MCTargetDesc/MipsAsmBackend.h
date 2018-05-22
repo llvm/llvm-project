@@ -37,8 +37,8 @@ public:
       : MCAsmBackend(TT.isLittleEndian() ? support::little : support::big),
         TheTriple(TT), IsN32(N32) {}
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

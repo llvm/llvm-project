@@ -211,9 +211,9 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   return Value;
 }
 
-std::unique_ptr<MCObjectWriter>
-MipsAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createMipsELFObjectWriter(OS, TheTriple, IsN32);
+std::unique_ptr<MCObjectTargetWriter>
+MipsAsmBackend::createObjectTargetWriter() const {
+  return createMipsELFObjectWriter(TheTriple, IsN32);
 }
 
 // Little-endian fixup data byte ordering:

@@ -41,8 +41,8 @@ public:
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved) const override;
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
 
   // If linker relaxation is enabled, always emit relocations even if the fixup
   // can be resolved. This is necessary for correctness as offsets may change
@@ -335,9 +335,9 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-RISCVAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createRISCVELFObjectWriter(OS, OSABI, Is64Bit);
+std::unique_ptr<MCObjectTargetWriter>
+RISCVAsmBackend::createObjectTargetWriter() const {
+  return createRISCVELFObjectWriter(OSABI, Is64Bit);
 }
 
 } // end anonymous namespace

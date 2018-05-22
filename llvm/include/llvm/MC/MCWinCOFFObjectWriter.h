@@ -10,6 +10,7 @@
 #ifndef LLVM_MC_MCWINCOFFOBJECTWRITER_H
 #define LLVM_MC_MCWINCOFFOBJECTWRITER_H
 
+#include "llvm/MC/MCObjectWriter.h"
 #include <memory>
 
 namespace llvm {
@@ -17,11 +18,10 @@ namespace llvm {
 class MCAsmBackend;
 class MCContext;
 class MCFixup;
-class MCObjectWriter;
 class MCValue;
 class raw_pwrite_stream;
 
-  class MCWinCOFFObjectTargetWriter {
+  class MCWinCOFFObjectTargetWriter : public MCObjectTargetWriter {
     virtual void anchor();
 
     const unsigned Machine;
@@ -31,6 +31,11 @@ class raw_pwrite_stream;
 
   public:
     virtual ~MCWinCOFFObjectTargetWriter() = default;
+
+    virtual Triple::ObjectFormatType getFormat() const { return Triple::COFF; }
+    static bool classof(const MCObjectTargetWriter *W) {
+      return W->getFormat() == Triple::COFF;
+    }
 
     unsigned getMachine() const { return Machine; }
     virtual unsigned getRelocType(MCContext &Ctx, const MCValue &Target,

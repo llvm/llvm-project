@@ -77,7 +77,7 @@ CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("arg")
 CHECK:        DW_AT_type (0x0000000000000063
 CHECK:        DW_AT_location (0x00000000
-CHECK:          [0x0000000000000000, 0x000000000000000e): DW_OP_reg5 RDI, DW_OP_piece 0x4)
+CHECK:          [0x0000000100000f50, 0x0000000100000f5e): DW_OP_reg5 RDI, DW_OP_piece 0x4)
 CHECK:[[INC1:0x[0-9a-f]*]]{{.*}}DW_TAG_inlined_subroutine
 CHECK:        DW_AT_abstract_origin (0x00000128 "inc")
 CHECK:        DW_AT_low_pc (0x0000000100000f63)
@@ -115,8 +115,8 @@ CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("arg")
 CHECK:        DW_AT_type (0x0000000000000063
 CHECK:        DW_AT_location (0x00000025
-CHECK:          [0x0000000000000000, 0x000000000000000f): DW_OP_reg5 RDI, DW_OP_piece 0x4
-CHECK:          [0x0000000000000019, 0x000000000000001d): DW_OP_reg5 RDI, DW_OP_piece 0x4)
+CHECK:          [0x0000000100000f90, 0x0000000100000f9f): DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK:          [0x0000000100000fa9, 0x0000000100000fad): DW_OP_reg5 RDI, DW_OP_piece 0x4)
 CHECK:      DW_TAG_lexical_block
 CHECK:        DW_AT_low_pc (0x0000000100000f94)
 CHECK:        DW_AT_high_pc (0x0000000100000fa7)
