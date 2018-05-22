@@ -6,9 +6,12 @@ SET(PYTHON_DIRECTORY python2.7/site-packages)
 # Build the readline python module
 include_directories(${PYTHON_INCLUDE_DIR})
 add_library(readline SHARED readline.cpp)
+target_include_directories(readline
+                           PRIVATE
+                             ${libedit_INCLUDE_DIRS})
 
 if (NOT LLDB_DISABLE_LIBEDIT)
-  target_link_libraries(readline ${PYTHON_LIBRARY} edit)
+  target_link_libraries(readline ${PYTHON_LIBRARY} ${libedit_LIBRARIES})
 else()
   target_link_libraries(readline ${PYTHON_LIBRARY})
 endif()
