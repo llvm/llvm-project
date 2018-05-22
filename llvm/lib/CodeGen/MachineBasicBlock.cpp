@@ -646,6 +646,14 @@ void MachineBasicBlock::replaceSuccessor(MachineBasicBlock *Old,
   removeSuccessor(OldI);
 }
 
+void MachineBasicBlock::copySuccessor(MachineBasicBlock *Orig,
+                                      succ_iterator I) {
+  if (Orig->Probs.empty())
+    addSuccessor(*I, Orig->getSuccProbability(I));
+  else
+    addSuccessorWithoutProb(*I);
+}
+
 void MachineBasicBlock::addPredecessor(MachineBasicBlock *Pred) {
   Predecessors.push_back(Pred);
 }

@@ -1235,18 +1235,18 @@ let mayLoad = 1, mayStore = 1, usesCustomInserter = 1,
 
 let mayLoad = 1, mayStore = 1, usesCustomInserter = 1,
     SchedRW = [WriteRMW] in {
-  let Defs = [ESP, EFLAGS], Uses = [ESP] in
+  let Defs = [ESP, EFLAGS, DF], Uses = [ESP] in
   def WRFLAGS32 : PseudoI<(outs), (ins GR32:$src),
                    [(int_x86_flags_write_u32 GR32:$src)]>,
                 Requires<[Not64BitMode]>;
 
-  let Defs = [RSP, EFLAGS], Uses = [RSP] in
+  let Defs = [RSP, EFLAGS, DF], Uses = [RSP] in
   def WRFLAGS64 : PseudoI<(outs), (ins GR64:$src),
                    [(int_x86_flags_write_u64 GR64:$src)]>,
                 Requires<[In64BitMode]>;
 }
 
-let Defs = [ESP, EFLAGS], Uses = [ESP], mayLoad = 1, hasSideEffects=0,
+let Defs = [ESP, EFLAGS, DF], Uses = [ESP], mayLoad = 1, hasSideEffects=0,
     SchedRW = [WriteLoad] in {
 def POPF16   : I<0x9D, RawFrm, (outs), (ins), "popf{w}", [], IIC_POP_F>,
                 OpSize16;
@@ -1254,7 +1254,7 @@ def POPF32   : I<0x9D, RawFrm, (outs), (ins), "popf{l|d}", [], IIC_POP_FD>,
                 OpSize32, Requires<[Not64BitMode]>;
 }
 
-let Defs = [ESP], Uses = [ESP, EFLAGS], mayStore = 1, hasSideEffects=0,
+let Defs = [ESP], Uses = [ESP, EFLAGS, DF], mayStore = 1, hasSideEffects=0,
     SchedRW = [WriteStore] in {
 def PUSHF16  : I<0x9C, RawFrm, (outs), (ins), "pushf{w}", [], IIC_PUSH_F>,
                  OpSize16;
@@ -1294,10 +1294,10 @@ def PUSH64i32  : Ii32S<0x68, RawFrm, (outs), (ins i64i32imm:$imm),
                     Requires<[In64BitMode]>;
 }
 
-let Defs = [RSP, EFLAGS], Uses = [RSP], mayLoad = 1, hasSideEffects=0 in
+let Defs = [RSP, EFLAGS, DF], Uses = [RSP], mayLoad = 1, hasSideEffects=0 in
 def POPF64   : I<0x9D, RawFrm, (outs), (ins), "popfq", [], IIC_POP_FD>,
                OpSize32, Requires<[In64BitMode]>, Sched<[WriteLoad]>;
-let Defs = [RSP], Uses = [RSP, EFLAGS], mayStore = 1, hasSideEffects=0 in
+let Defs = [RSP], Uses = [RSP, EFLAGS, DF], mayStore = 1, hasSideEffects=0 in
 def PUSHF64    : I<0x9C, RawFrm, (outs), (ins), "pushfq", [], IIC_PUSH_F>,
                  OpSize32, Requires<[In64BitMode]>, Sched<[WriteStore]>;
 
@@ -1382,8 +1382,7 @@ def BSR64rm  : RI<0xBD, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
 } // Defs = [EFLAGS]
 
 let SchedRW = [WriteMicrocoded] in {
-// These uses the DF flag in the EFLAGS register to inc or dec EDI and ESI
-let Defs = [EDI,ESI], Uses = [EDI,ESI,EFLAGS] in {
+let Defs = [EDI,ESI], Uses = [EDI,ESI,DF] in {
 def MOVSB : I<0xA4, RawFrmDstSrc, (outs), (ins dstidx8:$dst, srcidx8:$src),
               "movsb\t{$src, $dst|$dst, $src}", [], IIC_MOVS>;
 def MOVSW : I<0xA5, RawFrmDstSrc, (outs), (ins dstidx16:$dst, srcidx16:$src),
@@ -1394,36 +1393,33 @@ def MOVSQ : RI<0xA5, RawFrmDstSrc, (outs), (ins dstidx64:$dst, srcidx64:$src),
                "movsq\t{$src, $dst|$dst, $src}", [], IIC_MOVS>;
 }
 
-// These uses the DF flag in the EFLAGS register to inc or dec EDI and ESI
-let Defs = [EDI], Uses = [AL,EDI,EFLAGS] in
+let Defs = [EDI], Uses = [AL,EDI,DF] in
 def STOSB : I<0xAA, RawFrmDst, (outs), (ins dstidx8:$dst),
               "stosb\t{%al, $dst|$dst, al}", [], IIC_STOS>;
-let Defs = [EDI], Uses = [AX,EDI,EFLAGS] in
+let Defs = [EDI], Uses = [AX,EDI,DF] in
 def STOSW : I<0xAB, RawFrmDst, (outs), (ins dstidx16:$dst),
               "stosw\t{%ax, $dst|$dst, ax}", [], IIC_STOS>, OpSize16;
-let Defs = [EDI], Uses = [EAX,EDI,EFLAGS] in
+let Defs = [EDI], Uses = [EAX,EDI,DF] in
 def STOSL : I<0xAB, RawFrmDst, (outs), (ins dstidx32:$dst),
               "stos{l|d}\t{%eax, $dst|$dst, eax}", [], IIC_STOS>, OpSize32;
-let Defs = [RDI], Uses = [RAX,RDI,EFLAGS] in
+let Defs = [RDI], Uses = [RAX,RDI,DF] in
 def STOSQ : RI<0xAB, RawFrmDst, (outs), (ins dstidx64:$dst),
                "stosq\t{%rax, $dst|$dst, rax}", [], IIC_STOS>;
 
-// These uses the DF flag in the EFLAGS register to inc or dec EDI and ESI
-let Defs = [EDI,EFLAGS], Uses = [AL,EDI,EFLAGS] in
+let Defs = [EDI,EFLAGS], Uses = [AL,EDI,DF] in
 def SCASB : I<0xAE, RawFrmDst, (outs), (ins dstidx8:$dst),
               "scasb\t{$dst, %al|al, $dst}", [], IIC_SCAS>;
-let Defs = [EDI,EFLAGS], Uses = [AX,EDI,EFLAGS] in
+let Defs = [EDI,EFLAGS], Uses = [AX,EDI,DF] in
 def SCASW : I<0xAF, RawFrmDst, (outs), (ins dstidx16:$dst),
               "scasw\t{$dst, %ax|ax, $dst}", [], IIC_SCAS>, OpSize16;
-let Defs = [EDI,EFLAGS], Uses = [EAX,EDI,EFLAGS] in
+let Defs = [EDI,EFLAGS], Uses = [EAX,EDI,DF] in
 def SCASL : I<0xAF, RawFrmDst, (outs), (ins dstidx32:$dst),
               "scas{l|d}\t{$dst, %eax|eax, $dst}", [], IIC_SCAS>, OpSize32;
-let Defs = [EDI,EFLAGS], Uses = [RAX,EDI,EFLAGS] in
+let Defs = [EDI,EFLAGS], Uses = [RAX,EDI,DF] in
 def SCASQ : RI<0xAF, RawFrmDst, (outs), (ins dstidx64:$dst),
                "scasq\t{$dst, %rax|rax, $dst}", [], IIC_SCAS>;
 
-// These uses the DF flag in the EFLAGS register to inc or dec EDI and ESI
-let Defs = [EDI,ESI,EFLAGS], Uses = [EDI,ESI,EFLAGS] in {
+let Defs = [EDI,ESI,EFLAGS], Uses = [EDI,ESI,DF] in {
 def CMPSB : I<0xA6, RawFrmDstSrc, (outs), (ins dstidx8:$dst, srcidx8:$src),
               "cmpsb\t{$dst, $src|$src, $dst}", [], IIC_CMPS>;
 def CMPSW : I<0xA7, RawFrmDstSrc, (outs), (ins dstidx16:$dst, srcidx16:$src),
@@ -2070,8 +2066,7 @@ def DATA32_PREFIX : I<0x66, RawFrm, (outs),  (ins), "data32", [], IIC_NOP>,
 } // SchedRW
 
 // Repeat string operation instruction prefixes
-// These use the DF flag in the EFLAGS register to inc or dec ECX
-let Defs = [ECX], Uses = [ECX,EFLAGS], SchedRW = [WriteMicrocoded] in {
+let Defs = [ECX], Uses = [ECX,DF], SchedRW = [WriteMicrocoded] in {
 // Repeat (used with INS, OUTS, MOVS, LODS and STOS)
 def REP_PREFIX : I<0xF3, RawFrm, (outs),  (ins), "rep", []>;
 // Repeat while not equal (used with CMPS and SCAS)
@@ -2080,24 +2075,22 @@ def REPNE_PREFIX : I<0xF2, RawFrm, (outs),  (ins), "repne", []>;
 
 // String manipulation instructions
 let SchedRW = [WriteMicrocoded] in {
-// These uses the DF flag in the EFLAGS register to inc or dec EDI and ESI
-let Defs = [AL,ESI], Uses = [ESI,EFLAGS] in
+let Defs = [AL,ESI], Uses = [ESI,DF] in
 def LODSB : I<0xAC, RawFrmSrc, (outs), (ins srcidx8:$src),
               "lodsb\t{$src, %al|al, $src}", [], IIC_LODS>;
-let Defs = [AX,ESI], Uses = [ESI,EFLAGS] in
+let Defs = [AX,ESI], Uses = [ESI,DF] in
 def LODSW : I<0xAD, RawFrmSrc, (outs), (ins srcidx16:$src),
               "lodsw\t{$src, %ax|ax, $src}", [], IIC_LODS>, OpSize16;
-let Defs = [EAX,ESI], Uses = [ESI,EFLAGS] in
+let Defs = [EAX,ESI], Uses = [ESI,DF] in
 def LODSL : I<0xAD, RawFrmSrc, (outs), (ins srcidx32:$src),
               "lods{l|d}\t{$src, %eax|eax, $src}", [], IIC_LODS>, OpSize32;
-let Defs = [RAX,ESI], Uses = [ESI,EFLAGS] in
+let Defs = [RAX,ESI], Uses = [ESI,DF] in
 def LODSQ : RI<0xAD, RawFrmSrc, (outs), (ins srcidx64:$src),
                "lodsq\t{$src, %rax|rax, $src}", [], IIC_LODS>;
 }
 
 let SchedRW = [WriteSystem] in {
-// These uses the DF flag in the EFLAGS register to inc or dec EDI and ESI
-let Defs = [ESI], Uses = [DX,ESI,EFLAGS] in {
+let Defs = [ESI], Uses = [DX,ESI,DF] in {
 def OUTSB : I<0x6E, RawFrmSrc, (outs), (ins srcidx8:$src),
              "outsb\t{$src, %dx|dx, $src}", [], IIC_OUTS>;
 def OUTSW : I<0x6F, RawFrmSrc, (outs), (ins srcidx16:$src),
@@ -2106,8 +2099,7 @@ def OUTSL : I<0x6F, RawFrmSrc, (outs), (ins srcidx32:$src),
               "outs{l|d}\t{$src, %dx|dx, $src}", [], IIC_OUTS>, OpSize32;
 }
 
-// These uses the DF flag in the EFLAGS register to inc or dec EDI and ESI
-let Defs = [EDI], Uses = [DX,EDI,EFLAGS] in {
+let Defs = [EDI], Uses = [DX,EDI,DF] in {
 def INSB : I<0x6C, RawFrmDst, (outs), (ins dstidx8:$dst),
              "insb\t{%dx, $dst|$dst, dx}", [], IIC_INS>;
 def INSW : I<0x6D, RawFrmDst, (outs), (ins dstidx16:$dst),
@@ -2117,18 +2109,21 @@ def INSL : I<0x6D, RawFrmDst, (outs), (ins dstidx32:$dst),
 }
 }
 
-// Flag instructions
-let SchedRW = [WriteALU] in {
+// EFLAGS management instructions.
+let SchedRW = [WriteALU], Defs = [EFLAGS], Uses = [EFLAGS] in {
 def CLC : I<0xF8, RawFrm, (outs), (ins), "clc", [], IIC_CLC_CMC_STC>;
 def STC : I<0xF9, RawFrm, (outs), (ins), "stc", [], IIC_CLC_CMC_STC>;
-def CLI : I<0xFA, RawFrm, (outs), (ins), "cli", [], IIC_CLI>;
-def STI : I<0xFB, RawFrm, (outs), (ins), "sti", [], IIC_STI>;
+def CMC : I<0xF5, RawFrm, (outs), (ins), "cmc", [], IIC_CLC_CMC_STC>;
+}
+
+// DF management instructions.
+// FIXME: These are a bit more expensive than CLC and STC. We should consider
+// adjusting their schedule bucket.
+let SchedRW = [WriteALU], Defs = [DF] in {
 def CLD : I<0xFC, RawFrm, (outs), (ins), "cld", [], IIC_CLD>;
 def STD : I<0xFD, RawFrm, (outs), (ins), "std", [], IIC_STD>;
-def CMC : I<0xF5, RawFrm, (outs), (ins), "cmc", [], IIC_CLC_CMC_STC>;
-
-def CLTS : I<0x06, RawFrm, (outs), (ins), "clts", [], IIC_CLTS>, TB;
 }
+
 
 // Table lookup instructions
 let Uses = [AL,EBX], Defs = [AL], hasSideEffects = 0, mayLoad = 1 in
