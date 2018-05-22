@@ -10,16 +10,10 @@ define i64 @test_add_i64(i64 %arg1, i64 %arg2) {
 ;
 ; X32-LABEL: test_add_i64:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    .cfi_offset %ebp, -8
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    .cfi_def_cfa_register %ebp
-; X32-NEXT:    movl 16(%ebp), %eax
-; X32-NEXT:    movl 20(%ebp), %edx
-; X32-NEXT:    addl 8(%ebp), %eax
-; X32-NEXT:    adcl 12(%ebp), %edx
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    retl
   %ret = add i64 %arg1, %arg2
   ret i64 %ret

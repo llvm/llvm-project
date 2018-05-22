@@ -251,8 +251,18 @@ def ST7 : X86Reg<"st(7)", 7>, DwarfRegNum<[40, 19, 18]>;
 // Floating-point status word
 def FPSW : X86Reg<"fpsw", 0>;
 
-// Status flags register
+// Status flags register.
+//
+// Note that some flags that are commonly thought of as part of the status
+// flags register are modeled separately. Typically this is due to instructions
+// reading and updating those flags independently of all the others. We don't
+// want to create false dependencies between these instructions and so we use
+// a separate register to model them.
 def EFLAGS : X86Reg<"flags", 0>;
+
+// The direction flag.
+def DF : X86Reg<"DF", 0>;
+
 
 // Segment registers
 def CS : X86Reg<"cs", 1>;
@@ -494,6 +504,10 @@ def CCR : RegisterClass<"X86", [i32], 32, (add EFLAGS)> {
   let isAllocatable = 0;
 }
 def FPCCR : RegisterClass<"X86", [i16], 16, (add FPSW)> {
+  let CopyCost = -1;  // Don't allow copying of status registers.
+  let isAllocatable = 0;
+}
+def DFCCR : RegisterClass<"X86", [i32], 32, (add DF)> {
   let CopyCost = -1;  // Don't allow copying of status registers.
   let isAllocatable = 0;
 }

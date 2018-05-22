@@ -693,6 +693,19 @@ let Uses = [RAX, RBX, RCX, RDX], Defs = [RAX, RBX, RCX] in {
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
+// TS flag control instruction.
+let SchedRW = [WriteSystem] in {
+def CLTS : I<0x06, RawFrm, (outs), (ins), "clts", [], IIC_CLTS>, TB;
+}
+
+//===----------------------------------------------------------------------===//
+// IF (inside EFLAGS) management instructions.
+let SchedRW = [WriteSystem], Uses = [EFLAGS], Defs = [EFLAGS] in {
+def CLI : I<0xFA, RawFrm, (outs), (ins), "cli", [], IIC_CLI>;
+def STI : I<0xFB, RawFrm, (outs), (ins), "sti", [], IIC_STI>;
+}
+
+//===----------------------------------------------------------------------===//
 // RDPID Instruction
 let SchedRW = [WriteSystem] in {
 def RDPID32 : I<0xC7, MRM7r, (outs GR32:$src), (ins),
