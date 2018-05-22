@@ -29,6 +29,7 @@
 #include "R600MachineFunctionInfo.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -3006,7 +3007,7 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
     SDValue X = LHS->getOperand(0);
 
     if (VT == MVT::i32 && RHSVal == 16 && X.getValueType() == MVT::i16 &&
-        isTypeLegal(MVT::v2i16)) {
+        isOperationLegal(ISD::BUILD_VECTOR, MVT::v2i16)) {
       // Prefer build_vector as the canonical form if packed types are legal.
       // (shl ([asz]ext i16:x), 16 -> build_vector 0, x
       SDValue Vec = DAG.getBuildVector(MVT::v2i16, SL,
@@ -3817,12 +3818,13 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     // TODO: Generalize and move to DAGCombiner
     SDValue Src = N->getOperand(0);
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Src)) {
-      assert(Src.getValueType() == MVT::i64);
-      SDLoc SL(N);
-      uint64_t CVal = C->getZExtValue();
-      return DAG.getNode(ISD::BUILD_VECTOR, SL, DestVT,
-                         DAG.getConstant(Lo_32(CVal), SL, MVT::i32),
-                         DAG.getConstant(Hi_32(CVal), SL, MVT::i32));
+      if (Src.getValueType() == MVT::i64) {
+        SDLoc SL(N);
+        uint64_t CVal = C->getZExtValue();
+        return DAG.getNode(ISD::BUILD_VECTOR, SL, DestVT,
+                           DAG.getConstant(Lo_32(CVal), SL, MVT::i32),
+                           DAG.getConstant(Hi_32(CVal), SL, MVT::i32));
+      }
     }
 
     if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Src)) {

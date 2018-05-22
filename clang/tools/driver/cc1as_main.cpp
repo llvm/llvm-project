@@ -97,7 +97,6 @@ struct AssemblerInvocation {
   llvm::DebugCompressionType CompressDebugSections =
       llvm::DebugCompressionType::None;
   std::string MainFileName;
-  std::string SplitDwarfFile;
 
   /// @}
   /// @name Frontend Options
@@ -248,7 +247,6 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   }
   Opts.LLVMArgs = Args.getAllArgValues(OPT_mllvm);
   Opts.OutputPath = Args.getLastArgValue(OPT_o);
-  Opts.SplitDwarfFile = Args.getLastArgValue(OPT_split_dwarf_file);
   if (Arg *A = Args.getLastArg(OPT_filetype)) {
     StringRef Name = A->getValue();
     unsigned OutputType = StringSwitch<unsigned>(Name)
@@ -284,17 +282,22 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
 }
 
 static std::unique_ptr<raw_fd_ostream>
-getOutputStream(StringRef Path, DiagnosticsEngine &Diags, bool Binary) {
+getOutputStream(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
+                bool Binary) {
+  if (Opts.OutputPath.empty())
+    Opts.OutputPath = "-";
+
   // Make sure that the Out file gets unlinked from the disk if we get a
   // SIGINT.
-  if (Path != "-")
-    sys::RemoveFileOnSignal(Path);
+  if (Opts.OutputPath != "-")
+    sys::RemoveFileOnSignal(Opts.OutputPath);
 
   std::error_code EC;
   auto Out = llvm::make_unique<raw_fd_ostream>(
-      Path, EC, (Binary ? sys::fs::F_None : sys::fs::F_Text));
+      Opts.OutputPath, EC, (Binary ? sys::fs::F_None : sys::fs::F_Text));
   if (EC) {
-    Diags.Report(diag::err_fe_unable_to_open_output) << Path << EC.message();
+    Diags.Report(diag::err_fe_unable_to_open_output) << Opts.OutputPath
+                                                     << EC.message();
     return nullptr;
   }
 
@@ -339,15 +342,9 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   MAI->setRelaxELFRelocations(Opts.RelaxELFRelocations);
 
   bool IsBinary = Opts.OutputType == AssemblerInvocation::FT_Obj;
-  if (Opts.OutputPath.empty())
-    Opts.OutputPath = "-";
-  std::unique_ptr<raw_fd_ostream> FDOS =
-      getOutputStream(Opts.OutputPath, Diags, IsBinary);
+  std::unique_ptr<raw_fd_ostream> FDOS = getOutputStream(Opts, Diags, IsBinary);
   if (!FDOS)
     return true;
-  std::unique_ptr<raw_fd_ostream> DwoOS;
-  if (!Opts.SplitDwarfFile.empty())
-    DwoOS = getOutputStream(Opts.SplitDwarfFile, Diags, IsBinary);
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
@@ -430,9 +427,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     MCTargetOptions MCOptions;
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
-    std::unique_ptr<MCObjectWriter> OW =
-        DwoOS ? MAB->createDwoObjectWriter(*Out, *DwoOS)
-              : MAB->createObjectWriter(*Out);
+    std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(*Out);
 
     Triple T(Opts.Triple);
     Str.reset(TheTarget->createMCObjectStreamer(
@@ -481,12 +476,8 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   FDOS.reset();
 
   // Delete output file if there were errors.
-  if (Failed) {
-    if (Opts.OutputPath != "-")
-      sys::fs::remove(Opts.OutputPath);
-    if (!Opts.SplitDwarfFile.empty() && Opts.SplitDwarfFile != "-")
-      sys::fs::remove(Opts.SplitDwarfFile);
-  }
+  if (Failed && Opts.OutputPath != "-")
+    sys::fs::remove(Opts.OutputPath);
 
   return Failed;
 }

@@ -16,7 +16,9 @@
 
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUMachineFunction.h"
+#include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
@@ -34,7 +36,6 @@ namespace llvm {
 
 class MachineFrameInfo;
 class MachineFunction;
-class SIInstrInfo;
 class TargetRegisterClass;
 
 class AMDGPUImagePseudoSourceValue : public PseudoSourceValue {
@@ -185,25 +186,20 @@ private:
 
   unsigned HighBitsOf32BitAddress;
 
-  MCPhysReg getNextUserSGPR() const {
-    assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
-    return AMDGPU::SGPR0 + NumUserSGPRs;
-  }
+  MCPhysReg getNextUserSGPR() const;
 
-  MCPhysReg getNextSystemSGPR() const {
-    return AMDGPU::SGPR0 + NumUserSGPRs + NumSystemSGPRs;
-  }
+  MCPhysReg getNextSystemSGPR() const;
 
 public:
   struct SpilledReg {
-    unsigned VGPR = AMDGPU::NoRegister;
+    unsigned VGPR = 0;
     int Lane = -1;
 
     SpilledReg() = default;
     SpilledReg(unsigned R, int L) : VGPR (R), Lane (L) {}
 
     bool hasLane() { return Lane != -1;}
-    bool hasReg() { return VGPR != AMDGPU::NoRegister;}
+    bool hasReg() { return VGPR != 0;}
   };
 
   struct SGPRSpillVGPRCSR {
@@ -243,8 +239,8 @@ public:
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);
   void removeSGPRToVGPRFrameIndices(MachineFrameInfo &MFI);
 
-  bool hasCalculatedTID() const { return TIDReg != AMDGPU::NoRegister; }
-  unsigned getTIDReg() const { return TIDReg; }
+  bool hasCalculatedTID() const { return TIDReg != 0; };
+  unsigned getTIDReg() const { return TIDReg; };
   void setTIDReg(unsigned Reg) { TIDReg = Reg; }
 
   unsigned getBytesInStackArgArea() const {
@@ -433,7 +429,7 @@ public:
   }
 
   void setScratchRSrcReg(unsigned Reg) {
-    assert(Reg != AMDGPU::NoRegister && "Should never be unset");
+    assert(Reg != 0 && "Should never be unset");
     ScratchRSrcReg = Reg;
   }
 
@@ -446,6 +442,7 @@ public:
   }
 
   void setStackPtrOffsetReg(unsigned Reg) {
+    assert(Reg != 0 && "Should never be unset");
     StackPtrOffsetReg = Reg;
   }
 
@@ -458,7 +455,7 @@ public:
   }
 
   void setScratchWaveOffsetReg(unsigned Reg) {
-    assert(Reg != AMDGPU::NoRegister && "Should never be unset");
+    assert(Reg != 0 && "Should never be unset");
     ScratchWaveOffsetReg = Reg;
     if (isEntryFunction())
       FrameOffsetReg = ScratchWaveOffsetReg;
@@ -621,20 +618,7 @@ public:
   }
 
   /// \returns VGPR used for \p Dim' work item ID.
-  unsigned getWorkItemIDVGPR(unsigned Dim) const {
-    switch (Dim) {
-    case 0:
-      assert(hasWorkItemIDX());
-      return AMDGPU::VGPR0;
-    case 1:
-      assert(hasWorkItemIDY());
-      return AMDGPU::VGPR1;
-    case 2:
-      assert(hasWorkItemIDZ());
-      return AMDGPU::VGPR2;
-    }
-    llvm_unreachable("unexpected dimension");
-  }
+  unsigned getWorkItemIDVGPR(unsigned Dim) const;
 
   unsigned getLDSWaveSpillSize() const {
     return LDSWaveSpillSize;

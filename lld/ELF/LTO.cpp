@@ -155,8 +155,8 @@ BitcodeCompiler::BitcodeCompiler() {
   for (Symbol *Sym : Symtab->getSymbols()) {
     StringRef Name = Sym->getName();
     for (StringRef Prefix : {"__start_", "__stop_"})
-      if (Name.startswith(Prefix))
-        UsedStartStop.insert(Name.substr(Prefix.size()));
+      if (Name.consume_front(Prefix))
+        UsedStartStop.insert(Name);
   }
 }
 

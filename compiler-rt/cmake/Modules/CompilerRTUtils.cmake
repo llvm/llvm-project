@@ -131,11 +131,11 @@ macro(test_target_arch arch def)
   if(SANITIZER_CXX_ABI_INTREE)
     # We're using in tree C++ ABI, only test the C compiler for now.
     set(TARGET_${arch}_FILENAME "${TARGET_${arch}_NAME}/CheckTarget.c")
-    file(WRITE "${TARGET_${arch}_FILENAME}" "#include <stdlib.h>\nint main() { void *p = malloc(1); return 0; }\n")
+    file(WRITE "${TARGET_${arch}_FILENAME}" "#include <stdlib.h>\nint main() { (void)malloc(sizeof(int)); return 0; }\n")
   else()
     # We're using the system C++ ABI, test that we can build C++ programs.
     set(TARGET_${arch}_FILENAME "${TARGET_${arch}_NAME}/CheckTarget.cpp")
-    file(WRITE "${TARGET_${arch}_FILENAME}" "#include <new>\nint main() { int *p = new int; return 0; }\n")
+    file(WRITE "${TARGET_${arch}_FILENAME}" "#include <new>\nint main() { (void) new int; return 0; }\n")
   endif()
 
   set(TARGET_${arch}_CFLAGS ${ARGN})

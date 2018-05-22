@@ -71,10 +71,15 @@ define amdgpu_kernel void @extract_vector_elt_v3i16(i16 addrspace(1)* %out, <3 x
 }
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v4i16:
-; SICIVI: buffer_load_ushort
-; SICIVI: buffer_load_ushort
-; SICIVI: buffer_store_short
-; SICIVI: buffer_store_short
+; SICI: buffer_load_ushort
+; SICI: buffer_load_ushort
+; SICI: buffer_store_short
+; SICI: buffer_store_short
+
+; VI: s_load_dword s
+; VI: s_load_dword s
+; VI: buffer_store_short
+; VI: buffer_store_short
 
 ; GFX9-DAG: s_load_dword [[LOAD0:s[0-9]+]], s[0:1], 0x2c
 ; GFX9-DAG: s_load_dword [[LOAD1:s[0-9]+]], s[0:1], 0x30
@@ -92,9 +97,16 @@ define amdgpu_kernel void @extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x
 }
 
 ; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v3i16:
-; SICIVI: buffer_load_ushort
-; SICIVI: buffer_load_ushort
-; SICIVI: buffer_load_ushort
+; SICI: buffer_load_ushort
+; SICI: buffer_load_ushort
+; SICI: buffer_load_ushort
+
+; SICI: buffer_store_short
+; SICI: buffer_store_short
+; SICI: buffer_store_short
+
+; SICI: buffer_load_ushort
+; SICI: buffer_store_short
 
 ; GFX9-DAG: global_load_short_d16_hi v
 ; GFX9-DAG: global_load_short_d16 v

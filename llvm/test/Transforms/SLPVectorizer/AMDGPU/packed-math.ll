@@ -1,18 +1,15 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -slp-vectorizer -dce < %s | FileCheck -check-prefixes=GCN,GFX9 %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -slp-vectorizer -dce < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -slp-vectorizer -dce < %s | FileCheck -check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -slp-vectorizer -dce < %s | FileCheck -check-prefixes=GCN,VI,GFX89 %s
 
 ; FIXME: Should still like to vectorize the memory operations for VI
 
 ; Simple 3-pair chain with loads and stores
 ; GCN-LABEL: @test1_as_3_3_3_v2f16(
-; GFX9: load <2 x half>, <2 x half> addrspace(3)*
-; GFX9: load <2 x half>, <2 x half> addrspace(3)*
-; GFX9: fmul <2 x half>
-; GFX9: store <2 x half> %{{.*}}, <2 x half> addrspace(3)* %
-; GFX9: ret
-
-; VI: load half
-; VI: load half
+; GFX89: load <2 x half>, <2 x half> addrspace(3)*
+; GFX89: load <2 x half>, <2 x half> addrspace(3)*
+; GFX89: fmul <2 x half>
+; GFX89: store <2 x half> %{{.*}}, <2 x half> addrspace(3)* %
+; GFX89: ret
 define amdgpu_kernel void @test1_as_3_3_3_v2f16(half addrspace(3)* %a, half addrspace(3)* %b, half addrspace(3)* %c) {
   %i0 = load half, half addrspace(3)* %a, align 2
   %i1 = load half, half addrspace(3)* %b, align 2
@@ -29,14 +26,11 @@ define amdgpu_kernel void @test1_as_3_3_3_v2f16(half addrspace(3)* %a, half addr
 }
 
 ; GCN-LABEL: @test1_as_3_0_0(
-; GFX9: load <2 x half>, <2 x half> addrspace(3)*
-; GFX9: load <2 x half>, <2 x half>*
-; GFX9: fmul <2 x half>
-; GFX9: store <2 x half> %{{.*}}, <2 x half>* %
-; GFX9: ret
-
-; VI: load half
-; VI: load half
+; GFX89: load <2 x half>, <2 x half> addrspace(3)*
+; GFX89: load <2 x half>, <2 x half>*
+; GFX89: fmul <2 x half>
+; GFX89: store <2 x half> %{{.*}}, <2 x half>* %
+; GFX89: ret
 define amdgpu_kernel void @test1_as_3_0_0(half addrspace(3)* %a, half* %b, half* %c) {
   %i0 = load half, half addrspace(3)* %a, align 2
   %i1 = load half, half* %b, align 2
@@ -53,14 +47,11 @@ define amdgpu_kernel void @test1_as_3_0_0(half addrspace(3)* %a, half* %b, half*
 }
 
 ; GCN-LABEL: @test1_as_0_0_3_v2f16(
-; GFX9: load <2 x half>, <2 x half>*
-; GFX9: load <2 x half>, <2 x half>*
-; GFX9: fmul <2 x half>
-; GFX9: store <2 x half> %{{.*}}, <2 x half> addrspace(3)* %
-; GFX9: ret
-
-; VI: load half
-; VI: load half
+; GFX89: load <2 x half>, <2 x half>*
+; GFX89: load <2 x half>, <2 x half>*
+; GFX89: fmul <2 x half>
+; GFX89: store <2 x half> %{{.*}}, <2 x half> addrspace(3)* %
+; GFX89: ret
 define amdgpu_kernel void @test1_as_0_0_3_v2f16(half* %a, half* %b, half addrspace(3)* %c) {
   %i0 = load half, half* %a, align 2
   %i1 = load half, half* %b, align 2

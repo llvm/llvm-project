@@ -1692,5 +1692,34 @@ define void @kill_true() {
   ret void
 }
 
+; --------------------------------------------------------------------
+; llvm.amdgcn.update.dpp.i32
+; --------------------------------------------------------------------
+
+declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1)
+
+; CHECK-LABEL: {{^}}define amdgpu_kernel void @update_dpp_no_combine(
+; CHECK: @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 false)
+define amdgpu_kernel void @update_dpp_no_combine(i32 addrspace(1)* %out, i32 %in1, i32 %in2) {
+  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 0)
+  store i32 %tmp0, i32 addrspace(1)* %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}define amdgpu_kernel void @update_dpp_drop_old(
+; CHECK: @llvm.amdgcn.update.dpp.i32(i32 undef, i32 %in2, i32 3, i32 15, i32 15, i1 true)
+define amdgpu_kernel void @update_dpp_drop_old(i32 addrspace(1)* %out, i32 %in1, i32 %in2) {
+  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 3, i32 15, i32 15, i1 1)
+  store i32 %tmp0, i32 addrspace(1)* %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}define amdgpu_kernel void @update_dpp_undef_old(
+; CHECK: @llvm.amdgcn.update.dpp.i32(i32 undef, i32 %in1, i32 4, i32 15, i32 15, i1 true)
+define amdgpu_kernel void @update_dpp_undef_old(i32 addrspace(1)* %out, i32 %in1) {
+  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 undef, i32 %in1, i32 4, i32 15, i32 15, i1 1)
+  store i32 %tmp0, i32 addrspace(1)* %out
+  ret void
+}
 
 ; CHECK: attributes #5 = { convergent }

@@ -6628,6 +6628,18 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyNoCrash("(/**/[:!] ?[).");
 }
 
+TEST_F(FormatTest, IncorrectUnbalancedBracesInMacrosWithUnicode) {
+  // Found by oss-fuzz:
+  // https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=8212
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_Cpp);
+  Style.ColumnLimit = 60;
+  verifyNoCrash(
+      "\x23\x47\xff\x20\x28\xff\x3c\xff\x3f\xff\x20\x2f\x7b\x7a\xff\x20"
+      "\xff\xff\xff\xca\xb5\xff\xff\xff\xff\x3a\x7b\x7d\xff\x20\xff\x20"
+      "\xff\x74\xff\x20\x7d\x7d\xff\x7b\x3a\xff\x20\x71\xff\x20\xff\x0a",
+      Style);
+}
+
 TEST_F(FormatTest, IncorrectCodeDoNoWhile) {
   verifyFormat("do {\n}");
   verifyFormat("do {\n}\n"

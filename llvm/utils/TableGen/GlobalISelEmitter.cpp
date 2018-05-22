@@ -854,6 +854,7 @@ public:
   LLTCodeGen getFirstConditionAsRootType();
   bool hasFirstCondition() const override;
   unsigned getNumOperands() const;
+  StringRef getOpcode() const;
 
   // FIXME: Remove this as soon as possible
   InstructionMatcher &insnmatchers_front() const { return *Matchers.front(); }
@@ -1545,6 +1546,7 @@ public:
     return I->TheDef->getName() == "G_CONSTANT";
   }
 
+  StringRef getOpcode() const { return I->TheDef->getName(); }
   unsigned getNumOperands() const { return I->Operands.size(); }
 
   StringRef getOperandType(unsigned OpIdx) const {
@@ -1554,6 +1556,32 @@ public:
 
 DenseMap<const CodeGenInstruction *, unsigned>
     InstructionOpcodeMatcher::OpcodeValues;
+
+class InstructionNumOperandsMatcher final : public InstructionPredicateMatcher {
+  unsigned NumOperands = 0;
+
+public:
+  InstructionNumOperandsMatcher(unsigned InsnVarID, unsigned NumOperands)
+      : InstructionPredicateMatcher(IPM_NumOperands, InsnVarID),
+        NumOperands(NumOperands) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == IPM_NumOperands;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return InstructionPredicateMatcher::isIdentical(B) &&
+           NumOperands == cast<InstructionNumOperandsMatcher>(&B)->NumOperands;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIM_CheckNumOperands")
+          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
+          << MatchTable::Comment("Expected")
+          << MatchTable::IntValue(NumOperands) << MatchTable::LineBreak;
+  }
+};
 
 /// Generates code to check that this instruction is a constant whose value
 /// meets an immediate predicate.
@@ -1750,6 +1778,7 @@ protected:
   /// The operands to match. All rendered operands must be present even if the
   /// condition is always true.
   OperandVec Operands;
+  bool NumOperandsCheck = true;
 
   std::string SymbolicName;
   unsigned InsnVarID;
@@ -1811,15 +1840,14 @@ public:
 
   void pop_front() { Operands.erase(Operands.begin()); }
 
-  void optimize() {}
+  void optimize();
 
   /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarName matches all the predicates and all the operands.
   void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule) {
-    Table << MatchTable::Opcode("GIM_CheckNumOperands")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
-          << MatchTable::Comment("Expected")
-          << MatchTable::IntValue(getNumOperands()) << MatchTable::LineBreak;
+    if (NumOperandsCheck)
+      InstructionNumOperandsMatcher(InsnVarID, getNumOperands())
+          .emitPredicateOpcodes(Table, Rule);
 
     emitPredicateListOpcodes(Table, Rule);
 
@@ -1882,7 +1910,13 @@ public:
   bool isConstantInstruction() {
     return getOpcodeMatcher().isConstantInstruction();
   }
+
+  StringRef getOpcode() { return getOpcodeMatcher().getOpcode(); }
 };
+
+StringRef RuleMatcher::getOpcode() const {
+  return Matchers.front()->getOpcode();
+}
 
 unsigned RuleMatcher::getNumOperands() const {
   return Matchers.front()->getNumOperands();
@@ -1953,6 +1987,28 @@ public:
     return false;
   }
 };
+
+void InstructionMatcher::optimize() {
+  SmallVector<std::unique_ptr<PredicateMatcher>, 8> Stash;
+  const auto &OpcMatcher = getOpcodeMatcher();
+
+  Stash.push_back(predicates_pop_front());
+  if (Stash.back().get() == &OpcMatcher) {
+    if (NumOperandsCheck && OpcMatcher.getNumOperands() < getNumOperands())
+      Stash.emplace_back(
+          new InstructionNumOperandsMatcher(InsnVarID, getNumOperands()));
+    NumOperandsCheck = false;
+  }
+
+  if (InsnVarID > 0) {
+    assert(!Operands.empty() && "Nested instruction is expected to def a vreg");
+    for (auto &OP : Operands[0]->predicates())
+      OP.reset();
+    Operands[0]->eraseNullPredicates();
+  }
+  while (!Stash.empty())
+    prependPredicate(Stash.pop_back_val());
+}
 
 //===- Actions ------------------------------------------------------------===//
 class OperandRenderer {

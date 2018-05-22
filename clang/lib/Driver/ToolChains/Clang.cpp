@@ -4802,6 +4802,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
   }
 
+  // Handle the debug info splitting at object creation time if we're
+  // creating an object.
+  // TODO: Currently only works on linux with newer objcopy.
+  if (SplitDWARF && Output.getType() == types::TY_Object)
+    SplitDebugInfo(getToolChain(), C, *this, JA, Args, Output, SplitDWARFOut);
+
   if (Arg *A = Args.getLastArg(options::OPT_pg))
     if (Args.hasArg(options::OPT_fomit_frame_pointer))
       D.Diag(diag::err_drv_argument_not_allowed_with) << "-fomit-frame-pointer"
@@ -4852,6 +4858,13 @@ ObjCRuntime Clang::AddObjCRuntimeArgs(const ArgList &args,
       getToolChain().getDriver().Diag(diag::err_drv_unknown_objc_runtime)
           << value;
     }
+    if ((runtime.getKind() == ObjCRuntime::GNUstep) &&
+        (runtime.getVersion() >= VersionTuple(2, 0)))
+      if (!getToolChain().getTriple().isOSBinFormatELF()) {
+        getToolChain().getDriver().Diag(
+            diag::err_drv_gnustep_objc_runtime_incompatible_binary)
+          << runtime.getVersion().getMajor();
+      }
 
     runtimeArg->render(args, cmdArgs);
     return runtime;
@@ -4945,7 +4958,7 @@ ObjCRuntime Clang::AddObjCRuntimeArgs(const ArgList &args,
     // Legacy behaviour is to target the gnustep runtime if we are in
     // non-fragile mode or the GCC runtime in fragile mode.
     if (isNonFragile)
-      runtime = ObjCRuntime(ObjCRuntime::GNUstep, VersionTuple(1, 6));
+      runtime = ObjCRuntime(ObjCRuntime::GNUstep, VersionTuple(2, 0));
     else
       runtime = ObjCRuntime(ObjCRuntime::GCC, VersionTuple());
   }
@@ -5458,17 +5471,19 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  if (Args.hasArg(options::OPT_gsplit_dwarf) &&
-      getToolChain().getTriple().isOSLinux()) {
-    CmdArgs.push_back("-split-dwarf-file");
-    CmdArgs.push_back(SplitDebugName(Args, Input));
-  }
-
   assert(Input.isFilename() && "Invalid input.");
   CmdArgs.push_back(Input.getFilename());
 
   const char *Exec = getToolChain().getDriver().getClangProgramPath();
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
+
+  // Handle the debug info splitting at object creation time if we're
+  // creating an object.
+  // TODO: Currently only works on linux with newer objcopy.
+  if (Args.hasArg(options::OPT_gsplit_dwarf) &&
+      getToolChain().getTriple().isOSLinux())
+    SplitDebugInfo(getToolChain(), C, *this, JA, Args, Output,
+                   SplitDebugName(Args, Input));
 }
 
 // Begin OffloadBundler

@@ -55,6 +55,7 @@
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/LiveIntervals.h"

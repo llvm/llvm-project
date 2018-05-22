@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn -mcpu=tahiti < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
 
 ; Test expansion of scalar selects on vectors.
 ; Evergreen not enabled since it seems to be having problems with doubles.
@@ -76,8 +76,14 @@ define amdgpu_kernel void @select_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> %a,
 }
 
 ; GCN-LABEL: {{^}}select_v2i16:
-; GCN: v_cndmask_b32_e32
-; GCN-NOT: v_cndmask_b32
+; GFX89: s_load_dword
+; GFX89: s_load_dword
+; GFX89: s_load_dword
+; GFX89: v_cndmask_b32
+; GFX89-NOT: v_cndmask_b32
+
+; SI: v_cndmask_b32_e32
+; SI-NOT: v_cndmask_b32e
 define amdgpu_kernel void @select_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %a, <2 x i16> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <2 x i16> %a, <2 x i16> %b
@@ -86,7 +92,9 @@ define amdgpu_kernel void @select_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> 
 }
 
 ; GCN-LABEL: {{^}}v_select_v2i16:
-; GCN: v_cndmask_b32_e32
+; GCN: buffer_load_dword v
+; GCN: buffer_load_dword v
+; GCN: v_cndmask_b32
 ; GCN-NOT: cndmask
 define amdgpu_kernel void @v_select_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %a.ptr, <2 x i16> addrspace(1)* %b.ptr, i32 %c) #0 {
   %a = load <2 x i16>, <2 x i16> addrspace(1)* %a.ptr
@@ -330,7 +338,7 @@ define amdgpu_kernel void @select_v8f64(<8 x double> addrspace(1)* %out, <8 x do
 }
 
 ; GCN-LABEL: {{^}}v_select_v2f16:
-; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32
 ; GCN-NOT: cndmask
 define amdgpu_kernel void @v_select_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %a.ptr, <2 x half> addrspace(1)* %b.ptr, i32 %c) #0 {
   %a = load <2 x half>, <2 x half> addrspace(1)* %a.ptr

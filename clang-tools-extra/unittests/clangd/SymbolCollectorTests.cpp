@@ -651,6 +651,21 @@ TEST_F(SymbolCollectorTest, IWYUPragma) {
                                  IncludeHeader("\"the/good/header.h\""))));
 }
 
+TEST_F(SymbolCollectorTest, IWYUPragmaWithDoubleQuotes) {
+  CollectorOpts.CollectIncludePath = true;
+  CanonicalIncludes Includes;
+  PragmaHandler = collectIWYUHeaderMaps(&Includes);
+  CollectorOpts.Includes = &Includes;
+  const std::string Header = R"(
+    // IWYU pragma: private, include "the/good/header.h"
+    class Foo {};
+  )";
+  runSymbolCollector(Header, /*Main=*/"");
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           AllOf(QName("Foo"), DeclURI(TestHeaderURI),
+                                 IncludeHeader("\"the/good/header.h\""))));
+}
+
 TEST_F(SymbolCollectorTest, AvoidUsingFwdDeclsAsCanonicalDecls) {
   CollectorOpts.CollectIncludePath = true;
   Annotations Header(R"(

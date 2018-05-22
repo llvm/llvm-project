@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=CI %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
 
 ; DAGCombiner will transform:
 ; (fabs (f16 bitcast (i16 a))) => (f16 bitcast (and (i16 a), 0x7FFFFFFF))
@@ -36,16 +36,8 @@ define amdgpu_kernel void @s_fabs_f16(half addrspace(1)* %out, half %in) {
 ; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]]
 ; CI: v_or_b32_e32
 
-; VI: flat_load_ushort [[HI:v[0-9]+]]
-; VI: flat_load_ushort [[LO:v[0-9]+]]
-; VI: v_mov_b32_e32 [[MASK:v[0-9]+]], 0x7fff{{$}}
-; VI-DAG: v_and_b32_e32 [[FABS_LO:v[0-9]+]], [[HI]], [[MASK]]
-; VI-DAG: v_and_b32_sdwa [[FABS_HI:v[0-9]+]], [[LO]], [[MASK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, [[FABS_LO]], [[FABS_HI]]
-; VI: flat_store_dword
-
-; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: s_and_b32 s{{[0-9]+}}, [[VAL]], 0x7fff7fff
+; GFX89: s_load_dword [[VAL:s[0-9]+]]
+; GFX89: s_and_b32 s{{[0-9]+}}, [[VAL]], 0x7fff7fff
 define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   store <2 x half> %fabs, <2 x half> addrspace(1)* %out
@@ -59,13 +51,12 @@ define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half
 ; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]]
 ; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]]
 
-; VI: v_mov_b32_e32 [[MASK:v[0-9]+]], 0x7fff{{$}}
-; VI-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[MASK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[MASK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-DAG: v_and_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[MASK]]
-; VI-DAG: v_and_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[MASK]]
-; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; VI:     v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+
+; GFX89: s_load_dword s
+; GFX89: s_load_dword s
+; GFX89: s_mov_b32 [[MASK:s[0-9]+]], 0x7fff7fff
+; GFX89: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
+; GFX89: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
 
 ; GCN: {{flat|global}}_store_dwordx2
 define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
@@ -147,9 +138,9 @@ define amdgpu_kernel void @v_fabs_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x
 ; CI-DAG: v_mul_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 ; CI-DAG: v_add_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 
-; GFX89-DAG: v_mul_f16_e32 v{{[0-9]+}}, -4.0, [[VAL]]
+; GFX89-DAG: v_mul_f16_e64 v{{[0-9]+}}, |[[VAL]]|, 4.0
 ; GFX89-DAG: v_mov_b32_e32 [[CONST2:v[0-9]+]], 0x4000
-; GFX89-DAG: v_sub_f16_sdwa v{{[0-9]+}}, [[CONST2]], [[VAL]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX89-DAG: v_add_f16_sdwa v{{[0-9]+}}, |[[VAL]]|, [[CONST2]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 define amdgpu_kernel void @v_extract_fabs_fold_v2f16(<2 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
@@ -167,11 +158,12 @@ define amdgpu_kernel void @v_extract_fabs_fold_v2f16(<2 x half> addrspace(1)* %i
 
 ; GCN-LABEL: {{^}}v_extract_fabs_no_fold_v2f16:
 ; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
-
-; FIXME: Extra bfe on VI
-; GFX9-NOT: v_bfe_u32
-; VI: v_bfe_u32
 ; GCN: v_and_b32_e32 [[AND:v[0-9]+]], 0x7fff7fff, [[VAL]]
+
+
+; VI: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, 16, 15
+; VI: flat_store_short
+
 ; GFX9: global_store_short_d16_hi v{{\[[0-9]+:[0-9]+\]}}, [[AND]], off
 define amdgpu_kernel void @v_extract_fabs_no_fold_v2f16(<2 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

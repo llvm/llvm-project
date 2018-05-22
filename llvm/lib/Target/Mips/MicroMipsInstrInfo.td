@@ -1052,16 +1052,14 @@ let DecoderNamespace = "MicroMips" in {
                ISA_MICROMIPS, ASE_EVA;
   def SCE_MM : MMRel, SCEBaseMM<"sce", GPR32Opnd>, LLE_FM_MM<0xA>,
                ISA_MICROMIPS, ASE_EVA;
-}
-let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
+
   let DecoderMethod = "DecodeCacheOpMM" in {
-  def CACHE_MM : MMRel, CacheOp<"cache", mem_mm_12, II_CACHE>,
-                 CACHE_PREF_FM_MM<0x08, 0x6>;
-  def PREF_MM  : MMRel, CacheOp<"pref", mem_mm_12, II_PREF>,
-                 CACHE_PREF_FM_MM<0x18, 0x2>;
+    def CACHE_MM : MMRel, CacheOp<"cache", mem_mm_12, II_CACHE>,
+                   CACHE_PREF_FM_MM<0x08, 0x6>, ISA_MICROMIPS32_NOT_MIPS32R6;
+    def PREF_MM  : MMRel, CacheOp<"pref", mem_mm_12, II_PREF>,
+                   CACHE_PREF_FM_MM<0x18, 0x2>, ISA_MICROMIPS32_NOT_MIPS32R6;
   }
-}
-let DecoderNamespace = "MicroMips" in {
+
   let DecoderMethod = "DecodePrefeOpMM" in {
     def PREFE_MM  : MMRel, CacheOp<"prefe", mem_mm_9, II_PREFE>,
                     CACHE_PREFE_FM_MM<0x18, 0x2>, ISA_MICROMIPS, ASE_EVA;

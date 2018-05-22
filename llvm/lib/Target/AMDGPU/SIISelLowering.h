@@ -60,8 +60,10 @@ class SITargetLowering final : public AMDGPUTargetLowering {
   SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue lowerIntrinsicWChain_IllegalReturnType(SDValue Op, SDValue &Chain,
-                                                 SelectionDAG &DAG) const;
+  SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M,
+                              SelectionDAG &DAG,
+                              bool IsIntrinsic = false) const;
+
   SDValue handleD16VData(SDValue VData, SelectionDAG &DAG) const;
 
   /// Converts \p Op, which must be of floating point type, to the

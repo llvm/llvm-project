@@ -21,6 +21,7 @@
 #include "AMDGPU.h"
 #include "AMDGPURegisterInfo.h"
 #include "SIDefines.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm-c/Disassembler.h"
 #include "llvm/ADT/APInt.h"

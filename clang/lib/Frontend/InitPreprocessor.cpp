@@ -645,6 +645,19 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     if (LangOpts.ObjCRuntime.isNeXTFamily())
       Builder.defineMacro("__NEXT_RUNTIME__");
 
+    if (LangOpts.ObjCRuntime.getKind() == ObjCRuntime::GNUstep) {
+      auto version = LangOpts.ObjCRuntime.getVersion();
+      std::string versionString = "1";
+      // Don't rely on the tuple argument, because we can be asked to target
+      // later ABIs than we actually support, so clamp these values to those
+      // currently supported
+      if (version >= VersionTuple(2, 0))
+        Builder.defineMacro("__OBJC_GNUSTEP_RUNTIME_ABI__", "20");
+      else
+        Builder.defineMacro("__OBJC_GNUSTEP_RUNTIME_ABI__",
+            "1" + Twine(std::min(8U, version.getMinor().getValueOr(0))));
+    }
+
     if (LangOpts.ObjCRuntime.getKind() == ObjCRuntime::ObjFW) {
       VersionTuple tuple = LangOpts.ObjCRuntime.getVersion();
 
