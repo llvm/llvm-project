@@ -17,7 +17,7 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "../../Process/gdb-remote/GDBRemoteCommunicationClient.h"
+#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "lldb/Target/Platform.h"
 

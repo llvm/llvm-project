@@ -14,7 +14,7 @@
 #include "ProcessFreeBSD.h"
 #include "ProcessMonitor.h"
 #include "RegisterContextPOSIXProcessMonitor_powerpc.h"
-#include "RegisterContextPOSIX_powerpc.h"
+#include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
 
 using namespace lldb_private;
 using namespace lldb;
