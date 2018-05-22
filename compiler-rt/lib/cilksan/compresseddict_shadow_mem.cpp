@@ -147,14 +147,9 @@ void CompressedDictShadowMem::check_race(bool prev_read, bool is_read,
       if (lca->is_PBag()) {
         // If memory is allocated on stack, the accesses race with each other
         // only if the mem location is allocated in shared ancestor's stack
+        // We don't need to check for this because we clear shadow memory;
+        // non-shared stack can't race because earlier one would've been cleared
 
-        // if stack_check = false, there is no race.
-        // if stack_check = true, it's a race only if all other conditions apply.
-        //bool stack_check = (!on_stack || addr >= cur_node->get_rsp());
-        bool stack_check = (!on_stack || shifted_addr >= lca->get_rsp());
-        has_race = stack_check;
-      }
-      if (has_race) {
         if (prev_read) // checking the current access with previous reads
           report_race(access->getLoc(),
                       AccessLoc_t(acc_id, call_stack),
