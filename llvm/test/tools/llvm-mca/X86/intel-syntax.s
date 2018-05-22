@@ -23,15 +23,15 @@
 # ALL-NEXT: [5]: MayStore
 # ALL-NEXT: [6]: HasSideEffects
 
-# INTEL:      [1]    [2]    [3]    [4]    [5]    [6]	Instructions:
-# INTEL-NEXT:  1      1     0.50                    	mov	eax, 1
-# INTEL-NEXT:  1      1     0.50                    	mov	ebx, 255
-# INTEL-NEXT:  2      3     1.00                    	imul	esi, edi
-# INTEL-NEXT:  1      1     0.50                    	lea	eax, [rsi + rdi]
+# INTEL:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# INTEL-NEXT:  1      1     0.50                        mov	eax, 1
+# INTEL-NEXT:  1      1     0.50                        mov	ebx, 255
+# INTEL-NEXT:  2      3     1.00                        imul	esi, edi
+# INTEL-NEXT:  1      1     0.50                        lea	eax, [rsi + rdi]
 
-# ATT:      [1]    [2]    [3]    [4]    [5]    [6]	Instructions:
-# ATT-NEXT:  1      1     0.50                    	movl	$1, %eax
-# ATT-NEXT:  1      1     0.50                    	movl	$255, %ebx
-# ATT-NEXT:  2      3     1.00                    	imull	%edi, %esi
-# ATT-NEXT:  1      1     0.50                    	leal	(%rsi,%rdi), %eax
+# ATT:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# ATT-NEXT:  1      1     0.50                        movl	$1, %eax
+# ATT-NEXT:  1      1     0.50                        movl	$255, %ebx
+# ATT-NEXT:  2      3     1.00                        imull	%edi, %esi
+# ATT-NEXT:  1      1     0.50                        leal	(%rsi,%rdi), %eax
 

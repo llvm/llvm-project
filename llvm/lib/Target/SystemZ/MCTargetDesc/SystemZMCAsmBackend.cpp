@@ -44,7 +44,7 @@ class SystemZMCAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
 public:
   SystemZMCAsmBackend(uint8_t osABI)
-    : OSABI(osABI) {}
+      : MCAsmBackend(support::big), OSABI(osABI) {}
 
   // Override MCAsmBackend
   unsigned getNumFixupKinds() const override {
@@ -66,10 +66,10 @@ public:
                         MCInst &Res) const override {
     llvm_unreachable("SystemZ does do not have assembler relaxation");
   }
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createSystemZObjectWriter(OS, OSABI);
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createSystemZObjectWriter(OSABI);
   }
 };
 } // end anonymous namespace
@@ -115,10 +115,9 @@ void SystemZMCAsmBackend::applyFixup(const MCAssembler &Asm,
   }
 }
 
-bool SystemZMCAsmBackend::writeNopData(uint64_t Count,
-                                       MCObjectWriter *OW) const {
+bool SystemZMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   for (uint64_t I = 0; I != Count; ++I)
-    OW->write8(7);
+    OS << '\x7';
   return true;
 }
 

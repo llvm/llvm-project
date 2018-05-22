@@ -19,6 +19,7 @@
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600RegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

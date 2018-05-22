@@ -17,6 +17,7 @@
 #include "R600Defines.h"
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 
 using namespace llvm;
 

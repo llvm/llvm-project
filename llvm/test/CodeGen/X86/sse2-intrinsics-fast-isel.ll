@@ -1114,10 +1114,9 @@ define <4 x float> @test_mm_cvtepi32_ps(<2 x i64> %a0) nounwind {
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %res = call <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32> %arg0)
+  %res = sitofp <4 x i32> %arg0 to <4 x float>
   ret <4 x float> %res
 }
-declare <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32>) nounwind readnone
 
 define <2 x i64> @test_mm_cvtpd_epi32(<2 x double> %a0) nounwind {
 ; X32-LABEL: test_mm_cvtpd_epi32:

@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -50,7 +51,7 @@ struct ELFRelocationEntry {
   void dump() const { print(errs()); }
 };
 
-class MCELFObjectTargetWriter {
+class MCELFObjectTargetWriter : public MCObjectTargetWriter {
   const uint8_t OSABI;
   const uint16_t EMachine;
   const unsigned HasRelocationAddend : 1;
@@ -62,6 +63,11 @@ protected:
 
 public:
   virtual ~MCELFObjectTargetWriter() = default;
+
+  virtual Triple::ObjectFormatType getFormat() const { return Triple::ELF; }
+  static bool classof(const MCObjectTargetWriter *W) {
+    return W->getFormat() == Triple::ELF;
+  }
 
   static uint8_t getOSABI(Triple::OSType OSType) {
     switch (OSType) {
@@ -140,6 +146,11 @@ public:
 std::unique_ptr<MCObjectWriter>
 createELFObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
                       raw_pwrite_stream &OS, bool IsLittleEndian);
+
+std::unique_ptr<MCObjectWriter>
+createELFDwoObjectWriter(std::unique_ptr<MCELFObjectTargetWriter> MOTW,
+                         raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS,
+                         bool IsLittleEndian);
 
 } // end namespace llvm
 

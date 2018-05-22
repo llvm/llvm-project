@@ -5,7 +5,7 @@
 ; GFX9:      v_pk_add_f16 [[ADD:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX9-NEXT: v_add_f16_sdwa v{{[0-9]+}}, [[ADD]], [[ADD]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_add_f16_e32
+; VI:      v_add_f16_sdwa
 ; VI-NEXT: v_add_f16_e32
 ; VI-NEXT: v_add_f16_e32
 define half @reduction_half4(<4 x half> %vec4) {
@@ -22,7 +22,7 @@ entry:
 ; GFX9:      v_pk_add_u16 [[ADD:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX9-NEXT: v_add_u16_sdwa v{{[0-9]+}}, [[ADD]], [[ADD]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_add_u16_e32
+; VI:      v_add_u16_sdwa
 ; VI-NEXT: v_add_u16_e32
 ; VI-NEXT: v_add_u16_e32
 define i16 @reduction_v4i16(<4 x i16> %vec4) {
@@ -41,8 +41,8 @@ entry:
 ; GFX9-NEXT: v_pk_add_f16 [[ADD3:v[0-9]+]], [[ADD2]], [[ADD1]]{{$}}
 ; GFX9-NEXT: v_add_f16_sdwa v{{[0-9]+}}, [[ADD3]], [[ADD3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_add_f16_e32
-; VI-NEXT: v_add_f16_e32
+; VI:      v_add_f16_sdwa
+; VI-NEXT: v_add_f16_sdwa
 ; VI-NEXT: v_add_f16_e32
 ; VI-NEXT: v_add_f16_e32
 ; VI-NEXT: v_add_f16_e32
@@ -67,8 +67,8 @@ entry:
 ; GFX9-NEXT: v_pk_add_u16 [[ADD3]], [[ADD2]], [[ADD1]]{{$}}
 ; GFX9-NEXT: v_add_u16_sdwa v{{[0-9]+}}, [[ADD3]], [[ADD3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_add_u16_e32
-; VI-NEXT: v_add_u16_e32
+; VI:      v_add_u16_sdwa
+; VI-NEXT: v_add_u16_sdwa
 ; VI-NEXT: v_add_u16_e32
 ; VI-NEXT: v_add_u16_e32
 ; VI-NEXT: v_add_u16_e32
@@ -97,10 +97,10 @@ entry:
 ; GFX9-NEXT: v_pk_add_f16 [[ADD3]], [[ADD2]], [[ADD1]]{{$}}
 ; GFX9-NEXT: v_add_f16_sdwa v{{[0-9]+}}, [[ADD3]], [[ADD3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_add_f16_e32
-; VI-NEXT: v_add_f16_e32
-; VI-NEXT: v_add_f16_e32
-; VI-NEXT: v_add_f16_e32
+; VI:      v_add_f16_sdwa
+; VI-NEXT: v_add_f16_sdwa
+; VI-NEXT: v_add_f16_sdwa
+; VI-NEXT: v_add_f16_sdwa
 ; VI-NEXT: v_add_f16_e32
 ; VI-NEXT: v_add_f16_e32
 ; VI-NEXT: v_add_f16_e32
@@ -131,7 +131,7 @@ entry:
 ; GFX9:      v_pk_min_u16 [[MIN:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX9-NEXT: v_min_u16_sdwa v{{[0-9]+}}, [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_min_u16_e32
+; VI:      v_min_u16_sdwa
 ; VI-NEXT: v_min_u16_e32
 ; VI-NEXT: v_min_u16_e32
 define i16 @reduction_min_v4i16(<4 x i16> %vec4) {
@@ -152,8 +152,8 @@ entry:
 ; GFX9-NEXT: v_pk_min_u16 [[MIN3:v[0-9]+]], [[MIN2]], [[MIN1]]{{$}}
 ; GFX9-NEXT: v_min_u16_sdwa v{{[0-9]+}}, [[MIN3]], [[MIN3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_min_u16_e32
-; VI-NEXT: v_min_u16_e32
+; VI:      v_min_u16_sdwa
+; VI-NEXT: v_min_u16_sdwa
 ; VI-NEXT: v_min_u16_e32
 ; VI-NEXT: v_min_u16_e32
 ; VI-NEXT: v_min_u16_e32
@@ -224,10 +224,10 @@ entry:
 ; GFX9-NEXT:   v_pk_min_i16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX9-NEXT:   v_min_i16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_min_i16_e32
-; VI-NEXT: v_min_i16_e32
-; VI-NEXT: v_min_i16_e32
-; VI-NEXT: v_min_i16_e32
+; VI:      v_min_i16_sdwa
+; VI-NEXT: v_min_i16_sdwa
+; VI-NEXT: v_min_i16_sdwa
+; VI-NEXT: v_min_i16_sdwa
 ; VI-NEXT: v_min_i16_e32
 ; VI-NEXT: v_min_i16_e32
 ; VI-NEXT: v_min_i16_e32
@@ -339,7 +339,7 @@ entry:
 ; GFX9:      v_pk_max_u16 [[MAX:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX9-NEXT: v_max_u16_sdwa v{{[0-9]+}}, [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_max_u16_e32
+; VI:      v_max_u16_sdwa
 ; VI-NEXT: v_max_u16_e32
 ; VI-NEXT: v_max_u16_e32
 define i16 @reduction_umax_v4i16(<4 x i16> %vec4) {
@@ -358,7 +358,7 @@ entry:
 ; GFX9:      v_pk_max_i16 [[MAX:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX9-NEXT: v_max_i16_sdwa v{{[0-9]+}}, [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_max_i16_e32
+; VI:      v_max_i16_sdwa
 ; VI-NEXT: v_max_i16_e32
 ; VI-NEXT: v_max_i16_e32
 define i16 @reduction_smax_v4i16(<4 x i16> %vec4) #0 {
@@ -377,7 +377,7 @@ entry:
 ; GFX9:      v_pk_max_f16 [[MAX:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX9-NEXT: v_max_f16_sdwa v{{[0-9]+}}, [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_max_f16_e32
+; VI:      v_max_f16_sdwa
 ; VI-NEXT: v_max_f16_e32
 ; VI-NEXT: v_max_f16_e32
 define half @reduction_fmax_v4half(<4 x half> %vec4) {
@@ -396,7 +396,7 @@ entry:
 ; GFX9:      v_pk_min_f16 [[MIN:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX9-NEXT: v_min_f16_sdwa v{{[0-9]+}}, [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; VI:      v_min_f16_e32
+; VI:      v_min_f16_sdwa
 ; VI-NEXT: v_min_f16_e32
 ; VI-NEXT: v_min_f16_e32
 define half @reduction_fmin_v4half(<4 x half> %vec4) {

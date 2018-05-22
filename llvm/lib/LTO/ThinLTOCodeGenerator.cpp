@@ -268,7 +268,7 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
     PM.add(createObjCARCContractPass());
 
     // Setup the codegen now.
-    if (TM.addPassesToEmitFile(PM, OS, TargetMachine::CGFT_ObjectFile,
+    if (TM.addPassesToEmitFile(PM, OS, nullptr, TargetMachine::CGFT_ObjectFile,
                                /* DisableVerify */ true))
       report_fatal_error("Failed to setup codegen");
 

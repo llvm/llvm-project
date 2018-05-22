@@ -3206,71 +3206,75 @@ define <4 x float>@test_int_x86_avx512_mask_cvt_sd2ss_round(<4 x float> %x0,<2 x
   ret <4 x float> %res2
 }
 
-declare <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i32, i16)
+declare <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i32)
 
 define <16 x i32>@test_int_x86_avx512_mask_pternlog_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pternlog_d_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
 ; CHECK-NEXT:    vpternlogd $33, %zmm2, %zmm1, %zmm3
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpternlogd $33, %zmm2, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    vpaddd %zmm3, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33, i16 %x4)
-  %res1 = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33, i16 -1)
-  %res2 = add <16 x i32> %res, %res1
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
+  %2 = bitcast i16 %x4 to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  %4 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
+  %res2 = add <16 x i32> %3, %4
   ret <16 x i32> %res2
 }
-
-declare <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i32, i16)
 
 define <16 x i32>@test_int_x86_avx512_maskz_pternlog_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_pternlog_d_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
 ; CHECK-NEXT:    vpternlogd $33, %zmm2, %zmm1, %zmm3
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpternlogd $33, %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vpaddd %zmm3, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33, i16 %x4)
-  %res1 = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33, i16 -1)
-  %res2 = add <16 x i32> %res, %res1
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
+  %2 = bitcast i16 %x4 to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  %4 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
+  %res2 = add <16 x i32> %3, %4
   ret <16 x i32> %res2
 }
 
-declare <8 x i64> @llvm.x86.avx512.mask.pternlog.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i32, i8)
+declare <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i32)
 
 define <8 x i64>@test_int_x86_avx512_mask_pternlog_q_512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pternlog_q_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
 ; CHECK-NEXT:    vpternlogq $33, %zmm2, %zmm1, %zmm3
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpternlogq $33, %zmm2, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    vpaddq %zmm3, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.mask.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33, i8 %x4)
-  %res1 = call <8 x i64> @llvm.x86.avx512.mask.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33, i8 -1)
-  %res2 = add <8 x i64> %res, %res1
+  %1 = call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33)
+  %2 = bitcast i8 %x4 to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i64> %1, <8 x i64> %x0
+  %4 = call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33)
+  %res2 = add <8 x i64> %3, %4
   ret <8 x i64> %res2
 }
-
-declare <8 x i64> @llvm.x86.avx512.maskz.pternlog.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i32, i8)
 
 define <8 x i64>@test_int_x86_avx512_maskz_pternlog_q_512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_pternlog_q_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
 ; CHECK-NEXT:    vpternlogq $33, %zmm2, %zmm1, %zmm3
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpternlogq $33, %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vpaddq %zmm3, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.maskz.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33, i8 %x4)
-  %res1 = call <8 x i64> @llvm.x86.avx512.maskz.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33, i8 -1)
-  %res2 = add <8 x i64> %res, %res1
+  %1 = call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33)
+  %2 = bitcast i8 %x4 to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i64> %1, <8 x i64> zeroinitializer
+  %4 = call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33)
+  %res2 = add <8 x i64> %3, %4
   ret <8 x i64> %res2
 }
 

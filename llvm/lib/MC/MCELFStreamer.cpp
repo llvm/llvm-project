@@ -69,13 +69,8 @@ void MCELFStreamer::mergeFragment(MCDataFragment *DF,
     if (RequiredBundlePadding > 0) {
       SmallString<256> Code;
       raw_svector_ostream VecOS(Code);
-      {
-        auto OW = Assembler.getBackend().createObjectWriter(VecOS);
-
-        EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
-
-        Assembler.writeFragmentPadding(*EF, FSize, OW.get());
-      }
+      EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
+      Assembler.writeFragmentPadding(VecOS, *EF, FSize);
 
       DF->getContents().append(Code.begin(), Code.end());
     }
@@ -193,17 +188,6 @@ static unsigned CombineSymbolTypes(unsigned T1, unsigned T2) {
 
 bool MCELFStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolELF>(S);
-  // Indirect symbols are handled differently, to match how 'as' handles
-  // them. This makes writing matching .o files easier.
-  if (Attribute == MCSA_IndirectSymbol) {
-    // Note that we intentionally cannot use the symbol data here; this is
-    // important for matching the string table that 'as' generates.
-    IndirectSymbolData ISD;
-    ISD.Symbol = Symbol;
-    ISD.Section = getCurrentSectionOnly();
-    getAssembler().getIndirectSymbols().push_back(ISD);
-    return true;
-  }
 
   // Adding a symbol attribute always introduces the symbol, note that an
   // important side effect of calling registerSymbol here is to register

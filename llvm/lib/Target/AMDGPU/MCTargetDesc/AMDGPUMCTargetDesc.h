@@ -25,7 +25,7 @@ class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCObjectWriter;
+class MCObjectTargetWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
@@ -50,9 +50,9 @@ MCAsmBackend *createAMDGPUAsmBackend(const Target &T,
                                      const MCRegisterInfo &MRI,
                                      const MCTargetOptions &Options);
 
-std::unique_ptr<MCObjectWriter>
+std::unique_ptr<MCObjectTargetWriter>
 createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
-                            bool HasRelocationAddend, raw_pwrite_stream &OS);
+                            bool HasRelocationAddend);
 } // End llvm namespace
 
 #define GET_REGINFO_ENUM

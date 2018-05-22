@@ -18,6 +18,7 @@
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -224,7 +225,7 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   } else {
     const TargetRegisterClass *RC = TRI.getRegClassForReg(MRI, DstReg);
     IsSgpr = TRI.isSGPRClass(RC);
-    Size = RC->MC->getPhysRegSize() * 8;
+    Size = TRI.getRegSizeInBits(*RC);
   }
 
   if (Size != 32 && Size != 64)

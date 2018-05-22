@@ -568,8 +568,8 @@ void X86AvoidSFBPass::breakBlockedCopies(
     const DisplacementSizeMap &BlockingStoresDispSizeMap) {
   int64_t LdDispImm = getDispOperand(LoadInst).getImm();
   int64_t StDispImm = getDispOperand(StoreInst).getImm();
-  int64_t LMMOffset = (*LoadInst->memoperands_begin())->getOffset();
-  int64_t SMMOffset = (*StoreInst->memoperands_begin())->getOffset();
+  int64_t LMMOffset = 0;
+  int64_t SMMOffset = 0;
 
   int64_t LdDisp1 = LdDispImm;
   int64_t LdDisp2 = 0;

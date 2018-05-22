@@ -19,11 +19,11 @@ define <4 x float> @test_mm_mask_cvtepi32_ps(<4 x float> %__W, i8 zeroext %__U, 
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__A to <4 x i32>
-  %1 = tail call <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32> %0) #8
-  %2 = bitcast i8 %__U to <8 x i1>
-  %extract.i = shufflevector <8 x i1> %2, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %3 = select <4 x i1> %extract.i, <4 x float> %1, <4 x float> %__W
-  ret <4 x float> %3
+  %conv.i.i = sitofp <4 x i32> %0 to <4 x float>
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract.i, <4 x float> %conv.i.i, <4 x float> %__W
+  ret <4 x float> %2
 }
 
 define <4 x float> @test_mm_maskz_cvtepi32_ps(i16 zeroext %__U, <2 x i64> %__A) {
@@ -41,11 +41,12 @@ define <4 x float> @test_mm_maskz_cvtepi32_ps(i16 zeroext %__U, <2 x i64> %__A) 
 entry:
   %conv.i = trunc i16 %__U to i8
   %0 = bitcast <2 x i64> %__A to <4 x i32>
-  %1 = tail call <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32> %0) #8
-  %2 = bitcast i8 %conv.i to <8 x i1>
-  %extract.i = shufflevector <8 x i1> %2, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %3 = select <4 x i1> %extract.i, <4 x float> %1, <4 x float> zeroinitializer
-  ret <4 x float> %3
+  %conv.i.i = sitofp <4 x i32> %0 to <4 x float>
+  %1 = bitcast i8 %conv.i to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract.i, <4 x float> %conv.i.i, <4 x float> zeroinitializer
+  ret <4 x float> %2
+
 }
 
 define <8 x float> @test_mm256_mask_cvtepi32_ps(<8 x float> %__W, i8 zeroext %__U, <4 x i64> %__A) {
@@ -63,10 +64,10 @@ define <8 x float> @test_mm256_mask_cvtepi32_ps(<8 x float> %__W, i8 zeroext %__
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__A to <8 x i32>
-  %1 = tail call <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32> %0) #8
-  %2 = bitcast i8 %__U to <8 x i1>
-  %3 = select <8 x i1> %2, <8 x float> %1, <8 x float> %__W
-  ret <8 x float> %3
+  %conv.i.i = sitofp <8 x i32> %0 to <8 x float>
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x float> %conv.i.i, <8 x float> %__W
+  ret <8 x float> %2
 }
 
 define <8 x float> @test_mm256_maskz_cvtepi32_ps(i16 zeroext %__U, <4 x i64> %__A) {
@@ -84,10 +85,10 @@ define <8 x float> @test_mm256_maskz_cvtepi32_ps(i16 zeroext %__U, <4 x i64> %__
 entry:
   %conv.i = trunc i16 %__U to i8
   %0 = bitcast <4 x i64> %__A to <8 x i32>
-  %1 = tail call <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32> %0) #8
-  %2 = bitcast i8 %conv.i to <8 x i1>
-  %3 = select <8 x i1> %2, <8 x float> %1, <8 x float> zeroinitializer
-  ret <8 x float> %3
+  %conv.i.i = sitofp <8 x i32> %0 to <8 x float>
+  %1 = bitcast i8 %conv.i to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x float> %conv.i.i, <8 x float> zeroinitializer
+  ret <8 x float> %2
 }
 
 define <2 x i64> @test_mm_mask_cvtpd_epi32(<2 x i64> %__W, i8 zeroext %__U, <2 x double> %__A) {
@@ -1197,8 +1198,8 @@ define <4 x float> @test_mm_cvtepu32_ps(<2 x i64> %__A) {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__A to <4 x i32>
-  %1 = tail call <4 x float> @llvm.x86.avx512.mask.cvtudq2ps.128(<4 x i32> %0, <4 x float> zeroinitializer, i8 -1) #8
-  ret <4 x float> %1
+  %conv.i = uitofp <4 x i32> %0 to <4 x float>
+  ret <4 x float> %conv.i
 }
 
 define <4 x float> @test_mm_mask_cvtepu32_ps(<4 x float> %__W, i8 zeroext %__U, <2 x i64> %__A) {
@@ -1216,8 +1217,11 @@ define <4 x float> @test_mm_mask_cvtepu32_ps(<4 x float> %__W, i8 zeroext %__U, 
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__A to <4 x i32>
-  %1 = tail call <4 x float> @llvm.x86.avx512.mask.cvtudq2ps.128(<4 x i32> %0, <4 x float> %__W, i8 %__U) #8
-  ret <4 x float> %1
+  %conv.i.i = uitofp <4 x i32> %0 to <4 x float>
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract.i, <4 x float> %conv.i.i, <4 x float> %__W
+  ret <4 x float> %2
 }
 
 define <4 x float> @test_mm_maskz_cvtepu32_ps(i8 zeroext %__U, <2 x i64> %__A) {
@@ -1235,8 +1239,11 @@ define <4 x float> @test_mm_maskz_cvtepu32_ps(i8 zeroext %__U, <2 x i64> %__A) {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__A to <4 x i32>
-  %1 = tail call <4 x float> @llvm.x86.avx512.mask.cvtudq2ps.128(<4 x i32> %0, <4 x float> zeroinitializer, i8 %__U) #8
-  ret <4 x float> %1
+  %conv.i.i = uitofp <4 x i32> %0 to <4 x float>
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract.i, <4 x float> %conv.i.i, <4 x float> zeroinitializer
+  ret <4 x float> %2
 }
 
 define <8 x float> @test_mm256_cvtepu32_ps(<4 x i64> %__A) {
@@ -1251,8 +1258,8 @@ define <8 x float> @test_mm256_cvtepu32_ps(<4 x i64> %__A) {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__A to <8 x i32>
-  %1 = tail call <8 x float> @llvm.x86.avx512.mask.cvtudq2ps.256(<8 x i32> %0, <8 x float> zeroinitializer, i8 -1) #8
-  ret <8 x float> %1
+  %conv.i = uitofp <8 x i32> %0 to <8 x float>
+  ret <8 x float> %conv.i
 }
 
 define <8 x float> @test_mm256_mask_cvtepu32_ps(<8 x float> %__W, i8 zeroext %__U, <4 x i64> %__A) {
@@ -1270,8 +1277,10 @@ define <8 x float> @test_mm256_mask_cvtepu32_ps(<8 x float> %__W, i8 zeroext %__
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__A to <8 x i32>
-  %1 = tail call <8 x float> @llvm.x86.avx512.mask.cvtudq2ps.256(<8 x i32> %0, <8 x float> %__W, i8 %__U) #8
-  ret <8 x float> %1
+  %conv.i.i = uitofp <8 x i32> %0 to <8 x float>
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x float> %conv.i.i, <8 x float> %__W
+  ret <8 x float> %2
 }
 
 define <8 x float> @test_mm256_maskz_cvtepu32_ps(i8 zeroext %__U, <4 x i64> %__A) {
@@ -1289,8 +1298,10 @@ define <8 x float> @test_mm256_maskz_cvtepu32_ps(i8 zeroext %__U, <4 x i64> %__A
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__A to <8 x i32>
-  %1 = tail call <8 x float> @llvm.x86.avx512.mask.cvtudq2ps.256(<8 x i32> %0, <8 x float> zeroinitializer, i8 %__U) #8
-  ret <8 x float> %1
+  %conv.i.i = uitofp <8 x i32> %0 to <8 x float>
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x float> %conv.i.i, <8 x float> zeroinitializer
+  ret <8 x float> %2
 }
 
 define <8 x float> @test_mm256_shuffle_f32x4(<8 x float> %__A, <8 x float> %__B) {
@@ -3535,8 +3546,264 @@ entry:
   ret <2 x i64> %2
 }
 
-declare <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32>)
-declare <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32>)
+define <2 x i64> @test_mm_ternarylogic_epi32(<2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C) {
+; X32-LABEL: test_mm_ternarylogic_epi32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vpternlogd $4, %xmm2, %xmm1, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_ternarylogic_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpternlogd $4, %xmm2, %xmm1, %xmm0
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__A to <4 x i32>
+  %1 = bitcast <2 x i64> %__B to <4 x i32>
+  %2 = bitcast <2 x i64> %__C to <4 x i32>
+  %3 = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2, i32 4)
+  %4 = bitcast <4 x i32> %3 to <2 x i64>
+  ret <2 x i64> %4
+}
+
+declare <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32>, <4 x i32>, <4 x i32>, i32) #2
+
+define <2 x i64> @test_mm_mask_ternarylogic_epi32(<2 x i64> %__A, i8 zeroext %__U, <2 x i64> %__B, <2 x i64> %__C) {
+; X32-LABEL: test_mm_mask_ternarylogic_epi32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpternlogd $4, %xmm2, %xmm1, %xmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_mask_ternarylogic_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpternlogd $4, %xmm2, %xmm1, %xmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__A to <4 x i32>
+  %1 = bitcast <2 x i64> %__B to <4 x i32>
+  %2 = bitcast <2 x i64> %__C to <4 x i32>
+  %3 = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2, i32 4)
+  %4 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %4, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %5 = select <4 x i1> %extract, <4 x i32> %3, <4 x i32> %0
+  %6 = bitcast <4 x i32> %5 to <2 x i64>
+  ret <2 x i64> %6
+}
+
+define <2 x i64> @test_mm_maskz_ternarylogic_epi32(i8 zeroext %__U, <2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C) {
+; X32-LABEL: test_mm_maskz_ternarylogic_epi32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpternlogd $4, %xmm2, %xmm1, %xmm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_maskz_ternarylogic_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpternlogd $4, %xmm2, %xmm1, %xmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__A to <4 x i32>
+  %1 = bitcast <2 x i64> %__B to <4 x i32>
+  %2 = bitcast <2 x i64> %__C to <4 x i32>
+  %3 = tail call <4 x i32> @llvm.x86.avx512.pternlog.d.128(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2, i32 4)
+  %4 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %4, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %5 = select <4 x i1> %extract, <4 x i32> %3, <4 x i32> zeroinitializer
+  %6 = bitcast <4 x i32> %5 to <2 x i64>
+  ret <2 x i64> %6
+}
+
+define <4 x i64> @test_mm256_ternarylogic_epi32(<4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C) {
+; X32-LABEL: test_mm256_ternarylogic_epi32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vpternlogd $4, %ymm2, %ymm1, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_ternarylogic_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpternlogd $4, %ymm2, %ymm1, %ymm0
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__A to <8 x i32>
+  %1 = bitcast <4 x i64> %__B to <8 x i32>
+  %2 = bitcast <4 x i64> %__C to <8 x i32>
+  %3 = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> %0, <8 x i32> %1, <8 x i32> %2, i32 4)
+  %4 = bitcast <8 x i32> %3 to <4 x i64>
+  ret <4 x i64> %4
+}
+
+declare <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32>, <8 x i32>, <8 x i32>, i32) #2
+
+define <4 x i64> @test_mm256_mask_ternarylogic_epi32(<4 x i64> %__A, i8 zeroext %__U, <4 x i64> %__B, <4 x i64> %__C) {
+; X32-LABEL: test_mm256_mask_ternarylogic_epi32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpternlogd $4, %ymm2, %ymm1, %ymm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_ternarylogic_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpternlogd $4, %ymm2, %ymm1, %ymm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__A to <8 x i32>
+  %1 = bitcast <4 x i64> %__B to <8 x i32>
+  %2 = bitcast <4 x i64> %__C to <8 x i32>
+  %3 = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> %0, <8 x i32> %1, <8 x i32> %2, i32 4)
+  %4 = bitcast i8 %__U to <8 x i1>
+  %5 = select <8 x i1> %4, <8 x i32> %3, <8 x i32> %0
+  %6 = bitcast <8 x i32> %5 to <4 x i64>
+  ret <4 x i64> %6
+}
+
+define <4 x i64> @test_mm256_maskz_ternarylogic_epi32(i8 zeroext %__U, <4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C) {
+; X32-LABEL: test_mm256_maskz_ternarylogic_epi32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpternlogd $4, %ymm2, %ymm1, %ymm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_ternarylogic_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpternlogd $4, %ymm2, %ymm1, %ymm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__A to <8 x i32>
+  %1 = bitcast <4 x i64> %__B to <8 x i32>
+  %2 = bitcast <4 x i64> %__C to <8 x i32>
+  %3 = tail call <8 x i32> @llvm.x86.avx512.pternlog.d.256(<8 x i32> %0, <8 x i32> %1, <8 x i32> %2, i32 4)
+  %4 = bitcast i8 %__U to <8 x i1>
+  %5 = select <8 x i1> %4, <8 x i32> %3, <8 x i32> zeroinitializer
+  %6 = bitcast <8 x i32> %5 to <4 x i64>
+  ret <4 x i64> %6
+}
+
+define <2 x i64> @test_mm_ternarylogic_epi64(<2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C) {
+; X32-LABEL: test_mm_ternarylogic_epi64:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vpternlogq $4, %xmm2, %xmm1, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_ternarylogic_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpternlogq $4, %xmm2, %xmm1, %xmm0
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C, i32 4)
+  ret <2 x i64> %0
+}
+
+declare <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64>, <2 x i64>, <2 x i64>, i32) #2
+
+define <2 x i64> @test_mm_mask_ternarylogic_epi64(<2 x i64> %__A, i8 zeroext %__U, <2 x i64> %__B, <2 x i64> %__C) {
+; X32-LABEL: test_mm_mask_ternarylogic_epi64:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpternlogq $4, %xmm2, %xmm1, %xmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_mask_ternarylogic_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpternlogq $4, %xmm2, %xmm1, %xmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %2 = select <2 x i1> %extract, <2 x i64> %0, <2 x i64> %__A
+  ret <2 x i64> %2
+}
+
+define <2 x i64> @test_mm_maskz_ternarylogic_epi64(i8 zeroext %__U, <2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C) {
+; X32-LABEL: test_mm_maskz_ternarylogic_epi64:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpternlogq $4, %xmm2, %xmm1, %xmm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_maskz_ternarylogic_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpternlogq $4, %xmm2, %xmm1, %xmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <2 x i64> @llvm.x86.avx512.pternlog.q.128(<2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %2 = select <2 x i1> %extract, <2 x i64> %0, <2 x i64> zeroinitializer
+  ret <2 x i64> %2
+}
+
+define <4 x i64> @test_mm256_ternarylogic_epi64(<4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C) {
+; X32-LABEL: test_mm256_ternarylogic_epi64:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vpternlogq $4, %ymm2, %ymm1, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_ternarylogic_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpternlogq $4, %ymm2, %ymm1, %ymm0
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C, i32 4)
+  ret <4 x i64> %0
+}
+
+declare <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64>, <4 x i64>, <4 x i64>, i32) #2
+
+define <4 x i64> @test_mm256_mask_ternarylogic_epi64(<4 x i64> %__A, i8 zeroext %__U, <4 x i64> %__B, <4 x i64> %__C) {
+; X32-LABEL: test_mm256_mask_ternarylogic_epi64:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpternlogq $4, %ymm2, %ymm1, %ymm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_ternarylogic_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpternlogq $4, %ymm2, %ymm1, %ymm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract, <4 x i64> %0, <4 x i64> %__A
+  ret <4 x i64> %2
+}
+
+define <4 x i64> @test_mm256_maskz_ternarylogic_epi64(i8 zeroext %__U, <4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C) {
+; X32-LABEL: test_mm256_maskz_ternarylogic_epi64:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpternlogq $4, %ymm2, %ymm1, %ymm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_ternarylogic_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpternlogq $4, %ymm2, %ymm1, %ymm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <4 x i64> @llvm.x86.avx512.pternlog.q.256(<4 x i64> %__A, <4 x i64> %__B, <4 x i64> %__C, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract, <4 x i64> %0, <4 x i64> zeroinitializer
+  ret <4 x i64> %2
+}
+
 declare <4 x i32> @llvm.x86.avx512.mask.cvtpd2dq.128(<2 x double>, <4 x i32>, i8)
 declare <4 x i32> @llvm.x86.avx.cvt.pd2dq.256(<4 x double>)
 declare <4 x float> @llvm.x86.avx512.mask.cvtpd2ps(<2 x double>, <4 x float>, i8)
@@ -3555,8 +3822,6 @@ declare <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float>)
 declare <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float>)
 declare <4 x i32> @llvm.x86.avx512.mask.cvttps2udq.128(<4 x float>, <4 x i32>, i8)
 declare <8 x i32> @llvm.x86.avx512.mask.cvttps2udq.256(<8 x float>, <8 x i32>, i8)
-declare <4 x float> @llvm.x86.avx512.mask.cvtudq2ps.128(<4 x i32>, <4 x float>, i8)
-declare <8 x float> @llvm.x86.avx512.mask.cvtudq2ps.256(<8 x i32>, <8 x float>, i8)
 declare <8 x i16> @llvm.x86.avx512.mask.pmov.dw.256(<8 x i32>, <8 x i16>, i8)
 
 !0 = !{i32 1}

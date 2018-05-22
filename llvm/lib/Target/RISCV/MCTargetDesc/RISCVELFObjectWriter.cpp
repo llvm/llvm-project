@@ -81,10 +81,7 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 }
 
-std::unique_ptr<MCObjectWriter>
-llvm::createRISCVELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
-                                 bool Is64Bit) {
-  return createELFObjectWriter(
-      llvm::make_unique<RISCVELFObjectWriter>(OSABI, Is64Bit), OS,
-      /*IsLittleEndian=*/true);
+std::unique_ptr<MCObjectTargetWriter>
+llvm::createRISCVELFObjectWriter(uint8_t OSABI, bool Is64Bit) {
+  return llvm::make_unique<RISCVELFObjectWriter>(OSABI, Is64Bit);
 }

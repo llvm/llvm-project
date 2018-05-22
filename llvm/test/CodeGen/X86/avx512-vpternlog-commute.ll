@@ -3,16 +3,15 @@
 
 ; These test cases demonstrate cases where vpternlog could benefit from being commuted.
 
-declare <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i32, i16)
-declare <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i32, i16)
+declare <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i32)
 
 define <16 x i32> @vpternlog_v16i32_012(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: vpternlog_v16i32_012:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpternlogd $114, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_102(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
@@ -20,8 +19,8 @@ define <16 x i32> @vpternlog_v16i32_102(<16 x i32> %x0, <16 x i32> %x1, <16 x i3
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpternlogd $78, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_210(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
@@ -29,8 +28,8 @@ define <16 x i32> @vpternlog_v16i32_210(<16 x i32> %x0, <16 x i32> %x1, <16 x i3
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpternlogd $92, %zmm1, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_012_load0(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2) {
@@ -39,8 +38,8 @@ define <16 x i32> @vpternlog_v16i32_012_load0(<16 x i32>* %x0ptr, <16 x i32> %x1
 ; CHECK-NEXT:    vpternlogd $46, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_012_load1(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2) {
@@ -49,8 +48,8 @@ define <16 x i32> @vpternlog_v16i32_012_load1(<16 x i32> %x0, <16 x i32>* %x1ptr
 ; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_012_load2(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr) {
@@ -59,8 +58,8 @@ define <16 x i32> @vpternlog_v16i32_012_load2(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_102_load0(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2) {
@@ -69,8 +68,8 @@ define <16 x i32> @vpternlog_v16i32_102_load0(<16 x i32>* %x0ptr, <16 x i32> %x1
 ; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_102_load1(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2) {
@@ -79,8 +78,8 @@ define <16 x i32> @vpternlog_v16i32_102_load1(<16 x i32> %x0, <16 x i32>* %x1ptr
 ; CHECK-NEXT:    vpternlogd $46, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_102_load2(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr) {
@@ -89,8 +88,8 @@ define <16 x i32> @vpternlog_v16i32_102_load2(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-NEXT:    vpternlogd $78, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_210_load0(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2) {
@@ -99,8 +98,8 @@ define <16 x i32> @vpternlog_v16i32_210_load0(<16 x i32>* %x0ptr, <16 x i32> %x1
 ; CHECK-NEXT:    vpternlogd $78, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_210_load1(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2) {
@@ -109,8 +108,8 @@ define <16 x i32> @vpternlog_v16i32_210_load1(<16 x i32> %x0, <16 x i32>* %x1ptr
 ; CHECK-NEXT:    vpternlogd $92, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_210_load2(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr) {
@@ -119,8 +118,8 @@ define <16 x i32> @vpternlog_v16i32_210_load2(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-NEXT:    vpternlogd $58, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_021_load0(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2) {
@@ -129,8 +128,8 @@ define <16 x i32> @vpternlog_v16i32_021_load0(<16 x i32>* %x0ptr, <16 x i32> %x1
 ; CHECK-NEXT:    vpternlogd $58, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_021_load1(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2) {
@@ -139,8 +138,8 @@ define <16 x i32> @vpternlog_v16i32_021_load1(<16 x i32> %x0, <16 x i32>* %x1ptr
 ; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_021_load2(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr) {
@@ -149,8 +148,8 @@ define <16 x i32> @vpternlog_v16i32_021_load2(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_012_mask(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -159,8 +158,10 @@ define <16 x i32> @vpternlog_v16i32_012_mask(<16 x i32> %x0, <16 x i32> %x1, <16
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpternlogd $114, %zmm2, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_mask(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -170,8 +171,10 @@ define <16 x i32> @vpternlog_v16i32_102_mask(<16 x i32> %x0, <16 x i32> %x1, <16
 ; CHECK-NEXT:    vpternlogd $114, %zmm2, %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x1
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_mask(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -181,8 +184,10 @@ define <16 x i32> @vpternlog_v16i32_210_mask(<16 x i32> %x0, <16 x i32> %x1, <16
 ; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x2
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_mask1(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -192,9 +197,9 @@ define <16 x i32> @vpternlog_v16i32_012_mask1(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-NEXT:    vpternlogd $78, %zmm2, %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
   %mask.cast = bitcast i16 %mask to <16 x i1>
-  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x1
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %x1
   ret <16 x i32> %res2
 }
 
@@ -205,23 +210,25 @@ define <16 x i32> @vpternlog_v16i32_012_mask2(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-NEXT:    vpternlogd $58, %zmm0, %zmm1, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
   %mask.cast = bitcast i16 %mask to <16 x i1>
-  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x2
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %x2
   ret <16 x i32> %res2
 }
 
 define <16 x i32> @vpternlog_v16i32_012_load0_mask(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
 ; CHECK-LABEL: vpternlog_v16i32_012_load0_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpternlogd $114, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_load0_mask1(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -231,9 +238,9 @@ define <16 x i32> @vpternlog_v16i32_012_load0_mask1(<16 x i32>* %x0ptr, <16 x i3
 ; CHECK-NEXT:    vpternlogd $65, (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33, i16 -1)
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
   %mask.cast = bitcast i16 %mask to <16 x i1>
-  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x1
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %x1
   ret <16 x i32> %res2
 }
 
@@ -245,9 +252,9 @@ define <16 x i32> @vpternlog_v16i32_012_load0_mask2(<16 x i32>* %x0ptr, <16 x i3
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33, i16 -1)
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
   %mask.cast = bitcast i16 %mask to <16 x i1>
-  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x2
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %x2
   ret <16 x i32> %res2
 }
 
@@ -258,8 +265,10 @@ define <16 x i32> @vpternlog_v16i32_012_load1_mask(<16 x i32> %x0, <16 x i32>* %
 ; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_load1_mask2(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -270,9 +279,9 @@ define <16 x i32> @vpternlog_v16i32_012_load1_mask2(<16 x i32> %x0, <16 x i32>* 
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33, i16 -1)
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
   %mask.cast = bitcast i16 %mask to <16 x i1>
-  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x2
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %x2
   ret <16 x i32> %res2
 }
 
@@ -283,8 +292,10 @@ define <16 x i32> @vpternlog_v16i32_012_load2_mask(<16 x i32> %x0, <16 x i32> %x
 ; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_load2_mask1(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr, i16 %mask) {
@@ -295,9 +306,9 @@ define <16 x i32> @vpternlog_v16i32_012_load2_mask1(<16 x i32> %x0, <16 x i32> %
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33, i16 -1)
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
   %mask.cast = bitcast i16 %mask to <16 x i1>
-  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x1
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %x1
   ret <16 x i32> %res2
 }
 
@@ -308,21 +319,25 @@ define <16 x i32> @vpternlog_v16i32_102_load0_mask(<16 x i32>* %x0ptr, <16 x i32
 ; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x1
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_load1_mask(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2, i16 %mask) {
 ; CHECK-LABEL: vpternlog_v16i32_102_load1_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpternlogd $114, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x1
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_load2_mask(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr, i16 %mask) {
@@ -333,8 +348,10 @@ define <16 x i32> @vpternlog_v16i32_102_load2_mask(<16 x i32> %x0, <16 x i32> %x
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x1
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_load0_mask(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -345,8 +362,10 @@ define <16 x i32> @vpternlog_v16i32_210_load0_mask(<16 x i32>* %x0ptr, <16 x i32
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x2
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_load1_mask(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -357,34 +376,40 @@ define <16 x i32> @vpternlog_v16i32_210_load1_mask(<16 x i32> %x0, <16 x i32>* %
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x2
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_load2_mask(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr, i16 %mask) {
 ; CHECK-LABEL: vpternlog_v16i32_210_load2_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x2
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_load0_mask(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
 ; CHECK-LABEL: vpternlog_v16i32_021_load0_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_load1_mask(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -394,8 +419,10 @@ define <16 x i32> @vpternlog_v16i32_021_load1_mask(<16 x i32> %x0, <16 x i32>* %
 ; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_load2_mask(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr, i16 %mask) {
@@ -405,8 +432,10 @@ define <16 x i32> @vpternlog_v16i32_021_load2_mask(<16 x i32> %x0, <16 x i32> %x
 ; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_maskz(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -415,8 +444,10 @@ define <16 x i32> @vpternlog_v16i32_012_maskz(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpternlogd $114, %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_maskz(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -425,8 +456,10 @@ define <16 x i32> @vpternlog_v16i32_102_maskz(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpternlogd $78, %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_maskz(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -435,8 +468,10 @@ define <16 x i32> @vpternlog_v16i32_210_maskz(<16 x i32> %x0, <16 x i32> %x1, <1
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vpternlogd $92, %zmm1, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_load0_maskz(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -446,8 +481,10 @@ define <16 x i32> @vpternlog_v16i32_012_load0_maskz(<16 x i32>* %x0ptr, <16 x i3
 ; CHECK-NEXT:    vpternlogd $46, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_load1_maskz(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -457,8 +494,10 @@ define <16 x i32> @vpternlog_v16i32_012_load1_maskz(<16 x i32> %x0, <16 x i32>* 
 ; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_load2_maskz(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr, i16 %mask) {
@@ -468,8 +507,10 @@ define <16 x i32> @vpternlog_v16i32_012_load2_maskz(<16 x i32> %x0, <16 x i32> %
 ; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_load0_maskz(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -479,8 +520,10 @@ define <16 x i32> @vpternlog_v16i32_102_load0_maskz(<16 x i32>* %x0ptr, <16 x i3
 ; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_load1_maskz(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -490,8 +533,10 @@ define <16 x i32> @vpternlog_v16i32_102_load1_maskz(<16 x i32> %x0, <16 x i32>* 
 ; CHECK-NEXT:    vpternlogd $46, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_load2_maskz(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr, i16 %mask) {
@@ -501,8 +546,10 @@ define <16 x i32> @vpternlog_v16i32_102_load2_maskz(<16 x i32> %x0, <16 x i32> %
 ; CHECK-NEXT:    vpternlogd $78, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_load0_maskz(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -512,8 +559,10 @@ define <16 x i32> @vpternlog_v16i32_210_load0_maskz(<16 x i32>* %x0ptr, <16 x i3
 ; CHECK-NEXT:    vpternlogd $78, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_load1_maskz(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -523,8 +572,10 @@ define <16 x i32> @vpternlog_v16i32_210_load1_maskz(<16 x i32> %x0, <16 x i32>* 
 ; CHECK-NEXT:    vpternlogd $92, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_load2_maskz(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr, i16 %mask) {
@@ -534,8 +585,10 @@ define <16 x i32> @vpternlog_v16i32_210_load2_maskz(<16 x i32> %x0, <16 x i32> %
 ; CHECK-NEXT:    vpternlogd $58, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_load0_maskz(<16 x i32>* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -545,8 +598,10 @@ define <16 x i32> @vpternlog_v16i32_021_load0_maskz(<16 x i32>* %x0ptr, <16 x i3
 ; CHECK-NEXT:    vpternlogd $58, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x0 = load <16 x i32>, <16 x i32>* %x0ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_load1_maskz(<16 x i32> %x0, <16 x i32>* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -556,8 +611,10 @@ define <16 x i32> @vpternlog_v16i32_021_load1_maskz(<16 x i32> %x0, <16 x i32>* 
 ; CHECK-NEXT:    vpternlogd $114, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x1 = load <16 x i32>, <16 x i32>* %x1ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_load2_maskz(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2ptr, i16 %mask) {
@@ -567,8 +624,10 @@ define <16 x i32> @vpternlog_v16i32_021_load2_maskz(<16 x i32> %x0, <16 x i32> %
 ; CHECK-NEXT:    vpternlogd $116, (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2ptr
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_broadcast0(i32* %ptr_x0, <16 x i32> %x1, <16 x i32> %x2) {
@@ -579,8 +638,8 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast0(i32* %ptr_x0, <16 x i32> %x1,
   %x0_scalar = load i32, i32* %ptr_x0
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0_scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_012_broadcast1(<16 x i32> %x0, i32* %ptr_x1, <16 x i32> %x2) {
@@ -591,8 +650,8 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast1(<16 x i32> %x0, i32* %ptr_x1,
   %x1_scalar = load i32, i32* %ptr_x1
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1_scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_012_broadcast2(<16 x i32> %x0, <16 x i32> %x1, i32* %ptr_x2) {
@@ -603,8 +662,8 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast2(<16 x i32> %x0, <16 x i32> %x
   %x2_scalar = load i32, i32* %ptr_x2
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2_scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_102_broadcast0(i32* %ptr_x0, <16 x i32> %x1, <16 x i32> %x2) {
@@ -615,8 +674,8 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast0(i32* %ptr_x0, <16 x i32> %x1,
   %x0_scalar = load i32, i32* %ptr_x0
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0_scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_102_broadcast1(<16 x i32> %x0, i32* %ptr_x1, <16 x i32> %x2) {
@@ -627,8 +686,8 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast1(<16 x i32> %x0, i32* %ptr_x1,
   %x1_scalar = load i32, i32* %ptr_x1
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1_scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_102_broadcast2(<16 x i32> %x0, <16 x i32> %x1, i32* %ptr_x2) {
@@ -639,8 +698,8 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast2(<16 x i32> %x0, <16 x i32> %x
   %x2_scalar = load i32, i32* %ptr_x2
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2_scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_210_broadcast0(i32* %ptr_x0, <16 x i32> %x1, <16 x i32> %x2) {
@@ -651,8 +710,8 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast0(i32* %ptr_x0, <16 x i32> %x1,
   %x0_scalar = load i32, i32* %ptr_x0
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0_scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_210_broadcast1(<16 x i32> %x0, i32* %ptr_x1, <16 x i32> %x2) {
@@ -663,8 +722,8 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast1(<16 x i32> %x0, i32* %ptr_x1,
   %x1_scalar = load i32, i32* %ptr_x1
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1_scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_210_broadcast2(<16 x i32> %x0, <16 x i32> %x1, i32* %ptr_x2) {
@@ -675,23 +734,25 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast2(<16 x i32> %x0, <16 x i32> %x
   %x2_scalar = load i32, i32* %ptr_x2
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2_scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @vpternlog_v16i32_012_broadcast0_mask(i32* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
 ; CHECK-LABEL: vpternlog_v16i32_012_broadcast0_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm2
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpternlogd $114, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, i32* %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_broadcast1_mask(<16 x i32> %x0, i32* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -703,8 +764,10 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast1_mask(<16 x i32> %x0, i32* %x1
   %x1scalar = load i32, i32* %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_broadcast2_mask(<16 x i32> %x0, <16 x i32> %x1, i32* %x2ptr, i16 %mask) {
@@ -716,8 +779,10 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast2_mask(<16 x i32> %x0, <16 x i3
   %x2scalar = load i32, i32* %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_broadcast0_mask(i32* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -729,23 +794,27 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast0_mask(i32* %x0ptr, <16 x i32> 
   %x0scalar = load i32, i32* %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x1
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_broadcast1_mask(<16 x i32> %x0, i32* %x1ptr, <16 x i32> %x2, i16 %mask) {
 ; CHECK-LABEL: vpternlog_v16i32_102_broadcast1_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm2
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpternlogd $114, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x1scalar = load i32, i32* %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x1
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_broadcast2_mask(<16 x i32> %x0, <16 x i32> %x1, i32* %x2ptr, i16 %mask) {
@@ -758,8 +827,10 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast2_mask(<16 x i32> %x0, <16 x i3
   %x2scalar = load i32, i32* %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x1
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_broadcast0_mask(i32* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -772,8 +843,10 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast0_mask(i32* %x0ptr, <16 x i32> 
   %x0scalar = load i32, i32* %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x2
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_broadcast1_mask(<16 x i32> %x0, i32* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -786,38 +859,44 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast1_mask(<16 x i32> %x0, i32* %x1
   %x1scalar = load i32, i32* %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x2
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_broadcast2_mask(<16 x i32> %x0, <16 x i32> %x1, i32* %x2ptr, i16 %mask) {
 ; CHECK-LABEL: vpternlog_v16i32_210_broadcast2_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm2
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x2scalar = load i32, i32* %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x2
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_broadcast0_mask(i32* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
 ; CHECK-LABEL: vpternlog_v16i32_021_broadcast0_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpbroadcastd (%rdi), %zmm2
+; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x0scalar = load i32, i32* %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_broadcast1_mask(<16 x i32> %x0, i32* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -829,8 +908,10 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast1_mask(<16 x i32> %x0, i32* %x1
   %x1scalar = load i32, i32* %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_broadcast2_mask(<16 x i32> %x0, <16 x i32> %x1, i32* %x2ptr, i16 %mask) {
@@ -842,8 +923,10 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast2_mask(<16 x i32> %x0, <16 x i3
   %x2scalar = load i32, i32* %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_broadcast0_maskz(i32* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -855,8 +938,10 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast0_maskz(i32* %x0ptr, <16 x i32>
   %x0scalar = load i32, i32* %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_broadcast1_maskz(<16 x i32> %x0, i32* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -868,8 +953,10 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast1_maskz(<16 x i32> %x0, i32* %x
   %x1scalar = load i32, i32* %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_broadcast2_maskz(<16 x i32> %x0, <16 x i32> %x1, i32* %x2ptr, i16 %mask) {
@@ -881,8 +968,10 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast2_maskz(<16 x i32> %x0, <16 x i
   %x2scalar = load i32, i32* %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_broadcast0_maskz(i32* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -894,8 +983,10 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast0_maskz(i32* %x0ptr, <16 x i32>
   %x0scalar = load i32, i32* %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_broadcast1_maskz(<16 x i32> %x0, i32* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -907,8 +998,10 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast1_maskz(<16 x i32> %x0, i32* %x
   %x1scalar = load i32, i32* %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_102_broadcast2_maskz(<16 x i32> %x0, <16 x i32> %x1, i32* %x2ptr, i16 %mask) {
@@ -920,8 +1013,10 @@ define <16 x i32> @vpternlog_v16i32_102_broadcast2_maskz(<16 x i32> %x0, <16 x i
   %x2scalar = load i32, i32* %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_broadcast0_maskz(i32* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -933,8 +1028,10 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast0_maskz(i32* %x0ptr, <16 x i32>
   %x0scalar = load i32, i32* %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_broadcast1_maskz(<16 x i32> %x0, i32* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -946,8 +1043,10 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast1_maskz(<16 x i32> %x0, i32* %x
   %x1scalar = load i32, i32* %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_210_broadcast2_maskz(<16 x i32> %x0, <16 x i32> %x1, i32* %x2ptr, i16 %mask) {
@@ -959,8 +1058,10 @@ define <16 x i32> @vpternlog_v16i32_210_broadcast2_maskz(<16 x i32> %x0, <16 x i
   %x2scalar = load i32, i32* %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x2, <16 x i32> %x1, <16 x i32> %x0, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_broadcast0_maskz(i32* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -972,8 +1073,10 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast0_maskz(i32* %x0ptr, <16 x i32>
   %x0scalar = load i32, i32* %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_broadcast1_maskz(<16 x i32> %x0, i32* %x1ptr, <16 x i32> %x2, i16 %mask) {
@@ -985,8 +1088,10 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast1_maskz(<16 x i32> %x0, i32* %x
   %x1scalar = load i32, i32* %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_021_broadcast2_maskz(<16 x i32> %x0, <16 x i32> %x1, i32* %x2ptr, i16 %mask) {
@@ -998,8 +1103,10 @@ define <16 x i32> @vpternlog_v16i32_021_broadcast2_maskz(<16 x i32> %x0, <16 x i
   %x2scalar = load i32, i32* %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114, i16 %mask)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x2, <16 x i32> %x1, i32 114)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  ret <16 x i32> %3
 }
 
 define <16 x i32> @vpternlog_v16i32_012_broadcast0_mask1(i32* %x0ptr, <16 x i32> %x1, <16 x i32> %x2, i16 %mask) {
@@ -1011,9 +1118,9 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast0_mask1(i32* %x0ptr, <16 x i32>
   %x0scalar = load i32, i32* %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
   %mask.cast = bitcast i16 %mask to <16 x i1>
-  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x1
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %x1
   ret <16 x i32> %res2
 }
 
@@ -1027,9 +1134,9 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast0_mask2(i32* %x0ptr, <16 x i32>
   %x0scalar = load i32, i32* %x0ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x0scalar, i32 0
   %x0 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
   %mask.cast = bitcast i16 %mask to <16 x i1>
-  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x2
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %x2
   ret <16 x i32> %res2
 }
 
@@ -1043,9 +1150,9 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast1_mask2(<16 x i32> %x0, i32* %x
   %x1scalar = load i32, i32* %x1ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x1scalar, i32 0
   %x1 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
   %mask.cast = bitcast i16 %mask to <16 x i1>
-  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x2
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %x2
   ret <16 x i32> %res2
 }
 
@@ -1059,8 +1166,8 @@ define <16 x i32> @vpternlog_v16i32_012_broadcast2_mask1(<16 x i32> %x0, <16 x i
   %x2scalar = load i32, i32* %x2ptr
   %vecinit.i = insertelement <16 x i32> undef, i32 %x2scalar, i32 0
   %x2 = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
-  %res = call <16 x i32> @llvm.x86.avx512.mask.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114, i16 -1)
+  %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 114)
   %mask.cast = bitcast i16 %mask to <16 x i1>
-  %res2 = select <16 x i1> %mask.cast, <16 x i32> %res, <16 x i32> %x1
+  %res2 = select <16 x i1> %mask.cast, <16 x i32> %1, <16 x i32> %x1
   ret <16 x i32> %res2
 }

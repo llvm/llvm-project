@@ -238,8 +238,8 @@ public:
   /// defining a separate atom.
   bool isSymbolLinkerVisible(const MCSymbol &SD) const;
 
-  /// Emit the section contents using the given object writer.
-  void writeSectionData(const MCSection *Section,
+  /// Emit the section contents to \p OS.
+  void writeSectionData(raw_ostream &OS, const MCSection *Section,
                         const MCAsmLayout &Layout) const;
 
   /// Check whether a given symbol has been flagged with .thumb_func.
@@ -433,10 +433,10 @@ public:
       FileNames.push_back(FileName);
   }
 
-  /// Write the necessary bundle padding to the given object writer.
+  /// Write the necessary bundle padding to \p OS.
   /// Expects a fragment \p F containing instructions and its size \p FSize.
-  void writeFragmentPadding(const MCFragment &F, uint64_t FSize,
-                            MCObjectWriter *OW) const;
+  void writeFragmentPadding(raw_ostream &OS, const MCFragment &F,
+                            uint64_t FSize) const;
 
   /// @}
 

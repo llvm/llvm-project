@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -enable-amdgpu-aa=0 -mattr=+flat-for-global,-fp64-fp16-denormals < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=fiji -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=CIVI -check-prefix=VI -check-prefix=GFX89 %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=hawaii -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=CIVI -check-prefix=CI %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -enable-amdgpu-aa=0 -mattr=+flat-for-global,-fp64-fp16-denormals < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=fiji -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,VI,GFX89 %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=hawaii -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,CI %s
 
 ; GCN-LABEL: {{^}}s_insertelement_v2i16_0:
 ; GCN: s_load_dword [[VEC:s[0-9]+]]
@@ -39,11 +39,21 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reg(<2 x i16> addrspace(1)* %
 ; GCN: s_load_dword [[ELT0:s[0-9]+]]
 ; GCN: s_load_dword [[VEC:s[0-9]+]]
 
-; CIVI-DAG: s_and_b32 [[ELT0]], [[ELT0]], 0xffff{{$}}
-; CIVI: s_lshr_b32 [[SHR:s[0-9]+]], [[VEC]], 16
-; CIVI: s_lshl_b32 [[ELT1:s[0-9]+]], [[SHR]], 16
-; CIVI-DAG: s_or_b32 s{{[0-9]+}}, [[ELT0]], [[ELT1]]
-; CIVI-DAG: ; use [[SHR]]
+; CI-DAG: s_and_b32 [[ELT0]], [[ELT0]], 0xffff{{$}}
+; CI: s_lshr_b32 [[SHR:s[0-9]+]], [[VEC]], 16
+; CI: s_lshl_b32 [[ELT1:s[0-9]+]], [[SHR]], 16
+; CI-DAG: s_or_b32 s{{[0-9]+}}, [[ELT0]], [[ELT1]]
+; CI-DAG: ; use [[SHR]]
+
+
+; FIXME: Should be able to void mask of upper bits
+; VI-DAG: s_and_b32 [[ELT0]], [[ELT0]], 0xffff{{$}}
+; VI-DAG: s_and_b32 [[VEC_HIMASK:s[0-9]+]], [[VEC]], 0xffff0000{{$}}
+; VI: s_or_b32 [[OR:s[0-9]+]], [[ELT0]], [[VEC_HIMASK]]
+; VI: s_lshr_b32 [[SHR:s[0-9]+]], [[VEC]], 16
+
+; VI-DAG: ; use [[SHR]]
+
 
 ; GFX9: s_lshr_b32 [[ELT1:s[0-9]+]], [[VEC]], 16
 ; GFX9-DAG: s_pack_ll_b32_b16 s{{[0-9]+}}, [[ELT0]], [[ELT1]]
@@ -103,10 +113,16 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi_multi_use_1(<2 x i16> a
 ; GCN: s_load_dword [[ELT_ARG:s[0-9]+]], s[0:1]
 ; GCN: s_load_dword [[VEC:s[0-9]+]],
 
-; CIVI-DAG: s_lshr_b32 [[ELT_HI:s[0-9]+]], [[ELT_ARG]], 16
-; CIVI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VEC]], 16
-; CIVI-DAG: s_lshl_b32 [[VEC_HI:s[0-9]+]], [[SHR]], 16
-; CIVI: s_or_b32 s{{[0-9]+}}, [[ELT_HI]], [[VEC_HI]]
+; CI-DAG: s_lshr_b32 [[ELT_HI:s[0-9]+]], [[ELT_ARG]], 16
+; CI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VEC]], 16
+; CI-DAG: s_lshl_b32 [[VEC_HI:s[0-9]+]], [[SHR]], 16
+; CI: s_or_b32 s{{[0-9]+}}, [[ELT_HI]], [[VEC_HI]]
+
+
+; VI-DAG: s_lshr_b32 [[ELT_HI:s[0-9]+]], [[ELT_ARG]], 16
+; VI-DAG: s_lshr_b32 [[VEC_HI:s[0-9]+]], [[VEC]], 16
+; VI: s_and_b32 [[MASK_HI:s[0-9]+]], [[VEC]], 0xffff0000
+; VI: s_or_b32 s{{[0-9]+}}, [[ELT_HI]], [[MASK_HI]]
 
 ; GFX9-DAG: s_lshr_b32 [[ELT_HI:s[0-9]+]], [[ELT_ARG]], 16
 ; GFX9-DAG: s_lshr_b32 [[VEC_HI:s[0-9]+]], [[VEC]], 16

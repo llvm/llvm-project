@@ -16,6 +16,7 @@
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFunction.h"

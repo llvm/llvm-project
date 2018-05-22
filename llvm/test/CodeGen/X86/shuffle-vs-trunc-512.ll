@@ -941,3 +941,16 @@ define <4 x double> @PR34175(<32 x i16>* %p) {
   %tofp = uitofp <4 x i16> %shuf to <4 x double>
   ret <4 x double> %tofp
 }
+
+define <16 x i8> @trunc_v8i64_to_v8i8_return_v16i8(<8 x i64> %vec) nounwind {
+; AVX512-LABEL: trunc_v8i64_to_v8i8_return_v16i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %truncated = trunc <8 x i64> %vec to <8 x i8>
+  %result = shufflevector <8 x i8> %truncated, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %result
+}
+

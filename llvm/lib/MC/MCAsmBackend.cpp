@@ -11,19 +11,53 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCCodePadder.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCMachObjectWriter.h"
+#include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCWasmObjectWriter.h"
+#include "llvm/MC/MCWinCOFFObjectWriter.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend() : CodePadder(new MCCodePadder()) {}
-
-MCAsmBackend::MCAsmBackend(std::unique_ptr<MCCodePadder> TargetCodePadder)
-    : CodePadder(std::move(TargetCodePadder)) {}
+MCAsmBackend::MCAsmBackend(support::endianness Endian)
+    : CodePadder(new MCCodePadder()), Endian(Endian) {}
 
 MCAsmBackend::~MCAsmBackend() = default;
+
+std::unique_ptr<MCObjectWriter>
+MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
+  auto TW = createObjectTargetWriter();
+  switch (TW->getFormat()) {
+  case Triple::ELF:
+    return createELFObjectWriter(cast<MCELFObjectTargetWriter>(std::move(TW)), OS,
+                                 Endian == support::little);
+  case Triple::MachO:
+    return createMachObjectWriter(cast<MCMachObjectTargetWriter>(std::move(TW)),
+                                  OS, Endian == support::little);
+  case Triple::COFF:
+    return createWinCOFFObjectWriter(
+        cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS);
+  case Triple::Wasm:
+    return createWasmObjectWriter(cast<MCWasmObjectTargetWriter>(std::move(TW)),
+                                  OS);
+  default:
+    llvm_unreachable("unexpected object format");
+  }
+}
+
+std::unique_ptr<MCObjectWriter>
+MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
+                                    raw_pwrite_stream &DwoOS) const {
+  auto TW = createObjectTargetWriter();
+  if (TW->getFormat() != Triple::ELF)
+    report_fatal_error("dwo only supported with ELF");
+  return createELFDwoObjectWriter(cast<MCELFObjectTargetWriter>(std::move(TW)),
+                                  OS, DwoOS, Endian == support::little);
+}
 
 Optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
   return None;

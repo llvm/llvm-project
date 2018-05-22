@@ -16,7 +16,6 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
 #include "AMDGPURegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
@@ -223,10 +222,8 @@ public:
 
   const int *getRegUnitPressureSets(unsigned RegUnit) const override;
 
-  unsigned getReturnAddressReg(const MachineFunction &MF) const {
-    // Not a callee saved register.
-    return AMDGPU::SGPR30_SGPR31;
-  }
+  unsigned getReturnAddressReg(const MachineFunction &MF) const;
+
   const TargetRegisterClass *
   getConstrainedRegClassForOperand(const MachineOperand &MO,
                                  const MachineRegisterInfo &MRI) const override;

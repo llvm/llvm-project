@@ -21,6 +21,7 @@
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "InstPrinter/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"

@@ -19,6 +19,7 @@
 #include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"

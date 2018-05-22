@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveInterval.h"

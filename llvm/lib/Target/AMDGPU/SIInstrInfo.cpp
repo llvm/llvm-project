@@ -19,6 +19,7 @@
 #include "SIDefines.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -4917,4 +4918,17 @@ const MCInstrDesc &SIInstrInfo::getKillTerminatorFromPseudo(unsigned Opcode) con
   default:
     llvm_unreachable("invalid opcode, expected SI_KILL_*_PSEUDO");
   }
+}
+
+bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
+  if (!isSMRD(MI))
+    return false;
+
+  // Check that it is using a buffer resource.
+  int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::sbase);
+  if (Idx == -1) // e.g. s_memtime
+    return false;
+
+  const auto RCID = MI.getDesc().OpInfo[Idx].RegClass;
+  return RCID == AMDGPU::SReg_128RegClassID;
 }

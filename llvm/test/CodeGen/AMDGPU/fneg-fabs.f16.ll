@@ -73,12 +73,9 @@ define amdgpu_kernel void @v_fneg_fabs_f16(half addrspace(1)* %out, half addrspa
 ; CI: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 16, v{{[0-9]+}}
 ; CI: v_or_b32_e32 [[OR:v[0-9]+]], v{{[0-9]+}}, [[SHL]]
 ; CI: v_or_b32_e32 v{{[0-9]+}}, 0x80008000, [[OR]]
-; VI: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
-; VI: v_mov_b32_e32 [[VMASK:v[0-9]+]], [[MASK]]
-; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[VMASK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; CIVI: flat_store_dword
 
+; FIXME: Random commute
+; VI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008000
 ; GFX9: s_or_b32 s{{[0-9]+}}, 0x80008000, s{{[0-9]+}}
 define amdgpu_kernel void @s_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
@@ -95,14 +92,13 @@ define amdgpu_kernel void @s_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x
 ; CI: v_or_b32_e32 [[OR1:v[0-9]+]], v{{[0-9]+}}, [[SHL1]]
 ; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]], [[OR0]]
 ; CI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]], [[OR1]]
-; VI: s_mov_b32 [[MASK:s[0-9]+]], 0x8000{{$}}
-; VI: v_mov_b32_e32 [[VMASK:v[0-9]+]], [[MASK]]
-; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[VMASK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
-; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[VMASK]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI: v_or_b32_e32 v{{[0-9]+}}, [[MASK]],
 
-; GFX9: s_mov_b32 [[MASK:s[0-9]+]], 0x80008000
+; FIXME: Random commute
+; GFX89: s_mov_b32 [[MASK:s[0-9]+]], 0x80008000
+
+; VI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
+; VI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
+
 ; GFX9: s_or_b32 s{{[0-9]+}}, [[MASK]], s{{[0-9]+}}
 ; GFX9: s_or_b32 s{{[0-9]+}}, [[MASK]], s{{[0-9]+}}
 
@@ -120,7 +116,7 @@ define amdgpu_kernel void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x h
 ; CI: v_mul_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 ; CI: v_mul_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 
-; VI: v_mul_f16_e64 v{{[0-9]+}}, -|v{{[0-9]+}}|, 4.0
+; VI: v_mul_f16_e64 v{{[0-9]+}}, -|s{{[0-9]+}}|, 4.0
 ; VI: v_mul_f16_sdwa v{{[0-9]+}}, -|v{{[0-9]+}}|, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 
 ; GFX9: s_and_b32 [[ABS:s[0-9]+]], s{{[0-9]+}}, 0x7fff7fff

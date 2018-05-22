@@ -39,21 +39,92 @@ private:
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
   VPInstruction *createInstruction(unsigned Opcode,
-                                   std::initializer_list<VPValue *> Operands) {
+                                   ArrayRef<VPValue *> Operands) {
     VPInstruction *Instr = new VPInstruction(Opcode, Operands);
-    BB->insert(Instr, InsertPt);
+    if (BB)
+      BB->insert(Instr, InsertPt);
     return Instr;
+  }
+
+  VPInstruction *createInstruction(unsigned Opcode,
+                                   std::initializer_list<VPValue *> Operands) {
+    return createInstruction(Opcode, ArrayRef<VPValue *>(Operands));
   }
 
 public:
   VPBuilder() {}
 
-  /// This specifies that created VPInstructions should be appended to
-  /// the end of the specified block.
+  /// Clear the insertion point: created instructions will not be inserted into
+  /// a block.
+  void clearInsertionPoint() {
+    BB = nullptr;
+    InsertPt = VPBasicBlock::iterator();
+  }
+
+  VPBasicBlock *getInsertBlock() const { return BB; }
+  VPBasicBlock::iterator getInsertPoint() const { return InsertPt; }
+
+  /// InsertPoint - A saved insertion point.
+  class VPInsertPoint {
+    VPBasicBlock *Block = nullptr;
+    VPBasicBlock::iterator Point;
+
+  public:
+    /// Creates a new insertion point which doesn't point to anything.
+    VPInsertPoint() = default;
+
+    /// Creates a new insertion point at the given location.
+    VPInsertPoint(VPBasicBlock *InsertBlock, VPBasicBlock::iterator InsertPoint)
+        : Block(InsertBlock), Point(InsertPoint) {}
+
+    /// Returns true if this insert point is set.
+    bool isSet() const { return Block != nullptr; }
+
+    VPBasicBlock *getBlock() const { return Block; }
+    VPBasicBlock::iterator getPoint() const { return Point; }
+  };
+
+  /// Sets the current insert point to a previously-saved location.
+  void restoreIP(VPInsertPoint IP) {
+    if (IP.isSet())
+      setInsertPoint(IP.getBlock(), IP.getPoint());
+    else
+      clearInsertionPoint();
+  }
+
+  /// This specifies that created VPInstructions should be appended to the end
+  /// of the specified block.
   void setInsertPoint(VPBasicBlock *TheBB) {
     assert(TheBB && "Attempting to set a null insert point");
     BB = TheBB;
     InsertPt = BB->end();
+  }
+
+  /// This specifies that created instructions should be inserted at the
+  /// specified point.
+  void setInsertPoint(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
+    BB = TheBB;
+    InsertPt = IP;
+  }
+
+  /// Insert and return the specified instruction.
+  VPInstruction *insert(VPInstruction *I) const {
+    BB->insert(I, InsertPt);
+    return I;
+  }
+
+  /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
+  /// its underlying Instruction.
+  VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                        Instruction *Inst = nullptr) {
+    VPInstruction *NewVPInst = createInstruction(Opcode, Operands);
+    NewVPInst->setUnderlyingValue(Inst);
+    return NewVPInst;
+  }
+  VPValue *createNaryOp(unsigned Opcode,
+                        std::initializer_list<VPValue *> Operands,
+                        Instruction *Inst = nullptr) {
+    return createNaryOp(Opcode, ArrayRef<VPValue *>(Operands), Inst);
   }
 
   VPValue *createNot(VPValue *Operand) {
@@ -67,8 +138,28 @@ public:
   VPValue *createOr(VPValue *LHS, VPValue *RHS) {
     return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS});
   }
-};
 
+  //===--------------------------------------------------------------------===//
+  // RAII helpers.
+  //===--------------------------------------------------------------------===//
+
+  /// RAII object that stores the current insertion point and restores it when
+  /// the object is destroyed.
+  class InsertPointGuard {
+    VPBuilder &Builder;
+    VPBasicBlock *Block;
+    VPBasicBlock::iterator Point;
+
+  public:
+    InsertPointGuard(VPBuilder &B)
+        : Builder(B), Block(B.getInsertBlock()), Point(B.getInsertPoint()) {}
+
+    InsertPointGuard(const InsertPointGuard &) = delete;
+    InsertPointGuard &operator=(const InsertPointGuard &) = delete;
+
+    ~InsertPointGuard() { Builder.restoreIP(VPInsertPoint(Block, Point)); }
+  };
+};
 
 /// TODO: The following VectorizationFactor was pulled out of
 /// LoopVectorizationCostModel class. LV also deals with

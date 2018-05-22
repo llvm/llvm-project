@@ -34,15 +34,15 @@ class WebAssemblyAsmBackendELF final : public MCAsmBackend {
 
 public:
   explicit WebAssemblyAsmBackendELF(bool Is64Bit)
-      : MCAsmBackend(), Is64Bit(Is64Bit) {}
+      : MCAsmBackend(support::little), Is64Bit(Is64Bit) {}
   ~WebAssemblyAsmBackendELF() override {}
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsPCRel) const override;
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
 
   // No instruction requires relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
@@ -62,7 +62,7 @@ public:
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override {}
 
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 };
 
 class WebAssemblyAsmBackend final : public MCAsmBackend {
@@ -70,7 +70,7 @@ class WebAssemblyAsmBackend final : public MCAsmBackend {
 
 public:
   explicit WebAssemblyAsmBackend(bool Is64Bit)
-      : MCAsmBackend(), Is64Bit(Is64Bit) {}
+      : MCAsmBackend(support::little), Is64Bit(Is64Bit) {}
   ~WebAssemblyAsmBackend() override {}
 
   unsigned getNumFixupKinds() const override {
@@ -83,8 +83,8 @@ public:
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsPCRel) const override;
 
-  std::unique_ptr<MCObjectWriter>
-  createObjectWriter(raw_pwrite_stream &OS) const override;
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
 
   // No instruction requires relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
@@ -98,13 +98,13 @@ public:
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override {}
 
-  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 };
 
-bool WebAssemblyAsmBackendELF::writeNopData(uint64_t Count,
-                                            MCObjectWriter *OW) const {
+bool WebAssemblyAsmBackendELF::writeNopData(raw_ostream &OS,
+                                            uint64_t Count) const {
   for (uint64_t i = 0; i < Count; ++i)
-    OW->write8(WebAssembly::Nop);
+    OS << char(WebAssembly::Nop);
 
   return true;
 }
@@ -133,9 +133,9 @@ void WebAssemblyAsmBackendELF::applyFixup(const MCAssembler &Asm,
     Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
 }
 
-std::unique_ptr<MCObjectWriter>
-WebAssemblyAsmBackendELF::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createWebAssemblyELFObjectWriter(OS, Is64Bit, 0);
+std::unique_ptr<MCObjectTargetWriter>
+WebAssemblyAsmBackendELF::createObjectTargetWriter() const {
+  return createWebAssemblyELFObjectWriter(Is64Bit, 0);
 }
 
 const MCFixupKindInfo &
@@ -158,13 +158,13 @@ WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-bool WebAssemblyAsmBackend::writeNopData(uint64_t Count,
-                                         MCObjectWriter *OW) const {
+bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS,
+                                         uint64_t Count) const {
   if (Count == 0)
     return true;
 
   for (uint64_t i = 0; i < Count; ++i)
-    OW->write8(WebAssembly::Nop);
+    OS << char(WebAssembly::Nop);
 
   return true;
 }
@@ -193,9 +193,9 @@ void WebAssemblyAsmBackend::applyFixup(const MCAssembler &Asm,
     Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
 }
 
-std::unique_ptr<MCObjectWriter>
-WebAssemblyAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
-  return createWebAssemblyWasmObjectWriter(OS, Is64Bit);
+std::unique_ptr<MCObjectTargetWriter>
+WebAssemblyAsmBackend::createObjectTargetWriter() const {
+  return createWebAssemblyWasmObjectWriter(Is64Bit);
 }
 } // end anonymous namespace
 

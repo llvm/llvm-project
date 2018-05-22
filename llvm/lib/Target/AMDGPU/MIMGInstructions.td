@@ -610,10 +610,7 @@ multiclass ImageDimD16Helper<AMDGPUImageDimIntrinsic I,
 
   let SubtargetPredicate = HasPackedD16VMem in {
     def _packed_v1 : ImageDimPattern<I, "_V1", f16, "_D16">;
-    // used on gfx810
-    def _packed_v2 : ImageDimPattern<d16helper, "_V1", i32, "_D16">;
-    // used on gfx900
-    def _packed_v2_gfx9 : ImageDimPattern<I, "_V1", v2f16, "_D16">;
+    def _packed_v2 : ImageDimPattern<I, "_V1", v2f16, "_D16">;
     def _packed_v4 : ImageDimPattern<d16helper, "_V2", v2i32, "_D16">;
   } // End HasPackedD16VMem.
 }
@@ -717,7 +714,7 @@ multiclass ImageSampleAltPatterns<SDPatternOperator name, string opcode> {
   } // End HasUnpackedD16VMem.
 
   let SubtargetPredicate = HasPackedD16VMem in {
-    defm : ImageSampleDataPatterns<name, !cast<string>(opcode # _V1), i32, "_D16">;
+    defm : ImageSampleDataPatterns<name, !cast<string>(opcode # _V1), f16, "_D16">;
     defm : ImageSampleDataPatterns<name, !cast<string>(opcode # _V2), v2i32, "_D16">;
   } // End HasPackedD16VMem.
 }
@@ -780,7 +777,7 @@ multiclass ImageLoadAltPatterns<SDPatternOperator name, string opcode> {
   } // End HasUnPackedD16VMem.
 
   let SubtargetPredicate = HasPackedD16VMem in {
-    defm : ImageLoadDataPatterns<name, !cast<string>(opcode # _V1), i32, "_D16">;
+    defm : ImageLoadDataPatterns<name, !cast<string>(opcode # _V1), f16, "_D16">;
     defm : ImageLoadDataPatterns<name, !cast<string>(opcode # _V2), v2i32, "_D16">;
   } // End HasPackedD16VMem.
 }
@@ -865,8 +862,8 @@ defm : ImageLoadAltPatterns<SIImage_load, "IMAGE_LOAD">;
 defm : ImageLoadAltPatterns<SIImage_load_mip, "IMAGE_LOAD_MIP">;
 
 // Image store.
-defm : ImageStorePatterns<SIImage_store, "IMAGE_STORE">;
-defm : ImageStorePatterns<SIImage_store_mip, "IMAGE_STORE_MIP">;
+defm : ImageStorePatterns<int_amdgcn_image_store, "IMAGE_STORE">;
+defm : ImageStorePatterns<int_amdgcn_image_store_mip, "IMAGE_STORE_MIP">;
 defm : ImageStoreAltPatterns<SIImage_store, "IMAGE_STORE">;
 defm : ImageStoreAltPatterns<SIImage_store_mip, "IMAGE_STORE_MIP">;
 

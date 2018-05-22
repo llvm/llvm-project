@@ -28,8 +28,7 @@
 # ALL-NEXT:  1      0      -                          b	t
 
 # ALL:      Timeline view:
-
-# ALL:      Index     01
+# ALL-NEXT: Index     01
 
 # ALL:      [0,0]     DR   b	t
 # ALL-NEXT: [1,0]     DR   b	t

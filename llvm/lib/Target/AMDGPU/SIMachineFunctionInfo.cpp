@@ -11,6 +11,7 @@
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -297,4 +298,30 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
 void SIMachineFunctionInfo::removeSGPRToVGPRFrameIndices(MachineFrameInfo &MFI) {
   for (auto &R : SGPRToVGPRSpills)
     MFI.RemoveStackObject(R.first);
+}
+
+
+/// \returns VGPR used for \p Dim' work item ID.
+unsigned SIMachineFunctionInfo::getWorkItemIDVGPR(unsigned Dim) const {
+  switch (Dim) {
+  case 0:
+    assert(hasWorkItemIDX());
+    return AMDGPU::VGPR0;
+  case 1:
+    assert(hasWorkItemIDY());
+    return AMDGPU::VGPR1;
+  case 2:
+    assert(hasWorkItemIDZ());
+    return AMDGPU::VGPR2;
+  }
+  llvm_unreachable("unexpected dimension");
+}
+
+MCPhysReg SIMachineFunctionInfo::getNextUserSGPR() const {
+  assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
+  return AMDGPU::SGPR0 + NumUserSGPRs;
+}
+
+MCPhysReg SIMachineFunctionInfo::getNextSystemSGPR() const {
+  return AMDGPU::SGPR0 + NumUserSGPRs + NumSystemSGPRs;
 }

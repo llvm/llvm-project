@@ -4767,6 +4767,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
   }
 
+  // Any FP binop with an undef operand is folded to NaN. This matches the
+  // behavior of the IR optimizer.
+  switch (Opcode) {
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FDIV:
+  case ISD::FREM:
+    if (N1.isUndef() || N2.isUndef())
+      return getConstantFP(APFloat::getNaN(EVTToAPFloatSemantics(VT)), DL, VT);
+  }
+
   // Canonicalize an UNDEF to the RHS, even over a constant.
   if (N1.isUndef()) {
     if (TLI->isCommutativeBinOp(Opcode)) {
@@ -4776,9 +4788,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::FP_ROUND_INREG:
       case ISD::SIGN_EXTEND_INREG:
       case ISD::SUB:
-      case ISD::FSUB:
-      case ISD::FDIV:
-      case ISD::FREM:
         return getUNDEF(VT);     // fold op(undef, arg2) -> undef
       case ISD::UDIV:
       case ISD::SDIV:
@@ -4813,14 +4822,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::SRL:
     case ISD::SHL:
       return getUNDEF(VT);       // fold op(arg1, undef) -> undef
-    case ISD::FADD:
-    case ISD::FSUB:
-    case ISD::FMUL:
-    case ISD::FDIV:
-    case ISD::FREM:
-      if (getTarget().Options.UnsafeFPMath)
-        return N2;
-      break;
     case ISD::MUL:
     case ISD::AND:
       return getConstant(0, DL, VT);  // fold op(arg1, undef) -> 0
