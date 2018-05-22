@@ -228,7 +228,7 @@ CILKSAN_API void __csan_func_exit(const csi_id_t func_exit_id,
     assert(low_stack <= high_stack);
     // Clear shadow memory of stack locations.
     if (low_stack != high_stack)
-      cilksan_clear_shadow_memory(low_stack, high_stack - low_stack + 1);
+      cilksan_clear_shadow_memory(low_stack, high_stack - low_stack);
     enable_checking();
   }
   // XXX Let's focus on Cilk function for now; maybe put it back later
@@ -314,7 +314,7 @@ CILKSAN_API void __csan_task_exit(const csi_id_t task_exit_id,
   assert(low_stack <= high_stack);
   // Clear shadow memory of stack locations.
   if (low_stack != high_stack)
-    cilksan_clear_shadow_memory(low_stack, high_stack - low_stack + 1);
+    cilksan_clear_shadow_memory(low_stack, high_stack - low_stack);
   enable_checking();
 }
 
