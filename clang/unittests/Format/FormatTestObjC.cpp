@@ -796,35 +796,6 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
   verifyFormat("[((Foo *)foo) bar];");
   verifyFormat("[((Foo *)foo) bar:1 blech:2];");
 
-  // Message receiver taking multiple lines.
-  Style.ColumnLimit = 20;
-  // Non-corner case.
-  verifyFormat("[[object block:^{\n"
-               "  return 42;\n"
-               "}] a:42 b:42];");
-  // Arguments just fit into one line.
-  verifyFormat("[[object block:^{\n"
-               "  return 42;\n"
-               "}] aaaaaaa:42 b:42];");
-  // Arguments just over a column limit.
-  verifyFormat("[[object block:^{\n"
-               "  return 42;\n"
-               "}] aaaaaaa:42\n"
-               "        bb:42];");
-  // Non-corner case.
-  verifyFormat("[[object aaa:42\n"
-               "           b:42]\n"
-               "    cc:42 d:42];");
-  // Arguments just fit into one line.
-  verifyFormat("[[object aaa:42\n"
-               "           b:42]\n"
-               "    cccccc:42 d:42];");
-  // Arguments just over a column limit.
-  verifyFormat("[[object aaa:42\n"
-               "           b:42]\n"
-               "    cccccc:42\n"
-               "        dd:42];");
-
   Style.ColumnLimit = 70;
   verifyFormat(
       "void f() {\n"

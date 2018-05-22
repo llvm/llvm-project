@@ -8,10 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/lldb-defines.h"
 #include "TestingSupport/TestUtilities.h"
 #include "gtest/gtest.h"
+
+#ifdef __APPLE__
+#include "lldb/Host/macosx/HostInfoMacOSX.h"
+#endif
 
 using namespace lldb_private;
 using namespace llvm;
@@ -47,6 +50,8 @@ TEST_F(HostInfoTest, GetAugmentedArchSpec) {
 }
 
 
+#ifdef __APPLE__
+
 struct HostInfoMacOSXTest : public HostInfoMacOSX {
   static std::string ComputeClangDir(std::string lldb_shlib_path,
                                      bool verify = false) {
@@ -58,7 +63,6 @@ struct HostInfoMacOSXTest : public HostInfoMacOSX {
 };
 
 
-#ifdef __APPLE__
 TEST_F(HostInfoTest, MacOSX) {
   // This returns whatever the POSIX fallback returns.
   std::string posix = "/usr/lib/liblldb.dylib";

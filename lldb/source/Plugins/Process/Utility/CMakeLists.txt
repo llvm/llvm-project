@@ -1,5 +1,3 @@
-include_directories(../../../Utility/)
-
 add_lldb_library(lldbPluginProcessUtility PLUGIN
   DynamicRegisterInfo.cpp
   FreeBSDSignals.cpp

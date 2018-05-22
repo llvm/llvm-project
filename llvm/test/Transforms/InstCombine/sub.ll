@@ -593,26 +593,6 @@ define <2 x i64> @test32(<2 x i64> %A) {
   ret <2 x i64> %sub
 }
 
-define <2 x i64> @test33(<2 x i1> %A) {
-; CHECK-LABEL: @test33(
-; CHECK-NEXT:    [[SUB:%.*]] = sext <2 x i1> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[SUB]]
-;
-  %ext = zext <2 x i1> %A to <2 x i64>
-  %sub = sub <2 x i64> zeroinitializer, %ext
-  ret <2 x i64> %sub
-}
-
-define <2 x i64> @test34(<2 x i1> %A) {
-; CHECK-LABEL: @test34(
-; CHECK-NEXT:    [[SUB:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[SUB]]
-;
-  %ext = sext <2 x i1> %A to <2 x i64>
-  %sub = sub <2 x i64> zeroinitializer, %ext
-  ret <2 x i64> %sub
-}
-
 define <2 x i64> @test35(<2 x i64> %A) {
 ; CHECK-LABEL: @test35(
 ; CHECK-NEXT:    [[SUB:%.*]] = mul <2 x i64> [[A:%.*]], <i64 -2, i64 -3>
@@ -792,58 +772,6 @@ define i32 @test48(i1 %A, i32 %B, i32 %C, i32 %D) {
   %sel1 = select i1 %A, i32 %B, i32 %C
   %sub = sub i32 %sel0, %sel1
   ret i32 %sub
-}
-
-; Zext+add is more canonical than sext+sub.
-
-define i8 @bool_sext_sub(i8 %x, i1 %y) {
-; CHECK-LABEL: @bool_sext_sub(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    ret i8 [[SUB]]
-;
-  %sext = sext i1 %y to i8
-  %sub = sub i8 %x, %sext
-  ret i8 %sub
-}
-
-; Vectors get the same transform.
-
-define <2 x i8> @bool_sext_sub_vec(<2 x i8> %x, <2 x i1> %y) {
-; CHECK-LABEL: @bool_sext_sub_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> [[Y:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i8> [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i8> [[SUB]]
-;
-  %sext = sext <2 x i1> %y to <2 x i8>
-  %sub = sub <2 x i8> %x, %sext
-  ret <2 x i8> %sub
-}
-
-; NSW is preserved.
-
-define <2 x i8> @bool_sext_sub_vec_nsw(<2 x i8> %x, <2 x i1> %y) {
-; CHECK-LABEL: @bool_sext_sub_vec_nsw(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> [[Y:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw <2 x i8> [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i8> [[SUB]]
-;
-  %sext = sext <2 x i1> %y to <2 x i8>
-  %sub = sub nsw <2 x i8> %x, %sext
-  ret <2 x i8> %sub
-}
-
-; We favor the canonical zext+add over keeping the NUW.
-
-define i8 @bool_sext_sub_nuw(i8 %x, i1 %y) {
-; CHECK-LABEL: @bool_sext_sub_nuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[Y:%.*]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    ret i8 [[SUB]]
-;
-  %sext = sext i1 %y to i8
-  %sub = sub nuw i8 %x, %sext
-  ret i8 %sub
 }
 
 define i32 @test49(i32 %X) {

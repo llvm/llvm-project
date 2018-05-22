@@ -157,6 +157,8 @@ public:
 
   const SISubtarget *getSubtarget() const;
 
+  bool isFPExtFoldable(unsigned Opcode, EVT DestVT, EVT SrcVT) const override;
+
   bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,

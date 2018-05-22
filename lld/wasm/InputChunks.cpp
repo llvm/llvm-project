@@ -193,11 +193,8 @@ static unsigned writeCompressedReloc(uint8_t *Buf, const WasmRelocation &Rel,
   case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
   case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
     return encodeSLEB128(static_cast<int32_t>(Value), Buf);
-  case R_WEBASSEMBLY_TABLE_INDEX_I32:
-  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    return 4;
   default:
-    llvm_unreachable("unknown relocation type");
+    llvm_unreachable("unexpected relocation type");
   }
 }
 
@@ -210,11 +207,8 @@ static unsigned getRelocWidthPadded(const WasmRelocation &Rel) {
   case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
   case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
     return 5;
-  case R_WEBASSEMBLY_TABLE_INDEX_I32:
-  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    return 4;
   default:
-    llvm_unreachable("unknown relocation type");
+    llvm_unreachable("unexpected relocation type");
   }
 }
 
@@ -279,7 +273,7 @@ void InputFunction::writeTo(uint8_t *Buf) const {
   const uint8_t *FuncStart = SecStart + getInputSectionOffset();
   const uint8_t *End = FuncStart + Function->Size;
   uint32_t Count;
-  decodeULEB128(Buf, &Count);
+  decodeULEB128(FuncStart, &Count);
   FuncStart += Count;
 
   DEBUG(dbgs() << "write func: " << getName() << "\n");

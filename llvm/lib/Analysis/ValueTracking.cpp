@@ -3375,7 +3375,8 @@ static uint64_t GetStringLengthH(const Value *V,
 /// If we can compute the length of the string pointed to by
 /// the specified pointer, return 'len+1'.  If we can't, return 0.
 uint64_t llvm::GetStringLength(const Value *V, unsigned CharSize) {
-  if (!V->getType()->isPointerTy()) return 0;
+  if (!V->getType()->isPointerTy())
+    return 0;
 
   SmallPtrSet<const PHINode*, 32> PHIs;
   uint64_t Len = GetStringLengthH(V, PHIs, CharSize);

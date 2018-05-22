@@ -561,9 +561,19 @@ DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
   // probably only one unless this is something like LTO - though an in-process
   // built/cached lookup table could be used in that case to improve repeated
   // lookups of different CUs in the DWO.
-  for (const auto &DWOCU : dwo_compile_units())
+  for (const auto &DWOCU : dwo_compile_units()) {
+    // Might not have parsed DWO ID yet.
+    if (!DWOCU->getDWOId()) {
+      if (Optional<uint64_t> DWOId =
+          toUnsigned(DWOCU->getUnitDIE().find(DW_AT_GNU_dwo_id)))
+        DWOCU->setDWOId(*DWOId);
+      else
+        // No DWO ID?
+        continue;
+    }
     if (DWOCU->getDWOId() == Hash)
       return DWOCU.get();
+  }
   return nullptr;
 }
 

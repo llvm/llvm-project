@@ -1682,12 +1682,12 @@ Value *LibCallSimplifier::optimizeFls(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeAbs(CallInst *CI, IRBuilder<> &B) {
-  // abs(x) -> x >s -1 ? x : -x
-  Value *Op = CI->getArgOperand(0);
-  Value *Pos =
-      B.CreateICmpSGT(Op, Constant::getAllOnesValue(Op->getType()), "ispos");
-  Value *Neg = B.CreateNeg(Op, "neg");
-  return B.CreateSelect(Pos, Op, Neg);
+  // abs(x) -> x <s 0 ? -x : x
+  // The negation has 'nsw' because abs of INT_MIN is undefined.
+  Value *X = CI->getArgOperand(0);
+  Value *IsNeg = B.CreateICmpSLT(X, Constant::getNullValue(X->getType()));
+  Value *NegX = B.CreateNSWNeg(X, "neg");
+  return B.CreateSelect(IsNeg, NegX, X);
 }
 
 Value *LibCallSimplifier::optimizeIsDigit(CallInst *CI, IRBuilder<> &B) {

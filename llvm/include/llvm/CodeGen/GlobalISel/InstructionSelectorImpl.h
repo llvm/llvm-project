@@ -153,6 +153,33 @@ bool InstructionSelector::executeMatchTable(
       break;
     }
 
+    case GIM_SwitchOpcode: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t LowerBound = MatchTable[CurrentIdx++];
+      int64_t UpperBound = MatchTable[CurrentIdx++];
+      int64_t Default = MatchTable[CurrentIdx++];
+
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      const int64_t Opcode = State.MIs[InsnID]->getOpcode();
+
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(), {
+        dbgs() << CurrentIdx << ": GIM_SwitchOpcode(MIs[" << InsnID << "], ["
+               << LowerBound << ", " << UpperBound << "), Default=" << Default
+               << ", JumpTable...) // Got=" << Opcode << "\n";
+      });
+      if (Opcode < LowerBound || UpperBound <= Opcode) {
+        CurrentIdx = Default;
+        break;
+      }
+      CurrentIdx = MatchTable[CurrentIdx + (Opcode - LowerBound)];
+      if (!CurrentIdx) {
+        CurrentIdx = Default;
+	break;
+      }
+      OnFailResumeAt.push_back(Default);
+      break;
+    }
+
     case GIM_CheckNumOperands: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t Expected = MatchTable[CurrentIdx++];

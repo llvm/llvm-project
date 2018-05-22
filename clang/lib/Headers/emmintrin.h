@@ -44,8 +44,6 @@ typedef unsigned char __v16qu __attribute__((__vector_size__(16)));
  * appear in the interface though. */
 typedef signed char __v16qs __attribute__((__vector_size__(16)));
 
-#include <f16cintrin.h>
-
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse2")))
 

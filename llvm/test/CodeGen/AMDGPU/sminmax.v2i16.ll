@@ -158,6 +158,8 @@ define amdgpu_kernel void @v_abs_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> a
 }
 
 ; GCN-LABEL: {{^}}s_min_max_v2i16:
+; GFX9: v_pk_max_i16
+; GFX9: v_pk_min_i16
 define amdgpu_kernel void @s_min_max_v2i16(<2 x i16> addrspace(1)* %out0, <2 x i16> addrspace(1)* %out1, <2 x i16> %val0, <2 x i16> %val1) #0 {
   %cond0 = icmp sgt <2 x i16> %val0, %val1
   %sel0 = select <2 x i1> %cond0, <2 x i16> %val0, <2 x i16> %val1
@@ -169,6 +171,8 @@ define amdgpu_kernel void @s_min_max_v2i16(<2 x i16> addrspace(1)* %out0, <2 x i
 }
 
 ; GCN-LABEL: {{^}}v_min_max_v2i16:
+; GFX9: v_pk_max_i16
+; GFX9: v_pk_min_i16
 define amdgpu_kernel void @v_min_max_v2i16(<2 x i16> addrspace(1)* %out0, <2 x i16> addrspace(1)* %out1, <2 x i16> addrspace(1)* %ptr0, <2 x i16> addrspace(1)* %ptr1) #0 {
   %val0 = load volatile <2 x i16>, <2 x i16> addrspace(1)* %ptr0
   %val1 = load volatile <2 x i16>, <2 x i16> addrspace(1)* %ptr1
@@ -182,8 +186,12 @@ define amdgpu_kernel void @v_min_max_v2i16(<2 x i16> addrspace(1)* %out0, <2 x i
   ret void
 }
 
-; GCN-LABEL: {{^}}s_min_max_v4i32:
-define amdgpu_kernel void @s_min_max_v4i32(<4 x i16> addrspace(1)* %out0, <4 x i16> addrspace(1)* %out1, <4 x i16> %val0, <4 x i16> %val1) #0 {
+; GCN-LABEL: {{^}}s_min_max_v4i16:
+; GFX9: v_pk_max_i16
+; GFX9: v_pk_max_i16
+; GFX9: v_pk_min_i16
+; GFX9: v_pk_min_i16
+define amdgpu_kernel void @s_min_max_v4i16(<4 x i16> addrspace(1)* %out0, <4 x i16> addrspace(1)* %out1, <4 x i16> %val0, <4 x i16> %val1) #0 {
   %cond0 = icmp sgt <4 x i16> %val0, %val1
   %sel0 = select <4 x i1> %cond0, <4 x i16> %val0, <4 x i16> %val1
   %sel1 = select <4 x i1> %cond0, <4 x i16> %val1, <4 x i16> %val0
