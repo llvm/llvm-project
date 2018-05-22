@@ -30,7 +30,7 @@ define i32 @test1() nounwind {
 ; X32-NEXT:    cmpb %cl, %ah
 ; X32-NEXT:    sete d
 ; X32-NEXT:    movb %ch, a
-; X32-NEXT:    testb $-1, %dl
+; X32-NEXT:    testb %dl, %dl
 ; X32-NEXT:    jne .LBB0_2
 ; X32-NEXT:  # %bb.1: # %if.then
 ; X32-NEXT:    movsbl %al, %eax
@@ -55,7 +55,7 @@ define i32 @test1() nounwind {
 ; X64-NEXT:    cmpb %dil, %cl
 ; X64-NEXT:    sete {{.*}}(%rip)
 ; X64-NEXT:    movb %dl, {{.*}}(%rip)
-; X64-NEXT:    testb $-1, %sil
+; X64-NEXT:    testb %sil, %sil
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %if.then
 ; X64-NEXT:    pushq %rax
@@ -101,7 +101,7 @@ define i32 @test2(i32* %ptr) nounwind {
 ; X32-NEXT:    pushl $42
 ; X32-NEXT:    calll external
 ; X32-NEXT:    addl $4, %esp
-; X32-NEXT:    testb $-1, %bl
+; X32-NEXT:    testb %bl, %bl
 ; X32-NEXT:    je .LBB1_1
 ; X32-NEXT:  # %bb.2: # %else
 ; X32-NEXT:    xorl %eax, %eax
@@ -119,7 +119,7 @@ define i32 @test2(i32* %ptr) nounwind {
 ; X64-NEXT:    setne %bl
 ; X64-NEXT:    movl $42, %edi
 ; X64-NEXT:    callq external
-; X64-NEXT:    testb $-1, %bl
+; X64-NEXT:    testb %bl, %bl
 ; X64-NEXT:    je .LBB1_1
 ; X64-NEXT:  # %bb.2: # %else
 ; X64-NEXT:    xorl %eax, %eax
@@ -160,7 +160,7 @@ define void @test_tail_call(i32* %ptr) nounwind optsize {
 ; X32-NEXT:    setne %al
 ; X32-NEXT:    incb a
 ; X32-NEXT:    sete d
-; X32-NEXT:    testb $-1, %al
+; X32-NEXT:    testb %al, %al
 ; X32-NEXT:    jne external_b # TAILCALL
 ; X32-NEXT:  # %bb.1: # %then
 ; X32-NEXT:    jmp external_a # TAILCALL
@@ -171,7 +171,7 @@ define void @test_tail_call(i32* %ptr) nounwind optsize {
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    incb {{.*}}(%rip)
 ; X64-NEXT:    sete {{.*}}(%rip)
-; X64-NEXT:    testb $-1, %al
+; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    jne external_b # TAILCALL
 ; X64-NEXT:  # %bb.1: # %then
 ; X64-NEXT:    jmp external_a # TAILCALL
@@ -239,7 +239,7 @@ define void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, i8* %ptr1, i32* %
 ; X32-NEXT:    setl %dl
 ; X32-NEXT:    movzbl %dl, %ebp
 ; X32-NEXT:    negl %ebp
-; X32-NEXT:    testb $-1, %al
+; X32-NEXT:    testb %al, %al
 ; X32-NEXT:    jne .LBB3_3
 ; X32-NEXT:  # %bb.2: # %bb1
 ; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1
@@ -248,7 +248,7 @@ define void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, i8* %ptr1, i32* %
 ; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; X32-NEXT:    movb %cl, (%ebx)
 ; X32-NEXT:    movl (%edi), %edx
-; X32-NEXT:    testb $-1, %al
+; X32-NEXT:    testb %al, %al
 ; X32-NEXT:    jne .LBB3_5
 ; X32-NEXT:  # %bb.4: # %bb1
 ; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1

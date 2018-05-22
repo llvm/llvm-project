@@ -636,7 +636,7 @@ void X86FlagsCopyLoweringPass::insertTest(MachineBasicBlock &MBB,
   // also allow us to select a shorter encoding of `testb %reg, %reg` when that
   // would be equivalent.
   auto TestI =
-      BuildMI(MBB, Pos, Loc, TII->get(X86::TEST8ri)).addReg(Reg).addImm(-1);
+      BuildMI(MBB, Pos, Loc, TII->get(X86::TEST8rr)).addReg(Reg).addReg(Reg);
   (void)TestI;
   DEBUG(dbgs() << "    test cond: "; TestI->dump());
   ++NumTestsInserted;

@@ -221,7 +221,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK32-NEXT:    pushl %eax
 ; CHECK32-NEXT:    calll bar
 ; CHECK32-NEXT:    addl $16, %esp
-; CHECK32-NEXT:    testb $-1, %bl
+; CHECK32-NEXT:    testb %bl, %bl
 ; CHECK32-NEXT:    jne .LBB4_3
 ; CHECK32-NEXT:  # %bb.1: # %t
 ; CHECK32-NEXT:    movl $42, %eax
@@ -243,7 +243,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK64-NEXT:    setne %bl
 ; CHECK64-NEXT:    movq %rax, %rdi
 ; CHECK64-NEXT:    callq bar
-; CHECK64-NEXT:    testb $-1, %bl
+; CHECK64-NEXT:    testb %bl, %bl
 ; CHECK64-NEXT:    jne .LBB4_2
 ; CHECK64-NEXT:  # %bb.1: # %t
 ; CHECK64-NEXT:    movl $42, %eax
@@ -284,7 +284,7 @@ define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i6
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK32-NEXT:    lock cmpxchg8b (%esi)
-; CHECK32-NEXT:    setne {{[0-9]+}}(%esp) # 1-byte Folded Spill
+; CHECK32-NEXT:    setne {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    movl %edi, %edx
 ; CHECK32-NEXT:    movl %ebp, %ecx
@@ -292,7 +292,7 @@ define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i6
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK32-NEXT:    lock cmpxchg8b (%esi)
 ; CHECK32-NEXT:    sete %al
-; CHECK32-NEXT:    testb $-1, {{[0-9]+}}(%esp) # 1-byte Folded Reload
+; CHECK32-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
 ; CHECK32-NEXT:    jne .LBB5_4
 ; CHECK32-NEXT:  # %bb.1: # %entry
 ; CHECK32-NEXT:    testb %al, %al
@@ -319,7 +319,7 @@ define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i6
 ; CHECK64-NEXT:    movq %r8, %rax
 ; CHECK64-NEXT:    lock cmpxchgq %r9, (%rcx)
 ; CHECK64-NEXT:    sete %al
-; CHECK64-NEXT:    testb $-1, %dl
+; CHECK64-NEXT:    testb %dl, %dl
 ; CHECK64-NEXT:    jne .LBB5_3
 ; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    testb %al, %al
