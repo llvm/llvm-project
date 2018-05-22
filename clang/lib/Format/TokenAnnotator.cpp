@@ -2958,7 +2958,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     if (Left.is(TT_JsTypeColon))
       return true;
-    if (Right.NestingLevel == 0 && Right.is(Keywords.kw_is))
+    if (Right.is(Keywords.kw_is))
       return false;
     if (Left.is(Keywords.kw_in))
       return Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None;

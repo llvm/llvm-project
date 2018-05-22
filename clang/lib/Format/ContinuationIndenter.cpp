@@ -94,9 +94,9 @@ static unsigned getLengthToMatchingParen(const FormatToken &Tok,
       break;
     if (!End->Next->closesScope())
       continue;
-    if (End->Next->MatchingParen->isOneOf(tok::l_brace,
-                                          TT_ArrayInitializerLSquare,
-                                          tok::less)) {
+    if (End->Next->MatchingParen &&
+        End->Next->MatchingParen->isOneOf(
+            tok::l_brace, TT_ArrayInitializerLSquare, tok::less)) {
       const ParenState *State = FindParenState(End->Next->MatchingParen);
       if (State && State->BreakBeforeClosingBrace)
         break;

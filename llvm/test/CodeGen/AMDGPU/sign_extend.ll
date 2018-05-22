@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 
 ; GCN-LABEL: {{^}}s_sext_i1_to_i32:
 ; GCN: v_cndmask_b32_e64
@@ -177,10 +177,15 @@ define amdgpu_kernel void @v_sext_v4i8_to_v4i32(i32 addrspace(1)* %out, i32 addr
   ret void
 }
 
-; FIXME: s_bfe_i64
+; FIXME: s_bfe_i64, same on SI and VI
 ; GCN-LABEL: {{^}}s_sext_v4i16_to_v4i32:
-; GCN-DAG: s_ashr_i64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 48
-; GCN-DAG: s_ashr_i32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+; SI-DAG: s_ashr_i64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 48
+; SI-DAG: s_ashr_i32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+
+; VI: s_ashr_i32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+; VI: s_ashr_i32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+
+
 ; GCN-DAG: s_sext_i32_i16
 ; GCN-DAG: s_sext_i32_i16
 ; GCN: s_endpgm
@@ -199,8 +204,6 @@ define amdgpu_kernel void @s_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 %a)
 }
 
 ; GCN-LABEL: {{^}}v_sext_v4i16_to_v4i32:
-; SI-DAG: v_ashr_i64 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, 48
-; VI-DAG: v_ashrrev_i64 v{{\[[0-9]+:[0-9]+\]}}, 48, v{{\[[0-9]+:[0-9]+\]}}
 ; GCN-DAG: v_ashrrev_i32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
 ; GCN-DAG: v_ashrrev_i32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
 ; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 16

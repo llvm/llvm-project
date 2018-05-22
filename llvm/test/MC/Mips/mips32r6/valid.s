@@ -66,6 +66,7 @@ a:
         bovc     $2, $0, 4       # CHECK: bovc $2, $zero, 4    # encoding: [0x20,0x40,0x00,0x01]
         bovc     $2, $4, 4       # CHECK: bovc $2, $4, 4      # encoding: [0x20,0x82,0x00,0x01]
         cache      1, 8($5)         # CHECK: cache 1, 8($5)          # encoding: [0x7c,0xa1,0x04,0x25]
+                                    # CHECK-NEXT:                    # <MCInst #{{.*}} CACHE_R6
         ceil.w.d  $f11,$f24         # CHECK: ceil.w.d  $f11, $f24 # encoding: [0x46,0x20,0xc2,0xce]
                                     # CHECK:                      # <MCInst #{{.*}} CEIL_W_D64
         ceil.w.s  $f6,$f20          # CHECK: ceil.w.s  $f6, $f20  # encoding: [0x46,0x00,0xa1,0x8e]
@@ -152,6 +153,7 @@ a:
                                  # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} PAUSE
                                  # CHECK-NOT                     # <MCInst #{{[0-9}+}} PAUSE_MM
         pref    1, 8($5)         # CHECK: pref 1, 8($5)          # encoding: [0x7c,0xa1,0x04,0x35]
+                                 # CHECK-NEXT:                   # <MCInst #{{.*}} PREF_R6
         # FIXME: Use the code generator in order to print the .set directives
         #        instead of the instruction printer.
         rdhwr   $sp,$11          # CHECK:      .set  push
