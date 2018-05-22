@@ -193,22 +193,6 @@ define <8 x i32> @test_x86_avx_cvt_ps2dq_256(<8 x float> %a0) {
 declare <8 x i32> @llvm.x86.avx.cvt.ps2dq.256(<8 x float>) nounwind readnone
 
 
-define <8 x float> @test_x86_avx_cvtdq2_ps_256(<8 x i32> %a0) {
-; AVX-LABEL: test_x86_avx_cvtdq2_ps_256:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0 # encoding: [0xc5,0xfc,0x5b,0xc0]
-; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx_cvtdq2_ps_256:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvtdq2ps %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x5b,0xc0]
-; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32> %a0) ; <<8 x float>> [#uses=1]
-  ret <8 x float> %res
-}
-declare <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32>) nounwind readnone
-
-
 define <4 x i32> @test_x86_avx_cvtt_pd2dq_256(<4 x double> %a0) {
 ; AVX-LABEL: test_x86_avx_cvtt_pd2dq_256:
 ; AVX:       # %bb.0:

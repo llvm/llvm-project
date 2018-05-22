@@ -20,6 +20,11 @@
  *
  *===-----------------------------------------------------------------------===
  */
+
+#ifndef __WMMINTRIN_H
+#error "Never use <__wmmintrin_pclmul.h> directly; include <wmmintrin.h> instead."
+#endif
+
 #ifndef __WMMINTRIN_PCLMUL_H
 #define __WMMINTRIN_PCLMUL_H
 

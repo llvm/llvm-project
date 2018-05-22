@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: %clang -cc1as -triple x86_64-pc-linux-gnu %s -filetype obj -o %t1 -split-dwarf-file %t2
 // RUN: llvm-objdump -s %t1 | FileCheck --check-prefix=O %s
 // RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=DWO %s
