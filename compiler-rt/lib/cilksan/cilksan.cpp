@@ -453,15 +453,44 @@ static void record_mem_helper(bool is_read, const csi_id_t acc_id,
                               uintptr_t addr,
                               size_t mem_size, bool on_stack) {
   FrameData_t *f = frame_stack.head();
-  bool is_in_shadow_memory =
-    shadow_memory.does_access_exists(is_read, addr, mem_size);
+  bool write_in_shadow =shadow_memory.does_access_exists(false, addr, mem_size);
+  bool read_in_shadow = shadow_memory.does_access_exists(true, addr, mem_size);
 
-  if (is_in_shadow_memory == false)
+  // guaranteed safe if:
+  //  1. it's a write, there are no other reads or writes
+  //  2. it's a read, there are at most only reads
+  if (!write_in_shadow && (!read_in_shadow || is_read))
     shadow_memory.insert_access(is_read, acc_id, addr, mem_size, f,
                                 call_stack);
-  else
-    check_races_and_update(is_read, acc_id, addr, mem_size, on_stack,
-                           f, call_stack, shadow_memory);
+  else {
+    // we know this access can potentially lead to a race, so we check
+    // check_races_and_update assumes both r/w are already present
+    // but that's not true so there's a lot of casework
+    if (is_read) {
+      if (read_in_shadow) {
+        check_races_and_update(is_read, acc_id, addr, mem_size, on_stack,
+                               f, call_stack, shadow_memory);
+      } else {
+        shadow_memory.insert_access(is_read, acc_id, addr, mem_size, f,
+                                    call_stack);
+        shadow_memory.check_race_with_prev_write(true, acc_id, addr,
+                                                 mem_size, on_stack, f, call_stack);
+      }
+    } else {
+      if (read_in_shadow && write_in_shadow) {
+        check_races_and_update(is_read, acc_id, addr, mem_size, on_stack,
+                               f, call_stack, shadow_memory);
+      } else if (read_in_shadow) {
+        shadow_memory.insert_access(is_read, acc_id, addr, mem_size, f,
+                                    call_stack);
+        shadow_memory.check_race_with_prev_read(acc_id, addr, mem_size,
+                                                on_stack, f, call_stack);
+      } else {
+        shadow_memory.check_and_update_write(acc_id, addr, mem_size,
+                                             on_stack, f, call_stack);
+      }
+    }
+  }
 }
 
 void cilksan_do_read(const csi_id_t load_id,
