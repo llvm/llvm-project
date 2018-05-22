@@ -537,13 +537,6 @@ public:
   bool isConstantInitializer(ASTContext &Ctx, bool ForRef,
                              const Expr **Culprit = nullptr) const;
 
-  enum SideEffectsKind {
-    SE_NoSideEffects,          ///< Strictly evaluate the expression.
-    SE_AllowUndefinedBehavior, ///< Allow UB that we can give a value, but not
-                               ///< arbitrary unmodeled side effects.
-    SE_AllowSideEffects        ///< Allow any unmodeled side effect.
-  };
-
   /// EvalStatus is a struct with detailed info about an evaluation in progress.
   struct EvalStatus {
     /// Whether the evaluated expression has side effects.
@@ -572,11 +565,6 @@ public:
     bool hasSideEffects() const {
       return HasSideEffects;
     }
-
-    bool hasUnacceptableSideEffect(SideEffectsKind SEK) {
-      return (SEK < SE_AllowSideEffects && HasSideEffects) ||
-             (SEK < SE_AllowUndefinedBehavior && HasUndefinedBehavior);
-    }
   };
 
   /// EvalResult is a struct with detailed info about an evaluated expression.
@@ -602,6 +590,13 @@ public:
   /// any crazy technique that we want to, even if the expression has
   /// side-effects.
   bool EvaluateAsBooleanCondition(bool &Result, const ASTContext &Ctx) const;
+
+  enum SideEffectsKind {
+    SE_NoSideEffects,          ///< Strictly evaluate the expression.
+    SE_AllowUndefinedBehavior, ///< Allow UB that we can give a value, but not
+                               ///< arbitrary unmodeled side effects.
+    SE_AllowSideEffects        ///< Allow any unmodeled side effect.
+  };
 
   /// EvaluateAsInt - Return true if this is a constant which we can fold and
   /// convert to an integer, using any crazy technique that we want to.

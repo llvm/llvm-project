@@ -65,8 +65,9 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
       // FIXME(ioeric): resolve the header and store actual file path. For now,
       // we simply assume the written header is suitable to be #included.
       Includes->addMapping(PP.getSourceManager().getFilename(Range.getBegin()),
-                           Text.startswith("<") ? Text.str()
-                                                : ("\"" + Text + "\"").str());
+                           (Text.startswith("<") || Text.startswith("\""))
+                               ? Text.str()
+                               : ("\"" + Text + "\"").str());
       return false;
     }
 

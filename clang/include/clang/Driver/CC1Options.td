@@ -621,6 +621,8 @@ def version : Flag<["-"], "version">,
   HelpText<"Print the compiler version">;
 def main_file_name : Separate<["-"], "main-file-name">,
   HelpText<"Main file name to use for debug info">;
+def split_dwarf_file : Separate<["-"], "split-dwarf-file">,
+  HelpText<"File name to use for split dwarf debug info output">;
 
 }
 
@@ -630,8 +632,6 @@ def fexternc_nounwind : Flag<["-"], "fexternc-nounwind">,
   HelpText<"Assume all functions with C linkage do not unwind">;
 def enable_split_dwarf : Flag<["-"], "enable-split-dwarf">,
   HelpText<"Use split dwarf/Fission">;
-def split_dwarf_file : Separate<["-"], "split-dwarf-file">,
-  HelpText<"File name to use for split dwarf debug info output">;
 def fno_wchar : Flag<["-"], "fno-wchar">,
   HelpText<"Disable C++ builtin type wchar_t">;
 def fconstant_string_class : Separate<["-"], "fconstant-string-class">,

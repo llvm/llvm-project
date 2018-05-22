@@ -20,10 +20,13 @@
  *
  *===-----------------------------------------------------------------------===
  */
+
+#ifndef __WMMINTRIN_H
+#error "Never use <__wmmintrin_aes.h> directly; include <wmmintrin.h> instead."
+#endif
+
 #ifndef __WMMINTRIN_AES_H
 #define __WMMINTRIN_AES_H
-
-#include <emmintrin.h>
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("aes")))

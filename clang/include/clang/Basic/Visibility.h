@@ -17,6 +17,7 @@
 
 #include "clang/Basic/Linkage.h"
 #include <cassert>
+#include <cstdint>
 
 namespace clang {
 

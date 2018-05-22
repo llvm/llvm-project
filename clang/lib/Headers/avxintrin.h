@@ -2225,7 +2225,7 @@ _mm256_cvtepi32_pd(__m128i __a)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_cvtepi32_ps(__m256i __a)
 {
-  return (__m256)__builtin_ia32_cvtdq2ps256((__v8si) __a);
+  return (__m256)__builtin_convertvector((__v8si)__a, __v8sf);
 }
 
 /// Converts a 256-bit vector of [4 x double] into a 128-bit vector of

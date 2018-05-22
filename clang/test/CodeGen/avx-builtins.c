@@ -256,7 +256,7 @@ __m256d test_mm256_cvtepi32_pd(__m128i A) {
 
 __m256 test_mm256_cvtepi32_ps(__m256i A) {
   // CHECK-LABEL: test_mm256_cvtepi32_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32> %{{.*}})
+  // CHECK: sitofp <8 x i32> %{{.*}} to <8 x float>
   return _mm256_cvtepi32_ps(A);
 }
 

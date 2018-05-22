@@ -17,14 +17,14 @@ namespace Constant {
 
   C c1 = {};
   C c2 = {1};
-  // CHECK: @_ZN8Constant2c1E = global %"struct.Constant::C" zeroinitializer, align 1
+  // CHECK: @_ZN8Constant2c1E = global { i8 } zeroinitializer, align 1
   // CHECK: @_ZN8Constant2c2E = global { i8 } { i8 1 }, align 1
 
   // Test packing bases into tail padding.
   D d1 = {};
   D d2 = {1, 2, 3};
   D d3 = {1};
-  // CHECK: @_ZN8Constant2d1E = global %"struct.Constant::D" zeroinitializer, align 4
+  // CHECK: @_ZN8Constant2d1E = global { i32, i8, i8 } zeroinitializer, align 4
   // CHECK: @_ZN8Constant2d2E = global { i32, i8, i8 } { i32 1, i8 2, i8 3 }, align 4
   // CHECK: @_ZN8Constant2d3E = global { i32, i8, i8 } { i32 1, i8 0, i8 0 }, align 4
 
