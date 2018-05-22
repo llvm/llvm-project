@@ -29,10 +29,10 @@ int main() {
   return 0;
 }
 
-// CHECK: @0 = private unnamed_addr constant [12 x i8] c"_stringIvar\00"
-// CHECK: @1 = private unnamed_addr constant [12 x i8] c"@\22NSString\22\00"
-// CHECK: @2 = private unnamed_addr constant [9 x i8] c"_intIvar\00"
-// CHECK: @3 = private unnamed_addr constant [2 x i8] c"i\00"
+// CHECK: = private unnamed_addr constant [12 x i8] c"_stringIvar\00"
+// CHECK: = private unnamed_addr constant [12 x i8] c"@\22NSString\22\00"
+// CHECK: = private unnamed_addr constant [9 x i8] c"_intIvar\00"
+// CHECK: = private unnamed_addr constant [2 x i8] c"i\00"
 
 @interface Class1 {
   int : 3;

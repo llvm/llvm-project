@@ -243,7 +243,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // R19O-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
 //
 // R19C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
-// R19C-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
+// R19N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // R19N-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
 // R19N-NEXT:    // MIs[0] dst
 // R19C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
@@ -257,10 +257,10 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // R19C-NEXT:    // MIs[0] Operand 3
 // R19C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/3, /*Type*/GILLT_s32,
 // R19C-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/3, // MIs[1]
-// R19C-NEXT:    GIM_CheckNumOperands, /*MI*/1, /*Expected*/4,
+// R19N-NEXT:    GIM_CheckNumOperands, /*MI*/1, /*Expected*/4,
 // R19C-NEXT:    GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_SELECT,
-// R19C-NEXT:    // MIs[1] Operand 0
-// R19C-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s32,
+// R19N-NEXT:    // MIs[1] Operand 0
+// R19N-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s32,
 // R19N-NEXT:    // MIs[1] src3
 // R19C-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
 // R19N-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
@@ -323,7 +323,7 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R21C-NEXT:  // Label [[PREV_NUM]]: @[[PREV]]
 // R21C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]], // Rule ID 21 //
 //
-// R21C-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
+// R21N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // R21N-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
 // R21N-NEXT:    // MIs[0] dst
 // R21C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
