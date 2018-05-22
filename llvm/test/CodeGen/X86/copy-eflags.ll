@@ -19,35 +19,24 @@ define i32 @test1() nounwind {
 ; X32-LABEL: test1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movb b, %cl
-; X32-NEXT:    movb %cl, %al
+; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    incb %al
 ; X32-NEXT:    movb %al, b
 ; X32-NEXT:    incl c
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    seto %al
-; X32-NEXT:    lahf
-; X32-NEXT:    movl %eax, %edx
-; X32-NEXT:    popl %eax
+; X32-NEXT:    sete %dl
 ; X32-NEXT:    movb a, %ah
 ; X32-NEXT:    movb %ah, %ch
 ; X32-NEXT:    incb %ch
 ; X32-NEXT:    cmpb %cl, %ah
 ; X32-NEXT:    sete d
 ; X32-NEXT:    movb %ch, a
-; X32-NEXT:    pushl %eax
-; X32-NEXT:    movl %edx, %eax
-; X32-NEXT:    addb $127, %al
-; X32-NEXT:    sahf
-; X32-NEXT:    popl %eax
-; X32-NEXT:    je .LBB0_2
+; X32-NEXT:    testb $-1, %dl
+; X32-NEXT:    jne .LBB0_2
 ; X32-NEXT:  # %bb.1: # %if.then
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    movsbl %al, %eax
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    calll external
 ; X32-NEXT:    addl $4, %esp
-; X32-NEXT:    popl %ebp
 ; X32-NEXT:  .LBB0_2: # %if.end
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    retl
@@ -59,23 +48,20 @@ define i32 @test1() nounwind {
 ; X64-NEXT:    incb %al
 ; X64-NEXT:    movb %al, {{.*}}(%rip)
 ; X64-NEXT:    incl {{.*}}(%rip)
-; X64-NEXT:    pushfq
-; X64-NEXT:    popq %rsi
+; X64-NEXT:    sete %sil
 ; X64-NEXT:    movb {{.*}}(%rip), %cl
 ; X64-NEXT:    movl %ecx, %edx
 ; X64-NEXT:    incb %dl
 ; X64-NEXT:    cmpb %dil, %cl
 ; X64-NEXT:    sete {{.*}}(%rip)
 ; X64-NEXT:    movb %dl, {{.*}}(%rip)
-; X64-NEXT:    pushq %rsi
-; X64-NEXT:    popfq
-; X64-NEXT:    je .LBB0_2
+; X64-NEXT:    testb $-1, %sil
+; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %if.then
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    movq %rsp, %rbp
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movsbl %al, %edi
 ; X64-NEXT:    callq external
-; X64-NEXT:    popq %rbp
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB0_2: # %if.end
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
@@ -108,54 +94,40 @@ if.end:
 define i32 @test2(i32* %ptr) nounwind {
 ; X32-LABEL: test2:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    movl 8(%ebp), %eax
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    incl (%eax)
-; X32-NEXT:    seto %al
-; X32-NEXT:    lahf
-; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    setne %bl
 ; X32-NEXT:    pushl $42
 ; X32-NEXT:    calll external
 ; X32-NEXT:    addl $4, %esp
-; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    addb $127, %al
-; X32-NEXT:    sahf
+; X32-NEXT:    testb $-1, %bl
 ; X32-NEXT:    je .LBB1_1
-; X32-NEXT:  # %bb.3: # %else
+; X32-NEXT:  # %bb.2: # %else
 ; X32-NEXT:    xorl %eax, %eax
-; X32-NEXT:    jmp .LBB1_2
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    retl
 ; X32-NEXT:  .LBB1_1: # %then
 ; X32-NEXT:    movl $64, %eax
-; X32-NEXT:  .LBB1_2: # %then
-; X32-NEXT:    popl %esi
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    incl (%rdi)
-; X64-NEXT:    pushfq
-; X64-NEXT:    popq %rbx
+; X64-NEXT:    setne %bl
 ; X64-NEXT:    movl $42, %edi
 ; X64-NEXT:    callq external
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    popfq
+; X64-NEXT:    testb $-1, %bl
 ; X64-NEXT:    je .LBB1_1
-; X64-NEXT:  # %bb.3: # %else
+; X64-NEXT:  # %bb.2: # %else
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    jmp .LBB1_2
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
 ; X64-NEXT:  .LBB1_1: # %then
 ; X64-NEXT:    movl $64, %eax
-; X64-NEXT:  .LBB1_2: # %then
-; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
 entry:
   %val = load i32, i32* %ptr
@@ -183,43 +155,25 @@ declare void @external_b()
 define void @test_tail_call(i32* %ptr) nounwind optsize {
 ; X32-LABEL: test_tail_call:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    movl %esp, %ebp
-; X32-NEXT:    movl 8(%ebp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    incl (%eax)
-; X32-NEXT:    seto %al
-; X32-NEXT:    lahf
-; X32-NEXT:    movl %eax, %eax
+; X32-NEXT:    setne %al
 ; X32-NEXT:    incb a
 ; X32-NEXT:    sete d
-; X32-NEXT:    movl %eax, %eax
-; X32-NEXT:    addb $127, %al
-; X32-NEXT:    sahf
-; X32-NEXT:    je .LBB2_1
-; X32-NEXT:  # %bb.2: # %else
-; X32-NEXT:    popl %ebp
-; X32-NEXT:    jmp external_b # TAILCALL
-; X32-NEXT:  .LBB2_1: # %then
-; X32-NEXT:    popl %ebp
+; X32-NEXT:    testb $-1, %al
+; X32-NEXT:    jne external_b # TAILCALL
+; X32-NEXT:  # %bb.1: # %then
 ; X32-NEXT:    jmp external_a # TAILCALL
 ;
 ; X64-LABEL: test_tail_call:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    incl (%rdi)
-; X64-NEXT:    pushfq
-; X64-NEXT:    popq %rax
+; X64-NEXT:    setne %al
 ; X64-NEXT:    incb {{.*}}(%rip)
 ; X64-NEXT:    sete {{.*}}(%rip)
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    popfq
-; X64-NEXT:    je .LBB2_1
-; X64-NEXT:  # %bb.2: # %else
-; X64-NEXT:    popq %rbp
-; X64-NEXT:    jmp external_b # TAILCALL
-; X64-NEXT:  .LBB2_1: # %then
-; X64-NEXT:    popq %rbp
+; X64-NEXT:    testb $-1, %al
+; X64-NEXT:    jne external_b # TAILCALL
+; X64-NEXT:  # %bb.1: # %then
 ; X64-NEXT:    jmp external_a # TAILCALL
 entry:
   %val = load i32, i32* %ptr

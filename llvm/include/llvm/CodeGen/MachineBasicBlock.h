@@ -449,6 +449,13 @@ public:
   /// Replace successor OLD with NEW and update probability info.
   void replaceSuccessor(MachineBasicBlock *Old, MachineBasicBlock *New);
 
+  /// Copy a successor (and any probability info) from original block to this
+  /// block's. Uses an iterator into the original blocks successors.
+  ///
+  /// This is useful when doing a partial clone of successors. Afterward, the
+  /// probabilities may need to be normalized.
+  void copySuccessor(MachineBasicBlock *Orig, succ_iterator I);
+
   /// Transfers all the successors from MBB to this machine basic block (i.e.,
   /// copies all the successors FromMBB and remove all the successors from
   /// FromMBB).
