@@ -68,27 +68,47 @@ bool ThreadPlanStepOverBreakpoint::DoPlanExplainsStop(Event *event_ptr) {
     // next instruction also contained a breakpoint.
     StopReason reason = stop_info_sp->GetStopReason();
 
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+
+    if (log)
+      log->Printf("Step over breakpoint stopped for reason: %s.", 
+          Thread::StopReasonAsCString(reason));
+  
     switch (reason) {
-    case eStopReasonTrace:
-    case eStopReasonNone:
-      return true;
-    case eStopReasonBreakpoint:
-      // It's a little surprising that we stop here for a breakpoint hit.
-      // However, when you single step ONTO a breakpoint we still want to call
-      // that a breakpoint hit, and trigger the actions, etc.  Otherwise you
-      // would see the PC at the breakpoint without having triggered the
-      // actions, then you'd continue, the PC wouldn't change, and you'd see
-      // the breakpoint hit, which would be odd. So the lower levels fake "step
-      // onto breakpoint address" and return that as a breakpoint hit.  So our
-      // trace step COULD appear as a breakpoint hit if the next instruction
-      // also contained a breakpoint.  We don't want to handle that, since we
-      // really don't know what to do with breakpoint hits.  But make sure we
-      // don't set ourselves to auto-continue or we'll wrench control away from
-      // the plans that can deal with this.
-      SetAutoContinue(false);
-      return false;
-    default:
-      return false;
+      case eStopReasonTrace:
+      case eStopReasonNone:
+        return true;
+      case eStopReasonBreakpoint:
+      {
+        // It's a little surprising that we stop here for a breakpoint hit.
+        // However, when you single step ONTO a breakpoint we still want to call
+        // that a breakpoint hit, and trigger the actions, etc.  Otherwise you
+        // would see the PC at the breakpoint without having triggered the
+        // actions, then you'd continue, the PC wouldn't change, and you'd see
+        // the breakpoint hit, which would be odd. So the lower levels fake 
+        // "step onto breakpoint address" and return that as a breakpoint hit.  
+        // So our trace step COULD appear as a breakpoint hit if the next 
+        // instruction also contained a breakpoint.  We don't want to handle 
+        // that, since we really don't know what to do with breakpoint hits.  
+        // But make sure we don't set ourselves to auto-continue or we'll wrench
+        // control away from the plans that can deal with this.
+        // Be careful, however, as we may have "seen a breakpoint under the PC
+        // because we stopped without changing the PC, in which case we do want
+        // to re-claim this stop so we'll try again.
+        lldb::addr_t pc_addr = m_thread.GetRegisterContext()->GetPC();
+
+        if (pc_addr == m_breakpoint_addr) {
+          if (log)
+            log->Printf("Got breakpoint stop reason but pc: %" PRIu64 
+                        "hasn't changed.", pc_addr);
+          return true;
+        }
+
+        SetAutoContinue(false);
+        return false;
+      }
+      default:
+        return false;
     }
   }
   return false;
@@ -110,8 +130,10 @@ bool ThreadPlanStepOverBreakpoint::DoWillResume(StateType resume_state,
     BreakpointSiteSP bp_site_sp(
         m_thread.GetProcess()->GetBreakpointSiteList().FindByAddress(
             m_breakpoint_addr));
-    if (bp_site_sp && bp_site_sp->IsEnabled())
+    if (bp_site_sp && bp_site_sp->IsEnabled()) {
       m_thread.GetProcess()->DisableBreakpointSite(bp_site_sp.get());
+      m_reenabled_breakpoint_site = false;
+    }
   }
   return true;
 }
@@ -119,6 +141,10 @@ bool ThreadPlanStepOverBreakpoint::DoWillResume(StateType resume_state,
 bool ThreadPlanStepOverBreakpoint::WillStop() {
   ReenableBreakpointSite();
   return true;
+}
+
+void ThreadPlanStepOverBreakpoint::WillPop() {
+  ReenableBreakpointSite();
 }
 
 bool ThreadPlanStepOverBreakpoint::MischiefManaged() {
