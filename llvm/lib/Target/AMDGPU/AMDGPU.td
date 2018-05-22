@@ -799,6 +799,9 @@ def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<"FeatureVOP3P">;
 
+def NotHasVOP3PInsts : Predicate<"!Subtarget->hasVOP3PInsts()">,
+  AssemblerPredicate<"!FeatureVOP3P">;
+
 def HasSDWA : Predicate<"Subtarget->hasSDWA()">,
   AssemblerPredicate<"FeatureSDWA,FeatureVolcanicIslands">;
 

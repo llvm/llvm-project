@@ -187,7 +187,9 @@ tlti $9, 17767              # CHECK: tlti $9, 17767         # encoding: [0x41,0x
 tltiu $9, 17767             # CHECK: tltiu $9, 17767        # encoding: [0x41,0x49,0x45,0x67]
 tnei $9, 17767              # CHECK: tnei $9, 17767         # encoding: [0x41,0x89,0x45,0x67]
 cache 1, 8($5)              # CHECK: cache 1, 8($5)         # encoding: [0x20,0x25,0x60,0x08]
+                            # CHECK-NEXT:                   # <MCInst #{{.*}} CACHE_MM
 pref 1, 8($5)               # CHECK: pref 1, 8($5)          # encoding: [0x60,0x25,0x20,0x08]
+                            # CHECK-NEXT:                   # <MCInst #{{.*}} PREF_MM
 ssnop                       # CHECK: ssnop                  # encoding: [0x00,0x00,0x08,0x00]
 ehb                         # CHECK: ehb                    # encoding: [0x00,0x00,0x18,0x00]
 pause                       # CHECK: pause                  # encoding: [0x00,0x00,0x28,0x00]

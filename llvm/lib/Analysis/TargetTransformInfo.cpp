@@ -743,20 +743,37 @@ static bool isTransposeVectorMask(ArrayRef<int> Mask) {
   return true;
 }
 
-static TargetTransformInfo::OperandValueKind getOperandInfo(Value *V) {
+TargetTransformInfo::OperandValueKind
+getOperandInfo(Value *V, TargetTransformInfo::OperandValueProperties &OpProps) {
   TargetTransformInfo::OperandValueKind OpInfo =
       TargetTransformInfo::OK_AnyValue;
+  OpProps = TargetTransformInfo::OP_None;
 
-  // Check for a splat of a constant or for a non uniform vector of constants.
+  const Value *Splat = getSplatValue(V);
+
+  // Check for a splat of a constant or for a non uniform vector of constants
+  // and check if the constant(s) are all powers of two.
   if (isa<ConstantVector>(V) || isa<ConstantDataVector>(V)) {
     OpInfo = TargetTransformInfo::OK_NonUniformConstantValue;
-    if (cast<Constant>(V)->getSplatValue() != nullptr)
+    if (Splat) {
       OpInfo = TargetTransformInfo::OK_UniformConstantValue;
+      if (auto *CI = dyn_cast<ConstantInt>(Splat))
+        if (CI->getValue().isPowerOf2())
+          OpProps = TargetTransformInfo::OP_PowerOf2;
+    } else if (auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
+      OpProps = TargetTransformInfo::OP_PowerOf2;
+      for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+        if (auto *CI = dyn_cast<ConstantInt>(CDS->getElementAsConstant(I)))
+          if (CI->getValue().isPowerOf2())
+            continue;
+        OpProps = TargetTransformInfo::OP_None;
+        break;
+      }
+    }
   }
 
   // Check for a splat of a uniform value. This is not loop aware, so return
   // true only for the obviously uniform cases (argument, globalvalue)
-  const Value *Splat = getSplatValue(V);
   if (Splat && (isa<Argument>(Splat) || isa<GlobalValue>(Splat)))
     OpInfo = TargetTransformInfo::OK_UniformValue;
 
@@ -1086,15 +1103,13 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    TargetTransformInfo::OperandValueKind Op1VK =
-      getOperandInfo(I->getOperand(0));
-    TargetTransformInfo::OperandValueKind Op2VK =
-      getOperandInfo(I->getOperand(1));
-    SmallVector<const Value*, 2> Operands(I->operand_values());
-    return getArithmeticInstrCost(I->getOpcode(), I->getType(), Op1VK,
-                                       Op2VK, TargetTransformInfo::OP_None,
-                                       TargetTransformInfo::OP_None,
-                                       Operands);
+    TargetTransformInfo::OperandValueKind Op1VK, Op2VK;
+    TargetTransformInfo::OperandValueProperties Op1VP, Op2VP;
+    Op1VK = getOperandInfo(I->getOperand(0), Op1VP);
+    Op2VK = getOperandInfo(I->getOperand(1), Op2VP);
+    SmallVector<const Value *, 2> Operands(I->operand_values());
+    return getArithmeticInstrCost(I->getOpcode(), I->getType(), Op1VK, Op2VK,
+                                  Op1VP, Op2VP, Operands);
   }
   case Instruction::Select: {
     const SelectInst *SI = cast<SelectInst>(I);

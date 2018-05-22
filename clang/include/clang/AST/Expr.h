@@ -1620,6 +1620,14 @@ public:
   bool isUTF32() const { return Kind == UTF32; }
   bool isPascal() const { return IsPascal; }
 
+  bool containsNonAscii() const {
+    StringRef Str = getString();
+    for (unsigned i = 0, e = Str.size(); i != e; ++i)
+      if (!isASCII(Str[i]))
+        return true;
+    return false;
+  }
+
   bool containsNonAsciiOrNull() const {
     StringRef Str = getString();
     for (unsigned i = 0, e = Str.size(); i != e; ++i)

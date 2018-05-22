@@ -1,8 +1,8 @@
-; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefixes=SI,GCN,MESA-GCN,FUNC
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefixes=VI,GCN,MESA-VI,MESA-GCN,FUNC
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs | FileCheck %s --check-prefixes=VI,GCN,HSA-VI,FUNC
-; RUN: llc < %s -march=r600 -mcpu=redwood -verify-machineinstrs | FileCheck %s --check-prefix=EG --check-prefix=FUNC
-; RUN: llc < %s -march=r600 -mcpu=cayman -verify-machineinstrs | FileCheck %s --check-prefix=EG --check-prefix=FUNC
+; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck -enable-var-scope --check-prefixes=SI,GCN,MESA-GCN,FUNC %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=VI,GCN,MESA-VI,MESA-GCN,FUNC %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=VI,GCN,HSA-VI,FUNC %s
+; RUN: llc < %s -march=r600 -mcpu=redwood -verify-machineinstrs | FileCheck -enable-var-scope -check-prefix=EG --check-prefix=FUNC %s
+; RUN: llc < %s -march=r600 -mcpu=cayman -verify-machineinstrs | FileCheck -enable-var-scope --check-prefix=EG --check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}i8_arg:
 ; HSA-VI: kernarg_segment_alignment = 4
@@ -162,10 +162,11 @@ entry:
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
+
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+
+; VI: s_load_dword s
 define amdgpu_kernel void @v2i16_arg(<2 x i16> addrspace(1)* %out, <2 x i16> %in) {
 entry:
   store <2 x i16> %in, <2 x i16> addrspace(1)* %out
@@ -285,14 +286,14 @@ entry:
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; HSA-GCN: flat_load_ushort
-; HSA-GCN: flat_load_ushort
-; HSA-GCN: flat_load_ushort
-; HSA-GCN: flat_load_ushort
+
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+
+; VI: s_load_dword s
+; VI: s_load_dword s
 define amdgpu_kernel void @v4i16_arg(<4 x i16> addrspace(1)* %out, <4 x i16> %in) {
 entry:
   store <4 x i16> %in, <4 x i16> addrspace(1)* %out
@@ -305,6 +306,7 @@ entry:
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].Z
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].W
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[4].X
+
 ; SI: s_load_dwordx4 s{{\[[0-9]:[0-9]\]}}, s[0:1], 0xd
 ; MESA-VI: s_load_dwordx4 s{{\[[0-9]:[0-9]\]}}, s[0:1], 0x34
 ; HSA-VI: s_load_dwordx4 s[{{[0-9]+:[0-9]+}}], s[4:5], 0x10
@@ -370,22 +372,20 @@ entry:
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
+
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+
+; VI: s_load_dword s
+; VI: s_load_dword s
+; VI: s_load_dword s
+; VI: s_load_dword s
 define amdgpu_kernel void @v8i16_arg(<8 x i16> addrspace(1)* %out, <8 x i16> %in) {
 entry:
   store <8 x i16> %in, <8 x i16> addrspace(1)* %out
@@ -502,38 +502,32 @@ entry:
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
+
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+
+; VI: s_load_dword s
+; VI: s_load_dword s
+; VI: s_load_dword s
+; VI: s_load_dword s
+; VI: s_load_dword s
+; VI: s_load_dword s
+; VI: s_load_dword s
+; VI: s_load_dword s
 define amdgpu_kernel void @v16i16_arg(<16 x i16> addrspace(1)* %out, <16 x i16> %in) {
 entry:
   store <16 x i16> %in, <16 x i16> addrspace(1)* %out

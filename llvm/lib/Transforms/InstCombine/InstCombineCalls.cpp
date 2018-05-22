@@ -3407,6 +3407,23 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // amdgcn.kill(i1 1) is a no-op
     return eraseInstFromFunction(CI);
   }
+  case Intrinsic::amdgcn_update_dpp: {
+    Value *Old = II->getArgOperand(0);
+
+    auto BC = dyn_cast<ConstantInt>(II->getArgOperand(5));
+    auto RM = dyn_cast<ConstantInt>(II->getArgOperand(3));
+    auto BM = dyn_cast<ConstantInt>(II->getArgOperand(4));
+    if (!BC || !RM || !BM ||
+        BC->isZeroValue() ||
+        RM->getZExtValue() != 0xF ||
+        BM->getZExtValue() != 0xF ||
+        isa<UndefValue>(Old))
+      break;
+
+    // If bound_ctrl = 1, row mask = bank mask = 0xf we can omit old value.
+    II->setOperand(0, UndefValue::get(Old->getType()));
+    return II;
+  }
   case Intrinsic::stackrestore: {
     // If the save is right next to the restore, remove the restore.  This can
     // happen when variable allocas are DCE'd.
