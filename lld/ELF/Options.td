@@ -428,6 +428,22 @@ defm thinlto_cache_policy: Eq<"thinlto-cache-policy">,
   HelpText<"Pruning policy for the ThinLTO cache">;
 def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;
 
+def plugin_opt_O: J<"plugin-opt=O">, Alias<lto_O>;
+def plugin_opt_debug_pass_manager: F<"plugin-opt=debug-pass-manager">, Alias<lto_debug_pass_manager>;
+def plugin_opt_disable_verify: F<"plugin-opt=disable-verify">, Alias<disable_verify>;
+def plugin_opt_jobs_eq: J<"plugin-opt=jobs=">, Alias<thinlto_jobs>;
+def plugin_opt_lto_partitions_eq: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>;
+def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
+def plugin_opt_new_pass_manager: F<"plugin-opt=new-pass-manager">, Alias<lto_new_pass_manager>;
+def plugin_opt_obj_path_eq: J<"plugin-opt=obj-path=">;
+def plugin_opt_sample_profile_eq: J<"plugin-opt=sample-profile=">, Alias<lto_sample_profile>;
+def plugin_opt_save_temps: F<"plugin-opt=save-temps">, Alias<save_temps>;
+def plugin_opt_thinlto_emit_imports_files: F<"plugin-opt=thinlto-emit-imports-files">;
+def plugin_opt_thinlto_index_only: F<"plugin-opt=thinlto-index-only">;
+def plugin_opt_thinlto_index_only_eq: J<"plugin-opt=thinlto-index-only=">;
+def plugin_opt_thinlto_object_suffix_replace_eq: J<"plugin-opt=thinlto-object-suffix-replace=">;
+def plugin_opt_thinlto_prefix_replace_eq: J<"plugin-opt=thinlto-prefix-replace=">;
+
 // Ignore LTO plugin-related options.
 // clang -flto passes -plugin and -plugin-opt to the linker. This is required
 // for ld.gold and ld.bfd to get LTO working. But it's not for lld which doesn't
@@ -436,6 +452,11 @@ def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;
 // be called 'ld' and understanding which linker is used would require parsing of
 // --version output.
 defm plugin: Eq<"plugin">;
+
+def plugin_opt_fresolution_eq: J<"plugin-opt=-fresolution=">;
+def plugin_opt_pass_through_eq: J<"plugin-opt=-pass-through=">;
+def plugin_opt_thinlto: J<"plugin-opt=thinlto">;
+def plugin_opt_slash: J<"plugin-opt=/">;
 
 // Options listed below are silently ignored for now for compatibility.
 def allow_shlib_undefined: F<"allow-shlib-undefined">;
