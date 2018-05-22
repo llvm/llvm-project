@@ -634,12 +634,17 @@ static bool getCompressDebugSections(opt::InputArgList &Args) {
   return true;
 }
 
-static int parseInt(StringRef S, opt::Arg *Arg) {
-  int V = 0;
-  if (!to_integer(S, V, 10))
-    error(Arg->getSpelling() + "=" + Arg->getValue() +
-          ": number expected, but got '" + S + "'");
-  return V;
+static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &Args,
+                                                        unsigned Id) {
+  auto *Arg = Args.getLastArg(Id);
+  if (!Arg)
+    return {"", ""};
+
+  StringRef S = Arg->getValue();
+  std::pair<StringRef, StringRef> Ret = S.split(';');
+  if (Ret.second.empty())
+    error(Arg->getSpelling() + " expects 'old;new' format, but got " + S);
+  return Ret;
 }
 
 // Parse the symbol ordering file and warn for any duplicate entries.
@@ -668,6 +673,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   errorHandler().FatalWarnings =
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
+  ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
 
   Config->AllowMultipleDefinition =
       Args.hasFlag(OPT_allow_multiple_definition,
@@ -712,6 +718,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->LTONewPassManager = Args.hasArg(OPT_lto_new_pass_manager);
   Config->LTONewPmPasses = Args.getLastArgValue(OPT_lto_newpm_passes);
   Config->LTOO = args::getInteger(Args, OPT_lto_O, 2);
+  Config->LTOObjPath = Args.getLastArgValue(OPT_plugin_opt_obj_path_eq);
   Config->LTOPartitions = args::getInteger(Args, OPT_lto_partitions, 1);
   Config->LTOSampleProfile = Args.getLastArgValue(OPT_lto_sample_profile);
   Config->MapFile = Args.getLastArgValue(OPT_Map);
@@ -748,8 +755,17 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ThinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(Args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
+  Config->ThinLTOEmitImportsFiles =
+      Args.hasArg(OPT_plugin_opt_thinlto_emit_imports_files);
+  Config->ThinLTOIndexOnly = Args.hasArg(OPT_plugin_opt_thinlto_index_only) ||
+                             Args.hasArg(OPT_plugin_opt_thinlto_index_only_eq);
+  Config->ThinLTOIndexOnlyArg =
+      Args.getLastArgValue(OPT_plugin_opt_thinlto_index_only_eq);
   Config->ThinLTOJobs = args::getInteger(Args, OPT_thinlto_jobs, -1u);
-  ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
+  Config->ThinLTOObjectSuffixReplace =
+      getOldNewOptions(Args, OPT_plugin_opt_thinlto_object_suffix_replace_eq);
+  Config->ThinLTOPrefixReplace =
+      getOldNewOptions(Args, OPT_plugin_opt_thinlto_prefix_replace_eq);
   Config->Trace = Args.hasArg(OPT_trace);
   Config->Undefined = args::getStrings(Args, OPT_undefined);
   Config->UndefinedVersion =
@@ -777,55 +793,13 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZText = getZFlag(Args, "text", "notext", true);
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
-  // Parse LTO plugin-related options for compatibility with gold.
-  for (auto *Arg : Args.filtered(OPT_plugin_opt)) {
-    StringRef S = Arg->getValue();
-    if (S == "disable-verify") {
-      Config->DisableVerify = true;
-    } else if (S == "save-temps") {
-      Config->SaveTemps = true;
-    } else if (S.startswith("O")) {
-      Config->LTOO = parseInt(S.substr(1), Arg);
-    } else if (S.startswith("lto-partitions=")) {
-      Config->LTOPartitions = parseInt(S.substr(15), Arg);
-    } else if (S.startswith("jobs=")) {
-      Config->ThinLTOJobs = parseInt(S.substr(5), Arg);
-    } else if (S.startswith("mcpu=")) {
-      parseClangOption(Saver.save("-" + S), Arg->getSpelling());
-    } else if (S == "new-pass-manager") {
-      Config->LTONewPassManager = true;
-    } else if (S == "debug-pass-manager") {
-      Config->LTODebugPassManager = true;
-    } else if (S.startswith("sample-profile=")) {
-      Config->LTOSampleProfile = S.substr(15);
-    } else if (S.startswith("obj-path=")) {
-      Config->LTOObjPath = S.substr(9);
-    } else if (S == "thinlto-index-only") {
-      Config->ThinLTOIndexOnly = true;
-    } else if (S.startswith("thinlto-index-only=")) {
-      Config->ThinLTOIndexOnly = true;
-      Config->ThinLTOIndexOnlyArg = S.substr(19);
-    } else if (S == "thinlto-emit-imports-files") {
-      Config->ThinLTOEmitImportsFiles = true;
-    } else if (S.startswith("thinlto-prefix-replace=")) {
-      std::tie(Config->ThinLTOPrefixReplace.first,
-               Config->ThinLTOPrefixReplace.second) = S.substr(23).split(';');
-      if (Config->ThinLTOPrefixReplace.second.empty())
-        error("thinlto-prefix-replace expects 'old;new' format, but got " +
-              S.substr(23));
-    } else if (S.startswith("thinlto-object-suffix-replace=")) {
-      std::tie(Config->ThinLTOObjectSuffixReplace.first,
-               Config->ThinLTOObjectSuffixReplace.second) =
-          S.substr(30).split(';');
-      if (Config->ThinLTOObjectSuffixReplace.second.empty())
-        error(
-            "thinlto-object-suffix-replace expects 'old;new' format, but got " +
-            S.substr(30));
-    } else if (!S.startswith("/") && !S.startswith("-fresolution=") &&
-               !S.startswith("-pass-through=") && !S.startswith("thinlto")) {
-      parseClangOption(S, Arg->getSpelling());
-    }
-  }
+  // Parse LTO options.
+  if (auto *Arg = Args.getLastArg(OPT_plugin_opt_mcpu_eq))
+    parseClangOption(Saver.save("-mcpu=" + StringRef(Arg->getValue())),
+                     Arg->getSpelling());
+
+  for (auto *Arg : Args.filtered(OPT_plugin_opt))
+    parseClangOption(Arg->getValue(), Arg->getSpelling());
 
   // Parse -mllvm options.
   for (auto *Arg : Args.filtered(OPT_mllvm))

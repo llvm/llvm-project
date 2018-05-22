@@ -26,7 +26,6 @@ class MachCoreTestCase(TestBase):
         lldb.DBG.SetSelectedPlatform(self._initial_platform)
         super(MachCoreTestCase, self).tearDown()
 
-    @skipUnlessDarwin
     def test_selected_thread(self):
         """Test that the right thread is selected after a core is loaded."""
         # Create core form YAML.
