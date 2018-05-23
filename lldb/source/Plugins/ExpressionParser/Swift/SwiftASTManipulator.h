@@ -133,6 +133,7 @@ public:
                              uint32_t language_flags,
                              const EvaluateExpressionOptions &options,
                              const Expression::SwiftGenericInfo &generic_info,
+                             llvm::StringRef os_version,
                              uint32_t &first_body_line);
 
   void FindSpecialNames(llvm::SmallVectorImpl<swift::Identifier> &names,
