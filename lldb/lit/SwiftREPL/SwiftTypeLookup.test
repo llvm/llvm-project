@@ -1,0 +1,6 @@
+// Test that we don't crash when looking up types.
+
+// RUN: %lldb --repl < %s | FileCheck %s --check-prefix=TYPE
+
+:type lookup Swift
+// TYPE: Optional
