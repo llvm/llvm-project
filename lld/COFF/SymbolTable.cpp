@@ -38,8 +38,9 @@ void SymbolTable::addFile(InputFile *File) {
   if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN) {
     Config->Machine = MT;
   } else if (MT != IMAGE_FILE_MACHINE_UNKNOWN && Config->Machine != MT) {
-    fatal(toString(File) + ": machine type " + machineToStr(MT) +
+    error(toString(File) + ": machine type " + machineToStr(MT) +
           " conflicts with " + machineToStr(Config->Machine));
+    return;
   }
 
   if (auto *F = dyn_cast<ObjFile>(File)) {

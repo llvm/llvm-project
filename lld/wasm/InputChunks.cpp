@@ -193,12 +193,8 @@ static unsigned writeCompressedReloc(uint8_t *Buf, const WasmRelocation &Rel,
   case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
   case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
     return encodeSLEB128(static_cast<int32_t>(Value), Buf);
-  case R_WEBASSEMBLY_TABLE_INDEX_I32:
-  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    write32le(Buf, Value);
-    return 4;
   default:
-    llvm_unreachable("unknown relocation type");
+    llvm_unreachable("unexpected relocation type");
   }
 }
 
@@ -211,11 +207,8 @@ static unsigned getRelocWidthPadded(const WasmRelocation &Rel) {
   case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
   case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
     return 5;
-  case R_WEBASSEMBLY_TABLE_INDEX_I32:
-  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    return 4;
   default:
-    llvm_unreachable("unknown relocation type");
+    llvm_unreachable("unexpected relocation type");
   }
 }
 
