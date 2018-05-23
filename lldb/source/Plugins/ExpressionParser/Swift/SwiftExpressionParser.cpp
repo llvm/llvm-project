@@ -623,202 +623,167 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
                    SwiftASTManipulator &manipulator,
                    const Expression::SwiftGenericInfo &generic_info) {
   // First, emit the typealias for "$__lldb_context"
+  if (!block)
+    return;
 
-  do {
-    if (!block)
-      break;
+  Function *function = block->CalculateSymbolContextFunction();
 
-    Function *function = block->CalculateSymbolContextFunction();
+  if (!function)
+    return;
 
-    if (!function)
-      break;
+  constexpr bool can_create = true;
+  Block &function_block(function->GetBlock(can_create));
 
-    constexpr bool can_create = true;
-    Block &function_block(function->GetBlock(can_create));
+  lldb::VariableListSP variable_list_sp(
+      function_block.GetBlockVariableList(true));
 
-    lldb::VariableListSP variable_list_sp(
-        function_block.GetBlockVariableList(true));
+  if (!variable_list_sp)
+    return;
 
-    if (!variable_list_sp)
-      break;
+  lldb::VariableSP self_var_sp(
+      variable_list_sp->FindVariable(ConstString("self")));
 
-    lldb::VariableSP self_var_sp(
-        variable_list_sp->FindVariable(ConstString("self")));
+  if (!self_var_sp)
+    return;
 
-    if (!self_var_sp)
-      break;
+  CompilerType self_type;
 
-    CompilerType self_type;
+  if (stack_frame_sp) {
+    lldb::ValueObjectSP valobj_sp =
+        stack_frame_sp->GetValueObjectForFrameVariable(self_var_sp,
+                                                       lldb::eNoDynamicValues);
 
-    if (stack_frame_sp) {
-      lldb::ValueObjectSP valobj_sp =
-          stack_frame_sp->GetValueObjectForFrameVariable(
-              self_var_sp, lldb::eNoDynamicValues);
+    if (valobj_sp)
+      self_type = valobj_sp->GetCompilerType();
+  }
 
-      if (valobj_sp)
-        self_type = valobj_sp->GetCompilerType();
+  if (!self_type.IsValid()) {
+    if (Type *type = self_var_sp->GetType()) {
+      self_type = type->GetForwardCompilerType();
     }
+  }
 
-    if (!self_type.IsValid()) {
-      if (Type *type = self_var_sp->GetType()) {
-        self_type = type->GetForwardCompilerType();
-      }
-    }
+  if (!self_type.IsValid() ||
+      !llvm::isa<SwiftASTContext>(self_type.GetTypeSystem()))
+    return;
 
-    if (!self_type.IsValid() ||
-        !llvm::isa<SwiftASTContext>(self_type.GetTypeSystem()))
-      break;
+  // Import before getting the unbound version, because the unbound version
+  // may not be in the mangled name map
 
-    // Import before getting the unbound version, because the unbound version
-    // may not be in the mangled name map
+  CompilerType imported_self_type = ImportType(swift_ast_context, self_type);
 
-    CompilerType imported_self_type = ImportType(swift_ast_context, self_type);
+  if (!imported_self_type.IsValid())
+    return;
 
-    if (!imported_self_type.IsValid())
-      break;
+  // This might be a referenced type, in which case we really want to extend
+  // the referent:
+  imported_self_type =
+      llvm::cast<SwiftASTContext>(imported_self_type.GetTypeSystem())
+          ->GetReferentType(imported_self_type);
 
-    // This might be a referenced type, in which case we really want to extend
-    // the referent:
-    imported_self_type =
-        llvm::cast<SwiftASTContext>(imported_self_type.GetTypeSystem())
-            ->GetReferentType(imported_self_type);
+  // If we are extending a generic class it's going to be a metatype, and we
+  // have to grab the instance type:
+  imported_self_type =
+      llvm::cast<SwiftASTContext>(imported_self_type.GetTypeSystem())
+          ->GetInstanceType(imported_self_type.GetOpaqueQualType());
 
-    // If we are extending a generic class it's going to be a metatype, and we
-    // have to grab the instance type:
-    imported_self_type =
-        llvm::cast<SwiftASTContext>(imported_self_type.GetTypeSystem())
-            ->GetInstanceType(imported_self_type.GetOpaqueQualType());
+  Flags imported_self_type_flags(imported_self_type.GetTypeInfo());
 
-    Flags imported_self_type_flags(imported_self_type.GetTypeInfo());
-
-    // If 'self' is the Self archetype, resolve it to the actual metatype it is
-    if (SwiftASTContext::IsSelfArchetypeType(imported_self_type)) {
-      SwiftLanguageRuntime *swift_runtime =
-          stack_frame_sp->GetThread()->GetProcess()->GetSwiftLanguageRuntime();
-      if (CompilerType concrete_self_type = swift_runtime->GetConcreteType(
-              stack_frame_sp.get(), ConstString("Self"))) {
-        if (SwiftASTContext *concrete_self_type_ast_ctx =
-                llvm::dyn_cast_or_null<SwiftASTContext>(
-                    concrete_self_type.GetTypeSystem())) {
-          imported_self_type = concrete_self_type_ast_ctx->CreateMetatypeType(
-              concrete_self_type);
-          imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
-          imported_self_type =
-              ImportType(swift_ast_context, imported_self_type);
-          if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                              lldb::eTypeIsMetatype)) {
-            imported_self_type = imported_self_type.GetInstanceType();
-          }
+  // If 'self' is the Self archetype, resolve it to the actual metatype it is
+  if (SwiftASTContext::IsSelfArchetypeType(imported_self_type)) {
+    SwiftLanguageRuntime *swift_runtime =
+        stack_frame_sp->GetThread()->GetProcess()->GetSwiftLanguageRuntime();
+    if (CompilerType concrete_self_type = swift_runtime->GetConcreteType(
+            stack_frame_sp.get(), ConstString("Self"))) {
+      if (SwiftASTContext *concrete_self_type_ast_ctx =
+              llvm::dyn_cast_or_null<SwiftASTContext>(
+                  concrete_self_type.GetTypeSystem())) {
+        imported_self_type =
+            concrete_self_type_ast_ctx->CreateMetatypeType(concrete_self_type);
+        imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
+        imported_self_type = ImportType(swift_ast_context, imported_self_type);
+        if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
+                                            lldb::eTypeIsMetatype)) {
+          imported_self_type = imported_self_type.GetInstanceType();
         }
       }
     }
-      
-    // Get the instance type:
-    if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                        lldb::eTypeIsMetatype)) {
-      imported_self_type = imported_self_type.GetInstanceType();
-      imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
-    }
+  }
 
-
-    swift::Type object_type =
-        swift::Type((swift::TypeBase *)(imported_self_type.GetOpaqueQualType()))
-            ->getWithoutSpecifierType();
-
-    if (object_type.getPointer() &&
-        (object_type.getPointer() != imported_self_type.GetOpaqueQualType()))
-      imported_self_type = CompilerType(imported_self_type.GetTypeSystem(),
-                                        object_type.getPointer());
-
-    // If the type of 'self' is a bound generic type, get the unbound version
-
-    bool is_generic = imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                                      lldb::eTypeIsGeneric);
-    bool is_bound = imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                                    lldb::eTypeIsBound);
-
-    if (is_generic) {
-      if (is_bound)
-        imported_self_type = imported_self_type.GetUnboundType();
-    }
-
-    // if 'self' is a weak storage type, it must be an optional.  Look through
-    // it and unpack the argument of "optional".
-
-    if (swift::WeakStorageType *weak_storage_type =
-            ((swift::TypeBase *)imported_self_type.GetOpaqueQualType())
-                ->getAs<swift::WeakStorageType>()) {
-      swift::Type referent_type = weak_storage_type->getReferentType();
-
-      swift::BoundGenericEnumType *optional_type =
-          referent_type->getAs<swift::BoundGenericEnumType>();
-
-      if (!optional_type) {
-        break;
-      }
-
-      swift::Type first_arg_type = optional_type->getGenericArgs()[0];
-
-      swift::ClassType *self_class_type =
-          first_arg_type->getAs<swift::ClassType>();
-
-      if (!self_class_type) {
-        break;
-      }
-
-      imported_self_type =
-          CompilerType(imported_self_type.GetTypeSystem(), self_class_type);
-    }
-
+  // Get the instance type:
+  if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
+                                      lldb::eTypeIsMetatype)) {
+    imported_self_type = imported_self_type.GetInstanceType();
     imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
-    if (imported_self_type_flags.AllClear(lldb::eTypeIsArchetype)) {
-      swift::ValueDecl *type_alias_decl = nullptr;
+  }
 
-      type_alias_decl = manipulator.MakeGlobalTypealias(
-          swift_ast_context.GetASTContext()->getIdentifier("$__lldb_context"),
-          imported_self_type);
+  swift::Type object_type =
+      swift::Type((swift::TypeBase *)(imported_self_type.GetOpaqueQualType()))
+          ->getWithoutSpecifierType();
 
-      if (!type_alias_decl) {
-        Log *log(
-            lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-        if (log)
-          log->Printf("SEP:AddRequiredAliases: Failed to make the "
-                      "$__lldb_context typealias.");
-      }
-    } else {
+  if (object_type.getPointer() &&
+      (object_type.getPointer() != imported_self_type.GetOpaqueQualType()))
+    imported_self_type = CompilerType(imported_self_type.GetTypeSystem(),
+                                      object_type.getPointer());
+
+  // If the type of 'self' is a bound generic type, get the unbound version
+
+  bool is_generic = imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
+                                                    lldb::eTypeIsGeneric);
+  bool is_bound =
+      imported_self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsBound);
+
+  if (is_generic) {
+    if (is_bound)
+      imported_self_type = imported_self_type.GetUnboundType();
+  }
+
+  // if 'self' is a weak storage type, it must be an optional.  Look through
+  // it and unpack the argument of "optional".
+
+  if (swift::WeakStorageType *weak_storage_type =
+          ((swift::TypeBase *)imported_self_type.GetOpaqueQualType())
+              ->getAs<swift::WeakStorageType>()) {
+    swift::Type referent_type = weak_storage_type->getReferentType();
+
+    swift::BoundGenericEnumType *optional_type =
+        referent_type->getAs<swift::BoundGenericEnumType>();
+
+    if (!optional_type)
+      return;
+
+    swift::Type first_arg_type = optional_type->getGenericArgs()[0];
+
+    swift::ClassType *self_class_type =
+        first_arg_type->getAs<swift::ClassType>();
+
+    if (!self_class_type)
+      return;
+
+    imported_self_type =
+        CompilerType(imported_self_type.GetTypeSystem(), self_class_type);
+  }
+
+  imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
+  if (imported_self_type_flags.AllClear(lldb::eTypeIsArchetype)) {
+    swift::ValueDecl *type_alias_decl = nullptr;
+
+    type_alias_decl = manipulator.MakeGlobalTypealias(
+        swift_ast_context.GetASTContext()->getIdentifier("$__lldb_context"),
+        imported_self_type);
+
+    if (!type_alias_decl) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
       if (log)
-        log->Printf("SEP:AddRequiredAliases: Failed to resolve the self "
-                    "archetype - could not make the $__lldb_context "
-                    "typealias.");
+        log->Printf("SEP:AddRequiredAliases: Failed to make the "
+                    "$__lldb_context typealias.");
     }
-
-  } while (0);
-
-  // Emit the typedefs
-
-  for (const Expression::SwiftGenericInfo::Binding &binding :
-       generic_info.function_bindings) {
-    CompilerType bound_type = binding.type;
-
-    if (!llvm::isa<SwiftASTContext>(bound_type.GetTypeSystem()))
-      continue;
-
-    CompilerType imported_bound_type =
-        ImportType(swift_ast_context, bound_type);
-
-    if (!imported_bound_type.IsValid())
-      continue;
-
-    std::string alias_name("$__lldb_typeof_generic_");
-    alias_name.append(binding.name);
-
-    swift::ValueDecl *type_alias_decl = manipulator.MakeGlobalTypealias(
-        swift_ast_context.GetASTContext()->getIdentifier(alias_name),
-        imported_bound_type);
-
-    if (!type_alias_decl)
-      continue;
+  } else {
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+    if (log)
+      log->Printf("SEP:AddRequiredAliases: Failed to resolve the self "
+                  "archetype - could not make the $__lldb_context "
+                  "typealias.");
   }
 }
 

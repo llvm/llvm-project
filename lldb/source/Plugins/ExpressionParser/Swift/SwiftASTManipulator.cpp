@@ -223,149 +223,58 @@ $builtin_logger_initialize()
             : "";
 
     if (generic_info.class_bindings.size()) {
-      if (generic_info.function_bindings.size()) {
-        wrapped_stream.Printf("extension %s$__lldb_context {\n"
-                              "  @LLDBDebuggerFunction %s\n"
-                              "  %s func $__lldb_wrapped_expr_%u",
-                              optional_extension, availability.c_str(),
-                              func_decorator, current_counter);
-        DumpGenericNames(wrapped_stream, generic_info.function_bindings);
-        wrapped_stream.Printf("(_ $__lldb_arg : UnsafeMutablePointer<Any>");
-        DumpPlaceholderArguments(wrapped_stream,
-                                 generic_info.function_bindings);
-        wrapped_stream.Printf(
-            ") {\n"
-            "%s" // This is the expression text (with newlines).
-            "  }\n"
-            "}\n"
-            "%s\n"
-            "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
-            "  do {\n"
-            "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(\n"
-            "      $__lldb_arg ",
-            wrapped_expr_text.GetData(), availability.c_str(), current_counter);
-        DumpPlaceholdersIntoCall(wrapped_stream,
-                                 generic_info.function_bindings);
-        wrapped_stream.Printf(
-            "\n"
-            "    )\n"
-            "  }\n"
-            "}\n");
-        first_body_line = 5;
-      } else {
-        wrapped_stream.Printf(
-            "extension %s$__lldb_context {\n"
-            "  @LLDBDebuggerFunction %s\n"
-            "  %s func $__lldb_wrapped_expr_%u(_ $__lldb_arg : "
-            "UnsafeMutablePointer<Any>) {\n"
-            "%s" // This is the expression text (with newlines).
-            "  }\n"
-            "}\n"
-            "%s\n"
-            "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
-            "  do {\n"
-            "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(\n"
-            "      $__lldb_arg\n"
-            "    )\n"
-            "  }\n"
-            "}\n",
-            optional_extension, availability.c_str(), func_decorator,
-            current_counter, wrapped_expr_text.GetData(), availability.c_str(),
-            current_counter);
-
-        first_body_line = 5;
-      }
-    } else {
-      if (generic_info.function_bindings.size()) {
-        wrapped_stream.Printf("extension %s$__lldb_context {\n"
-                              "  @LLDBDebuggerFunction %s\n"
-                              "  %s func $__lldb_wrapped_expr_%u ",
-                              optional_extension, availability.c_str(),
-                              func_decorator, current_counter);
-        DumpGenericNames(wrapped_stream, generic_info.function_bindings);
-        wrapped_stream.Printf("(_ $__lldb_arg : UnsafeMutablePointer<Any>");
-        DumpPlaceholderArguments(wrapped_stream,
-                                 generic_info.function_bindings);
-        wrapped_stream.Printf(
-            ") {\n"
-            "%s" // This is the expression text (with newlines).
-            "  }\n"
-            "}\n"
-            "%s\n"
-            "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
-            "  do {\n"
-            "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(\n"
-            "      $__lldb_arg ",
-            wrapped_expr_text.GetData(), availability.c_str(), current_counter);
-        DumpPlaceholdersIntoCall(wrapped_stream,
-                                 generic_info.function_bindings);
-        wrapped_stream.Printf(
-            "\n"
-            "    )\n"
-            "  }\n"
-            "}\n");
-        first_body_line = 5;
-
-      } else {
-        wrapped_stream.Printf(
-            "extension %s$__lldb_context {\n"
-            "  @LLDBDebuggerFunction %s\n"
-            "  %s func $__lldb_wrapped_expr_%u(_ $__lldb_arg : "
-            "UnsafeMutablePointer<Any>) {\n"
-            "%s" // This is the expression text (with newlines).
-            "  }\n"
-            "}\n"
-            "%s\n"
-            "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
-            "  do {\n"
-            "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(\n"
-            "      $__lldb_arg\n"
-            "    )\n"
-            "  }\n"
-            "}\n",
-            optional_extension, availability.c_str(), func_decorator,
-            current_counter, wrapped_expr_text.GetData(), availability.c_str(),
-            current_counter);
-
-        first_body_line = 5;
-      }
-    }
-  } else {
-    if (generic_info.function_bindings.size()) {
       wrapped_stream.Printf(
-          "@LLDBDebuggerFunction %s\n"
-          "func $__lldb_wrapped_expr_%u",
-          availability.c_str(), current_counter);
-      DumpGenericNames(wrapped_stream, generic_info.function_bindings);
-      wrapped_stream.Printf("(_ $__lldb_arg : UnsafeMutablePointer<Any>");
-      DumpPlaceholderArguments(wrapped_stream, generic_info.function_bindings);
-      wrapped_stream.Printf(
-          ") {\n"
+          "extension %s$__lldb_context {\n"
+          "  @LLDBDebuggerFunction %s\n"
+          "  %s func $__lldb_wrapped_expr_%u(_ $__lldb_arg : "
+          "UnsafeMutablePointer<Any>) {\n"
           "%s" // This is the expression text (with newlines).
+          "  }\n"
           "}\n"
           "%s\n"
           "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
           "  do {\n"
-          "    $__lldb_wrapped_expr_%u(\n"
-          "      $__lldb_arg",
-          wrapped_expr_text.GetData(), availability.c_str(), current_counter);
-      DumpPlaceholdersIntoCall(wrapped_stream, generic_info.function_bindings);
-      wrapped_stream.Printf(
-          "\n"
+          "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(\n"
+          "      $__lldb_arg\n"
           "    )\n"
           "  }\n"
-          "}\n");
-      first_body_line = 4;
+          "}\n",
+          optional_extension, availability.c_str(), func_decorator,
+          current_counter, wrapped_expr_text.GetData(), availability.c_str(),
+          current_counter);
+
+      first_body_line = 5;
     } else {
       wrapped_stream.Printf(
-          "@LLDBDebuggerFunction %s\n"
-          "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
+          "extension %s$__lldb_context {\n"
+          "  @LLDBDebuggerFunction %s\n"
+          "  %s func $__lldb_wrapped_expr_%u(_ $__lldb_arg : "
+          "UnsafeMutablePointer<Any>) {\n"
           "%s" // This is the expression text (with newlines).
+          "  }\n"
+          "}\n"
+          "%s\n"
+          "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
+          "  do {\n"
+          "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(\n"
+          "      $__lldb_arg\n"
+          "    )\n"
+          "  }\n"
           "}\n",
-          availability.c_str(),
-          wrapped_expr_text.GetData());
-      first_body_line = 4;
+          optional_extension, availability.c_str(), func_decorator,
+          current_counter, wrapped_expr_text.GetData(), availability.c_str(),
+          current_counter);
+
+      first_body_line = 5;
     }
+  } else {
+    wrapped_stream.Printf(
+        "@LLDBDebuggerFunction %s\n"
+        "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
+        "%s" // This is the expression text (with newlines).
+        "}\n",
+        availability.c_str(), wrapped_expr_text.GetData());
+    first_body_line = 4;
   }
 }
 
