@@ -1339,6 +1339,11 @@ SwiftLanguageRuntime::GetRemoteASTContext(SwiftASTContext &swift_ast_ctx) {
     .first->second;
 }
 
+void SwiftLanguageRuntime::ReleaseAssociatedRemoteASTContext(
+    swift::ASTContext *ctx) {
+  m_remote_ast_contexts.erase(ctx);
+}
+
 llvm::Optional<uint64_t>
 SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
                                               ValueObject *instance,
