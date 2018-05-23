@@ -7,6 +7,7 @@
 @.str = private unnamed_addr constant [5 x i8] c"file\00", align 1
 @.str.1 = private unnamed_addr constant [2 x i8] c"w\00", align 1
 @.str.2 = private unnamed_addr constant [4 x i8] c"str\00", align 1
+@stdout = external global %struct._IO_FILE*, align 8
 @global_file = common global %struct._IO_FILE* null, align 8
 
 define void @external_fgetc_test(%struct._IO_FILE* %f) {
@@ -189,9 +190,35 @@ define void @test_captured_by_global_value() {
   ret void
 }
 
+define void @test_captured_by_standard_stream(i8* nocapture readonly %s) {
+; CHECK-LABEL: @test_captured_by_standard_stream(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call %struct._IO_FILE* @fopen(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0))
+; CHECK-NEXT:    [[TMP:%.*]] = load %struct._IO_FILE*, %struct._IO_FILE** @stdout, align 8
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call i32 @fputs(i8* [[S:%.*]], %struct._IO_FILE* [[TMP]])
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @fclose(%struct._IO_FILE* [[TMP]])
+; CHECK-NEXT:    ret void
+;
+  %call = tail call %struct._IO_FILE* @fopen(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0))
+  %tmp = load %struct._IO_FILE*, %struct._IO_FILE** @stdout, align 8
+  %call1 = tail call i32 @fputs(i8* %s, %struct._IO_FILE* %tmp)
+  %call2 = tail call i32 @fclose(%struct._IO_FILE* %tmp)
+  ret void
+}
 
+define void @test_captured_by_arg(i8* nocapture readonly %s, %struct._IO_FILE* nocapture %file) {
+; CHECK-LABEL: @test_captured_by_arg(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call %struct._IO_FILE* @fopen(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call i32 @fputs(i8* [[S:%.*]], %struct._IO_FILE* [[FILE:%.*]])
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @fclose(%struct._IO_FILE* [[FILE]])
+; CHECK-NEXT:    ret void
+;
+  %call = tail call %struct._IO_FILE* @fopen(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0))
+  %call1 = tail call i32 @fputs(i8* %s, %struct._IO_FILE* %file)
+  %call2 = tail call i32 @fclose(%struct._IO_FILE* %file)
+  ret void
+}
 
-declare i64 @fwrite(i8* nocapture, i64, i64, %struct._IO_FILE* nocapture) #0
-declare i64 @fread(i8* nocapture, i64, i64, %struct._IO_FILE* nocapture) #0
-declare i32 @fputs(i8* nocapture readonly, %struct._IO_FILE* nocapture) #0
-declare i8* @fgets(i8*, i32, %struct._IO_FILE* nocapture) #0
+declare i64 @fwrite(i8* nocapture, i64, i64, %struct._IO_FILE* nocapture)
+declare i64 @fread(i8* nocapture, i64, i64, %struct._IO_FILE* nocapture)
+declare i32 @fputs(i8* nocapture readonly, %struct._IO_FILE* nocapture)
+declare i8* @fgets(i8*, i32, %struct._IO_FILE* nocapture)

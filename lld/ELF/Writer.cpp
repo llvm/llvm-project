@@ -92,7 +92,7 @@ static bool isSectionPrefix(StringRef Prefix, StringRef Name) {
   return Name.startswith(Prefix) || Name == Prefix.drop_back();
 }
 
-StringRef elf::getOutputSectionName(InputSectionBase *S) {
+StringRef elf::getOutputSectionName(const InputSectionBase *S) {
   if (Config->Relocatable)
     return S->Name;
 

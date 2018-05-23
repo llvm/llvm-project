@@ -115,6 +115,11 @@ private:
   /// branch.
   bool AddressTaken = false;
 
+  /// Indicate that this basic block is the entry block of an EH scope, i.e.,
+  /// the block that used to have a catchpad or cleanuppad instruction in the
+  /// LLVM IR.
+  bool IsEHScopeEntry = false;
+
   /// Indicate that this basic block is the entry block of an EH funclet.
   bool IsEHFuncletEntry = false;
 
@@ -374,6 +379,14 @@ public:
   void setIsEHPad(bool V = true) { IsEHPad = V; }
 
   bool hasEHPadSuccessor() const;
+
+  /// Returns true if this is the entry block of an EH scope, i.e., the block
+  /// that used to have a catchpad or cleanuppad instruction in the LLVM IR.
+  bool isEHScopeEntry() const { return IsEHScopeEntry; }
+
+  /// Indicates if this is the entry block of an EH scope, i.e., the block that
+  /// that used to have a catchpad or cleanuppad instruction in the LLVM IR.
+  void setIsEHScopeEntry(bool V = true) { IsEHScopeEntry = V; }
 
   /// Returns true if this is the entry block of an EH funclet.
   bool isEHFuncletEntry() const { return IsEHFuncletEntry; }

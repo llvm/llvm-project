@@ -21,6 +21,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
+#include "lldb/Symbol/Variable.h"
 #include "lldb/Utility/RegularExpression.h"
 
 #include "llvm/DebugInfo/PDB/GenericError.h"
@@ -483,8 +484,51 @@ size_t SymbolFilePDB::ParseTypes(const lldb_private::SymbolContext &sc) {
 
 size_t
 SymbolFilePDB::ParseVariablesForContext(const lldb_private::SymbolContext &sc) {
-  // TODO: Implement this
-  return size_t();
+  if (!sc.comp_unit)
+    return 0;
+
+  size_t num_added = 0;
+  if (sc.function) {
+    auto pdb_func = m_session_up->getConcreteSymbolById<PDBSymbolFunc>(
+        sc.function->GetID());
+    if (!pdb_func)
+      return 0;
+
+    num_added += ParseVariables(sc, *pdb_func);
+    sc.function->GetBlock(false).SetDidParseVariables(true, true);
+  } else if (sc.comp_unit) {
+    auto compiland = GetPDBCompilandByUID(sc.comp_unit->GetID());
+    if (!compiland)
+      return 0;
+
+    if (sc.comp_unit->GetVariableList(false))
+      return 0;
+
+    auto results = m_global_scope_up->findAllChildren<PDBSymbolData>();
+    if (results && results->getChildCount()) {
+      while (auto result = results->getNext()) {
+        auto cu_id = result->getCompilandId();
+        // FIXME: We are not able to determine variable's compile unit.
+        if (cu_id == 0)
+          continue;
+
+        if (cu_id == sc.comp_unit->GetID())
+          num_added += ParseVariables(sc, *result);
+      }
+    }
+
+    // FIXME: A `file static` or `global constant` variable appears both in
+    // compiland's children and global scope's children with unexpectedly
+    // different symbol's Id making it ambiguous.
+
+    // FIXME: 'local constant', for example, const char var[] = "abc", declared
+    // in a function scope, can't be found in PDB.
+
+    // Parse variables in this compiland.
+    num_added += ParseVariables(sc, *compiland);
+  }
+
+  return num_added;
 }
 
 lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
@@ -714,18 +758,270 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
   return sc_list.GetSize() - old_size;
 }
 
+std::string SymbolFilePDB::GetMangledForPDBData(const PDBSymbolData &pdb_data) {
+  std::string decorated_name;
+  auto vm_addr = pdb_data.getVirtualAddress();
+  if (vm_addr != LLDB_INVALID_ADDRESS && vm_addr) {
+    auto result_up =
+        m_global_scope_up->findAllChildren(PDB_SymType::PublicSymbol);
+    if (result_up) {
+      while (auto symbol_up = result_up->getNext()) {
+        if (symbol_up->getRawSymbol().getVirtualAddress() == vm_addr) {
+          decorated_name = symbol_up->getRawSymbol().getName();
+          break;
+        }
+      }
+    }
+  }
+  if (!decorated_name.empty())
+    return decorated_name;
+
+  return std::string();
+}
+
+VariableSP SymbolFilePDB::ParseVariableForPDBData(
+    const lldb_private::SymbolContext &sc,
+    const llvm::pdb::PDBSymbolData &pdb_data) {
+  VariableSP var_sp;
+  uint32_t var_uid = pdb_data.getSymIndexId();
+  auto result = m_variables.find(var_uid);
+  if (result != m_variables.end())
+    return result->second;
+
+  ValueType scope = eValueTypeInvalid;
+  bool is_static_member = false;
+  bool is_external = false;
+  bool is_artificial = false;
+
+  switch (pdb_data.getDataKind()) {
+  case PDB_DataKind::Global:
+    scope = eValueTypeVariableGlobal;
+    is_external = true;
+    break;
+  case PDB_DataKind::Local:
+    scope = eValueTypeVariableLocal;
+    break;
+  case PDB_DataKind::FileStatic:
+    scope = eValueTypeVariableStatic;
+    break;
+  case PDB_DataKind::StaticMember:
+    is_static_member = true;
+    scope = eValueTypeVariableStatic;
+    break;
+  case PDB_DataKind::Member:
+    scope = eValueTypeVariableStatic;
+    break;
+  case PDB_DataKind::Param:
+    scope = eValueTypeVariableArgument;
+    break;
+  case PDB_DataKind::Constant:
+    scope = eValueTypeConstResult;
+    break;
+  default:
+    break;
+  }
+
+  switch (pdb_data.getLocationType()) {
+  case PDB_LocType::TLS:
+    scope = eValueTypeVariableThreadLocal;
+    break;
+  case PDB_LocType::RegRel: {
+    // It is a `this` pointer.
+    if (pdb_data.getDataKind() == PDB_DataKind::ObjectPtr) {
+      scope = eValueTypeVariableArgument;
+      is_artificial = true;
+    }
+  } break;
+  default:
+    break;
+  }
+
+  Declaration decl;
+  if (!is_artificial && !pdb_data.isCompilerGenerated()) {
+    if (auto lines = pdb_data.getLineNumbers()) {
+      if (auto first_line = lines->getNext()) {
+        uint32_t src_file_id = first_line->getSourceFileId();
+        auto src_file = m_session_up->getSourceFileById(src_file_id);
+        if (src_file) {
+          FileSpec spec(src_file->getFileName(), /*resolve_path*/ false);
+          decl.SetFile(spec);
+          decl.SetColumn(first_line->getColumnNumber());
+          decl.SetLine(first_line->getLineNumber());
+        }
+      }
+    }
+  }
+
+  Variable::RangeList ranges;
+  SymbolContextScope *context_scope = sc.comp_unit;
+  if (scope == eValueTypeVariableLocal) {
+    if (sc.function) {
+      context_scope = sc.function->GetBlock(true).FindBlockByID(
+          pdb_data.getClassParentId());
+      if (context_scope == nullptr)
+        context_scope = sc.function;
+    }
+  }
+
+  SymbolFileTypeSP type_sp =
+      std::make_shared<SymbolFileType>(*this, pdb_data.getTypeId());
+
+  auto var_name = pdb_data.getName();
+  auto mangled = GetMangledForPDBData(pdb_data);
+  auto mangled_cstr = mangled.empty() ? nullptr : mangled.c_str();
+
+  DWARFExpression location(nullptr);
+
+  var_sp = std::make_shared<Variable>(
+      var_uid, var_name.c_str(), mangled_cstr, type_sp, scope, context_scope,
+      ranges, &decl, location, is_external, is_artificial, is_static_member);
+
+  m_variables.insert(std::make_pair(var_uid, var_sp));
+  return var_sp;
+}
+
+size_t
+SymbolFilePDB::ParseVariables(const lldb_private::SymbolContext &sc,
+                              const llvm::pdb::PDBSymbol &pdb_symbol,
+                              lldb_private::VariableList *variable_list) {
+  size_t num_added = 0;
+
+  if (auto pdb_data = llvm::dyn_cast<PDBSymbolData>(&pdb_symbol)) {
+    VariableListSP local_variable_list_sp;
+
+    auto result = m_variables.find(pdb_data->getSymIndexId());
+    if (result != m_variables.end()) {
+      if (variable_list)
+        variable_list->AddVariableIfUnique(result->second);
+    } else {
+      // Prepare right VariableList for this variable.
+      if (auto lexical_parent = pdb_data->getLexicalParent()) {
+        switch (lexical_parent->getSymTag()) {
+        case PDB_SymType::Exe:
+          assert(sc.comp_unit);
+          LLVM_FALLTHROUGH;
+        case PDB_SymType::Compiland: {
+          if (sc.comp_unit) {
+            local_variable_list_sp = sc.comp_unit->GetVariableList(false);
+            if (!local_variable_list_sp) {
+              local_variable_list_sp = std::make_shared<VariableList>();
+              sc.comp_unit->SetVariableList(local_variable_list_sp);
+            }
+          }
+        } break;
+        case PDB_SymType::Block:
+        case PDB_SymType::Function: {
+          if (sc.function) {
+            Block *block = sc.function->GetBlock(true).FindBlockByID(
+                lexical_parent->getSymIndexId());
+            if (block) {
+              local_variable_list_sp = block->GetBlockVariableList(false);
+              if (!local_variable_list_sp) {
+                local_variable_list_sp = std::make_shared<VariableList>();
+                block->SetVariableList(local_variable_list_sp);
+              }
+            }
+          }
+        } break;
+        default:
+          break;
+        }
+      }
+
+      if (local_variable_list_sp) {
+        if (auto var_sp = ParseVariableForPDBData(sc, *pdb_data)) {
+          local_variable_list_sp->AddVariableIfUnique(var_sp);
+          if (variable_list)
+            variable_list->AddVariableIfUnique(var_sp);
+          ++num_added;
+        }
+      }
+    }
+  }
+
+  if (auto results = pdb_symbol.findAllChildren()) {
+    while (auto result = results->getNext())
+      num_added += ParseVariables(sc, *result, variable_list);
+  }
+
+  return num_added;
+}
+
 uint32_t SymbolFilePDB::FindGlobalVariables(
     const lldb_private::ConstString &name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx, bool append,
     uint32_t max_matches, lldb_private::VariableList &variables) {
-  return uint32_t();
+  if (!append)
+    variables.Clear();
+  if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
+    return 0;
+  if (name.IsEmpty())
+    return 0;
+
+  auto results =
+      m_global_scope_up->findChildren(PDB_SymType::Data, name.GetStringRef(),
+                                      PDB_NameSearchFlags::NS_CaseSensitive);
+  if (!results)
+    return 0;
+
+  uint32_t matches = 0;
+  size_t old_size = variables.GetSize();
+  while (auto result = results->getNext()) {
+    auto pdb_data = llvm::dyn_cast<PDBSymbolData>(result.get());
+    if (max_matches > 0 && matches >= max_matches)
+      break;
+
+    SymbolContext sc;
+    sc.module_sp = m_obj_file->GetModule();
+    lldbassert(sc.module_sp.get());
+
+    sc.comp_unit = ParseCompileUnitForUID(pdb_data->getCompilandId()).get();
+    // FIXME: We are not able to determine the compile unit.
+    if (sc.comp_unit == nullptr)
+      continue;
+
+    ParseVariables(sc, *pdb_data, &variables);
+    matches = variables.GetSize() - old_size;
+  }
+
+  return matches;
 }
 
 uint32_t
 SymbolFilePDB::FindGlobalVariables(const lldb_private::RegularExpression &regex,
                                    bool append, uint32_t max_matches,
                                    lldb_private::VariableList &variables) {
-  return uint32_t();
+  if (!regex.IsValid())
+    return 0;
+  auto results = m_global_scope_up->findAllChildren<PDBSymbolData>();
+  if (!results)
+    return 0;
+
+  uint32_t matches = 0;
+  size_t old_size = variables.GetSize();
+  while (auto pdb_data = results->getNext()) {
+    if (max_matches > 0 && matches >= max_matches)
+      break;
+
+    auto var_name = pdb_data->getName();
+    if (var_name.empty())
+      continue;
+    if (!regex.Execute(var_name))
+      continue;
+    SymbolContext sc;
+    sc.module_sp = m_obj_file->GetModule();
+    lldbassert(sc.module_sp.get());
+
+    sc.comp_unit = ParseCompileUnitForUID(pdb_data->getCompilandId()).get();
+    // FIXME: We are not able to determine the compile unit.
+    if (sc.comp_unit == nullptr)
+      continue;
+
+    ParseVariables(sc, *pdb_data, &variables);
+    matches = variables.GetSize() - old_size;
+  }
+
+  return matches;
 }
 
 bool SymbolFilePDB::ResolveFunction(const llvm::pdb::PDBSymbolFunc &pdb_func,
