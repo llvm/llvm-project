@@ -975,6 +975,10 @@ void LoopUnswitch::UnswitchTrivialCondition(Loop *L, Value *Cond, Constant *Val,
                     << " blocks] in Function "
                     << L->getHeader()->getParent()->getName()
                     << " on cond: " << *Val << " == " << *Cond << "\n");
+  // We are going to make essential changes to CFG. This may invalidate cached
+  // information for L or one of its parent loops in SCEV.
+  if (auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>())
+    SEWP->getSE().forgetTopmostLoop(L);
 
   // First step, split the preheader, so that we know that there is a safe place
   // to insert the conditional branch.  We will change loopPreheader to have a
@@ -1201,8 +1205,10 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
                     << " blocks] in Function " << F->getName() << " when '"
                     << *Val << "' == " << *LIC << "\n");
 
+  // We are going to make essential changes to CFG. This may invalidate cached
+  // information for L or one of its parent loops in SCEV.
   if (auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>())
-    SEWP->getSE().forgetLoop(L);
+    SEWP->getSE().forgetTopmostLoop(L);
 
   LoopBlocks.clear();
   NewBlocks.clear();

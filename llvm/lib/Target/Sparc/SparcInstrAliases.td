@@ -474,6 +474,19 @@ def : InstAlias<"wr $simm13, %tbr", (WRTBRri G0, i32imm:$simm13), 0>;
 // flush -> flush %g0
 def : InstAlias<"flush", (FLUSH), 0>;
 
+def : MnemonicAlias<"iflush", "flush">;
+
+def : MnemonicAlias<"stub", "stb">;
+def : MnemonicAlias<"stsb", "stb">;
+
+def : MnemonicAlias<"stuba", "stba">;
+def : MnemonicAlias<"stsba", "stba">;
+
+def : MnemonicAlias<"stuh", "sth">;
+def : MnemonicAlias<"stsh", "sth">;
+
+def : MnemonicAlias<"stuha", "stha">;
+def : MnemonicAlias<"stsha", "stha">;
 
 def : MnemonicAlias<"lduw", "ld">, Requires<[HasV9]>;
 def : MnemonicAlias<"lduwa", "lda">, Requires<[HasV9]>;

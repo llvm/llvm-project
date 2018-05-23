@@ -564,7 +564,7 @@ unsigned long test_mm512_mask_reduce_max_epu64(__mmask8 __M, __m512i __W){
 // CHECK:   store <8 x double> [[TMP1]], <8 x double>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP2:%.*]] = load i8, i8* [[__M_ADDR_I]], align 1
 // CHECK:   [[TMP3:%.*]] = load <8 x double>, <8 x double>* [[__V_ADDR_I]], align 64
-// CHECK:   store double 0x7FF0000000000000, double* [[__W_ADDR_I_I]], align 8
+// CHECK:   store double 0xFFF0000000000000, double* [[__W_ADDR_I_I]], align 8
 // CHECK:   [[TMP4:%.*]] = load double, double* [[__W_ADDR_I_I]], align 8
 // CHECK:   [[VECINIT_I_I:%.*]] = insertelement <8 x double> undef, double [[TMP4]], i32 0
 // CHECK:   [[TMP5:%.*]] = load double, double* [[__W_ADDR_I_I]], align 8
@@ -583,9 +583,8 @@ unsigned long test_mm512_mask_reduce_max_epu64(__mmask8 __M, __m512i __W){
 // CHECK:   [[VECINIT7_I_I:%.*]] = insertelement <8 x double> [[VECINIT6_I_I]], double [[TMP11]], i32 7
 // CHECK:   store <8 x double> [[VECINIT7_I_I]], <8 x double>* [[_COMPOUNDLITERAL_I_I]], align 64
 // CHECK:   [[TMP12:%.*]] = load <8 x double>, <8 x double>* [[_COMPOUNDLITERAL_I_I]], align 64
-// CHECK:   [[SUB_I:%.*]] = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, [[TMP12]]
 // CHECK:   [[TMP13:%.*]] = bitcast i8 [[TMP2]] to <8 x i1>
-// CHECK:   [[TMP14:%.*]] = select <8 x i1> [[TMP13]], <8 x double> [[TMP3]], <8 x double> [[SUB_I]]
+// CHECK:   [[TMP14:%.*]] = select <8 x i1> [[TMP13]], <8 x double> [[TMP3]], <8 x double> [[TMP12]]
 // CHECK:   store <8 x double> [[TMP14]], <8 x double>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP15:%.*]] = load <8 x double>, <8 x double>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP16:%.*]] = load <8 x double>, <8 x double>* [[__V_ADDR_I]], align 64
@@ -1859,7 +1858,7 @@ unsigned int test_mm512_mask_reduce_max_epu32(__mmask16 __M, __m512i __W){
 // CHECK:   store <16 x float> [[TMP1]], <16 x float>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP2:%.*]] = load i16, i16* [[__M_ADDR_I]], align 2
 // CHECK:   [[TMP3:%.*]] = load <16 x float>, <16 x float>* [[__V_ADDR_I]], align 64
-// CHECK:   store float 0x7FF0000000000000, float* [[__W_ADDR_I_I]], align 4
+// CHECK:   store float 0xFFF0000000000000, float* [[__W_ADDR_I_I]], align 4
 // CHECK:   [[TMP4:%.*]] = load float, float* [[__W_ADDR_I_I]], align 4
 // CHECK:   [[VECINIT_I_I:%.*]] = insertelement <16 x float> undef, float [[TMP4]], i32 0
 // CHECK:   [[TMP5:%.*]] = load float, float* [[__W_ADDR_I_I]], align 4
@@ -1894,9 +1893,8 @@ unsigned int test_mm512_mask_reduce_max_epu32(__mmask16 __M, __m512i __W){
 // CHECK:   [[VECINIT15_I_I:%.*]] = insertelement <16 x float> [[VECINIT14_I_I]], float [[TMP19]], i32 15
 // CHECK:   store <16 x float> [[VECINIT15_I_I]], <16 x float>* [[_COMPOUNDLITERAL_I_I]], align 64
 // CHECK:   [[TMP20:%.*]] = load <16 x float>, <16 x float>* [[_COMPOUNDLITERAL_I_I]], align 64
-// CHECK:   [[SUB_I:%.*]] = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[TMP20]]
 // CHECK:   [[TMP21:%.*]] = bitcast i16 [[TMP2]] to <16 x i1>
-// CHECK:   [[TMP22:%.*]] = select <16 x i1> [[TMP21]], <16 x float> [[TMP3]], <16 x float> [[SUB_I]]
+// CHECK:   [[TMP22:%.*]] = select <16 x i1> [[TMP21]], <16 x float> [[TMP3]], <16 x float> [[TMP20]]
 // CHECK:   store <16 x float> [[TMP22]], <16 x float>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP23:%.*]] = load <16 x float>, <16 x float>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP24:%.*]] = load <16 x float>, <16 x float>* [[__V_ADDR_I]], align 64

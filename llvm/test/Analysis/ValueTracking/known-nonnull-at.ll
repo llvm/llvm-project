@@ -98,3 +98,24 @@ exc:
   unreachable
 }
 
+declare i8* @returningPtr(i8* returned %p)
+
+define i1 @nonnullReturnTest(i8* nonnull %x) {
+; CHECK-LABEL: @nonnullReturnTest(
+; CHECK-NEXT:    %x2 = call i8* @returningPtr(i8* %x)
+; CHECK-NEXT:    ret i1 false
+  %x2 = call i8* @returningPtr(i8* %x)
+  %null_check = icmp eq i8* %x2, null
+  ret i1 %null_check
+}
+
+define i1 @unknownReturnTest(i8* %x) {
+; CHECK-LABEL: @unknownReturnTest(
+; CHECK-NEXT:    %x2 = call i8* @returningPtr(i8* %x)
+; CHECK-NEXT:    %null_check = icmp eq i8* %x2, null
+; CHECK-NEXT:    ret i1 %null_check
+  %x2 = call i8* @returningPtr(i8* %x)
+  %null_check = icmp eq i8* %x2, null
+  ret i1 %null_check
+}
+
