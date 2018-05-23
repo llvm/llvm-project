@@ -309,6 +309,11 @@ public:
   swift::remoteAST::RemoteASTContext &
   GetRemoteASTContext(SwiftASTContext &swift_ast_ctx);
 
+  /// Release the RemoteASTContext associated with the given swift::ASTContext.
+  /// Note that a RemoteASTContext must be destroyed before its associated
+  /// swift::ASTContext is destroyed.
+  void ReleaseAssociatedRemoteASTContext(swift::ASTContext *ctx);
+
   /// Retrieve the offset of the named member variable within an instance
   /// of the given type.
   ///

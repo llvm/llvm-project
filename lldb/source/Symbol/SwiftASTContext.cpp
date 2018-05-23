@@ -861,8 +861,15 @@ SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
 }
 
 SwiftASTContext::~SwiftASTContext() {
-  if (m_ast_context_ap.get()) {
-    GetASTMap().Erase(m_ast_context_ap.get());
+  if (swift::ASTContext *ctx = m_ast_context_ap.get()) {
+    // A RemoteASTContext associated with this swift::ASTContext has to be
+    // destroyed before the swift::ASTContext is destroyed.
+    if (TargetSP target_sp = m_target_wp.lock())
+      if (ProcessSP process_sp = target_sp->GetProcessSP())
+        if (auto *runtime = process_sp->GetSwiftLanguageRuntime())
+          runtime->ReleaseAssociatedRemoteASTContext(ctx);
+
+    GetASTMap().Erase(ctx);
   }
 }
 
