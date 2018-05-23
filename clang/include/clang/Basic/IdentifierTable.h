@@ -825,6 +825,9 @@ public:
   static Selector constructSetterSelector(IdentifierTable &Idents,
                                           SelectorTable &SelTable,
                                           const IdentifierInfo *Name);
+
+  /// Return the property name for the given setter selector.
+  static std::string getPropertyNameFromSetterSelector(Selector Sel);
 };
 
 /// DeclarationNameExtra - Common base of the MultiKeywordSelector,

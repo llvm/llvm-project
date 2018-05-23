@@ -12,10 +12,10 @@ declare i64 @llabs(i64)
 
 define i32 @test_abs(i32 %x) {
 ; CHECK-LABEL: @test_abs(
-; CHECK-NEXT:    [[ISPOS:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISPOS]], i32 [[NEG]], i32 [[X]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[NEG]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %ret = call i32 @abs(i32 %x)
   ret i32 %ret
@@ -23,10 +23,10 @@ define i32 @test_abs(i32 %x) {
 
 define i64 @test_labs(i64 %x) {
 ; CHECK-LABEL: @test_labs(
-; CHECK-NEXT:    [[ISPOS:%.*]] = icmp slt i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[X]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISPOS]], i64 [[NEG]], i64 [[X]]
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i64 0, [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 [[NEG]], i64 [[X]]
+; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %ret = call i64 @labs(i64 %x)
   ret i64 %ret
@@ -34,10 +34,10 @@ define i64 @test_labs(i64 %x) {
 
 define i64 @test_llabs(i64 %x) {
 ; CHECK-LABEL: @test_llabs(
-; CHECK-NEXT:    [[ISPOS:%.*]] = icmp slt i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[X]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISPOS]], i64 [[NEG]], i64 [[X]]
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i64 0, [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 [[NEG]], i64 [[X]]
+; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %ret = call i64 @llabs(i64 %x)
   ret i64 %ret

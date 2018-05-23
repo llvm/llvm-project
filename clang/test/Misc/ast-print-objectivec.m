@@ -50,3 +50,13 @@ struct __attribute__((objc_bridge_related(C1,,))) S1;
 
 // CHECK: @class C1;
 // CHECK: struct __attribute__((objc_bridge_related(C1, , ))) S1;
+
+@interface ImplicitPropertyWithSetterOnly
+
+- (void)setX:(int)x;
+
+@end
+
+void printImplicitPropertyWithSetterOnly(ImplicitPropertyWithSetterOnly *x) {
+  x.x = 313; // CHECK: x.x = 313;
+}
