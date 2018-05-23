@@ -82,5 +82,19 @@ TEST(ClusteringTest, Clusters3D_InvalidOrder) {
   consumeError(std::move(Error));
 }
 
+TEST(ClusteringTest, Ordering) {
+  ASSERT_LT(InstructionBenchmarkClustering::ClusterId::makeValid(1),
+            InstructionBenchmarkClustering::ClusterId::makeValid(2));
+
+  ASSERT_LT(InstructionBenchmarkClustering::ClusterId::makeValid(2),
+            InstructionBenchmarkClustering::ClusterId::noise());
+
+  ASSERT_LT(InstructionBenchmarkClustering::ClusterId::makeValid(2),
+            InstructionBenchmarkClustering::ClusterId::error());
+
+  ASSERT_LT(InstructionBenchmarkClustering::ClusterId::noise(),
+            InstructionBenchmarkClustering::ClusterId::error());
+}
+
 } // namespace
 } // namespace exegesis

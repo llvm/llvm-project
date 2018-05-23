@@ -175,15 +175,20 @@ const RegisterBank &ARMRegisterBankInfo::getRegBankFromRegClass(
 
   switch (RC.getID()) {
   case GPRRegClassID:
+  case GPRwithAPSRRegClassID:
   case GPRnopcRegClassID:
+  case rGPRRegClassID:
   case GPRspRegClassID:
   case tGPR_and_tcGPRRegClassID:
+  case tcGPRRegClassID:
   case tGPRRegClassID:
     return getRegBank(ARM::GPRRegBankID);
+  case HPRRegClassID:
   case SPR_8RegClassID:
   case SPRRegClassID:
   case DPR_8RegClassID:
   case DPRRegClassID:
+  case QPRRegClassID:
     return getRegBank(ARM::FPRRegBankID);
   default:
     llvm_unreachable("Unsupported register kind");

@@ -9,9 +9,16 @@
 // RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21O -input-file=%T/optimized.cpp
 
 // RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20N -input-file=%T/non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20O -input-file=%T/optimized.cpp
+
 // RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00N -input-file=%T/non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00O -input-file=%T/optimized.cpp
+
 // RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01N -input-file=%T/non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01O -input-file=%T/optimized.cpp
+
 // RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02N,NOOPT -input-file=%T/non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02O       -input-file=%T/optimized.cpp
 
 // RUN: diff %T/default.cpp %T/optimized.cpp
 
@@ -239,20 +246,27 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 //===- Test a pattern with multiple ComplexPatterns in multiple instrs ----===//
 //
+// R19O-NEXT:  GIM_SwitchOpcode, /*MI*/0, /*[*/{{[0-9]+}}, {{[0-9]+}}, /*)*//*default:*//*Label [[DEFAULT_NUM:[0-9]+]]*/ [[DEFAULT:[0-9]+]],
+// R19O-NEXT:  /*TargetOpcode::G_ADD*//*Label [[CASE_ADD_NUM:[0-9]+]]*/ [[CASE_ADD:[0-9]+]],
+// R19O:       /*TargetOpcode::G_SELECT*//*Label [[CASE_SELECT_NUM:[0-9]+]]*/ [[CASE_SELECT:[0-9]+]],
+// R19O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
+// R19O:       // Label [[CASE_SELECT_NUM]]: @[[CASE_SELECT]]
 // R19O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ [[GROUP:[0-9]+]],
-// R19O-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
+// R19O-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 //
 // R19C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
+//
 // R19N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // R19N-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
 // R19N-NEXT:    // MIs[0] dst
-// R19C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// R19N-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // R19N-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
 // R19N-NEXT:    // MIs[0] src1
 // R19C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // R19N-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
 // R19N-NEXT:    // MIs[0] Operand 2
 // R19C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
+//
 // R19N-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/0, GICP_gi_complex_rr,
 // R19C-NEXT:    // MIs[0] Operand 3
 // R19C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/3, /*Type*/GILLT_s32,
@@ -298,8 +312,11 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // R19C-NEXT:    GIR_Done,
 // R19C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 //
-// R19O:         GIM_Reject,
-// R19O-NEXT:  // Label [[GROUP_NUM]]: @[[GROUP]]
+// R19O:       // Label [[GROUP_NUM]]: @[[GROUP]]
+// R19O-NEXT:  GIM_Reject,
+// R19O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
+// R19O-NEXT:  GIM_Reject,
+// R19O-NEXT:  };
 
 def INSN3 : I<(outs GPR32:$dst),
               (ins GPR32Op:$src1, GPR32:$src2a, GPR32:$src2b, GPR32:$scr), []>;
@@ -313,8 +330,13 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
                  (INSN4 GPR32:$src3, complex:$src4, i32imm:$src5a,
                         i32imm:$src5b))>;
 
+// R21O-NEXT:  GIM_SwitchOpcode, /*MI*/0, /*[*/{{[0-9]+}}, {{[0-9]+}}, /*)*//*default:*//*Label [[DEFAULT_NUM:[0-9]+]]*/ [[DEFAULT:[0-9]+]],
+// R21O-NEXT:  /*TargetOpcode::G_ADD*//*Label [[CASE_ADD_NUM:[0-9]+]]*/ [[CASE_ADD:[0-9]+]],
+// R21O:       /*TargetOpcode::G_SELECT*//*Label [[CASE_SELECT_NUM:[0-9]+]]*/ [[CASE_SELECT:[0-9]+]],
+// R21O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
+// R21O:       // Label [[CASE_SELECT_NUM]]: @[[CASE_SELECT]]
 // R21O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ [[GROUP:[0-9]+]],
-// R21O-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
+// R21O-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 //
 // R21C-NEXT:  GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ [[PREV:[0-9]+]], // Rule ID 19 //
 // R21C-NOT:     GIR_Done,
@@ -326,13 +348,14 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R21N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // R21N-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
 // R21N-NEXT:    // MIs[0] dst
-// R21C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// R21N-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // R21N-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
 // R21N-NEXT:    // MIs[0] src1
 // R21C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // R21N-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
 // R21N-NEXT:    // MIs[0] src2
 // R21C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
+//
 // R21N-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/0, GICP_gi_complex,
 // R21N-NEXT:    // MIs[0] src3
 // R21C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/3, /*Type*/GILLT_s32,
@@ -353,10 +376,22 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R21C-NEXT:    GIR_Done,
 // R21C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 //
-// R21O-NEXT:    GIM_Reject,
+// R21O-NEXT:  GIM_Reject,
 // R21O-NEXT:  // Label [[GROUP_NUM]]: @[[GROUP]]
+// R21O-NEXT:  GIM_Reject,
+// R21O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
+// R21O-NEXT:  GIM_Reject,
+// R21O-NEXT:  };
 
 //===- Test a pattern with ComplexPattern operands. -----------------------===//
+//
+// R20O-NEXT:  GIM_SwitchOpcode, /*MI*/0, /*[*/{{[0-9]+}}, {{[0-9]+}}, /*)*//*default:*//*Label [[DEFAULT_NUM:[0-9]+]]*/ [[DEFAULT:[0-9]+]],
+// R20O-NEXT:  /*TargetOpcode::G_ADD*//*Label [[CASE_ADD_NUM:[0-9]+]]*/ [[CASE_ADD:[0-9]+]],
+// R20O:       /*TargetOpcode::G_SUB*//*Label [[CASE_SUB_NUM:[0-9]+]]*/ [[CASE_SUB:[0-9]+]],
+// R20O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
+// R20O:       // Label [[CASE_SUB_NUM]]: @[[CASE_SUB]]
+// R20O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ [[GROUP:[0-9]+]],
+// R20O-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 //
 // R20N:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ [[PREV:[0-9]+]], // Rule ID 21 //
 // R20N:       // Label [[PREV_NUM]]: @[[PREV]]
@@ -372,9 +407,11 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R20C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 //
 // R20N-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
-// R20C-NEXT:    // MIs[0] src2
+// R20N-NEXT:    // MIs[0] src2
 // R20C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // R20C-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/0, GICP_gi_complex,
+// R20O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// R20O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
 // R20C-NEXT:    // (sub:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2) => (INSN1:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2)
 // R20C-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSN1,
 // R20C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -385,6 +422,12 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R20C-NEXT:    // GIR_Coverage, 20,
 // R20C-NEXT:    GIR_Done,
 // R20C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+//
+// R20O:       // Label [[GROUP_NUM]]: @[[GROUP]]
+// R20O-NEXT:  GIM_Reject,
+// R20O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
+// R20O-NEXT:  GIM_Reject,
+// R20O-NEXT:  };
 
 def INSN1 : I<(outs GPR32:$dst), (ins GPR32:$src1, complex:$src2), []>;
 def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
@@ -399,6 +442,14 @@ def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
           (INSN2 GPR32:$src1, complex:$src3, complex:$src2)>;
 
 //===- Test a more complex multi-instruction match. -----------------------===//
+//
+// R00O-NEXT:  GIM_SwitchOpcode, /*MI*/0, /*[*/{{[0-9]+}}, {{[0-9]+}}, /*)*//*default:*//*Label [[DEFAULT_NUM:[0-9]+]]*/ [[DEFAULT:[0-9]+]],
+// R00O-NEXT:  /*TargetOpcode::G_ADD*//*Label [[CASE_ADD_NUM:[0-9]+]]*/ [[CASE_ADD:[0-9]+]],
+// R00O:       /*TargetOpcode::G_SUB*//*Label [[CASE_SUB_NUM:[0-9]+]]*/ [[CASE_SUB:[0-9]+]],
+// R00O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
+// R00O:       // Label [[CASE_SUB_NUM]]: @[[CASE_SUB]]
+// R00O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ [[GROUP:[0-9]+]],
+// R00O-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 //
 // R00C:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ [[PREV:[0-9]+]], // Rule ID 20 //
 // R00C:       // Label [[PREV_NUM]]: @[[PREV]]
@@ -419,6 +470,7 @@ def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
 // R00N-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s32,
 // R00N-NEXT:    // MIs[1] src1
 // R00C-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
+// R00O-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
 // R00N-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
 // R00N-NEXT:    // MIs[1] src2
 // R00N-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
@@ -432,12 +484,18 @@ def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
 // R00N-NEXT:    GIM_CheckType, /*MI*/2, /*Op*/0, /*Type*/GILLT_s32,
 // R00N-NEXT:    // MIs[2] src3
 // R00C-NEXT:    GIM_CheckType, /*MI*/2, /*Op*/1, /*Type*/GILLT_s32,
+// R00O-NEXT:    GIM_CheckType, /*MI*/2, /*Op*/2, /*Type*/GILLT_s32,
 // R00N-NEXT:    GIM_CheckRegBankForClass, /*MI*/2, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
 // R00N-NEXT:    // MIs[2] src4
 // R00N-NEXT:    GIM_CheckType, /*MI*/2, /*Op*/2, /*Type*/GILLT_s32,
 // R00N-NEXT:    GIM_CheckRegBankForClass, /*MI*/2, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
 // R00C-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/1,
 // R00C-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/2,
+// R00O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// R00O-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
+// R00O-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
+// R00O-NEXT:    GIM_CheckRegBankForClass, /*MI*/2, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
+// R00O-NEXT:    GIM_CheckRegBankForClass, /*MI*/2, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
 // R00C-NEXT:    // (sub:{ *:[i32] } (sub:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2), (sub:{ *:[i32] } GPR32:{ *:[i32] }:$src3, GPR32:{ *:[i32] }:$src4)) => (INSNBOB:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2, GPR32:{ *:[i32] }:$src3, GPR32:{ *:[i32] }:$src4)
 // R00C-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSNBOB,
 // R00C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -450,6 +508,13 @@ def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
 // R00C-NEXT:    // GIR_Coverage, 0,
 // R00C-NEXT:    GIR_Done,
 // R00C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+//
+// R00O-NEXT:  GIM_Reject,
+// R00O-NEXT:  // Label [[GROUP_NUM]]: @[[GROUP]]
+// R00O-NEXT:  GIM_Reject,
+// R00O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
+// R00O-NEXT:  GIM_Reject,
+// R00O-NEXT:  };
 
 def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, GPR32:$src4),
                  [(set GPR32:$dst,
@@ -458,11 +523,22 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 
 //===- Test a simple pattern with an intrinsic. ---------------------------===//
 //
+// R01O-NEXT:  GIM_SwitchOpcode, /*MI*/0, /*[*/{{[0-9]+}}, {{[0-9]+}}, /*)*//*default:*//*Label [[DEFAULT_NUM:[0-9]+]]*/ [[DEFAULT:[0-9]+]],
+// R01O-NEXT:  /*TargetOpcode::G_ADD*//*Label [[CASE_ADD_NUM:[0-9]+]]*/ [[CASE_ADD:[0-9]+]],
+// R01O:       /*TargetOpcode::G_INTRINSIC*//*Label [[CASE_INTRINSIC_NUM:[0-9]+]]*/ [[CASE_INTRINSIC:[0-9]+]],
+// R01O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
+// R01O:       // Label [[CASE_INTRINSIC_NUM]]: @[[CASE_INTRINSIC]]
+//
 // R01N:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ [[PREV:[0-9]+]], // Rule ID 0 //
 // R01N:       // Label [[PREV_NUM]]: @[[PREV]]
 //
 // R01C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]], // Rule ID 1 //
 // R01C-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
+//
+// R01O-NEXT:    GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, Intrinsic::mytarget_nop,
+// R01O-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// R01O-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
+// R01O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
 //
 // R01N-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_INTRINSIC,
 // R01N-NEXT:    // MIs[0] dst
@@ -483,11 +559,23 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // R01C-NEXT:    // GIR_Coverage, 1,
 // R01C-NEXT:    GIR_Done,
 // R01C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+//
+// R01O-NEXT:  GIM_Reject,
+// R01O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
+// R01O-NEXT:  GIM_Reject,
 
 def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
             [(set GPR32:$dst, (int_mytarget_nop GPR32:$src1))]>;
 
 //===- Test a simple pattern with a default operand. ----------------------===//
+//
+// R02O-NEXT:  GIM_SwitchOpcode, /*MI*/0, /*[*/{{[0-9]+}}, {{[0-9]+}}, /*)*//*default:*//*Label [[DEFAULT_NUM:[0-9]+]]*/ [[DEFAULT:[0-9]+]],
+// R02O-NEXT:  /*TargetOpcode::G_ADD*//*Label [[CASE_ADD_NUM:[0-9]+]]*/ [[CASE_ADD:[0-9]+]],
+// R02O:       /*TargetOpcode::G_XOR*//*Label [[CASE_XOR_NUM:[0-9]+]]*/ [[CASE_XOR:[0-9]+]],
+// R02O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
+// R02O:       // Label [[CASE_XOR_NUM]]: @[[CASE_XOR]]
+// R02O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ [[GROUP:[0-9]+]],
+// R02O-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 //
 // R02N:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ [[PREV:[0-9]+]], // Rule ID 1 //
 // R02N:       // Label [[PREV_NUM]]: @[[PREV]]
@@ -505,6 +593,8 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // R02C-NEXT:    // MIs[0] Operand 2
 // R02C-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // R02C-NEXT:    GIM_CheckConstantInt, /*MI*/0, /*Op*/2, -2
+// R02O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// R02O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
 // R02C-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -2:{ *:[i32] }) => (XORI:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // R02C-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XORI,
 // R02C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -515,6 +605,9 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // R02C-NEXT:    // GIR_Coverage, 2,
 // R02C-NEXT:    GIR_Done,
 // R02C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+//
+// R02O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
+// R02O-NEXT:  GIM_Reject,
 
 // The -2 is just to distinguish it from the 'not' case below.
 def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),

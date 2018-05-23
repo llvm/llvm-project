@@ -588,6 +588,18 @@ const SISubtarget *SITargetLowering::getSubtarget() const {
 // TargetLowering queries
 //===----------------------------------------------------------------------===//
 
+// v_mad_mix* support a conversion from f16 to f32.
+//
+// There is only one special case when denormals are enabled we don't currently,
+// where this is OK to use.
+bool SITargetLowering::isFPExtFoldable(unsigned Opcode,
+                                           EVT DestVT, EVT SrcVT) const {
+  return ((Opcode == ISD::FMAD && Subtarget->hasMadMixInsts()) ||
+          (Opcode == ISD::FMA && Subtarget->hasFmaMixInsts())) &&
+         DestVT.getScalarType() == MVT::f32 && !Subtarget->hasFP32Denormals() &&
+         SrcVT.getScalarType() == MVT::f16;
+}
+
 bool SITargetLowering::isShuffleMaskLegal(ArrayRef<int>, EVT) const {
   // SI has some legal vector types, but no legal vector operations. Say no
   // shuffles are legal in order to prefer scalarizing some vector operations.

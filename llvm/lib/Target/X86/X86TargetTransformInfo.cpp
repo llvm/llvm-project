@@ -245,12 +245,13 @@ int X86TTIImpl::getArithmeticInstrCost(
   }
 
   if (ISD == ISD::SDIV &&
-      Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
+      (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
+       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
       Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
     // On X86, vector signed division by constants power-of-two are
     // normally expanded to the sequence SRA + SRL + ADD + SRA.
-    // The OperandValue properties many not be same as that of previous
-    // operation;conservatively assume OP_None.
+    // The OperandValue properties may not be the same as that of the previous
+    // operation; conservatively assume OP_None.
     int Cost = 2 * getArithmeticInstrCost(Instruction::AShr, Ty, Op1Info,
                                           Op2Info, TargetTransformInfo::OP_None,
                                           TargetTransformInfo::OP_None);

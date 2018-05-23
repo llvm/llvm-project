@@ -226,9 +226,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       const Instruction *PadInst = BB.getFirstNonPHI();
       // If this is a non-landingpad EH pad, mark this function as using
       // funclets.
-      // FIXME: SEH catchpads do not create funclets, so we could avoid setting
-      // this in such cases in order to improve frame layout.
+      // FIXME: SEH catchpads do not create EH scope/funclets, so we could avoid
+      // setting this in such cases in order to improve frame layout.
       if (!isa<LandingPadInst>(PadInst)) {
+        MF->setHasEHScopes(true);
         MF->setHasEHFunclets(true);
         MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
       }

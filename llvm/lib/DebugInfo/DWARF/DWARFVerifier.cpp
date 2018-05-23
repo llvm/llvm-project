@@ -362,10 +362,9 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
                              ParentRI.Die.getTag() == DW_TAG_subprogram);
   if (ShouldBeContained && !ParentRI.contains(RI)) {
     ++NumErrors;
-    error() << "DIE address ranges are not "
-               "contained in its parent's ranges:";
-    Die.dump(OS, 0);
+    error() << "DIE address ranges are not contained in its parent's ranges:";
     ParentRI.Die.dump(OS, 0);
+    Die.dump(OS, 2);
     OS << "\n";
   }
 
@@ -409,7 +408,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     ReportError("DIE has invalid DW_AT_stmt_list encoding:");
     break;
   case DW_AT_location: {
-    auto VerifyLocation = [&](StringRef D) {
+    auto VerifyLocationExpr = [&](StringRef D) {
       DWARFUnit *U = Die.getDwarfUnit();
       DataExtractor Data(D, DCtx.isLittleEndian(), 0);
       DWARFExpression Expression(Data, U->getVersion(),
@@ -422,13 +421,13 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     };
     if (Optional<ArrayRef<uint8_t>> Expr = AttrValue.Value.getAsBlock()) {
       // Verify inlined location.
-      VerifyLocation(llvm::toStringRef(*Expr));
-    } else if (auto LocOffset = AttrValue.Value.getAsUnsignedConstant()) {
+      VerifyLocationExpr(llvm::toStringRef(*Expr));
+    } else if (auto LocOffset = AttrValue.Value.getAsSectionOffset()) {
       // Verify location list.
       if (auto DebugLoc = DCtx.getDebugLoc())
         if (auto LocList = DebugLoc->getLocationListAtOffset(*LocOffset))
           for (const auto &Entry : LocList->Entries)
-            VerifyLocation({Entry.Loc.data(), Entry.Loc.size()});
+            VerifyLocationExpr({Entry.Loc.data(), Entry.Loc.size()});
     }
     break;
   }

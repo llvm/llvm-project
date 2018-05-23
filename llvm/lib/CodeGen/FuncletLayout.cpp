@@ -42,7 +42,7 @@ INITIALIZE_PASS(FuncletLayout, DEBUG_TYPE,
 
 bool FuncletLayout::runOnMachineFunction(MachineFunction &F) {
   DenseMap<const MachineBasicBlock *, int> FuncletMembership =
-      getFuncletMembership(F);
+      getEHScopeMembership(F);
   if (FuncletMembership.empty())
     return false;
 

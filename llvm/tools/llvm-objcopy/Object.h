@@ -365,6 +365,7 @@ public:
                  SectionBase *DefinedIn, uint64_t Value, uint8_t Visibility,
                  uint16_t Shndx, uint64_t Sz);
   void addSymbolNames();
+  bool empty() const { return Symbols.empty(); }
   const SectionBase *getStrTab() const { return SymbolNames; }
   const Symbol *getSymbolByIndex(uint32_t Index) const;
   void updateSymbols(function_ref<void(Symbol &)> Callable);

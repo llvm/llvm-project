@@ -83,6 +83,9 @@ class DwarfCompileUnit final : public DwarfUnit {
   DenseMap<const MDNode *, DIE *> AbstractSPDies;
   DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> AbstractVariables;
 
+  /// DWO ID for correlating skeleton and split units.
+  uint64_t DWOId = 0;
+
   /// Construct a DIE for the given DbgVariable without initializing the
   /// DbgVariable's DIE reference.
   DIE *constructVariableDIEImpl(const DbgVariable &DV, bool Abstract);
@@ -219,6 +222,13 @@ public:
   /// Set the skeleton unit associated with this unit.
   void setSkeleton(DwarfCompileUnit &Skel) { Skeleton = &Skel; }
 
+  unsigned getHeaderSize() const override {
+    // DWARF v5 added the DWO ID to the header for split/skeleton units.
+    unsigned DWOIdSize =
+        DD->getDwarfVersion() >= 5 && DD->useSplitDwarf() ? sizeof(uint64_t)
+                                                          : 0;
+    return DwarfUnit::getHeaderSize() + DWOIdSize;
+  }
   unsigned getLength() {
     return sizeof(uint32_t) + // Length field
         getHeaderSize() + getUnitDie().getSize();
@@ -289,6 +299,9 @@ public:
 
   void setBaseAddress(const MCSymbol *Base) { BaseAddress = Base; }
   const MCSymbol *getBaseAddress() const { return BaseAddress; }
+
+  uint64_t getDWOId() const { return DWOId; }
+  void setDWOId(uint64_t DwoId) { DWOId = DwoId; }
 
   bool hasDwarfPubSections() const;
 };

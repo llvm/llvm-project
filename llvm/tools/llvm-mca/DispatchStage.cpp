@@ -142,6 +142,12 @@ void DispatchStage::dispatch(InstRef IR) {
   SC->scheduleInstruction(IR);
 }
 
+void DispatchStage::preExecute(const InstRef &IR) {
+  RCU->cycleEvent();
+  AvailableEntries = CarryOver >= DispatchWidth ? 0 : DispatchWidth - CarryOver;
+  CarryOver = CarryOver >= DispatchWidth ? CarryOver - DispatchWidth : 0U;
+}
+
 bool DispatchStage::execute(InstRef &IR) {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
   if (!isAvailable(Desc.NumMicroOps) || !canDispatch(IR))

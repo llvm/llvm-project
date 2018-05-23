@@ -20,25 +20,32 @@
 namespace llvm {
 namespace orc {
 
+/// Mangles symbol names then uniques them in the context of an
+/// ExecutionSession.
+//
+// FIXME: This may be more at home in Core.h.
 class MangleAndInterner {
 public:
   MangleAndInterner(ExecutionSession &ES, const DataLayout &DL);
   SymbolStringPtr operator()(StringRef Name);
-
 private:
   ExecutionSession &ES;
   const DataLayout &DL;
 };
 
-/// Layer interface.
+/// Interface for layers that accept LLVM IR.
 class IRLayer {
 public:
   IRLayer(ExecutionSession &ES);
   virtual ~IRLayer();
 
+  /// Returns the ExecutionSession for this layer.
   ExecutionSession &getExecutionSession() { return ES; }
 
+  /// Adds a MaterializationUnit representing the given IR to the given VSO.
   virtual Error add(VSO &V, VModuleKey K, std::unique_ptr<Module> M);
+
+  /// Emit should materialize the given IR.
   virtual void emit(MaterializationResponsibility R, VModuleKey K,
                     std::unique_ptr<Module> M) = 0;
 
@@ -46,29 +53,50 @@ private:
   ExecutionSession &ES;
 };
 
-class BasicIRLayerMaterializationUnit : public MaterializationUnit {
+/// IRMaterializationUnit is a convenient base class for MaterializationUnits
+/// wrapping LLVM IR. Represents materialization responsibility for all symbols
+/// in the given module. If symbols are overridden by other definitions, then
+/// their linkage is changed to available-externally.
+class IRMaterializationUnit : public MaterializationUnit {
 public:
-  BasicIRLayerMaterializationUnit(IRLayer &L, VModuleKey K,
-                                  std::unique_ptr<Module> M);
+  IRMaterializationUnit(ExecutionSession &ES, std::unique_ptr<Module> M);
+
+protected:
+  std::unique_ptr<Module> M;
 
 private:
-  void materialize(MaterializationResponsibility R) override;
   void discard(const VSO &V, SymbolStringPtr Name) override;
 
-  IRLayer &L;
-  VModuleKey K;
-  std::unique_ptr<Module> M;
   std::map<SymbolStringPtr, GlobalValue *> Discardable;
 };
 
+/// MaterializationUnit that materializes modules by calling the 'emit' method
+/// on the given IRLayer.
+class BasicIRLayerMaterializationUnit : public IRMaterializationUnit {
+public:
+  BasicIRLayerMaterializationUnit(IRLayer &L, VModuleKey K,
+                                  std::unique_ptr<Module> M);
+private:
+
+  void materialize(MaterializationResponsibility R) override;
+
+  IRLayer &L;
+  VModuleKey K;
+};
+
+/// Interface for Layers that accept object files.
 class ObjectLayer {
 public:
   ObjectLayer(ExecutionSession &ES);
   virtual ~ObjectLayer();
 
+  /// Returns the execution session for this layer.
   ExecutionSession &getExecutionSession() { return ES; }
 
+  /// Adds a MaterializationUnit representing the given IR to the given VSO.
   virtual Error add(VSO &V, VModuleKey K, std::unique_ptr<MemoryBuffer> O);
+
+  /// Emit should materialize the given IR.
   virtual void emit(MaterializationResponsibility R, VModuleKey K,
                     std::unique_ptr<MemoryBuffer> O) = 0;
 
@@ -76,11 +104,15 @@ private:
   ExecutionSession &ES;
 };
 
-/// The MemoryBuffer should represent a valid object file.
-/// If there is any chance that the file is invalid it should be validated
-/// prior to constructing a BasicObjectLayerMaterializationUnit.
+/// Materializes the given object file (represented by a MemoryBuffer
+/// instance) by calling 'emit' on the given ObjectLayer.
 class BasicObjectLayerMaterializationUnit : public MaterializationUnit {
 public:
+
+
+  /// The MemoryBuffer should represent a valid object file.
+  /// If there is any chance that the file is invalid it should be validated
+  /// prior to constructing a BasicObjectLayerMaterializationUnit.
   BasicObjectLayerMaterializationUnit(ObjectLayer &L, VModuleKey K,
                                       std::unique_ptr<MemoryBuffer> O);
 

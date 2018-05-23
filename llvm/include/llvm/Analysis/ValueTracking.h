@@ -276,6 +276,22 @@ class Value;
   /// pointer, return 'len+1'.  If we can't, return 0.
   uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
 
+  /// This function returns call pointer argument that is considered the same by
+  /// aliasing rules. You CAN'T use it to replace one value with another.
+  const Value *getArgumentAliasingToReturnedPointer(ImmutableCallSite CS);
+  inline Value *getArgumentAliasingToReturnedPointer(CallSite CS) {
+    return const_cast<Value *>(
+        getArgumentAliasingToReturnedPointer(ImmutableCallSite(CS)));
+  }
+
+  // {launder,strip}.invariant.group returns pointer that aliases its argument,
+  // and it only captures pointer by returning it.
+  // These intrinsics are not marked as nocapture, because returning is
+  // considered as capture. The arguments are not marked as returned neither,
+  // because it would make it useless.
+  bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+      ImmutableCallSite CS);
+
   /// This method strips off any GEP address adjustments and pointer casts from
   /// the specified value, returning the original object being addressed. Note
   /// that the returned value has pointer type if the specified value does. If

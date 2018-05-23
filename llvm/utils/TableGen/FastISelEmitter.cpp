@@ -453,6 +453,13 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     if (II.Operands.empty())
       continue;
 
+    // Allow instructions to be marked as unavailable for FastISel for
+    // certain cases, i.e. an ISA has two 'and' instruction which differ
+    // by what registers they can use but are otherwise identical for
+    // codegen purposes.
+    if (II.FastISelShouldIgnore)
+      continue;
+
     // For now, ignore multi-instruction patterns.
     bool MultiInsts = false;
     for (unsigned i = 0, e = Dst->getNumChildren(); i != e; ++i) {

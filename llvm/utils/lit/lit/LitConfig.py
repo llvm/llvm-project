@@ -83,6 +83,8 @@ class LitConfig(object):
             Interface for setting maximum time to spend executing
             a single test
         """
+        if not isinstance(value, int):
+            self.fatal('maxIndividualTestTime must set to a value of type int.')
         self._maxIndividualTestTime = value
         if self.maxIndividualTestTime > 0:
             # The current implementation needs psutil to set

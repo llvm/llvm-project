@@ -11,4 +11,4 @@
 //===----------------------------------------------------------------------===//
 
 def GPRRegBank : RegisterBank<"GPRB", [GPR, GPRwithAPSR]>;
-def FPRRegBank : RegisterBank<"FPRB", [SPR, DPR]>;
+def FPRRegBank : RegisterBank<"FPRB", [HPR, SPR, DPR, QPR]>;
