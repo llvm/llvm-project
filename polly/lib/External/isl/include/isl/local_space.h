@@ -2,7 +2,7 @@
 #define ISL_LOCAL_SPACE_H
 
 #include <isl/aff_type.h>
-#include <isl/space.h>
+#include <isl/space_type.h>
 #include <isl/printer.h>
 #include <isl/map_type.h>
 
