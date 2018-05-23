@@ -733,7 +733,9 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_integral_v
 // is_floating_point
 
 template <class _Tp> struct __libcpp_is_floating_point              : public false_type {};
+#ifdef __clang__
 template <>          struct __libcpp_is_floating_point<__fp16>      : public true_type {};
+#endif
 #ifdef __FLT16_MANT_DIG__
 template <>          struct __libcpp_is_floating_point<_Float16>    : public true_type {};
 #endif

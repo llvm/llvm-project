@@ -14,7 +14,9 @@
 #include <type_traits>
 
 int main() {
+#ifdef __clang__
   static_assert(std::is_floating_point<__fp16>::value, "");
+#endif
 #ifdef __FLT16_MANT_DIG__
   static_assert(std::is_floating_point<_Float16>::value, "");
 #endif

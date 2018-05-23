@@ -3,7 +3,7 @@
 ; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=SCOP
 
 ; RUN: opt %loadPolly -S -polly-use-llvm-names -polly-codegen-ppcg \
-; RUN: -polly-acc-dump-code \
+; RUN: -polly-acc-dump-code -polly-stmt-granularity=bb \
 ; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=CODE
 
 ; RUN: opt %loadPolly -S -polly-use-llvm-names -polly-codegen-ppcg \
