@@ -41,6 +41,9 @@ WChar16Typedef WC16Var;
 typedef char32_t WChar32Typedef;
 WChar32Typedef WC32Var;
 
+typedef wchar_t WCharTypedef;
+WCharTypedef WCVar;
+
 int main() {
   return 0;
 }

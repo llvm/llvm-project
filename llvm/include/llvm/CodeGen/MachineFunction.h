@@ -319,6 +319,7 @@ class MachineFunction {
 
   bool CallsEHReturn = false;
   bool CallsUnwindInit = false;
+  bool HasEHScopes = false;
   bool HasEHFunclets = false;
 
   /// List of C++ TypeInfo used.
@@ -759,6 +760,9 @@ public:
 
   bool callsUnwindInit() const { return CallsUnwindInit; }
   void setCallsUnwindInit(bool b) { CallsUnwindInit = b; }
+
+  bool hasEHScopes() const { return HasEHScopes; }
+  void setHasEHScopes(bool V) { HasEHScopes = V; }
 
   bool hasEHFunclets() const { return HasEHFunclets; }
   void setHasEHFunclets(bool V) { HasEHFunclets = V; }

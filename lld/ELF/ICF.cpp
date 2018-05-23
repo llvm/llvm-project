@@ -78,6 +78,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "Writer.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -185,6 +186,12 @@ static bool isEligible(InputSection *S) {
   // .init and .fini contains instructions that must be executed to initialize
   // and finalize the process. They cannot and should not be merged.
   if (S->Name == ".init" || S->Name == ".fini")
+    return false;
+
+  // A user program may enumerate sections named with a C identifier using
+  // __start_* and __stop_* symbols. We cannot ICF any such sections because
+  // that could change program semantics.
+  if (isValidCIdentifier(S->Name))
     return false;
 
   return true;
@@ -300,6 +307,13 @@ template <class ELFT>
 bool ICF<ELFT>::equalsConstant(const InputSection *A, const InputSection *B) {
   if (A->NumRelocations != B->NumRelocations || A->Flags != B->Flags ||
       A->getSize() != B->getSize() || A->Data != B->Data)
+    return false;
+
+  // If two sections have different output sections, we cannot merge them.
+  // FIXME: This doesn't do the right thing in the case where there is a linker
+  // script. We probably need to move output section assignment before ICF to
+  // get the correct behaviour here.
+  if (getOutputSectionName(A) != getOutputSectionName(B))
     return false;
 
   if (A->AreRelocsRela)

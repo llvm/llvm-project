@@ -1406,9 +1406,13 @@ void StmtPrinter::VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *Node) {
     OS << Node->getClassReceiver()->getName() << ".";
   }
 
-  if (Node->isImplicitProperty())
-    Node->getImplicitPropertyGetter()->getSelector().print(OS);
-  else
+  if (Node->isImplicitProperty()) {
+    if (const auto *Getter = Node->getImplicitPropertyGetter())
+      Getter->getSelector().print(OS);
+    else
+      OS << SelectorTable::getPropertyNameFromSetterSelector(
+          Node->getImplicitPropertySetter()->getSelector());
+  } else
     OS << Node->getExplicitProperty()->getName();
 }
 

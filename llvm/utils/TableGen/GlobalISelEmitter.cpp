@@ -673,7 +673,7 @@ public:
   /// finalize() and optimize() are both allowed to mutate the contained
   /// matchers, so moving them out after finalize() is not supported.
   void finalize();
-  void optimize() override {}
+  void optimize() override;
   void emit(MatchTable &Table) override;
 
   /// Could be used to move out the matchers added previously, unless finalize()
@@ -2041,6 +2041,14 @@ void InstructionMatcher::optimize() {
       Stash.emplace_back(
           new InstructionNumOperandsMatcher(InsnVarID, getNumOperands()));
     NumOperandsCheck = false;
+
+    for (auto &OM : Operands)
+      for (auto &OP : OM->predicates())
+        if (isa<IntrinsicIDOperandMatcher>(OP)) {
+          Stash.push_back(std::move(OP));
+          OM->eraseNullPredicates();
+          break;
+        }
   }
 
   if (InsnVarID > 0) {
@@ -4102,6 +4110,11 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
   OptRules = optimizeRules<SwitchMatcher>(OptRules, MatcherStorage);
 
   return MatchTable::buildTable(OptRules, WithCoverage);
+}
+
+void GroupMatcher::optimize() {
+  GlobalISelEmitter::optimizeRules<GroupMatcher>(Matchers, MatcherStorage)
+      .swap(Matchers);
 }
 
 void GlobalISelEmitter::run(raw_ostream &OS) {

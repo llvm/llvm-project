@@ -124,7 +124,7 @@ bool returnTypeIsEligibleForTailCall(const Function *F, const Instruction *I,
                                      const TargetLoweringBase &TLI);
 
 DenseMap<const MachineBasicBlock *, int>
-getFuncletMembership(const MachineFunction &MF);
+getEHScopeMembership(const MachineFunction &MF);
 
 } // End llvm namespace
 
