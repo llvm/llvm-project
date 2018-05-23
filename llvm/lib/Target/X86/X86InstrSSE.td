@@ -408,7 +408,7 @@ multiclass sse12_mov_packed<bits<8> opc, RegisterClass RC,
                             X86MemOperand x86memop, PatFrag ld_frag,
                             string asm, Domain d,
                             X86SchedWriteMoveLS sched> {
-let hasSideEffects = 0 in
+let hasSideEffects = 0, isMoveReg = 1 in
   def rr : PI<opc, MRMSrcReg, (outs RC:$dst), (ins RC:$src),
               !strconcat(asm, "\t{$src, $dst|$dst, $src}"), [], d>,
            Sched<[sched.RR]>;
@@ -505,7 +505,8 @@ def VMOVUPDYmr : VPDI<0x11, MRMDestMem, (outs), (ins f256mem:$dst, VR256:$src),
 } // Predicate
 
 // For disassembler
-let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
+let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0,
+    isMoveReg = 1 in {
 let SchedRW = [SchedWriteFMoveLS.XMM.RR] in {
   def VMOVAPSrr_REV : VPSI<0x29, MRMDestReg, (outs VR128:$dst),
                           (ins VR128:$src),
@@ -581,7 +582,7 @@ def MOVUPDmr : PDI<0x11, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
 
 // For disassembler
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0,
-    SchedRW = [SchedWriteFMoveLS.XMM.RR] in {
+    isMoveReg = 1, SchedRW = [SchedWriteFMoveLS.XMM.RR] in {
   def MOVAPSrr_REV : PSI<0x29, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
                          "movaps\t{$src, $dst|$dst, $src}", []>,
                          FoldGenData<"MOVAPSrr">;

@@ -35,11 +35,12 @@
   vaddps %ymm3, %ymm0, %ymm5
   vaddps %ymm3, %ymm0, %ymm6
 
-# CHECK:      Iterations:     1
-# CHECK-NEXT: Instructions:   33
-# CHECK-NEXT: Total Cycles:   70
-# CHECK-NEXT: Dispatch Width: 2
-# CHECK-NEXT: IPC:            0.47
+# CHECK:      Iterations:        1
+# CHECK-NEXT: Instructions:      33
+# CHECK-NEXT: Total Cycles:      70
+# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: IPC:               0.47
+# CHECK-NEXT: Block RThroughput: 64.0
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
 # CHECK-NEXT: RAT     - Register unavailable:                      0

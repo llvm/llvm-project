@@ -18,11 +18,12 @@
   vaddps  %xmm0, %xmm1, %xmm2
   vaddps  %xmm0, %xmm1, %xmm2
 
-# CHECK:      Iterations:     1
-# CHECK-NEXT: Instructions:   16
-# CHECK-NEXT: Total Cycles:   31
-# CHECK-NEXT: Dispatch Width: 2
-# CHECK-NEXT: IPC:            0.52
+# CHECK:      Iterations:        1
+# CHECK-NEXT: Instructions:      16
+# CHECK-NEXT: Total Cycles:      31
+# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: IPC:               0.52
+# CHECK-NEXT: Block RThroughput: 21.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps

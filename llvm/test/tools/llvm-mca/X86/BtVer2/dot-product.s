@@ -5,11 +5,12 @@ vmulps   %xmm0, %xmm1, %xmm2
 vhaddps  %xmm2, %xmm2, %xmm3
 vhaddps  %xmm3, %xmm3, %xmm4
 
-# CHECK:      Iterations:     300
-# CHECK-NEXT: Instructions:   900
-# CHECK-NEXT: Total Cycles:   610
-# CHECK-NEXT: Dispatch Width: 2
-# CHECK-NEXT: IPC:            1.48
+# CHECK:      Iterations:        300
+# CHECK-NEXT: Instructions:      900
+# CHECK-NEXT: Total Cycles:      610
+# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: IPC:               1.48
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps

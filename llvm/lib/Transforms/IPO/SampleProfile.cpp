@@ -37,6 +37,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -253,7 +254,7 @@ protected:
 
   /// Dominance, post-dominance and loop information.
   std::unique_ptr<DominatorTree> DT;
-  std::unique_ptr<PostDomTreeBase<BasicBlock>> PDT;
+  std::unique_ptr<PostDominatorTree> PDT;
   std::unique_ptr<LoopInfo> LI;
 
   std::function<AssumptionCache &(Function &)> GetAC;
@@ -1365,8 +1366,7 @@ void SampleProfileLoader::computeDominanceAndLoopInfo(Function &F) {
   DT.reset(new DominatorTree);
   DT->recalculate(F);
 
-  PDT.reset(new PostDomTreeBase<BasicBlock>());
-  PDT->recalculate(F);
+  PDT.reset(new PostDominatorTree(F));
 
   LI.reset(new LoopInfo);
   LI->analyze(*DT);

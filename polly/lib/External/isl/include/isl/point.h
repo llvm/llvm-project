@@ -2,8 +2,8 @@
 #define ISL_POINT_H
 
 #include <stdio.h>
-#include <isl/space.h>
-#include <isl/val.h>
+#include <isl/space_type.h>
+#include <isl/val_type.h>
 
 #if defined(__cplusplus)
 extern "C" {

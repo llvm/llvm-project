@@ -23,7 +23,8 @@ D: MingW Win32 API portability layer
 
 N: Aaron Ballman
 E: aaron@aaronballman.com
-D: __declspec attributes, Windows support, general bug fixing
+D: Clang frontend, frontend attributes, Windows support, general bug fixing
+I: AaronBallman
 
 N: Nate Begeman
 E: natebegeman@mac.com
@@ -223,6 +224,11 @@ D: Support for packed types
 N: Rod Kay
 E: rkay@auroraux.org
 D: Author of LLVM Ada bindings
+
+N: Erich Keane
+E: erich.keane@intel.com
+D: A variety of Clang contributions including function multiversioning, regcall/vectorcall.
+I: ErichKeane
 
 N: Eric Kidd
 W: http://randomhacks.net/

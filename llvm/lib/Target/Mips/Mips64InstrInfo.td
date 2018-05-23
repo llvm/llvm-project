@@ -377,10 +377,12 @@ let isCodeGenOnly = 1, AdditionalPredicates = [NotInMicroMips] in {
 let isCodeGenOnly = 1, rs = 0, shamt = 0 in {
   def DSLL64_32 : FR<0x00, 0x3c, (outs GPR64:$rd), (ins GPR32:$rt),
                      "dsll\t$rd, $rt, 32", [], II_DSLL>;
-  def SLL64_32 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR32:$rt),
-                    "sll\t$rd, $rt, 0", [], II_SLL>;
-  def SLL64_64 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR64:$rt),
-                    "sll\t$rd, $rt, 0", [], II_SLL>;
+  let isMoveReg = 1 in {
+    def SLL64_32 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR32:$rt),
+                      "sll\t$rd, $rt, 0", [], II_SLL>;
+    def SLL64_64 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR64:$rt),
+                      "sll\t$rd, $rt, 0", [], II_SLL>;
+  }
 }
 
 // We need the following pseudo instruction to avoid offset calculation for

@@ -2057,6 +2057,12 @@ void InstructionMatcher::optimize() {
       OP.reset();
     Operands[0]->eraseNullPredicates();
   }
+  for (auto &OM : Operands) {
+    for (auto &OP : OM->predicates())
+      if (isa<LLTOperandMatcher>(OP))
+        Stash.push_back(std::move(OP));
+    OM->eraseNullPredicates();
+  }
   while (!Stash.empty())
     prependPredicate(Stash.pop_back_val());
 }
@@ -4063,7 +4069,7 @@ std::vector<Matcher *> GlobalISelEmitter::optimizeRules(
   }
   ProcessCurrentGroup();
 
-  DEBUG(dbgs() << "NumGroups: " << NumGroups << "\n");
+  LLVM_DEBUG(dbgs() << "NumGroups: " << NumGroups << "\n");
   assert(CurrentGroup->empty() && "The last group wasn't properly processed");
   return OptRules;
 }

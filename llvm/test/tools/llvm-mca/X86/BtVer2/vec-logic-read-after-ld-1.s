@@ -4,11 +4,12 @@
 vaddps %xmm0, %xmm0, %xmm1
 vandps (%rdi), %xmm1, %xmm2
 
-# CHECK:      Iterations:     1
-# CHECK-NEXT: Instructions:   2
-# CHECK-NEXT: Total Cycles:   9
-# CHECK-NEXT: Dispatch Width: 2
-# CHECK-NEXT: IPC:            0.22
+# CHECK:      Iterations:        1
+# CHECK-NEXT: Instructions:      2
+# CHECK-NEXT: Total Cycles:      9
+# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: IPC:               0.22
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps

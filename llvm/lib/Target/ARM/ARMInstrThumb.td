@@ -1154,7 +1154,7 @@ def : tInstAlias <"movs $Rdn, $imm",
 
 // A7-73: MOV(2) - mov setting flag.
 
-let hasSideEffects = 0 in {
+let hasSideEffects = 0, isMoveReg = 1 in {
 def tMOVr : Thumb1pI<(outs GPR:$Rd), (ins GPR:$Rm), AddrModeNone,
                       2, IIC_iMOVr,
                       "mov", "\t$Rd, $Rm", "", []>,

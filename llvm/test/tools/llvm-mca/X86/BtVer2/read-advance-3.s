@@ -5,11 +5,12 @@
   add (%rsp), %rsi
   add %rdx, %r8
 
-# CHECK:      Iterations:     1
-# CHECK-NEXT: Instructions:   3
-# CHECK-NEXT: Total Cycles:   7
-# CHECK-NEXT: Dispatch Width: 3
-# CHECK-NEXT: IPC:            0.43
+# CHECK:      Iterations:        1
+# CHECK-NEXT: Instructions:      3
+# CHECK-NEXT: Total Cycles:      7
+# CHECK-NEXT: Dispatch Width:    3
+# CHECK-NEXT: IPC:               0.43
+# CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps

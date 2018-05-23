@@ -148,11 +148,11 @@ public:
   /// Returns the number of predefined instructions.
   static unsigned getNumFixedInstructions();
 
-  /// getInstructionsByEnumValue - Return all of the instructions defined by the
-  /// target, ordered by their enum value.
-  ArrayRef<const CodeGenInstruction *>
-  getInstructionsByEnumValue() const {
-    if (InstrsByEnum.empty()) ComputeInstrsByEnum();
+  /// Return all of the instructions defined by the target, ordered by their
+  /// enum value.
+  ArrayRef<const CodeGenInstruction *> getInstructionsByEnumValue() const {
+    if (InstrsByEnum.empty())
+      ComputeInstrsByEnum();
     return InstrsByEnum;
   }
 

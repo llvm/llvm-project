@@ -164,8 +164,8 @@ CudaInstallationDetector::CudaInstallationDetector(
       std::string FilePath = LibDevicePath + "/libdevice.10.bc";
       if (FS.exists(FilePath)) {
         for (const char *GpuArchName :
-             {"sm_20", "sm_30", "sm_32", "sm_35", "sm_50", "sm_52", "sm_53",
-                   "sm_60", "sm_61", "sm_62", "sm_70", "sm_72"}) {
+             {"sm_30", "sm_32", "sm_35", "sm_37", "sm_50", "sm_52", "sm_53",
+              "sm_60", "sm_61", "sm_62", "sm_70", "sm_72"}) {
           const CudaArch GpuArch = StringToCudaArch(GpuArchName);
           if (Version >= MinVersionForCudaArch(GpuArch) &&
               Version <= MaxVersionForCudaArch(GpuArch))

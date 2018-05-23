@@ -1,7 +1,7 @@
 #ifndef ISL_ID_TO_AST_EXPR_H
 #define ISL_ID_TO_AST_EXPR_H
 
-#include <isl/id.h>
+#include <isl/id_type.h>
 #include <isl/ast_type.h>
 #include <isl/maybe_ast_expr.h>
 

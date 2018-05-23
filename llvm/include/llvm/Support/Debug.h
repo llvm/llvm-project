@@ -118,8 +118,6 @@ raw_ostream &dbgs();
 //
 #define LLVM_DEBUG(X) DEBUG_WITH_TYPE(DEBUG_TYPE, X)
 
-#define DEBUG(X) LLVM_DEBUG(X)
-
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_DEBUG_H

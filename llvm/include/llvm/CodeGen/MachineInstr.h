@@ -547,6 +547,12 @@ public:
     return hasProperty(MCID::MoveImm, Type);
   }
 
+  /// Return true if this instruction is a register move.
+  /// (including moving values from subreg to reg)
+  bool isMoveReg(QueryType Type = IgnoreBundle) const {
+    return hasProperty(MCID::MoveReg, Type);
+  }
+
   /// Return true if this instruction is a bitcast instruction.
   bool isBitcast(QueryType Type = IgnoreBundle) const {
     return hasProperty(MCID::Bitcast, Type);

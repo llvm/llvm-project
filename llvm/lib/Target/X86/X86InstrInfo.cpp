@@ -6852,6 +6852,16 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   llvm_unreachable("Cannot emit physreg copy instruction");
 }
 
+bool X86InstrInfo::isCopyInstr(const MachineInstr &MI, MachineOperand &Src,
+                               MachineOperand &Dest) const {
+  if (MI.isMoveReg()) {
+    Dest = MI.getOperand(0);
+    Src = MI.getOperand(1);
+    return true;
+  }
+  return false;
+}
+
 static unsigned getLoadStoreRegOpcode(unsigned Reg,
                                       const TargetRegisterClass *RC,
                                       bool isStackAligned,

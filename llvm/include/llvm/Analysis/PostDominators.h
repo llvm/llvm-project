@@ -30,6 +30,8 @@ class PostDominatorTree : public PostDomTreeBase<BasicBlock> {
 public:
   using Base = PostDomTreeBase<BasicBlock>;
 
+  PostDominatorTree() = default;
+  explicit PostDominatorTree(Function &F) { recalculate(F); }
   /// Handle invalidation explicitly.
   bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &);
