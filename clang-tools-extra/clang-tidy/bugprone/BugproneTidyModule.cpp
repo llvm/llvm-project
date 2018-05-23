@@ -10,6 +10,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "../cppcoreguidelines/NarrowingConversionsCheck.h"
 #include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
@@ -92,6 +93,8 @@ public:
         "bugprone-move-forwarding-reference");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(
         "bugprone-multiple-statement-macro");
+    CheckFactories.registerCheck<cppcoreguidelines::NarrowingConversionsCheck>(
+        "bugprone-narrowing-conversions");
     CheckFactories.registerCheck<ParentVirtualCallCheck>(
         "bugprone-parent-virtual-call");
     CheckFactories.registerCheck<SizeofContainerCheck>(

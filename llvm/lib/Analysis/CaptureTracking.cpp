@@ -22,6 +22,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
@@ -247,11 +248,12 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker) {
       if (CS.onlyReadsMemory() && CS.doesNotThrow() && I->getType()->isVoidTy())
         break;
 
-      // launder.invariant.group only captures pointer by returning it,
-      // so the pointer wasn't captured if returned pointer is not captured.
-      // Note that adding similar special cases for intrinsics requires handling
-      // them in 'isEscapeSource' in BasicAA.
-      if (CS.getIntrinsicID() == Intrinsic::launder_invariant_group) {
+      // The pointer is not captured if returned pointer is not captured.
+      // NOTE: CaptureTracking users should not assume that only functions
+      // marked with nocapture do not capture. This means that places like
+      // GetUnderlyingObject in ValueTracking or DecomposeGEPExpression
+      // in BasicAA also need to know about this property.
+      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CS)) {
         AddUses(I);
         break;
       }

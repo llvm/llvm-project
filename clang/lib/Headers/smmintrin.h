@@ -493,7 +493,7 @@ _mm_blendv_ps (__m128 __V1, __m128 __V2, __m128 __M)
 /// \param __V2
 ///    A 128-bit vector of [16 x i8].
 /// \param __M
-///    A 128-bit vector operand, with mask bits 127, 119, 111 ... 7 specifying
+///    A 128-bit vector operand, with mask bits 127, 119, 111...7 specifying
 ///    how the values are to be copied. The position of the mask bit corresponds
 ///    to the most significant bit of a copied value. When a mask bit is 0, the
 ///    corresponding 8-bit element in operand \a __V1 is copied to the same
@@ -1277,8 +1277,8 @@ _mm_cvtepi8_epi16(__m128i __V)
 /// This intrinsic corresponds to the <c> VPMOVSXBD / PMOVSXBD </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [16 x i8]. The lower four 8-bit elements are sign-
-///    extended to 32-bit values.
+///    A 128-bit vector of [16 x i8]. The lower four 8-bit elements are
+///    sign-extended to 32-bit values.
 /// \returns A 128-bit vector of [4 x i32] containing the sign-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepi8_epi32(__m128i __V)
@@ -1298,8 +1298,8 @@ _mm_cvtepi8_epi32(__m128i __V)
 /// This intrinsic corresponds to the <c> VPMOVSXBQ / PMOVSXBQ </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [16 x i8]. The lower two 8-bit elements are sign-
-///    extended to 64-bit values.
+///    A 128-bit vector of [16 x i8]. The lower two 8-bit elements are
+///    sign-extended to 64-bit values.
 /// \returns A 128-bit vector of [2 x i64] containing the sign-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepi8_epi64(__m128i __V)
@@ -1319,8 +1319,8 @@ _mm_cvtepi8_epi64(__m128i __V)
 /// This intrinsic corresponds to the <c> VPMOVSXWD / PMOVSXWD </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [8 x i16]. The lower four 16-bit elements are sign-
-///    extended to 32-bit values.
+///    A 128-bit vector of [8 x i16]. The lower four 16-bit elements are
+///    sign-extended to 32-bit values.
 /// \returns A 128-bit vector of [4 x i32] containing the sign-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepi16_epi32(__m128i __V)
@@ -1338,8 +1338,8 @@ _mm_cvtepi16_epi32(__m128i __V)
 /// This intrinsic corresponds to the <c> VPMOVSXWQ / PMOVSXWQ </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [8 x i16]. The lower two 16-bit elements are sign-
-///    extended to 64-bit values.
+///    A 128-bit vector of [8 x i16]. The lower two 16-bit elements are
+///     sign-extended to 64-bit values.
 /// \returns A 128-bit vector of [2 x i64] containing the sign-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepi16_epi64(__m128i __V)
@@ -1357,8 +1357,8 @@ _mm_cvtepi16_epi64(__m128i __V)
 /// This intrinsic corresponds to the <c> VPMOVSXDQ / PMOVSXDQ </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [4 x i32]. The lower two 32-bit elements are sign-
-///    extended to 64-bit values.
+///    A 128-bit vector of [4 x i32]. The lower two 32-bit elements are
+///    sign-extended to 64-bit values.
 /// \returns A 128-bit vector of [2 x i64] containing the sign-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepi32_epi64(__m128i __V)
@@ -1377,8 +1377,8 @@ _mm_cvtepi32_epi64(__m128i __V)
 /// This intrinsic corresponds to the <c> VPMOVZXBW / PMOVZXBW </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [16 x i8]. The lower eight 8-bit elements are zero-
-///    extended to 16-bit values.
+///    A 128-bit vector of [16 x i8]. The lower eight 8-bit elements are
+///    zero-extended to 16-bit values.
 /// \returns A 128-bit vector of [8 x i16] containing the zero-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu8_epi16(__m128i __V)
@@ -1396,8 +1396,8 @@ _mm_cvtepu8_epi16(__m128i __V)
 /// This intrinsic corresponds to the <c> VPMOVZXBD / PMOVZXBD </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [16 x i8]. The lower four 8-bit elements are zero-
-///    extended to 32-bit values.
+///    A 128-bit vector of [16 x i8]. The lower four 8-bit elements are
+///    zero-extended to 32-bit values.
 /// \returns A 128-bit vector of [4 x i32] containing the zero-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu8_epi32(__m128i __V)
@@ -1415,8 +1415,8 @@ _mm_cvtepu8_epi32(__m128i __V)
 /// This intrinsic corresponds to the <c> VPMOVZXBQ / PMOVZXBQ </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [16 x i8]. The lower two 8-bit elements are zero-
-///    extended to 64-bit values.
+///    A 128-bit vector of [16 x i8]. The lower two 8-bit elements are
+///    zero-extended to 64-bit values.
 /// \returns A 128-bit vector of [2 x i64] containing the zero-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu8_epi64(__m128i __V)
@@ -1434,8 +1434,8 @@ _mm_cvtepu8_epi64(__m128i __V)
 /// This intrinsic corresponds to the <c> VPMOVZXWD / PMOVZXWD </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [8 x i16]. The lower four 16-bit elements are zero-
-///    extended to 32-bit values.
+///    A 128-bit vector of [8 x i16]. The lower four 16-bit elements are
+///    zero-extended to 32-bit values.
 /// \returns A 128-bit vector of [4 x i32] containing the zero-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu16_epi32(__m128i __V)
@@ -1453,8 +1453,8 @@ _mm_cvtepu16_epi32(__m128i __V)
 /// This intrinsic corresponds to the <c> VPMOVZXWQ / PMOVZXWQ </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [8 x i16]. The lower two 16-bit elements are zero-
-///    extended to 64-bit values.
+///    A 128-bit vector of [8 x i16]. The lower two 16-bit elements are
+///    zero-extended to 64-bit values.
 /// \returns A 128-bit vector of [2 x i64] containing the zero-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu16_epi64(__m128i __V)
@@ -1472,8 +1472,8 @@ _mm_cvtepu16_epi64(__m128i __V)
 /// This intrinsic corresponds to the <c> VPMOVZXDQ / PMOVZXDQ </c> instruction.
 ///
 /// \param __V
-///    A 128-bit vector of [4 x i32]. The lower two 32-bit elements are zero-
-///    extended to 64-bit values.
+///    A 128-bit vector of [4 x i32]. The lower two 32-bit elements are
+///    zero-extended to 64-bit values.
 /// \returns A 128-bit vector of [2 x i64] containing the zero-extended values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu32_epi64(__m128i __V)
@@ -1534,14 +1534,14 @@ _mm_packus_epi32(__m128i __V1, __m128i __V2)
 ///    \code
 ///    // M2 represents bit 2 of the immediate operand
 ///    // M10 represents bits [1:0] of the immediate operand
-///    i = M2 * 4
-///    j = M10 * 4
+///    i = M2 * 4;
+///    j = M10 * 4;
 ///    for (k = 0; k < 8; k = k + 1) {
-///      d0 = abs(X[i + k + 0] - Y[j + 0])
-///      d1 = abs(X[i + k + 1] - Y[j + 1])
-///      d2 = abs(X[i + k + 2] - Y[j + 2])
-///      d3 = abs(X[i + k + 3] - Y[j + 3])
-///      r[k] = d0 + d1 + d2 + d3
+///      d0 = abs(X[i + k + 0] - Y[j + 0]);
+///      d1 = abs(X[i + k + 1] - Y[j + 1]);
+///      d2 = abs(X[i + k + 2] - Y[j + 2]);
+///      d3 = abs(X[i + k + 3] - Y[j + 3]);
+///      r[k] = d0 + d1 + d2 + d3;
 ///    }
 ///    \endcode
 /// \returns A 128-bit integer vector containing the sums of the sets of

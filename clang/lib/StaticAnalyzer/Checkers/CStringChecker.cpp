@@ -1652,7 +1652,11 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
 
         // If the size is known to be zero, we're done.
         if (StateZeroSize && !StateNonZeroSize) {
-          StateZeroSize = StateZeroSize->BindExpr(CE, LCtx, DstVal);
+          if (returnPtr) {
+            StateZeroSize = StateZeroSize->BindExpr(CE, LCtx, DstVal);
+          } else {
+            StateZeroSize = StateZeroSize->BindExpr(CE, LCtx, *lenValNL);
+          }
           C.addTransition(StateZeroSize);
           return;
         }

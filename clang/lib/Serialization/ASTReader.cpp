@@ -4811,7 +4811,8 @@ bool ASTReader::readASTFileControlBlock(
 
       unsigned NumInputFiles = Record[0];
       unsigned NumUserFiles = Record[1];
-      const uint64_t *InputFileOffs = (const uint64_t *)Blob.data();
+      const llvm::support::unaligned_uint64_t *InputFileOffs =
+          (const llvm::support::unaligned_uint64_t *)Blob.data();
       for (unsigned I = 0; I != NumInputFiles; ++I) {
         // Go find this input file.
         bool isSystemFile = I >= NumUserFiles;

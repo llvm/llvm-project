@@ -100,6 +100,7 @@ __andn_u32(unsigned int __X, unsigned int __Y)
 ///    number of bits to be extracted.
 /// \returns An unsigned integer whose least significant bits contain the
 ///    extracted bits.
+/// \see _bextr_u32
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
 __bextr_u32(unsigned int __X, unsigned int __Y)
 {
@@ -124,6 +125,7 @@ __bextr_u32(unsigned int __X, unsigned int __Y)
 ///    Bits [7:0] specify the number of bits.
 /// \returns An unsigned integer whose least significant bits contain the
 ///    extracted bits.
+/// \see __bextr_u32
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
 _bextr_u32(unsigned int __X, unsigned int __Y, unsigned int __Z)
 {
@@ -261,6 +263,7 @@ __andn_u64 (unsigned long long __X, unsigned long long __Y)
 ///    the number of bits to be extracted.
 /// \returns An unsigned 64-bit integer whose least significant bits contain the
 ///    extracted bits.
+/// \see _bextr_u64
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __bextr_u64(unsigned long long __X, unsigned long long __Y)
 {
@@ -285,6 +288,7 @@ __bextr_u64(unsigned long long __X, unsigned long long __Y)
 ///    Bits [7:0] specify the number of bits.
 /// \returns An unsigned 64-bit integer whose least significant bits contain the
 ///    extracted bits.
+/// \see __bextr_u64
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 _bextr_u64(unsigned long long __X, unsigned int __Y, unsigned int __Z)
 {

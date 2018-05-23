@@ -3,13 +3,10 @@
 #include <immintrin.h>
 
 // CHECK-LABEL: define i64 @test_mm512_reduce_max_epi64(<8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I11_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I8_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I9_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I10_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__V_ADDR_I:%.*]] = alloca <8 x i64>, align 64
@@ -27,8 +24,6 @@
 // CHECK:   store <8 x i64> [[SHUFFLE1_I]], <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP5:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I_I]], align 64
 // CHECK:   [[TMP6:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP7:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
 // CHECK:   [[TMP8:%.*]] = icmp sgt <8 x i64> [[TMP5]], [[TMP6]]
 // CHECK:   [[TMP9:%.*]] = select <8 x i1> [[TMP8]], <8 x i64> [[TMP5]], <8 x i64> [[TMP6]]
 // CHECK:   store <8 x i64> [[TMP9]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -42,8 +37,6 @@
 // CHECK:   store <8 x i64> [[SHUFFLE3_I]], <8 x i64>* [[__B_ADDR_I13_I]], align 64
 // CHECK:   [[TMP14:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I12_I]], align 64
 // CHECK:   [[TMP15:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I13_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP16:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
 // CHECK:   [[TMP17:%.*]] = icmp sgt <8 x i64> [[TMP14]], [[TMP15]]
 // CHECK:   [[TMP18:%.*]] = select <8 x i1> [[TMP17]], <8 x i64> [[TMP14]], <8 x i64> [[TMP15]]
 // CHECK:   store <8 x i64> [[TMP18]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -57,8 +50,6 @@
 // CHECK:   store <8 x i64> [[SHUFFLE6_I]], <8 x i64>* [[__B_ADDR_I10_I]], align 64
 // CHECK:   [[TMP23:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I9_I]], align 64
 // CHECK:   [[TMP24:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I10_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
-// CHECK:   [[TMP25:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
 // CHECK:   [[TMP26:%.*]] = icmp sgt <8 x i64> [[TMP23]], [[TMP24]]
 // CHECK:   [[TMP27:%.*]] = select <8 x i1> [[TMP26]], <8 x i64> [[TMP23]], <8 x i64> [[TMP24]]
 // CHECK:   store <8 x i64> [[TMP27]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -70,13 +61,10 @@ long long test_mm512_reduce_max_epi64(__m512i __W){
 }
 
 // CHECK-LABEL: define i64 @test_mm512_reduce_max_epu64(<8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I11_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I8_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I9_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I10_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__V_ADDR_I:%.*]] = alloca <8 x i64>, align 64
@@ -94,8 +82,6 @@ long long test_mm512_reduce_max_epi64(__m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE1_I]], <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP5:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I_I]], align 64
 // CHECK:   [[TMP6:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP7:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
 // CHECK:   [[TMP8:%.*]] = icmp ugt <8 x i64> [[TMP5]], [[TMP6]]
 // CHECK:   [[TMP9:%.*]] = select <8 x i1> [[TMP8]], <8 x i64> [[TMP5]], <8 x i64> [[TMP6]]
 // CHECK:   store <8 x i64> [[TMP9]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -109,8 +95,6 @@ long long test_mm512_reduce_max_epi64(__m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE3_I]], <8 x i64>* [[__B_ADDR_I13_I]], align 64
 // CHECK:   [[TMP14:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I12_I]], align 64
 // CHECK:   [[TMP15:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I13_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP16:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
 // CHECK:   [[TMP17:%.*]] = icmp ugt <8 x i64> [[TMP14]], [[TMP15]]
 // CHECK:   [[TMP18:%.*]] = select <8 x i1> [[TMP17]], <8 x i64> [[TMP14]], <8 x i64> [[TMP15]]
 // CHECK:   store <8 x i64> [[TMP18]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -124,8 +108,6 @@ long long test_mm512_reduce_max_epi64(__m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE6_I]], <8 x i64>* [[__B_ADDR_I10_I]], align 64
 // CHECK:   [[TMP23:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I9_I]], align 64
 // CHECK:   [[TMP24:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I10_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
-// CHECK:   [[TMP25:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
 // CHECK:   [[TMP26:%.*]] = icmp ugt <8 x i64> [[TMP23]], [[TMP24]]
 // CHECK:   [[TMP27:%.*]] = select <8 x i1> [[TMP26]], <8 x i64> [[TMP23]], <8 x i64> [[TMP24]]
 // CHECK:   store <8 x i64> [[TMP27]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -201,13 +183,10 @@ double test_mm512_reduce_max_pd(__m512d __W){
 }
 
 // CHECK-LABEL: define i64 @test_mm512_reduce_min_epi64(<8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I11_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I8_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I9_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I10_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__V_ADDR_I:%.*]] = alloca <8 x i64>, align 64
@@ -225,8 +204,6 @@ double test_mm512_reduce_max_pd(__m512d __W){
 // CHECK:   store <8 x i64> [[SHUFFLE1_I]], <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP5:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I_I]], align 64
 // CHECK:   [[TMP6:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP7:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
 // CHECK:   [[TMP8:%.*]] = icmp slt <8 x i64> [[TMP5]], [[TMP6]]
 // CHECK:   [[TMP9:%.*]] = select <8 x i1> [[TMP8]], <8 x i64> [[TMP5]], <8 x i64> [[TMP6]]
 // CHECK:   store <8 x i64> [[TMP9]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -240,8 +217,6 @@ double test_mm512_reduce_max_pd(__m512d __W){
 // CHECK:   store <8 x i64> [[SHUFFLE3_I]], <8 x i64>* [[__B_ADDR_I13_I]], align 64
 // CHECK:   [[TMP14:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I12_I]], align 64
 // CHECK:   [[TMP15:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I13_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP16:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
 // CHECK:   [[TMP17:%.*]] = icmp slt <8 x i64> [[TMP14]], [[TMP15]]
 // CHECK:   [[TMP18:%.*]] = select <8 x i1> [[TMP17]], <8 x i64> [[TMP14]], <8 x i64> [[TMP15]]
 // CHECK:   store <8 x i64> [[TMP18]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -255,8 +230,6 @@ double test_mm512_reduce_max_pd(__m512d __W){
 // CHECK:   store <8 x i64> [[SHUFFLE6_I]], <8 x i64>* [[__B_ADDR_I10_I]], align 64
 // CHECK:   [[TMP23:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I9_I]], align 64
 // CHECK:   [[TMP24:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I10_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
-// CHECK:   [[TMP25:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
 // CHECK:   [[TMP26:%.*]] = icmp slt <8 x i64> [[TMP23]], [[TMP24]]
 // CHECK:   [[TMP27:%.*]] = select <8 x i1> [[TMP26]], <8 x i64> [[TMP23]], <8 x i64> [[TMP24]]
 // CHECK:   store <8 x i64> [[TMP27]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -268,13 +241,10 @@ long long test_mm512_reduce_min_epi64(__m512i __W){
 }
 
 // CHECK-LABEL: define i64 @test_mm512_reduce_min_epu64(<8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I11_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I8_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I9_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I10_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__V_ADDR_I:%.*]] = alloca <8 x i64>, align 64
@@ -292,8 +262,6 @@ long long test_mm512_reduce_min_epi64(__m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE1_I]], <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP5:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I_I]], align 64
 // CHECK:   [[TMP6:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP7:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
 // CHECK:   [[TMP8:%.*]] = icmp ult <8 x i64> [[TMP5]], [[TMP6]]
 // CHECK:   [[TMP9:%.*]] = select <8 x i1> [[TMP8]], <8 x i64> [[TMP5]], <8 x i64> [[TMP6]]
 // CHECK:   store <8 x i64> [[TMP9]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -307,8 +275,6 @@ long long test_mm512_reduce_min_epi64(__m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE3_I]], <8 x i64>* [[__B_ADDR_I13_I]], align 64
 // CHECK:   [[TMP14:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I12_I]], align 64
 // CHECK:   [[TMP15:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I13_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP16:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
 // CHECK:   [[TMP17:%.*]] = icmp ult <8 x i64> [[TMP14]], [[TMP15]]
 // CHECK:   [[TMP18:%.*]] = select <8 x i1> [[TMP17]], <8 x i64> [[TMP14]], <8 x i64> [[TMP15]]
 // CHECK:   store <8 x i64> [[TMP18]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -322,8 +288,6 @@ long long test_mm512_reduce_min_epi64(__m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE6_I]], <8 x i64>* [[__B_ADDR_I10_I]], align 64
 // CHECK:   [[TMP23:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I9_I]], align 64
 // CHECK:   [[TMP24:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I10_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
-// CHECK:   [[TMP25:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I8_I]], align 64
 // CHECK:   [[TMP26:%.*]] = icmp ult <8 x i64> [[TMP23]], [[TMP24]]
 // CHECK:   [[TMP27:%.*]] = select <8 x i1> [[TMP26]], <8 x i64> [[TMP23]], <8 x i64> [[TMP24]]
 // CHECK:   store <8 x i64> [[TMP27]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -399,13 +363,10 @@ double test_mm512_reduce_min_pd(__m512d __W){
 }
 
 // CHECK-LABEL: define i64 @test_mm512_mask_reduce_max_epi64(i8 zeroext %__M, <8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I14_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I9_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I10_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I11_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__D_ADDR_I_I:%.*]] = alloca i64, align 8
@@ -454,8 +415,6 @@ double test_mm512_reduce_min_pd(__m512d __W){
 // CHECK:   store <8 x i64> [[SHUFFLE1_I]], <8 x i64>* [[__B_ADDR_I14_I]], align 64
 // CHECK:   [[TMP19:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I13_I]], align 64
 // CHECK:   [[TMP20:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I14_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP21:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
 // CHECK:   [[TMP22:%.*]] = icmp sgt <8 x i64> [[TMP19]], [[TMP20]]
 // CHECK:   [[TMP23:%.*]] = select <8 x i1> [[TMP22]], <8 x i64> [[TMP19]], <8 x i64> [[TMP20]]
 // CHECK:   store <8 x i64> [[TMP23]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -469,8 +428,6 @@ double test_mm512_reduce_min_pd(__m512d __W){
 // CHECK:   store <8 x i64> [[SHUFFLE4_I]], <8 x i64>* [[__B_ADDR_I11_I]], align 64
 // CHECK:   [[TMP28:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I10_I]], align 64
 // CHECK:   [[TMP29:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I11_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I9_I]], align 64
-// CHECK:   [[TMP30:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I9_I]], align 64
 // CHECK:   [[TMP31:%.*]] = icmp sgt <8 x i64> [[TMP28]], [[TMP29]]
 // CHECK:   [[TMP32:%.*]] = select <8 x i1> [[TMP31]], <8 x i64> [[TMP28]], <8 x i64> [[TMP29]]
 // CHECK:   store <8 x i64> [[TMP32]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -484,8 +441,6 @@ double test_mm512_reduce_min_pd(__m512d __W){
 // CHECK:   store <8 x i64> [[SHUFFLE7_I]], <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP37:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I_I]], align 64
 // CHECK:   [[TMP38:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP39:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
 // CHECK:   [[TMP40:%.*]] = icmp sgt <8 x i64> [[TMP37]], [[TMP38]]
 // CHECK:   [[TMP41:%.*]] = select <8 x i1> [[TMP40]], <8 x i64> [[TMP37]], <8 x i64> [[TMP38]]
 // CHECK:   store <8 x i64> [[TMP41]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -497,13 +452,10 @@ long long test_mm512_mask_reduce_max_epi64(__mmask8 __M, __m512i __W){
 }
 
 // CHECK-LABEL: define i64 @test_mm512_mask_reduce_max_epu64(i8 zeroext %__M, <8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I14_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I9_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I10_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I11_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__D_ADDR_I_I:%.*]] = alloca i64, align 8
@@ -552,8 +504,6 @@ long long test_mm512_mask_reduce_max_epi64(__mmask8 __M, __m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE1_I]], <8 x i64>* [[__B_ADDR_I14_I]], align 64
 // CHECK:   [[TMP19:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I13_I]], align 64
 // CHECK:   [[TMP20:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I14_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP21:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
 // CHECK:   [[TMP22:%.*]] = icmp ugt <8 x i64> [[TMP19]], [[TMP20]]
 // CHECK:   [[TMP23:%.*]] = select <8 x i1> [[TMP22]], <8 x i64> [[TMP19]], <8 x i64> [[TMP20]]
 // CHECK:   store <8 x i64> [[TMP23]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -567,8 +517,6 @@ long long test_mm512_mask_reduce_max_epi64(__mmask8 __M, __m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE4_I]], <8 x i64>* [[__B_ADDR_I11_I]], align 64
 // CHECK:   [[TMP28:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I10_I]], align 64
 // CHECK:   [[TMP29:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I11_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I9_I]], align 64
-// CHECK:   [[TMP30:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I9_I]], align 64
 // CHECK:   [[TMP31:%.*]] = icmp ugt <8 x i64> [[TMP28]], [[TMP29]]
 // CHECK:   [[TMP32:%.*]] = select <8 x i1> [[TMP31]], <8 x i64> [[TMP28]], <8 x i64> [[TMP29]]
 // CHECK:   store <8 x i64> [[TMP32]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -582,8 +530,6 @@ long long test_mm512_mask_reduce_max_epi64(__mmask8 __M, __m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE7_I]], <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP37:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I_I]], align 64
 // CHECK:   [[TMP38:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP39:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
 // CHECK:   [[TMP40:%.*]] = icmp ugt <8 x i64> [[TMP37]], [[TMP38]]
 // CHECK:   [[TMP41:%.*]] = select <8 x i1> [[TMP40]], <8 x i64> [[TMP37]], <8 x i64> [[TMP38]]
 // CHECK:   store <8 x i64> [[TMP41]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -618,7 +564,7 @@ unsigned long test_mm512_mask_reduce_max_epu64(__mmask8 __M, __m512i __W){
 // CHECK:   store <8 x double> [[TMP1]], <8 x double>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP2:%.*]] = load i8, i8* [[__M_ADDR_I]], align 1
 // CHECK:   [[TMP3:%.*]] = load <8 x double>, <8 x double>* [[__V_ADDR_I]], align 64
-// CHECK:   store double 0x7FF0000000000000, double* [[__W_ADDR_I_I]], align 8
+// CHECK:   store double 0xFFF0000000000000, double* [[__W_ADDR_I_I]], align 8
 // CHECK:   [[TMP4:%.*]] = load double, double* [[__W_ADDR_I_I]], align 8
 // CHECK:   [[VECINIT_I_I:%.*]] = insertelement <8 x double> undef, double [[TMP4]], i32 0
 // CHECK:   [[TMP5:%.*]] = load double, double* [[__W_ADDR_I_I]], align 8
@@ -637,9 +583,8 @@ unsigned long test_mm512_mask_reduce_max_epu64(__mmask8 __M, __m512i __W){
 // CHECK:   [[VECINIT7_I_I:%.*]] = insertelement <8 x double> [[VECINIT6_I_I]], double [[TMP11]], i32 7
 // CHECK:   store <8 x double> [[VECINIT7_I_I]], <8 x double>* [[_COMPOUNDLITERAL_I_I]], align 64
 // CHECK:   [[TMP12:%.*]] = load <8 x double>, <8 x double>* [[_COMPOUNDLITERAL_I_I]], align 64
-// CHECK:   [[SUB_I:%.*]] = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, [[TMP12]]
 // CHECK:   [[TMP13:%.*]] = bitcast i8 [[TMP2]] to <8 x i1>
-// CHECK:   [[TMP14:%.*]] = select <8 x i1> [[TMP13]], <8 x double> [[TMP3]], <8 x double> [[SUB_I]]
+// CHECK:   [[TMP14:%.*]] = select <8 x i1> [[TMP13]], <8 x double> [[TMP3]], <8 x double> [[TMP12]]
 // CHECK:   store <8 x double> [[TMP14]], <8 x double>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP15:%.*]] = load <8 x double>, <8 x double>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP16:%.*]] = load <8 x double>, <8 x double>* [[__V_ADDR_I]], align 64
@@ -692,13 +637,10 @@ long long test_mm512_mask_reduce_max_pd(__mmask8 __M, __m512d __W){
 }
 
 // CHECK-LABEL: define i64 @test_mm512_mask_reduce_min_epi64(i8 zeroext %__M, <8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I14_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I9_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I10_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I11_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__D_ADDR_I_I:%.*]] = alloca i64, align 8
@@ -747,8 +689,6 @@ long long test_mm512_mask_reduce_max_pd(__mmask8 __M, __m512d __W){
 // CHECK:   store <8 x i64> [[SHUFFLE1_I]], <8 x i64>* [[__B_ADDR_I14_I]], align 64
 // CHECK:   [[TMP19:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I13_I]], align 64
 // CHECK:   [[TMP20:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I14_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP21:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
 // CHECK:   [[TMP22:%.*]] = icmp slt <8 x i64> [[TMP19]], [[TMP20]]
 // CHECK:   [[TMP23:%.*]] = select <8 x i1> [[TMP22]], <8 x i64> [[TMP19]], <8 x i64> [[TMP20]]
 // CHECK:   store <8 x i64> [[TMP23]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -762,8 +702,6 @@ long long test_mm512_mask_reduce_max_pd(__mmask8 __M, __m512d __W){
 // CHECK:   store <8 x i64> [[SHUFFLE4_I]], <8 x i64>* [[__B_ADDR_I11_I]], align 64
 // CHECK:   [[TMP28:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I10_I]], align 64
 // CHECK:   [[TMP29:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I11_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I9_I]], align 64
-// CHECK:   [[TMP30:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I9_I]], align 64
 // CHECK:   [[TMP31:%.*]] = icmp slt <8 x i64> [[TMP28]], [[TMP29]]
 // CHECK:   [[TMP32:%.*]] = select <8 x i1> [[TMP31]], <8 x i64> [[TMP28]], <8 x i64> [[TMP29]]
 // CHECK:   store <8 x i64> [[TMP32]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -777,8 +715,6 @@ long long test_mm512_mask_reduce_max_pd(__mmask8 __M, __m512d __W){
 // CHECK:   store <8 x i64> [[SHUFFLE7_I]], <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP37:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I_I]], align 64
 // CHECK:   [[TMP38:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP39:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
 // CHECK:   [[TMP40:%.*]] = icmp slt <8 x i64> [[TMP37]], [[TMP38]]
 // CHECK:   [[TMP41:%.*]] = select <8 x i1> [[TMP40]], <8 x i64> [[TMP37]], <8 x i64> [[TMP38]]
 // CHECK:   store <8 x i64> [[TMP41]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -790,13 +726,10 @@ long long test_mm512_mask_reduce_min_epi64(__mmask8 __M, __m512i __W){
 }
 
 // CHECK-LABEL: define i64 @test_mm512_mask_reduce_min_epu64(i8 zeroext %__M, <8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I14_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I9_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I10_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I11_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__D_ADDR_I_I:%.*]] = alloca i64, align 8
@@ -845,8 +778,6 @@ long long test_mm512_mask_reduce_min_epi64(__mmask8 __M, __m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE1_I]], <8 x i64>* [[__B_ADDR_I14_I]], align 64
 // CHECK:   [[TMP19:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I13_I]], align 64
 // CHECK:   [[TMP20:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I14_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP21:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
 // CHECK:   [[TMP22:%.*]] = icmp ult <8 x i64> [[TMP19]], [[TMP20]]
 // CHECK:   [[TMP23:%.*]] = select <8 x i1> [[TMP22]], <8 x i64> [[TMP19]], <8 x i64> [[TMP20]]
 // CHECK:   store <8 x i64> [[TMP23]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -860,8 +791,6 @@ long long test_mm512_mask_reduce_min_epi64(__mmask8 __M, __m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE4_I]], <8 x i64>* [[__B_ADDR_I11_I]], align 64
 // CHECK:   [[TMP28:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I10_I]], align 64
 // CHECK:   [[TMP29:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I11_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I9_I]], align 64
-// CHECK:   [[TMP30:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I9_I]], align 64
 // CHECK:   [[TMP31:%.*]] = icmp ult <8 x i64> [[TMP28]], [[TMP29]]
 // CHECK:   [[TMP32:%.*]] = select <8 x i1> [[TMP31]], <8 x i64> [[TMP28]], <8 x i64> [[TMP29]]
 // CHECK:   store <8 x i64> [[TMP32]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -875,8 +804,6 @@ long long test_mm512_mask_reduce_min_epi64(__mmask8 __M, __m512i __W){
 // CHECK:   store <8 x i64> [[SHUFFLE7_I]], <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP37:%.*]] = load <8 x i64>, <8 x i64>* [[__A_ADDR_I_I]], align 64
 // CHECK:   [[TMP38:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP39:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
 // CHECK:   [[TMP40:%.*]] = icmp ult <8 x i64> [[TMP37]], [[TMP38]]
 // CHECK:   [[TMP41:%.*]] = select <8 x i1> [[TMP40]], <8 x i64> [[TMP37]], <8 x i64> [[TMP38]]
 // CHECK:   store <8 x i64> [[TMP41]], <8 x i64>* [[__V_ADDR_I]], align 64
@@ -983,16 +910,12 @@ double test_mm512_mask_reduce_min_pd(__mmask8 __M, __m512d __W){
 }
 
 // CHECK-LABEL: define i32 @test_mm512_reduce_max_epi32(<8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I17_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I18_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I19_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I14_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I15_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I16_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I11_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[A_ADDR_I:%.*]] = alloca <8 x i64>, align 64
@@ -1018,9 +941,6 @@ double test_mm512_mask_reduce_min_pd(__mmask8 __M, __m512d __W){
 // CHECK:   [[TMP12:%.*]] = bitcast <8 x i64> [[TMP11]] to <16 x i32>
 // CHECK:   [[TMP13:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP14:%.*]] = bitcast <8 x i64> [[TMP13]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP15:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP16:%.*]] = bitcast <8 x i64> [[TMP15]] to <16 x i32>
 // CHECK:   [[TMP17:%.*]] = icmp sgt <16 x i32> [[TMP12]], [[TMP14]]
 // CHECK:   [[TMP18:%.*]] = select <16 x i1> [[TMP17]], <16 x i32> [[TMP12]], <16 x i32> [[TMP14]]
 // CHECK:   [[TMP19:%.*]] = bitcast <16 x i32> [[TMP18]] to <8 x i64>
@@ -1043,9 +963,6 @@ double test_mm512_mask_reduce_min_pd(__mmask8 __M, __m512d __W){
 // CHECK:   [[TMP31:%.*]] = bitcast <8 x i64> [[TMP30]] to <16 x i32>
 // CHECK:   [[TMP32:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I19_I]], align 64
 // CHECK:   [[TMP33:%.*]] = bitcast <8 x i64> [[TMP32]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I17_I]], align 64
-// CHECK:   [[TMP34:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I17_I]], align 64
-// CHECK:   [[TMP35:%.*]] = bitcast <8 x i64> [[TMP34]] to <16 x i32>
 // CHECK:   [[TMP36:%.*]] = icmp sgt <16 x i32> [[TMP31]], [[TMP33]]
 // CHECK:   [[TMP37:%.*]] = select <16 x i1> [[TMP36]], <16 x i32> [[TMP31]], <16 x i32> [[TMP33]]
 // CHECK:   [[TMP38:%.*]] = bitcast <16 x i32> [[TMP37]] to <8 x i64>
@@ -1068,9 +985,6 @@ double test_mm512_mask_reduce_min_pd(__mmask8 __M, __m512d __W){
 // CHECK:   [[TMP50:%.*]] = bitcast <8 x i64> [[TMP49]] to <16 x i32>
 // CHECK:   [[TMP51:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I16_I]], align 64
 // CHECK:   [[TMP52:%.*]] = bitcast <8 x i64> [[TMP51]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I14_I]], align 64
-// CHECK:   [[TMP53:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I14_I]], align 64
-// CHECK:   [[TMP54:%.*]] = bitcast <8 x i64> [[TMP53]] to <16 x i32>
 // CHECK:   [[TMP55:%.*]] = icmp sgt <16 x i32> [[TMP50]], [[TMP52]]
 // CHECK:   [[TMP56:%.*]] = select <16 x i1> [[TMP55]], <16 x i32> [[TMP50]], <16 x i32> [[TMP52]]
 // CHECK:   [[TMP57:%.*]] = bitcast <16 x i32> [[TMP56]] to <8 x i64>
@@ -1093,9 +1007,6 @@ double test_mm512_mask_reduce_min_pd(__mmask8 __M, __m512d __W){
 // CHECK:   [[TMP69:%.*]] = bitcast <8 x i64> [[TMP68]] to <16 x i32>
 // CHECK:   [[TMP70:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I13_I]], align 64
 // CHECK:   [[TMP71:%.*]] = bitcast <8 x i64> [[TMP70]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP72:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP73:%.*]] = bitcast <8 x i64> [[TMP72]] to <16 x i32>
 // CHECK:   [[TMP74:%.*]] = icmp sgt <16 x i32> [[TMP69]], [[TMP71]]
 // CHECK:   [[TMP75:%.*]] = select <16 x i1> [[TMP74]], <16 x i32> [[TMP69]], <16 x i32> [[TMP71]]
 // CHECK:   [[TMP76:%.*]] = bitcast <16 x i32> [[TMP75]] to <8 x i64>
@@ -1109,16 +1020,12 @@ int test_mm512_reduce_max_epi32(__m512i __W){
 }
 
 // CHECK-LABEL: define i32 @test_mm512_reduce_max_epu32(<8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I17_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I18_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I19_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I14_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I15_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I16_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I11_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[A_ADDR_I:%.*]] = alloca <8 x i64>, align 64
@@ -1144,9 +1051,6 @@ int test_mm512_reduce_max_epi32(__m512i __W){
 // CHECK:   [[TMP12:%.*]] = bitcast <8 x i64> [[TMP11]] to <16 x i32>
 // CHECK:   [[TMP13:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP14:%.*]] = bitcast <8 x i64> [[TMP13]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP15:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP16:%.*]] = bitcast <8 x i64> [[TMP15]] to <16 x i32>
 // CHECK:   [[TMP17:%.*]] = icmp ugt <16 x i32> [[TMP12]], [[TMP14]]
 // CHECK:   [[TMP18:%.*]] = select <16 x i1> [[TMP17]], <16 x i32> [[TMP12]], <16 x i32> [[TMP14]]
 // CHECK:   [[TMP19:%.*]] = bitcast <16 x i32> [[TMP18]] to <8 x i64>
@@ -1169,9 +1073,6 @@ int test_mm512_reduce_max_epi32(__m512i __W){
 // CHECK:   [[TMP31:%.*]] = bitcast <8 x i64> [[TMP30]] to <16 x i32>
 // CHECK:   [[TMP32:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I19_I]], align 64
 // CHECK:   [[TMP33:%.*]] = bitcast <8 x i64> [[TMP32]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I17_I]], align 64
-// CHECK:   [[TMP34:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I17_I]], align 64
-// CHECK:   [[TMP35:%.*]] = bitcast <8 x i64> [[TMP34]] to <16 x i32>
 // CHECK:   [[TMP36:%.*]] = icmp ugt <16 x i32> [[TMP31]], [[TMP33]]
 // CHECK:   [[TMP37:%.*]] = select <16 x i1> [[TMP36]], <16 x i32> [[TMP31]], <16 x i32> [[TMP33]]
 // CHECK:   [[TMP38:%.*]] = bitcast <16 x i32> [[TMP37]] to <8 x i64>
@@ -1194,9 +1095,6 @@ int test_mm512_reduce_max_epi32(__m512i __W){
 // CHECK:   [[TMP50:%.*]] = bitcast <8 x i64> [[TMP49]] to <16 x i32>
 // CHECK:   [[TMP51:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I16_I]], align 64
 // CHECK:   [[TMP52:%.*]] = bitcast <8 x i64> [[TMP51]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I14_I]], align 64
-// CHECK:   [[TMP53:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I14_I]], align 64
-// CHECK:   [[TMP54:%.*]] = bitcast <8 x i64> [[TMP53]] to <16 x i32>
 // CHECK:   [[TMP55:%.*]] = icmp ugt <16 x i32> [[TMP50]], [[TMP52]]
 // CHECK:   [[TMP56:%.*]] = select <16 x i1> [[TMP55]], <16 x i32> [[TMP50]], <16 x i32> [[TMP52]]
 // CHECK:   [[TMP57:%.*]] = bitcast <16 x i32> [[TMP56]] to <8 x i64>
@@ -1219,9 +1117,6 @@ int test_mm512_reduce_max_epi32(__m512i __W){
 // CHECK:   [[TMP69:%.*]] = bitcast <8 x i64> [[TMP68]] to <16 x i32>
 // CHECK:   [[TMP70:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I13_I]], align 64
 // CHECK:   [[TMP71:%.*]] = bitcast <8 x i64> [[TMP70]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP72:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP73:%.*]] = bitcast <8 x i64> [[TMP72]] to <16 x i32>
 // CHECK:   [[TMP74:%.*]] = icmp ugt <16 x i32> [[TMP69]], [[TMP71]]
 // CHECK:   [[TMP75:%.*]] = select <16 x i1> [[TMP74]], <16 x i32> [[TMP69]], <16 x i32> [[TMP71]]
 // CHECK:   [[TMP76:%.*]] = bitcast <16 x i32> [[TMP75]] to <8 x i64>
@@ -1316,16 +1211,12 @@ float test_mm512_reduce_max_ps(__m512 __W){
 }
 
 // CHECK-LABEL: define i32 @test_mm512_reduce_min_epi32(<8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I17_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I18_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I19_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I14_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I15_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I16_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I11_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[A_ADDR_I:%.*]] = alloca <8 x i64>, align 64
@@ -1351,9 +1242,6 @@ float test_mm512_reduce_max_ps(__m512 __W){
 // CHECK:   [[TMP12:%.*]] = bitcast <8 x i64> [[TMP11]] to <16 x i32>
 // CHECK:   [[TMP13:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP14:%.*]] = bitcast <8 x i64> [[TMP13]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP15:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP16:%.*]] = bitcast <8 x i64> [[TMP15]] to <16 x i32>
 // CHECK:   [[TMP17:%.*]] = icmp slt <16 x i32> [[TMP12]], [[TMP14]]
 // CHECK:   [[TMP18:%.*]] = select <16 x i1> [[TMP17]], <16 x i32> [[TMP12]], <16 x i32> [[TMP14]]
 // CHECK:   [[TMP19:%.*]] = bitcast <16 x i32> [[TMP18]] to <8 x i64>
@@ -1376,9 +1264,6 @@ float test_mm512_reduce_max_ps(__m512 __W){
 // CHECK:   [[TMP31:%.*]] = bitcast <8 x i64> [[TMP30]] to <16 x i32>
 // CHECK:   [[TMP32:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I19_I]], align 64
 // CHECK:   [[TMP33:%.*]] = bitcast <8 x i64> [[TMP32]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I17_I]], align 64
-// CHECK:   [[TMP34:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I17_I]], align 64
-// CHECK:   [[TMP35:%.*]] = bitcast <8 x i64> [[TMP34]] to <16 x i32>
 // CHECK:   [[TMP36:%.*]] = icmp slt <16 x i32> [[TMP31]], [[TMP33]]
 // CHECK:   [[TMP37:%.*]] = select <16 x i1> [[TMP36]], <16 x i32> [[TMP31]], <16 x i32> [[TMP33]]
 // CHECK:   [[TMP38:%.*]] = bitcast <16 x i32> [[TMP37]] to <8 x i64>
@@ -1401,9 +1286,6 @@ float test_mm512_reduce_max_ps(__m512 __W){
 // CHECK:   [[TMP50:%.*]] = bitcast <8 x i64> [[TMP49]] to <16 x i32>
 // CHECK:   [[TMP51:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I16_I]], align 64
 // CHECK:   [[TMP52:%.*]] = bitcast <8 x i64> [[TMP51]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I14_I]], align 64
-// CHECK:   [[TMP53:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I14_I]], align 64
-// CHECK:   [[TMP54:%.*]] = bitcast <8 x i64> [[TMP53]] to <16 x i32>
 // CHECK:   [[TMP55:%.*]] = icmp slt <16 x i32> [[TMP50]], [[TMP52]]
 // CHECK:   [[TMP56:%.*]] = select <16 x i1> [[TMP55]], <16 x i32> [[TMP50]], <16 x i32> [[TMP52]]
 // CHECK:   [[TMP57:%.*]] = bitcast <16 x i32> [[TMP56]] to <8 x i64>
@@ -1426,9 +1308,6 @@ float test_mm512_reduce_max_ps(__m512 __W){
 // CHECK:   [[TMP69:%.*]] = bitcast <8 x i64> [[TMP68]] to <16 x i32>
 // CHECK:   [[TMP70:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I13_I]], align 64
 // CHECK:   [[TMP71:%.*]] = bitcast <8 x i64> [[TMP70]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP72:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP73:%.*]] = bitcast <8 x i64> [[TMP72]] to <16 x i32>
 // CHECK:   [[TMP74:%.*]] = icmp slt <16 x i32> [[TMP69]], [[TMP71]]
 // CHECK:   [[TMP75:%.*]] = select <16 x i1> [[TMP74]], <16 x i32> [[TMP69]], <16 x i32> [[TMP71]]
 // CHECK:   [[TMP76:%.*]] = bitcast <16 x i32> [[TMP75]] to <8 x i64>
@@ -1442,16 +1321,12 @@ int test_mm512_reduce_min_epi32(__m512i __W){
 }
 
 // CHECK-LABEL: define i32 @test_mm512_reduce_min_epu32(<8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I17_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I18_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I19_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I14_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I15_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I16_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I11_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[A_ADDR_I:%.*]] = alloca <8 x i64>, align 64
@@ -1477,9 +1352,6 @@ int test_mm512_reduce_min_epi32(__m512i __W){
 // CHECK:   [[TMP12:%.*]] = bitcast <8 x i64> [[TMP11]] to <16 x i32>
 // CHECK:   [[TMP13:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP14:%.*]] = bitcast <8 x i64> [[TMP13]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP15:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP16:%.*]] = bitcast <8 x i64> [[TMP15]] to <16 x i32>
 // CHECK:   [[TMP17:%.*]] = icmp ult <16 x i32> [[TMP12]], [[TMP14]]
 // CHECK:   [[TMP18:%.*]] = select <16 x i1> [[TMP17]], <16 x i32> [[TMP12]], <16 x i32> [[TMP14]]
 // CHECK:   [[TMP19:%.*]] = bitcast <16 x i32> [[TMP18]] to <8 x i64>
@@ -1502,9 +1374,6 @@ int test_mm512_reduce_min_epi32(__m512i __W){
 // CHECK:   [[TMP31:%.*]] = bitcast <8 x i64> [[TMP30]] to <16 x i32>
 // CHECK:   [[TMP32:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I19_I]], align 64
 // CHECK:   [[TMP33:%.*]] = bitcast <8 x i64> [[TMP32]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I17_I]], align 64
-// CHECK:   [[TMP34:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I17_I]], align 64
-// CHECK:   [[TMP35:%.*]] = bitcast <8 x i64> [[TMP34]] to <16 x i32>
 // CHECK:   [[TMP36:%.*]] = icmp ult <16 x i32> [[TMP31]], [[TMP33]]
 // CHECK:   [[TMP37:%.*]] = select <16 x i1> [[TMP36]], <16 x i32> [[TMP31]], <16 x i32> [[TMP33]]
 // CHECK:   [[TMP38:%.*]] = bitcast <16 x i32> [[TMP37]] to <8 x i64>
@@ -1527,9 +1396,6 @@ int test_mm512_reduce_min_epi32(__m512i __W){
 // CHECK:   [[TMP50:%.*]] = bitcast <8 x i64> [[TMP49]] to <16 x i32>
 // CHECK:   [[TMP51:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I16_I]], align 64
 // CHECK:   [[TMP52:%.*]] = bitcast <8 x i64> [[TMP51]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I14_I]], align 64
-// CHECK:   [[TMP53:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I14_I]], align 64
-// CHECK:   [[TMP54:%.*]] = bitcast <8 x i64> [[TMP53]] to <16 x i32>
 // CHECK:   [[TMP55:%.*]] = icmp ult <16 x i32> [[TMP50]], [[TMP52]]
 // CHECK:   [[TMP56:%.*]] = select <16 x i1> [[TMP55]], <16 x i32> [[TMP50]], <16 x i32> [[TMP52]]
 // CHECK:   [[TMP57:%.*]] = bitcast <16 x i32> [[TMP56]] to <8 x i64>
@@ -1552,9 +1418,6 @@ int test_mm512_reduce_min_epi32(__m512i __W){
 // CHECK:   [[TMP69:%.*]] = bitcast <8 x i64> [[TMP68]] to <16 x i32>
 // CHECK:   [[TMP70:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I13_I]], align 64
 // CHECK:   [[TMP71:%.*]] = bitcast <8 x i64> [[TMP70]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP72:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I11_I]], align 64
-// CHECK:   [[TMP73:%.*]] = bitcast <8 x i64> [[TMP72]] to <16 x i32>
 // CHECK:   [[TMP74:%.*]] = icmp ult <16 x i32> [[TMP69]], [[TMP71]]
 // CHECK:   [[TMP75:%.*]] = select <16 x i1> [[TMP74]], <16 x i32> [[TMP69]], <16 x i32> [[TMP71]]
 // CHECK:   [[TMP76:%.*]] = bitcast <16 x i32> [[TMP75]] to <8 x i64>
@@ -1649,16 +1512,12 @@ float test_mm512_reduce_min_ps(__m512 __W){
 }
 
 // CHECK-LABEL: define i32 @test_mm512_mask_reduce_max_epi32(i16 zeroext %__M, <8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I18_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I19_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I20_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I15_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I16_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I17_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I14_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__S_ADDR_I_I:%.*]] = alloca i32, align 4
@@ -1734,9 +1593,6 @@ float test_mm512_reduce_min_ps(__m512 __W){
 // CHECK:   [[TMP37:%.*]] = bitcast <8 x i64> [[TMP36]] to <16 x i32>
 // CHECK:   [[TMP38:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I20_I]], align 64
 // CHECK:   [[TMP39:%.*]] = bitcast <8 x i64> [[TMP38]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I18_I]], align 64
-// CHECK:   [[TMP40:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I18_I]], align 64
-// CHECK:   [[TMP41:%.*]] = bitcast <8 x i64> [[TMP40]] to <16 x i32>
 // CHECK:   [[TMP42:%.*]] = icmp sgt <16 x i32> [[TMP37]], [[TMP39]]
 // CHECK:   [[TMP43:%.*]] = select <16 x i1> [[TMP42]], <16 x i32> [[TMP37]], <16 x i32> [[TMP39]]
 // CHECK:   [[TMP44:%.*]] = bitcast <16 x i32> [[TMP43]] to <8 x i64>
@@ -1759,9 +1615,6 @@ float test_mm512_reduce_min_ps(__m512 __W){
 // CHECK:   [[TMP56:%.*]] = bitcast <8 x i64> [[TMP55]] to <16 x i32>
 // CHECK:   [[TMP57:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I17_I]], align 64
 // CHECK:   [[TMP58:%.*]] = bitcast <8 x i64> [[TMP57]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I15_I]], align 64
-// CHECK:   [[TMP59:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I15_I]], align 64
-// CHECK:   [[TMP60:%.*]] = bitcast <8 x i64> [[TMP59]] to <16 x i32>
 // CHECK:   [[TMP61:%.*]] = icmp sgt <16 x i32> [[TMP56]], [[TMP58]]
 // CHECK:   [[TMP62:%.*]] = select <16 x i1> [[TMP61]], <16 x i32> [[TMP56]], <16 x i32> [[TMP58]]
 // CHECK:   [[TMP63:%.*]] = bitcast <16 x i32> [[TMP62]] to <8 x i64>
@@ -1784,9 +1637,6 @@ float test_mm512_reduce_min_ps(__m512 __W){
 // CHECK:   [[TMP75:%.*]] = bitcast <8 x i64> [[TMP74]] to <16 x i32>
 // CHECK:   [[TMP76:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I14_I]], align 64
 // CHECK:   [[TMP77:%.*]] = bitcast <8 x i64> [[TMP76]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP78:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP79:%.*]] = bitcast <8 x i64> [[TMP78]] to <16 x i32>
 // CHECK:   [[TMP80:%.*]] = icmp sgt <16 x i32> [[TMP75]], [[TMP77]]
 // CHECK:   [[TMP81:%.*]] = select <16 x i1> [[TMP80]], <16 x i32> [[TMP75]], <16 x i32> [[TMP77]]
 // CHECK:   [[TMP82:%.*]] = bitcast <16 x i32> [[TMP81]] to <8 x i64>
@@ -1809,9 +1659,6 @@ float test_mm512_reduce_min_ps(__m512 __W){
 // CHECK:   [[TMP94:%.*]] = bitcast <8 x i64> [[TMP93]] to <16 x i32>
 // CHECK:   [[TMP95:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP96:%.*]] = bitcast <8 x i64> [[TMP95]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP97:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP98:%.*]] = bitcast <8 x i64> [[TMP97]] to <16 x i32>
 // CHECK:   [[TMP99:%.*]] = icmp sgt <16 x i32> [[TMP94]], [[TMP96]]
 // CHECK:   [[TMP100:%.*]] = select <16 x i1> [[TMP99]], <16 x i32> [[TMP94]], <16 x i32> [[TMP96]]
 // CHECK:   [[TMP101:%.*]] = bitcast <16 x i32> [[TMP100]] to <8 x i64>
@@ -1825,16 +1672,12 @@ int test_mm512_mask_reduce_max_epi32(__mmask16 __M, __m512i __W){
 }
 
 // CHECK-LABEL: define i32 @test_mm512_mask_reduce_max_epu32(i16 zeroext %__M, <8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I18_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I19_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I20_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I15_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I16_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I17_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I14_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__S_ADDR_I_I:%.*]] = alloca i32, align 4
@@ -1910,9 +1753,6 @@ int test_mm512_mask_reduce_max_epi32(__mmask16 __M, __m512i __W){
 // CHECK:   [[TMP37:%.*]] = bitcast <8 x i64> [[TMP36]] to <16 x i32>
 // CHECK:   [[TMP38:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I20_I]], align 64
 // CHECK:   [[TMP39:%.*]] = bitcast <8 x i64> [[TMP38]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I18_I]], align 64
-// CHECK:   [[TMP40:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I18_I]], align 64
-// CHECK:   [[TMP41:%.*]] = bitcast <8 x i64> [[TMP40]] to <16 x i32>
 // CHECK:   [[TMP42:%.*]] = icmp ugt <16 x i32> [[TMP37]], [[TMP39]]
 // CHECK:   [[TMP43:%.*]] = select <16 x i1> [[TMP42]], <16 x i32> [[TMP37]], <16 x i32> [[TMP39]]
 // CHECK:   [[TMP44:%.*]] = bitcast <16 x i32> [[TMP43]] to <8 x i64>
@@ -1935,9 +1775,6 @@ int test_mm512_mask_reduce_max_epi32(__mmask16 __M, __m512i __W){
 // CHECK:   [[TMP56:%.*]] = bitcast <8 x i64> [[TMP55]] to <16 x i32>
 // CHECK:   [[TMP57:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I17_I]], align 64
 // CHECK:   [[TMP58:%.*]] = bitcast <8 x i64> [[TMP57]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I15_I]], align 64
-// CHECK:   [[TMP59:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I15_I]], align 64
-// CHECK:   [[TMP60:%.*]] = bitcast <8 x i64> [[TMP59]] to <16 x i32>
 // CHECK:   [[TMP61:%.*]] = icmp ugt <16 x i32> [[TMP56]], [[TMP58]]
 // CHECK:   [[TMP62:%.*]] = select <16 x i1> [[TMP61]], <16 x i32> [[TMP56]], <16 x i32> [[TMP58]]
 // CHECK:   [[TMP63:%.*]] = bitcast <16 x i32> [[TMP62]] to <8 x i64>
@@ -1960,9 +1797,6 @@ int test_mm512_mask_reduce_max_epi32(__mmask16 __M, __m512i __W){
 // CHECK:   [[TMP75:%.*]] = bitcast <8 x i64> [[TMP74]] to <16 x i32>
 // CHECK:   [[TMP76:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I14_I]], align 64
 // CHECK:   [[TMP77:%.*]] = bitcast <8 x i64> [[TMP76]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP78:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP79:%.*]] = bitcast <8 x i64> [[TMP78]] to <16 x i32>
 // CHECK:   [[TMP80:%.*]] = icmp ugt <16 x i32> [[TMP75]], [[TMP77]]
 // CHECK:   [[TMP81:%.*]] = select <16 x i1> [[TMP80]], <16 x i32> [[TMP75]], <16 x i32> [[TMP77]]
 // CHECK:   [[TMP82:%.*]] = bitcast <16 x i32> [[TMP81]] to <8 x i64>
@@ -1985,9 +1819,6 @@ int test_mm512_mask_reduce_max_epi32(__mmask16 __M, __m512i __W){
 // CHECK:   [[TMP94:%.*]] = bitcast <8 x i64> [[TMP93]] to <16 x i32>
 // CHECK:   [[TMP95:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP96:%.*]] = bitcast <8 x i64> [[TMP95]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP97:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP98:%.*]] = bitcast <8 x i64> [[TMP97]] to <16 x i32>
 // CHECK:   [[TMP99:%.*]] = icmp ugt <16 x i32> [[TMP94]], [[TMP96]]
 // CHECK:   [[TMP100:%.*]] = select <16 x i1> [[TMP99]], <16 x i32> [[TMP94]], <16 x i32> [[TMP96]]
 // CHECK:   [[TMP101:%.*]] = bitcast <16 x i32> [[TMP100]] to <8 x i64>
@@ -2027,7 +1858,7 @@ unsigned int test_mm512_mask_reduce_max_epu32(__mmask16 __M, __m512i __W){
 // CHECK:   store <16 x float> [[TMP1]], <16 x float>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP2:%.*]] = load i16, i16* [[__M_ADDR_I]], align 2
 // CHECK:   [[TMP3:%.*]] = load <16 x float>, <16 x float>* [[__V_ADDR_I]], align 64
-// CHECK:   store float 0x7FF0000000000000, float* [[__W_ADDR_I_I]], align 4
+// CHECK:   store float 0xFFF0000000000000, float* [[__W_ADDR_I_I]], align 4
 // CHECK:   [[TMP4:%.*]] = load float, float* [[__W_ADDR_I_I]], align 4
 // CHECK:   [[VECINIT_I_I:%.*]] = insertelement <16 x float> undef, float [[TMP4]], i32 0
 // CHECK:   [[TMP5:%.*]] = load float, float* [[__W_ADDR_I_I]], align 4
@@ -2062,9 +1893,8 @@ unsigned int test_mm512_mask_reduce_max_epu32(__mmask16 __M, __m512i __W){
 // CHECK:   [[VECINIT15_I_I:%.*]] = insertelement <16 x float> [[VECINIT14_I_I]], float [[TMP19]], i32 15
 // CHECK:   store <16 x float> [[VECINIT15_I_I]], <16 x float>* [[_COMPOUNDLITERAL_I_I]], align 64
 // CHECK:   [[TMP20:%.*]] = load <16 x float>, <16 x float>* [[_COMPOUNDLITERAL_I_I]], align 64
-// CHECK:   [[SUB_I:%.*]] = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[TMP20]]
 // CHECK:   [[TMP21:%.*]] = bitcast i16 [[TMP2]] to <16 x i1>
-// CHECK:   [[TMP22:%.*]] = select <16 x i1> [[TMP21]], <16 x float> [[TMP3]], <16 x float> [[SUB_I]]
+// CHECK:   [[TMP22:%.*]] = select <16 x i1> [[TMP21]], <16 x float> [[TMP3]], <16 x float> [[TMP20]]
 // CHECK:   store <16 x float> [[TMP22]], <16 x float>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP23:%.*]] = load <16 x float>, <16 x float>* [[__V_ADDR_I]], align 64
 // CHECK:   [[TMP24:%.*]] = load <16 x float>, <16 x float>* [[__V_ADDR_I]], align 64
@@ -2130,16 +1960,12 @@ float test_mm512_mask_reduce_max_ps(__mmask16 __M, __m512 __W){
 }
 
 // CHECK-LABEL: define i32 @test_mm512_mask_reduce_min_epi32(i16 zeroext %__M, <8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I18_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I19_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I20_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I15_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I16_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I17_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I14_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__S_ADDR_I_I:%.*]] = alloca i32, align 4
@@ -2215,9 +2041,6 @@ float test_mm512_mask_reduce_max_ps(__mmask16 __M, __m512 __W){
 // CHECK:   [[TMP37:%.*]] = bitcast <8 x i64> [[TMP36]] to <16 x i32>
 // CHECK:   [[TMP38:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I20_I]], align 64
 // CHECK:   [[TMP39:%.*]] = bitcast <8 x i64> [[TMP38]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I18_I]], align 64
-// CHECK:   [[TMP40:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I18_I]], align 64
-// CHECK:   [[TMP41:%.*]] = bitcast <8 x i64> [[TMP40]] to <16 x i32>
 // CHECK:   [[TMP42:%.*]] = icmp slt <16 x i32> [[TMP37]], [[TMP39]]
 // CHECK:   [[TMP43:%.*]] = select <16 x i1> [[TMP42]], <16 x i32> [[TMP37]], <16 x i32> [[TMP39]]
 // CHECK:   [[TMP44:%.*]] = bitcast <16 x i32> [[TMP43]] to <8 x i64>
@@ -2240,9 +2063,6 @@ float test_mm512_mask_reduce_max_ps(__mmask16 __M, __m512 __W){
 // CHECK:   [[TMP56:%.*]] = bitcast <8 x i64> [[TMP55]] to <16 x i32>
 // CHECK:   [[TMP57:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I17_I]], align 64
 // CHECK:   [[TMP58:%.*]] = bitcast <8 x i64> [[TMP57]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I15_I]], align 64
-// CHECK:   [[TMP59:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I15_I]], align 64
-// CHECK:   [[TMP60:%.*]] = bitcast <8 x i64> [[TMP59]] to <16 x i32>
 // CHECK:   [[TMP61:%.*]] = icmp slt <16 x i32> [[TMP56]], [[TMP58]]
 // CHECK:   [[TMP62:%.*]] = select <16 x i1> [[TMP61]], <16 x i32> [[TMP56]], <16 x i32> [[TMP58]]
 // CHECK:   [[TMP63:%.*]] = bitcast <16 x i32> [[TMP62]] to <8 x i64>
@@ -2265,9 +2085,6 @@ float test_mm512_mask_reduce_max_ps(__mmask16 __M, __m512 __W){
 // CHECK:   [[TMP75:%.*]] = bitcast <8 x i64> [[TMP74]] to <16 x i32>
 // CHECK:   [[TMP76:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I14_I]], align 64
 // CHECK:   [[TMP77:%.*]] = bitcast <8 x i64> [[TMP76]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP78:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP79:%.*]] = bitcast <8 x i64> [[TMP78]] to <16 x i32>
 // CHECK:   [[TMP80:%.*]] = icmp slt <16 x i32> [[TMP75]], [[TMP77]]
 // CHECK:   [[TMP81:%.*]] = select <16 x i1> [[TMP80]], <16 x i32> [[TMP75]], <16 x i32> [[TMP77]]
 // CHECK:   [[TMP82:%.*]] = bitcast <16 x i32> [[TMP81]] to <8 x i64>
@@ -2290,9 +2107,6 @@ float test_mm512_mask_reduce_max_ps(__mmask16 __M, __m512 __W){
 // CHECK:   [[TMP94:%.*]] = bitcast <8 x i64> [[TMP93]] to <16 x i32>
 // CHECK:   [[TMP95:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP96:%.*]] = bitcast <8 x i64> [[TMP95]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP97:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP98:%.*]] = bitcast <8 x i64> [[TMP97]] to <16 x i32>
 // CHECK:   [[TMP99:%.*]] = icmp slt <16 x i32> [[TMP94]], [[TMP96]]
 // CHECK:   [[TMP100:%.*]] = select <16 x i1> [[TMP99]], <16 x i32> [[TMP94]], <16 x i32> [[TMP96]]
 // CHECK:   [[TMP101:%.*]] = bitcast <16 x i32> [[TMP100]] to <8 x i64>
@@ -2306,16 +2120,12 @@ int test_mm512_mask_reduce_min_epi32(__mmask16 __M, __m512i __W){
 }
 
 // CHECK-LABEL: define i32 @test_mm512_mask_reduce_min_epu32(i16 zeroext %__M, <8 x i64> %__W) #0 {
-// CHECK:   [[_COMPOUNDLITERAL_I_I18_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I19_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I20_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I15_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I16_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I17_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I12_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I13_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I14_I:%.*]] = alloca <8 x i64>, align 64
-// CHECK:   [[_COMPOUNDLITERAL_I_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__A_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__B_ADDR_I_I:%.*]] = alloca <8 x i64>, align 64
 // CHECK:   [[__S_ADDR_I_I:%.*]] = alloca i32, align 4
@@ -2391,9 +2201,6 @@ int test_mm512_mask_reduce_min_epi32(__mmask16 __M, __m512i __W){
 // CHECK:   [[TMP37:%.*]] = bitcast <8 x i64> [[TMP36]] to <16 x i32>
 // CHECK:   [[TMP38:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I20_I]], align 64
 // CHECK:   [[TMP39:%.*]] = bitcast <8 x i64> [[TMP38]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I18_I]], align 64
-// CHECK:   [[TMP40:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I18_I]], align 64
-// CHECK:   [[TMP41:%.*]] = bitcast <8 x i64> [[TMP40]] to <16 x i32>
 // CHECK:   [[TMP42:%.*]] = icmp ult <16 x i32> [[TMP37]], [[TMP39]]
 // CHECK:   [[TMP43:%.*]] = select <16 x i1> [[TMP42]], <16 x i32> [[TMP37]], <16 x i32> [[TMP39]]
 // CHECK:   [[TMP44:%.*]] = bitcast <16 x i32> [[TMP43]] to <8 x i64>
@@ -2416,9 +2223,6 @@ int test_mm512_mask_reduce_min_epi32(__mmask16 __M, __m512i __W){
 // CHECK:   [[TMP56:%.*]] = bitcast <8 x i64> [[TMP55]] to <16 x i32>
 // CHECK:   [[TMP57:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I17_I]], align 64
 // CHECK:   [[TMP58:%.*]] = bitcast <8 x i64> [[TMP57]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I15_I]], align 64
-// CHECK:   [[TMP59:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I15_I]], align 64
-// CHECK:   [[TMP60:%.*]] = bitcast <8 x i64> [[TMP59]] to <16 x i32>
 // CHECK:   [[TMP61:%.*]] = icmp ult <16 x i32> [[TMP56]], [[TMP58]]
 // CHECK:   [[TMP62:%.*]] = select <16 x i1> [[TMP61]], <16 x i32> [[TMP56]], <16 x i32> [[TMP58]]
 // CHECK:   [[TMP63:%.*]] = bitcast <16 x i32> [[TMP62]] to <8 x i64>
@@ -2441,9 +2245,6 @@ int test_mm512_mask_reduce_min_epi32(__mmask16 __M, __m512i __W){
 // CHECK:   [[TMP75:%.*]] = bitcast <8 x i64> [[TMP74]] to <16 x i32>
 // CHECK:   [[TMP76:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I14_I]], align 64
 // CHECK:   [[TMP77:%.*]] = bitcast <8 x i64> [[TMP76]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP78:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I12_I]], align 64
-// CHECK:   [[TMP79:%.*]] = bitcast <8 x i64> [[TMP78]] to <16 x i32>
 // CHECK:   [[TMP80:%.*]] = icmp ult <16 x i32> [[TMP75]], [[TMP77]]
 // CHECK:   [[TMP81:%.*]] = select <16 x i1> [[TMP80]], <16 x i32> [[TMP75]], <16 x i32> [[TMP77]]
 // CHECK:   [[TMP82:%.*]] = bitcast <16 x i32> [[TMP81]] to <8 x i64>
@@ -2466,9 +2267,6 @@ int test_mm512_mask_reduce_min_epi32(__mmask16 __M, __m512i __W){
 // CHECK:   [[TMP94:%.*]] = bitcast <8 x i64> [[TMP93]] to <16 x i32>
 // CHECK:   [[TMP95:%.*]] = load <8 x i64>, <8 x i64>* [[__B_ADDR_I_I]], align 64
 // CHECK:   [[TMP96:%.*]] = bitcast <8 x i64> [[TMP95]] to <16 x i32>
-// CHECK:   store <8 x i64> zeroinitializer, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP97:%.*]] = load <8 x i64>, <8 x i64>* [[_COMPOUNDLITERAL_I_I_I]], align 64
-// CHECK:   [[TMP98:%.*]] = bitcast <8 x i64> [[TMP97]] to <16 x i32>
 // CHECK:   [[TMP99:%.*]] = icmp ult <16 x i32> [[TMP94]], [[TMP96]]
 // CHECK:   [[TMP100:%.*]] = select <16 x i1> [[TMP99]], <16 x i32> [[TMP94]], <16 x i32> [[TMP96]]
 // CHECK:   [[TMP101:%.*]] = bitcast <16 x i32> [[TMP100]] to <8 x i64>
