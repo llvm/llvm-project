@@ -8,7 +8,7 @@
 ; RUN: llvm-nm %t2 | FileCheck --check-prefix=CHECK-O2 %s
 ; RUN: ld.lld -o %t2a -m elf_x86_64 -e main %t.o
 ; RUN: llvm-nm %t2a | FileCheck --check-prefix=CHECK-O2 %s
-; RUN: ld.lld -o %t2 -m elf_x86_64 -e main --plugin-opt=O2 %t.o
+; RUN: ld.lld -o %t2 -m elf_x86_64 -e main %t.o --plugin-opt O2
 ; RUN: llvm-nm %t2 | FileCheck --check-prefix=CHECK-O2 %s
 
 ; Reject invalid optimization levels.

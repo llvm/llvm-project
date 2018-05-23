@@ -19,7 +19,7 @@
 #include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
 
 #define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
-#include "RegisterInfos_ppc64le.h"
+#include "Plugins/Process/Utility/RegisterInfos_ppc64le.h"
 #undef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
 
 namespace lldb_private {

@@ -19,7 +19,7 @@
 #include "ProcessWindows.h"
 #include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
-#include "UnwindLLDB.h"
+#include "Plugins/Process/Utility/UnwindLLDB.h"
 
 #if defined(_WIN64)
 #include "x64/RegisterContextWindows_x64.h"

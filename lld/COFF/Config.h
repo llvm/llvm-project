@@ -129,10 +129,10 @@ struct Configuration {
   Symbol *SEHCount = nullptr;
 
   // Used for /opt:lldlto=N
-  unsigned LTOOptLevel = 2;
+  unsigned LTOO = 2;
 
   // Used for /opt:lldltojobs=N
-  unsigned LTOJobs = 0;
+  unsigned ThinLTOJobs = 0;
   // Used for /opt:lldltopartitions=N
   unsigned LTOPartitions = 1;
 
