@@ -66,6 +66,7 @@ lldb::Encoding TranslateBuiltinEncoding(PDB_BuiltinType type) {
   case PDB_BuiltinType::UInt:
   case PDB_BuiltinType::ULong:
   case PDB_BuiltinType::HResult:
+  case PDB_BuiltinType::WCharT:
     return lldb::eEncodingUint;
   default:
     return lldb::eEncodingInvalid;
