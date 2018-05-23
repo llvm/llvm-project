@@ -325,7 +325,7 @@ template <class ELFT> void InputSection::copyShtGroup(uint8_t *Buf) {
     *To++ = Sections[Idx]->getOutputSection()->SectionIndex;
 }
 
-InputSectionBase *InputSection::getRelocatedSection() {
+InputSectionBase *InputSection::getRelocatedSection() const {
   if (!File || (Type != SHT_RELA && Type != SHT_REL))
     return nullptr;
   ArrayRef<InputSectionBase *> Sections = File->getSections();
