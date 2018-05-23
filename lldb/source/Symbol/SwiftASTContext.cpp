@@ -3577,7 +3577,11 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
         all_dlopen_errors.GetData());
   };
 
-  swift_module->collectLinkLibraries(addLinkLibrary);
+  swift_module->forAllVisibleModules(
+      {}, [&](swift::ModuleDecl::ImportedModule import) {
+        import.second->collectLinkLibraries(addLinkLibrary);
+        return true;
+      });
   error = current_error;
 }
 
