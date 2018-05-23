@@ -855,6 +855,8 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
                                 : DD->useSplitDwarf() ? dwarf::DW_UT_skeleton
                                                       : dwarf::DW_UT_compile;
   DwarfUnit::emitCommonHeader(UseOffsets, UT);
+  if (DD->getDwarfVersion() >= 5 && UT != dwarf::DW_UT_compile)
+    Asm->emitInt64(getDWOId());
 }
 
 bool DwarfCompileUnit::hasDwarfPubSections() const {

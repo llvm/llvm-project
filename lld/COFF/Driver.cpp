@@ -1086,12 +1086,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         TailMerge = 0;
       } else if (S.startswith("lldlto=")) {
         StringRef OptLevel = S.substr(7);
-        if (OptLevel.getAsInteger(10, Config->LTOOptLevel) ||
-            Config->LTOOptLevel > 3)
+        if (OptLevel.getAsInteger(10, Config->LTOO) || Config->LTOO > 3)
           error("/opt:lldlto: invalid optimization level: " + OptLevel);
       } else if (S.startswith("lldltojobs=")) {
         StringRef Jobs = S.substr(11);
-        if (Jobs.getAsInteger(10, Config->LTOJobs) || Config->LTOJobs == 0)
+        if (Jobs.getAsInteger(10, Config->ThinLTOJobs) ||
+            Config->ThinLTOJobs == 0)
           error("/opt:lldltojobs: invalid job count: " + Jobs);
       } else if (S.startswith("lldltopartitions=")) {
         StringRef N = S.substr(17);

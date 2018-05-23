@@ -98,14 +98,8 @@ public:
                                                  this)),
         Owner(B), STI(Subtarget) {}
 
-  void cycleEvent() {
-    RCU->cycleEvent();
-    AvailableEntries =
-        CarryOver >= DispatchWidth ? 0 : DispatchWidth - CarryOver;
-    CarryOver = CarryOver >= DispatchWidth ? CarryOver - DispatchWidth : 0U;
-  }
-
   virtual bool isReady() const override final { return isRCUEmpty(); }
+  virtual void preExecute(const InstRef &IR) override final;
   virtual bool execute(InstRef &IR) override final;
   void notifyInstructionRetired(const InstRef &IR);
   void notifyDispatchStall(const InstRef &IR, unsigned EventType);

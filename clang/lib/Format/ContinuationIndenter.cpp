@@ -1073,34 +1073,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   if (Current.isMemberAccess())
     State.Stack.back().StartOfFunctionCall =
         !Current.NextOperator ? 0 : State.Column;
-  if (Current.is(TT_SelectorName) &&
-      !State.Stack.back().ObjCSelectorNameFound) {
+  if (Current.is(TT_SelectorName))
     State.Stack.back().ObjCSelectorNameFound = true;
-
-    // Reevaluate whether ObjC message arguments fit into one line.
-    // If a receiver spans multiple lines, e.g.:
-    //   [[object block:^{
-    //     return 42;
-    //   }] a:42 b:42];
-    // BreakBeforeParameter is calculated based on an incorrect assumption
-    // (it is checked whether the whole expression fits into one line without
-    // considering a line break inside a message receiver).
-    if (Current.Previous && Current.Previous->closesScope() &&
-        Current.Previous->MatchingParen &&
-        Current.Previous->MatchingParen->Previous) {
-      const FormatToken &CurrentScopeOpener =
-          *Current.Previous->MatchingParen->Previous;
-      if (CurrentScopeOpener.is(TT_ObjCMethodExpr) &&
-          CurrentScopeOpener.MatchingParen) {
-        int NecessarySpaceInLine =
-            getLengthToMatchingParen(CurrentScopeOpener, State.Stack) +
-            CurrentScopeOpener.TotalLength - Current.TotalLength - 1;
-        if (State.Column + Current.ColumnWidth + NecessarySpaceInLine <=
-            Style.ColumnLimit)
-          State.Stack.back().BreakBeforeParameter = false;
-      }
-    }
-  }
   if (Current.is(TT_CtorInitializerColon) &&
       Style.BreakConstructorInitializers != FormatStyle::BCIS_AfterColon) {
     // Indent 2 from the column, so:

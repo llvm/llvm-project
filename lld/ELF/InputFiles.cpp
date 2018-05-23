@@ -1017,8 +1017,9 @@ static uint8_t getBitcodeMachineKind(StringRef Path, const Triple &T) {
   case Triple::x86_64:
     return EM_X86_64;
   default:
-    fatal(Path + ": could not infer e_machine from bitcode target triple " +
+    error(Path + ": could not infer e_machine from bitcode target triple " +
           T.str());
+    return EM_NONE;
   }
 }
 
@@ -1065,7 +1066,7 @@ template <class ELFT>
 static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
                                    const lto::InputFile::Symbol &ObjSym,
                                    BitcodeFile &F) {
-  StringRef NameRef = Saver.save(ObjSym.getName());
+  StringRef Name = Saver.save(ObjSym.getName());
   uint32_t Binding = ObjSym.isWeak() ? STB_WEAK : STB_GLOBAL;
 
   uint8_t Type = ObjSym.isTLS() ? STT_TLS : STT_NOTYPE;
@@ -1074,20 +1075,20 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &KeptComdats,
 
   int C = ObjSym.getComdatIndex();
   if (C != -1 && !KeptComdats[C])
-    return Symtab->addUndefined<ELFT>(NameRef, Binding, Visibility, Type,
+    return Symtab->addUndefined<ELFT>(Name, Binding, Visibility, Type,
                                       CanOmitFromDynSym, &F);
 
   if (ObjSym.isUndefined())
-    return Symtab->addUndefined<ELFT>(NameRef, Binding, Visibility, Type,
+    return Symtab->addUndefined<ELFT>(Name, Binding, Visibility, Type,
                                       CanOmitFromDynSym, &F);
 
   if (ObjSym.isCommon())
-    return Symtab->addCommon(NameRef, ObjSym.getCommonSize(),
+    return Symtab->addCommon(Name, ObjSym.getCommonSize(),
                              ObjSym.getCommonAlignment(), Binding, Visibility,
                              STT_OBJECT, F);
 
-  return Symtab->addBitcode(NameRef, Binding, Visibility, Type,
-                            CanOmitFromDynSym, F);
+  return Symtab->addBitcode(Name, Binding, Visibility, Type, CanOmitFromDynSym,
+                            F);
 }
 
 template <class ELFT>

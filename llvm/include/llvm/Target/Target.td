@@ -568,6 +568,12 @@ class Instruction {
   /// can be queried via the getNamedOperandIdx() function which is generated
   /// by TableGen.
   bit UseNamedOperandTable = 0;
+
+  /// Should FastISel ignore this instruction. For certain ISAs, they have
+  /// instructions which map to the same ISD Opcode, value type operands and
+  /// instruction selection predicates. FastISel cannot handle such cases, but
+  /// SelectionDAG can.
+  bit FastISelShouldIgnore = 0;
 }
 
 /// PseudoInstExpansion - Expansion information for a pseudo-instruction.

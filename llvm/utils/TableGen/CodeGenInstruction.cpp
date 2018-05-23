@@ -327,6 +327,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   isInsertSubreg = R->getValueAsBit("isInsertSubreg");
   isConvergent = R->getValueAsBit("isConvergent");
   hasNoSchedulingInfo = R->getValueAsBit("hasNoSchedulingInfo");
+  FastISelShouldIgnore = R->getValueAsBit("FastISelShouldIgnore");
 
   bool Unset;
   mayLoad      = R->getValueAsBitOrUnset("mayLoad", Unset);

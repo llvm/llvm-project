@@ -162,8 +162,13 @@ template <class ELFT> static uint32_t getHash(InputSection *S) {
 
 // Returns true if section S is subject of ICF.
 static bool isEligible(InputSection *S) {
-  if (!S->Live || S->KeepUnique || !(S->Flags & SHF_ALLOC) ||
-      (S->Flags & SHF_WRITE))
+  if (!S->Live || S->KeepUnique || !(S->Flags & SHF_ALLOC))
+    return false;
+
+  // Don't merge writable sections. .data.rel.ro sections are marked as writable
+  // but are semantically read-only.
+  if ((S->Flags & SHF_WRITE) && S->Name != ".data.rel.ro" &&
+      !S->Name.startswith(".data.rel.ro."))
     return false;
 
   // Don't merge read only data sections unless

@@ -35,12 +35,10 @@ Error IRLayer::add(VSO &V, VModuleKey K, std::unique_ptr<Module> M) {
       *this, std::move(K), std::move(M)));
 }
 
-BasicIRLayerMaterializationUnit::BasicIRLayerMaterializationUnit(
-    IRLayer &L, VModuleKey K, std::unique_ptr<Module> M)
-    : MaterializationUnit(SymbolFlagsMap()), L(L), K(std::move(K)),
-      M(std::move(M)) {
+IRMaterializationUnit::IRMaterializationUnit(ExecutionSession &ES,
+                                             std::unique_ptr<Module> M)
+  : MaterializationUnit(SymbolFlagsMap()), M(std::move(M)) {
 
-  auto &ES = L.getExecutionSession();
   MangleAndInterner Mangle(ES, this->M->getDataLayout());
   for (auto &G : this->M->global_values()) {
     if (G.hasName() && !G.isDeclaration() &&
@@ -53,18 +51,22 @@ BasicIRLayerMaterializationUnit::BasicIRLayerMaterializationUnit(
   }
 }
 
-void BasicIRLayerMaterializationUnit::materialize(
-    MaterializationResponsibility R) {
-  L.emit(std::move(R), std::move(K), std::move(M));
-}
-
-void BasicIRLayerMaterializationUnit::discard(const VSO &V,
-                                              SymbolStringPtr Name) {
+void IRMaterializationUnit::discard(const VSO &V, SymbolStringPtr Name) {
   auto I = Discardable.find(Name);
   assert(I != Discardable.end() &&
          "Symbol not provided by this MU, or previously discarded");
   I->second->setLinkage(GlobalValue::AvailableExternallyLinkage);
   Discardable.erase(I);
+}
+
+BasicIRLayerMaterializationUnit::BasicIRLayerMaterializationUnit(
+    IRLayer &L, VModuleKey K, std::unique_ptr<Module> M)
+  : IRMaterializationUnit(L.getExecutionSession(), std::move(M)),
+      L(L), K(std::move(K)) {}
+
+void BasicIRLayerMaterializationUnit::materialize(
+    MaterializationResponsibility R) {
+  L.emit(std::move(R), std::move(K), std::move(M));
 }
 
 ObjectLayer::ObjectLayer(ExecutionSession &ES) : ES(ES) {}

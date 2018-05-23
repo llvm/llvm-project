@@ -222,6 +222,55 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
   if (!Config.SplitDWO.empty()) {
     SplitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType);
   }
+  
+  // TODO: update or remove symbols only if there is an option that affects them.
+  if (Obj.SymbolTable) {
+    Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
+      if ((Config.LocalizeHidden &&
+           (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
+          (!Config.SymbolsToLocalize.empty() &&
+           is_contained(Config.SymbolsToLocalize, Sym.Name)))
+        Sym.Binding = STB_LOCAL;
+
+      if (!Config.SymbolsToGlobalize.empty() &&
+          is_contained(Config.SymbolsToGlobalize, Sym.Name))
+        Sym.Binding = STB_GLOBAL;
+
+      if (!Config.SymbolsToWeaken.empty() &&
+          is_contained(Config.SymbolsToWeaken, Sym.Name) &&
+          Sym.Binding == STB_GLOBAL)
+        Sym.Binding = STB_WEAK;
+
+      if (Config.Weaken && Sym.Binding == STB_GLOBAL &&
+          Sym.getShndx() != SHN_UNDEF)
+        Sym.Binding = STB_WEAK;
+
+      const auto I = Config.SymbolsToRename.find(Sym.Name);
+      if (I != Config.SymbolsToRename.end())
+        Sym.Name = I->getValue();
+    });
+
+    Obj.removeSymbols([&](const Symbol &Sym) {
+      if (!Config.SymbolsToKeep.empty() &&
+          is_contained(Config.SymbolsToKeep, Sym.Name))
+        return false;
+
+      if (Config.DiscardAll && Sym.Binding == STB_LOCAL &&
+          Sym.getShndx() != SHN_UNDEF && Sym.Type != STT_FILE &&
+          Sym.Type != STT_SECTION)
+        return true;
+
+      if (Config.StripAll || Config.StripAllGNU)
+        return true;
+
+      if (!Config.SymbolsToRemove.empty() &&
+          is_contained(Config.SymbolsToRemove, Sym.Name)) {
+        return true;
+      }
+
+      return false;
+    });
+  }
 
   SectionPred RemovePred = [](const SectionBase &) { return false; };
 
@@ -327,6 +376,19 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
     };
   }
 
+  // This has to be the last predicate assignment.
+  // If the option --keep-symbol has been specified
+  // and at least one of those symbols is present 
+  // (equivalently, the updated symbol table is not empty)
+  // the symbol table and the string table should not be removed.
+  if (!Config.SymbolsToKeep.empty() && !Obj.SymbolTable->empty()) {
+    RemovePred = [&Obj, RemovePred](const SectionBase &Sec) {
+      if (&Sec == Obj.SymbolTable || &Sec == Obj.SymbolTable->getStrTab())
+        return false;
+      return RemovePred(Sec);
+    };
+  }
+
   Obj.removeSections(RemovePred);
 
   if (!Config.AddSection.empty()) {
@@ -347,51 +409,6 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
 
   if (!Config.AddGnuDebugLink.empty())
     Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink);
-
-  if (Obj.SymbolTable) {
-    Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
-      if ((Config.LocalizeHidden &&
-           (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
-          (!Config.SymbolsToLocalize.empty() &&
-           is_contained(Config.SymbolsToLocalize, Sym.Name)))
-        Sym.Binding = STB_LOCAL;
-
-      if (!Config.SymbolsToGlobalize.empty() &&
-          is_contained(Config.SymbolsToGlobalize, Sym.Name))
-        Sym.Binding = STB_GLOBAL;
-
-      if (!Config.SymbolsToWeaken.empty() &&
-          is_contained(Config.SymbolsToWeaken, Sym.Name) &&
-          Sym.Binding == STB_GLOBAL)
-        Sym.Binding = STB_WEAK;
-
-      if (Config.Weaken && Sym.Binding == STB_GLOBAL &&
-          Sym.getShndx() != SHN_UNDEF)
-        Sym.Binding = STB_WEAK;
-
-      const auto I = Config.SymbolsToRename.find(Sym.Name);
-      if (I != Config.SymbolsToRename.end())
-        Sym.Name = I->getValue();
-    });
-
-    Obj.removeSymbols([&](const Symbol &Sym) {
-      if (!Config.SymbolsToKeep.empty() &&
-          is_contained(Config.SymbolsToKeep, Sym.Name))
-        return false;
-
-      if (Config.DiscardAll && Sym.Binding == STB_LOCAL &&
-          Sym.getShndx() != SHN_UNDEF && Sym.Type != STT_FILE &&
-          Sym.Type != STT_SECTION)
-        return true;
-
-      if (!Config.SymbolsToRemove.empty() &&
-          is_contained(Config.SymbolsToRemove, Sym.Name)) {
-        return true;
-      }
-
-      return false;
-    });
-  }
 }
 
 std::unique_ptr<Reader> CreateReader(StringRef InputFilename,
