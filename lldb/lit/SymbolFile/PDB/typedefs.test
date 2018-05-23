@@ -26,6 +26,8 @@ CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} double *
 CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} double *&
 CHECK-DAG: Type{{.*}} , name = "RefTypedef", compiler_type = {{.*}} typedef RefTypedef
 
+CHECK-DAG: Type{{.*}} , name = "wchar_t", size = 2, compiler_type = {{.*}} wchar_t
+
 CHECK-DAG: Type{{.*}} , name = "int", size = 4, compiler_type = {{.*}} int
 CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} int &
 CHECK-DAG: Type{{.*}} , name = "unsigned char", size = 1, compiler_type = {{.*}} unsigned char

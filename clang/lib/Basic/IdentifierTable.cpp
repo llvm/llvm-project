@@ -645,6 +645,12 @@ SelectorTable::constructSetterSelector(IdentifierTable &Idents,
   return SelTable.getUnarySelector(SetterName);
 }
 
+std::string SelectorTable::getPropertyNameFromSetterSelector(Selector Sel) {
+  StringRef Name = Sel.getNameForSlot(0);
+  assert(Name.startswith("set") && "invalid setter name");
+  return (Twine(toLowercase(Name[3])) + Name.drop_front(4)).str();
+}
+
 size_t SelectorTable::getTotalMemory() const {
   SelectorTableImpl &SelTabImpl = getSelectorTableImpl(Impl);
   return SelTabImpl.Allocator.getTotalMemory();

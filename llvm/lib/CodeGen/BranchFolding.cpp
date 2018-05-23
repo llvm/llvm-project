@@ -200,7 +200,7 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   }
 
   // Recalculate funclet membership.
-  FuncletMembership = getFuncletMembership(MF);
+  FuncletMembership = getEHScopeMembership(MF);
 
   bool MadeChangeThisIteration = true;
   while (MadeChangeThisIteration) {
@@ -1293,7 +1293,7 @@ bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
   // Make sure blocks are numbered in order
   MF.RenumberBlocks();
   // Renumbering blocks alters funclet membership, recalculate it.
-  FuncletMembership = getFuncletMembership(MF);
+  FuncletMembership = getEHScopeMembership(MF);
 
   for (MachineFunction::iterator I = std::next(MF.begin()), E = MF.end();
        I != E; ) {
