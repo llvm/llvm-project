@@ -723,6 +723,21 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       "Swift.StridedRangeGenerator summary provider",
       ConstString("Swift.StridedRangeGenerator<.+>$"), summary_flags, true);
 
+  TypeSummaryImpl::Flags simd_summary_flags;
+  simd_summary_flags.SetCascades(false)
+      .SetDontShowChildren(true)
+      .SetHideItemNames(true)
+      .SetShowMembersOneLiner(false);
+  const char *accelSIMDTypes = "^(simd\.)?(simd_)?("
+                               "(int|uint|float|double)[234]|"
+                               "(float|double)[234]x[234]|"
+                               "quat(f|d)"
+                               ")$";
+  AddCXXSummary(swift_category_sp,
+                lldb_private::formatters::swift::AccelerateSIMD_SummaryProvider,
+                "Accelerate/SIMD summary provider", ConstString(accelSIMDTypes),
+                simd_summary_flags, true);
+
   TypeSummaryImpl::Flags nil_summary_flags;
   nil_summary_flags.SetCascades(true)
       .SetDontShowChildren(true)
