@@ -100,7 +100,7 @@ Improvements to clang-tidy
   only allowed in nested loops.
 
 - New :doc:`cppcoreguidelines-narrowing-conversions
-  <clang-tidy/checks/cppcoreguidelines-narrowing-conversions>`_ check
+  <clang-tidy/checks/cppcoreguidelines-narrowing-conversions>` check
 
   Checks for narrowing conversions, e. g. ``int i = 0; i += 0.1;``.
 
