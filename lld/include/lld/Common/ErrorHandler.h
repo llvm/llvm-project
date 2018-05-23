@@ -34,6 +34,10 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 
+namespace llvm {
+class DiagnosticInfo;
+}
+
 namespace lld {
 
 class ErrorHandler {
@@ -73,6 +77,9 @@ inline void warn(const Twine &Msg) { errorHandler().warn(Msg); }
 inline uint64_t errorCount() { return errorHandler().ErrorCount; }
 
 LLVM_ATTRIBUTE_NORETURN void exitLld(int Val);
+
+void diagnosticHandler(const llvm::DiagnosticInfo &DI);
+void checkError(Error E);
 
 // check functions are convenient functions to strip errors
 // from error-or-value objects.

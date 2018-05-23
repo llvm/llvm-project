@@ -1,0 +1,58 @@
+REQUIRES: windows
+RUN: clang-cl /Z7 /c %S/Inputs/VariablesTest.cpp /o %T/VariablesTest.cpp.obj
+RUN: link %T/VariablesTest.cpp.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/VariablesTest.cpp.exe
+RUN: lldb-test symbols %T/VariablesTest.cpp.exe | FileCheck %s
+
+CHECK: Module [[MOD:.*]]
+CHECK: SymbolVendor ([[MOD]])
+CHECK:     CompileUnit{{.*}}, language = "c++", file = '{{.*}}\VariablesTest.cpp'
+CHECK-DAG:   Variable{{.*}}, name = "g_IntVar"
+CHECK-SAME:  scope = global, external
+CHECK-DAG:   Variable{{.*}}, name = "m_StaticClassMember"
+CHECK-SAME:  scope = global, external
+CHECK-DAG:   Variable{{.*}}, name = "g_pConst"
+CHECK-SAME:  scope = global, external
+CHECK-DAG:   Variable{{.*}}, name = "same_name_var"
+CHECK-SAME:  scope = global, external
+CHECK-DAG:   Variable{{.*}}, name = "g_EnumVar"
+CHECK-SAME:  scope = global, external
+CHECK-DAG:   Variable{{.*}}, name = "g_tls"
+CHECK-SAME:  scope = thread local, external
+CHECK-DAG:   Variable{{.*}}, name = "ClassVar"
+CHECK-SAME:  scope = global, external
+CHECK-DAG:   Variable{{.*}}, name = "g_Const"
+CHECK-SAME:  scope = ??? (2)
+
+CHECK-DAG:   Function{[[FID1:.*]]}, mangled = ?f@@YAHHH@Z
+CHECK-NEXT:  Block{[[FID1]]}
+CHECK-DAG:     Variable{{.*}}, name = "var_arg1"
+CHECK-SAME:    scope = parameter
+CHECK-DAG:     Variable{{.*}}, name = "var_arg2"
+CHECK-SAME:    scope = parameter
+CHECK-DAG:     Variable{{.*}}, name = "same_name_var"
+CHECK-SAME:    scope = local
+
+CHECK-DAG:   Function{[[FID2:.*]]}, mangled = main
+CHECK-NEXT:  Block{[[FID2]]}
+CHECK-DAG:     Variable{{.*}}, name = "same_name_var"
+CHECK-SAME:    scope = local
+CHECK-DAG:     Variable{{.*}}, name = "local_const"
+CHECK-SAME:    scope = local
+CHECK-DAG:     Variable{{.*}}, name = "local_pCString"
+CHECK-SAME:    scope = local
+CHECK-DAG:     Variable{{.*}}, name = "a"
+CHECK-SAME:    scope = local
+
+CHECK-DAG:   Function{[[FID3:.*]]}, mangled = ??0Class@@QEAA@H@Z
+CHECK-NEXT:  Block{[[FID3]]}
+CHECK-DAG:     Variable{{.*}}, name = "this"
+CHECK-SAME:    scope = parameter
+CHECK-SAME:    artificial
+CHECK-DAG:     Variable{{.*}}, name = "a"
+CHECK-SAME:    scope = parameter
+
+CHECK-DAG:   Function{[[FID4:.*]]}, mangled = ?Func@Class@@QEAAXXZ
+CHECK-NEXT:  Block{[[FID4]]}
+CHECK-DAG:     Variable{{.*}}, name = "this"
+CHECK-SAME:    scope = parameter
+CHECK-SAME:    artificial

@@ -654,21 +654,11 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(Input.Contents, Input.FileName);
 
+  // The diagnostic options must be set before creating a CompilerInstance.
+  CI->getDiagnosticOpts().IgnoreWarnings = true;
   // We reuse the preamble whether it's valid or not. This is a
   // correctness/performance tradeoff: building without a preamble is slow, and
   // completion is latency-sensitive.
-  if (Input.Preamble) {
-    auto Bounds =
-        ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0);
-    // FIXME(ibiryukov): Remove this call to CanReuse() after we'll fix
-    // clients relying on getting stats for preamble files during code
-    // completion.
-    // Note that results of CanReuse() are ignored, see the comment above.
-    Input.Preamble->CanReuse(*CI, ContentsBuffer.get(), Bounds,
-                             Input.VFS.get());
-  }
-  // The diagnostic options must be set before creating a CompilerInstance.
-  CI->getDiagnosticOpts().IgnoreWarnings = true;
   auto Clang = prepareCompilerInstance(
       std::move(CI), Input.Preamble, std::move(ContentsBuffer),
       std::move(Input.PCHs), std::move(Input.VFS), DummyDiagsConsumer);

@@ -48,6 +48,7 @@ add_clang_library(clangTidyBugproneModule
   clangBasic
   clangLex
   clangTidy
+  clangTidyCppCoreGuidelinesModule
   clangTidyUtils
   clangTooling
   )

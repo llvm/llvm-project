@@ -126,7 +126,8 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
   case R_WEBASSEMBLY_MEMORY_ADDR_I32:
   case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
     if (auto *Sym = dyn_cast<DefinedData>(getDataSymbol(Reloc.Index)))
-      return Sym->getVirtualAddress() + Reloc.Addend;
+      if (Sym->isLive())
+        return Sym->getVirtualAddress() + Reloc.Addend;
     return 0;
   case R_WEBASSEMBLY_TYPE_INDEX_LEB:
     return TypeMap[Reloc.Index];

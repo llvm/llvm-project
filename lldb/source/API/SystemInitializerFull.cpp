@@ -84,6 +84,7 @@
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
+#include "Plugins/Process/mach-core/ProcessMachCore.h"
 #include "Plugins/Process/minidump/ProcessMinidump.h"
 #include "Plugins/ScriptInterpreter/None/ScriptInterpreterNone.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
@@ -104,7 +105,6 @@
 #include "Plugins/Platform/MacOSX/PlatformRemoteAppleWatch.h"
 #include "Plugins/Platform/MacOSX/PlatformiOSSimulator.h"
 #include "Plugins/Process/MacOSX-Kernel/ProcessKDP.h"
-#include "Plugins/Process/mach-core/ProcessMachCore.h"
 #include "Plugins/SymbolVendor/MacOSX/SymbolVendorMacOSX.h"
 #endif
 #include "Plugins/StructuredData/DarwinLog/StructuredDataDarwinLog.h"
@@ -313,6 +313,7 @@ void SystemInitializerFull::Initialize() {
 
   JITLoaderGDB::Initialize();
   ProcessElfCore::Initialize();
+  ProcessMachCore::Initialize();
   minidump::ProcessMinidump::Initialize();
   MemoryHistoryASan::Initialize();
   AddressSanitizerRuntime::Initialize();
@@ -353,7 +354,6 @@ void SystemInitializerFull::Initialize() {
 #if defined(__APPLE__)
   SymbolVendorMacOSX::Initialize();
   ProcessKDP::Initialize();
-  ProcessMachCore::Initialize();
   PlatformAppleTVSimulator::Initialize();
   PlatformAppleWatchSimulator::Initialize();
   PlatformRemoteAppleTV::Initialize();
@@ -440,6 +440,7 @@ void SystemInitializerFull::Terminate() {
 
   JITLoaderGDB::Terminate();
   ProcessElfCore::Terminate();
+  ProcessMachCore::Terminate();
   minidump::ProcessMinidump::Terminate();
   MemoryHistoryASan::Terminate();
   AddressSanitizerRuntime::Terminate();
@@ -471,7 +472,6 @@ void SystemInitializerFull::Terminate() {
 
 #if defined(__APPLE__)
   DynamicLoaderDarwinKernel::Terminate();
-  ProcessMachCore::Terminate();
   ProcessKDP::Terminate();
   SymbolVendorMacOSX::Terminate();
   PlatformAppleTVSimulator::Terminate();

@@ -29,6 +29,8 @@ endif ()
 set(LLDB_DISABLE_LIBEDIT ${LLDB_DEFAULT_DISABLE_LIBEDIT} CACHE BOOL "Disables the use of editline.")
 if (LLDB_DISABLE_LIBEDIT)
   add_definitions( -DLLDB_DISABLE_LIBEDIT )
+else()
+  find_package(LibEdit REQUIRED)
 endif()
 
 if(APPLE)

@@ -5,7 +5,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; // hi.c:
 ; extern void foo(int);
-;  
+;
 ; int test(int t) {
 ;   return t * t;
 ; }

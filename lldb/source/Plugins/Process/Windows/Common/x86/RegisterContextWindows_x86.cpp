@@ -15,9 +15,9 @@
 
 #include "ProcessWindowsLog.h"
 #include "RegisterContextWindows_x86.h"
-#include "RegisterContext_x86.h"
+#include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "TargetThreadWindows.h"
-#include "lldb-x86-register-enums.h"
+#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 
 #include "llvm/ADT/STLExtras.h"
 
