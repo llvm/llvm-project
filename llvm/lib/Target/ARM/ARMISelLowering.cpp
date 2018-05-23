@@ -12462,6 +12462,10 @@ bool ARMTargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
                                                        unsigned,
                                                        unsigned,
                                                        bool *Fast) const {
+  // Depends what it gets converted into if the type is weird.
+  if (!VT.isSimple())
+    return false;
+
   // The AllowsUnaliged flag models the SCTLR.A setting in ARM cpus
   bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
 
