@@ -26,6 +26,9 @@ llvm::Optional<std::string> demangleMSVC(llvm::StringRef S);
 std::vector<uint8_t> parseHex(llvm::StringRef S);
 bool isValidCIdentifier(llvm::StringRef S);
 
+// Write the contents of the a buffer to a file
+void saveBuffer(llvm::StringRef Buffer, const llvm::Twine &Path);
+
 // This class represents multiple glob patterns.
 class StringMatcher {
 public:
@@ -41,6 +44,6 @@ private:
 inline llvm::ArrayRef<uint8_t> toArrayRef(llvm::StringRef S) {
   return {reinterpret_cast<const uint8_t *>(S.data()), S.size()};
 }
-}
+} // namespace lld
 
 #endif

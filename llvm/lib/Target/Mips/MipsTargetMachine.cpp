@@ -54,7 +54,7 @@ extern "C" void LLVMInitializeMipsTarget() {
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeMipsDelaySlotFillerPass(*PR);
-  initializeMipsLongBranchPass(*PR);
+  initializeMipsBranchExpansionPass(*PR);
 }
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,
@@ -290,12 +290,20 @@ MipsTargetMachine::getTargetTransformInfo(const Function &F) {
 void MipsPassConfig::addPreEmitPass() {
   addPass(createMicroMipsSizeReductionPass());
 
-  // The delay slot filler and the long branch passes can potientially create
-  // forbidden slot/ hazards for MIPSR6 which the hazard schedule pass will
-  // fix. Any new pass must come before the hazard schedule pass.
+  // The delay slot filler pass can potientially create forbidden slot hazards
+  // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.
   addPass(createMipsDelaySlotFillerPass());
-  addPass(createMipsLongBranchPass());
-  addPass(createMipsHazardSchedule());
+
+  // This pass expands branches and takes care about the forbidden slot hazards.
+  // Expanding branches may potentially create forbidden slot hazards for
+  // MIPSR6, and fixing such hazard may potentially break a branch by extending
+  // its offset out of range. That's why this pass combine these two tasks, and
+  // runs them alternately until one of them finishes without any changes. Only
+  // then we can be sure that all branches are expanded properly and no hazards
+  // exists.
+  // Any new pass should go before this pass.
+  addPass(createMipsBranchExpansion());
+
   addPass(createMipsConstantIslandPass());
 }
 

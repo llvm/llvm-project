@@ -112,8 +112,8 @@ following format:
   ...
 
 :program:`llvm-exegesis` will also analyze the clusters to point out
-inconsistencies in the scheduling information. For example,
-`/tmp/inconsistencies.txt` will contain messages like:
+inconsistencies in the scheduling information. The output is an html file. For
+example, `/tmp/inconsistencies.html` will contain messages like:
 
 .. code-block:: none
 

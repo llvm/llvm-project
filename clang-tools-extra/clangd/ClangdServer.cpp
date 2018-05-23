@@ -330,7 +330,7 @@ llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
 
   bool IsHeader = HeaderIter != std::end(HeaderExtensions);
 
-  // We can only switch between extensions known extensions.
+  // We can only switch between the known extensions.
   if (!IsSource && !IsHeader)
     return llvm::None;
 

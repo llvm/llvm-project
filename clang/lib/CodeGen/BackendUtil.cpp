@@ -115,7 +115,18 @@ class EmitAssemblyHelper {
   ///
   /// \return True on success.
   bool AddEmitPasses(legacy::PassManager &CodeGenPasses, BackendAction Action,
-                     raw_pwrite_stream &OS);
+                     raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS);
+
+  std::unique_ptr<llvm::ToolOutputFile> openOutputFile(StringRef Path) {
+    std::error_code EC;
+    auto F = llvm::make_unique<llvm::ToolOutputFile>(Path, EC,
+                                                     llvm::sys::fs::F_None);
+    if (EC) {
+      Diags.Report(diag::err_fe_unable_to_open_output) << Path << EC.message();
+      F.reset();
+    }
+    return F;
+  }
 
   /// Add target specific pre-linking passes.
   void AddPreLinkPasses();
@@ -732,7 +743,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
 
 bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
                                        BackendAction Action,
-                                       raw_pwrite_stream &OS) {
+                                       raw_pwrite_stream &OS,
+                                       raw_pwrite_stream *DwoOS) {
   // Add LibraryInfo.
   llvm::Triple TargetTriple(TheModule->getTargetTriple());
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
@@ -749,7 +761,7 @@ bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
   if (CodeGenOpts.OptimizationLevel > 0)
     CodeGenPasses.add(createObjCARCContractPass());
 
-  if (TM->addPassesToEmitFile(CodeGenPasses, OS, nullptr, CGFT,
+  if (TM->addPassesToEmitFile(CodeGenPasses, OS, DwoOS, CGFT,
                               /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
     Diags.Report(diag::err_fe_unable_to_interface_with_target);
     return false;
@@ -792,7 +804,7 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
   CodeGenPasses.add(
       createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
 
-  std::unique_ptr<raw_fd_ostream> ThinLinkOS;
+  std::unique_ptr<llvm::ToolOutputFile> ThinLinkOS, DwoOS;
 
   switch (Action) {
   case Backend_EmitNothing:
@@ -801,18 +813,12 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
   case Backend_EmitBC:
     if (CodeGenOpts.EmitSummaryIndex) {
       if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
-        std::error_code EC;
-        ThinLinkOS.reset(new llvm::raw_fd_ostream(
-            CodeGenOpts.ThinLinkBitcodeFile, EC,
-            llvm::sys::fs::F_None));
-        if (EC) {
-          Diags.Report(diag::err_fe_unable_to_open_output) << CodeGenOpts.ThinLinkBitcodeFile
-                                                           << EC.message();
+        ThinLinkOS = openOutputFile(CodeGenOpts.ThinLinkBitcodeFile);
+        if (!ThinLinkOS)
           return;
-        }
       }
-      PerModulePasses.add(
-          createWriteThinLTOBitcodePass(*OS, ThinLinkOS.get()));
+      PerModulePasses.add(createWriteThinLTOBitcodePass(
+          *OS, ThinLinkOS ? &ThinLinkOS->os() : nullptr));
     }
     else
       PerModulePasses.add(
@@ -825,7 +831,13 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
     break;
 
   default:
-    if (!AddEmitPasses(CodeGenPasses, Action, *OS))
+    if (!CodeGenOpts.SplitDwarfFile.empty()) {
+      DwoOS = openOutputFile(CodeGenOpts.SplitDwarfFile);
+      if (!DwoOS)
+        return;
+    }
+    if (!AddEmitPasses(CodeGenPasses, Action, *OS,
+                       DwoOS ? &DwoOS->os() : nullptr))
       return;
   }
 
@@ -854,6 +866,11 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
     PrettyStackTraceString CrashInfo("Code generation");
     CodeGenPasses.run(*TheModule);
   }
+
+  if (ThinLinkOS)
+    ThinLinkOS->keep();
+  if (DwoOS)
+    DwoOS->keep();
 }
 
 void EmitAssemblyHelper::DoPreLinkPasses() {
@@ -1023,7 +1040,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   // create that pass manager here and use it as needed below.
   legacy::PassManager CodeGenPasses;
   bool NeedCodeGen = false;
-  Optional<raw_fd_ostream> ThinLinkOS;
+  std::unique_ptr<llvm::ToolOutputFile> ThinLinkOS, DwoOS;
 
   // Append any output we need to the pass manager.
   switch (Action) {
@@ -1033,17 +1050,12 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   case Backend_EmitBC:
     if (CodeGenOpts.EmitSummaryIndex) {
       if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
-        std::error_code EC;
-        ThinLinkOS.emplace(CodeGenOpts.ThinLinkBitcodeFile, EC,
-                           llvm::sys::fs::F_None);
-        if (EC) {
-          Diags.Report(diag::err_fe_unable_to_open_output)
-              << CodeGenOpts.ThinLinkBitcodeFile << EC.message();
+        ThinLinkOS = openOutputFile(CodeGenOpts.ThinLinkBitcodeFile);
+        if (!ThinLinkOS)
           return;
-        }
       }
-      MPM.addPass(
-          ThinLTOBitcodeWriterPass(*OS, ThinLinkOS ? &*ThinLinkOS : nullptr));
+      MPM.addPass(ThinLTOBitcodeWriterPass(*OS, ThinLinkOS ? &ThinLinkOS->os()
+                                                           : nullptr));
     } else {
       MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
                                     CodeGenOpts.EmitSummaryIndex,
@@ -1061,7 +1073,13 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     NeedCodeGen = true;
     CodeGenPasses.add(
         createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
-    if (!AddEmitPasses(CodeGenPasses, Action, *OS))
+    if (!CodeGenOpts.SplitDwarfFile.empty()) {
+      DwoOS = openOutputFile(CodeGenOpts.SplitDwarfFile);
+      if (!DwoOS)
+        return;
+    }
+    if (!AddEmitPasses(CodeGenPasses, Action, *OS,
+                       DwoOS ? &DwoOS->os() : nullptr))
       // FIXME: Should we handle this error differently?
       return;
     break;
@@ -1081,6 +1099,11 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     PrettyStackTraceString CrashInfo("Code generation");
     CodeGenPasses.run(*TheModule);
   }
+
+  if (ThinLinkOS)
+    ThinLinkOS->keep();
+  if (DwoOS)
+    DwoOS->keep();
 }
 
 Expected<BitcodeModule> clang::FindThinLTOModule(MemoryBufferRef MBRef) {

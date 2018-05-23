@@ -996,6 +996,11 @@ def : GCNPat <
   (S_OR_B32 (S_MOV_B32 (i32 0x80008000)), $src) // Set sign bit
 >;
 
+def : GCNPat <
+  (fneg (v2f16 (fabs v2f16:$src))),
+  (S_OR_B32 (S_MOV_B32 (i32 0x80008000)), $src) // Set sign bit
+>;
+
 /********** ================== **********/
 /********** Immediate Patterns **********/
 /********** ================== **********/

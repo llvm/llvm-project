@@ -81,6 +81,14 @@ enum {
   ///        failed match.
   GIM_Try,
 
+  /// Switch over the opcode on the specified instruction
+  /// - InsnID - Instruction ID
+  /// - LowerBound - numerically minimum opcode supported
+  /// - UpperBound - numerically maximum + 1 opcode supported
+  /// - Default - failure jump target
+  /// - JumpTable... - (UpperBound - LowerBound) (at least 2) jump targets
+  GIM_SwitchOpcode,
+
   /// Record the specified instruction
   /// - NewInsnID - Instruction ID to define
   /// - InsnID - Instruction ID

@@ -777,6 +777,13 @@ struct InstructionMapper {
         mapToLegalUnsigned(It);
         break;
 
+      case TargetInstrInfo::MachineOutlinerInstrType::LegalTerminator:
+        mapToLegalUnsigned(It);
+        InstrList.push_back(It);
+        UnsignedVec.push_back(IllegalInstrNumber);
+        IllegalInstrNumber--;
+        break;
+
       case TargetInstrInfo::MachineOutlinerInstrType::Invisible:
         break;
       }

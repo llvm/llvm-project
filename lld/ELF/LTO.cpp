@@ -45,28 +45,6 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-// This is for use when debugging LTO.
-static void saveBuffer(StringRef Buffer, const Twine &Path) {
-  std::error_code EC;
-  raw_fd_ostream OS(Path.str(), EC, sys::fs::OpenFlags::F_None);
-  if (EC)
-    error("cannot create " + Path + ": " + EC.message());
-  OS << Buffer;
-}
-
-static void diagnosticHandler(const DiagnosticInfo &DI) {
-  SmallString<128> S;
-  raw_svector_ostream OS(S);
-  DiagnosticPrinterRawOStream DP(OS);
-  DI.print(DP);
-  warn(S);
-}
-
-static void checkError(Error E) {
-  handleAllErrors(std::move(E),
-                  [&](ErrorInfoBase &EIB) { error(EIB.message()); });
-}
-
 // Creates an empty file to store a list of object files for final
 // linking of distributed ThinLTO.
 static std::unique_ptr<raw_fd_ostream> openFile(StringRef File) {

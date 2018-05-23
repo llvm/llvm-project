@@ -205,6 +205,9 @@ th, td {
   border-left: solid 1px #eee;
   text-align: left;
 }
+td pre {
+  display: inline-block;
+}
 td:first-child {
   border-left: none;
 }

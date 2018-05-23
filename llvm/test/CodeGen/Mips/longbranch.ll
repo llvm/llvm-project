@@ -9,8 +9,6 @@
 ; RUN:   | FileCheck %s -check-prefix=O32-STATIC
 ; RUN: llc -mtriple=mipsel-unknown-linux-gnu -mcpu=mips32r6 -force-mips-long-branch -O3 \
 ; RUN:   -relocation-model=pic < %s | FileCheck %s -check-prefix=O32-R6-PIC
-; RUN: llc -mtriple=mipsel-unknown-linux-gnu -mcpu=mips32r6 -force-mips-long-branch -O3 \
-; RUN:   -relocation-model=static < %s | FileCheck %s -check-prefix=O32-R6-STATIC
 
 ; RUN: llc -mtriple=mips64el-unknown-linux-gnu -mcpu=mips4 -target-abi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
 ; RUN:   < %s | FileCheck %s -check-prefix=MIPS4

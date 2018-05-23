@@ -68,8 +68,26 @@ define amdgpu_kernel void @v_fneg_fabs_f16(half addrspace(1)* %out, half addrspa
   ret void
 }
 
+; GCN-LABEL: {{^}}s_fneg_fabs_v2f16_non_bc_src:
+; GFX9-DAG: s_load_dword [[VAL:s[0-9]+]]
+; GFX9-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x40003c00
+; GFX9: v_pk_add_f16 [[ADD:v[0-9]+]], [[VAL]], [[K]]
+; GFX9: v_or_b32_e32 [[RESULT:v[0-9]+]], 0x80008000, [[ADD]]
+
+; VI: v_or_b32_e32 v{{[0-9]+}}, 0x80008000, v{{[0-9]+}}
+define amdgpu_kernel void @s_fneg_fabs_v2f16_non_bc_src(<2 x half> addrspace(1)* %out, <2 x half> %in) {
+  %add = fadd <2 x half> %in, <half 1.0, half 2.0>
+  %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %add)
+  %fneg.fabs = fsub <2 x half> <half -0.0, half -0.0>, %fabs
+  store <2 x half> %fneg.fabs, <2 x half> addrspace(1)* %out
+  ret void
+}
+
 ; FIXME: single bit op
-; GCN-LABEL: {{^}}s_fneg_fabs_v2f16:
+
+; Combine turns this into integer op when bitcast source (from load)
+
+; GCN-LABEL: {{^}}s_fneg_fabs_v2f16_bc_src:
 ; CI: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 16, v{{[0-9]+}}
 ; CI: v_or_b32_e32 [[OR:v[0-9]+]], v{{[0-9]+}}, [[SHL]]
 ; CI: v_or_b32_e32 v{{[0-9]+}}, 0x80008000, [[OR]]
@@ -77,7 +95,7 @@ define amdgpu_kernel void @v_fneg_fabs_f16(half addrspace(1)* %out, half addrspa
 ; FIXME: Random commute
 ; VI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008000
 ; GFX9: s_or_b32 s{{[0-9]+}}, 0x80008000, s{{[0-9]+}}
-define amdgpu_kernel void @s_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
+define amdgpu_kernel void @s_fneg_fabs_v2f16_bc_src(<2 x half> addrspace(1)* %out, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg.fabs = fsub <2 x half> <half -0.0, half -0.0>, %fabs
   store <2 x half> %fneg.fabs, <2 x half> addrspace(1)* %out

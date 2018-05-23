@@ -34,9 +34,6 @@ public:
       : DWARFUnit(Context, Section, Header, DA, RS, SS, SOS, AOS, LS, LE, IsDWO,
                   UnitSection) {}
 
-  uint32_t getHeaderSize() const override {
-    return DWARFUnit::getHeaderSize() + 12;
-  }
   uint64_t getTypeHash() const { return getHeader().getTypeHash(); }
   uint32_t getTypeOffset() const { return getHeader().getTypeOffset(); }
 

@@ -92,6 +92,105 @@ define <128 x i8> @test_09(<128 x i8> %v0, <128 x i8> %v1) #0 {
   ret <128 x i8> %t1
 }
 
+; CHECK-LABEL: test_0a:
+; CHECK: q[[Q0A0:[0-3]]] &= vcmp.eq(v0.b,v1.b)
+; CHECK: v0 = vmux(q[[Q0A0]],v0,v1)
+define <128 x i8> @test_0a(<128 x i8> %v0, <128 x i8> %v1, <128 x i8> %v2) #0 {
+  %q0 = icmp eq <128 x i8> %v0, %v1
+  %q1 = trunc <128 x i8> %v2 to <128 x i1>
+  %q2 = and <128 x i1> %q0, %q1
+  %t1 = select <128 x i1> %q2, <128 x i8> %v0, <128 x i8> %v1
+  ret <128 x i8> %t1
+}
+
+; CHECK-LABEL: test_0b:
+; CHECK: q[[Q0B0:[0-3]]] |= vcmp.eq(v0.b,v1.b)
+; CHECK: v0 = vmux(q[[Q0B0]],v0,v1)
+define <128 x i8> @test_0b(<128 x i8> %v0, <128 x i8> %v1, <128 x i8> %v2) #0 {
+  %q0 = icmp eq <128 x i8> %v0, %v1
+  %q1 = trunc <128 x i8> %v2 to <128 x i1>
+  %q2 = or <128 x i1> %q0, %q1
+  %t1 = select <128 x i1> %q2, <128 x i8> %v0, <128 x i8> %v1
+  ret <128 x i8> %t1
+}
+
+; CHECK-LABEL: test_0c:
+; CHECK: q[[Q0C0:[0-3]]] ^= vcmp.eq(v0.b,v1.b)
+; CHECK: v0 = vmux(q[[Q0C0]],v0,v1)
+define <128 x i8> @test_0c(<128 x i8> %v0, <128 x i8> %v1, <128 x i8> %v2) #0 {
+  %q0 = icmp eq <128 x i8> %v0, %v1
+  %q1 = trunc <128 x i8> %v2 to <128 x i1>
+  %q2 = xor <128 x i1> %q0, %q1
+  %t1 = select <128 x i1> %q2, <128 x i8> %v0, <128 x i8> %v1
+  ret <128 x i8> %t1
+}
+
+; CHECK-LABEL: test_0d:
+; CHECK: q[[Q0D0:[0-3]]] &= vcmp.gt(v0.b,v1.b)
+; CHECK: v0 = vmux(q[[Q0D0]],v0,v1)
+define <128 x i8> @test_0d(<128 x i8> %v0, <128 x i8> %v1, <128 x i8> %v2) #0 {
+  %q0 = icmp sgt <128 x i8> %v0, %v1
+  %q1 = trunc <128 x i8> %v2 to <128 x i1>
+  %q2 = and <128 x i1> %q0, %q1
+  %t1 = select <128 x i1> %q2, <128 x i8> %v0, <128 x i8> %v1
+  ret <128 x i8> %t1
+}
+
+; CHECK-LABEL: test_0e:
+; CHECK: q[[Q0E0:[0-3]]] |= vcmp.gt(v0.b,v1.b)
+; CHECK: v0 = vmux(q[[Q0E0]],v0,v1)
+define <128 x i8> @test_0e(<128 x i8> %v0, <128 x i8> %v1, <128 x i8> %v2) #0 {
+  %q0 = icmp sgt <128 x i8> %v0, %v1
+  %q1 = trunc <128 x i8> %v2 to <128 x i1>
+  %q2 = or <128 x i1> %q0, %q1
+  %t1 = select <128 x i1> %q2, <128 x i8> %v0, <128 x i8> %v1
+  ret <128 x i8> %t1
+}
+
+; CHECK-LABEL: test_0f:
+; CHECK: q[[Q0F0:[0-3]]] ^= vcmp.gt(v0.b,v1.b)
+; CHECK: v0 = vmux(q[[Q0F0]],v0,v1)
+define <128 x i8> @test_0f(<128 x i8> %v0, <128 x i8> %v1, <128 x i8> %v2) #0 {
+  %q0 = icmp sgt <128 x i8> %v0, %v1
+  %q1 = trunc <128 x i8> %v2 to <128 x i1>
+  %q2 = xor <128 x i1> %q0, %q1
+  %t1 = select <128 x i1> %q2, <128 x i8> %v0, <128 x i8> %v1
+  ret <128 x i8> %t1
+}
+
+; CHECK-LABEL: test_0g:
+; CHECK: q[[Q0G0:[0-3]]] &= vcmp.gt(v0.ub,v1.ub)
+; CHECK: v0 = vmux(q[[Q0G0]],v0,v1)
+define <128 x i8> @test_0g(<128 x i8> %v0, <128 x i8> %v1, <128 x i8> %v2) #0 {
+  %q0 = icmp ugt <128 x i8> %v0, %v1
+  %q1 = trunc <128 x i8> %v2 to <128 x i1>
+  %q2 = and <128 x i1> %q0, %q1
+  %t1 = select <128 x i1> %q2, <128 x i8> %v0, <128 x i8> %v1
+  ret <128 x i8> %t1
+}
+
+; CHECK-LABEL: test_0h:
+; CHECK: q[[Q0H0:[0-3]]] |= vcmp.gt(v0.ub,v1.ub)
+; CHECK: v0 = vmux(q[[Q0H0]],v0,v1)
+define <128 x i8> @test_0h(<128 x i8> %v0, <128 x i8> %v1, <128 x i8> %v2) #0 {
+  %q0 = icmp ugt <128 x i8> %v0, %v1
+  %q1 = trunc <128 x i8> %v2 to <128 x i1>
+  %q2 = or <128 x i1> %q0, %q1
+  %t1 = select <128 x i1> %q2, <128 x i8> %v0, <128 x i8> %v1
+  ret <128 x i8> %t1
+}
+
+; CHECK-LABEL: test_0i:
+; CHECK: q[[Q0I0:[0-3]]] ^= vcmp.gt(v0.ub,v1.ub)
+; CHECK: v0 = vmux(q[[Q0I0]],v0,v1)
+define <128 x i8> @test_0i(<128 x i8> %v0, <128 x i8> %v1, <128 x i8> %v2) #0 {
+  %q0 = icmp ugt <128 x i8> %v0, %v1
+  %q1 = trunc <128 x i8> %v2 to <128 x i1>
+  %q2 = xor <128 x i1> %q0, %q1
+  %t1 = select <128 x i1> %q2, <128 x i8> %v0, <128 x i8> %v1
+  ret <128 x i8> %t1
+}
+
 ; --- Half
 
 ; CHECK-LABEL: test_10:
@@ -184,6 +283,105 @@ define <64 x i16> @test_19(<64 x i16> %v0, <64 x i16> %v1) #0 {
   ret <64 x i16> %t1
 }
 
+; CHECK-LABEL: test_1a:
+; CHECK: q[[Q1A0:[0-3]]] &= vcmp.eq(v0.h,v1.h)
+; CHECK: v0 = vmux(q[[Q1A0]],v0,v1)
+define <64 x i16> @test_1a(<64 x i16> %v0, <64 x i16> %v1, <64 x i16> %v2) #0 {
+  %q0 = icmp eq <64 x i16> %v0, %v1
+  %q1 = trunc <64 x i16> %v2 to <64 x i1>
+  %q2 = and <64 x i1> %q0, %q1
+  %t1 = select <64 x i1> %q2, <64 x i16> %v0, <64 x i16> %v1
+  ret <64 x i16> %t1
+}
+
+; CHECK-LABEL: test_1b:
+; CHECK: q[[Q1B0:[0-3]]] |= vcmp.eq(v0.h,v1.h)
+; CHECK: v0 = vmux(q[[Q1B0]],v0,v1)
+define <64 x i16> @test_1b(<64 x i16> %v0, <64 x i16> %v1, <64 x i16> %v2) #0 {
+  %q0 = icmp eq <64 x i16> %v0, %v1
+  %q1 = trunc <64 x i16> %v2 to <64 x i1>
+  %q2 = or <64 x i1> %q0, %q1
+  %t1 = select <64 x i1> %q2, <64 x i16> %v0, <64 x i16> %v1
+  ret <64 x i16> %t1
+}
+
+; CHECK-LABEL: test_1c:
+; CHECK: q[[Q1C0:[0-3]]] ^= vcmp.eq(v0.h,v1.h)
+; CHECK: v0 = vmux(q[[Q1C0]],v0,v1)
+define <64 x i16> @test_1c(<64 x i16> %v0, <64 x i16> %v1, <64 x i16> %v2) #0 {
+  %q0 = icmp eq <64 x i16> %v0, %v1
+  %q1 = trunc <64 x i16> %v2 to <64 x i1>
+  %q2 = xor <64 x i1> %q0, %q1
+  %t1 = select <64 x i1> %q2, <64 x i16> %v0, <64 x i16> %v1
+  ret <64 x i16> %t1
+}
+
+; CHECK-LABEL: test_1d:
+; CHECK: q[[Q1D0:[0-3]]] &= vcmp.gt(v0.h,v1.h)
+; CHECK: v0 = vmux(q[[Q1D0]],v0,v1)
+define <64 x i16> @test_1d(<64 x i16> %v0, <64 x i16> %v1, <64 x i16> %v2) #0 {
+  %q0 = icmp sgt <64 x i16> %v0, %v1
+  %q1 = trunc <64 x i16> %v2 to <64 x i1>
+  %q2 = and <64 x i1> %q0, %q1
+  %t1 = select <64 x i1> %q2, <64 x i16> %v0, <64 x i16> %v1
+  ret <64 x i16> %t1
+}
+
+; CHECK-LABEL: test_1e:
+; CHECK: q[[Q1E0:[0-3]]] |= vcmp.gt(v0.h,v1.h)
+; CHECK: v0 = vmux(q[[Q1E0]],v0,v1)
+define <64 x i16> @test_1e(<64 x i16> %v0, <64 x i16> %v1, <64 x i16> %v2) #0 {
+  %q0 = icmp sgt <64 x i16> %v0, %v1
+  %q1 = trunc <64 x i16> %v2 to <64 x i1>
+  %q2 = or <64 x i1> %q0, %q1
+  %t1 = select <64 x i1> %q2, <64 x i16> %v0, <64 x i16> %v1
+  ret <64 x i16> %t1
+}
+
+; CHECK-LABEL: test_1f:
+; CHECK: q[[Q1F0:[0-3]]] ^= vcmp.gt(v0.h,v1.h)
+; CHECK: v0 = vmux(q[[Q1F0]],v0,v1)
+define <64 x i16> @test_1f(<64 x i16> %v0, <64 x i16> %v1, <64 x i16> %v2) #0 {
+  %q0 = icmp sgt <64 x i16> %v0, %v1
+  %q1 = trunc <64 x i16> %v2 to <64 x i1>
+  %q2 = xor <64 x i1> %q0, %q1
+  %t1 = select <64 x i1> %q2, <64 x i16> %v0, <64 x i16> %v1
+  ret <64 x i16> %t1
+}
+
+; CHECK-LABEL: test_1g:
+; CHECK: q[[Q1G0:[0-3]]] &= vcmp.gt(v0.uh,v1.uh)
+; CHECK: v0 = vmux(q[[Q1G0]],v0,v1)
+define <64 x i16> @test_1g(<64 x i16> %v0, <64 x i16> %v1, <64 x i16> %v2) #0 {
+  %q0 = icmp ugt <64 x i16> %v0, %v1
+  %q1 = trunc <64 x i16> %v2 to <64 x i1>
+  %q2 = and <64 x i1> %q0, %q1
+  %t1 = select <64 x i1> %q2, <64 x i16> %v0, <64 x i16> %v1
+  ret <64 x i16> %t1
+}
+
+; CHECK-LABEL: test_1h:
+; CHECK: q[[Q1H0:[0-3]]] |= vcmp.gt(v0.uh,v1.uh)
+; CHECK: v0 = vmux(q[[Q1H0]],v0,v1)
+define <64 x i16> @test_1h(<64 x i16> %v0, <64 x i16> %v1, <64 x i16> %v2) #0 {
+  %q0 = icmp ugt <64 x i16> %v0, %v1
+  %q1 = trunc <64 x i16> %v2 to <64 x i1>
+  %q2 = or <64 x i1> %q0, %q1
+  %t1 = select <64 x i1> %q2, <64 x i16> %v0, <64 x i16> %v1
+  ret <64 x i16> %t1
+}
+
+; CHECK-LABEL: test_1i:
+; CHECK: q[[Q1I0:[0-3]]] ^= vcmp.gt(v0.uh,v1.uh)
+; CHECK: v0 = vmux(q[[Q1I0]],v0,v1)
+define <64 x i16> @test_1i(<64 x i16> %v0, <64 x i16> %v1, <64 x i16> %v2) #0 {
+  %q0 = icmp ugt <64 x i16> %v0, %v1
+  %q1 = trunc <64 x i16> %v2 to <64 x i1>
+  %q2 = xor <64 x i1> %q0, %q1
+  %t1 = select <64 x i1> %q2, <64 x i16> %v0, <64 x i16> %v1
+  ret <64 x i16> %t1
+}
+
 ; --- Word
 
 ; CHECK-LABEL: test_20:
@@ -273,6 +471,105 @@ define <32 x i32> @test_28(<32 x i32> %v0, <32 x i32> %v1) #0 {
 define <32 x i32> @test_29(<32 x i32> %v0, <32 x i32> %v1) #0 {
   %t0 = icmp uge <32 x i32> %v0, %v1
   %t1 = select <32 x i1> %t0, <32 x i32> %v0, <32 x i32> %v1
+  ret <32 x i32> %t1
+}
+
+; CHECK-LABEL: test_2a:
+; CHECK: q[[Q2A0:[0-3]]] &= vcmp.eq(v0.w,v1.w)
+; CHECK: v0 = vmux(q[[Q2A0]],v0,v1)
+define <32 x i32> @test_2a(<32 x i32> %v0, <32 x i32> %v1, <32 x i32> %v2) #0 {
+  %q0 = icmp eq <32 x i32> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = and <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x i32> %v0, <32 x i32> %v1
+  ret <32 x i32> %t1
+}
+
+; CHECK-LABEL: test_2b:
+; CHECK: q[[Q2B0:[0-3]]] |= vcmp.eq(v0.w,v1.w)
+; CHECK: v0 = vmux(q[[Q2B0]],v0,v1)
+define <32 x i32> @test_2b(<32 x i32> %v0, <32 x i32> %v1, <32 x i32> %v2) #0 {
+  %q0 = icmp eq <32 x i32> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = or <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x i32> %v0, <32 x i32> %v1
+  ret <32 x i32> %t1
+}
+
+; CHECK-LABEL: test_2c:
+; CHECK: q[[Q2C0:[0-3]]] ^= vcmp.eq(v0.w,v1.w)
+; CHECK: v0 = vmux(q[[Q2C0]],v0,v1)
+define <32 x i32> @test_2c(<32 x i32> %v0, <32 x i32> %v1, <32 x i32> %v2) #0 {
+  %q0 = icmp eq <32 x i32> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = xor <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x i32> %v0, <32 x i32> %v1
+  ret <32 x i32> %t1
+}
+
+; CHECK-LABEL: test_2d:
+; CHECK: q[[Q2D0:[0-3]]] &= vcmp.gt(v0.w,v1.w)
+; CHECK: v0 = vmux(q[[Q2D0]],v0,v1)
+define <32 x i32> @test_2d(<32 x i32> %v0, <32 x i32> %v1, <32 x i32> %v2) #0 {
+  %q0 = icmp sgt <32 x i32> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = and <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x i32> %v0, <32 x i32> %v1
+  ret <32 x i32> %t1
+}
+
+; CHECK-LABEL: test_2e:
+; CHECK: q[[Q2E0:[0-3]]] |= vcmp.gt(v0.w,v1.w)
+; CHECK: v0 = vmux(q[[Q2E0]],v0,v1)
+define <32 x i32> @test_2e(<32 x i32> %v0, <32 x i32> %v1, <32 x i32> %v2) #0 {
+  %q0 = icmp sgt <32 x i32> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = or <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x i32> %v0, <32 x i32> %v1
+  ret <32 x i32> %t1
+}
+
+; CHECK-LABEL: test_2f:
+; CHECK: q[[Q2F0:[0-3]]] ^= vcmp.gt(v0.w,v1.w)
+; CHECK: v0 = vmux(q[[Q2F0]],v0,v1)
+define <32 x i32> @test_2f(<32 x i32> %v0, <32 x i32> %v1, <32 x i32> %v2) #0 {
+  %q0 = icmp sgt <32 x i32> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = xor <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x i32> %v0, <32 x i32> %v1
+  ret <32 x i32> %t1
+}
+
+; CHECK-LABEL: test_2g:
+; CHECK: q[[Q2G0:[0-3]]] &= vcmp.gt(v0.uw,v1.uw)
+; CHECK: v0 = vmux(q[[Q2G0]],v0,v1)
+define <32 x i32> @test_2g(<32 x i32> %v0, <32 x i32> %v1, <32 x i32> %v2) #0 {
+  %q0 = icmp ugt <32 x i32> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = and <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x i32> %v0, <32 x i32> %v1
+  ret <32 x i32> %t1
+}
+
+; CHECK-LABEL: test_2h:
+; CHECK: q[[Q2H0:[0-3]]] |= vcmp.gt(v0.uw,v1.uw)
+; CHECK: v0 = vmux(q[[Q2H0]],v0,v1)
+define <32 x i32> @test_2h(<32 x i32> %v0, <32 x i32> %v1, <32 x i32> %v2) #0 {
+  %q0 = icmp ugt <32 x i32> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = or <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x i32> %v0, <32 x i32> %v1
+  ret <32 x i32> %t1
+}
+
+; CHECK-LABEL: test_2i:
+; CHECK: q[[Q2I0:[0-3]]] ^= vcmp.gt(v0.uw,v1.uw)
+; CHECK: v0 = vmux(q[[Q2I0]],v0,v1)
+define <32 x i32> @test_2i(<32 x i32> %v0, <32 x i32> %v1, <32 x i32> %v2) #0 {
+  %q0 = icmp ugt <32 x i32> %v0, %v1
+  %q1 = trunc <32 x i32> %v2 to <32 x i1>
+  %q2 = xor <32 x i1> %q0, %q1
+  %t1 = select <32 x i1> %q2, <32 x i32> %v0, <32 x i32> %v1
   ret <32 x i32> %t1
 }
 
