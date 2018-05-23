@@ -12,6 +12,7 @@
 
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/UserID.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -181,6 +182,16 @@ private:
   void FindTypesByName(const std::string &name, uint32_t max_matches,
                        lldb_private::TypeMap &types);
 
+  std::string GetMangledForPDBData(const llvm::pdb::PDBSymbolData &pdb_data);
+
+  lldb::VariableSP
+  ParseVariableForPDBData(const lldb_private::SymbolContext &sc,
+                          const llvm::pdb::PDBSymbolData &pdb_data);
+
+  size_t ParseVariables(const lldb_private::SymbolContext &sc,
+                        const llvm::pdb::PDBSymbol &pdb_data,
+                        lldb_private::VariableList *variable_list = nullptr);
+
   lldb::CompUnitSP
   GetCompileUnitContainsAddress(const lldb_private::Address &so_addr);
 
@@ -217,6 +228,7 @@ private:
 
   llvm::DenseMap<uint32_t, lldb::CompUnitSP> m_comp_units;
   llvm::DenseMap<uint32_t, lldb::TypeSP> m_types;
+  llvm::DenseMap<uint32_t, lldb::VariableSP> m_variables;
 
   std::vector<lldb::TypeSP> m_builtin_types;
   std::unique_ptr<llvm::pdb::IPDBSession> m_session_up;
