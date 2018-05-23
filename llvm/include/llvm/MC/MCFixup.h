@@ -41,6 +41,14 @@ enum MCFixupKind {
   FK_SecRel_2,   ///< A two-byte section relative fixup.
   FK_SecRel_4,   ///< A four-byte section relative fixup.
   FK_SecRel_8,   ///< A eight-byte section relative fixup.
+  FK_Data_Add_1, ///< A one-byte add fixup.
+  FK_Data_Add_2, ///< A two-byte add fixup.
+  FK_Data_Add_4, ///< A four-byte add fixup.
+  FK_Data_Add_8, ///< A eight-byte add fixup.
+  FK_Data_Sub_1, ///< A one-byte sub fixup.
+  FK_Data_Sub_2, ///< A two-byte sub fixup.
+  FK_Data_Sub_4, ///< A four-byte sub fixup.
+  FK_Data_Sub_8, ///< A eight-byte sub fixup.
 
   FirstTargetFixupKind = 128,
 
@@ -90,6 +98,28 @@ public:
     return FI;
   }
 
+  /// Return a fixup corresponding to the add half of a add/sub fixup pair for
+  /// the given Fixup.
+  static MCFixup createAddFor(const MCFixup &Fixup) {
+    MCFixup FI;
+    FI.Value = Fixup.getValue();
+    FI.Offset = Fixup.getOffset();
+    FI.Kind = (unsigned)getAddKindForKind(Fixup.getKind());
+    FI.Loc = Fixup.getLoc();
+    return FI;
+  }
+
+  /// Return a fixup corresponding to the sub half of a add/sub fixup pair for
+  /// the given Fixup.
+  static MCFixup createSubFor(const MCFixup &Fixup) {
+    MCFixup FI;
+    FI.Value = Fixup.getValue();
+    FI.Offset = Fixup.getOffset();
+    FI.Kind = (unsigned)getSubKindForKind(Fixup.getKind());
+    FI.Loc = Fixup.getLoc();
+    return FI;
+  }
+
   MCFixupKind getKind() const { return MCFixupKind(Kind); }
 
   uint32_t getOffset() const { return Offset; }
@@ -106,6 +136,30 @@ public:
     case 2: return isPCRel ? FK_PCRel_2 : FK_Data_2;
     case 4: return isPCRel ? FK_PCRel_4 : FK_Data_4;
     case 8: return isPCRel ? FK_PCRel_8 : FK_Data_8;
+    }
+  }
+
+  /// Return the generic fixup kind for an addition with a given size. It
+  /// is an error to pass an unsupported size.
+  static MCFixupKind getAddKindForKind(unsigned Kind) {
+    switch (Kind) {
+    default: llvm_unreachable("Unknown type to convert!");
+    case FK_Data_1: return FK_Data_Add_1;
+    case FK_Data_2: return FK_Data_Add_2;
+    case FK_Data_4: return FK_Data_Add_4;
+    case FK_Data_8: return FK_Data_Add_8;
+    }
+  }
+
+  /// Return the generic fixup kind for an subtraction with a given size. It
+  /// is an error to pass an unsupported size.
+  static MCFixupKind getSubKindForKind(unsigned Kind) {
+    switch (Kind) {
+    default: llvm_unreachable("Unknown type to convert!");
+    case FK_Data_1: return FK_Data_Sub_1;
+    case FK_Data_2: return FK_Data_Sub_2;
+    case FK_Data_4: return FK_Data_Sub_4;
+    case FK_Data_8: return FK_Data_Sub_8;
     }
   }
 

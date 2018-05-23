@@ -241,6 +241,11 @@ Improvements to clang-tidy
 
 - The 'google-runtime-member-string-references' check was removed.
 
+- New `cppcoreguidelines-narrowing-conversions
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-narrowing-conversions.html>`_ check
+
+  Checks for narrowing conversions, e.g. ``int i = 0; i += 0.1;``.
+
 Improvements to include-fixer
 -----------------------------
 

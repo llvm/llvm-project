@@ -96,6 +96,10 @@ public:
                           const MCValue &Target, MutableArrayRef<char> Data,
                           uint64_t Value, bool IsResolved) const = 0;
 
+  /// Check whether the given target requires emitting differences of two
+  /// symbols as a set of relocations.
+  virtual bool requiresDiffExpressionRelocations() const { return false; }
+
   /// @}
 
   /// \name Target Relaxation Interfaces

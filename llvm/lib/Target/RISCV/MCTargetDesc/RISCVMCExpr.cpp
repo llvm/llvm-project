@@ -44,7 +44,23 @@ void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                             const MCAsmLayout *Layout,
                                             const MCFixup *Fixup) const {
-  return getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup);
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
+    return false;
+
+  // Some custom fixup types are not valid with symbol difference expressions
+  if (Res.getSymA() && Res.getSymB()) {
+    switch (getKind()) {
+    default:
+      return true;
+    case VK_RISCV_LO:
+    case VK_RISCV_HI:
+    case VK_RISCV_PCREL_LO:
+    case VK_RISCV_PCREL_HI:
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {

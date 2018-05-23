@@ -38,3 +38,8 @@ void f6() {
   size_t len = strlcat(buf, "defg", 4);
   clang_analyzer_eval(len == 7); // expected-warning{{TRUE}}
 }
+
+int f7() {
+  char buf[8];
+  return strlcpy(buf, "1234567", 0); // no-crash
+}
