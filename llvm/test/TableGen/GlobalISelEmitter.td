@@ -239,8 +239,11 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 //===- Test a pattern with multiple ComplexPatterns in multiple instrs ----===//
 //
-// R19O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ [[GROUP:[0-9]+]],
-// R19O-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
+// R19O-NEXT:  GIM_SwitchOpcode, /*MI*/0, /*[*/{{[0-9]+}}, {{[0-9]+}}, /*)*//*default:*//*Label [[DEFAULT_NUM:[0-9]+]]*/ [[DEFAULT:[0-9]+]],
+// R19O-NEXT:  /*TargetOpcode::G_ADD*//*Label [[CASE_ADD_NUM:[0-9]+]]*/ [[CASE_ADD:[0-9]+]],
+// R19O:       /*TargetOpcode::G_SELECT*//*Label [[CASE_SELECT_NUM:[0-9]+]]*/ [[CASE_SELECT:[0-9]+]],
+// R19O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
+// R19O:       // Label [[CASE_SELECT_NUM]]: @[[CASE_SELECT]]
 //
 // R19C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
 // R19N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
@@ -298,8 +301,9 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // R19C-NEXT:    GIR_Done,
 // R19C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 //
-// R19O:         GIM_Reject,
-// R19O-NEXT:  // Label [[GROUP_NUM]]: @[[GROUP]]
+// R19O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
+// R19O-NEXT:  GIM_Reject,
+// R19O-NEXT:  };
 
 def INSN3 : I<(outs GPR32:$dst),
               (ins GPR32Op:$src1, GPR32:$src2a, GPR32:$src2b, GPR32:$scr), []>;
@@ -313,8 +317,11 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
                  (INSN4 GPR32:$src3, complex:$src4, i32imm:$src5a,
                         i32imm:$src5b))>;
 
-// R21O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ [[GROUP:[0-9]+]],
-// R21O-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SELECT,
+// R21O-NEXT:  GIM_SwitchOpcode, /*MI*/0, /*[*/{{[0-9]+}}, {{[0-9]+}}, /*)*//*default:*//*Label [[DEFAULT_NUM:[0-9]+]]*/ [[DEFAULT:[0-9]+]],
+// R21O-NEXT:  /*TargetOpcode::G_ADD*//*Label [[CASE_ADD_NUM:[0-9]+]]*/ [[CASE_ADD:[0-9]+]],
+// R21O:       /*TargetOpcode::G_SELECT*//*Label [[CASE_SELECT_NUM:[0-9]+]]*/ [[CASE_SELECT:[0-9]+]],
+// R21O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
+// R21O:       // Label [[CASE_SELECT_NUM]]: @[[CASE_SELECT]]
 //
 // R21C-NEXT:  GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ [[PREV:[0-9]+]], // Rule ID 19 //
 // R21C-NOT:     GIR_Done,
@@ -353,8 +360,10 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R21C-NEXT:    GIR_Done,
 // R21C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 //
-// R21O-NEXT:    GIM_Reject,
-// R21O-NEXT:  // Label [[GROUP_NUM]]: @[[GROUP]]
+// R21O-NEXT:  GIM_Reject,
+// R21O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
+// R21O-NEXT:  GIM_Reject,
+// R21O-NEXT:  };
 
 //===- Test a pattern with ComplexPattern operands. -----------------------===//
 //

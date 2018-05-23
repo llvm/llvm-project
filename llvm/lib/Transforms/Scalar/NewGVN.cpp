@@ -1585,11 +1585,11 @@ NewGVN::performSymbolicPredicateInfoEvaluation(Instruction *I) const {
       SwappedOps ? Cmp->getSwappedPredicate() : Cmp->getPredicate();
 
   if (isa<PredicateAssume>(PI)) {
-    // If the comparison is true when the operands are equal, then we know the
-    // operands are equal, because assumes must always be true.
-    if (CmpInst::isTrueWhenEqual(Predicate)) {
+    // If we assume the operands are equal, then they are equal.
+    if (Predicate == CmpInst::ICMP_EQ) {
       addPredicateUsers(PI, I);
-      addAdditionalUsers(Cmp->getOperand(0), I);
+      addAdditionalUsers(SwappedOps ? Cmp->getOperand(1) : Cmp->getOperand(0),
+                         I);
       return createVariableOrConstant(FirstOp);
     }
   }

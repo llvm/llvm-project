@@ -38,6 +38,9 @@ void Backend::runCycle(unsigned Cycle) {
   notifyCycleBegin(Cycle);
 
   InstRef IR;
+  Dispatch->preExecute(IR);
+  HWS->cycleEvent(); // TODO: This will eventually be stage-ified.
+
   while (Fetch->execute(IR)) {
     if (!Dispatch->execute(IR))
       break;
@@ -51,9 +54,6 @@ void Backend::notifyCycleBegin(unsigned Cycle) {
   LLVM_DEBUG(dbgs() << "[E] Cycle begin: " << Cycle << '\n');
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleBegin();
-
-  Dispatch->cycleEvent();
-  HWS->cycleEvent();
 }
 
 void Backend::notifyInstructionEvent(const HWInstructionEvent &Event) {

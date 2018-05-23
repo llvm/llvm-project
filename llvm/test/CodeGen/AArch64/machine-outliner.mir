@@ -124,6 +124,8 @@ body:             |
     $w17 = ORRWri $wzr, 1
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w17 = ORRWri $wzr, 1
     $w17 = ORRWri $wzr, 2
     BL @baz, implicit-def dead $lr, implicit $sp
     $w17 = ORRWri $wzr, 1
@@ -131,6 +133,8 @@ body:             |
     $w17 = ORRWri $wzr, 1
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w17 = ORRWri $wzr, 1
     $w8 = ORRWri $wzr, 0
     
   bb.2:

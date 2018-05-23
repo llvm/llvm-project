@@ -130,15 +130,22 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
       return false;
     AbbrOffset = AbbrEntry->Offset;
   }
-  bool TypeOffsetOK = true;
   if (isTypeUnit()) {
     TypeHash = debug_info.getU64(offset_ptr);
     TypeOffset = debug_info.getU32(offset_ptr);
-    // Type offset is unit-relative; should be after the header and before
-    // the end of the current unit.
-    TypeOffsetOK = TypeOffset >= *offset_ptr - Offset &&
-                   TypeOffset < getLength() + SizeOfLength;
-  }
+  } else if (UnitType == DW_UT_split_compile || UnitType == DW_UT_skeleton)
+    DWOId = debug_info.getU64(offset_ptr);
+
+  // Header fields all parsed, capture the size of this unit header.
+  assert(*offset_ptr - Offset <= 255 && "unexpected header size");
+  Size = uint8_t(*offset_ptr - Offset);
+
+  // Type offset is unit-relative; should be after the header and before
+  // the end of the current unit.
+  bool TypeOffsetOK =
+      !isTypeUnit()
+          ? true
+          : TypeOffset >= Size && TypeOffset < getLength() + SizeOfLength;
   bool LengthOK = debug_info.isValidOffset(getNextUnitOffset() - 1);
   bool VersionOK = DWARFContext::isSupportedVersion(getVersion());
   bool AddrSizeOK = getAddressByteSize() == 4 || getAddressByteSize() == 8;
@@ -195,10 +202,6 @@ void DWARFUnit::clear() {
 
 const char *DWARFUnit::getCompilationDir() {
   return dwarf::toString(getUnitDIE().find(DW_AT_comp_dir), nullptr);
-}
-
-Optional<uint64_t> DWARFUnit::getDWOId() {
-  return toUnsigned(getUnitDIE().find(DW_AT_GNU_dwo_id));
 }
 
 void DWARFUnit::extractDIEsToVector(
@@ -269,6 +272,8 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
   // If CU DIE was just parsed, copy several attribute values from it.
   if (!HasCUDie) {
     DWARFDie UnitDie = getUnitDIE();
+    if (Optional<uint64_t> DWOId = toUnsigned(UnitDie.find(DW_AT_GNU_dwo_id)))
+      Header.setDWOId(*DWOId);
     if (!isDWO) {
       assert(AddrOffsetSectionBase == 0);
       assert(RangeSectionBase == 0);

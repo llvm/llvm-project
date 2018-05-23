@@ -871,11 +871,13 @@ def : ClampPat<V_MAX_F32_e64, f32>;
 def : ClampPat<V_MAX_F64, f64>;
 def : ClampPat<V_MAX_F16_e64, f16>;
 
+let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
   (v2f16 (AMDGPUclamp (VOP3PMods v2f16:$src0, i32:$src0_modifiers))),
   (V_PK_MAX_F16 $src0_modifiers, $src0,
                 $src0_modifiers, $src0, DSTCLAMP.ENABLE)
 >;
+}
 
 /********** ================================ **********/
 /********** Floating point absolute/negative **********/
@@ -991,6 +993,11 @@ def : GCNPat <
 // VOP3P instructions, so it is turned into the bit op.
 def : GCNPat <
   (fneg (v2f16 (bitconvert (and_oneuse i32:$src, 0x7fff7fff)))),
+  (S_OR_B32 (S_MOV_B32 (i32 0x80008000)), $src) // Set sign bit
+>;
+
+def : GCNPat <
+  (fneg (v2f16 (fabs v2f16:$src))),
   (S_OR_B32 (S_MOV_B32 (i32 0x80008000)), $src) // Set sign bit
 >;
 
@@ -1333,10 +1340,12 @@ def : GCNPat<
   (V_MAX_F16_e64 $src_mods, $src, $src_mods, $src, 0, 0)
 >;
 
+let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat<
   (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
   (V_PK_MAX_F16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)
 >;
+}
 }
 
 let OtherPredicates = [NoFP32Denormals] in {
@@ -1387,16 +1396,18 @@ class ExpPattern<SDPatternOperator node, ValueType vt, Instruction Inst> : GCNPa
 def : ExpPattern<AMDGPUexport, i32, EXP>;
 def : ExpPattern<AMDGPUexport_done, i32, EXP_DONE>;
 
-def : GCNPat <
-  (v2i16 (build_vector i16:$src0, i16:$src1)),
-  (v2i16 (S_PACK_LL_B32_B16 $src0, $src1))
->;
-
 // COPY_TO_REGCLASS is workaround tablegen bug from multiple outputs
 // from S_LSHL_B32's multiple outputs from implicit scc def.
 def : GCNPat <
   (v2i16 (build_vector (i16 0), i16:$src1)),
   (v2i16 (COPY_TO_REGCLASS (S_LSHL_B32 i16:$src1, (i16 16)), SReg_32_XM0))
+>;
+
+
+let SubtargetPredicate = HasVOP3PInsts in {
+def : GCNPat <
+  (v2i16 (build_vector i16:$src0, i16:$src1)),
+  (v2i16 (S_PACK_LL_B32_B16 $src0, $src1))
 >;
 
 // With multiple uses of the shift, this will duplicate the shift and
@@ -1405,6 +1416,7 @@ def : GCNPat <
   (v2i16 (build_vector i16:$src0, (i16 (trunc (srl_oneuse i32:$src1, (i32 16)))))),
   (v2i16 (S_PACK_LH_B32_B16 i16:$src0, i32:$src1))
 >;
+
 
 def : GCNPat <
   (v2i16 (build_vector (i16 (trunc (srl_oneuse i32:$src0, (i32 16)))),
@@ -1417,6 +1429,9 @@ def : GCNPat <
   (v2f16 (build_vector f16:$src0, f16:$src1)),
   (v2f16 (S_PACK_LL_B32_B16 $src0, $src1))
 >;
+
+} // End SubtargetPredicate = HasVOP3PInsts
+
 
 // def : GCNPat <
 //   (v2f16 (scalar_to_vector f16:$src0)),

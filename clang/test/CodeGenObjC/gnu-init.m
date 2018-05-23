@@ -60,7 +60,7 @@
 // CHECK-NEW-SAME: @.objc_init
 // CHECK-NEW-NEXT: ret void
 
-// CHECK-OLD: @4 = internal global { i64, i64, i8*, { i64, { i8*, i8* }*, i16, i16, [4 x i8*] }* } { i64 9, i64 32, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @.objc_source_file_name, i64 0, i64 0), { i64, { i8*, i8* }*, i16, i16, [4 x i8*] }* @3 }, align 8
+// CHECK-OLD: @4 = internal global { i64, i64, i8*, { i64, { i8*, i8* }*, i16, i16, [4 x i8*] }* } { i64 9, i64 32, i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.objc_source_file_name, i64 0, i64 0), { i64, { i8*, i8* }*, i16, i16, [4 x i8*] }* @3 }, align 8
 // CHECK-OLD: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @.objc_load_function, i8* null }]
 
 // CHECK-OLD: define internal void @.objc_load_function() {

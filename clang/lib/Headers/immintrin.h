@@ -68,55 +68,11 @@
 
 #if !defined(_MSC_VER) || __has_feature(modules) || defined(__AVX2__)
 #include <avx2intrin.h>
+#endif
 
-/* The 256-bit versions of functions in f16cintrin.h.
-   Intel documents these as being in immintrin.h, and
-   they depend on typedefs from avxintrin.h. */
-
-/// Converts a 256-bit vector of [8 x float] into a 128-bit vector
-///    containing 16-bit half-precision float values.
-///
-/// \headerfile <x86intrin.h>
-///
-/// \code
-/// __m128i _mm256_cvtps_ph(__m256 a, const int imm);
-/// \endcode
-///
-/// This intrinsic corresponds to the <c> VCVTPS2PH </c> instruction.
-///
-/// \param a
-///    A 256-bit vector containing 32-bit single-precision float values to be
-///    converted to 16-bit half-precision float values.
-/// \param imm
-///    An immediate value controlling rounding using bits [2:0]: \n
-///    000: Nearest \n
-///    001: Down \n
-///    010: Up \n
-///    011: Truncate \n
-///    1XX: Use MXCSR.RC for rounding
-/// \returns A 128-bit vector containing the converted 16-bit half-precision
-///    float values.
-#define _mm256_cvtps_ph(a, imm) __extension__ ({ \
- (__m128i)__builtin_ia32_vcvtps2ph256((__v8sf)(__m256)(a), (imm)); })
-
-/// Converts a 128-bit vector containing 16-bit half-precision float
-///    values into a 256-bit vector of [8 x float].
-///
-/// \headerfile <x86intrin.h>
-///
-/// This intrinsic corresponds to the <c> VCVTPH2PS </c> instruction.
-///
-/// \param __a
-///    A 128-bit vector containing 16-bit half-precision float values to be
-///    converted to 32-bit single-precision float values.
-/// \returns A vector of [8 x float] containing the converted 32-bit
-///    single-precision float values.
-static __inline __m256 __attribute__((__always_inline__, __nodebug__, __target__("f16c")))
-_mm256_cvtph_ps(__m128i __a)
-{
-  return (__m256)__builtin_ia32_vcvtph2ps256((__v8hi)__a);
-}
-#endif /* __AVX2__ */
+#if !defined(_MSC_VER) || __has_feature(modules) || defined(__F16C__)
+#include <f16cintrin.h>
+#endif
 
 #if !defined(_MSC_VER) || __has_feature(modules) || defined(__VPCLMULQDQ__)
 #include <vpclmulqdqintrin.h>

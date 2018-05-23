@@ -98,3 +98,12 @@ bool lld::isValidCIdentifier(StringRef S) {
          std::all_of(S.begin() + 1, S.end(),
                      [](char C) { return C == '_' || isAlnum(C); });
 }
+
+// Write the contents of the a buffer to a file
+void lld::saveBuffer(StringRef Buffer, const Twine &Path) {
+  std::error_code EC;
+  raw_fd_ostream OS(Path.str(), EC, sys::fs::OpenFlags::F_None);
+  if (EC)
+    error("cannot create " + Path + ": " + EC.message());
+  OS << Buffer;
+}
