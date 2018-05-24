@@ -1959,14 +1959,20 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
   // but this particular declaration is not that definition, import the
   // definition and map to that.
   TagDecl *Definition = D->getDefinition();
-  if (Definition && Definition != D) {
+  if (Definition && Definition != D &&
+      // In contrast to a normal CXXRecordDecl, the implicit
+      // CXXRecordDecl of ClassTemplateSpecializationDecl is its redeclaration.
+      // The definition of the implicit CXXRecordDecl in this case is the
+      // ClassTemplateSpecializationDecl itself. Thus, we start with an extra
+      // condition in order to be able to import the implict Decl.
+      !D->isImplicit()) {
     Decl *ImportedDef = Importer.Import(Definition);
     if (!ImportedDef)
       return nullptr;
 
     return Importer.Imported(D, ImportedDef);
   }
-  
+
   // Import the major distinguishing characteristics of this record.
   DeclContext *DC, *LexicalDC;
   DeclarationName Name;
@@ -4070,6 +4076,17 @@ ASTNodeImporter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
                                           TemplateParams);
 }
 
+// Returns the definition for a (forward) declaration of a ClassTemplateDecl, if
+// it has any definition in the redecl chain.
+static ClassTemplateDecl *getDefinition(ClassTemplateDecl *D) {
+  CXXRecordDecl *ToTemplatedDef = D->getTemplatedDecl()->getDefinition();
+  if (!ToTemplatedDef)
+    return nullptr;
+  ClassTemplateDecl *TemplateWithDef =
+      ToTemplatedDef->getDescribedClassTemplate();
+  return TemplateWithDef;
+}
+
 Decl *ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   // If this record has a definition in the translation unit we're coming from,
   // but this particular declaration is not that definition, import the
@@ -4084,7 +4101,7 @@ Decl *ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     return Importer.Imported(D, ImportedDef);
   }
-  
+
   // Import the major distinguishing characteristics of this class template.
   DeclContext *DC, *LexicalDC;
   DeclarationName Name;
@@ -4103,34 +4120,39 @@ Decl *ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     for (auto *FoundDecl : FoundDecls) {
       if (!FoundDecl->isInIdentifierNamespace(Decl::IDNS_Ordinary))
         continue;
-      
+
       Decl *Found = FoundDecl;
       if (auto *FoundTemplate = dyn_cast<ClassTemplateDecl>(Found)) {
+
+        // The class to be imported is a definition.
+        if (D->isThisDeclarationADefinition()) {
+          // Lookup will find the fwd decl only if that is more recent than the
+          // definition. So, try to get the definition if that is available in
+          // the redecl chain.
+          ClassTemplateDecl *TemplateWithDef = getDefinition(FoundTemplate);
+          if (!TemplateWithDef)
+            continue;
+          FoundTemplate = TemplateWithDef; // Continue with the definition.
+        }
+
         if (IsStructuralMatch(D, FoundTemplate)) {
           // The class templates structurally match; call it the same template.
 
-          // We found a forward declaration but the class to be imported has a
-          // definition.
-          // FIXME Add this forward declaration to the redeclaration chain.
-          if (D->isThisDeclarationADefinition() &&
-              !FoundTemplate->isThisDeclarationADefinition())
-            continue;
-
-          Importer.Imported(D->getTemplatedDecl(), 
+          Importer.Imported(D->getTemplatedDecl(),
                             FoundTemplate->getTemplatedDecl());
           return Importer.Imported(D, FoundTemplate);
-        }         
+        }
       }
-      
+
       ConflictingDecls.push_back(FoundDecl);
     }
-    
+
     if (!ConflictingDecls.empty()) {
       Name = Importer.HandleNameConflict(Name, DC, Decl::IDNS_Ordinary,
-                                         ConflictingDecls.data(), 
+                                         ConflictingDecls.data(),
                                          ConflictingDecls.size());
     }
-    
+
     if (!Name)
       return nullptr;
   }

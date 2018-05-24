@@ -167,3 +167,14 @@ void testUserAccessorAttributes(Foo *foo) {
 	foo.x = foo.x; // expected-error {{property access is using 'x' method which is unavailable}} \
 		       // expected-warning {{property access is using 'setX:' method which is deprecated}}
 }
+
+// test implicit property does not emit duplicated warning.
+@protocol Foo
+- (int)size __attribute__((availability(ios,deprecated=3.0))); // expected-note {{'size' has been explicitly marked deprecated here}}
+- (void)setSize: (int)x __attribute__((availability(ios,deprecated=2.0))); // expected-note {{'setSize:' has been explicitly marked deprecated here}}
+@end
+
+void testImplicitProperty(id<Foo> object) {
+  object.size = object.size; // expected-warning {{'size' is deprecated: first deprecated in iOS 3.0}} \
+                             // expected-warning {{'setSize:' is deprecated: first deprecated in iOS 2.0}}
+}

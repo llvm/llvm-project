@@ -85,8 +85,8 @@ private:
                             bool Assumption);
 };
 
-} // end GR namespace
+} // end namespace ento
 
-} // end clang namespace
+} // end namespace clang
 
 #endif

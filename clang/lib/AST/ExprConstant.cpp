@@ -7277,30 +7277,43 @@ bool IntExprEvaluator::CheckReferencedDecl(const Expr* E, const Decl* D) {
   return false;
 }
 
+/// Values returned by __builtin_classify_type, chosen to match the values
+/// produced by GCC's builtin.
+enum class GCCTypeClass {
+  None = -1,
+  Void = 0,
+  Integer = 1,
+  // GCC reserves 2 for character types, but instead classifies them as
+  // integers.
+  Enum = 3,
+  Bool = 4,
+  Pointer = 5,
+  // GCC reserves 6 for references, but appears to never use it (because
+  // expressions never have reference type, presumably).
+  PointerToDataMember = 7,
+  RealFloat = 8,
+  Complex = 9,
+  // GCC reserves 10 for functions, but does not use it since GCC version 6 due
+  // to decay to pointer. (Prior to version 6 it was only used in C++ mode).
+  // GCC claims to reserve 11 for pointers to member functions, but *actually*
+  // uses 12 for that purpose, same as for a class or struct. Maybe it
+  // internally implements a pointer to member as a struct?  Who knows.
+  PointerToMemberFunction = 12, // Not a bug, see above.
+  ClassOrStruct = 12,
+  Union = 13,
+  // GCC reserves 14 for arrays, but does not use it since GCC version 6 due to
+  // decay to pointer. (Prior to version 6 it was only used in C++ mode).
+  // GCC reserves 15 for strings, but actually uses 5 (pointer) for string
+  // literals.
+};
+
 /// EvaluateBuiltinClassifyType - Evaluate __builtin_classify_type the same way
 /// as GCC.
-static int EvaluateBuiltinClassifyType(const CallExpr *E,
-                                       const LangOptions &LangOpts) {
-  // The following enum mimics the values returned by GCC.
-  // FIXME: Does GCC differ between lvalue and rvalue references here?
-  enum gcc_type_class {
-    no_type_class = -1,
-    void_type_class, integer_type_class, char_type_class,
-    enumeral_type_class, boolean_type_class,
-    pointer_type_class, reference_type_class, offset_type_class,
-    real_type_class, complex_type_class,
-    function_type_class, method_type_class,
-    record_type_class, union_type_class,
-    array_type_class, string_type_class,
-    lang_type_class
-  };
+static GCCTypeClass
+EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
+  assert(!T->isDependentType() && "unexpected dependent type");
 
-  // If no argument was supplied, default to "no_type_class". This isn't
-  // ideal, however it is what gcc does.
-  if (E->getNumArgs() == 0)
-    return no_type_class;
-
-  QualType CanTy = E->getArg(0)->getType().getCanonicalType();
+  QualType CanTy = T.getCanonicalType();
   const BuiltinType *BT = dyn_cast<BuiltinType>(CanTy);
 
   switch (CanTy->getTypeClass()) {
@@ -7309,37 +7322,41 @@ static int EvaluateBuiltinClassifyType(const CallExpr *E,
 #define NON_CANONICAL_TYPE(ID, BASE) case Type::ID:
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(ID, BASE) case Type::ID:
 #include "clang/AST/TypeNodes.def"
-      llvm_unreachable("CallExpr::isBuiltinClassifyType(): unimplemented type");
+  case Type::Auto:
+  case Type::DeducedTemplateSpecialization:
+      llvm_unreachable("unexpected non-canonical or dependent type");
 
   case Type::Builtin:
     switch (BT->getKind()) {
 #define BUILTIN_TYPE(ID, SINGLETON_ID)
-#define SIGNED_TYPE(ID, SINGLETON_ID) case BuiltinType::ID: return integer_type_class;
-#define FLOATING_TYPE(ID, SINGLETON_ID) case BuiltinType::ID: return real_type_class;
-#define PLACEHOLDER_TYPE(ID, SINGLETON_ID) case BuiltinType::ID: break;
+#define SIGNED_TYPE(ID, SINGLETON_ID) \
+    case BuiltinType::ID: return GCCTypeClass::Integer;
+#define FLOATING_TYPE(ID, SINGLETON_ID) \
+    case BuiltinType::ID: return GCCTypeClass::RealFloat;
+#define PLACEHOLDER_TYPE(ID, SINGLETON_ID) \
+    case BuiltinType::ID: break;
 #include "clang/AST/BuiltinTypes.def"
     case BuiltinType::Void:
-      return void_type_class;
+      return GCCTypeClass::Void;
 
     case BuiltinType::Bool:
-      return boolean_type_class;
+      return GCCTypeClass::Bool;
 
-    case BuiltinType::Char_U: // gcc doesn't appear to use char_type_class
+    case BuiltinType::Char_U:
     case BuiltinType::UChar:
+    case BuiltinType::WChar_U:
+    case BuiltinType::Char8:
+    case BuiltinType::Char16:
+    case BuiltinType::Char32:
     case BuiltinType::UShort:
     case BuiltinType::UInt:
     case BuiltinType::ULong:
     case BuiltinType::ULongLong:
     case BuiltinType::UInt128:
-      return integer_type_class;
+      return GCCTypeClass::Integer;
 
     case BuiltinType::NullPtr:
-      return pointer_type_class;
 
-    case BuiltinType::WChar_U:
-    case BuiltinType::Char8:
-    case BuiltinType::Char16:
-    case BuiltinType::Char32:
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
     case BuiltinType::ObjCSel:
@@ -7351,74 +7368,73 @@ static int EvaluateBuiltinClassifyType(const CallExpr *E,
     case BuiltinType::OCLClkEvent:
     case BuiltinType::OCLQueue:
     case BuiltinType::OCLReserveID:
+      return GCCTypeClass::None;
+
     case BuiltinType::Dependent:
-      llvm_unreachable("CallExpr::isBuiltinClassifyType(): unimplemented type");
+      llvm_unreachable("unexpected dependent type");
     };
-    break;
+    llvm_unreachable("unexpected placeholder type");
 
   case Type::Enum:
-    return LangOpts.CPlusPlus ? enumeral_type_class : integer_type_class;
-    break;
+    return LangOpts.CPlusPlus ? GCCTypeClass::Enum : GCCTypeClass::Integer;
 
   case Type::Pointer:
-    return pointer_type_class;
-    break;
-
-  case Type::MemberPointer:
-    if (CanTy->isMemberDataPointerType())
-      return offset_type_class;
-    else {
-      // We expect member pointers to be either data or function pointers,
-      // nothing else.
-      assert(CanTy->isMemberFunctionPointerType());
-      return method_type_class;
-    }
-
-  case Type::Complex:
-    return complex_type_class;
-
-  case Type::FunctionNoProto:
-  case Type::FunctionProto:
-    return LangOpts.CPlusPlus ? function_type_class : pointer_type_class;
-
-  case Type::Record:
-    if (const RecordType *RT = CanTy->getAs<RecordType>()) {
-      switch (RT->getDecl()->getTagKind()) {
-      case TagTypeKind::TTK_Struct:
-      case TagTypeKind::TTK_Class:
-      case TagTypeKind::TTK_Interface:
-        return record_type_class;
-
-      case TagTypeKind::TTK_Enum:
-        return LangOpts.CPlusPlus ? enumeral_type_class : integer_type_class;
-
-      case TagTypeKind::TTK_Union:
-        return union_type_class;
-      }
-    }
-    llvm_unreachable("CallExpr::isBuiltinClassifyType(): unimplemented type");
-
   case Type::ConstantArray:
   case Type::VariableArray:
   case Type::IncompleteArray:
-    return LangOpts.CPlusPlus ? array_type_class : pointer_type_class;
+  case Type::FunctionNoProto:
+  case Type::FunctionProto:
+    return GCCTypeClass::Pointer;
+
+  case Type::MemberPointer:
+    return CanTy->isMemberDataPointerType()
+               ? GCCTypeClass::PointerToDataMember
+               : GCCTypeClass::PointerToMemberFunction;
+
+  case Type::Complex:
+    return GCCTypeClass::Complex;
+
+  case Type::Record:
+    return CanTy->isUnionType() ? GCCTypeClass::Union
+                                : GCCTypeClass::ClassOrStruct;
+
+  case Type::Atomic:
+    // GCC classifies _Atomic T the same as T.
+    return EvaluateBuiltinClassifyType(
+        CanTy->castAs<AtomicType>()->getValueType(), LangOpts);
 
   case Type::BlockPointer:
-  case Type::LValueReference:
-  case Type::RValueReference:
   case Type::Vector:
   case Type::ExtVector:
-  case Type::Auto:
-  case Type::DeducedTemplateSpecialization:
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
   case Type::Pipe:
-  case Type::Atomic:
-    llvm_unreachable("CallExpr::isBuiltinClassifyType(): unimplemented type");
+    // GCC classifies vectors as None. We follow its lead and classify all
+    // other types that don't fit into the regular classification the same way.
+    return GCCTypeClass::None;
+
+  case Type::LValueReference:
+  case Type::RValueReference:
+    llvm_unreachable("invalid type for expression");
   }
 
-  llvm_unreachable("CallExpr::isBuiltinClassifyType(): unimplemented type");
+  llvm_unreachable("unexpected type class");
+}
+
+/// EvaluateBuiltinClassifyType - Evaluate __builtin_classify_type the same way
+/// as GCC.
+static GCCTypeClass
+EvaluateBuiltinClassifyType(const CallExpr *E, const LangOptions &LangOpts) {
+  // If no argument was supplied, default to None. This isn't
+  // ideal, however it is what gcc does.
+  if (E->getNumArgs() == 0)
+    return GCCTypeClass::None;
+
+  // FIXME: Bizarrely, GCC treats a call with more than one argument as not
+  // being an ICE, but still folds it to a constant using the type of the first
+  // argument.
+  return EvaluateBuiltinClassifyType(E->getArg(0)->getType(), LangOpts);
 }
 
 /// EvaluateBuiltinConstantPForLValue - Determine the result of
@@ -7842,7 +7858,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case Builtin::BI__builtin_classify_type:
-    return Success(EvaluateBuiltinClassifyType(E, Info.getLangOpts()), E);
+    return Success((int)EvaluateBuiltinClassifyType(E, Info.getLangOpts()), E);
 
   // FIXME: BI__builtin_clrsb
   // FIXME: BI__builtin_clrsbl

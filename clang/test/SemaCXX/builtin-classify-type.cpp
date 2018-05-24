@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s
 
 // expected-no-diagnostics
 
@@ -34,6 +34,14 @@ void foo() {
   cl cl_obj;
   union { int a; float b; } u_obj;
   int arr[10];
+  int (^block)();
+  __attribute__((vector_size(16))) int vec;
+  typedef __attribute__((ext_vector_type(4))) int evec_t;
+  evec_t evec;
+  _Atomic int atomic_i;
+  _Atomic double atomic_d;
+  _Complex int complex_i;
+  _Complex double complex_d;
 
   int a1[__builtin_classify_type(f()) == void_type_class ? 1 : -1];
   int a2[__builtin_classify_type(i) == integer_type_class ? 1 : -1];
@@ -44,11 +52,18 @@ void foo() {
   int a7[__builtin_classify_type(r) == integer_type_class ? 1 : -1];
   int a8[__builtin_classify_type(&cl::baz) == offset_type_class ? 1 : -1];
   int a9[__builtin_classify_type(d) == real_type_class ? 1 : -1];
-  int a10[__builtin_classify_type(f) == function_type_class ? 1 : -1];
-  int a11[__builtin_classify_type(&cl::bar) == method_type_class ? 1 : -1];
+  int a10[__builtin_classify_type(f) == pointer_type_class ? 1 : -1];
+  int a11[__builtin_classify_type(&cl::bar) == record_type_class ? 1 : -1];
   int a12[__builtin_classify_type(cl_obj) == record_type_class ? 1 : -1];
   int a13[__builtin_classify_type(u_obj) == union_type_class ? 1 : -1];
-  int a14[__builtin_classify_type(arr) == array_type_class ? 1 : -1];
-  int a15[__builtin_classify_type("abc") == array_type_class ? 1 : -1];
+  int a14[__builtin_classify_type(arr) == pointer_type_class ? 1 : -1];
+  int a15[__builtin_classify_type("abc") == pointer_type_class ? 1 : -1];
+  int a16[__builtin_classify_type(block) == no_type_class ? 1 : -1];
+  int a17[__builtin_classify_type(vec) == no_type_class ? 1 : -1];
+  int a18[__builtin_classify_type(evec) == no_type_class ? 1 : -1];
+  int a19[__builtin_classify_type(atomic_i) == integer_type_class ? 1 : -1];
+  int a20[__builtin_classify_type(atomic_d) == real_type_class ? 1 : -1];
+  int a21[__builtin_classify_type(complex_i) == complex_type_class ? 1 : -1];
+  int a22[__builtin_classify_type(complex_d) == complex_type_class ? 1 : -1];
 }
 

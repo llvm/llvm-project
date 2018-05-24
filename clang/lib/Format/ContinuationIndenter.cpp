@@ -405,7 +405,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   // If the template declaration spans multiple lines, force wrap before the
   // function/class declaration
   if (Previous.ClosesTemplateDeclaration &&
-      State.Stack.back().BreakBeforeParameter)
+      State.Stack.back().BreakBeforeParameter && Current.CanBreakBefore)
     return true;
 
   if (State.Column <= NewLineColumn)
@@ -804,7 +804,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
        !State.Stack.back().AvoidBinPacking) ||
       Previous.is(TT_BinaryOperator))
     State.Stack.back().BreakBeforeParameter = false;
-  if (Previous.isOneOf(TT_TemplateCloser, TT_JavaAnnotation) &&
+  if (PreviousNonComment &&
+      PreviousNonComment->isOneOf(TT_TemplateCloser, TT_JavaAnnotation) &&
       Current.NestingLevel == 0)
     State.Stack.back().BreakBeforeParameter = false;
   if (NextNonComment->is(tok::question) ||

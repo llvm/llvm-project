@@ -15,9 +15,11 @@ add_clang_unittest(ASTTests
   DeclTest.cpp
   EvaluateAsRValueTest.cpp
   ExternalASTSourceTest.cpp
+  Language.cpp
   NamedDeclPrinterTest.cpp
   SourceLocationTest.cpp
   StmtPrinterTest.cpp
+  StructuralEquivalenceTest.cpp
   )
 
 target_link_libraries(ASTTests
