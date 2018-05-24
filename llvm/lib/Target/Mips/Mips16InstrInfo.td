@@ -869,7 +869,9 @@ def Move32R16: FI8_MOV32R16_ins<"move", IIM16Alu>;
 //Purpose: Move
 // To move the contents of a GPR to a GPR.
 //
-def MoveR3216: FI8_MOVR3216_ins<"move", IIM16Alu>;
+def MoveR3216: FI8_MOVR3216_ins<"move", IIM16Alu> {
+  let isMoveReg = 1;
+}
 
 //
 // Format: MFHI rx MIPS16e
@@ -879,6 +881,7 @@ def MoveR3216: FI8_MOVR3216_ins<"move", IIM16Alu>;
 def Mfhi16: FRR16_M_ins<0b10000, "mfhi", IIM16Alu> {
   let Uses = [HI0];
   let hasSideEffects = 0;
+  let isMoveReg = 1;
 }
 
 //
@@ -889,6 +892,7 @@ def Mfhi16: FRR16_M_ins<0b10000, "mfhi", IIM16Alu> {
 def Mflo16: FRR16_M_ins<0b10010, "mflo", IIM16Alu> {
   let Uses = [LO0];
   let hasSideEffects = 0;
+  let isMoveReg = 0;
 }
 
 //

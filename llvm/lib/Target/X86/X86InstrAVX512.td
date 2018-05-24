@@ -2683,7 +2683,7 @@ defm VFPCLASS : avx512_fp_fpclass_all<"vfpclass", 0x66, 0x67, X86Vfpclass,
 multiclass avx512_mask_mov<bits<8> opc_kk, bits<8> opc_km, bits<8> opc_mk,
                          string OpcodeStr, RegisterClass KRC,
                          ValueType vvt, X86MemOperand x86memop> {
-  let hasSideEffects = 0, SchedRW = [WriteMove] in
+  let isMoveReg = 1, hasSideEffects = 0, SchedRW = [WriteMove] in
   def kk : I<opc_kk, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src),
              !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
              Sched<[WriteMove]>;
@@ -3168,6 +3168,7 @@ multiclass avx512_load<bits<8> opc, string OpcodeStr,
                        X86SchedWriteMoveLS Sched, bit NoRMPattern = 0,
                        SDPatternOperator SelectOprr = vselect> {
   let hasSideEffects = 0 in {
+  let isMoveReg = 1 in
   def rr : AVX512PI<opc, MRMSrcReg, (outs _.RC:$dst), (ins _.RC:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), [],
                     _.ExeDomain>, EVEX, Sched<[Sched.RR]>;
@@ -3270,6 +3271,7 @@ multiclass avx512_store<bits<8> opc, string OpcodeStr,
                         string Name, X86SchedWriteMoveLS Sched,
                         bit NoMRPattern = 0> {
   let hasSideEffects = 0 in {
+  let isMoveReg = 1 in
   def rr_REV  : AVX512PI<opc, MRMDestReg, (outs _.RC:$dst), (ins _.RC:$src),
                          OpcodeStr # ".s\t{$src, $dst|$dst, $src}",
                          [], _.ExeDomain>, EVEX, FoldGenData<Name#rr>,

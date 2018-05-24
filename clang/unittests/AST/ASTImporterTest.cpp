@@ -281,8 +281,9 @@ public:
     return std::make_tuple(*FoundDecls.begin(), Imported);
   }
 
-  // Creates a TU decl for the given source code.
-  // May be called several times in a given test.
+  // Creates a TU decl for the given source code which can be used as a From
+  // context.  May be called several times in a given test (with different file
+  // name).
   TranslationUnitDecl *getTuDecl(StringRef SrcCode, Language Lang,
                                  StringRef FileName = "input.cc") {
     assert(
@@ -295,6 +296,16 @@ public:
     TU &Tu = FromTUs.back();
 
     return Tu.TUDecl;
+  }
+
+  // Creates the To context with the given source code and returns the TU decl.
+  TranslationUnitDecl *getToTuDecl(StringRef ToSrcCode, Language ToLang) {
+    ArgVector ToArgs = getArgVectorForLanguage(ToLang);
+    ToCode = ToSrcCode;
+    assert(!ToAST);
+    ToAST = tooling::buildASTFromCodeWithArgs(ToCode, ToArgs, OutputFileName);
+
+    return ToAST->getASTContext().getTranslationUnitDecl();
   }
 
   // Import the given Decl into the ToCtx.
@@ -1352,6 +1363,22 @@ TEST_P(ASTImporterTestBase, ShouldImportImplicitCXXRecordDecl) {
   Decl *From, *To;
   std::tie(From, To) = getImportedDecl(
       R"(
+      struct declToImport {
+      };
+      )",
+      Lang_CXX, "", Lang_CXX);
+
+  MatchVerifier<Decl> Verifier;
+  // Match the implicit Decl.
+  auto Matcher = cxxRecordDecl(has(cxxRecordDecl()));
+  ASSERT_TRUE(Verifier.match(From, Matcher));
+  EXPECT_TRUE(Verifier.match(To, Matcher));
+}
+
+TEST_P(ASTImporterTestBase, ShouldImportImplicitCXXRecordDeclOfClassTemplate) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      R"(
       template <typename U>
       struct declToImport {
       };
@@ -1367,7 +1394,7 @@ TEST_P(ASTImporterTestBase, ShouldImportImplicitCXXRecordDecl) {
 
 TEST_P(
     ASTImporterTestBase,
-    DISABLED_ShouldImportImplicitCXXRecordDeclOfClassTemplateSpecializationDecl) {
+    ShouldImportImplicitCXXRecordDeclOfClassTemplateSpecializationDecl) {
   Decl *From, *To;
   std::tie(From, To) = getImportedDecl(
       R"(
@@ -1462,6 +1489,121 @@ TEST_P(ASTImporterTestBase, ImportDefinitionOfClassTemplateAfterFwdDecl) {
     auto *ToCTD = cast<ClassTemplateDecl>(Import(FromCTD, Lang_CXX));
     EXPECT_TRUE(ToCTD->isThisDeclarationADefinition());
   }
+}
+
+TEST_P(ASTImporterTestBase,
+       ImportDefinitionOfClassTemplateIfThereIsAnExistingFwdDeclAndDefinition) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+      template <typename T>
+      struct B {
+        void f();
+      };
+
+      template <typename T>
+      struct B;
+      )",
+      Lang_CXX);
+  ASSERT_EQ(1u, DeclCounterWithPredicate<ClassTemplateDecl>(
+                    [](const ClassTemplateDecl *T) {
+                      return T->isThisDeclarationADefinition();
+                    })
+                    .match(ToTU, classTemplateDecl()));
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <typename T>
+      struct B {
+        void f();
+      };
+      )",
+      Lang_CXX, "input1.cc");
+  ClassTemplateDecl *FromD = FirstDeclMatcher<ClassTemplateDecl>().match(
+      FromTU, classTemplateDecl(hasName("B")));
+
+  Import(FromD, Lang_CXX);
+
+  // We should have only one definition.
+  EXPECT_EQ(1u, DeclCounterWithPredicate<ClassTemplateDecl>(
+                    [](const ClassTemplateDecl *T) {
+                      return T->isThisDeclarationADefinition();
+                    })
+                    .match(ToTU, classTemplateDecl()));
+}
+
+TEST_P(ASTImporterTestBase,
+       ImportDefinitionOfClassIfThereIsAnExistingFwdDeclAndDefinition) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+      struct B {
+        void f();
+      };
+
+      struct B;
+      )",
+      Lang_CXX);
+  ASSERT_EQ(2u, DeclCounter<CXXRecordDecl>().match(
+                    ToTU, cxxRecordDecl(hasParent(translationUnitDecl()))));
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      struct B {
+        void f();
+      };
+      )",
+      Lang_CXX, "input1.cc");
+  auto *FromD = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("B")));
+
+  Import(FromD, Lang_CXX);
+
+  EXPECT_EQ(2u, DeclCounter<CXXRecordDecl>().match(
+                    ToTU, cxxRecordDecl(hasParent(translationUnitDecl()))));
+}
+
+TEST_P(
+    ASTImporterTestBase,
+    ImportDefinitionOfClassTemplateSpecIfThereIsAnExistingFwdDeclAndDefinition)
+{
+  Decl *ToTU = getToTuDecl(
+      R"(
+      template <typename T>
+      struct B;
+
+      template <>
+      struct B<int> {};
+
+      template <>
+      struct B<int>;
+      )",
+      Lang_CXX);
+  // We should have only one definition.
+  ASSERT_EQ(1u, DeclCounterWithPredicate<ClassTemplateSpecializationDecl>(
+                    [](const ClassTemplateSpecializationDecl *T) {
+                      return T->isThisDeclarationADefinition();
+                    })
+                    .match(ToTU, classTemplateSpecializationDecl()));
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <typename T>
+      struct B;
+
+      template <>
+      struct B<int> {};
+      )",
+      Lang_CXX, "input1.cc");
+  auto *FromD = FirstDeclMatcher<ClassTemplateSpecializationDecl>().match(
+      FromTU, classTemplateSpecializationDecl(hasName("B")));
+
+  Import(FromD, Lang_CXX);
+
+  // We should have only one definition.
+  EXPECT_EQ(1u, DeclCounterWithPredicate<ClassTemplateSpecializationDecl>(
+                    [](const ClassTemplateSpecializationDecl *T) {
+                      return T->isThisDeclarationADefinition();
+                    })
+                    .match(ToTU, classTemplateSpecializationDecl()));
 }
 
 INSTANTIATE_TEST_CASE_P(

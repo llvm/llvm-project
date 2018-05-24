@@ -96,7 +96,6 @@ private:
 
   bool parseDirectiveArch(SMLoc L);
   bool parseDirectiveCPU(SMLoc L);
-  bool parseDirectiveWord(unsigned Size, SMLoc L);
   bool parseDirectiveInst(SMLoc L);
 
   bool parseDirectiveTLSDescCall(SMLoc L);
@@ -165,6 +164,13 @@ public:
     MCStreamer &S = getParser().getStreamer();
     if (S.getTargetStreamer() == nullptr)
       new AArch64TargetStreamer(S);
+
+    // Alias .hword/.word/xword to the target-independent .2byte/.4byte/.8byte
+    // directives as they have the same form and semantics:
+    ///  ::= (.hword | .word | .xword ) [ expression (, expression)* ]
+    Parser.addAliasForDirective(".hword", ".2byte");
+    Parser.addAliasForDirective(".word", ".4byte");
+    Parser.addAliasForDirective(".xword", ".8byte");
 
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
@@ -4369,12 +4375,6 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveArch(Loc);
   else if (IDVal == ".cpu")
     parseDirectiveCPU(Loc);
-  else if (IDVal == ".hword")
-    parseDirectiveWord(2, Loc);
-  else if (IDVal == ".word")
-    parseDirectiveWord(4, Loc);
-  else if (IDVal == ".xword")
-    parseDirectiveWord(8, Loc);
   else if (IDVal == ".tlsdesccall")
     parseDirectiveTLSDescCall(Loc);
   else if (IDVal == ".ltorg" || IDVal == ".pool")
@@ -4536,22 +4536,6 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
 
     CurLoc = incrementLoc(CurLoc, Name.size());
   }
-  return false;
-}
-
-/// parseDirectiveWord
-///  ::= .word [ expression (, expression)* ]
-bool AArch64AsmParser::parseDirectiveWord(unsigned Size, SMLoc L) {
-  auto parseOp = [&]() -> bool {
-    const MCExpr *Value;
-    if (getParser().parseExpression(Value))
-      return true;
-    getParser().getStreamer().EmitValue(Value, Size, L);
-    return false;
-  };
-
-  if (parseMany(parseOp))
-    return true;
   return false;
 }
 

@@ -8399,9 +8399,7 @@ static Value *EmitX86Abs(CodeGenFunction &CGF, ArrayRef<Value *> Ops) {
   Value *Sub = CGF.Builder.CreateSub(Zero, Ops[0]);
   Value *Cmp = CGF.Builder.CreateICmp(ICmpInst::ICMP_SGT, Ops[0], Zero);
   Value *Res = CGF.Builder.CreateSelect(Cmp, Ops[0], Sub);
-  if (Ops.size() == 1)
-    return Res;
-  return EmitX86Select(CGF, Ops[2], Res, Ops[1]);
+  return Res;
 }
 
 static Value *EmitX86MinMax(CodeGenFunction &CGF, ICmpInst::Predicate Pred,
@@ -8409,11 +8407,8 @@ static Value *EmitX86MinMax(CodeGenFunction &CGF, ICmpInst::Predicate Pred,
   Value *Cmp = CGF.Builder.CreateICmp(Pred, Ops[0], Ops[1]);
   Value *Res = CGF.Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
 
-  if (Ops.size() == 2)
-    return Res;
-
-  assert(Ops.size() == 4);
-  return EmitX86Select(CGF, Ops[3], Res, Ops[2]);
+  assert(Ops.size() == 2);
+  return Res;
 }
 
 static Value *EmitX86Muldq(CodeGenFunction &CGF, bool IsSigned,
@@ -9108,65 +9103,65 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pabsb256:
   case X86::BI__builtin_ia32_pabsw256:
   case X86::BI__builtin_ia32_pabsd256:
-  case X86::BI__builtin_ia32_pabsq128_mask:
-  case X86::BI__builtin_ia32_pabsq256_mask:
-  case X86::BI__builtin_ia32_pabsb512_mask:
-  case X86::BI__builtin_ia32_pabsw512_mask:
-  case X86::BI__builtin_ia32_pabsd512_mask:
-  case X86::BI__builtin_ia32_pabsq512_mask:
+  case X86::BI__builtin_ia32_pabsq128:
+  case X86::BI__builtin_ia32_pabsq256:
+  case X86::BI__builtin_ia32_pabsb512:
+  case X86::BI__builtin_ia32_pabsw512:
+  case X86::BI__builtin_ia32_pabsd512:
+  case X86::BI__builtin_ia32_pabsq512:
     return EmitX86Abs(*this, Ops);
 
   case X86::BI__builtin_ia32_pmaxsb128:
   case X86::BI__builtin_ia32_pmaxsw128:
   case X86::BI__builtin_ia32_pmaxsd128:
-  case X86::BI__builtin_ia32_pmaxsq128_mask:
+  case X86::BI__builtin_ia32_pmaxsq128:
   case X86::BI__builtin_ia32_pmaxsb256:
   case X86::BI__builtin_ia32_pmaxsw256:
   case X86::BI__builtin_ia32_pmaxsd256:
-  case X86::BI__builtin_ia32_pmaxsq256_mask:
-  case X86::BI__builtin_ia32_pmaxsb512_mask:
-  case X86::BI__builtin_ia32_pmaxsw512_mask:
-  case X86::BI__builtin_ia32_pmaxsd512_mask:
-  case X86::BI__builtin_ia32_pmaxsq512_mask:
+  case X86::BI__builtin_ia32_pmaxsq256:
+  case X86::BI__builtin_ia32_pmaxsb512:
+  case X86::BI__builtin_ia32_pmaxsw512:
+  case X86::BI__builtin_ia32_pmaxsd512:
+  case X86::BI__builtin_ia32_pmaxsq512:
     return EmitX86MinMax(*this, ICmpInst::ICMP_SGT, Ops);
   case X86::BI__builtin_ia32_pmaxub128:
   case X86::BI__builtin_ia32_pmaxuw128:
   case X86::BI__builtin_ia32_pmaxud128:
-  case X86::BI__builtin_ia32_pmaxuq128_mask:
+  case X86::BI__builtin_ia32_pmaxuq128:
   case X86::BI__builtin_ia32_pmaxub256:
   case X86::BI__builtin_ia32_pmaxuw256:
   case X86::BI__builtin_ia32_pmaxud256:
-  case X86::BI__builtin_ia32_pmaxuq256_mask:
-  case X86::BI__builtin_ia32_pmaxub512_mask:
-  case X86::BI__builtin_ia32_pmaxuw512_mask:
-  case X86::BI__builtin_ia32_pmaxud512_mask:
-  case X86::BI__builtin_ia32_pmaxuq512_mask:
+  case X86::BI__builtin_ia32_pmaxuq256:
+  case X86::BI__builtin_ia32_pmaxub512:
+  case X86::BI__builtin_ia32_pmaxuw512:
+  case X86::BI__builtin_ia32_pmaxud512:
+  case X86::BI__builtin_ia32_pmaxuq512:
     return EmitX86MinMax(*this, ICmpInst::ICMP_UGT, Ops);
   case X86::BI__builtin_ia32_pminsb128:
   case X86::BI__builtin_ia32_pminsw128:
   case X86::BI__builtin_ia32_pminsd128:
-  case X86::BI__builtin_ia32_pminsq128_mask:
+  case X86::BI__builtin_ia32_pminsq128:
   case X86::BI__builtin_ia32_pminsb256:
   case X86::BI__builtin_ia32_pminsw256:
   case X86::BI__builtin_ia32_pminsd256:
-  case X86::BI__builtin_ia32_pminsq256_mask:
-  case X86::BI__builtin_ia32_pminsb512_mask:
-  case X86::BI__builtin_ia32_pminsw512_mask:
-  case X86::BI__builtin_ia32_pminsd512_mask:
-  case X86::BI__builtin_ia32_pminsq512_mask:
+  case X86::BI__builtin_ia32_pminsq256:
+  case X86::BI__builtin_ia32_pminsb512:
+  case X86::BI__builtin_ia32_pminsw512:
+  case X86::BI__builtin_ia32_pminsd512:
+  case X86::BI__builtin_ia32_pminsq512:
     return EmitX86MinMax(*this, ICmpInst::ICMP_SLT, Ops);
   case X86::BI__builtin_ia32_pminub128:
   case X86::BI__builtin_ia32_pminuw128:
   case X86::BI__builtin_ia32_pminud128:
-  case X86::BI__builtin_ia32_pminuq128_mask:
+  case X86::BI__builtin_ia32_pminuq128:
   case X86::BI__builtin_ia32_pminub256:
   case X86::BI__builtin_ia32_pminuw256:
   case X86::BI__builtin_ia32_pminud256:
-  case X86::BI__builtin_ia32_pminuq256_mask:
-  case X86::BI__builtin_ia32_pminub512_mask:
-  case X86::BI__builtin_ia32_pminuw512_mask:
-  case X86::BI__builtin_ia32_pminud512_mask:
-  case X86::BI__builtin_ia32_pminuq512_mask:
+  case X86::BI__builtin_ia32_pminuq256:
+  case X86::BI__builtin_ia32_pminub512:
+  case X86::BI__builtin_ia32_pminuw512:
+  case X86::BI__builtin_ia32_pminud512:
+  case X86::BI__builtin_ia32_pminuq512:
     return EmitX86MinMax(*this, ICmpInst::ICMP_ULT, Ops);
 
   case X86::BI__builtin_ia32_pmuludq128:

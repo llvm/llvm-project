@@ -13,7 +13,7 @@
 
 ; SCOP:      Invariant Accesses: {
 ; SCOP-NEXT:         ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; SCOP-NEXT:             { Stmt_loop[i0] -> MemRef_p[0] };
+; SCOP-NEXT:             { Stmt_loop_a[i0] -> MemRef_p[0] };
 ; SCOP-NEXT:         Execution Context: {  :  }
 ; SCOP-NEXT: }
 

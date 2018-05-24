@@ -59,10 +59,10 @@ lldb::Encoding TranslateBuiltinEncoding(PDB_BuiltinType type) {
   case PDB_BuiltinType::Int:
   case PDB_BuiltinType::Long:
   case PDB_BuiltinType::Char:
-  case PDB_BuiltinType::Char16:
-  case PDB_BuiltinType::Char32:
     return lldb::eEncodingSint;
   case PDB_BuiltinType::Bool:
+  case PDB_BuiltinType::Char16:
+  case PDB_BuiltinType::Char32:
   case PDB_BuiltinType::UInt:
   case PDB_BuiltinType::ULong:
   case PDB_BuiltinType::HResult:

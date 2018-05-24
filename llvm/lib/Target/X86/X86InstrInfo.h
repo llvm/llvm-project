@@ -394,6 +394,8 @@ public:
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
+  bool isCopyInstr(const MachineInstr &MI, MachineOperand &Src,
+                   MachineOperand &Dest) const override;
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, unsigned SrcReg,
                            bool isKill, int FrameIndex,

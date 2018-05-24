@@ -174,7 +174,7 @@ namespace __sanitizer {
 uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
                    OFF_T offset) {
 #if SANITIZER_NETBSD
-  return internal_syscall_ptr(SYSCALL(mmap), addr, length, prot, flags, fd,
+  return internal_syscall64(SYSCALL(mmap), addr, length, prot, flags, fd,
                               (long)0, offset);
 #elif SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
   return internal_syscall(SYSCALL(mmap), (uptr)addr, length, prot, flags, fd,

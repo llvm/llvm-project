@@ -3340,7 +3340,7 @@ defm sysSTM : arm_ldst_mult<"stm", " ^", 0, 1, LdStMulFrm, IIC_iStore_m,
 //  Move Instructions.
 //
 
-let hasSideEffects = 0 in
+let hasSideEffects = 0, isMoveReg = 1 in
 def MOVr : AsI1<0b1101, (outs GPR:$Rd), (ins GPR:$Rm), DPFrm, IIC_iMOVr,
                 "mov", "\t$Rd, $Rm", []>, UnaryDP, Sched<[WriteALU]> {
   bits<4> Rd;

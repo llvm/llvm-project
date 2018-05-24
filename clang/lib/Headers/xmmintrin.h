@@ -2495,10 +2495,14 @@ extern "C" {
 ///
 ///    For example, the following expression checks if an overflow exception has
 ///    occurred:
+///    \code
 ///      ( _mm_getcsr() & _MM_EXCEPT_OVERFLOW )
+///    \endcode
 ///
 ///    The following expression gets the current rounding mode:
+///    \code
 ///      _MM_GET_ROUNDING_MODE()
+///    \endcode
 ///
 /// \headerfile <x86intrin.h>
 ///

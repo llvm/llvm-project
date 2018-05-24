@@ -75,10 +75,11 @@ struct StackTrace {
 ALWAYS_INLINE
 uptr StackTrace::GetPreviousInstructionPc(uptr pc) {
 #if defined(__arm__)
-  // Cancel Thumb bit.
-  pc = pc & (~1);
-#endif
-#if defined(__powerpc__) || defined(__powerpc64__)
+  // T32 (Thumb) branch instructions might be 16 or 32 bit long,
+  // so we return (pc-2) in that case in order to be safe.
+  // For A32 mode we return (pc-4) because all instructions are 32 bit long.
+  return (pc - 3) & (~1);
+#elif defined(__powerpc__) || defined(__powerpc64__) || defined(__aarch64__)
   // PCs are always 4 byte aligned.
   return pc - 4;
 #elif defined(__sparc__) || defined(__mips__)

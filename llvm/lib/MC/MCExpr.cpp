@@ -11,6 +11,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
@@ -576,8 +577,12 @@ EvaluateSymbolicAdd(const MCAssembler *Asm, const MCAsmLayout *Layout,
   assert((!Layout || Asm) &&
          "Must have an assembler object if layout is given!");
 
-  // If we have a layout, we can fold resolved differences.
-  if (Asm) {
+  // If we have a layout, we can fold resolved differences. Do not do this if
+  // the backend requires this to be emitted as individual relocations, unless
+  // the InSet flag is set to get the current difference anyway (used for
+  // example to calculate symbol sizes).
+  if (Asm &&
+      (InSet || !Asm->getBackend().requiresDiffExpressionRelocations())) {
     // First, fold out any differences which are fully resolved. By
     // reassociating terms in
     //   Result = (LHS_A - LHS_B + LHS_Cst) + (RHS_A - RHS_B + RHS_Cst).

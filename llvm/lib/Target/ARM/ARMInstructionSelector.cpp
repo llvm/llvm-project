@@ -134,6 +134,8 @@ static const TargetRegisterClass *guessRegClass(unsigned Reg,
       return &ARM::SPRRegClass;
     else if (Size == 64)
       return &ARM::DPRRegClass;
+    else if (Size == 128)
+      return &ARM::QPRRegClass;
     else
       llvm_unreachable("Unsupported destination size");
   }

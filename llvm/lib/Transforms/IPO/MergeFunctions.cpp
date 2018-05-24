@@ -645,8 +645,8 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
 static bool isThunkProfitable(Function * F) {
   if (F->size() == 1) {
     if (F->front().size() <= 2) {
-      DEBUG(dbgs() << "isThunkProfitable: " << F->getName()
-                    << " is too small to bother creating a thunk for\n");
+      LLVM_DEBUG(dbgs() << "isThunkProfitable: " << F->getName()
+                        << " is too small to bother creating a thunk for\n");
       return false;
     }
   }

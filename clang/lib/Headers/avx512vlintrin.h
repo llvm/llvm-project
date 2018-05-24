@@ -2844,48 +2844,40 @@ _mm256_maskz_abs_epi32(__mmask8 __U, __m256i __A) {
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_abs_epi64 (__m128i __A) {
-  return (__m128i) __builtin_ia32_pabsq128_mask ((__v2di) __A,
-             (__v2di)
-             _mm_setzero_si128 (),
-             (__mmask8) -1);
+  return (__m128i)__builtin_ia32_pabsq128((__v2di)__A);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_mask_abs_epi64 (__m128i __W, __mmask8 __U, __m128i __A) {
-  return (__m128i) __builtin_ia32_pabsq128_mask ((__v2di) __A,
-             (__v2di) __W,
-             (__mmask8) __U);
+  return (__m128i)__builtin_ia32_selectq_128((__mmask8)__U,
+                                             (__v2di)_mm_abs_epi64(__A),
+                                             (__v2di)__W);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_maskz_abs_epi64 (__mmask8 __U, __m128i __A) {
-  return (__m128i) __builtin_ia32_pabsq128_mask ((__v2di) __A,
-             (__v2di)
-             _mm_setzero_si128 (),
-             (__mmask8) __U);
+  return (__m128i)__builtin_ia32_selectq_128((__mmask8)__U,
+                                             (__v2di)_mm_abs_epi64(__A),
+                                             (__v2di)_mm_setzero_si128());
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_abs_epi64 (__m256i __A) {
-  return (__m256i) __builtin_ia32_pabsq256_mask ((__v4di) __A,
-             (__v4di)
-             _mm256_setzero_si256 (),
-             (__mmask8) -1);
+  return (__m256i)__builtin_ia32_pabsq256 ((__v4di)__A);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_mask_abs_epi64 (__m256i __W, __mmask8 __U, __m256i __A) {
-  return (__m256i) __builtin_ia32_pabsq256_mask ((__v4di) __A,
-             (__v4di) __W,
-             (__mmask8) __U);
+  return (__m256i)__builtin_ia32_selectq_256((__mmask8)__U,
+                                             (__v4di)_mm256_abs_epi64(__A),
+                                             (__v4di)__W);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_maskz_abs_epi64 (__mmask8 __U, __m256i __A) {
-  return (__m256i) __builtin_ia32_pabsq256_mask ((__v4di) __A,
-             (__v4di)
-             _mm256_setzero_si256 (),
-             (__mmask8) __U);
+  return (__m256i)__builtin_ia32_selectq_256((__mmask8)__U,
+                                             (__v4di)_mm256_abs_epi64(__A),
+                                             (__v4di)_mm256_setzero_si256());
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
@@ -2917,55 +2909,41 @@ _mm256_mask_max_epi32(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_maskz_max_epi64 (__mmask8 __M, __m128i __A, __m128i __B) {
-  return (__m128i) __builtin_ia32_pmaxsq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di)
-              _mm_setzero_si128 (),
-              __M);
-}
-
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_mask_max_epi64 (__m128i __W, __mmask8 __M, __m128i __A,
-        __m128i __B) {
-  return (__m128i) __builtin_ia32_pmaxsq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di) __W, __M);
-}
-
-static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_max_epi64 (__m128i __A, __m128i __B) {
-  return (__m128i) __builtin_ia32_pmaxsq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di)
-              _mm_setzero_si128 (),
-              (__mmask8) -1);
+  return (__m128i)__builtin_ia32_pmaxsq128((__v2di)__A, (__v2di)__B);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS
-_mm256_maskz_max_epi64 (__mmask8 __M, __m256i __A, __m256i __B) {
-  return (__m256i) __builtin_ia32_pmaxsq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di)
-              _mm256_setzero_si256 (),
-              __M);
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_max_epi64 (__mmask8 __M, __m128i __A, __m128i __B) {
+  return (__m128i)__builtin_ia32_selectq_128((__mmask8)__M,
+                                             (__v2di)_mm_max_epi64(__A, __B),
+                                             (__v2di)_mm_setzero_si128());
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS
-_mm256_mask_max_epi64 (__m256i __W, __mmask8 __M, __m256i __A,
-           __m256i __B) {
-  return (__m256i) __builtin_ia32_pmaxsq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di) __W, __M);
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_max_epi64 (__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
+  return (__m128i)__builtin_ia32_selectq_128((__mmask8)__M,
+                                             (__v2di)_mm_max_epi64(__A, __B),
+                                             (__v2di)__W);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_max_epi64 (__m256i __A, __m256i __B) {
-  return (__m256i) __builtin_ia32_pmaxsq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di)
-              _mm256_setzero_si256 (),
-              (__mmask8) -1);
+  return (__m256i)__builtin_ia32_pmaxsq256((__v4di)__A, (__v4di)__B);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_maskz_max_epi64 (__mmask8 __M, __m256i __A, __m256i __B) {
+  return (__m256i)__builtin_ia32_selectq_256((__mmask8)__M,
+                                             (__v4di)_mm256_max_epi64(__A, __B),
+                                             (__v4di)_mm256_setzero_si256());
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_mask_max_epi64 (__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
+  return (__m256i)__builtin_ia32_selectq_256((__mmask8)__M,
+                                             (__v4di)_mm256_max_epi64(__A, __B),
+                                             (__v4di)__W);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
@@ -2997,55 +2975,41 @@ _mm256_mask_max_epu32(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_maskz_max_epu64 (__mmask8 __M, __m128i __A, __m128i __B) {
-  return (__m128i) __builtin_ia32_pmaxuq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di)
-              _mm_setzero_si128 (),
-              __M);
-}
-
-static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_max_epu64 (__m128i __A, __m128i __B) {
-  return (__m128i) __builtin_ia32_pmaxuq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di)
-              _mm_setzero_si128 (),
-              (__mmask8) -1);
+  return (__m128i)__builtin_ia32_pmaxuq128((__v2di)__A, (__v2di)__B);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_mask_max_epu64 (__m128i __W, __mmask8 __M, __m128i __A,
-        __m128i __B) {
-  return (__m128i) __builtin_ia32_pmaxuq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di) __W, __M);
+_mm_maskz_max_epu64 (__mmask8 __M, __m128i __A, __m128i __B) {
+  return (__m128i)__builtin_ia32_selectq_128((__mmask8)__M,
+                                             (__v2di)_mm_max_epu64(__A, __B),
+                                             (__v2di)_mm_setzero_si128());
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS
-_mm256_maskz_max_epu64 (__mmask8 __M, __m256i __A, __m256i __B) {
-  return (__m256i) __builtin_ia32_pmaxuq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di)
-              _mm256_setzero_si256 (),
-              __M);
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_max_epu64 (__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
+  return (__m128i)__builtin_ia32_selectq_128((__mmask8)__M,
+                                             (__v2di)_mm_max_epu64(__A, __B),
+                                             (__v2di)__W);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_max_epu64 (__m256i __A, __m256i __B) {
-  return (__m256i) __builtin_ia32_pmaxuq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di)
-              _mm256_setzero_si256 (),
-              (__mmask8) -1);
+  return (__m256i)__builtin_ia32_pmaxuq256((__v4di)__A, (__v4di)__B);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
-_mm256_mask_max_epu64 (__m256i __W, __mmask8 __M, __m256i __A,
-           __m256i __B) {
-  return (__m256i) __builtin_ia32_pmaxuq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di) __W, __M);
+_mm256_maskz_max_epu64 (__mmask8 __M, __m256i __A, __m256i __B) {
+  return (__m256i)__builtin_ia32_selectq_256((__mmask8)__M,
+                                             (__v4di)_mm256_max_epu64(__A, __B),
+                                             (__v4di)_mm256_setzero_si256());
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_mask_max_epu64 (__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
+  return (__m256i)__builtin_ia32_selectq_256((__mmask8)__M,
+                                             (__v4di)_mm256_max_epu64(__A, __B),
+                                             (__v4di)__W);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
@@ -3078,54 +3042,40 @@ _mm256_mask_min_epi32(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_min_epi64 (__m128i __A, __m128i __B) {
-  return (__m128i) __builtin_ia32_pminsq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di)
-              _mm_setzero_si128 (),
-              (__mmask8) -1);
+  return (__m128i)__builtin_ia32_pminsq128((__v2di)__A, (__v2di)__B);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_mask_min_epi64 (__m128i __W, __mmask8 __M, __m128i __A,
-        __m128i __B) {
-  return (__m128i) __builtin_ia32_pminsq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di) __W, __M);
+_mm_mask_min_epi64 (__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
+  return (__m128i)__builtin_ia32_selectq_128((__mmask8)__M,
+                                             (__v2di)_mm_min_epi64(__A, __B),
+                                             (__v2di)__W);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_maskz_min_epi64 (__mmask8 __M, __m128i __A, __m128i __B) {
-  return (__m128i) __builtin_ia32_pminsq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di)
-              _mm_setzero_si128 (),
-              __M);
+  return (__m128i)__builtin_ia32_selectq_128((__mmask8)__M,
+                                             (__v2di)_mm_min_epi64(__A, __B),
+                                             (__v2di)_mm_setzero_si128());
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_min_epi64 (__m256i __A, __m256i __B) {
-  return (__m256i) __builtin_ia32_pminsq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di)
-              _mm256_setzero_si256 (),
-              (__mmask8) -1);
+  return (__m256i)__builtin_ia32_pminsq256((__v4di)__A, (__v4di)__B);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
-_mm256_mask_min_epi64 (__m256i __W, __mmask8 __M, __m256i __A,
-           __m256i __B) {
-  return (__m256i) __builtin_ia32_pminsq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di) __W, __M);
+_mm256_mask_min_epi64 (__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
+  return (__m256i)__builtin_ia32_selectq_256((__mmask8)__M,
+                                             (__v4di)_mm256_min_epi64(__A, __B),
+                                             (__v4di)__W);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_maskz_min_epi64 (__mmask8 __M, __m256i __A, __m256i __B) {
-  return (__m256i) __builtin_ia32_pminsq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di)
-              _mm256_setzero_si256 (),
-              __M);
+  return (__m256i)__builtin_ia32_selectq_256((__mmask8)__M,
+                                             (__v4di)_mm256_min_epi64(__A, __B),
+                                             (__v4di)_mm256_setzero_si256());
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
@@ -3158,54 +3108,40 @@ _mm256_mask_min_epu32(__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_min_epu64 (__m128i __A, __m128i __B) {
-  return (__m128i) __builtin_ia32_pminuq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di)
-              _mm_setzero_si128 (),
-              (__mmask8) -1);
+  return (__m128i)__builtin_ia32_pminuq128((__v2di)__A, (__v2di)__B);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_mask_min_epu64 (__m128i __W, __mmask8 __M, __m128i __A,
-        __m128i __B) {
-  return (__m128i) __builtin_ia32_pminuq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di) __W, __M);
+_mm_mask_min_epu64 (__m128i __W, __mmask8 __M, __m128i __A, __m128i __B) {
+  return (__m128i)__builtin_ia32_selectq_128((__mmask8)__M,
+                                             (__v2di)_mm_min_epu64(__A, __B),
+                                             (__v2di)__W);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_maskz_min_epu64 (__mmask8 __M, __m128i __A, __m128i __B) {
-  return (__m128i) __builtin_ia32_pminuq128_mask ((__v2di) __A,
-              (__v2di) __B,
-              (__v2di)
-              _mm_setzero_si128 (),
-              __M);
+  return (__m128i)__builtin_ia32_selectq_128((__mmask8)__M,
+                                             (__v2di)_mm_min_epu64(__A, __B),
+                                             (__v2di)_mm_setzero_si128());
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_min_epu64 (__m256i __A, __m256i __B) {
-  return (__m256i) __builtin_ia32_pminuq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di)
-              _mm256_setzero_si256 (),
-              (__mmask8) -1);
+  return (__m256i)__builtin_ia32_pminuq256((__v4di)__A, (__v4di)__B);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
-_mm256_mask_min_epu64 (__m256i __W, __mmask8 __M, __m256i __A,
-           __m256i __B) {
-  return (__m256i) __builtin_ia32_pminuq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di) __W, __M);
+_mm256_mask_min_epu64 (__m256i __W, __mmask8 __M, __m256i __A, __m256i __B) {
+  return (__m256i)__builtin_ia32_selectq_256((__mmask8)__M,
+                                             (__v4di)_mm256_min_epu64(__A, __B),
+                                             (__v4di)__W);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_maskz_min_epu64 (__mmask8 __M, __m256i __A, __m256i __B) {
-  return (__m256i) __builtin_ia32_pminuq256_mask ((__v4di) __A,
-              (__v4di) __B,
-              (__v4di)
-              _mm256_setzero_si256 (),
-              __M);
+  return (__m256i)__builtin_ia32_selectq_256((__mmask8)__M,
+                                             (__v4di)_mm256_min_epu64(__A, __B),
+                                             (__v4di)_mm256_setzero_si256());
 }
 
 #define _mm_roundscale_pd(A, imm) __extension__ ({ \
