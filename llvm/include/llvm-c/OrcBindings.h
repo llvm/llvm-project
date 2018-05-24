@@ -141,6 +141,15 @@ LLVMOrcErrorCode LLVMOrcGetSymbolAddress(LLVMOrcJITStackRef JITStack,
                                          const char *SymbolName);
 
 /**
+ * Get symbol address from JIT instance, searching only the specified
+ * handle.
+ */
+LLVMOrcErrorCode LLVMOrcGetSymbolAddressIn(LLVMOrcJITStackRef JITStack,
+                                           LLVMOrcTargetAddress *RetAddr,
+                                           LLVMOrcModuleHandle H,
+                                           const char *SymbolName);
+
+/**
  * Dispose of an ORC JIT stack.
  */
 LLVMOrcErrorCode LLVMOrcDisposeInstance(LLVMOrcJITStackRef JITStack);

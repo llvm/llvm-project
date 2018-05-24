@@ -7,8 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ClangdUnit.h"
+#include "TestFS.h"
 #include "TestTU.h"
 #include "index/FileIndex.h"
+#include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -87,7 +92,7 @@ void update(FileIndex &M, llvm::StringRef Basename, llvm::StringRef Code) {
   File.HeaderFilename = (Basename + ".h").str();
   File.HeaderCode = Code;
   auto AST = File.build();
-  M.update(File.Filename, &AST);
+  M.update(File.Filename, &AST.getASTContext(), AST.getPreprocessorPtr());
 }
 
 TEST(FileIndexTest, IndexAST) {
@@ -129,13 +134,13 @@ TEST(FileIndexTest, RemoveAST) {
   Req.Scopes = {"ns::"};
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X"));
 
-  M.update("f1.cpp", nullptr);
+  M.update("f1.cpp", nullptr, nullptr);
   EXPECT_THAT(match(M, Req), UnorderedElementsAre());
 }
 
 TEST(FileIndexTest, RemoveNonExisting) {
   FileIndex M;
-  M.update("no.cpp", nullptr);
+  M.update("no.cpp", nullptr, nullptr);
   EXPECT_THAT(match(M, FuzzyFindRequest()), UnorderedElementsAre());
 }
 
@@ -198,6 +203,58 @@ vector<Ty> make_vector(Arg A) {}
   });
   EXPECT_TRUE(SeenVector);
   EXPECT_TRUE(SeenMakeVector);
+}
+
+TEST(FileIndexTest, RebuildWithPreamble) {
+  auto FooCpp = testPath("foo.cpp");
+  auto FooH = testPath("foo.h");
+  FileIndex Index;
+  bool IndexUpdated = false;
+  CppFile File("foo.cpp", /*StorePreambleInMemory=*/true,
+               std::make_shared<PCHContainerOperations>(),
+               [&Index, &IndexUpdated](PathRef FilePath, ASTContext &Ctx,
+                                       std::shared_ptr<Preprocessor> PP) {
+                 EXPECT_FALSE(IndexUpdated)
+                     << "Expected only a single index update";
+                 IndexUpdated = true;
+                 Index.update(FilePath, &Ctx, std::move(PP));
+               });
+
+  // Preparse ParseInputs.
+  ParseInputs PI;
+  PI.CompileCommand.Directory = testRoot();
+  PI.CompileCommand.Filename = FooCpp;
+  PI.CompileCommand.CommandLine = {"clang", "-xc++", FooCpp};
+
+  llvm::StringMap<std::string> Files;
+  Files[FooCpp] = "";
+  Files[FooH] = R"cpp(
+    namespace ns_in_header {
+      int func_in_header();
+    }
+  )cpp";
+  PI.FS = buildTestFS(std::move(Files));
+
+  PI.Contents = R"cpp(
+    #include "foo.h"
+    namespace ns_in_source {
+      int func_in_source();
+    }
+  )cpp";
+
+  // Rebuild the file.
+  File.rebuild(std::move(PI));
+  ASSERT_TRUE(IndexUpdated);
+
+  // Check the index contains symbols from the preamble, but not from the main
+  // file.
+  FuzzyFindRequest Req;
+  Req.Query = "";
+  Req.Scopes = {"", "ns_in_header::"};
+
+  EXPECT_THAT(
+      match(Index, Req),
+      UnorderedElementsAre("ns_in_header", "ns_in_header::func_in_header"));
 }
 
 } // namespace

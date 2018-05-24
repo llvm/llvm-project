@@ -32,8 +32,8 @@ define void @test_simple(i32 %n, ...) {
 ; CHECK: add [[VR_TOP:x[0-9]+]], [[VR_TOPTMP]], #128
 ; CHECK: str [[VR_TOP]], [x[[VA_LIST]], #16]
 
-; CHECK: mov     [[GRVR:x[0-9]+]], #-545460846720
-; CHECK: movk    [[GRVR]], #65480
+; CHECK: mov     [[GRVR:x[0-9]+]], #-56
+; CHECK: movk    [[GRVR]], #65408, lsl #32
 ; CHECK: str     [[GRVR]], [x[[VA_LIST]], #24]
 
   %addr = bitcast %va_list* @var to i8*

@@ -14,14 +14,11 @@
 #include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
 #include "Plugins/ObjectContainer/BSD-Archive/ObjectContainerBSDArchive.h"
 #include "Plugins/ObjectContainer/Universal-Mach-O/ObjectContainerUniversalMachO.h"
-#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
-#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
@@ -78,9 +75,6 @@ void SystemInitializerCommon::Initialize() {
 
   // Initialize plug-ins
   ObjectContainerBSDArchive::Initialize();
-  ObjectFileELF::Initialize();
-  ObjectFileMachO::Initialize();
-  ObjectFilePECOFF::Initialize();
 
   EmulateInstructionARM::Initialize();
   EmulateInstructionMIPS::Initialize();
@@ -103,9 +97,6 @@ void SystemInitializerCommon::Terminate() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
   ObjectContainerBSDArchive::Terminate();
-  ObjectFileELF::Terminate();
-  ObjectFileMachO::Terminate();
-  ObjectFilePECOFF::Terminate();
 
   EmulateInstructionARM::Terminate();
   EmulateInstructionMIPS::Terminate();

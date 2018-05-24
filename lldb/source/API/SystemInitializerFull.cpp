@@ -70,6 +70,9 @@
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV2.h"
 #include "Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime/RenderScriptRuntime.h"
 #include "Plugins/MemoryHistory/asan/MemoryHistoryASan.h"
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
+#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/OperatingSystem/Go/OperatingSystemGo.h"
 #include "Plugins/OperatingSystem/Python/OperatingSystemPython.h"
 #include "Plugins/Platform/Android/PlatformAndroid.h"
@@ -251,6 +254,11 @@ SystemInitializerFull::~SystemInitializerFull() {}
 
 void SystemInitializerFull::Initialize() {
   SystemInitializerCommon::Initialize();
+
+  ObjectFileELF::Initialize();
+  ObjectFileMachO::Initialize();
+  ObjectFilePECOFF::Initialize();
+
   ScriptInterpreterNone::Initialize();
 
 #ifndef LLDB_DISABLE_PYTHON
@@ -513,6 +521,10 @@ void SystemInitializerFull::Terminate() {
   PlatformiOSSimulator::Terminate();
   PlatformDarwinKernel::Terminate();
 #endif
+
+  ObjectFileELF::Terminate();
+  ObjectFileMachO::Terminate();
+  ObjectFilePECOFF::Terminate();
 
   // Now shutdown the common parts, in reverse order.
   SystemInitializerCommon::Terminate();

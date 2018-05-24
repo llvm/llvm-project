@@ -10,6 +10,7 @@
 #include "CodeCompletionStrings.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RawCommentList.h"
+#include "clang/Basic/SourceManager.h"
 #include <utility>
 
 namespace clang {
@@ -122,10 +123,23 @@ void processSnippetChunks(const CodeCompletionString &CCS,
   }
 }
 
+std::string getFormattedComment(const ASTContext &Ctx, const RawComment &RC,
+                                bool CommentsFromHeaders) {
+  auto &SourceMgr = Ctx.getSourceManager();
+  // Parsing comments from invalid preamble can lead to crashes. So we only
+  // return comments from the main file when doing code completion. For
+  // indexing, we still read all the comments.
+  // FIXME: find a better fix, e.g. store file contents in the preamble or get
+  // doc comments from the index.
+  if (!CommentsFromHeaders && !SourceMgr.isWrittenInMainFile(RC.getLocStart()))
+    return "";
+  return RC.getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+}
 } // namespace
 
 std::string getDocComment(const ASTContext &Ctx,
-                          const CodeCompletionResult &Result) {
+                          const CodeCompletionResult &Result,
+                          bool CommentsFromHeaders) {
   // FIXME: clang's completion also returns documentation for RK_Pattern if they
   // contain a pattern for ObjC properties. Unfortunately, there is no API to
   // get this declaration, so we don't show documentation in that case.
@@ -137,20 +151,20 @@ std::string getDocComment(const ASTContext &Ctx,
   const RawComment *RC = getCompletionComment(Ctx, Decl);
   if (!RC)
     return "";
-  return RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+  return getFormattedComment(Ctx, *RC, CommentsFromHeaders);
 }
 
 std::string
 getParameterDocComment(const ASTContext &Ctx,
                        const CodeCompleteConsumer::OverloadCandidate &Result,
-                       unsigned ArgIndex) {
+                       unsigned ArgIndex, bool CommentsFromHeaders) {
   auto Func = Result.getFunction();
   if (!Func)
     return "";
   const RawComment *RC = getParameterComment(Ctx, Result, ArgIndex);
   if (!RC)
     return "";
-  return RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+  return getFormattedComment(Ctx, *RC, CommentsFromHeaders);
 }
 
 void getLabelAndInsertText(const CodeCompletionString &CCS, std::string *Label,

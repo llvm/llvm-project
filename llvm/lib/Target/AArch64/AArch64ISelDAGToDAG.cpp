@@ -168,6 +168,7 @@ public:
   bool tryBitfieldExtractOpFromSExt(SDNode *N);
   bool tryBitfieldInsertOp(SDNode *N);
   bool tryBitfieldInsertInZeroOp(SDNode *N);
+  bool tryShiftAmountMod(SDNode *N);
 
   bool tryReadRegister(SDNode *N);
   bool tryWriteRegister(SDNode *N);
@@ -2441,6 +2442,111 @@ bool AArch64DAGToDAGISel::tryBitfieldInsertInZeroOp(SDNode *N) {
   return true;
 }
 
+/// tryShiftAmountMod - Take advantage of built-in mod of shift amount in
+/// variable shift/rotate instructions.
+bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
+  EVT VT = N->getValueType(0);
+
+  unsigned Opc;
+  switch (N->getOpcode()) {
+  case ISD::ROTR:
+    Opc = (VT == MVT::i32) ? AArch64::RORVWr : AArch64::RORVXr;
+    break;
+  case ISD::SHL:
+    Opc = (VT == MVT::i32) ? AArch64::LSLVWr : AArch64::LSLVXr;
+    break;
+  case ISD::SRL:
+    Opc = (VT == MVT::i32) ? AArch64::LSRVWr : AArch64::LSRVXr;
+    break;
+  case ISD::SRA:
+    Opc = (VT == MVT::i32) ? AArch64::ASRVWr : AArch64::ASRVXr;
+    break;
+  default:
+    return false;
+  }
+
+  uint64_t Size;
+  uint64_t Bits;
+  if (VT == MVT::i32) {
+    Bits = 5;
+    Size = 32;
+  } else if (VT == MVT::i64) {
+    Bits = 6;
+    Size = 64;
+  } else
+    return false;
+
+  SDValue ShiftAmt = N->getOperand(1);
+  SDLoc DL(N);
+  SDValue NewShiftAmt;
+
+  // Skip over an extend of the shift amount.
+  if (ShiftAmt->getOpcode() == ISD::ZERO_EXTEND ||
+      ShiftAmt->getOpcode() == ISD::ANY_EXTEND)
+    ShiftAmt = ShiftAmt->getOperand(0);
+
+  if (ShiftAmt->getOpcode() == ISD::ADD || ShiftAmt->getOpcode() == ISD::SUB) {
+    SDValue Add0 = ShiftAmt->getOperand(0);
+    SDValue Add1 = ShiftAmt->getOperand(1);
+    uint64_t Add0Imm;
+    uint64_t Add1Imm;
+    // If we are shifting by X+/-N where N == 0 mod Size, then just shift by X
+    // to avoid the ADD/SUB.
+    if (isIntImmediate(Add1, Add1Imm) && (Add1Imm % Size == 0))
+      NewShiftAmt = Add0;
+    // If we are shifting by N-X where N == 0 mod Size, then just shift by -X to
+    // generate a NEG instead of a SUB of a constant.
+    else if (ShiftAmt->getOpcode() == ISD::SUB &&
+             isIntImmediate(Add0, Add0Imm) && Add0Imm != 0 &&
+             (Add0Imm % Size == 0)) {
+      unsigned NegOpc;
+      unsigned ZeroReg;
+      EVT SubVT = ShiftAmt->getValueType(0);
+      if (SubVT == MVT::i32) {
+        NegOpc = AArch64::SUBWrr;
+        ZeroReg = AArch64::WZR;
+      } else {
+        assert(SubVT == MVT::i64);
+        NegOpc = AArch64::SUBXrr;
+        ZeroReg = AArch64::XZR;
+      }
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, ZeroReg, SubVT);
+      MachineSDNode *Neg =
+          CurDAG->getMachineNode(NegOpc, DL, SubVT, Zero, Add1);
+      NewShiftAmt = SDValue(Neg, 0);
+    } else
+      return false;
+  } else {
+    // If the shift amount is masked with an AND, check that the mask covers the
+    // bits that are implicitly ANDed off by the above opcodes and if so, skip
+    // the AND.
+    uint64_t MaskImm;
+    if (!isOpcWithIntImmediate(ShiftAmt.getNode(), ISD::AND, MaskImm))
+      return false;
+
+    if (countTrailingOnes(MaskImm) < Bits)
+      return false;
+
+    NewShiftAmt = ShiftAmt->getOperand(0);
+  }
+
+  // Narrow/widen the shift amount to match the size of the shift operation.
+  if (VT == MVT::i32)
+    NewShiftAmt = narrowIfNeeded(CurDAG, NewShiftAmt);
+  else if (VT == MVT::i64 && NewShiftAmt->getValueType(0) == MVT::i32) {
+    SDValue SubReg = CurDAG->getTargetConstant(AArch64::sub_32, DL, MVT::i32);
+    MachineSDNode *Ext = CurDAG->getMachineNode(
+        AArch64::SUBREG_TO_REG, DL, VT,
+        CurDAG->getTargetConstant(0, DL, MVT::i64), NewShiftAmt, SubReg);
+    NewShiftAmt = SDValue(Ext, 0);
+  }
+
+  SDValue Ops[] = {N->getOperand(0), NewShiftAmt};
+  CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+  return true;
+}
+
 bool
 AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
                                               unsigned RegWidth) {
@@ -2706,6 +2812,11 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     if (tryBitfieldExtractOp(Node))
       return;
     if (tryBitfieldInsertInZeroOp(Node))
+      return;
+    LLVM_FALLTHROUGH;
+  case ISD::ROTR:
+  case ISD::SHL:
+    if (tryShiftAmountMod(Node))
       return;
     break;
 

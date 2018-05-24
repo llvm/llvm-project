@@ -871,7 +871,10 @@ lldb::SBListener &CMICmnLLDBDebugSessionInfo::GetListener() const {
 // Throws:  None.
 //--
 lldb::SBTarget CMICmnLLDBDebugSessionInfo::GetTarget() const {
-  return GetDebugger().GetSelectedTarget();
+  auto target = GetDebugger().GetSelectedTarget();
+  if (target.IsValid())
+    return target;
+  return GetDebugger().GetDummyTarget();
 }
 
 //++

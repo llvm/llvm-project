@@ -7,65 +7,66 @@
 
 add %eax, %eax
 
-# ALL:      Iterations:     100
-# ALL-NEXT: Instructions:   100
-# ALL-NEXT: Total Cycles:   103
-# ALL-NEXT: Dispatch Width: 2
-# ALL-NEXT: IPC:            0.97
+# ALL:             Iterations:        100
+# ALL-NEXT:        Instructions:      100
+# ALL-NEXT:        Total Cycles:      103
+# ALL-NEXT:        Dispatch Width:    2
+# ALL-NEXT:        IPC:               0.97
+# ALL-NEXT:        Block RThroughput: 0.5
 
-# ALL:      Instruction Info:
-# ALL-NEXT: [1]: #uOps
-# ALL-NEXT: [2]: Latency
-# ALL-NEXT: [3]: RThroughput
-# ALL-NEXT: [4]: MayLoad
-# ALL-NEXT: [5]: MayStore
-# ALL-NEXT: [6]: HasSideEffects
+# ALL:             Instruction Info:
+# ALL-NEXT:        [1]: #uOps
+# ALL-NEXT:        [2]: Latency
+# ALL-NEXT:        [3]: RThroughput
+# ALL-NEXT:        [4]: MayLoad
+# ALL-NEXT:        [5]: MayStore
+# ALL-NEXT:        [6]: HasSideEffects
 
-# ALL:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# ALL-NEXT:  1      1     0.50                        addl	%eax, %eax
+# ALL:             [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
+# ALL-NEXT:         1      1     0.50                        addl	%eax, %eax
 
-# ALL:      Dynamic Dispatch Stall Cycles:
-# ALL-NEXT: RAT     - Register unavailable:                      0
-# ALL-NEXT: RCU     - Retire tokens unavailable:                 0
-# ALL-NEXT: SCHEDQ  - Scheduler full:                            61
-# ALL-NEXT: LQ      - Load queue full:                           0
-# ALL-NEXT: SQ      - Store queue full:                          0
-# ALL-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# ALL:             Dynamic Dispatch Stall Cycles:
+# ALL-NEXT:        RAT     - Register unavailable:                      0
+# ALL-NEXT:        RCU     - Retire tokens unavailable:                 0
+# ALL-NEXT:        SCHEDQ  - Scheduler full:                            61
+# ALL-NEXT:        LQ      - Load queue full:                           0
+# ALL-NEXT:        SQ      - Store queue full:                          0
+# ALL-NEXT:        GROUP   - Static restrictions on the dispatch group: 0
 
-# ALL:      Dispatch Logic - number of cycles where we saw N instructions dispatched:
-# ALL-NEXT: [# dispatched], [# cycles]
-# ALL-NEXT:  0,              22  (21.4%)
-# ALL-NEXT:  2,              19  (18.4%)
-# ALL-NEXT:  1,              62  (60.2%)
+# ALL:             Dispatch Logic - number of cycles where we saw N instructions dispatched:
+# ALL-NEXT:        [# dispatched], [# cycles]
+# ALL-NEXT:         0,              22  (21.4%)
+# ALL-NEXT:         2,              19  (18.4%)
+# ALL-NEXT:         1,              62  (60.2%)
 
-# ALL:      Schedulers - number of cycles where we saw N instructions issued:
-# ALL-NEXT: [# issued], [# cycles]
-# ALL-NEXT:  0,          3  (2.9%)
-# ALL-NEXT:  1,          100  (97.1%)
+# ALL:             Schedulers - number of cycles where we saw N instructions issued:
+# ALL-NEXT:        [# issued], [# cycles]
+# ALL-NEXT:         0,          3  (2.9%)
+# ALL-NEXT:         1,          100  (97.1%)
 
-# ALL:      Scheduler's queue usage:
-# ALL-NEXT: JALU01,  20/20
-# ALL-NEXT: JFPU01,  0/18
-# ALL-NEXT: JLSAGU,  0/12
+# ALL:             Scheduler's queue usage:
+# ALL-NEXT:        JALU01,  20/20
+# ALL-NEXT:        JFPU01,  0/18
+# ALL-NEXT:        JLSAGU,  0/12
 
-# ALL:      Retire Control Unit - number of cycles where we saw N instructions retired:
-# ALL-NEXT: [# retired], [# cycles]
-# ALL-NEXT:  0,           3  (2.9%)
-# ALL-NEXT:  1,           100  (97.1%)
+# ALL:             Retire Control Unit - number of cycles where we saw N instructions retired:
+# ALL-NEXT:        [# retired], [# cycles]
+# ALL-NEXT:         0,           3  (2.9%)
+# ALL-NEXT:         1,           100  (97.1%)
 
-# ALL:      Register File statistics:
-# ALL-NEXT: Total number of mappings created:    200
-# ALL-NEXT: Max number of mappings used:         44
+# ALL:             Register File statistics:
+# ALL-NEXT:        Total number of mappings created:    200
+# ALL-NEXT:        Max number of mappings used:         44
 
-# ALL:      *  Register File #1 -- JFpuPRF:
-# ALL-NEXT:    Number of physical registers:     72
-# ALL-NEXT:    Total number of mappings created: 0
-# ALL-NEXT:    Max number of mappings used:      0
+# ALL:             *  Register File #1 -- JFpuPRF:
+# ALL-NEXT:           Number of physical registers:     72
+# ALL-NEXT:           Total number of mappings created: 0
+# ALL-NEXT:           Max number of mappings used:      0
 
-# ALL:      *  Register File #2 -- JIntegerPRF:
-# ALL-NEXT:    Number of physical registers:     64
-# ALL-NEXT:    Total number of mappings created: 200
-# ALL-NEXT:    Max number of mappings used:      44
+# ALL:             *  Register File #2 -- JIntegerPRF:
+# ALL-NEXT:           Number of physical registers:     64
+# ALL-NEXT:           Total number of mappings created: 200
+# ALL-NEXT:           Max number of mappings used:      44
 
 # FULLREPORT:      Resources:
 # FULLREPORT-NEXT: [0]   - JALU0
@@ -83,37 +84,37 @@ add %eax, %eax
 # FULLREPORT-NEXT: [12]  - JVALU1
 # FULLREPORT-NEXT: [13]  - JVIMUL
 
-# NORPV:      Timeline view:
-# NORPV-NEXT:                     012
-# NORPV-NEXT: Index     0123456789
+# NORPV:           Timeline view:
+# NORPV-NEXT:                          012
+# NORPV-NEXT:      Index     0123456789
 
 # FULLREPORT:      Resource pressure per iteration:
 # FULLREPORT-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
 # FULLREPORT-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -
 
-# NORPV:      [0,0]     DeER .    . .   addl	%eax, %eax
-# NORPV-NEXT: [1,0]     D=eER.    . .   addl	%eax, %eax
-# NORPV-NEXT: [2,0]     .D=eER    . .   addl	%eax, %eax
-# NORPV-NEXT: [3,0]     .D==eER   . .   addl	%eax, %eax
-# NORPV-NEXT: [4,0]     . D==eER  . .   addl	%eax, %eax
-# NORPV-NEXT: [5,0]     . D===eER . .   addl	%eax, %eax
-# NORPV-NEXT: [6,0]     .  D===eER. .   addl	%eax, %eax
-# NORPV-NEXT: [7,0]     .  D====eER .   addl	%eax, %eax
-# NORPV-NEXT: [8,0]     .   D====eER.   addl	%eax, %eax
-# NORPV-NEXT: [9,0]     .   D=====eER   addl	%eax, %eax
+# NORPV:           [0,0]     DeER .    . .   addl	%eax, %eax
+# NORPV-NEXT:      [1,0]     D=eER.    . .   addl	%eax, %eax
+# NORPV-NEXT:      [2,0]     .D=eER    . .   addl	%eax, %eax
+# NORPV-NEXT:      [3,0]     .D==eER   . .   addl	%eax, %eax
+# NORPV-NEXT:      [4,0]     . D==eER  . .   addl	%eax, %eax
+# NORPV-NEXT:      [5,0]     . D===eER . .   addl	%eax, %eax
+# NORPV-NEXT:      [6,0]     .  D===eER. .   addl	%eax, %eax
+# NORPV-NEXT:      [7,0]     .  D====eER .   addl	%eax, %eax
+# NORPV-NEXT:      [8,0]     .   D====eER.   addl	%eax, %eax
+# NORPV-NEXT:      [9,0]     .   D=====eER   addl	%eax, %eax
 
-# NORPV:      Average Wait times (based on the timeline view):
-# NORPV-NEXT: [0]: Executions
-# NORPV-NEXT: [1]: Average time spent waiting in a scheduler's queue
-# NORPV-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
-# NORPV-NEXT: [3]: Average time elapsed from WB until retire stage
+# NORPV:           Average Wait times (based on the timeline view):
+# NORPV-NEXT:      [0]: Executions
+# NORPV-NEXT:      [1]: Average time spent waiting in a scheduler's queue
+# NORPV-NEXT:      [2]: Average time spent waiting in a scheduler's queue while ready
+# NORPV-NEXT:      [3]: Average time elapsed from WB until retire stage
 
 # FULLREPORT:      Resource pressure by instruction:
 # FULLREPORT-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
 # FULLREPORT-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addl	%eax, %eax
 
-# NORPV:            [0]    [1]    [2]    [3]
-# NORPV-NEXT: 0.     10    3.5    0.1    0.0       addl	%eax, %eax
+# NORPV:                 [0]    [1]    [2]    [3]
+# NORPV-NEXT:      0.     10    3.5    0.1    0.0       addl	%eax, %eax
 
 # FULLREPORT:      Timeline view:
 # FULLREPORT-NEXT:                     012

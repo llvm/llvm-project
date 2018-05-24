@@ -586,9 +586,11 @@ public:
       const auto *CCS = Candidate.CreateSignatureString(
           CurrentArg, S, *Allocator, CCTUInfo, true);
       assert(CCS && "Expected the CodeCompletionString to be non-null");
+      // FIXME: for headers, we need to get a comment from the index.
       SigHelp.signatures.push_back(ProcessOverloadCandidate(
           Candidate, *CCS,
-          getParameterDocComment(S.getASTContext(), Candidate, CurrentArg)));
+          getParameterDocComment(S.getASTContext(), Candidate, CurrentArg,
+                                 /*CommentsFromHeader=*/false)));
     }
   }
 
@@ -1030,7 +1032,8 @@ private:
       SemaCCS = Recorder->codeCompletionString(*SR);
       if (Opts.IncludeComments) {
         assert(Recorder->CCSema);
-        DocComment = getDocComment(Recorder->CCSema->getASTContext(), *SR);
+        DocComment = getDocComment(Recorder->CCSema->getASTContext(), *SR,
+                                   /*CommentsFromHeader=*/false);
       }
     }
     return Candidate.build(FileName, Scores, Opts, SemaCCS, Includes.get(), DocComment);

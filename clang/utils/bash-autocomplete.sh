@@ -38,7 +38,8 @@ _clang()
 
   # expand ~ to $HOME
   eval local path=${COMP_WORDS[0]}
-  flags=$( "$path" --autocomplete="$arg" 2>/dev/null | sed -e 's/\t.*//' )
+  # Use $'\t' so that bash expands the \t for older versions of sed.
+  flags=$( "$path" --autocomplete="$arg" 2>/dev/null | sed -e $'s/\t.*//' )
   # If clang is old that it does not support --autocomplete,
   # fall back to the filename completion.
   if [[ "$?" != 0 ]]; then

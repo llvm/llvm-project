@@ -48,9 +48,10 @@ public:
   void addSymbolMapping(llvm::StringRef QualifiedName,
                         llvm::StringRef CanonicalPath);
 
-  /// Returns the canonical include for symbol with \p QualifiedName, which is
-  /// declared in \p Header
-  llvm::StringRef mapHeader(llvm::StringRef Header,
+  /// Returns the canonical include for symbol with \p QualifiedName.
+  /// \p Headers is the include stack: Headers.front() is the file declaring the
+  /// symbol, and Headers.back() is the main file.
+  llvm::StringRef mapHeader(llvm::ArrayRef<std::string> Headers,
                             llvm::StringRef QualifiedName) const;
 
 private:

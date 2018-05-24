@@ -34,9 +34,9 @@ void SummaryView::onInstructionEvent(const HWInstructionEvent &Event) {
     return;
 
   // Update the cumulative number of resource cycles based on the processor
-  // resource usage information available from the instruction descriptor. We need to
-  // compute the cumulative number of resource cycles for every processor
-  // resource which is consumed by an instruction of the block.
+  // resource usage information available from the instruction descriptor. We
+  // need to compute the cumulative number of resource cycles for every
+  // processor resource which is consumed by an instruction of the block.
   const Instruction &Inst = *Event.IR.getInstruction();
   const InstrDesc &Desc = Inst.getDesc();
   NumMicroOps += Desc.NumMicroOps;
@@ -99,7 +99,10 @@ void SummaryView::printView(raw_ostream &OS) const {
   TempStream << "\nTotal Cycles:      " << TotalCycles;
   TempStream << "\nDispatch Width:    " << DispatchWidth;
   TempStream << "\nIPC:               " << format("%.2f", IPC);
-  TempStream << "\nBlock RThroughput: " << format("%.1f", BlockRThroughput)
+
+  // Round to the block reciprocal throughput to the nearest tenth.
+  TempStream << "\nBlock RThroughput: "
+             << format("%.1f", floor((BlockRThroughput * 10) + 0.5) / 10)
              << '\n';
   TempStream.flush();
   OS << Buffer;
