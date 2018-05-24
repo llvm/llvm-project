@@ -4,17 +4,18 @@
 
   b   t
 
-# M3:      Iterations:     300
-# M3-NEXT: Instructions:   300
-# M3-NEXT: Total Cycles:   51
-# M3-NEXT: Dispatch Width: 6
-# M3-NEXT: IPC:            5.88
+# ALL:      Iterations:        300
+# ALL-NEXT: Instructions:      300
 
-# M1:      Iterations:     300
-# M1-NEXT: Instructions:   300
-# M1-NEXT: Total Cycles:   76
-# M1-NEXT: Dispatch Width: 4
-# M1-NEXT: IPC:            3.95
+# M1-NEXT:  Total Cycles:      76
+# M1-NEXT:  Dispatch Width:    4
+# M1-NEXT:  IPC:               3.95
+# M1-NEXT:  Block RThroughput: 0.3
+
+# M3-NEXT:  Total Cycles:      51
+# M3-NEXT:  Dispatch Width:    6
+# M3-NEXT:  IPC:               5.88
+# M3-NEXT:  Block RThroughput: 0.2
 
 # ALL:      Instruction Info:
 # ALL-NEXT: [1]: #uOps

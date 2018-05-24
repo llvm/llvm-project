@@ -472,7 +472,8 @@ private:
   /// relatively uncommon we only allocate space for them if necessary.
   struct TypeIdInfo {
     /// List of type identifiers used by this function in llvm.type.test
-    /// intrinsics other than by an llvm.assume intrinsic, represented as GUIDs.
+    /// intrinsics referenced by something other than an llvm.assume intrinsic,
+    /// represented as GUIDs.
     std::vector<GlobalValue::GUID> TypeTests;
 
     /// List of virtual calls made by this function using (respectively)

@@ -23,6 +23,7 @@
 #include "InstPrinter/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
+#include "R600AsmPrinter.h"
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600RegisterInfo.h"
@@ -89,7 +90,7 @@ createAMDGPUAsmPrinterPass(TargetMachine &tm,
 
 extern "C" void LLVMInitializeAMDGPUAsmPrinter() {
   TargetRegistry::RegisterAsmPrinter(getTheAMDGPUTarget(),
-                                     createAMDGPUAsmPrinterPass);
+                                     llvm::createR600AsmPrinterPass);
   TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
                                      createAMDGPUAsmPrinterPass);
 }
@@ -115,9 +116,6 @@ AMDGPUTargetStreamer* AMDGPUAsmPrinter::getTargetStreamer() const {
 }
 
 void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
-  if (TM.getTargetTriple().getArch() != Triple::amdgcn)
-    return;
-
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA &&
       TM.getTargetTriple().getOS() != Triple::AMDPAL)
     return;
@@ -143,8 +141,6 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
 }
 
 void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
-  if (TM.getTargetTriple().getArch() != Triple::amdgcn)
-    return;
 
   // Following code requires TargetStreamer to be present.
   if (!getTargetStreamer())
@@ -309,24 +305,20 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->SwitchSection(ConfigSection);
   }
 
-  if (STM.getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS) {
-    if (MFI->isEntryFunction()) {
-      getSIProgramInfo(CurrentProgramInfo, MF);
-    } else {
-      auto I = CallGraphResourceInfo.insert(
-        std::make_pair(&MF.getFunction(), SIFunctionResourceInfo()));
-      SIFunctionResourceInfo &Info = I.first->second;
-      assert(I.second && "should only be called once per function");
-      Info = analyzeResourceUsage(MF);
-    }
-
-    if (STM.isAmdPalOS())
-      EmitPALMetadata(MF, CurrentProgramInfo);
-    else if (!STM.isAmdHsaOS()) {
-      EmitProgramInfoSI(MF, CurrentProgramInfo);
-    }
+  if (MFI->isEntryFunction()) {
+    getSIProgramInfo(CurrentProgramInfo, MF);
   } else {
-    EmitProgramInfoR600(MF);
+    auto I = CallGraphResourceInfo.insert(
+      std::make_pair(&MF.getFunction(), SIFunctionResourceInfo()));
+    SIFunctionResourceInfo &Info = I.first->second;
+    assert(I.second && "should only be called once per function");
+    Info = analyzeResourceUsage(MF);
+  }
+
+  if (STM.isAmdPalOS())
+    EmitPALMetadata(MF, CurrentProgramInfo);
+  else if (!STM.isAmdHsaOS()) {
+    EmitProgramInfoSI(MF, CurrentProgramInfo);
   }
 
   DisasmLines.clear();
@@ -340,84 +332,78 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
         Context.getELFSection(".AMDGPU.csdata", ELF::SHT_PROGBITS, 0);
     OutStreamer->SwitchSection(CommentSection);
 
-    if (STM.getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS) {
-      if (!MFI->isEntryFunction()) {
-        OutStreamer->emitRawComment(" Function info:", false);
-        SIFunctionResourceInfo &Info = CallGraphResourceInfo[&MF.getFunction()];
-        emitCommonFunctionComments(
-          Info.NumVGPR,
-          Info.getTotalNumSGPRs(MF.getSubtarget<SISubtarget>()),
-          Info.PrivateSegmentSize,
-          getFunctionCodeSize(MF));
-        return false;
-      }
-
-      OutStreamer->emitRawComment(" Kernel info:", false);
-      emitCommonFunctionComments(CurrentProgramInfo.NumVGPR,
-                                 CurrentProgramInfo.NumSGPR,
-                                 CurrentProgramInfo.ScratchSize,
-                                 getFunctionCodeSize(MF));
-
-      OutStreamer->emitRawComment(
-        " FloatMode: " + Twine(CurrentProgramInfo.FloatMode), false);
-      OutStreamer->emitRawComment(
-        " IeeeMode: " + Twine(CurrentProgramInfo.IEEEMode), false);
-      OutStreamer->emitRawComment(
-        " LDSByteSize: " + Twine(CurrentProgramInfo.LDSSize) +
-        " bytes/workgroup (compile time only)", false);
-
-      OutStreamer->emitRawComment(
-        " SGPRBlocks: " + Twine(CurrentProgramInfo.SGPRBlocks), false);
-      OutStreamer->emitRawComment(
-        " VGPRBlocks: " + Twine(CurrentProgramInfo.VGPRBlocks), false);
-
-      OutStreamer->emitRawComment(
-        " NumSGPRsForWavesPerEU: " +
-        Twine(CurrentProgramInfo.NumSGPRsForWavesPerEU), false);
-      OutStreamer->emitRawComment(
-        " NumVGPRsForWavesPerEU: " +
-        Twine(CurrentProgramInfo.NumVGPRsForWavesPerEU), false);
-
-      OutStreamer->emitRawComment(
-        " ReservedVGPRFirst: " + Twine(CurrentProgramInfo.ReservedVGPRFirst),
-        false);
-      OutStreamer->emitRawComment(
-        " ReservedVGPRCount: " + Twine(CurrentProgramInfo.ReservedVGPRCount),
-        false);
-
-      if (MF.getSubtarget<SISubtarget>().debuggerEmitPrologue()) {
-        OutStreamer->emitRawComment(
-          " DebuggerWavefrontPrivateSegmentOffsetSGPR: s" +
-          Twine(CurrentProgramInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR), false);
-        OutStreamer->emitRawComment(
-          " DebuggerPrivateSegmentBufferSGPR: s" +
-          Twine(CurrentProgramInfo.DebuggerPrivateSegmentBufferSGPR), false);
-      }
-
-      OutStreamer->emitRawComment(
-        " COMPUTE_PGM_RSRC2:USER_SGPR: " +
-        Twine(G_00B84C_USER_SGPR(CurrentProgramInfo.ComputePGMRSrc2)), false);
-      OutStreamer->emitRawComment(
-        " COMPUTE_PGM_RSRC2:TRAP_HANDLER: " +
-        Twine(G_00B84C_TRAP_HANDLER(CurrentProgramInfo.ComputePGMRSrc2)), false);
-      OutStreamer->emitRawComment(
-        " COMPUTE_PGM_RSRC2:TGID_X_EN: " +
-        Twine(G_00B84C_TGID_X_EN(CurrentProgramInfo.ComputePGMRSrc2)), false);
-      OutStreamer->emitRawComment(
-        " COMPUTE_PGM_RSRC2:TGID_Y_EN: " +
-        Twine(G_00B84C_TGID_Y_EN(CurrentProgramInfo.ComputePGMRSrc2)), false);
-      OutStreamer->emitRawComment(
-        " COMPUTE_PGM_RSRC2:TGID_Z_EN: " +
-        Twine(G_00B84C_TGID_Z_EN(CurrentProgramInfo.ComputePGMRSrc2)), false);
-      OutStreamer->emitRawComment(
-        " COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: " +
-        Twine(G_00B84C_TIDIG_COMP_CNT(CurrentProgramInfo.ComputePGMRSrc2)),
-        false);
-    } else {
-      R600MachineFunctionInfo *MFI = MF.getInfo<R600MachineFunctionInfo>();
-      OutStreamer->emitRawComment(
-        Twine("SQ_PGM_RESOURCES:STACK_SIZE = " + Twine(MFI->CFStackSize)));
+    if (!MFI->isEntryFunction()) {
+      OutStreamer->emitRawComment(" Function info:", false);
+      SIFunctionResourceInfo &Info = CallGraphResourceInfo[&MF.getFunction()];
+      emitCommonFunctionComments(
+        Info.NumVGPR,
+        Info.getTotalNumSGPRs(MF.getSubtarget<SISubtarget>()),
+        Info.PrivateSegmentSize,
+        getFunctionCodeSize(MF));
+      return false;
     }
+
+    OutStreamer->emitRawComment(" Kernel info:", false);
+    emitCommonFunctionComments(CurrentProgramInfo.NumVGPR,
+                               CurrentProgramInfo.NumSGPR,
+                               CurrentProgramInfo.ScratchSize,
+                               getFunctionCodeSize(MF));
+
+    OutStreamer->emitRawComment(
+      " FloatMode: " + Twine(CurrentProgramInfo.FloatMode), false);
+    OutStreamer->emitRawComment(
+      " IeeeMode: " + Twine(CurrentProgramInfo.IEEEMode), false);
+    OutStreamer->emitRawComment(
+      " LDSByteSize: " + Twine(CurrentProgramInfo.LDSSize) +
+      " bytes/workgroup (compile time only)", false);
+
+    OutStreamer->emitRawComment(
+      " SGPRBlocks: " + Twine(CurrentProgramInfo.SGPRBlocks), false);
+    OutStreamer->emitRawComment(
+      " VGPRBlocks: " + Twine(CurrentProgramInfo.VGPRBlocks), false);
+
+    OutStreamer->emitRawComment(
+      " NumSGPRsForWavesPerEU: " +
+      Twine(CurrentProgramInfo.NumSGPRsForWavesPerEU), false);
+    OutStreamer->emitRawComment(
+      " NumVGPRsForWavesPerEU: " +
+      Twine(CurrentProgramInfo.NumVGPRsForWavesPerEU), false);
+
+    OutStreamer->emitRawComment(
+      " ReservedVGPRFirst: " + Twine(CurrentProgramInfo.ReservedVGPRFirst),
+      false);
+    OutStreamer->emitRawComment(
+      " ReservedVGPRCount: " + Twine(CurrentProgramInfo.ReservedVGPRCount),
+      false);
+
+    if (MF.getSubtarget<SISubtarget>().debuggerEmitPrologue()) {
+      OutStreamer->emitRawComment(
+        " DebuggerWavefrontPrivateSegmentOffsetSGPR: s" +
+        Twine(CurrentProgramInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR), false);
+      OutStreamer->emitRawComment(
+        " DebuggerPrivateSegmentBufferSGPR: s" +
+        Twine(CurrentProgramInfo.DebuggerPrivateSegmentBufferSGPR), false);
+    }
+
+    OutStreamer->emitRawComment(
+      " COMPUTE_PGM_RSRC2:USER_SGPR: " +
+      Twine(G_00B84C_USER_SGPR(CurrentProgramInfo.ComputePGMRSrc2)), false);
+    OutStreamer->emitRawComment(
+      " COMPUTE_PGM_RSRC2:TRAP_HANDLER: " +
+      Twine(G_00B84C_TRAP_HANDLER(CurrentProgramInfo.ComputePGMRSrc2)), false);
+    OutStreamer->emitRawComment(
+      " COMPUTE_PGM_RSRC2:TGID_X_EN: " +
+      Twine(G_00B84C_TGID_X_EN(CurrentProgramInfo.ComputePGMRSrc2)), false);
+    OutStreamer->emitRawComment(
+      " COMPUTE_PGM_RSRC2:TGID_Y_EN: " +
+      Twine(G_00B84C_TGID_Y_EN(CurrentProgramInfo.ComputePGMRSrc2)), false);
+    OutStreamer->emitRawComment(
+      " COMPUTE_PGM_RSRC2:TGID_Z_EN: " +
+      Twine(G_00B84C_TGID_Z_EN(CurrentProgramInfo.ComputePGMRSrc2)), false);
+    OutStreamer->emitRawComment(
+      " COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: " +
+      Twine(G_00B84C_TIDIG_COMP_CNT(CurrentProgramInfo.ComputePGMRSrc2)),
+      false);
   }
 
   if (STM.dumpCode()) {
@@ -438,65 +424,6 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return false;
-}
-
-void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
-  unsigned MaxGPR = 0;
-  bool killPixel = false;
-  const R600Subtarget &STM = MF.getSubtarget<R600Subtarget>();
-  const R600RegisterInfo *RI = STM.getRegisterInfo();
-  const R600MachineFunctionInfo *MFI = MF.getInfo<R600MachineFunctionInfo>();
-
-  for (const MachineBasicBlock &MBB : MF) {
-    for (const MachineInstr &MI : MBB) {
-      if (MI.getOpcode() == AMDGPU::KILLGT)
-        killPixel = true;
-      unsigned numOperands = MI.getNumOperands();
-      for (unsigned op_idx = 0; op_idx < numOperands; op_idx++) {
-        const MachineOperand &MO = MI.getOperand(op_idx);
-        if (!MO.isReg())
-          continue;
-        unsigned HWReg = RI->getHWRegIndex(MO.getReg());
-
-        // Register with value > 127 aren't GPR
-        if (HWReg > 127)
-          continue;
-        MaxGPR = std::max(MaxGPR, HWReg);
-      }
-    }
-  }
-
-  unsigned RsrcReg;
-  if (STM.getGeneration() >= R600Subtarget::EVERGREEN) {
-    // Evergreen / Northern Islands
-    switch (MF.getFunction().getCallingConv()) {
-    default: LLVM_FALLTHROUGH;
-    case CallingConv::AMDGPU_CS: RsrcReg = R_0288D4_SQ_PGM_RESOURCES_LS; break;
-    case CallingConv::AMDGPU_GS: RsrcReg = R_028878_SQ_PGM_RESOURCES_GS; break;
-    case CallingConv::AMDGPU_PS: RsrcReg = R_028844_SQ_PGM_RESOURCES_PS; break;
-    case CallingConv::AMDGPU_VS: RsrcReg = R_028860_SQ_PGM_RESOURCES_VS; break;
-    }
-  } else {
-    // R600 / R700
-    switch (MF.getFunction().getCallingConv()) {
-    default: LLVM_FALLTHROUGH;
-    case CallingConv::AMDGPU_GS: LLVM_FALLTHROUGH;
-    case CallingConv::AMDGPU_CS: LLVM_FALLTHROUGH;
-    case CallingConv::AMDGPU_VS: RsrcReg = R_028868_SQ_PGM_RESOURCES_VS; break;
-    case CallingConv::AMDGPU_PS: RsrcReg = R_028850_SQ_PGM_RESOURCES_PS; break;
-    }
-  }
-
-  OutStreamer->EmitIntValue(RsrcReg, 4);
-  OutStreamer->EmitIntValue(S_NUM_GPRS(MaxGPR + 1) |
-                           S_STACK_SIZE(MFI->CFStackSize), 4);
-  OutStreamer->EmitIntValue(R_02880C_DB_SHADER_CONTROL, 4);
-  OutStreamer->EmitIntValue(S_02880C_KILL_ENABLE(killPixel), 4);
-
-  if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
-    OutStreamer->EmitIntValue(R_0288E8_SQ_LDS_ALLOC, 4);
-    OutStreamer->EmitIntValue(alignTo(MFI->getLDSSize(), 4) >> 2, 4);
-  }
 }
 
 uint64_t AMDGPUAsmPrinter::getFunctionCodeSize(const MachineFunction &MF) const {

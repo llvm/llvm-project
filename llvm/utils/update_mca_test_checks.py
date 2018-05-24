@@ -23,7 +23,7 @@ ADVERT = '{}utils/{}'.format(ADVERT_PREFIX, os.path.basename(__file__))
 
 
 class Error(Exception):
-  """ Generic Error to be raised without printing a traceback.
+  """ Generic Error that can be raised without printing a traceback.
   """
   pass
 
@@ -137,7 +137,89 @@ def _get_run_infos(run_lines, args):
   return run_infos
 
 
-def _get_block_infos(run_infos, test_path, args):  # noqa
+def _break_down_block(block_info, common_prefix):
+  """ Given a block_info, see if we can analyze it further to let us break it
+      down by prefix per-line rather than per-block.
+  """
+  texts = block_info.keys()
+  prefixes = list(block_info.values())
+  # Split the lines from each of the incoming block_texts and zip them so that
+  # each element contains the corresponding lines from each text.  E.g.
+  #
+  # block_text_1: A   # line 1
+  #               B   # line 2
+  #
+  # block_text_2: A   # line 1
+  #               C   # line 2
+  #
+  # would become:
+  #
+  # [(A, A),   # line 1
+  #  (B, C)]   # line 2
+  #
+  line_tuples = list(zip(*list((text.splitlines() for text in texts))))
+
+  # To simplify output, we'll only proceed if the very first line of the block
+  # texts is common to each of them.
+  if len(set(line_tuples[0])) != 1:
+    return []
+
+  result = []
+  lresult = defaultdict(list)
+  for i, line in enumerate(line_tuples):
+    if len(set(line)) == 1:
+      # We're about to output a line with the common prefix.  This is a sync
+      # point so flush any batched-up lines one prefix at a time to the output
+      # first.
+      for prefix in sorted(lresult):
+        result.extend(lresult[prefix])
+      lresult = defaultdict(list)
+
+      # The line is common to each block so output with the common prefix.
+      result.append((common_prefix, line[0]))
+    else:
+      # The line is not common to each block, or we don't have a common prefix.
+      # If there are no prefixes available, warn and bail out.
+      if not prefixes[0]:
+        _warn('multiple lines not disambiguated by prefixes:\n{}\n'
+              'Some blocks may be skipped entirely as a result.'.format(
+                  '\n'.join('  - {}'.format(l) for l in line)))
+        return []
+
+      # Iterate through the line from each of the blocks and add the line with
+      # the corresponding prefix to the current batch of results so that we can
+      # later output them per-prefix.
+      for i, l in enumerate(line):
+        for prefix in prefixes[i]:
+          lresult[prefix].append((prefix, l))
+
+  # Flush any remaining batched-up lines one prefix at a time to the output.
+  for prefix in sorted(lresult):
+    result.extend(lresult[prefix])
+  return result
+
+
+def _get_useful_prefix_info(run_infos):
+  """ Given the run_infos, calculate any prefixes that are common to every one,
+      and the length of the longest prefix string.
+  """
+  try:
+    all_sets = [set(s) for s in list(zip(*run_infos))[0]]
+    common_to_all = set.intersection(*all_sets)
+    longest_prefix_len = max(len(p) for p in set.union(*all_sets))
+  except IndexError:
+    common_to_all = []
+    longest_prefix_len = 0
+  else:
+    if len(common_to_all) > 1:
+      _warn('Multiple prefixes common to all RUN lines: {}'.format(
+          common_to_all))
+    if common_to_all:
+      common_to_all = sorted(common_to_all)[0]
+  return common_to_all, longest_prefix_len
+
+
+def _get_block_infos(run_infos, test_path, args, common_prefix):  # noqa
   """ For each run line, run the tool with the specified args and collect the
       output. We use the concept of 'blocks' for uniquing, where a block is
       a series of lines of text with no more than one newline character between
@@ -202,7 +284,6 @@ def _get_block_infos(run_infos, test_path, args):  # noqa
   # Now go through the block_infos structure and attempt to smartly prune the
   # number of prefixes per block to the minimal set possible to output.
   for block_num in range(len(block_infos)):
-
     # When there are multiple block texts for a block num, remove any
     # prefixes that are common to more than one of them.
     # E.g. [ [{ALL,FOO}] , [{ALL,BAR}] ] -> [ [{FOO}] , [{BAR}] ]
@@ -220,9 +301,7 @@ def _get_block_infos(run_infos, test_path, args):  # noqa
       # When a block text matches multiple sets of prefixes, try removing any
       # prefixes that aren't common to all of them.
       # E.g. [ {ALL,FOO} , {ALL,BAR} ] -> [{ALL}]
-      common_values = pruned_sets[i][0].copy()
-      for s in pruned_sets[i][1:]:
-        common_values &= s
+      common_values = set.intersection(*pruned_sets[i])
       if common_values:
         pruned_sets[i] = [common_values]
 
@@ -241,11 +320,60 @@ def _get_block_infos(run_infos, test_path, args):  # noqa
 
       block_infos[block_num][block_text] = sorted(list(current_set))
 
+    # If we have multiple block_texts, try to break them down further to avoid
+    # the case where we have very similar block_texts repeated after each
+    # other.
+    if common_prefix and len(block_infos[block_num]) > 1:
+      # We'll only attempt this if each of the block_texts have the same number
+      # of lines as each other.
+      same_num_Lines = (len(set(len(k.splitlines())
+                                for k in block_infos[block_num].keys())) == 1)
+      if same_num_Lines:
+        breakdown = _break_down_block(block_infos[block_num], common_prefix)
+        if breakdown:
+          block_infos[block_num] = breakdown
+
   return block_infos
 
 
+def _write_block(output, block, not_prefix_set, common_prefix, prefix_pad):
+  """ Write an individual block, with correct padding on the prefixes.
+  """
+  end_prefix = ':     '
+  previous_prefix = None
+  num_lines_of_prefix = 0
+
+  for prefix, line in block:
+    if prefix in not_prefix_set:
+      _warn('not writing for prefix {0} due to presence of "{0}-NOT:" '
+            'in input file.'.format(prefix))
+      continue
+
+    # If the previous line isn't already blank and we're writing more than one
+    # line for the current prefix output a blank line first, unless either the
+    # current of previous prefix is common to all.
+    num_lines_of_prefix += 1
+    if prefix != previous_prefix:
+      if output and output[-1]:
+        if num_lines_of_prefix > 1 or any(p == common_prefix
+                                          for p in (prefix, previous_prefix)):
+          output.append('')
+      num_lines_of_prefix = 0
+      previous_prefix = prefix
+
+    output.append(
+        '{} {}{}{} {}'.format(COMMENT_CHAR,
+                              prefix,
+                              end_prefix,
+                              ' ' * (prefix_pad - len(prefix)),
+                              line).rstrip())
+    end_prefix = '-NEXT:'
+
+  output.append('')
+
+
 def _write_output(test_path, input_lines, prefix_list, block_infos,  # noqa
-                  args):
+                  args, common_prefix, prefix_pad):
   prefix_set = set([prefix for prefixes, _ in prefix_list
                     for prefix in prefixes])
   not_prefix_set = set()
@@ -290,27 +418,31 @@ def _write_output(test_path, input_lines, prefix_list, block_infos,  # noqa
       if not block_text:
         continue
 
-      if block_infos[block_num][block_text]:
+      if type(block_infos[block_num]) is list:
+        # The block is of the type output from _break_down_block().
+        _write_block(output_check_lines,
+                     block_infos[block_num],
+                     not_prefix_set,
+                     common_prefix,
+                     prefix_pad)
+        break
+      elif block_infos[block_num][block_text]:
+        # _break_down_block() was unable to do do anything so output the block
+        # as-is.
         lines = block_text.split('\n')
         for prefix in block_infos[block_num][block_text]:
-          if prefix in not_prefix_set:
-            _warn('not writing for prefix {0} due to presence of "{0}-NOT:" '
-                  'in input file.'.format(prefix))
-            continue
-
-          output_check_lines.append(
-              '{} {}:      {}'.format(COMMENT_CHAR, prefix, lines[0]).rstrip())
-          for line in lines[1:]:
-            output_check_lines.append(
-                '{} {}-NEXT: {}'.format(COMMENT_CHAR, prefix, line).rstrip())
-          output_check_lines.append('')
+          _write_block(output_check_lines,
+                       [(prefix, line) for line in lines],
+                       not_prefix_set,
+                       common_prefix,
+                       prefix_pad)
 
   if output_check_lines:
     output_lines.insert(0, ADVERT)
     output_lines.extend(output_check_lines)
 
   if input_lines == output_lines:
-    sys.stderr.write('      [unchanged]\n')
+    sys.stderr.write('            [unchanged]\n')
     return
   sys.stderr.write('      [{} lines total]\n'.format(len(output_lines)))
 
@@ -346,8 +478,15 @@ def main():
 
     run_lines = _find_run_lines(input_lines, args)
     run_infos = _get_run_infos(run_lines, args)
-    block_infos = _get_block_infos(run_infos, test_path, args)
-    _write_output(test_path, input_lines, run_infos, block_infos, args)
+    common_prefix, prefix_pad = _get_useful_prefix_info(run_infos)
+    block_infos = _get_block_infos(run_infos, test_path, args, common_prefix)
+    _write_output(test_path,
+                  input_lines,
+                  run_infos,
+                  block_infos,
+                  args,
+                  common_prefix,
+                  prefix_pad)
 
   return 0
 

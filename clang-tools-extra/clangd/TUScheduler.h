@@ -52,7 +52,7 @@ enum class WantDiagnostics {
 class TUScheduler {
 public:
   TUScheduler(unsigned AsyncThreadsCount, bool StorePreamblesInMemory,
-              ASTParsedCallback ASTCallback,
+              PreambleParsedCallback PreambleCallback,
               std::chrono::steady_clock::duration UpdateDebounce);
   ~TUScheduler();
 
@@ -101,7 +101,7 @@ private:
 
   const bool StorePreamblesInMemory;
   const std::shared_ptr<PCHContainerOperations> PCHOps;
-  const ASTParsedCallback ASTCallback;
+  const PreambleParsedCallback PreambleCallback;
   Semaphore Barrier;
   llvm::StringMap<std::unique_ptr<FileData>> Files;
   // None when running tasks synchronously and non-None when running tasks

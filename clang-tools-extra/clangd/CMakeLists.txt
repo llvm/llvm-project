@@ -47,6 +47,7 @@ add_clang_library(clangDaemon
   clangAST
   clangASTMatchers
   clangBasic
+  clangDriver
   clangFormat
   clangFrontend
   clangIndex

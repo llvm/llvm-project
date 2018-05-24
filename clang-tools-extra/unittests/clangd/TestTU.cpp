@@ -43,7 +43,7 @@ ParsedAST TestTU::build() const {
 
 SymbolSlab TestTU::headerSymbols() const {
   auto AST = build();
-  return indexAST(&AST);
+  return indexAST(AST.getASTContext(), AST.getPreprocessorPtr());
 }
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {

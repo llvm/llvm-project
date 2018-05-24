@@ -131,9 +131,9 @@ public:
     auto Factory = llvm::make_unique<SymbolIndexActionFactory>(
         CollectorOpts, PragmaHandler.get());
 
-    std::vector<std::string> Args = {"symbol_collector", "-fsyntax-only",
-                                     "-std=c++11",       "-include",
-                                     TestHeaderName,     TestFileName};
+    std::vector<std::string> Args = {
+        "symbol_collector", "-fsyntax-only", "-xc++",     "-std=c++11",
+        "-include",         TestHeaderName,  TestFileName};
     Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
     tooling::ToolInvocation Invocation(
         Args,
@@ -664,6 +664,70 @@ TEST_F(SymbolCollectorTest, IWYUPragmaWithDoubleQuotes) {
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            AllOf(QName("Foo"), DeclURI(TestHeaderURI),
                                  IncludeHeader("\"the/good/header.h\""))));
+}
+
+TEST_F(SymbolCollectorTest, SkipIncFileWhenCanonicalizeHeaders) {
+  CollectorOpts.CollectIncludePath = true;
+  CanonicalIncludes Includes;
+  Includes.addMapping(TestHeaderName, "<canonical>");
+  CollectorOpts.Includes = &Includes;
+  auto IncFile = testPath("test.inc");
+  auto IncURI = URI::createFile(IncFile).toString();
+  InMemoryFileSystem->addFile(IncFile, 0,
+                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
+  runSymbolCollector("#include \"test.inc\"\nclass Y {};", /*Main=*/"",
+                     /*ExtraArgs=*/{"-I", testRoot()});
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
+                                         IncludeHeader("<canonical>")),
+                                   AllOf(QName("Y"), DeclURI(TestHeaderURI),
+                                         IncludeHeader("<canonical>"))));
+}
+
+TEST_F(SymbolCollectorTest, MainFileIsHeaderWhenSkipIncFile) {
+  CollectorOpts.CollectIncludePath = true;
+  CanonicalIncludes Includes;
+  CollectorOpts.Includes = &Includes;
+  TestFileName = testPath("main.h");
+  TestFileURI = URI::createFile(TestFileName).toString();
+  auto IncFile = testPath("test.inc");
+  auto IncURI = URI::createFile(IncFile).toString();
+  InMemoryFileSystem->addFile(IncFile, 0,
+                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
+  runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
+                     /*ExtraArgs=*/{"-I", testRoot()});
+  EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
+                                                  IncludeHeader(TestFileURI))));
+}
+
+TEST_F(SymbolCollectorTest, MainFileIsHeaderWithoutExtensionWhenSkipIncFile) {
+  CollectorOpts.CollectIncludePath = true;
+  CanonicalIncludes Includes;
+  CollectorOpts.Includes = &Includes;
+  TestFileName = testPath("no_ext_main");
+  TestFileURI = URI::createFile(TestFileName).toString();
+  auto IncFile = testPath("test.inc");
+  auto IncURI = URI::createFile(IncFile).toString();
+  InMemoryFileSystem->addFile(IncFile, 0,
+                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
+  runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
+                     /*ExtraArgs=*/{"-I", testRoot()});
+  EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
+                                                  IncludeHeader(TestFileURI))));
+}
+
+TEST_F(SymbolCollectorTest, FallbackToIncFileWhenIncludingFileIsCC) {
+  CollectorOpts.CollectIncludePath = true;
+  CanonicalIncludes Includes;
+  CollectorOpts.Includes = &Includes;
+  auto IncFile = testPath("test.inc");
+  auto IncURI = URI::createFile(IncFile).toString();
+  InMemoryFileSystem->addFile(IncFile, 0,
+                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
+  runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
+                     /*ExtraArgs=*/{"-I", testRoot()});
+  EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
+                                                  IncludeHeader(IncURI))));
 }
 
 TEST_F(SymbolCollectorTest, AvoidUsingFwdDeclsAsCanonicalDecls) {

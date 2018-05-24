@@ -813,6 +813,7 @@ TEST_F(InMemoryFileSystemTest, WorkingDirectory) {
                       NormalizedFS.getCurrentWorkingDirectory().get()));
 }
 
+#if !defined(_WIN32)
 TEST_F(InMemoryFileSystemTest, GetRealPath) {
   SmallString<16> Path;
   EXPECT_EQ(FS.getRealPath("b", Path), errc::operation_not_permitted);
@@ -834,6 +835,7 @@ TEST_F(InMemoryFileSystemTest, GetRealPath) {
   EXPECT_EQ(GetRealPath("../b"), "/b");
   EXPECT_EQ(GetRealPath("b/./c"), "/a/b/c");
 }
+#endif // _WIN32
 
 TEST_F(InMemoryFileSystemTest, AddFileWithUser) {
   FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), 0xFEEDFACE);

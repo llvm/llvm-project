@@ -394,11 +394,20 @@ set(arm_Thumb1_VFPv2_SOURCES
   arm/unordsf2vfp.S)
 set(arm_Thumb1_icache_SOURCES
   arm/sync_synchronize.S)
-set(arm_Thumb1_SOURCES
-  ${arm_Thumb1_JT_SOURCES}
-  ${arm_Thumb1_SjLj_EH_SOURCES}
-  ${arm_Thumb1_VFPv2_SOURCES}
-  ${arm_Thumb1_icache_SOURCES})
+
+# If VFP is supported, include arm_Thumb1_SjLj_EH_SOURCES and
+# arm_Thumb1_VFPv2_SOURCES in arm_Thumb1_SOURCES.
+if(COMPILER_RT_HAS_ARM_VFP)
+  set(arm_Thumb1_SOURCES
+    ${arm_Thumb1_JT_SOURCES}
+    ${arm_Thumb1_SjLj_EH_SOURCES}
+    ${arm_Thumb1_VFPv2_SOURCES}
+    ${arm_Thumb1_icache_SOURCES})
+else()
+  set(arm_Thumb1_SOURCES
+    ${arm_Thumb1_JT_SOURCES}
+    ${arm_Thumb1_icache_SOURCES})
+endif()
 
 if(MINGW)
   set(arm_SOURCES

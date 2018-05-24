@@ -1602,15 +1602,22 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
   if (!ModuleManager)
     createModuleManager();
 
+  // If -Wmodule-file-config-mismatch is mapped as an error or worse, allow the
+  // ASTReader to diagnose it, since it can produce better errors that we can.
+  bool ConfigMismatchIsRecoverable =
+      getDiagnostics().getDiagnosticLevel(diag::warn_module_config_mismatch,
+                                          SourceLocation())
+        <= DiagnosticsEngine::Warning;
+
   auto Listener = llvm::make_unique<ReadModuleNames>(*this);
   auto &ListenerRef = *Listener;
   ASTReader::ListenerScope ReadModuleNamesListener(*ModuleManager,
                                                    std::move(Listener));
 
   // Try to load the module file.
-  switch (ModuleManager->ReadAST(FileName, serialization::MK_ExplicitModule,
-                                 SourceLocation(),
-                                 ASTReader::ARR_ConfigurationMismatch)) {
+  switch (ModuleManager->ReadAST(
+      FileName, serialization::MK_ExplicitModule, SourceLocation(),
+      ConfigMismatchIsRecoverable ? ASTReader::ARR_ConfigurationMismatch : 0)) {
   case ASTReader::Success:
     // We successfully loaded the module file; remember the set of provided
     // modules so that we don't try to load implicit modules for them.
