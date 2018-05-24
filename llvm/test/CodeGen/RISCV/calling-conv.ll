@@ -19,16 +19,16 @@ define i32 @callee_scalars(i32 %a, i64 %b, i32 %c, i32 %d, double %e) nounwind {
 ; RV32I-FPELIM-NEXT:    sw s2, 20(sp)
 ; RV32I-FPELIM-NEXT:    sw s3, 16(sp)
 ; RV32I-FPELIM-NEXT:    sw s4, 12(sp)
-; RV32I-FPELIM-NEXT:    mv s1, a4
-; RV32I-FPELIM-NEXT:    mv s2, a3
-; RV32I-FPELIM-NEXT:    mv s3, a1
-; RV32I-FPELIM-NEXT:    mv s4, a0
+; RV32I-FPELIM-NEXT:    mv s2, a4
+; RV32I-FPELIM-NEXT:    mv s3, a3
+; RV32I-FPELIM-NEXT:    mv s4, a1
+; RV32I-FPELIM-NEXT:    mv s1, a0
 ; RV32I-FPELIM-NEXT:    mv a0, a5
 ; RV32I-FPELIM-NEXT:    mv a1, a6
 ; RV32I-FPELIM-NEXT:    call __fixdfsi
-; RV32I-FPELIM-NEXT:    add a1, s4, s3
+; RV32I-FPELIM-NEXT:    add a1, s1, s4
+; RV32I-FPELIM-NEXT:    add a1, a1, s3
 ; RV32I-FPELIM-NEXT:    add a1, a1, s2
-; RV32I-FPELIM-NEXT:    add a1, a1, s1
 ; RV32I-FPELIM-NEXT:    add a0, a1, a0
 ; RV32I-FPELIM-NEXT:    lw s4, 12(sp)
 ; RV32I-FPELIM-NEXT:    lw s3, 16(sp)
@@ -48,16 +48,16 @@ define i32 @callee_scalars(i32 %a, i64 %b, i32 %c, i32 %d, double %e) nounwind {
 ; RV32I-WITHFP-NEXT:    sw s3, 12(sp)
 ; RV32I-WITHFP-NEXT:    sw s4, 8(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 32
-; RV32I-WITHFP-NEXT:    mv s1, a4
-; RV32I-WITHFP-NEXT:    mv s2, a3
-; RV32I-WITHFP-NEXT:    mv s3, a1
-; RV32I-WITHFP-NEXT:    mv s4, a0
+; RV32I-WITHFP-NEXT:    mv s2, a4
+; RV32I-WITHFP-NEXT:    mv s3, a3
+; RV32I-WITHFP-NEXT:    mv s4, a1
+; RV32I-WITHFP-NEXT:    mv s1, a0
 ; RV32I-WITHFP-NEXT:    mv a0, a5
 ; RV32I-WITHFP-NEXT:    mv a1, a6
 ; RV32I-WITHFP-NEXT:    call __fixdfsi
-; RV32I-WITHFP-NEXT:    add a1, s4, s3
+; RV32I-WITHFP-NEXT:    add a1, s1, s4
+; RV32I-WITHFP-NEXT:    add a1, a1, s3
 ; RV32I-WITHFP-NEXT:    add a1, a1, s2
-; RV32I-WITHFP-NEXT:    add a1, a1, s1
 ; RV32I-WITHFP-NEXT:    add a0, a1, a0
 ; RV32I-WITHFP-NEXT:    lw s4, 8(sp)
 ; RV32I-WITHFP-NEXT:    lw s3, 12(sp)

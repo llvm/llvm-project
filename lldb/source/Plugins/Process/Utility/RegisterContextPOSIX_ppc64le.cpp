@@ -13,6 +13,7 @@
 
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -20,7 +21,6 @@
 #include "lldb/Utility/Endian.h"
 #include "llvm/Support/Compiler.h"
 
-#include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "RegisterContextPOSIX_ppc64le.h"
 
 using namespace lldb_private;
@@ -117,10 +117,6 @@ RegisterContextPOSIX_ppc64le::RegisterContextPOSIX_ppc64le(
     RegisterInfoInterface *register_info)
     : RegisterContext(thread, concrete_frame_idx) {
   m_register_info_ap.reset(register_info);
-
-  ProcessSP base = CalculateProcess();
-  if (base.get()->GetPluginName() == ProcessElfCore::GetPluginNameStatic())
-    return;
 }
 
 void RegisterContextPOSIX_ppc64le::InvalidateAllRegisters() {}

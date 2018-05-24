@@ -49,12 +49,20 @@ public:
       return make_error<StringError>(std::move(ErrMsg),
                                      inconvertibleErrorCode());
     }
-    case MachO::ARM64_RELOC_UNSIGNED:
-      if (NumBytes != 4 && NumBytes != 8)
-        return make_error<StringError>("Invalid relocation size for "
-                                       "ARM64_RELOC_UNSIGNED",
+    case MachO::ARM64_RELOC_POINTER_TO_GOT:
+    case MachO::ARM64_RELOC_UNSIGNED: {
+      if (NumBytes != 4 && NumBytes != 8) {
+        std::string ErrMsg;
+        {
+          raw_string_ostream ErrStream(ErrMsg);
+          ErrStream << "Invalid relocation size for relocation "
+                    << getRelocName(RE.RelType);
+        }
+        return make_error<StringError>(std::move(ErrMsg),
                                        inconvertibleErrorCode());
+      }
       break;
+    }
     case MachO::ARM64_RELOC_BRANCH26:
     case MachO::ARM64_RELOC_PAGE21:
     case MachO::ARM64_RELOC_PAGEOFF12:
@@ -69,6 +77,7 @@ public:
     switch (RE.RelType) {
     default:
       llvm_unreachable("Unsupported relocation type!");
+    case MachO::ARM64_RELOC_POINTER_TO_GOT:
     case MachO::ARM64_RELOC_UNSIGNED:
       // This could be an unaligned memory location.
       if (NumBytes == 4)
@@ -150,6 +159,7 @@ public:
     switch (RelType) {
     default:
       llvm_unreachable("Unsupported relocation type!");
+    case MachO::ARM64_RELOC_POINTER_TO_GOT:
     case MachO::ARM64_RELOC_UNSIGNED:
       assert((NumBytes == 4 || NumBytes == 8) && "Invalid relocation size.");
       break;
@@ -167,6 +177,7 @@ public:
     switch (RelType) {
     default:
       llvm_unreachable("Unsupported relocation type!");
+    case MachO::ARM64_RELOC_POINTER_TO_GOT:
     case MachO::ARM64_RELOC_UNSIGNED:
       // This could be an unaligned memory location.
       if (NumBytes == 4)
@@ -293,6 +304,16 @@ public:
       return processSubtractRelocation(SectionID, RelI, Obj, ObjSectionToID);
 
     RelocationEntry RE(getRelocationEntry(SectionID, Obj, RelI));
+
+    if (RE.RelType == MachO::ARM64_RELOC_POINTER_TO_GOT) {
+      bool Valid =
+          (RE.Size == 2 && RE.IsPCRel) || (RE.Size == 3 && !RE.IsPCRel);
+      if (!Valid)
+        return make_error<StringError>("ARM64_RELOC_POINTER_TO_GOT supports "
+                                       "32-bit pc-rel or 64-bit absolute only",
+                                       inconvertibleErrorCode());
+    }
+
     if (auto Addend = decodeAddend(RE))
       RE.Addend = *Addend;
     else
@@ -310,13 +331,17 @@ public:
       return ValueOrErr.takeError();
 
     bool IsExtern = Obj.getPlainRelocationExternal(RelInfo);
-    if (!IsExtern && RE.IsPCRel)
+    if (RE.RelType == MachO::ARM64_RELOC_POINTER_TO_GOT) {
+      // We'll take care of the offset in processGOTRelocation.
+      Value.Offset = 0;
+    } else if (!IsExtern && RE.IsPCRel)
       makeValueAddendPCRel(Value, RelI, 1 << RE.Size);
 
     RE.Addend = Value.Offset;
 
     if (RE.RelType == MachO::ARM64_RELOC_GOT_LOAD_PAGE21 ||
-        RE.RelType == MachO::ARM64_RELOC_GOT_LOAD_PAGEOFF12)
+        RE.RelType == MachO::ARM64_RELOC_GOT_LOAD_PAGEOFF12 ||
+        RE.RelType == MachO::ARM64_RELOC_POINTER_TO_GOT)
       processGOTRelocation(RE, Value, Stubs);
     else {
       if (Value.SymbolName)
@@ -349,6 +374,19 @@ public:
       encodeAddend(LocalAddress, 1 << RE.Size, RelType, Value + RE.Addend);
       break;
     }
+
+    case MachO::ARM64_RELOC_POINTER_TO_GOT: {
+      assert(((RE.Size == 2 && RE.IsPCRel) || (RE.Size == 3 && !RE.IsPCRel)) &&
+             "ARM64_RELOC_POINTER_TO_GOT only supports 32-bit pc-rel or 64-bit "
+             "absolute");
+      // Addend is the GOT entry address and RE.Offset the target of the
+      // relocation.
+      uint64_t Result =
+          RE.IsPCRel ? (RE.Addend - RE.Offset) : (Value + RE.Addend);
+      encodeAddend(LocalAddress, 1 << RE.Size, RelType, Result);
+      break;
+    }
+
     case MachO::ARM64_RELOC_BRANCH26: {
       assert(RE.IsPCRel && "not PCRel and ARM64_RELOC_BRANCH26 not supported");
       // Check if branch is in range.
@@ -386,7 +424,7 @@ public:
       writeBytesUnaligned(Value, LocalAddress, 1 << RE.Size);
       break;
     }
-    case MachO::ARM64_RELOC_POINTER_TO_GOT:
+
     case MachO::ARM64_RELOC_TLVP_LOAD_PAGE21:
     case MachO::ARM64_RELOC_TLVP_LOAD_PAGEOFF12:
       llvm_unreachable("Relocation type not yet implemented!");
@@ -404,7 +442,9 @@ public:
 private:
   void processGOTRelocation(const RelocationEntry &RE,
                             RelocationValueRef &Value, StubMap &Stubs) {
-    assert(RE.Size == 2);
+    assert((RE.RelType == MachO::ARM64_RELOC_POINTER_TO_GOT &&
+            (RE.Size == 2 || RE.Size == 3)) ||
+           RE.Size == 2);
     SectionEntry &Section = Sections[RE.SectionID];
     StubMap::const_iterator i = Stubs.find(Value);
     int64_t Offset;
