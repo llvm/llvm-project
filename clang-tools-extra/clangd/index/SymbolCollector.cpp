@@ -389,7 +389,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
                         /*EnableSnippets=*/false);
   std::string FilterText = getFilterText(*CCS);
   std::string Documentation =
-      formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion));
+      formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion,
+                                              /*CommentsFromHeaders=*/true));
   std::string CompletionDetail = getDetail(*CCS);
 
   std::string Include;
