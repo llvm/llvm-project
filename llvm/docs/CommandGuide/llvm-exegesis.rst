@@ -113,20 +113,10 @@ following format:
 
 :program:`llvm-exegesis` will also analyze the clusters to point out
 inconsistencies in the scheduling information. The output is an html file. For
-example, `/tmp/inconsistencies.html` will contain messages like:
+example, `/tmp/inconsistencies.html` will contain messages like the following :
 
-.. code-block:: none
-
-  Sched Class EXTRACTPSrr_VEXTRACTPSrr contains instructions with distinct performance characteristics, falling into 2 clusters:
-  4,EXTRACTPSrr,,3.00
-  3,VEXTRACTPSrr,,2.01
-
-  Sched Class WriteCRC32 contains instructions with distinct performance characteristics, falling into 2 clusters:
-  4,CRC32r32r16,,3.01
-  4,CRC32r32r32,,3.00
-  11,CRC32r32r8,,4.01
-  4,CRC32r64r64,,3.01
-  4,CRC32r64r8,,3.00
+.. image:: llvm-exegesis-analysis.png
+  :align: center
 
 Note that the scheduling class names will be resolved only when
 :program:`llvm-exegesis` is compiled in debug mode, else only the class id will

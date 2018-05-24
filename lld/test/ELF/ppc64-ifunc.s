@@ -6,6 +6,7 @@
 # RUN: ld.lld %t.o %t2.so -o %t
 # RUN: llvm-objdump -D %t | FileCheck %s
 # RUN: llvm-readelf -dynamic-table %t | FileCheck --check-prefix=DT %s
+# RUN: llvm-readelf -dyn-relocations %t | FileCheck --check-prefix=DYNREL %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/shared-ppc64.s -o %t2.o
@@ -13,6 +14,7 @@
 # RUN: ld.lld %t.o %t2.so -o %t
 # RUN: llvm-objdump -D %t | FileCheck %s
 # RUN: llvm-readelf -dynamic-table %t | FileCheck --check-prefix=DT %s
+# RUN: llvm-readelf -dyn-relocations %t | FileCheck --check-prefix=DYNREL %s
 
 # CHECK: Disassembly of section .text:
 
@@ -53,6 +55,14 @@
 # Check .plt address
 # DT_PLTGOT should point to the start of the .plt section.
 # DT: 0x0000000000000003 PLTGOT 0x10030000
+
+# Check that we emit the correct dynamic relocation type for an ifunc
+# DYNREL: 'PLT' relocation section at offset 0x{{[0-9a-f]+}} contains 48 bytes:
+# 48 bytes --> 2 Elf64_Rela relocations
+# DYNREL-NEXT: Offset        Info           Type               Symbol's Value  Symbol's Name + Addend
+# DYNREL-NEXT: {{[0-9a-f]+}} {{[0-9a-f]+}}  R_PPC64_JMP_SLOT      {{0+}}            foo + 0
+# DYNREL-NEXT: {{[0-9a-f]+}} {{[0-9a-f]+}}  R_PPC64_IRELATIVE     10010028
+
 
     .text
     .abiversion 2

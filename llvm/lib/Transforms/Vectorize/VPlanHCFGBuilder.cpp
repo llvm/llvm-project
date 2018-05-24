@@ -30,6 +30,7 @@
 
 using namespace llvm;
 
+namespace {
 // Class that is used to build the plain CFG for the incoming IR.
 class PlainCFGBuilder {
 private:
@@ -74,6 +75,7 @@ public:
   // Build the plain CFG and return its Top Region.
   VPRegionBlock *buildPlainCFG();
 };
+} // anonymous namespace
 
 // Return true if \p Inst is an incoming Instruction to be ignored in the VPlan
 // representation.

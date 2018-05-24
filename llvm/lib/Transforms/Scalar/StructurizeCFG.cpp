@@ -204,6 +204,9 @@ class StructurizeCFG : public RegionPass {
 
   void orderNodes();
 
+  Loop *getAdjustedLoop(RegionNode *RN);
+  unsigned getAdjustedLoopDepth(RegionNode *RN);
+
   void analyzeLoops(RegionNode *N);
 
   Value *invert(Value *Condition);
@@ -301,6 +304,26 @@ bool StructurizeCFG::doInitialization(Region *R, RGPassManager &RGM) {
   return false;
 }
 
+/// Use the exit block to determine the loop if RN is a SubRegion.
+Loop *StructurizeCFG::getAdjustedLoop(RegionNode *RN) {
+  if (RN->isSubRegion()) {
+    Region *SubRegion = RN->getNodeAs<Region>();
+    return LI->getLoopFor(SubRegion->getExit());
+  }
+
+  return LI->getLoopFor(RN->getEntry());
+}
+
+/// Use the exit block to determine the loop depth if RN is a SubRegion.
+unsigned StructurizeCFG::getAdjustedLoopDepth(RegionNode *RN) {
+  if (RN->isSubRegion()) {
+    Region *SubR = RN->getNodeAs<Region>();
+    return LI->getLoopDepth(SubR->getExit());
+  }
+
+  return LI->getLoopDepth(RN->getEntry());
+}
+
 /// Build up the general order of nodes
 void StructurizeCFG::orderNodes() {
   ReversePostOrderTraversal<Region*> RPOT(ParentRegion);
@@ -310,16 +333,15 @@ void StructurizeCFG::orderNodes() {
   // to what we want.  The only problem with it is that sometimes backedges
   // for outer loops will be visited before backedges for inner loops.
   for (RegionNode *RN : RPOT) {
-    BasicBlock *BB = RN->getEntry();
-    Loop *Loop = LI->getLoopFor(BB);
+    Loop *Loop = getAdjustedLoop(RN);
     ++LoopBlocks[Loop];
   }
 
   unsigned CurrentLoopDepth = 0;
   Loop *CurrentLoop = nullptr;
   for (auto I = RPOT.begin(), E = RPOT.end(); I != E; ++I) {
-    BasicBlock *BB = (*I)->getEntry();
-    unsigned LoopDepth = LI->getLoopDepth(BB);
+    RegionNode *RN = cast<RegionNode>(*I);
+    unsigned LoopDepth = getAdjustedLoopDepth(RN);
 
     if (is_contained(Order, *I))
       continue;
@@ -331,15 +353,14 @@ void StructurizeCFG::orderNodes() {
       auto LoopI = I;
       while (unsigned &BlockCount = LoopBlocks[CurrentLoop]) {
         LoopI++;
-        BasicBlock *LoopBB = (*LoopI)->getEntry();
-        if (LI->getLoopFor(LoopBB) == CurrentLoop) {
+        if (getAdjustedLoop(cast<RegionNode>(*LoopI)) == CurrentLoop) {
           --BlockCount;
           Order.push_back(*LoopI);
         }
       }
     }
 
-    CurrentLoop = LI->getLoopFor(BB);
+    CurrentLoop = getAdjustedLoop(RN);
     if (CurrentLoop)
       LoopBlocks[CurrentLoop]--;
 

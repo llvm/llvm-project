@@ -380,7 +380,7 @@ public:
 
   JITSymbol findSymbolIn(orc::VModuleKey K, const std::string &Name,
                          bool ExportedSymbolsOnly) {
-    return KeyLayers[K]->findSymbolIn(K, Name, ExportedSymbolsOnly);
+    return KeyLayers[K]->findSymbolIn(K, mangle(Name), ExportedSymbolsOnly);
   }
 
   LLVMOrcErrorCode findSymbolAddress(JITTargetAddress &RetAddr,

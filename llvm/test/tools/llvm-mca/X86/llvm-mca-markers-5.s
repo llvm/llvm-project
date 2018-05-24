@@ -15,11 +15,12 @@
 
 # CHECK:      [0] Code Region - First Region
 
-# CHECK:      Iterations:     1
-# CHECK-NEXT: Instructions:   1
-# CHECK-NEXT: Total Cycles:   4
-# CHECK-NEXT: Dispatch Width: 2
-# CHECK-NEXT: IPC:            0.25
+# CHECK:      Iterations:        1
+# CHECK-NEXT: Instructions:      1
+# CHECK-NEXT: Total Cycles:      4
+# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -34,11 +35,12 @@
 
 # CHECK:      [1] Code Region - Second Region
 
-# CHECK:      Iterations:     1
-# CHECK-NEXT: Instructions:   1
-# CHECK-NEXT: Total Cycles:   4
-# CHECK-NEXT: Dispatch Width: 2
-# CHECK-NEXT: IPC:            0.25
+# CHECK:      Iterations:        1
+# CHECK-NEXT: Instructions:      1
+# CHECK-NEXT: Total Cycles:      4
+# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -53,11 +55,12 @@
 
 # CHECK:      [2] Code Region - Third Region
 
-# CHECK:      Iterations:     1
-# CHECK-NEXT: Instructions:   1
-# CHECK-NEXT: Total Cycles:   4
-# CHECK-NEXT: Dispatch Width: 2
-# CHECK-NEXT: IPC:            0.25
+# CHECK:      Iterations:        1
+# CHECK-NEXT: Instructions:      1
+# CHECK-NEXT: Total Cycles:      4
+# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps

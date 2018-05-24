@@ -16,3 +16,10 @@ defm remove_section : Eq<"remove-section">,
 
 def R : JoinedOrSeparate<["-"], "R">,
         Alias<remove_section>;
+
+defm keep_symbol : Eq<"keep-symbol">,
+                   MetaVarName<"symbol">,
+                   HelpText<"Do not remove symbol <symbol>">;
+
+def K : JoinedOrSeparate<["-"], "K">,
+        Alias<keep_symbol>;

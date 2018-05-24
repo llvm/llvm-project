@@ -200,23 +200,31 @@ bool shouldCollectIncludePath(index::SymbolKind Kind) {
 /// Gets a canonical include (URI of the header or <header>  or "header") for
 /// header of \p Loc.
 /// Returns None if fails to get include header for \p Loc.
-/// FIXME: we should handle .inc files whose symbols are expected be exported by
-/// their containing headers.
 llvm::Optional<std::string>
 getIncludeHeader(llvm::StringRef QName, const SourceManager &SM,
                  SourceLocation Loc, const SymbolCollector::Options &Opts) {
-  llvm::StringRef FilePath = SM.getFilename(Loc);
-  if (FilePath.empty())
-    return llvm::None;
-  if (Opts.Includes) {
-    llvm::StringRef Mapped = Opts.Includes->mapHeader(FilePath, QName);
-    if (Mapped != FilePath)
-      return (Mapped.startswith("<") || Mapped.startswith("\""))
-                 ? Mapped.str()
-                 : ("\"" + Mapped + "\"").str();
+  std::vector<std::string> Headers;
+  // Collect the #include stack.
+  while (true) {
+    if (!Loc.isValid())
+      break;
+    auto FilePath = SM.getFilename(Loc);
+    if (FilePath.empty())
+      break;
+    Headers.push_back(FilePath);
+    if (SM.isInMainFile(Loc))
+      break;
+    Loc = SM.getIncludeLoc(SM.getFileID(Loc));
   }
-
-  return toURI(SM, SM.getFilename(Loc), Opts);
+  if (Headers.empty())
+    return llvm::None;
+  llvm::StringRef Header = Headers[0];
+  if (Opts.Includes) {
+    Header = Opts.Includes->mapHeader(Headers, QName);
+    if (Header.startswith("<") || Header.startswith("\""))
+      return Header.str();
+  }
+  return toURI(SM, Header, Opts);
 }
 
 // Return the symbol location of the given declaration `D`.
@@ -381,7 +389,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
                         /*EnableSnippets=*/false);
   std::string FilterText = getFilterText(*CCS);
   std::string Documentation =
-      formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion));
+      formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion,
+                                              /*CommentsFromHeaders=*/true));
   std::string CompletionDetail = getDetail(*CCS);
 
   std::string Include;

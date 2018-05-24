@@ -67,7 +67,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
-; CHECK: stxsdx
+; CHECK: stfdx
 ; CHECK: lxvd2x
 }
 

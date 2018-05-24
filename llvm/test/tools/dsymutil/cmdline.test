@@ -2,6 +2,8 @@ RUN: dsymutil -help 2>&1 | FileCheck --check-prefix=HELP %s
 HELP: OVERVIEW: manipulate archived DWARF debug symbol files.
 HELP: USAGE: dsymutil{{[^ ]*}} [options] <input files>
 HELP-NOT: -reverse-iterate
+HELP: Color Options
+HELP: -color
 HELP: Specific Options:
 HELP: -arch=<arch>
 HELP: -dump-debug-map

@@ -38,6 +38,9 @@ def RetFlag      : SDNode<"RISCVISD::RET_FLAG", SDTNone,
                           [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def SelectCC     : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC,
                           [SDNPInGlue]>;
+def Tail         : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
+                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                           SDNPVariadic]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -665,10 +668,19 @@ def PseudoRET : Pseudo<(outs), (ins), [(RetFlag)]>,
 // expand to auipc and jalr while encoding.
 // Define AsmString to print "tail" when compile with -S flag.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2],
-    hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0 in
+    isCodeGenOnly = 0 in
 def PseudoTAIL : Pseudo<(outs), (ins bare_symbol:$dst), []> {
   let AsmString = "tail\t$dst";
 }
+
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in
+def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1), [(Tail GPRTC:$rs1)]>,
+                         PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
+
+def : Pat<(Tail (iPTR tglobaladdr:$dst)),
+          (PseudoTAIL texternalsym:$dst)>;
+def : Pat<(Tail (iPTR texternalsym:$dst)),
+          (PseudoTAIL texternalsym:$dst)>;
 
 /// Loads
 

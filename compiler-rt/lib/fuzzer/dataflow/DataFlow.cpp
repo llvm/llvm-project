@@ -40,23 +40,12 @@
 //
 // Example output:
 // ===============
-// LEN:    5
-// LABELS: 10
-// L7 1 6
-// L8 2 7
-// L9 3 8
-// L10 4 9
-// F1 10
-// F2 5
+//  F0 11111111111111
+//  F1 10000000000000
 //  ===============
-// "LEN:" indicates the number of bytes in the input.
-// "LABELS:" indicates the number of DFSan labels created while running the input.
-//   * The labels [1,LEN] correspond to the bytes of the input
-//     (label 1 corresponds to byte 0, and so on)
-//   * The label LEN+1 corresponds to the input size.
-//   * The labels [LEN+2,LABELS] correspond to DFSan's union labels.
-// "Li j k": describes the label 'i' as a union of labels 'j' and 'k'.
-// "Ff l": tells that the function 'f' depends on the label 'l'.
+// "FN xxxxxxxxxx": tells what bytes of the input does the function N depend on.
+//    The byte string is LEN+1 bytes. The last byte is set if the function
+//    depends on the input length.
 //===----------------------------------------------------------------------===*/
 
 #include <assert.h>
@@ -79,9 +68,10 @@ static size_t NumFuncs;
 static const uintptr_t *FuncsBeg;
 static __thread size_t CurrentFunc;
 static dfsan_label *FuncLabels;  // Array of NumFuncs elements.
+static char *PrintableStringForLabel;  // InputLen + 2 bytes.
 
 // Prints all instrumented functions.
-int PrintFunctions() {
+static int PrintFunctions() {
   // We don't have the symbolizer integrated with dfsan yet.
   // So use backtrace_symbols_fd and pipe it through llvm-symbolizer.
   // TODO(kcc): this is pretty ugly and may break in lots of ways.
@@ -99,16 +89,28 @@ int PrintFunctions() {
   return 0;
 }
 
-void PrintDataFlow(FILE *Out) {
-  fprintf(Out, "LEN:    %zd\n", InputLen);
-  fprintf(Out, "LABELS: %zd\n", dfsan_get_label_count());
-  for (dfsan_label L = InputLen + 2; L <= dfsan_get_label_count(); L++) {
+static void SetBytesForLabel(dfsan_label L, char *Bytes) {
+  assert(L);
+  if (L <= InputLen + 1) {
+    Bytes[L - 1] = '1';
+  } else {
     auto *DLI = dfsan_get_label_info(L);
-    fprintf(Out, "L%d %d %d\n", L, DLI->l1, DLI->l2);
+    SetBytesForLabel(DLI->l1, Bytes);
+    SetBytesForLabel(DLI->l2, Bytes);
   }
+}
+
+static char *GetPrintableStringForLabel(dfsan_label L) {
+  memset(PrintableStringForLabel, '0', InputLen + 1);
+  PrintableStringForLabel[InputLen + 1] = 0;
+  SetBytesForLabel(L, PrintableStringForLabel);
+  return PrintableStringForLabel;
+}
+
+static void PrintDataFlow(FILE *Out) {
   for (size_t I = 0; I < NumFuncs; I++)
     if (FuncLabels[I])
-      fprintf(Out, "F%zd %d\n", I, FuncLabels[I]);
+      fprintf(Out, "F%zd %s\n", I, GetPrintableStringForLabel(FuncLabels[I]));
 }
 
 int main(int argc, char **argv) {
@@ -116,9 +118,12 @@ int main(int argc, char **argv) {
     LLVMFuzzerInitialize(&argc, &argv);
   if (argc == 1)
     return PrintFunctions();
-  assert(argc == 2 || argc == 3);
+  assert(argc == 4 || argc == 5);
+  size_t Beg = atoi(argv[1]);
+  size_t End = atoi(argv[2]);
+  assert(Beg < End);
 
-  const char *Input = argv[1];
+  const char *Input = argv[3];
   fprintf(stderr, "INFO: reading '%s'\n", Input);
   FILE *In = fopen(Input, "r");
   assert(In);
@@ -128,13 +133,16 @@ int main(int argc, char **argv) {
   unsigned char *Buf = (unsigned char*)malloc(InputLen);
   size_t NumBytesRead = fread(Buf, 1, InputLen, In);
   assert(NumBytesRead == InputLen);
+  PrintableStringForLabel = (char*)malloc(InputLen + 2);
   fclose(In);
 
   fprintf(stderr, "INFO: running '%s'\n", Input);
   for (size_t I = 1; I <= InputLen; I++) {
     dfsan_label L = dfsan_create_label("", nullptr);
     assert(L == I);
-    dfsan_set_label(L, Buf + I - 1, 1);
+    size_t Idx = I - 1;
+    if (Idx >= Beg && Idx < End)
+      dfsan_set_label(L, Buf + Idx, 1);
   }
   dfsan_label SizeL = dfsan_create_label("", nullptr);
   assert(SizeL == InputLen + 1);
@@ -143,10 +151,10 @@ int main(int argc, char **argv) {
   LLVMFuzzerTestOneInput(Buf, InputLen);
   free(Buf);
 
-  bool OutIsStdout = argc == 2;
+  bool OutIsStdout = argc == 4;
   fprintf(stderr, "INFO: writing dataflow to %s\n",
-          OutIsStdout ? "<stdout>" : argv[2]);
-  FILE *Out = OutIsStdout ? stdout : fopen(argv[2], "w");
+          OutIsStdout ? "<stdout>" : argv[4]);
+  FILE *Out = OutIsStdout ? stdout : fopen(argv[4], "w");
   PrintDataFlow(Out);
   if (!OutIsStdout) fclose(Out);
 }

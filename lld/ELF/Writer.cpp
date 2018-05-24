@@ -663,6 +663,9 @@ static bool isRelroSection(const OutputSection *Sec) {
   if (InX::Got && Sec == InX::Got->getParent())
     return true;
 
+  if (Sec->Name.equals(".toc"))
+    return true;
+
   // .got.plt contains pointers to external function symbols. They are
   // by default resolved lazily, so we usually cannot put it into RELRO.
   // However, if "-z now" is given, the lazy symbol resolution is
@@ -707,8 +710,9 @@ enum RankFlags {
   RF_BSS = 1 << 8,
   RF_NOTE = 1 << 7,
   RF_PPC_NOT_TOCBSS = 1 << 6,
-  RF_PPC_TOCL = 1 << 4,
-  RF_PPC_TOC = 1 << 3,
+  RF_PPC_TOCL = 1 << 5,
+  RF_PPC_TOC = 1 << 4,
+  RF_PPC_GOT = 1 << 3,
   RF_PPC_BRANCH_LT = 1 << 2,
   RF_MIPS_GPREL = 1 << 1,
   RF_MIPS_NOT_GOT = 1 << 0
@@ -826,6 +830,9 @@ static unsigned getSectionRank(const OutputSection *Sec) {
 
     if (Name == ".toc")
       Rank |= RF_PPC_TOC;
+
+    if (Name == ".got")
+      Rank |= RF_PPC_GOT;
 
     if (Name == ".branch_lt")
       Rank |= RF_PPC_BRANCH_LT;

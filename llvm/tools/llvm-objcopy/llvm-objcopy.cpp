@@ -55,17 +55,25 @@ enum ObjcopyID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE) const char *const OBJCOPY_##NAME[] = VALUE;
 #include "ObjcopyOpts.inc"
 #undef PREFIX
 
 static const opt::OptTable::Info ObjcopyInfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,          NAME,         HELPTEXT,                                    \
-   METAVAR,         OBJCOPY_##ID, opt::Option::KIND##Class,                    \
-   PARAM,           FLAGS,        OBJCOPY_##GROUP,                             \
-   OBJCOPY_##ALIAS, ALIASARGS,    VALUES},
+  {OBJCOPY_##PREFIX,                                                           \
+   NAME,                                                                       \
+   HELPTEXT,                                                                   \
+   METAVAR,                                                                    \
+   OBJCOPY_##ID,                                                               \
+   opt::Option::KIND##Class,                                                   \
+   PARAM,                                                                      \
+   FLAGS,                                                                      \
+   OBJCOPY_##GROUP,                                                            \
+   OBJCOPY_##ALIAS,                                                            \
+   ALIASARGS,                                                                  \
+   VALUES},
 #include "ObjcopyOpts.inc"
 #undef OPTION
 };
@@ -84,13 +92,17 @@ enum StripID {
 #undef OPTION
 };
 
+#define PREFIX(NAME, VALUE) const char *const STRIP_##NAME[] = VALUE;
+#include "StripOpts.inc"
+#undef PREFIX
+
 static const opt::OptTable::Info StripInfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,        NAME,       HELPTEXT,                                        \
-   METAVAR,       STRIP_##ID, opt::Option::KIND##Class,                        \
-   PARAM,         FLAGS,      STRIP_##GROUP,                                   \
-   STRIP_##ALIAS, ALIASARGS,  VALUES},
+  {STRIP_##PREFIX, NAME,       HELPTEXT,                                       \
+   METAVAR,        STRIP_##ID, opt::Option::KIND##Class,                       \
+   PARAM,          FLAGS,      STRIP_##GROUP,                                  \
+   STRIP_##ALIAS,  ALIASARGS,  VALUES},
 #include "StripOpts.inc"
 #undef OPTION
 };
@@ -222,8 +234,9 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
   if (!Config.SplitDWO.empty()) {
     SplitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType);
   }
-  
-  // TODO: update or remove symbols only if there is an option that affects them.
+
+  // TODO: update or remove symbols only if there is an option that affects
+  // them.
   if (Obj.SymbolTable) {
     Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
       if ((Config.LocalizeHidden &&
@@ -378,7 +391,7 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
 
   // This has to be the last predicate assignment.
   // If the option --keep-symbol has been specified
-  // and at least one of those symbols is present 
+  // and at least one of those symbols is present
   // (equivalently, the updated symbol table is not empty)
   // the symbol table and the string table should not be removed.
   if (!Config.SymbolsToKeep.empty() && !Obj.SymbolTable->empty()) {
@@ -557,6 +570,9 @@ CopyConfig ParseStripOptions(ArrayRef<const char *> ArgsArr) {
 
   for (auto Arg : InputArgs.filtered(STRIP_remove_section))
     Config.ToRemove.push_back(Arg->getValue());
+
+  for (auto Arg : InputArgs.filtered(STRIP_keep_symbol))
+    Config.SymbolsToKeep.push_back(Arg->getValue());
 
   return Config;
 }

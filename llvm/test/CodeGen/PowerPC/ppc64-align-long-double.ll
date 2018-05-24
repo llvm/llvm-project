@@ -46,8 +46,8 @@ entry:
 ; CHECK-VSX-DAG: std 6, -8(1)
 ; CHECK-VSX-DAG: addi [[REG1:[0-9]+]], 1, -16
 ; CHECK-VSX-DAG: addi 3, 1, -8
-; CHECK-VSX: lxsdx 1, 0, [[REG1]]
-; CHECK-VSX: lxsdx 2, 0, 3
+; CHECK-VSX: lfdx 1, 0, [[REG1]]
+; CHECK-VSX: lfdx 2, 0, 3
 
 ; FIXME-VSX: addi 4, 1, 48
 ; FIXME-VSX: lxsdx 1, 4, 3
