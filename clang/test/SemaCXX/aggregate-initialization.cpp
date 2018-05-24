@@ -180,3 +180,9 @@ namespace IdiomaticStdArrayInitDoesNotWarn {
 
 #pragma clang diagnostic pop
 }
+
+namespace HugeArraysUseArrayFiller {
+  // All we're checking here is that initialization completes in a reasonable
+  // amount of time.
+  struct A { int n; int arr[1000 * 1000 * 1000]; } a = {1, {2}};
+}

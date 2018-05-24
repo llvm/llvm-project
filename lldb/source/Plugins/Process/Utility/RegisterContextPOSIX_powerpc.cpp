@@ -14,6 +14,7 @@
 
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -21,7 +22,6 @@
 #include "lldb/Utility/Endian.h"
 #include "llvm/Support/Compiler.h"
 
-#include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "RegisterContextPOSIX_powerpc.h"
 
 using namespace lldb_private;
@@ -95,11 +95,6 @@ RegisterContextPOSIX_powerpc::RegisterContextPOSIX_powerpc(
     RegisterInfoInterface *register_info)
     : RegisterContext(thread, concrete_frame_idx) {
   m_register_info_ap.reset(register_info);
-
-  // elf-core yet to support ReadFPR()
-  ProcessSP base = CalculateProcess();
-  if (base.get()->GetPluginName() == ProcessElfCore::GetPluginNameStatic())
-    return;
 }
 
 RegisterContextPOSIX_powerpc::~RegisterContextPOSIX_powerpc() {}

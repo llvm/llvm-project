@@ -62,6 +62,7 @@ class CodeGenTarget {
   mutable std::unique_ptr<CodeGenSchedModels> SchedModels;
 
   mutable std::vector<const CodeGenInstruction*> InstrsByEnum;
+  mutable unsigned NumPseudoInstructions = 0;
 public:
   CodeGenTarget(RecordKeeper &Records);
   ~CodeGenTarget();
@@ -148,8 +149,19 @@ public:
   /// Returns the number of predefined instructions.
   static unsigned getNumFixedInstructions();
 
+  /// Returns the number of pseudo instructions.
+  unsigned getNumPseudoInstructions() const {
+    if (InstrsByEnum.empty())
+      ComputeInstrsByEnum();
+    return NumPseudoInstructions;
+  }
+
   /// Return all of the instructions defined by the target, ordered by their
   /// enum value.
+  /// The following order of instructions is also guaranteed:
+  /// - fixed / generic instructions as declared in TargetOpcodes.def, in order;
+  /// - pseudo instructions in lexicographical order sorted by name;
+  /// - other instructions in lexicographical order sorted by name.
   ArrayRef<const CodeGenInstruction *> getInstructionsByEnumValue() const {
     if (InstrsByEnum.empty())
       ComputeInstrsByEnum();

@@ -13,6 +13,7 @@
 
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -20,11 +21,10 @@
 #include "lldb/Utility/Endian.h"
 #include "llvm/Support/Compiler.h"
 
-#include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "RegisterContextPOSIX_mips64.h"
 #include "RegisterContextFreeBSD_mips64.h"
 #include "RegisterContextLinux_mips64.h"
-#include "RegisterContextLinux_mips.h" 
+#include "RegisterContextLinux_mips.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -59,11 +59,6 @@ RegisterContextPOSIX_mips64::RegisterContextPOSIX_mips64(
          static_cast<uint32_t>(m_registers_count[gpr_registers_count] +
                                m_registers_count[fpr_registers_count] +
                                m_registers_count[msa_registers_count]));
-
-  // elf-core yet to support ReadFPR()
-  ProcessSP base = CalculateProcess();
-  if (base.get()->GetPluginName() == ProcessElfCore::GetPluginNameStatic())
-    return;
 }
 
 RegisterContextPOSIX_mips64::~RegisterContextPOSIX_mips64() {}

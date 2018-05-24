@@ -33,6 +33,7 @@
 #include "lldb/Utility/Log.h"
 
 #include "lldb/../../source/Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "lldb/../../source/Plugins/ObjectFile/JIT/ObjectFileJIT.h"
 
 using namespace lldb_private;
 
@@ -1225,15 +1226,18 @@ bool IRExecutionUnit::GetArchitecture(lldb_private::ArchSpec &arch) {
 lldb::ModuleSP IRExecutionUnit::GetJITModule() {
   ExecutionContext exe_ctx(GetBestExecutionContextScope());
   Target *target = exe_ctx.GetTargetPtr();
-  if (target) {
-    lldb::ModuleSP jit_module_sp = lldb_private::Module::CreateJITModule(
-        std::static_pointer_cast<lldb_private::ObjectFileJITDelegate>(
-            shared_from_this()));
-    if (jit_module_sp) {
-      bool changed = false;
-      jit_module_sp->SetLoadAddress(*target, 0, true, changed);
-    }
-    return jit_module_sp;
-  }
-  return lldb::ModuleSP();
+  if (!target)
+    return nullptr;
+
+  auto Delegate = std::static_pointer_cast<lldb_private::ObjectFileJITDelegate>(
+      shared_from_this());
+
+  lldb::ModuleSP jit_module_sp =
+      lldb_private::Module::CreateModuleFromObjectFile<ObjectFileJIT>(Delegate);
+  if (!jit_module_sp)
+    return nullptr;
+
+  bool changed = false;
+  jit_module_sp->SetLoadAddress(*target, 0, true, changed);
+  return jit_module_sp;
 }

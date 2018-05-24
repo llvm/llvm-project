@@ -45,9 +45,9 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lui s7, %hi(i)
 ; RV32I-NEXT:    lui s9, %hi(g)
 ; RV32I-NEXT:    lui s10, %hi(f)
-; RV32I-NEXT:    lui s11, %hi(e)
+; RV32I-NEXT:    lui s1, %hi(e)
 ; RV32I-NEXT:    lui s8, %hi(d)
-; RV32I-NEXT:    addi s1, zero, 32
+; RV32I-NEXT:    addi s11, zero, 32
 ; RV32I-NEXT:    lui s2, %hi(c)
 ; RV32I-NEXT:    lui s4, %hi(b)
 ; RV32I-NEXT:  .LBB0_2: # %for.body
@@ -57,11 +57,11 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    beqz a1, .LBB0_4
 ; RV32I-NEXT:  # %bb.3: # %if.then
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; RV32I-NEXT:    lw a4, %lo(e)(s11)
+; RV32I-NEXT:    lw a4, %lo(e)(s1)
 ; RV32I-NEXT:    lw a3, %lo(d)(s8)
 ; RV32I-NEXT:    lw a2, %lo(c)(s2)
 ; RV32I-NEXT:    lw a1, %lo(b)(s4)
-; RV32I-NEXT:    mv a5, s1
+; RV32I-NEXT:    mv a5, s11
 ; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_4: # %if.end
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
@@ -70,7 +70,7 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:  # %bb.5: # %if.then3
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; RV32I-NEXT:    lw a4, %lo(f)(s10)
-; RV32I-NEXT:    lw a3, %lo(e)(s11)
+; RV32I-NEXT:    lw a3, %lo(e)(s1)
 ; RV32I-NEXT:    lw a2, %lo(d)(s8)
 ; RV32I-NEXT:    lw a1, %lo(c)(s2)
 ; RV32I-NEXT:    lw a0, %lo(b)(s4)
@@ -84,10 +84,10 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; RV32I-NEXT:    lw a4, %lo(g)(s9)
 ; RV32I-NEXT:    lw a3, %lo(f)(s10)
-; RV32I-NEXT:    lw a2, %lo(e)(s11)
+; RV32I-NEXT:    lw a2, %lo(e)(s1)
 ; RV32I-NEXT:    lw a1, %lo(d)(s8)
 ; RV32I-NEXT:    lw a0, %lo(c)(s2)
-; RV32I-NEXT:    mv a5, s1
+; RV32I-NEXT:    mv a5, s11
 ; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_8: # %if.end9
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1
@@ -99,9 +99,9 @@ define i32 @test() nounwind {
 ; RV32I-NEXT:    lw a4, %lo(h)(a0)
 ; RV32I-NEXT:    lw a3, %lo(g)(s9)
 ; RV32I-NEXT:    lw a2, %lo(f)(s10)
-; RV32I-NEXT:    lw a1, %lo(e)(s11)
+; RV32I-NEXT:    lw a1, %lo(e)(s1)
 ; RV32I-NEXT:    lw a0, %lo(d)(s8)
-; RV32I-NEXT:    mv a5, s1
+; RV32I-NEXT:    mv a5, s11
 ; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .LBB0_10: # %for.inc
 ; RV32I-NEXT:    # in Loop: Header=BB0_2 Depth=1

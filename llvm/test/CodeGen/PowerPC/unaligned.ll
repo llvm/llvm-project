@@ -74,8 +74,8 @@ entry:
 ; CHECK: stfd
 
 ; CHECK-VSX: @foo5
-; CHECK-VSX: lxsdx
-; CHECK-VSX: stxsdx
+; CHECK-VSX: lfdx
+; CHECK-VSX: stfdx
 }
 
 define void @foo6(<4 x float>* %p, <4 x float>* %r) nounwind {

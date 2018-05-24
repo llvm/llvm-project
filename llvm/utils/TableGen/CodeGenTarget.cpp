@@ -374,19 +374,24 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
 
   for (const auto &I : Insts) {
     const CodeGenInstruction *CGI = I.second.get();
-    if (CGI->Namespace != "TargetOpcode")
+    if (CGI->Namespace != "TargetOpcode") {
       InstrsByEnum.push_back(CGI);
+      if (CGI->TheDef->getValueAsBit("isPseudo"))
+        ++NumPseudoInstructions;
+    }
   }
 
   assert(InstrsByEnum.size() == Insts.size() && "Missing predefined instr");
 
   // All of the instructions are now in random order based on the map iteration.
-  // Sort them by name.
-  llvm::sort(InstrsByEnum.begin() + EndOfPredefines, InstrsByEnum.end(),
-             [](const CodeGenInstruction *Rec1,
-                const CodeGenInstruction *Rec2) {
-    return Rec1->TheDef->getName() < Rec2->TheDef->getName();
-  });
+  llvm::sort(
+      InstrsByEnum.begin() + EndOfPredefines, InstrsByEnum.end(),
+      [](const CodeGenInstruction *Rec1, const CodeGenInstruction *Rec2) {
+        const auto &D1 = *Rec1->TheDef;
+        const auto &D2 = *Rec2->TheDef;
+        return std::make_tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
+               std::make_tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
+      });
 }
 
 

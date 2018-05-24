@@ -116,12 +116,12 @@ define double @fld_stack(double %a) nounwind {
 ; RV32IFD-NEXT:    sw ra, 28(sp)
 ; RV32IFD-NEXT:    sw s1, 24(sp)
 ; RV32IFD-NEXT:    sw s2, 20(sp)
-; RV32IFD-NEXT:    mv s1, a1
-; RV32IFD-NEXT:    mv s2, a0
+; RV32IFD-NEXT:    mv s2, a1
+; RV32IFD-NEXT:    mv s1, a0
 ; RV32IFD-NEXT:    addi a0, sp, 8
 ; RV32IFD-NEXT:    call notdead
-; RV32IFD-NEXT:    sw s2, 0(sp)
-; RV32IFD-NEXT:    sw s1, 4(sp)
+; RV32IFD-NEXT:    sw s1, 0(sp)
+; RV32IFD-NEXT:    sw s2, 4(sp)
 ; RV32IFD-NEXT:    fld ft0, 0(sp)
 ; RV32IFD-NEXT:    fld ft1, 8(sp)
 ; RV32IFD-NEXT:    fadd.d ft0, ft1, ft0

@@ -7,8 +7,8 @@
 define i128 @test_abs(ppc_fp128 %x) nounwind  {
 entry:
 ; PPC64-LABEL: test_abs:
-; PPC64-DAG: stxsdx 2, 0, [[ADDR_HI:[0-9]+]]
-; PPC64-DAG: stxsdx 1, 0, [[ADDR_LO:[0-9]+]]
+; PPC64-DAG: stfdx 2, 0, [[ADDR_HI:[0-9]+]]
+; PPC64-DAG: stfdx 1, 0, [[ADDR_LO:[0-9]+]]
 ; PPC64-DAG: addi [[ADDR_HI]], [[SP:[0-9]+]], [[OFFSET_HI:-?[0-9]+]]
 ; PPC64-DAG: addi [[ADDR_LO]], [[SP]], [[OFFSET_LO:-?[0-9]+]]
 ; PPC64-DAG: ld [[HI:[0-9]+]], [[OFFSET_LO]]([[SP]])
@@ -45,8 +45,8 @@ entry:
 define i128 @test_neg(ppc_fp128 %x) nounwind  {
 entry:
 ; PPC64-LABEL: test_neg:
-; PPC64-DAG: stxsdx 2, 0, [[ADDR_HI:[0-9]+]]
-; PPC64-DAG: stxsdx 1, 0, [[ADDR_LO:[0-9]+]]
+; PPC64-DAG: stfdx 2, 0, [[ADDR_HI:[0-9]+]]
+; PPC64-DAG: stfdx 1, 0, [[ADDR_LO:[0-9]+]]
 ; PPC64-DAG: addi [[ADDR_HI]], [[SP:[0-9]+]], [[OFFSET_HI:-?[0-9]+]]
 ; PPC64-DAG: addi [[ADDR_LO]], [[SP]], [[OFFSET_LO:-?[0-9]+]]
 ; PPC64-DAG: li [[FLIP_BIT:[0-9]+]], 1
@@ -87,7 +87,7 @@ entry:
 define i128 @test_copysign(ppc_fp128 %x) nounwind  {
 entry:
 ; PPC64-LABEL: test_copysign:
-; PPC64-DAG: stxsdx 1, 0, [[ADDR_REG:[0-9]+]]
+; PPC64-DAG: stfdx 1, 0, [[ADDR_REG:[0-9]+]]
 ; PPC64-DAG: addi [[ADDR_REG]], 1, [[OFFSET:-?[0-9]+]]
 ; PPC64-DAG: li [[HI_TMP:[0-9]+]], 16399
 ; PPC64-DAG: sldi [[CST_HI:[0-9]+]], [[HI_TMP]], 48
