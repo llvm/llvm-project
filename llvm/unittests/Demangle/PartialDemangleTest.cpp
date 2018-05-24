@@ -109,6 +109,32 @@ TEST(PartialDemangleTest, TestNameMeta) {
   EXPECT_TRUE(Demangler.isData());
 }
 
+TEST(PartialDemanglerTest, TestCtorOrDtor) {
+  static const char *Pos[] = {
+      "_ZN1AC1Ev",        // A::A()
+      "_ZN1AC1IiEET_",    // A::A<int>(int)
+      "_ZN1AD2Ev",        // A::~A()
+      "_ZN1BIiEC1IcEET_", // B<int>::B<char>(char)
+      "_ZN1AC1B1TEv",     // A::A[abi:T]()
+      "_ZNSt1AD2Ev",      // std::A::~A()
+      "_ZN2ns1AD1Ev",      // ns::A::~A()
+  };
+  static const char *Neg[] = {
+      "_Z1fv",
+      "_ZN1A1gIiEEvT_", // void A::g<int>(int)
+  };
+
+  llvm::ItaniumPartialDemangler D;
+  for (const char *N : Pos) {
+    EXPECT_FALSE(D.partialDemangle(N));
+    EXPECT_TRUE(D.isCtorOrDtor());
+  }
+  for (const char *N : Neg) {
+    EXPECT_FALSE(D.partialDemangle(N));
+    EXPECT_FALSE(D.isCtorOrDtor());
+  }
+}
+
 TEST(PartialDemanglerTest, TestMisc) {
   llvm::ItaniumPartialDemangler D1, D2;
 

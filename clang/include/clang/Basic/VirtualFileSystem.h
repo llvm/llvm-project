@@ -374,6 +374,14 @@ public:
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
     return WorkingDirectory;
   }
+  /// Canonicalizes \p Path by combining with the current working
+  /// directory and normalizing the path (e.g. remove dots). If the current
+  /// working directory is not set, this returns errc::operation_not_permitted.
+  ///
+  /// This doesn't resolve symlinks as they are not supported in in-memory file
+  /// system.
+  std::error_code getRealPath(const Twine &Path,
+                              SmallVectorImpl<char> &Output) const override;
 
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
 };

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding -triple x86_64-unknown-unknown -target-feature +rdpid -emit-llvm -o - %s | FileCheck %s
 
 
-#include <x86intrin.h>
+#include <immintrin.h>
 
 unsigned int test_rdpid_u32(void) {
 // CHECK-LABEL: @test_rdpid_u32

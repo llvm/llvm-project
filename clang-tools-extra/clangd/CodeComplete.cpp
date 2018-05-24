@@ -406,6 +406,50 @@ std::vector<std::string> getQueryScopes(CodeCompletionContext &CCContext,
   return Info.scopesForIndexQuery();
 }
 
+// Should we perform index-based completion in a context of the specified kind?
+// FIXME: consider allowing completion, but restricting the result types.
+bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
+  switch (K) {
+  case CodeCompletionContext::CCC_TopLevel:
+  case CodeCompletionContext::CCC_ObjCInterface:
+  case CodeCompletionContext::CCC_ObjCImplementation:
+  case CodeCompletionContext::CCC_ObjCIvarList:
+  case CodeCompletionContext::CCC_ClassStructUnion:
+  case CodeCompletionContext::CCC_Statement:
+  case CodeCompletionContext::CCC_Expression:
+  case CodeCompletionContext::CCC_ObjCMessageReceiver:
+  case CodeCompletionContext::CCC_EnumTag:
+  case CodeCompletionContext::CCC_UnionTag:
+  case CodeCompletionContext::CCC_ClassOrStructTag:
+  case CodeCompletionContext::CCC_ObjCProtocolName:
+  case CodeCompletionContext::CCC_Namespace:
+  case CodeCompletionContext::CCC_Type:
+  case CodeCompletionContext::CCC_Name: // FIXME: why does ns::^ give this?
+  case CodeCompletionContext::CCC_PotentiallyQualifiedName:
+  case CodeCompletionContext::CCC_ParenthesizedExpression:
+  case CodeCompletionContext::CCC_ObjCInterfaceName:
+  case CodeCompletionContext::CCC_ObjCCategoryName:
+    return true;
+  case CodeCompletionContext::CCC_Other: // Be conservative.
+  case CodeCompletionContext::CCC_OtherWithMacros:
+  case CodeCompletionContext::CCC_DotMemberAccess:
+  case CodeCompletionContext::CCC_ArrowMemberAccess:
+  case CodeCompletionContext::CCC_ObjCPropertyAccess:
+  case CodeCompletionContext::CCC_MacroName:
+  case CodeCompletionContext::CCC_MacroNameUse:
+  case CodeCompletionContext::CCC_PreprocessorExpression:
+  case CodeCompletionContext::CCC_PreprocessorDirective:
+  case CodeCompletionContext::CCC_NaturalLanguage:
+  case CodeCompletionContext::CCC_SelectorName:
+  case CodeCompletionContext::CCC_TypeQualifiers:
+  case CodeCompletionContext::CCC_ObjCInstanceMessage:
+  case CodeCompletionContext::CCC_ObjCClassMessage:
+  case CodeCompletionContext::CCC_Recovery:
+    return false;
+  }
+  llvm_unreachable("unknown code completion context");
+}
+
 // The CompletionRecorder captures Sema code-complete output, including context.
 // It filters out ignored results (but doesn't apply fuzzy-filtering yet).
 // It doesn't do scoring or conversion to CompletionItem yet, as we want to
@@ -431,12 +475,17 @@ struct CompletionRecorder : public CodeCompleteConsumer {
   void ProcessCodeCompleteResults(class Sema &S, CodeCompletionContext Context,
                                   CodeCompletionResult *InResults,
                                   unsigned NumResults) override final {
+    // If a callback is called without any sema result and the context does not
+    // support index-based completion, we simply skip it to give way to
+    // potential future callbacks with results.
+    if (NumResults == 0 && !contextAllowsIndex(Context.getKind()))
+      return;
     if (CCSema) {
       log(llvm::formatv(
           "Multiple code complete callbacks (parser backtracked?). "
           "Dropping results from context {0}, keeping results from {1}.",
-          getCompletionKindString(this->CCContext.getKind()),
-          getCompletionKindString(Context.getKind())));
+          getCompletionKindString(Context.getKind()),
+          getCompletionKindString(this->CCContext.getKind())));
       return;
     }
     // Record the completion context.
@@ -717,50 +766,6 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   Action.EndSourceFile();
 
   return true;
-}
-
-// Should we perform index-based completion in a context of the specified kind?
-// FIXME: consider allowing completion, but restricting the result types.
-bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
-  switch (K) {
-  case CodeCompletionContext::CCC_TopLevel:
-  case CodeCompletionContext::CCC_ObjCInterface:
-  case CodeCompletionContext::CCC_ObjCImplementation:
-  case CodeCompletionContext::CCC_ObjCIvarList:
-  case CodeCompletionContext::CCC_ClassStructUnion:
-  case CodeCompletionContext::CCC_Statement:
-  case CodeCompletionContext::CCC_Expression:
-  case CodeCompletionContext::CCC_ObjCMessageReceiver:
-  case CodeCompletionContext::CCC_EnumTag:
-  case CodeCompletionContext::CCC_UnionTag:
-  case CodeCompletionContext::CCC_ClassOrStructTag:
-  case CodeCompletionContext::CCC_ObjCProtocolName:
-  case CodeCompletionContext::CCC_Namespace:
-  case CodeCompletionContext::CCC_Type:
-  case CodeCompletionContext::CCC_Name: // FIXME: why does ns::^ give this?
-  case CodeCompletionContext::CCC_PotentiallyQualifiedName:
-  case CodeCompletionContext::CCC_ParenthesizedExpression:
-  case CodeCompletionContext::CCC_ObjCInterfaceName:
-  case CodeCompletionContext::CCC_ObjCCategoryName:
-    return true;
-  case CodeCompletionContext::CCC_Other: // Be conservative.
-  case CodeCompletionContext::CCC_OtherWithMacros:
-  case CodeCompletionContext::CCC_DotMemberAccess:
-  case CodeCompletionContext::CCC_ArrowMemberAccess:
-  case CodeCompletionContext::CCC_ObjCPropertyAccess:
-  case CodeCompletionContext::CCC_MacroName:
-  case CodeCompletionContext::CCC_MacroNameUse:
-  case CodeCompletionContext::CCC_PreprocessorExpression:
-  case CodeCompletionContext::CCC_PreprocessorDirective:
-  case CodeCompletionContext::CCC_NaturalLanguage:
-  case CodeCompletionContext::CCC_SelectorName:
-  case CodeCompletionContext::CCC_TypeQualifiers:
-  case CodeCompletionContext::CCC_ObjCInstanceMessage:
-  case CodeCompletionContext::CCC_ObjCClassMessage:
-  case CodeCompletionContext::CCC_Recovery:
-    return false;
-  }
-  llvm_unreachable("unknown code completion context");
 }
 
 // Should we allow index completions in the specified context?
