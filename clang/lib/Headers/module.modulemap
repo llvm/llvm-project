@@ -71,6 +71,9 @@ module _Builtin_intrinsics [system] [extern_c] {
     textual header "sgxintrin.h"
     textual header "ptwriteintrin.h"
 
+    textual header "__wmmintrin_aes.h"
+    textual header "__wmmintrin_pclmul.h"
+
     explicit module mm_malloc {
       requires !freestanding
       header "mm_malloc.h"
@@ -135,14 +138,6 @@ module _Builtin_intrinsics [system] [extern_c] {
       header "wmmintrin.h"
       export aes
       export pclmul
-    }
-
-    explicit module aes {
-      header "__wmmintrin_aes.h"
-    }
-
-    explicit module pclmul {
-      header "__wmmintrin_pclmul.h"
     }
   }
 

@@ -3152,6 +3152,65 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def : Pat<(f32 (fpround (f64 (extloadf32 ixaddr:$src)))),
             (f32 (DFLOADf32 ixaddr:$src))>;
 
+  let Predicates = [IsBigEndian, HasP9Vector] in {
+
+    // (Un)Signed DWord vector extract -> QP
+    def : Pat<(f128 (sint_to_fp (i64 (extractelt v2i64:$src, 0)))),
+              (f128 (XSCVSDQP (COPY_TO_REGCLASS $src, VFRC)))>;
+    def : Pat<(f128 (sint_to_fp (i64 (extractelt v2i64:$src, 1)))),
+              (f128 (XSCVSDQP
+                      (EXTRACT_SUBREG (XXPERMDI $src, $src, 3), sub_64)))>;
+    def : Pat<(f128 (uint_to_fp (i64 (extractelt v2i64:$src, 0)))),
+              (f128 (XSCVUDQP (COPY_TO_REGCLASS $src, VFRC)))>;
+    def : Pat<(f128 (uint_to_fp (i64 (extractelt v2i64:$src, 1)))),
+              (f128 (XSCVUDQP
+                      (EXTRACT_SUBREG (XXPERMDI $src, $src, 3), sub_64)))>;
+
+    // (Un)Signed Word vector extract -> QP
+    def : Pat<(f128 (sint_to_fp (i32 (extractelt v4i32:$src, 1)))),
+              (f128 (XSCVSDQP (EXTRACT_SUBREG (VEXTSW2D $src), sub_64)))>;
+    foreach Idx = [0,2,3] in {
+      def : Pat<(f128 (sint_to_fp (i32 (extractelt v4i32:$src, Idx)))),
+                (f128 (XSCVSDQP (EXTRACT_SUBREG
+                                (VEXTSW2D (VSPLTW Idx, $src)), sub_64)))>;
+    }
+    foreach Idx = 0-3 in {
+      def : Pat<(f128 (uint_to_fp (i32 (extractelt v4i32:$src, Idx)))),
+                (f128 (XSCVUDQP (XXEXTRACTUW $src, !shl(Idx, 2))))>;
+    }
+
+  } // IsBigEndian, HasP9Vector
+
+  let Predicates = [IsLittleEndian, HasP9Vector] in {
+
+    // (Un)Signed DWord vector extract -> QP
+    def : Pat<(f128 (sint_to_fp (i64 (extractelt v2i64:$src, 0)))),
+              (f128 (XSCVSDQP
+                      (EXTRACT_SUBREG (XXPERMDI $src, $src, 3), sub_64)))>;
+    def : Pat<(f128 (sint_to_fp (i64 (extractelt v2i64:$src, 1)))),
+              (f128 (XSCVSDQP (COPY_TO_REGCLASS $src, VFRC)))>;
+    def : Pat<(f128 (uint_to_fp (i64 (extractelt v2i64:$src, 0)))),
+              (f128 (XSCVUDQP
+                      (EXTRACT_SUBREG (XXPERMDI $src, $src, 3), sub_64)))>;
+    def : Pat<(f128 (uint_to_fp (i64 (extractelt v2i64:$src, 1)))),
+              (f128 (XSCVUDQP (COPY_TO_REGCLASS $src, VFRC)))>;
+
+    // (Un)Signed Word vector extract -> QP
+    foreach Idx = [[0,3],[1,2],[3,0]] in {
+      def : Pat<(f128 (sint_to_fp (i32 (extractelt v4i32:$src, !head(Idx))))),
+                (f128 (XSCVSDQP (EXTRACT_SUBREG
+                                  (VEXTSW2D (VSPLTW !head(!tail(Idx)), $src)),
+                                  sub_64)))>;
+    }
+    def : Pat<(f128 (sint_to_fp (i32 (extractelt v4i32:$src, 2)))),
+              (f128 (XSCVSDQP (EXTRACT_SUBREG (VEXTSW2D $src), sub_64)))>;
+
+    foreach Idx = [[0,12],[1,8],[2,4],[3,0]] in {
+      def : Pat<(f128 (uint_to_fp (i32 (extractelt v4i32:$src, !head(Idx))))),
+                (f128 (XSCVUDQP (XXEXTRACTUW $src, !head(!tail(Idx)))))>;
+    }
+  } // IsLittleEndian, HasP9Vector
+
   // Convert (Un)Signed DWord in memory -> QP
   def : Pat<(f128 (sint_to_fp (i64 (load xaddr:$src)))),
             (f128 (XSCVSDQP (LXSDX xaddr:$src)))>;

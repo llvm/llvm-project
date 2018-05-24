@@ -717,6 +717,32 @@ int isl_constraint_is_div_constraint(__isl_keep isl_constraint *constraint)
 	return 0;
 }
 
+/* Is "constraint" an equality that corresponds to integer division "div"?
+ *
+ * That is, given an integer division of the form
+ *
+ *	a = floor((f + c)/m)
+ *
+ * is the equality of the form
+ *
+ *		-f + m d + c' = 0
+ * ?
+ * Note that the constant term is not checked explicitly, but given
+ * that this is a valid equality constraint, the constant c' necessarily
+ * has a value close to -c.
+ */
+isl_bool isl_constraint_is_div_equality(__isl_keep isl_constraint *constraint,
+	unsigned div)
+{
+	isl_bool equality;
+
+	equality = isl_constraint_is_equality(constraint);
+	if (equality < 0 || !equality)
+		return equality;
+	return isl_local_space_is_div_equality(constraint->ls,
+						constraint->v->el, div);
+}
+
 /* We manually set ISL_BASIC_SET_FINAL instead of calling
  * isl_basic_map_finalize because we want to keep the position
  * of the divs and we therefore do not want to throw away redundant divs.

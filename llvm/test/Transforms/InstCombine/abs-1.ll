@@ -266,3 +266,30 @@ define i8 @shifty_abs_too_many_uses(i8 %x) {
   ret i8 %abs
 }
 
+define i8 @negate_abs(i8 %x) {
+; CHECK-LABEL: @negate_abs(
+; CHECK-NEXT:    [[N:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[X]], i8 [[N]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %n = sub i8 0, %x
+  %c = icmp slt i8 %x, 0
+  %s = select i1 %c, i8 %n, i8 %x
+  %r = sub i8 0, %s
+  ret i8 %r
+}
+
+define <2 x i8> @negate_nabs(<2 x i8> %x) {
+; CHECK-LABEL: @negate_nabs(
+; CHECK-NEXT:    [[N:%.*]] = sub <2 x i8> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[C]], <2 x i8> [[N]], <2 x i8> [[X]]
+; CHECK-NEXT:    ret <2 x i8> [[S]]
+;
+  %n = sub <2 x i8> zeroinitializer, %x
+  %c = icmp slt <2 x i8> %x, zeroinitializer
+  %s = select <2 x i1> %c, <2 x i8> %x, <2 x i8> %n
+  %r = sub <2 x i8> zeroinitializer, %s
+  ret <2 x i8> %r
+}

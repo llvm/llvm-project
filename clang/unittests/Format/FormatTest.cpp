@@ -5521,6 +5521,57 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
                NeverBreak);
 }
 
+TEST_F(FormatTest, WrapsTemplateDeclarationsWithComments) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_Cpp);
+  Style.ColumnLimit = 60;
+  EXPECT_EQ("// Baseline - no comments.\n"
+            "template <\n"
+            "    typename aaaaaaaaaaaaaaaaaaaaaa<bbbbbbbbbbbb>::value>\n"
+            "void f() {}",
+            format("// Baseline - no comments.\n"
+                   "template <\n"
+                   "    typename aaaaaaaaaaaaaaaaaaaaaa<bbbbbbbbbbbb>::value>\n"
+                   "void f() {}",
+                   Style));
+
+  EXPECT_EQ("template <\n"
+            "    typename aaaaaaaaaa<bbbbbbbbbbbb>::value>  // trailing\n"
+            "void f() {}",
+            format("template <\n"
+                   "    typename aaaaaaaaaa<bbbbbbbbbbbb>::value> // trailing\n"
+                   "void f() {}",
+                   Style));
+
+  EXPECT_EQ(
+      "template <\n"
+      "    typename aaaaaaaaaa<bbbbbbbbbbbb>::value> /* line */\n"
+      "void f() {}",
+      format("template <typename aaaaaaaaaa<bbbbbbbbbbbb>::value>  /* line */\n"
+             "void f() {}",
+             Style));
+
+  EXPECT_EQ(
+      "template <\n"
+      "    typename aaaaaaaaaa<bbbbbbbbbbbb>::value>  // trailing\n"
+      "                                               // multiline\n"
+      "void f() {}",
+      format("template <\n"
+             "    typename aaaaaaaaaa<bbbbbbbbbbbb>::value> // trailing\n"
+             "                                              // multiline\n"
+             "void f() {}",
+             Style));
+
+  EXPECT_EQ(
+      "template <typename aaaaaaaaaa<\n"
+      "    bbbbbbbbbbbb>::value>  // trailing loooong\n"
+      "void f() {}",
+      format(
+          "template <\n"
+          "    typename aaaaaaaaaa<bbbbbbbbbbbb>::value> // trailing loooong\n"
+          "void f() {}",
+          Style));
+}
+
 TEST_F(FormatTest, WrapsTemplateParameters) {
   FormatStyle Style = getLLVMStyle();
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;

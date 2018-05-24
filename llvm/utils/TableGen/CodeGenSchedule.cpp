@@ -78,6 +78,13 @@ struct InstRegexOp : public SetTheory::Operator {
 
   void apply(SetTheory &ST, DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
+    ArrayRef<const CodeGenInstruction *> Instructions =
+        Target.getInstructionsByEnumValue();
+
+    unsigned NumGeneric = Target.getNumFixedInstructions();
+    auto Generics = Instructions.slice(0, NumGeneric);
+    auto NonGenerics = Instructions.slice(NumGeneric);
+
     for (Init *Arg : make_range(Expr->arg_begin(), Expr->arg_end())) {
       StringInit *SI = dyn_cast<StringInit>(Arg);
       if (!SI)
@@ -108,10 +115,6 @@ struct InstRegexOp : public SetTheory::Operator {
 
       int NumMatches = 0;
 
-      unsigned NumGeneric = Target.getNumFixedInstructions();
-      ArrayRef<const CodeGenInstruction *> Generics =
-          Target.getInstructionsByEnumValue().slice(0, NumGeneric + 1);
-
       // The generic opcodes are unsorted, handle them manually.
       for (auto *Inst : Generics) {
         StringRef InstName = Inst->TheDef->getName();
@@ -121,9 +124,6 @@ struct InstRegexOp : public SetTheory::Operator {
           NumMatches++;
         }
       }
-
-      ArrayRef<const CodeGenInstruction *> Instructions =
-          Target.getInstructionsByEnumValue().slice(NumGeneric + 1);
 
       // Target instructions are sorted. Find the range that starts with our
       // prefix.
@@ -136,18 +136,19 @@ struct InstRegexOp : public SetTheory::Operator {
                  !RHS->TheDef->getName().startswith(LHS);
         }
       };
-      auto Range = std::equal_range(Instructions.begin(), Instructions.end(),
+      auto Range = std::equal_range(NonGenerics.begin(), NonGenerics.end(),
                                     Prefix, Comp());
 
       // For this range we know that it starts with the prefix. Check if there's
       // a regex that needs to be checked.
-      for (auto *Inst : make_range(Range)) {
+      const auto HandleNonGeneric = [&](const CodeGenInstruction *Inst) {
         StringRef InstName = Inst->TheDef->getName();
         if (!Regexpr || Regexpr->match(InstName.substr(Prefix.size()))) {
           Elts.insert(Inst->TheDef);
           NumMatches++;
         }
-      }
+      };
+      std::for_each(Range.first, Range.second, HandleNonGeneric);
 
       if (0 == NumMatches)
         PrintFatalError(Loc, "instregex has no matches: " + Original);

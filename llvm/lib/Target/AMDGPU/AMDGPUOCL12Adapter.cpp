@@ -232,7 +232,7 @@ static bool findAndDefineBuiltinCalls(Module &M) {
       isModified = true;
       Function *NewFunc = getNewOCL20BuiltinFuncDecl(&F, AMDGPUASI);
       // Get the new Function declaration.
-      DEBUG(dbgs() << "\n Modifying Func " << F.getName() << " to call "
+      LLVM_DEBUG(dbgs() << "\n Modifying Func " << F.getName() << " to call "
        << NewFunc->getName() << " Function");
       createOCL20BuiltinFuncDefn(&F, NewFunc, AMDGPUASI);
     }

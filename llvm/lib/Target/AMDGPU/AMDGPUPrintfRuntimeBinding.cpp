@@ -334,7 +334,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
                                     (strlen(CA->getAsCString().data()) + 1);
                 size_t Rem = SizeStr % DWORD_ALIGN;
                 size_t NSizeStr = 0;
-                DEBUG(dbgs() << "Printf string original size = " << SizeStr << '\n');
+                LLVM_DEBUG(dbgs() << "Printf string original size = " << SizeStr << '\n');
                 if (Rem) {
                   NSizeStr = SizeStr + (DWORD_ALIGN - Rem);
                 } else {
@@ -349,12 +349,12 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
             ArgSize = sizeof(NonLiteralStr);
           }
         }
-        DEBUG(dbgs() << "Printf ArgSize (in buffer) = "
+        LLVM_DEBUG(dbgs() << "Printf ArgSize (in buffer) = "
               << ArgSize << " for type: " << *ArgType << '\n');
         Sizes << ArgSize << ':';
         Sum += ArgSize;
       }
-      DEBUG(dbgs() << "Printf format string in source = "
+      LLVM_DEBUG(dbgs() << "Printf format string in source = "
                    << Str.str() << '\n');
       for (size_t I = 0; I < Str.size(); ++I) {
         // Rest of the C escape sequences (e.g. \') are handled correctly
@@ -405,10 +405,10 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
       Constant *PrintfAllocFn
         = M.getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);
       Function *Afn = dyn_cast<Function>(PrintfAllocFn);
-      DEBUG(dbgs() << "inserting printf_alloc decl, an extern @ pre-link:");
-      DEBUG(dbgs() << *Afn);
+      LLVM_DEBUG(dbgs() << "inserting printf_alloc decl, an extern @ pre-link:");
+      LLVM_DEBUG(dbgs() << *Afn);
 
-      DEBUG(dbgs() << "Printf metadata = " << Sizes.str() << '\n');
+      LLVM_DEBUG(dbgs() << "Printf metadata = " << Sizes.str() << '\n');
       std::string fmtstr = itostr(++UniqID) + ":" + Sizes.str().c_str();
       MDString *fmtStrArray
         = MDString::get( Ctx, fmtstr );
@@ -654,7 +654,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
           StoreInst* StBuff
             = new StoreInst(
                     TheBtCast, CastedGEP, Brnch);
-          DEBUG(dbgs() << "inserting store to printf buffer:\n"
+          LLVM_DEBUG(dbgs() << "inserting store to printf buffer:\n"
             << *StBuff << '\n');
           ++W;
           if (W == *WhatToStore.end()
@@ -663,7 +663,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
           BufferIdx
               = dyn_cast<GetElementPtrInst>(GetElementPtrInst::Create(
                     nullptr, BufferIdx, BuffOffset, "PrintBuffNextPtr", Brnch));
-          DEBUG(dbgs() << "inserting gep to the printf buffer:\n"
+          LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:\n"
                        << *BufferIdx << '\n');
         }
       }

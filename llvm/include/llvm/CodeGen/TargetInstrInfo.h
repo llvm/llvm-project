@@ -845,6 +845,14 @@ public:
     llvm_unreachable("Target didn't implement TargetInstrInfo::copyPhysReg!");
   }
 
+  /// If the specific machine instruction is a instruction that moves/copies
+  /// value from one register to another register return true along with
+  /// @Source machine operand and @Destination machine operand.
+  virtual bool isCopyInstr(const MachineInstr &MI, MachineOperand &Source,
+                           MachineOperand &Destination) const {
+    return false;
+  }
+
   /// Store the specified register of the given register class to the specified
   /// stack frame index. The store instruction is to be added to the given
   /// machine basic block before the specified machine instruction. If isKill

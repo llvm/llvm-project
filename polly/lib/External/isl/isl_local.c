@@ -13,6 +13,7 @@
 #include <isl/space.h>
 #include <isl_vec_private.h>
 #include <isl_mat_private.h>
+#include <isl_reordering.h>
 #include <isl_seq.h>
 #include <isl_local.h>
 
@@ -24,6 +25,25 @@ isl_ctx *isl_local_get_ctx(__isl_keep isl_local *local)
 		return NULL;
 
 	return isl_mat_get_ctx(local);
+}
+
+/* Create an isl_local object from a matrix describing
+ * integer divisions.
+ *
+ * An isl_local object is current defined as exactly such a matrix,
+ * so simply return the input.
+ */
+__isl_give isl_local *isl_local_alloc_from_mat(__isl_take isl_mat *mat)
+{
+	return mat;
+}
+
+/* Free "local" and return NULL.
+ */
+__isl_null isl_local *isl_local_free(__isl_take isl_local *local)
+{
+	isl_mat_free(local);
+	return NULL;
 }
 
 /* Return the number of local variables (isl_dim_div),
@@ -183,6 +203,45 @@ int isl_local_cmp(__isl_keep isl_local *local1, __isl_keep isl_local *local2)
 	}
 
 	return 0;
+}
+
+/* Reorder the columns of the given local variables according to the
+ * given reordering.
+ * The order of the local variables themselves is assumed not to change.
+ */
+__isl_give isl_local *isl_local_reorder(__isl_take isl_local *local,
+	__isl_take isl_reordering *r)
+{
+	isl_mat *div = local;
+	int i, j;
+	isl_space *space;
+	isl_mat *mat;
+	int extra;
+
+	if (!local || !r)
+		goto error;
+
+	space = isl_reordering_peek_space(r);
+	extra = isl_space_dim(space, isl_dim_all) + div->n_row - r->len;
+	mat = isl_mat_alloc(div->ctx, div->n_row, div->n_col + extra);
+	if (!mat)
+		goto error;
+
+	for (i = 0; i < div->n_row; ++i) {
+		isl_seq_cpy(mat->row[i], div->row[i], 2);
+		isl_seq_clr(mat->row[i] + 2, mat->n_col - 2);
+		for (j = 0; j < r->len; ++j)
+			isl_int_set(mat->row[i][2 + r->pos[j]],
+				    div->row[i][2 + j]);
+	}
+
+	isl_reordering_free(r);
+	isl_local_free(local);
+	return isl_local_alloc_from_mat(mat);
+error:
+	isl_reordering_free(r);
+	isl_local_free(local);
+	return NULL;
 }
 
 /* Extend a vector "v" representing an integer point

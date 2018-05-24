@@ -1790,6 +1790,7 @@ class CFCMSA_DESC {
   string AsmString = "cfcmsa\t$rd, $cs";
   InstrItinClass Itinerary = NoItinerary;
   bit hasSideEffects = 1;
+  bit isMoveReg = 1;
 }
 
 class CLE_S_B_DESC : MSA_3R_DESC_BASE<"cle_s.b", vsetle_v16i8, MSA128BOpnd>;
@@ -1884,6 +1885,7 @@ class CTCMSA_DESC {
   string AsmString = "ctcmsa\t$cd, $rs";
   InstrItinClass Itinerary = NoItinerary;
   bit hasSideEffects = 1;
+  bit isMoveReg = 1;
 }
 
 class DIV_S_B_DESC : MSA_3R_DESC_BASE<"div_s.b", sdiv, MSA128BOpnd>;
@@ -2429,6 +2431,7 @@ class MOVE_V_DESC {
   string AsmString = "move.v\t$wd, $ws";
   list<dag> Pattern = [];
   InstrItinClass Itinerary = NoItinerary;
+  bit isMoveReg = 1;
 }
 
 class MSUB_Q_H_DESC : MSA_3RF_4RF_DESC_BASE<"msub_q.h", int_mips_msub_q_h,
