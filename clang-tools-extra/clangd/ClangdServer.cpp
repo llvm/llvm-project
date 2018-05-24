@@ -17,6 +17,7 @@
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
@@ -92,12 +93,14 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
       // is parsed.
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
-      WorkScheduler(Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
-                    FileIdx
-                        ? [this](PathRef Path,
-                                 ParsedAST *AST) { FileIdx->update(Path, AST); }
-                        : ASTParsedCallback(),
-                    Opts.UpdateDebounce) {
+      WorkScheduler(
+          Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
+          FileIdx
+              ? [this](PathRef Path, ASTContext &AST,
+                       std::shared_ptr<Preprocessor>
+                           PP) { FileIdx->update(Path, &AST, std::move(PP)); }
+              : PreambleParsedCallback(),
+          Opts.UpdateDebounce) {
   if (FileIdx && Opts.StaticIndex) {
     MergedIndex = mergeIndex(FileIdx.get(), Opts.StaticIndex);
     Index = MergedIndex.get();

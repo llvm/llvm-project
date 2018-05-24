@@ -414,11 +414,11 @@ struct TUScheduler::FileData {
 
 TUScheduler::TUScheduler(unsigned AsyncThreadsCount,
                          bool StorePreamblesInMemory,
-                         ASTParsedCallback ASTCallback,
+                         PreambleParsedCallback PreambleCallback,
                          steady_clock::duration UpdateDebounce)
     : StorePreamblesInMemory(StorePreamblesInMemory),
       PCHOps(std::make_shared<PCHContainerOperations>()),
-      ASTCallback(std::move(ASTCallback)), Barrier(AsyncThreadsCount),
+      PreambleCallback(std::move(PreambleCallback)), Barrier(AsyncThreadsCount),
       UpdateDebounce(UpdateDebounce) {
   if (0 < AsyncThreadsCount) {
     PreambleTasks.emplace();
@@ -455,7 +455,7 @@ void TUScheduler::update(PathRef File, ParseInputs Inputs,
     // Create a new worker to process the AST-related tasks.
     ASTWorkerHandle Worker = ASTWorker::Create(
         File, WorkerThreads ? WorkerThreads.getPointer() : nullptr, Barrier,
-        CppFile(File, StorePreamblesInMemory, PCHOps, ASTCallback),
+        CppFile(File, StorePreamblesInMemory, PCHOps, PreambleCallback),
         UpdateDebounce);
     FD = std::unique_ptr<FileData>(new FileData{
         Inputs.Contents, Inputs.CompileCommand, std::move(Worker)});
