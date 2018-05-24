@@ -917,6 +917,8 @@ int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
   int FPOffset = MFI.getObjectOffset(FI) + FixedObject + 16;
   int Offset = MFI.getObjectOffset(FI) + MFI.getStackSize();
   bool isFixed = MFI.isFixedObjectIndex(FI);
+  bool isCSR = !isFixed && MFI.getObjectOffset(FI) >=
+                               -((int)AFI->getCalleeSavedStackSize());
 
   // Use frame pointer to reference fixed objects. Use it for locals if
   // there are VLAs or a dynamically realigned SP (and thus the SP isn't
@@ -930,6 +932,12 @@ int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
     // Argument access should always use the FP.
     if (isFixed) {
       UseFP = hasFP(MF);
+    } else if (isCSR && RegInfo->needsStackRealignment(MF)) {
+      // References to the CSR area must use FP if we're re-aligning the stack
+      // since the dynamically-sized alignment padding is between the SP/BP and
+      // the CSR area.
+      assert(hasFP(MF) && "Re-aligned stack must have frame pointer");
+      UseFP = true;
     } else if (hasFP(MF) && !RegInfo->hasBasePointer(MF) &&
                !RegInfo->needsStackRealignment(MF)) {
       // Use SP or FP, whichever gives us the best chance of the offset
@@ -947,9 +955,9 @@ int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
     }
   }
 
-  assert((isFixed || !RegInfo->needsStackRealignment(MF) || !UseFP) &&
+  assert(((isFixed || isCSR) || !RegInfo->needsStackRealignment(MF) || !UseFP) &&
          "In the presence of dynamic stack pointer realignment, "
-         "non-argument objects cannot be accessed through the frame pointer");
+         "non-argument/CSR objects cannot be accessed through the frame pointer");
 
   if (UseFP) {
     FrameReg = RegInfo->getFrameRegister(MF);
