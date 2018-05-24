@@ -2551,30 +2551,27 @@ isl_stat isl_space_check_named_params(__isl_keep isl_space *space)
 	return isl_stat_ok;
 }
 
-/* Align the initial parameters of dim1 to match the order in dim2.
+/* Align the initial parameters of space1 to match the order in space2.
  */
-__isl_give isl_space *isl_space_align_params(__isl_take isl_space *dim1,
-	__isl_take isl_space *dim2)
+__isl_give isl_space *isl_space_align_params(__isl_take isl_space *space1,
+	__isl_take isl_space *space2)
 {
 	isl_reordering *exp;
 
-	if (!isl_space_has_named_params(dim1) || !isl_space_has_named_params(dim2))
-		isl_die(isl_space_get_ctx(dim1), isl_error_invalid,
-			"parameter alignment requires named parameters",
-			goto error);
+	if (isl_space_check_named_params(space1) < 0 ||
+	    isl_space_check_named_params(space2) < 0)
+		goto error;
 
-	dim2 = isl_space_params(dim2);
-	exp = isl_parameter_alignment_reordering(dim1, dim2);
-	exp = isl_reordering_extend_space(exp, dim1);
-	isl_space_free(dim2);
-	if (!exp)
-		return NULL;
-	dim1 = isl_space_copy(exp->dim);
+	space2 = isl_space_params(space2);
+	exp = isl_parameter_alignment_reordering(space1, space2);
+	exp = isl_reordering_extend_space(exp, space1);
+	isl_space_free(space2);
+	space1 = isl_reordering_get_space(exp);
 	isl_reordering_free(exp);
-	return dim1;
+	return space1;
 error:
-	isl_space_free(dim1);
-	isl_space_free(dim2);
+	isl_space_free(space1);
+	isl_space_free(space2);
 	return NULL;
 }
 

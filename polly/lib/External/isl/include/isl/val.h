@@ -1,22 +1,16 @@
 #ifndef ISL_VAL_H
 #define ISL_VAL_H
 
+#include <isl/stdint.h>
 #include <isl/ctx.h>
 #include <isl/list.h>
 #include <isl/multi.h>
 #include <isl/printer.h>
+#include <isl/val_type.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-struct __isl_export isl_val;
-typedef struct isl_val isl_val;
-
-ISL_DECLARE_LIST(val)
-
-struct __isl_export isl_multi_val;
-typedef struct isl_multi_val isl_multi_val;
 
 ISL_DECLARE_MULTI(val)
 ISL_DECLARE_MULTI_NEG(val)
@@ -160,6 +154,8 @@ __isl_give isl_printer *isl_printer_print_multi_val(__isl_take isl_printer *p,
 	__isl_keep isl_multi_val *mv);
 void isl_multi_val_dump(__isl_keep isl_multi_val *mv);
 __isl_give char *isl_multi_val_to_str(__isl_keep isl_multi_val *mv);
+
+ISL_DECLARE_LIST_FN(val)
 
 #if defined(__cplusplus)
 }
