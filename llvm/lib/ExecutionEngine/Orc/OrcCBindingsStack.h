@@ -380,6 +380,7 @@ public:
 
   JITSymbol findSymbolIn(orc::VModuleKey K, const std::string &Name,
                          bool ExportedSymbolsOnly) {
+    assert(KeyLayers.count(K) && "looking up symbol in unknown module");
     return KeyLayers[K]->findSymbolIn(K, Name, ExportedSymbolsOnly);
   }
 
@@ -388,6 +389,27 @@ public:
                                      bool ExportedSymbolsOnly) {
     RetAddr = 0;
     if (auto Sym = findSymbol(Name, ExportedSymbolsOnly)) {
+      // Successful lookup, non-null symbol:
+      if (auto AddrOrErr = Sym.getAddress()) {
+        RetAddr = *AddrOrErr;
+        return LLVMOrcErrSuccess;
+      } else
+        return mapError(AddrOrErr.takeError());
+    } else if (auto Err = Sym.takeError()) {
+      // Lookup failure - report error.
+      return mapError(std::move(Err));
+    }
+    // Otherwise we had a successful lookup but got a null result. We already
+    // set RetAddr to '0' above, so just return success.
+    return LLVMOrcErrSuccess;
+  }
+
+  LLVMOrcErrorCode findSymbolAddressIn(JITTargetAddress &RetAddr,
+                                       orc::VModuleKey K,
+                                       const std::string &Name,
+                                       bool ExportedSymbolsOnly) {
+    RetAddr = 0;
+    if (auto Sym = findSymbolIn(K, Name, ExportedSymbolsOnly)) {
       // Successful lookup, non-null symbol:
       if (auto AddrOrErr = Sym.getAddress()) {
         RetAddr = *AddrOrErr;

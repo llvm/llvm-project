@@ -28,7 +28,8 @@ enum NodeType : unsigned {
   CALL,
   SELECT_CC,
   BuildPairF64,
-  SplitF64
+  SplitF64,
+  TAIL
 };
 }
 
@@ -100,6 +101,10 @@ private:
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+
+  bool IsEligibleForTailCallOptimization(CCState &CCInfo,
+    CallLoweringInfo &CLI, MachineFunction &MF,
+    const SmallVector<CCValAssign, 16> &ArgLocs) const;
 };
 }
 

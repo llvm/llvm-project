@@ -112,6 +112,14 @@ LLVMOrcErrorCode LLVMOrcGetSymbolAddress(LLVMOrcJITStackRef JITStack,
   return J.findSymbolAddress(*RetAddr, SymbolName, true);
 }
 
+LLVMOrcErrorCode LLVMOrcGetSymbolAddressIn(LLVMOrcJITStackRef JITStack,
+                                           LLVMOrcTargetAddress *RetAddr,
+                                           LLVMOrcModuleHandle H,
+                                           const char *SymbolName) {
+  OrcCBindingsStack &J = *unwrap(JITStack);
+  return J.findSymbolAddressIn(*RetAddr, H, SymbolName, true);
+}
+
 LLVMOrcErrorCode LLVMOrcDisposeInstance(LLVMOrcJITStackRef JITStack) {
   auto *J = unwrap(JITStack);
   auto Err = J->shutdown();

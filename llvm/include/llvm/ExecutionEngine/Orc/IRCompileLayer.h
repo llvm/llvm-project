@@ -16,8 +16,9 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <memory>
 #include <string>
 
@@ -26,6 +27,29 @@ namespace llvm {
 class Module;
 
 namespace orc {
+
+class IRCompileLayer2 : public IRLayer {
+public:
+  using CompileFunction =
+      std::function<Expected<std::unique_ptr<MemoryBuffer>>(Module &)>;
+
+  using NotifyCompiledFunction =
+      std::function<void(VModuleKey K, std::unique_ptr<Module>)>;
+
+  IRCompileLayer2(ExecutionSession &ES, ObjectLayer &BaseLayer,
+                  CompileFunction Compile);
+
+  void setNotifyCompiled(NotifyCompiledFunction NotifyCompiled);
+
+  void emit(MaterializationResponsibility R, VModuleKey K,
+            std::unique_ptr<Module> M) override;
+
+private:
+  mutable std::mutex IRLayerMutex;
+  ObjectLayer &BaseLayer;
+  CompileFunction Compile;
+  NotifyCompiledFunction NotifyCompiled = NotifyCompiledFunction();
+};
 
 /// Eager IR compiling layer.
 ///

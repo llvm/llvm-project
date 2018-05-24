@@ -24,34 +24,32 @@ RUN: echo -n 1234567890123456 > %t/IN/1234567890123456
 
 # ABC: No data is used, the only used label is 4 (corresponds to the size)
 RUN:%t-ThreeFunctionsTestDF %t/IN/ABC    | FileCheck %s --check-prefix=IN_ABC
-IN_ABC: F{{[012]}} 1000
+IN_ABC: F{{[012]}} 0001
 IN_ABC-NOT: F
 
 # FUABC: First 3 bytes are checked, Func1/Func2 are not called.
 RUN:%t-ThreeFunctionsTestDF %t/IN/FUABC  | FileCheck %s --check-prefix=IN_FUABC
-IN_FUABC: F{{[012]}} 111100
+IN_FUABC: F{{[012]}} 111001
 IN_FUABC-NOT: F
 
 # FUZZR: 5 bytes are used (4 in one function, 5-th in the other), Func2 is not called.
 RUN:%t-ThreeFunctionsTestDF %t/IN/FUZZR  | FileCheck %s --check-prefix=IN_FUZZR
-IN_FUZZR-DAG: F{{[012]}} 111110
-IN_FUZZR-DAG: F{{[012]}} 000001
+IN_FUZZR-DAG: F{{[012]}} 111101
+IN_FUZZR-DAG: F{{[012]}} 000010
 IN_FUZZR-NOT: F
 
 # FUZZM: 5 bytes are used, both Func1 and Func2 are called, Func2 depends only on size (label 6).
 RUN:%t-ThreeFunctionsTestDF %t/IN/FUZZM  | FileCheck %s --check-prefix=IN_FUZZM
-IN_FUZZM-DAG: F{{[012]}} 100000
-IN_FUZZM-DAG: F{{[012]}} 111110
+IN_FUZZM-DAG: F{{[012]}} 000010
+IN_FUZZM-DAG: F{{[012]}} 111101
 IN_FUZZM-DAG: F{{[012]}} 000001
 
 # FUZZMU: 6 bytes are used, both Func1 and Func2 are called, Func2 depends on byte 6 and size (label 7)
 RUN:%t-ThreeFunctionsTestDF %t/IN/FUZZMU  | FileCheck %s --check-prefix=IN_FUZZMU
-IN_FUZZMU-DAG: F{{[012]}} 1000001
-IN_FUZZMU-DAG: F{{[012]}} 1111100
-IN_FUZZMU-DAG: F{{[012]}} 0000010
+IN_FUZZMU-DAG: F{{[012]}} 0000100
+IN_FUZZMU-DAG: F{{[012]}} 1111001
+IN_FUZZMU-DAG: F{{[012]}} 0000011
 
 # Today a very simple test will cause DFSan to die with "out of labels"
 RUN: not %t-ExplodeDFSanLabelsTestDF %t/IN/1234567890123456 2>&1 | FileCheck %s --check-prefix=OUT_OF_LABELS
 OUT_OF_LABELS: ==FATAL: DataFlowSanitizer: out of labels
-
-

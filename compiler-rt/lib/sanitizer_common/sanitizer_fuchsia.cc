@@ -407,7 +407,31 @@ bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
 }
 
 void RawWrite(const char *buffer) {
-  __sanitizer_log_write(buffer, internal_strlen(buffer));
+  constexpr size_t size = 128;
+  static _Thread_local char line[size];
+  static _Thread_local size_t lastLineEnd = 0;
+  static _Thread_local size_t cur = 0;
+
+  while (*buffer) {
+    if (cur >= size) {
+      if (lastLineEnd == 0)
+        lastLineEnd = size;
+      __sanitizer_log_write(line, lastLineEnd);
+      internal_memmove(line, line + lastLineEnd, cur - lastLineEnd);
+      cur = cur - lastLineEnd;
+      lastLineEnd = 0;
+    }
+    if (*buffer == '\n')
+      lastLineEnd = cur + 1;
+    line[cur++] = *buffer++;
+  }
+  // Flush all complete lines before returning.
+  if (lastLineEnd != 0) {
+    __sanitizer_log_write(line, lastLineEnd);
+    internal_memmove(line, line + lastLineEnd, cur - lastLineEnd);
+    cur = cur - lastLineEnd;
+    lastLineEnd = 0;
+  }
 }
 
 void CatastrophicErrorWrite(const char *buffer, uptr length) {

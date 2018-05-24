@@ -136,9 +136,9 @@ private:
   /// started.
   BitVector ReservedRegs;
 
-  using VRegToTypeMap = DenseMap<unsigned, LLT>;
-  /// Map generic virtual registers to their actual size.
-  mutable std::unique_ptr<VRegToTypeMap> VRegToType;
+  using VRegToTypeMap = IndexedMap<LLT, VirtReg2IndexFunctor>;
+  /// Map generic virtual registers to their low-level type.
+  VRegToTypeMap VRegToType;
 
   /// Keep track of the physical registers that are live in to the function.
   /// Live in values are typically arguments in registers.  LiveIn values are
@@ -717,17 +717,13 @@ public:
   unsigned createVirtualRegister(const TargetRegisterClass *RegClass,
                                  StringRef Name = "");
 
-  /// Accessor for VRegToType. This accessor should only be used
-  /// by global-isel related work.
-  VRegToTypeMap &getVRegToType() const {
-    if (!VRegToType)
-      VRegToType.reset(new VRegToTypeMap);
-    return *VRegToType.get();
-  }
-
-  /// Get the low-level type of \p VReg or LLT{} if VReg is not a generic
+  /// Get the low-level type of \p Reg or LLT{} if Reg is not a generic
   /// (target independent) virtual register.
-  LLT getType(unsigned VReg) const;
+  LLT getType(unsigned Reg) const {
+    if (TargetRegisterInfo::isVirtualRegister(Reg) && VRegToType.inBounds(Reg))
+      return VRegToType[Reg];
+    return LLT{};
+  }
 
   /// Set the low-level type of \p VReg to \p Ty.
   void setType(unsigned VReg, LLT Ty);

@@ -90,8 +90,9 @@ static int PrintFunctions() {
 }
 
 static void SetBytesForLabel(dfsan_label L, char *Bytes) {
-  if (L <= InputLen) {
-    Bytes[L] = '1';
+  assert(L);
+  if (L <= InputLen + 1) {
+    Bytes[L - 1] = '1';
   } else {
     auto *DLI = dfsan_get_label_info(L);
     SetBytesForLabel(DLI->l1, Bytes);
