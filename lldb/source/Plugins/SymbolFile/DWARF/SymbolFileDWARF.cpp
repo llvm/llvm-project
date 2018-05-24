@@ -2957,7 +2957,7 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
       DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
 
       if (dwarf_cu) {
-        const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
+        const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
         if (die) {
           const char *flags =
               die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
@@ -2976,7 +2976,7 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
         DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
 
         if (dwarf_cu) {
-          const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
+          const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
           if (die) {
             const char *flags =
                 die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
@@ -3007,7 +3007,7 @@ int SymbolFileDWARF::GetCompileOptions(const char *option,
       DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
 
       if (dwarf_cu) {
-        const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
+        const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
         if (die) {
           const char *flags =
               die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
@@ -3028,7 +3028,7 @@ int SymbolFileDWARF::GetCompileOptions(const char *option,
         DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
 
         if (dwarf_cu) {
-          const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
+          const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
           if (die) {
             const char *flags =
                 die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
