@@ -61,7 +61,6 @@ add_lldb_library(lldbSymbol
     lldbPluginExpressionParserSwift
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
-    lldbPluginObjectContainerBSDArchive
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     lldbPluginPlatformMacOSX

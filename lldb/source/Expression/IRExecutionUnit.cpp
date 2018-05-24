@@ -34,6 +34,7 @@
 #include "lldb/Utility/Log.h"
 
 #include "lldb/../../source/Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "lldb/../../source/Plugins/ObjectFile/JIT/ObjectFileJIT.h"
 
 using namespace lldb_private;
 
@@ -1336,30 +1337,35 @@ lldb::ModuleSP IRExecutionUnit::CreateJITModule(const char *name,
     ExecutionContext exe_ctx(GetBestExecutionContextScope());
     Target *target = exe_ctx.GetTargetPtr();
     if (target) {
-      jit_module_sp = lldb_private::Module::CreateJITModule(
+      auto Delegate =
           std::static_pointer_cast<lldb_private::ObjectFileJITDelegate>(
-              shared_from_this()));
-      if (jit_module_sp) {
-        m_jit_module_wp = jit_module_sp;
-        bool changed = false;
-        jit_module_sp->SetLoadAddress(*target, 0, true, changed);
+              shared_from_this());
 
-        jit_module_sp->SetTypeSystemMap(target->GetTypeSystemMap());
+      lldb::ModuleSP jit_module_sp =
+          lldb_private::Module::CreateModuleFromObjectFile<ObjectFileJIT>(
+              Delegate);
+      if (!jit_module_sp)
+        return nullptr;
 
-        ConstString const_name(name);
-        FileSpec jit_file;
-        jit_file.GetFilename() = const_name;
-        jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
+      m_jit_module_wp = jit_module_sp;
+      bool changed = false;
+      jit_module_sp->SetLoadAddress(*target, 0, true, changed);
 
-        if (limit_file_ptr) {
-          SymbolVendor *symbol_vendor = jit_module_sp->GetSymbolVendor();
-          if (symbol_vendor)
-            symbol_vendor->SetLimitSourceFileRange(
-                *limit_file_ptr, limit_start_line, limit_end_line);
-        }
+      jit_module_sp->SetTypeSystemMap(target->GetTypeSystemMap());
 
-        target->GetImages().Append(jit_module_sp);
+      ConstString const_name(name);
+      FileSpec jit_file;
+      jit_file.GetFilename() = const_name;
+      jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
+
+      if (limit_file_ptr) {
+        SymbolVendor *symbol_vendor = jit_module_sp->GetSymbolVendor();
+        if (symbol_vendor)
+          symbol_vendor->SetLimitSourceFileRange(
+              *limit_file_ptr, limit_start_line, limit_end_line);
       }
+
+      target->GetImages().Append(jit_module_sp);
       return jit_module_sp;
     }
   }

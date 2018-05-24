@@ -53,6 +53,18 @@ public:
 
 private:
   void Index();
+  void IndexUnit(DWARFUnit &unit, NameToDIE &func_basenames,
+                 NameToDIE &func_fullnames, NameToDIE &func_methods,
+                 NameToDIE &func_selectors, NameToDIE &objc_class_selectors,
+                 NameToDIE &globals, NameToDIE &types, NameToDIE &namespaces);
+
+  static void
+  IndexUnitImpl(DWARFUnit &unit, const lldb::LanguageType cu_language,
+                const DWARFFormValue::FixedFormSizes &fixed_form_sizes,
+                const dw_offset_t cu_offset, NameToDIE &func_basenames,
+                NameToDIE &func_fullnames, NameToDIE &func_methods,
+                NameToDIE &func_selectors, NameToDIE &objc_class_selectors,
+                NameToDIE &globals, NameToDIE &types, NameToDIE &namespaces);
 
   /// Non-null value means we haven't built the index yet.
   DWARFDebugInfo *m_debug_info;
