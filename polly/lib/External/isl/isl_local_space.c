@@ -542,42 +542,6 @@ error:
 	return NULL;
 }
 
-/* Reorder the columns of the given div definitions according to the
- * given reordering.
- * The order of the divs themselves is assumed not to change.
- */
-static __isl_give isl_mat *reorder_divs(__isl_take isl_mat *div,
-	__isl_take isl_reordering *r)
-{
-	int i, j;
-	isl_mat *mat;
-	int extra;
-
-	if (!div || !r)
-		goto error;
-
-	extra = isl_space_dim(r->dim, isl_dim_all) + div->n_row - r->len;
-	mat = isl_mat_alloc(div->ctx, div->n_row, div->n_col + extra);
-	if (!mat)
-		goto error;
-
-	for (i = 0; i < div->n_row; ++i) {
-		isl_seq_cpy(mat->row[i], div->row[i], 2);
-		isl_seq_clr(mat->row[i] + 2, mat->n_col - 2);
-		for (j = 0; j < r->len; ++j)
-			isl_int_set(mat->row[i][2 + r->pos[j]],
-				    div->row[i][2 + j]);
-	}
-
-	isl_reordering_free(r);
-	isl_mat_free(div);
-	return mat;
-error:
-	isl_reordering_free(r);
-	isl_mat_free(div);
-	return NULL;
-}
-
 /* Reorder the dimensions of "ls" according to the given reordering.
  * The reordering r is assumed to have been extended with the local
  * variables, leaving them in the same order.
@@ -589,11 +553,11 @@ __isl_give isl_local_space *isl_local_space_realign(
 	if (!ls || !r)
 		goto error;
 
-	ls->div = reorder_divs(ls->div, isl_reordering_copy(r));
+	ls->div = isl_local_reorder(ls->div, isl_reordering_copy(r));
 	if (!ls->div)
 		goto error;
 
-	ls = isl_local_space_reset_space(ls, isl_space_copy(r->dim));
+	ls = isl_local_space_reset_space(ls, isl_reordering_get_space(r));
 
 	isl_reordering_free(r);
 	return ls;
@@ -1213,6 +1177,49 @@ __isl_give isl_local_space *isl_local_space_insert_dims(
 	return ls;
 }
 
+/* Does the linear part of "constraint" correspond to
+ * integer division "div" in "ls"?
+ *
+ * That is, given div = floor((c + f)/m), is the constraint of the form
+ *
+ *		f - m d + c' >= 0		[sign = 1]
+ * or
+ *		-f + m d + c'' >= 0		[sign = -1]
+ * ?
+ * If so, set *sign to the corresponding value.
+ */
+static isl_bool is_linear_div_constraint(__isl_keep isl_local_space *ls,
+	isl_int *constraint, unsigned div, int *sign)
+{
+	isl_bool unknown;
+	unsigned pos;
+
+	unknown = isl_local_space_div_is_marked_unknown(ls, div);
+	if (unknown < 0)
+		return isl_bool_error;
+	if (unknown)
+		return isl_bool_false;
+
+	pos = isl_local_space_offset(ls, isl_dim_div) + div;
+
+	if (isl_int_eq(constraint[pos], ls->div->row[div][0])) {
+		*sign = -1;
+		if (!isl_seq_is_neg(constraint + 1,
+				    ls->div->row[div] + 2, pos - 1))
+			return isl_bool_false;
+	} else if (isl_int_abs_eq(constraint[pos], ls->div->row[div][0])) {
+		*sign = 1;
+		if (!isl_seq_eq(constraint + 1, ls->div->row[div] + 2, pos - 1))
+			return isl_bool_false;
+	} else {
+		return isl_bool_false;
+	}
+	if (isl_seq_first_non_zero(constraint + pos + 1,
+				    ls->div->n_row - div - 1) != -1)
+		return isl_bool_false;
+	return isl_bool_true;
+}
+
 /* Check if the constraints pointed to by "constraint" is a div
  * constraint corresponding to div "div" in "ls".
  *
@@ -1221,44 +1228,65 @@ __isl_give isl_local_space *isl_local_space_insert_dims(
  *		f - m d >= 0
  * or
  *		-(f-(m-1)) + m d >= 0
+ *
+ * First check if the linear part is of the right form and
+ * then check the constant term.
  */
 isl_bool isl_local_space_is_div_constraint(__isl_keep isl_local_space *ls,
 	isl_int *constraint, unsigned div)
 {
-	unsigned pos;
+	int sign;
+	isl_bool linear;
 
-	if (!ls)
-		return isl_bool_error;
+	linear = is_linear_div_constraint(ls, constraint, div, &sign);
+	if (linear < 0 || !linear)
+		return linear;
 
-	if (isl_int_is_zero(ls->div->row[div][0]))
-		return isl_bool_false;
-
-	pos = isl_local_space_offset(ls, isl_dim_div) + div;
-
-	if (isl_int_eq(constraint[pos], ls->div->row[div][0])) {
+	if (sign < 0) {
 		int neg;
 		isl_int_sub(ls->div->row[div][1],
 				ls->div->row[div][1], ls->div->row[div][0]);
 		isl_int_add_ui(ls->div->row[div][1], ls->div->row[div][1], 1);
-		neg = isl_seq_is_neg(constraint, ls->div->row[div]+1, pos);
+		neg = isl_seq_is_neg(constraint, ls->div->row[div] + 1, 1);
 		isl_int_sub_ui(ls->div->row[div][1], ls->div->row[div][1], 1);
 		isl_int_add(ls->div->row[div][1],
 				ls->div->row[div][1], ls->div->row[div][0]);
 		if (!neg)
 			return isl_bool_false;
-		if (isl_seq_first_non_zero(constraint+pos+1,
-					    ls->div->n_row-div-1) != -1)
+	} else {
+		if (!isl_int_eq(constraint[0], ls->div->row[div][1]))
 			return isl_bool_false;
-	} else if (isl_int_abs_eq(constraint[pos], ls->div->row[div][0])) {
-		if (!isl_seq_eq(constraint, ls->div->row[div]+1, pos))
-			return isl_bool_false;
-		if (isl_seq_first_non_zero(constraint+pos+1,
-					    ls->div->n_row-div-1) != -1)
-			return isl_bool_false;
-	} else
-		return isl_bool_false;
+	}
 
 	return isl_bool_true;
+}
+
+/* Is the constraint pointed to by "constraint" one
+ * of an equality that corresponds to integer division "div" in "ls"?
+ *
+ * That is, given an integer division of the form
+ *
+ *	a = floor((f + c)/m)
+ *
+ * is the equality of the form
+ *
+ *		-f + m d + c' = 0
+ * ?
+ * Note that the constant term is not checked explicitly, but given
+ * that this is a valid equality constraint, the constant c' necessarily
+ * has a value close to -c.
+ */
+isl_bool isl_local_space_is_div_equality(__isl_keep isl_local_space *ls,
+	isl_int *constraint, unsigned div)
+{
+	int sign;
+	isl_bool linear;
+
+	linear = is_linear_div_constraint(ls, constraint, div, &sign);
+	if (linear < 0 || !linear)
+		return linear;
+
+	return sign < 0;
 }
 
 /*

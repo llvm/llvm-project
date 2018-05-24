@@ -120,7 +120,7 @@ void VPlanVerifier::verifyHierarchicalCFG(
   if (!EnableHCFGVerifier)
     return;
 
-  DEBUG(dbgs() << "Verifying VPlan H-CFG.\n");
+  LLVM_DEBUG(dbgs() << "Verifying VPlan H-CFG.\n");
   assert(!TopRegion->getParent() && "VPlan Top Region should have no parent.");
   verifyRegionRec(TopRegion);
 }

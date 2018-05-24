@@ -306,6 +306,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   isIndirectBranch = R->getValueAsBit("isIndirectBranch");
   isCompare    = R->getValueAsBit("isCompare");
   isMoveImm    = R->getValueAsBit("isMoveImm");
+  isMoveReg    = R->getValueAsBit("isMoveReg");
   isBitcast    = R->getValueAsBit("isBitcast");
   isSelect     = R->getValueAsBit("isSelect");
   isBarrier    = R->getValueAsBit("isBarrier");

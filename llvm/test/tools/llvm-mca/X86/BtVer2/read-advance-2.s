@@ -7,11 +7,12 @@
 # The second integer multiply can start at cycle 2 because the implicit reads
 # can start after the load operand is evaluated.
 
-# CHECK:      Iterations:     1
-# CHECK-NEXT: Instructions:   2
-# CHECK-NEXT: Total Cycles:   10
-# CHECK-NEXT: Dispatch Width: 2
-# CHECK-NEXT: IPC:            0.20
+# CHECK:      Iterations:        1
+# CHECK-NEXT: Instructions:      2
+# CHECK-NEXT: Total Cycles:      10
+# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps

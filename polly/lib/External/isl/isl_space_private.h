@@ -3,7 +3,7 @@
 
 #include <isl/space.h>
 #include <isl/hash.h>
-#include <isl/id.h>
+#include <isl/id_type.h>
 
 struct isl_name;
 struct isl_space {

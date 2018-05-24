@@ -1772,6 +1772,7 @@ class MoveFromLOHI<string opstr, RegisterOperand RO, Register UseReg>:
          FrmR, opstr> {
   let Uses = [UseReg];
   let hasSideEffects = 0;
+  let isMoveReg = 1;
 }
 
 class PseudoMTLOHI<RegisterClass DstRC, RegisterClass SrcRC>
@@ -1784,6 +1785,7 @@ class MoveToLOHI<string opstr, RegisterOperand RO, list<Register> DefRegs>:
   FrmR, opstr> {
   let Defs = DefRegs;
   let hasSideEffects = 0;
+  let isMoveReg = 1;
 }
 
 class EffectiveAddress<string opstr, RegisterOperand RO> :

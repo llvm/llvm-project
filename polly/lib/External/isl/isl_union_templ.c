@@ -398,7 +398,7 @@ static __isl_give UNION *FN(UNION,realign_domain)(__isl_take UNION *u,
 	if (!u || !r)
 		goto error;
 
-	space = isl_space_copy(r->dim);
+	space = isl_reordering_get_space(r);
 	u = FN(UNION,transform_space)(u, space, &FN(UNION,align_entry), r);
 	isl_reordering_free(r);
 	return u;

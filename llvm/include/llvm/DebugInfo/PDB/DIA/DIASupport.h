@@ -22,14 +22,6 @@
 #define NOMINMAX
 #endif
 
-// llvm/Support/Debug.h unconditionally #defines DEBUG as a macro.
-// DIA headers #define it if it is not already defined, so we have
-// an order of includes problem.  The real fix is to make LLVM use
-// something less generic than DEBUG, such as LLVM_DEBUG(), but it's
-// fairly prevalent.  So for now, we save the definition state and
-// restore it.
-#pragma push_macro("DEBUG")
-
 // atlbase.h has to come before windows.h
 #include <atlbase.h>
 #include <windows.h>
@@ -38,7 +30,5 @@
 #include <cvconst.h>
 #include <dia2.h>
 #include <diacreate.h>
-
-#pragma pop_macro("DEBUG")
 
 #endif // LLVM_DEBUGINFO_PDB_DIA_DIASUPPORT_H

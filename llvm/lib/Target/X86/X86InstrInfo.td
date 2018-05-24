@@ -1455,7 +1455,7 @@ def CMPSQ : RI<0xA7, RawFrmDstSrc, (outs), (ins dstidx64:$dst, srcidx64:$src),
 //  Move Instructions.
 //
 let SchedRW = [WriteMove] in {
-let hasSideEffects = 0 in {
+let hasSideEffects = 0, isMoveReg = 1 in {
 def MOV8rr  : I<0x88, MRMDestReg, (outs GR8 :$dst), (ins GR8 :$src),
                 "mov{b}\t{$src, $dst|$dst, $src}", []>;
 def MOV16rr : I<0x89, MRMDestReg, (outs GR16:$dst), (ins GR16:$src),
@@ -1624,7 +1624,7 @@ def MOV64o64a : RIi64<0xA3, RawFrmMemOffs, (outs), (ins offset64_64:$dst),
 } // hasSideEffects = 0
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0,
-    SchedRW = [WriteMove] in {
+    SchedRW = [WriteMove], isMoveReg = 1 in {
 def MOV8rr_REV : I<0x8A, MRMSrcReg, (outs GR8:$dst), (ins GR8:$src),
                    "mov{b}\t{$src, $dst|$dst, $src}", []>,
                    FoldGenData<"MOV8rr">;
@@ -1673,7 +1673,7 @@ def MOV64mr : RI<0x89, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
 // that they can be used for copying and storing h registers, which can't be
 // encoded when a REX prefix is present.
 let isCodeGenOnly = 1 in {
-let hasSideEffects = 0 in
+let hasSideEffects = 0, isMoveReg = 1 in
 def MOV8rr_NOREX : I<0x88, MRMDestReg,
                      (outs GR8_NOREX:$dst), (ins GR8_NOREX:$src),
                      "mov{b}\t{$src, $dst|$dst, $src}", []>,

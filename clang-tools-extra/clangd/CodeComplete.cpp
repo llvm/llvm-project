@@ -1004,11 +1004,11 @@ private:
     Scores.symbolScore =
         Scores.filterScore ? Scores.finalScore / Scores.filterScore : QualScore;
 
-    DEBUG(llvm::dbgs() << "CodeComplete: " << C.Name
-                       << (IndexResult ? " (index)" : "")
-                       << (SemaResult ? " (sema)" : "") << " = "
-                       << Scores.finalScore << "\n"
-                       << Quality << Relevance << "\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "CodeComplete: " << C.Name << (IndexResult ? " (index)" : "")
+               << (SemaResult ? " (sema)" : "") << " = " << Scores.finalScore
+               << "\n" 
+               << Quality << Relevance << "\n");
 
     NSema += bool(SemaResult);
     NIndex += bool(IndexResult);

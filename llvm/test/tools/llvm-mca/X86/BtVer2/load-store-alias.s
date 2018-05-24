@@ -10,11 +10,12 @@ vmovaps %xmm0, 32(%rdi)
 vmovaps 48(%rsi), %xmm0
 vmovaps %xmm0, 48(%rdi)
 
-# CHECK:      Iterations:     100
-# CHECK-NEXT: Instructions:   800
-# CHECK-NEXT: Total Cycles:   2403
-# CHECK-NEXT: Dispatch Width: 2
-# CHECK-NEXT: IPC:            0.33
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      800
+# CHECK-NEXT: Total Cycles:      2403
+# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: IPC:               0.33
+# CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps

@@ -1628,6 +1628,22 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
         Value *ShAmtOp = cast<Instruction>(Op1)->getOperand(1);
         return BinaryOperator::CreateLShr(X, ShAmtOp);
       }
+
+      if (Op1->hasOneUse()) {
+        Value *LHS, *RHS;
+        SelectPatternFlavor SPF = matchSelectPattern(Op1, LHS, RHS).Flavor;
+        if (SPF == SPF_ABS || SPF == SPF_NABS) {
+          // This is a negate of an ABS/NABS pattern. Just swap the operands
+          // of the select.
+          SelectInst *SI = cast<SelectInst>(Op1);
+          Value *TrueVal = SI->getTrueValue();
+          Value *FalseVal = SI->getFalseValue();
+          SI->setTrueValue(FalseVal);
+          SI->setFalseValue(TrueVal);
+          // Don't swap prof metadata, we didn't change the branch behavior.
+          return replaceInstUsesWith(I, SI);
+        }
+      }
     }
 
     // Turn this into a xor if LHS is 2^n-1 and the remaining bits are known

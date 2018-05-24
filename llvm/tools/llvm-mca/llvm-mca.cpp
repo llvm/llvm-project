@@ -495,7 +495,7 @@ int main(int argc, char **argv) {
                    LoadQueueSize, StoreQueueSize, AssumeNoAlias);
     mca::BackendPrinter Printer(B);
 
-    Printer.addView(llvm::make_unique<mca::SummaryView>(S, Width));
+    Printer.addView(llvm::make_unique<mca::SummaryView>(SM, S, Width));
     if (PrintInstructionInfoView)
       Printer.addView(
           llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, S, *IP));

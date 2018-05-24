@@ -489,6 +489,7 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   if (Inst.isIndirectBranch)   OS << "|(1ULL<<MCID::IndirectBranch)";
   if (Inst.isCompare)          OS << "|(1ULL<<MCID::Compare)";
   if (Inst.isMoveImm)          OS << "|(1ULL<<MCID::MoveImm)";
+  if (Inst.isMoveReg)          OS << "|(1ULL<<MCID::MoveReg)";
   if (Inst.isBitcast)          OS << "|(1ULL<<MCID::Bitcast)";
   if (Inst.isAdd)              OS << "|(1ULL<<MCID::Add)";
   if (Inst.isSelect)           OS << "|(1ULL<<MCID::Select)";

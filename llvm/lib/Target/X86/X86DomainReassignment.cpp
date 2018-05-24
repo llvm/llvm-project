@@ -753,7 +753,7 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   }
 
   for (Closure &C : Closures) {
-    DEBUG(C.dump(MRI));
+    LLVM_DEBUG(C.dump(MRI));
     if (isReassignmentProfitable(C, MaskDomain)) {
       reassign(C, MaskDomain);
       ++NumClosuresConverted;

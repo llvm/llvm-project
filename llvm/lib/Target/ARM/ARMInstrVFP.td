@@ -999,6 +999,7 @@ def VSQRTH : AHuI<0b11101, 0b11, 0b0001, 0b11, 0,
                   []>;
 
 let hasSideEffects = 0 in {
+let isMoveReg = 1 in {
 def VMOVD  : ADuI<0b11101, 0b11, 0b0000, 0b01, 0,
                   (outs DPR:$Dd), (ins DPR:$Dm),
                   IIC_fpUNA64, "vmov", ".f64\t$Dd, $Dm", []>;
@@ -1006,6 +1007,7 @@ def VMOVD  : ADuI<0b11101, 0b11, 0b0000, 0b01, 0,
 def VMOVS  : ASuI<0b11101, 0b11, 0b0000, 0b01, 0,
                   (outs SPR:$Sd), (ins SPR:$Sm),
                   IIC_fpUNA32, "vmov", ".f32\t$Sd, $Sm", []>;
+} // isMoveReg
 
 let PostEncoderMethod = "", DecoderNamespace = "VFPV8" in {
 def VMOVH  : ASuInp<0b11101, 0b11, 0b0000, 0b01, 0,
@@ -1024,6 +1026,7 @@ def VINSH  : ASuInp<0b11101, 0b11, 0b0000, 0b11, 0,
 // FP <-> GPR Copies.  Int <-> FP Conversions.
 //
 
+let isMoveReg = 1 in {
 def VMOVRS : AVConv2I<0b11100001, 0b1010,
                       (outs GPR:$Rt), (ins SPR:$Sn),
                       IIC_fpMOVSI, "vmov", "\t$Rt, $Sn",
@@ -1069,6 +1072,7 @@ def VMOVSR : AVConv4I<0b11100000, 0b1010,
   // pipelines.
   let D = VFPNeonDomain;
 }
+} // isMoveReg
 def : Pat<(arm_vmovsr GPR:$Rt), (VMOVSR GPR:$Rt)>, Requires<[HasVFP2, UseVMOVSR]>;
 
 let hasSideEffects = 0 in {

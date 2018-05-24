@@ -69,8 +69,7 @@ AnalysisKey PostDominatorTreeAnalysis::Key;
 
 PostDominatorTree PostDominatorTreeAnalysis::run(Function &F,
                                                  FunctionAnalysisManager &) {
-  PostDominatorTree PDT;
-  PDT.recalculate(F);
+  PostDominatorTree PDT(F);
   return PDT;
 }
 
