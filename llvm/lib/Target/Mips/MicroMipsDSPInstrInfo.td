@@ -386,6 +386,7 @@ class WRDSP_MM_DESC {
   string AsmString = !strconcat("wrdsp", "\t$rt, $mask");
   list<dag> Pattern = [(int_mips_wrdsp GPR32Opnd:$rt, immZExt7:$mask)];
   InstrItinClass Itinerary = NoItinerary;
+  bit isMoveReg = 1;
 }
 
 class BPOSGE32C_MMR3_DESC {

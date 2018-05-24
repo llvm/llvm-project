@@ -720,7 +720,26 @@ MCAssembler::handleFixup(const MCAsmLayout &Layout, MCFragment &F,
     // The fixup was unresolved, we need a relocation. Inform the object
     // writer of the relocation, and give it an opportunity to adjust the
     // fixup value if need be.
-    getWriter().recordRelocation(*this, Layout, &F, Fixup, Target, FixedValue);
+    if (Target.getSymA() && Target.getSymB() &&
+        getBackend().requiresDiffExpressionRelocations()) {
+      // The fixup represents the difference between two symbols, which the
+      // backend has indicated must be resolved at link time. Split up the fixup
+      // into two relocations, one for the add, and one for the sub, and emit
+      // both of these. The constant will be associated with the add half of the
+      // expression.
+      MCFixup FixupAdd = MCFixup::createAddFor(Fixup);
+      MCValue TargetAdd =
+          MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
+      getWriter().recordRelocation(*this, Layout, &F, FixupAdd, TargetAdd,
+                                   FixedValue);
+      MCFixup FixupSub = MCFixup::createSubFor(Fixup);
+      MCValue TargetSub = MCValue::get(Target.getSymB());
+      getWriter().recordRelocation(*this, Layout, &F, FixupSub, TargetSub,
+                                   FixedValue);
+    } else {
+      getWriter().recordRelocation(*this, Layout, &F, Fixup, Target,
+                                   FixedValue);
+    }
   }
   return std::make_tuple(Target, FixedValue, IsResolved);
 }

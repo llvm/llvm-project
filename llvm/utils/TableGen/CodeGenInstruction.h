@@ -226,6 +226,7 @@ template <typename T> class ArrayRef;
     bool isIndirectBranch : 1;
     bool isCompare : 1;
     bool isMoveImm : 1;
+    bool isMoveReg : 1;
     bool isBitcast : 1;
     bool isSelect : 1;
     bool isBarrier : 1;

@@ -127,6 +127,7 @@ enum Flag {
   IndirectBranch,
   Compare,
   MoveImm,
+  MoveReg,
   Bitcast,
   Select,
   DelaySlot,
@@ -243,6 +244,9 @@ public:
 
   /// Return true if the instruction is an add instruction.
   bool isAdd() const { return Flags & (1ULL << MCID::Add); }
+
+  /// Return true if the instruction is a register to register move.
+  bool isMoveReg() const { return Flags & (1ULL << MCID::MoveReg); }
 
   ///  Return true if the instruction is a call.
   bool isCall() const { return Flags & (1ULL << MCID::Call); }

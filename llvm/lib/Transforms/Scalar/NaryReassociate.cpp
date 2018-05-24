@@ -240,10 +240,17 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
           Changed = true;
           SE->forgetValue(&*I);
           I->replaceAllUsesWith(NewI);
-          // If SeenExprs constains I's WeakTrackingVH, that entry will be
-          // replaced with
-          // nullptr.
+          WeakVH NewIExist = NewI;
+          // If SeenExprs/NewIExist contains I's WeakTrackingVH/WeakVH, that
+          // entry will be replaced with nullptr if deleted.
           RecursivelyDeleteTriviallyDeadInstructions(&*I, TLI);
+          if (!NewIExist) {
+            // Rare occation where the new instruction (NewI) have been removed,
+            // probably due to parts of the input code was dead from the
+            // beginning, reset the iterator and start over from the beginning
+            I = BB->begin();
+            continue;
+          }
           I = NewI->getIterator();
         }
         // Add the rewritten instruction to SeenExprs; the original instruction

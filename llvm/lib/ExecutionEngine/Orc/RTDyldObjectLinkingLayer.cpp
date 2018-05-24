@@ -22,7 +22,7 @@ RTDyldObjectLinkingLayer2::RTDyldObjectLinkingLayer2(
 void RTDyldObjectLinkingLayer2::emit(MaterializationResponsibility R,
                                      VModuleKey K,
                                      std::unique_ptr<MemoryBuffer> O) {
-  assert(O && "Object has already been materialized");
+  assert(O && "Object must not be null");
 
   auto &ES = getExecutionSession();
 

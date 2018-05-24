@@ -130,7 +130,9 @@ let DecoderNamespace = "MicroMips" in {
 }
 
 def FMOV_S_MM : MMRel, ABSS_FT<"mov.s", FGR32Opnd, FGR32Opnd, II_MOV_S>,
-                ABS_FM_MM<0, 0x1>, ISA_MICROMIPS;
+                ABS_FM_MM<0, 0x1>, ISA_MICROMIPS {
+  let isMoveReg = 1;
+}
 def FNEG_S_MM : MMRel, ABSS_FT<"neg.s", FGR32Opnd, FGR32Opnd, II_NEG, fneg>,
                 ABS_FM_MM<0, 0x2d>, ISA_MICROMIPS;
 

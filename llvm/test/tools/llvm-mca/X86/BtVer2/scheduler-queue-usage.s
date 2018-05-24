@@ -4,11 +4,12 @@
 vmulps (%rsi), %xmm0, %xmm0
 add  %rsi, %rsi
 
-# CHECK:      Iterations:     1
-# CHECK-NEXT: Instructions:   2
-# CHECK-NEXT: Total Cycles:   10
-# CHECK-NEXT: Dispatch Width: 2
-# CHECK-NEXT: IPC:            0.20
+# CHECK:      Iterations:        1
+# CHECK-NEXT: Instructions:      2
+# CHECK-NEXT: Total Cycles:      10
+# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps

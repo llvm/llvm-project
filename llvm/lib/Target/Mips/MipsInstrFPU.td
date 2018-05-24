@@ -149,12 +149,16 @@ multiclass ROUND_M<string opstr, InstrItinClass Itin> {
 class MFC1_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC,
               InstrItinClass Itin, SDPatternOperator OpNode= null_frag> :
   InstSE<(outs DstRC:$rt), (ins SrcRC:$fs), !strconcat(opstr, "\t$rt, $fs"),
-         [(set DstRC:$rt, (OpNode SrcRC:$fs))], Itin, FrmFR, opstr>, HARDFLOAT;
+         [(set DstRC:$rt, (OpNode SrcRC:$fs))], Itin, FrmFR, opstr>, HARDFLOAT {
+  let isMoveReg = 1;
+}
 
 class MTC1_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC,
               InstrItinClass Itin, SDPatternOperator OpNode= null_frag> :
   InstSE<(outs DstRC:$fs), (ins SrcRC:$rt), !strconcat(opstr, "\t$rt, $fs"),
-         [(set DstRC:$fs, (OpNode SrcRC:$rt))], Itin, FrmFR, opstr>, HARDFLOAT;
+         [(set DstRC:$fs, (OpNode SrcRC:$rt))], Itin, FrmFR, opstr>, HARDFLOAT {
+  let isMoveReg = 1;
+}
 
 class MTC1_64_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC,
                  InstrItinClass Itin> :
@@ -510,14 +514,16 @@ let AdditionalPredicates = [NotInMicroMips] in {
               bitconvert>, MFC1_FM<5>, ISA_MIPS3;
   def DMFC1 : MFC1_FT<"dmfc1", GPR64Opnd, FGR64Opnd, II_DMFC1,
                       bitconvert>, MFC1_FM<1>, ISA_MIPS3;
-  def FMOV_S   : MMRel, ABSS_FT<"mov.s", FGR32Opnd, FGR32Opnd, II_MOV_S>,
-                 ABSS_FM<0x6, 16>;
-  def FMOV_D32 : MMRel, ABSS_FT<"mov.d", AFGR64Opnd, AFGR64Opnd, II_MOV_D>,
-                 ABSS_FM<0x6, 17>, FGR_32;
-  def FMOV_D64 : ABSS_FT<"mov.d", FGR64Opnd, FGR64Opnd, II_MOV_D>,
-                 ABSS_FM<0x6, 17>, FGR_64 {
-                   let DecoderNamespace = "MipsFP64";
-  }
+  let isMoveReg = 1 in {
+    def FMOV_S   : MMRel, ABSS_FT<"mov.s", FGR32Opnd, FGR32Opnd, II_MOV_S>,
+                   ABSS_FM<0x6, 16>;
+    def FMOV_D32 : MMRel, ABSS_FT<"mov.d", AFGR64Opnd, AFGR64Opnd, II_MOV_D>,
+                   ABSS_FM<0x6, 17>, FGR_32;
+    def FMOV_D64 : ABSS_FT<"mov.d", FGR64Opnd, FGR64Opnd, II_MOV_D>,
+                   ABSS_FM<0x6, 17>, FGR_64 {
+                     let DecoderNamespace = "MipsFP64";
+    }
+  } // isMoveReg
 }
 
 /// Floating Point Memory Instructions

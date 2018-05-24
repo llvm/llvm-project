@@ -56,6 +56,22 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_32;
   case FK_Data_8:
     return ELF::R_RISCV_64;
+  case FK_Data_Add_1:
+    return ELF::R_RISCV_ADD8;
+  case FK_Data_Add_2:
+    return ELF::R_RISCV_ADD16;
+  case FK_Data_Add_4:
+    return ELF::R_RISCV_ADD32;
+  case FK_Data_Add_8:
+    return ELF::R_RISCV_ADD64;
+  case FK_Data_Sub_1:
+    return ELF::R_RISCV_SUB8;
+  case FK_Data_Sub_2:
+    return ELF::R_RISCV_SUB16;
+  case FK_Data_Sub_4:
+    return ELF::R_RISCV_SUB32;
+  case FK_Data_Sub_8:
+    return ELF::R_RISCV_SUB64;
   case RISCV::fixup_riscv_hi20:
     return ELF::R_RISCV_HI20;
   case RISCV::fixup_riscv_lo12_i:
@@ -78,6 +94,8 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_RVC_BRANCH;
   case RISCV::fixup_riscv_call:
     return ELF::R_RISCV_CALL;
+  case RISCV::fixup_riscv_relax:
+    return ELF::R_RISCV_RELAX;
   }
 }
 

@@ -37,6 +37,11 @@ public:
         Is64Bit(Is64Bit) {}
   ~RISCVAsmBackend() override {}
 
+  // Generate diff expression relocations if the relax feature is enabled,
+  // otherwise it is safe for the assembler to calculate these internally.
+  bool requiresDiffExpressionRelocations() const override {
+    return STI.getFeatureBits()[RISCV::FeatureRelax];
+  }
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved) const override;
@@ -83,7 +88,8 @@ public:
       { "fixup_riscv_jal",          12,     20,  MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_riscv_branch",        0,     32,  MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_riscv_rvc_jump",      2,     11,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_rvc_branch",    0,     16,  MCFixupKindInfo::FKF_IsPCRel }
+      { "fixup_riscv_rvc_branch",    0,     16,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_relax",         0,      0,  0 }
     };
 
     if (Kind < FirstTargetFixupKind)
@@ -296,16 +302,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-static unsigned getSize(unsigned Kind) {
-  switch (Kind) {
-  default:
-    return 4;
-  case RISCV::fixup_riscv_rvc_jump:
-  case RISCV::fixup_riscv_rvc_branch:
-    return 2;
-  }
-}
-
 void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                  const MCValue &Target,
                                  MutableArrayRef<char> Data, uint64_t Value,
@@ -321,16 +317,13 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   Value <<= Info.TargetOffset;
 
   unsigned Offset = Fixup.getOffset();
-  unsigned FullSize = getSize(Fixup.getKind());
+  unsigned NumBytes = alignTo(Info.TargetSize + Info.TargetOffset, 8) / 8;
 
-#ifndef NDEBUG
-  unsigned NumBytes = (Info.TargetSize + 7) / 8;
   assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
-#endif
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
-  for (unsigned i = 0; i != FullSize; ++i) {
+  for (unsigned i = 0; i != NumBytes; ++i) {
     Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
 }

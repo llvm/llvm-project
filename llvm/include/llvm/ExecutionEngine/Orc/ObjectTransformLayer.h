@@ -15,13 +15,30 @@
 #define LLVM_EXECUTIONENGINE_ORC_OBJECTTRANSFORMLAYER_H
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Layer.h"
 #include <algorithm>
 #include <memory>
 #include <string>
 
 namespace llvm {
 namespace orc {
+
+class ObjectTransformLayer2 : public ObjectLayer {
+public:
+  using TransformFunction =
+      std::function<Expected<std::unique_ptr<MemoryBuffer>>(
+          std::unique_ptr<MemoryBuffer>)>;
+
+  ObjectTransformLayer2(ExecutionSession &ES, ObjectLayer &BaseLayer,
+                        TransformFunction Transform);
+
+  void emit(MaterializationResponsibility R, VModuleKey K,
+            std::unique_ptr<MemoryBuffer> O) override;
+
+private:
+  ObjectLayer &BaseLayer;
+  TransformFunction Transform;
+};
 
 /// Object mutating layer.
 ///

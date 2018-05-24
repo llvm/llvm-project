@@ -63,6 +63,9 @@ struct ItaniumPartialDemangler {
   /// the function is a non-static member function.
   bool hasFunctionQualifiers() const;
 
+  /// If this symbol describes a constructor or destructor.
+  bool isCtorOrDtor() const;
+
   /// If this symbol describes a function.
   bool isFunction() const;
 

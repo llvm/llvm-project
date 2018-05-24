@@ -905,6 +905,7 @@ public:
 
   std::unique_ptr<PredicateMatcher> popFirstCondition() override;
   const PredicateMatcher &getFirstCondition() const override;
+  LLTCodeGen getFirstConditionAsRootType();
   bool hasFirstCondition() const override;
   unsigned getNumOperands() const;
   StringRef getOpcode() const;
@@ -1975,6 +1976,16 @@ unsigned RuleMatcher::getNumOperands() const {
   return Matchers.front()->getNumOperands();
 }
 
+LLTCodeGen RuleMatcher::getFirstConditionAsRootType() {
+  InstructionMatcher &InsnMatcher = *Matchers.front();
+  if (!InsnMatcher.predicates_empty())
+    if (const auto *TM =
+            dyn_cast<LLTOperandMatcher>(&**InsnMatcher.predicates_begin()))
+      if (TM->getInsnVarID() == 0 && TM->getOpIdx() == 0)
+        return TM->getTy();
+  return {};
+}
+
 /// Generates code to check that the operand is a register defined by an
 /// instruction that matches the given instruction matcher.
 ///
@@ -2056,6 +2067,12 @@ void InstructionMatcher::optimize() {
     for (auto &OP : Operands[0]->predicates())
       OP.reset();
     Operands[0]->eraseNullPredicates();
+  }
+  for (auto &OM : Operands) {
+    for (auto &OP : OM->predicates())
+      if (isa<LLTOperandMatcher>(OP))
+        Stash.push_back(std::move(OP));
+    OM->eraseNullPredicates();
   }
   while (!Stash.empty())
     prependPredicate(Stash.pop_back_val());
@@ -4063,7 +4080,7 @@ std::vector<Matcher *> GlobalISelEmitter::optimizeRules(
   }
   ProcessCurrentGroup();
 
-  DEBUG(dbgs() << "NumGroups: " << NumGroups << "\n");
+  LLVM_DEBUG(dbgs() << "NumGroups: " << NumGroups << "\n");
   assert(CurrentGroup->empty() && "The last group wasn't properly processed");
   return OptRules;
 }
@@ -4113,7 +4130,30 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
 }
 
 void GroupMatcher::optimize() {
+  // Make sure we only sort by a specific predicate within a range of rules that
+  // all have that predicate checked against a specific value (not a wildcard):
+  auto F = Matchers.begin();
+  auto T = F;
+  auto E = Matchers.end();
+  while (T != E) {
+    while (T != E) {
+      auto *R = static_cast<RuleMatcher *>(*T);
+      if (!R->getFirstConditionAsRootType().get().isValid())
+        break;
+      ++T;
+    }
+    std::stable_sort(F, T, [](Matcher *A, Matcher *B) {
+      auto *L = static_cast<RuleMatcher *>(A);
+      auto *R = static_cast<RuleMatcher *>(B);
+      return L->getFirstConditionAsRootType() <
+             R->getFirstConditionAsRootType();
+    });
+    if (T != E)
+      F = ++T;
+  }
   GlobalISelEmitter::optimizeRules<GroupMatcher>(Matchers, MatcherStorage)
+      .swap(Matchers);
+  GlobalISelEmitter::optimizeRules<SwitchMatcher>(Matchers, MatcherStorage)
       .swap(Matchers);
 }
 
@@ -4452,17 +4492,14 @@ void RuleMatcher::optimize() {
   for (auto &Item : InsnVariableIDs) {
     InstructionMatcher &InsnMatcher = *Item.first;
     for (auto &OM : InsnMatcher.operands()) {
-      // Register Banks checks rarely fail, but often crash as targets usually
-      // provide only partially defined RegisterBankInfo::getRegBankFromRegClass
-      // method. Often the problem is hidden as non-optimized MatchTable checks
-      // banks rather late, most notably after checking target / function /
-      // module features and a few opcodes. That makes these checks a)
-      // beneficial to delay until the very end (we don't want to perform a lot
-      // of checks that all pass and then fail at the very end) b) not safe to
-      // have as early checks.
+      // Complex Patterns are usually expensive and they relatively rarely fail
+      // on their own: more often we end up throwing away all the work done by a
+      // matching part of a complex pattern because some other part of the
+      // enclosing pattern didn't match. All of this makes it beneficial to
+      // delay complex patterns until the very end of the rule matching,
+      // especially for targets having lots of complex patterns.
       for (auto &OP : OM->predicates())
-        if (isa<RegisterBankOperandMatcher>(OP) ||
-            isa<ComplexPatternOperandMatcher>(OP))
+        if (isa<ComplexPatternOperandMatcher>(OP))
           EpilogueMatchers.emplace_back(std::move(OP));
       OM->eraseNullPredicates();
     }
@@ -4568,10 +4605,20 @@ void GroupMatcher::finalize() {
     return;
 
   Matcher &FirstRule = **Matchers.begin();
+  for (;;) {
+    // All the checks are expected to succeed during the first iteration:
+    for (const auto &Rule : Matchers)
+      if (!Rule->hasFirstCondition())
+        return;
+    const auto &FirstCondition = FirstRule.getFirstCondition();
+    for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
+      if (!Matchers[I]->getFirstCondition().isIdentical(FirstCondition))
+        return;
 
-  Conditions.push_back(FirstRule.popFirstCondition());
-  for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
-    Matchers[I]->popFirstCondition();
+    Conditions.push_back(FirstRule.popFirstCondition());
+    for (unsigned I = 1, E = Matchers.size(); I < E; ++I)
+      Matchers[I]->popFirstCondition();
+  }
 }
 
 void GroupMatcher::emit(MatchTable &Table) {
@@ -4596,7 +4643,7 @@ void GroupMatcher::emit(MatchTable &Table) {
 }
 
 bool SwitchMatcher::isSupportedPredicateType(const PredicateMatcher &P) {
-  return isa<InstructionOpcodeMatcher>(P);
+  return isa<InstructionOpcodeMatcher>(P) || isa<LLTOperandMatcher>(P);
 }
 
 bool SwitchMatcher::candidateConditionMatches(
@@ -4670,6 +4717,13 @@ void SwitchMatcher::emitPredicateSpecificOpcodes(const PredicateMatcher &P,
   if (const auto *Condition = dyn_cast<InstructionOpcodeMatcher>(&P)) {
     Table << MatchTable::Opcode("GIM_SwitchOpcode") << MatchTable::Comment("MI")
           << MatchTable::IntValue(Condition->getInsnVarID());
+    return;
+  }
+  if (const auto *Condition = dyn_cast<LLTOperandMatcher>(&P)) {
+    Table << MatchTable::Opcode("GIM_SwitchType") << MatchTable::Comment("MI")
+          << MatchTable::IntValue(Condition->getInsnVarID())
+          << MatchTable::Comment("Op")
+          << MatchTable::IntValue(Condition->getOpIdx());
     return;
   }
 

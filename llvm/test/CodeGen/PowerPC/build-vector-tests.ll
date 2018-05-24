@@ -1667,20 +1667,20 @@ entry:
 ; P9LE: xvcvdpsp
 ; P9LE: vmrgew
 ; P9LE: xvcvspsxws v2
-; P8BE: lxsdx
-; P8BE: lxsdx
-; P8BE: lxsdx
-; P8BE: lxsdx
+; P8BE: lfdx
+; P8BE: lfd
+; P8BE: lfd
+; P8BE: lfd
 ; P8BE: xxmrghd
 ; P8BE: xxmrghd
 ; P8BE: xvcvdpsp
 ; P8BE: xvcvdpsp
 ; P8BE: vmrgew
 ; P8BE: xvcvspsxws v2
-; P8LE: lxsdx
-; P8LE: lxsdx
-; P8LE: lxsdx
-; P8LE: lxsdx
+; P8LE: lfdx
+; P8LE: lfd
+; P8LE: lfd
+; P8LE: lfd
 ; P8LE: xxmrghd
 ; P8LE: xxmrghd
 ; P8LE: xvcvdpsp
@@ -1741,9 +1741,9 @@ entry:
 ; P9LE: vmrgew
 ; P9LE: xvcvspsxws v2
 ; P8BE: lfdux
-; P8BE: lxsdx
-; P8BE: lxsdx
-; P8BE: lxsdx
+; P8BE: lfd
+; P8BE: lfd
+; P8BE: lfd
 ; P8BE: xxmrghd
 ; P8BE: xxmrghd
 ; P8BE: xvcvdpsp
@@ -1751,9 +1751,9 @@ entry:
 ; P8BE: vmrgew
 ; P8BE: xvcvspsxws v2
 ; P8LE: lfdux
-; P8LE: lxsdx
-; P8LE: lxsdx
-; P8LE: lxsdx
+; P8LE: lfd
+; P8LE: lfd
+; P8LE: lfd
 ; P8LE: xxmrghd
 ; P8LE: xxmrghd
 ; P8LE: xvcvdpsp
@@ -1814,9 +1814,9 @@ entry:
 ; P9LE: vmrgew
 ; P9LE: xvcvspsxws v2
 ; P8BE: lfdux
-; P8BE: lxsdx
-; P8BE: lxsdx
-; P8BE: lxsdx
+; P8BE: lfd
+; P8BE: lfd
+; P8BE: lfd
 ; P8BE: xxmrghd
 ; P8BE: xxmrghd
 ; P8BE: xvcvdpsp
@@ -1824,9 +1824,9 @@ entry:
 ; P8BE: vmrgew
 ; P8BE: xvcvspsxws v2
 ; P8LE: lfdux
-; P8LE: lxsdx
-; P8LE: lxsdx
-; P8LE: lxsdx
+; P8LE: lfd
+; P8LE: lfd
+; P8LE: lfd
 ; P8LE: xxmrghd
 ; P8LE: xxmrghd
 ; P8LE: xvcvdpsp
@@ -2827,20 +2827,20 @@ entry:
 ; P9LE: xvcvdpsp
 ; P9LE: vmrgew
 ; P9LE: xvcvspuxws v2
-; P8BE: lxsdx
-; P8BE: lxsdx
-; P8BE: lxsdx
-; P8BE: lxsdx
+; P8BE: lfdx
+; P8BE: lfd
+; P8BE: lfd
+; P8BE: lfd
 ; P8BE: xxmrghd
 ; P8BE: xxmrghd
 ; P8BE: xvcvdpsp
 ; P8BE: xvcvdpsp
 ; P8BE: vmrgew
 ; P8BE: xvcvspuxws v2
-; P8LE: lxsdx
-; P8LE: lxsdx
-; P8LE: lxsdx
-; P8LE: lxsdx
+; P8LE: lfdx
+; P8LE: lfd
+; P8LE: lfd
+; P8LE: lfd
 ; P8LE: xxmrghd
 ; P8LE: xxmrghd
 ; P8LE: xvcvdpsp
@@ -2901,9 +2901,9 @@ entry:
 ; P9LE: vmrgew
 ; P9LE: xvcvspuxws v2
 ; P8BE: lfdux
-; P8BE: lxsdx
-; P8BE: lxsdx
-; P8BE: lxsdx
+; P8BE: lfd
+; P8BE: lfd
+; P8BE: lfd
 ; P8BE: xxmrghd
 ; P8BE: xxmrghd
 ; P8BE: xvcvdpsp
@@ -2911,9 +2911,9 @@ entry:
 ; P8BE: vmrgew
 ; P8BE: xvcvspuxws v2
 ; P8LE: lfdux
-; P8LE: lxsdx
-; P8LE: lxsdx
-; P8LE: lxsdx
+; P8LE: lfd
+; P8LE: lfd
+; P8LE: lfd
 ; P8LE: xxmrghd
 ; P8LE: xxmrghd
 ; P8LE: xvcvdpsp
@@ -2974,9 +2974,9 @@ entry:
 ; P9LE: vmrgew
 ; P9LE: xvcvspuxws v2
 ; P8BE: lfdux
-; P8BE: lxsdx
-; P8BE: lxsdx
-; P8BE: lxsdx
+; P8BE: lfd
+; P8BE: lfd
+; P8BE: lfd
 ; P8BE: xxmrghd
 ; P8BE: xxmrghd
 ; P8BE: xvcvdpsp
@@ -2984,9 +2984,9 @@ entry:
 ; P8BE: vmrgew
 ; P8BE: xvcvspuxws v2
 ; P8LE: lfdux
-; P8LE: lxsdx
-; P8LE: lxsdx
-; P8LE: lxsdx
+; P8LE: lfd
+; P8LE: lfd
+; P8LE: lfd
 ; P8LE: xxmrghd
 ; P8LE: xxmrghd
 ; P8LE: xvcvdpsp

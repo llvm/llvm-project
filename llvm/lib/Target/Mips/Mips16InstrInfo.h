@@ -53,6 +53,9 @@ public:
                    const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
 
+  bool isCopyInstr(const MachineInstr &MI, MachineOperand &Src,
+                   MachineOperand &Dest) const override;
+
   void storeRegToStack(MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator MBBI,
                        unsigned SrcReg, bool isKill, int FrameIndex,
