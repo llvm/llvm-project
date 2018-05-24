@@ -393,7 +393,7 @@ int main(int argc, char **argv) {
   std::string SDKPath = llvm::sys::fs::getMainExecutable(argv[0], P);
   SDKPath = llvm::sys::path::parent_path(SDKPath);
 
-  HideUnrelatedOptions(DsymCategory);
+  HideUnrelatedOptions({&DsymCategory, &ColorCategory});
   llvm::cl::ParseCommandLineOptions(
       argc, argv,
       "manipulate archived DWARF debug symbol files.\n\n"

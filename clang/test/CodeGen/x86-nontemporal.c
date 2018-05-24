@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -target-feature +avx -target-feature +avx2 -target-feature +avx512f -emit-llvm -o - -Wall -Werror -fmax-type-align=16 | FileCheck %s --check-prefix=CHECK
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -target-feature +avx -target-feature +avx2 -target-feature +avx512f -fno-signed-char -emit-llvm -o - -Wall -Werror -fmax-type-align=16 | FileCheck %s --check-prefix=CHECK
 
-#include <x86intrin.h>
+#include <immintrin.h>
 
 // (PR33830) Tests ensure the correct alignment of non-temporal load/stores on darwin targets where fmax-type-align is set to 16.
 

@@ -287,13 +287,6 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
     }
     break;
-  case AMDGPU::CLAMP_R600: {
-    MachineInstr *NewMI = TII->buildDefaultInstruction(
-        *BB, I, AMDGPU::MOV, MI.getOperand(0).getReg(),
-        MI.getOperand(1).getReg());
-    TII->addFlag(*NewMI, 0, MO_FLAG_CLAMP);
-    break;
-  }
 
   case AMDGPU::FABS_R600: {
     MachineInstr *NewMI = TII->buildDefaultInstruction(
@@ -2180,20 +2173,6 @@ SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
       if (FoldOperand(Node, i, Src, FakeOp, FakeOp, FakeOp, FakeOp, DAG))
         return DAG.getMachineNode(Opcode, SDLoc(Node), Node->getVTList(), Ops);
     }
-  } else if (Opcode == AMDGPU::CLAMP_R600) {
-    SDValue Src = Node->getOperand(0);
-    if (!Src.isMachineOpcode() ||
-        !TII->hasInstrModifiers(Src.getMachineOpcode()))
-      return Node;
-    int ClampIdx = TII->getOperandIdx(Src.getMachineOpcode(),
-        AMDGPU::OpName::clamp);
-    if (ClampIdx < 0)
-      return Node;
-    SDLoc DL(Node);
-    std::vector<SDValue> Ops(Src->op_begin(), Src->op_end());
-    Ops[ClampIdx - 1] = DAG.getTargetConstant(1, DL, MVT::i32);
-    return DAG.getMachineNode(Src.getMachineOpcode(), DL,
-                              Node->getVTList(), Ops);
   } else {
     if (!TII->hasInstrModifiers(Opcode))
       return Node;

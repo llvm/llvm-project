@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding -triple x86_64-unknown-unknown -target-feature +rdrnd -target-feature +rdseed -emit-llvm -o - %s | FileCheck %s
 
 
-#include <x86intrin.h>
+#include <immintrin.h>
 
 int rdrand16(unsigned short *p) {
   return _rdrand16_step(p);

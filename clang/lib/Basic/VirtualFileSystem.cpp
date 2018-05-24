@@ -788,6 +788,19 @@ std::error_code InMemoryFileSystem::setCurrentWorkingDirectory(const Twine &P) {
   return {};
 }
 
+std::error_code
+InMemoryFileSystem::getRealPath(const Twine &Path,
+                                SmallVectorImpl<char> &Output) const {
+  auto CWD = getCurrentWorkingDirectory();
+  if (!CWD || CWD->empty())
+    return errc::operation_not_permitted;
+  Path.toVector(Output);
+  if (auto EC = makeAbsolute(Output))
+    return EC;
+  llvm::sys::path::remove_dots(Output, /*remove_dot_dot=*/true);
+  return {};
+}
+
 } // namespace vfs
 } // namespace clang
 

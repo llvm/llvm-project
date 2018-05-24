@@ -813,6 +813,28 @@ TEST_F(InMemoryFileSystemTest, WorkingDirectory) {
                       NormalizedFS.getCurrentWorkingDirectory().get()));
 }
 
+TEST_F(InMemoryFileSystemTest, GetRealPath) {
+  SmallString<16> Path;
+  EXPECT_EQ(FS.getRealPath("b", Path), errc::operation_not_permitted);
+
+  auto GetRealPath = [this](StringRef P) {
+    SmallString<16> Output;
+    auto EC = FS.getRealPath(P, Output);
+    EXPECT_FALSE(EC);
+    return Output.str().str();
+  };
+
+  FS.setCurrentWorkingDirectory("a");
+  EXPECT_EQ(GetRealPath("b"), "a/b");
+  EXPECT_EQ(GetRealPath("../b"), "b");
+  EXPECT_EQ(GetRealPath("b/./c"), "a/b/c");
+
+  FS.setCurrentWorkingDirectory("/a");
+  EXPECT_EQ(GetRealPath("b"), "/a/b");
+  EXPECT_EQ(GetRealPath("../b"), "/b");
+  EXPECT_EQ(GetRealPath("b/./c"), "/a/b/c");
+}
+
 TEST_F(InMemoryFileSystemTest, AddFileWithUser) {
   FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), 0xFEEDFACE);
   auto Stat = FS.status("/a");

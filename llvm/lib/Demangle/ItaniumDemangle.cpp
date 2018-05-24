@@ -5264,6 +5264,38 @@ bool ItaniumPartialDemangler::hasFunctionQualifiers() const {
   return E->getCVQuals() != QualNone || E->getRefQual() != FrefQualNone;
 }
 
+bool ItaniumPartialDemangler::isCtorOrDtor() const {
+  Node *N = static_cast<Node *>(RootNode);
+  while (N) {
+    switch (N->getKind()) {
+    default:
+      return false;
+    case Node::KCtorDtorName:
+      return true;
+
+    case Node::KAbiTagAttr:
+      N = static_cast<AbiTagAttr *>(N)->Base;
+      break;
+    case Node::KFunctionEncoding:
+      N = static_cast<FunctionEncoding *>(N)->getName();
+      break;
+    case Node::KLocalName:
+      N = static_cast<LocalName *>(N)->Entity;
+      break;
+    case Node::KNameWithTemplateArgs:
+      N = static_cast<NameWithTemplateArgs *>(N)->Name;
+      break;
+    case Node::KNestedName:
+      N = static_cast<NestedName *>(N)->Name;
+      break;
+    case Node::KStdQualifiedName:
+      N = static_cast<StdQualifiedName *>(N)->Child;
+      break;
+    }
+  }
+  return false;
+}
+
 bool ItaniumPartialDemangler::isFunction() const {
   assert(RootNode != nullptr && "must call partialDemangle()");
   return static_cast<Node *>(RootNode)->getKind() == Node::KFunctionEncoding;
