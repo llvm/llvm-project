@@ -129,7 +129,7 @@ let Uses = [RM] in {
     def LXSDX : XX1Form_memOp<31, 588,
                         (outs vsfrc:$XT), (ins memrr:$src),
                         "lxsdx $XT, $src", IIC_LdStLFD,
-                        [(set f64:$XT, (load xoaddr:$src))]>;
+                        []>;
 
     // Pseudo instruction XFLOADf64 will be expanded to LXSDX or LFDX later
     let isPseudo = 1, CodeSize = 3 in
@@ -160,7 +160,7 @@ let Uses = [RM] in {
     def STXSDX : XX1Form_memOp<31, 716,
                         (outs), (ins vsfrc:$XT, memrr:$dst),
                         "stxsdx $XT, $dst", IIC_LdStSTFD,
-                        [(store f64:$XT, xoaddr:$dst)]>;
+                        []>;
 
     // Pseudo instruction XFSTOREf64  will be expanded to STXSDX or STFDX later
     let isPseudo = 1, CodeSize = 3 in

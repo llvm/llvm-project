@@ -98,26 +98,12 @@ TEST_F(OrcCAPIExecutionTest, TestEagerIRCompilation) {
 
   LLVMOrcModuleHandle H;
   LLVMOrcAddEagerlyCompiledIR(JIT, &H, wrap(M.release()), myResolver, nullptr);
-
-  // get symbol address searching the entire stack
-  {
-    LLVMOrcTargetAddress MainAddr;
-    LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
-    MainFnTy MainFn = (MainFnTy)MainAddr;
-    int Result = MainFn();
-    EXPECT_EQ(Result, 42)
-      << "Eagerly JIT'd code did not return expected result";
-  }
-
-  // and then just searching a single handle
-  {
-    LLVMOrcTargetAddress MainAddr;
-    LLVMOrcGetSymbolAddressIn(JIT, &MainAddr, H, "main");
-    MainFnTy MainFn = (MainFnTy)MainAddr;
-    int Result = MainFn();
-    EXPECT_EQ(Result, 42)
-      << "Eagerly JIT'd code did not return expected result";
-  }
+  LLVMOrcTargetAddress MainAddr;
+  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
+  MainFnTy MainFn = (MainFnTy)MainAddr;
+  int Result = MainFn();
+  EXPECT_EQ(Result, 42)
+    << "Eagerly JIT'd code did not return expected result";
 
   LLVMOrcRemoveModule(JIT, H);
 

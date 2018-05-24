@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +fsgsbase -emit-llvm -o - | FileCheck %s
 
 
-#include <x86intrin.h>
+#include <immintrin.h>
 
 unsigned int test_readfsbase_u32()
 {

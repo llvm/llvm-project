@@ -19,6 +19,7 @@
 #include "clang/Tooling/Tooling.h"
 
 #include "DeclMatcher.h"
+#include "Language.h"
 #include "gtest/gtest.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -28,50 +29,6 @@ namespace ast_matchers {
 using internal::Matcher;
 using internal::BindableMatcher;
 using llvm::StringMap;
-
-typedef std::vector<std::string> ArgVector;
-typedef std::vector<ArgVector> RunOptions;
-
-static bool isCXX(Language Lang) {
-  return Lang == Lang_CXX || Lang == Lang_CXX11;
-}
-
-static ArgVector getBasicRunOptionsForLanguage(Language Lang) {
-  ArgVector BasicArgs;
-  // Test with basic arguments.
-  switch (Lang) {
-  case Lang_C:
-    BasicArgs = {"-x", "c", "-std=c99"};
-    break;
-  case Lang_C89:
-    BasicArgs = {"-x", "c", "-std=c89"};
-    break;
-  case Lang_CXX:
-    BasicArgs = {"-std=c++98", "-frtti"};
-    break;
-  case Lang_CXX11:
-    BasicArgs = {"-std=c++11", "-frtti"};
-    break;
-  case Lang_OpenCL:
-  case Lang_OBJCXX:
-    llvm_unreachable("Not implemented yet!");
-  }
-  return BasicArgs;
-}
-
-static RunOptions getRunOptionsForLanguage(Language Lang) {
-  ArgVector BasicArgs = getBasicRunOptionsForLanguage(Lang);
-
-  // For C++, test with "-fdelayed-template-parsing" enabled to handle MSVC
-  // default behaviour.
-  if (isCXX(Lang)) {
-    ArgVector ArgsForDelayedTemplateParse = BasicArgs;
-    ArgsForDelayedTemplateParse.emplace_back("-fdelayed-template-parsing");
-    return {BasicArgs, ArgsForDelayedTemplateParse};
-  }
-
-  return {BasicArgs};
-}
 
 // Creates a virtual file and assigns that to the context of given AST. If the
 // file already exists then the file will not be created again as a duplicate.
@@ -1543,7 +1500,7 @@ TEST_P(ASTImporterTestBase,
       )",
       Lang_CXX);
   ASSERT_EQ(2u, DeclCounter<CXXRecordDecl>().match(
-                    ToTU, cxxRecordDecl(hasParent(translationUnitDecl()))));
+                    ToTU, cxxRecordDecl(unless(isImplicit()))));
 
   Decl *FromTU = getTuDecl(
       R"(
@@ -1558,7 +1515,7 @@ TEST_P(ASTImporterTestBase,
   Import(FromD, Lang_CXX);
 
   EXPECT_EQ(2u, DeclCounter<CXXRecordDecl>().match(
-                    ToTU, cxxRecordDecl(hasParent(translationUnitDecl()))));
+                    ToTU, cxxRecordDecl(unless(isImplicit()))));
 }
 
 TEST_P(

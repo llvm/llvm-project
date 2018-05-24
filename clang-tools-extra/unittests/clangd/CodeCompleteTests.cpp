@@ -693,6 +693,42 @@ TEST(CompletionTest, BacktrackCrashes) {
 )cpp");
 }
 
+TEST(CompletionTest, CompleteInMacroWithStringification) {
+  auto Results = completions(R"cpp(
+void f(const char *, int x);
+#define F(x) f(#x, x)
+
+namespace ns {
+int X;
+int Y;
+}  // namespace ns
+
+int f(int input_num) {
+  F(ns::^)
+}
+)cpp");
+
+  EXPECT_THAT(Results.items,
+              UnorderedElementsAre(Named("X"), Named("Y")));
+}
+
+TEST(CompletionTest, CompleteInMacroAndNamespaceWithStringification) {
+  auto Results = completions(R"cpp(
+void f(const char *, int x);
+#define F(x) f(#x, x)
+
+namespace ns {
+int X;
+
+int f(int input_num) {
+  F(^)
+}
+}  // namespace ns
+)cpp");
+
+  EXPECT_THAT(Results.items, Contains(Named("X")));
+}
+
 TEST(CompletionTest, CompleteInExcludedPPBranch) {
   auto Results = completions(R"cpp(
     int bar(int param_in_bar) {

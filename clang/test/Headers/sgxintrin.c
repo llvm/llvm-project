@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple x86_64-unknown-unknown -target-feature +sgx -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-64
 // RUN: %clang_cc1 %s -ffreestanding -triple i386 -target-feature +sgx -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-32
 
-#include <x86intrin.h>
+#include <immintrin.h>
 #include <stdint.h>
 #include <stddef.h>
 

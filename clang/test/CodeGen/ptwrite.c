@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +ptwrite -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s --check-prefix=X86 --check-prefix=X86_64
 // RUN: %clang_cc1 %s -ffreestanding -triple=i386-unknown-unknown -target-feature +ptwrite -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s --check-prefix=X86
 
-#include <x86intrin.h>
+#include <immintrin.h>
 
 #include <stdint.h>
 

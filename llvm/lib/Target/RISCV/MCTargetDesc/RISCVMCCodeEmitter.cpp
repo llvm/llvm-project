@@ -186,7 +186,7 @@ RISCVMCCodeEmitter::getImmOpValueAsr1(const MCInst &MI, unsigned OpNo,
 unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-
+  bool EnableRelax = STI.getFeatureBits()[RISCV::FeatureRelax];
   const MCOperand &MO = MI.getOperand(OpNo);
 
   MCInstrDesc const &Desc = MCII.get(MI.getOpcode());
@@ -253,6 +253,15 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   Fixups.push_back(
       MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
   ++MCNumFixups;
+
+  if (EnableRelax) {
+    if (FixupKind == RISCV::fixup_riscv_call) {
+      Fixups.push_back(
+      MCFixup::create(0, Expr, MCFixupKind(RISCV::fixup_riscv_relax),
+                      MI.getLoc()));
+      ++MCNumFixups;
+    }
+  }
 
   return 0;
 }

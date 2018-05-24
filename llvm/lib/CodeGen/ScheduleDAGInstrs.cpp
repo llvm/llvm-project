@@ -318,13 +318,14 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
   } else {
     addPhysRegDataDeps(SU, OperIdx);
 
-    // clear this register's use list
-    if (Uses.contains(Reg))
-      Uses.eraseAll(Reg);
-
-    if (!MO.isDead()) {
-      Defs.eraseAll(Reg);
-    } else if (SU->isCall) {
+    // Clear previous uses and defs of this register and its subergisters.
+    for (MCSubRegIterator SubReg(Reg, TRI, true); SubReg.isValid(); ++SubReg) {
+      if (Uses.contains(*SubReg))
+        Uses.eraseAll(*SubReg);
+      if (!MO.isDead())
+        Defs.eraseAll(*SubReg);
+    }
+    if (MO.isDead() && SU->isCall) {
       // Calls will not be reordered because of chain dependencies (see
       // below). Since call operands are dead, calls may continue to be added
       // to the DefList making dependence checking quadratic in the size of

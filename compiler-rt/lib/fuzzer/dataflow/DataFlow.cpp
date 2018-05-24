@@ -118,9 +118,12 @@ int main(int argc, char **argv) {
     LLVMFuzzerInitialize(&argc, &argv);
   if (argc == 1)
     return PrintFunctions();
-  assert(argc == 2 || argc == 3);
+  assert(argc == 4 || argc == 5);
+  size_t Beg = atoi(argv[1]);
+  size_t End = atoi(argv[2]);
+  assert(Beg < End);
 
-  const char *Input = argv[1];
+  const char *Input = argv[3];
   fprintf(stderr, "INFO: reading '%s'\n", Input);
   FILE *In = fopen(Input, "r");
   assert(In);
@@ -137,7 +140,9 @@ int main(int argc, char **argv) {
   for (size_t I = 1; I <= InputLen; I++) {
     dfsan_label L = dfsan_create_label("", nullptr);
     assert(L == I);
-    dfsan_set_label(L, Buf + I - 1, 1);
+    size_t Idx = I - 1;
+    if (Idx >= Beg && Idx < End)
+      dfsan_set_label(L, Buf + Idx, 1);
   }
   dfsan_label SizeL = dfsan_create_label("", nullptr);
   assert(SizeL == InputLen + 1);
@@ -146,10 +151,10 @@ int main(int argc, char **argv) {
   LLVMFuzzerTestOneInput(Buf, InputLen);
   free(Buf);
 
-  bool OutIsStdout = argc == 2;
+  bool OutIsStdout = argc == 4;
   fprintf(stderr, "INFO: writing dataflow to %s\n",
-          OutIsStdout ? "<stdout>" : argv[2]);
-  FILE *Out = OutIsStdout ? stdout : fopen(argv[2], "w");
+          OutIsStdout ? "<stdout>" : argv[4]);
+  FILE *Out = OutIsStdout ? stdout : fopen(argv[4], "w");
   PrintDataFlow(Out);
   if (!OutIsStdout) fclose(Out);
 }
