@@ -66,6 +66,11 @@ private:
                 MachineBasicBlock::iterator &NextMBBI);
   bool expandMOVImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                     unsigned BitSize);
+  bool expandMOVImmSimple(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          unsigned BitSize,
+                          unsigned OneChunks,
+                          unsigned ZeroChunks);
 
   bool expandCMP_SWAP(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                       unsigned LdarOp, unsigned StlrOp, unsigned CmpOp,
@@ -105,57 +110,6 @@ static uint64_t getChunk(uint64_t Imm, unsigned ChunkIdx) {
   assert(ChunkIdx < 4 && "Out of range chunk index specified!");
 
   return (Imm >> (ChunkIdx * 16)) & 0xFFFF;
-}
-
-/// Helper function which replicates a 16-bit chunk within a 64-bit
-/// value. Indices correspond to element numbers in a v4i16.
-static uint64_t replicateChunk(uint64_t Imm, unsigned FromIdx, unsigned ToIdx) {
-  assert((FromIdx < 4) && (ToIdx < 4) && "Out of range chunk index specified!");
-  const unsigned ShiftAmt = ToIdx * 16;
-
-  // Replicate the source chunk to the destination position.
-  const uint64_t Chunk = getChunk(Imm, FromIdx) << ShiftAmt;
-  // Clear the destination chunk.
-  Imm &= ~(0xFFFFLL << ShiftAmt);
-  // Insert the replicated chunk.
-  return Imm | Chunk;
-}
-
-/// Helper function which tries to materialize a 64-bit value with an
-/// ORR + MOVK instruction sequence.
-static bool tryOrrMovk(uint64_t UImm, uint64_t OrrImm, MachineInstr &MI,
-                       MachineBasicBlock &MBB,
-                       MachineBasicBlock::iterator &MBBI,
-                       const AArch64InstrInfo *TII, unsigned ChunkIdx) {
-  assert(ChunkIdx < 4 && "Out of range chunk index specified!");
-  const unsigned ShiftAmt = ChunkIdx * 16;
-
-  uint64_t Encoding;
-  if (AArch64_AM::processLogicalImmediate(OrrImm, 64, Encoding)) {
-    // Create the ORR-immediate instruction.
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXri))
-            .add(MI.getOperand(0))
-            .addReg(AArch64::XZR)
-            .addImm(Encoding);
-
-    // Create the MOVK instruction.
-    const unsigned Imm16 = getChunk(UImm, ChunkIdx);
-    const unsigned DstReg = MI.getOperand(0).getReg();
-    const bool DstIsDead = MI.getOperand(0).isDead();
-    MachineInstrBuilder MIB1 =
-        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::MOVKXi))
-            .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
-            .addReg(DstReg)
-            .addImm(Imm16)
-            .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, ShiftAmt));
-
-    transferImpOps(MI, MIB, MIB1);
-    MI.eraseFromParent();
-    return true;
-  }
-
-  return false;
 }
 
 /// Check whether the given 16-bit chunk replicated to full 64-bit width
@@ -440,7 +394,22 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
     return true;
   }
 
-  // Try a MOVI instruction (aka ORR-immediate with the zero register).
+  // Scan the immediate and count the number of 16-bit chunks which are either
+  // all ones or all zeros.
+  unsigned OneChunks = 0;
+  unsigned ZeroChunks = 0;
+  for (unsigned Shift = 0; Shift < BitSize; Shift += 16) {
+    const unsigned Chunk = (Imm >> Shift) & Mask;
+    if (Chunk == Mask)
+      OneChunks++;
+    else if (Chunk == 0)
+      ZeroChunks++;
+  }
+
+  // FIXME: Prefer MOVZ/MOVN over ORR because of the rules for the "mov"
+  // alias.
+
+  // Try a single ORR.
   uint64_t UImm = Imm << (64 - BitSize) >> (64 - BitSize);
   uint64_t Encoding;
   if (AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding)) {
@@ -455,73 +424,68 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
     return true;
   }
 
-  // Scan the immediate and count the number of 16-bit chunks which are either
-  // all ones or all zeros.
-  unsigned OneChunks = 0;
-  unsigned ZeroChunks = 0;
+  // Two instruction sequences.
+  //
+  // Prefer MOVZ/MOVN followed by MOVK; it's more readable, and possibly the
+  // fastest sequence with fast literal generation.
+  if (OneChunks >= (BitSize / 16) - 2 || ZeroChunks >= (BitSize / 16) - 2)
+    return expandMOVImmSimple(MBB, MBBI, BitSize, OneChunks, ZeroChunks);
+
+  assert(BitSize == 64 && "All 32-bit immediates can be expanded with a"
+                          "MOVZ/MOVK pair");
+
+  // Try other two-instruction sequences.
+
+  // 64-bit ORR followed by MOVK.
+  // We try to construct the ORR immediate in three different ways: either we
+  // zero out the chunk which will be replaced, we fill the chunk which will
+  // be replaced with ones, or we take the bit pattern from the other half of
+  // the 64-bit immediate. This is comprehensive because of the way ORR
+  // immediates are constructed.
   for (unsigned Shift = 0; Shift < BitSize; Shift += 16) {
-    const unsigned Chunk = (Imm >> Shift) & Mask;
-    if (Chunk == Mask)
-      OneChunks++;
-    else if (Chunk == 0)
-      ZeroChunks++;
-  }
+    uint64_t ShiftedMask = (0xFFFFULL << Shift);
+    uint64_t ZeroChunk = UImm & ~ShiftedMask;
+    uint64_t OneChunk = UImm | ShiftedMask;
+    uint64_t RotatedImm = (UImm << 32) | (UImm >> 32);
+    uint64_t ReplicateChunk = ZeroChunk | (RotatedImm & ShiftedMask);
+    if (AArch64_AM::processLogicalImmediate(ZeroChunk, BitSize, Encoding) ||
+        AArch64_AM::processLogicalImmediate(OneChunk, BitSize, Encoding) ||
+        AArch64_AM::processLogicalImmediate(ReplicateChunk,
+                                            BitSize, Encoding)) {
+      // Create the ORR-immediate instruction.
+      MachineInstrBuilder MIB =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXri))
+              .add(MI.getOperand(0))
+              .addReg(AArch64::XZR)
+              .addImm(Encoding);
 
-  // Since we can't materialize the constant with a single ORR instruction,
-  // let's see whether we can materialize 3/4 of the constant with an ORR
-  // instruction and use an additional MOVK instruction to materialize the
-  // remaining 1/4.
-  //
-  // We are looking for constants with a pattern like: |A|X|B|X| or |X|A|X|B|.
-  //
-  // E.g. assuming |A|X|A|X| is a pattern which can be materialized with ORR,
-  // we would create the following instruction sequence:
-  //
-  // ORR x0, xzr, |A|X|A|X|
-  // MOVK x0, |B|, LSL #16
-  //
-  // Only look at 64-bit constants which can't be materialized with a single
-  // instruction e.g. which have less than either three all zero or all one
-  // chunks.
-  //
-  // Ignore 32-bit constants here, they always can be materialized with a
-  // MOVZ/MOVN + MOVK pair. Since the 32-bit constant can't be materialized
-  // with a single ORR, the best sequence we can achieve is a ORR + MOVK pair.
-  // Thus we fall back to the default code below which in the best case creates
-  // a single MOVZ/MOVN instruction (in case one chunk is all zero or all one).
-  //
-  if (BitSize == 64 && OneChunks < 3 && ZeroChunks < 3) {
-    // If we interpret the 64-bit constant as a v4i16, are elements 0 and 2
-    // identical?
-    if (getChunk(UImm, 0) == getChunk(UImm, 2)) {
-      // See if we can come up with a constant which can be materialized with
-      // ORR-immediate by replicating element 3 into element 1.
-      uint64_t OrrImm = replicateChunk(UImm, 3, 1);
-      if (tryOrrMovk(UImm, OrrImm, MI, MBB, MBBI, TII, 1))
-        return true;
+      // Create the MOVK instruction.
+      const unsigned Imm16 = getChunk(UImm, Shift / 16);
+      const unsigned DstReg = MI.getOperand(0).getReg();
+      const bool DstIsDead = MI.getOperand(0).isDead();
+      MachineInstrBuilder MIB1 =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::MOVKXi))
+              .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+              .addReg(DstReg)
+              .addImm(Imm16)
+              .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, Shift));
 
-      // See if we can come up with a constant which can be materialized with
-      // ORR-immediate by replicating element 1 into element 3.
-      OrrImm = replicateChunk(UImm, 1, 3);
-      if (tryOrrMovk(UImm, OrrImm, MI, MBB, MBBI, TII, 3))
-        return true;
-
-      // If we interpret the 64-bit constant as a v4i16, are elements 1 and 3
-      // identical?
-    } else if (getChunk(UImm, 1) == getChunk(UImm, 3)) {
-      // See if we can come up with a constant which can be materialized with
-      // ORR-immediate by replicating element 2 into element 0.
-      uint64_t OrrImm = replicateChunk(UImm, 2, 0);
-      if (tryOrrMovk(UImm, OrrImm, MI, MBB, MBBI, TII, 0))
-        return true;
-
-      // See if we can come up with a constant which can be materialized with
-      // ORR-immediate by replicating element 1 into element 3.
-      OrrImm = replicateChunk(UImm, 0, 2);
-      if (tryOrrMovk(UImm, OrrImm, MI, MBB, MBBI, TII, 2))
-        return true;
+      transferImpOps(MI, MIB, MIB1);
+      MI.eraseFromParent();
+      return true;
     }
   }
+
+  // FIXME: Add more two-instruction sequences.
+
+  // Three instruction sequences.
+  //
+  // Prefer MOVZ/MOVN followed by two MOVK; it's more readable, and possibly
+  // the fastest sequence with fast literal generation. (If neither MOVK is
+  // part of a fast literal generation pair, it could be slower than the
+  // four-instruction sequence, but we won't worry about that for now.)
+  if (OneChunks || ZeroChunks)
+    return expandMOVImmSimple(MBB, MBBI, BitSize, OneChunks, ZeroChunks);
 
   // Check for identical 16-bit chunks within the constant and if so materialize
   // them with a single ORR instruction. The remaining one or two 16-bit chunks
@@ -536,6 +500,23 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
   // MOVK instruction.
   if (BitSize == 64 && trySequenceOfOnes(UImm, MI, MBB, MBBI, TII))
     return true;
+
+  // We found no possible two or three instruction sequence; use the general
+  // four-instruction sequence.
+  return expandMOVImmSimple(MBB, MBBI, BitSize, OneChunks, ZeroChunks);
+}
+
+/// \brief Expand a MOVi32imm or MOVi64imm pseudo instruction to a
+/// MOVZ or MOVN of width BitSize followed by up to 3 MOVK instructions.
+bool AArch64ExpandPseudo::expandMOVImmSimple(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MBBI,
+                                             unsigned BitSize,
+                                             unsigned OneChunks,
+                                             unsigned ZeroChunks) {
+  MachineInstr &MI = *MBBI;
+  unsigned DstReg = MI.getOperand(0).getReg();
+  uint64_t Imm = MI.getOperand(1).getImm();
+  const unsigned Mask = 0xFFFF;
 
   // Use a MOVZ or MOVN instruction to set the high bits, followed by one or
   // more MOVK instructions to insert additional 16-bit portions into the

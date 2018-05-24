@@ -5,15 +5,15 @@
 
 add %eax, %eax
 
-# CUSTOM:      Iterations:     100
-# CUSTOM-NEXT: Instructions:   100
-# CUSTOM-NEXT: Total Cycles:   103
-# CUSTOM-NEXT: Dispatch Width: 1
-# CUSTOM-NEXT: IPC:            0.97
+# ALL:          Iterations:        100
+# ALL-NEXT:     Instructions:      100
+# ALL-NEXT:     Total Cycles:      103
 
-# DEFAULT:      Iterations:     100
-# DEFAULT-NEXT: Instructions:   100
-# DEFAULT-NEXT: Total Cycles:   103
-# DEFAULT-NEXT: Dispatch Width: 2
-# DEFAULT-NEXT: IPC:            0.97
+# CUSTOM-NEXT:  Dispatch Width:    1
+# DEFAULT-NEXT: Dispatch Width:    2
+
+# ALL-NEXT:     IPC:               0.97
+
+# CUSTOM-NEXT:  Block RThroughput: 1.0
+# DEFAULT-NEXT: Block RThroughput: 0.5
 

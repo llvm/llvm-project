@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Initialization/SystemInitializerCommon.h"
+#include "SystemInitializerLLGS.h"
 #include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/lldb-private.h"
 
@@ -35,8 +35,8 @@ int main_gdbserver(int argc, char *argv[]);
 int main_platform(int argc, char *argv[]);
 
 static void initialize() {
-  g_debugger_lifetime->Initialize(
-      llvm::make_unique<lldb_private::SystemInitializerCommon>(), nullptr);
+  g_debugger_lifetime->Initialize(llvm::make_unique<SystemInitializerLLGS>(),
+                                  nullptr);
 }
 
 static void terminate() { g_debugger_lifetime->Terminate(); }

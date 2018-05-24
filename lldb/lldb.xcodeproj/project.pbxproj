@@ -756,6 +756,7 @@
 		4CD44CFB20B37C440003557C /* DWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CF820B37C440003557C /* DWARFIndex.cpp */; };
 		4CD44CFC20B37C440003557C /* ManualDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CF920B37C440003557C /* ManualDWARFIndex.cpp */; };
 		4CD44CFD20B37C440003557C /* AppleDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CFA20B37C440003557C /* AppleDWARFIndex.cpp */; };
+		4CD44D2220B725DA0003557C /* SystemInitializerLLGS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44D2020B725DA0003557C /* SystemInitializerLLGS.cpp */; };
 		4CDB8D6D1DBA91B6006C5B13 /* LibStdcppUniquePointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */; };
 		4CDB8D6E1DBA91B6006C5B13 /* LibStdcppTuple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */; };
 		4CE4EFAA1E8999B900A80C06 /* PlatformOpenBSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4EFA61E8999B000A80C06 /* PlatformOpenBSD.cpp */; };
@@ -2589,7 +2590,7 @@
 		4C4EB7821E6A4DE7002035C0 /* DumpDataExtractor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DumpDataExtractor.h; path = include/lldb/Core/DumpDataExtractor.h; sourceTree = "<group>"; };
 		4C54B2781F61CE1200D469CA /* SBBreakpointName.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBBreakpointName.h; path = include/lldb/API/SBBreakpointName.h; sourceTree = "<group>"; };
 		4C54B27C1F61CE5300D469CA /* SBBreakpointName.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBBreakpointName.cpp; path = source/API/SBBreakpointName.cpp; sourceTree = "<group>"; };
-		4C54B2811F62081300D469CA /* SBBreakpointOptionCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SBBreakpointOptionCommon.h; path = include/lldb/API/SBBreakpointOptionCommon.h; sourceTree = "<group>"; };
+		4C54B2811F62081300D469CA /* SBBreakpointOptionCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SBBreakpointOptionCommon.h; path = source/API/SBBreakpointOptionCommon.h; sourceTree = "<group>"; };
 		4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBASTParser.cpp; path = PDB/PDBASTParser.cpp; sourceTree = "<group>"; };
 		4C562CC31CC07DDD00C52EAC /* PDBASTParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBASTParser.h; path = PDB/PDBASTParser.h; sourceTree = "<group>"; };
 		4C56543019D1EFAA002E9C44 /* ThreadPlanPython.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanPython.cpp; path = source/Target/ThreadPlanPython.cpp; sourceTree = "<group>"; };
@@ -2662,6 +2663,8 @@
 		4CD44CFE20B37C570003557C /* DWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DWARFIndex.h; sourceTree = "<group>"; };
 		4CD44CFF20B37C580003557C /* AppleDWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppleDWARFIndex.h; sourceTree = "<group>"; };
 		4CD44D0020B37C580003557C /* ManualDWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ManualDWARFIndex.h; sourceTree = "<group>"; };
+		4CD44D2020B725DA0003557C /* SystemInitializerLLGS.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SystemInitializerLLGS.cpp; path = "tools/lldb-server/SystemInitializerLLGS.cpp"; sourceTree = "<group>"; };
+		4CD44D2320B725F60003557C /* SystemInitializerLLGS.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SystemInitializerLLGS.h; path = "tools/lldb-server/SystemInitializerLLGS.h"; sourceTree = "<group>"; };
 		4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppUniquePointer.cpp; path = Language/CPlusPlus/LibStdcppUniquePointer.cpp; sourceTree = "<group>"; };
 		4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppTuple.cpp; path = Language/CPlusPlus/LibStdcppTuple.cpp; sourceTree = "<group>"; };
 		4CE4EFA61E8999B000A80C06 /* PlatformOpenBSD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformOpenBSD.cpp; sourceTree = "<group>"; };
@@ -6769,6 +6772,8 @@
 				E769331D1A94D18100C73337 /* lldb-server.cpp */,
 				26DC6A1C1337FECA00FF7998 /* lldb-platform.cpp */,
 				26D6F3F4183E7F9300194858 /* lldb-gdbserver.cpp */,
+				4CD44D2020B725DA0003557C /* SystemInitializerLLGS.cpp */,
+				4CD44D2320B725F60003557C /* SystemInitializerLLGS.h */,
 			);
 			name = "lldb-server";
 			sourceTree = "<group>";
@@ -8243,6 +8248,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E769331C1A94D15400C73337 /* lldb-gdbserver.cpp in Sources */,
+				4CD44D2220B725DA0003557C /* SystemInitializerLLGS.cpp in Sources */,
 				26DC6A1D1337FECA00FF7998 /* lldb-platform.cpp in Sources */,
 				E769331E1A94D18100C73337 /* lldb-server.cpp in Sources */,
 			);

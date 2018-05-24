@@ -903,6 +903,9 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     Result.IntVal = cast<ConstantInt>(C)->getValue();
     break;
   case Type::PointerTyID:
+    while (auto *A = dyn_cast<GlobalAlias>(C)) {
+      C = A->getAliasee();
+    }
     if (isa<ConstantPointerNull>(C))
       Result.PointerVal = nullptr;
     else if (const Function *F = dyn_cast<Function>(C))

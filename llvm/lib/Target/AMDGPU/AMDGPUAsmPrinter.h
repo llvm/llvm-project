@@ -137,7 +137,6 @@ private:
 
   /// Emit register usage information so that the GPU driver
   /// can correctly setup the GPU state.
-  void EmitProgramInfoR600(const MachineFunction &MF);
   void EmitProgramInfoSI(const MachineFunction &MF,
                          const SIProgramInfo &KernelInfo);
   void EmitPALMetadata(const MachineFunction &MF,

@@ -17,6 +17,7 @@
 #include "Protocol.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -126,7 +127,8 @@ private:
   std::vector<Inclusion> Inclusions;
 };
 
-using ASTParsedCallback = std::function<void(PathRef Path, ParsedAST *)>;
+using PreambleParsedCallback = std::function<void(
+    PathRef Path, ASTContext &, std::shared_ptr<clang::Preprocessor>)>;
 
 /// Manages resources, required by clangd. Allows to rebuild file with new
 /// contents, and provides AST and Preamble for it.
@@ -134,7 +136,7 @@ class CppFile {
 public:
   CppFile(PathRef FileName, bool StorePreamblesInMemory,
           std::shared_ptr<PCHContainerOperations> PCHs,
-          ASTParsedCallback ASTCallback);
+          PreambleParsedCallback PreambleCallback);
 
   /// Rebuild the AST and the preamble.
   /// Returns a list of diagnostics or llvm::None, if an error occured.
@@ -170,7 +172,7 @@ private:
   std::shared_ptr<PCHContainerOperations> PCHs;
   /// This is called after the file is parsed. This can be nullptr if there is
   /// no callback.
-  ASTParsedCallback ASTCallback;
+  PreambleParsedCallback PreambleCallback;
 };
 
 /// Get the beginning SourceLocation at a specified \p Pos.

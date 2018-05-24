@@ -1,0 +1,15 @@
+# RUN: %cc %p/inputs/break-insert.c -g
+# RUN: %lldbmi < %s | FileCheck %s
+
+# Test that a breakpoint can be inserted before creating a target.
+
+-break-insert breakpoint
+# CHECK: ^done,bkpt={number="1"
+
+-file-exec-and-symbols a.out
+# CHECK: ^done
+
+-exec-run
+# CHECK: ^running
+# CHECK: *stopped,reason="breakpoint-hit"
+

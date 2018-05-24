@@ -38,8 +38,8 @@ def err_pch_targetopt_mismatch : Error<
     "PCH file was compiled for the %0 '%1' but the current translation "
     "unit is being compiled for target '%2'">;
 def err_pch_targetopt_feature_mismatch : Error<
-    "%select{AST file|current translation unit}0 was compiled with the target "
-    "feature'%1' but the %select{current translation unit is|AST file was}0 "
+    "%select{AST file was|current translation unit is}0 compiled with the target "
+    "feature '%1' but the %select{current translation unit is|AST file was}0 "
     "not">;
 def err_pch_langopt_mismatch : Error<"%0 was %select{disabled|enabled}1 in "
     "PCH file but is currently %select{disabled|enabled}2">;

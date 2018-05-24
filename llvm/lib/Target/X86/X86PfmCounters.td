@@ -69,3 +69,7 @@ def SKXPort5Counter : PfmIssueCounter<SKXPort5, ["uops_dispatched_port:port_5"]>
 def SKXPort6Counter : PfmIssueCounter<SKXPort6, ["uops_dispatched_port:port_6"]>;
 def SKXPort7Counter : PfmIssueCounter<SKXPort7, ["uops_dispatched_port:port_7"]>;
 }
+
+let SchedModel = BtVer2Model in {
+def JCycleCounter : PfmCycleCounter<"cpu_clk_unhalted">;
+}

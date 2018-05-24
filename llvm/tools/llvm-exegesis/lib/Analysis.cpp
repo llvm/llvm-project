@@ -195,22 +195,30 @@ void Analysis::printSchedClassClustersHtml(std::vector<size_t> PointIds,
     OS << "<tr><td>";
     writeClusterId<kEscapeHtml>(OS, CurrentClusterId);
     OS << "</td><td><ul>";
-    const auto &ClusterRepresentative =
-        Points[PointIds[I]]; // FIXME: average measurements.
+    std::vector<BenchmarkMeasureStats> MeasurementStats(
+        Points[PointIds[I]].Measurements.size());
     for (; I < E &&
            Clustering_.getClusterIdForPoint(PointIds[I]) == CurrentClusterId;
          ++I) {
+      const auto &Point = Points[PointIds[I]];
       OS << "<li><span class=\"mono\">";
-      writeEscaped<kEscapeHtml>(OS, Points[PointIds[I]].Key.OpcodeName);
+      writeEscaped<kEscapeHtml>(OS, Point.Key.OpcodeName);
       OS << "</span> <span class=\"mono\">";
-      writeEscaped<kEscapeHtml>(OS, Points[PointIds[I]].Key.Config);
+      writeEscaped<kEscapeHtml>(OS, Point.Key.Config);
       OS << "</span></li>";
+      for (size_t J = 0, F = Point.Measurements.size(); J < F; ++J) {
+        MeasurementStats[J].push(Point.Measurements[J]);
+      }
     }
     OS << "</ul></td>";
-    for (const auto &Measurement : ClusterRepresentative.Measurements) {
-      OS << "<td>";
-      writeMeasurementValue<kEscapeHtml>(OS, Measurement.Value);
-      OS << "</td>";
+    for (const auto &Stats : MeasurementStats) {
+      OS << "<td class=\"measurement\">";
+      writeMeasurementValue<kEscapeHtml>(OS, Stats.avg());
+      OS << "<br><span class=\"minmax\">[";
+      writeMeasurementValue<kEscapeHtml>(OS, Stats.min());
+      OS << ";";
+      writeMeasurementValue<kEscapeHtml>(OS, Stats.max());
+      OS << "]</span></td>";
     }
     OS << "</tr>";
   }
@@ -321,7 +329,7 @@ void Analysis::printSchedClassDescHtml(const llvm::MCSchedClassDesc &SCDesc,
       writeEscaped<kEscapeHtml>(OS, SubtargetInfo_->getSchedModel()
                                         .getProcResource(WPR.ProcResourceIdx)
                                         ->Name);
-      OS << "</spam>: " << WPR.Cycles << "</li>";
+      OS << "</span>: " << WPR.Cycles << "</li>";
     }
     OS << "</ul></td>";
     OS << "</tr>";
@@ -377,6 +385,12 @@ table.sched-class-desc td {
 }
 span.mono {
   font-family: monospace;
+}
+span.minmax {
+  color: #888;
+}
+td.measurement {
+  text-align: center;
 }
 </style>
 </head>

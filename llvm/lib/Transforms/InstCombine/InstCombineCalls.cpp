@@ -2966,6 +2966,23 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::arm_neon_aesd:
+  case Intrinsic::arm_neon_aese:
+  case Intrinsic::aarch64_crypto_aesd:
+  case Intrinsic::aarch64_crypto_aese: {
+    Value *DataArg = II->getArgOperand(0);
+    Value *KeyArg  = II->getArgOperand(1);
+
+    // Try to use the builtin XOR in AESE and AESD to eliminate a prior XOR
+    Value *Data, *Key;
+    if (match(KeyArg, m_ZeroInt()) &&
+        match(DataArg, m_Xor(m_Value(Data), m_Value(Key)))) {
+      II->setArgOperand(0, Data);
+      II->setArgOperand(1, Key);
+      return II;
+    }
+    break;
+  }
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II->getArgOperand(0);
 
