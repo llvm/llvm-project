@@ -206,6 +206,11 @@ static FileSpec resolveCompDir(const char *path_from_dwarf) {
   return local_spec;
 }
 
+static inline bool IsSwiftLanguage(LanguageType language) {
+  return language == eLanguageTypePLI || language == eLanguageTypeSwift ||
+         ((uint32_t)language == (uint32_t)llvm::dwarf::DW_LANG_Swift);
+}
+
 DWARFUnit *SymbolFileDWARF::GetBaseCompileUnit() {
   return nullptr;
 }
@@ -2937,6 +2942,135 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
     }
   }
   return type_sp;
+}
+
+bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
+                                       CompileUnit *cu) {
+  value.clear();
+
+  DWARFDebugInfo *debug_info = DebugInfo();
+
+  if (debug_info) {
+    const uint32_t num_compile_units = GetNumCompileUnits();
+
+    if (cu) {
+      DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
+
+      if (dwarf_cu) {
+        const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
+        if (die) {
+          const char *flags =
+              die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+          if (flags) {
+            if (strstr(flags, option)) {
+              Args compiler_args(flags);
+
+              return compiler_args.GetOptionValueAsString(option, value);
+            }
+          }
+        }
+      }
+    } else {
+      for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
+        DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+
+        if (dwarf_cu) {
+          const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
+          if (die) {
+            const char *flags =
+                die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+            if (flags) {
+              if (strstr(flags, option)) {
+                Args compiler_args(flags);
+
+                return compiler_args.GetOptionValueAsString(option, value);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+int SymbolFileDWARF::GetCompileOptions(const char *option,
+                                       std::vector<std::string> &values,
+                                       CompileUnit *cu) {
+  DWARFDebugInfo *debug_info = DebugInfo();
+
+  if (debug_info) {
+    if (cu) {
+      DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
+
+      if (dwarf_cu) {
+        const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
+        if (die) {
+          const char *flags =
+              die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+          if (flags) {
+            if (strstr(flags, option)) {
+              Args compiler_args(flags);
+
+              return compiler_args.GetOptionValuesAsStrings(option, values);
+            }
+          }
+        }
+      }
+    } else {
+      const uint32_t num_compile_units = GetNumCompileUnits();
+
+      for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
+        DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+
+        if (dwarf_cu) {
+          const DWARFDIE die = dwarf_cu->GetUnitDIEOnly();
+          if (die) {
+            const char *flags =
+                die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+            if (flags) {
+              if (strstr(flags, option)) {
+                Args compiler_args(flags);
+
+                return compiler_args.GetOptionValuesAsStrings(option, values);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
+void SymbolFileDWARF::GetLoadedModules(lldb::LanguageType language,
+                                       lldb_private::FileSpecList &modules) {
+  ModuleSP module_sp(m_obj_file->GetModule());
+
+  if (IsSwiftLanguage(language)) {
+    const uint32_t num_cus = module_sp->GetNumCompileUnits();
+    for (uint32_t i = 0; i < num_cus; ++i) {
+      CompileUnit *cu = module_sp->GetCompileUnitAtIndex(i).get();
+      if (cu) {
+        const FileSpecList &files = cu->GetSupportFiles();
+        const size_t num_files = files.GetSize();
+        static ConstString g_swift_module_extension("swiftmodule");
+        for (uint32_t pass = 0; pass < 2; ++pass) {
+          for (size_t file_idx = 0; file_idx < num_files; ++file_idx) {
+            const FileSpec &file = files.GetFileSpecAtIndex(file_idx);
+            if (file.GetFileNameExtension() == g_swift_module_extension)
+              modules.AppendIfUnique(file);
+          }
+        }
+      }
+    }
+  }
 }
 
 TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
