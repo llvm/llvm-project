@@ -90,10 +90,6 @@ static void DupDescriptor(int error_fd, const FileSpec &file_spec, int fd,
 
 static void LLVM_ATTRIBUTE_NORETURN ChildFunc(int error_fd,
                                               const ProcessLaunchInfo &info) {
-  // Do not inherit setgid powers.
-  if (setgid(getgid()) != 0)
-    ExitWithError(error_fd, "setgid");
-
   if (info.GetFlags().Test(eLaunchFlagLaunchInSeparateProcessGroup)) {
     if (setpgid(0, 0) != 0)
       ExitWithError(error_fd, "setpgid");
@@ -139,6 +135,10 @@ static void LLVM_ATTRIBUTE_NORETURN ChildFunc(int error_fd,
     ExitWithError(error_fd, "pthread_sigmask");
 
   if (info.GetFlags().Test(eLaunchFlagDebug)) {
+    // Do not inherit setgid powers.
+    if (setgid(getgid()) != 0)
+      ExitWithError(error_fd, "setgid");
+
     // HACK:
     // Close everything besides stdin, stdout, and stderr that has no file
     // action to avoid leaking. Only do this when debugging, as elsewhere we

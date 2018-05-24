@@ -2,8 +2,9 @@
 REQUIRES: linux
 
 # Build the tracer and the test.
-RUN: %no_fuzzer_cpp_compiler -c -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,func,trace-cmp   %S/ThreeFunctionsTest.cpp -o %t-ThreeFunctionsTest.o
-RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow  %t-ThreeFunctionsTest.o %S/../../lib/fuzzer/dataflow/DataFlow.cpp -o  %t-ThreeFunctionsTestDF
+RUN: %no_fuzzer_cpp_compiler -c -fno-sanitize=all -fsanitize=dataflow  %S/../../lib/fuzzer/dataflow/DataFlow.cpp -o  %t-DataFlow.o
+RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,func,trace-cmp   %S/ThreeFunctionsTest.cpp     %t-DataFlow.o -o %t-ThreeFunctionsTestDF
+RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,func,trace-cmp   %S/ExplodeDFSanLabelsTest.cpp %t-DataFlow.o -o %t-ExplodeDFSanLabelsTestDF
 
 # Dump the function list.
 RUN:  %t-ThreeFunctionsTestDF 2>&1 | FileCheck %s --check-prefix=FUNC_LIST
@@ -19,58 +20,48 @@ RUN: echo -n FUABC  > %t/IN/FUABC
 RUN: echo -n FUZZR  > %t/IN/FUZZR
 RUN: echo -n FUZZM  > %t/IN/FUZZM
 RUN: echo -n FUZZMU > %t/IN/FUZZMU
+RUN: echo -n 1234567890123456 > %t/IN/1234567890123456
 
 # ABC: No data is used, the only used label is 4 (corresponds to the size)
-RUN:%t-ThreeFunctionsTestDF %t/IN/ABC    | FileCheck %s --check-prefix=IN_ABC
-IN_ABC: LEN: 3
-IN_ABC: LABELS: 4
-IN_ABC: F{{[012]}} 4
+RUN:%t-ThreeFunctionsTestDF 0 3 %t/IN/ABC    | FileCheck %s --check-prefix=IN_ABC
+IN_ABC: F{{[012]}} 0001
 IN_ABC-NOT: F
 
 # FUABC: First 3 bytes are checked, Func1/Func2 are not called.
-RUN:%t-ThreeFunctionsTestDF %t/IN/FUABC  | FileCheck %s --check-prefix=IN_FUABC
-IN_FUABC: LEN: 5
-IN_FUABC: LABELS:
-IN_FUABC: L{{.*}} 1
-IN_FUABC: L{{.*}} 2
-IN_FUABC: L{{.*}} 3
-IN_FUABC-NOT: L{{.*}} 4
-IN_FUABC: F{{[012]}}
+RUN:%t-ThreeFunctionsTestDF 0 5 %t/IN/FUABC  | FileCheck %s --check-prefix=IN_FUABC
+IN_FUABC: F{{[012]}} 111001
 IN_FUABC-NOT: F
 
 # FUZZR: 5 bytes are used (4 in one function, 5-th in the other), Func2 is not called.
-RUN:%t-ThreeFunctionsTestDF %t/IN/FUZZR  | FileCheck %s --check-prefix=IN_FUZZR
-IN_FUZZR: LEN: 5
-IN_FUZZR: LABELS:
-IN_FUZZR: L{{.*}} 1
-IN_FUZZR: L{{.*}} 2
-IN_FUZZR: L{{.*}} 3
-IN_FUZZR: L[[L0:[0-9]*]] 4
-IN_FUZZR-DAG: F{{[012]}} 5
-IN_FUZZR-DAG: F{{[012]}} [[L0]]
+RUN:%t-ThreeFunctionsTestDF 0 5 %t/IN/FUZZR  | FileCheck %s --check-prefix=IN_FUZZR
+IN_FUZZR-DAG: F{{[012]}} 111101
+IN_FUZZR-DAG: F{{[012]}} 000010
 IN_FUZZR-NOT: F
 
 # FUZZM: 5 bytes are used, both Func1 and Func2 are called, Func2 depends only on size (label 6).
-RUN:%t-ThreeFunctionsTestDF %t/IN/FUZZM  | FileCheck %s --check-prefix=IN_FUZZM
-IN_FUZZM: LEN: 5
-IN_FUZZM: LABELS:
-IN_FUZZM: L{{.*}} 1
-IN_FUZZM: L{{.*}} 2
-IN_FUZZM: L{{.*}} 3
-IN_FUZZM: L{{.*}} 4
-IN_FUZZM-DAG: F{{[012]}} 6
-IN_FUZZM-DAG: F{{[012]}} 5
-IN_FUZZM-DAG: F
+RUN:%t-ThreeFunctionsTestDF 0 5 %t/IN/FUZZM  | FileCheck %s --check-prefix=IN_FUZZM
+IN_FUZZM-DAG: F{{[012]}} 000010
+IN_FUZZM-DAG: F{{[012]}} 111101
+IN_FUZZM-DAG: F{{[012]}} 000001
 
 # FUZZMU: 6 bytes are used, both Func1 and Func2 are called, Func2 depends on byte 6 and size (label 7)
-RUN:%t-ThreeFunctionsTestDF %t/IN/FUZZMU  | FileCheck %s --check-prefix=IN_FUZZMU
-IN_FUZZMU: LEN: 6
-IN_FUZZMU: LABELS:
-IN_FUZZMU: L{{.*}} 1
-IN_FUZZMU: L{{.*}} 2
-IN_FUZZMU: L{{.*}} 3
-IN_FUZZMU: L{{.*}} 4
-IN_FUZZMU: L[[L2:[0-9]*]] 6 7
-IN_FUZZMU-DAG: F{{[012]}} 5
-IN_FUZZMU-DAG: F{{[012]}} [[L2]]
-IN_FUZZMU-DAG: F
+RUN:%t-ThreeFunctionsTestDF 0 6 %t/IN/FUZZMU  | FileCheck %s --check-prefix=IN_FUZZMU
+
+# Test merge_data_flow
+RUN:rm -f %t-merge-*
+RUN:%t-ThreeFunctionsTestDF 0 2 %t/IN/FUZZMU > %t-merge-1
+RUN:%t-ThreeFunctionsTestDF 2 4 %t/IN/FUZZMU > %t-merge-2
+RUN:%t-ThreeFunctionsTestDF 4 6 %t/IN/FUZZMU > %t-merge-3
+RUN:%libfuzzer_src/scripts/merge_data_flow.py  %t-merge-* | FileCheck %s --check-prefix=IN_FUZZMU
+
+IN_FUZZMU-DAG: F{{[012]}} 0000100
+IN_FUZZMU-DAG: F{{[012]}} 1111001
+IN_FUZZMU-DAG: F{{[012]}} 0000011
+
+# A very simple test will cause DFSan to die with "out of labels"
+RUN: not %t-ExplodeDFSanLabelsTestDF 0 16 %t/IN/1234567890123456 2>&1 | FileCheck %s --check-prefix=OUT_OF_LABELS
+OUT_OF_LABELS: ==FATAL: DataFlowSanitizer: out of labels
+# However we can run the same test piece by piece.
+RUN: %t-ExplodeDFSanLabelsTestDF 0 2  %t/IN/1234567890123456
+RUN: %t-ExplodeDFSanLabelsTestDF 2 4  %t/IN/1234567890123456
+RUN: %t-ExplodeDFSanLabelsTestDF 4 6  %t/IN/1234567890123456

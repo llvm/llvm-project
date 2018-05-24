@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-codegen-ppcg -S < %s \
+; RUN: opt %loadPolly -polly-import-jscop -polly-codegen-ppcg -polly-stmt-granularity=bb -S < %s \
 ; RUN: | FileCheck %s
 
 ; REQUIRES: pollyacc

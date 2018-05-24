@@ -352,6 +352,12 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
 #define INT64_MAX              (__INT64_C(9223372036854775807))
 #undef UINT64_MAX
 #define UINT64_MAX             (__UINT64_C(18446744073709551615))
+#undef UINTPTR_MAX
+#if SANITIZER_WORDSIZE == 64
+# define UINTPTR_MAX           (18446744073709551615UL)
+#else
+# define UINTPTR_MAX           (4294967295U)
+#endif  // SANITIZER_WORDSIZE == 64
 
 enum LinkerInitialized { LINKER_INITIALIZED = 0 };
 

@@ -110,6 +110,8 @@ const CMICmnResources::SRsrcTextData
         {IDE_MI_APP_ARG_EXECUTABLE, "executable (NOT IMPLEMENTED)\n\tThe file "
                                     "path to the executable i.e. '\"C:\\My "
                                     "Dev\\foo.exe\"'."},
+        {IDE_MI_APP_ARG_SYNCHRONOUS, "--synchronous\n\tBlock until each command "
+                                     "has finished executing.\n\tUsed for testing only."},
         {IDS_STDIN_ERR_INVALID_PROMPT,
          "Stdin. Invalid prompt description '%s'"},
         {IDS_STDIN_ERR_THREAD_CREATION_FAILED,

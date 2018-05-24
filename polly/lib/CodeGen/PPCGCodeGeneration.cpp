@@ -1563,12 +1563,14 @@ void GPUNodeBuilder::clearScalarEvolution(Function *F) {
 }
 
 void GPUNodeBuilder::clearLoops(Function *F) {
+  SmallSet<Loop *, 1> WorkList;
   for (BasicBlock &BB : *F) {
     Loop *L = LI.getLoopFor(&BB);
     if (L)
-      SE.forgetLoop(L);
-    LI.removeBlock(&BB);
+      WorkList.insert(L);
   }
+  for (auto *L : WorkList)
+    LI.erase(L);
 }
 
 std::tuple<Value *, Value *> GPUNodeBuilder::getGridSizes(ppcg_kernel *Kernel) {

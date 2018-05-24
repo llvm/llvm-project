@@ -53,7 +53,6 @@
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
-#include "Plugins/ObjectFile/JIT/ObjectFileJIT.h"
 
 #include "llvm/ADT/STLExtras.h"    // for make_unique
 #include "llvm/Support/Compiler.h" // for LLVM_PRETT...
@@ -1650,26 +1649,6 @@ uint32_t Module::GetVersion(uint32_t *versions, uint32_t num_versions) {
       versions[i] = LLDB_INVALID_MODULE_VERSION;
   }
   return 0;
-}
-
-ModuleSP
-Module::CreateJITModule(const lldb::ObjectFileJITDelegateSP &delegate_sp) {
-  if (delegate_sp) {
-    // Must create a module and place it into a shared pointer before we can
-    // create an object file since it has a std::weak_ptr back to the module,
-    // so we need to control the creation carefully in this static function
-    ModuleSP module_sp(new Module());
-    module_sp->m_objfile_sp =
-        std::make_shared<ObjectFileJIT>(module_sp, delegate_sp);
-    if (module_sp->m_objfile_sp) {
-      // Once we get the object file, update our module with the object file's
-      // architecture since it might differ in vendor/os if some parts were
-      // unknown.
-      module_sp->m_objfile_sp->GetArchitecture(module_sp->m_arch);
-    }
-    return module_sp;
-  }
-  return ModuleSP();
 }
 
 bool Module::GetIsDynamicLinkEditor() {

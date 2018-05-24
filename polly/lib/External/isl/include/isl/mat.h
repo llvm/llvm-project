@@ -14,7 +14,7 @@
 
 #include <isl/ctx.h>
 #include <isl/vec.h>
-#include <isl/val.h>
+#include <isl/val_type.h>
 
 #if defined(__cplusplus)
 extern "C" {

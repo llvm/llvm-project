@@ -743,7 +743,7 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
     Printf("INFO: %zd/%zd inputs touch the focus function\n",
            Corpus.NumInputsThatTouchFocusFunction(), Corpus.size());
 
-  if (Corpus.empty()) {
+  if (Corpus.empty() && Options.MaxNumberOfRuns) {
     Printf("ERROR: no interesting inputs were found. "
            "Is the code instrumented for coverage? Exiting.\n");
     exit(1);
