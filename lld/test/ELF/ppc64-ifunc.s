@@ -57,7 +57,7 @@
 # DT: 0x0000000000000003 PLTGOT 0x10030000
 
 # Check that we emit the correct dynamic relocation type for an ifunc
-# DYNREL: 'PLT' relocation section at offset 0x{{[0-9]+}} contains 48 bytes:
+# DYNREL: 'PLT' relocation section at offset 0x{{[0-9a-f]+}} contains 48 bytes:
 # 48 bytes --> 2 Elf64_Rela relocations
 # DYNREL-NEXT: Offset        Info           Type               Symbol's Value  Symbol's Name + Addend
 # DYNREL-NEXT: {{[0-9a-f]+}} {{[0-9a-f]+}}  R_PPC64_JMP_SLOT      {{0+}}            foo + 0
