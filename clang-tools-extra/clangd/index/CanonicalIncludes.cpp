@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CanonicalIncludes.h"
+#include "../Headers.h"
+#include "clang/Driver/Types.h"
 #include "llvm/Support/Regex.h"
 
 namespace clang {
@@ -33,12 +35,33 @@ void CanonicalIncludes::addSymbolMapping(llvm::StringRef QualifiedName,
 }
 
 llvm::StringRef
-CanonicalIncludes::mapHeader(llvm::StringRef Header,
+CanonicalIncludes::mapHeader(llvm::ArrayRef<std::string> Headers,
                              llvm::StringRef QualifiedName) const {
+  assert(!Headers.empty());
   auto SE = SymbolMapping.find(QualifiedName);
   if (SE != SymbolMapping.end())
     return SE->second;
   std::lock_guard<std::mutex> Lock(RegexMutex);
+  // Find the first header such that the extension is not '.inc', and isn't a
+  // recognized non-header file
+  auto I =
+      std::find_if(Headers.begin(), Headers.end(), [](llvm::StringRef Include) {
+        // Skip .inc file whose including header file should
+        // be #included instead.
+        return !Include.endswith(".inc");
+      });
+  if (I == Headers.end())
+    return Headers[0]; // Fallback to the declaring header.
+  StringRef Header = *I;
+  // If Header is not expected be included (e.g. .cc file), we fall back to
+  // the declaring header.
+  StringRef Ext = llvm::sys::path::extension(Header).trim('.');
+  // Include-able headers must have precompile type. Treat files with
+  // non-recognized extenstions (TY_INVALID) as headers.
+  auto ExtType = driver::types::lookupTypeForExtension(Ext);
+  if ((ExtType != driver::types::TY_INVALID) &&
+      !driver::types::onlyPrecompileType(ExtType))
+    return Headers[0];
   for (auto &Entry : RegexHeaderMappingTable) {
 #ifndef NDEBUG
     std::string Dummy;
@@ -65,9 +88,8 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
       // FIXME(ioeric): resolve the header and store actual file path. For now,
       // we simply assume the written header is suitable to be #included.
       Includes->addMapping(PP.getSourceManager().getFilename(Range.getBegin()),
-                           (Text.startswith("<") || Text.startswith("\""))
-                               ? Text.str()
-                               : ("\"" + Text + "\"").str());
+                           isLiteralInclude(Text) ? Text.str()
+                                                  : ("\"" + Text + "\"").str());
       return false;
     }
 
