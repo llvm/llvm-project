@@ -13,7 +13,7 @@
 #include <stdio.h>
 
 #include <isl/ctx.h>
-#include <isl/space.h>
+#include <isl/space_type.h>
 #include <isl/vec.h>
 #include <isl/mat.h>
 #include <isl/printer.h>
@@ -21,7 +21,7 @@
 #include <isl/aff_type.h>
 #include <isl/list.h>
 #include <isl/map_type.h>
-#include <isl/val.h>
+#include <isl/val_type.h>
 #include <isl/stdint.h>
 #include <isl/stride_info.h>
 

@@ -16,31 +16,30 @@
 using namespace lldb_private;
 
 namespace {
-  struct Matches {
-    ConstString original;
-    ConstString remapped;
-    Matches(const char *o, const char *r) : original(o),
-        remapped(r) {}
-  };
-  
-  void TestPathMappings(const PathMappingList &map,
-                        llvm::ArrayRef<Matches> matches,
-                        llvm::ArrayRef<ConstString> fails) {
-    ConstString actual_remapped;
-    for (const auto &fail: fails) {
-      EXPECT_FALSE(map.RemapPath(fail, actual_remapped));
-    }
-    for (const auto &match: matches) {
-      FileSpec orig_spec(match.original.GetStringRef(), false);
-      std::string orig_normalized = orig_spec.GetPath();
-      EXPECT_TRUE(map.RemapPath(match.original, actual_remapped));
-      EXPECT_EQ(actual_remapped, match.remapped);
-      FileSpec remapped_spec(match.remapped.GetStringRef(), false);
-      FileSpec unmapped_spec;
-      EXPECT_TRUE(map.ReverseRemapPath(remapped_spec, unmapped_spec));
-      std::string unmapped_path = unmapped_spec.GetPath();
-      EXPECT_EQ(unmapped_path, orig_normalized);
-    }
+struct Matches {
+  FileSpec original;
+  FileSpec remapped;
+  Matches(const char *o, const char *r)
+      : original(o, false), remapped(r, false) {}
+};
+} // namespace
+
+static void TestPathMappings(const PathMappingList &map,
+                             llvm::ArrayRef<Matches> matches,
+                             llvm::ArrayRef<ConstString> fails) {
+  ConstString actual_remapped;
+  for (const auto &fail : fails) {
+    EXPECT_FALSE(map.RemapPath(fail, actual_remapped));
+  }
+  for (const auto &match : matches) {
+    std::string orig_normalized = match.original.GetPath();
+    EXPECT_TRUE(
+        map.RemapPath(ConstString(match.original.GetPath()), actual_remapped));
+    EXPECT_EQ(FileSpec(actual_remapped.GetStringRef(), false), match.remapped);
+    FileSpec unmapped_spec;
+    EXPECT_TRUE(map.ReverseRemapPath(match.remapped, unmapped_spec));
+    std::string unmapped_path = unmapped_spec.GetPath();
+    EXPECT_EQ(unmapped_path, orig_normalized);
   }
 }
 

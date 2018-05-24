@@ -13,7 +13,7 @@
 #include <isl/aff_type.h>
 #include <isl/set_type.h>
 #include <isl/union_set_type.h>
-#include <isl/val.h>
+#include <isl/val_type.h>
 #include <isl/vec.h>
 
 #if defined(__cplusplus)

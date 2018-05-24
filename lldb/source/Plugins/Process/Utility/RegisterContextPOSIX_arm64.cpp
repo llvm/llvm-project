@@ -13,6 +13,7 @@
 
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -20,7 +21,6 @@
 #include "lldb/Utility/Endian.h"
 #include "llvm/Support/Compiler.h"
 
-#include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "RegisterContextPOSIX_arm64.h"
 
 using namespace lldb;
@@ -126,11 +126,6 @@ RegisterContextPOSIX_arm64::RegisterContextPOSIX_arm64(
   }
 
   ::memset(&m_fpr, 0, sizeof m_fpr);
-
-  // elf-core yet to support ReadFPR()
-  lldb::ProcessSP base = CalculateProcess();
-  if (base.get()->GetPluginName() == ProcessElfCore::GetPluginNameStatic())
-    return;
 }
 
 RegisterContextPOSIX_arm64::~RegisterContextPOSIX_arm64() {}

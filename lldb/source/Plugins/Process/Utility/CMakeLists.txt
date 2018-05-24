@@ -58,7 +58,6 @@ add_lldb_library(lldbPluginProcessUtility PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginProcessElfCore
   LINK_COMPONENTS
     Support
   )

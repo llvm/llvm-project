@@ -1,6 +1,7 @@
 #ifndef ISL_AFF_H
 #define ISL_AFF_H
 
+#include <isl/stdint.h>
 #include <isl/local_space.h>
 #include <isl/printer.h>
 #include <isl/set_type.h>
@@ -8,7 +9,7 @@
 #include <isl/list.h>
 #include <isl/multi.h>
 #include <isl/union_set_type.h>
-#include <isl/val.h>
+#include <isl/val_type.h>
 #include <isl/point.h>
 
 #if defined(__cplusplus)
