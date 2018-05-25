@@ -3,11 +3,12 @@
 
   stp	d0, d1, [x0]
 
-# CHECK:      Iterations:     2
-# CHECK-NEXT: Instructions:   2
-# CHECK-NEXT: Total Cycles:   4
-# CHECK-NEXT: Dispatch Width: 8
-# CHECK-NEXT: IPC:            0.50
+# CHECK:      Iterations:        2
+# CHECK-NEXT: Instructions:      2
+# CHECK-NEXT: Total Cycles:      4
+# CHECK-NEXT: Dispatch Width:    8
+# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps

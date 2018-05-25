@@ -145,6 +145,11 @@ typedef struct LLVMComdat *LLVMComdatRef;
 typedef struct LLVMOpaqueModuleFlagEntry LLVMModuleFlagEntry;
 
 /**
+ * @see llvm::JITEventListener
+ */
+typedef struct LLVMOpaqueJITEventListener *LLVMJITEventListenerRef;
+
+/**
  * @}
  */
 

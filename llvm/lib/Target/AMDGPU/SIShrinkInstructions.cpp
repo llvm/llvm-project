@@ -10,7 +10,6 @@
 //
 
 #include "AMDGPU.h"
-#include "AMDGPUMCInstLower.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"

@@ -104,4 +104,14 @@ void InstructionBenchmark::writeYamlOrDie(const llvm::StringRef Filename) {
   }
 }
 
+void BenchmarkMeasureStats::push(const BenchmarkMeasure &BM) {
+  if (Key.empty())
+    Key = BM.Key;
+  assert(Key == BM.Key);
+  ++NumValues;
+  SumValues += BM.Value;
+  MaxValue = std::max(MaxValue, BM.Value);
+  MinValue = std::min(MinValue, BM.Value);
+}
+
 } // namespace exegesis

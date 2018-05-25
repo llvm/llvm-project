@@ -33867,25 +33867,40 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Try to match (and (xor X, -1), Y) logic pattern for (andnp X, Y) combines.
+static bool matchANDXORWithAllOnesAsANDNP(SDNode *N, SDValue &X, SDValue &Y) {
+  if (N->getOpcode() != ISD::AND)
+    return false;
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (N0.getOpcode() == ISD::XOR &&
+      ISD::isBuildVectorAllOnes(N0.getOperand(1).getNode())) {
+    X = N0.getOperand(0);
+    Y = N1;
+    return true;
+  }
+  if (N1.getOpcode() == ISD::XOR &&
+      ISD::isBuildVectorAllOnes(N1.getOperand(1).getNode())) {
+    X = N1.getOperand(0);
+    Y = N0;
+    return true;
+  }
+
+  return false;
+}
+
 /// Try to fold: (and (xor X, -1), Y) -> (andnp X, Y).
 static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::AND);
 
   EVT VT = N->getValueType(0);
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  SDLoc DL(N);
-
   if (VT != MVT::v2i64 && VT != MVT::v4i64 && VT != MVT::v8i64)
     return SDValue();
 
-  if (N0.getOpcode() == ISD::XOR &&
-      ISD::isBuildVectorAllOnes(N0.getOperand(1).getNode()))
-    return DAG.getNode(X86ISD::ANDNP, DL, VT, N0.getOperand(0), N1);
-
-  if (N1.getOpcode() == ISD::XOR &&
-      ISD::isBuildVectorAllOnes(N1.getOperand(1).getNode()))
-    return DAG.getNode(X86ISD::ANDNP, DL, VT, N1.getOperand(0), N0);
+  SDValue X, Y;
+  if (matchANDXORWithAllOnesAsANDNP(N, X, Y))
+    return DAG.getNode(X86ISD::ANDNP, SDLoc(N), VT, X, Y);
 
   return SDValue();
 }
@@ -34242,6 +34257,38 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Try to match OR(AND(~MASK,X),AND(MASK,Y)) logic pattern.
+static bool matchLogicBlend(SDNode *N, SDValue &X, SDValue &Y, SDValue &Mask) {
+  if (N->getOpcode() != ISD::OR)
+    return false;
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // Canonicalize AND to LHS.
+  if (N1.getOpcode() == ISD::AND)
+    std::swap(N0, N1);
+
+  // Attempt to match OR(AND(M,Y),ANDNP(M,X)).
+  if (N0.getOpcode() != ISD::AND || N1.getOpcode() != X86ISD::ANDNP)
+    return false;
+
+  Mask = N1.getOperand(0);
+  X = N1.getOperand(1);
+
+  // Check to see if the mask appeared in both the AND and ANDNP.
+  if (N0.getOperand(0) == Mask)
+    Y = N0.getOperand(1);
+  else if (N0.getOperand(1) == Mask)
+    Y = N0.getOperand(0);
+  else
+    return false;
+
+  // TODO: Attempt to match against AND(XOR(-1,M),Y) as well, waiting for
+  // ANDNP combine allows other combines to happen that prevent matching.
+  return true;
+}
+
 // Try to fold:
 //   (or (and (m, y), (pandn m, x)))
 // into:
@@ -34254,33 +34301,13 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
                                             const X86Subtarget &Subtarget) {
   assert(N->getOpcode() == ISD::OR && "Unexpected Opcode");
 
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
-
   if (!((VT.is128BitVector() && Subtarget.hasSSE2()) ||
         (VT.is256BitVector() && Subtarget.hasInt256())))
     return SDValue();
 
-  // Canonicalize AND to LHS.
-  if (N1.getOpcode() == ISD::AND)
-    std::swap(N0, N1);
-
-  // TODO: Attempt to match against AND(XOR(-1,X),Y) as well, waiting for
-  // ANDNP combine allows other combines to happen that prevent matching.
-  if (N0.getOpcode() != ISD::AND || N1.getOpcode() != X86ISD::ANDNP)
-    return SDValue();
-
-  SDValue Mask = N1.getOperand(0);
-  SDValue X = N1.getOperand(1);
-  SDValue Y;
-  if (N0.getOperand(0) == Mask)
-    Y = N0.getOperand(1);
-  if (N0.getOperand(1) == Mask)
-    Y = N0.getOperand(0);
-
-  // Check to see if the mask appeared in both the AND and ANDNP.
-  if (!Y.getNode())
+  SDValue X, Y, Mask;
+  if (!matchLogicBlend(N, X, Y, Mask))
     return SDValue();
 
   // Validate that X, Y, and Mask are bitcasts, and see through them.

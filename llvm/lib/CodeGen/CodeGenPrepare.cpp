@@ -6559,6 +6559,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
       /// The GEP operand must be a pointer, so must its result -> BitCast
       Instruction *NC = new BitCastInst(GEPI->getOperand(0), GEPI->getType(),
                                         GEPI->getName(), GEPI);
+      NC->setDebugLoc(GEPI->getDebugLoc());
       GEPI->replaceAllUsesWith(NC);
       GEPI->eraseFromParent();
       ++NumGEPsElim;

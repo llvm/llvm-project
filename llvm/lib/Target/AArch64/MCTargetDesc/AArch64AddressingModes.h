@@ -765,6 +765,17 @@ static inline bool isSVEMaskOfIdenticalElements(int64_t Imm) {
   return all_of(Vec.Parts, [Vec](T Elem) { return Elem == Vec.Parts[0]; });
 }
 
+/// Returns true if Imm is valid for CPY/DUP.
+template <typename T>
+static inline bool isSVECpyImm(int64_t Imm) {
+  if (std::is_same<int8_t, typename std::make_signed<T>::type>::value)
+    return uint8_t(Imm) == Imm || int8_t(Imm) == Imm;
+  else
+    return int8_t(Imm) == Imm || int16_t(Imm & ~0xff) == Imm;
+
+  llvm_unreachable("Unsupported element width");
+}
+
 inline static bool isAnyMOVZMovAlias(uint64_t Value, int RegWidth) {
   for (int Shift = 0; Shift <= RegWidth - 16; Shift += 16)
     if ((Value & ~(0xffffULL << Shift)) == 0)

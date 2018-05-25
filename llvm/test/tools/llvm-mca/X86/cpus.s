@@ -12,63 +12,31 @@
 
 add %edi, %eax
 
-# BTVER2:      Iterations:     100
-# BTVER2-NEXT: Instructions:   100
-# BTVER2-NEXT: Total Cycles:   103
-# BTVER2-NEXT: Dispatch Width: 2
-# BTVER2-NEXT: IPC:            0.97
+# ALL:              Iterations:        100
+# ALL-NEXT:         Instructions:      100
+# ALL-NEXT:         Total Cycles:      103
 
-# SLM:      Iterations:     100
-# SLM-NEXT: Instructions:   100
-# SLM-NEXT: Total Cycles:   103
-# SLM-NEXT: Dispatch Width: 2
-# SLM-NEXT: IPC:            0.97
+# BROADWELL-NEXT:   Dispatch Width:    4
+# BTVER2-NEXT:      Dispatch Width:    2
+# HASWELL-NEXT:     Dispatch Width:    4
+# IVYBRIDGE-NEXT:   Dispatch Width:    4
+# KNL-NEXT:         Dispatch Width:    4
+# SANDYBRIDGE-NEXT: Dispatch Width:    4
+# SKX-NEXT:         Dispatch Width:    6
+# SKX-AVX512-NEXT:  Dispatch Width:    6
+# SLM-NEXT:         Dispatch Width:    2
+# ZNVER1-NEXT:      Dispatch Width:    4
 
-# BROADWELL:      Iterations:     100
-# BROADWELL-NEXT: Instructions:   100
-# BROADWELL-NEXT: Total Cycles:   103
-# BROADWELL-NEXT: Dispatch Width: 4
-# BROADWELL-NEXT: IPC:            0.97
+# ALL-NEXT:         IPC:               0.97
 
-# HASWELL:      Iterations:     100
-# HASWELL-NEXT: Instructions:   100
-# HASWELL-NEXT: Total Cycles:   103
-# HASWELL-NEXT: Dispatch Width: 4
-# HASWELL-NEXT: IPC:            0.97
-
-# IVYBRIDGE:      Iterations:     100
-# IVYBRIDGE-NEXT: Instructions:   100
-# IVYBRIDGE-NEXT: Total Cycles:   103
-# IVYBRIDGE-NEXT: Dispatch Width: 4
-# IVYBRIDGE-NEXT: IPC:            0.97
-
-# KNL:      Iterations:     100
-# KNL-NEXT: Instructions:   100
-# KNL-NEXT: Total Cycles:   103
-# KNL-NEXT: Dispatch Width: 4
-# KNL-NEXT: IPC:            0.97
-
-# SANDYBRIDGE:      Iterations:     100
-# SANDYBRIDGE-NEXT: Instructions:   100
-# SANDYBRIDGE-NEXT: Total Cycles:   103
-# SANDYBRIDGE-NEXT: Dispatch Width: 4
-# SANDYBRIDGE-NEXT: IPC:            0.97
-
-# ZNVER1:      Iterations:     100
-# ZNVER1-NEXT: Instructions:   100
-# ZNVER1-NEXT: Total Cycles:   103
-# ZNVER1-NEXT: Dispatch Width: 4
-# ZNVER1-NEXT: IPC:            0.97
-
-# SKX:      Iterations:     100
-# SKX-NEXT: Instructions:   100
-# SKX-NEXT: Total Cycles:   103
-# SKX-NEXT: Dispatch Width: 6
-# SKX-NEXT: IPC:            0.97
-
-# SKX-AVX512:      Iterations:     100
-# SKX-AVX512-NEXT: Instructions:   100
-# SKX-AVX512-NEXT: Total Cycles:   103
-# SKX-AVX512-NEXT: Dispatch Width: 6
-# SKX-AVX512-NEXT: IPC:            0.97
+# BROADWELL-NEXT:   Block RThroughput: 0.3
+# BTVER2-NEXT:      Block RThroughput: 0.5
+# HASWELL-NEXT:     Block RThroughput: 0.3
+# IVYBRIDGE-NEXT:   Block RThroughput: 0.3
+# KNL-NEXT:         Block RThroughput: 0.3
+# SANDYBRIDGE-NEXT: Block RThroughput: 0.3
+# SKX-NEXT:         Block RThroughput: 0.3
+# SKX-AVX512-NEXT:  Block RThroughput: 0.3
+# SLM-NEXT:         Block RThroughput: 0.5
+# ZNVER1-NEXT:      Block RThroughput: 0.3
 

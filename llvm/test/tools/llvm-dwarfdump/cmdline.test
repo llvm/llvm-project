@@ -2,6 +2,8 @@ RUN: llvm-dwarfdump -h 2>&1 | FileCheck --check-prefix=HELP %s
 RUN: llvm-dwarfdump --help 2>&1 | FileCheck --check-prefix=HELP %s
 HELP: USAGE: llvm-dwarfdump{{[^ ]*}} [options] <input object files or .dSYM bundles>
 HELP-NOT: -reverse-iterate
+HELP: Color Options
+HELP: -color
 HELP: Section-specific Dump Options
 HELP: -debug-info            - Dump the .debug_info section
 HELP: -eh-frame

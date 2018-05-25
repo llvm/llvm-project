@@ -13,12 +13,12 @@
 //===----------------------------------------------------------------------===//
 //
 
-#include "AMDGPUMCInstLower.h"
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "InstPrinter/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "R600AsmPrinter.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -36,6 +36,29 @@
 #include <algorithm>
 
 using namespace llvm;
+
+namespace {
+
+class AMDGPUMCInstLower {
+  MCContext &Ctx;
+  const AMDGPUSubtarget &ST;
+  const AsmPrinter &AP;
+
+  const MCExpr *getLongBranchBlockExpr(const MachineBasicBlock &SrcBB,
+                                       const MachineOperand &MO) const;
+
+public:
+  AMDGPUMCInstLower(MCContext &ctx, const AMDGPUSubtarget &ST,
+                    const AsmPrinter &AP);
+
+  bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
+
+  /// Lower a MachineInstr to an MCInst
+  void lower(const MachineInstr *MI, MCInst &OutMI) const;
+
+};
+
+} // End anonymous namespace
 
 #include "AMDGPUGenMCPseudoLowering.inc"
 
@@ -175,11 +198,13 @@ bool AMDGPUAsmPrinter::lowerOperand(const MachineOperand &MO,
   return MCInstLowering.lowerOperand(MO, MCOp);
 }
 
-const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
+static const MCExpr *lowerAddrSpaceCast(const TargetMachine &TM,
+                                        const Constant *CV,
+                                        MCContext &OutContext) {
   // TargetMachine does not support llvm-style cast. Use C++-style cast.
   // This is safe since TM is always of type AMDGPUTargetMachine or its
   // derived class.
-  auto *AT = static_cast<AMDGPUTargetMachine*>(&TM);
+  auto &AT = static_cast<const AMDGPUTargetMachine&>(TM);
   auto *CE = dyn_cast<ConstantExpr>(CV);
 
   // Lower null pointers in private and local address space.
@@ -188,12 +213,18 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
   if (CE && CE->getOpcode() == Instruction::AddrSpaceCast) {
     auto Op = CE->getOperand(0);
     auto SrcAddr = Op->getType()->getPointerAddressSpace();
-    if (Op->isNullValue() && AT->getNullPointerValue(SrcAddr) == 0) {
+    if (Op->isNullValue() && AT.getNullPointerValue(SrcAddr) == 0) {
       auto DstAddr = CE->getType()->getPointerAddressSpace();
-      return MCConstantExpr::create(AT->getNullPointerValue(DstAddr),
+      return MCConstantExpr::create(AT.getNullPointerValue(DstAddr),
         OutContext);
     }
   }
+  return nullptr;
+}
+
+const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
+  if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
+    return E;
   return AsmPrinter::lowerConstant(CV);
 }
 
@@ -292,4 +323,35 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLine.size());
     }
   }
+}
+
+void R600AsmPrinter::EmitInstruction(const MachineInstr *MI) {
+  const R600Subtarget &STI = MF->getSubtarget<R600Subtarget>();
+  AMDGPUMCInstLower MCInstLowering(OutContext, STI, *this);
+
+  StringRef Err;
+  if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
+    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    C.emitError("Illegal instruction detected: " + Err);
+    MI->print(errs());
+  }
+
+  if (MI->isBundle()) {
+    const MachineBasicBlock *MBB = MI->getParent();
+    MachineBasicBlock::const_instr_iterator I = ++MI->getIterator();
+    while (I != MBB->instr_end() && I->isInsideBundle()) {
+      EmitInstruction(&*I);
+      ++I;
+    }
+  } else {
+    MCInst TmpInst;
+    MCInstLowering.lower(MI, TmpInst);
+    EmitToStreamer(*OutStreamer, TmpInst);
+ }
+}
+
+const MCExpr *R600AsmPrinter::lowerConstant(const Constant *CV) {
+  if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
+    return E;
+  return AsmPrinter::lowerConstant(CV);
 }

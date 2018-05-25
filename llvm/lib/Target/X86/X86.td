@@ -245,6 +245,8 @@ def FeatureSlowDivide64 : SubtargetFeature<"idivq-to-divl",
 def FeaturePadShortFunctions : SubtargetFeature<"pad-short-functions",
                                      "PadShortFunctions", "true",
                                      "Pad short functions">;
+def FeatureINVPCID : SubtargetFeature<"invpcid", "HasINVPCID", "true",
+                                      "Invalidate Process-Context Identifier">;
 def FeatureSGX     : SubtargetFeature<"sgx", "HasSGX", "true",
                                       "Enable Software Guard Extensions">;
 def FeatureCLFLUSHOPT : SubtargetFeature<"clflushopt", "HasCLFLUSHOPT", "true",
@@ -730,6 +732,7 @@ def HSWFeatures : ProcessorFeatures<IVBFeatures.Value, [
   FeatureBMI2,
   FeatureERMSB,
   FeatureFMA,
+  FeatureINVPCID,
   FeatureLZCNT,
   FeatureMOVBE,
   FeatureFastVariableShuffle

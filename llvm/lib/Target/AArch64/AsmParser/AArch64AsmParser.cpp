@@ -133,7 +133,7 @@ private:
   OperandMatchResultTy tryParseAdrpLabel(OperandVector &Operands);
   OperandMatchResultTy tryParseAdrLabel(OperandVector &Operands);
   OperandMatchResultTy tryParseFPImm(OperandVector &Operands);
-  OperandMatchResultTy tryParseAddSubImm(OperandVector &Operands);
+  OperandMatchResultTy tryParseImmWithOptionalShift(OperandVector &Operands);
   OperandMatchResultTy tryParseGPR64sp0Operand(OperandVector &Operands);
   bool tryParseNeonVectorRegister(OperandVector &Operands);
   OperandMatchResultTy tryParseVectorIndex(OperandVector &Operands);
@@ -636,6 +636,27 @@ public:
 
   bool isShiftedImm() const { return Kind == k_ShiftedImm; }
 
+  /// Returns the immediate value as a pair of (imm, shift) if the immediate is
+  /// a shifted immediate by value 'Shift' or '0', or if it is an unshifted
+  /// immediate that can be shifted by 'Shift'.
+  template <unsigned Width>
+  Optional<std::pair<int64_t, unsigned> > getShiftedVal() const {
+    if (isShiftedImm() && Width == getShiftedImmShift())
+      if (auto *CE = dyn_cast<MCConstantExpr>(getShiftedImmVal()))
+        return std::make_pair(CE->getValue(), Width);
+
+    if (isImm())
+      if (auto *CE = dyn_cast<MCConstantExpr>(getImm())) {
+        int64_t Val = CE->getValue();
+        if ((Val != 0) && ((Val >> Width) << Width) == Val)
+          return std::make_pair(Val >> Width, Width);
+        else
+          return std::make_pair(Val, 0u);
+      }
+
+    return {};
+  }
+
   bool isAddSubImm() const {
     if (!isShiftedImm() && !isImm())
       return false;
@@ -673,8 +694,8 @@ public:
     }
 
     // If it's a constant, it should be a real immediate in range:
-    if (auto *CE = dyn_cast<MCConstantExpr>(Expr))
-      return CE->getValue() >= 0 && CE->getValue() <= 0xfff;
+    if (auto ShiftedVal = getShiftedVal<12>())
+      return ShiftedVal->first >= 0 && ShiftedVal->first <= 0xfff;
 
     // If it's an expression, we hope for the best and let the fixup/relocation
     // code deal with it.
@@ -699,6 +720,26 @@ public:
     // Otherwise it should be a real negative immediate in range:
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr);
     return CE != nullptr && CE->getValue() < 0 && -CE->getValue() <= 0xfff;
+  }
+
+  // Signed value in the range -128 to +127. For element widths of
+  // 16 bits or higher it may also be a signed multiple of 256 in the
+  // range -32768 to +32512.
+  // For element-width of 8 bits a range of -128 to 255 is accepted,
+  // since a copy of a byte can be either signed/unsigned.
+  template <typename T>
+  DiagnosticPredicate isSVECpyImm() const {
+    if (!isShiftedImm() && (!isImm() || !isa<MCConstantExpr>(getImm())))
+      return DiagnosticPredicateTy::NoMatch;
+
+    bool IsByte =
+        std::is_same<int8_t, typename std::make_signed<T>::type>::value;
+    if (auto ShiftedImm = getShiftedVal<8>())
+      if (!(IsByte && ShiftedImm->second) &&
+          AArch64_AM::isSVECpyImm<T>(ShiftedImm->first << ShiftedImm->second))
+        return DiagnosticPredicateTy::Match;
+
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   bool isCondCode() const { return Kind == k_CondCode; }
@@ -1284,9 +1325,13 @@ public:
     addExpr(Inst, getImm());
   }
 
-  void addAddSubImmOperands(MCInst &Inst, unsigned N) const {
+  template <int Shift>
+  void addImmWithOptionalShiftOperands(MCInst &Inst, unsigned N) const {
     assert(N == 2 && "Invalid number of operands!");
-    if (isShiftedImm()) {
+    if (auto ShiftedVal = getShiftedVal<Shift>()) {
+      Inst.addOperand(MCOperand::createImm(ShiftedVal->first));
+      Inst.addOperand(MCOperand::createImm(ShiftedVal->second));
+    } else if (isShiftedImm()) {
       addExpr(Inst, getShiftedImmVal());
       Inst.addOperand(MCOperand::createImm(getShiftedImmShift()));
     } else {
@@ -1295,16 +1340,14 @@ public:
     }
   }
 
-  void addAddSubImmNegOperands(MCInst &Inst, unsigned N) const {
+  template <int Shift>
+  void addImmNegWithOptionalShiftOperands(MCInst &Inst, unsigned N) const {
     assert(N == 2 && "Invalid number of operands!");
-
-    const MCExpr *MCE = isShiftedImm() ? getShiftedImmVal() : getImm();
-    const MCConstantExpr *CE = cast<MCConstantExpr>(MCE);
-    int64_t Val = -CE->getValue();
-    unsigned ShiftAmt = isShiftedImm() ? ShiftedImm.ShiftAmount : 0;
-
-    Inst.addOperand(MCOperand::createImm(Val));
-    Inst.addOperand(MCOperand::createImm(ShiftAmt));
+    if (auto ShiftedVal = getShiftedVal<Shift>()) {
+      Inst.addOperand(MCOperand::createImm(-ShiftedVal->first));
+      Inst.addOperand(MCOperand::createImm(ShiftedVal->second));
+    } else
+      llvm_unreachable("Not a shifted negative immediate");
   }
 
   void addCondCodeOperands(MCInst &Inst, unsigned N) const {
@@ -2269,9 +2312,10 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
   return MatchOperand_ParseFail;
 }
 
-/// tryParseAddSubImm - Parse ADD/SUB shifted immediate operand
+/// tryParseImmWithOptionalShift - Parse immediate operand, optionally with
+/// a shift suffix, for example '#1, lsl #12'.
 OperandMatchResultTy
-AArch64AsmParser::tryParseAddSubImm(OperandVector &Operands) {
+AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = getLoc();
 
@@ -2285,18 +2329,9 @@ AArch64AsmParser::tryParseAddSubImm(OperandVector &Operands) {
   if (parseSymbolicImmVal(Imm))
     return MatchOperand_ParseFail;
   else if (Parser.getTok().isNot(AsmToken::Comma)) {
-    uint64_t ShiftAmount = 0;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(Imm);
-    if (MCE) {
-      int64_t Val = MCE->getValue();
-      if (Val > 0xfff && (Val & 0xfff) == 0) {
-        Imm = MCConstantExpr::create(Val >> 12, getContext());
-        ShiftAmount = 12;
-      }
-    }
     SMLoc E = Parser.getTok().getLoc();
-    Operands.push_back(AArch64Operand::CreateShiftedImm(Imm, ShiftAmount, S, E,
-                                                        getContext()));
+    Operands.push_back(
+        AArch64Operand::CreateImm(Imm, S, E, getContext()));
     return MatchOperand_Success;
   }
 
@@ -2327,6 +2362,13 @@ AArch64AsmParser::tryParseAddSubImm(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
   Parser.Lex(); // Eat the number
+
+  // Just in case the optional lsl #0 is used for immediates other than zero.
+  if (ShiftAmount == 0 && Imm != 0) {
+    SMLoc E = Parser.getTok().getLoc();
+    Operands.push_back(AArch64Operand::CreateImm(Imm, S, E, getContext()));
+    return MatchOperand_Success;
+  }
 
   SMLoc E = Parser.getTok().getLoc();
   Operands.push_back(AArch64Operand::CreateShiftedImm(Imm, ShiftAmount,
@@ -3765,6 +3807,14 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [1, 32].");
   case Match_InvalidImm1_64:
     return Error(Loc, "immediate must be an integer in range [1, 64].");
+  case Match_InvalidSVECpyImm8:
+    return Error(Loc, "immediate must be an integer in range [-128, 255]"
+                      " with a shift amount of 0");
+  case Match_InvalidSVECpyImm16:
+  case Match_InvalidSVECpyImm32:
+  case Match_InvalidSVECpyImm64:
+    return Error(Loc, "immediate must be an integer in range [-128, 127] or a "
+                      "multiple of 256 in range [-32768, 32512]");
   case Match_InvalidIndex1:
     return Error(Loc, "expected lane specifier '[1]'");
   case Match_InvalidIndexB:
@@ -4293,6 +4343,10 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm1_16:
   case Match_InvalidImm1_32:
   case Match_InvalidImm1_64:
+  case Match_InvalidSVECpyImm8:
+  case Match_InvalidSVECpyImm16:
+  case Match_InvalidSVECpyImm32:
+  case Match_InvalidSVECpyImm64:
   case Match_InvalidIndex1:
   case Match_InvalidIndexB:
   case Match_InvalidIndexH:

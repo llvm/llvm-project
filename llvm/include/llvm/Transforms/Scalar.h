@@ -176,6 +176,12 @@ Pass *createLoopUnswitchPass(bool OptimizeForSize = false,
 
 //===----------------------------------------------------------------------===//
 //
+// LoopInstSimplify - This pass simplifies instructions in a loop's body.
+//
+Pass *createLoopInstSimplifyPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LoopUnroll - This pass is a simple loop unrolling pass.
 //
 Pass *createLoopUnrollPass(int OptLevel = 2, int Threshold = -1, int Count = -1,

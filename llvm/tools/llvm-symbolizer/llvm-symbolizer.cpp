@@ -101,22 +101,17 @@ static bool error(Expected<T> &ResOrErr) {
 
 static bool parseCommand(StringRef InputString, bool &IsData,
                          std::string &ModuleName, uint64_t &ModuleOffset) {
-  const char *kDataCmd = "DATA ";
-  const char *kCodeCmd = "CODE ";
   const char kDelimiters[] = " \n\r";
-  IsData = false;
   ModuleName = "";
-  const char *pos = InputString.data();
-  if (strncmp(pos, kDataCmd, strlen(kDataCmd)) == 0) {
-    IsData = true;
-    pos += strlen(kDataCmd);
-  } else if (strncmp(pos, kCodeCmd, strlen(kCodeCmd)) == 0) {
+  if (InputString.consume_front("CODE ")) {
     IsData = false;
-    pos += strlen(kCodeCmd);
+  } else if (InputString.consume_front("DATA ")) {
+    IsData = true;
   } else {
     // If no cmd, assume it's CODE.
     IsData = false;
   }
+  const char *pos = InputString.data();
   // Skip delimiters and parse input filename (if needed).
   if (ClBinaryName == "") {
     pos += strspn(pos, kDelimiters);
@@ -183,7 +178,7 @@ int main(int argc, char **argv) {
     if (ClPrintAddress) {
       outs() << "0x";
       outs().write_hex(ModuleOffset);
-      StringRef Delimiter = (ClPrettyPrint == true) ? ": " : "\n";
+      StringRef Delimiter = ClPrettyPrint ? ": " : "\n";
       outs() << Delimiter;
     }
     if (IsData) {

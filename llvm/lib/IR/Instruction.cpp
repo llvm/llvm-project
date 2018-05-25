@@ -602,7 +602,8 @@ bool Instruction::isAssociative() const {
   switch (Opcode) {
   case FMul:
   case FAdd:
-    return cast<FPMathOperator>(this)->isFast();
+    return cast<FPMathOperator>(this)->hasAllowReassoc() &&
+           cast<FPMathOperator>(this)->hasNoSignedZeros();
   default:
     return false;
   }
