@@ -99,7 +99,7 @@ public:
   dw_addr_t GetRangesBase() const { return m_ranges_base; }
   void SetAddrBase(dw_addr_t addr_base, dw_addr_t ranges_base,
                    dw_offset_t base_obj_offset);
-  void ClearDIEs(bool keep_compile_unit_die);
+  void ClearDIEs();
   void BuildAddressRangeTable(SymbolFileDWARF *dwarf,
                               DWARFDebugAranges *debug_aranges);
 
