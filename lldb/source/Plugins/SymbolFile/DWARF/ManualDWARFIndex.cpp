@@ -290,16 +290,15 @@ void ManualDWARFIndex::IndexUnitImpl(
           const DWARFDebugInfoEntry *parent = die.GetParent();
           bool is_method = false;
           if (parent) {
-            dw_tag_t parent_tag = parent->Tag();
-            if (parent_tag == DW_TAG_class_type ||
-                parent_tag == DW_TAG_structure_type) {
+            DWARFDIE parent_die(&unit, parent);
+            if (parent_die.IsStructClassOrUnion())
               is_method = true;
-            } else {
+            else {
               if (specification_die_form.IsValid()) {
                 DWARFDIE specification_die =
                     unit.GetSymbolFileDWARF()->DebugInfo()->GetDIE(
                         DIERef(specification_die_form));
-                if (specification_die.GetParent().IsStructOrClass())
+                if (specification_die.GetParent().IsStructClassOrUnion())
                   is_method = true;
               }
             }
