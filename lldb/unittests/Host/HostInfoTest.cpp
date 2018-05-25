@@ -90,6 +90,14 @@ TEST_F(HostInfoTest, MacOSX) {
       "Swift-4.1-development-snapshot.xctoolchain/usr/lib/swift/clang";
   EXPECT_EQ(HostInfoMacOSXTest::ComputeClangDir(toolchain), toolchain_clang);
 
+  std::string cltools = "/Library/Developer/CommandLineTools/Library/"
+                        "PrivateFrameworks/LLDB.framework";
+  std::string cltools_clang =
+      "/Library/Developer/CommandLineTools/Library/PrivateFrameworks/"
+      "LLDB.framework/Resources/Clang";
+  EXPECT_EQ(HostInfoMacOSXTest::ComputeClangDir(cltools), cltools_clang);
+
+
   // Test that a bogus path is detected.
   EXPECT_NE(HostInfoMacOSXTest::ComputeClangDir(GetInputFilePath(xcode), true),
             HostInfoMacOSXTest::ComputeClangDir(GetInputFilePath(xcode)));

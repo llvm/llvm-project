@@ -376,4 +376,8 @@ _writegsbase_u64(unsigned long long __V)
 #include <ptwriteintrin.h>
 #endif
 
+#if !defined(_MSC_VER) || __has_feature(modules) || defined(__INVPCID__)
+#include <invpcidintrin.h>
+#endif
+
 #endif /* __IMMINTRIN_H */

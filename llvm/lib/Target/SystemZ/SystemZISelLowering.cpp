@@ -5357,7 +5357,7 @@ SDValue SystemZTargetLowering::combineSTORE(
   // for the extraction to be done on a vMiN value, so that we can use VSTE.
   // If X has wider elements then convert it to:
   // (truncstoreiN (extract_vector_elt (bitcast X), Y2), Z).
-  if (MemVT.isInteger()) {
+  if (MemVT.isInteger() && SN->isTruncatingStore()) {
     if (SDValue Value =
             combineTruncateExtract(SDLoc(N), MemVT, SN->getValue(), DCI)) {
       DCI.AddToWorklist(Value.getNode());

@@ -1291,10 +1291,13 @@ namespace {
   class CodeCompletionDeclConsumer : public VisibleDeclConsumer {
     ResultBuilder &Results;
     DeclContext *CurContext;
+    std::vector<FixItHint> FixIts;
 
   public:
-    CodeCompletionDeclConsumer(ResultBuilder &Results, DeclContext *CurContext)
-      : Results(Results), CurContext(CurContext) { }
+    CodeCompletionDeclConsumer(
+        ResultBuilder &Results, DeclContext *CurContext,
+        std::vector<FixItHint> FixIts = std::vector<FixItHint>())
+        : Results(Results), CurContext(CurContext), FixIts(std::move(FixIts)) {}
 
     void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
                    bool InBaseClass) override {
@@ -1303,7 +1306,7 @@ namespace {
         Accessible = Results.getSema().IsSimplyAccessible(ND, Ctx);
 
       ResultBuilder::Result Result(ND, Results.getBasePriority(ND), nullptr,
-                                   false, Accessible);
+                                   false, Accessible, FixIts);
       Results.AddResult(Result, CurContext, Hiding, InBaseClass);
     }
 
@@ -3979,14 +3982,18 @@ static void AddObjCProperties(
 static void AddRecordMembersCompletionResults(Sema &SemaRef,
                                               ResultBuilder &Results, Scope *S,
                                               QualType BaseType,
-                                              RecordDecl *RD) {
+                                              RecordDecl *RD,
+                                              Optional<FixItHint> AccessOpFixIt) {
   // Indicate that we are performing a member access, and the cv-qualifiers
   // for the base object type.
   Results.setObjectTypeQualifiers(BaseType.getQualifiers());
 
   // Access to a C/C++ class, struct, or union.
   Results.allowNestedNameSpecifiers();
-  CodeCompletionDeclConsumer Consumer(Results, SemaRef.CurContext);
+  std::vector<FixItHint> FixIts;
+  if (AccessOpFixIt)
+      FixIts.emplace_back(AccessOpFixIt.getValue());
+  CodeCompletionDeclConsumer Consumer(Results, SemaRef.CurContext, std::move(FixIts));
   SemaRef.LookupVisibleDecls(RD, Sema::LookupMemberName, Consumer,
                              SemaRef.CodeCompleter->includeGlobals(),
                              /*IncludeDependentBases=*/true,
@@ -4013,107 +4020,138 @@ static void AddRecordMembersCompletionResults(Sema &SemaRef,
 }
 
 void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
+                                           Expr *OtherOpBase,
                                            SourceLocation OpLoc, bool IsArrow,
                                            bool IsBaseExprStatement) {
   if (!Base || !CodeCompleter)
     return;
-  
+
   ExprResult ConvertedBase = PerformMemberExprBaseConversion(Base, IsArrow);
   if (ConvertedBase.isInvalid())
     return;
-  Base = ConvertedBase.get();
-  
-  QualType BaseType = Base->getType();
+  QualType ConvertedBaseType = ConvertedBase.get()->getType();
+
+  enum CodeCompletionContext::Kind contextKind;
 
   if (IsArrow) {
-    if (const PointerType *Ptr = BaseType->getAs<PointerType>())
-      BaseType = Ptr->getPointeeType();
-    else if (BaseType->isObjCObjectPointerType())
-      /*Do nothing*/ ;
-    else
-      return;
+    if (const PointerType *Ptr = ConvertedBaseType->getAs<PointerType>())
+      ConvertedBaseType = Ptr->getPointeeType();
   }
-  
-  enum CodeCompletionContext::Kind contextKind;
-  
+
   if (IsArrow) {
     contextKind = CodeCompletionContext::CCC_ArrowMemberAccess;
-  }
-  else {
-    if (BaseType->isObjCObjectPointerType() ||
-        BaseType->isObjCObjectOrInterfaceType()) {
+  } else {
+    if (ConvertedBaseType->isObjCObjectPointerType() ||
+        ConvertedBaseType->isObjCObjectOrInterfaceType()) {
       contextKind = CodeCompletionContext::CCC_ObjCPropertyAccess;
-    }
-    else {
+    } else {
       contextKind = CodeCompletionContext::CCC_DotMemberAccess;
     }
   }
 
-  CodeCompletionContext CCContext(contextKind, BaseType);
+  CodeCompletionContext CCContext(contextKind, ConvertedBaseType);
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
-                        CodeCompleter->getCodeCompletionTUInfo(),
-                        CCContext,
+                        CodeCompleter->getCodeCompletionTUInfo(), CCContext,
                         &ResultBuilder::IsMember);
+
+  auto DoCompletion = [&](Expr *Base, bool IsArrow, Optional<FixItHint> AccessOpFixIt) -> bool {
+    if (!Base)
+      return false;
+
+    ExprResult ConvertedBase = PerformMemberExprBaseConversion(Base, IsArrow);
+    if (ConvertedBase.isInvalid())
+      return false;
+    Base = ConvertedBase.get();
+
+    QualType BaseType = Base->getType();
+
+    if (IsArrow) {
+      if (const PointerType *Ptr = BaseType->getAs<PointerType>())
+        BaseType = Ptr->getPointeeType();
+      else if (BaseType->isObjCObjectPointerType())
+        /*Do nothing*/;
+      else
+        return false;
+    }
+
+    if (const RecordType *Record = BaseType->getAs<RecordType>()) {
+      AddRecordMembersCompletionResults(*this, Results, S, BaseType,
+                                        Record->getDecl(),
+                                        std::move(AccessOpFixIt));
+    } else if (const auto *TST =
+                   BaseType->getAs<TemplateSpecializationType>()) {
+      TemplateName TN = TST->getTemplateName();
+      if (const auto *TD =
+              dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl())) {
+        CXXRecordDecl *RD = TD->getTemplatedDecl();
+        AddRecordMembersCompletionResults(*this, Results, S, BaseType, RD,
+                                          std::move(AccessOpFixIt));
+      }
+    } else if (const auto *ICNT = BaseType->getAs<InjectedClassNameType>()) {
+      if (auto *RD = ICNT->getDecl())
+        AddRecordMembersCompletionResults(*this, Results, S, BaseType, RD,
+                                          std::move(AccessOpFixIt));
+    } else if (!IsArrow && BaseType->isObjCObjectPointerType()) {
+      // Objective-C property reference.
+      AddedPropertiesSet AddedProperties;
+
+      if (const ObjCObjectPointerType *ObjCPtr =
+              BaseType->getAsObjCInterfacePointerType()) {
+        // Add property results based on our interface.
+        assert(ObjCPtr && "Non-NULL pointer guaranteed above!");
+        AddObjCProperties(CCContext, ObjCPtr->getInterfaceDecl(), true,
+                          /*AllowNullaryMethods=*/true, CurContext,
+                          AddedProperties, Results, IsBaseExprStatement);
+      }
+
+      // Add properties from the protocols in a qualified interface.
+      for (auto *I : BaseType->getAs<ObjCObjectPointerType>()->quals())
+        AddObjCProperties(CCContext, I, true, /*AllowNullaryMethods=*/true,
+                          CurContext, AddedProperties, Results,
+                          IsBaseExprStatement);
+    } else if ((IsArrow && BaseType->isObjCObjectPointerType()) ||
+               (!IsArrow && BaseType->isObjCObjectType())) {
+      // Objective-C instance variable access.
+      ObjCInterfaceDecl *Class = nullptr;
+      if (const ObjCObjectPointerType *ObjCPtr =
+              BaseType->getAs<ObjCObjectPointerType>())
+        Class = ObjCPtr->getInterfaceDecl();
+      else
+        Class = BaseType->getAs<ObjCObjectType>()->getInterface();
+
+      // Add all ivars from this class and its superclasses.
+      if (Class) {
+        CodeCompletionDeclConsumer Consumer(Results, CurContext);
+        Results.setFilter(&ResultBuilder::IsObjCIvar);
+        LookupVisibleDecls(
+            Class, LookupMemberName, Consumer, CodeCompleter->includeGlobals(),
+            /*IncludeDependentBases=*/false, CodeCompleter->loadExternal());
+      }
+    }
+
+    // FIXME: How do we cope with isa?
+    return true;
+  };
+
   Results.EnterNewScope();
-  if (const RecordType *Record = BaseType->getAs<RecordType>()) {
-    AddRecordMembersCompletionResults(*this, Results, S, BaseType,
-                                      Record->getDecl());
-  } else if (const auto *TST = BaseType->getAs<TemplateSpecializationType>()) {
-    TemplateName TN = TST->getTemplateName();
-    if (const auto *TD =
-            dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl())) {
-      CXXRecordDecl *RD = TD->getTemplatedDecl();
-      AddRecordMembersCompletionResults(*this, Results, S, BaseType, RD);
-    }
-  } else if (const auto *ICNT = BaseType->getAs<InjectedClassNameType>()) {
-    if (auto *RD = ICNT->getDecl())
-      AddRecordMembersCompletionResults(*this, Results, S, BaseType, RD);
-  } else if (!IsArrow && BaseType->isObjCObjectPointerType()) {
-    // Objective-C property reference.
-    AddedPropertiesSet AddedProperties;
 
-    if (const ObjCObjectPointerType *ObjCPtr =
-            BaseType->getAsObjCInterfacePointerType()) {
-      // Add property results based on our interface.
-      assert(ObjCPtr && "Non-NULL pointer guaranteed above!");
-      AddObjCProperties(CCContext, ObjCPtr->getInterfaceDecl(), true,
-                        /*AllowNullaryMethods=*/true, CurContext,
-                        AddedProperties, Results, IsBaseExprStatement);
-    }
-
-    // Add properties from the protocols in a qualified interface.
-    for (auto *I : BaseType->getAs<ObjCObjectPointerType>()->quals())
-      AddObjCProperties(CCContext, I, true, /*AllowNullaryMethods=*/true,
-                        CurContext, AddedProperties, Results,
-                        IsBaseExprStatement);
-  } else if ((IsArrow && BaseType->isObjCObjectPointerType()) ||
-             (!IsArrow && BaseType->isObjCObjectType())) {
-    // Objective-C instance variable access.
-    ObjCInterfaceDecl *Class = nullptr;
-    if (const ObjCObjectPointerType *ObjCPtr
-                                    = BaseType->getAs<ObjCObjectPointerType>())
-      Class = ObjCPtr->getInterfaceDecl();
-    else
-      Class = BaseType->getAs<ObjCObjectType>()->getInterface();
-    
-    // Add all ivars from this class and its superclasses.
-    if (Class) {
-      CodeCompletionDeclConsumer Consumer(Results, CurContext);
-      Results.setFilter(&ResultBuilder::IsObjCIvar);
-      LookupVisibleDecls(
-          Class, LookupMemberName, Consumer, CodeCompleter->includeGlobals(),
-          /*IncludeDependentBases=*/false, CodeCompleter->loadExternal());
-    }
+  bool CompletionSucceded = DoCompletion(Base, IsArrow, None);
+  if (CodeCompleter->includeFixIts()) {
+    const CharSourceRange OpRange =
+        CharSourceRange::getTokenRange(OpLoc, OpLoc);
+    CompletionSucceded |= DoCompletion(
+        OtherOpBase, !IsArrow,
+        FixItHint::CreateReplacement(OpRange, IsArrow ? "." : "->"));
   }
-  
-  // FIXME: How do we cope with isa?
-  
+
   Results.ExitScope();
 
+  if (!CompletionSucceded)
+    return;
+
   // Hand off the results found for code completion.
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            Results.getCompletionContext(),
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCClassPropertyRefExpr(Scope *S,

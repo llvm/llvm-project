@@ -1703,8 +1703,10 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       CXXScopeSpec SS;
       ParsedType ObjectType;
       bool MayBePseudoDestructor = false;
+      Expr* OrigLHS = !LHS.isInvalid() ? LHS.get() : nullptr;
+
       if (getLangOpts().CPlusPlus && !LHS.isInvalid()) {
-        Expr *Base = LHS.get();
+        Expr *Base = OrigLHS;
         const Type* BaseType = Base->getType().getTypePtrOrNull();
         if (BaseType && Tok.is(tok::l_paren) &&
             (BaseType->isFunctionType() ||
@@ -1729,11 +1731,25 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       }
 
       if (Tok.is(tok::code_completion)) {
+        tok::TokenKind CorrectedOpKind =
+            OpKind == tok::arrow ? tok::period : tok::arrow;
+        ExprResult CorrectedLHS(/*IsInvalid=*/true);
+        if (getLangOpts().CPlusPlus && OrigLHS) {
+          const bool DiagsAreSuppressed = Diags.getSuppressAllDiagnostics();
+          Diags.setSuppressAllDiagnostics(true);
+          CorrectedLHS = Actions.ActOnStartCXXMemberReference(
+              getCurScope(), OrigLHS, OpLoc, CorrectedOpKind, ObjectType,
+              MayBePseudoDestructor);
+          Diags.setSuppressAllDiagnostics(DiagsAreSuppressed);
+        }
+
+        Expr *Base = LHS.get();
+        Expr *CorrectedBase = CorrectedLHS.get();
+
         // Code completion for a member access expression.
-        if (Expr *Base = LHS.get())
-          Actions.CodeCompleteMemberReferenceExpr(
-              getCurScope(), Base, OpLoc, OpKind == tok::arrow,
-              ExprStatementTokLoc == Base->getLocStart());
+        Actions.CodeCompleteMemberReferenceExpr(
+            getCurScope(), Base, CorrectedBase, OpLoc, OpKind == tok::arrow,
+            Base && ExprStatementTokLoc == Base->getLocStart());
 
         cutOffParsing();
         return ExprError();

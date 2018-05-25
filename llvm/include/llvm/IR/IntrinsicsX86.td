@@ -6186,3 +6186,11 @@ let TargetPrefix = "x86" in {
   def int_x86_ptwrite64 : GCCBuiltin<"__builtin_ia32_ptwrite64">,
               Intrinsic<[], [llvm_i64_ty], []>;
 }
+
+//===----------------------------------------------------------------------===//
+// INVPCID - Invalidate Process-Context Identifier
+
+let TargetPrefix = "x86" in {
+  def int_x86_invpcid : GCCBuiltin<"__builtin_ia32_invpcid">,
+              Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty], []>;
+}

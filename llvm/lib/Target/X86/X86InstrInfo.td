@@ -904,6 +904,7 @@ def HasCLWB      : Predicate<"Subtarget->hasCLWB()">;
 def HasWBNOINVD  : Predicate<"Subtarget->hasWBNOINVD()">;
 def HasRDPID     : Predicate<"Subtarget->hasRDPID()">;
 def HasWAITPKG   : Predicate<"Subtarget->hasWAITPKG()">;
+def HasINVPCID   : Predicate<"Subtarget->hasINVPCID()">;
 def HasCmpxchg16b: Predicate<"Subtarget->hasCmpxchg16b()">;
 def HasPCONFIG   : Predicate<"Subtarget->hasPCONFIG()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,

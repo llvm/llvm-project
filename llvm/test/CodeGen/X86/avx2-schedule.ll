@@ -3386,7 +3386,7 @@ define <4 x i32> @test_pmaskmovd(i8* %a0, <4 x i32> %a1, <4 x i32> %a2) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2 # sched: [8:1.00]
 ; GENERIC-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
-; GENERIC-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaskmovd:
@@ -3484,7 +3484,7 @@ define <2 x i64> @test_pmaskmovq(i8* %a0, <2 x i64> %a1, <2 x i64> %a2) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmaskmovq (%rdi), %xmm0, %xmm2 # sched: [8:1.00]
 ; GENERIC-NEXT:    vpmaskmovq %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
-; GENERIC-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaskmovq:
