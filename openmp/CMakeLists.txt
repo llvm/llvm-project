@@ -18,6 +18,8 @@ if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_S
     "Enable -Werror flags to turn warnings into errors for supporting compilers.")
   set(OPENMP_LIBDIR_SUFFIX "" CACHE STRING
     "Suffix of lib installation directory, e.g. 64 => lib64")
+  # Do not use OPENMP_LIBDIR_SUFFIX directly, use OPENMP_INSTALL_LIBDIR.
+  set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}")
 
   # Group test settings.
   set(OPENMP_TEST_C_COMPILER ${CMAKE_C_COMPILER} CACHE STRING
@@ -28,7 +30,7 @@ if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_S
 else()
   set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
   # If building in tree, we honor the same install suffix LLVM uses.
-  set(OPENMP_LIBDIR_SUFFIX ${LLVM_LIBDIR_SUFFIX})
+  set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}")
 
   if (NOT MSVC)
     set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
