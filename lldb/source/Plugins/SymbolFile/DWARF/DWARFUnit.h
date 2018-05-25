@@ -33,6 +33,9 @@ enum DWARFProducer {
 class DWARFUnit {
   friend class DWARFCompileUnit;
 
+  using die_iterator_range =
+      llvm::iterator_range<DWARFDebugInfoEntry::collection::iterator>;
+
 public:
   virtual ~DWARFUnit();
 
@@ -110,7 +113,7 @@ public:
 
   void SetBaseAddress(dw_addr_t base_addr);
 
-  DWARFDIE GetUnitDIEOnly() { return DWARFDIE(this, GetUnitDIEPtrOnly()); }
+  DWARFBaseDIE GetUnitDIEOnly() { return DWARFDIE(this, GetUnitDIEPtrOnly()); }
 
   DWARFDIE DIE() { return DWARFDIE(this, DIEPtr()); }
 
@@ -134,11 +137,6 @@ public:
 
   bool Supports_unnamed_objc_bitfields();
 
-  void Index(NameToDIE &func_basenames, NameToDIE &func_fullnames,
-             NameToDIE &func_methods, NameToDIE &func_selectors,
-             NameToDIE &objc_class_selectors, NameToDIE &globals,
-             NameToDIE &types, NameToDIE &namespaces);
-
   SymbolFileDWARF *GetSymbolFileDWARF() const;
 
   DWARFProducer GetProducer();
@@ -160,6 +158,11 @@ public:
   SymbolFileDWARFDwo *GetDwoSymbolFile() const;
 
   dw_offset_t GetBaseObjOffset() const;
+
+  die_iterator_range dies() {
+    ExtractDIEsIfNeeded(false);
+    return die_iterator_range(m_die_array.begin(), m_die_array.end());
+  }
 
 protected:
   DWARFUnit(SymbolFileDWARF *dwarf);
@@ -189,14 +192,6 @@ protected:
   // If this is a dwo compile unit this is the offset of the base compile unit
   // in the main object file
   dw_offset_t m_base_obj_offset = DW_INVALID_OFFSET;
-
-  static void
-  IndexPrivate(DWARFUnit *dwarf_cu, const lldb::LanguageType cu_language,
-               const DWARFFormValue::FixedFormSizes &fixed_form_sizes,
-               const dw_offset_t cu_offset, NameToDIE &func_basenames,
-               NameToDIE &func_fullnames, NameToDIE &func_methods,
-               NameToDIE &func_selectors, NameToDIE &objc_class_selectors,
-               NameToDIE &globals, NameToDIE &types, NameToDIE &namespaces);
 
   // Offset of the initial length field.
   dw_offset_t m_offset;
