@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/ExecutionEngine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Config/config.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
@@ -158,3 +159,7 @@ JITEventListener *JITEventListener::createOProfileJITEventListener() {
 
 } // namespace llvm
 
+LLVMJITEventListenerRef LLVMCreateOProfileJITEventListener(void)
+{
+  return wrap(JITEventListener::createOProfileJITEventListener());
+}

@@ -48,12 +48,6 @@ set(ALL_BUILTIN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
 include(CompilerRTUtils)
 include(CompilerRTDarwinUtils)
 
-# If targeting ARM, check if VFP is supported.
-if(CAN_TARGET_arm)
-  string(REPLACE ";" " " _TARGET_arm_CFLAGS "${TARGET_arm_CFLAGS}")
-  check_compile_definition(__VFP_FP__ "${CMAKE_C_FLAGS} ${_TARGET_arm_CFLAGS}" COMPILER_RT_HAS_ARM_VFP)
-endif()
-
 if(APPLE)
 
   find_darwin_sdk_dir(DARWIN_osx_SYSROOT macosx)

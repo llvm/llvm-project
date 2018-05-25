@@ -207,7 +207,7 @@ void DWARFUnit::AddUnitDIE(DWARFDebugInfoEntry &die) {
   if (!dwo_cu)
     return; // Can't fetch the compile unit from the dwo file.
 
-  DWARFDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
+  DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
   if (!dwo_cu_die.IsValid())
     return; // Can't fetch the compile unit DIE from the dwo file.
 

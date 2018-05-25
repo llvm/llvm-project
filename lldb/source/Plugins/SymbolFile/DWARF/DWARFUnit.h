@@ -113,7 +113,7 @@ public:
 
   void SetBaseAddress(dw_addr_t base_addr);
 
-  DWARFDIE GetUnitDIEOnly() { return DWARFDIE(this, GetUnitDIEPtrOnly()); }
+  DWARFBaseDIE GetUnitDIEOnly() { return DWARFDIE(this, GetUnitDIEPtrOnly()); }
 
   DWARFDIE DIE() { return DWARFDIE(this, DIEPtr()); }
 

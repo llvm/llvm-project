@@ -139,6 +139,10 @@ namespace std {
   private:
     T *val; // exposition only
   };
+
+template<class T>
+  optional(T) -> optional<T>;
+
 } // namespace std
 
 */
@@ -1002,6 +1006,11 @@ private:
         return &__x;
     }
 };
+
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class T>
+    optional(T) -> optional<T>;
+#endif
 
 // Comparisons between optionals
 template <class _Tp, class _Up>

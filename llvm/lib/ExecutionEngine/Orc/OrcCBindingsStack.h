@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -214,7 +215,14 @@ public:
                       Resolvers.erase(ResolverI);
                       return ObjLayerT::Resources{
                           std::make_shared<SectionMemoryManager>(), Resolver};
-                    }),
+                    },
+		    nullptr,
+		    [this](orc::VModuleKey K, const object::ObjectFile &Obj, const RuntimeDyld::LoadedObjectInfo &LoadedObjInfo) {
+		      this->notifyFinalized(K, Obj, LoadedObjInfo);
+		    },
+		    [this](orc::VModuleKey K, const object::ObjectFile &Obj) {
+		      this->notifyFreed(K, Obj);
+		    }),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(TM)),
         CODLayer(ES, CompileLayer,
                  [this](orc::VModuleKey K) {
@@ -427,6 +435,23 @@ public:
 
   const std::string &getErrorMessage() const { return ErrMsg; }
 
+  void RegisterJITEventListener(JITEventListener *L) {
+    if (!L)
+      return;
+    EventListeners.push_back(L);
+  }
+
+  void UnregisterJITEventListener(JITEventListener *L) {
+    if (!L)
+      return;
+
+    auto I = find(reverse(EventListeners), L);
+    if (I != EventListeners.rend()) {
+      std::swap(*I, EventListeners.back());
+      EventListeners.pop_back();
+    }
+  }
+
 private:
 
   LLVMOrcErrorCode mapError(Error Err) {
@@ -446,7 +471,21 @@ private:
     logAllUnhandledErrors(std::move(Err), errs(), "ORC error: ");
   };
 
+  void notifyFinalized(orc::VModuleKey K,
+		       const object::ObjectFile &Obj,
+		       const RuntimeDyld::LoadedObjectInfo &LoadedObjInfo) {
+    for (auto &Listener : EventListeners)
+      Listener->NotifyObjectEmitted(Obj, LoadedObjInfo);
+  }
+
+  void notifyFreed(orc::VModuleKey K, const object::ObjectFile &Obj) {
+    for (auto &Listener : EventListeners)
+      Listener->NotifyFreeingObject(Obj);
+  }
+
   orc::ExecutionSession ES;
+
+  std::vector<JITEventListener *> EventListeners;
 
   DataLayout DL;
   SectionMemoryManager CCMgrMemMgr;

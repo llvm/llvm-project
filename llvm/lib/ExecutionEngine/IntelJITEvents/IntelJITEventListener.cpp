@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IntelJITEventsWrapper.h"
+#include "llvm-c/ExecutionEngine.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Config/config.h"
@@ -238,3 +239,7 @@ JITEventListener *JITEventListener::createIntelJITEventListener(
 
 } // namespace llvm
 
+LLVMJITEventListenerRef LLVMCreateIntelJITEventListener(void)
+{
+  return wrap(JITEventListener::createIntelJITEventListener());
+}
