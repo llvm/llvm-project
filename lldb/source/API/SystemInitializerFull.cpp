@@ -11,7 +11,7 @@
 #include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #endif
 
-#include "lldb/API/SystemInitializerFull.h"
+#include "SystemInitializerFull.h"
 
 #include "lldb/API/SBCommandInterpreter.h"
 

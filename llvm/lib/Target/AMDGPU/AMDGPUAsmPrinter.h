@@ -29,6 +29,7 @@
 
 namespace llvm {
 
+class AMDGPUMachineFunction;
 class AMDGPUTargetStreamer;
 class MCOperand;
 class SISubtarget;
@@ -144,7 +145,8 @@ private:
   void emitCommonFunctionComments(uint32_t NumVGPR,
                                   uint32_t NumSGPR,
                                   uint64_t ScratchSize,
-                                  uint64_t CodeSize);
+                                  uint64_t CodeSize,
+                                  const AMDGPUMachineFunction* MFI);
 
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,

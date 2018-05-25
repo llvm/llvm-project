@@ -11,6 +11,9 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+
+#include "SystemInitializerFull.h"
+
 #include "lldb/API/SBDebugger.h"
 
 #include "lldb/lldb-private.h"
@@ -35,7 +38,6 @@
 #include "lldb/API/SBTypeNameSpecifier.h"
 #include "lldb/API/SBTypeSummary.h"
 #include "lldb/API/SBTypeSynthetic.h"
-#include "lldb/API/SystemInitializerFull.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"

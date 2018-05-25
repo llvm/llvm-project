@@ -45,7 +45,7 @@ int main()
 //  optional(const optional &);
     std::optional<char> source('A');
     std::optional opt(source);
-    static_assert(std::is_same_v<decltype(opt), std::optional<char>>, "");
+    static_assert(std::is_same_v<decltype(opt), std::optional<std::optional<char>>>, "");
     assert(static_cast<bool>(opt) == static_cast<bool>(source));
     assert(*opt == *source);
     }

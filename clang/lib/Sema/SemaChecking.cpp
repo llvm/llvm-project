@@ -3519,8 +3519,8 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
         break;
       case 2:
         // The third argument to compare_exchange / GNU exchange is the desired
-        // value, either by-value (for the *_n variant) or as a pointer.
-        if (!IsN)
+        // value, either by-value (for the C11 and *_n variant) or as a pointer.
+        if (IsPassedByAddress)
           CheckNonNullArgument(*this, TheCall->getArg(i), DRE->getLocStart());
         Ty = ByValType;
         break;
