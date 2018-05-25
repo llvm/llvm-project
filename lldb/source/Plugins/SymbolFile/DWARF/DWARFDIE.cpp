@@ -209,9 +209,10 @@ DWARFDIE::GetParentDeclContextDIE() const {
     return DWARFDIE();
 }
 
-bool DWARFDIE::IsStructOrClass() const {
+bool DWARFDIE::IsStructClassOrUnion() const {
   const dw_tag_t tag = Tag();
-  return tag == DW_TAG_class_type || tag == DW_TAG_structure_type;
+  return tag == DW_TAG_class_type || tag == DW_TAG_structure_type ||
+         tag == DW_TAG_union_type;
 }
 
 DWARFDIE

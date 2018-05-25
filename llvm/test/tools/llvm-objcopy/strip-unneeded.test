@@ -1,0 +1,136 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy --strip-unneeded %t %t2
+# RUN: llvm-readobj -symbols %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000000010
+    Size:            64
+  - Name:            .group
+    Type:            SHT_GROUP
+    Link:            .symtab
+    AddressAlign:    0x0000000000000004
+    Info:            barfoo
+    Members:
+      - SectionOrType:   GRP_COMDAT
+      - SectionOrType:   .text
+  - Name:            .rel.text
+    Type:            SHT_REL
+    Link:            .symtab
+    Info:            .text
+    Relocations:
+      - Offset: 0x1000
+        Symbol: foo
+        Type:   R_X86_64_PC32
+Symbols:
+  Local:
+    - Name:     foo
+      Type:     STT_FUNC
+      Section:  .text
+      Value:    0x1000
+      Size:     8
+    - Name:     bar
+      Type:     STT_FUNC
+      Size:     8
+      Section:  .text
+      Value:    0x1008
+    - Name:     barfoo
+      Type:     STT_FUNC
+      Size:     8
+      Section:  .text
+      Value:    0x1010
+    - Name:     fileSymbol
+      Type:     STT_FILE
+    - Name:     sectionSymbol
+      Type:     STT_SECTION
+  Weak:
+    - Name:     baz
+      Type:     STT_FUNC
+      Size:     8
+      Section:  .text
+      Value:    0x1018
+    - Name:     foobaz
+      Type:     STT_FUNC
+  Global:
+    - Name:     foobar
+      Type:     STT_FUNC
+    - Name:     barbaz
+      Type:     STT_FUNC
+      Size:     8
+      Section:  .text
+      Value:    0x1020
+
+#CHECK: Symbols [
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name:
+#CHECK-NEXT:    Value: 0x0
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: None
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Undefined
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: foo
+#CHECK-NEXT:    Value: 0x1000
+#CHECK-NEXT:    Size: 8
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: barfoo
+#CHECK-NEXT:    Value: 0x1010
+#CHECK-NEXT:    Size: 8
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: fileSymbol
+#CHECK-NEXT:    Value: 0x0
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: File
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Undefined
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: sectionSymbol
+#CHECK-NEXT:    Value: 0x0
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: Section
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Undefined
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: barbaz
+#CHECK-NEXT:    Value: 0x1020
+#CHECK-NEXT:    Size: 8
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: baz
+#CHECK-NEXT:    Value: 0x1018
+#CHECK-NEXT:    Size: 8
+#CHECK-NEXT:    Binding: Weak
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:]

@@ -10231,7 +10231,7 @@ public:
   struct CodeCompleteExpressionData;
   void CodeCompleteExpression(Scope *S,
                               const CodeCompleteExpressionData &Data);
-  void CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
+  void CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base, Expr *OtherOpBase,
                                        SourceLocation OpLoc, bool IsArrow,
                                        bool IsBaseExprStatement);
   void CodeCompletePostfixExpression(Scope *S, ExprResult LHS);

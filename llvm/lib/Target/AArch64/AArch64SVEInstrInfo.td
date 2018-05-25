@@ -20,6 +20,9 @@ let Predicates = [HasSVE] in {
   defm ADD_ZPmZ  : sve_int_bin_pred_arit_0<0b000, "add">;
   defm SUB_ZPmZ  : sve_int_bin_pred_arit_0<0b001, "sub">;
 
+  // Splat immediate (unpredicated)
+  defm DUP_ZI   : sve_int_dup_imm<"dup">;
+
   // continuous load with reg+immediate
   defm LD1B_IMM    : sve_mem_cld_si<0b0000, "ld1b",  Z_b, ZPR8>;
   defm LD1B_H_IMM  : sve_mem_cld_si<0b0001, "ld1b",  Z_h, ZPR16>;

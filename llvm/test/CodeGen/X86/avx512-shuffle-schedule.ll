@@ -4536,7 +4536,7 @@ define <16 x i8> @test_masked_16xi8_perm_mask0(<16 x i8> %vec, <16 x i8> %vec2, 
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmb %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufb {{.*#+}} xmm1 {%k1} = xmm0[8,6,12,4,7,9,14,8,4,12,9,4,14,15,12,14] sched: [7:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_16xi8_perm_mask0:
@@ -4573,7 +4573,7 @@ define <16 x i8> @test_masked_16xi8_perm_mask1(<16 x i8> %vec, <16 x i8> %vec2, 
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmb %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufb {{.*#+}} xmm1 {%k1} = xmm0[4,11,14,10,7,1,6,9,14,15,7,13,4,12,8,0] sched: [7:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_16xi8_perm_mask1:
@@ -4610,7 +4610,7 @@ define <16 x i8> @test_masked_16xi8_perm_mask2(<16 x i8> %vec, <16 x i8> %vec2, 
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmb %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufb {{.*#+}} xmm1 {%k1} = xmm0[11,6,13,10,0,7,13,3,5,13,3,9,3,15,12,7] sched: [7:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_16xi8_perm_mask2:
@@ -4660,7 +4660,7 @@ define <16 x i8> @test_masked_16xi8_perm_mask3(<16 x i8> %vec, <16 x i8> %vec2, 
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmb %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufb {{.*#+}} xmm1 {%k1} = xmm0[1,5,8,14,1,8,11,8,13,8,15,9,9,7,9,6] sched: [7:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_16xi8_perm_mask3:
@@ -5658,7 +5658,7 @@ define <8 x i16> @test_masked_8xi16_perm_high_mask0(<8 x i16> %vec, <8 x i16> %v
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmw %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufhw {{.*#+}} xmm1 {%k1} = xmm0[0,1,2,3,6,5,7,6] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_8xi16_perm_high_mask0:
@@ -5695,7 +5695,7 @@ define <8 x i16> @test_masked_8xi16_perm_low_mask1(<8 x i16> %vec, <8 x i16> %ve
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmw %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshuflw {{.*#+}} xmm1 {%k1} = xmm0[0,3,0,0,4,5,6,7] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_8xi16_perm_low_mask1:
@@ -5732,7 +5732,7 @@ define <8 x i16> @test_masked_8xi16_perm_high_mask2(<8 x i16> %vec, <8 x i16> %v
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmw %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufhw {{.*#+}} xmm1 {%k1} = xmm0[0,1,2,3,5,4,4,5] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_8xi16_perm_high_mask2:
@@ -5782,7 +5782,7 @@ define <8 x i16> @test_masked_8xi16_perm_low_mask3(<8 x i16> %vec, <8 x i16> %ve
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmw %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshuflw {{.*#+}} xmm1 {%k1} = xmm0[2,1,1,1,4,5,6,7] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_8xi16_perm_low_mask3:
@@ -5819,7 +5819,7 @@ define <8 x i16> @test_masked_8xi16_perm_high_mask4(<8 x i16> %vec, <8 x i16> %v
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmw %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufhw {{.*#+}} xmm1 {%k1} = xmm0[0,1,2,3,5,5,7,6] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_8xi16_perm_high_mask4:
@@ -5856,7 +5856,7 @@ define <8 x i16> @test_masked_8xi16_perm_low_mask5(<8 x i16> %vec, <8 x i16> %ve
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmw %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshuflw {{.*#+}} xmm1 {%k1} = xmm0[3,3,2,1,4,5,6,7] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_8xi16_perm_low_mask5:
@@ -5906,7 +5906,7 @@ define <8 x i16> @test_masked_8xi16_perm_high_mask6(<8 x i16> %vec, <8 x i16> %v
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmw %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufhw {{.*#+}} xmm1 {%k1} = xmm0[0,1,2,3,6,5,6,5] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_8xi16_perm_high_mask6:
@@ -5943,7 +5943,7 @@ define <8 x i16> @test_masked_8xi16_perm_low_mask7(<8 x i16> %vec, <8 x i16> %ve
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmw %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshuflw {{.*#+}} xmm1 {%k1} = xmm0[1,0,2,0,4,5,6,7] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_8xi16_perm_low_mask7:
@@ -7705,7 +7705,7 @@ define <4 x i32> @test_masked_4xi32_perm_mask0(<4 x i32> %vec, <4 x i32> %vec2, 
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufd {{.*#+}} xmm1 {%k1} = xmm0[2,3,3,0] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_4xi32_perm_mask0:
@@ -7742,7 +7742,7 @@ define <4 x i32> @test_masked_4xi32_perm_mask1(<4 x i32> %vec, <4 x i32> %vec2, 
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufd {{.*#+}} xmm1 {%k1} = xmm0[1,0,2,0] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_4xi32_perm_mask1:
@@ -7779,7 +7779,7 @@ define <4 x i32> @test_masked_4xi32_perm_mask2(<4 x i32> %vec, <4 x i32> %vec2, 
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufd {{.*#+}} xmm1 {%k1} = xmm0[3,0,1,0] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_4xi32_perm_mask2:
@@ -7829,7 +7829,7 @@ define <4 x i32> @test_masked_4xi32_perm_mask3(<4 x i32> %vec, <4 x i32> %vec2, 
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vptestnmd %xmm2, %xmm2, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpshufd {{.*#+}} xmm1 {%k1} = xmm0[1,1,0,3] sched: [1:0.50]
-; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.50]
+; GENERIC-NEXT:    vmovdqa %xmm1, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_masked_4xi32_perm_mask3:
