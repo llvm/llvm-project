@@ -933,8 +933,8 @@ define i32 @nabs_abs_x09(i32 %x) {
 ; CHECK-LABEL: @nabs_abs_x09(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[COND1:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
-; CHECK-NEXT:    ret i32 [[COND1]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp sgt i32 %x, -1
   %sub = sub nsw i32 0, %x
@@ -949,8 +949,8 @@ define i32 @nabs_abs_x10(i32 %x) {
 ; CHECK-LABEL: @nabs_abs_x10(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[COND1:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
-; CHECK-NEXT:    ret i32 [[COND1]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp sgt i32 %x, 0
   %sub = sub nsw i32 0, %x
@@ -965,8 +965,8 @@ define i32 @nabs_abs_x11(i32 %x) {
 ; CHECK-LABEL: @nabs_abs_x11(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[COND1:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
-; CHECK-NEXT:    ret i32 [[COND1]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp slt i32 %x, 0
   %sub = sub nsw i32 0, %x
@@ -981,8 +981,8 @@ define i32 @nabs_abs_x12(i32 %x) {
 ; CHECK-LABEL: @nabs_abs_x12(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[COND1:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
-; CHECK-NEXT:    ret i32 [[COND1]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp slt i32 %x, 1
   %sub = sub nsw i32 0, %x

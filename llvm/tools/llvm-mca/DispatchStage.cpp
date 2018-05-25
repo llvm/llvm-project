@@ -8,7 +8,11 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements methods declared by the DispatchStage class.
+/// This file models the dispatch component of an instruction pipeline.
+///
+/// The DispatchStage is responsible for updating instruction dependencies
+/// and communicating to the simulated instruction scheduler that an instruction
+/// is ready to be scheduled for execution.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -30,23 +34,13 @@ void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
   Owner->notifyInstructionEvent(HWInstructionDispatchedEvent(IR, UsedRegs));
 }
 
-void DispatchStage::notifyInstructionRetired(const InstRef &IR) {
-  LLVM_DEBUG(dbgs() << "[E] Instruction Retired: " << IR << '\n');
-  SmallVector<unsigned, 4> FreedRegs(RAT->getNumRegisterFiles());
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-
-  for (const std::unique_ptr<WriteState> &WS : IR.getInstruction()->getDefs())
-    RAT->removeRegisterWrite(*WS.get(), FreedRegs, !Desc.isZeroLatency());
-  Owner->notifyInstructionEvent(HWInstructionRetiredEvent(IR, FreedRegs));
-}
-
-bool DispatchStage::checkRAT(const InstRef &IR) {
+bool DispatchStage::checkPRF(const InstRef &IR) {
   SmallVector<unsigned, 4> RegDefs;
   for (const std::unique_ptr<WriteState> &RegDef :
        IR.getInstruction()->getDefs())
     RegDefs.emplace_back(RegDef->getRegisterID());
 
-  unsigned RegisterMask = RAT->isAvailable(RegDefs);
+  const unsigned RegisterMask = PRF.isAvailable(RegDefs);
   // A mask with all zeroes means: register files are available.
   if (RegisterMask) {
     Owner->notifyStallEvent(HWStallEvent(HWStallEvent::RegisterFileStall, IR));
@@ -58,7 +52,7 @@ bool DispatchStage::checkRAT(const InstRef &IR) {
 
 bool DispatchStage::checkRCU(const InstRef &IR) {
   const unsigned NumMicroOps = IR.getInstruction()->getDesc().NumMicroOps;
-  if (RCU->isAvailable(NumMicroOps))
+  if (RCU.isAvailable(NumMicroOps))
     return true;
   Owner->notifyStallEvent(
       HWStallEvent(HWStallEvent::RetireControlUnitStall, IR));
@@ -125,13 +119,13 @@ void DispatchStage::dispatch(InstRef IR) {
   // By default, a dependency-breaking zero-latency instruction is expected to
   // be optimized at register renaming stage. That means, no physical register
   // is allocated to the instruction.
-  SmallVector<unsigned, 4> RegisterFiles(RAT->getNumRegisterFiles());
+  SmallVector<unsigned, 4> RegisterFiles(PRF.getNumRegisterFiles());
   for (std::unique_ptr<WriteState> &WS : IS.getDefs())
-    RAT->addRegisterWrite(*WS, RegisterFiles, !Desc.isZeroLatency());
+    PRF.addRegisterWrite(*WS, RegisterFiles, !Desc.isZeroLatency());
 
   // Reserve slots in the RCU, and notify the instruction that it has been
   // dispatched to the schedulers for execution.
-  IS.dispatch(RCU->reserveSlot(IR, NumMicroOps));
+  IS.dispatch(RCU.reserveSlot(IR, NumMicroOps));
 
   // Notify listeners of the "instruction dispatched" event.
   notifyInstructionDispatched(IR, RegisterFiles);
@@ -143,7 +137,6 @@ void DispatchStage::dispatch(InstRef IR) {
 }
 
 void DispatchStage::preExecute(const InstRef &IR) {
-  RCU->cycleEvent();
   AvailableEntries = CarryOver >= DispatchWidth ? 0 : DispatchWidth - CarryOver;
   CarryOver = CarryOver >= DispatchWidth ? CarryOver - DispatchWidth : 0U;
 }
@@ -158,8 +151,8 @@ bool DispatchStage::execute(InstRef &IR) {
 
 #ifndef NDEBUG
 void DispatchStage::dump() const {
-  RAT->dump();
-  RCU->dump();
+  PRF.dump();
+  RCU.dump();
 }
 #endif
 } // namespace mca

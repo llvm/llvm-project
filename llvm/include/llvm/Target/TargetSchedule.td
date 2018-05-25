@@ -355,13 +355,23 @@ class PredicateProlog<code c> {
   code Code = c;
 }
 
+// Base class for scheduling predicates.
+class SchedPredicateBase;
+
+// A scheduling predicate whose logic is defined by a MCInstPredicate.
+// This can directly be used by SchedWriteVariant definitions.
+class MCSchedPredicate<MCInstPredicate P> : SchedPredicateBase {
+  MCInstPredicate Pred = P;
+  SchedMachineModel SchedModel = ?;
+}
+
 // Define a predicate to determine which SchedVariant applies to a
 // particular MachineInstr. The code snippet is used as an
 // if-statement's expression. Available variables are MI, SchedModel,
 // and anything defined in a PredicateProlog.
 //
 // SchedModel silences warnings but is ignored.
-class SchedPredicate<code pred> {
+class SchedPredicate<code pred> : SchedPredicateBase {
   SchedMachineModel SchedModel = ?;
   code Predicate = pred;
 }
@@ -376,8 +386,8 @@ def NoSchedPred : SchedPredicate<[{true}]>;
 // operands. In this case, latency is not additive. If the current Variant
 // is already part of a Sequence, then that entire chain leading up to
 // the Variant is distributed over the variadic operands.
-class SchedVar<SchedPredicate pred, list<SchedReadWrite> selected> {
-  SchedPredicate Predicate = pred;
+class SchedVar<SchedPredicateBase pred, list<SchedReadWrite> selected> {
+  SchedPredicateBase Predicate = pred;
   list<SchedReadWrite> Selected = selected;
 }
 

@@ -840,10 +840,10 @@ public:
                        bool Accessible = true,
                        std::vector<FixItHint> FixIts = std::vector<FixItHint>())
       : Declaration(Declaration), Priority(Priority), Kind(RK_Declaration),
-        Hidden(false), QualifierIsInformative(QualifierIsInformative),
+        FixIts(std::move(FixIts)), Hidden(false),
+        QualifierIsInformative(QualifierIsInformative),
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
-        DeclaringEntity(false), Qualifier(Qualifier),
-        FixIts(std::move(FixIts)) {
+        DeclaringEntity(false), Qualifier(Qualifier) {
     //FIXME: Add assert to check FixIts range requirements.
     computeCursorKindAndAvailability(Accessible);
   }

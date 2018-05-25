@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements methods declared by the RetireControlUnit interface.
+/// This file simulates the hardware responsible for retiring instructions.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -22,10 +22,9 @@ using namespace llvm;
 
 namespace mca {
 
-RetireControlUnit::RetireControlUnit(const llvm::MCSchedModel &SM,
-                                     DispatchStage *DS)
+RetireControlUnit::RetireControlUnit(const llvm::MCSchedModel &SM)
     : NextAvailableSlotIdx(0), CurrentInstructionSlotIdx(0),
-      AvailableSlots(SM.MicroOpBufferSize), MaxRetirePerCycle(0), Owner(DS) {
+      AvailableSlots(SM.MicroOpBufferSize), MaxRetirePerCycle(0) {
   // Check if the scheduling model provides extra information about the machine
   // processor. If so, then use that information to set the reorder buffer size
   // and the maximum number of instructions retired per cycle.
@@ -58,25 +57,19 @@ unsigned RetireControlUnit::reserveSlot(const InstRef &IR,
   return TokenID;
 }
 
-void RetireControlUnit::cycleEvent() {
-  if (isEmpty())
-    return;
+const RetireControlUnit::RUToken &RetireControlUnit::peekCurrentToken() const {
+  return Queue[CurrentInstructionSlotIdx];
+}
 
-  unsigned NumRetired = 0;
-  while (!isEmpty()) {
-    if (MaxRetirePerCycle != 0 && NumRetired == MaxRetirePerCycle)
-      break;
-    RUToken &Current = Queue[CurrentInstructionSlotIdx];
-    assert(Current.NumSlots && "Reserved zero slots?");
-    assert(Current.IR.isValid() && "Invalid RUToken in the RCU queue.");
-    if (!Current.Executed)
-      break;
-    Owner->notifyInstructionRetired(Current.IR);
-    CurrentInstructionSlotIdx += Current.NumSlots;
-    CurrentInstructionSlotIdx %= Queue.size();
-    AvailableSlots += Current.NumSlots;
-    NumRetired++;
-  }
+void RetireControlUnit::consumeCurrentToken() {
+  const RetireControlUnit::RUToken &Current = peekCurrentToken();
+  assert(Current.NumSlots && "Reserved zero slots?");
+  assert(Current.IR.isValid() && "Invalid RUToken in the RCU queue.");
+
+  // Update the slot index to be the next item in the circular queue.
+  CurrentInstructionSlotIdx += Current.NumSlots;
+  CurrentInstructionSlotIdx %= Queue.size();
+  AvailableSlots += Current.NumSlots;
 }
 
 void RetireControlUnit::onInstructionExecuted(unsigned TokenID) {

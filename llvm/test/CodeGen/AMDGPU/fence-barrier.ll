@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx803 -enable-si-insert-waitcnts=1 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
-; RUN: llvm-as -data-layout=A5 < %s | llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx803 -enable-si-insert-waitcnts=1 -verify-machineinstrs | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llvm-as -data-layout=A5 < %s | llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx803 -verify-machineinstrs | FileCheck --check-prefix=GCN %s
 
 declare i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
 declare i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()

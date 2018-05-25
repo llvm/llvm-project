@@ -96,7 +96,7 @@ void ManualDWARFIndex::Index() {
   //----------------------------------------------------------------------
   for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
     if (clear_cu_dies[cu_idx])
-      debug_info.GetCompileUnitAtIndex(cu_idx)->ClearDIEs(true);
+      debug_info.GetCompileUnitAtIndex(cu_idx)->ClearDIEs();
   }
 }
 

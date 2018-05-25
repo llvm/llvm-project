@@ -16,6 +16,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
@@ -1000,11 +1001,49 @@ void PathDiagnosticCallPiece::setCallee(const CallEnter &CE,
         CalleeCtx->getAnalysisDeclContext()->isBodyAutosynthesized());
 }
 
+static void describeTemplateParameters(raw_ostream &Out,
+                                       const ArrayRef<TemplateArgument> TAList,
+                                       const LangOptions &LO,
+                                       StringRef Prefix = StringRef(),
+                                       StringRef Postfix = StringRef());
+
+static void describeTemplateParameter(raw_ostream &Out,
+                                      const TemplateArgument &TArg,
+                                      const LangOptions &LO) {
+
+  if (TArg.getKind() == TemplateArgument::ArgKind::Pack) {
+    describeTemplateParameters(Out, TArg.getPackAsArray(), LO);
+  } else {
+    TArg.print(PrintingPolicy(LO), Out);
+  }
+}
+
+static void describeTemplateParameters(raw_ostream &Out,
+                                       const ArrayRef<TemplateArgument> TAList,
+                                       const LangOptions &LO,
+                                       StringRef Prefix, StringRef Postfix) {
+  if (TAList.empty())
+    return;
+
+  Out << Prefix;
+  for (int I = 0, Last = TAList.size() - 1; I != Last; ++I) {
+    describeTemplateParameter(Out, TAList[I], LO);
+    Out << ", ";
+  }
+  describeTemplateParameter(Out, TAList[TAList.size() - 1], LO);
+  Out << Postfix;
+}
+
 static void describeClass(raw_ostream &Out, const CXXRecordDecl *D,
                           StringRef Prefix = StringRef()) {
   if (!D->getIdentifier())
     return;
-  Out << Prefix << '\'' << *D << '\'';
+  Out << Prefix << '\'' << *D;
+  if (const auto T = dyn_cast<ClassTemplateSpecializationDecl>(D))
+    describeTemplateParameters(Out, T->getTemplateArgs().asArray(),
+                               D->getASTContext().getLangOpts(), "<", ">");
+
+  Out << '\'';
 }
 
 static bool describeCodeDecl(raw_ostream &Out, const Decl *D,
@@ -1062,7 +1101,16 @@ static bool describeCodeDecl(raw_ostream &Out, const Decl *D,
     return true;
   }
 
-  Out << Prefix << '\'' << cast<NamedDecl>(*D) << '\'';
+  Out << Prefix << '\'' << cast<NamedDecl>(*D);
+
+  // Adding template parameters.
+  if (const auto FD = dyn_cast<FunctionDecl>(D))
+    if (const TemplateArgumentList *TAList =
+                                    FD->getTemplateSpecializationArgs())
+      describeTemplateParameters(Out, TAList->asArray(),
+                                 FD->getASTContext().getLangOpts(), "<", ">");
+
+  Out << '\'';
   return true;
 }
 

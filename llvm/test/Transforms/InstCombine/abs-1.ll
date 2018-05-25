@@ -293,3 +293,14 @@ define <2 x i8> @negate_nabs(<2 x i8> %x) {
   %r = sub <2 x i8> zeroinitializer, %s
   ret <2 x i8> %r
 }
+
+define i1 @abs_must_be_positive(i32 %x) {
+; CHECK-LABEL: @abs_must_be_positive(
+; CHECK-NEXT:    ret i1 true
+;
+  %negx = sub nsw i32 0, %x
+  %c = icmp sge i32 %x, 0
+  %sel = select i1 %c, i32 %x, i32 %negx
+  %c2 = icmp sge i32 %sel, 0
+  ret i1 %c2
+}
