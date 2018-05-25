@@ -99,7 +99,7 @@ bool ThreadPlanStepOverBreakpoint::DoPlanExplainsStop(Event *event_ptr) {
 
         if (pc_addr == m_breakpoint_addr) {
           if (log)
-            log->Printf("Got breakpoint stop reason but pc: %x" PRIx64 
+            log->Printf("Got breakpoint stop reason but pc: 0x%" PRIx64
                         "hasn't changed.", pc_addr);
           return true;
         }
