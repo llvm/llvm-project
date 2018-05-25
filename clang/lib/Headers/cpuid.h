@@ -156,6 +156,7 @@
 #define bit_SMEP        0x00000080
 #define bit_BMI2        0x00000100
 #define bit_ENH_MOVSB   0x00000200
+#define bit_INVPCID     0x00000400
 #define bit_RTM         0x00000800
 #define bit_MPX         0x00004000
 #define bit_AVX512F     0x00010000

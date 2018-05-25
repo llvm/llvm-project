@@ -42,7 +42,7 @@ private:
 TEST_F(TUSchedulerTests, MissingFiles) {
   TUScheduler S(getDefaultAsyncThreadsCount(),
                 /*StorePreamblesInMemory=*/true,
-                /*ASTParsedCallback=*/nullptr,
+                /*PreambleParsedCallback=*/nullptr,
                 /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero());
 
   auto Added = testPath("added.cpp");
@@ -98,7 +98,7 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
     TUScheduler S(
         getDefaultAsyncThreadsCount(),
         /*StorePreamblesInMemory=*/true,
-        /*ASTParsedCallback=*/nullptr,
+        /*PreambleParsedCallback=*/nullptr,
         /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero());
     auto Path = testPath("foo.cpp");
     S.update(Path, getInputs(Path, ""), WantDiagnostics::Yes,
@@ -126,7 +126,7 @@ TEST_F(TUSchedulerTests, Debounce) {
   {
     TUScheduler S(getDefaultAsyncThreadsCount(),
                   /*StorePreamblesInMemory=*/true,
-                  /*ASTParsedCallback=*/nullptr,
+                  /*PreambleParsedCallback=*/nullptr,
                   /*UpdateDebounce=*/std::chrono::seconds(1));
     // FIXME: we could probably use timeouts lower than 1 second here.
     auto Path = testPath("foo.cpp");
@@ -157,7 +157,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
   {
     TUScheduler S(getDefaultAsyncThreadsCount(),
                   /*StorePreamblesInMemory=*/true,
-                  /*ASTParsedCallback=*/nullptr,
+                  /*PreambleParsedCallback=*/nullptr,
                   /*UpdateDebounce=*/std::chrono::milliseconds(50));
 
     std::vector<std::string> Files;

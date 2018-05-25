@@ -23,263 +23,171 @@
 using namespace clang;
 using namespace ento;
 
-/// A Range represents the closed range [from, to].  The caller must
-/// guarantee that from <= to.  Note that Range is immutable, so as not
-/// to subvert RangeSet's immutability.
-namespace {
-class Range : public std::pair<const llvm::APSInt *, const llvm::APSInt *> {
-public:
-  Range(const llvm::APSInt &from, const llvm::APSInt &to)
-      : std::pair<const llvm::APSInt *, const llvm::APSInt *>(&from, &to) {
-    assert(from <= to);
-  }
-  bool Includes(const llvm::APSInt &v) const {
-    return *first <= v && v <= *second;
-  }
-  const llvm::APSInt &From() const { return *first; }
-  const llvm::APSInt &To() const { return *second; }
-  const llvm::APSInt *getConcreteValue() const {
-    return &From() == &To() ? &From() : nullptr;
-  }
+void RangeSet::IntersectInRange(BasicValueFactory &BV, Factory &F,
+                      const llvm::APSInt &Lower, const llvm::APSInt &Upper,
+                      PrimRangeSet &newRanges, PrimRangeSet::iterator &i,
+                      PrimRangeSet::iterator &e) const {
+  // There are six cases for each range R in the set:
+  //   1. R is entirely before the intersection range.
+  //   2. R is entirely after the intersection range.
+  //   3. R contains the entire intersection range.
+  //   4. R starts before the intersection range and ends in the middle.
+  //   5. R starts in the middle of the intersection range and ends after it.
+  //   6. R is entirely contained in the intersection range.
+  // These correspond to each of the conditions below.
+  for (/* i = begin(), e = end() */; i != e; ++i) {
+    if (i->To() < Lower) {
+      continue;
+    }
+    if (i->From() > Upper) {
+      break;
+    }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    ID.AddPointer(&From());
-    ID.AddPointer(&To());
-  }
-};
-
-class RangeTrait : public llvm::ImutContainerInfo<Range> {
-public:
-  // When comparing if one Range is less than another, we should compare
-  // the actual APSInt values instead of their pointers.  This keeps the order
-  // consistent (instead of comparing by pointer values) and can potentially
-  // be used to speed up some of the operations in RangeSet.
-  static inline bool isLess(key_type_ref lhs, key_type_ref rhs) {
-    return *lhs.first < *rhs.first ||
-           (!(*rhs.first < *lhs.first) && *lhs.second < *rhs.second);
-  }
-};
-
-/// RangeSet contains a set of ranges. If the set is empty, then
-///  there the value of a symbol is overly constrained and there are no
-///  possible values for that symbol.
-class RangeSet {
-  typedef llvm::ImmutableSet<Range, RangeTrait> PrimRangeSet;
-  PrimRangeSet ranges; // no need to make const, since it is an
-                       // ImmutableSet - this allows default operator=
-                       // to work.
-public:
-  typedef PrimRangeSet::Factory Factory;
-  typedef PrimRangeSet::iterator iterator;
-
-  RangeSet(PrimRangeSet RS) : ranges(RS) {}
-
-  /// Create a new set with all ranges of this set and RS.
-  /// Possible intersections are not checked here.
-  RangeSet addRange(Factory &F, const RangeSet &RS) {
-    PrimRangeSet Ranges(RS.ranges);
-    for (const auto &range : ranges)
-      Ranges = F.add(Ranges, range);
-    return RangeSet(Ranges);
-  }
-
-  iterator begin() const { return ranges.begin(); }
-  iterator end() const { return ranges.end(); }
-
-  bool isEmpty() const { return ranges.isEmpty(); }
-
-  /// Construct a new RangeSet representing '{ [from, to] }'.
-  RangeSet(Factory &F, const llvm::APSInt &from, const llvm::APSInt &to)
-      : ranges(F.add(F.getEmptySet(), Range(from, to))) {}
-
-  /// Profile - Generates a hash profile of this RangeSet for use
-  ///  by FoldingSet.
-  void Profile(llvm::FoldingSetNodeID &ID) const { ranges.Profile(ID); }
-
-  /// getConcreteValue - If a symbol is contrained to equal a specific integer
-  ///  constant then this method returns that value.  Otherwise, it returns
-  ///  NULL.
-  const llvm::APSInt *getConcreteValue() const {
-    return ranges.isSingleton() ? ranges.begin()->getConcreteValue() : nullptr;
-  }
-
-private:
-  void IntersectInRange(BasicValueFactory &BV, Factory &F,
-                        const llvm::APSInt &Lower, const llvm::APSInt &Upper,
-                        PrimRangeSet &newRanges, PrimRangeSet::iterator &i,
-                        PrimRangeSet::iterator &e) const {
-    // There are six cases for each range R in the set:
-    //   1. R is entirely before the intersection range.
-    //   2. R is entirely after the intersection range.
-    //   3. R contains the entire intersection range.
-    //   4. R starts before the intersection range and ends in the middle.
-    //   5. R starts in the middle of the intersection range and ends after it.
-    //   6. R is entirely contained in the intersection range.
-    // These correspond to each of the conditions below.
-    for (/* i = begin(), e = end() */; i != e; ++i) {
-      if (i->To() < Lower) {
-        continue;
-      }
-      if (i->From() > Upper) {
+    if (i->Includes(Lower)) {
+      if (i->Includes(Upper)) {
+        newRanges =
+            F.add(newRanges, Range(BV.getValue(Lower), BV.getValue(Upper)));
         break;
-      }
-
-      if (i->Includes(Lower)) {
-        if (i->Includes(Upper)) {
-          newRanges =
-              F.add(newRanges, Range(BV.getValue(Lower), BV.getValue(Upper)));
-          break;
-        } else
-          newRanges = F.add(newRanges, Range(BV.getValue(Lower), i->To()));
-      } else {
-        if (i->Includes(Upper)) {
-          newRanges = F.add(newRanges, Range(i->From(), BV.getValue(Upper)));
-          break;
-        } else
-          newRanges = F.add(newRanges, *i);
-      }
+      } else
+        newRanges = F.add(newRanges, Range(BV.getValue(Lower), i->To()));
+    } else {
+      if (i->Includes(Upper)) {
+        newRanges = F.add(newRanges, Range(i->From(), BV.getValue(Upper)));
+        break;
+      } else
+        newRanges = F.add(newRanges, *i);
     }
   }
+}
 
-  const llvm::APSInt &getMinValue() const {
-    assert(!isEmpty());
-    return ranges.begin()->From();
-  }
+const llvm::APSInt &RangeSet::getMinValue() const {
+  assert(!isEmpty());
+  return ranges.begin()->From();
+}
 
-  bool pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const {
-    // This function has nine cases, the cartesian product of range-testing
-    // both the upper and lower bounds against the symbol's type.
-    // Each case requires a different pinning operation.
-    // The function returns false if the described range is entirely outside
-    // the range of values for the associated symbol.
-    APSIntType Type(getMinValue());
-    APSIntType::RangeTestResultKind LowerTest = Type.testInRange(Lower, true);
-    APSIntType::RangeTestResultKind UpperTest = Type.testInRange(Upper, true);
+bool RangeSet::pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const {
+  // This function has nine cases, the cartesian product of range-testing
+  // both the upper and lower bounds against the symbol's type.
+  // Each case requires a different pinning operation.
+  // The function returns false if the described range is entirely outside
+  // the range of values for the associated symbol.
+  APSIntType Type(getMinValue());
+  APSIntType::RangeTestResultKind LowerTest = Type.testInRange(Lower, true);
+  APSIntType::RangeTestResultKind UpperTest = Type.testInRange(Upper, true);
 
-    switch (LowerTest) {
+  switch (LowerTest) {
+  case APSIntType::RTR_Below:
+    switch (UpperTest) {
     case APSIntType::RTR_Below:
-      switch (UpperTest) {
-      case APSIntType::RTR_Below:
-        // The entire range is outside the symbol's set of possible values.
-        // If this is a conventionally-ordered range, the state is infeasible.
-        if (Lower <= Upper)
-          return false;
+      // The entire range is outside the symbol's set of possible values.
+      // If this is a conventionally-ordered range, the state is infeasible.
+      if (Lower <= Upper)
+        return false;
 
-        // However, if the range wraps around, it spans all possible values.
-        Lower = Type.getMinValue();
-        Upper = Type.getMaxValue();
-        break;
-      case APSIntType::RTR_Within:
-        // The range starts below what's possible but ends within it. Pin.
-        Lower = Type.getMinValue();
-        Type.apply(Upper);
-        break;
-      case APSIntType::RTR_Above:
-        // The range spans all possible values for the symbol. Pin.
-        Lower = Type.getMinValue();
-        Upper = Type.getMaxValue();
-        break;
-      }
+      // However, if the range wraps around, it spans all possible values.
+      Lower = Type.getMinValue();
+      Upper = Type.getMaxValue();
       break;
     case APSIntType::RTR_Within:
-      switch (UpperTest) {
-      case APSIntType::RTR_Below:
-        // The range wraps around, but all lower values are not possible.
-        Type.apply(Lower);
-        Upper = Type.getMaxValue();
-        break;
-      case APSIntType::RTR_Within:
-        // The range may or may not wrap around, but both limits are valid.
-        Type.apply(Lower);
-        Type.apply(Upper);
-        break;
-      case APSIntType::RTR_Above:
-        // The range starts within what's possible but ends above it. Pin.
-        Type.apply(Lower);
-        Upper = Type.getMaxValue();
-        break;
-      }
+      // The range starts below what's possible but ends within it. Pin.
+      Lower = Type.getMinValue();
+      Type.apply(Upper);
       break;
     case APSIntType::RTR_Above:
-      switch (UpperTest) {
-      case APSIntType::RTR_Below:
-        // The range wraps but is outside the symbol's set of possible values.
-        return false;
-      case APSIntType::RTR_Within:
-        // The range starts above what's possible but ends within it (wrap).
-        Lower = Type.getMinValue();
-        Type.apply(Upper);
-        break;
-      case APSIntType::RTR_Above:
-        // The entire range is outside the symbol's set of possible values.
-        // If this is a conventionally-ordered range, the state is infeasible.
-        if (Lower <= Upper)
-          return false;
-
-        // However, if the range wraps around, it spans all possible values.
-        Lower = Type.getMinValue();
-        Upper = Type.getMaxValue();
-        break;
-      }
+      // The range spans all possible values for the symbol. Pin.
+      Lower = Type.getMinValue();
+      Upper = Type.getMaxValue();
       break;
     }
-
-    return true;
-  }
-
-public:
-  // Returns a set containing the values in the receiving set, intersected with
-  // the closed range [Lower, Upper]. Unlike the Range type, this range uses
-  // modular arithmetic, corresponding to the common treatment of C integer
-  // overflow. Thus, if the Lower bound is greater than the Upper bound, the
-  // range is taken to wrap around. This is equivalent to taking the
-  // intersection with the two ranges [Min, Upper] and [Lower, Max],
-  // or, alternatively, /removing/ all integers between Upper and Lower.
-  RangeSet Intersect(BasicValueFactory &BV, Factory &F, llvm::APSInt Lower,
-                     llvm::APSInt Upper) const {
-    if (!pin(Lower, Upper))
-      return F.getEmptySet();
-
-    PrimRangeSet newRanges = F.getEmptySet();
-
-    PrimRangeSet::iterator i = begin(), e = end();
-    if (Lower <= Upper)
-      IntersectInRange(BV, F, Lower, Upper, newRanges, i, e);
-    else {
-      // The order of the next two statements is important!
-      // IntersectInRange() does not reset the iteration state for i and e.
-      // Therefore, the lower range most be handled first.
-      IntersectInRange(BV, F, BV.getMinValue(Upper), Upper, newRanges, i, e);
-      IntersectInRange(BV, F, Lower, BV.getMaxValue(Lower), newRanges, i, e);
+    break;
+  case APSIntType::RTR_Within:
+    switch (UpperTest) {
+    case APSIntType::RTR_Below:
+      // The range wraps around, but all lower values are not possible.
+      Type.apply(Lower);
+      Upper = Type.getMaxValue();
+      break;
+    case APSIntType::RTR_Within:
+      // The range may or may not wrap around, but both limits are valid.
+      Type.apply(Lower);
+      Type.apply(Upper);
+      break;
+    case APSIntType::RTR_Above:
+      // The range starts within what's possible but ends above it. Pin.
+      Type.apply(Lower);
+      Upper = Type.getMaxValue();
+      break;
     }
+    break;
+  case APSIntType::RTR_Above:
+    switch (UpperTest) {
+    case APSIntType::RTR_Below:
+      // The range wraps but is outside the symbol's set of possible values.
+      return false;
+    case APSIntType::RTR_Within:
+      // The range starts above what's possible but ends within it (wrap).
+      Lower = Type.getMinValue();
+      Type.apply(Upper);
+      break;
+    case APSIntType::RTR_Above:
+      // The entire range is outside the symbol's set of possible values.
+      // If this is a conventionally-ordered range, the state is infeasible.
+      if (Lower <= Upper)
+        return false;
 
-    return newRanges;
-  }
-
-  void print(raw_ostream &os) const {
-    bool isFirst = true;
-    os << "{ ";
-    for (iterator i = begin(), e = end(); i != e; ++i) {
-      if (isFirst)
-        isFirst = false;
-      else
-        os << ", ";
-
-      os << '[' << i->From().toString(10) << ", " << i->To().toString(10)
-         << ']';
+      // However, if the range wraps around, it spans all possible values.
+      Lower = Type.getMinValue();
+      Upper = Type.getMaxValue();
+      break;
     }
-    os << " }";
+    break;
   }
 
-  bool operator==(const RangeSet &other) const {
-    return ranges == other.ranges;
-  }
-};
-} // end anonymous namespace
+  return true;
+}
 
-REGISTER_TRAIT_WITH_PROGRAMSTATE(ConstraintRange,
-                                 CLANG_ENTO_PROGRAMSTATE_MAP(SymbolRef,
-                                                             RangeSet))
+// Returns a set containing the values in the receiving set, intersected with
+// the closed range [Lower, Upper]. Unlike the Range type, this range uses
+// modular arithmetic, corresponding to the common treatment of C integer
+// overflow. Thus, if the Lower bound is greater than the Upper bound, the
+// range is taken to wrap around. This is equivalent to taking the
+// intersection with the two ranges [Min, Upper] and [Lower, Max],
+// or, alternatively, /removing/ all integers between Upper and Lower.
+RangeSet RangeSet::Intersect(BasicValueFactory &BV, Factory &F,
+                             llvm::APSInt Lower, llvm::APSInt Upper) const {
+  if (!pin(Lower, Upper))
+    return F.getEmptySet();
+
+  PrimRangeSet newRanges = F.getEmptySet();
+
+  PrimRangeSet::iterator i = begin(), e = end();
+  if (Lower <= Upper)
+    IntersectInRange(BV, F, Lower, Upper, newRanges, i, e);
+  else {
+    // The order of the next two statements is important!
+    // IntersectInRange() does not reset the iteration state for i and e.
+    // Therefore, the lower range most be handled first.
+    IntersectInRange(BV, F, BV.getMinValue(Upper), Upper, newRanges, i, e);
+    IntersectInRange(BV, F, Lower, BV.getMaxValue(Lower), newRanges, i, e);
+  }
+
+  return newRanges;
+}
+
+void RangeSet::print(raw_ostream &os) const {
+  bool isFirst = true;
+  os << "{ ";
+  for (iterator i = begin(), e = end(); i != e; ++i) {
+    if (isFirst)
+      isFirst = false;
+    else
+      os << ", ";
+
+    os << '[' << i->From().toString(10) << ", " << i->To().toString(10)
+       << ']';
+  }
+  os << " }";
+}
 
 namespace {
 class RangeConstraintManager : public RangedConstraintManager {

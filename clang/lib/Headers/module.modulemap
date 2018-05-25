@@ -70,6 +70,7 @@ module _Builtin_intrinsics [system] [extern_c] {
     textual header "pconfigintrin.h"
     textual header "sgxintrin.h"
     textual header "ptwriteintrin.h"
+    textual header "invpcidintrin.h"
 
     textual header "__wmmintrin_aes.h"
     textual header "__wmmintrin_pclmul.h"

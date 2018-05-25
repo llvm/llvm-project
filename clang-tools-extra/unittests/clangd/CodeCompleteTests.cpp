@@ -17,6 +17,7 @@
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "index/MemIndex.h"
+#include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -693,6 +694,42 @@ TEST(CompletionTest, BacktrackCrashes) {
 )cpp");
 }
 
+TEST(CompletionTest, CompleteInMacroWithStringification) {
+  auto Results = completions(R"cpp(
+void f(const char *, int x);
+#define F(x) f(#x, x)
+
+namespace ns {
+int X;
+int Y;
+}  // namespace ns
+
+int f(int input_num) {
+  F(ns::^)
+}
+)cpp");
+
+  EXPECT_THAT(Results.items,
+              UnorderedElementsAre(Named("X"), Named("Y")));
+}
+
+TEST(CompletionTest, CompleteInMacroAndNamespaceWithStringification) {
+  auto Results = completions(R"cpp(
+void f(const char *, int x);
+#define F(x) f(#x, x)
+
+namespace ns {
+int X;
+
+int f(int input_num) {
+  F(^)
+}
+}  // namespace ns
+)cpp");
+
+  EXPECT_THAT(Results.items, Contains(Named("X")));
+}
+
 TEST(CompletionTest, CompleteInExcludedPPBranch) {
   auto Results = completions(R"cpp(
     int bar(int param_in_bar) {
@@ -960,6 +997,46 @@ TEST(CompletionTest, NoIndexCompletionsInsideDependentCode) {
     EXPECT_THAT(Completions.items,
                 Not(Contains(Labeled("SomeNameInTheIndex"))));
   }
+}
+
+TEST(CompletionTest, DocumentationFromChangedFileCrash) {
+  MockFSProvider FS;
+  auto FooH = testPath("foo.h");
+  auto FooCpp = testPath("foo.cpp");
+  FS.Files[FooH] = R"cpp(
+    // this is my documentation comment.
+    int func();
+  )cpp";
+  FS.Files[FooCpp] = "";
+
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  Annotations Source(R"cpp(
+    #include "foo.h"
+    int func() {
+      // This makes sure we have func from header in the AST.
+    }
+    int a = fun^
+  )cpp");
+  Server.addDocument(FooCpp, Source.code(), WantDiagnostics::Yes);
+  // We need to wait for preamble to build.
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+
+  // Change the header file. Completion will reuse the old preamble!
+  FS.Files[FooH] = R"cpp(
+    int func();
+  )cpp";
+
+  clangd::CodeCompleteOptions Opts;
+  Opts.IncludeComments = true;
+  CompletionList Completions =
+      cantFail(runCodeComplete(Server, FooCpp, Source.point(), Opts));
+  // We shouldn't crash. Unfortunately, current workaround is to not produce
+  // comments for symbols from headers.
+  EXPECT_THAT(Completions.items,
+              Contains(AllOf(Not(IsDocumented()), Named("func"))));
 }
 
 } // namespace

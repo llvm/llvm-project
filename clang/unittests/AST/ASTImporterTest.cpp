@@ -1500,7 +1500,7 @@ TEST_P(ASTImporterTestBase,
       )",
       Lang_CXX);
   ASSERT_EQ(2u, DeclCounter<CXXRecordDecl>().match(
-                    ToTU, cxxRecordDecl(hasParent(translationUnitDecl()))));
+                    ToTU, cxxRecordDecl(unless(isImplicit()))));
 
   Decl *FromTU = getTuDecl(
       R"(
@@ -1515,7 +1515,7 @@ TEST_P(ASTImporterTestBase,
   Import(FromD, Lang_CXX);
 
   EXPECT_EQ(2u, DeclCounter<CXXRecordDecl>().match(
-                    ToTU, cxxRecordDecl(hasParent(translationUnitDecl()))));
+                    ToTU, cxxRecordDecl(unless(isImplicit()))));
 }
 
 TEST_P(

@@ -13,6 +13,8 @@
 #include "Logger.h"
 #include "SourceCode.h"
 #include "Trace.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -25,7 +27,6 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -86,6 +87,9 @@ private:
 
 class CppFilePreambleCallbacks : public PreambleCallbacks {
 public:
+  CppFilePreambleCallbacks(PathRef File, PreambleParsedCallback ParsedCallback)
+      : File(File), ParsedCallback(ParsedCallback) {}
+
   std::vector<serialization::DeclID> takeTopLevelDeclIDs() {
     return std::move(TopLevelDeclIDs);
   }
@@ -100,6 +104,13 @@ public:
         continue;
       TopLevelDeclIDs.push_back(Writer.getDeclID(D));
     }
+  }
+
+  void AfterExecute(CompilerInstance &CI) override {
+    if (!ParsedCallback)
+      return;
+    trace::Span Tracer("Running PreambleCallback");
+    ParsedCallback(File, CI.getASTContext(), CI.getPreprocessorPtr());
   }
 
   void HandleTopLevelDecl(DeclGroupRef DG) override {
@@ -122,6 +133,8 @@ public:
   }
 
 private:
+  PathRef File;
+  PreambleParsedCallback ParsedCallback;
   std::vector<Decl *> TopLevelDecls;
   std::vector<serialization::DeclID> TopLevelDeclIDs;
   std::vector<Inclusion> Inclusions;
@@ -277,9 +290,9 @@ ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
 
 CppFile::CppFile(PathRef FileName, bool StorePreamblesInMemory,
                  std::shared_ptr<PCHContainerOperations> PCHs,
-                 ASTParsedCallback ASTCallback)
+                 PreambleParsedCallback PreambleCallback)
     : FileName(FileName), StorePreamblesInMemory(StorePreamblesInMemory),
-      PCHs(std::move(PCHs)), ASTCallback(std::move(ASTCallback)) {
+      PCHs(std::move(PCHs)), PreambleCallback(std::move(PreambleCallback)) {
   log("Created CppFile for " + FileName);
 }
 
@@ -346,10 +359,6 @@ llvm::Optional<std::vector<Diag>> CppFile::rebuild(ParseInputs &&Inputs) {
     Diagnostics.insert(Diagnostics.end(), NewAST->getDiagnostics().begin(),
                        NewAST->getDiagnostics().end());
   }
-  if (ASTCallback && NewAST) {
-    trace::Span Tracer("Running ASTCallback");
-    ASTCallback(FileName, NewAST.getPointer());
-  }
 
   // Write the results of rebuild into class fields.
   Command = std::move(Inputs.CompileCommand);
@@ -404,7 +413,7 @@ CppFile::rebuildPreamble(CompilerInvocation &CI,
   assert(!CI.getFrontendOpts().SkipFunctionBodies);
   CI.getFrontendOpts().SkipFunctionBodies = true;
 
-  CppFilePreambleCallbacks SerializedDeclsCollector;
+  CppFilePreambleCallbacks SerializedDeclsCollector(FileName, PreambleCallback);
   auto BuiltPreamble = PrecompiledPreamble::Build(
       CI, &ContentsBuffer, Bounds, *PreambleDiagsEngine, FS, PCHs,
       /*StoreInMemory=*/StorePreamblesInMemory, SerializedDeclsCollector);

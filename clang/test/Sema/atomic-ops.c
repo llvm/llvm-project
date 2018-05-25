@@ -531,8 +531,80 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
 }
 
 void nullPointerWarning(_Atomic(int) *Ap, int *p, int val) {
-  // The 'expected' pointer shouldn't be NULL.
-  (void)__c11_atomic_compare_exchange_strong(Ap, NULL, val, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  (void)atomic_compare_exchange_weak(Ap, ((void*)0), val); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  (void)__atomic_compare_exchange_n(p, NULL, val, 0, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  volatile _Atomic(int) vai;
+  _Atomic(int) ai;
+  volatile int vi = 42;
+  int i = 42;
+
+  __c11_atomic_init((volatile _Atomic(int)*)0, 42); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __c11_atomic_init((_Atomic(int)*)0, 42); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __c11_atomic_store((volatile _Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __c11_atomic_store((_Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_load((volatile _Atomic(int)*)0, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_load((_Atomic(int)*)0, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_exchange((volatile _Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_exchange((_Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_compare_exchange_weak((volatile _Atomic(int)*)0, &i, 42, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_compare_exchange_weak((_Atomic(int)*)0, &i, 42, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_compare_exchange_weak(&vai, (int*)0, 42, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_compare_exchange_weak(&ai, (int*)0, 42, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_compare_exchange_strong((volatile _Atomic(int)*)0, &i, 42, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_compare_exchange_strong((_Atomic(int)*)0, &i, 42, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_compare_exchange_strong(&vai, (int*)0, 42, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_compare_exchange_strong(&ai, (int*)0, 42, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_add((volatile _Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_add((_Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_sub((volatile _Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_sub((_Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_and((volatile _Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_and((_Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_or((volatile _Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_or((_Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_xor((volatile _Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_xor((_Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+
+  __atomic_store_n((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_store_n((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_store((volatile int*)0, &i, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_store((int*)0, &i, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_store(&vi, (int*)0, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_store(&i, (int*)0, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_load_n((volatile int*)0, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_load_n((int*)0, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_load((volatile int*)0, &i, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_load((int*)0, &i, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_load(&vi, (int*)0, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_load(&i, (int*)0, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_exchange_n((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_exchange_n((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_exchange((volatile int*)0, &i, &i, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_exchange((int*)0, &i, &i, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_exchange(&vi, (int*)0, &i, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_exchange(&i, (int*)0, &i, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_exchange(&vi, &i, (int*)0, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  __atomic_exchange(&i, &i, (int*)0, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_compare_exchange_n((volatile int*)0, &i, 42, /*weak=*/0, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_compare_exchange_n((int*)0, &i, 42, /*weak=*/0, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_compare_exchange_n(&vi, (int*)0, 42, /*weak=*/0, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_compare_exchange_n(&i, (int*)0, 42, /*weak=*/0, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_compare_exchange((volatile int*)0, &i, &i, /*weak=*/0, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_compare_exchange((int*)0, &i, &i, /*weak=*/0, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_compare_exchange(&vi, (int*)0, &i, /*weak=*/0, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_compare_exchange(&i, (int*)0, &i, /*weak=*/0, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_compare_exchange(&vi, &i, (int*)0, /*weak=*/0, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_compare_exchange(&i, &i, (int*)0, /*weak=*/0, memory_order_relaxed, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_add((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_add((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_sub((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_sub((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_and((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_and((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_or((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_or((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_xor((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_xor((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_min((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_min((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_max((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__atomic_fetch_max((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
 }
