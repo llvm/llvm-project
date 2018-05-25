@@ -530,11 +530,15 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_relaxed);
 }
 
-void nullPointerWarning(_Atomic(int) *Ap, int *p, int val) {
+void nullPointerWarning() {
   volatile _Atomic(int) vai;
   _Atomic(int) ai;
   volatile int vi = 42;
   int i = 42;
+  volatile _Atomic(int*) vap;
+  _Atomic(int*) ap;
+  volatile int* vp = NULL;
+  int* p = NULL;
 
   __c11_atomic_init((volatile _Atomic(int)*)0, 42); // expected-warning {{null passed to a callee that requires a non-null argument}}
   __c11_atomic_init((_Atomic(int)*)0, 42); // expected-warning {{null passed to a callee that requires a non-null argument}}
@@ -607,4 +611,65 @@ void nullPointerWarning(_Atomic(int) *Ap, int *p, int val) {
   (void)__atomic_fetch_min((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
   (void)__atomic_fetch_max((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
   (void)__atomic_fetch_max((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+
+  // These don't warn: the "desired" parameter is passed by value. Even for
+  // atomic pointers the "desired" result can be NULL.
+  __c11_atomic_init(&vai, 0);
+  __c11_atomic_init(&ai, 0);
+  __c11_atomic_init(&vap, NULL);
+  __c11_atomic_init(&ap, NULL);
+  __c11_atomic_store(&vai, 0, memory_order_relaxed);
+  __c11_atomic_store(&ai, 0, memory_order_relaxed);
+  __c11_atomic_store(&vap, NULL, memory_order_relaxed);
+  __c11_atomic_store(&ap, NULL, memory_order_relaxed);
+  (void)__c11_atomic_exchange(&vai, 0, memory_order_relaxed);
+  (void)__c11_atomic_exchange(&ai, 0, memory_order_relaxed);
+  (void)__c11_atomic_exchange(&vap, NULL, memory_order_relaxed);
+  (void)__c11_atomic_exchange(&ap, NULL, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_weak(&vai, &i, 0, memory_order_relaxed, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_weak(&ai, &i, 0, memory_order_relaxed, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_weak(&vap, &p, NULL, memory_order_relaxed, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_weak(&ap, &p, NULL, memory_order_relaxed, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_strong(&vai, &i, 0, memory_order_relaxed, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_strong(&ai, &i, 0, memory_order_relaxed, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_strong(&vap, &p, NULL, memory_order_relaxed, memory_order_relaxed);
+  (void)__c11_atomic_compare_exchange_strong(&ap, &p, NULL, memory_order_relaxed, memory_order_relaxed);
+  (void)__c11_atomic_fetch_add(&vai, 0, memory_order_relaxed);
+  (void)__c11_atomic_fetch_add(&ai, 0, memory_order_relaxed);
+  (void)__c11_atomic_fetch_sub(&vai, 0, memory_order_relaxed);
+  (void)__c11_atomic_fetch_sub(&ai, 0, memory_order_relaxed);
+  (void)__c11_atomic_fetch_and(&vai, 0, memory_order_relaxed);
+  (void)__c11_atomic_fetch_and(&ai, 0, memory_order_relaxed);
+  (void)__c11_atomic_fetch_or(&vai, 0, memory_order_relaxed);
+  (void)__c11_atomic_fetch_or(&ai, 0, memory_order_relaxed);
+  (void)__c11_atomic_fetch_xor(&vai, 0, memory_order_relaxed);
+  (void)__c11_atomic_fetch_xor(&ai, 0, memory_order_relaxed);
+
+  // Ditto.
+  __atomic_store_n(&vi, 0, memory_order_relaxed);
+  __atomic_store_n(&i, 0, memory_order_relaxed);
+  __atomic_store_n(&vp, NULL, memory_order_relaxed);
+  __atomic_store_n(&p, NULL, memory_order_relaxed);
+  (void)__atomic_exchange_n(&vi, 0, memory_order_relaxed);
+  (void)__atomic_exchange_n(&i, 0, memory_order_relaxed);
+  (void)__atomic_exchange_n(&vp, NULL, memory_order_relaxed);
+  (void)__atomic_exchange_n(&p, NULL, memory_order_relaxed);
+  (void)__atomic_compare_exchange_n(&vi, &i, 0, /*weak=*/0, memory_order_relaxed, memory_order_relaxed);
+  (void)__atomic_compare_exchange_n(&i, &i, 0, /*weak=*/0, memory_order_relaxed, memory_order_relaxed);
+  (void)__atomic_compare_exchange_n(&vp, &vp, NULL, /*weak=*/0, memory_order_relaxed, memory_order_relaxed);
+  (void)__atomic_compare_exchange_n(&p, &p, NULL, /*weak=*/0, memory_order_relaxed, memory_order_relaxed);
+  (void)__atomic_fetch_add(&vi, 0, memory_order_relaxed);
+  (void)__atomic_fetch_add(&i, 0, memory_order_relaxed);
+  (void)__atomic_fetch_sub(&vi, 0, memory_order_relaxed);
+  (void)__atomic_fetch_sub(&i, 0, memory_order_relaxed);
+  (void)__atomic_fetch_and(&vi, 0, memory_order_relaxed);
+  (void)__atomic_fetch_and(&i, 0, memory_order_relaxed);
+  (void)__atomic_fetch_or(&vi, 0, memory_order_relaxed);
+  (void)__atomic_fetch_or(&i, 0, memory_order_relaxed);
+  (void)__atomic_fetch_xor(&vi, 0, memory_order_relaxed);
+  (void)__atomic_fetch_xor(&i, 0, memory_order_relaxed);
+  (void)__atomic_fetch_min(&vi, 0, memory_order_relaxed);
+  (void)__atomic_fetch_min(&i, 0, memory_order_relaxed);
+  (void)__atomic_fetch_max(&vi, 0, memory_order_relaxed);
+  (void)__atomic_fetch_max(&i, 0, memory_order_relaxed);
 }

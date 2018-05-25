@@ -89,7 +89,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
       OPTIONS ${CUDA_ARCH} ${CUDA_DEBUG})
 
   # Install device RTL under the lib destination folder.
-  install(TARGETS omptarget-nvptx ARCHIVE DESTINATION "lib")
+  install(TARGETS omptarget-nvptx ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 
   target_link_libraries(omptarget-nvptx ${CUDA_LIBRARIES})
 
@@ -171,8 +171,8 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
                          COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-nvptx-sm_${sm}.bc
                          $<TARGET_FILE_DIR:omptarget-nvptx>)
 
-      # Install device RTL under the lib destination folder.
-      install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-nvptx-sm_${sm}.bc DESTINATION "lib")
+      # Install bitcode library under the lib destination folder.
+      install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-nvptx-sm_${sm}.bc DESTINATION "${OPENMP_INSTALL_LIBDIR}")
     endforeach()
   endif()
 

@@ -566,6 +566,10 @@ int baz(int f, double &a) {
   // CHECK: icmp ne i8 [[RES]], 0
   // CHECK: br i1
 
+  // CHECK: [[RES:%.+]] = call i16 @__kmpc_parallel_level(%struct.ident_t* @{{.+}}, i32 [[GTID]])
+  // CHECK: icmp ne i16 [[RES]], 0
+  // CHECK: br i1
+
   // CHECK: call void @__kmpc_serialized_parallel(%struct.ident_t* @{{.+}}, i32 [[GTID]])
   // CHECK: call void [[OUTLINED:@.+]](i32* [[GTID_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]], double* %{{.+}})
   // CHECK: call void @__kmpc_end_serialized_parallel(%struct.ident_t* @{{.+}}, i32 [[GTID]])
@@ -583,15 +587,6 @@ int baz(int f, double &a) {
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK: call void @__kmpc_end_sharing_variables()
-  // CHECK: br label
-
-  // CHECK: [[RES:%.+]] = call i16 @__kmpc_parallel_level(%struct.ident_t* @{{.+}}, i32 [[GTID]])
-  // CHECK: icmp ne i16 [[RES]], 0
-  // CHECK: br i1
-
-  // CHECK: call void @__kmpc_serialized_parallel(%struct.ident_t* @{{.+}}, i32 [[GTID]])
-  // CHECK: call void [[OUTLINED:@.+]](i32* [[GTID_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]], double* %{{.+}})
-  // CHECK: call void @__kmpc_end_serialized_parallel(%struct.ident_t* @{{.+}}, i32 [[GTID]])
   // CHECK: br label
 
   // CHECK: call void [[OUTLINED]](i32* [[GTID_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]], double* %{{.+}})

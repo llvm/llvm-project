@@ -39,7 +39,7 @@ include_directories(${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS})
 add_library(omptarget.rtl.cuda SHARED src/rtl.cpp)
 
 # Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION lib${OPENMP_LIBDIR_SUFFIX})
+install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 
 target_link_libraries(omptarget.rtl.cuda
   ${LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES}

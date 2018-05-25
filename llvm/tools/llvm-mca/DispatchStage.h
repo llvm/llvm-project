@@ -8,13 +8,16 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements classes that are used to model reorder buffers and
-/// the hardware dispatch logic.
+/// This file models the dispatch component of an instruction pipeline.
+///
+/// The DispatchStage is responsible for updating instruction dependencies
+/// and communicating to the simulated instruction scheduler that an instruction
+/// is ready to be scheduled for execution.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_MCA_DISPATCH_H
-#define LLVM_TOOLS_LLVM_MCA_DISPATCH_H
+#ifndef LLVM_TOOLS_LLVM_MCA_DISPATCH_STAGE_H
+#define LLVM_TOOLS_LLVM_MCA_DISPATCH_STAGE_H
 
 #include "Instruction.h"
 #include "RegisterFile.h"
@@ -57,16 +60,16 @@ class DispatchStage : public Stage {
   unsigned AvailableEntries;
   unsigned CarryOver;
   Scheduler *SC;
-  std::unique_ptr<RegisterFile> RAT;
-  std::unique_ptr<RetireControlUnit> RCU;
   Backend *Owner;
   const llvm::MCSubtargetInfo &STI;
+  RetireControlUnit &RCU;
+  RegisterFile &PRF;
 
-  bool checkRAT(const InstRef &IR);
   bool checkRCU(const InstRef &IR);
+  bool checkPRF(const InstRef &IR);
   bool checkScheduler(const InstRef &IR);
   void dispatch(InstRef IR);
-  bool isRCUEmpty() const { return RCU->isEmpty(); }
+  bool isRCUEmpty() const { return RCU.isEmpty(); }
   void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
 
   void notifyInstructionDispatched(const InstRef &IR,
@@ -78,35 +81,26 @@ class DispatchStage : public Stage {
 
   bool canDispatch(const InstRef &IR) {
     assert(isAvailable(IR.getInstruction()->getDesc().NumMicroOps));
-    return checkRCU(IR) && checkRAT(IR) && checkScheduler(IR);
+    return checkRCU(IR) && checkPRF(IR) && checkScheduler(IR);
   }
 
   void collectWrites(llvm::SmallVectorImpl<WriteState *> &Vec,
                      unsigned RegID) const {
-    return RAT->collectWrites(Vec, RegID);
+    return PRF.collectWrites(Vec, RegID);
   }
 
 public:
   DispatchStage(Backend *B, const llvm::MCSubtargetInfo &Subtarget,
                 const llvm::MCRegisterInfo &MRI, unsigned RegisterFileSize,
-                unsigned MaxDispatchWidth, Scheduler *Sched)
+                unsigned MaxDispatchWidth, RetireControlUnit &R,
+                RegisterFile &F, Scheduler *Sched)
       : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
-        CarryOver(0U), SC(Sched),
-        RAT(llvm::make_unique<RegisterFile>(Subtarget.getSchedModel(), MRI,
-                                            RegisterFileSize)),
-        RCU(llvm::make_unique<RetireControlUnit>(Subtarget.getSchedModel(),
-                                                 this)),
-        Owner(B), STI(Subtarget) {}
+        CarryOver(0U), SC(Sched), Owner(B), STI(Subtarget), RCU(R), PRF(F) {}
 
   virtual bool isReady() const override final { return isRCUEmpty(); }
   virtual void preExecute(const InstRef &IR) override final;
   virtual bool execute(InstRef &IR) override final;
-  void notifyInstructionRetired(const InstRef &IR);
   void notifyDispatchStall(const InstRef &IR, unsigned EventType);
-
-  void onInstructionExecuted(unsigned TokenID) {
-    RCU->onInstructionExecuted(TokenID);
-  }
 
 #ifndef NDEBUG
   void dump() const;
@@ -114,4 +108,4 @@ public:
 };
 } // namespace mca
 
-#endif
+#endif // LLVM_TOOLS_LLVM_MCA_DISPATCH_STAGE_H

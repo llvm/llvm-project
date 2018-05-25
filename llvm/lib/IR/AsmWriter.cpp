@@ -2478,6 +2478,43 @@ void AssemblyWriter::printModule(const Module *M) {
   }
 }
 
+static std::string getLinkageName(GlobalValue::LinkageTypes LT) {
+  switch (LT) {
+  case GlobalValue::ExternalLinkage:
+    return "external";
+  case GlobalValue::PrivateLinkage:
+    return "private";
+  case GlobalValue::InternalLinkage:
+    return "internal";
+  case GlobalValue::LinkOnceAnyLinkage:
+    return "linkonce";
+  case GlobalValue::LinkOnceODRLinkage:
+    return "linkonce_odr";
+  case GlobalValue::WeakAnyLinkage:
+    return "weak";
+  case GlobalValue::WeakODRLinkage:
+    return "weak_odr";
+  case GlobalValue::CommonLinkage:
+    return "common";
+  case GlobalValue::AppendingLinkage:
+    return "appending";
+  case GlobalValue::ExternalWeakLinkage:
+    return "extern_weak";
+  case GlobalValue::AvailableExternallyLinkage:
+    return "available_externally";
+  }
+  llvm_unreachable("invalid linkage");
+}
+
+// When printing the linkage types in IR where the ExternalLinkage is
+// not printed, and other linkage types are expected to be printed with
+// a space after the name.
+static std::string getLinkageNameWithSpace(GlobalValue::LinkageTypes LT) {
+  if (LT == GlobalValue::ExternalLinkage)
+    return "";
+  return getLinkageName(LT) + " ";
+}
+
 static void printMetadataIdentifier(StringRef Name,
                                     formatted_raw_ostream &Out) {
   if (Name.empty()) {
@@ -2522,34 +2559,6 @@ void AssemblyWriter::printNamedMDNode(const NamedMDNode *NMD) {
       Out << '!' << Slot;
   }
   Out << "}\n";
-}
-
-static const char *getLinkagePrintName(GlobalValue::LinkageTypes LT) {
-  switch (LT) {
-  case GlobalValue::ExternalLinkage:
-    return "";
-  case GlobalValue::PrivateLinkage:
-    return "private ";
-  case GlobalValue::InternalLinkage:
-    return "internal ";
-  case GlobalValue::LinkOnceAnyLinkage:
-    return "linkonce ";
-  case GlobalValue::LinkOnceODRLinkage:
-    return "linkonce_odr ";
-  case GlobalValue::WeakAnyLinkage:
-    return "weak ";
-  case GlobalValue::WeakODRLinkage:
-    return "weak_odr ";
-  case GlobalValue::CommonLinkage:
-    return "common ";
-  case GlobalValue::AppendingLinkage:
-    return "appending ";
-  case GlobalValue::ExternalWeakLinkage:
-    return "extern_weak ";
-  case GlobalValue::AvailableExternallyLinkage:
-    return "available_externally ";
-  }
-  llvm_unreachable("invalid linkage");
 }
 
 static void PrintVisibility(GlobalValue::VisibilityTypes Vis,
@@ -2640,7 +2649,7 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   if (!GV->hasInitializer() && GV->hasExternalLinkage())
     Out << "external ";
 
-  Out << getLinkagePrintName(GV->getLinkage());
+  Out << getLinkageNameWithSpace(GV->getLinkage());
   PrintDSOLocation(*GV, Out);
   PrintVisibility(GV->getVisibility(), Out);
   PrintDLLStorageClass(GV->getDLLStorageClass(), Out);
@@ -2687,7 +2696,7 @@ void AssemblyWriter::printIndirectSymbol(const GlobalIndirectSymbol *GIS) {
   WriteAsOperandInternal(Out, GIS, &TypePrinter, &Machine, GIS->getParent());
   Out << " = ";
 
-  Out << getLinkagePrintName(GIS->getLinkage());
+  Out << getLinkageNameWithSpace(GIS->getLinkage());
   PrintDSOLocation(*GIS, Out);
   PrintVisibility(GIS->getVisibility(), Out);
   PrintDLLStorageClass(GIS->getDLLStorageClass(), Out);
@@ -2790,7 +2799,7 @@ void AssemblyWriter::printFunction(const Function *F) {
   } else
     Out << "define ";
 
-  Out << getLinkagePrintName(F->getLinkage());
+  Out << getLinkageNameWithSpace(F->getLinkage());
   PrintDSOLocation(*F, Out);
   PrintVisibility(F->getVisibility(), Out);
   PrintDLLStorageClass(F->getDLLStorageClass(), Out);

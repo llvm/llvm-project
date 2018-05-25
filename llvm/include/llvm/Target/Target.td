@@ -384,6 +384,11 @@ class DwarfRegAlias<Register reg> {
 }
 
 //===----------------------------------------------------------------------===//
+// Pull in the common support for MCPredicate (portable scheduling predicates).
+//
+include "llvm/Target/TargetInstrPredicate.td"
+
+//===----------------------------------------------------------------------===//
 // Pull in the common support for scheduling
 //
 include "llvm/Target/TargetSchedule.td"
