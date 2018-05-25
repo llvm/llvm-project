@@ -344,11 +344,49 @@ void SILowerControlFlow::emitBreak(MachineInstr &MI) {
 }
 
 void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
-  MI.setDesc(TII->get(AMDGPU::S_OR_B64));
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  auto Dst = MI.getOperand(0).getReg();
+
+  // Skip ANDing with exec if the break condition is already masked by exec
+  // because it is a V_CMP in the same basic block. (We know the break
+  // condition operand was an i1 in IR, so if it is a VALU instruction it must
+  // be one with a carry-out.)
+  bool SkipAnding = false;
+  if (MI.getOperand(1).isReg()) {
+    if (MachineInstr *Def = MRI->getUniqueVRegDef(MI.getOperand(1).getReg())) {
+      SkipAnding = Def->getParent() == MI.getParent()
+          && SIInstrInfo::isVALU(*Def);
+    }
+  }
+
+  // AND the break condition operand with exec, then OR that into the "loop
+  // exit" mask.
+  MachineInstr *And = nullptr, *Or = nullptr;
+  if (!SkipAnding) {
+    And = BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_AND_B64), Dst)
+             .addReg(AMDGPU::EXEC)
+             .add(MI.getOperand(1));
+    Or = BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
+             .addReg(Dst)
+             .add(MI.getOperand(2));
+  } else
+    Or = BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
+             .add(MI.getOperand(1))
+             .add(MI.getOperand(2));
+
+  if (LIS) {
+    if (And)
+      LIS->InsertMachineInstrInMaps(*And);
+    LIS->ReplaceMachineInstrInMaps(MI, *Or);
+  }
+
+  MI.eraseFromParent();
 }
 
 void SILowerControlFlow::emitElseBreak(MachineInstr &MI) {
-  MI.setDesc(TII->get(AMDGPU::S_OR_B64));
+  // Lowered in the same way as emitIfBreak above.
+  emitIfBreak(MI);
 }
 
 void SILowerControlFlow::emitLoop(MachineInstr &MI) {

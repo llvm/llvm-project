@@ -360,6 +360,9 @@ protected:
   /// using Shadow Stack
   bool HasSHSTK;
 
+  /// Processor supports Invalidate Process-Context Identifier
+  bool HasINVPCID;
+
   /// Processor has Software Guard Extensions
   bool HasSGX;
 
@@ -644,6 +647,7 @@ public:
   bool hasWAITPKG() const { return HasWAITPKG; }
   bool hasPCONFIG() const { return HasPCONFIG; }
   bool hasSGX() const { return HasSGX; }
+  bool hasINVPCID() const { return HasINVPCID; }
   bool useRetpoline() const { return UseRetpoline; }
   bool useRetpolineExternalThunk() const { return UseRetpolineExternalThunk; }
 

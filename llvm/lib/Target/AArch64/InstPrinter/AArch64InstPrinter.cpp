@@ -1437,3 +1437,46 @@ void AArch64InstPrinter::printSVERegOp(const MCInst *MI, unsigned OpNum,
   if (suffix != 0)
     O << '.' << suffix;
 }
+
+template <typename T>
+void AArch64InstPrinter::printImmSVE(T Value, raw_ostream &O) {
+  typename std::make_unsigned<T>::type HexValue = Value;
+
+  if (getPrintImmHex())
+    O << '#' << formatHex((uint64_t)HexValue);
+  else
+    O << '#' << formatDec(Value);
+
+  if (CommentStream) {
+    // Do the opposite to that used for instruction operands.
+    if (getPrintImmHex())
+      *CommentStream << '=' << formatDec(HexValue) << '\n';
+    else
+      *CommentStream << '=' << formatHex((uint64_t)Value) << '\n';
+  }
+}
+
+template <typename T>
+void AArch64InstPrinter::printImm8OptLsl(const MCInst *MI, unsigned OpNum,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
+  unsigned UnscaledVal = MI->getOperand(OpNum).getImm();
+  unsigned Shift = MI->getOperand(OpNum + 1).getImm();
+  assert(AArch64_AM::getShiftType(Shift) == AArch64_AM::LSL &&
+         "Unexepected shift type!");
+
+  // #0 lsl #8 is never pretty printed
+  if ((UnscaledVal == 0) && (AArch64_AM::getShiftValue(Shift) != 0)) {
+    O << '#' << formatImm(UnscaledVal);
+    printShifter(MI, OpNum + 1, STI, O);
+    return;
+  }
+
+  T Val;
+  if (std::is_signed<T>())
+    Val = (int8_t)UnscaledVal * (1 << AArch64_AM::getShiftValue(Shift));
+  else
+    Val = (uint8_t)UnscaledVal * (1 << AArch64_AM::getShiftValue(Shift));
+
+  printImmSVE(Val, O);
+}

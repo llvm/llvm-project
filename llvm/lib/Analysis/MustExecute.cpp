@@ -117,7 +117,7 @@ bool llvm::isGuaranteedToExecute(const Instruction &Inst,
     // exit.  At the moment, we use a (cheap) hack for the common case where
     // the instruction of interest is the first one in the block.
     return !SafetyInfo->HeaderMayThrow ||
-      Inst.getParent()->getFirstNonPHI() == &Inst;
+      Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
 
   // Somewhere in this loop there is an instruction which may throw and make us
   // exit the loop.

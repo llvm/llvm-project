@@ -212,6 +212,7 @@ public:
   virtual void removeSectionReferences(const SectionBase *Sec);
   virtual void removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
   virtual void accept(SectionVisitor &Visitor) const = 0;
+  virtual void markSymbols();
 };
 
 class Segment {
@@ -344,6 +345,7 @@ struct Symbol {
   uint8_t Type;
   uint64_t Value;
   uint8_t Visibility;
+  bool Referenced = false;
 
   uint16_t getShndx() const;
 };
@@ -368,6 +370,7 @@ public:
   bool empty() const { return Symbols.empty(); }
   const SectionBase *getStrTab() const { return SymbolNames; }
   const Symbol *getSymbolByIndex(uint32_t Index) const;
+  Symbol *getSymbolByIndex(uint32_t Index);
   void updateSymbols(function_ref<void(Symbol &)> Callable);
 
   void removeSectionReferences(const SectionBase *Sec) override;
@@ -382,7 +385,7 @@ public:
 };
 
 struct Relocation {
-  const Symbol *RelocSymbol = nullptr;
+  Symbol *RelocSymbol = nullptr;
   uint64_t Offset;
   uint64_t Addend;
   uint32_t Type;
@@ -436,6 +439,7 @@ public:
   void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
   void accept(SectionVisitor &Visitor) const override;
   void removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
+  void markSymbols() override;
 
   static bool classof(const SectionBase *S) {
     if (S->Flags & ELF::SHF_ALLOC)
@@ -450,7 +454,7 @@ public:
 class GroupSection : public SectionBase {
   MAKE_SEC_WRITER_FRIEND
   const SymbolTableSection *SymTab = nullptr;
-  const Symbol *Sym = nullptr;
+  Symbol *Sym = nullptr;
   ELF::Elf32_Word FlagWord;
   SmallVector<SectionBase *, 3> GroupMembers;
 
@@ -462,7 +466,7 @@ public:
   explicit GroupSection(ArrayRef<uint8_t> Data) : Contents(Data) {}
 
   void setSymTab(const SymbolTableSection *SymTabSec) { SymTab = SymTabSec; }
-  void setSymbol(const Symbol *S) { Sym = S; }
+  void setSymbol(Symbol *S) { Sym = S; }
   void setFlagWord(ELF::Elf32_Word W) { FlagWord = W; }
   void addMember(SectionBase *Sec) { GroupMembers.push_back(Sec); }
 
@@ -470,6 +474,7 @@ public:
   void accept(SectionVisitor &) const override;
   void finalize() override;
   void removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
+  void markSymbols() override;
 
   static bool classof(const SectionBase *S) {
     return S->Type == ELF::SHT_GROUP;

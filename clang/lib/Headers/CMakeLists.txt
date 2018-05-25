@@ -58,6 +58,7 @@ set(files
   immintrin.h
   intrin.h
   inttypes.h
+  invpcidintrin.h
   iso646.h
   limits.h
   lwpintrin.h

@@ -805,11 +805,13 @@ def move_vec_shift : Operand<i32> {
 let DiagnosticType = "AddSubSecondSource" in {
   def AddSubImmOperand : AsmOperandClass {
     let Name = "AddSubImm";
-    let ParserMethod = "tryParseAddSubImm";
+    let ParserMethod = "tryParseImmWithOptionalShift";
+    let RenderMethod = "addImmWithOptionalShiftOperands<12>";
   }
   def AddSubImmNegOperand : AsmOperandClass {
     let Name = "AddSubImmNeg";
-    let ParserMethod = "tryParseAddSubImm";
+    let ParserMethod = "tryParseImmWithOptionalShift";
+    let RenderMethod = "addImmNegWithOptionalShiftOperands<12>";
   }
 }
 // An ADD/SUB immediate shifter operand:

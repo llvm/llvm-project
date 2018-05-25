@@ -2122,6 +2122,7 @@ void ASTUnit::CodeComplete(
   CodeCompleteOpts.IncludeGlobals = CachedCompletionResults.empty();
   CodeCompleteOpts.IncludeBriefComments = IncludeBriefComments;
   CodeCompleteOpts.LoadExternal = Consumer.loadExternal();
+  CodeCompleteOpts.IncludeFixIts = Consumer.includeFixIts();
 
   assert(IncludeBriefComments == this->IncludeBriefCommentsInCodeCompletion);
 
