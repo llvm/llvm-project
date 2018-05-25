@@ -166,3 +166,47 @@ void dependentColonColonCompletion() {
   typename Template<T>::Nested m;
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:166:25 %s -o - | FileCheck -check-prefix=CHECK-CC7 %s
 }
+
+class Proxy2 {
+public:
+  Derived *operator->() const;
+  int member5;
+};
+
+void test2(const Proxy2 &p) {
+  p->
+}
+
+void test3(const Proxy2 &p) {
+  p.
+}
+
+// RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:177:6 %s -o - | FileCheck -check-prefix=CHECK-CC8 --implicit-check-not="Derived : Derived(" %s
+// CHECK-CC8: Base1 : Base1::
+// CHECK-CC8: member1 : [#int#][#Base1::#]member1
+// CHECK-CC8: member1 : [#int#][#Base2::#]member1
+// CHECK-CC8: member2 : [#float#][#Base1::#]member2
+// CHECK-CC8: member3 : [#double#][#Base2::#]member3
+// CHECK-CC8: member4 : [#int#]member4
+// CHECK-CC8: member5 : [#int#]member5 (requires fix-it: {177:4-177:6} to ".")
+// CHECK-CC8: memfun1 : [#void#][#Base3::#]memfun1(<#float#>)
+// CHECK-CC8: memfun1 : [#void#][#Base3::#]memfun1(<#double#>)[# const#]
+// CHECK-CC8: memfun1 (Hidden) : [#void#]Base2::memfun1(<#int#>)
+// CHECK-CC8: memfun2 : [#void#][#Base3::#]memfun2(<#int#>)
+// CHECK-CC8: memfun3 : [#int#]memfun3(<#int#>)
+// CHECK-CC8: operator-> : [#Derived *#]operator->()[# const#] (requires fix-it: {177:4-177:6} to ".")
+
+// RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:181:6 %s -o - | FileCheck -check-prefix=CHECK-CC9 --implicit-check-not="Derived : Derived(" %s
+// CHECK-CC9: Base1 : Base1::
+// CHECK-CC9: member1 : [#int#][#Base1::#]member1 (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: member1 : [#int#][#Base2::#]member1 (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: member2 : [#float#][#Base1::#]member2 (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: member3 : [#double#][#Base2::#]member3 (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: member4 : [#int#]member4 (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: member5 : [#int#]member5
+// CHECK-CC9: memfun1 : [#void#][#Base3::#]memfun1(<#float#>) (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: memfun1 : [#void#][#Base3::#]memfun1(<#double#>)[# const#] (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: memfun1 (Hidden) : [#void#]Base2::memfun1(<#int#>) (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: memfun2 : [#void#][#Base3::#]memfun2(<#int#>) (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: memfun3 : [#int#]memfun3(<#int#>) (requires fix-it: {181:4-181:5} to "->")
+// CHECK-CC9: operator-> : [#Derived *#]operator->()[# const#]

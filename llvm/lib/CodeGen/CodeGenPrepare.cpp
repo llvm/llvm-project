@@ -3390,47 +3390,6 @@ bool TypePromotionHelper::canGetThrough(const Instruction *Inst,
        (IsSExt && BinOp->hasNoSignedWrap())))
     return true;
 
-  // ext(and(opnd, cst)) --> and(ext(opnd), ext(cst))
-  if ((Inst->getOpcode() == Instruction::And ||
-       Inst->getOpcode() == Instruction::Or))
-    return true;
-
-  // ext(xor(opnd, cst)) --> xor(ext(opnd), ext(cst))
-  if (Inst->getOpcode() == Instruction::Xor) {
-    const ConstantInt *Cst = dyn_cast<ConstantInt>(Inst->getOperand(1));
-    // Make sure it is not a NOT.
-    if (Cst && !Cst->getValue().isAllOnesValue())
-      return true;
-  }
-
-  // zext(shrl(opnd, cst)) --> shrl(zext(opnd), zext(cst))
-  // It may change a poisoned value into a regular value, like
-  //     zext i32 (shrl i8 %val, 12)  -->  shrl i32 (zext i8 %val), 12
-  //          poisoned value                    regular value
-  // It should be OK since undef covers valid value.
-  if (Inst->getOpcode() == Instruction::LShr && !IsSExt)
-    return true;
-
-  // and(ext(shl(opnd, cst)), cst) --> and(shl(ext(opnd), ext(cst)), cst)
-  // It may change a poisoned value into a regular value, like
-  //     zext i32 (shl i8 %val, 12)  -->  shl i32 (zext i8 %val), 12
-  //          poisoned value                    regular value
-  // It should be OK since undef covers valid value.
-  if (Inst->getOpcode() == Instruction::Shl && Inst->hasOneUse()) {
-    const Instruction *ExtInst =
-        dyn_cast<const Instruction>(*Inst->user_begin());
-    if (ExtInst->hasOneUse()) {
-      const Instruction *AndInst =
-          dyn_cast<const Instruction>(*ExtInst->user_begin());
-      if (AndInst && AndInst->getOpcode() == Instruction::And) {
-        const ConstantInt *Cst = dyn_cast<ConstantInt>(AndInst->getOperand(1));
-        if (Cst &&
-            Cst->getValue().isIntN(Inst->getType()->getIntegerBitWidth()))
-          return true;
-      }
-    }
-  }
-
   // Check if we can do the following simplification.
   // ext(trunc(opnd)) --> ext(opnd)
   if (!isa<TruncInst>(Inst))
@@ -6559,6 +6518,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
       /// The GEP operand must be a pointer, so must its result -> BitCast
       Instruction *NC = new BitCastInst(GEPI->getOperand(0), GEPI->getType(),
                                         GEPI->getName(), GEPI);
+      NC->setDebugLoc(GEPI->getDebugLoc());
       GEPI->replaceAllUsesWith(NC);
       GEPI->eraseFromParent();
       ++NumGEPsElim;

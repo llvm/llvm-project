@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
-// expected-no-diagnostics
 
 struct S {
   S(int, int) {}
@@ -25,3 +24,6 @@ namespace PR14948 {
 
   template<typename T> T Q<T>::x {};
 }
+
+int conditional1 = 1 ? {} : 0; // expected-error {{initializer list cannot be used on the right hand side of operator '?'}}
+int conditional2 = 1 ? 0 : {}; // expected-error {{initializer list cannot be used on the right hand side of operator ':'}}

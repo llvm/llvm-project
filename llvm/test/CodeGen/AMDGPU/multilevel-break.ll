@@ -30,7 +30,9 @@
 
 ; Ensure extra or eliminated
 ; GCN-NEXT: s_or_b64 exec, exec, [[SAVE_BREAK]]
-; GCN-NEXT: s_or_b64 [[OR_BREAK:s\[[0-9]+:[0-9]+\]]], [[SAVE_BREAK]], s{{\[[0-9]+:[0-9]+\]}}
+; GCN-NEXT: s_mov_b64
+; GCN-NEXT: s_and_b64 [[MASKED_SAVE_BREAK:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE_BREAK]]
+; GCN-NEXT: s_or_b64 [[OR_BREAK:s\[[0-9]+:[0-9]+\]]], [[MASKED_SAVE_BREAK]], s{{\[[0-9]+:[0-9]+\]}}
 ; GCN-NEXT: s_andn2_b64 exec, exec, [[OR_BREAK]]
 ; GCN-NEXT: s_cbranch_execnz [[INNER_LOOP]]
 
@@ -39,7 +41,8 @@
 
 ; Ensure copy is eliminated
 ; GCN-NEXT: s_or_b64 exec, exec, [[OR_BREAK]]
-; GCN-NEXT: s_or_b64 [[OUTER_OR_BREAK:s\[[0-9]+:[0-9]+\]]], [[SAVE_BREAK]], s{{\[[0-9]+:[0-9]+\]}}
+; GCN-NEXT: s_and_b64 [[MASKED2_SAVE_BREAK:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE_BREAK]]
+; GCN-NEXT: s_or_b64 [[OUTER_OR_BREAK:s\[[0-9]+:[0-9]+\]]], [[MASKED2_SAVE_BREAK]], s{{\[[0-9]+:[0-9]+\]}}
 ; GCN-NEXT: s_andn2_b64 exec, exec, [[OUTER_OR_BREAK]]
 ; GCN-NEXT: s_cbranch_execnz [[OUTER_LOOP]]
 define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {

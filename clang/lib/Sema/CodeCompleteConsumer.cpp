@@ -554,6 +554,24 @@ PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(Sema &SemaRef,
         if (const char *BriefComment = CCS->getBriefComment())
           OS << " : " << BriefComment;
       }
+      for (const FixItHint &FixIt : Results[I].FixIts) {
+        const SourceLocation BLoc = FixIt.RemoveRange.getBegin();
+        const SourceLocation ELoc = FixIt.RemoveRange.getEnd();
+
+        SourceManager &SM = SemaRef.SourceMgr;
+        std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(BLoc);
+        std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(ELoc);
+        // Adjust for token ranges.
+        if (FixIt.RemoveRange.isTokenRange())
+          EInfo.second += Lexer::MeasureTokenLength(ELoc, SM, SemaRef.LangOpts);
+
+        OS << " (requires fix-it:"
+           << " {" << SM.getLineNumber(BInfo.first, BInfo.second) << ':'
+           << SM.getColumnNumber(BInfo.first, BInfo.second) << '-'
+           << SM.getLineNumber(EInfo.first, EInfo.second) << ':'
+           << SM.getColumnNumber(EInfo.first, EInfo.second) << "}"
+           << " to \"" << FixIt.CodeToInsert << "\")";
+      }
       OS << '\n';
       break;
       

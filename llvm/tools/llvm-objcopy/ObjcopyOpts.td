@@ -90,3 +90,5 @@ def K : JoinedOrSeparate<["-"], "K">,
         Alias<keep_symbol>;
 def only_keep_debug : Flag<["-", "--"], "only-keep-debug">,
                           HelpText<"Currently ignored. Only for compaitability with GNU objcopy.">;
+def strip_unneeded : Flag<["-", "--"], "strip-unneeded">,
+                      HelpText<"Remove all symbols not needed by relocations">;

@@ -29,6 +29,7 @@
 
 namespace llvm {
 
+class AMDGPUMachineFunction;
 class AMDGPUTargetStreamer;
 class MCOperand;
 class SISubtarget;
@@ -137,7 +138,6 @@ private:
 
   /// Emit register usage information so that the GPU driver
   /// can correctly setup the GPU state.
-  void EmitProgramInfoR600(const MachineFunction &MF);
   void EmitProgramInfoSI(const MachineFunction &MF,
                          const SIProgramInfo &KernelInfo);
   void EmitPALMetadata(const MachineFunction &MF,
@@ -145,7 +145,8 @@ private:
   void emitCommonFunctionComments(uint32_t NumVGPR,
                                   uint32_t NumSGPR,
                                   uint64_t ScratchSize,
-                                  uint64_t CodeSize);
+                                  uint64_t CodeSize,
+                                  const AMDGPUMachineFunction* MFI);
 
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,

@@ -37,10 +37,15 @@ void Backend::run() {
 void Backend::runCycle(unsigned Cycle) {
   notifyCycleBegin(Cycle);
 
+  // Update the stages before we do any processing for this cycle.
   InstRef IR;
+  Retire->preExecute(IR);
   Dispatch->preExecute(IR);
+
+  // This will execute scheduled instructions.
   HWS->cycleEvent(); // TODO: This will eventually be stage-ified.
 
+  // Fetch instructions and dispatch them to the hardware.
   while (Fetch->execute(IR)) {
     if (!Dispatch->execute(IR))
       break;

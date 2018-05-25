@@ -1867,6 +1867,9 @@ TARGET_BUILTIN(__builtin_ia32_movdir64b, "vv*vC*", "n", "movdir64b")
 // PTWRITE
 TARGET_BUILTIN(__builtin_ia32_ptwrite32, "vUi", "n", "ptwrite")
 
+// INVPCID
+TARGET_BUILTIN(__builtin_ia32_invpcid, "vUiv*", "nc", "invpcid")
+
 // MSVC
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")

@@ -51,6 +51,7 @@ define weak_odr zeroext i1 @baz() {
 
 ; CHECK-DAG: !llvm.dbg.cu = !{![[CU:.*]]}
 ; CHECK-DAG: !llvm.debugify = !{![[NUM_INSTS:.*]], ![[NUM_VARS:.*]]}
+; CHECK-DAG: "Debug Info Version"
 
 ; CHECK-DAG: ![[CU]] = distinct !DICompileUnit(language: DW_LANG_C, file: {{.*}}, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: {{.*}})
 ; CHECK-DAG: !DIFile(filename: "<stdin>", directory: "/")
@@ -84,6 +85,6 @@ define weak_odr zeroext i1 @baz() {
 ; CHECK-FAIL: WARNING: Missing line 3
 ; CHECK-FAIL: WARNING: Missing line 4
 ; CHECK-FAIL: ERROR: Missing variable 1
-; CHECK-FAIL: CheckModuleDebugify [{{.*}}]: FAIL
+; CHECK-FAIL: CheckModuleDebugify: FAIL
 
-; PASS: CheckModuleDebugify [{{.*}}]: PASS
+; PASS: CheckModuleDebugify: PASS

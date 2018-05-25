@@ -18,6 +18,9 @@
 #include "DispatchStage.h"
 #include "FetchStage.h"
 #include "InstrBuilder.h"
+#include "RegisterFile.h"
+#include "RetireControlUnit.h"
+#include "RetireStage.h"
 #include "Scheduler.h"
 
 namespace mca {
@@ -51,12 +54,17 @@ class HWStallEvent;
 /// histograms. For example, it tracks how the dispatch group size changes
 /// over time.
 class Backend {
-  /// This is the initial stage of the pipeline.
+  // The following are the simulated hardware components of the backend.
+  RetireControlUnit RCU;
+  RegisterFile PRF;
+
   /// TODO: Eventually this will become a list of unique Stage* that this
   /// backend pipeline executes.
   std::unique_ptr<FetchStage> Fetch;
   std::unique_ptr<Scheduler> HWS;
   std::unique_ptr<DispatchStage> Dispatch;
+  std::unique_ptr<RetireStage> Retire;
+
   std::set<HWEventListener *> Listeners;
   unsigned Cycles;
 
@@ -68,15 +76,16 @@ public:
           std::unique_ptr<FetchStage> InitialStage, unsigned DispatchWidth = 0,
           unsigned RegisterFileSize = 0, unsigned LoadQueueSize = 0,
           unsigned StoreQueueSize = 0, bool AssumeNoAlias = false)
-      : Fetch(std::move(InitialStage)),
-        HWS(llvm::make_unique<Scheduler>(this, Subtarget.getSchedModel(),
+      : RCU(Subtarget.getSchedModel()),
+        PRF(Subtarget.getSchedModel(), MRI, RegisterFileSize),
+        Fetch(std::move(InitialStage)),
+        HWS(llvm::make_unique<Scheduler>(this, Subtarget.getSchedModel(), RCU,
                                          LoadQueueSize, StoreQueueSize,
                                          AssumeNoAlias)),
         Dispatch(llvm::make_unique<DispatchStage>(
-            this, Subtarget, MRI, RegisterFileSize, DispatchWidth, HWS.get())),
-        Cycles(0) {
-    HWS->setDispatchStage(Dispatch.get());
-  }
+            this, Subtarget, MRI, RegisterFileSize, DispatchWidth, RCU, PRF,
+            HWS.get())),
+        Retire(llvm::make_unique<RetireStage>(this, RCU, PRF)), Cycles(0) {}
 
   void run();
   void addEventListener(HWEventListener *Listener);

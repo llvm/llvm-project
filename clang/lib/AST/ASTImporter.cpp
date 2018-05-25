@@ -4320,9 +4320,13 @@ Decl *ASTNodeImporter::VisitClassTemplateSpecializationDecl(
 
     D2->setTemplateSpecializationKind(D->getTemplateSpecializationKind());
 
-    // Add the specialization to this context.
+    // Set the context of this specialization/instantiation.
     D2->setLexicalDeclContext(LexicalDC);
-    LexicalDC->addDeclInternal(D2);
+
+    // Add to the DC only if it was an explicit specialization/instantiation.
+    if (D2->isExplicitInstantiationOrSpecialization()) {
+      LexicalDC->addDeclInternal(D2);
+    }
   }
   Importer.Imported(D, D2);
   if (D->isCompleteDefinition() && ImportDefinition(D, D2))

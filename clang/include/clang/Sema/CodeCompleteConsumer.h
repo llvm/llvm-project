@@ -783,6 +783,33 @@ public:
   /// The availability of this result.
   CXAvailabilityKind Availability = CXAvailability_Available;
 
+  /// FixIts that *must* be applied before inserting the text for the
+  /// corresponding completion item.
+  ///
+  /// Completion items with non-empty fixits will not be returned by default,
+  /// they should be explicitly requested by setting
+  /// CompletionOptions::IncludeFixIts. For the editors to be able to
+  /// compute position of the cursor for the completion item itself, the
+  /// following conditions are guaranteed to hold for RemoveRange of the stored
+  /// fixits:
+  ///  - Ranges in the fixits are guaranteed to never contain the completion
+  ///  point (or identifier under completion point, if any) inside them, except
+  ///  at the start or at the end of the range.
+  ///  - If a fixit range starts or ends with completion point (or starts or
+  ///  ends after the identifier under completion point), it will contain at
+  ///  least one character. It allows to unambiguously recompute completion
+  ///  point after applying the fixit.
+  /// The intuition is that provided fixits change code around the identifier we
+  /// complete, but are not allowed to touch the identifier itself or the
+  /// completion point. One example of completion items with corrections are the
+  /// ones replacing '.' with '->' and vice versa:
+  /// std::unique_ptr<std::vector<int>> vec_ptr;
+  /// In 'vec_ptr.^', one of completion items is 'push_back', it requires
+  /// replacing '.' with '->'.
+  /// In 'vec_ptr->^', one of completion items is 'release', it requires
+  /// replacing '->' with '.'.
+  std::vector<FixItHint> FixIts;
+
   /// Whether this result is hidden by another name.
   bool Hidden : 1;
 
@@ -807,15 +834,17 @@ public:
   NestedNameSpecifier *Qualifier = nullptr;
 
   /// Build a result that refers to a declaration.
-  CodeCompletionResult(const NamedDecl *Declaration,
-                       unsigned Priority,
+  CodeCompletionResult(const NamedDecl *Declaration, unsigned Priority,
                        NestedNameSpecifier *Qualifier = nullptr,
                        bool QualifierIsInformative = false,
-                       bool Accessible = true)
+                       bool Accessible = true,
+                       std::vector<FixItHint> FixIts = std::vector<FixItHint>())
       : Declaration(Declaration), Priority(Priority), Kind(RK_Declaration),
-        Hidden(false), QualifierIsInformative(QualifierIsInformative),
+        FixIts(std::move(FixIts)), Hidden(false),
+        QualifierIsInformative(QualifierIsInformative),
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
         DeclaringEntity(false), Qualifier(Qualifier) {
+    //FIXME: Add assert to check FixIts range requirements.
     computeCursorKindAndAvailability(Accessible);
   }
 
@@ -1026,6 +1055,10 @@ public:
   bool includeBriefComments() const {
     return CodeCompleteOpts.IncludeBriefComments;
   }
+
+  /// Whether to include completion items with small fix-its, e.g. change
+  /// '.' to '->' on member access, etc.
+  bool includeFixIts() const { return CodeCompleteOpts.IncludeFixIts; }
 
   /// Hint whether to load data from the external AST in order to provide
   /// full results. If false, declarations from the preamble may be omitted.

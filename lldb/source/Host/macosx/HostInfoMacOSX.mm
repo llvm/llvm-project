@@ -271,7 +271,7 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
   auto parent = std::next(rev_it);
   if (parent != r_end && *parent == "SharedFrameworks") {
     // This is the top-level LLDB in the Xcode.app bundle.
-    // e.g., "Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A"
+    // E.g., "Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A"
     raw_path.resize(parent - r_end);
     llvm::sys::path::append(clang_path, raw_path,
                             "Developer/Toolchains/XcodeDefault.xctoolchain",
@@ -282,17 +282,21 @@ bool HostInfoMacOSX::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
     }
   } else if (parent != r_end && *parent == "PrivateFrameworks" &&
              std::distance(parent, r_end) > 2) {
-    // This is LLDB inside an Xcode toolchain.
-    // e.g., "Xcode.app/Contents/Developer/Toolchains/" \
-    //       "My.xctoolchain/System/Library/PrivateFrameworks/LLDB.framework"
     ++parent;
     ++parent;
-    raw_path.resize(parent - r_end);
-    llvm::sys::path::append(clang_path, raw_path, swift_clang_resource_dir);
-    if (!verify || VerifyClangPath(clang_path)) {
-      file_spec.SetFile(clang_path.c_str(), true);
-      return true;
+    if (*parent == "System") {
+      // This is LLDB inside an Xcode toolchain.
+      // E.g., "Xcode.app/Contents/Developer/Toolchains/"               \
+      //       "My.xctoolchain/System/Library/PrivateFrameworks/LLDB.framework"
+      raw_path.resize(parent - r_end);
+      llvm::sys::path::append(clang_path, raw_path, swift_clang_resource_dir);
+      if (!verify || VerifyClangPath(clang_path)) {
+        file_spec.SetFile(clang_path.c_str(), true);
+        return true;
+      }
+      raw_path = lldb_shlib_spec.GetPath();
     }
+    raw_path.resize(rev_it - r_end);
   } else {
     raw_path.resize(rev_it - r_end);
   }

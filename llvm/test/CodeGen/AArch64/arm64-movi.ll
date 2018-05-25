@@ -134,18 +134,6 @@ define i64 @mvn_lsl_pattern() nounwind {
   ret i64 -279156097024
 }
 
-; FIXME: prefer "mov w0, #-63; movk x0, #31, lsl #32"
-; or "mov x0, #137438887936; movk x0, #65473"
-define i64 @mvn32_pattern() nounwind {
-; CHECK-LABEL: mvn32_pattern:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x0, #65473
-; CHECK-NEXT:    movk x0, #65535, lsl #16
-; CHECK-NEXT:    movk x0, #31, lsl #32
-; CHECK-NEXT:    ret
-  ret i64 137438953409
-}
-
 ; FIXME: prefer "mov w0, #-63; movk x0, #17, lsl #32"
 define i64 @mvn32_pattern_2() nounwind {
 ; CHECK-LABEL: mvn32_pattern_2:
@@ -281,9 +269,9 @@ define i64 @orr_movk10() nounwind {
 define i64 @orr_movk11() nounwind {
 ; CHECK-LABEL: orr_movk11:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x0, #-4503599627370241
+; CHECK-NEXT:    mov x0, #-65281
 ; CHECK-NEXT:    movk x0, #57005, lsl #16
-; CHECK-NEXT:    movk x0, #65535, lsl #32
+; CHECK-NEXT:    movk x0, #65520, lsl #48
 ; CHECK-NEXT:    ret
   ret i64 -4222125209747201
 }
@@ -318,24 +306,20 @@ entry:
   ret i64 -281474976710654
 }
 
-; FIXME: prefer "mov x0, #-549755813888; movk x0, 2048, lsl #16"
 define i64 @orr_movk14() nounwind {
 ; CHECK-LABEL: orr_movk14:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x0, #134217728
-; CHECK-NEXT:    movk x0, #65408, lsl #32
-; CHECK-NEXT:    movk x0, #65535, lsl #48
+; CHECK-NEXT:    mov x0, #-549755813888
+; CHECK-NEXT:    movk x0, #2048, lsl #16
 ; CHECK-NEXT:    ret
   ret i64 -549621596160
 }
 
-; FIXME: prefer "mov x0, #549755813887; movk x0, #63487, lsl #16"
 define i64 @orr_movk15() nounwind {
 ; CHECK-LABEL: orr_movk15:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x0, #65535
+; CHECK-NEXT:    mov x0, #549755813887
 ; CHECK-NEXT:    movk x0, #63487, lsl #16
-; CHECK-NEXT:    movk x0, #127, lsl #32
 ; CHECK-NEXT:    ret
   ret i64 549621596159
 }
@@ -351,24 +335,121 @@ define i64 @orr_movk16() nounwind {
   ret i64 36028661727494142
 }
 
-; FIXME: prefer "mov x0, #-1099511627776; movk x0, #65280, lsl #16"
 define i64 @orr_movk17() nounwind {
 ; CHECK-LABEL: orr_movk17:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x0, #-71777214294589696
-; CHECK-NEXT:    movk x0, #0
-; CHECK-NEXT:    movk x0, #65535, lsl #48
+; CHECK-NEXT:    mov x0, #-1099511627776
+; CHECK-NEXT:    movk x0, #65280, lsl #16
 ; CHECK-NEXT:    ret
   ret i64 -1095233437696
 }
 
-; FIXME: prefer "mov x0, #72340172838076673; and x0, x0, #2199023255296"
 define i64 @orr_movk18() nounwind {
 ; CHECK-LABEL: orr_movk18:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x0, #72340172838076673
-; CHECK-NEXT:    movk x0, #256
-; CHECK-NEXT:    movk x0, #0, lsl #48
+; CHECK-NEXT:    mov x0, #137438887936
+; CHECK-NEXT:    movk x0, #65473
+; CHECK-NEXT:    ret
+  ret i64 137438953409
+}
+
+; FIXME: prefer "mov x0, #72340172838076673; and x0, x0, #2199023255296"
+define i64 @orr_and() nounwind {
+; CHECK-LABEL: orr_and:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #256
+; CHECK-NEXT:    movk x0, #257, lsl #16
+; CHECK-NEXT:    movk x0, #257, lsl #32
 ; CHECK-NEXT:    ret
   ret i64 1103823438080
+}
+
+; FIXME: prefer "mov w0, #-1431655766; movk x0, #9, lsl #32"
+define i64 @movn_movk() nounwind {
+; CHECK-LABEL: movn_movk:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #43690
+; CHECK-NEXT:    movk x0, #43690, lsl #16
+; CHECK-NEXT:    movk x0, #9, lsl #32
+; CHECK-NEXT:    ret
+  ret i64 41518017194
+}
+
+; FIXME: prefer "mov w0, #-13690; orr x0, x0, #0x1111111111111111"
+define i64 @movn_orr() nounwind {
+; CHECK-LABEL: movn_orr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #-51847
+; CHECK-NEXT:    movk x0, #4369, lsl #32
+; CHECK-NEXT:    movk x0, #4369, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 1229782942255887737
+}
+
+; FIXME: prefer "mov w0, #-305397761; eor x0, x0, #0x3333333333333333"
+define i64 @movn_eor() nounwind {
+; CHECK-LABEL: movn_eor:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #3689348814741910323
+; CHECK-NEXT:    movk x0, #52428
+; CHECK-NEXT:    movk x0, #8455, lsl #16
+; CHECK-NEXT:    ret
+  ret i64 3689348814437076172
+}
+
+; FIXME: prefer "mov x0, #536866816; orr x0, x0, #0x3fff800000000000"
+define i64 @orr_orr_64() nounwind {
+; CHECK-LABEL: orr_orr_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #4611545280939032576
+; CHECK-NEXT:    movk x0, #61440
+; CHECK-NEXT:    movk x0, #8191, lsl #16
+; CHECK-NEXT:    ret
+  ret i64 4611545281475899392
+}
+
+; FIXME: prefer "mov x0, #558551907040256; orr x0, x0, #0x1000100010001000"
+define i64 @orr_orr_32() nounwind {
+; CHECK-LABEL: orr_orr_32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #-287953294993589248
+; CHECK-NEXT:    movk x0, #7169, lsl #16
+; CHECK-NEXT:    movk x0, #7169, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 2018171185438784512
+}
+
+; FIXME: prefer "mov x0, #281479271743489; orr x0, x0, #0x1000100010001000"
+define i64 @orr_orr_16() nounwind {
+; CHECK-LABEL: orr_orr_16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #4097
+; CHECK-NEXT:    movk x0, #4097, lsl #16
+; CHECK-NEXT:    movk x0, #4097, lsl #32
+; CHECK-NEXT:    movk x0, #4097, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 1153220576333074433
+}
+
+; FIXME: prefer "mov x0, #144680345676153346; orr x0, x0, #0x1818181818181818"
+define i64 @orr_orr_8() nounwind {
+; CHECK-LABEL: orr_orr_8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #6682
+; CHECK-NEXT:    movk x0, #6682, lsl #16
+; CHECK-NEXT:    movk x0, #6682, lsl #32
+; CHECK-NEXT:    movk x0, #6682, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 1880844493789993498
+}
+
+; FIXME: prefer "mov x0, #-6148914691236517206; orr x0, x0, #0x0FFFFF0000000000"
+define i64 @orr_64_orr_8() nounwind {
+; CHECK-LABEL: orr_64_orr_8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #-6148914691236517206
+; CHECK-NEXT:    movk x0, #65450, lsl #32
+; CHECK-NEXT:    movk x0, #45055, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 -5764607889538110806
 }

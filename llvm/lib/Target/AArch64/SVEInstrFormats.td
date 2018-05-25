@@ -84,7 +84,6 @@ def sve_logical_imm32 : Operand<i64> {
   }];
 }
 
-//===----------------------------------------------------------------------===//
 class SVELogicalImmNotOperand<int Width> : AsmOperandClass {
   let Name = "SVELogicalImm" # Width # "Not";
   let DiagnosticType = "LogicalSecondSource";
@@ -103,6 +102,43 @@ def sve_logical_imm16_not : Operand<i64> {
 def sve_logical_imm32_not : Operand<i64> {
   let ParserMatchClass = SVELogicalImmNotOperand<32>;
 }
+
+class SVEShiftedImmOperand<int ElementWidth, string Infix, string Predicate>
+    : AsmOperandClass {
+  let Name = "SVE" # Infix # "Imm" # ElementWidth;
+  let DiagnosticType = "Invalid" # Name;
+  let RenderMethod = "addImmWithOptionalShiftOperands<8>";
+  let ParserMethod = "tryParseImmWithOptionalShift";
+  let PredicateMethod = Predicate;
+}
+
+def SVECpyImmOperand8  : SVEShiftedImmOperand<8,  "Cpy", "isSVECpyImm<int8_t>">;
+def SVECpyImmOperand16 : SVEShiftedImmOperand<16, "Cpy", "isSVECpyImm<int16_t>">;
+def SVECpyImmOperand32 : SVEShiftedImmOperand<32, "Cpy", "isSVECpyImm<int32_t>">;
+def SVECpyImmOperand64 : SVEShiftedImmOperand<64, "Cpy", "isSVECpyImm<int64_t>">;
+
+class imm8_opt_lsl<int ElementWidth, string printType,
+                   AsmOperandClass OpndClass, code Predicate>
+    : Operand<i32>, ImmLeaf<i32, Predicate> {
+  let EncoderMethod = "getImm8OptLsl";
+  let DecoderMethod = "DecodeImm8OptLsl<" # ElementWidth # ">";
+  let PrintMethod = "printImm8OptLsl<" # printType # ">";
+  let ParserMatchClass = OpndClass;
+  let MIOperandInfo = (ops i32imm, i32imm);
+}
+
+def cpy_imm8_opt_lsl_i8  : imm8_opt_lsl<8,  "int8_t",  SVECpyImmOperand8,  [{
+  return AArch64_AM::isSVECpyImm<int8_t>(Imm);
+}]>;
+def cpy_imm8_opt_lsl_i16 : imm8_opt_lsl<16, "int16_t", SVECpyImmOperand16, [{
+  return AArch64_AM::isSVECpyImm<int16_t>(Imm);
+}]>;
+def cpy_imm8_opt_lsl_i32 : imm8_opt_lsl<32, "int32_t", SVECpyImmOperand32, [{
+  return AArch64_AM::isSVECpyImm<int32_t>(Imm);
+}]>;
+def cpy_imm8_opt_lsl_i64 : imm8_opt_lsl<64, "int64_t", SVECpyImmOperand64, [{
+  return AArch64_AM::isSVECpyImm<int64_t>(Imm);
+}]>;
 
 //===----------------------------------------------------------------------===//
 // SVE PTrue - These are used extensively throughout the pattern matching so
@@ -352,6 +388,42 @@ multiclass sve_int_bin_pred_arit_0<bits<3> opc, string asm> {
   def _D : sve_int_bin_pred_arit_log<0b11, 0b00, opc, asm, ZPR64>;
 }
 
+//===----------------------------------------------------------------------===//
+// SVE Integer Wide Immediate - Unpredicated Group
+//===----------------------------------------------------------------------===//
+class sve_int_dup_imm<bits<2> sz8_64, string asm,
+                      ZPRRegOp zprty, Operand immtype>
+: I<(outs zprty:$Zd), (ins immtype:$imm),
+  asm, "\t$Zd, $imm",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<9> imm;
+  let Inst{31-24} = 0b00100101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-14} = 0b11100011;
+  let Inst{13}    = imm{8};   // sh
+  let Inst{12-5}  = imm{7-0}; // imm8
+  let Inst{4-0}   = Zd;
+
+  let isReMaterializable = 1;
+}
+
+multiclass sve_int_dup_imm<string asm> {
+  def _B : sve_int_dup_imm<0b00, asm, ZPR8, cpy_imm8_opt_lsl_i8>;
+  def _H : sve_int_dup_imm<0b01, asm, ZPR16, cpy_imm8_opt_lsl_i16>;
+  def _S : sve_int_dup_imm<0b10, asm, ZPR32, cpy_imm8_opt_lsl_i32>;
+  def _D : sve_int_dup_imm<0b11, asm, ZPR64, cpy_imm8_opt_lsl_i64>;
+
+  def : InstAlias<"mov $Zd, $imm",
+                  (!cast<Instruction>(NAME # _B) ZPR8:$Zd, cpy_imm8_opt_lsl_i8:$imm), 1>;
+  def : InstAlias<"mov $Zd, $imm",
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, cpy_imm8_opt_lsl_i16:$imm), 1>;
+  def : InstAlias<"mov $Zd, $imm",
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, cpy_imm8_opt_lsl_i32:$imm), 1>;
+  def : InstAlias<"mov $Zd, $imm",
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, cpy_imm8_opt_lsl_i64:$imm), 1>;
+}
 
 //===----------------------------------------------------------------------===//
 //SVE Index Generation Group

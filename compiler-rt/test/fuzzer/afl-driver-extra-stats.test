@@ -1,3 +1,4 @@
+XFAIL: ios
 RUN: %no_fuzzer_cpp_compiler %S/AFLDriverTest.cpp %libfuzzer_src/afl/afl_driver.cpp -o %t-AFLDriverTest
 
 ; Test that not specifying an extra stats file isn't broken.

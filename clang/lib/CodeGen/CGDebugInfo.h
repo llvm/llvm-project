@@ -57,6 +57,7 @@ class CGDebugInfo {
   CodeGenModule &CGM;
   const codegenoptions::DebugInfoKind DebugKind;
   bool DebugTypeExtRefs;
+  mutable bool EmitFileChecksums;
   llvm::DIBuilder DBuilder;
   llvm::DICompileUnit *TheCU = nullptr;
   ModuleMap *ClangModuleMap = nullptr;

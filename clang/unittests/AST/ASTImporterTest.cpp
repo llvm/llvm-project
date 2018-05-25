@@ -1214,7 +1214,7 @@ TEST_P(ASTImporterTestBase, TUshouldNotContainTemplatedDeclOfTypeAlias) {
 
 TEST_P(
     ASTImporterTestBase,
-    DISABLED_TUshouldNotContainClassTemplateSpecializationOfImplicitInstantiation) {
+    TUshouldNotContainClassTemplateSpecializationOfImplicitInstantiation) {
 
   Decl *From, *To;
   std::tie(From, To) = getImportedDecl(

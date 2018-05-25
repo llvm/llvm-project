@@ -164,3 +164,8 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-ptwrite %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-PTWRITE %s
 // PTWRITE: "-target-feature" "+ptwrite"
 // NO-PTWRITE: "-target-feature" "-ptwrite"
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -minvpcid %s -### -o %t.o 2>&1 | FileCheck -check-prefix=INVPCID %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-invpcid %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-INVPCID %s
+// INVPCID: "-target-feature" "+invpcid"
+// NO-INVPCID: "-target-feature" "-invpcid"

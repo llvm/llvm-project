@@ -635,12 +635,26 @@ let Predicates = [HasFSGSBase, In64BitMode], SchedRW = [WriteSystem] in {
 // INVPCID Instruction
 let SchedRW = [WriteSystem] in {
 def INVPCID32 : I<0x82, MRMSrcMem, (outs), (ins GR32:$src1, i128mem:$src2),
-                  "invpcid\t{$src2, $src1|$src1, $src2}", []>, T8PD,
-                  Requires<[Not64BitMode]>;
+                  "invpcid\t{$src2, $src1|$src1, $src2}",
+                  [(int_x86_invpcid GR32:$src1, addr:$src2)]>, T8PD,
+                  Requires<[Not64BitMode, HasINVPCID]>;
 def INVPCID64 : I<0x82, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
                   "invpcid\t{$src2, $src1|$src1, $src2}", []>, T8PD,
-                  Requires<[In64BitMode]>;
+                  Requires<[In64BitMode, HasINVPCID]>;
 } // SchedRW
+
+let Predicates = [In64BitMode, HasINVPCID] in {
+  // The instruction can only use a 64 bit register as the register argument
+  // in 64 bit mode, while the intrinsic only accepts a 32 bit argument
+  // corresponding to it.
+  // The accepted values for now are 0,1,2,3 anyways (see Intel SDM -- INVCPID
+  // type),/ so it doesn't hurt us that one can't supply a 64 bit value here.
+  def : Pat<(int_x86_invpcid GR32:$src1, addr:$src2),
+            (INVPCID64
+              (SUBREG_TO_REG (i64 0), (MOV32rr GR32:$src1), sub_32bit),
+              addr:$src2)>;
+}
+
 
 //===----------------------------------------------------------------------===//
 // SMAP Instruction

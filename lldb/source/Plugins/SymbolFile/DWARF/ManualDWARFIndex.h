@@ -52,31 +52,28 @@ public:
   void Dump(Stream &s) override;
 
 private:
+  struct IndexSet {
+    NameToDIE function_basenames;
+    NameToDIE function_fullnames;
+    NameToDIE function_methods;
+    NameToDIE function_selectors;
+    NameToDIE objc_class_selectors;
+    NameToDIE globals;
+    NameToDIE types;
+    NameToDIE namespaces;
+  };
   void Index();
-  void IndexUnit(DWARFUnit &unit, NameToDIE &func_basenames,
-                 NameToDIE &func_fullnames, NameToDIE &func_methods,
-                 NameToDIE &func_selectors, NameToDIE &objc_class_selectors,
-                 NameToDIE &globals, NameToDIE &types, NameToDIE &namespaces);
+  void IndexUnit(DWARFUnit &unit, IndexSet &set);
 
   static void
   IndexUnitImpl(DWARFUnit &unit, const lldb::LanguageType cu_language,
                 const DWARFFormValue::FixedFormSizes &fixed_form_sizes,
-                const dw_offset_t cu_offset, NameToDIE &func_basenames,
-                NameToDIE &func_fullnames, NameToDIE &func_methods,
-                NameToDIE &func_selectors, NameToDIE &objc_class_selectors,
-                NameToDIE &globals, NameToDIE &types, NameToDIE &namespaces);
+                const dw_offset_t cu_offset, IndexSet &set);
 
   /// Non-null value means we haven't built the index yet.
   DWARFDebugInfo *m_debug_info;
 
-  NameToDIE m_function_basenames;
-  NameToDIE m_function_fullnames;
-  NameToDIE m_function_methods;
-  NameToDIE m_function_selectors;
-  NameToDIE m_objc_class_selectors;
-  NameToDIE m_globals;
-  NameToDIE m_types;
-  NameToDIE m_namespaces;
+  IndexSet m_set;
 };
 } // namespace lldb_private
 

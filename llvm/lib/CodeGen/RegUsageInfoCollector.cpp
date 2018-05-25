@@ -56,6 +56,10 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  // Call determineCalleeSaves and then also set the bits for subregs and
+  // fully saved superregs.
+  static void computeCalleeSavedRegs(BitVector &SavedRegs, MachineFunction &MF);
+
   static char ID;
 };
 } // end of anonymous namespace
@@ -103,6 +107,9 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "Clobbered Registers: ");
 
+  BitVector SavedRegs;
+  computeCalleeSavedRegs(SavedRegs, MF);
+
   const BitVector &UsedPhysRegsMask = MRI->getUsedPhysRegsMask();
   auto SetRegAsDefined = [&RegMask] (unsigned Reg) {
     RegMask[Reg / 32] &= ~(1u << Reg % 32);
@@ -110,11 +117,15 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   // Scan all the physical registers. When a register is defined in the current
   // function set it and all the aliasing registers as defined in the regmask.
   for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
+    // Don't count registers that are saved and restored.
+    if (SavedRegs.test(PReg))
+      continue;
     // If a register is defined by an instruction mark it as defined together
-    // with all it's aliases.
+    // with all it's unsaved aliases.
     if (!MRI->def_empty(PReg)) {
       for (MCRegAliasIterator AI(PReg, TRI, true); AI.isValid(); ++AI)
-        SetRegAsDefined(*AI);
+        if (!SavedRegs.test(*AI))
+          SetRegAsDefined(*AI);
       continue;
     }
     // If a register is in the UsedPhysRegsMask set then mark it as defined.
@@ -124,15 +135,7 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
       SetRegAsDefined(PReg);
   }
 
-  if (!TargetFrameLowering::isSafeForNoCSROpt(F)) {
-    const uint32_t *CallPreservedMask =
-        TRI->getCallPreservedMask(MF, F.getCallingConv());
-    if (CallPreservedMask) {
-      // Set callee saved register as preserved.
-      for (unsigned i = 0; i < RegMaskSize; ++i)
-        RegMask[i] = RegMask[i] | CallPreservedMask[i];
-    }
-  } else {
+  if (TargetFrameLowering::isSafeForNoCSROpt(F)) {
     ++NumCSROpt;
     LLVM_DEBUG(dbgs() << MF.getName()
                       << " function optimized for not having CSR.\n");
@@ -147,4 +150,49 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   PRUI->storeUpdateRegUsageInfo(&F, std::move(RegMask));
 
   return false;
+}
+
+void RegUsageInfoCollector::
+computeCalleeSavedRegs(BitVector &SavedRegs, MachineFunction &MF) {
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
+  // Target will return the set of registers that it saves/restores as needed.
+  SavedRegs.clear();
+  TFI->determineCalleeSaves(MF, SavedRegs);
+
+  // Insert subregs.
+  const MCPhysReg *CSRegs = TRI->getCalleeSavedRegs(&MF);
+  for (unsigned i = 0; CSRegs[i]; ++i) {
+    unsigned Reg = CSRegs[i];
+    if (SavedRegs.test(Reg))
+      for (MCSubRegIterator SR(Reg, TRI, false); SR.isValid(); ++SR)
+        SavedRegs.set(*SR);
+  }
+
+  // Insert any register fully saved via subregisters.
+  for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
+    if (SavedRegs.test(PReg))
+      continue;
+
+    // Check if PReg is fully covered by its subregs.
+    bool CoveredBySubRegs = false;
+    for (const TargetRegisterClass *RC : TRI->regclasses())
+      if (RC->CoveredBySubRegs && RC->contains(PReg)) {
+        CoveredBySubRegs = true;
+        break;
+      }
+    if (!CoveredBySubRegs)
+      continue;
+
+    // Add PReg to SavedRegs if all subregs are saved.
+    bool AllSubRegsSaved = true;
+    for (MCSubRegIterator SR(PReg, TRI, false); SR.isValid(); ++SR)
+      if (!SavedRegs.test(*SR)) {
+        AllSubRegsSaved = false;
+        break;
+      }
+    if (AllSubRegsSaved)
+      SavedRegs.set(PReg);
+  }
 }

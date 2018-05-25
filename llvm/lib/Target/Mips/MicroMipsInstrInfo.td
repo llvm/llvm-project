@@ -241,33 +241,20 @@ MicroMipsInst16<(outs movep_regpair:$dst_regs), (ins RO:$rs, RO:$rt),
   let isMoveReg = 1;
 }
 
-/// A register pair used by load/store pair instructions.
-def RegPairAsmOperand : AsmOperandClass {
-  let Name = "RegPair";
-  let ParserMethod = "parseRegisterPair";
-  let PredicateMethod = "isRegPair";
-}
-
-def regpair : Operand<i32> {
-  let EncoderMethod = "getRegisterPairOpValue";
-  let ParserMatchClass = RegPairAsmOperand;
-  let PrintMethod = "printRegisterPair";
-  let DecoderMethod = "DecodeRegPairOperand";
-  let MIOperandInfo = (ops ptr_rc, ptr_rc);
-}
-
 class StorePairMM<string opstr, ComplexPattern Addr = addr>
-    :  InstSE<(outs), (ins regpair:$rt, mem_simm12:$addr),
+    :  InstSE<(outs), (ins GPR32Opnd:$rt, GPR32Opnd:$rt2, mem_simm12:$addr),
          !strconcat(opstr, "\t$rt, $addr"), [], II_SWP, FrmI, opstr> {
   let DecoderMethod = "DecodeMemMMImm12";
   let mayStore = 1;
+  let AsmMatchConverter = "ConvertXWPOperands";
 }
 
 class LoadPairMM<string opstr, ComplexPattern Addr = addr>
-    : InstSE<(outs regpair:$rt), (ins mem_simm12:$addr),
+    : InstSE<(outs GPR32Opnd:$rt, GPR32Opnd:$rt2), (ins mem_simm12:$addr),
           !strconcat(opstr, "\t$rt, $addr"), [], II_LWP, FrmI, opstr> {
   let DecoderMethod = "DecodeMemMMImm12";
   let mayLoad = 1;
+  let AsmMatchConverter = "ConvertXWPOperands";
 }
 
 class LLBaseMM<string opstr, RegisterOperand RO> :
