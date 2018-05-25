@@ -69,6 +69,7 @@ PPC64::PPC64() {
   GotRel = R_PPC64_GLOB_DAT;
   PltRel = R_PPC64_JMP_SLOT;
   RelativeRel = R_PPC64_RELATIVE;
+  IRelativeRel = R_PPC64_IRELATIVE;
   GotEntrySize = 8;
   PltEntrySize = 4;
   GotPltEntrySize = 8;
