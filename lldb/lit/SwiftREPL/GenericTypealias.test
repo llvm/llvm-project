@@ -1,0 +1,16 @@
+// Test that generic typealiases are reconstructed correctly.
+// RUN: %lldb --repl < %s | FileCheck %s
+
+class Tinky<T> {
+  var x : T
+  init(_ x : T) {
+    self.x = x
+  }
+}
+
+typealias Patatino<T> = Tinky<T>
+
+var p : Patatino<Int> = Patatino(23);
+// CHECK: p: Tinky<Int> = {
+// CHECK-NEXT: x = 23
+// CHECK-NEXT: }
