@@ -4459,7 +4459,7 @@ static void AddKeywordsToConsumer(Sema &SemaRef,
       }
     }
 
-    if (SemaRef.getLangOpts().GNUMode)
+    if (SemaRef.getLangOpts().GNUKeywords)
       Consumer.addKeywordResult("typeof");
   } else if (CCC.WantFunctionLikeCasts) {
     static const char *const CastableTypeSpecs[] = {

@@ -15,9 +15,11 @@
 #ifndef LLVM_EXECUTIONENGINE_JITEVENTLISTENER_H
 #define LLVM_EXECUTIONENGINE_JITEVENTLISTENER_H
 
+#include "llvm-c/ExecutionEngine.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/CBindingWrapping.h"
 #include <cstdint>
 #include <vector>
 
@@ -119,6 +121,20 @@ private:
   virtual void anchor();
 };
 
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITEventListener, LLVMJITEventListenerRef)
+
 } // end namespace llvm
+
+#ifndef LLVM_USE_INTEL_JITEVENTS
+LLVMJITEventListenerRef LLVMCreateIntelJITEventListener(void) {
+  return nullptr;
+}
+#endif
+
+#ifndef LLVM_USE_OPROFILE
+LLVMJITEventListenerRef LLVMCreateOProfileJITEventListener(void) {
+  return nullptr;
+}
+#endif
 
 #endif // LLVM_EXECUTIONENGINE_JITEVENTLISTENER_H

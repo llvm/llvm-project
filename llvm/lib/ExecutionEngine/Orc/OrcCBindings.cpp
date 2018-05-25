@@ -9,6 +9,7 @@
 
 #include "OrcCBindingsStack.h"
 #include "llvm-c/OrcBindings.h"
+#include "llvm/ExecutionEngine/JITEventListener.h"
 
 using namespace llvm;
 
@@ -125,4 +126,14 @@ LLVMOrcErrorCode LLVMOrcDisposeInstance(LLVMOrcJITStackRef JITStack) {
   auto Err = J->shutdown();
   delete J;
   return Err;
+}
+
+void LLVMOrcRegisterJITEventListener(LLVMOrcJITStackRef JITStack, LLVMJITEventListenerRef L)
+{
+  unwrap(JITStack)->RegisterJITEventListener(unwrap(L));
+}
+
+void LLVMOrcUnregisterJITEventListener(LLVMOrcJITStackRef JITStack, LLVMJITEventListenerRef L)
+{
+  unwrap(JITStack)->UnregisterJITEventListener(unwrap(L));
 }

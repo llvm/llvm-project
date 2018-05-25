@@ -437,7 +437,10 @@ private:
   public:
     NotifyFinalizedT(OrcMCJITReplacement &M) : M(M) {}
 
-    void operator()(VModuleKey K) { M.UnfinalizedSections.erase(K); }
+    void operator()(VModuleKey K, const object::ObjectFile &Obj,
+                    const RuntimeDyld::LoadedObjectInfo &Info) {
+      M.UnfinalizedSections.erase(K);
+    }
 
   private:
     OrcMCJITReplacement &M;
