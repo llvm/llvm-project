@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRPrintingPasses.h"
@@ -29,7 +30,6 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <map>
 #include <unordered_set>
 using namespace llvm;
 using namespace llvm::legacy;
@@ -414,8 +414,8 @@ public:
     for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
       ModulePass *MP = getContainedPass(Index);
       MP->dumpPassStructure(Offset + 1);
-      std::map<Pass *, FunctionPassManagerImpl *>::const_iterator I =
-        OnTheFlyManagers.find(MP);
+      MapVector<Pass *, FunctionPassManagerImpl *>::const_iterator I =
+          OnTheFlyManagers.find(MP);
       if (I != OnTheFlyManagers.end())
         I->second->dumpPassStructure(Offset + 2);
       dumpLastUses(MP, Offset+1);
@@ -434,7 +434,7 @@ public:
  private:
   /// Collection of on the fly FPPassManagers. These managers manage
   /// function passes that are required by module passes.
-  std::map<Pass *, FunctionPassManagerImpl *> OnTheFlyManagers;
+   MapVector<Pass *, FunctionPassManagerImpl *> OnTheFlyManagers;
 };
 
 char MPPassManager::ID = 0;

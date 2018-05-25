@@ -757,6 +757,7 @@
 		4CD44CFC20B37C440003557C /* ManualDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CF920B37C440003557C /* ManualDWARFIndex.cpp */; };
 		4CD44CFD20B37C440003557C /* AppleDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CFA20B37C440003557C /* AppleDWARFIndex.cpp */; };
 		4CD44D2220B725DA0003557C /* SystemInitializerLLGS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44D2020B725DA0003557C /* SystemInitializerLLGS.cpp */; };
+		4CD44D4220B777850003557C /* DWARFBaseDIE.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44D4020B777850003557C /* DWARFBaseDIE.cpp */; };
 		4CDB8D6D1DBA91B6006C5B13 /* LibStdcppUniquePointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */; };
 		4CDB8D6E1DBA91B6006C5B13 /* LibStdcppTuple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */; };
 		4CE4EFAA1E8999B900A80C06 /* PlatformOpenBSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4EFA61E8999B000A80C06 /* PlatformOpenBSD.cpp */; };
@@ -2665,6 +2666,8 @@
 		4CD44D0020B37C580003557C /* ManualDWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ManualDWARFIndex.h; sourceTree = "<group>"; };
 		4CD44D2020B725DA0003557C /* SystemInitializerLLGS.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SystemInitializerLLGS.cpp; path = "tools/lldb-server/SystemInitializerLLGS.cpp"; sourceTree = "<group>"; };
 		4CD44D2320B725F60003557C /* SystemInitializerLLGS.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SystemInitializerLLGS.h; path = "tools/lldb-server/SystemInitializerLLGS.h"; sourceTree = "<group>"; };
+		4CD44D4020B777850003557C /* DWARFBaseDIE.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFBaseDIE.cpp; sourceTree = "<group>"; };
+		4CD44D4120B777850003557C /* DWARFBaseDIE.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFBaseDIE.h; sourceTree = "<group>"; };
 		4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppUniquePointer.cpp; path = Language/CPlusPlus/LibStdcppUniquePointer.cpp; sourceTree = "<group>"; };
 		4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppTuple.cpp; path = Language/CPlusPlus/LibStdcppTuple.cpp; sourceTree = "<group>"; };
 		4CE4EFA61E8999B000A80C06 /* PlatformOpenBSD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformOpenBSD.cpp; sourceTree = "<group>"; };
@@ -3946,6 +3949,8 @@
 				4CC7C6521D5299140076FF94 /* DWARFASTParserOCaml.cpp */,
 				260C89B610F57C5600BB2B04 /* DWARFAttribute.h */,
 				266E829C1B8E542C008FCA06 /* DWARFAttribute.cpp */,
+				4CD44D4020B777850003557C /* DWARFBaseDIE.cpp */,
+				4CD44D4120B777850003557C /* DWARFBaseDIE.h */,
 				260C89B710F57C5600BB2B04 /* DWARFCompileUnit.cpp */,
 				260C89B810F57C5600BB2B04 /* DWARFCompileUnit.h */,
 				26AB92101819D74600E63F3E /* DWARFDataExtractor.cpp */,
@@ -7879,6 +7884,7 @@
 				4C56543119D1EFAA002E9C44 /* ThreadPlanPython.cpp in Sources */,
 				26AB92121819D74600E63F3E /* DWARFDataExtractor.cpp in Sources */,
 				268900E913353E6F00698AC0 /* CPPLanguageRuntime.cpp in Sources */,
+				4CD44D4220B777850003557C /* DWARFBaseDIE.cpp in Sources */,
 				9485545A1DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp in Sources */,
 				268900EA13353E6F00698AC0 /* DynamicLoader.cpp in Sources */,
 				945261BF1B9A11FC00BF138D /* CxxStringTypes.cpp in Sources */,

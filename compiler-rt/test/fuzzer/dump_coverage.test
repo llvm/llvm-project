@@ -1,7 +1,7 @@
 UNSUPPORTED: freebsd
-RUN: %cpp_compiler -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard %S/DSO1.cpp -fPIC -shared -o %t-DSO1.so
-RUN: %cpp_compiler -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard %S/DSO2.cpp -fPIC -shared -o %t-DSO2.so
-RUN: %cpp_compiler -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard %S/DSOTestMain.cpp %S/DSOTestExtra.cpp -L. %t-DSO1.so %t-DSO2.so -o %t-DSOTest
+RUN: %cpp_compiler -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard %S/DSO1.cpp -fPIC -shared -o %dynamiclib1 %ld_flags_rpath_so1
+RUN: %cpp_compiler -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard %S/DSO2.cpp -fPIC -shared -o %dynamiclib2 %ld_flags_rpath_so2
+RUN: %cpp_compiler -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard %S/DSOTestMain.cpp %S/DSOTestExtra.cpp %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t-DSOTest
 
 RUN: %cpp_compiler -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard %S/NullDerefTest.cpp -o %t-NullDerefTest
 
@@ -15,7 +15,7 @@ CHECK: SanitizerCoverage: {{.*}}NullDerefTest.{{.*}}.sancov: {{.*}} PCs written
 SANCOV: LLVMFuzzerTestOneInput
 
 DSO: SanitizerCoverage: {{.*}}DSOTest.{{.*}}.sancov: {{.*}} PCs written
-DSO-DAG: SanitizerCoverage: {{.*}}DSO1.{{.*}}.sancov: {{.*}} PCs written
-DSO-DAG: SanitizerCoverage: {{.*}}DSO2.{{.*}}.sancov: {{.*}} PCs written
+DSO-DAG: SanitizerCoverage: {{.*}}1.{{.*}}.sancov: {{.*}} PCs written
+DSO-DAG: SanitizerCoverage: {{.*}}2.{{.*}}.sancov: {{.*}} PCs written
 
 NOCOV-NOT: SanitizerCoverage: {{.*}} PCs written

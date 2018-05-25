@@ -3,8 +3,8 @@
 define i64 @test_sext_zext(i16 %A) {
 ; CHECK-LABEL: @test_sext_zext(
 ; CHECK-NEXT:  [[C2:%.*]] = zext i16 %A to i64
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 [[C2]], metadata !8, metadata !DIExpression()), !dbg !13
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 [[C2]], metadata !10, metadata !DIExpression()), !dbg !12
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 [[C2]], {{.*}}, metadata !DIExpression())
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 [[C2]], {{.*}}, metadata !DIExpression())
   %c1 = zext i16 %A to i32
   %c2 = sext i32 %c1 to i64
   ret i64 %c2
@@ -12,84 +12,84 @@ define i64 @test_sext_zext(i16 %A) {
 
 define void @test_or(i64 %A) {
 ; CHECK-LABEL: @test_or(
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !17, metadata !DIExpression(DW_OP_constu, 256, DW_OP_or, DW_OP_stack_value)), !dbg !18
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, {{.*}}, metadata !DIExpression(DW_OP_constu, 256, DW_OP_or, DW_OP_stack_value))
   %1 = or i64 %A, 256
   ret void
 }
 
 define void @test_xor(i32 %A) {
 ; CHECK-LABEL: @test_xor(
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 %A, metadata !22, metadata !DIExpression(DW_OP_constu, 1, DW_OP_xor, DW_OP_stack_value)), !dbg !23
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 %A, {{.*}}, metadata !DIExpression(DW_OP_constu, 1, DW_OP_xor, DW_OP_stack_value))
   %1 = xor i32 %A, 1
   ret void
 }
 
 define void @test_sub_neg(i64 %A) {
 ; CHECK-LABEL: @test_sub_neg(
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !27, metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)), !dbg !28
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, {{.*}}, metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value))
   %1 = sub i64 %A, -1
   ret void
 }
 
 define void @test_sub_pos(i64 %A) {
 ; CHECK-LABEL: @test_sub_pos(
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !32, metadata !DIExpression(DW_OP_constu, 1, DW_OP_minus, DW_OP_stack_value)), !dbg !33
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, {{.*}}, metadata !DIExpression(DW_OP_constu, 1, DW_OP_minus, DW_OP_stack_value))
   %1 = sub i64 %A, 1
   ret void
 }
 
 define void @test_shl(i64 %A) {
 ; CHECK-LABEL: @test_shl(
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !37, metadata !DIExpression(DW_OP_constu, 7, DW_OP_shl, DW_OP_stack_value)), !dbg !38
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, {{.*}}, metadata !DIExpression(DW_OP_constu, 7, DW_OP_shl, DW_OP_stack_value))
   %1 = shl i64 %A, 7
   ret void
 }
 
 define void @test_lshr(i64 %A) {
 ; CHECK-LABEL: @test_lshr(
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !42, metadata !DIExpression(DW_OP_constu, 7, DW_OP_shr, DW_OP_stack_value)), !dbg !43
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, {{.*}}, metadata !DIExpression(DW_OP_constu, 7, DW_OP_shr, DW_OP_stack_value))
   %1 = lshr i64 %A, 7
   ret void
 }
 
 define void @test_ashr(i64 %A) {
 ; CHECK-LABEL: @test_ashr(
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !47, metadata !DIExpression(DW_OP_constu, 7, DW_OP_shra, DW_OP_stack_value)), !dbg !48
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, {{.*}}, metadata !DIExpression(DW_OP_constu, 7, DW_OP_shra, DW_OP_stack_value))
   %1 = ashr i64 %A, 7
   ret void
 }
 
 define void @test_mul(i64 %A) {
 ; CHECK-LABEL: @test_mul(
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !52, metadata !DIExpression(DW_OP_constu, 7, DW_OP_mul, DW_OP_stack_value)), !dbg !53
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, {{.*}}, metadata !DIExpression(DW_OP_constu, 7, DW_OP_mul, DW_OP_stack_value))
   %1 = mul i64 %A, 7
   ret void
 }
 
 define void @test_sdiv(i64 %A) {
 ; CHECK-LABEL: @test_sdiv(
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !57, metadata !DIExpression(DW_OP_constu, 7, DW_OP_div, DW_OP_stack_value)), !dbg !58
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, {{.*}}, metadata !DIExpression(DW_OP_constu, 7, DW_OP_div, DW_OP_stack_value))
   %1 = sdiv i64 %A, 7
   ret void
 }
 
 define void @test_srem(i64 %A) {
 ; CHECK-LABEL: @test_srem(
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !62, metadata !DIExpression(DW_OP_constu, 7, DW_OP_mod, DW_OP_stack_value)), !dbg !63
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, {{.*}}, metadata !DIExpression(DW_OP_constu, 7, DW_OP_mod, DW_OP_stack_value))
   %1 = srem i64 %A, 7
   ret void
 }
 
 define void @test_ptrtoint(i64* %P) {
 ; CHECK-LABEL: @test_ptrtoint
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64* %P, metadata !67, metadata !DIExpression()), !dbg !68
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64* %P, {{.*}}, metadata !DIExpression())
   %1 = ptrtoint i64* %P to i64
   ret void
 }
 
 define void @test_and(i64 %A) {
 ; CHECK-LABEL: @test_and(
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, metadata !72, metadata !DIExpression(DW_OP_constu, 256, DW_OP_and, DW_OP_stack_value)), !dbg !73
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64 %A, {{.*}}, metadata !DIExpression(DW_OP_constu, 256, DW_OP_and, DW_OP_stack_value))
   %1 = and i64 %A, 256
   ret void
 }

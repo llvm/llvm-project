@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 //
 
-#include "AMDGPUMCInstLower.h"
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
@@ -37,6 +36,29 @@
 #include <algorithm>
 
 using namespace llvm;
+
+namespace {
+
+class AMDGPUMCInstLower {
+  MCContext &Ctx;
+  const AMDGPUSubtarget &ST;
+  const AsmPrinter &AP;
+
+  const MCExpr *getLongBranchBlockExpr(const MachineBasicBlock &SrcBB,
+                                       const MachineOperand &MO) const;
+
+public:
+  AMDGPUMCInstLower(MCContext &ctx, const AMDGPUSubtarget &ST,
+                    const AsmPrinter &AP);
+
+  bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
+
+  /// Lower a MachineInstr to an MCInst
+  void lower(const MachineInstr *MI, MCInst &OutMI) const;
+
+};
+
+} // End anonymous namespace
 
 #include "AMDGPUGenMCPseudoLowering.inc"
 

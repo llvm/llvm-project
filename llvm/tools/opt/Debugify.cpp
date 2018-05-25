@@ -121,6 +121,12 @@ bool applyDebugifyMetadata(Module &M,
   addDebugifyOperand(NextVar - 1);  // Original number of variables.
   assert(NMD->getNumOperands() == 2 &&
          "llvm.debugify should have exactly 2 operands!");
+
+  // Claim that this synthetic debug info is valid.
+  StringRef DIVersionKey = "Debug Info Version";
+  if (!M.getModuleFlag(DIVersionKey))
+    M.addModuleFlag(Module::Warning, DIVersionKey, DEBUG_METADATA_VERSION);
+
   return true;
 }
 
@@ -191,8 +197,10 @@ bool checkDebugifyMetadata(Module &M,
     errs() << "ERROR: Missing variable " << Idx + 1 << "\n";
   HasErrors |= MissingVars.count() > 0;
 
-  errs() << Banner << " [" << NameOfWrappedPass << "]: "
-         << (HasErrors ? "FAIL" : "PASS") << '\n';
+  errs() << Banner;
+  if (!NameOfWrappedPass.empty())
+    errs() << " [" << NameOfWrappedPass << "]";
+  errs() << ": " << (HasErrors ? "FAIL" : "PASS") << '\n';
   if (HasErrors) {
     errs() << "Module IR Dump\n";
     M.print(errs(), nullptr, false);
@@ -268,10 +276,12 @@ struct CheckDebugifyFunctionPass : public FunctionPass {
     Module &M = *F.getParent();
     auto FuncIt = F.getIterator();
     return checkDebugifyMetadata(M, make_range(FuncIt, std::next(FuncIt)),
-                                 NameOfWrappedPass, "CheckFunctionDebugify", Strip);
+                                 NameOfWrappedPass, "CheckFunctionDebugify",
+                                 Strip);
   }
 
-  CheckDebugifyFunctionPass(bool Strip = false, StringRef NameOfWrappedPass = "")
+  CheckDebugifyFunctionPass(bool Strip = false,
+                            StringRef NameOfWrappedPass = "")
       : FunctionPass(ID), Strip(Strip), NameOfWrappedPass(NameOfWrappedPass) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

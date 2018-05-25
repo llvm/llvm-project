@@ -152,7 +152,12 @@ public:
                          const RuntimeDyld::LoadedObjectInfo &)>;
 
   /// Functor for receiving finalization notifications.
-  using NotifyFinalizedFtor = std::function<void(VModuleKey)>;
+  using NotifyFinalizedFtor =
+      std::function<void(VModuleKey, const object::ObjectFile &Obj,
+                         const RuntimeDyld::LoadedObjectInfo &)>;
+
+  /// Functor for receiving deallocation notifications.
+  using NotifyFreedFtor = std::function<void(VModuleKey, const object::ObjectFile &Obj)>;
 
 private:
   using OwnedObject = object::OwningBinary<object::ObjectFile>;
@@ -164,22 +169,27 @@ private:
                          OwnedObject Obj, MemoryManagerPtrT MemMgr,
                          std::shared_ptr<SymbolResolver> Resolver,
                          bool ProcessAllSections)
-        : MemMgr(std::move(MemMgr)),
+        : K(std::move(K)),
+          Parent(Parent),
+          MemMgr(std::move(MemMgr)),
           PFC(llvm::make_unique<PreFinalizeContents>(
-              Parent, std::move(K), std::move(Obj), std::move(Resolver),
+              std::move(Obj), std::move(Resolver),
               ProcessAllSections)) {
       buildInitialSymbolTable(PFC->Obj);
     }
 
     ~ConcreteLinkedObject() override {
+      if (this->Parent.NotifyFreed)
+        this->Parent.NotifyFreed(K, *ObjForNotify.getBinary());
+
       MemMgr->deregisterEHFrames();
     }
 
     Error finalize() override {
       assert(PFC && "mapSectionAddress called on finalized LinkedObject");
 
-      JITSymbolResolverAdapter ResolverAdapter(PFC->Parent.ES, *PFC->Resolver,
-                                               nullptr);
+      JITSymbolResolverAdapter ResolverAdapter(Parent.ES, *PFC->Resolver,
+					       nullptr);
       PFC->RTDyld = llvm::make_unique<RuntimeDyld>(*MemMgr, ResolverAdapter);
       PFC->RTDyld->setProcessAllSections(PFC->ProcessAllSections);
 
@@ -195,8 +205,8 @@ private:
           SymbolTable[KV.first] = KV.second;
       }
 
-      if (PFC->Parent.NotifyLoaded)
-        PFC->Parent.NotifyLoaded(PFC->K, *PFC->Obj.getBinary(), *Info);
+      if (Parent.NotifyLoaded)
+        Parent.NotifyLoaded(K, *PFC->Obj.getBinary(), *Info);
 
       PFC->RTDyld->finalizeWithMemoryManagerLocking();
 
@@ -204,10 +214,12 @@ private:
         return make_error<StringError>(PFC->RTDyld->getErrorString(),
                                        inconvertibleErrorCode());
 
-      if (PFC->Parent.NotifyFinalized)
-        PFC->Parent.NotifyFinalized(PFC->K);
+      if (Parent.NotifyFinalized)
+        Parent.NotifyFinalized(K, *PFC->Obj.getBinary(), *Info);
 
       // Release resources.
+      if (this->Parent.NotifyFreed)
+        ObjForNotify = std::move(PFC->Obj); // needed for callback
       PFC = nullptr;
       return Error::success();
     }
@@ -250,23 +262,23 @@ private:
     // Contains the information needed prior to finalization: the object files,
     // memory manager, resolver, and flags needed for RuntimeDyld.
     struct PreFinalizeContents {
-      PreFinalizeContents(RTDyldObjectLinkingLayer &Parent, VModuleKey K,
-                          OwnedObject Obj,
+      PreFinalizeContents(OwnedObject Obj,
                           std::shared_ptr<SymbolResolver> Resolver,
                           bool ProcessAllSections)
-          : Parent(Parent), K(std::move(K)), Obj(std::move(Obj)),
+          : Obj(std::move(Obj)),
             Resolver(std::move(Resolver)),
             ProcessAllSections(ProcessAllSections) {}
 
-      RTDyldObjectLinkingLayer &Parent;
-      VModuleKey K;
       OwnedObject Obj;
       std::shared_ptr<SymbolResolver> Resolver;
       bool ProcessAllSections;
       std::unique_ptr<RuntimeDyld> RTDyld;
     };
 
+    VModuleKey K;
+    RTDyldObjectLinkingLayer &Parent;
     MemoryManagerPtrT MemMgr;
+    OwnedObject ObjForNotify;
     std::unique_ptr<PreFinalizeContents> PFC;
   };
 
@@ -295,10 +307,13 @@ public:
   RTDyldObjectLinkingLayer(
       ExecutionSession &ES, ResourcesGetter GetResources,
       NotifyLoadedFtor NotifyLoaded = NotifyLoadedFtor(),
-      NotifyFinalizedFtor NotifyFinalized = NotifyFinalizedFtor())
+      NotifyFinalizedFtor NotifyFinalized = NotifyFinalizedFtor(),
+      NotifyFreedFtor NotifyFreed = NotifyFreedFtor())
       : ES(ES), GetResources(std::move(GetResources)),
         NotifyLoaded(std::move(NotifyLoaded)),
-        NotifyFinalized(std::move(NotifyFinalized)), ProcessAllSections(false) {
+        NotifyFinalized(std::move(NotifyFinalized)),
+        NotifyFreed(std::move(NotifyFreed)),
+        ProcessAllSections(false) {
   }
 
   /// Set the 'ProcessAllSections' flag.
@@ -395,6 +410,7 @@ private:
   ResourcesGetter GetResources;
   NotifyLoadedFtor NotifyLoaded;
   NotifyFinalizedFtor NotifyFinalized;
+  NotifyFreedFtor NotifyFreed;
   bool ProcessAllSections = false;
 };
 

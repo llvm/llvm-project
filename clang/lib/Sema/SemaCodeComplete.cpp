@@ -1371,8 +1371,8 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
   } else
     Results.AddResult(Result("__auto_type", CCP_Type));
 
-  // GNU extensions
-  if (LangOpts.GNUMode) {
+  // GNU keywords
+  if (LangOpts.GNUKeywords) {
     // FIXME: Enable when we actually support decimal floating point.
     //    Results.AddResult(Result("_Decimal32"));
     //    Results.AddResult(Result("_Decimal64"));
