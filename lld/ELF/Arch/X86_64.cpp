@@ -123,7 +123,7 @@ template <class ELFT> void X86_64<ELFT>::writeGotPltHeader(uint8_t *Buf) const {
 template <class ELFT>
 void X86_64<ELFT>::writeGotPlt(uint8_t *Buf, const Symbol &S) const {
   // See comments in X86::writeGotPlt.
-  write32le(Buf, S.getPltVA() + 6);
+  write64le(Buf, S.getPltVA() + 6);
 }
 
 template <class ELFT> void X86_64<ELFT>::writePltHeader(uint8_t *Buf) const {
