@@ -28,7 +28,7 @@ int main()
 //  Test the implicit deduction guides
     {
 //  optional()
-    std::optional opt;   // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'optional'}}
+    std::optional opt;   // expected-error {{declaration of variable 'opt' with deduced type 'std::optional' requires an initializer}}
     }
 
     {

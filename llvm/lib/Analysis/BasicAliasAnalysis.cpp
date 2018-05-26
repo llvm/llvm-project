@@ -992,9 +992,9 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS1,
 /// Provide ad-hoc rules to disambiguate accesses through two GEP operators,
 /// both having the exact same pointer operand.
 static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
-                                            uint64_t V1Size,
+                                            LocationSize V1Size,
                                             const GEPOperator *GEP2,
-                                            uint64_t V2Size,
+                                            LocationSize V2Size,
                                             const DataLayout &DL) {
   assert(GEP1->getPointerOperand()->stripPointerCastsAndInvariantGroups() ==
              GEP2->getPointerOperand()->stripPointerCastsAndInvariantGroups() &&
@@ -1169,8 +1169,8 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
 // the highest %f1 can be is (%alloca + 3). This means %random can not be higher
 // than (%alloca - 1), and so is not inbounds, a contradiction.
 bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
-      const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject, 
-      uint64_t ObjectAccessSize) {
+      const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
+      LocationSize ObjectAccessSize) {
   // If the object access size is unknown, or the GEP isn't inbounds, bail.
   if (ObjectAccessSize == MemoryLocation::UnknownSize || !GEPOp->isInBounds())
     return false;
@@ -1204,11 +1204,11 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
 /// We know that V1 is a GEP, but we don't know anything about V2.
 /// UnderlyingV1 is GetUnderlyingObject(GEP1, DL), UnderlyingV2 is the same for
 /// V2.
-AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
-                                    const AAMDNodes &V1AAInfo, const Value *V2,
-                                    uint64_t V2Size, const AAMDNodes &V2AAInfo,
-                                    const Value *UnderlyingV1,
-                                    const Value *UnderlyingV2) {
+AliasResult
+BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
+                        const AAMDNodes &V1AAInfo, const Value *V2,
+                        LocationSize V2Size, const AAMDNodes &V2AAInfo,
+                        const Value *UnderlyingV1, const Value *UnderlyingV2) {
   DecomposedGEP DecompGEP1, DecompGEP2;
   bool GEP1MaxLookupReached =
     DecomposeGEPExpression(GEP1, DecompGEP1, DL, &AC, DT);
@@ -1437,9 +1437,10 @@ static AliasResult MergeAliasResults(AliasResult A, AliasResult B) {
 
 /// Provides a bunch of ad-hoc rules to disambiguate a Select instruction
 /// against another.
-AliasResult BasicAAResult::aliasSelect(const SelectInst *SI, uint64_t SISize,
+AliasResult BasicAAResult::aliasSelect(const SelectInst *SI,
+                                       LocationSize SISize,
                                        const AAMDNodes &SIAAInfo,
-                                       const Value *V2, uint64_t V2Size,
+                                       const Value *V2, LocationSize V2Size,
                                        const AAMDNodes &V2AAInfo,
                                        const Value *UnderV2) {
   // If the values are Selects with the same condition, we can do a more precise
@@ -1472,9 +1473,10 @@ AliasResult BasicAAResult::aliasSelect(const SelectInst *SI, uint64_t SISize,
 
 /// Provide a bunch of ad-hoc rules to disambiguate a PHI instruction against
 /// another.
-AliasResult BasicAAResult::aliasPHI(const PHINode *PN, uint64_t PNSize,
+AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
                                     const AAMDNodes &PNAAInfo, const Value *V2,
-                                    uint64_t V2Size, const AAMDNodes &V2AAInfo,
+                                    LocationSize V2Size,
+                                    const AAMDNodes &V2AAInfo,
                                     const Value *UnderV2) {
   // Track phi nodes we have visited. We use this information when we determine
   // value equivalence.
@@ -1579,9 +1581,9 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, uint64_t PNSize,
 
 /// Provides a bunch of ad-hoc rules to disambiguate in common cases, such as
 /// array references.
-AliasResult BasicAAResult::aliasCheck(const Value *V1, uint64_t V1Size,
+AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
                                       AAMDNodes V1AAInfo, const Value *V2,
-                                      uint64_t V2Size, AAMDNodes V2AAInfo, 
+                                      LocationSize V2Size, AAMDNodes V2AAInfo,
                                       const Value *O1, const Value *O2) {
   // If either of the memory references is empty, it doesn't matter what the
   // pointer values are.
@@ -1805,8 +1807,8 @@ void BasicAAResult::GetIndexDifference(
 }
 
 bool BasicAAResult::constantOffsetHeuristic(
-    const SmallVectorImpl<VariableGEPIndex> &VarIndices, uint64_t V1Size,
-    uint64_t V2Size, int64_t BaseOffset, AssumptionCache *AC,
+    const SmallVectorImpl<VariableGEPIndex> &VarIndices, LocationSize V1Size,
+    LocationSize V2Size, int64_t BaseOffset, AssumptionCache *AC,
     DominatorTree *DT) {
   if (VarIndices.size() != 2 || V1Size == MemoryLocation::UnknownSize ||
       V2Size == MemoryLocation::UnknownSize)

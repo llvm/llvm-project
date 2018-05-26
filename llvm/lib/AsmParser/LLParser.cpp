@@ -282,6 +282,10 @@ bool LLParser::ParseTopLevelEntities() {
     case lltok::GlobalVar:  if (ParseNamedGlobal()) return true; break;
     case lltok::ComdatVar:  if (parseComdat()) return true; break;
     case lltok::exclaim:    if (ParseStandaloneMetadata()) return true; break;
+    case lltok::SummaryID:
+      if (ParseSummaryEntry())
+        return true;
+      break;
     case lltok::MetadataVar:if (ParseNamedMetadata()) return true; break;
     case lltok::kw_attributes: if (ParseUnnamedAttrGrp()) return true; break;
     case lltok::kw_uselistorder: if (ParseUseListOrder()) return true; break;
@@ -708,6 +712,55 @@ bool LLParser::ParseStandaloneMetadata() {
     NumberedMetadata[MetadataID].reset(Init);
   }
 
+  return false;
+}
+
+// Skips a single module summary entry.
+bool LLParser::SkipModuleSummaryEntry() {
+  // Each module summary entry consists of a tag for the entry
+  // type, followed by a colon, then the fields surrounded by nested sets of
+  // parentheses. The "tag:" looks like a Label. Once parsing support is
+  // in place we will look for the tokens corresponding to the expected tags.
+  if (ParseToken(lltok::LabelStr,
+                 "expected 'label' at start of summary entry") ||
+      ParseToken(lltok::lparen, "expected '(' at start of summary entry"))
+    return true;
+  // Now walk through the parenthesized entry, until the number of open
+  // parentheses goes back down to 0 (the first '(' was parsed above).
+  unsigned NumOpenParen = 1;
+  do {
+    switch (Lex.getKind()) {
+    case lltok::lparen:
+      NumOpenParen++;
+      break;
+    case lltok::rparen:
+      NumOpenParen--;
+      break;
+    case lltok::Eof:
+      return TokError("found end of file while parsing summary entry");
+    default:
+      // Skip everything in between parentheses.
+      break;
+    }
+    Lex.Lex();
+  } while (NumOpenParen > 0);
+  return false;
+}
+
+/// ParseSummaryEntry:
+///   ::= SummaryID '=' ...
+bool LLParser::ParseSummaryEntry() {
+  assert(Lex.getKind() == lltok::SummaryID);
+  // unsigned SummaryID = Lex.getUIntVal();
+
+  Lex.Lex();
+  if (ParseToken(lltok::equal, "expected '=' here"))
+    return true;
+
+  // TODO: Support parsing into a ModuleSummaryIndex object saved in
+  // the LLParser. For now, skip the summary entry.
+  if (SkipModuleSummaryEntry())
+    return true;
   return false;
 }
 

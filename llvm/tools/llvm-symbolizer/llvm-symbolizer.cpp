@@ -113,7 +113,7 @@ static bool parseCommand(StringRef InputString, bool &IsData,
   }
   const char *pos = InputString.data();
   // Skip delimiters and parse input filename (if needed).
-  if (ClBinaryName == "") {
+  if (ClBinaryName.empty()) {
     pos += strspn(pos, kDelimiters);
     if (*pos == '"' || *pos == '\'') {
       char quote = *pos;
