@@ -1845,35 +1845,21 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDParallelCall(
       RCG(CGF);
     } else {
       // Check for master and then parallelism:
-      // if (__kmpc_is_spmd_exec_mode()) {
+      // if (__kmpc_is_spmd_exec_mode() || __kmpc_parallel_level(loc, gtid)) {
       //  Serialized execution.
-      // } else if (is_master) {
+      // } else if (master) {
       //   Worker call.
-      // } else if (__kmpc_parallel_level(loc, gtid)) {
-      //   Serialized execution.
       // } else {
       //   Outlined function call.
       // }
       CGBuilderTy &Bld = CGF.Builder;
       llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".exit");
-      llvm::BasicBlock *SPMDCheckBB = CGF.createBasicBlock(".spmdcheck");
+      llvm::BasicBlock *SeqBB = CGF.createBasicBlock(".sequential");
+      llvm::BasicBlock *ParallelCheckBB = CGF.createBasicBlock(".parcheck");
       llvm::BasicBlock *MasterCheckBB = CGF.createBasicBlock(".mastercheck");
-      llvm::BasicBlock *ParallelCheckBB =
-          CGF.createBasicBlock(".parallelcheck");
       llvm::Value *IsSPMD = Bld.CreateIsNotNull(CGF.EmitNounwindRuntimeCall(
           createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_is_spmd_exec_mode)));
-      Bld.CreateCondBr(IsSPMD, SPMDCheckBB, MasterCheckBB);
-      CGF.EmitBlock(SPMDCheckBB);
-      SeqGen(CGF, Action);
-      CGF.EmitBranch(ExitBB);
-      CGF.EmitBlock(MasterCheckBB);
-      llvm::BasicBlock *MasterThenBB = CGF.createBasicBlock("master.then");
-      llvm::Value *IsMaster =
-          Bld.CreateICmpEQ(getNVPTXThreadID(CGF), getMasterThreadID(CGF));
-      Bld.CreateCondBr(IsMaster, MasterThenBB, ParallelCheckBB);
-      CGF.EmitBlock(MasterThenBB);
-      L0ParallelGen(CGF, Action);
-      CGF.EmitBranch(ExitBB);
+      Bld.CreateCondBr(IsSPMD, SeqBB, ParallelCheckBB);
       // There is no need to emit line number for unconditional branch.
       (void)ApplyDebugLocation::CreateEmpty(CGF);
       CGF.EmitBlock(ParallelCheckBB);
@@ -1883,15 +1869,23 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDParallelCall(
           createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_parallel_level),
           {RTLoc, ThreadID});
       llvm::Value *Res = Bld.CreateIsNotNull(PL);
-      llvm::BasicBlock *ThenBlock = CGF.createBasicBlock("omp_if.then");
-      llvm::BasicBlock *ElseBlock = CGF.createBasicBlock("omp_if.else");
-      Bld.CreateCondBr(Res, ThenBlock, ElseBlock);
-      // Emit the 'then' code.
-      CGF.EmitBlock(ThenBlock);
+      Bld.CreateCondBr(Res, SeqBB, MasterCheckBB);
+      CGF.EmitBlock(SeqBB);
       SeqGen(CGF, Action);
+      CGF.EmitBranch(ExitBB);
       // There is no need to emit line number for unconditional branch.
       (void)ApplyDebugLocation::CreateEmpty(CGF);
-      // Emit the 'else' code.
+      CGF.EmitBlock(MasterCheckBB);
+      llvm::BasicBlock *MasterThenBB = CGF.createBasicBlock("master.then");
+      llvm::BasicBlock *ElseBlock = CGF.createBasicBlock("omp_if.else");
+      llvm::Value *IsMaster =
+          Bld.CreateICmpEQ(getNVPTXThreadID(CGF), getMasterThreadID(CGF));
+      Bld.CreateCondBr(IsMaster, MasterThenBB, ElseBlock);
+      CGF.EmitBlock(MasterThenBB);
+      L0ParallelGen(CGF, Action);
+      CGF.EmitBranch(ExitBB);
+      // There is no need to emit line number for unconditional branch.
+      (void)ApplyDebugLocation::CreateEmpty(CGF);
       CGF.EmitBlock(ElseBlock);
       RCG(CGF);
       // There is no need to emit line number for unconditional branch.

@@ -330,7 +330,7 @@ void Sema::PragmaStack<ValueType>::Act(SourceLocation PragmaLocation,
         Stack.erase(std::prev(I.base()), Stack.end());
       }
     } else if (!Stack.empty()) {
-      // We don't have a label, just pop the last entry.
+      // We do not have a label, just pop the last entry.
       CurrentValue = Stack.back().Value;
       CurrentPragmaLocation = Stack.back().PragmaLocation;
       Stack.pop_back();

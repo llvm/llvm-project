@@ -294,6 +294,13 @@ public:
   ProgramStateRef enterStackFrame(const CallEvent &Call,
                                   const StackFrameContext *CalleeCtx) const;
 
+  /// Get the lvalue for a base class object reference.
+  Loc getLValue(const CXXBaseSpecifier &BaseSpec, const SubRegion *Super) const;
+
+  /// Get the lvalue for a base class object reference.
+  Loc getLValue(const CXXRecordDecl *BaseClass, const SubRegion *Super,
+                bool IsVirtual) const;
+
   /// Get the lvalue for a variable reference.
   Loc getLValue(const VarDecl *D, const LocationContext *LC) const;
 
@@ -722,6 +729,22 @@ inline ProgramStateRef ProgramState::bindLoc(SVal LV, SVal V, const LocationCont
   if (Optional<Loc> L = LV.getAs<Loc>())
     return bindLoc(*L, V, LCtx);
   return this;
+}
+
+inline Loc ProgramState::getLValue(const CXXBaseSpecifier &BaseSpec,
+                                   const SubRegion *Super) const {
+  const auto *Base = BaseSpec.getType()->getAsCXXRecordDecl();
+  return loc::MemRegionVal(
+           getStateManager().getRegionManager().getCXXBaseObjectRegion(
+                                            Base, Super, BaseSpec.isVirtual()));
+}
+
+inline Loc ProgramState::getLValue(const CXXRecordDecl *BaseClass,
+                                   const SubRegion *Super,
+                                   bool IsVirtual) const {
+  return loc::MemRegionVal(
+           getStateManager().getRegionManager().getCXXBaseObjectRegion(
+                                                  BaseClass, Super, IsVirtual));
 }
 
 inline Loc ProgramState::getLValue(const VarDecl *VD,

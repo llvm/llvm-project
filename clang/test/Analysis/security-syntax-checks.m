@@ -37,6 +37,27 @@ void test_float_condition() {
   for (FooType x = 100000001.0f; x <= 100000010.0f; x++ ) {} // expected-warning{{Variable 'x' with floating point type 'FooType'}}
 }
 
+// Obsolete function bcmp
+int bcmp(void *, void *, size_t);
+
+int test_bcmp(void *a, void *b, size_t n) {
+  return bcmp(a, b, n); // expected-warning{{The bcmp() function is obsoleted by memcmp()}}
+}
+
+// Obsolete function bcopy
+void bcopy(void *, void *, size_t);
+
+void test_bcopy(void *a, void *b, size_t n) {
+  bcopy(a, b, n); // expected-warning{{The bcopy() function is obsoleted by memcpy() or memmove(}}
+}
+
+// Obsolete function bzero
+void bzero(void *, size_t);
+
+void test_bzero(void *a, size_t n) {
+  bzero(a, n); // expected-warning{{The bzero() function is obsoleted by memset()}}
+}
+
 // <rdar://problem/6335715> rule request: gets() buffer overflow
 // Part of recommendation: 300-BSI (buildsecurityin.us-cert.gov)
 char* gets(char *buf);
