@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements the logic for retiring instructions.
+/// This file simulates the hardware responsible for retiring instructions.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -62,27 +62,32 @@ private:
   unsigned AvailableSlots;
   unsigned MaxRetirePerCycle; // 0 means no limit.
   std::vector<RUToken> Queue;
-  DispatchStage *Owner;
 
 public:
-  RetireControlUnit(const llvm::MCSchedModel &SM, DispatchStage *DU);
+  RetireControlUnit(const llvm::MCSchedModel &SM);
 
   bool isFull() const { return !AvailableSlots; }
   bool isEmpty() const { return AvailableSlots == Queue.size(); }
   bool isAvailable(unsigned Quantity = 1) const {
-    // Some instructions may declare a number of uOps which exceedes the size
+    // Some instructions may declare a number of uOps which exceeds the size
     // of the reorder buffer. To avoid problems, cap the amount of slots to
     // the size of the reorder buffer.
     Quantity = std::min(Quantity, static_cast<unsigned>(Queue.size()));
     return AvailableSlots >= Quantity;
   }
 
+  unsigned getMaxRetirePerCycle() const { return MaxRetirePerCycle; }
+
   // Reserves a number of slots, and returns a new token.
   unsigned reserveSlot(const InstRef &IS, unsigned NumMicroOps);
 
-  /// Retires instructions in program order.
-  void cycleEvent();
+  // Return the current token from the RCU's circular token queue.
+  const RUToken &peekCurrentToken() const;
 
+  // Advance the pointer to the next token in the circular token queue.
+  void consumeCurrentToken();
+
+  // Update the RCU token to represent the executed state.
   void onInstructionExecuted(unsigned TokenID);
 
 #ifndef NDEBUG

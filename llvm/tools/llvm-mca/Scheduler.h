@@ -17,6 +17,7 @@
 
 #include "Instruction.h"
 #include "LSUnit.h"
+#include "RetireControlUnit.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include <map>
@@ -24,7 +25,6 @@
 namespace mca {
 
 class Backend;
-class DispatchStage;
 
 /// Used to notify the internal state of a processor resource.
 ///
@@ -402,6 +402,7 @@ public:
 /// An Instruction leaves the IssuedQueue when it reaches the write-back stage.
 class Scheduler {
   const llvm::MCSchedModel &SM;
+  RetireControlUnit &RCU;
 
   // Hardware resources that are managed by this scheduler.
   std::unique_ptr<ResourceManager> Resources;
@@ -409,9 +410,6 @@ class Scheduler {
 
   // The Backend gets notified when instructions are ready/issued/executed.
   Backend *const Owner;
-
-  // The dispatch unit gets notified when instructions are executed.
-  DispatchStage *DS;
 
   using QueueEntryTy = std::pair<unsigned, Instruction *>;
   std::map<unsigned, Instruction *> WaitQueue;
@@ -447,14 +445,12 @@ class Scheduler {
   void updateIssuedQueue(llvm::SmallVectorImpl<InstRef> &Executed);
 
 public:
-  Scheduler(Backend *B, const llvm::MCSchedModel &Model, unsigned LoadQueueSize,
-            unsigned StoreQueueSize, bool AssumeNoAlias)
-      : SM(Model), Resources(llvm::make_unique<ResourceManager>(SM)),
+  Scheduler(Backend *B, const llvm::MCSchedModel &Model, RetireControlUnit &R,
+            unsigned LoadQueueSize, unsigned StoreQueueSize, bool AssumeNoAlias)
+      : SM(Model), RCU(R), Resources(llvm::make_unique<ResourceManager>(SM)),
         LSU(llvm::make_unique<LSUnit>(LoadQueueSize, StoreQueueSize,
                                       AssumeNoAlias)),
         Owner(B) {}
-
-  void setDispatchStage(DispatchStage *DispStage) { DS = DispStage; }
 
   /// Check if the instruction in 'IR' can be dispatched.
   ///

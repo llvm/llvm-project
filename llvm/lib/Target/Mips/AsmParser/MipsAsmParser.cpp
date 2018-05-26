@@ -150,6 +150,8 @@ class MipsAsmParser : public MCTargetAsmParser {
   void printWarningWithFixIt(const Twine &Msg, const Twine &FixMsg,
                              SMRange Range, bool ShowColors = true);
 
+  void ConvertXWPOperands(MCInst &Inst, const OperandVector &Operands);
+
 #define GET_ASSEMBLER_HEADER
 #include "MipsGenAsmMatcher.inc"
 
@@ -2161,7 +2163,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   }   // if load/store
 
   if (inMicroMipsMode()) {
-    if (MCID.mayLoad()) {
+    if (MCID.mayLoad() && Inst.getOpcode() != Mips::LWP_MM) {
       // Try to create 16-bit GP relative load instruction.
       for (unsigned i = 0; i < MCID.getNumOperands(); i++) {
         const MCOperandInfo &OpInfo = MCID.OpInfo[i];
@@ -2278,12 +2280,17 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
           return Error(IDLoc, "immediate operand value out of range");
         break;
       case Mips::ADDIUPC_MM:
-        MCOperand Opnd = Inst.getOperand(1);
+        Opnd = Inst.getOperand(1);
         if (!Opnd.isImm())
           return Error(IDLoc, "expected immediate operand kind");
-        int Imm = Opnd.getImm();
+        Imm = Opnd.getImm();
         if ((Imm % 4 != 0) || !isInt<25>(Imm))
           return Error(IDLoc, "immediate operand value out of range");
+        break;
+      case Mips::LWP_MM:
+      case Mips::SWP_MM:
+        if (Inst.getOperand(0).getReg() == Mips::RA)
+          return Error(IDLoc, "invalid operand for instruction");
         break;
     }
   }
@@ -5171,7 +5178,6 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       return Match_RequiresDifferentSrcAndDst;
     return Match_Success;
   case Mips::LWP_MM:
-  case Mips::LWP_MMR6:
     if (Inst.getOperand(0).getReg() == Inst.getOperand(2).getReg())
       return Match_RequiresDifferentSrcAndDst;
     return Match_Success;
@@ -5510,6 +5516,17 @@ void MipsAsmParser::warnIfRegIndexIsAT(unsigned RegIndex, SMLoc Loc) {
 void MipsAsmParser::warnIfNoMacro(SMLoc Loc) {
   if (!AssemblerOptions.back()->isMacro())
     Warning(Loc, "macro instruction expanded into multiple instructions");
+}
+
+void MipsAsmParser::ConvertXWPOperands(MCInst &Inst,
+                                       const OperandVector &Operands) {
+  assert(
+      (Inst.getOpcode() == Mips::LWP_MM || Inst.getOpcode() == Mips::SWP_MM) &&
+      "Unexpected instruction!");
+  ((MipsOperand &)*Operands[1]).addGPR32ZeroAsmRegOperands(Inst, 1);
+  int NextReg = nextReg(((MipsOperand &)*Operands[1]).getGPR32Reg());
+  Inst.addOperand(MCOperand::createReg(NextReg));
+  ((MipsOperand &)*Operands[2]).addMemOperands(Inst, 2);
 }
 
 void

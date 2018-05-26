@@ -1,6 +1,7 @@
 ; Test to check the callgraph in summary
 ; RUN: opt -write-relbf-to-summary -module-summary %s -o %t.o
 ; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s
+; RUN: llvm-dis -o - %t.o | FileCheck %s --check-prefix=DIS
 
 
 ; CHECK: <SOURCE_FILENAME
@@ -33,3 +34,8 @@ declare void @func(...) #1
 @undefinedglob = external global i32
 
 ; OLD: Index {{.*}} contains 1 nodes (1 functions, 0 alias, 0 globals) and 1 edges (0 refs and 1 calls)
+
+; DIS: ^0 = module: (path: "{{.*}}thinlto-function-summary-callgraph-relbf.ll.tmp.o", hash: (0, 0, 0, 0, 0))
+; DIS: ^1 = gv: (name: "func") ; guid = 7289175272376759421
+; DIS: ^2 = gv: (name: "main", summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 3, calls: ((callee: ^1, relbf: 256)), refs: (^3)))) ; guid = 15822663052811949562
+; DIS: ^3 = gv: (name: "undefinedglob") ; guid = 18036901804029949403

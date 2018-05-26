@@ -428,6 +428,26 @@ public:
     std::vector<uint64_t> Args;
   };
 
+  /// All type identifier related information. Because these fields are
+  /// relatively uncommon we only allocate space for them if necessary.
+  struct TypeIdInfo {
+    /// List of type identifiers used by this function in llvm.type.test
+    /// intrinsics referenced by something other than an llvm.assume intrinsic,
+    /// represented as GUIDs.
+    std::vector<GlobalValue::GUID> TypeTests;
+
+    /// List of virtual calls made by this function using (respectively)
+    /// llvm.assume(llvm.type.test) or llvm.type.checked.load intrinsics that do
+    /// not have all constant integer arguments.
+    std::vector<VFuncId> TypeTestAssumeVCalls, TypeCheckedLoadVCalls;
+
+    /// List of virtual calls made by this function using (respectively)
+    /// llvm.assume(llvm.type.test) or llvm.type.checked.load intrinsics with
+    /// all constant integer arguments.
+    std::vector<ConstVCall> TypeTestAssumeConstVCalls,
+        TypeCheckedLoadConstVCalls;
+  };
+
   /// Function attribute flags. Used to track if a function accesses memory,
   /// recurses or aliases.
   struct FFlags {
@@ -467,26 +487,6 @@ private:
 
   /// List of <CalleeValueInfo, CalleeInfo> call edge pairs from this function.
   std::vector<EdgeTy> CallGraphEdgeList;
-
-  /// All type identifier related information. Because these fields are
-  /// relatively uncommon we only allocate space for them if necessary.
-  struct TypeIdInfo {
-    /// List of type identifiers used by this function in llvm.type.test
-    /// intrinsics referenced by something other than an llvm.assume intrinsic,
-    /// represented as GUIDs.
-    std::vector<GlobalValue::GUID> TypeTests;
-
-    /// List of virtual calls made by this function using (respectively)
-    /// llvm.assume(llvm.type.test) or llvm.type.checked.load intrinsics that do
-    /// not have all constant integer arguments.
-    std::vector<VFuncId> TypeTestAssumeVCalls, TypeCheckedLoadVCalls;
-
-    /// List of virtual calls made by this function using (respectively)
-    /// llvm.assume(llvm.type.test) or llvm.type.checked.load intrinsics with
-    /// all constant integer arguments.
-    std::vector<ConstVCall> TypeTestAssumeConstVCalls,
-        TypeCheckedLoadConstVCalls;
-  };
 
   std::unique_ptr<TypeIdInfo> TIdInfo;
 
@@ -576,6 +576,8 @@ public:
       TIdInfo = llvm::make_unique<TypeIdInfo>();
     TIdInfo->TypeTests.push_back(Guid);
   }
+
+  const TypeIdInfo *getTypeIdInfo() const { return TIdInfo.get(); };
 
   friend struct GraphTraits<ValueInfo>;
 };
@@ -865,6 +867,12 @@ public:
   }
   bool isGUIDLive(GlobalValue::GUID GUID) const;
 
+  /// Return a ValueInfo for the index value_type (convenient when iterating
+  /// index).
+  ValueInfo getValueInfo(const GlobalValueSummaryMapTy::value_type &R) const {
+    return ValueInfo(IsAnalysis, &R);
+  }
+
   /// Return a ValueInfo for GUID if it exists, otherwise return ValueInfo().
   ValueInfo getValueInfo(GlobalValue::GUID GUID) const {
     auto I = GlobalValueMap.find(GUID);
@@ -1048,6 +1056,12 @@ public:
   /// Summary).
   void collectDefinedGVSummariesPerModule(
       StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries) const;
+
+  /// Print to an output stream.
+  void print(raw_ostream &OS, bool IsForDebug = false) const;
+
+  /// Dump to stderr (for debugging).
+  void dump() const;
 
   /// Export summary to dot file for GraphViz.
   void exportToDot(raw_ostream& OS) const;

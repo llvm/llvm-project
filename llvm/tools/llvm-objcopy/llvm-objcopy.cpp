@@ -168,11 +168,13 @@ struct CopyConfig {
   bool StripSections = false;
   bool StripNonAlloc = false;
   bool StripDWO = false;
+  bool StripUnneeded = false;
   bool ExtractDWO = false;
   bool LocalizeHidden = false;
   bool Weaken = false;
   bool DiscardAll = false;
   bool OnlyKeepDebug = false;
+  bool KeepFileSymbols = false;
 };
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
@@ -263,9 +265,18 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
         Sym.Name = I->getValue();
     });
 
+    // The purpose of this loop is to mark symbols referenced by sections
+    // (like GroupSection or RelocationSection). This way, we know which
+    // symbols are still 'needed' and wich are not.
+    if (Config.StripUnneeded) {
+      for (auto &Section : Obj.sections())
+        Section.markSymbols();
+    }
+
     Obj.removeSymbols([&](const Symbol &Sym) {
-      if (!Config.SymbolsToKeep.empty() &&
-          is_contained(Config.SymbolsToKeep, Sym.Name))
+      if ((!Config.SymbolsToKeep.empty() &&
+           is_contained(Config.SymbolsToKeep, Sym.Name)) ||
+          (Config.KeepFileSymbols && Sym.Type == STT_FILE))
         return false;
 
       if (Config.DiscardAll && Sym.Binding == STB_LOCAL &&
@@ -280,6 +291,13 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
           is_contained(Config.SymbolsToRemove, Sym.Name)) {
         return true;
       }
+
+      // TODO: We might handle the 'null symbol' in a different way
+      // by probably handling it the same way as we handle 'null section' ?
+      if (Config.StripUnneeded && !Sym.Referenced && Sym.Index != 0 &&
+          (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&
+          Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
+        return true;
 
       return false;
     });
@@ -394,7 +412,8 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
   // and at least one of those symbols is present
   // (equivalently, the updated symbol table is not empty)
   // the symbol table and the string table should not be removed.
-  if (!Config.SymbolsToKeep.empty() && !Obj.SymbolTable->empty()) {
+  if ((!Config.SymbolsToKeep.empty() || Config.KeepFileSymbols) &&
+      !Obj.SymbolTable->empty()) {
     RemovePred = [&Obj, RemovePred](const SectionBase &Sec) {
       if (&Sec == Obj.SymbolTable || &Sec == Obj.SymbolTable->getStrTab())
         return false;
@@ -509,11 +528,13 @@ CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   Config.StripDWO = InputArgs.hasArg(OBJCOPY_strip_dwo);
   Config.StripSections = InputArgs.hasArg(OBJCOPY_strip_sections);
   Config.StripNonAlloc = InputArgs.hasArg(OBJCOPY_strip_non_alloc);
+  Config.StripUnneeded = InputArgs.hasArg(OBJCOPY_strip_unneeded);
   Config.ExtractDWO = InputArgs.hasArg(OBJCOPY_extract_dwo);
   Config.LocalizeHidden = InputArgs.hasArg(OBJCOPY_localize_hidden);
   Config.Weaken = InputArgs.hasArg(OBJCOPY_weaken);
   Config.DiscardAll = InputArgs.hasArg(OBJCOPY_discard_all);
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
+  Config.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
     Config.SymbolsToLocalize.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbol))

@@ -219,6 +219,8 @@ lltok::Kind LLLexer::LexToken() {
       SkipLineComment();
       continue;
     case '!': return LexExclaim();
+    case '^':
+      return LexCaret();
     case '#': return LexHash();
     case '0': case '1': case '2': case '3': case '4':
     case '5': case '6': case '7': case '8': case '9':
@@ -328,6 +330,22 @@ bool LLLexer::ReadVarName() {
   return false;
 }
 
+// Lex an ID: [0-9]+. On success, the ID is stored in UIntVal and Token is
+// returned, otherwise the Error token is returned.
+lltok::Kind LLLexer::LexUIntID(lltok::Kind Token) {
+  if (!isdigit(static_cast<unsigned char>(CurPtr[0])))
+    return lltok::Error;
+
+  for (++CurPtr; isdigit(static_cast<unsigned char>(CurPtr[0])); ++CurPtr)
+    /*empty*/;
+
+  uint64_t Val = atoull(TokStart + 1, CurPtr);
+  if ((unsigned)Val != Val)
+    Error("invalid value number (too large)!");
+  UIntVal = unsigned(Val);
+  return Token;
+}
+
 lltok::Kind LLLexer::LexVar(lltok::Kind Var, lltok::Kind VarID) {
   // Handle StringConstant: \"[^\"]*\"
   if (CurPtr[0] == '"') {
@@ -357,17 +375,7 @@ lltok::Kind LLLexer::LexVar(lltok::Kind Var, lltok::Kind VarID) {
     return Var;
 
   // Handle VarID: [0-9]+
-  if (isdigit(static_cast<unsigned char>(CurPtr[0]))) {
-    for (++CurPtr; isdigit(static_cast<unsigned char>(CurPtr[0])); ++CurPtr)
-      /*empty*/;
-
-    uint64_t Val = atoull(TokStart+1, CurPtr);
-    if ((unsigned)Val != Val)
-      Error("invalid value number (too large)!");
-    UIntVal = unsigned(Val);
-    return VarID;
-  }
-  return lltok::Error;
+  return LexUIntID(VarID);
 }
 
 /// Lex all tokens that start with a % character.
@@ -420,22 +428,18 @@ lltok::Kind LLLexer::LexExclaim() {
   return lltok::exclaim;
 }
 
+/// Lex all tokens that start with a ^ character.
+///    SummaryID ::= ^[0-9]+
+lltok::Kind LLLexer::LexCaret() {
+  // Handle SummaryID: ^[0-9]+
+  return LexUIntID(lltok::SummaryID);
+}
+
 /// Lex all tokens that start with a # character.
 ///    AttrGrpID ::= #[0-9]+
 lltok::Kind LLLexer::LexHash() {
   // Handle AttrGrpID: #[0-9]+
-  if (isdigit(static_cast<unsigned char>(CurPtr[0]))) {
-    for (++CurPtr; isdigit(static_cast<unsigned char>(CurPtr[0])); ++CurPtr)
-      /*empty*/;
-
-    uint64_t Val = atoull(TokStart+1, CurPtr);
-    if ((unsigned)Val != Val)
-      Error("invalid value number (too large)!");
-    UIntVal = unsigned(Val);
-    return lltok::AttrGrpID;
-  }
-
-  return lltok::Error;
+  return LexUIntID(lltok::AttrGrpID);
 }
 
 /// Lex a label, integer type, keyword, or hexadecimal integer constant.

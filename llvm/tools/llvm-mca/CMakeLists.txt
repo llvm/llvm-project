@@ -28,6 +28,7 @@ add_llvm_tool(llvm-mca
   ResourcePressureView.cpp
   RetireControlUnit.cpp
   RetireControlUnitStatistics.cpp
+  RetireStage.cpp
   Scheduler.cpp
   SchedulerStatistics.cpp
   Stage.cpp

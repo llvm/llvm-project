@@ -648,7 +648,7 @@ public:
     if (isImm())
       if (auto *CE = dyn_cast<MCConstantExpr>(getImm())) {
         int64_t Val = CE->getValue();
-        if ((Val != 0) && ((Val >> Width) << Width) == Val)
+        if ((Val != 0) && (uint64_t(Val >> Width) << Width) == uint64_t(Val))
           return std::make_pair(Val >> Width, Width);
         else
           return std::make_pair(Val, 0u);
@@ -736,7 +736,8 @@ public:
         std::is_same<int8_t, typename std::make_signed<T>::type>::value;
     if (auto ShiftedImm = getShiftedVal<8>())
       if (!(IsByte && ShiftedImm->second) &&
-          AArch64_AM::isSVECpyImm<T>(ShiftedImm->first << ShiftedImm->second))
+          AArch64_AM::isSVECpyImm<T>(uint64_t(ShiftedImm->first)
+                                     << ShiftedImm->second))
         return DiagnosticPredicateTy::Match;
 
     return DiagnosticPredicateTy::NearMatch;

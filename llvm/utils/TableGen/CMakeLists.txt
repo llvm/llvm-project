@@ -29,6 +29,7 @@ add_tablegen(llvm-tblgen LLVM
   InstrDocsEmitter.cpp
   IntrinsicEmitter.cpp
   OptParserEmitter.cpp
+  PredicateExpander.cpp
   PseudoLoweringEmitter.cpp
   RISCVCompressInstEmitter.cpp
   RegisterBankEmitter.cpp

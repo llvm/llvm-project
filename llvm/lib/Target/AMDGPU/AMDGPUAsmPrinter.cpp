@@ -278,11 +278,14 @@ void AMDGPUAsmPrinter::emitCommonFunctionComments(
   uint32_t NumVGPR,
   uint32_t NumSGPR,
   uint64_t ScratchSize,
-  uint64_t CodeSize) {
+  uint64_t CodeSize,
+  const AMDGPUMachineFunction *MFI) {
   OutStreamer->emitRawComment(" codeLenInByte = " + Twine(CodeSize), false);
   OutStreamer->emitRawComment(" NumSgprs: " + Twine(NumSGPR), false);
   OutStreamer->emitRawComment(" NumVgprs: " + Twine(NumVGPR), false);
   OutStreamer->emitRawComment(" ScratchSize: " + Twine(ScratchSize), false);
+  OutStreamer->emitRawComment(" MemoryBound: " + Twine(MFI->isMemoryBound()),
+                              false);
 }
 
 bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
@@ -339,7 +342,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
         Info.NumVGPR,
         Info.getTotalNumSGPRs(MF.getSubtarget<SISubtarget>()),
         Info.PrivateSegmentSize,
-        getFunctionCodeSize(MF));
+        getFunctionCodeSize(MF), MFI);
       return false;
     }
 
@@ -347,7 +350,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     emitCommonFunctionComments(CurrentProgramInfo.NumVGPR,
                                CurrentProgramInfo.NumSGPR,
                                CurrentProgramInfo.ScratchSize,
-                               getFunctionCodeSize(MF));
+                               getFunctionCodeSize(MF), MFI);
 
     OutStreamer->emitRawComment(
       " FloatMode: " + Twine(CurrentProgramInfo.FloatMode), false);
@@ -375,6 +378,9 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->emitRawComment(
       " ReservedVGPRCount: " + Twine(CurrentProgramInfo.ReservedVGPRCount),
       false);
+
+    OutStreamer->emitRawComment(
+      " WaveLimiterHint : " + Twine(MFI->needsWaveLimiter()), false);
 
     if (MF.getSubtarget<SISubtarget>().debuggerEmitPrologue()) {
       OutStreamer->emitRawComment(

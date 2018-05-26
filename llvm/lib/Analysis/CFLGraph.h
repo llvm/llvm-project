@@ -423,17 +423,15 @@ template <typename CFLAA> class CFLGraphBuilder {
         addNode(Inst);
 
       // Check if Inst is a call to a library function that
-      // allocates/deallocates
-      // on the heap. Those kinds of functions do not introduce any aliases.
+      // allocates/deallocates on the heap. Those kinds of functions do not
+      // introduce any aliases.
       // TODO: address other common library functions such as realloc(),
-      // strdup(),
-      // etc.
+      // strdup(), etc.
       if (isMallocOrCallocLikeFn(Inst, &TLI) || isFreeCall(Inst, &TLI))
         return;
 
       // TODO: Add support for noalias args/all the other fun function
-      // attributes
-      // that we can tack on.
+      // attributes that we can tack on.
       SmallVector<Function *, 4> Targets;
       if (getPossibleTargets(CS, Targets))
         if (tryInterproceduralAnalysis(CS, Targets))

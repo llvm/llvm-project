@@ -1078,6 +1078,12 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
       // leading zero bits.
       MaxHighZeros =
           std::max(Known.countMinLeadingZeros(), Known2.countMinLeadingZeros());
+    } else if (SPF == SPF_ABS) {
+      // RHS from matchSelectPattern returns the negation part of abs pattern.
+      // If the negate has an NSW flag we can assume the sign bit of the result
+      // will be 0 because that makes abs(INT_MIN) undefined.
+      if (cast<Instruction>(RHS)->hasNoSignedWrap())
+        MaxHighZeros = 1;
     }
 
     // Only known if known in both the LHS and RHS.
