@@ -373,6 +373,15 @@ def PaddingChecker : Checker<"Padding">,
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = InsecureAPI in {
+  def bcmp : Checker<"bcmp">,
+    HelpText<"Warn on uses of the 'bcmp' function">,
+    DescFile<"CheckSecuritySyntaxOnly.cpp">;
+  def bcopy : Checker<"bcopy">,
+    HelpText<"Warn on uses of the 'bcopy' function">,
+    DescFile<"CheckSecuritySyntaxOnly.cpp">;
+  def bzero : Checker<"bzero">,
+    HelpText<"Warn on uses of the 'bzero' function">,
+    DescFile<"CheckSecuritySyntaxOnly.cpp">;
   def gets : Checker<"gets">,
     HelpText<"Warn on uses of the 'gets' function">,
     DescFile<"CheckSecuritySyntaxOnly.cpp">;

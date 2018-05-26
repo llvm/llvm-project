@@ -127,7 +127,7 @@ void AliasSet::removeFromTracker(AliasSetTracker &AST) {
 }
 
 void AliasSet::addPointer(AliasSetTracker &AST, PointerRec &Entry,
-                          uint64_t Size, const AAMDNodes &AAInfo,
+                          LocationSize Size, const AAMDNodes &AAInfo,
                           bool KnownMustAlias) {
   assert(!Entry.hasAliasSet() && "Entry already in set!");
 
@@ -183,7 +183,7 @@ void AliasSet::addUnknownInst(Instruction *I, AliasAnalysis &AA) {
 /// aliasesPointer - Return true if the specified pointer "may" (or must)
 /// alias one of the members in the set.
 ///
-bool AliasSet::aliasesPointer(const Value *Ptr, uint64_t Size,
+bool AliasSet::aliasesPointer(const Value *Ptr, LocationSize Size,
                               const AAMDNodes &AAInfo,
                               AliasAnalysis &AA) const {
   if (AliasAny)
@@ -263,7 +263,7 @@ void AliasSetTracker::clear() {
 /// alias the pointer. Return the unified set, or nullptr if no set that aliases
 /// the pointer was found.
 AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
-                                                    uint64_t Size,
+                                                    LocationSize Size,
                                                     const AAMDNodes &AAInfo) {
   AliasSet *FoundSet = nullptr;
   for (iterator I = begin(), E = end(); I != E;) {
@@ -303,7 +303,8 @@ AliasSet *AliasSetTracker::findAliasSetForUnknownInst(Instruction *Inst) {
 
 /// getAliasSetForPointer - Return the alias set that the specified pointer
 /// lives in.
-AliasSet &AliasSetTracker::getAliasSetForPointer(Value *Pointer, uint64_t Size,
+AliasSet &AliasSetTracker::getAliasSetForPointer(Value *Pointer,
+                                                 LocationSize Size,
                                                  const AAMDNodes &AAInfo) {
   AliasSet::PointerRec &Entry = getEntryFor(Pointer);
 
@@ -348,7 +349,8 @@ AliasSet &AliasSetTracker::getAliasSetForPointer(Value *Pointer, uint64_t Size,
   return AliasSets.back();
 }
 
-void AliasSetTracker::add(Value *Ptr, uint64_t Size, const AAMDNodes &AAInfo) {
+void AliasSetTracker::add(Value *Ptr, LocationSize Size,
+                          const AAMDNodes &AAInfo) {
   addPointer(Ptr, Size, AAInfo, AliasSet::NoAccess);
 }
 
@@ -589,7 +591,7 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
   return *AliasAnyAS;
 }
 
-AliasSet &AliasSetTracker::addPointer(Value *P, uint64_t Size,
+AliasSet &AliasSetTracker::addPointer(Value *P, LocationSize Size,
                                       const AAMDNodes &AAInfo,
                                       AliasSet::AccessLattice E) {
   AliasSet &AS = getAliasSetForPointer(P, Size, AAInfo);

@@ -904,8 +904,8 @@ struct RenamePassData {
 namespace llvm {
 
 /// A MemorySSAWalker that does AA walks to disambiguate accesses. It no
-/// longer does caching on its own,
-/// but the name has been retained for the moment.
+/// longer does caching on its own, but the name has been retained for the
+/// moment.
 class MemorySSA::CachingWalker final : public MemorySSAWalker {
   ClobberWalker Walker;
 
