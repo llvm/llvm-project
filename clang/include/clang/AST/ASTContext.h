@@ -1123,7 +1123,7 @@ public:
   /// Return the uniqued reference to the type for an Objective-C
   /// gc-qualified type.
   ///
-  /// The retulting type has a union of the qualifiers from T and the gc
+  /// The resulting type has a union of the qualifiers from T and the gc
   /// attribute.
   QualType getObjCGCQualType(QualType T, Qualifiers::GC gcAttr) const;
 
@@ -1250,9 +1250,9 @@ public:
   /// Returns true iff we need copy/dispose helpers for the given type.
   bool BlockRequiresCopying(QualType Ty, const VarDecl *D);
 
-  /// Returns true, if given type has a known lifetime. HasByrefExtendedLayout is set
-  /// to false in this case. If HasByrefExtendedLayout returns true, byref variable
-  /// has extended lifetime.
+  /// Returns true, if given type has a known lifetime. HasByrefExtendedLayout
+  /// is set to false in this case. If HasByrefExtendedLayout returns true,
+  /// byref variable has extended lifetime.
   bool getByrefLifetime(QualType Ty,
                         Qualifiers::ObjCLifetime &Lifetime,
                         bool &HasByrefExtendedLayout) const;
