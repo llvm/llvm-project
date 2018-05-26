@@ -174,6 +174,7 @@ struct CopyConfig {
   bool Weaken = false;
   bool DiscardAll = false;
   bool OnlyKeepDebug = false;
+  bool KeepFileSymbols = false;
 };
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
@@ -273,8 +274,9 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
     }
 
     Obj.removeSymbols([&](const Symbol &Sym) {
-      if (!Config.SymbolsToKeep.empty() &&
-          is_contained(Config.SymbolsToKeep, Sym.Name))
+      if ((!Config.SymbolsToKeep.empty() &&
+           is_contained(Config.SymbolsToKeep, Sym.Name)) ||
+          (Config.KeepFileSymbols && Sym.Type == STT_FILE))
         return false;
 
       if (Config.DiscardAll && Sym.Binding == STB_LOCAL &&
@@ -410,7 +412,8 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
   // and at least one of those symbols is present
   // (equivalently, the updated symbol table is not empty)
   // the symbol table and the string table should not be removed.
-  if (!Config.SymbolsToKeep.empty() && !Obj.SymbolTable->empty()) {
+  if ((!Config.SymbolsToKeep.empty() || Config.KeepFileSymbols) &&
+      !Obj.SymbolTable->empty()) {
     RemovePred = [&Obj, RemovePred](const SectionBase &Sec) {
       if (&Sec == Obj.SymbolTable || &Sec == Obj.SymbolTable->getStrTab())
         return false;
@@ -531,6 +534,7 @@ CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   Config.Weaken = InputArgs.hasArg(OBJCOPY_weaken);
   Config.DiscardAll = InputArgs.hasArg(OBJCOPY_discard_all);
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
+  Config.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
     Config.SymbolsToLocalize.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbol))
