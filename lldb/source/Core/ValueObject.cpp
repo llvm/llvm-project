@@ -19,6 +19,7 @@
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Core/ValueObjectSyntheticFilter.h"
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/DumpValueObjectOptions.h" // for DumpValueObj...
 #include "lldb/DataFormatters/FormatManager.h" // for FormatManager
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeFormat.h"    // for TypeFormatImpl_F...

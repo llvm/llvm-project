@@ -11,7 +11,6 @@
 #define liblldb_ValueObject_h_
 
 #include "lldb/Core/Value.h"
-#include "lldb/DataFormatters/DumpValueObjectOptions.h" // for DumpValueObj...
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h" // for TypeImpl
 #include "lldb/Target/ExecutionContext.h"
@@ -43,6 +42,9 @@
 #include <stdint.h> // for uint32_t
 namespace lldb_private {
 class Declaration;
+}
+namespace lldb_private {
+class DumpValueObjectOptions;
 }
 namespace lldb_private {
 class EvaluateExpressionOptions;
