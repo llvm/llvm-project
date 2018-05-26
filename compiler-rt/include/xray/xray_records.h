@@ -54,7 +54,7 @@ struct alignas(32) XRayFileHeader {
 
   union {
     char FreeForm[16];
-    // The current civiltime timestamp, as retrived from 'clock_gettime'. This
+    // The current civiltime timestamp, as retrieved from 'clock_gettime'. This
     // allows readers of the file to determine when the file was created or
     // written down.
     struct timespec TS;

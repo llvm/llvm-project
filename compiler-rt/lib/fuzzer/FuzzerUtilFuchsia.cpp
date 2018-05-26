@@ -59,7 +59,7 @@ void InterruptHandler() {
 void CrashHandler(zx_handle_t *Port) {
   std::unique_ptr<zx_handle_t> ExceptionPort(Port);
   zx_port_packet_t Packet;
-  _zx_port_wait(*ExceptionPort, ZX_TIME_INFINITE, &Packet, 1);
+  _zx_port_wait(*ExceptionPort, ZX_TIME_INFINITE, &Packet);
   // Unbind as soon as possible so we don't receive exceptions from this thread.
   if (_zx_task_bind_exception_port(ZX_HANDLE_INVALID, ZX_HANDLE_INVALID,
                                    kFuzzingCrash, 0) != ZX_OK) {
@@ -110,7 +110,7 @@ void SetSignalHandler(const FuzzingOptions &Options) {
   if ((rc = _zx_task_bind_exception_port(_zx_process_self(), *ExceptionPort,
                                          kFuzzingCrash, 0)) != ZX_OK) {
     Printf("libFuzzer: unable to bind exception port: %s\n",
-           zx_status_get_string(rc));
+           _zx_status_get_string(rc));
     exit(1);
   }
 
@@ -126,10 +126,10 @@ void SleepSeconds(int Seconds) {
 unsigned long GetPid() {
   zx_status_t rc;
   zx_info_handle_basic_t Info;
-  if ((rc = zx_object_get_info(_zx_process_self(), ZX_INFO_HANDLE_BASIC, &Info,
+  if ((rc = _zx_object_get_info(_zx_process_self(), ZX_INFO_HANDLE_BASIC, &Info,
                                sizeof(Info), NULL, NULL)) != ZX_OK) {
     Printf("libFuzzer: unable to get info about self: %s\n",
-           zx_status_get_string(rc));
+           _zx_status_get_string(rc));
     exit(1);
   }
   return Info.koid;
@@ -229,7 +229,7 @@ int ExecuteCommand(const Command &Cmd) {
   if ((rc = _zx_object_get_info(ProcessHandle, ZX_INFO_PROCESS, &Info,
                                 sizeof(Info), nullptr, nullptr)) != ZX_OK) {
     Printf("libFuzzer: unable to get return code from '%s': %s\n", Argv[0],
-           zx_status_get_string(rc));
+           _zx_status_get_string(rc));
     return rc;
   }
 

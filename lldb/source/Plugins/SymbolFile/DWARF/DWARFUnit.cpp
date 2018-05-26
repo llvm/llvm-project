@@ -288,7 +288,7 @@ void DWARFUnit::SetAddrBase(dw_addr_t addr_base,
   m_base_obj_offset = base_obj_offset;
 }
 
-void DWARFUnit::ClearDIEs(bool keep_compile_unit_die) {
+void DWARFUnit::ClearDIEs() {
   if (m_die_array.size() > 1) {
     // std::vectors never get any smaller when resized to a smaller size, or
     // when clear() or erase() are called, the size will report that it is
@@ -300,12 +300,11 @@ void DWARFUnit::ClearDIEs(bool keep_compile_unit_die) {
     // Save at least the compile unit DIE
     DWARFDebugInfoEntry::collection tmp_array;
     m_die_array.swap(tmp_array);
-    if (keep_compile_unit_die)
-      m_die_array.push_back(tmp_array.front());
+    m_die_array.push_back(tmp_array.front());
   }
 
   if (m_dwo_symbol_file)
-    m_dwo_symbol_file->GetCompileUnit()->ClearDIEs(keep_compile_unit_die);
+    m_dwo_symbol_file->GetCompileUnit()->ClearDIEs();
 }
 
 void DWARFUnit::BuildAddressRangeTable(SymbolFileDWARF *dwarf,
@@ -403,7 +402,7 @@ void DWARFUnit::BuildAddressRangeTable(SymbolFileDWARF *dwarf,
   // Keep memory down by clearing DIEs if this generate function caused them to
   // be parsed
   if (clear_dies)
-    ClearDIEs(true);
+    ClearDIEs();
 }
 
 lldb::ByteOrder DWARFUnit::GetByteOrder() const {
