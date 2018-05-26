@@ -424,7 +424,8 @@ namespace ISD {
     /// Like SetCC, ops #0 and #1 are the LHS and RHS operands to compare, but
     /// op #2 is a boolean indicating if there is an incoming carry. This
     /// operator checks the result of "LHS - RHS - Carry", and can be used to
-    /// compare two wide integers: (setcce lhshi rhshi (subc lhslo rhslo) cc).
+    /// compare two wide integers:
+    /// (setcccarry lhshi rhshi (subcarry lhslo rhslo) cc).
     /// Only valid for integers.
     SETCCCARRY,
 

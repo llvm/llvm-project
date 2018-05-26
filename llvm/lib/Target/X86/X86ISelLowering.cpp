@@ -20624,26 +20624,11 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                               Src3),
                                   Mask, PassThru, Subtarget, DAG);
     }
-    case IFMA_OP_MASKZ:
-    case IFMA_OP_MASK: {
-      SDValue Src1 = Op.getOperand(1);
-      SDValue Src2 = Op.getOperand(2);
-      SDValue Src3 = Op.getOperand(3);
-      SDValue Mask = Op.getOperand(4);
-      MVT VT = Op.getSimpleValueType();
-      SDValue PassThru = Src1;
-
-      // set PassThru element
-      if (IntrData->Type == IFMA_OP_MASKZ)
-        PassThru = getZeroVector(VT, Subtarget, DAG, dl);
-
-      // Node we need to swizzle the operands to pass the multiply operands
+    case IFMA_OP:
+      // NOTE: We need to swizzle the operands to pass the multiply operands
       // first.
-      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0,
-                                              dl, Op.getValueType(),
-                                              Src2, Src3, Src1),
-                                  Mask, PassThru, Subtarget, DAG);
-    }
+      return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
+                         Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
     case CVTPD2PS:
       // ISD::FP_ROUND has a second argument that indicates if the truncation
       // does not change the value. Set it to 0 since it can change.
