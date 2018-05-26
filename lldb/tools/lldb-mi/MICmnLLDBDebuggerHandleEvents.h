@@ -14,6 +14,7 @@
 #include "MICmnMIValueList.h"
 #include "MICmnMIValueTuple.h"
 #include "MIUtilSingletonBase.h"
+#include "lldb/API/SBEvent.h"
 
 // Declarations:
 class CMICmnLLDBDebugSessionInfo;
