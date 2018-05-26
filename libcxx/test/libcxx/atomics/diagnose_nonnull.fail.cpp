@@ -17,8 +17,8 @@
 #include <atomic>
 
 int main() {
-  std::atomic<int> ai = ATOMIC_VAR_INIT(0);
-  volatile std::atomic<int> vai = ATOMIC_VAR_INIT(0);
+  std::atomic<int> ai;
+  volatile std::atomic<int> vai;
   int i = 42;
 
   atomic_is_lock_free((const volatile std::atomic<int>*)0); // expected-error {{null passed to a callee that requires a non-null argument}}
