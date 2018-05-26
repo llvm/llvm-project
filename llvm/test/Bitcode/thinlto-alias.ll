@@ -2,8 +2,10 @@
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s
 ; RUN: opt -module-summary %p/Inputs/thinlto-alias.ll -o %t2.o
+; RUN: llvm-dis -o - %t2.o | FileCheck %s --check-prefix=DIS
 ; RUN: llvm-lto -thinlto -o %t3 %t.o %t2.o
 ; RUN: llvm-bcanalyzer -dump %t3.thinlto.bc | FileCheck %s --check-prefix=COMBINED
+; RUN: llvm-dis -o - %t3.thinlto.bc | FileCheck %s --check-prefix=COMBINED-DIS
 
 ; CHECK: <SOURCE_FILENAME
 ; "main"
@@ -44,3 +46,13 @@ entry:
 }
 
 declare void @analias(...)
+
+; DIS: ^0 = module: (path: "{{.*}}thinlto-alias.ll.tmp2.o", hash: (0, 0, 0, 0, 0))
+; DIS: ^1 = gv: (name: "analias", summaries: (alias: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), aliasee: ^2))) ; guid = 12695095382722328222
+; DIS: ^2 = gv: (name: "aliasee", summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1))) ; guid = 17407585008595848568
+
+; COMBINED-DIS: ^0 = module: (path: "{{.*}}thinlto-alias.ll.tmp.o", hash: (0, 0, 0, 0, 0))
+; COMBINED-DIS: ^1 = module: (path: "{{.*}}thinlto-alias.ll.tmp2.o", hash: (0, 0, 0, 0, 0))
+; COMBINED-DIS: ^2 = gv: (guid: 12695095382722328222, summaries: (alias: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), aliasee: ^4)))
+; COMBINED-DIS: ^3 = gv: (guid: 15822663052811949562, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 2, calls: ((callee: ^2)))))
+; COMBINED-DIS: ^4 = gv: (guid: 17407585008595848568, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1)))

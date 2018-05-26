@@ -312,6 +312,8 @@ namespace llvm {
     bool ParseFnAttributeValuePairs(AttrBuilder &B,
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
+    bool SkipModuleSummaryEntry();
+    bool ParseSummaryEntry();
 
     // Type Parsing.
     bool ParseType(Type *&Result, const Twine &Msg, bool AllowVoid = false);
