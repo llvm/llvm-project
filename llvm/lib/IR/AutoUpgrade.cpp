@@ -265,6 +265,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.lzcnt.") || // Added in 5.0
       Name.startswith("avx512.mask.pternlog.") || // Added in 7.0
       Name.startswith("avx512.maskz.pternlog.") || // Added in 7.0
+      Name.startswith("avx512.mask.vpmadd52") || // Added in 7.0
+      Name.startswith("avx512.maskz.vpmadd52") || // Added in 7.0
       Name == "sse.cvtsi2ss" || // Added in 7.0
       Name == "sse.cvtsi642ss" || // Added in 7.0
       Name == "sse2.cvtsi2sd" || // Added in 7.0
@@ -2569,6 +2571,34 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                  : CI->getArgOperand(0);
       Rep = EmitX86Select(Builder, CI->getArgOperand(4), Rep, PassThru);
+    } else if (IsX86 && (Name.startswith("avx512.mask.vpmadd52") ||
+                         Name.startswith("avx512.maskz.vpmadd52"))) {
+      bool ZeroMask = Name[11] == 'z';
+      bool High = Name[20] == 'h' || Name[21] == 'h';
+      unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
+      Intrinsic::ID IID;
+      if (VecWidth == 128 && !High)
+        IID = Intrinsic::x86_avx512_vpmadd52l_uq_128;
+      else if (VecWidth == 256 && !High)
+        IID = Intrinsic::x86_avx512_vpmadd52l_uq_256;
+      else if (VecWidth == 512 && !High)
+        IID = Intrinsic::x86_avx512_vpmadd52l_uq_512;
+      else if (VecWidth == 128 && High)
+        IID = Intrinsic::x86_avx512_vpmadd52h_uq_128;
+      else if (VecWidth == 256 && High)
+        IID = Intrinsic::x86_avx512_vpmadd52h_uq_256;
+      else if (VecWidth == 512 && High)
+        IID = Intrinsic::x86_avx512_vpmadd52h_uq_512;
+      else
+        llvm_unreachable("Unexpected intrinsic");
+
+      Value *Args[] = { CI->getArgOperand(0) , CI->getArgOperand(1),
+                        CI->getArgOperand(2) };
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(), IID),
+                               Args);
+      Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
+                                 : CI->getArgOperand(0);
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
     } else if (IsX86 && Name.startswith("avx512.mask.") &&
                upgradeAVX512MaskToSelect(Name, Builder, *CI, Rep)) {
       // Rep will be updated by the call in the condition.
