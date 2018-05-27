@@ -8,9 +8,9 @@ define i32 @test_x86_tbm_bextri_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_bextri_u32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    bextrl $3076, %edi, %ecx # imm = 0xC04
-; GENERIC-NEXT:    # sched: [1:0.33]
+; GENERIC-NEXT:    # sched: [2:1.00]
 ; GENERIC-NEXT:    bextrl $3076, (%rsi), %eax # imm = 0xC04
-; GENERIC-NEXT:    # sched: [6:0.50]
+; GENERIC-NEXT:    # sched: [7:1.00]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -33,9 +33,9 @@ define i64 @test_x86_tbm_bextri_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_bextri_u64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    bextrl $3076, %edi, %ecx # imm = 0xC04
-; GENERIC-NEXT:    # sched: [1:0.33]
+; GENERIC-NEXT:    # sched: [2:1.00]
 ; GENERIC-NEXT:    bextrl $3076, (%rsi), %eax # imm = 0xC04
-; GENERIC-NEXT:    # sched: [6:0.50]
+; GENERIC-NEXT:    # sched: [7:1.00]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
