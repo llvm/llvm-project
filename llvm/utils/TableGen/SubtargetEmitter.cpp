@@ -1506,7 +1506,7 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
   }
 
   if (!VariantClasses.empty()) {
-    OS << "  switch (SchedClass) {\n";
+    bool FoundPredicates = false;
     for (unsigned VC : VariantClasses) {
       // Emit code for each variant scheduling class.
       const CodeGenSchedClass &SC = SchedModels.getSchedClass(VC);
@@ -1526,6 +1526,12 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
       }
       if (ProcIndices.empty())
         continue;
+
+      // Emit a switch statement only if there are predicates to expand.
+      if (!FoundPredicates) {
+        OS << "  switch (SchedClass) {\n";
+        FoundPredicates = true;
+      }
 
       OS << "  case " << VC << ": // " << SC.Name << '\n';
       PredicateExpander PE;
@@ -1556,9 +1562,9 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
         OS << "    return " << SC.Index << ";\n";
       OS << "    break;\n";
     }
-    // Add a default case to avoid generating a potentially empty switch.
-    OS << "  default : break;\n"
-       << "  };\n";
+
+    if (FoundPredicates)
+     OS << "  };\n";
   }
 
   if (OnlyExpandMCInstPredicates) {
