@@ -309,13 +309,15 @@ static ConstString SubsPrimitiveParmItanium(llvm::StringRef mangled,
 
   // FastDemangle will call our hook for each instance of a primitive type,
   // allowing us to perform substitution
-  const char *const demangled =
+  char *const demangled =
       FastDemangle(mangled.str().c_str(), mangled.size(), swap_parms_hook);
 
   if (log)
     log->Printf("substituted mangling for %s:{%s} %s:{%s}\n",
                 mangled.str().c_str(), demangled, output_buf.c_str(),
                 FastDemangle(output_buf.c_str()));
+  // FastDemangle malloc'd this string.
+  free(demangled);
 
   return output_buf == mangled ? ConstString() : ConstString(output_buf);
 }
