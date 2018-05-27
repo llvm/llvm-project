@@ -1218,17 +1218,6 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  endif
 #endif
 
-#if __has_attribute(nonnull) || _GNUC_VER >= 400
-// Function pointer parameter must be non-null: warns on null parameter,
-// undefined behavior if the parameter is null. Omitting parameter indices
-// indicates that all parameters of pointer type cannot be null.
-//
-// Note: parameter indexing starts at 1.
-#  define _LIBCPP_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
-#else
-#  define _LIBCPP_NONNULL(...)
-#endif
-
 // Define availability macros.
 #if defined(_LIBCPP_USE_AVAILABILITY_APPLE)
 #  define _LIBCPP_AVAILABILITY_SHARED_MUTEX                                    \
