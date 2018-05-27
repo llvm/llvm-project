@@ -9,11 +9,11 @@
 
 #pragma once
 
-namespace MI {
-
 // In house headers:
 #include "MICmnResources.h"
 #include "MIUtilString.h"
+
+namespace MI {
 
 //++
 //============================================================================
