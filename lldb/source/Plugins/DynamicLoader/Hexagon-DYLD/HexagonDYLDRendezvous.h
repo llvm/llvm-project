@@ -11,8 +11,10 @@
 #define liblldb_HexagonDYLDRendezvous_H_
 
 // C Includes
+#include <limits.h> // for PATH_MAX
 // C++ Includes
 #include <list>
+#include <map>
 #include <string>
 
 // Other libraries and framework includes
