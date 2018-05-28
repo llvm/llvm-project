@@ -110,6 +110,7 @@ bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
       nullptr, ePropertyClangModulesCachePath, path);
 }
 
+
 ModuleList::ModuleList()
     : m_modules(), m_modules_mutex(), m_notifier(nullptr) {}
 

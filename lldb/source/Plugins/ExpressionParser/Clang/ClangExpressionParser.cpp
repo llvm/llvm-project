@@ -598,7 +598,6 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   std::string module_name("$__lldb_module");
 
   m_llvm_context.reset(new LLVMContext());
-
   m_code_generator.reset(CreateLLVMCodeGen(
       m_compiler->getDiagnostics(), module_name,
       m_compiler->getHeaderSearchOpts(), m_compiler->getPreprocessorOpts(),

@@ -70,7 +70,6 @@ public:
              uint32_t line_offset) override;
 
   bool CanInterpret() override { return true; }
-
   bool FinalizeJITExecution(
       DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
       lldb::ExpressionVariableSP &result,

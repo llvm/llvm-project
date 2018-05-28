@@ -85,7 +85,8 @@ File::File(const FileSpec &filespec, uint32_t options, uint32_t permissions)
       m_stream(kInvalidStream), m_options(0), m_own_stream(false),
       m_is_interactive(eLazyBoolCalculate),
       m_is_real_terminal(eLazyBoolCalculate),
-      m_supports_colors(eLazyBoolCalculate) {
+      m_supports_colors(eLazyBoolCalculate)
+{
   if (filespec) {
     Open(filespec.GetPath().c_str(), options, permissions);
   }

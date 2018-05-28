@@ -94,8 +94,8 @@ PlatformSP PlatformRemoteAppleWatch::CreateInstance(bool force,
 
 #if defined(__APPLE__)
       // Only accept "unknown" for the vendor if the host is Apple and
-      // it "unknown" wasn't specified (it was just returned because
-      // it was NOT specified)
+      // "unknown" wasn't specified (it was just returned because it was NOT
+      // specified)
       case llvm::Triple::UnknownArch:
         create = !arch->TripleVendorWasSpecified();
         break;

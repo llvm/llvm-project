@@ -542,7 +542,7 @@ Status REPL::RunLoop() {
 
   if (!error.Success())
     return error;
-    
+
   Debugger &debugger = m_target.GetDebugger();
 
   lldb::IOHandlerSP io_handler_sp(GetIOHandler());

@@ -412,7 +412,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                               m_options, m_swift_generic_info, exe_ctx,
                               first_body_line)) {
       diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                    "couldn't construct expression body");
+                                   "couldn't construct expression body");
       return false;
     }
   }
@@ -513,6 +513,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     Status jit_error = parser.PrepareForExecution(
         m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
         m_can_interpret, execution_policy);
+
     if (!jit_error.Success()) {
       const char *error_cstr = jit_error.AsCString();
       if (error_cstr && error_cstr[0])
