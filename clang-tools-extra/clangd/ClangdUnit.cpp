@@ -90,35 +90,13 @@ public:
   CppFilePreambleCallbacks(PathRef File, PreambleParsedCallback ParsedCallback)
       : File(File), ParsedCallback(ParsedCallback) {}
 
-  std::vector<serialization::DeclID> takeTopLevelDeclIDs() {
-    return std::move(TopLevelDeclIDs);
-  }
-
   std::vector<Inclusion> takeInclusions() { return std::move(Inclusions); }
-
-  void AfterPCHEmitted(ASTWriter &Writer) override {
-    TopLevelDeclIDs.reserve(TopLevelDecls.size());
-    for (Decl *D : TopLevelDecls) {
-      // Invalid top-level decls may not have been serialized.
-      if (D->isInvalidDecl())
-        continue;
-      TopLevelDeclIDs.push_back(Writer.getDeclID(D));
-    }
-  }
 
   void AfterExecute(CompilerInstance &CI) override {
     if (!ParsedCallback)
       return;
     trace::Span Tracer("Running PreambleCallback");
     ParsedCallback(File, CI.getASTContext(), CI.getPreprocessorPtr());
-  }
-
-  void HandleTopLevelDecl(DeclGroupRef DG) override {
-    for (Decl *D : DG) {
-      if (isa<ObjCMethodDecl>(D))
-        continue;
-      TopLevelDecls.push_back(D);
-    }
   }
 
   void BeforeExecute(CompilerInstance &CI) override {
@@ -135,8 +113,6 @@ public:
 private:
   PathRef File;
   PreambleParsedCallback ParsedCallback;
-  std::vector<Decl *> TopLevelDecls;
-  std::vector<serialization::DeclID> TopLevelDeclIDs;
   std::vector<Inclusion> Inclusions;
   SourceManager *SourceMgr = nullptr;
 };
@@ -204,28 +180,6 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
                    std::move(Inclusions));
 }
 
-void ParsedAST::ensurePreambleDeclsDeserialized() {
-  if (PreambleDeclsDeserialized || !Preamble)
-    return;
-
-  std::vector<const Decl *> Resolved;
-  Resolved.reserve(Preamble->TopLevelDeclIDs.size());
-
-  ExternalASTSource &Source = *getASTContext().getExternalSource();
-  for (serialization::DeclID TopLevelDecl : Preamble->TopLevelDeclIDs) {
-    // Resolve the declaration ID to an actual declaration, possibly
-    // deserializing the declaration in the process.
-    if (Decl *D = Source.GetExternalDecl(TopLevelDecl))
-      Resolved.push_back(D);
-  }
-
-  TopLevelDecls.reserve(TopLevelDecls.size() +
-                        Preamble->TopLevelDeclIDs.size());
-  TopLevelDecls.insert(TopLevelDecls.begin(), Resolved.begin(), Resolved.end());
-
-  PreambleDeclsDeserialized = true;
-}
-
 ParsedAST::ParsedAST(ParsedAST &&Other) = default;
 
 ParsedAST &ParsedAST::operator=(ParsedAST &&Other) = default;
@@ -252,9 +206,8 @@ const Preprocessor &ParsedAST::getPreprocessor() const {
   return Clang->getPreprocessor();
 }
 
-ArrayRef<const Decl *> ParsedAST::getTopLevelDecls() {
-  ensurePreambleDeclsDeserialized();
-  return TopLevelDecls;
+ArrayRef<const Decl *> ParsedAST::getLocalTopLevelDecls() {
+  return LocalTopLevelDecls;
 }
 
 const std::vector<Diag> &ParsedAST::getDiagnostics() const { return Diags; }
@@ -264,7 +217,7 @@ std::size_t ParsedAST::getUsedBytes() const {
   // FIXME(ibiryukov): we do not account for the dynamically allocated part of
   // Message and Fixes inside each diagnostic.
   return AST.getASTAllocatedMemory() + AST.getSideTableAllocatedMemory() +
-         ::getUsedBytes(TopLevelDecls) + ::getUsedBytes(Diags);
+         ::getUsedBytes(LocalTopLevelDecls) + ::getUsedBytes(Diags);
 }
 
 const std::vector<Inclusion> &ParsedAST::getInclusions() const {
@@ -272,21 +225,19 @@ const std::vector<Inclusion> &ParsedAST::getInclusions() const {
 }
 
 PreambleData::PreambleData(PrecompiledPreamble Preamble,
-                           std::vector<serialization::DeclID> TopLevelDeclIDs,
                            std::vector<Diag> Diags,
                            std::vector<Inclusion> Inclusions)
-    : Preamble(std::move(Preamble)),
-      TopLevelDeclIDs(std::move(TopLevelDeclIDs)), Diags(std::move(Diags)),
+    : Preamble(std::move(Preamble)), Diags(std::move(Diags)),
       Inclusions(std::move(Inclusions)) {}
 
 ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
-                     std::vector<const Decl *> TopLevelDecls,
+                     std::vector<const Decl *> LocalTopLevelDecls,
                      std::vector<Diag> Diags, std::vector<Inclusion> Inclusions)
     : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Diags(std::move(Diags)),
-      TopLevelDecls(std::move(TopLevelDecls)), PreambleDeclsDeserialized(false),
+      LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
       Inclusions(std::move(Inclusions)) {
   assert(this->Clang);
   assert(this->Action);
@@ -431,9 +382,8 @@ CppFile::rebuildPreamble(CompilerInvocation &CI,
         " for file " + Twine(FileName));
 
     return std::make_shared<PreambleData>(
-        std::move(*BuiltPreamble),
-        SerializedDeclsCollector.takeTopLevelDeclIDs(),
-        PreambleDiagnostics.take(), SerializedDeclsCollector.takeInclusions());
+        std::move(*BuiltPreamble), PreambleDiagnostics.take(),
+        SerializedDeclsCollector.takeInclusions());
   } else {
     log("Could not build a preamble for file " + Twine(FileName));
     return nullptr;
