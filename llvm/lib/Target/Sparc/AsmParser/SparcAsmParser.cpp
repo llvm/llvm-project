@@ -109,7 +109,9 @@ public:
                 const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
     Parser.addAliasForDirective(".half", ".2byte");
+    Parser.addAliasForDirective(".uahalf", ".2byte");
     Parser.addAliasForDirective(".word", ".4byte");
+    Parser.addAliasForDirective(".uaword", ".4byte");
     Parser.addAliasForDirective(".nword", is64Bit() ? ".8byte" : ".4byte");
     if (is64Bit())
       Parser.addAliasForDirective(".xword", ".8byte");

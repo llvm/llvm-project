@@ -1,5 +1,4 @@
-//===--- TestTU.cpp - Scratch source files for testing ------------*-
-//C++-*-===//
+//===--- TestTU.cpp - Scratch source files for testing --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -73,22 +72,24 @@ const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {
 }
 
 const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
-  const NamedDecl *Result = nullptr;
-  for (const Decl *D : AST.getTopLevelDecls()) {
-    auto *ND = dyn_cast<NamedDecl>(D);
-    if (!ND || ND->getNameAsString() != QName)
-      continue;
-    if (Result) {
-      ADD_FAILURE() << "Multiple Decls named " << QName;
-      assert(false && "QName is not unique");
-    }
-    Result = ND;
+  llvm::SmallVector<llvm::StringRef, 4> Components;
+  QName.split(Components, "::");
+
+  auto &Ctx = AST.getASTContext();
+  auto LookupDecl = [&Ctx](const DeclContext &Scope,
+                           llvm::StringRef Name) -> const NamedDecl & {
+    auto LookupRes = Scope.lookup(DeclarationName(&Ctx.Idents.get(Name)));
+    assert(!LookupRes.empty() && "Lookup failed");
+    assert(LookupRes.size() == 1 && "Lookup returned multiple results");
+    return *LookupRes.front();
+  };
+
+  const DeclContext *Scope = Ctx.getTranslationUnitDecl();
+  for (auto NameIt = Components.begin(), End = Components.end() - 1;
+       NameIt != End; ++NameIt) {
+    Scope = &cast<DeclContext>(LookupDecl(*Scope, *NameIt));
   }
-  if (!Result) {
-    ADD_FAILURE() << "No Decl named " << QName << " in AST";
-    assert(false && "No Decl with QName");
-  }
-  return *Result;
+  return LookupDecl(*Scope, Components.back());
 }
 
 } // namespace clangd

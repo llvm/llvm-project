@@ -26,12 +26,25 @@ Usage:
 
 """
 
-import sys
-import os
-import plistlib
+from collections import defaultdict
+
 from math import log
 from optparse import OptionParser
+import json
+import os
+import plistlib
+import re
+import sys
 
+STATS_REGEXP = re.compile(r"Statistics: (\{.+\})", re.MULTILINE | re.DOTALL)
+
+class Colors:
+    """
+    Color for terminal highlight.
+    """
+    RED = '\x1b[2;30;41m'
+    GREEN = '\x1b[6;30;42m'
+    CLEAR = '\x1b[0m'
 
 # Information about analysis run:
 # path - the analysis output directory
@@ -120,12 +133,16 @@ class AnalysisRun:
         # Cumulative list of all diagnostics from all the reports.
         self.diagnostics = []
         self.clang_version = None
+        self.stats = []
 
     def getClangVersion(self):
         return self.clang_version
 
     def readSingleFile(self, p, deleteEmpty):
         data = plistlib.readPlist(p)
+        if 'statistics' in data:
+            self.stats.append(json.loads(data['statistics']))
+            data.pop('statistics')
 
         # We want to retrieve the clang version even if there are no
         # reports. Assume that all reports were created using the same
@@ -264,12 +281,53 @@ def compareResults(A, B, opts):
 
     return res
 
+def deriveStats(results):
+    # Assume all keys are the same in each statistics bucket.
+    combined_data = defaultdict(list)
+    for stat in results.stats:
+        for key, value in stat.iteritems():
+            combined_data[key].append(value)
+    combined_stats = {}
+    for key, values in combined_data.iteritems():
+        combined_stats[str(key)] = {
+            "max": max(values),
+            "min": min(values),
+            "mean": sum(values) / len(values),
+            "median": sorted(values)[len(values) / 2],
+            "total": sum(values)
+        }
+    return combined_stats
+
+
+def compareStats(resultsA, resultsB):
+    statsA = deriveStats(resultsA)
+    statsB = deriveStats(resultsB)
+    keys = sorted(statsA.keys())
+    for key in keys:
+        print key
+        for kkey in statsA[key]:
+            valA = float(statsA[key][kkey])
+            valB = float(statsB[key][kkey])
+            report = "%.3f -> %.3f" % (valA, valB)
+            # Only apply highlighting when writing to TTY and it's not Windows
+            if sys.stdout.isatty() and os.name != 'nt':
+                if valA != 0:
+                  ratio = (valB - valA) / valB
+                  if ratio < -0.2:
+                      report = Colors.GREEN + report + Colors.CLEAR
+                  elif ratio > 0.2:
+                      report = Colors.RED + report + Colors.CLEAR
+            print "\t %s %s" % (kkey, report)
 
 def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True,
                              Stdout=sys.stdout):
     # Load the run results.
     resultsA = loadResults(dirA, opts, opts.rootA, deleteEmpty)
     resultsB = loadResults(dirB, opts, opts.rootB, deleteEmpty)
+    if resultsA.stats:
+        compareStats(resultsA, resultsB)
+    if opts.stats_only:
+        return
 
     # Open the verbose log, if given.
     if opts.verboseLog:
@@ -339,6 +397,8 @@ def generate_option_parser():
                       default=False,
                       help="Show histogram of absolute paths differences. \
                             Requires matplotlib")
+    parser.add_option("--stats-only", action="store_true", dest="stats_only",
+                      default=False, help="Only show statistics on reports")
     return parser
 
 
