@@ -1000,7 +1000,6 @@ TEST(CompletionTest, NoIndexCompletionsInsideDependentCode) {
   }
 }
 
-// FIXME: This still crashes under asan. Fix it and reenable the test.
 TEST(CompletionTest, DocumentationFromChangedFileCrash) {
   MockFSProvider FS;
   auto FooH = testPath("foo.h");
