@@ -2510,58 +2510,61 @@ let Predicates = [HasTBM], Defs = [EFLAGS] in {
 multiclass tbm_ternary_imm_intr<bits<8> opc, RegisterClass RC, string OpcodeStr,
                                 X86MemOperand x86memop, PatFrag ld_frag,
                                 Intrinsic Int, Operand immtype,
-                                SDPatternOperator immoperator> {
+                                SDPatternOperator immoperator,
+                                X86FoldableSchedWrite Sched> {
   def ri : Ii32<opc,  MRMSrcReg, (outs RC:$dst), (ins RC:$src1, immtype:$cntl),
                 !strconcat(OpcodeStr,
                            "\t{$cntl, $src1, $dst|$dst, $src1, $cntl}"),
                 [(set RC:$dst, (Int RC:$src1, immoperator:$cntl))]>,
-                XOP, XOPA, Sched<[WriteALU]>;
+                XOP, XOPA, Sched<[Sched]>;
   def mi : Ii32<opc,  MRMSrcMem, (outs RC:$dst),
                 (ins x86memop:$src1, immtype:$cntl),
                 !strconcat(OpcodeStr,
                            "\t{$cntl, $src1, $dst|$dst, $src1, $cntl}"),
                 [(set RC:$dst, (Int (ld_frag addr:$src1), immoperator:$cntl))]>,
-                XOP, XOPA, Sched<[WriteALULd]>;
+                XOP, XOPA, Sched<[Sched.Folded]>;
 }
 
 defm BEXTRI32 : tbm_ternary_imm_intr<0x10, GR32, "bextr{l}", i32mem, loadi32,
-                                     int_x86_tbm_bextri_u32, i32imm, imm>;
+                                     int_x86_tbm_bextri_u32, i32imm, imm,
+                                     WriteBEXTR>;
 let ImmT = Imm32S in
 defm BEXTRI64 : tbm_ternary_imm_intr<0x10, GR64, "bextr{q}", i64mem, loadi64,
                                      int_x86_tbm_bextri_u64, i64i32imm,
-                                     i64immSExt32>, VEX_W;
+                                     i64immSExt32, WriteBEXTR>, VEX_W;
 
 multiclass tbm_binary_rm<bits<8> opc, Format FormReg, Format FormMem,
                          RegisterClass RC, string OpcodeStr,
-                         X86MemOperand x86memop> {
+                         X86MemOperand x86memop, X86FoldableSchedWrite Sched> {
 let hasSideEffects = 0 in {
   def rr : I<opc,  FormReg, (outs RC:$dst), (ins RC:$src),
              !strconcat(OpcodeStr,"\t{$src, $dst|$dst, $src}"), []>,
-             XOP_4V, XOP9, Sched<[WriteALU]>;
+             XOP_4V, XOP9, Sched<[Sched]>;
   let mayLoad = 1 in
   def rm : I<opc,  FormMem, (outs RC:$dst), (ins x86memop:$src),
              !strconcat(OpcodeStr,"\t{$src, $dst|$dst, $src}"), []>,
-             XOP_4V, XOP9, Sched<[WriteALULd]>;
+             XOP_4V, XOP9, Sched<[Sched.Folded]>;
 }
 }
 
 multiclass tbm_binary_intr<bits<8> opc, string OpcodeStr,
+                           X86FoldableSchedWrite Sched,
                            Format FormReg, Format FormMem> {
   defm NAME#32 : tbm_binary_rm<opc, FormReg, FormMem, GR32, OpcodeStr#"{l}",
-                               i32mem>;
+                               i32mem, Sched>;
   defm NAME#64 : tbm_binary_rm<opc, FormReg, FormMem, GR64, OpcodeStr#"{q}",
-                               i64mem>, VEX_W;
+                               i64mem, Sched>, VEX_W;
 }
 
-defm BLCFILL : tbm_binary_intr<0x01, "blcfill", MRM1r, MRM1m>;
-defm BLCI    : tbm_binary_intr<0x02, "blci", MRM6r, MRM6m>;
-defm BLCIC   : tbm_binary_intr<0x01, "blcic", MRM5r, MRM5m>;
-defm BLCMSK  : tbm_binary_intr<0x02, "blcmsk", MRM1r, MRM1m>;
-defm BLCS    : tbm_binary_intr<0x01, "blcs", MRM3r, MRM3m>;
-defm BLSFILL : tbm_binary_intr<0x01, "blsfill", MRM2r, MRM2m>;
-defm BLSIC   : tbm_binary_intr<0x01, "blsic", MRM6r, MRM6m>;
-defm T1MSKC  : tbm_binary_intr<0x01, "t1mskc", MRM7r, MRM7m>;
-defm TZMSK   : tbm_binary_intr<0x01, "tzmsk", MRM4r, MRM4m>;
+defm BLCFILL : tbm_binary_intr<0x01, "blcfill", WriteALU, MRM1r, MRM1m>;
+defm BLCI    : tbm_binary_intr<0x02, "blci", WriteALU, MRM6r, MRM6m>;
+defm BLCIC   : tbm_binary_intr<0x01, "blcic", WriteALU, MRM5r, MRM5m>;
+defm BLCMSK  : tbm_binary_intr<0x02, "blcmsk", WriteALU, MRM1r, MRM1m>;
+defm BLCS    : tbm_binary_intr<0x01, "blcs", WriteALU, MRM3r, MRM3m>;
+defm BLSFILL : tbm_binary_intr<0x01, "blsfill", WriteALU, MRM2r, MRM2m>;
+defm BLSIC   : tbm_binary_intr<0x01, "blsic", WriteALU, MRM6r, MRM6m>;
+defm T1MSKC  : tbm_binary_intr<0x01, "t1mskc", WriteALU, MRM7r, MRM7m>;
+defm TZMSK   : tbm_binary_intr<0x01, "tzmsk", WriteALU, MRM4r, MRM4m>;
 } // HasTBM, EFLAGS
 
 // Use BEXTRI for 64-bit 'and' with large immediate 'mask'.
