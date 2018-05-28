@@ -153,6 +153,10 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
                  std::shared_ptr<PCHContainerOperations> PCHs,
                  IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+  assert(CI);
+  // Command-line parsing sets DisableFree to true by default, but we don't want
+  // to leak memory in clangd.
+  CI->getFrontendOpts().DisableFree = false;
   const PrecompiledPreamble *PreamblePCH =
       Preamble ? &Preamble->Preamble : nullptr;
 
