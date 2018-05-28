@@ -9,7 +9,10 @@
 
 // <array>
 // UNSUPPORTED: c++98, c++03, c++11, c++14
+// UNSUPPORTED: clang-5
 // UNSUPPORTED: libcpp-no-deduction-guides
+// Clang 5 will generate bad implicit deduction guides
+//	Specifically, for the copy constructor.
 
 
 // template <class T, class... U>
@@ -51,8 +54,6 @@ int main()
     }
 
 //  Test the implicit deduction guides
-// FIXME broken: no matching constructor
-#if 0
   {
   std::array<double, 2> source = {4.0, 5.0};
   std::array arr(source);   // array(array)
@@ -61,5 +62,4 @@ int main()
     assert(arr[0] == 4.0);
     assert(arr[1] == 5.0);
   }
-#endif
 }
