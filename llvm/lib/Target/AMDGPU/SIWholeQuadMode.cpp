@@ -453,6 +453,11 @@ void SIWholeQuadMode::propagateInstruction(MachineInstr &MI,
 
   if (II.Needs != 0)
     markInstructionUses(MI, II.Needs, Worklist);
+
+  // Ensure we process a block containing WWM, even if it does not require any
+  // WQM transitions.
+  if (II.Needs & StateWWM)
+    BI.Needs |= StateWWM;
 }
 
 void SIWholeQuadMode::propagateBlock(MachineBasicBlock &MBB,

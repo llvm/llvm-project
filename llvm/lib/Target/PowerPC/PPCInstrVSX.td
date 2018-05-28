@@ -3179,6 +3179,33 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                 (f128 (XSCVUDQP (XXEXTRACTUW $src, !shl(Idx, 2))))>;
     }
 
+    // (Un)Signed HWord vector extract -> QP
+    foreach Idx = 0-7 in {
+      def : Pat<(f128 (sint_to_fp
+                        (i32 (sext_inreg
+                               (vector_extract v8i16:$src, Idx), i16)))),
+              (f128 (XSCVSDQP (EXTRACT_SUBREG
+                                (VEXTSH2D (VEXTRACTUH !add(Idx, Idx), $src)),
+                                sub_64)))>;
+      // The SDAG adds the `and` since an `i16` is being extracted as an `i32`.
+      def : Pat<(f128 (uint_to_fp
+                        (and (i32 (vector_extract v8i16:$src, Idx)), 65535))),
+                (f128 (XSCVUDQP (EXTRACT_SUBREG
+                                  (VEXTRACTUH !add(Idx, Idx), $src), sub_64)))>;
+    }
+
+    // (Un)Signed Byte vector extract -> QP
+    foreach Idx = 0-15 in {
+      def : Pat<(f128 (sint_to_fp
+                        (i32 (sext_inreg (vector_extract v16i8:$src, Idx),
+                                         i8)))),
+                (f128 (XSCVSDQP (EXTRACT_SUBREG
+                                  (VEXTSB2D (VEXTRACTUB Idx, $src)), sub_64)))>;
+      def : Pat<(f128 (uint_to_fp
+                        (and (i32 (vector_extract v16i8:$src, Idx)), 255))),
+                (f128 (XSCVUDQP
+                        (EXTRACT_SUBREG (VEXTRACTUB Idx, $src), sub_64)))>;
+    }
   } // IsBigEndian, HasP9Vector
 
   let Predicates = [IsLittleEndian, HasP9Vector] in {
@@ -3208,6 +3235,42 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
     foreach Idx = [[0,12],[1,8],[2,4],[3,0]] in {
       def : Pat<(f128 (uint_to_fp (i32 (extractelt v4i32:$src, !head(Idx))))),
                 (f128 (XSCVUDQP (XXEXTRACTUW $src, !head(!tail(Idx)))))>;
+    }
+
+    // (Un)Signed HWord vector extract -> QP
+    // The Nested foreach lists identifies the vector element and corresponding
+    // register byte location.
+    foreach Idx = [[0,14],[1,12],[2,10],[3,8],[4,6],[5,4],[6,2],[7,0]] in {
+      def : Pat<(f128 (sint_to_fp
+                        (i32 (sext_inreg
+                               (vector_extract v8i16:$src, !head(Idx)), i16)))),
+                (f128 (XSCVSDQP
+                        (EXTRACT_SUBREG (VEXTSH2D
+                                          (VEXTRACTUH !head(!tail(Idx)), $src)),
+                                        sub_64)))>;
+      def : Pat<(f128 (uint_to_fp
+                        (and (i32 (vector_extract v8i16:$src, !head(Idx))),
+                             65535))),
+                (f128 (XSCVUDQP (EXTRACT_SUBREG
+                                  (VEXTRACTUH !head(!tail(Idx)), $src), sub_64)))>;
+    }
+
+    // (Un)Signed Byte vector extract -> QP
+    foreach Idx = [[0,15],[1,14],[2,13],[3,12],[4,11],[5,10],[6,9],[7,8],[8,7],
+                   [9,6],[10,5],[11,4],[12,3],[13,2],[14,1],[15,0]] in {
+      def : Pat<(f128 (sint_to_fp
+                        (i32 (sext_inreg
+                               (vector_extract v16i8:$src, !head(Idx)), i8)))),
+                (f128 (XSCVSDQP
+                        (EXTRACT_SUBREG
+                          (VEXTSB2D (VEXTRACTUB !head(!tail(Idx)), $src)),
+                          sub_64)))>;
+      def : Pat<(f128 (uint_to_fp
+                        (and (i32 (vector_extract v16i8:$src, !head(Idx))),
+                             255))),
+                (f128 (XSCVUDQP
+                        (EXTRACT_SUBREG
+                          (VEXTRACTUB !head(!tail(Idx)), $src), sub_64)))>;
     }
   } // IsLittleEndian, HasP9Vector
 

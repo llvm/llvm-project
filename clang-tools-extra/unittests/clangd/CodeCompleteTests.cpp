@@ -18,6 +18,7 @@
 #include "TestFS.h"
 #include "index/MemIndex.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -999,8 +1000,7 @@ TEST(CompletionTest, NoIndexCompletionsInsideDependentCode) {
   }
 }
 
-// FIXME: This still crashes under asan. Fix it and reenable the test.
-TEST(CompletionTest, DISABLED_DocumentationFromChangedFileCrash) {
+TEST(CompletionTest, DocumentationFromChangedFileCrash) {
   MockFSProvider FS;
   auto FooH = testPath("foo.h");
   auto FooCpp = testPath("foo.cpp");
@@ -1039,6 +1039,25 @@ TEST(CompletionTest, DISABLED_DocumentationFromChangedFileCrash) {
   EXPECT_THAT(Completions.items,
               Contains(AllOf(Not(IsDocumented()), Named("func"))));
 }
+
+TEST(CompletionTest, CompleteOnInvalidLine) {
+  auto FooCpp = testPath("foo.cpp");
+
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  MockFSProvider FS;
+  FS.Files[FooCpp] = "// empty file";
+
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  // Run completion outside the file range.
+  Position Pos;
+  Pos.line = 100;
+  Pos.character = 0;
+  EXPECT_THAT_EXPECTED(
+      runCodeComplete(Server, FooCpp, Pos, clangd::CodeCompleteOptions()),
+      Failed());
+}
+
 
 } // namespace
 } // namespace clangd

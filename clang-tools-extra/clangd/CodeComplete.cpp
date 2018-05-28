@@ -699,26 +699,13 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
     log("Couldn't create CompilerInvocation");;
     return false;
   }
-  CI->getFrontendOpts().DisableFree = false;
-  CI->getLangOpts()->CommentOpts.ParseAllComments = true;
-
-  std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =
-      llvm::MemoryBuffer::getMemBufferCopy(Input.Contents, Input.FileName);
-
-  // The diagnostic options must be set before creating a CompilerInstance.
-  CI->getDiagnosticOpts().IgnoreWarnings = true;
-  // We reuse the preamble whether it's valid or not. This is a
-  // correctness/performance tradeoff: building without a preamble is slow, and
-  // completion is latency-sensitive.
-  auto Clang = prepareCompilerInstance(
-      std::move(CI), Input.Preamble, std::move(ContentsBuffer),
-      std::move(Input.PCHs), std::move(Input.VFS), DummyDiagsConsumer);
-
-  // Disable typo correction in Sema.
-  Clang->getLangOpts().SpellChecking = false;
-
-  auto &FrontendOpts = Clang->getFrontendOpts();
+  auto &FrontendOpts = CI->getFrontendOpts();
+  FrontendOpts.DisableFree = false;
   FrontendOpts.SkipFunctionBodies = true;
+  CI->getLangOpts()->CommentOpts.ParseAllComments = true;
+  // Disable typo correction in Sema.
+  CI->getLangOpts()->SpellChecking = false;
+  // Setup code completion.
   FrontendOpts.CodeCompleteOpts = Options;
   FrontendOpts.CodeCompletionAt.FileName = Input.FileName;
   auto Offset = positionToOffset(Input.Contents, Input.Pos);
@@ -731,6 +718,18 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
            FrontendOpts.CodeCompletionAt.Column) =
       offsetToClangLineColumn(Input.Contents, *Offset);
 
+  std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =
+      llvm::MemoryBuffer::getMemBufferCopy(Input.Contents, Input.FileName);
+  // The diagnostic options must be set before creating a CompilerInstance.
+  CI->getDiagnosticOpts().IgnoreWarnings = true;
+  // We reuse the preamble whether it's valid or not. This is a
+  // correctness/performance tradeoff: building without a preamble is slow, and
+  // completion is latency-sensitive.
+  // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
+  // the remapped buffers do not get freed.
+  auto Clang = prepareCompilerInstance(
+      std::move(CI), Input.Preamble, std::move(ContentsBuffer),
+      std::move(Input.PCHs), std::move(Input.VFS), DummyDiagsConsumer);
   Clang->setCodeCompletionConsumer(Consumer.release());
 
   SyntaxOnlyAction Action;

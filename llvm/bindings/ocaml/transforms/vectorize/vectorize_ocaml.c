@@ -20,12 +20,6 @@
 #include "caml/misc.h"
 
 /* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
-CAMLprim value llvm_add_bb_vectorize(LLVMPassManagerRef PM) {
-  LLVMAddBBVectorizePass(PM);
-  return Val_unit;
-}
-
-/* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
 CAMLprim value llvm_add_loop_vectorize(LLVMPassManagerRef PM) {
   LLVMAddLoopVectorizePass(PM);
   return Val_unit;

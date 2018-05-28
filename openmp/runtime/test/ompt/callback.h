@@ -74,7 +74,7 @@ static ompt_enumerate_mutex_impls_t ompt_enumerate_mutex_impls;
 static void print_ids(int level)
 {
   int task_type, thread_num;
-  ompt_frame_t *frame;
+  omp_frame_t *frame;
   ompt_data_t *task_parallel_data;
   ompt_data_t *task_data;
   int exists_task = ompt_get_task_info(level, &task_type, &task_data, &frame,
@@ -189,7 +189,7 @@ on_ompt_callback_mutex_acquire(
   ompt_mutex_kind_t kind,
   unsigned int hint,
   unsigned int impl,
-  ompt_wait_id_t wait_id,
+  omp_wait_id_t wait_id,
   const void *codeptr_ra)
 {
   switch(kind)
@@ -217,7 +217,7 @@ on_ompt_callback_mutex_acquire(
 static void
 on_ompt_callback_mutex_acquired(
   ompt_mutex_kind_t kind,
-  ompt_wait_id_t wait_id,
+  omp_wait_id_t wait_id,
   const void *codeptr_ra)
 {
   switch(kind)
@@ -245,7 +245,7 @@ on_ompt_callback_mutex_acquired(
 static void
 on_ompt_callback_mutex_released(
   ompt_mutex_kind_t kind,
-  ompt_wait_id_t wait_id,
+  omp_wait_id_t wait_id,
   const void *codeptr_ra)
 {
   switch(kind)
@@ -273,7 +273,7 @@ on_ompt_callback_mutex_released(
 static void
 on_ompt_callback_nest_lock(
     ompt_scope_endpoint_t endpoint,
-    ompt_wait_id_t wait_id,
+    omp_wait_id_t wait_id,
     const void *codeptr_ra)
 {
   switch(endpoint)
@@ -447,7 +447,7 @@ on_ompt_callback_lock_init(
   ompt_mutex_kind_t kind,
   unsigned int hint,
   unsigned int impl,
-  ompt_wait_id_t wait_id,
+  omp_wait_id_t wait_id,
   const void *codeptr_ra)
 {
   switch(kind)
@@ -466,7 +466,7 @@ on_ompt_callback_lock_init(
 static void
 on_ompt_callback_lock_destroy(
   ompt_mutex_kind_t kind,
-  ompt_wait_id_t wait_id,
+  omp_wait_id_t wait_id,
   const void *codeptr_ra)
 {
   switch(kind)
@@ -571,7 +571,7 @@ on_ompt_callback_master(
 static void
 on_ompt_callback_parallel_begin(
   ompt_data_t *encountering_task_data,
-  const ompt_frame_t *encountering_task_frame,
+  const omp_frame_t *encountering_task_frame,
   ompt_data_t* parallel_data,
   uint32_t requested_team_size,
   ompt_invoker_t invoker,
@@ -596,7 +596,7 @@ on_ompt_callback_parallel_end(
 static void
 on_ompt_callback_task_create(
     ompt_data_t *encountering_task_data,
-    const ompt_frame_t *encountering_task_frame,
+    const omp_frame_t *encountering_task_frame,
     ompt_data_t* new_task_data,
     int type,
     int has_dependences,
@@ -678,7 +678,7 @@ on_ompt_callback_control_tool(
   void *arg,
   const void *codeptr_ra)
 {
-  ompt_frame_t* omptTaskFrame;
+  omp_frame_t* omptTaskFrame;
   ompt_get_task_info(0, NULL, (ompt_data_t**) NULL, &omptTaskFrame, NULL, NULL);
   printf("%" PRIu64 ": ompt_event_control_tool: command=%" PRIu64 ", modifier=%" PRIu64 ", arg=%p, codeptr_ra=%p, current_task_frame.exit=%p, current_task_frame.reenter=%p \n", ompt_get_thread_data()->value, command, modifier, arg, codeptr_ra, omptTaskFrame->exit_frame, omptTaskFrame->enter_frame);
   return 0; //success

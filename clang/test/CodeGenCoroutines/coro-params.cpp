@@ -156,3 +156,28 @@ void coroutine_matching_promise_constructor(promise_matching_constructor, int, f
   // CHECK: invoke void @_ZNSt12experimental16coroutine_traitsIJv28promise_matching_constructorifdEE12promise_typeC1ES1_ifd(%"struct.std::experimental::coroutine_traits<void, promise_matching_constructor, int, float, double>::promise_type"* %__promise, i32 %[[INT]], float %[[FLOAT]], double %[[DOUBLE]])
   co_return;
 }
+
+struct some_class;
+
+struct method {};
+
+template <typename... Args> struct std::experimental::coroutine_traits<method, Args...> {
+  struct promise_type {
+    promise_type(some_class&, float);
+    method get_return_object();
+    suspend_always initial_suspend();
+    suspend_always final_suspend();
+    void return_void();
+    void unhandled_exception();
+  };
+};
+
+struct some_class {
+  method good_coroutine_calls_custom_constructor(float);
+};
+
+// CHECK-LABEL: define void @_ZN10some_class39good_coroutine_calls_custom_constructorEf(%struct.some_class*
+method some_class::good_coroutine_calls_custom_constructor(float) {
+  // CHECK: invoke void @_ZNSt12experimental16coroutine_traitsIJ6methodR10some_classfEE12promise_typeC1ES3_f(%"struct.std::experimental::coroutine_traits<method, some_class &, float>::promise_type"* %__promise, %struct.some_class* dereferenceable(1) %{{.+}}, float
+  co_return;
+}

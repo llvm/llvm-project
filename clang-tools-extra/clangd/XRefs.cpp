@@ -168,7 +168,7 @@ IdentifiedSymbol getSymbolAtPosition(ParsedAST &AST, SourceLocation Pos) {
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
   IndexOpts.IndexFunctionLocals = true;
-  indexTopLevelDecls(AST.getASTContext(), AST.getTopLevelDecls(),
+  indexTopLevelDecls(AST.getASTContext(), AST.getLocalTopLevelDecls(),
                      DeclMacrosFinder, IndexOpts);
 
   return {DeclMacrosFinder.takeDecls(), DeclMacrosFinder.takeMacroInfos()};
@@ -418,7 +418,7 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
   IndexOpts.IndexFunctionLocals = true;
-  indexTopLevelDecls(AST.getASTContext(), AST.getTopLevelDecls(),
+  indexTopLevelDecls(AST.getASTContext(), AST.getLocalTopLevelDecls(),
                      DocHighlightsFinder, IndexOpts);
 
   return DocHighlightsFinder.takeHighlights();

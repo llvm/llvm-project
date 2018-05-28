@@ -482,7 +482,7 @@ OMPT_API_ROUTINE int ompt_get_parallel_info(int ancestor_level,
                                            team_size);
 }
 
-OMPT_API_ROUTINE omp_state_t ompt_get_state(ompt_wait_id_t *wait_id) {
+OMPT_API_ROUTINE omp_state_t ompt_get_state(omp_wait_id_t *wait_id) {
   omp_state_t thread_state = __ompt_get_state_internal(wait_id);
 
   if (thread_state == omp_state_undefined) {
@@ -502,7 +502,7 @@ OMPT_API_ROUTINE ompt_data_t *ompt_get_thread_data(void) {
 
 OMPT_API_ROUTINE int ompt_get_task_info(int ancestor_level, int *type,
                                         ompt_data_t **task_data,
-                                        ompt_frame_t **task_frame,
+                                        omp_frame_t **task_frame,
                                         ompt_data_t **parallel_data,
                                         int *thread_num) {
   return __ompt_get_task_info_internal(ancestor_level, type, task_data,

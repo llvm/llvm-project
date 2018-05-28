@@ -64,7 +64,7 @@ static bool isNullOrUndef(const Constant *C) {
   return true;
 }
 
-static bool isSuitableForBSS(const GlobalVariable *GV, bool NoZerosInBSS) {
+static bool isSuitableForBSS(const GlobalVariable *GV) {
   const Constant *C = GV->getInitializer();
 
   // Must have zero initializer.
@@ -77,10 +77,6 @@ static bool isSuitableForBSS(const GlobalVariable *GV, bool NoZerosInBSS) {
 
   // If the global has an explicit section specified, don't put it in BSS.
   if (GV->hasSection())
-    return false;
-
-  // If -nozero-initialized-in-bss is specified, don't ever use BSS.
-  if (NoZerosInBSS)
     return false;
 
   // Otherwise, put it in BSS!
@@ -138,25 +134,24 @@ void TargetLoweringObjectFile::emitPersonalityValue(MCStreamer &Streamer,
 
 
 /// getKindForGlobal - This is a top-level target-independent classifier for
-/// a global variable.  Given an global variable and information from TM, it
-/// classifies the global in a variety of ways that make various target
-/// implementations simpler.  The target implementation is free to ignore this
-/// extra info of course.
+/// a global object.  Given a global variable and information from the TM, this
+/// function classifies the global in a target independent manner. This function
+/// may be overridden by the target implementation.
 SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
                                                        const TargetMachine &TM){
   assert(!GO->isDeclaration() && !GO->hasAvailableExternallyLinkage() &&
          "Can only be used for global definitions");
 
-  Reloc::Model ReloModel = TM.getRelocationModel();
-
-  // Early exit - functions should be always in text sections.
-  const auto *GVar = dyn_cast<GlobalVariable>(GO);
-  if (!GVar)
+  // Functions are classified as text sections.
+  if (isa<Function>(GO))
     return SectionKind::getText();
+
+  // Global variables require more detailed analysis.
+  const auto *GVar = cast<GlobalVariable>(GO);
 
   // Handle thread-local data first.
   if (GVar->isThreadLocal()) {
-    if (isSuitableForBSS(GVar, TM.Options.NoZerosInBSS))
+    if (isSuitableForBSS(GVar) && !TM.Options.NoZerosInBSS)
       return SectionKind::getThreadBSS();
     return SectionKind::getThreadData();
   }
@@ -165,8 +160,9 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
   if (GVar->hasCommonLinkage())
     return SectionKind::getCommon();
 
-  // Variable can be easily put to BSS section.
-  if (isSuitableForBSS(GVar, TM.Options.NoZerosInBSS)) {
+  // Most non-mergeable zero data can be put in the BSS section unless otherwise
+  // specified.
+  if (isSuitableForBSS(GVar) && !TM.Options.NoZerosInBSS) {
     if (GVar->hasLocalLinkage())
       return SectionKind::getBSSLocal();
     else if (GVar->hasExternalLinkage())
@@ -174,14 +170,13 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
     return SectionKind::getBSS();
   }
 
-  const Constant *C = GVar->getInitializer();
-
   // If the global is marked constant, we can put it into a mergable section,
   // a mergable string section, or general .data if it contains relocations.
   if (GVar->isConstant()) {
     // If the initializer for the global contains something that requires a
     // relocation, then we may have to drop this into a writable data section
     // even though it is marked const.
+    const Constant *C = GVar->getInitializer();
     if (!C->needsRelocation()) {
       // If the global is required to have a unique address, it can't be put
       // into a mergable section: just drop it into the general read-only
@@ -227,6 +222,7 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       // the time the app starts up.  However, we can't put this into a
       // mergable section, because the linker doesn't take relocations into
       // consideration when it tries to merge entries in the section.
+      Reloc::Model ReloModel = TM.getRelocationModel();
       if (ReloModel == Reloc::Static || ReloModel == Reloc::ROPI ||
           ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI)
         return SectionKind::getReadOnly();
