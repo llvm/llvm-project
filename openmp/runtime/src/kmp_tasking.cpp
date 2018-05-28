@@ -845,7 +845,7 @@ static void __kmpc_omp_task_complete_if0_template(ident_t *loc_ref,
 #if OMPT_SUPPORT
   if (ompt) {
     __ompt_task_finish(task, NULL);
-    ompt_frame_t *ompt_frame;
+    omp_frame_t *ompt_frame;
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame = NULL;
   }

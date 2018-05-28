@@ -2112,29 +2112,23 @@ void Scop::addUserContext() {
   if (UserContextStr.empty())
     return;
 
-  isl_set *UserContext =
-      isl_set_read_from_str(getIslCtx().get(), UserContextStr.c_str());
-  isl_space *Space = getParamSpace().release();
-  if (isl_space_dim(Space, isl_dim_param) !=
-      isl_set_dim(UserContext, isl_dim_param)) {
-    auto SpaceStr = isl_space_to_str(Space);
+  isl::set UserContext = isl::set(getIslCtx(), UserContextStr.c_str());
+  isl::space Space = getParamSpace();
+  if (Space.dim(isl::dim::param) != UserContext.dim(isl::dim::param)) {
+    std::string SpaceStr = Space.to_str();
     errs() << "Error: the context provided in -polly-context has not the same "
            << "number of dimensions than the computed context. Due to this "
            << "mismatch, the -polly-context option is ignored. Please provide "
            << "the context in the parameter space: " << SpaceStr << ".\n";
-    free(SpaceStr);
-    isl_set_free(UserContext);
-    isl_space_free(Space);
     return;
   }
 
-  for (unsigned i = 0; i < isl_space_dim(Space, isl_dim_param); i++) {
+  for (unsigned i = 0; i < Space.dim(isl::dim::param); i++) {
     std::string NameContext = Context.get_dim_name(isl::dim::param, i);
-    std::string NameUserContext =
-        isl_set_get_dim_name(UserContext, isl_dim_param, i);
+    std::string NameUserContext = UserContext.get_dim_name(isl::dim::param, i);
 
     if (NameContext != NameUserContext) {
-      auto SpaceStr = isl_space_to_str(Space);
+      std::string SpaceStr = Space.to_str();
       errs() << "Error: the name of dimension " << i
              << " provided in -polly-context "
              << "is '" << NameUserContext << "', but the name in the computed "
@@ -2142,19 +2136,14 @@ void Scop::addUserContext() {
              << "'. Due to this name mismatch, "
              << "the -polly-context option is ignored. Please provide "
              << "the context in the parameter space: " << SpaceStr << ".\n";
-      free(SpaceStr);
-      isl_set_free(UserContext);
-      isl_space_free(Space);
       return;
     }
 
-    UserContext =
-        isl_set_set_dim_id(UserContext, isl_dim_param, i,
-                           isl_space_get_dim_id(Space, isl_dim_param, i));
+    UserContext = UserContext.set_dim_id(isl::dim::param, i,
+                                         Space.get_dim_id(isl::dim::param, i));
   }
 
-  Context = Context.intersect(isl::manage(UserContext));
-  isl_space_free(Space);
+  Context = Context.intersect(UserContext);
 }
 
 void Scop::buildInvariantEquivalenceClasses() {

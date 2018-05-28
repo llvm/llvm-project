@@ -11,11 +11,17 @@
 
         ! SPARC32: .half 1024
         ! SPARC64: .half 1024
+        ! SPARC32: .half 1024
+        ! SPARC64: .half 1024
         .half 1024
+        .uahalf 1024
 
         ! SPARC32: .word 65536
         ! SPARC64: .word 65536
+        ! SPARC32: .word 65536
+        ! SPARC64: .word 65536
         .word 65536
+        .uaword 65536
 
         ! SPARC32: .word 65536
         ! SPARC64: .xword 65536

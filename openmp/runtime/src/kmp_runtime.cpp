@@ -1462,7 +1462,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
     ompt_data_t ompt_parallel_data;
     ompt_parallel_data.ptr = NULL;
     ompt_data_t *parent_task_data;
-    ompt_frame_t *ompt_frame;
+    omp_frame_t *ompt_frame;
     ompt_data_t *implicit_task_data;
     void *return_address = NULL;
 

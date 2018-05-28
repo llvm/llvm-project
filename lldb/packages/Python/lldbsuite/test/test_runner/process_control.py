@@ -9,7 +9,7 @@ within the LLDB test suite.
 
 
 This module provides process-management support for the LLDB test
-running infrasructure.
+running infrastructure.
 """
 
 # System imports
