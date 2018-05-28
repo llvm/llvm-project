@@ -417,13 +417,6 @@ def X86VPermt2     : SDNode<"X86ISD::VPERMV3",
                                          SDTCisSameSizeAs<0,2>,
                                          SDTCisSameAs<0,3>]>, []>;
 
-def X86VPermi2X   : SDNode<"X86ISD::VPERMIV3",
-                    SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisInt<1>,
-                                         SDTCisVec<1>, SDTCisSameNumEltsAs<0, 1>,
-                                         SDTCisSameSizeAs<0,1>,
-                                         SDTCisSameAs<0,2>,
-                                         SDTCisSameAs<0,3>]>, []>;
-
 def X86vpternlog  : SDNode<"X86ISD::VPTERNLOG", SDTTernlog>;
 
 def X86VPerm2x128 : SDNode<"X86ISD::VPERM2X128", SDTShuff3OpI>;

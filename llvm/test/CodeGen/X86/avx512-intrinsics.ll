@@ -1963,8 +1963,8 @@ define <16 x i32>@test_int_x86_avx512_mask_vpermi2var_d_512(<16 x i32> %x0, <16 
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm3
 ; CHECK-NEXT:    vpermi2d (%rdi), %zmm0, %zmm3 {%k1}
-; CHECK-NEXT:    vpermi2d %zmm2, %zmm0, %zmm1
-; CHECK-NEXT:    vpaddd %zmm1, %zmm3, %zmm0
+; CHECK-NEXT:    vpermt2d %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vpaddd %zmm0, %zmm3, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2p
   %res = call <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %x3)
@@ -1979,8 +1979,8 @@ define <8 x double>@test_int_x86_avx512_mask_vpermi2var_pd_512(<8 x double> %x0,
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_pd_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovapd %zmm1, %zmm3
-; CHECK-NEXT:    vpermi2pd %zmm2, %zmm0, %zmm3
+; CHECK-NEXT:    vmovapd %zmm0, %zmm3
+; CHECK-NEXT:    vpermt2pd %zmm2, %zmm1, %zmm3
 ; CHECK-NEXT:    vpermi2pd %zmm2, %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vaddpd %zmm3, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
@@ -1996,8 +1996,8 @@ define <16 x float>@test_int_x86_avx512_mask_vpermi2var_ps_512(<16 x float> %x0,
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_ps_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm1, %zmm3
-; CHECK-NEXT:    vpermi2ps %zmm2, %zmm0, %zmm3
+; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm3
 ; CHECK-NEXT:    vpermi2ps %zmm2, %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vaddps %zmm3, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
@@ -2013,8 +2013,8 @@ define <8 x i64>@test_int_x86_avx512_mask_vpermi2var_q_512(<8 x i64> %x0, <8 x i
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_q_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm3
-; CHECK-NEXT:    vpermi2q %zmm2, %zmm0, %zmm3
+; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
+; CHECK-NEXT:    vpermt2q %zmm2, %zmm1, %zmm3
 ; CHECK-NEXT:    vpermi2q %zmm2, %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vpaddq %zmm3, %zmm1, %zmm0
 ; CHECK-NEXT:    retq

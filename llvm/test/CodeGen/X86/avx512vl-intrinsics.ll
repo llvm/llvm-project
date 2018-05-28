@@ -602,8 +602,8 @@ define <2 x double>@test_int_x86_avx512_mask_vpermi2var_pd_128(<2 x double> %x0,
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_pd_128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vmovapd %xmm1, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0xd9]
-; CHECK-NEXT:    vpermi2pd %xmm2, %xmm0, %xmm3 ## encoding: [0x62,0xf2,0xfd,0x08,0x77,0xda]
+; CHECK-NEXT:    vmovapd %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0xd8]
+; CHECK-NEXT:    vpermt2pd %xmm2, %xmm1, %xmm3 ## encoding: [0x62,0xf2,0xf5,0x08,0x7f,0xda]
 ; CHECK-NEXT:    vpermi2pd %xmm2, %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0x77,0xca]
 ; CHECK-NEXT:    vaddpd %xmm3, %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0x58,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
@@ -619,8 +619,8 @@ define <4 x double>@test_int_x86_avx512_mask_vpermi2var_pd_256(<4 x double> %x0,
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_pd_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vmovapd %ymm1, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x28,0xd9]
-; CHECK-NEXT:    vpermi2pd %ymm2, %ymm0, %ymm3 ## encoding: [0x62,0xf2,0xfd,0x28,0x77,0xda]
+; CHECK-NEXT:    vmovapd %ymm0, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x28,0xd8]
+; CHECK-NEXT:    vpermt2pd %ymm2, %ymm1, %ymm3 ## encoding: [0x62,0xf2,0xf5,0x28,0x7f,0xda]
 ; CHECK-NEXT:    vpermi2pd %ymm2, %ymm0, %ymm1 {%k1} ## encoding: [0x62,0xf2,0xfd,0x29,0x77,0xca]
 ; CHECK-NEXT:    vaddpd %ymm3, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf5,0x58,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
@@ -636,8 +636,8 @@ define <4 x float>@test_int_x86_avx512_mask_vpermi2var_ps_128(<4 x float> %x0, <
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_ps_128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vmovaps %xmm1, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xd9]
-; CHECK-NEXT:    vpermi2ps %xmm2, %xmm0, %xmm3 ## encoding: [0x62,0xf2,0x7d,0x08,0x77,0xda]
+; CHECK-NEXT:    vmovaps %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xd8]
+; CHECK-NEXT:    vpermt2ps %xmm2, %xmm1, %xmm3 ## encoding: [0x62,0xf2,0x75,0x08,0x7f,0xda]
 ; CHECK-NEXT:    vpermi2ps %xmm2, %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0x77,0xca]
 ; CHECK-NEXT:    vaddps %xmm3, %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf0,0x58,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
@@ -665,8 +665,8 @@ define <8 x float>@test_int_x86_avx512_mask_vpermi2var_ps_256(<8 x float> %x0, <
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_ps_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vmovaps %ymm1, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xd9]
-; CHECK-NEXT:    vpermi2ps %ymm2, %ymm0, %ymm3 ## encoding: [0x62,0xf2,0x7d,0x28,0x77,0xda]
+; CHECK-NEXT:    vmovaps %ymm0, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xd8]
+; CHECK-NEXT:    vpermt2ps %ymm2, %ymm1, %ymm3 ## encoding: [0x62,0xf2,0x75,0x28,0x7f,0xda]
 ; CHECK-NEXT:    vpermi2ps %ymm2, %ymm0, %ymm1 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x77,0xca]
 ; CHECK-NEXT:    vaddps %ymm3, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf4,0x58,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]

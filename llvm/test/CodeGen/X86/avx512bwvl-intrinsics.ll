@@ -1872,8 +1872,8 @@ define <8 x i16>@test_int_x86_avx512_mask_vpermi2var_hi_128(<8 x i16> %x0, <8 x 
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_hi_128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
-; CHECK-NEXT:    vmovdqa %xmm1, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xd9]
-; CHECK-NEXT:    vpermi2w %xmm2, %xmm0, %xmm3 ## encoding: [0x62,0xf2,0xfd,0x08,0x75,0xda]
+; CHECK-NEXT:    vmovdqa %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xd8]
+; CHECK-NEXT:    vpermt2w %xmm2, %xmm1, %xmm3 ## encoding: [0x62,0xf2,0xf5,0x08,0x7d,0xda]
 ; CHECK-NEXT:    vpermi2w %xmm2, %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0x75,0xca]
 ; CHECK-NEXT:    vpaddw %xmm3, %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0xfd,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
@@ -1889,8 +1889,8 @@ define <16 x i16>@test_int_x86_avx512_mask_vpermi2var_hi_256(<16 x i16> %x0, <16
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_hi_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
-; CHECK-NEXT:    vmovdqa %ymm1, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xd9]
-; CHECK-NEXT:    vpermi2w %ymm2, %ymm0, %ymm3 ## encoding: [0x62,0xf2,0xfd,0x28,0x75,0xda]
+; CHECK-NEXT:    vmovdqa %ymm0, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xd8]
+; CHECK-NEXT:    vpermt2w %ymm2, %ymm1, %ymm3 ## encoding: [0x62,0xf2,0xf5,0x28,0x7d,0xda]
 ; CHECK-NEXT:    vpermi2w %ymm2, %ymm0, %ymm1 {%k1} ## encoding: [0x62,0xf2,0xfd,0x29,0x75,0xca]
 ; CHECK-NEXT:    vpaddw %ymm3, %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf5,0xfd,0xc3]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
