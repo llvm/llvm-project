@@ -122,7 +122,6 @@ public:
       const char *name;
       CompilerType type;
     };
-    llvm::SmallVector<Binding, 3> function_bindings;
     llvm::SmallVector<Binding, 3> class_bindings;
   };
 

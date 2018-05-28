@@ -273,6 +273,18 @@ bool ExpressionSourceCode::SaveExpressionTextToTempFile(
   return success;
 }
 
+/// Format the OS name the way that Swift availability attributes do.
+static llvm::StringRef getAvailabilityName(llvm::Triple::OSType os) {
+  switch (os) {
+  case llvm::Triple::MacOSX: return "macOS";
+  case llvm::Triple::IOS: return "iOS";
+  case llvm::Triple::TvOS: return "tvOS";
+  case llvm::Triple::WatchOS: return "watchOS";
+  default:
+    return llvm::Triple::getOSTypeName(os);
+  }
+}
+
 bool ExpressionSourceCode::GetText(
     std::string &text, lldb::LanguageType wrapping_language,
     uint32_t language_flags, const EvaluateExpressionOptions &options,
@@ -466,8 +478,21 @@ bool ExpressionSourceCode::GetText(
       }
       break;
     case lldb::eLanguageTypeSwift: {
+      llvm::SmallString<16> buffer;
+      llvm::raw_svector_ostream os_vers(buffer);
+      auto platform = target->GetPlatform();
+      auto arch_spec = platform->GetSystemArchitecture();
+      auto triple = arch_spec.GetTriple();
+      if (triple.isOSDarwin()) {
+        uint32_t major, minor, patch;
+        platform->GetOSVersion(major, minor, patch,
+                               target->GetProcessSP().get());
+        os_vers << getAvailabilityName(triple.getOS()) << " ";
+        os_vers << major << "." << minor << "." << patch;
+      }
       SwiftASTManipulator::WrapExpression(wrap_stream, m_body.c_str(),
                                           language_flags, options, generic_info,
+                                          os_vers.str(),
                                           first_body_line);
     }
     }

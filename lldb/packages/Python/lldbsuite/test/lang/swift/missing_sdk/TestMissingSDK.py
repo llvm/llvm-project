@@ -18,10 +18,10 @@ class TestMissingSDK(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
-        self.build()
 
     @skipIf(oslist=['linux', 'windows'])
     def testMissingSDK(self):
+        self.build()
         exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.

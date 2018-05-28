@@ -8871,8 +8871,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				"ARCHS[sdk=iphoneos*]" = "$(ARCHS_STANDARD)";
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD)";
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_OTHER_FLAGS = "-analyzer-config suppress-null-return-paths=false";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
@@ -11755,8 +11754,6 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD)";
-				"ARCHS[sdk=iphoneos*]" = "$(ARCHS_STANDARD)";
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_OTHER_FLAGS = "-analyzer-config suppress-null-return-paths=false";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
@@ -12449,8 +12446,6 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD)";
-				"ARCHS[sdk=iphoneos*]" = "$(ARCHS_STANDARD)";
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_OTHER_FLAGS = "-analyzer-config suppress-null-return-paths=false";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
@@ -13433,8 +13428,6 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD)";
-				"ARCHS[sdk=iphoneos*]" = "$(ARCHS_STANDARD)";
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_OTHER_FLAGS = "-analyzer-config suppress-null-return-paths=false";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
