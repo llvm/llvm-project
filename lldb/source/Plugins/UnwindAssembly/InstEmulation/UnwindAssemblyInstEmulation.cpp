@@ -159,7 +159,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
             // If the offset of m_curr_row don't match with the offset we see
             // in saved_unwind_states then we have to update m_curr_row and
-            // m_register_values based on the saved values. It is happenning
+            // m_register_values based on the saved values. It is happening
             // after we processed an epilogue and a return to caller
             // instruction.
             if (it->second.first->GetOffset() != m_curr_row->GetOffset()) {
@@ -206,7 +206,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
                     replace_existing);
               }
 
-              // We are starting a new conditional block at the catual offset
+              // We are starting a new conditional block at the actual offset
               condition_block_start_offset = current_offset;
             }
 
@@ -242,7 +242,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
             // instruction?
             if (m_curr_row_modified) {
               // Save the modified row if we don't already have a CFI row in
-              // the currennt address
+              // the current address
               if (saved_unwind_states.count(
                       current_offset + inst->GetOpcode().GetByteSize()) == 0) {
                 m_curr_row->SetOffset(current_offset +

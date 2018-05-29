@@ -35,8 +35,8 @@ namespace lldb_private {
 /// contexts: ExecutionContextRef and ExecutionContext. Both of these objects
 /// are described below.
 ///
-/// Not all objects in an ExectionContext objects will be valid. If you want
-/// to refer strongly (ExectionContext) or weakly (ExectionContextRef) to a
+/// Not all objects in an ExecutionContext objects will be valid. If you want
+/// to refer strongly (ExecutionContext) or weakly (ExecutionContextRef) to a
 /// process, then only the process and target references will be valid. For
 /// threads, only the thread, process and target references will be filled in.
 /// For frames, all of the objects will be filled in.
