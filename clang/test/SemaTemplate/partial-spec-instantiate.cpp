@@ -55,3 +55,46 @@ namespace rdar9169404 {
   // expected-no-diagnostics
 #endif
 }
+
+// rdar://problem/39524996
+namespace rdar39524996 {
+  template <typename T, typename U>
+  struct enable_if_not_same
+  {
+    typedef void type;
+  };
+  template <typename T>
+  struct enable_if_not_same<T, T>;
+
+  template <typename T>
+  struct Wrapper {
+    // Assertion triggered on trying to set twice the same partial specialization
+    // enable_if_not_same<int, int>
+    template <class U>
+    Wrapper(const Wrapper<U>& other,
+            typename enable_if_not_same<U, T>::type* = 0) {}
+
+    explicit Wrapper(int i) {}
+  };
+
+  template <class T>
+  struct Container {
+    // It is important that the struct has implicit copy and move constructors.
+    Container() : x() {}
+
+    template <class U>
+    Container(const Container<U>& other) : x(static_cast<T>(other.x)) {}
+
+    // Implicit constructors are member-wise, so the field triggers instantiation
+    // of T constructors and we instantiate all of them for overloading purposes.
+    T x;
+  };
+
+  void takesWrapperInContainer(const Container< Wrapper<int> >& c);
+  void test() {
+    // Type mismatch triggers initialization with conversion which requires
+    // implicit constructors to be instantiated.
+    Container<int> c;
+    takesWrapperInContainer(c);
+  }
+}
