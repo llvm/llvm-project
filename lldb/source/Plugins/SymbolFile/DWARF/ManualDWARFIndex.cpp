@@ -50,9 +50,9 @@ void ManualDWARFIndex::Index() {
   auto extract_fn = [&debug_info, &clear_cu_dies](size_t cu_idx) {
     DWARFUnit *dwarf_cu = debug_info.GetCompileUnitAtIndex(cu_idx);
     if (dwarf_cu) {
-      // dwarf_cu->ExtractDIEsIfNeeded(false) will return zero if the DIEs
+      // dwarf_cu->ExtractDIEsIfNeeded() will return false if the DIEs
       // for a compile unit have already been parsed.
-      if (dwarf_cu->ExtractDIEsIfNeeded(false) > 1)
+      if (dwarf_cu->ExtractDIEsIfNeeded())
         clear_cu_dies[cu_idx] = true;
     }
   };
