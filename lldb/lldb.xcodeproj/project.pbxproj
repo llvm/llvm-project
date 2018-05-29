@@ -7647,7 +7647,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration -a -z \"$ENABLE_ADDRESS_SANITIZER\" ]\nthen\n  \"${SRCROOT}\"/scripts/check-ast-context.py --file \"${SRCROOT}\"/source/Symbol/SwiftASTContext.cpp --llvmbuild \"${LLDB_PATH_TO_LLVM_BUILD}\" --swiftbuild \"${LLVM_BUILD_DIR}/${SWIFT_BUILD_DIR_ARCH}\" --lldbbuild \"${BUILD_DIR}\" --llvmbarch \"${LLVM_BUILD_DIR_ARCH}\" --verbose true\nfi\n";
+			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration -a -z \"$ENABLE_ADDRESS_SANITIZER\" ]\nthen\n  \"${SRCROOT}\"/scripts/check-ast-context.py --file \"${SRCROOT}\"/source/Symbol/SwiftASTContext.cpp --llvmbuild \"${LLDB_PATH_TO_LLVM_BUILD}\" --swiftbuild \"${LLVM_BUILD_DIR}/swift-macosx-x86_64\" --lldbbuild \"${BUILD_DIR}\" --llvmbarch \"llvm-macosx-x86_64\" --verbose true\nfi\n";
 		};
 		9A19ACE2116563A700E0D453 /* Finish swig wrapper classes (lldb) */ = {
 			isa = PBXShellScriptBuildPhase;
