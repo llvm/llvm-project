@@ -17,9 +17,9 @@
 ; RUN: llvm-nm %t32.lto.o | FileCheck %s --check-prefix=NM2
 
 ; Then check without --thinlto-jobs (which currently default to hardware_concurrency)
-; We just check that we don't crash or fail (as it's not sure which tests are
-; stable on the final output file itself.
-; RUN: ld.lld -shared %t1.o %t2.o -o %t2
+; RUN: ld.lld -shared %t1.o %t2.o -o %t3
+; RUN: llvm-nm %t31.lto.o | FileCheck %s --check-prefix=NM1
+; RUN: llvm-nm %t32.lto.o | FileCheck %s --check-prefix=NM2
 
 ; NM1: T f
 ; NM2: T g
