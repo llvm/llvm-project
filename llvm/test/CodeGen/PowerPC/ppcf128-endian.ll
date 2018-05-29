@@ -43,10 +43,10 @@ entry:
 ; CHECK: .LCPI[[LC]]_1:
 ; CHECK: .long   0
 ; CHECK: @caller_const
-; CHECK: addi [[REG0:[0-9]+]], {{[0-9]+}}, .LCPI[[LC]]_0
-; CHECK: addi [[REG1:[0-9]+]], {{[0-9]+}}, .LCPI[[LC]]_1
-; CHECK: lfs 1, 0([[REG0]])
-; CHECK: lfs 2, 0([[REG1]])
+; CHECK: addis [[REG0:[0-9]+]], 2, .LCPI[[LC]]_0@toc@ha
+; CHECK: addis [[REG1:[0-9]+]], 2, .LCPI[[LC]]_1@toc@ha
+; CHECK: lfs 1, .LCPI[[LC]]_0@toc@l([[REG0]])
+; CHECK: lfs 2, .LCPI[[LC]]_1@toc@l([[REG1]])
 ; CHECK: bl test
 
 define ppc_fp128 @result() {

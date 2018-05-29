@@ -146,6 +146,9 @@ class MipsAsmParser : public MCTargetAsmParser {
   /// If true, then CpSaveLocation is a register, otherwise it's an offset.
   bool     CpSaveLocationIsRegister;
 
+  // Map of register aliases created via the .set directive.
+  StringMap<AsmToken> RegisterSets;
+
   // Print a warning along with its fix-it message at the given range.
   void printWarningWithFixIt(const Twine &Msg, const Twine &FixMsg,
                              SMRange Range, bool ShowColors = true);
@@ -183,6 +186,9 @@ class MipsAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy
   matchAnyRegisterNameWithoutDollar(OperandVector &Operands,
                                     StringRef Identifier, SMLoc S);
+  OperandMatchResultTy matchAnyRegisterWithoutDollar(OperandVector &Operands,
+                                                     const AsmToken &Token,
+                                                     SMLoc S);
   OperandMatchResultTy matchAnyRegisterWithoutDollar(OperandVector &Operands,
                                                      SMLoc S);
   OperandMatchResultTy parseAnyRegister(OperandVector &Operands);
@@ -5991,6 +5997,19 @@ bool MipsAsmParser::searchSymbolAlias(OperandVector &Operands) {
           llvm_unreachable("Should never ParseFail");
       }
     }
+  } else if (Sym->isUnset()) {
+    // If symbol is unset, it might be created in the `parseSetAssignment`
+    // routine as an alias for a numeric register name.
+    // Lookup in the aliases list.
+    auto Entry = RegisterSets.find(Sym->getName());
+    if (Entry != RegisterSets.end()) {
+      OperandMatchResultTy ResTy =
+          matchAnyRegisterWithoutDollar(Operands, Entry->getValue(), S);
+      if (ResTy == MatchOperand_Success) {
+        Parser.Lex();
+        return true;
+      }
+    }
   }
 
   return false;
@@ -6060,10 +6079,8 @@ MipsAsmParser::matchAnyRegisterNameWithoutDollar(OperandVector &Operands,
 }
 
 OperandMatchResultTy
-MipsAsmParser::matchAnyRegisterWithoutDollar(OperandVector &Operands, SMLoc S) {
-  MCAsmParser &Parser = getParser();
-  auto Token = Parser.getLexer().peekTok(false);
-
+MipsAsmParser::matchAnyRegisterWithoutDollar(OperandVector &Operands,
+                                             const AsmToken &Token, SMLoc S) {
   if (Token.is(AsmToken::Identifier)) {
     LLVM_DEBUG(dbgs() << ".. identifier\n");
     StringRef Identifier = Token.getIdentifier();
@@ -6088,6 +6105,12 @@ MipsAsmParser::matchAnyRegisterWithoutDollar(OperandVector &Operands, SMLoc S) {
   LLVM_DEBUG(dbgs() << Token.getKind() << "\n");
 
   return MatchOperand_NoMatch;
+}
+
+OperandMatchResultTy
+MipsAsmParser::matchAnyRegisterWithoutDollar(OperandVector &Operands, SMLoc S) {
+  auto Token = getLexer().peekTok(false);
+  return matchAnyRegisterWithoutDollar(Operands, Token, S);
 }
 
 OperandMatchResultTy
@@ -6849,11 +6872,24 @@ bool MipsAsmParser::parseSetAssignment() {
     return reportParseError("unexpected token, expected comma");
   Lex(); // Eat comma
 
-  if (Parser.parseExpression(Value))
+  if (getLexer().is(AsmToken::Dollar) &&
+      getLexer().peekTok().is(AsmToken::Integer)) {
+    // Parse assignment of a numeric register:
+    //   .set r1,$1
+    Parser.Lex(); // Eat $.
+    RegisterSets[Name] = Parser.getTok();
+    Parser.Lex(); // Eat identifier.
+    getContext().getOrCreateSymbol(Name);
+  } else if (!Parser.parseExpression(Value)) {
+    // Parse assignment of an expression including
+    // symbolic registers:
+    //   .set  $tmp, $BB0-$BB1
+    //   .set  r2, $f2
+    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    Sym->setVariableValue(Value);
+  } else {
     return reportParseError("expected valid expression after comma");
-
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-  Sym->setVariableValue(Value);
+  }
 
   return false;
 }

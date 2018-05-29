@@ -39,7 +39,8 @@ class DWARFUnit {
 public:
   virtual ~DWARFUnit();
 
-  size_t ExtractDIEsIfNeeded(bool cu_die_only);
+  void ExtractUnitDIEIfNeeded();
+  bool ExtractDIEsIfNeeded();
   DWARFDIE LookupAddress(const dw_addr_t address);
   size_t AppendDIEsWithTag(const dw_tag_t tag,
                            DWARFDIECollection &matching_dies,
@@ -160,7 +161,7 @@ public:
   dw_offset_t GetBaseObjOffset() const;
 
   die_iterator_range dies() {
-    ExtractDIEsIfNeeded(false);
+    ExtractDIEsIfNeeded();
     return die_iterator_range(m_die_array.begin(), m_die_array.end());
   }
 
@@ -173,6 +174,10 @@ protected:
   void *m_user_data = nullptr;
   // The compile unit debug information entry item
   DWARFDebugInfoEntry::collection m_die_array;
+  // GetUnitDIEPtrOnly() needs to return pointer to the first DIE.
+  // But the first element of m_die_array after ExtractUnitDIEIfNeeded()
+  // would possibly move in memory after later ExtractDIEsIfNeeded().
+  DWARFDebugInfoEntry m_first_die;
   // A table similar to the .debug_aranges table, but this one points to the
   // exact DW_TAG_subprogram DIEs
   std::unique_ptr<DWARFDebugAranges> m_func_aranges_ap;
@@ -202,21 +207,22 @@ private:
   // Get the DWARF unit DWARF debug informration entry. Parse the single DIE
   // if needed.
   const DWARFDebugInfoEntry *GetUnitDIEPtrOnly() {
-    ExtractDIEsIfNeeded(true);
-    if (m_die_array.empty())
+    ExtractUnitDIEIfNeeded();
+    if (!m_first_die)
       return NULL;
-    return &m_die_array[0];
+    return &m_first_die;
   }
 
   // Get all DWARF debug informration entries. Parse all DIEs if needed.
   const DWARFDebugInfoEntry *DIEPtr() {
-    ExtractDIEsIfNeeded(false);
+    ExtractDIEsIfNeeded();
     if (m_die_array.empty())
       return NULL;
     return &m_die_array[0];
   }
 
-  void AddUnitDIE(DWARFDebugInfoEntry &die);
+  void AddUnitDIE(const DWARFDebugInfoEntry &cu_die);
+  void ExtractDIEsEndCheck(lldb::offset_t offset) const;
 
   DISALLOW_COPY_AND_ASSIGN(DWARFUnit);
 };

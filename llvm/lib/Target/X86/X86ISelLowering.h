@@ -1097,8 +1097,6 @@ namespace llvm {
     /// Customize the preferred legalization strategy for certain types.
     LegalizeTypeAction getPreferredVectorAction(EVT VT) const override;
 
-    MVT getRegisterTypeForCallingConv(MVT VT) const override;
-
     MVT getRegisterTypeForCallingConv(LLVMContext &Context,
                                       EVT VT) const override;
 

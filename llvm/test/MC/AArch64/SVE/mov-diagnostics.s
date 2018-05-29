@@ -20,6 +20,24 @@ mov z0.d, xzr
 
 
 // --------------------------------------------------------------------------//
+// Unpredicated mov of Z register only allowed for .d
+
+mov z0.b, z1.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.b, z1.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.h, z1.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.h, z1.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.s, z1.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.s, z1.s
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
 // Invalid immediates
 
 mov z0.b, #0, lsl #8      // #0, lsl #8 is not valid for .b

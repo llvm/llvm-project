@@ -55,6 +55,18 @@ mov     z31.b, wsp
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 3b 20 05 <unknown>
 
+mov     z0.d, z0.d
+// CHECK-INST: mov     z0.d, z0.d
+// CHECK-ENCODING: [0x00,0x30,0x60,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 30 60 04 <unknown>
+
+mov     z31.d, z0.d
+// CHECK-INST: mov     z31.d, z0.d
+// CHECK-ENCODING: [0x1f,0x30,0x60,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 1f 30 60 04 <unknown>
+
 mov     z5.b, #-128
 // CHECK-INST: mov     z5.b, #-128
 // CHECK-ENCODING: [0x05,0xd0,0x38,0x25]

@@ -11,7 +11,7 @@ define i32 @combine_sdiv_by_one(i32 %x) {
 ; CHECK-LABEL: combine_sdiv_by_one:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    ret{{[l|q]}}
+; CHECK-NEXT:    retq
   %1 = sdiv i32 %x, 1
   ret i32 %1
 }
@@ -19,7 +19,7 @@ define i32 @combine_sdiv_by_one(i32 %x) {
 define <4 x i32> @combine_vec_sdiv_by_one(<4 x i32> %x) {
 ; CHECK-LABEL: combine_vec_sdiv_by_one:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
+; CHECK-NEXT:    retq
   %1 = sdiv <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %1
 }
@@ -30,7 +30,7 @@ define i32 @combine_sdiv_by_negone(i32 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    negl %edi
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    ret{{[l|q]}}
+; CHECK-NEXT:    retq
   %1 = sdiv i32 %x, -1
   ret i32 %1
 }
@@ -41,13 +41,13 @@ define <4 x i32> @combine_vec_sdiv_by_negone(<4 x i32> %x) {
 ; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    psubd %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_negone:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; AVX-NEXT:    retq
   %1 = sdiv <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   ret <4 x i32> %1
 }
@@ -59,7 +59,7 @@ define i32 @combine_sdiv_dupe(i32 %x) {
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %edi
-; CHECK-NEXT:    ret{{[l|q]}}
+; CHECK-NEXT:    retq
   %1 = sdiv i32 %x, %x
   ret i32 %1
 }
@@ -89,7 +89,7 @@ define <4 x i32> @combine_vec_sdiv_dupe(<4 x i32> %x) {
 ; SSE-NEXT:    idivl %ecx
 ; SSE-NEXT:    pinsrd $3, %eax, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_dupe:
 ; AVX:       # %bb.0:
@@ -114,7 +114,7 @@ define <4 x i32> @combine_vec_sdiv_dupe(<4 x i32> %x) {
 ; AVX-NEXT:    cltd
 ; AVX-NEXT:    idivl %ecx
 ; AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; AVX-NEXT:    retq
   %1 = sdiv <4 x i32> %x, %x
   ret <4 x i32> %1
 }
@@ -125,13 +125,13 @@ define <4 x i32> @combine_vec_sdiv_by_pos0(<4 x i32> %x) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE-NEXT:    psrld $2, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_pos0:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpsrld $2, %xmm0, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; AVX-NEXT:    retq
   %1 = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %2 = sdiv <4 x i32> %1, <i32 4, i32 4, i32 4, i32 4>
   ret <4 x i32> %2
@@ -150,7 +150,7 @@ define <4 x i32> @combine_vec_sdiv_by_pos1(<4 x i32> %x) {
 ; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm0[4,5,6,7]
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_sdiv_by_pos1:
 ; AVX1:       # %bb.0:
@@ -161,19 +161,19 @@ define <4 x i32> @combine_vec_sdiv_by_pos1(<4 x i32> %x) {
 ; AVX1-NEXT:    vpsrld $3, %xmm0, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; AVX1-NEXT:    ret{{[l|q]}}
+; AVX1-NEXT:    retq
 ;
 ; AVX2ORLATER-LABEL: combine_vec_sdiv_by_pos1:
 ; AVX2ORLATER:       # %bb.0:
 ; AVX2ORLATER-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2ORLATER-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm0
-; AVX2ORLATER-NEXT:    ret{{[l|q]}}
+; AVX2ORLATER-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pos1:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    vpshld {{.*}}(%rip), %xmm0, %xmm0
-; XOP-NEXT:    ret{{[l|q]}}
+; XOP-NEXT:    retq
   %1 = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %2 = sdiv <4 x i32> %1, <i32 1, i32 4, i32 8, i32 16>
   ret <4 x i32> %2
@@ -189,7 +189,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2a(<4 x i32> %x) {
 ; SSE-NEXT:    paddd %xmm0, %xmm1
 ; SSE-NEXT:    psrad $2, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_pow2a:
 ; AVX:       # %bb.0:
@@ -197,7 +197,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2a(<4 x i32> %x) {
 ; AVX-NEXT:    vpsrld $30, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrad $2, %xmm0, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; AVX-NEXT:    retq
   %1 = sdiv <4 x i32> %x, <i32 4, i32 4, i32 4, i32 4>
   ret <4 x i32> %1
 }
@@ -212,7 +212,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2a_neg(<4 x i32> %x) {
 ; SSE-NEXT:    psrad $2, %xmm1
 ; SSE-NEXT:    pxor %xmm0, %xmm0
 ; SSE-NEXT:    psubd %xmm1, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_pow2a_neg:
 ; AVX:       # %bb.0:
@@ -222,7 +222,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2a_neg(<4 x i32> %x) {
 ; AVX-NEXT:    vpsrad $2, %xmm0, %xmm0
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; AVX-NEXT:    retq
   %1 = sdiv <4 x i32> %x, <i32 -4, i32 -4, i32 -4, i32 -4>
   ret <4 x i32> %1
 }
@@ -343,7 +343,7 @@ define <16 x i8> @combine_vec_sdiv_by_pow2b_v16i8(<16 x i8> %x) {
 ; SSE-NEXT:    movzbl %cl, %eax
 ; SSE-NEXT:    pinsrb $15, %eax, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_pow2b_v16i8:
 ; AVX:       # %bb.0:
@@ -459,7 +459,7 @@ define <16 x i8> @combine_vec_sdiv_by_pow2b_v16i8(<16 x i8> %x) {
 ; AVX-NEXT:    sarb %cl
 ; AVX-NEXT:    movzbl %cl, %eax
 ; AVX-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; AVX-NEXT:    retq
   %1 = sdiv <16 x i8> %x, <i8 1, i8 4, i8 2, i8 16, i8 8, i8 32, i8 64, i8 2, i8 1, i8 4, i8 2, i8 16, i8 8, i8 32, i8 64, i8 2>
   ret <16 x i8> %1
 }
@@ -522,7 +522,7 @@ define <8 x i16> @combine_vec_sdiv_by_pow2b_v8i16(<8 x i16> %x) {
 ; SSE-NEXT:    addl %eax, %ecx
 ; SSE-NEXT:    sarw %cx
 ; SSE-NEXT:    pinsrw $7, %ecx, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_sdiv_by_pow2b_v8i16:
 ; AVX1:       # %bb.0:
@@ -580,7 +580,7 @@ define <8 x i16> @combine_vec_sdiv_by_pow2b_v8i16(<8 x i16> %x) {
 ; AVX1-NEXT:    addl %eax, %ecx
 ; AVX1-NEXT:    sarw %cx
 ; AVX1-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm0
-; AVX1-NEXT:    ret{{[l|q]}}
+; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_vec_sdiv_by_pow2b_v8i16:
 ; AVX2:       # %bb.0:
@@ -638,7 +638,7 @@ define <8 x i16> @combine_vec_sdiv_by_pow2b_v8i16(<8 x i16> %x) {
 ; AVX2-NEXT:    addl %eax, %ecx
 ; AVX2-NEXT:    sarw %cx
 ; AVX2-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm0
-; AVX2-NEXT:    ret{{[l|q]}}
+; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: combine_vec_sdiv_by_pow2b_v8i16:
 ; AVX512F:       # %bb.0:
@@ -696,7 +696,7 @@ define <8 x i16> @combine_vec_sdiv_by_pow2b_v8i16(<8 x i16> %x) {
 ; AVX512F-NEXT:    addl %eax, %ecx
 ; AVX512F-NEXT:    sarw %cx
 ; AVX512F-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm0
-; AVX512F-NEXT:    ret{{[l|q]}}
+; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: combine_vec_sdiv_by_pow2b_v8i16:
 ; AVX512BW:       # %bb.0:
@@ -754,7 +754,7 @@ define <8 x i16> @combine_vec_sdiv_by_pow2b_v8i16(<8 x i16> %x) {
 ; AVX512BW-NEXT:    addl %eax, %ecx
 ; AVX512BW-NEXT:    sarw %cx
 ; AVX512BW-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm0
-; AVX512BW-NEXT:    ret{{[l|q]}}
+; AVX512BW-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v8i16:
 ; XOP:       # %bb.0:
@@ -812,7 +812,7 @@ define <8 x i16> @combine_vec_sdiv_by_pow2b_v8i16(<8 x i16> %x) {
 ; XOP-NEXT:    addl %eax, %ecx
 ; XOP-NEXT:    sarw %cx
 ; XOP-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm0
-; XOP-NEXT:    ret{{[l|q]}}
+; XOP-NEXT:    retq
   %1 = sdiv <8 x i16> %x, <i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2>
   ret <8 x i16> %1
 }
@@ -930,7 +930,7 @@ define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 ; SSE-NEXT:    addl %eax, %ecx
 ; SSE-NEXT:    sarw %cx
 ; SSE-NEXT:    pinsrw $7, %ecx, %xmm1
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_sdiv_by_pow2b_v16i16:
 ; AVX1:       # %bb.0:
@@ -1043,7 +1043,7 @@ define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 ; AVX1-NEXT:    sarw %cx
 ; AVX1-NEXT:    vpinsrw $7, %ecx, %xmm2, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    ret{{[l|q]}}
+; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_vec_sdiv_by_pow2b_v16i16:
 ; AVX2:       # %bb.0:
@@ -1156,7 +1156,7 @@ define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 ; AVX2-NEXT:    sarw %cx
 ; AVX2-NEXT:    vpinsrw $7, %ecx, %xmm2, %xmm0
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    ret{{[l|q]}}
+; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: combine_vec_sdiv_by_pow2b_v16i16:
 ; AVX512F:       # %bb.0:
@@ -1269,7 +1269,7 @@ define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 ; AVX512F-NEXT:    sarw %cx
 ; AVX512F-NEXT:    vpinsrw $7, %ecx, %xmm2, %xmm0
 ; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    ret{{[l|q]}}
+; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: combine_vec_sdiv_by_pow2b_v16i16:
 ; AVX512BW:       # %bb.0:
@@ -1382,7 +1382,7 @@ define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 ; AVX512BW-NEXT:    sarw %cx
 ; AVX512BW-NEXT:    vpinsrw $7, %ecx, %xmm2, %xmm0
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    ret{{[l|q]}}
+; AVX512BW-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v16i16:
 ; XOP:       # %bb.0:
@@ -1495,7 +1495,7 @@ define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 ; XOP-NEXT:    sarw %cx
 ; XOP-NEXT:    vpinsrw $7, %ecx, %xmm2, %xmm0
 ; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; XOP-NEXT:    ret{{[l|q]}}
+; XOP-NEXT:    retq
   %1 = sdiv <16 x i16> %x, <i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2, i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2>
   ret <16 x i16> %1
 }
@@ -1723,7 +1723,7 @@ define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ; SSE-NEXT:    sarw %cx
 ; SSE-NEXT:    pinsrw $7, %ecx, %xmm3
 ; SSE-NEXT:    movdqa %xmm5, %xmm2
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_sdiv_by_pow2b_v32i16:
 ; AVX1:       # %bb.0:
@@ -1944,7 +1944,7 @@ define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ; AVX1-NEXT:    sarw %cx
 ; AVX1-NEXT:    vpinsrw $7, %ecx, %xmm2, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; AVX1-NEXT:    ret{{[l|q]}}
+; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_vec_sdiv_by_pow2b_v32i16:
 ; AVX2:       # %bb.0:
@@ -2165,7 +2165,7 @@ define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ; AVX2-NEXT:    sarw %cx
 ; AVX2-NEXT:    vpinsrw $7, %ecx, %xmm2, %xmm1
 ; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; AVX2-NEXT:    ret{{[l|q]}}
+; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: combine_vec_sdiv_by_pow2b_v32i16:
 ; AVX512F:       # %bb.0:
@@ -2386,7 +2386,7 @@ define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ; AVX512F-NEXT:    sarw %cx
 ; AVX512F-NEXT:    vpinsrw $7, %ecx, %xmm2, %xmm1
 ; AVX512F-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; AVX512F-NEXT:    ret{{[l|q]}}
+; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: combine_vec_sdiv_by_pow2b_v32i16:
 ; AVX512BW:       # %bb.0:
@@ -2609,7 +2609,7 @@ define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ; AVX512BW-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm0
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512BW-NEXT:    ret{{[l|q]}}
+; AVX512BW-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v32i16:
 ; XOP:       # %bb.0:
@@ -2830,7 +2830,7 @@ define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ; XOP-NEXT:    sarw %cx
 ; XOP-NEXT:    vpinsrw $7, %ecx, %xmm2, %xmm1
 ; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; XOP-NEXT:    ret{{[l|q]}}
+; XOP-NEXT:    retq
   %1 = sdiv <32 x i16> %x, <i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2, i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2, i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2, i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2>
   ret <32 x i16> %1
 }
@@ -2859,7 +2859,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2b_v4i32(<4 x i32> %x) {
 ; SSE-NEXT:    addl %edx, %eax
 ; SSE-NEXT:    sarl $4, %eax
 ; SSE-NEXT:    pinsrd $3, %eax, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_pow2b_v4i32:
 ; AVX:       # %bb.0:
@@ -2884,7 +2884,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2b_v4i32(<4 x i32> %x) {
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    sarl $4, %ecx
 ; AVX-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; AVX-NEXT:    retq
   %1 = sdiv <4 x i32> %x, <i32 1, i32 4, i32 8, i32 16>
   ret <4 x i32> %1
 }
@@ -2934,7 +2934,7 @@ define <8 x i32> @combine_vec_sdiv_by_pow2b_v8i32(<8 x i32> %x) {
 ; SSE-NEXT:    addl %edx, %eax
 ; SSE-NEXT:    sarl $4, %eax
 ; SSE-NEXT:    pinsrd $3, %eax, %xmm1
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_sdiv_by_pow2b_v8i32:
 ; AVX1:       # %bb.0:
@@ -2982,7 +2982,7 @@ define <8 x i32> @combine_vec_sdiv_by_pow2b_v8i32(<8 x i32> %x) {
 ; AVX1-NEXT:    sarl $4, %ecx
 ; AVX1-NEXT:    vpinsrd $3, %ecx, %xmm2, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    ret{{[l|q]}}
+; AVX1-NEXT:    retq
 ;
 ; AVX2ORLATER-LABEL: combine_vec_sdiv_by_pow2b_v8i32:
 ; AVX2ORLATER:       # %bb.0:
@@ -3030,7 +3030,7 @@ define <8 x i32> @combine_vec_sdiv_by_pow2b_v8i32(<8 x i32> %x) {
 ; AVX2ORLATER-NEXT:    sarl $4, %ecx
 ; AVX2ORLATER-NEXT:    vpinsrd $3, %ecx, %xmm2, %xmm0
 ; AVX2ORLATER-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2ORLATER-NEXT:    ret{{[l|q]}}
+; AVX2ORLATER-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v8i32:
 ; XOP:       # %bb.0:
@@ -3078,7 +3078,7 @@ define <8 x i32> @combine_vec_sdiv_by_pow2b_v8i32(<8 x i32> %x) {
 ; XOP-NEXT:    sarl $4, %ecx
 ; XOP-NEXT:    vpinsrd $3, %ecx, %xmm2, %xmm0
 ; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; XOP-NEXT:    ret{{[l|q]}}
+; XOP-NEXT:    retq
   %1 = sdiv <8 x i32> %x, <i32 1, i32 4, i32 8, i32 16, i32 1, i32 4, i32 8, i32 16>
   ret <8 x i32> %1
 }
@@ -3170,7 +3170,7 @@ define <16 x i32> @combine_vec_sdiv_by_pow2b_v16i32(<16 x i32> %x) {
 ; SSE-NEXT:    addl %edx, %eax
 ; SSE-NEXT:    sarl $4, %eax
 ; SSE-NEXT:    pinsrd $3, %eax, %xmm3
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_sdiv_by_pow2b_v16i32:
 ; AVX1:       # %bb.0:
@@ -3262,7 +3262,7 @@ define <16 x i32> @combine_vec_sdiv_by_pow2b_v16i32(<16 x i32> %x) {
 ; AVX1-NEXT:    sarl $4, %ecx
 ; AVX1-NEXT:    vpinsrd $3, %ecx, %xmm3, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX1-NEXT:    ret{{[l|q]}}
+; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_vec_sdiv_by_pow2b_v16i32:
 ; AVX2:       # %bb.0:
@@ -3354,7 +3354,7 @@ define <16 x i32> @combine_vec_sdiv_by_pow2b_v16i32(<16 x i32> %x) {
 ; AVX2-NEXT:    sarl $4, %ecx
 ; AVX2-NEXT:    vpinsrd $3, %ecx, %xmm3, %xmm1
 ; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; AVX2-NEXT:    ret{{[l|q]}}
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_vec_sdiv_by_pow2b_v16i32:
 ; AVX512:       # %bb.0:
@@ -3448,7 +3448,7 @@ define <16 x i32> @combine_vec_sdiv_by_pow2b_v16i32(<16 x i32> %x) {
 ; AVX512-NEXT:    vpinsrd $3, %ecx, %xmm3, %xmm0
 ; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX512-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v16i32:
 ; XOP:       # %bb.0:
@@ -3540,7 +3540,7 @@ define <16 x i32> @combine_vec_sdiv_by_pow2b_v16i32(<16 x i32> %x) {
 ; XOP-NEXT:    sarl $4, %ecx
 ; XOP-NEXT:    vpinsrd $3, %ecx, %xmm3, %xmm1
 ; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; XOP-NEXT:    ret{{[l|q]}}
+; XOP-NEXT:    retq
   %1 = sdiv <16 x i32> %x, <i32 1, i32 4, i32 8, i32 16, i32 1, i32 4, i32 8, i32 16, i32 1, i32 4, i32 8, i32 16, i32 1, i32 4, i32 8, i32 16>
   ret <16 x i32> %1
 }
@@ -3556,7 +3556,7 @@ define <2 x i64> @combine_vec_sdiv_by_pow2b_v2i64(<2 x i64> %x) {
 ; SSE-NEXT:    sarq $2, %rcx
 ; SSE-NEXT:    movq %rcx, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_pow2b_v2i64:
 ; AVX:       # %bb.0:
@@ -3568,7 +3568,7 @@ define <2 x i64> @combine_vec_sdiv_by_pow2b_v2i64(<2 x i64> %x) {
 ; AVX-NEXT:    sarq $2, %rcx
 ; AVX-NEXT:    vmovq %rcx, %xmm1
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX-NEXT:    ret{{[l|q]}}
+; AVX-NEXT:    retq
   %1 = sdiv <2 x i64> %x, <i64 1, i64 4>
   ret <2 x i64> %1
 }
@@ -3599,7 +3599,7 @@ define <4 x i64> @combine_vec_sdiv_by_pow2b_v4i64(<4 x i64> %x) {
 ; SSE-NEXT:    sarq $2, %rcx
 ; SSE-NEXT:    movq %rcx, %xmm2
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_sdiv_by_pow2b_v4i64:
 ; AVX1:       # %bb.0:
@@ -3628,7 +3628,7 @@ define <4 x i64> @combine_vec_sdiv_by_pow2b_v4i64(<4 x i64> %x) {
 ; AVX1-NEXT:    vmovq %rcx, %xmm2
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    ret{{[l|q]}}
+; AVX1-NEXT:    retq
 ;
 ; AVX2ORLATER-LABEL: combine_vec_sdiv_by_pow2b_v4i64:
 ; AVX2ORLATER:       # %bb.0:
@@ -3657,7 +3657,7 @@ define <4 x i64> @combine_vec_sdiv_by_pow2b_v4i64(<4 x i64> %x) {
 ; AVX2ORLATER-NEXT:    vmovq %rcx, %xmm2
 ; AVX2ORLATER-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; AVX2ORLATER-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2ORLATER-NEXT:    ret{{[l|q]}}
+; AVX2ORLATER-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v4i64:
 ; XOP:       # %bb.0:
@@ -3686,7 +3686,7 @@ define <4 x i64> @combine_vec_sdiv_by_pow2b_v4i64(<4 x i64> %x) {
 ; XOP-NEXT:    vmovq %rcx, %xmm2
 ; XOP-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; XOP-NEXT:    ret{{[l|q]}}
+; XOP-NEXT:    retq
   %1 = sdiv <4 x i64> %x, <i64 1, i64 4, i64 8, i64 16>
   ret <4 x i64> %1
 }
@@ -3740,7 +3740,7 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; SSE-NEXT:    sarq $2, %rcx
 ; SSE-NEXT:    movq %rcx, %xmm4
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_sdiv_by_pow2b_v8i64:
 ; AVX1:       # %bb.0:
@@ -3794,7 +3794,7 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; AVX1-NEXT:    vmovq %rcx, %xmm3
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX1-NEXT:    ret{{[l|q]}}
+; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_vec_sdiv_by_pow2b_v8i64:
 ; AVX2:       # %bb.0:
@@ -3848,7 +3848,7 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; AVX2-NEXT:    vmovq %rcx, %xmm3
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; AVX2-NEXT:    ret{{[l|q]}}
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_vec_sdiv_by_pow2b_v8i64:
 ; AVX512:       # %bb.0:
@@ -3904,7 +3904,7 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX512-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_pow2b_v8i64:
 ; XOP:       # %bb.0:
@@ -3958,7 +3958,7 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; XOP-NEXT:    vmovq %rcx, %xmm3
 ; XOP-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; XOP-NEXT:    ret{{[l|q]}}
+; XOP-NEXT:    retq
   %1 = sdiv <8 x i64> %x, <i64 1, i64 4, i64 8, i64 16, i64 1, i64 4, i64 8, i64 16>
   ret <8 x i64> %1
 }
@@ -3989,7 +3989,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2b_PosAndNeg(<4 x i32> %x) {
 ; SSE-NEXT:    sarl $4, %eax
 ; SSE-NEXT:    negl %eax
 ; SSE-NEXT:    pinsrd $3, %eax, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sdiv_by_pow2b_PosAndNeg:
 ; AVX:       # %bb.0:
@@ -4016,7 +4016,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2b_PosAndNeg(<4 x i32> %x) {
 ; AVX-NEXT:    sarl $4, %ecx
 ; AVX-NEXT:    negl %ecx
 ; AVX-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm0
-; AVX-NEXT:    ret{{[l|q]}}
+; AVX-NEXT:    retq
   %1 = sdiv <4 x i32> %x, <i32 1, i32 -4, i32 8, i32 -16>
   ret <4 x i32> %1
 }
@@ -4024,7 +4024,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2b_PosAndNeg(<4 x i32> %x) {
 define <4 x i32> @combine_vec_sdiv_by_pow2b_undef1(<4 x i32> %x) {
 ; CHECK-LABEL: combine_vec_sdiv_by_pow2b_undef1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
+; CHECK-NEXT:    retq
   %1 = sdiv <4 x i32> %x, <i32 undef, i32 -4, i32 undef, i32 -16>
   ret <4 x i32> %1
 }
@@ -4032,7 +4032,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2b_undef1(<4 x i32> %x) {
 define <4 x i32> @combine_vec_sdiv_by_pow2b_undef2(<4 x i32> %x) {
 ; CHECK-LABEL: combine_vec_sdiv_by_pow2b_undef2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
+; CHECK-NEXT:    retq
   %1 = sdiv <4 x i32> %x, <i32 undef, i32 4, i32 undef, i32 16>
   ret <4 x i32> %1
 }
@@ -4040,7 +4040,7 @@ define <4 x i32> @combine_vec_sdiv_by_pow2b_undef2(<4 x i32> %x) {
 define <4 x i32> @combine_vec_sdiv_by_pow2b_undef3(<4 x i32> %x) {
 ; CHECK-LABEL: combine_vec_sdiv_by_pow2b_undef3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
+; CHECK-NEXT:    retq
   %1 = sdiv <4 x i32> %x, <i32 undef, i32 -4, i32 undef, i32 16>
   ret <4 x i32> %1
 }

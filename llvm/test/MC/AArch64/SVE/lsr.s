@@ -54,3 +54,27 @@ lsr     z31.d, z31.d, #1
 // CHECK-ENCODING: [0xff,0x97,0xff,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 97 ff 04 <unknown>
+
+lsr     z0.b, p0/m, z0.b, z0.b
+// CHECK-INST: lsr     z0.b, p0/m, z0.b, z0.b
+// CHECK-ENCODING: [0x00,0x80,0x11,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 11 04 <unknown>
+
+lsr     z0.h, p0/m, z0.h, z0.h
+// CHECK-INST: lsr     z0.h, p0/m, z0.h, z0.h
+// CHECK-ENCODING: [0x00,0x80,0x51,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 51 04 <unknown>
+
+lsr     z0.s, p0/m, z0.s, z0.s
+// CHECK-INST: lsr     z0.s, p0/m, z0.s, z0.s
+// CHECK-ENCODING: [0x00,0x80,0x91,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 91 04 <unknown>
+
+lsr     z0.d, p0/m, z0.d, z0.d
+// CHECK-INST: lsr     z0.d, p0/m, z0.d, z0.d
+// CHECK-ENCODING: [0x00,0x80,0xd1,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 d1 04 <unknown>

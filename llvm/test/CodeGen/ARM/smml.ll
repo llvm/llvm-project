@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=armv6-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V6
 ; RUN: llc -mtriple=armv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V6
 ; RUN: llc -mtriple=thumb-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMB
-; RUN: llc -mtriple=thumbv6-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6
+; RUN: llc -mtriple=thumbv6-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMB
 ; RUN: llc -mtriple=thumbv6t2-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6T2
 ; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6T2
 ; RUN: llc -mtriple=thumbv7m-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V4
@@ -26,7 +26,6 @@ define i32 @Test1(i32 %a, i32 %b, i32 %c) {
 ;CHECK-LABEL: Test1
 ;CHECK-V4-NOT: smmls
 ;CHECK-THUMB-NOT: smmls
-;CHECK-THUMBV6-NOT: smmls
 ;CHECK-V6: smmls r0, [[Rn:r[1-2]]], [[Rm:r[1-2]]], r0
 ;CHECK-THUMBV6T2: smmls r0, [[Rn:r[1-2]]], [[Rm:r[1-2]]], r0
 entry:
@@ -44,13 +43,10 @@ entry:
 declare void @opaque(i32)
 define void @test_used_flags(i32 %in1, i32 %in2) {
 ; CHECK-LABEL: test_used_flags:
-; CHECK-THUMB: cmp  r1, #0
-; CHECK-THUMB: push {r2}
-; CHECK-THUMB: pop  {r3}
-; CHECK-THUMB: ble
-; CHECK-THUMBV6: cmp r1, #0
-; CHECK-THUMBV6: mov r3, r2
-; CHECK-THUMBV6: ble
+; CHECK-THUMB: movs    r2, #0
+; CHECK-THUMB: subs    r0, r2, r0
+; CHECK-THUMB: sbcs    r2, r1
+; CHECK-THUMB: bge
 ; CHECK-V6: smull [[PROD_LO:r[0-9]+]], [[PROD_HI:r[0-9]+]], r0, r1
 ; CHECK-V6: rsbs {{.*}}, [[PROD_LO]], #0
 ; CHECK-V6: rscs {{.*}}, [[PROD_HI]], #0

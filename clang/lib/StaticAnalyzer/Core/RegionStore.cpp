@@ -1638,9 +1638,18 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
           // The array index has to be known.
           if (auto CI = R->getIndex().getAs<nonloc::ConcreteInt>()) {
             int64_t i = CI->getValue().getSExtValue();
-            // Return unknown value if index is out of bounds.
-            if (i < 0 || i >= InitList->getNumInits())
-              return UnknownVal();
+            // If it is known that the index is out of bounds, we can return
+            // an undefined value.
+            if (i < 0)
+              return UndefinedVal();
+
+            if (auto CAT = Ctx.getAsConstantArrayType(VD->getType()))
+              if (CAT->getSize().sle(i))
+                return UndefinedVal();
+
+            // If there is a list, but no init, it must be zero.
+            if (i >= InitList->getNumInits())
+              return svalBuilder.makeZeroVal(R->getElementType());
 
             if (const Expr *ElemInit = InitList->getInit(i))
               if (Optional<SVal> V = svalBuilder.getConstantVal(ElemInit))
@@ -1715,11 +1724,15 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
     // Either the record variable or the field has to be const qualified.
     if (RecordVarTy.isConstQualified() || Ty.isConstQualified())
       if (const Expr *Init = VD->getInit())
-        if (const auto *InitList = dyn_cast<InitListExpr>(Init))
-          if (Index < InitList->getNumInits())
+        if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
+          if (Index < InitList->getNumInits()) {
             if (const Expr *FieldInit = InitList->getInit(Index))
               if (Optional<SVal> V = svalBuilder.getConstantVal(FieldInit))
                 return *V;
+          } else {
+            return svalBuilder.makeZeroVal(Ty);
+          }
+        }
   }
 
   return getBindingForFieldOrElementCommon(B, R, Ty);

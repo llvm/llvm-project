@@ -89,7 +89,7 @@ CHECK:            size = 0, padding size = 0, offset to padding = 0
 CHECK:            bytes of callee saved registers = 0, exception handler addr = 0000:0000
 CHECK:            flags = has async eh | opt speed
 CHECK:      180 | S_REGREL32 [size = 16] `p`
-CHECK:            type = [[FOO_PTR]] (Foo*), register = RSP, offset = 8
+CHECK:            type = [[FOO_PTR]] (Foo*), register = CVRegRSP, offset = 8
 CHECK:      196 | S_END [size = 4]
 CHECK:      200 | S_BUILDINFO [size = 8] BuildId = `[[B_BUILD]]`
 CHECK-LABEL:   Mod 0002 | `* Linker *`:

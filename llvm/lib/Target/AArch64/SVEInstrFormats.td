@@ -399,6 +399,13 @@ class sve_int_bin_pred_arit_log<bits<2> sz8_64, bits<2> fmt, bits<3> opc,
   let Constraints = "$Zdn = $_Zdn";
 }
 
+multiclass sve_int_bin_pred_log<bits<3> opc, string asm> {
+  def _B : sve_int_bin_pred_arit_log<0b00, 0b11, opc, asm, ZPR8>;
+  def _H : sve_int_bin_pred_arit_log<0b01, 0b11, opc, asm, ZPR16>;
+  def _S : sve_int_bin_pred_arit_log<0b10, 0b11, opc, asm, ZPR32>;
+  def _D : sve_int_bin_pred_arit_log<0b11, 0b11, opc, asm, ZPR64>;
+}
+
 multiclass sve_int_bin_pred_arit_0<bits<3> opc, string asm> {
   def _B : sve_int_bin_pred_arit_log<0b00, 0b00, opc, asm, ZPR8>;
   def _H : sve_int_bin_pred_arit_log<0b01, 0b00, opc, asm, ZPR16>;
@@ -468,6 +475,28 @@ multiclass sve_int_arith_imm0<bits<3> opc, string asm> {
   def _H : sve_int_arith_imm0<0b01, opc, asm, ZPR16, addsub_imm8_opt_lsl_i16>;
   def _S : sve_int_arith_imm0<0b10, opc, asm, ZPR32, addsub_imm8_opt_lsl_i32>;
   def _D : sve_int_arith_imm0<0b11, opc, asm, ZPR64, addsub_imm8_opt_lsl_i64>;
+}
+
+
+//===----------------------------------------------------------------------===//
+// SVE Bitwise Logical - Unpredicated Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_bin_cons_log<bits<2> opc, string asm>
+: I<(outs ZPR64:$Zd), (ins ZPR64:$Zn, ZPR64:$Zm),
+  asm, "\t$Zd, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = opc{1-0};
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-10} = 0b001100;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
 }
 
 //===----------------------------------------------------------------------===//
@@ -569,6 +598,39 @@ multiclass sve_int_index_rr<string asm> {
   def _S : sve_int_index_rr<0b10, asm, ZPR32, GPR32>;
   def _D : sve_int_index_rr<0b11, asm, ZPR64, GPR64>;
 }
+//
+//===----------------------------------------------------------------------===//
+// SVE Bitwise Shift - Predicated Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_bin_pred_shift_1<bits<2> sz8_64, bits<3> opc, string asm,
+                               ZPRRegOp zprty>
+: I<(outs zprty:$Zdn), (ins PPR3bAny:$Pg, zprty:$_Zdn, zprty:$Zm),
+  asm, "\t$Zdn, $Pg/m, $_Zdn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zdn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-19} = 0b010;
+  let Inst{18-16} = opc;
+  let Inst{15-13} = 0b100;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zm;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+multiclass sve_int_bin_pred_shift_1<bits<3> opc, string asm> {
+  def _B : sve_int_bin_pred_shift_1<0b00, opc, asm, ZPR8>;
+  def _H : sve_int_bin_pred_shift_1<0b01, opc, asm, ZPR16>;
+  def _S : sve_int_bin_pred_shift_1<0b10, opc, asm, ZPR32>;
+  def _D : sve_int_bin_pred_shift_1<0b11, opc, asm, ZPR64>;
+}
+
 
 //===----------------------------------------------------------------------===//
 // SVE Shift by Immediate - Unpredicated Group
