@@ -606,13 +606,14 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
   if (isa<DefinedSynthetic>(Def))
     return None;
 
-  // Don't write dead symbols or symbols in codeview sections to the symbol
+  // Don't write symbols that won't be written to the output to the symbol
   // table.
-  if (!Def->isLive())
-    return None;
-  if (auto *D = dyn_cast<DefinedRegular>(Def))
-    if (D->getChunk()->isCodeView())
+  OutputSection *OS = nullptr;
+  if (Chunk *C = Def->getChunk()) {
+    OS = C->getOutputSection();
+    if (!OS)
       return None;
+  }
 
   coff_symbol16 Sym;
   StringRef Name = Def->getName();
@@ -640,15 +641,9 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
     Sym.SectionNumber = IMAGE_SYM_ABSOLUTE;
     break;
   default: {
-    uint64_t RVA = Def->getRVA();
-    OutputSection *Sec = nullptr;
-    for (OutputSection *S : OutputSections) {
-      if (S->getRVA() > RVA)
-        break;
-      Sec = S;
-    }
-    Sym.Value = RVA - Sec->getRVA();
-    Sym.SectionNumber = Sec->SectionIndex;
+    assert(OS && "Writing dead symbol to symbol table");
+    Sym.Value = Def->getRVA() - OS->getRVA();
+    Sym.SectionNumber = OS->SectionIndex;
     break;
   }
   }

@@ -449,8 +449,6 @@ DWARFFormValue::FixedFormSizes DWARFUnit::GetFixedFormSizes() {
 
 void DWARFUnit::SetBaseAddress(dw_addr_t base_addr) { m_base_addr = base_addr; }
 
-bool DWARFUnit::HasDIEsParsed() const { return m_die_array.size() > 1; }
-
 //----------------------------------------------------------------------
 // Compare function DWARFDebugAranges::Range structures
 //----------------------------------------------------------------------
