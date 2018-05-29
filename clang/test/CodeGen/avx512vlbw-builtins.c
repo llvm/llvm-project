@@ -1617,43 +1617,49 @@ __m256i test_mm256_maskz_subs_epu16(__mmask16 __U, __m256i __A, __m256i __B) {
 
 __m128i test_mm_mask2_permutex2var_epi16(__m128i __A, __m128i __I, __mmask8 __U,            __m128i __B) {
   // CHECK-LABEL: @test_mm_mask2_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.mask.vpermi2var.hi.128
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.128
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_mask2_permutex2var_epi16(__A,__I,__U,__B); 
 }
 __m256i test_mm256_mask2_permutex2var_epi16(__m256i __A, __m256i __I,         __mmask16 __U, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask2_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.mask.vpermi2var.hi.256
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.256
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_mask2_permutex2var_epi16(__A,__I,__U,__B); 
 }
 __m128i test_mm_permutex2var_epi16(__m128i __A, __m128i __I, __m128i __B) {
   // CHECK-LABEL: @test_mm_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.mask.vpermt2var.hi.128
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.128
   return _mm_permutex2var_epi16(__A,__I,__B); 
 }
 __m128i test_mm_mask_permutex2var_epi16(__m128i __A, __mmask8 __U, __m128i __I,           __m128i __B) {
   // CHECK-LABEL: @test_mm_mask_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.mask.vpermt2var.hi.128
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.128
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_mask_permutex2var_epi16(__A,__U,__I,__B); 
 }
 __m128i test_mm_maskz_permutex2var_epi16(__mmask8 __U, __m128i __A, __m128i __I,            __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.maskz.vpermt2var.hi.128
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.128
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_maskz_permutex2var_epi16(__U,__A,__I,__B); 
 }
 
 __m256i test_mm256_permutex2var_epi16(__m256i __A, __m256i __I, __m256i __B) {
   // CHECK-LABEL: @test_mm256_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.mask.vpermt2var.hi.256
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.256
   return _mm256_permutex2var_epi16(__A,__I,__B); 
 }
 __m256i test_mm256_mask_permutex2var_epi16(__m256i __A, __mmask16 __U,        __m256i __I, __m256i __B) {
   // CHECK-LABEL: @test_mm256_mask_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.mask.vpermt2var.hi.256
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.256
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_mask_permutex2var_epi16(__A,__U,__I,__B); 
 }
 __m256i test_mm256_maskz_permutex2var_epi16(__mmask16 __U, __m256i __A,         __m256i __I, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.maskz.vpermt2var.hi.256
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.256
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_permutex2var_epi16(__U,__A,__I,__B); 
 }
 __m128i test_mm_mask_maddubs_epi16(__m128i __W, __mmask8 __U, __m128i __X, __m128i __Y) {
