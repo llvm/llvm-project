@@ -262,25 +262,6 @@ public:
   }
 };
 
-/// An Instruction Converter which completely deletes an instruction.
-/// For example, IMPLICIT_DEF instructions can be deleted when converting from
-/// GPR to mask.
-class InstrDeleter : public InstrConverterBase {
-public:
-  InstrDeleter(unsigned SrcOpcode) : InstrConverterBase(SrcOpcode) {}
-
-  bool convertInstr(MachineInstr *MI, const TargetInstrInfo *TII,
-                    MachineRegisterInfo *MRI) const override {
-    assert(isLegal(MI, TII) && "Cannot convert instruction");
-    return true;
-  }
-
-  double getExtraCost(const MachineInstr *MI,
-                      MachineRegisterInfo *MRI) const override {
-    return 0;
-  }
-};
-
 // Key type to be used by the Instruction Converters map.
 // A converter is identified by <destination domain, source opcode>
 typedef std::pair<int, unsigned> InstrConverterBaseKeyTy;
@@ -587,7 +568,7 @@ void X86DomainReassignment::initConverters() {
       new InstrIgnore(TargetOpcode::PHI);
 
   Converters[{MaskDomain, TargetOpcode::IMPLICIT_DEF}] =
-      new InstrDeleter(TargetOpcode::IMPLICIT_DEF);
+      new InstrIgnore(TargetOpcode::IMPLICIT_DEF);
 
   Converters[{MaskDomain, TargetOpcode::INSERT_SUBREG}] =
       new InstrReplaceWithCopy(TargetOpcode::INSERT_SUBREG, 2);
