@@ -334,6 +334,7 @@ multiclass AVX512_maskable_3src<bits<8> O, Format F, X86VectorVTInfo _,
 // Similar to AVX512_maskable_3src but in this case the input VT for the tied
 // operand differs from the output VT. This requires a bitconvert on
 // the preserved vector going into the vselect.
+// NOTE: The unmasked pattern is disabled.
 multiclass AVX512_maskable_3src_cast<bits<8> O, Format F, X86VectorVTInfo OutVT,
                                      X86VectorVTInfo InVT,
                                      dag Outs, dag NonTiedIns, string OpcodeStr,
@@ -343,7 +344,7 @@ multiclass AVX512_maskable_3src_cast<bits<8> O, Format F, X86VectorVTInfo OutVT,
                           !con((ins InVT.RC:$src1), NonTiedIns),
                           !con((ins InVT.RC:$src1, InVT.KRCWM:$mask), NonTiedIns),
                           !con((ins InVT.RC:$src1, InVT.KRCWM:$mask), NonTiedIns),
-                          OpcodeStr, AttSrcAsm, IntelSrcAsm, RHS,
+                          OpcodeStr, AttSrcAsm, IntelSrcAsm, (null_frag),
                           (vselect InVT.KRCWM:$mask, RHS,
                            (bitconvert InVT.RC:$src1)),
                            vselect, "", IsCommutable>;
@@ -1719,17 +1720,19 @@ defm VPBROADCASTMB2Q : avx512_mask_broadcast<0x2A, "vpbroadcastmb2q",
 multiclass avx512_perm_i<bits<8> opc, string OpcodeStr,
                          X86FoldableSchedWrite sched,
                          X86VectorVTInfo _, X86VectorVTInfo IdxVT> {
-let Constraints = "$src1 = $dst", ExeDomain = _.ExeDomain in {
+let Constraints = "$src1 = $dst", ExeDomain = _.ExeDomain,
+    hasSideEffects = 0 in {
   defm rr: AVX512_maskable_3src_cast<opc, MRMSrcReg, _, IdxVT, (outs _.RC:$dst),
           (ins _.RC:$src2, _.RC:$src3),
           OpcodeStr, "$src3, $src2", "$src2, $src3",
-          (_.VT (X86VPermi2X IdxVT.RC:$src1, _.RC:$src2, _.RC:$src3)), 1>,
+          (_.VT (X86VPermt2 _.RC:$src2, IdxVT.RC:$src1, _.RC:$src3)), 1>,
           EVEX_4V, AVX5128IBase, Sched<[sched]>;
 
+  let mayLoad = 1 in
   defm rm: AVX512_maskable_3src_cast<opc, MRMSrcMem, _, IdxVT, (outs _.RC:$dst),
             (ins _.RC:$src2, _.MemOp:$src3),
             OpcodeStr, "$src3, $src2", "$src2, $src3",
-            (_.VT (X86VPermi2X IdxVT.RC:$src1, _.RC:$src2,
+            (_.VT (X86VPermt2 _.RC:$src2, IdxVT.RC:$src1,
                    (_.VT (bitconvert (_.LdFrag addr:$src3))))), 1>,
             EVEX_4V, AVX5128IBase, Sched<[sched.Folded, ReadAfterLd]>;
   }
@@ -1738,13 +1741,14 @@ let Constraints = "$src1 = $dst", ExeDomain = _.ExeDomain in {
 multiclass avx512_perm_i_mb<bits<8> opc, string OpcodeStr,
                             X86FoldableSchedWrite sched,
                             X86VectorVTInfo _, X86VectorVTInfo IdxVT> {
-  let Constraints = "$src1 = $dst", ExeDomain = _.ExeDomain in
+  let Constraints = "$src1 = $dst", ExeDomain = _.ExeDomain,
+      hasSideEffects = 0, mayLoad = 1 in
   defm rmb: AVX512_maskable_3src_cast<opc, MRMSrcMem, _, IdxVT, (outs _.RC:$dst),
               (ins _.RC:$src2, _.ScalarMemOp:$src3),
               OpcodeStr,   !strconcat("${src3}", _.BroadcastStr,", $src2"),
               !strconcat("$src2, ${src3}", _.BroadcastStr ),
-              (_.VT (X86VPermi2X IdxVT.RC:$src1,
-               _.RC:$src2,(_.VT (X86VBroadcast (_.ScalarLdFrag addr:$src3))))), 1>,
+              (_.VT (X86VPermt2 _.RC:$src2,
+               IdxVT.RC:$src1,(_.VT (X86VBroadcast (_.ScalarLdFrag addr:$src3))))), 1>,
               AVX5128IBase, EVEX_4V, EVEX_B,
               Sched<[sched.Folded, ReadAfterLd]>;
 }
@@ -1806,21 +1810,22 @@ multiclass avx512_perm_i_lowering<string InstrStr, X86VectorVTInfo _,
                                   X86VectorVTInfo IdxVT,
                                   X86VectorVTInfo CastVT> {
   def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                             (X86VPermi2X (IdxVT.VT (bitconvert (CastVT.VT _.RC:$src1))),
-                                          (_.VT _.RC:$src2), _.RC:$src3),
+                             (X86VPermt2 (_.VT _.RC:$src2),
+                                         (IdxVT.VT (bitconvert (CastVT.VT _.RC:$src1))), _.RC:$src3),
                              (_.VT (bitconvert (CastVT.VT _.RC:$src1))))),
             (!cast<Instruction>(InstrStr#"rrk") _.RC:$src1, _.KRCWM:$mask,
                                                 _.RC:$src2, _.RC:$src3)>;
   def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                             (X86VPermi2X (IdxVT.VT (bitconvert  (CastVT.VT _.RC:$src1))),
-                                          _.RC:$src2, (_.LdFrag addr:$src3)),
+                             (X86VPermt2 _.RC:$src2,
+                                         (IdxVT.VT (bitconvert  (CastVT.VT _.RC:$src1))),
+                                         (_.LdFrag addr:$src3)),
                              (_.VT (bitconvert  (CastVT.VT _.RC:$src1))))),
             (!cast<Instruction>(InstrStr#"rmk") _.RC:$src1, _.KRCWM:$mask,
                                                 _.RC:$src2, addr:$src3)>;
   def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                             (X86VPermi2X (IdxVT.VT (bitconvert  (CastVT.VT _.RC:$src1))),
-                                          _.RC:$src2,
-                                          (X86VBroadcast (_.ScalarLdFrag addr:$src3))),
+                             (X86VPermt2 _.RC:$src2,
+                                         (IdxVT.VT (bitconvert  (CastVT.VT _.RC:$src1))),
+                                         (X86VBroadcast (_.ScalarLdFrag addr:$src3))),
                              (_.VT (bitconvert  (CastVT.VT _.RC:$src1))))),
             (!cast<Instruction>(InstrStr#"rmbk") _.RC:$src1, _.KRCWM:$mask,
                                                  _.RC:$src2, addr:$src3)>;

@@ -5182,7 +5182,7 @@ static bool commuteVPTERNLOG(MachineInstr &MI, unsigned SrcOpIdx1,
   return true;
 }
 
-// Returns true if this is a VPERMI2 or VPERMT2 instrution that can be
+// Returns true if this is a VPERMI2 or VPERMT2 instruction that can be
 // commuted.
 static bool isCommutableVPERMV3Instruction(unsigned Opcode) {
 #define VPERM_CASES(Suffix) \
@@ -5223,7 +5223,7 @@ static bool isCommutableVPERMV3Instruction(unsigned Opcode) {
 }
 
 // Returns commuted opcode for VPERMI2 and VPERMT2 instructions by switching
-// from the I opcod to the T opcode and vice versa.
+// from the I opcode to the T opcode and vice versa.
 static unsigned getCommutedVPERMV3Opcode(unsigned Opcode) {
 #define VPERM_CASES(Orig, New) \
   case X86::Orig##128rr:    return X86::New##128rr;   \
