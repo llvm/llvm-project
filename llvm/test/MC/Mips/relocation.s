@@ -318,7 +318,7 @@ foo_mm:
                                            // ENCLE: addiu $2, $2, %lo(bar) # encoding: [0x42'A',0x30'A',0x00,0x00]
                                            // FIXUP: # fixup A - offset: 0, value: %lo(bar), kind: fixup_MICROMIPS_LO16
 
-// DATA-NEXT:  0010: 30430000 30420004 30430001 30420034
+// DATA-NEXT:  0010: 30430000 30420004 30430001 3042003C
         addiu $2, $3, %got(baz)            // RELOC: R_MICROMIPS_GOT16 .text
                                            // ENCBE: addiu $2, $3, %got(baz) # encoding: [0x30,0x43,A,A]
                                            // The placement of the 'A' annotations is incorrect. They use 32-bit little endian instead of 2x 16-bit little endian.
@@ -377,11 +377,21 @@ foo_mm:
                                            // ENCLE: addiu $2, $2, %lo(bar) # encoding: [0x42'A',0x30'A',0x00,0x00]
                                            // FIXUP: # fixup A - offset: 0, value: %lo(bar), kind: fixup_MICROMIPS_LO16
 
-// DATA-NEXT:  0040: 30430000 00000000 00000000 00000000
+// DATA-NEXT:  0040: 30430000 41A50000 41A50000 00000000
         addiu $2, $3, %gottprel(foo)       // RELOC: R_MICROMIPS_TLS_GOTTPREL foo
                                            // ENCBE: addiu $2, $3, %gottprel(foo) # encoding: [0x30,0x43,A,A]
                                            // ENCLE: addiu $2, $3, %gottprel(foo) # encoding: [0x43'A',0x30'A',0x00,0x00]
                                            // FIXUP: # fixup A - offset: 0, value: %gottprel(foo), kind: fixup_MICROMIPS_GOTTPREL
+
+        lui $5, %higher(foo)               // RELOC: R_MICROMIPS_HIGHER foo
+                                           // ENCBE: lui $5, %higher(foo) # encoding: [0x41,0xa5,A,A]
+                                           // ENCLE: lui $5, %higher(foo) # encoding: [0xa5'A',0x41'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %higher(foo), kind: fixup_MICROMIPS_HIGHER
+
+        lui $5, %highest(foo)              // RELOC: R_MICROMIPS_HIGHEST foo
+                                           // ENCBE: lui $5, %highest(foo) # encoding: [0x41,0xa5,A,A]
+                                           // ENCLE: lui $5, %highest(foo) # encoding: [0xa5'A',0x41'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %highest(foo), kind: fixup_MICROMIPS_HIGHEST
 
         .space 65520, 0
 long_mm:

@@ -1682,5 +1682,7 @@ def BWWriteResGroup202 : SchedWriteRes<[BWPort0,BWPort1,BWPort4,BWPort5,BWPort6,
 }
 def: InstRW<[BWWriteResGroup202], (instrs FSTENVm)>;
 
+def: InstRW<[WriteZero], (instrs CLC)>;
+
 } // SchedModel
 

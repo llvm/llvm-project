@@ -385,7 +385,7 @@ ProcessKDP::DoAttachToProcessWithID(lldb::pid_t attach_pid,
                                     const ProcessAttachInfo &attach_info) {
   Status error;
   error.SetErrorString(
-      "attach to process by ID is not suppported in kdp remote debugging");
+      "attach to process by ID is not supported in kdp remote debugging");
   return error;
 }
 
@@ -394,7 +394,7 @@ ProcessKDP::DoAttachToProcessWithName(const char *process_name,
                                       const ProcessAttachInfo &attach_info) {
   Status error;
   error.SetErrorString(
-      "attach to process by name is not suppported in kdp remote debugging");
+      "attach to process by name is not supported in kdp remote debugging");
   return error;
 }
 
@@ -544,7 +544,7 @@ Status ProcessKDP::DoHalt(bool &caused_stop) {
 
   if (m_comm.IsRunning()) {
     if (m_destroy_in_process) {
-      // If we are attemping to destroy, we need to not return an error to Halt
+      // If we are attempting to destroy, we need to not return an error to Halt
       // or DoDestroy won't get called. We are also currently running, so send
       // a process stopped event
       SetPrivateState(eStateStopped);
@@ -646,14 +646,14 @@ size_t ProcessKDP::DoWriteMemory(addr_t addr, const void *buf, size_t size,
 lldb::addr_t ProcessKDP::DoAllocateMemory(size_t size, uint32_t permissions,
                                           Status &error) {
   error.SetErrorString(
-      "memory allocation not suppported in kdp remote debugging");
+      "memory allocation not supported in kdp remote debugging");
   return LLDB_INVALID_ADDRESS;
 }
 
 Status ProcessKDP::DoDeallocateMemory(lldb::addr_t addr) {
   Status error;
   error.SetErrorString(
-      "memory deallocation not suppported in kdp remote debugging");
+      "memory deallocation not supported in kdp remote debugging");
   return error;
 }
 
@@ -700,14 +700,14 @@ Status ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
 Status ProcessKDP::EnableWatchpoint(Watchpoint *wp, bool notify) {
   Status error;
   error.SetErrorString(
-      "watchpoints are not suppported in kdp remote debugging");
+      "watchpoints are not supported in kdp remote debugging");
   return error;
 }
 
 Status ProcessKDP::DisableWatchpoint(Watchpoint *wp, bool notify) {
   Status error;
   error.SetErrorString(
-      "watchpoints are not suppported in kdp remote debugging");
+      "watchpoints are not supported in kdp remote debugging");
   return error;
 }
 
@@ -716,7 +716,7 @@ void ProcessKDP::Clear() { m_thread_list.Clear(); }
 Status ProcessKDP::DoSignal(int signo) {
   Status error;
   error.SetErrorString(
-      "sending signals is not suppported in kdp remote debugging");
+      "sending signals is not supported in kdp remote debugging");
   return error;
 }
 

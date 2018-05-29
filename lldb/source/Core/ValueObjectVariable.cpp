@@ -201,7 +201,7 @@ bool ValueObjectVariable::UpdateValue() {
         // are always load addresses. Host addresses are used to store freeze
         // dried variables. If this type is a struct, the entire struct
         // contents will be copied into the heap of the
-        // LLDB process, but we do not currrently follow any pointers.
+        // LLDB process, but we do not currently follow any pointers.
         if (is_pointer_or_ref)
           SetAddressTypeOfChildren(eAddressTypeLoad);
         else

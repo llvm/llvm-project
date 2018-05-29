@@ -154,6 +154,8 @@ btcq $7, (%rax)
 btrq $7, (%rax)
 btsq $7, (%rax)
 
+clc
+
 decb %dil
 decb (%rax)
 decw %di
@@ -745,6 +747,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      4     2.00    *      *            btcq	$7, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            btrq	$7, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            btsq	$7, (%rax)
+# CHECK-NEXT:  1      1     0.50                  *     clc
 # CHECK-NEXT:  1      1     0.50                        decb	%dil
 # CHECK-NEXT:  2      5     2.00    *      *            decb	(%rax)
 # CHECK-NEXT:  1      1     0.50                        decw	%di
@@ -1159,7 +1162,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT: 400.00  -      -      -      -     391.50 233.50 470.00
+# CHECK-NEXT: 400.00  -      -      -      -     392.00 234.00 470.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -1301,6 +1304,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btcq	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btrq	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btsq	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     clc
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     decb	%dil
 # CHECK-NEXT:  -      -      -      -      -     1.00   1.00   2.00   decb	(%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     decw	%di

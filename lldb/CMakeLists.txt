@@ -37,6 +37,11 @@ if(APPLE)
   add_definitions(-DLLDB_USE_OS_LOG)
 endif()
 
+if(LLDB_BUILD_FRAMEWORK)
+  set(LLDB_FRAMEWORK_DIR
+    ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR})
+endif()
+
 # add_subdirectory(include)
 add_subdirectory(docs)
 if (NOT LLDB_DISABLE_PYTHON)
@@ -47,8 +52,7 @@ if (NOT LLDB_DISABLE_PYTHON)
   set(LLDB_PYTHON_TARGET_DIR ${LLDB_BINARY_DIR}/scripts)
   set(LLDB_WRAP_PYTHON ${LLDB_BINARY_DIR}/scripts/LLDBWrapPython.cpp)
   if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_PYTHON_TARGET_DIR
-      ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR})
+    set(LLDB_PYTHON_TARGET_DIR ${LLDB_FRAMEWORK_DIR})
     set(LLDB_WRAP_PYTHON ${LLDB_PYTHON_TARGET_DIR}/LLDBWrapPython.cpp)
   else()
     # Don't set -m when building the framework.

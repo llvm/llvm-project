@@ -963,22 +963,25 @@ __m512i test_mm512_maskz_subs_epu16(__mmask32 __U, __m512i __A, __m512i __B) {
 }
 __m512i test_mm512_mask2_permutex2var_epi16(__m512i __A, __m512i __I, __mmask32 __U, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mask2_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.mask.vpermi2var.hi.512
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.512
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
   return _mm512_mask2_permutex2var_epi16(__A,__I,__U,__B); 
 }
 __m512i test_mm512_permutex2var_epi16(__m512i __A, __m512i __I, __m512i __B) {
   // CHECK-LABEL: @test_mm512_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.mask.vpermt2var.hi.512
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.512
   return _mm512_permutex2var_epi16(__A,__I,__B); 
 }
 __m512i test_mm512_mask_permutex2var_epi16(__m512i __A, __mmask32 __U, __m512i __I, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mask_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.mask.vpermt2var.hi.512
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.512
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
   return _mm512_mask_permutex2var_epi16(__A,__U,__I,__B); 
 }
 __m512i test_mm512_maskz_permutex2var_epi16(__mmask32 __U, __m512i __A, __m512i __I, __m512i __B) {
   // CHECK-LABEL: @test_mm512_maskz_permutex2var_epi16
-  // CHECK: @llvm.x86.avx512.maskz.vpermt2var.hi.512
+  // CHECK: @llvm.x86.avx512.vpermi2var.hi.512
+  // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
   return _mm512_maskz_permutex2var_epi16(__U,__A,__I,__B); 
 }
 

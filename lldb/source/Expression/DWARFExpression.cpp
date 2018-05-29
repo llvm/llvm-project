@@ -2697,7 +2697,7 @@ bool DWARFExpression::Evaluate(
           if (error_ptr) {
             error_ptr->SetErrorStringWithFormat(
                 "unable to extract DW_OP_bit_piece(bit_size = %" PRIu64
-                ", bit_offset = %" PRIu64 ") from an addresss value.",
+                ", bit_offset = %" PRIu64 ") from an address value.",
                 piece_bit_size, piece_bit_offset);
           }
           return false;
