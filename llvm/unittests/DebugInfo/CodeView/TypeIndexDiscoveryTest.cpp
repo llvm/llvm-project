@@ -555,7 +555,7 @@ TEST_F(TypeIndexIteratorTest, DataSym) {
 TEST_F(TypeIndexIteratorTest, RegisterSym) {
   RegisterSym Reg(SymbolRecordKind::RegisterSym);
   Reg.Index = TypeIndex::UInt32();
-  Reg.Register = RegisterId::EAX;
+  Reg.Register = RegisterId::CVRegEAX;
   Reg.Name = "Target";
   writeSymbolRecords(Reg);
   checkTypeReferences(0, Reg.Index);
