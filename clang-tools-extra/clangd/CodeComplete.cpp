@@ -359,13 +359,13 @@ struct SpecifiedScope {
 
 // Get all scopes that will be queried in indexes.
 std::vector<std::string> getQueryScopes(CodeCompletionContext &CCContext,
-                                        const SourceManager& SM) {
-  auto GetAllAccessibleScopes = [](CodeCompletionContext& CCContext) {
+                                        const SourceManager &SM) {
+  auto GetAllAccessibleScopes = [](CodeCompletionContext &CCContext) {
     SpecifiedScope Info;
-    for (auto* Context : CCContext.getVisitedContexts()) {
+    for (auto *Context : CCContext.getVisitedContexts()) {
       if (isa<TranslationUnitDecl>(Context))
         Info.AccessibleScopes.push_back(""); // global namespace
-      else if (const auto*NS = dyn_cast<NamespaceDecl>(Context))
+      else if (const auto *NS = dyn_cast<NamespaceDecl>(Context))
         Info.AccessibleScopes.push_back(NS->getQualifiedNameAsString() + "::");
     }
     return Info;
@@ -397,8 +397,9 @@ std::vector<std::string> getQueryScopes(CodeCompletionContext &CCContext,
   Info.AccessibleScopes.push_back(""); // global namespace
 
   Info.UnresolvedQualifier =
-      Lexer::getSourceText(CharSourceRange::getCharRange((*SS)->getRange()),
-                           SM, clang::LangOptions()).ltrim("::");
+      Lexer::getSourceText(CharSourceRange::getCharRange((*SS)->getRange()), SM,
+                           clang::LangOptions())
+          .ltrim("::");
   // Sema excludes the trailing "::".
   if (!Info.UnresolvedQualifier->empty())
     *Info.UnresolvedQualifier += "::";
@@ -590,7 +591,7 @@ public:
       SigHelp.signatures.push_back(ProcessOverloadCandidate(
           Candidate, *CCS,
           getParameterDocComment(S.getASTContext(), Candidate, CurrentArg,
-                                 /*CommentsFromHeader=*/false)));
+                                 /*CommentsFromHeaders=*/false)));
     }
   }
 
@@ -696,7 +697,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
                                           &DummyDiagsConsumer, false),
       Input.VFS);
   if (!CI) {
-    log("Couldn't create CompilerInvocation");;
+    log("Couldn't create CompilerInvocation");
     return false;
   }
   auto &FrontendOpts = CI->getFrontendOpts();
@@ -1013,7 +1014,7 @@ private:
     LLVM_DEBUG(llvm::dbgs()
                << "CodeComplete: " << C.Name << (IndexResult ? " (index)" : "")
                << (SemaResult ? " (sema)" : "") << " = " << Scores.finalScore
-               << "\n" 
+               << "\n"
                << Quality << Relevance << "\n");
 
     NSema += bool(SemaResult);
@@ -1035,7 +1036,8 @@ private:
                                    /*CommentsFromHeader=*/false);
       }
     }
-    return Candidate.build(FileName, Scores, Opts, SemaCCS, Includes.get(), DocComment);
+    return Candidate.build(FileName, Scores, Opts, SemaCCS, Includes.get(),
+                           DocComment);
   }
 };
 
