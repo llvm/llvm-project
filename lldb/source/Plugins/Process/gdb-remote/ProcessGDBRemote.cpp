@@ -5002,7 +5002,7 @@ ParseStructuredDataPacket(llvm::StringRef packet) {
   if (!packet.consume_front(s_async_json_packet_prefix)) {
     if (log) {
       log->Printf(
-          "GDBRemoteCommmunicationClientBase::%s() received $J packet "
+          "GDBRemoteCommunicationClientBase::%s() received $J packet "
           "but was not a StructuredData packet: packet starts with "
           "%s",
           __FUNCTION__,
