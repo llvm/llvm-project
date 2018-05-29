@@ -205,8 +205,6 @@ bool DWARFUnit::ExtractDIEsIfNeeded() {
 // Final checks for both ExtractUnitDIEIfNeeded() and ExtractDIEsIfNeeded().
 //--------------------------------------------------------------------------
 void DWARFUnit::ExtractDIEsEndCheck(lldb::offset_t offset) const {
-  lldb::offset_t next_cu_offset = GetNextCompileUnitOffset();
-
   // Give a little bit of info if we encounter corrupt DWARF (our offset should
   // always terminate at or before the start of the next compilation unit
   // header).
