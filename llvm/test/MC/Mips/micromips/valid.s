@@ -24,8 +24,8 @@ sb16 $3, 4($16)             # CHECK: sb16 $3, 4($16)    # encoding: [0x89,0x84]
 sh16 $4, 8($17)             # CHECK: sh16 $4, 8($17)    # encoding: [0xaa,0x14]
 sw16 $4, 4($17)             # CHECK: sw16 $4, 4($17)    # encoding: [0xea,0x11]
 sw16 $zero, 4($17)          # CHECK: sw16 $zero, 4($17) # encoding: [0xe8,0x11]
-mfhi $9                     # CHECK: mfhi $9            # encoding: [0x46,0x09]
-mflo $9                     # CHECK: mflo $9            # encoding: [0x46,0x49]
+mfhi16 $9                   # CHECK: mfhi16 $9          # encoding: [0x46,0x09]
+mflo16 $9                   # CHECK: mflo16 $9          # encoding: [0x46,0x49]
 move $25, $1                # CHECK: move $25, $1       # encoding: [0x0f,0x21]
 jrc $9                      # CHECK: jrc $9             # encoding: [0x45,0xa9]
 jalr $9                     # CHECK: jalr $9            # encoding: [0x45,0xc9]
@@ -133,10 +133,10 @@ movt $9, $6, $fcc0          # CHECK: movt $9, $6, $fcc0     # encoding: [0x55,0x
 movf $9, $6, $fcc0          # CHECK: movf $9, $6, $fcc0     # encoding: [0x55,0x26,0x01,0x7b]
 # FIXME: MTHI should also have its 16 bit implementation selected in micromips
 mthi   $6                   # CHECK: mthi   $6              # encoding: [0x00,0x06,0x2d,0x7c]
-mfhi   $6                   # CHECK: mfhi   $6              # encoding: [0x46,0x06]
+mfhi   $6                   # CHECK: mfhi   $6              # encoding: [0x00,0x06,0x0d,0x7c]
 # FIXME: MTLO should also have its 16 bit implementation selected in micromips
 mtlo   $6                   # CHECK: mtlo   $6              # encoding: [0x00,0x06,0x3d,0x7c]
-mflo   $6                   # CHECK: mflo   $6              # encoding: [0x46,0x46]
+mflo   $6                   # CHECK: mflo   $6              # encoding: [0x00,0x06,0x1d,0x7c]
 mfhc1 $4, $f0               # CHECK: mfhc1 $4, $f0          # encoding: [0x54,0x80,0x30,0x3b]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} MFHC1_D32_MM
 mthc1 $4, $f0               # CHECK: mthc1 $4, $f0          # encoding: [0x54,0x80,0x38,0x3b]

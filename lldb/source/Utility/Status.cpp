@@ -167,7 +167,7 @@ ErrorType Status::GetType() const { return m_type; }
 bool Status::Fail() const { return m_code != 0; }
 
 //----------------------------------------------------------------------
-// Set accesssor for the error value to "err" and the type to
+// Set accessor for the error value to "err" and the type to
 // "eErrorTypeMachKernel"
 //----------------------------------------------------------------------
 void Status::SetMachError(uint32_t err) {
@@ -201,7 +201,7 @@ int Status::SetExpressionErrorWithFormat(lldb::ExpressionResults result,
 }
 
 //----------------------------------------------------------------------
-// Set accesssor for the error value and type.
+// Set accessor for the error value and type.
 //----------------------------------------------------------------------
 void Status::SetError(ValueType err, ErrorType type) {
   m_code = err;

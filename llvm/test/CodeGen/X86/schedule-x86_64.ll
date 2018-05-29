@@ -3465,7 +3465,7 @@ define void @test_clc_cld_cmc() optsize {
 ; GENERIC-LABEL: test_clc_cld_cmc:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    clc # sched: [1:0.33]
+; GENERIC-NEXT:    clc # sched: [1:?]
 ; GENERIC-NEXT:    cld # sched: [1:0.33]
 ; GENERIC-NEXT:    cmc # sched: [1:0.33]
 ; GENERIC-NEXT:    #NO_APP
@@ -3492,7 +3492,7 @@ define void @test_clc_cld_cmc() optsize {
 ; SANDY-LABEL: test_clc_cld_cmc:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    clc # sched: [1:0.33]
+; SANDY-NEXT:    clc # sched: [1:?]
 ; SANDY-NEXT:    cld # sched: [1:0.33]
 ; SANDY-NEXT:    cmc # sched: [1:0.33]
 ; SANDY-NEXT:    #NO_APP
@@ -3501,7 +3501,7 @@ define void @test_clc_cld_cmc() optsize {
 ; HASWELL-LABEL: test_clc_cld_cmc:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    clc # sched: [1:0.25]
+; HASWELL-NEXT:    clc # sched: [1:?]
 ; HASWELL-NEXT:    cld # sched: [3:1.00]
 ; HASWELL-NEXT:    cmc # sched: [1:0.25]
 ; HASWELL-NEXT:    #NO_APP
@@ -3510,7 +3510,7 @@ define void @test_clc_cld_cmc() optsize {
 ; BROADWELL-LABEL: test_clc_cld_cmc:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    clc # sched: [1:0.25]
+; BROADWELL-NEXT:    clc # sched: [1:?]
 ; BROADWELL-NEXT:    cld # sched: [3:1.00]
 ; BROADWELL-NEXT:    cmc # sched: [1:0.25]
 ; BROADWELL-NEXT:    #NO_APP
@@ -3519,7 +3519,7 @@ define void @test_clc_cld_cmc() optsize {
 ; SKYLAKE-LABEL: test_clc_cld_cmc:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    clc # sched: [1:0.25]
+; SKYLAKE-NEXT:    clc # sched: [1:?]
 ; SKYLAKE-NEXT:    cld # sched: [3:1.00]
 ; SKYLAKE-NEXT:    cmc # sched: [1:0.25]
 ; SKYLAKE-NEXT:    #NO_APP
@@ -3528,7 +3528,7 @@ define void @test_clc_cld_cmc() optsize {
 ; SKX-LABEL: test_clc_cld_cmc:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    clc # sched: [1:0.25]
+; SKX-NEXT:    clc # sched: [1:?]
 ; SKX-NEXT:    cld # sched: [3:1.00]
 ; SKX-NEXT:    cmc # sched: [1:0.25]
 ; SKX-NEXT:    #NO_APP

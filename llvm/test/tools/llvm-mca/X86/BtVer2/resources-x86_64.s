@@ -154,6 +154,8 @@ btcq $7, (%rax)
 btrq $7, (%rax)
 btsq $7, (%rax)
 
+clc
+
 decb %dil
 decb (%rax)
 decw %di
@@ -745,6 +747,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      4     1.00    *      *            btcq	$7, (%rax)
 # CHECK-NEXT:  2      4     1.00    *      *            btrq	$7, (%rax)
 # CHECK-NEXT:  2      4     1.00    *      *            btsq	$7, (%rax)
+# CHECK-NEXT:  1      1     0.50                  *     clc
 # CHECK-NEXT:  1      1     0.50                        decb	%dil
 # CHECK-NEXT:  2      5     1.00    *      *            decb	(%rax)
 # CHECK-NEXT:  1      1     0.50                        decw	%di
@@ -1165,7 +1168,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 436.50 486.50 380.00  -      -      -      -     263.00 64.00  195.00  -      -      -      -
+# CHECK-NEXT: 437.00 487.00 380.00  -      -      -      -     263.00 64.00  195.00  -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -1307,6 +1310,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -     1.00    -      -      -      -     btcq	$7, (%rax)
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -     1.00    -      -      -      -     btrq	$7, (%rax)
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -     1.00    -      -      -      -     btsq	$7, (%rax)
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     clc
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     decb	%dil
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -     1.00    -      -      -      -     decb	(%rax)
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     decw	%di

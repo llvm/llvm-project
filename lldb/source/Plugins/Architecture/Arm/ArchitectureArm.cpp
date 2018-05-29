@@ -94,7 +94,7 @@ void ArchitectureArm::OverrideStopInfo(Thread &thread) {
 // such cases, we really don't want to stop at this location.
 // I will check with the lldb-dev list first before I enable this.
 #if 0
-    // ARM mode: check for condition on intsruction
+    // ARM mode: check for condition on instruction
     const addr_t pc = reg_ctx_sp->GetPC();
     Status error;
     // If we fail to read the opcode we will get UINT64_MAX as the result in
