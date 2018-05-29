@@ -1486,7 +1486,7 @@ bool MachProcess::Detach() {
   // Resume our task
   m_task.Resume();
 
-  // NULL our task out as we have already retored all exception ports
+  // NULL our task out as we have already restored all exception ports
   m_task.Clear();
 
   // Clear out any notion of the process we once were
@@ -1797,7 +1797,7 @@ bool MachProcess::DisableBreakpoint(nub_addr_t addr, bool remove) {
           break_op_size) {
         bool verify = false;
         if (bp->IsEnabled()) {
-          // Make sure we have the a breakpoint opcode exists at this address
+          // Make sure a breakpoint opcode exists at this address
           if (memcmp(curr_break_op, break_op, break_op_size) == 0) {
             break_op_found = true;
             // We found a valid breakpoint opcode at this address, now restore

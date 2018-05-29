@@ -772,8 +772,14 @@ static inline bool isSVECpyImm(int64_t Imm) {
     return uint8_t(Imm) == Imm || int8_t(Imm) == Imm;
   else
     return int8_t(Imm) == Imm || int16_t(Imm & ~0xff) == Imm;
+}
 
-  llvm_unreachable("Unsupported element width");
+/// Returns true if Imm is valid for ADD/SUB.
+template <typename T>
+static inline bool isSVEAddSubImm(int64_t Imm) {
+  bool IsInt8t =
+      std::is_same<int8_t, typename std::make_signed<T>::type>::value;
+  return uint8_t(Imm) == Imm || (!IsInt8t && uint16_t(Imm & ~0xff) == Imm);
 }
 
 inline static bool isAnyMOVZMovAlias(uint64_t Value, int RegWidth) {

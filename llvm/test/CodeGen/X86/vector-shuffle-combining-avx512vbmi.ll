@@ -33,8 +33,8 @@ define <16 x i8> @combine_vpermt2var_16i8_identity(<16 x i8> %x0, <16 x i8> %x1)
 define <16 x i8> @combine_vpermt2var_16i8_identity_mask(<16 x i8> %x0, <16 x i8> %x1, i16 %m) {
 ; X32-LABEL: combine_vpermt2var_16i8_identity_mask:
 ; X32:       # %bb.0:
-; X32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; X32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X32-NEXT:    vpermi2b %xmm1, %xmm0, %xmm2 {%k1} {z}
 ; X32-NEXT:    vmovdqa {{.*#+}} xmm0 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
 ; X32-NEXT:    vpermi2b %xmm2, %xmm2, %xmm0 {%k1} {z}
@@ -42,8 +42,8 @@ define <16 x i8> @combine_vpermt2var_16i8_identity_mask(<16 x i8> %x0, <16 x i8>
 ;
 ; X64-LABEL: combine_vpermt2var_16i8_identity_mask:
 ; X64:       # %bb.0:
-; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpermi2b %xmm1, %xmm0, %xmm2 {%k1} {z}
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm0 = [15,30,13,28,11,26,9,24,7,22,5,20,3,18,1,16]
 ; X64-NEXT:    vpermi2b %xmm2, %xmm2, %xmm0 {%k1} {z}

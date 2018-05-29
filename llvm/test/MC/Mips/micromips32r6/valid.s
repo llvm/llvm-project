@@ -117,8 +117,10 @@
                            # CHECK-NEXT:                # <MCInst #{{.*}} PREF_MMR6
   sb16 $3, 4($16)          # CHECK: sb16 $3, 4($16)     # encoding: [0x89,0x84]
   seb $3, $4               # CHECK: seb $3, $4          # encoding: [0x00,0x64,0x2b,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{.*}} SEB_MM
   seb $3                   # CHECK: seb $3, $3          # encoding: [0x00,0x63,0x2b,0x3c]
   seh $3, $4               # CHECK: seh $3, $4          # encoding: [0x00,0x64,0x3b,0x3c]
+                           # CHECK-NEXT:                # <MCInst #{{.*}} SEH_MM
   seh $3                   # CHECK: seh $3, $3          # encoding: [0x00,0x63,0x3b,0x3c]
   seleqz $2,$3,$4          # CHECK: seleqz $2, $3, $4   # encoding: [0x00,0x83,0x11,0x40]
   selnez $2,$3,$4          # CHECK: selnez $2, $3, $4   # encoding: [0x00,0x83,0x11,0x80]
@@ -363,9 +365,11 @@
   bc2eqzc $31, 8           # CHECK: bc2eqzc $31, 8         # encoding: [0x41,0x5f,0x00,0x04]
   bc2nezc $31, 8           # CHECK: bc2nezc $31, 8         # encoding: [0x41,0x7f,0x00,0x04]
   ins $9, $6, 3, 7         # CHECK: ins $9, $6, 3, 7       # encoding: [0x01,0x26,0x48,0xcc]
+                           # CHECK-NEXT:                   # <MCInst #{{.*}} INS_MMR6
   jalrc $4, $5             # CHECK: jalrc $4, $5           # encoding: [0x00,0x85,0x0f,0x3c]
   jalrc $5                 # CHECK: jalrc $5               # encoding: [0x03,0xe5,0x0f,0x3c]
   ext $9, $6, 3, 7         # CHECK: ext $9, $6, 3, 7       # encoding: [0x01,0x26,0x30,0xec]
+                           # CHECK-NEXT:                   # <MCInst #{{.*}} EXT_MMR6
   bovc $2, $4, 24          # CHECK: bovc $2, $4, 24        # encoding: [0x74,0x44,0x00,0x0c]
   bovc $4, $2, 24          # CHECK: bovc $4, $2, 24        # encoding: [0x74,0x44,0x00,0x0c]
   bnvc $2, $4, 24          # CHECK: bnvc $2, $4, 24        # encoding: [0x7c,0x44,0x00,0x0c]

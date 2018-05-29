@@ -80,7 +80,7 @@ int GetProcesses(CFMutableArrayRef plistMutableArray, bool all_users) {
       ::CFDictionarySetValue(appInfoDict.get(), DTSERVICES_APP_PID_KEY,
                              pidCFNumber.get());
 
-      // Set the a boolean to indicate if this is the front most
+      // Set a boolean to indicate if this is the front most
       ::CFDictionarySetValue(appInfoDict.get(), DTSERVICES_APP_FRONTMOST_KEY,
                              kCFBooleanFalse);
 
@@ -169,7 +169,7 @@ int ListApplications(std::string &plist, bool opt_runningApps,
                                pidCFNumber.get());
       }
 
-      // Set the a boolean to indicate if this is the front most
+      // Set a boolean to indicate if this is the front most
       if (sbsFrontAppID.get() && displayIdentifier &&
           (::CFStringCompare(sbsFrontAppID.get(), displayIdentifier, 0) ==
            kCFCompareEqualTo))

@@ -803,7 +803,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   {
     auto lang = m_expr.Language();
     if (log)
-      log->Printf("%s - Currrent expression language is %s\n", __FUNCTION__,
+      log->Printf("%s - Current expression language is %s\n", __FUNCTION__,
                   Language::GetNameForLanguageType(lang));
     lldb::ProcessSP process_sp = exe_ctx.GetProcessSP();
     if (process_sp && lang != lldb::eLanguageTypeUnknown) {
