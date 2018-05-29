@@ -269,16 +269,6 @@ void CompressedDictShadowMem::check_and_update_write(
 
       // SPBagInterface *cur_node = func->get_node();
       if (lca->is_PBag()) {
-        // If memory is allocated on stack, the accesses race with each other
-        // only if the mem location is allocated in shared ancestor's stack
-
-        // if stack_check = false, there is no race.
-        // if stack_check = true, it's a race only if all other conditions apply.
-        //bool stack_check = (!on_stack || addr >= cur_node->get_rsp());
-        bool stack_check = (!on_stack || shifted_addr >= lca->get_rsp());
-        has_race = stack_check;
-      }
-      if (has_race) {
         // check the current access with previous writes
         report_race(access->getLoc(),
                     AccessLoc_t(acc_id, call_stack),
