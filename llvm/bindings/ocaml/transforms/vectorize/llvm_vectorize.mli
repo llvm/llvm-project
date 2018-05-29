@@ -12,11 +12,6 @@
     This interface provides an OCaml API for LLVM vectorize transforms, the
     classes in the [LLVMVectorize] library. *)
 
-(** See the [llvm::createBBVectorizePass] function. *)
-external add_bb_vectorize
-  : [<Llvm.PassManager.any] Llvm.PassManager.t -> unit
-  = "llvm_add_bb_vectorize"
-
 (** See the [llvm::createLoopVectorizePass] function. *)
 external add_loop_vectorize
   : [<Llvm.PassManager.any] Llvm.PassManager.t -> unit

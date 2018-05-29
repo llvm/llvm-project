@@ -428,10 +428,6 @@ namespace llvm {
       // Res = VPERMV3 V0, MaskV, V1
       VPERMV3,
 
-      // 3-op Variable Permute overwriting the index (VPERMI2).
-      // Res = VPERMIV3 V0, MaskV, V1
-      VPERMIV3,
-
       // Bitwise ternary logic.
       VPTERNLOG,
       // Fix Up Special Packed Float32/64 values.

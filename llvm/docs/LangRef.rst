@@ -4742,7 +4742,7 @@ As a concrete example, the type descriptor graph for the following program
     void f(struct Outer* outer, struct Inner* inner, float* f, int* i, char* c) {
       outer->f = 0;            // tag0: (OuterStructTy, FloatScalarTy, 0)
       outer->inner_a.i = 0;    // tag1: (OuterStructTy, IntScalarTy, 12)
-      outer->inner_a.f = 0.0;  // tag2: (OuterStructTy, IntScalarTy, 16)
+      outer->inner_a.f = 0.0;  // tag2: (OuterStructTy, FloatScalarTy, 16)
       *f = 0.0;                // tag3: (FloatScalarTy, FloatScalarTy, 0)
     }
 

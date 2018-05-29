@@ -600,9 +600,36 @@ defm SUBFZE8 : XOForm_3rc<31, 200, 0, (outs g8rc:$rT), (ins g8rc:$rA),
 // FIXME: Duplicating this for the asm parser should be unnecessary, but the
 // previous definition must be marked as CodeGen only to prevent decoding
 // conflicts.
-let isAsmParserOnly = 1 in
+let isAsmParserOnly = 1 in {
 def ADD8TLS_ : XOForm_1<31, 266, 0, (outs g8rc:$rT), (ins g8rc:$rA, tlsreg:$rB),
                         "add $rT, $rA, $rB", IIC_IntSimple, []>;
+
+let mayLoad = 1 in {
+def LBZXTLS_ : XForm_1<31,  87, (outs g8rc:$rD), (ins ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "lbzx $rD, $rA, $rB", IIC_LdStLoad, []>;
+def LHZXTLS_ : XForm_1<31, 279, (outs g8rc:$rD), (ins ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "lhzx $rD, $rA, $rB", IIC_LdStLoad, []>;
+def LWZXTLS_ : XForm_1<31,  23, (outs g8rc:$rD), (ins ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "lwzx $rD, $rA, $rB", IIC_LdStLoad, []>;
+def LDXTLS_  : XForm_1<31,  21, (outs g8rc:$rD), (ins ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "ldx $rD, $rA, $rB", IIC_LdStLD, []>, isPPC64;
+}
+
+let mayStore = 1 in {
+def STBXTLS_ : XForm_8<31, 215, (outs), (ins g8rc:$rS, ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "stbx $rS, $rA, $rB", IIC_LdStStore, []>,
+                      PPC970_DGroup_Cracked;
+def STHXTLS_ : XForm_8<31, 407, (outs), (ins g8rc:$rS, ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "sthx $rS, $rA, $rB", IIC_LdStStore, []>,
+                      PPC970_DGroup_Cracked;
+def STWXTLS_ : XForm_8<31, 151, (outs), (ins g8rc:$rS, ptr_rc_nor0:$rA, tlsreg:$rB),
+                      "stwx $rS, $rA, $rB", IIC_LdStStore, []>,
+                      PPC970_DGroup_Cracked;
+def STDXTLS_  : XForm_8<31, 149, (outs), (ins g8rc:$rS, ptr_rc_nor0:$rA, tlsreg:$rB),
+                       "stdx $rS, $rA, $rB", IIC_LdStSTD, []>, isPPC64,
+                       PPC970_DGroup_Cracked;
+}
+}
 
 let isCommutable = 1 in {
 defm MULHD : XOForm_1r<31, 73, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),

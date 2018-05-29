@@ -548,7 +548,7 @@ protected:
     llvm::SmallVector<std::pair<lldb::ListenerSP, uint32_t &>, 4>
     GetListeners();
 
-    Broadcaster &m_broadcaster;    ///< The broadcsater that this implements
+    Broadcaster &m_broadcaster;    ///< The broadcaster that this implements
     event_names_map m_event_names; ///< Optionally define event names for
                                    ///readability and logging for each event bit
     collection m_listeners; ///< A list of Listener / event_mask pairs that are

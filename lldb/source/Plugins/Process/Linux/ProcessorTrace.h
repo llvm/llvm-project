@@ -34,7 +34,7 @@ namespace process_linux {
 // a key to the tracing instance and trace manipulations could be
 // performed using the trace id.
 //
-// The traace id could map to trace instances for a group of threads
+// The trace id could map to trace instances for a group of threads
 // (spanning to all the threads in the process) or a single thread.
 // The kernel interface for us is the perf_event_open.
 // ---------------------------------------------------------------------

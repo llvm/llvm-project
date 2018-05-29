@@ -606,7 +606,7 @@ def SKXWriteResGroup10 : SchedWriteRes<[SKXPort0156]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[SKXWriteResGroup10], (instrs CBW, CWDE, CDQE,
-                                          CLC, CMC, STC)>;
+                                          CMC, STC)>;
 def: InstRW<[SKXWriteResGroup10], (instrs LAHF, SAHF)>; // TODO: This doesn't match Agner's data
 def: InstRW<[SKXWriteResGroup10], (instregex "NOOP",
                                              "SGDT64m",
@@ -2550,4 +2550,7 @@ def SKXWriteResGroup267 : SchedWriteRes<[SKXPort6,SKXPort0156]> {
   let ResourceCycles = [1,3];
 }
 def: InstRW<[SKXWriteResGroup267], (instrs PAUSE)>;
+
+def: InstRW<[WriteZero], (instrs CLC)>;
+
 } // SchedModel

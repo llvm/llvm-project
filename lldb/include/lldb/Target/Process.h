@@ -761,7 +761,7 @@ public:
   /// This object will be used to resolve plug-in commands and can be
   /// triggered by a call to:
   ///
-  ///     (lldb) process commmand <args>
+  ///     (lldb) process command <args>
   ///
   /// @return
   ///     A CommandObject which can be one of the concrete subclasses

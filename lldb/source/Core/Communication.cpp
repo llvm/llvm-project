@@ -105,7 +105,7 @@ ConnectionStatus Communication::Disconnect(Status *error_ptr) {
     //
     // This unique pointer will cleanup after itself when this object goes
     // away, so there is no need to currently have it destroy itself
-    // immediately upon disconnnect.
+    // immediately upon disconnect.
     // connection_sp.reset();
     return status;
   }

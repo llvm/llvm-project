@@ -2478,5 +2478,338 @@ entry:
   ret <8 x i64> %2
 }
 
+declare <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32>, <16 x i32>, <16 x i32>)
+
+define <8 x i64> @test_mm512_mask2_permutex2var_epi32(<8 x i64> %__A, <8 x i64> %__I, i16 zeroext %__U, <8 x i64> %__B) {
+; X32-LABEL: test_mm512_mask2_permutex2var_epi32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X32-NEXT:    vpermi2d %zmm2, %zmm0, %zmm1 {%k1}
+; X32-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask2_permutex2var_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermi2d %zmm2, %zmm0, %zmm1 {%k1}
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = bitcast <8 x i64> %__I to <16 x i32>
+  %2 = bitcast <8 x i64> %__B to <16 x i32>
+  %3 = tail call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2)
+  %4 = bitcast i16 %__U to <16 x i1>
+  %5 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %1
+  %6 = bitcast <16 x i32> %5 to <8 x i64>
+  ret <8 x i64> %6
+}
+
+declare <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double>, <8 x i64>, <8 x double>)
+
+define <8 x double> @test_mm512_mask2_permutex2var_pd(<8 x double> %__A, <8 x i64> %__I, i8 zeroext %__U, <8 x double> %__B) {
+; X32-LABEL: test_mm512_mask2_permutex2var_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermi2pd %zmm2, %zmm0, %zmm1 {%k1}
+; X32-NEXT:    vmovapd %zmm1, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask2_permutex2var_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermi2pd %zmm2, %zmm0, %zmm1 {%k1}
+; X64-NEXT:    vmovapd %zmm1, %zmm0
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> %__A, <8 x i64> %__I, <8 x double> %__B)
+  %1 = bitcast <8 x i64> %__I to <8 x double>
+  %2 = bitcast i8 %__U to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x double> %0, <8 x double> %1
+  ret <8 x double> %3
+}
+
+declare <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float>, <16 x i32>, <16 x float>)
+
+define <16 x float> @test_mm512_mask2_permutex2var_ps(<16 x float> %__A, <8 x i64> %__I, i16 zeroext %__U, <16 x float> %__B) {
+; X32-LABEL: test_mm512_mask2_permutex2var_ps:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X32-NEXT:    vpermi2ps %zmm2, %zmm0, %zmm1 {%k1}
+; X32-NEXT:    vmovaps %zmm1, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask2_permutex2var_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermi2ps %zmm2, %zmm0, %zmm1 {%k1}
+; X64-NEXT:    vmovaps %zmm1, %zmm0
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__I to <16 x i32>
+  %1 = tail call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> %__A, <16 x i32> %0, <16 x float> %__B)
+  %2 = bitcast <8 x i64> %__I to <16 x float>
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x float> %1, <16 x float> %2
+  ret <16 x float> %4
+}
+
+declare <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64>, <8 x i64>, <8 x i64>)
+
+define <8 x i64> @test_mm512_mask2_permutex2var_epi64(<8 x i64> %__A, <8 x i64> %__I, i8 zeroext %__U, <8 x i64> %__B) {
+; X32-LABEL: test_mm512_mask2_permutex2var_epi64:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermi2q %zmm2, %zmm0, %zmm1 {%k1}
+; X32-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask2_permutex2var_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermi2q %zmm2, %zmm0, %zmm1 {%k1}
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> %__A, <8 x i64> %__I, <8 x i64> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> %__I
+  ret <8 x i64> %2
+}
+
+define <8 x i64> @test_mm512_permutex2var_epi32(<8 x i64> %__A, <8 x i64> %__I, <8 x i64> %__B) {
+; X32-LABEL: test_mm512_permutex2var_epi32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vpermt2d %zmm2, %zmm1, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_permutex2var_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpermt2d %zmm2, %zmm1, %zmm0
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = bitcast <8 x i64> %__I to <16 x i32>
+  %2 = bitcast <8 x i64> %__B to <16 x i32>
+  %3 = tail call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2)
+  %4 = bitcast <16 x i32> %3 to <8 x i64>
+  ret <8 x i64> %4
+}
+
+define <8 x i64> @test_mm512_maskz_permutex2var_epi32(i16 zeroext %__U, <8 x i64> %__A, <8 x i64> %__I, <8 x i64> %__B) {
+; X32-LABEL: test_mm512_maskz_permutex2var_epi32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X32-NEXT:    vpermt2d %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_permutex2var_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermt2d %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = bitcast <8 x i64> %__I to <16 x i32>
+  %2 = bitcast <8 x i64> %__B to <16 x i32>
+  %3 = tail call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2)
+  %4 = bitcast i16 %__U to <16 x i1>
+  %5 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> zeroinitializer
+  %6 = bitcast <16 x i32> %5 to <8 x i64>
+  ret <8 x i64> %6
+}
+
+define <8 x i64> @test_mm512_mask_permutex2var_epi32(<8 x i64> %__A, i16 zeroext %__U, <8 x i64> %__I, <8 x i64> %__B) {
+; X32-LABEL: test_mm512_mask_permutex2var_epi32:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X32-NEXT:    vpermt2d %zmm2, %zmm1, %zmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_permutex2var_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermt2d %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = bitcast <8 x i64> %__I to <16 x i32>
+  %2 = bitcast <8 x i64> %__B to <16 x i32>
+  %3 = tail call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2)
+  %4 = bitcast i16 %__U to <16 x i1>
+  %5 = select <16 x i1> %4, <16 x i32> %3, <16 x i32> %0
+  %6 = bitcast <16 x i32> %5 to <8 x i64>
+  ret <8 x i64> %6
+}
+
+define <8 x double> @test_mm512_permutex2var_pd(<8 x double> %__A, <8 x i64> %__I, <8 x double> %__B) {
+; X32-LABEL: test_mm512_permutex2var_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vpermt2pd %zmm2, %zmm1, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_permutex2var_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpermt2pd %zmm2, %zmm1, %zmm0
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> %__A, <8 x i64> %__I, <8 x double> %__B)
+  ret <8 x double> %0
+}
+
+define <8 x double> @test_mm512_mask_permutex2var_pd(<8 x double> %__A, i8 zeroext %__U, <8 x i64> %__I, <8 x double> %__B) {
+; X32-LABEL: test_mm512_mask_permutex2var_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermt2pd %zmm2, %zmm1, %zmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_permutex2var_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermt2pd %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> %__A, <8 x i64> %__I, <8 x double> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__A
+  ret <8 x double> %2
+}
+
+define <8 x double> @test_mm512_maskz_permutex2var_pd(i8 zeroext %__U, <8 x double> %__A, <8 x i64> %__I, <8 x double> %__B) {
+; X32-LABEL: test_mm512_maskz_permutex2var_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermt2pd %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_permutex2var_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermt2pd %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> %__A, <8 x i64> %__I, <8 x double> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
+  ret <8 x double> %2
+}
+
+define <16 x float> @test_mm512_permutex2var_ps(<16 x float> %__A, <8 x i64> %__I, <16 x float> %__B) {
+; X32-LABEL: test_mm512_permutex2var_ps:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_permutex2var_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__I to <16 x i32>
+  %1 = tail call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> %__A, <16 x i32> %0, <16 x float> %__B)
+  ret <16 x float> %1
+}
+
+define <16 x float> @test_mm512_mask_permutex2var_ps(<16 x float> %__A, i16 zeroext %__U, <8 x i64> %__I, <16 x float> %__B) {
+; X32-LABEL: test_mm512_mask_permutex2var_ps:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X32-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_permutex2var_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__I to <16 x i32>
+  %1 = tail call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> %__A, <16 x i32> %0, <16 x float> %__B)
+  %2 = bitcast i16 %__U to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %__A
+  ret <16 x float> %3
+}
+
+define <16 x float> @test_mm512_maskz_permutex2var_ps(i16 zeroext %__U, <16 x float> %__A, <8 x i64> %__I, <16 x float> %__B) {
+; X32-LABEL: test_mm512_maskz_permutex2var_ps:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X32-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_permutex2var_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__I to <16 x i32>
+  %1 = tail call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> %__A, <16 x i32> %0, <16 x float> %__B)
+  %2 = bitcast i16 %__U to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
+  ret <16 x float> %3
+}
+
+define <8 x i64> @test_mm512_permutex2var_epi64(<8 x i64> %__A, <8 x i64> %__I, <8 x i64> %__B) {
+; X32-LABEL: test_mm512_permutex2var_epi64:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vpermt2q %zmm2, %zmm1, %zmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_permutex2var_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vpermt2q %zmm2, %zmm1, %zmm0
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> %__A, <8 x i64> %__I, <8 x i64> %__B)
+  ret <8 x i64> %0
+}
+
+define <8 x i64> @test_mm512_mask_permutex2var_epi64(<8 x i64> %__A, i8 zeroext %__U, <8 x i64> %__I, <8 x i64> %__B) {
+; X32-LABEL: test_mm512_mask_permutex2var_epi64:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermt2q %zmm2, %zmm1, %zmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_permutex2var_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermt2q %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> %__A, <8 x i64> %__I, <8 x i64> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> %__A
+  ret <8 x i64> %2
+}
+
+define <8 x i64> @test_mm512_maskz_permutex2var_epi64(i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__I, <8 x i64> %__B) {
+; X32-LABEL: test_mm512_maskz_permutex2var_epi64:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermt2q %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_permutex2var_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermt2q %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> %__A, <8 x i64> %__I, <8 x i64> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> zeroinitializer
+  ret <8 x i64> %2
+}
+
+
 !0 = !{i32 1}
 

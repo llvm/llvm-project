@@ -185,7 +185,7 @@ const char *const s_filter_attributes[] = {
     "message",        // message contents, fully expanded
     "subsystem"       // subsystem of the log message
 
-    // Consider impelmenting this action as it would be cheaper to filter.
+    // Consider implementing this action as it would be cheaper to filter.
     // "message" requires always formatting the message, which is a waste of
     // cycles if it ends up being rejected. "format",      // format string
     // used to format message text
@@ -488,11 +488,11 @@ static OptionDefinition g_enable_option_table[] = {
      "a log message."},
     {LLDB_OPT_SET_ALL, false, "category", 'c', OptionParser::eNoArgument,
      nullptr, nullptr, 0, eArgTypeNone,
-     "Include the category in the the message header when displaying "
+     "Include the category in the message header when displaying "
      "a log message."},
     {LLDB_OPT_SET_ALL, false, "activity-chain", 'C', OptionParser::eNoArgument,
      nullptr, nullptr, 0, eArgTypeNone,
-     "Include the activity parent-child chain in the the message header "
+     "Include the activity parent-child chain in the message header "
      "when displaying a log message.  The activity hierarchy is "
      "displayed as {grandparent-activity}:"
      "{parent-activity}:{activity}[:...]."},
@@ -615,7 +615,7 @@ public:
 
     source_flags_sp->AddBooleanItem("any-process", m_include_any_process);
     source_flags_sp->AddBooleanItem("debug-level", m_include_debug_level);
-    // The debug-level flag, if set, implies info-level.
+    // The debug-level flag, if set, implies info-level.
     source_flags_sp->AddBooleanItem("info-level", m_include_info_level ||
                                                       m_include_debug_level);
     source_flags_sp->AddBooleanItem("live-stream", m_live_stream);
@@ -877,7 +877,7 @@ protected:
       plugin.SetEnabled(false);
     } else {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      // Our configuration succeeeded, so we're enabled/disabled per whichever
+      // Our configuration succeeded, so we're enabled/disabled per whichever
       // one this command is setup to do.
       plugin.SetEnabled(m_enable);
     }
@@ -1461,7 +1461,7 @@ Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
 
   // Darwin os_log() support automatically adds debug-level and info-level
   // messages when a debugger is attached to a process.  However, with
-  // integrated suppport for debugging built into the command-line LLDB, the
+  // integrated support for debugging built into the command-line LLDB, the
   // user may specifically set to *not* include debug-level and info-level
   // content.  When the user is using the integrated log support, we want to
   // put the kabosh on that automatic adding of info and debug level. This is

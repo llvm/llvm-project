@@ -451,7 +451,7 @@ const CMICmnResources::SRsrcTextData
          "'print' error. The option '%s' not found"},
         {IDS_CMD_ERR_EXPR_INVALID, "Failed to evaluate expression: %s"},
         {IDS_CMD_ERR_ATTACH_FAILED,
-         "Command '%s'. Attach to processs failed: %s"},
+         "Command '%s'. Attach to process failed: %s"},
         {IDS_CMD_ERR_ATTACH_BAD_ARGS,
          "Command '%s'. Must specify either a PID or a Name"}};
 

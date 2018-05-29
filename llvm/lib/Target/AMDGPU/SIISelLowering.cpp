@@ -3601,10 +3601,9 @@ SDValue SITargetLowering::adjustLoadValueType(unsigned Opcode,
   // Change from v4f16/v2f16 to EquivLoadVT.
   SDVTList VTList = DAG.getVTList(EquivLoadVT, MVT::Other);
 
-  SDValue Load
-    = DAG.getMemIntrinsicNode(IsIntrinsic ? ISD::INTRINSIC_W_CHAIN : Opcode, DL,
-                              VTList, Ops, M->getMemoryVT(),
-                              M->getMemOperand());
+  SDValue Load = DAG.getMemIntrinsicNode(
+                    IsIntrinsic ? (unsigned)ISD::INTRINSIC_W_CHAIN : Opcode,
+                    DL, VTList, Ops, M->getMemoryVT(), M->getMemOperand());
 
   SDValue Adjusted = adjustLoadValueTypeImpl(Load, LoadVT, DL, DAG, Unpacked);
 

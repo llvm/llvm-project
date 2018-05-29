@@ -146,13 +146,15 @@ Changes to the AVR Target
 Changes to the OCaml bindings
 -----------------------------
 
- During this release ...
+* Remove ``add_bb_vectorize``.
 
 
 Changes to the C API
 --------------------
 
- During this release ...
+* Remove ``LLVMAddBBVectorizePass``. The implementation was removed and the C
+  interface was made a deprecated no-op in LLVM 5. Use
+  ``LLVMAddSLPVectorizePass`` instead to get the supported SLP vectorizer.
 
 
 External Open Source Projects Using LLVM 7

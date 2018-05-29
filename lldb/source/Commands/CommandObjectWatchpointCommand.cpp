@@ -669,7 +669,7 @@ CommandObjectWatchpointCommand::CommandObjectWatchpointCommand(
     : CommandObjectMultiword(
           interpreter, "command",
           "Commands for adding, removing and examining LLDB commands "
-          "executed when the watchpoint is hit (watchpoint 'commmands').",
+          "executed when the watchpoint is hit (watchpoint 'commands').",
           "command <sub-command> [<sub-command-options>] <watchpoint-id>") {
   CommandObjectSP add_command_object(
       new CommandObjectWatchpointCommandAdd(interpreter));
