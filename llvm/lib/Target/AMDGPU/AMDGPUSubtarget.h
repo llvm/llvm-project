@@ -490,17 +490,17 @@ public:
     return HasUnpackedD16VMem;
   }
 
-  bool isMesaKernel(const MachineFunction &MF) const {
-    return isMesa3DOS() && !AMDGPU::isShader(MF.getFunction().getCallingConv());
+  bool isMesaKernel(const Function &F) const {
+    return isMesa3DOS() && !AMDGPU::isShader(F.getCallingConv());
   }
 
   // Covers VS/PS/CS graphics shaders
-  bool isMesaGfxShader(const MachineFunction &MF) const {
-    return isMesa3DOS() && AMDGPU::isShader(MF.getFunction().getCallingConv());
+  bool isMesaGfxShader(const Function &F) const {
+    return isMesa3DOS() && AMDGPU::isShader(F.getCallingConv());
   }
 
-  bool isAmdCodeObjectV2(const MachineFunction &MF) const {
-    return isAmdHsaOS() || isMesaKernel(MF);
+  bool isAmdCodeObjectV2(const Function &F) const {
+    return isAmdHsaOS() || isMesaKernel(F);
   }
 
   bool hasMad64_32() const {
@@ -549,8 +549,8 @@ public:
 
   /// Returns the offset in bytes from the start of the input buffer
   ///        of the first explicit kernel argument.
-  unsigned getExplicitKernelArgOffset(const MachineFunction &MF) const {
-    return isAmdCodeObjectV2(MF) ? 0 : 36;
+  unsigned getExplicitKernelArgOffset(const Function &F) const {
+    return isAmdCodeObjectV2(F) ? 0 : 36;
   }
 
   unsigned getAlignmentForImplicitArgPtr() const {
@@ -559,11 +559,10 @@ public:
 
   /// \returns Number of bytes of arguments that are passed to a shader or
   /// kernel in addition to the explicit ones declared for the function.
-  unsigned getImplicitArgNumBytes(const MachineFunction &MF) const {
-    if (isMesaKernel(MF))
+  unsigned getImplicitArgNumBytes(const Function &F) const {
+    if (isMesaKernel(F))
       return 16;
-    return AMDGPU::getIntegerAttribute(
-      MF.getFunction(), "amdgpu-implicitarg-num-bytes", 0);
+    return AMDGPU::getIntegerAttribute(F, "amdgpu-implicitarg-num-bytes", 0);
   }
 
   // Scratch is allocated in 256 dword per wave blocks for the entire
@@ -860,7 +859,7 @@ public:
     return getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS;
   }
 
-  unsigned getKernArgSegmentSize(const MachineFunction &MF,
+  unsigned getKernArgSegmentSize(const Function &F,
                                  unsigned ExplictArgBytes) const;
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs SGPRs

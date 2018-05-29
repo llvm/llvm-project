@@ -632,6 +632,11 @@ public:
                                   Value *LHS, Value *RHS,
                                   const Twine &Name = "");
 
+  /// Create a call to intrinsic \p ID with no operands.
+  CallInst *CreateIntrinsic(Intrinsic::ID ID,
+                            Instruction *FMFSource = nullptr,
+                            const Twine &Name = "");
+
   /// Create a call to intrinsic \p ID with 1 or more operands assuming the
   /// intrinsic and all operands have the same type. If \p FMFSource is
   /// provided, copy fast-math-flags from that instruction to the intrinsic.

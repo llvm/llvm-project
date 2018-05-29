@@ -1825,3 +1825,15 @@ void DWARFDebugInfoEntry::DumpDIECollection(
                 die_ref.HasChildren() ? " *" : "");
   }
 }
+
+bool DWARFDebugInfoEntry::operator==(const DWARFDebugInfoEntry &rhs) const {
+  return m_offset == rhs.m_offset && m_parent_idx == rhs.m_parent_idx &&
+         m_sibling_idx == rhs.m_sibling_idx &&
+         m_empty_children == rhs.m_empty_children &&
+         m_abbr_idx == rhs.m_abbr_idx && m_has_children == rhs.m_has_children &&
+         m_tag == rhs.m_tag;
+}
+
+bool DWARFDebugInfoEntry::operator!=(const DWARFDebugInfoEntry &rhs) const {
+  return !(*this == rhs);
+}

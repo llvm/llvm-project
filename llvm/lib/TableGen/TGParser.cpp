@@ -428,6 +428,13 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec, Init *DefmName,
   Rec->resolveReferences();
   checkConcrete(*Rec);
 
+  if (!isa<StringInit>(Rec->getNameInit())) {
+    PrintError(Rec->getLoc(), Twine("record name '") +
+                                  Rec->getNameInit()->getAsString() +
+                                  "' could not be fully resolved");
+    return true;
+  }
+
   // If ObjectBody has template arguments, it's an error.
   assert(Rec->getTemplateArgs().empty() && "How'd this get template args?");
 
@@ -2299,9 +2306,15 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
     Lex.Lex(); // eat the ','
 
     // Read the following declarations.
+    SMLoc Loc = Lex.getLoc();
     TemplArg = ParseDeclaration(CurRec, true/*templateargs*/);
     if (!TemplArg)
       return true;
+
+    if (TheRecToAddTo->isTemplateArg(TemplArg))
+      return Error(Loc, "template argument with the same name has already been "
+                        "defined");
+
     TheRecToAddTo->addTemplateArg(TemplArg);
   }
 

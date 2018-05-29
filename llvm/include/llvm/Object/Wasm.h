@@ -193,6 +193,12 @@ public:
   SubtargetFeatures getFeatures() const override;
   bool isRelocatableObject() const override;
 
+  struct ReadContext {
+    const uint8_t *Start;
+    const uint8_t *Ptr;
+    const uint8_t *End;
+  };
+
 private:
   bool isValidFunctionIndex(uint32_t Index) const;
   bool isDefinedFunctionIndex(uint32_t Index) const;
@@ -210,29 +216,27 @@ private:
 
   const uint8_t *getPtr(size_t Offset) const;
   Error parseSection(WasmSection &Sec);
-  Error parseCustomSection(WasmSection &Sec, const uint8_t *Ptr,
-                           const uint8_t *End);
+  Error parseCustomSection(WasmSection &Sec, ReadContext &Ctx);
 
   // Standard section types
-  Error parseTypeSection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseImportSection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseFunctionSection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseTableSection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseMemorySection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseGlobalSection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseExportSection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseStartSection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseElemSection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseCodeSection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseDataSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseTypeSection(ReadContext &Ctx);
+  Error parseImportSection(ReadContext &Ctx);
+  Error parseFunctionSection(ReadContext &Ctx);
+  Error parseTableSection(ReadContext &Ctx);
+  Error parseMemorySection(ReadContext &Ctx);
+  Error parseGlobalSection(ReadContext &Ctx);
+  Error parseExportSection(ReadContext &Ctx);
+  Error parseStartSection(ReadContext &Ctx);
+  Error parseElemSection(ReadContext &Ctx);
+  Error parseCodeSection(ReadContext &Ctx);
+  Error parseDataSection(ReadContext &Ctx);
 
   // Custom section types
-  Error parseNameSection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseLinkingSection(const uint8_t *Ptr, const uint8_t *End);
-  Error parseLinkingSectionSymtab(const uint8_t *&Ptr, const uint8_t *End);
-  Error parseLinkingSectionComdat(const uint8_t *&Ptr, const uint8_t *End);
-  Error parseRelocSection(StringRef Name, const uint8_t *Ptr,
-                          const uint8_t *End);
+  Error parseNameSection(ReadContext &Ctx);
+  Error parseLinkingSection(ReadContext &Ctx);
+  Error parseLinkingSectionSymtab(ReadContext &Ctx);
+  Error parseLinkingSectionComdat(ReadContext &Ctx);
+  Error parseRelocSection(StringRef Name, ReadContext &Ctx);
 
   wasm::WasmObjectHeader Header;
   std::vector<WasmSection> Sections;

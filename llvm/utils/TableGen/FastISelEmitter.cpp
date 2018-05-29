@@ -36,8 +36,18 @@ struct InstructionMemo {
   std::string Name;
   const CodeGenRegisterClass *RC;
   std::string SubRegNo;
-  std::vector<std::string>* PhysRegs;
+  std::vector<std::string> PhysRegs;
   std::string PredicateCheck;
+
+  InstructionMemo(std::string Name, const CodeGenRegisterClass *RC,
+                  std::string SubRegNo, std::vector<std::string> PhysRegs,
+                  std::string PredicateCheck)
+    : Name(Name), RC(RC), SubRegNo(SubRegNo), PhysRegs(PhysRegs),
+      PredicateCheck(PredicateCheck) {}
+
+  // Make sure we do not copy InstructionMemo.
+  InstructionMemo(const InstructionMemo &Other) = delete;
+  InstructionMemo(InstructionMemo &&Other) = default;
 };
 } // End anonymous namespace
 
@@ -527,10 +537,10 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
                              DstRC))
       continue;
 
-    std::vector<std::string>* PhysRegInputs = new std::vector<std::string>();
+    std::vector<std::string> PhysRegInputs;
     if (InstPatNode->getOperator()->getName() == "imm" ||
         InstPatNode->getOperator()->getName() == "fpimm")
-      PhysRegInputs->push_back("");
+      PhysRegInputs.push_back("");
     else {
       // Compute the PhysRegs used by the given pattern, and check that
       // the mapping from the src to dst patterns is simple.
@@ -548,7 +558,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
           ++DstIndex;
         }
 
-        PhysRegInputs->push_back(PhysReg);
+        PhysRegInputs.push_back(PhysReg);
       }
 
       if (Op->getName() != "EXTRACT_SUBREG" && DstIndex < Dst->getNumChildren())
@@ -572,13 +582,13 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     std::string PredicateCheck = Pattern.getPredicateCheck();
 
     // Ok, we found a pattern that we can handle. Remember it.
-    InstructionMemo Memo = {
+    InstructionMemo Memo(
       Pattern.getDstPattern()->getOperator()->getName(),
       DstRC,
       SubRegNo,
       PhysRegInputs,
       PredicateCheck
-    };
+    );
 
     int complexity = Pattern.getPatternComplexity(CGP);
 
@@ -592,8 +602,8 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
 
        // Note: Instructions with the same complexity will appear in the order
           // that they are encountered.
-    SimplePatterns[Operands][OpcodeName][VT][RetVT].insert(
-      std::make_pair(complexity, Memo));
+    SimplePatterns[Operands][OpcodeName][VT][RetVT].emplace(complexity,
+                                                            std::move(Memo));
 
     // If any of the operands were immediates with predicates on them, strip
     // them down to a signature that doesn't have predicates so that we can
@@ -648,22 +658,22 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
       OS << "  ";
     }
 
-    for (unsigned i = 0; i < Memo.PhysRegs->size(); ++i) {
-      if ((*Memo.PhysRegs)[i] != "")
+    for (unsigned i = 0; i < Memo.PhysRegs.size(); ++i) {
+      if (Memo.PhysRegs[i] != "")
         OS << "  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, "
-           << "TII.get(TargetOpcode::COPY), "
-           << (*Memo.PhysRegs)[i] << ").addReg(Op" << i << ");\n";
+           << "TII.get(TargetOpcode::COPY), " << Memo.PhysRegs[i]
+           << ").addReg(Op" << i << ");\n";
     }
 
     OS << "  return fastEmitInst_";
     if (Memo.SubRegNo.empty()) {
-      Operands.PrintManglingSuffix(OS, *Memo.PhysRegs,
-     ImmediatePredicates, true);
+      Operands.PrintManglingSuffix(OS, Memo.PhysRegs, ImmediatePredicates,
+                                   true);
       OS << "(" << InstNS << "::" << Memo.Name << ", ";
       OS << "&" << InstNS << "::" << Memo.RC->getName() << "RegClass";
       if (!Operands.empty())
         OS << ", ";
-      Operands.PrintArguments(OS, *Memo.PhysRegs);
+      Operands.PrintArguments(OS, Memo.PhysRegs);
       OS << ");\n";
     } else {
       OS << "extractsubreg(" << RetVTName

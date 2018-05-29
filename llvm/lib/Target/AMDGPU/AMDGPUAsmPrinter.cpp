@@ -192,7 +192,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
 
   const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();
   amd_kernel_code_t KernelCode;
-  if (STM.isAmdCodeObjectV2(*MF)) {
+  if (STM.isAmdCodeObjectV2(MF->getFunction())) {
     getAmdKernelCode(KernelCode, CurrentProgramInfo, *MF);
     getTargetStreamer()->EmitAMDKernelCodeT(KernelCode);
   }
@@ -208,7 +208,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
 void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
   const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();
-  if (MFI->isEntryFunction() && STM.isAmdCodeObjectV2(*MF)) {
+  if (MFI->isEntryFunction() && STM.isAmdCodeObjectV2(MF->getFunction())) {
     SmallString<128> SymbolName;
     getNameWithPrefix(SymbolName, &MF->getFunction()),
     getTargetStreamer()->EmitAMDGPUSymbolType(
@@ -907,7 +907,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.ComputePGMRSrc2 =
       S_00B84C_SCRATCH_EN(ProgInfo.ScratchBlocks > 0) |
       S_00B84C_USER_SGPR(MFI->getNumUserSGPRs()) |
-      S_00B84C_TRAP_HANDLER(STM.isTrapHandlerEnabled()) |
+      // For AMDHSA, TRAP_HANDLER must be zero, as it is populated by the CP.
+      S_00B84C_TRAP_HANDLER(STM.isAmdHsaOS() ? 0 : STM.isTrapHandlerEnabled()) |
       S_00B84C_TGID_X_EN(MFI->hasWorkGroupIDX()) |
       S_00B84C_TGID_Y_EN(MFI->hasWorkGroupIDY()) |
       S_00B84C_TGID_Z_EN(MFI->hasWorkGroupIDZ()) |
@@ -1125,7 +1126,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
 
   // FIXME: Should use getKernArgSize
   Out.kernarg_segment_byte_size =
-    STM.getKernArgSegmentSize(MF, MFI->getABIArgOffset());
+    STM.getKernArgSegmentSize(MF.getFunction(), MFI->getABIArgOffset());
   Out.wavefront_sgpr_count = CurrentProgramInfo.NumSGPR;
   Out.workitem_vgpr_count = CurrentProgramInfo.NumVGPR;
   Out.workitem_private_segment_byte_size = CurrentProgramInfo.ScratchSize;
@@ -1154,7 +1155,7 @@ AMDGPU::HSAMD::Kernel::CodeProps::Metadata AMDGPUAsmPrinter::getHSACodeProps(
   HSAMD::Kernel::CodeProps::Metadata HSACodeProps;
 
   HSACodeProps.mKernargSegmentSize =
-      STM.getKernArgSegmentSize(MF, MFI.getABIArgOffset());
+    STM.getKernArgSegmentSize(MF.getFunction(), MFI.getABIArgOffset());
   HSACodeProps.mGroupSegmentFixedSize = ProgramInfo.LDSSize;
   HSACodeProps.mPrivateSegmentFixedSize = ProgramInfo.ScratchSize;
   HSACodeProps.mKernargSegmentAlign =
