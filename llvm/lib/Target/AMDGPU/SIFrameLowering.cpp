@@ -237,6 +237,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = &TII->getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const Function &F = MF.getFunction();
 
   // We need to do the replacement of the private segment buffer and wave offset
   // register even if there are no stack objects. There could be stores to undef
@@ -288,7 +289,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
 
   unsigned PreloadedPrivateBufferReg = AMDGPU::NoRegister;
-  if (ST.isAmdCodeObjectV2(MF)) {
+  if (ST.isAmdCodeObjectV2(F)) {
     PreloadedPrivateBufferReg = MFI->getPreloadedReg(
       AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_BUFFER);
   }
@@ -307,7 +308,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
 
   if (ResourceRegUsed && PreloadedPrivateBufferReg != AMDGPU::NoRegister) {
-    assert(ST.isAmdCodeObjectV2(MF) || ST.isMesaGfxShader(MF));
+    assert(ST.isAmdCodeObjectV2(F) || ST.isMesaGfxShader(F));
     MRI.addLiveIn(PreloadedPrivateBufferReg);
     MBB.addLiveIn(PreloadedPrivateBufferReg);
   }
@@ -332,7 +333,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
 
   bool CopyBuffer = ResourceRegUsed &&
     PreloadedPrivateBufferReg != AMDGPU::NoRegister &&
-    ST.isAmdCodeObjectV2(MF) &&
+    ST.isAmdCodeObjectV2(F) &&
     ScratchRsrcReg != PreloadedPrivateBufferReg;
 
   // This needs to be careful of the copying order to avoid overwriting one of
@@ -370,6 +371,7 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = &TII->getRegisterInfo();
+  const Function &Fn = MF.getFunction();
   DebugLoc DL;
 
   if (ST.isAmdPalOS()) {
@@ -420,8 +422,7 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
                                        MachineMemOperand::MOInvariant |
                                        MachineMemOperand::MODereferenceable,
                                        0, 0);
-    unsigned Offset
-        = MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS ? 16 : 0;
+    unsigned Offset = Fn.getCallingConv() == CallingConv::AMDGPU_CS ? 16 : 0;
     BuildMI(MBB, I, DL, LoadDwordX4, ScratchRsrcReg)
       .addReg(Rsrc01)
       .addImm(Offset) // offset
@@ -430,9 +431,9 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
       .addMemOperand(MMO);
     return;
   }
-  if (ST.isMesaGfxShader(MF)
+  if (ST.isMesaGfxShader(Fn)
       || (PreloadedPrivateBufferReg == AMDGPU::NoRegister)) {
-    assert(!ST.isAmdCodeObjectV2(MF));
+    assert(!ST.isAmdCodeObjectV2(Fn));
     const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
 
     unsigned Rsrc2 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub2);

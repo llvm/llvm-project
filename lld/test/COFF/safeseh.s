@@ -1,6 +1,8 @@
 # RUN: llvm-mc -triple i686-windows-msvc %s -filetype=obj -o %t.obj
 # RUN: lld-link %t.obj -safeseh -out:%t.exe -opt:noref -entry:main
 # RUN: llvm-readobj -coff-basereloc -coff-load-config -file-headers %t.exe | FileCheck %s --check-prefix=CHECK-NOGC
+# RUN: lld-link %t.obj -safeseh -out:%t.exe -opt:noref -entry:main -debug:dwarf
+# RUN: llvm-readobj -coff-basereloc -coff-load-config -file-headers %t.exe | FileCheck %s --check-prefix=CHECK-NOGC
 # RUN: lld-link %t.obj -safeseh -out:%t.exe -opt:ref -entry:main
 # RUN: llvm-readobj -coff-basereloc -coff-load-config -file-headers %t.exe | FileCheck %s --check-prefix=CHECK-GC
 
@@ -13,7 +15,7 @@
 # CHECK-NOGC:     Type: HIGHLOW
 # CHECK-NOGC: LoadConfig [
 # CHECK-NOGC:   Size: 0x48
-# CHECK-NOGC:   SEHandlerTable: 0x402048
+# CHECK-NOGC:   SEHandlerTable: 0x
 # CHECK-NOGC:   SEHandlerCount: 1
 # CHECK-NOGC: ]
 # CHECK-NOGC: SEHTable [

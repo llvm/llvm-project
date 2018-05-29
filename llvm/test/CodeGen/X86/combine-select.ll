@@ -4,12 +4,8 @@
 define <4 x float> @select_mask_add_ss(<4 x float> %w, i8 zeroext %u, <4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: select_mask_add_ss:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vaddss %xmm2, %xmm1, %xmm2
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovss %xmm0, %xmm1, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vaddss %xmm2, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractelement <4 x float> %b, i32 0
@@ -26,13 +22,8 @@ entry:
 define <4 x float> @select_maskz_add_ss(i8 zeroext %u, <4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: select_maskz_add_ss:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vaddss %xmm1, %xmm0, %xmm1
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vmovss %xmm2, %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vaddss %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractelement <4 x float> %b, i32 0
@@ -48,12 +39,8 @@ entry:
 define <4 x float> @select_mask_sub_ss(<4 x float> %w, i8 zeroext %u, <4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: select_mask_sub_ss:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vsubss %xmm2, %xmm1, %xmm2
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovss %xmm0, %xmm1, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vsubss %xmm2, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractelement <4 x float> %b, i32 0
@@ -70,13 +57,8 @@ entry:
 define <4 x float> @select_maskz_sub_ss(i8 zeroext %u, <4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: select_maskz_sub_ss:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vsubss %xmm1, %xmm0, %xmm1
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vmovss %xmm2, %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vsubss %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractelement <4 x float> %b, i32 0
@@ -92,12 +74,8 @@ entry:
 define <4 x float> @select_mask_mul_ss(<4 x float> %w, i8 zeroext %u, <4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: select_mask_mul_ss:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm2
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vmovss %xmm0, %xmm1, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractelement <4 x float> %b, i32 0
@@ -114,13 +92,8 @@ entry:
 define <4 x float> @select_maskz_mul_ss(i8 zeroext %u, <4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: select_maskz_mul_ss:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vmulss %xmm1, %xmm0, %xmm1
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    kmovw %eax, %k1
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vmovss %xmm2, %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vmulss %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractelement <4 x float> %b, i32 0
@@ -132,3 +105,23 @@ entry:
   %6 = insertelement <4 x float> %a, float %5, i32 0
   ret <4 x float> %6
 }
+
+; Make sure we don't crash trying to truncate the and instruction i4->i8. We need to extend instead.
+define <4 x float> @select_mask_add_ss_small_mask_type(<4 x float> %w, i4 %u, <4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: select_mask_add_ss_small_mask_type:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vaddss %xmm2, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+entry:
+  %0 = extractelement <4 x float> %b, i32 0
+  %1 = extractelement <4 x float> %a, i32 0
+  %2 = fadd float %1, %0
+  %3 = and i4 %u, 1
+  %4 = icmp eq i4 %3, 0
+  %5 = extractelement <4 x float> %w, i32 0
+  %6 = select i1 %4, float %5, float %2
+  %7 = insertelement <4 x float> %a, float %6, i32 0
+  ret <4 x float> %7
+}
+

@@ -472,6 +472,8 @@ let Predicates = [HasSVE] in {
   defm LSR_ZZI : sve_int_bin_cons_shift_b_right<0b01, "lsr">;
   defm LSL_ZZI : sve_int_bin_cons_shift_b_left< 0b11, "lsl">;
 
+  defm LSR_ZPmZ  : sve_int_bin_pred_shift_1<0b001, "lsr">;
+  defm LSL_ZPmZ  : sve_int_bin_pred_shift_1<0b011, "lsl">;
 
   // InstAliases
   def : InstAlias<"mov $Zd, $Zn",

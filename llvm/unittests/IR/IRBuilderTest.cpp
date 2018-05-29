@@ -63,6 +63,10 @@ TEST_F(IRBuilderTest, Intrinsics) {
   Call = Builder.CreateMaxNum(V, V);
   II = cast<IntrinsicInst>(Call);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::maxnum);
+
+  Call = Builder.CreateIntrinsic(Intrinsic::readcyclecounter);
+  II = cast<IntrinsicInst>(Call);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::readcyclecounter);
 }
 
 TEST_F(IRBuilderTest, Lifetime) {

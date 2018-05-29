@@ -767,6 +767,35 @@ public:
     return OpActions[(unsigned)VT.getSimpleVT().SimpleTy][Op];
   }
 
+  LegalizeAction getStrictFPOperationAction(unsigned Op, EVT VT) const {
+    unsigned EqOpc;
+    switch (Op) {
+      default: llvm_unreachable("Unexpected FP pseudo-opcode");
+      case ISD::STRICT_FSQRT: EqOpc = ISD::FSQRT; break;
+      case ISD::STRICT_FPOW: EqOpc = ISD::FPOW; break;
+      case ISD::STRICT_FPOWI: EqOpc = ISD::FPOWI; break;
+      case ISD::STRICT_FMA: EqOpc = ISD::FMA; break;
+      case ISD::STRICT_FSIN: EqOpc = ISD::FSIN; break;
+      case ISD::STRICT_FCOS: EqOpc = ISD::FCOS; break;
+      case ISD::STRICT_FEXP: EqOpc = ISD::FEXP; break;
+      case ISD::STRICT_FEXP2: EqOpc = ISD::FEXP2; break;
+      case ISD::STRICT_FLOG: EqOpc = ISD::FLOG; break;
+      case ISD::STRICT_FLOG10: EqOpc = ISD::FLOG10; break;
+      case ISD::STRICT_FLOG2: EqOpc = ISD::FLOG2; break;
+      case ISD::STRICT_FRINT: EqOpc = ISD::FRINT; break;
+      case ISD::STRICT_FNEARBYINT: EqOpc = ISD::FNEARBYINT; break;
+    }
+
+    auto Action = getOperationAction(EqOpc, VT);
+
+    // We don't currently handle Custom or Promote for strict FP pseudo-ops.
+    // For now, we just expand for those cases.
+    if (Action != Legal)
+      Action = Expand;
+
+    return Action;
+  }
+
   /// Return true if the specified operation is legal on this target or can be
   /// made legal with custom lowering. This is used to help guide high-level
   /// lowering decisions.
@@ -1117,10 +1146,6 @@ public:
   /// Certain combinations of ABIs, Targets and features require that types
   /// are legal for some operations and not for other operations.
   /// For MIPS all vector types must be passed through the integer register set.
-  virtual MVT getRegisterTypeForCallingConv(MVT VT) const {
-    return getRegisterType(VT);
-  }
-
   virtual MVT getRegisterTypeForCallingConv(LLVMContext &Context,
                                             EVT VT) const {
     return getRegisterType(Context, VT);

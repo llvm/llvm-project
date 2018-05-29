@@ -56,12 +56,14 @@ public:
 
 private:
   void doPeepholeLoadStoreADDI();
+  void doPeepholeGlobalAddiLuiOffset();
   void doPeepholeBuildPairF64SplitF64();
 };
 }
 
 void RISCVDAGToDAGISel::PostprocessISelDAG() {
   doPeepholeLoadStoreADDI();
+  doPeepholeGlobalAddiLuiOffset();
   doPeepholeBuildPairF64SplitF64();
 }
 
@@ -126,6 +128,212 @@ bool RISCVDAGToDAGISel::SelectAddrFI(SDValue Addr, SDValue &Base) {
     return true;
   }
   return false;
+}
+
+// Detect the pattern lui %hi(global) --> ADDI %lo(global)
+//                          HiLUI          LoADDI
+static bool detectLuiAddiGlobal(SDNode *Tail, unsigned &Idx, SDValue &LoADDI,
+                                SDValue &HiLUI, GlobalAddressSDNode *&GAlo,
+                                GlobalAddressSDNode *&GAhi) {
+  // Try to detect the pattern on every operand of the tail instruction.
+  for (Idx = 0; Idx < Tail->getNumOperands(); Idx++) {
+    LoADDI = Tail->getOperand(Idx);
+    // LoADDI should only be used by one instruction (Tail).
+    if (!LoADDI->isMachineOpcode() ||
+        !(LoADDI->getMachineOpcode() == RISCV::ADDI) ||
+        !isa<GlobalAddressSDNode>(LoADDI->getOperand(1)) ||
+        !LoADDI->hasOneUse())
+      continue;
+    // Check for existence of %lo target flag.
+    GAlo = cast<GlobalAddressSDNode>(LoADDI->getOperand(1));
+    if (!(GAlo->getTargetFlags() == RISCVII::MO_LO) ||
+        !(GAlo->getOffset() == 0))
+      return false;
+    // Check for existence of %hi target flag.
+    HiLUI = LoADDI->getOperand(0);
+    if (!HiLUI->isMachineOpcode() ||
+        !(HiLUI->getMachineOpcode() == RISCV::LUI) ||
+        !isa<GlobalAddressSDNode>(HiLUI->getOperand(0)) || !HiLUI->hasOneUse())
+      return false;
+    GAhi = cast<GlobalAddressSDNode>(HiLUI->getOperand(0));
+    if (!(GAhi->getTargetFlags() == RISCVII::MO_HI) ||
+        !(GAhi->getOffset() == 0))
+      return false;
+    return true;
+  }
+  return false;
+}
+
+static bool matchLuiOffset(SDValue &OffsetLUI, int64_t &Offset) {
+  if (!OffsetLUI->isMachineOpcode() ||
+      !(OffsetLUI->getMachineOpcode() == RISCV::LUI) ||
+      !isa<ConstantSDNode>(OffsetLUI->getOperand(0)))
+    return false;
+  Offset = cast<ConstantSDNode>(OffsetLUI->getOperand(0))->getSExtValue();
+  Offset = Offset << 12;
+  LLVM_DEBUG(dbgs() << " Detected \" LUI Offset_hi\"\n");
+  return true;
+}
+
+static bool matchAddiLuiOffset(SDValue &OffsetLoADDI, int64_t &Offset) {
+  // LoADDI should only be used by the tail instruction only.
+  if (!OffsetLoADDI->isMachineOpcode() ||
+      !(OffsetLoADDI->getMachineOpcode() == RISCV::ADDI) ||
+      !isa<ConstantSDNode>(OffsetLoADDI->getOperand(1)) ||
+      !OffsetLoADDI->hasOneUse())
+    return false;
+  int64_t OffLo =
+      cast<ConstantSDNode>(OffsetLoADDI->getOperand(1))->getZExtValue();
+  // HiLUI should only be used by the loADDI.
+  SDValue OffsetHiLUI = (OffsetLoADDI->getOperand(0));
+  if (!OffsetHiLUI->isMachineOpcode() ||
+      !(OffsetHiLUI->getMachineOpcode() == RISCV::LUI) ||
+      !isa<ConstantSDNode>(OffsetHiLUI->getOperand(0)) ||
+      !OffsetHiLUI->hasOneUse())
+    return false;
+  int64_t OffHi =
+      cast<ConstantSDNode>(OffsetHiLUI->getOperand(0))->getSExtValue();
+  Offset = (OffHi << 12) + OffLo;
+  LLVM_DEBUG(dbgs() << " Detected \" ADDI (LUI Offset_hi), Offset_lo\"\n");
+  return true;
+}
+
+static void updateTailInstrUsers(SDNode *Tail, SelectionDAG *CurDAG,
+                                 GlobalAddressSDNode *GAhi,
+                                 GlobalAddressSDNode *GAlo,
+                                 SDValue &GlobalHiLUI, SDValue &GlobalLoADDI,
+                                 int64_t Offset) {
+  // Update the offset in GAhi and GAlo.
+  SDLoc DL(Tail->getOperand(1));
+  SDValue GAHiNew = CurDAG->getTargetGlobalAddress(GAhi->getGlobal(), DL,
+                                                   GlobalHiLUI.getValueType(),
+                                                   Offset, RISCVII::MO_HI);
+  SDValue GALoNew = CurDAG->getTargetGlobalAddress(GAlo->getGlobal(), DL,
+                                                   GlobalLoADDI.getValueType(),
+                                                   Offset, RISCVII::MO_LO);
+  CurDAG->UpdateNodeOperands(GlobalHiLUI.getNode(), GAHiNew);
+  CurDAG->UpdateNodeOperands(GlobalLoADDI.getNode(), GlobalHiLUI, GALoNew);
+  // Update all uses of the Tail with the GlobalLoADDI. After
+  // this Tail will be a dead node.
+  SDValue From = SDValue(Tail, 0);
+  CurDAG->ReplaceAllUsesOfValuesWith(&From, &GlobalLoADDI, 1);
+}
+
+// TODO: This transformation might be better implemeted in a Machine Funtion
+// Pass as discussed here: https://reviews.llvm.org/D45748.
+//
+// Merge the offset of address calculation into the offset field
+// of a global address node in a global address lowering sequence ("LUI
+// %hi(global) --> add %lo(global)") under the following conditions: 1) The
+// offset field in the global address lowering sequence is zero. 2) The lowered
+// global address is only used in one node, referred to as "Tail".
+
+// This peephole does the following transformations to merge the offset:
+
+// 1) ADDI (ADDI (LUI %hi(global)) %lo(global)), offset
+//     --->
+//      ADDI (LUI %hi(global + offset)) %lo(global + offset).
+//
+//  This generates:
+//  lui a0, hi (global + offset)
+//  add a0, a0, lo (global + offset)
+//  Instead of
+//  lui a0, hi (global)
+//  addi a0, hi (global)
+//  addi a0, offset
+// This pattern is for cases when the offset is small enough to fit in the
+// immediate filed of ADDI (less than 12 bits).
+
+// 2) ADD ((ADDI (LUI %hi(global)) %lo(global)), (LUI hi_offset))
+//   --->
+//    offset = hi_offset << 12
+//    ADDI (LUI %hi(global + offset)) %lo(global + offset)
+
+//  Which generates the ASM:
+//  lui  a0, hi(global + offset)
+//  addi a0, lo(global + offset)
+// Instead of:
+//  lui  a0, hi(global)
+//  addi a0, lo(global)
+//  lui a1, (offset)
+//  add a0, a0, a1
+
+// This pattern is for cases when the offset doesn't fit in an immediate field
+// of ADDI but the lower 12 bits are all zeros.
+
+// 3) ADD ((ADDI (LUI %hi(global)) %lo(global)), (ADDI lo_offset, (LUI
+// hi_offset)))
+//     --->
+//        ADDI (LUI %hi(global + offset)) %lo(global + offset)
+// Which generates the ASM:
+// lui  a1, %hi(global + offhi20<<12 + offlo12)
+// addi a1, %lo(global + offhi20<<12 + offlo12)
+// Instead of:
+//  lui  a0, hi(global)
+//  addi a0, lo(global)
+//  lui a1, (offhi20)
+//  addi a1, (offlo12)
+//  add a0, a0, a1
+// This pattern is for cases when the offset doesn't fit in an immediate field
+// of ADDI and both the lower 1 bits and high 20 bits are non zero.
+void RISCVDAGToDAGISel::doPeepholeGlobalAddiLuiOffset() {
+  SelectionDAG::allnodes_iterator Position(CurDAG->getRoot().getNode());
+  ++Position;
+  SelectionDAG::allnodes_iterator Begin(CurDAG->allnodes_begin());
+  while (Position != Begin) {
+    SDNode *Tail = &*--Position;
+    // Skip dead nodes and any non-machine opcodes.
+    if (Tail->use_empty() || !Tail->isMachineOpcode())
+      continue;
+    // The tail instruction can be an ADD or an ADDI.
+    if (!Tail->isMachineOpcode() || !(Tail->getMachineOpcode() == RISCV::ADD ||
+                                      Tail->getMachineOpcode() == RISCV::ADDI))
+      continue;
+    // First detect the global address part of pattern:
+    // (lui %hi(global) --> Addi %lo(global))
+    unsigned GlobalLoADDiIdx;
+    SDValue GlobalLoADDI;
+    SDValue GlobalHiLUI;
+    GlobalAddressSDNode *GAhi;
+    GlobalAddressSDNode *GAlo;
+    if (!detectLuiAddiGlobal(Tail, GlobalLoADDiIdx, GlobalLoADDI, GlobalHiLUI,
+                             GAlo, GAhi))
+      continue;
+    LLVM_DEBUG(dbgs() << " Detected \"ADDI LUI %hi(global), %lo(global)\n");
+    // Detect the offset part for the address calculation by looking at the
+    // other operand of the tail instruction:
+    int64_t Offset;
+    if (Tail->getMachineOpcode() == RISCV::ADD) {
+      // If the Tail is an ADD instruction, the offset can be in two forms:
+      // 1) LUI hi_Offset followed by:
+      //    ADDI lo_offset
+      //    This happens in case the offset has non zero bits in
+      //    both hi 20 and lo 12 bits.
+      // 2) LUI (offset20)
+      //    This happens in case the lower 12 bits of the offset are zeros.
+      SDValue OffsetVal = Tail->getOperand(1 - GlobalLoADDiIdx);
+      if (!matchAddiLuiOffset(OffsetVal, Offset) &&
+          !matchLuiOffset(OffsetVal, Offset))
+        continue;
+    } else
+      // The Tail is an ADDI instruction:
+      Offset = cast<ConstantSDNode>(Tail->getOperand(1 - GlobalLoADDiIdx))
+                   ->getSExtValue();
+
+    LLVM_DEBUG(
+        dbgs()
+        << " Fold offset value into global offset of LUI %hi and ADDI %lo\n");
+    LLVM_DEBUG(dbgs() << "\tTail:");
+    LLVM_DEBUG(Tail->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "\tGlobalHiLUI:");
+    LLVM_DEBUG(GlobalHiLUI->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "\tGlobalLoADDI:");
+    LLVM_DEBUG(GlobalLoADDI->dump(CurDAG));
+    LLVM_DEBUG(dbgs() << "\n");
+    updateTailInstrUsers(Tail, CurDAG, GAhi, GAlo, GlobalHiLUI, GlobalLoADDI,
+                         Offset);
+  }
+  CurDAG->RemoveDeadNodes();
 }
 
 // Merge an ADDI into the offset of a load/store instruction where possible.

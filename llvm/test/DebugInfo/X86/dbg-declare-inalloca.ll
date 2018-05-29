@@ -67,7 +67,7 @@
 ; OBJ:   VarName: a
 ; OBJ: }
 ; OBJ: DefRangeRegisterRelSym {
-; OBJ:   BaseRegister: ESP (0x15)
+; OBJ:   BaseRegister: CVRegESP (0x15)
 ; OBJ:   BasePointerOffset: 12
 ; OBJ: }
 ; OBJ: LocalSym {
@@ -78,7 +78,7 @@
 ; OBJ:   VarName: b
 ; OBJ: }
 ; OBJ: DefRangeRegisterRelSym {
-; OBJ:   BaseRegister: ESP (0x15)
+; OBJ:   BaseRegister: CVRegESP (0x15)
 ; OBJ:   BasePointerOffset: 16
 ; OBJ: }
 ; FIXME: Retain unused.
@@ -90,7 +90,7 @@
 ; OBJ:   VarName: c
 ; OBJ: }
 ; OBJ: DefRangeRegisterRelSym {
-; OBJ:   BaseRegister: ESP (0x15)
+; OBJ:   BaseRegister: CVRegESP (0x15)
 ; OBJ:   BasePointerOffset: 24
 ; OBJ: }
 ; OBJ-LABEL: ProcEnd {

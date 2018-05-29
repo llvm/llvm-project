@@ -60,6 +60,10 @@ public:
         m_empty_children(false), m_abbr_idx(0), m_has_children(false),
         m_tag(0) {}
 
+  explicit operator bool() const { return m_offset != DW_INVALID_OFFSET; }
+  bool operator==(const DWARFDebugInfoEntry &rhs) const;
+  bool operator!=(const DWARFDebugInfoEntry &rhs) const;
+
   void BuildAddressRangeTable(SymbolFileDWARF *dwarf2Data,
                               const DWARFUnit *cu,
                               DWARFDebugAranges *debug_aranges) const;

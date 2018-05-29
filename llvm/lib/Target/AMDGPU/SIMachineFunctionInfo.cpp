@@ -71,8 +71,11 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     if (F.hasFnAttribute("amdgpu-implicitarg-ptr"))
       ImplicitArgPtr = true;
   } else {
-    if (F.hasFnAttribute("amdgpu-implicitarg-ptr"))
+    if (F.hasFnAttribute("amdgpu-implicitarg-ptr")) {
       KernargSegmentPtr = true;
+      assert(MaxKernArgAlign == 0);
+      MaxKernArgAlign =  ST.getAlignmentForImplicitArgPtr();
+    }
   }
 
   CallingConv::ID CC = F.getCallingConv();
@@ -134,7 +137,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     }
   }
 
-  bool IsCOV2 = ST.isAmdCodeObjectV2(MF);
+  bool IsCOV2 = ST.isAmdCodeObjectV2(F);
   if (IsCOV2) {
     if (HasStackObjects || MaySpill)
       PrivateSegmentBuffer = true;
@@ -147,7 +150,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
     if (F.hasFnAttribute("amdgpu-dispatch-id"))
       DispatchID = true;
-  } else if (ST.isMesaGfxShader(MF)) {
+  } else if (ST.isMesaGfxShader(F)) {
     if (HasStackObjects || MaySpill)
       ImplicitBufferPtr = true;
   }

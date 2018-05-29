@@ -434,18 +434,31 @@ llvm::RecursivelyDeleteTriviallyDeadInstructions(Value *V,
 
   SmallVector<Instruction*, 16> DeadInsts;
   DeadInsts.push_back(I);
+  RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, TLI);
 
-  do {
-    I = DeadInsts.pop_back_val();
-    salvageDebugInfo(*I);
+  return true;
+}
+
+void llvm::RecursivelyDeleteTriviallyDeadInstructions(
+    SmallVectorImpl<Instruction *> &DeadInsts, const TargetLibraryInfo *TLI) {
+  // Process the dead instruction list until empty.
+  while (!DeadInsts.empty()) {
+    Instruction &I = *DeadInsts.pop_back_val();
+    assert(I.use_empty() && "Instructions with uses are not dead.");
+    assert(isInstructionTriviallyDead(&I, TLI) &&
+           "Live instruction found in dead worklist!");
+
+    // Don't lose the debug info while deleting the instructions.
+    salvageDebugInfo(I);
 
     // Null out all of the instruction's operands to see if any operand becomes
     // dead as we go.
-    for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {
-      Value *OpV = I->getOperand(i);
-      I->setOperand(i, nullptr);
+    for (Use &OpU : I.operands()) {
+      Value *OpV = OpU.get();
+      OpU.set(nullptr);
 
-      if (!OpV->use_empty()) continue;
+      if (!OpV->use_empty())
+        continue;
 
       // If the operand is an instruction that became dead as we nulled out the
       // operand, and if it is 'trivially' dead, delete it in a future loop
@@ -455,10 +468,8 @@ llvm::RecursivelyDeleteTriviallyDeadInstructions(Value *V,
           DeadInsts.push_back(OpI);
     }
 
-    I->eraseFromParent();
-  } while (!DeadInsts.empty());
-
-  return true;
+    I.eraseFromParent();
+  }
 }
 
 /// areAllUsesEqual - Check whether the uses of a value are all the same.
