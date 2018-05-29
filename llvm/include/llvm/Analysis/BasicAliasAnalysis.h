@@ -171,7 +171,7 @@ private:
 
   static bool isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
       const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
-      uint64_t ObjectAccessSize);
+      LocationSize ObjectAccessSize);
 
   /// A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.
@@ -183,31 +183,33 @@ private:
   /// the addition overflows.
   bool
   constantOffsetHeuristic(const SmallVectorImpl<VariableGEPIndex> &VarIndices,
-                          uint64_t V1Size, uint64_t V2Size, int64_t BaseOffset,
-                          AssumptionCache *AC, DominatorTree *DT);
+                          LocationSize V1Size, LocationSize V2Size,
+                          int64_t BaseOffset, AssumptionCache *AC,
+                          DominatorTree *DT);
 
   bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2);
 
   void GetIndexDifference(SmallVectorImpl<VariableGEPIndex> &Dest,
                           const SmallVectorImpl<VariableGEPIndex> &Src);
 
-  AliasResult aliasGEP(const GEPOperator *V1, uint64_t V1Size,
+  AliasResult aliasGEP(const GEPOperator *V1, LocationSize V1Size,
                        const AAMDNodes &V1AAInfo, const Value *V2,
-                       uint64_t V2Size, const AAMDNodes &V2AAInfo,
+                       LocationSize V2Size, const AAMDNodes &V2AAInfo,
                        const Value *UnderlyingV1, const Value *UnderlyingV2);
 
-  AliasResult aliasPHI(const PHINode *PN, uint64_t PNSize,
+  AliasResult aliasPHI(const PHINode *PN, LocationSize PNSize,
                        const AAMDNodes &PNAAInfo, const Value *V2,
-                       uint64_t V2Size, const AAMDNodes &V2AAInfo,
+                       LocationSize V2Size, const AAMDNodes &V2AAInfo,
                        const Value *UnderV2);
 
-  AliasResult aliasSelect(const SelectInst *SI, uint64_t SISize,
+  AliasResult aliasSelect(const SelectInst *SI, LocationSize SISize,
                           const AAMDNodes &SIAAInfo, const Value *V2,
-                          uint64_t V2Size, const AAMDNodes &V2AAInfo,
+                          LocationSize V2Size, const AAMDNodes &V2AAInfo,
                           const Value *UnderV2);
 
-  AliasResult aliasCheck(const Value *V1, uint64_t V1Size, AAMDNodes V1AATag,
-                         const Value *V2, uint64_t V2Size, AAMDNodes V2AATag,
+  AliasResult aliasCheck(const Value *V1, LocationSize V1Size,
+                         AAMDNodes V1AATag, const Value *V2,
+                         LocationSize V2Size, AAMDNodes V2AATag,
                          const Value *O1 = nullptr, const Value *O2 = nullptr);
 };
 

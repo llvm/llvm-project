@@ -55,7 +55,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/PredicateInfo.h"
 #include <cassert>
 #include <utility>
 #include <vector>
@@ -249,21 +248,7 @@ class SCCPSolver : public InstVisitor<SCCPSolver> {
   using Edge = std::pair<BasicBlock *, BasicBlock *>;
   DenseSet<Edge> KnownFeasibleEdges;
 
-  DenseMap<Function *, std::unique_ptr<PredicateInfo>> PredInfos;
-  DenseMap<Value *, SmallPtrSet<User *, 2>> AdditionalUsers;
-
 public:
-  void addPredInfo(Function &F, std::unique_ptr<PredicateInfo> PI) {
-    PredInfos[&F] = std::move(PI);
-  }
-
-  const PredicateBase *getPredicateInfoFor(Instruction *I) {
-    auto PI = PredInfos.find(I->getParent()->getParent());
-    if (PI == PredInfos.end())
-      return nullptr;
-    return PI->second->getPredicateInfoFor(I);
-  }
-
   SCCPSolver(const DataLayout &DL, const TargetLibraryInfo *tli)
       : DL(DL), TLI(tli) {}
 
@@ -576,26 +561,6 @@ private:
   void OperandChangedState(Instruction *I) {
     if (BBExecutable.count(I->getParent()))   // Inst is executable?
       visit(*I);
-  }
-
-  // Add U as additional user of V.
-  void addAdditionalUser(Value *V, User *U) {
-    auto Iter = AdditionalUsers.insert({V, {}});
-    Iter.first->second.insert(U);
-  }
-
-  // Mark I's users as changed, including AdditionalUsers.
-  void markUsersAsChanged(Value *I) {
-    for (User *U : I->users())
-      if (auto *UI = dyn_cast<Instruction>(U))
-        OperandChangedState(UI);
-
-    auto Iter = AdditionalUsers.find(I);
-    if (Iter != AdditionalUsers.end()) {
-      for (User *U : Iter->second)
-        if (auto *UI = dyn_cast<Instruction>(U))
-          OperandChangedState(UI);
-    }
   }
 
 private:
@@ -1192,59 +1157,6 @@ void SCCPSolver::visitCallSite(CallSite CS) {
   Function *F = CS.getCalledFunction();
   Instruction *I = CS.getInstruction();
 
-  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
-      if (ValueState[I].isOverdefined())
-        return;
-
-      auto *PI = getPredicateInfoFor(I);
-      if (!PI)
-        return;
-
-      auto *PBranch = dyn_cast<PredicateBranch>(getPredicateInfoFor(I));
-      if (!PBranch)
-        return mergeInValue(ValueState[I], I, getValueState(PI->OriginalOp));
-
-      Value *CopyOf = I->getOperand(0);
-      Value *Cond = PBranch->Condition;
-
-      // Everything below relies on the condition being a comparison.
-      auto *Cmp = dyn_cast<CmpInst>(Cond);
-      if (!Cmp)
-        return mergeInValue(ValueState[I], I, getValueState(PI->OriginalOp));
-
-      Value *CmpOp0 = Cmp->getOperand(0);
-      Value *CmpOp1 = Cmp->getOperand(1);
-      if (CopyOf != CmpOp0 && CopyOf != CmpOp1)
-        return mergeInValue(ValueState[I], I, getValueState(PI->OriginalOp));
-
-      if (CmpOp0 != CopyOf)
-        std::swap(CmpOp0, CmpOp1);
-
-      LatticeVal OriginalVal = getValueState(CopyOf);
-      LatticeVal EqVal = getValueState(CmpOp1);
-      LatticeVal &IV = ValueState[I];
-      if (PBranch->TrueEdge && Cmp->getPredicate() == CmpInst::ICMP_EQ) {
-        addAdditionalUser(CmpOp1, I);
-        if (OriginalVal.isConstant())
-          mergeInValue(IV, I, OriginalVal);
-        else
-          mergeInValue(IV, I, EqVal);
-        return;
-      }
-      if (!PBranch->TrueEdge && Cmp->getPredicate() == CmpInst::ICMP_NE) {
-        addAdditionalUser(CmpOp1, I);
-        if (OriginalVal.isConstant())
-          mergeInValue(IV, I, OriginalVal);
-        else
-          mergeInValue(IV, I, EqVal);
-        return;
-      }
-
-      return mergeInValue(IV, I, getValueState(PBranch->OriginalOp));
-    }
-  }
-
   // The common case is that we aren't tracking the callee, either because we
   // are not doing interprocedural analysis or the callee is indirect, or is
   // external.  Handle these cases first.
@@ -1356,7 +1268,9 @@ void SCCPSolver::Solve() {
       // since all of its users will have already been marked as overdefined
       // Update all of the users of this instruction's value.
       //
-      markUsersAsChanged(I);
+      for (User *U : I->users())
+        if (auto *UI = dyn_cast<Instruction>(U))
+          OperandChangedState(UI);
     }
 
     // Process the instruction work list.
@@ -1373,7 +1287,9 @@ void SCCPSolver::Solve() {
       // Update all of the users of this instruction's value.
       //
       if (I->getType()->isStructTy() || !getValueState(I).isOverdefined())
-        markUsersAsChanged(I);
+        for (User *U : I->users())
+          if (auto *UI = dyn_cast<Instruction>(U))
+            OperandChangedState(UI);
     }
 
     // Process the basic block work list.
@@ -1939,9 +1855,8 @@ static void findReturnsToZap(Function &F,
   }
 }
 
-bool llvm::runIPSCCP(
-    Module &M, const DataLayout &DL, const TargetLibraryInfo *TLI,
-    function_ref<std::unique_ptr<PredicateInfo>(Function &)> getPredicateInfo) {
+bool llvm::runIPSCCP(Module &M, const DataLayout &DL,
+                     const TargetLibraryInfo *TLI) {
   SCCPSolver Solver(DL, TLI);
 
   // Loop over all functions, marking arguments to those with their addresses
@@ -1950,7 +1865,6 @@ bool llvm::runIPSCCP(
     if (F.isDeclaration())
       continue;
 
-    Solver.addPredInfo(F, getPredicateInfo(F));
     // Determine if we can track the function's return values. If so, add the
     // function to the solver's set of return-tracked functions.
     if (canTrackReturnsInterprocedurally(&F))
@@ -2069,24 +1983,6 @@ bool llvm::runIPSCCP(
       F.getBasicBlockList().erase(DeadBB);
     }
     BlocksToErase.clear();
-
-    for (BasicBlock &BB : F) {
-      for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E;) {
-        Instruction *Inst = &*BI++;
-        if (const PredicateBase *PI = Solver.getPredicateInfoFor(Inst)) {
-          if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
-            if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
-              Value *Op = II->getOperand(0);
-              Inst->replaceAllUsesWith(Op);
-              Inst->eraseFromParent();
-              continue;
-            }
-          }
-          Inst->replaceAllUsesWith(PI->OriginalOp);
-          Inst->eraseFromParent();
-        }
-      }
-    }
   }
 
   // If we inferred constant or undef return values for a function, we replaced

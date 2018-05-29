@@ -1970,7 +1970,7 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   // Get the location that may be stored across the loop.  Since the access
   // is strided positively through memory, we say that the modified location
   // starts at the pointer and has infinite size.
-  uint64_t AccessSize = MemoryLocation::UnknownSize;
+  LocationSize AccessSize = MemoryLocation::UnknownSize;
 
   // If the loop iterates a fixed number of times, we can refine the access
   // size to be exactly the size of the memset, which is (BECount+1)*StoreSize

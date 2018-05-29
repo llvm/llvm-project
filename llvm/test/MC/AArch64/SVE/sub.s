@@ -198,3 +198,91 @@ sub     z23.b, p3/m, z23.b, z13.b
 // CHECK-ENCODING: [0xb7,0x0d,0x01,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: b7 0d 01 04 <unknown>
+
+// -----------------------
+//
+
+sub     z0.b, z0.b, #0
+// CHECK-INST: sub     z0.b, z0.b, #0
+// CHECK-ENCODING: [0x00,0xc0,0x21,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 c0 21 25 <unknown>
+
+sub     z31.b, z31.b, #255
+// CHECK-INST: sub     z31.b, z31.b, #255
+// CHECK-ENCODING: [0xff,0xdf,0x21,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff df 21 25 <unknown>
+
+sub     z0.h, z0.h, #0
+// CHECK-INST: sub     z0.h, z0.h, #0
+// CHECK-ENCODING: [0x00,0xc0,0x61,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 c0 61 25 <unknown>
+
+sub     z0.h, z0.h, #0, lsl #8
+// CHECK-INST: sub     z0.h, z0.h, #0, lsl #8
+// CHECK-ENCODING: [0x00,0xe0,0x61,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 e0 61 25 <unknown>
+
+sub     z31.h, z31.h, #255, lsl #8
+// CHECK-INST: sub     z31.h, z31.h, #65280
+// CHECK-ENCODING: [0xff,0xff,0x61,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff ff 61 25 <unknown>
+
+sub     z31.h, z31.h, #65280
+// CHECK-INST: sub     z31.h, z31.h, #65280
+// CHECK-ENCODING: [0xff,0xff,0x61,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff ff 61 25 <unknown>
+
+sub     z0.s, z0.s, #0
+// CHECK-INST: sub     z0.s, z0.s, #0
+// CHECK-ENCODING: [0x00,0xc0,0xa1,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 c0 a1 25 <unknown>
+
+sub     z0.s, z0.s, #0, lsl #8
+// CHECK-INST: sub     z0.s, z0.s, #0, lsl #8
+// CHECK-ENCODING: [0x00,0xe0,0xa1,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 e0 a1 25 <unknown>
+
+sub     z31.s, z31.s, #255, lsl #8
+// CHECK-INST: sub     z31.s, z31.s, #65280
+// CHECK-ENCODING: [0xff,0xff,0xa1,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff ff a1 25 <unknown>
+
+sub     z31.s, z31.s, #65280
+// CHECK-INST: sub     z31.s, z31.s, #65280
+// CHECK-ENCODING: [0xff,0xff,0xa1,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff ff a1 25 <unknown>
+
+sub     z0.d, z0.d, #0
+// CHECK-INST: sub     z0.d, z0.d, #0
+// CHECK-ENCODING: [0x00,0xc0,0xe1,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 c0 e1 25 <unknown>
+
+sub     z0.d, z0.d, #0, lsl #8
+// CHECK-INST: sub     z0.d, z0.d, #0, lsl #8
+// CHECK-ENCODING: [0x00,0xe0,0xe1,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 e0 e1 25 <unknown>
+
+sub     z31.d, z31.d, #255, lsl #8
+// CHECK-INST: sub     z31.d, z31.d, #65280
+// CHECK-ENCODING: [0xff,0xff,0xe1,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff ff e1 25 <unknown>
+
+sub     z31.d, z31.d, #65280
+// CHECK-INST: sub     z31.d, z31.d, #65280
+// CHECK-ENCODING: [0xff,0xff,0xe1,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff ff e1 25 <unknown>
+

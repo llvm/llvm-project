@@ -28,3 +28,7 @@
   sc $4, -513($5)          # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   ll $4, 512($5)           # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   ll $4, -513($5)          # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  lwr $4, 1($5)            # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+  lwl $4, 1($5)            # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+  swr $4, 1($5)            # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+  swl $4, 1($5)            # CHECK: :[[@LINE]]:11: error: invalid operand for instruction

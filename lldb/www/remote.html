@@ -133,7 +133,7 @@
               "<code>remote-</code>". For example, to debug a remote Linux application:
             <br>
             <code>
-              <br>(lldb) <b>patform select remote-linux</b>
+              <br>(lldb) <b>platform select remote-linux</b>
             </code>
 
             <p>
@@ -215,7 +215,7 @@
             <h4>Install and run by specifying a remote install path</h4>
             <p>
               If you want the "a.out" executable to be installed into
-              "/bin/a.out" instead of the platorm's current working directory,
+              "/bin/a.out" instead of the platform's current working directory,
               we can set the platform file specification using python:
             <br>
             <code>
@@ -225,7 +225,7 @@
             </code>
             <p>
               Now when you run your program, the program will be uploaded to
-              "/bin/a.out" instead of the the platform current working directory.
+              "/bin/a.out" instead of the platform current working directory.
               Only the main executable is uploaded to the remote system by
               default when launching the application. If you have shared
               libraries that should also be uploaded, then you can add the

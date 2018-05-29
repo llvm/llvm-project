@@ -831,7 +831,7 @@ struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag1> {
   };
 };
 
-extern "C" int f(mismatch_gro_type_tag1) { 
+extern "C" int f(mismatch_gro_type_tag1) {
   // expected-error@-1 {{cannot initialize return object of type 'int' with an rvalue of type 'void'}}
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
@@ -848,7 +848,7 @@ struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag2> {
   };
 };
 
-extern "C" int f(mismatch_gro_type_tag2) { 
+extern "C" int f(mismatch_gro_type_tag2) {
   // expected-error@-1 {{cannot initialize return object of type 'int' with an lvalue of type 'void *'}}
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
@@ -866,7 +866,7 @@ struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag3> {
   };
 };
 
-extern "C" int f(mismatch_gro_type_tag3) { 
+extern "C" int f(mismatch_gro_type_tag3) {
   // expected-error@-1 {{cannot initialize return object of type 'int' with an rvalue of type 'void'}}
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
@@ -885,7 +885,7 @@ struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag4> {
   };
 };
 
-extern "C" int f(mismatch_gro_type_tag4) { 
+extern "C" int f(mismatch_gro_type_tag4) {
   // expected-error@-1 {{cannot initialize return object of type 'int' with an rvalue of type 'char *'}}
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
@@ -1246,7 +1246,10 @@ good_coroutine_calls_default_constructor() {
   co_return;
 }
 
+struct some_class;
+
 struct good_promise_custom_constructor {
+  good_promise_custom_constructor(some_class&, float, int);
   good_promise_custom_constructor(double, float, int);
   good_promise_custom_constructor() = delete;
   coro<good_promise_custom_constructor> get_return_object();
@@ -1261,9 +1264,20 @@ good_coroutine_calls_custom_constructor(double, float, int) {
   co_return;
 }
 
+struct some_class {
+  coro<good_promise_custom_constructor>
+  good_coroutine_calls_custom_constructor(float, int) {
+    co_return;
+  }
+  coro<good_promise_custom_constructor>
+  static good_coroutine_calls_custom_constructor(double, float, int) {
+    co_return;
+  }
+};
+
 struct bad_promise_no_matching_constructor {
   bad_promise_no_matching_constructor(int, int, int);
-  // expected-note@+1 {{'bad_promise_no_matching_constructor' has been explicitly marked deleted here}}
+  // expected-note@+1 2 {{'bad_promise_no_matching_constructor' has been explicitly marked deleted here}}
   bad_promise_no_matching_constructor() = delete;
   coro<bad_promise_no_matching_constructor> get_return_object();
   suspend_always initial_suspend();
@@ -1277,6 +1291,14 @@ bad_coroutine_calls_with_no_matching_constructor(int, int) {
   // expected-error@-1 {{call to deleted constructor of 'std::experimental::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor>, int, int>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor')}}
   co_return;
 }
+
+struct some_class2 {
+coro<bad_promise_no_matching_constructor>
+bad_coroutine_calls_with_no_matching_constructor(int, int, int) {
+  // expected-error@-1 {{call to deleted constructor}}
+  co_return;
+}
+};
 
 } // namespace CoroHandleMemberFunctionTest
 

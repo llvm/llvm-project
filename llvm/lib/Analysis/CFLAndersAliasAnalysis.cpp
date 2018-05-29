@@ -337,7 +337,7 @@ public:
   FunctionInfo(const Function &, const SmallVectorImpl<Value *> &,
                const ReachabilitySet &, const AliasAttrMap &);
 
-  bool mayAlias(const Value *, uint64_t, const Value *, uint64_t) const;
+  bool mayAlias(const Value *, LocationSize, const Value *, LocationSize) const;
   const AliasSummary &getAliasSummary() const { return Summary; }
 };
 
@@ -516,9 +516,9 @@ CFLAndersAAResult::FunctionInfo::getAttrs(const Value *V) const {
 }
 
 bool CFLAndersAAResult::FunctionInfo::mayAlias(const Value *LHS,
-                                               uint64_t LHSSize,
+                                               LocationSize LHSSize,
                                                const Value *RHS,
-                                               uint64_t RHSSize) const {
+                                               LocationSize RHSSize) const {
   assert(LHS && RHS);
 
   // Check if we've seen LHS and RHS before. Sometimes LHS or RHS can be created

@@ -778,8 +778,8 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
     EVT ValueVT = ValueVTs[Value];
     unsigned NumRegs = RegCount[Value];
     MVT RegisterVT = IsABIMangled
-                         ? TLI.getRegisterTypeForCallingConv(RegVTs[Value])
-                         : RegVTs[Value];
+      ? TLI.getRegisterTypeForCallingConv(*DAG.getContext(), RegVTs[Value])
+      : RegVTs[Value];
 
     Parts.resize(NumRegs);
     for (unsigned i = 0; i != NumRegs; ++i) {
@@ -877,8 +877,8 @@ void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG,
     unsigned NumParts = RegCount[Value];
 
     MVT RegisterVT = IsABIMangled
-                         ? TLI.getRegisterTypeForCallingConv(RegVTs[Value])
-                         : RegVTs[Value];
+      ? TLI.getRegisterTypeForCallingConv(*DAG.getContext(), RegVTs[Value])
+      : RegVTs[Value];
 
     if (ExtendKind == ISD::ANY_EXTEND && TLI.isZExtFree(Val, RegisterVT))
       ExtendKind = ISD::ZERO_EXTEND;

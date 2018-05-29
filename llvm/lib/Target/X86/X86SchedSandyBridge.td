@@ -1144,4 +1144,6 @@ def SBWriteResGroup131 : SchedWriteRes<[SBPort0,SBPort1,SBPort23]> {
 }
 def: InstRW<[SBWriteResGroup131], (instregex "DIV(R?)_FI(16|32)m")>;
 
+def: InstRW<[WriteZero], (instrs CLC)>;
+
 } // SchedModel

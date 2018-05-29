@@ -782,8 +782,11 @@ void StackColoring::calculateLocalLiveness() {
       for (MachineBasicBlock::const_pred_iterator PI = BB->pred_begin(),
            PE = BB->pred_end(); PI != PE; ++PI) {
         LivenessMap::const_iterator I = BlockLiveness.find(*PI);
-        assert(I != BlockLiveness.end() && "Predecessor not found");
-        LocalLiveIn |= I->second.LiveOut;
+        // PR37130: transformations prior to stack coloring can
+        // sometimes leave behind statically unreachable blocks; these
+        // can be safely skipped here.
+        if (I != BlockLiveness.end())
+          LocalLiveIn |= I->second.LiveOut;
       }
 
       // Compute LiveOut by subtracting out lifetimes that end in this

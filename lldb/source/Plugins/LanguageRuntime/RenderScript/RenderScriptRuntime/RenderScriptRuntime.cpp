@@ -593,7 +593,7 @@ struct RenderScriptRuntime::Element {
   empirical_type<uint32_t> datum_size;  // Size of a single Element with padding
   empirical_type<uint32_t> padding;     // Number of padding bytes
   empirical_type<uint32_t>
-      array_size;        // Number of items in array, only needed for strucrs
+      array_size;        // Number of items in array, only needed for structs
   ConstString type_name; // Name of type, only needed for structs
 
   static const ConstString &
@@ -3392,7 +3392,7 @@ bool RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame *frame_ptr,
           DumpValueObjectOptions expr_options;
           expr_options.SetHideName(true);
 
-          // Setup expression as derefrencing a pointer cast to element
+          // Setup expression as dereferencing a pointer cast to element
           // address.
           char expr_char_buffer[jit_max_expr_size];
           int written =

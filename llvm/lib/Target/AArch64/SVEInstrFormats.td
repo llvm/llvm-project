@@ -117,6 +117,11 @@ def SVECpyImmOperand16 : SVEShiftedImmOperand<16, "Cpy", "isSVECpyImm<int16_t>">
 def SVECpyImmOperand32 : SVEShiftedImmOperand<32, "Cpy", "isSVECpyImm<int32_t>">;
 def SVECpyImmOperand64 : SVEShiftedImmOperand<64, "Cpy", "isSVECpyImm<int64_t>">;
 
+def SVEAddSubImmOperand8  : SVEShiftedImmOperand<8,  "AddSub", "isSVEAddSubImm<int8_t>">;
+def SVEAddSubImmOperand16 : SVEShiftedImmOperand<16, "AddSub", "isSVEAddSubImm<int16_t>">;
+def SVEAddSubImmOperand32 : SVEShiftedImmOperand<32, "AddSub", "isSVEAddSubImm<int32_t>">;
+def SVEAddSubImmOperand64 : SVEShiftedImmOperand<64, "AddSub", "isSVEAddSubImm<int64_t>">;
+
 class imm8_opt_lsl<int ElementWidth, string printType,
                    AsmOperandClass OpndClass, code Predicate>
     : Operand<i32>, ImmLeaf<i32, Predicate> {
@@ -138,6 +143,19 @@ def cpy_imm8_opt_lsl_i32 : imm8_opt_lsl<32, "int32_t", SVECpyImmOperand32, [{
 }]>;
 def cpy_imm8_opt_lsl_i64 : imm8_opt_lsl<64, "int64_t", SVECpyImmOperand64, [{
   return AArch64_AM::isSVECpyImm<int64_t>(Imm);
+}]>;
+
+def addsub_imm8_opt_lsl_i8  : imm8_opt_lsl<8,  "uint8_t",  SVEAddSubImmOperand8,  [{
+  return AArch64_AM::isSVEAddSubImm<int8_t>(Imm);
+}]>;
+def addsub_imm8_opt_lsl_i16 : imm8_opt_lsl<16, "uint16_t", SVEAddSubImmOperand16, [{
+  return AArch64_AM::isSVEAddSubImm<int16_t>(Imm);
+}]>;
+def addsub_imm8_opt_lsl_i32 : imm8_opt_lsl<32, "uint32_t", SVEAddSubImmOperand32, [{
+  return AArch64_AM::isSVEAddSubImm<int32_t>(Imm);
+}]>;
+def addsub_imm8_opt_lsl_i64 : imm8_opt_lsl<64, "uint64_t", SVEAddSubImmOperand64, [{
+  return AArch64_AM::isSVEAddSubImm<int64_t>(Imm);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -381,6 +399,13 @@ class sve_int_bin_pred_arit_log<bits<2> sz8_64, bits<2> fmt, bits<3> opc,
   let Constraints = "$Zdn = $_Zdn";
 }
 
+multiclass sve_int_bin_pred_log<bits<3> opc, string asm> {
+  def _B : sve_int_bin_pred_arit_log<0b00, 0b11, opc, asm, ZPR8>;
+  def _H : sve_int_bin_pred_arit_log<0b01, 0b11, opc, asm, ZPR16>;
+  def _S : sve_int_bin_pred_arit_log<0b10, 0b11, opc, asm, ZPR32>;
+  def _D : sve_int_bin_pred_arit_log<0b11, 0b11, opc, asm, ZPR64>;
+}
+
 multiclass sve_int_bin_pred_arit_0<bits<3> opc, string asm> {
   def _B : sve_int_bin_pred_arit_log<0b00, 0b00, opc, asm, ZPR8>;
   def _H : sve_int_bin_pred_arit_log<0b01, 0b00, opc, asm, ZPR16>;
@@ -423,6 +448,55 @@ multiclass sve_int_dup_imm<string asm> {
                   (!cast<Instruction>(NAME # _S) ZPR32:$Zd, cpy_imm8_opt_lsl_i32:$imm), 1>;
   def : InstAlias<"mov $Zd, $imm",
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, cpy_imm8_opt_lsl_i64:$imm), 1>;
+}
+
+class sve_int_arith_imm0<bits<2> sz8_64, bits<3> opc, string asm,
+                         ZPRRegOp zprty, Operand immtype>
+: I<(outs zprty:$Zdn), (ins zprty:$_Zdn, immtype:$imm),
+  asm, "\t$Zdn, $_Zdn, $imm",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zdn;
+  bits<9> imm;
+  let Inst{31-24} = 0b00100101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-19} = 0b100;
+  let Inst{18-16} = opc;
+  let Inst{15-14} = 0b11;
+  let Inst{13}    = imm{8};   // sh
+  let Inst{12-5}  = imm{7-0}; // imm8
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+multiclass sve_int_arith_imm0<bits<3> opc, string asm> {
+  def _B : sve_int_arith_imm0<0b00, opc, asm, ZPR8, addsub_imm8_opt_lsl_i8>;
+  def _H : sve_int_arith_imm0<0b01, opc, asm, ZPR16, addsub_imm8_opt_lsl_i16>;
+  def _S : sve_int_arith_imm0<0b10, opc, asm, ZPR32, addsub_imm8_opt_lsl_i32>;
+  def _D : sve_int_arith_imm0<0b11, opc, asm, ZPR64, addsub_imm8_opt_lsl_i64>;
+}
+
+
+//===----------------------------------------------------------------------===//
+// SVE Bitwise Logical - Unpredicated Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_bin_cons_log<bits<2> opc, string asm>
+: I<(outs ZPR64:$Zd), (ins ZPR64:$Zn, ZPR64:$Zm),
+  asm, "\t$Zd, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = opc{1-0};
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-10} = 0b001100;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
 }
 
 //===----------------------------------------------------------------------===//
@@ -524,6 +598,39 @@ multiclass sve_int_index_rr<string asm> {
   def _S : sve_int_index_rr<0b10, asm, ZPR32, GPR32>;
   def _D : sve_int_index_rr<0b11, asm, ZPR64, GPR64>;
 }
+//
+//===----------------------------------------------------------------------===//
+// SVE Bitwise Shift - Predicated Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_bin_pred_shift_1<bits<2> sz8_64, bits<3> opc, string asm,
+                               ZPRRegOp zprty>
+: I<(outs zprty:$Zdn), (ins PPR3bAny:$Pg, zprty:$_Zdn, zprty:$Zm),
+  asm, "\t$Zdn, $Pg/m, $_Zdn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zdn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-19} = 0b010;
+  let Inst{18-16} = opc;
+  let Inst{15-13} = 0b100;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zm;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+multiclass sve_int_bin_pred_shift_1<bits<3> opc, string asm> {
+  def _B : sve_int_bin_pred_shift_1<0b00, opc, asm, ZPR8>;
+  def _H : sve_int_bin_pred_shift_1<0b01, opc, asm, ZPR16>;
+  def _S : sve_int_bin_pred_shift_1<0b10, opc, asm, ZPR32>;
+  def _D : sve_int_bin_pred_shift_1<0b11, opc, asm, ZPR64>;
+}
+
 
 //===----------------------------------------------------------------------===//
 // SVE Shift by Immediate - Unpredicated Group

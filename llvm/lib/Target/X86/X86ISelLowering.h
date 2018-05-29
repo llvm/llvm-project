@@ -428,10 +428,6 @@ namespace llvm {
       // Res = VPERMV3 V0, MaskV, V1
       VPERMV3,
 
-      // 3-op Variable Permute overwriting the index (VPERMI2).
-      // Res = VPERMIV3 V0, MaskV, V1
-      VPERMIV3,
-
       // Bitwise ternary logic.
       VPTERNLOG,
       // Fix Up Special Packed Float32/64 values.
@@ -1100,8 +1096,6 @@ namespace llvm {
 
     /// Customize the preferred legalization strategy for certain types.
     LegalizeTypeAction getPreferredVectorAction(EVT VT) const override;
-
-    MVT getRegisterTypeForCallingConv(MVT VT) const override;
 
     MVT getRegisterTypeForCallingConv(LLVMContext &Context,
                                       EVT VT) const override;

@@ -67,8 +67,6 @@ CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
       DBuilder(CGM.getModule()) {
   for (const auto &KV : CGM.getCodeGenOpts().DebugPrefixMap)
     DebugPrefixMap[KV.first] = KV.second;
-  EmitFileChecksums = CGM.getCodeGenOpts().EmitCodeView ||
-                      CGM.getCodeGenOpts().DwarfVersion >= 5;
   CreateCompileUnit();
 }
 
@@ -367,21 +365,15 @@ Optional<llvm::DIFile::ChecksumKind>
 CGDebugInfo::computeChecksum(FileID FID, SmallString<32> &Checksum) const {
   Checksum.clear();
 
-  if (!EmitFileChecksums)
+  if (!CGM.getCodeGenOpts().EmitCodeView &&
+      CGM.getCodeGenOpts().DwarfVersion < 5)
     return None;
 
   SourceManager &SM = CGM.getContext().getSourceManager();
   bool Invalid;
-  const SrcMgr::SLocEntry &Entry = SM.getSLocEntry(FID, &Invalid);
-  if (Invalid || !Entry.isFile())
+  llvm::MemoryBuffer *MemBuffer = SM.getBuffer(FID, &Invalid);
+  if (Invalid)
     return None;
-  if (Entry.getFile().hasLineDirectives()) {
-    // This must be a preprocessed file; its content won't match the original
-    // source; therefore checksumming the text we have is pointless or wrong.
-    EmitFileChecksums = false;
-    return None;
-  }
-  llvm::MemoryBuffer *MemBuffer = SM.getBuffer(FID);
 
   llvm::MD5 Hash;
   llvm::MD5::MD5Result Result;

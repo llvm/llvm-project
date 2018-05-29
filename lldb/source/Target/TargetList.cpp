@@ -102,7 +102,7 @@ Status TargetList::CreateTargetInternal(
 
   CommandInterpreter &interpreter = debugger.GetCommandInterpreter();
 
-  // let's see if there is already an existing plaform before we go creating
+  // let's see if there is already an existing platform before we go creating
   // another...
   platform_sp = debugger.GetPlatformList().GetSelectedPlatform();
 
@@ -232,7 +232,7 @@ Status TargetList::CreateTargetInternal(
           }
 
           if (platform_ptr) {
-            // All platforms for all modules in the exectuable match, so we can
+            // All platforms for all modules in the executable match, so we can
             // select this platform
             platform_sp = platforms.front();
           } else if (more_than_one_platforms == false) {

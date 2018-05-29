@@ -83,6 +83,35 @@ void test_pmr_uses_allocator(std::tuple<TTypes...> ttuple, std::tuple<UTypes...>
     }
 }
 
+template <class Alloc, class ...TTypes, class ...UTypes>
+void test_pmr_not_uses_allocator(std::tuple<TTypes...> ttuple, std::tuple<UTypes...> utuple)
+{
+    {
+        using T = NotUsesAllocator<Alloc, sizeof...(TTypes)>;
+        using U = NotUsesAllocator<Alloc, sizeof...(UTypes)>;
+        assert((doTest<T, U>(UA_None, UA_None,
+                             std::move(ttuple), std::move(utuple))));
+    }
+    {
+        using T = UsesAllocatorV1<Alloc, sizeof...(TTypes)>;
+        using U = UsesAllocatorV2<Alloc, sizeof...(UTypes)>;
+        assert((doTest<T, U>(UA_None, UA_None,
+                             std::move(ttuple), std::move(utuple))));
+    }
+    {
+        using T = UsesAllocatorV2<Alloc, sizeof...(TTypes)>;
+        using U = UsesAllocatorV3<Alloc, sizeof...(UTypes)>;
+        assert((doTest<T, U>(UA_None, UA_None,
+                             std::move(ttuple), std::move(utuple))));
+    }
+    {
+        using T = UsesAllocatorV3<Alloc, sizeof...(TTypes)>;
+        using U = NotUsesAllocator<Alloc, sizeof...(UTypes)>;
+        assert((doTest<T, U>(UA_None, UA_None,
+                             std::move(ttuple), std::move(utuple))));
+    }
+}
+
 int main()
 {
     using ERT = std::experimental::erased_type;
@@ -91,7 +120,7 @@ int main()
     {
         std::tuple<> t1;
         test_pmr_uses_allocator<ERT>(t1, t1);
-        test_pmr_uses_allocator<PMR>(t1, t1);
+        test_pmr_not_uses_allocator<PMR>(t1, t1);
         test_pmr_uses_allocator<PMA>(t1, t1);
     }
     {
@@ -99,8 +128,8 @@ int main()
         std::tuple<> t2;
         test_pmr_uses_allocator<ERT>(t1, t2);
         test_pmr_uses_allocator<ERT>(t2, t1);
-        test_pmr_uses_allocator<PMR>(t1, t2);
-        test_pmr_uses_allocator<PMR>(t2, t1);
+        test_pmr_not_uses_allocator<PMR>(t1, t2);
+        test_pmr_not_uses_allocator<PMR>(t2, t1);
         test_pmr_uses_allocator<PMA>(t1, t2);
         test_pmr_uses_allocator<PMA>(t2, t1);
     }
@@ -111,8 +140,8 @@ int main()
         std::tuple<int&, double&&> t2(x, std::move(dx));
         test_pmr_uses_allocator<ERT>(           t1, std::move(t2));
         test_pmr_uses_allocator<ERT>(std::move(t2),            t1);
-        test_pmr_uses_allocator<PMR>(           t1, std::move(t2));
-        test_pmr_uses_allocator<PMR>(std::move(t2),            t1);
+        test_pmr_not_uses_allocator<PMR>(           t1, std::move(t2));
+        test_pmr_not_uses_allocator<PMR>(std::move(t2),            t1);
         test_pmr_uses_allocator<PMA>(           t1, std::move(t2));
         test_pmr_uses_allocator<PMA>(std::move(t2),            t1);
     }
@@ -126,8 +155,8 @@ int main()
         std::tuple<int&, double&&, const char*> t2(x, std::move(dx), s);
         test_pmr_uses_allocator<ERT>(           t1, std::move(t2));
         test_pmr_uses_allocator<ERT>(std::move(t2),            t1);
-        test_pmr_uses_allocator<PMR>(           t1, std::move(t2));
-        test_pmr_uses_allocator<PMR>(std::move(t2),            t1);
+        test_pmr_not_uses_allocator<PMR>(           t1, std::move(t2));
+        test_pmr_not_uses_allocator<PMR>(std::move(t2),            t1);
         test_pmr_uses_allocator<PMA>(           t1, std::move(t2));
         test_pmr_uses_allocator<PMA>(std::move(t2),            t1);
     }

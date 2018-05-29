@@ -946,36 +946,6 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
   }
 }
 
-static TargetLowering::LegalizeAction
-getStrictFPOpcodeAction(const TargetLowering &TLI, unsigned Opcode, EVT VT) {
-  unsigned EqOpc;
-  switch (Opcode) {
-    default: llvm_unreachable("Unexpected FP pseudo-opcode");
-    case ISD::STRICT_FSQRT: EqOpc = ISD::FSQRT; break;
-    case ISD::STRICT_FPOW: EqOpc = ISD::FPOW; break;
-    case ISD::STRICT_FPOWI: EqOpc = ISD::FPOWI; break;
-    case ISD::STRICT_FMA: EqOpc = ISD::FMA; break;
-    case ISD::STRICT_FSIN: EqOpc = ISD::FSIN; break;
-    case ISD::STRICT_FCOS: EqOpc = ISD::FCOS; break;
-    case ISD::STRICT_FEXP: EqOpc = ISD::FEXP; break;
-    case ISD::STRICT_FEXP2: EqOpc = ISD::FEXP2; break;
-    case ISD::STRICT_FLOG: EqOpc = ISD::FLOG; break;
-    case ISD::STRICT_FLOG10: EqOpc = ISD::FLOG10; break;
-    case ISD::STRICT_FLOG2: EqOpc = ISD::FLOG2; break;
-    case ISD::STRICT_FRINT: EqOpc = ISD::FRINT; break;
-    case ISD::STRICT_FNEARBYINT: EqOpc = ISD::FNEARBYINT; break;
-  }
-
-  auto Action = TLI.getOperationAction(EqOpc, VT);
-
-  // We don't currently handle Custom or Promote for strict FP pseudo-ops.
-  // For now, we just expand for those cases.
-  if (Action != TargetLowering::Legal)
-    Action = TargetLowering::Expand;
-
-  return Action;
-}
-
 /// Return a legal replacement for the given operation, with all legal operands.
 void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   LLVM_DEBUG(dbgs() << "\nLegalizing: "; Node->dump(&DAG));
@@ -1138,8 +1108,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     // equivalent.  For instance, if ISD::FSQRT is legal then ISD::STRICT_FSQRT
     // is also legal, but if ISD::FSQRT requires expansion then so does
     // ISD::STRICT_FSQRT.
-    Action = getStrictFPOpcodeAction(TLI, Node->getOpcode(),
-                                     Node->getValueType(0));
+    Action = TLI.getStrictFPOperationAction(Node->getOpcode(),
+                                            Node->getValueType(0));
     break;
   default:
     if (Node->getOpcode() >= ISD::BUILTIN_OP_END) {

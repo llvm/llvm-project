@@ -81,10 +81,12 @@ namespace llvm {
     lltok::Kind LexDollar();
     lltok::Kind LexExclaim();
     lltok::Kind LexPercent();
+    lltok::Kind LexUIntID(lltok::Kind Token);
     lltok::Kind LexVar(lltok::Kind Var, lltok::Kind VarID);
     lltok::Kind LexQuote();
     lltok::Kind Lex0x();
     lltok::Kind LexHash();
+    lltok::Kind LexCaret();
 
     uint64_t atoull(const char *Buffer, const char *End);
     uint64_t HexIntToVal(const char *Buffer, const char *End);

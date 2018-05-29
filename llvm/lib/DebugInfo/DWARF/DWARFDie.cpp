@@ -475,8 +475,10 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
   const uint32_t Offset = getOffset();
   uint32_t offset = Offset;
   if (DumpOpts.ShowParents) {
-    DumpOpts.ShowParents = false;
-    Indent = dumpParentChain(getParent(), OS, Indent, DumpOpts);
+    DIDumpOptions ParentDumpOpts = DumpOpts;
+    ParentDumpOpts.ShowParents = false;
+    ParentDumpOpts.ShowChildren = false;
+    Indent = dumpParentChain(getParent(), OS, Indent, ParentDumpOpts);
   }
 
   if (debug_info_data.isValidOffset(offset)) {
@@ -510,8 +512,10 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
         DWARFDie child = getFirstChild();
         if (DumpOpts.ShowChildren && DumpOpts.RecurseDepth > 0 && child) {
           DumpOpts.RecurseDepth--;
+          DIDumpOptions ChildDumpOpts = DumpOpts;
+          ChildDumpOpts.ShowParents = false;
           while (child) {
-            child.dump(OS, Indent + 2, DumpOpts);
+            child.dump(OS, Indent + 2, ChildDumpOpts);
             child = child.getSibling();
           }
         }

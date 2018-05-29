@@ -412,9 +412,9 @@ bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {
   return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
 }
 
-unsigned SISubtarget::getKernArgSegmentSize(const MachineFunction &MF,
+unsigned SISubtarget::getKernArgSegmentSize(const Function &F,
                                             unsigned ExplicitArgBytes) const {
-  unsigned ImplicitBytes = getImplicitArgNumBytes(MF);
+  unsigned ImplicitBytes = getImplicitArgNumBytes(F);
   if (ImplicitBytes == 0)
     return ExplicitArgBytes;
 

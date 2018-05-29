@@ -50,9 +50,9 @@ void ManualDWARFIndex::Index() {
   auto extract_fn = [&debug_info, &clear_cu_dies](size_t cu_idx) {
     DWARFUnit *dwarf_cu = debug_info.GetCompileUnitAtIndex(cu_idx);
     if (dwarf_cu) {
-      // dwarf_cu->ExtractDIEsIfNeeded(false) will return zero if the DIEs
+      // dwarf_cu->ExtractDIEsIfNeeded() will return false if the DIEs
       // for a compile unit have already been parsed.
-      if (dwarf_cu->ExtractDIEsIfNeeded(false) > 1)
+      if (dwarf_cu->ExtractDIEsIfNeeded())
         clear_cu_dies[cu_idx] = true;
     }
   };
@@ -256,6 +256,7 @@ void ManualDWARFIndex::IndexUnitImpl(
     }
 
     switch (tag) {
+    case DW_TAG_inlined_subroutine:
     case DW_TAG_subprogram:
       if (has_address) {
         if (name) {
@@ -327,28 +328,6 @@ void ManualDWARFIndex::IndexUnitImpl(
                                           DIERef(cu_offset, die.GetOffset()));
           }
         }
-      }
-      break;
-
-    case DW_TAG_inlined_subroutine:
-      if (has_address) {
-        if (name)
-          set.function_basenames.Insert(ConstString(name),
-                                        DIERef(cu_offset, die.GetOffset()));
-        if (mangled_cstr) {
-          // Make sure our mangled name isn't the same string table entry as
-          // our name. If it starts with '_', then it is ok, else compare the
-          // string to make sure it isn't the same and we don't end up with
-          // duplicate entries
-          if (name && name != mangled_cstr &&
-              ((mangled_cstr[0] == '_') ||
-               (::strcmp(name, mangled_cstr) != 0))) {
-            set.function_fullnames.Insert(ConstString(mangled_cstr),
-                                          DIERef(cu_offset, die.GetOffset()));
-          }
-        } else
-          set.function_fullnames.Insert(ConstString(name),
-                                        DIERef(cu_offset, die.GetOffset()));
       }
       break;
 

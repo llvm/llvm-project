@@ -121,7 +121,7 @@ llvm::FunctionType *cloneToStructRetFnTy(llvm::CallInst *call_inst) {
   if (log)
     log->Printf("%s - return type pointer type for StructRet clone @ '0x%p':\n",
                 __FUNCTION__, (void *)return_type_ptr_type);
-  // put the the sret pointer argument in place at the beginning of the
+  // put the sret pointer argument in place at the beginning of the
   // argument list.
   params.emplace(params.begin(), return_type_ptr_type);
   assert(params.size() == num_params + 1);

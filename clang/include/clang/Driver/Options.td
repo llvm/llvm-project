@@ -151,6 +151,8 @@ def m_wasm_Features_Group : OptionGroup<"<wasm features group>">,
                             Group<m_Group>, DocName<"WebAssembly">;
 def m_x86_Features_Group : OptionGroup<"<x86 features group>">,
                            Group<m_Group>, Flags<[CoreOption]>, DocName<"X86">;
+def m_riscv_Features_Group : OptionGroup<"<riscv features group>">,
+                             Group<m_Group>, DocName<"RISCV">;
 
 def m_libc_Group : OptionGroup<"<m libc group>">, Group<m_mips_Features_Group>,
                    Flags<[HelpHidden]>;
@@ -1946,6 +1948,11 @@ def mno_relax_all : Flag<["-"], "mno-relax-all">, Group<m_Group>;
 def mno_rtd: Flag<["-"], "mno-rtd">, Group<m_Group>;
 def mno_soft_float : Flag<["-"], "mno-soft-float">, Group<m_Group>;
 def mno_stackrealign : Flag<["-"], "mno-stackrealign">, Group<m_Group>;
+
+def mrelax : Flag<["-"], "mrelax">, Group<m_riscv_Features_Group>,
+  HelpText<"Enable linker relaxation">;
+def mno_relax : Flag<["-"], "mno-relax">, Group<m_riscv_Features_Group>,
+  HelpText<"Disable linker relaxation">;
 
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_arm_Features_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/AArch64 only)">;

@@ -866,7 +866,7 @@ def HWWriteResGroup10 : SchedWriteRes<[HWPort0156]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[HWWriteResGroup10], (instrs CBW, CWDE, CDQE,
-                                         CLC, CMC, STC)>;
+                                         CMC, STC)>;
 def: InstRW<[HWWriteResGroup10], (instrs LAHF, SAHF)>; // TODO: This doesn't match Agner's data
 def: InstRW<[HWWriteResGroup10], (instregex "NOOP",
                                             "SGDT64m",
@@ -1957,5 +1957,7 @@ def HWWriteResGroup192 : SchedWriteRes<[HWPort0, HWPort5, HWPort06, HWPort15, HW
 }
 def: InstRW<[HWWriteResGroup192], (instrs VGATHERQPSrm,
                                           VGATHERDPSrm)>;
+
+def: InstRW<[WriteZero], (instrs CLC)>;
 
 } // SchedModel

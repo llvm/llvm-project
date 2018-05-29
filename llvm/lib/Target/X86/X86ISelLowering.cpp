@@ -1778,12 +1778,6 @@ X86TargetLowering::getPreferredVectorAction(EVT VT) const {
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
 
-MVT X86TargetLowering::getRegisterTypeForCallingConv(MVT VT) const {
-  if (VT == MVT::v32i1 && Subtarget.hasAVX512() && !Subtarget.hasBWI())
-    return MVT::v32i8;
-  return TargetLowering::getRegisterTypeForCallingConv(VT);
-}
-
 MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                      EVT VT) const {
   if (VT == MVT::v32i1 && Subtarget.hasAVX512() && !Subtarget.hasBWI())
@@ -4372,7 +4366,6 @@ static bool isTargetShuffle(unsigned Opcode) {
   case X86ISD::VPPERM:
   case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
-  case X86ISD::VPERMIV3:
   case X86ISD::VZEXT_MOVL:
     return true;
   }
@@ -4388,7 +4381,6 @@ static bool isTargetShuffleVariableMask(unsigned Opcode) {
   case X86ISD::VPPERM:
   case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
-  case X86ISD::VPERMIV3:
     return true;
   // 'Faux' Target Shuffles.
   case ISD::AND:
@@ -5970,21 +5962,6 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     Ops.push_back(N->getOperand(0));
     Ops.push_back(N->getOperand(2));
     SDValue MaskNode = N->getOperand(1);
-    unsigned MaskEltSize = VT.getScalarSizeInBits();
-    if (auto *C = getTargetConstantFromNode(MaskNode)) {
-      DecodeVPERMV3Mask(C, MaskEltSize, Mask);
-      break;
-    }
-    return false;
-  }
-  case X86ISD::VPERMIV3: {
-    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
-    assert(N->getOperand(2).getValueType() == VT && "Unexpected value type");
-    IsUnary = IsFakeUnary = N->getOperand(1) == N->getOperand(2);
-    // Unlike most shuffle nodes, VPERMIV3's mask operand is the first one.
-    Ops.push_back(N->getOperand(1));
-    Ops.push_back(N->getOperand(2));
-    SDValue MaskNode = N->getOperand(0);
     unsigned MaskEltSize = VT.getScalarSizeInBits();
     if (auto *C = getTargetConstantFromNode(MaskNode)) {
       DecodeVPERMV3Mask(C, MaskEltSize, Mask);
@@ -20532,30 +20509,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       // Swap Src1 and Src2 in the node creation
       return DAG.getNode(IntrData->Opc0, dl, VT,Src2, Src1);
     }
-    case VPERM_3OP_MASKZ:
-    case VPERM_3OP_MASK:{
-      MVT VT = Op.getSimpleValueType();
-      // Src2 is the PassThru
-      SDValue Src1 = Op.getOperand(1);
-      // PassThru needs to be the same type as the destination in order
-      // to pattern match correctly.
-      SDValue Src2 = DAG.getBitcast(VT, Op.getOperand(2));
-      SDValue Src3 = Op.getOperand(3);
-      SDValue Mask = Op.getOperand(4);
-      SDValue PassThru = SDValue();
-
-      // set PassThru element
-      if (IntrData->Type == VPERM_3OP_MASKZ)
-        PassThru = getZeroVector(VT, Subtarget, DAG, dl);
-      else
-        PassThru = Src2;
-
-      // Swap Src1 and Src2 in the node creation
-      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0,
-                                              dl, Op.getValueType(),
-                                              Src2, Src1, Src3),
-                                  Mask, PassThru, Subtarget, DAG);
-    }
     case FMA_OP_MASK3:
     case FMA_OP_MASKZ:
     case FMA_OP_MASK: {
@@ -20624,26 +20577,11 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                               Src3),
                                   Mask, PassThru, Subtarget, DAG);
     }
-    case IFMA_OP_MASKZ:
-    case IFMA_OP_MASK: {
-      SDValue Src1 = Op.getOperand(1);
-      SDValue Src2 = Op.getOperand(2);
-      SDValue Src3 = Op.getOperand(3);
-      SDValue Mask = Op.getOperand(4);
-      MVT VT = Op.getSimpleValueType();
-      SDValue PassThru = Src1;
-
-      // set PassThru element
-      if (IntrData->Type == IFMA_OP_MASKZ)
-        PassThru = getZeroVector(VT, Subtarget, DAG, dl);
-
-      // Node we need to swizzle the operands to pass the multiply operands
+    case IFMA_OP:
+      // NOTE: We need to swizzle the operands to pass the multiply operands
       // first.
-      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0,
-                                              dl, Op.getValueType(),
-                                              Src2, Src3, Src1),
-                                  Mask, PassThru, Subtarget, DAG);
-    }
+      return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
+                         Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
     case CVTPD2PS:
       // ISD::FP_ROUND has a second argument that indicates if the truncation
       // does not change the value. Set it to 0 since it can change.
@@ -25890,7 +25828,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VPERM2X128:         return "X86ISD::VPERM2X128";
   case X86ISD::VPERMV:             return "X86ISD::VPERMV";
   case X86ISD::VPERMV3:            return "X86ISD::VPERMV3";
-  case X86ISD::VPERMIV3:           return "X86ISD::VPERMIV3";
   case X86ISD::VPERMI:             return "X86ISD::VPERMI";
   case X86ISD::VPTERNLOG:          return "X86ISD::VPTERNLOG";
   case X86ISD::VFIXUPIMM:          return "X86ISD::VFIXUPIMM";
@@ -32190,6 +32127,27 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(Opcode, DL, N->getValueType(0), LHS, RHS);
   }
 
+  // Some mask scalar intrinsics rely on checking if only one bit is set
+  // and implement it in C code like this:
+  // A[0] = (U & 1) ? A[0] : W[0];
+  // This creates some redundant instructions that break pattern matching.
+  // fold (select (setcc (and (X, 1), 0, seteq), Y, Z)) -> select(and(X, 1),Z,Y)
+  if (Subtarget.hasAVX512() && N->getOpcode() == ISD::SELECT &&
+      Cond.getOpcode() == ISD::SETCC && (VT == MVT::f32 || VT == MVT::f64)) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    SDValue AndNode = Cond.getOperand(0);
+    if (AndNode.getOpcode() == ISD::AND && CC == ISD::SETEQ &&
+        isNullConstant(Cond.getOperand(1)) &&
+        isa<ConstantSDNode>(AndNode.getOperand(1)) &&
+        cast<ConstantSDNode>(AndNode.getOperand(1))->getAPIntValue() == 1) {
+      // LHS and RHS swapped due to
+      // setcc outputting 1 when AND resulted in 0 and vice versa.
+      if (AndNode.getValueType() != MVT::i8)
+        AndNode = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, AndNode);
+      return DAG.getNode(ISD::SELECT, DL, VT, AndNode, RHS, LHS);
+    }
+  }
+
   // v16i8 (select v16i1, v16i8, v16i8) does not have a proper
   // lowering on KNL. In this case we convert it to
   // v16i8 (select v16i8, v16i8, v16i8) and use AVX instruction.
@@ -37786,6 +37744,11 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
     if (VT == MVT::f16 || VT == MVT::f128)
       return SDValue();
 
+    // If we have AVX512DQ we can use packed conversion instructions unless
+    // the VT is f80.
+    if (Subtarget.hasDQI() && VT != MVT::f80)
+      return SDValue();
+
     if (!Ld->isVolatile() && !VT.isVector() &&
         ISD::isNON_EXTLoad(Op0.getNode()) && Op0.hasOneUse() &&
         !Subtarget.is64Bit() && LdVT == MVT::i64) {
@@ -38878,7 +38841,6 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VPERMI:
   case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
-  case X86ISD::VPERMIV3:
   case X86ISD::VPERMIL2:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMILPV:

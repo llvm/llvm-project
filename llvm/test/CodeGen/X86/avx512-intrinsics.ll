@@ -1955,7 +1955,7 @@ define <2 x double> @test_x86_avx512__mm_cvt_roundu64_sd(<2 x double> %a, i64 %b
 }
 declare <2 x double> @llvm.x86.avx512.cvtusi642sd(<2 x double>, i64, i32) nounwind readnone
 
-declare <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
+declare <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32>, <16 x i32>, <16 x i32>)
 
 define <16 x i32>@test_int_x86_avx512_mask_vpermi2var_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p, <16 x i32> %x4, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_d_512:
@@ -1963,68 +1963,78 @@ define <16 x i32>@test_int_x86_avx512_mask_vpermi2var_d_512(<16 x i32> %x0, <16 
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm3
 ; CHECK-NEXT:    vpermi2d (%rdi), %zmm0, %zmm3 {%k1}
-; CHECK-NEXT:    vpermi2d %zmm2, %zmm0, %zmm1
-; CHECK-NEXT:    vpaddd %zmm1, %zmm3, %zmm0
+; CHECK-NEXT:    vpermt2d %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vpaddd %zmm0, %zmm3, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2p
-  %res = call <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %x3)
-  %res1 = call <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x4, i16 -1)
-  %res2 = add <16 x i32> %res, %res1
+  %1 = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
+  %2 = bitcast i16 %x3 to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x1
+  %4 = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x4)
+  %res2 = add <16 x i32> %3, %4
   ret <16 x i32> %res2
 }
 
-declare <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double>, <8 x i64>, <8 x double>, i8)
+declare <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double>, <8 x i64>, <8 x double>)
 
 define <8 x double>@test_int_x86_avx512_mask_vpermi2var_pd_512(<8 x double> %x0, <8 x i64> %x1, <8 x double> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_pd_512:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vmovapd %zmm0, %zmm3
+; CHECK-NEXT:    vpermt2pd %zmm2, %zmm1, %zmm3
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovapd %zmm1, %zmm3
-; CHECK-NEXT:    vpermi2pd %zmm2, %zmm0, %zmm3
 ; CHECK-NEXT:    vpermi2pd %zmm2, %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vaddpd %zmm3, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> %x1, <8 x double> %x2, i8 %x3)
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> %x1, <8 x double> %x2, i8 -1)
-  %res2 = fadd <8 x double> %res, %res1
+  %1 = call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> %x1, <8 x double> %x2)
+  %2 = bitcast <8 x i64> %x1 to <8 x double>
+  %3 = bitcast i8 %x3 to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x double> %1, <8 x double> %2
+  %5 = call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> %x0, <8 x i64> %x1, <8 x double> %x2)
+  %6 = bitcast <8 x i64> %x1 to <8 x double>
+  %res2 = fadd <8 x double> %4, %5
   ret <8 x double> %res2
 }
 
-declare <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float>, <16 x i32>, <16 x float>, i16)
+declare <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float>, <16 x i32>, <16 x float>)
 
 define <16 x float>@test_int_x86_avx512_mask_vpermi2var_ps_512(<16 x float> %x0, <16 x i32> %x1, <16 x float> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_ps_512:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm3
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm1, %zmm3
-; CHECK-NEXT:    vpermi2ps %zmm2, %zmm0, %zmm3
 ; CHECK-NEXT:    vpermi2ps %zmm2, %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vaddps %zmm3, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float> %x0, <16 x i32> %x1, <16 x float> %x2, i16 %x3)
-  %res1 = call <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float> %x0, <16 x i32> %x1, <16 x float> %x2, i16 -1)
-  %res2 = fadd <16 x float> %res, %res1
+  %1 = call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> %x0, <16 x i32> %x1, <16 x float> %x2)
+  %2 = bitcast <16 x i32> %x1 to <16 x float>
+  %3 = bitcast i16 %x3 to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x float> %1, <16 x float> %2
+  %5 = call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> %x0, <16 x i32> %x1, <16 x float> %x2)
+  %6 = bitcast <16 x i32> %x1 to <16 x float>
+  %res2 = fadd <16 x float> %4, %5
   ret <16 x float> %res2
 }
 
-declare <8 x i64> @llvm.x86.avx512.mask.vpermi2var.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
+declare <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64>, <8 x i64>, <8 x i64>)
 
 define <8 x i64>@test_int_x86_avx512_mask_vpermi2var_q_512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermi2var_q_512:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm3
+; CHECK-NEXT:    vpermt2q %zmm2, %zmm1, %zmm3
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm3
-; CHECK-NEXT:    vpermi2q %zmm2, %zmm0, %zmm3
 ; CHECK-NEXT:    vpermi2q %zmm2, %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vpaddq %zmm3, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.mask.vpermi2var.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i8 %x3)
-  %res1 = call <8 x i64> @llvm.x86.avx512.mask.vpermi2var.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i8 -1)
-  %res2 = add <8 x i64> %res, %res1
+  %1 = call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2)
+  %2 = bitcast i8 %x3 to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i64> %1, <8 x i64> %x1
+  %4 = call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2)
+  %res2 = add <8 x i64> %3, %4
   ret <8 x i64> %res2
 }
-
-declare <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 
 define <16 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32>* %x2p, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_d_512:
@@ -2036,13 +2046,13 @@ define <16 x i32>@test_int_x86_avx512_maskz_vpermt2var_d_512(<16 x i32> %x0, <16
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x2 = load <16 x i32>, <16 x i32>* %x2p
-  %res = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %x3)
-  %res1 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x1, i16 -1)
-  %res2 = add <16 x i32> %res, %res1
+  %1 = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2)
+  %2 = bitcast i16 %x3 to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  %4 = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x1)
+  %res2 = add <16 x i32> %3, %4
   ret <16 x i32> %res2
 }
-
-declare <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64>, <8 x double>, <8 x double>, i8)
 
 define <8 x double>@test_int_x86_avx512_maskz_vpermt2var_pd_512(<8 x i64> %x0, <8 x double> %x1, double* %x2ptr, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_pd_512:
@@ -2056,61 +2066,62 @@ define <8 x double>@test_int_x86_avx512_maskz_vpermt2var_pd_512(<8 x i64> %x0, <
   %x2s = load double, double* %x2ptr
   %x2ins = insertelement <8 x double> undef, double %x2s, i32 0
   %x2 = shufflevector <8 x double> %x2ins, <8 x double> undef, <8 x i32> zeroinitializer
-  %res = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3)
-  %res1 = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> %x0, <8 x double> %x1, <8 x double> %x1, i8 -1)
-  %res2 = fadd <8 x double> %res, %res1
+  %1 = call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> %x1, <8 x i64> %x0, <8 x double> %x2)
+  %2 = bitcast i8 %x3 to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x double> %1, <8 x double> zeroinitializer
+  %4 = call <8 x double> @llvm.x86.avx512.vpermi2var.pd.512(<8 x double> %x1, <8 x i64> %x0, <8 x double> %x1)
+  %res2 = fadd <8 x double> %3, %4
   ret <8 x double> %res2
 }
-
-declare <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32>, <16 x float>, <16 x float>, i16)
 
 define <16 x float>@test_int_x86_avx512_maskz_vpermt2var_ps_512(<16 x i32> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_ps_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm3
 ; CHECK-NEXT:    vpermt2ps %zmm2, %zmm0, %zmm3
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpermt2ps %zmm2, %zmm0, %zmm1 {%k1} {z}
 ; CHECK-NEXT:    vaddps %zmm3, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> %x0, <16 x float> %x1, <16 x float> %x2, i16 %x3)
-  %res1 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> %x0, <16 x float> %x1, <16 x float> %x2, i16 -1)
-  %res2 = fadd <16 x float> %res, %res1
+  %1 = call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> %x1, <16 x i32> %x0, <16 x float> %x2)
+  %2 = bitcast i16 %x3 to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
+  %4 = call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> %x1, <16 x i32> %x0, <16 x float> %x2)
+  %res2 = fadd <16 x float> %3, %4
   ret <16 x float> %res2
 }
-
-
-declare <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
 
 define <8 x i64>@test_int_x86_avx512_maskz_vpermt2var_q_512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vpermt2var_q_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm3
 ; CHECK-NEXT:    vpermt2q %zmm2, %zmm0, %zmm3
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpermt2q %zmm2, %zmm0, %zmm1 {%k1} {z}
 ; CHECK-NEXT:    vpaddq %zmm3, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i8 %x3)
-  %res1 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i8 -1)
-  %res2 = add <8 x i64> %res, %res1
+  %1 = call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> %x1, <8 x i64> %x0, <8 x i64> %x2)
+  %2 = bitcast i8 %x3 to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i64> %1, <8 x i64> zeroinitializer
+  %4 = call <8 x i64> @llvm.x86.avx512.vpermi2var.q.512(<8 x i64> %x1, <8 x i64> %x0, <8 x i64> %x2)
+  %res2 = add <8 x i64> %3, %4
   ret <8 x i64> %res2
 }
-
-declare <16 x i32> @llvm.x86.avx512.mask.vpermt2var.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 
 define <16 x i32>@test_int_x86_avx512_mask_vpermt2var_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermt2var_d_512:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm3
 ; CHECK-NEXT:    vpermt2d %zmm2, %zmm0, %zmm3
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpermt2d %zmm2, %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vpaddd %zmm3, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.vpermt2var.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %x3)
-  %res1 = call <16 x i32> @llvm.x86.avx512.mask.vpermt2var.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 -1)
-  %res2 = add <16 x i32> %res, %res1
+  %1 = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2)
+  %2 = bitcast i16 %x3 to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x1
+  %4 = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %x1, <16 x i32> %x0, <16 x i32> %x2)
+  %res2 = add <16 x i32> %3, %4
   ret <16 x i32> %res2
 }
 

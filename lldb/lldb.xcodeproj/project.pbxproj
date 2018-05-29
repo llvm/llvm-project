@@ -2409,7 +2409,6 @@
 		3F8169181ABA2419001DA9DF /* NameMatches.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NameMatches.cpp; path = source/Utility/NameMatches.cpp; sourceTree = "<group>"; };
 		3F81691C1ABA242B001DA9DF /* NameMatches.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = NameMatches.h; path = include/lldb/Utility/NameMatches.h; sourceTree = "<group>"; };
 		3F81692A1ABB7A16001DA9DF /* SystemInitializerFull.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SystemInitializerFull.cpp; path = source/API/SystemInitializerFull.cpp; sourceTree = "<group>"; };
-		3F81692D1ABB7A40001DA9DF /* SystemInitializerFull.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SystemInitializerFull.h; path = include/lldb/API/SystemInitializerFull.h; sourceTree = "<group>"; };
 		3F81692E1ABB7A6D001DA9DF /* SystemInitializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SystemInitializer.cpp; path = source/Initialization/SystemInitializer.cpp; sourceTree = "<group>"; };
 		3F81692F1ABB7A6D001DA9DF /* SystemInitializerCommon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SystemInitializerCommon.cpp; path = source/Initialization/SystemInitializerCommon.cpp; sourceTree = "<group>"; };
 		3F8169301ABB7A6D001DA9DF /* SystemLifetimeManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SystemLifetimeManager.cpp; path = source/Initialization/SystemLifetimeManager.cpp; sourceTree = "<group>"; };
@@ -3230,6 +3229,7 @@
 		B2B7CCED15D1BFB700EEFB57 /* WatchpointOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WatchpointOptions.h; path = include/lldb/Breakpoint/WatchpointOptions.h; sourceTree = "<group>"; };
 		B2B7CCEF15D1C20F00EEFB57 /* WatchpointOptions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = WatchpointOptions.cpp; path = source/Breakpoint/WatchpointOptions.cpp; sourceTree = "<group>"; };
 		B2D3033612EFA5C500F84EB3 /* InstructionUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InstructionUtils.h; path = Utility/InstructionUtils.h; sourceTree = "<group>"; };
+		CDC75CF920B8D1DF002209BC /* SystemInitializerFull.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SystemInitializerFull.h; path = source/API/SystemInitializerFull.h; sourceTree = "<group>"; };
 		D67521351EA17C3900439694 /* MainLoop.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MainLoop.cpp; sourceTree = "<group>"; };
 		E73A15A41B548EC500786197 /* GDBRemoteSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GDBRemoteSignals.cpp; path = Utility/GDBRemoteSignals.cpp; sourceTree = "<group>"; };
 		E73A15A51B548EC500786197 /* GDBRemoteSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GDBRemoteSignals.h; path = Utility/GDBRemoteSignals.h; sourceTree = "<group>"; };
@@ -4261,8 +4261,8 @@
 				94235B9B1A8D5FF300EB2EED /* SBVariablesOptions.cpp */,
 				B2A58721143119810092BFBA /* SBWatchpoint.h */,
 				B2A58723143119D50092BFBA /* SBWatchpoint.cpp */,
-				3F81692D1ABB7A40001DA9DF /* SystemInitializerFull.h */,
 				3F81692A1ABB7A16001DA9DF /* SystemInitializerFull.cpp */,
+				CDC75CF920B8D1DF002209BC /* SystemInitializerFull.h */,
 			);
 			name = API;
 			sourceTree = "<group>";

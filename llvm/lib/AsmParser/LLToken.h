@@ -351,6 +351,7 @@ enum Kind {
   GlobalID,   // @42
   LocalVarID, // %42
   AttrGrpID,  // #42
+  SummaryID,  // ^42
 
   // String valued tokens (StrVal).
   LabelStr,         // foo:

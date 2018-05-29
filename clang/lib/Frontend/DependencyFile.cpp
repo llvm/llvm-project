@@ -163,6 +163,7 @@ class DFGImpl : public PPCallbacks {
   bool SeenMissingHeader;
   bool IncludeModuleFiles;
   DependencyOutputFormat OutputFormat;
+  unsigned InputFileIndex;
 
 private:
   bool FileMatchesDepCriteria(const char *Filename,
@@ -177,9 +178,11 @@ public:
       AddMissingHeaderDeps(Opts.AddMissingHeaderDeps),
       SeenMissingHeader(false),
       IncludeModuleFiles(Opts.IncludeModuleFiles),
-      OutputFormat(Opts.OutputFormat) {
+      OutputFormat(Opts.OutputFormat),
+      InputFileIndex(0) {
     for (const auto &ExtraDep : Opts.ExtraDeps) {
-      AddFilename(ExtraDep);
+      if (AddFilename(ExtraDep))
+        ++InputFileIndex;
     }
   }
 
@@ -201,7 +204,7 @@ public:
     OutputDependencyFile();
   }
 
-  void AddFilename(StringRef Filename);
+  bool AddFilename(StringRef Filename);
   bool includeSystemHeaders() const { return IncludeSystemHeaders; }
   bool includeModuleFiles() const { return IncludeModuleFiles; }
 };
@@ -325,9 +328,12 @@ void DFGImpl::InclusionDirective(SourceLocation HashLoc,
   }
 }
 
-void DFGImpl::AddFilename(StringRef Filename) {
-  if (FilesSet.insert(Filename).second)
+bool DFGImpl::AddFilename(StringRef Filename) {
+  if (FilesSet.insert(Filename).second) {
     Files.push_back(Filename);
+    return true;
+  }
+  return false;
 }
 
 /// Print the filename, with escaping or quoting that accommodates the three
@@ -463,8 +469,10 @@ void DFGImpl::OutputDependencyFile() {
 
   // Create phony targets if requested.
   if (PhonyTarget && !Files.empty()) {
-    // Skip the first entry, this is always the input file itself.
-    for (auto I = Files.begin() + 1, E = Files.end(); I != E; ++I) {
+    unsigned Index = 0;
+    for (auto I = Files.begin(), E = Files.end(); I != E; ++I) {
+      if (Index++ == InputFileIndex)
+        continue;
       OS << '\n';
       PrintFilename(OS, *I, OutputFormat);
       OS << ":\n";
