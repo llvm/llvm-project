@@ -80,6 +80,9 @@ PPC64::PPC64() {
   PltHeaderSize = 60;
   NeedsThunks = true;
 
+  TlsModuleIndexRel = R_PPC64_DTPMOD64;
+  TlsOffsetRel = R_PPC64_DTPREL64;
+
   // We need 64K pages (at least under glibc/Linux, the loader won't
   // set different permissions on a finer granularity than that).
   DefaultMaxPageSize = 65536;
@@ -167,6 +170,13 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   case R_PPC64_REL32:
   case R_PPC64_REL64:
     return R_PC;
+  case R_PPC64_GOT_TLSGD16:
+  case R_PPC64_GOT_TLSGD16_HA:
+  case R_PPC64_GOT_TLSGD16_HI:
+  case R_PPC64_GOT_TLSGD16_LO:
+    return R_TLSGD_GOT;
+  case R_PPC64_TLSGD:
+    return R_HINT;
   default:
     return R_ABS;
   }
@@ -210,14 +220,18 @@ void PPC64::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 static std::pair<RelType, uint64_t> toAddr16Rel(RelType Type, uint64_t Val) {
   uint64_t V = Val - PPC64TocOffset;
   switch (Type) {
+  case R_PPC64_GOT_TLSGD16:
   case R_PPC64_TOC16:
     return {R_PPC64_ADDR16, V};
   case R_PPC64_TOC16_DS:
     return {R_PPC64_ADDR16_DS, V};
+  case R_PPC64_GOT_TLSGD16_HA:
   case R_PPC64_TOC16_HA:
     return {R_PPC64_ADDR16_HA, V};
+  case R_PPC64_GOT_TLSGD16_HI:
   case R_PPC64_TOC16_HI:
     return {R_PPC64_ADDR16_HI, V};
+  case R_PPC64_GOT_TLSGD16_LO:
   case R_PPC64_TOC16_LO:
     return {R_PPC64_ADDR16_LO, V};
   case R_PPC64_TOC16_LO_DS:
