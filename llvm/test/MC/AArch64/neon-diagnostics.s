@@ -279,10 +279,15 @@
 //----------------------------------------------------------------------
         // invalid vector type (2s, 4s, 2d)
          fmov v0.4h, #1.0
+         // invalid immediate (negative hexadecimal encoding)
+         fmov v0.4s, #-0x0
 
 // CHECK:ERROR: error: invalid operand for instruction
 // CHECK:ERROR:         fmov v0.4h, #1.0
 // CHECK:ERROR:              ^
+// CHECK-ERROR: error: encoded floating point value out of range
+// CHECK-ERROR:         fmov v0.4s, #-0x0
+// CHECK-ERROR:                     ^
 
 //----------------------------------------------------------------------
 // Vector Move -  register

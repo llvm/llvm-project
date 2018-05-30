@@ -3513,6 +3513,22 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return TargetLowering::getRegForInlineAsmConstraint(TRI, newConstraint,
                                                           VT);
     }
+    if (name.substr(0, 1).equals("f") &&
+        !name.substr(1).getAsInteger(10, intVal) && intVal <= 63) {
+      std::string newConstraint;
+
+      if (VT == MVT::f32 || VT == MVT::Other) {
+        newConstraint = "{f" + utostr(intVal) + "}";
+      } else if (VT == MVT::f64 && (intVal % 2 == 0)) {
+        newConstraint = "{d" + utostr(intVal / 2) + "}";
+      } else if (VT == MVT::f128 && (intVal % 4 == 0)) {
+        newConstraint = "{q" + utostr(intVal / 4) + "}";
+      } else {
+        return std::make_pair(0U, nullptr);
+      }
+      return TargetLowering::getRegForInlineAsmConstraint(TRI, newConstraint,
+                                                          VT);
+    }
   }
 
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);

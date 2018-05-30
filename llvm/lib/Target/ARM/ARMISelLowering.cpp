@@ -1064,9 +1064,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT_CC, MVT::f16, Custom);
   }
 
-  // Thumb-1 cannot currently select ARMISD::SUBE.
-  if (!Subtarget->isThumb1Only())
-    setOperationAction(ISD::SETCCCARRY, MVT::i32, Custom);
+  setOperationAction(ISD::SETCCCARRY, MVT::i32, Custom);
 
   setOperationAction(ISD::BRCOND,    MVT::Other, Custom);
   setOperationAction(ISD::BR_CC,     MVT::i32,   Custom);

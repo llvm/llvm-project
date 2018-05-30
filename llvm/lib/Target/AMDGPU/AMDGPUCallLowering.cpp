@@ -221,7 +221,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     CCValAssign &VA = ArgLocs[i];
     lowerParameter(MIRBuilder, Arg->getType(),
                    VA.getLocMemOffset() +
-                   Subtarget->getExplicitKernelArgOffset(MF), VRegs[i]);
+                   Subtarget->getExplicitKernelArgOffset(F), VRegs[i]);
   }
 
   return true;

@@ -1035,8 +1035,7 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
   SDValue BasePtr = DAG.getCopyFromReg(Chain, SL,
     MRI.getLiveInVirtReg(InputPtrReg->getRegister()), PtrVT);
 
-  return DAG.getNode(ISD::ADD, SL, PtrVT, BasePtr,
-                     DAG.getConstant(Offset, SL, PtrVT));
+  return DAG.getObjectPtrOffset(SL, BasePtr, Offset);
 }
 
 SDValue SITargetLowering::getImplicitArgPtr(SelectionDAG &DAG,
@@ -1450,7 +1449,7 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
   bool RequiresStackAccess = HasStackObjects || MFI.hasCalls();
 
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  if (ST.isAmdCodeObjectV2(MF)) {
+  if (ST.isAmdCodeObjectV2(MF.getFunction())) {
     if (RequiresStackAccess) {
       // If we have stack objects, we unquestionably need the private buffer
       // resource. For the Code Object V2 ABI, this will be the first 4 user
@@ -1562,12 +1561,12 @@ SDValue SITargetLowering::LowerFormalArguments(
   const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
 
   MachineFunction &MF = DAG.getMachineFunction();
+  const Function &Fn = MF.getFunction();
   FunctionType *FType = MF.getFunction().getFunctionType();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
 
   if (Subtarget->isAmdHsaOS() && AMDGPU::isShader(CallConv)) {
-    const Function &Fn = MF.getFunction();
     DiagnosticInfoUnsupported NoGraphicsHSA(
         Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc());
     DAG.getContext()->diagnose(NoGraphicsHSA);
@@ -1678,7 +1677,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       VT = Ins[i].VT;
       EVT MemVT = VA.getLocVT();
 
-      const uint64_t Offset = Subtarget->getExplicitKernelArgOffset(MF) +
+      const uint64_t Offset = Subtarget->getExplicitKernelArgOffset(Fn) +
         VA.getLocMemOffset();
       Info->setABIArgOffset(Offset + MemVT.getStoreSize());
 
@@ -1798,7 +1797,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   auto &ArgUsageInfo =
     DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
-  ArgUsageInfo.setFuncArgInfo(MF.getFunction(), Info->getArgInfo());
+  ArgUsageInfo.setFuncArgInfo(Fn, Info->getArgInfo());
 
   unsigned StackArgSize = CCInfo.getNextStackOffset();
   Info->setBytesInStackArgArea(StackArgSize);
@@ -4341,14 +4340,14 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_implicit_buffer_ptr: {
-    if (getSubtarget()->isAmdCodeObjectV2(MF))
+    if (getSubtarget()->isAmdCodeObjectV2(MF.getFunction()))
       return emitNonHSAIntrinsicError(DAG, DL, VT);
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::IMPLICIT_BUFFER_PTR);
   }
   case Intrinsic::amdgcn_dispatch_ptr:
   case Intrinsic::amdgcn_queue_ptr: {
-    if (!Subtarget->isAmdCodeObjectV2(MF)) {
+    if (!Subtarget->isAmdCodeObjectV2(MF.getFunction())) {
       DiagnosticInfoUnsupported BadIntrin(
           MF.getFunction(), "unsupported hsa intrinsic without hsa target",
           DL.getDebugLoc());

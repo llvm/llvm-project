@@ -44,7 +44,7 @@ entry:
 
   ; MMR3:         divu    $zero, $4, $5
   ; MMR3:         teq     $5, $zero, 7
-  ; MMR3:         mflo    $2
+  ; MMR3:         mflo16  $2
 
   ; MMR6:         divu    $2, $4, $5
   ; MMR6:         teq     $5, $zero, 7
@@ -66,7 +66,7 @@ entry:
 
   ; MMR3:         divu    $zero, $4, $5
   ; MMR3:         teq     $5, $zero, 7
-  ; MMR3:         mflo    $2
+  ; MMR3:         mflo16  $2
 
   ; MMR6:         divu    $2, $4, $5
   ; MMR6:         teq     $5, $zero, 7
@@ -88,7 +88,7 @@ entry:
 
   ; MMR3:         divu    $zero, $4, $5
   ; MMR3:         teq     $5, $zero, 7
-  ; MMR3:         mflo    $2
+  ; MMR3:         mflo16  $2
 
   ; MMR6:         divu    $2, $4, $5
   ; MMR6:         teq     $5, $zero, 7
@@ -110,7 +110,7 @@ entry:
 
   ; MMR3:         divu    $zero, $4, $5
   ; MMR3:         teq     $5, $zero, 7
-  ; MMR3:         mflo    $2
+  ; MMR3:         mflo16  $2
 
   ; MMR6:         divu    $2, $4, $5
   ; MMR6:         teq     $5, $zero, 7

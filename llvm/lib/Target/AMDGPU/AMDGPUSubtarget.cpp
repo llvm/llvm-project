@@ -412,14 +412,18 @@ bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {
   return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
 }
 
-unsigned SISubtarget::getKernArgSegmentSize(const MachineFunction &MF,
+unsigned SISubtarget::getKernArgSegmentSize(const Function &F,
                                             unsigned ExplicitArgBytes) const {
-  unsigned ImplicitBytes = getImplicitArgNumBytes(MF);
-  if (ImplicitBytes == 0)
-    return ExplicitArgBytes;
+  uint64_t TotalSize = ExplicitArgBytes;
+  unsigned ImplicitBytes = getImplicitArgNumBytes(F);
 
-  unsigned Alignment = getAlignmentForImplicitArgPtr();
-  return alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
+  if (ImplicitBytes != 0) {
+    unsigned Alignment = getAlignmentForImplicitArgPtr();
+    TotalSize = alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
+  }
+
+  // Being able to dereference past the end is useful for emitting scalar loads.
+  return alignTo(TotalSize, 4);
 }
 
 unsigned SISubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {

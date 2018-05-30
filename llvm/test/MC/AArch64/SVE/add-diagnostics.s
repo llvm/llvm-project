@@ -75,3 +75,72 @@ add z9.d, p4/m, z10.d, z7.d
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must match destination register
 // CHECK-NEXT: add z9.d, p4/m, z10.d, z7.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid immediates
+
+add     z0.b, z0.b, #0, lsl #8      // #0, lsl #8 is not valid for .b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] with a shift amount of 0
+// CHECK-NEXT: add     z0.b, z0.b, #0, lsl #8
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.b, z0.b, #-1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] with a shift amount of 0
+// CHECK-NEXT: add     z0.b, z0.b, #-1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.b, z0.b, #1, lsl #8
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] with a shift amount of 0
+// CHECK-NEXT: add     z0.b, z0.b, #1, lsl #8
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.b, z0.b, #256
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] with a shift amount of 0
+// CHECK-NEXT: add     z0.b, z0.b, #256
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.h, z0.h, #-1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] or a multiple of 256 in range [256, 65280]
+// CHECK-NEXT: add     z0.h, z0.h, #-1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.h, z0.h, #256, lsl #8
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] or a multiple of 256 in range [256, 65280]
+// CHECK-NEXT: add     z0.h, z0.h, #256, lsl #8
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.h, z0.h, #65536
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] or a multiple of 256 in range [256, 65280]
+// CHECK-NEXT: add     z0.h, z0.h, #65536
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.s, z0.s, #-1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] or a multiple of 256 in range [256, 65280]
+// CHECK-NEXT: add     z0.s, z0.s, #-1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.s, z0.s, #256, lsl #8
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] or a multiple of 256 in range [256, 65280]
+// CHECK-NEXT: add     z0.s, z0.s, #256, lsl #8
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.s, z0.s, #65536
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] or a multiple of 256 in range [256, 65280]
+// CHECK-NEXT: add     z0.s, z0.s, #65536
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.d, z0.d, #-1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] or a multiple of 256 in range [256, 65280]
+// CHECK-NEXT: add     z0.d, z0.d, #-1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.d, z0.d, #256, lsl #8
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] or a multiple of 256 in range [256, 65280]
+// CHECK-NEXT: add     z0.d, z0.d, #256, lsl #8
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add     z0.d, z0.d, #65536
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 255] or a multiple of 256 in range [256, 65280]
+// CHECK-NEXT: add     z0.d, z0.d, #65536
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

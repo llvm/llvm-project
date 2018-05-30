@@ -105,6 +105,7 @@ void MCContext::reset() {
   MachOUniquingMap.clear();
   ELFUniquingMap.clear();
   COFFUniquingMap.clear();
+  WasmUniquingMap.clear();
 
   NextID.clear();
   AllowTemporaryLabels = true;

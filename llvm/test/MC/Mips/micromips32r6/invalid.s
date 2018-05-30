@@ -382,3 +382,11 @@
   lwc2 $1, 16($32)         # CHECK: :[[@LINE]]:15: error: invalid register number
   sdc2 $1, 8($32)          # CHECK: :[[@LINE]]:14: error: invalid register number
   swc2 $1, 777($32)        # CHECK: :[[@LINE]]:16: error: invalid register number
+  movn  $3, $3, $4         # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  movz  $3, $3, $4         # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  movt  $4, $5, $fcc0      # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  movf  $4, $5, $fcc0      # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  madd  $4, $5             # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  maddu $4, $5             # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  msub  $4, $5             # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  msubu $4, $5             # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled

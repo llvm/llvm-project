@@ -116,8 +116,8 @@ public:
                       [this](std::unique_ptr<Module> M) {
                         return optimizeModule(std::move(M));
                       }),
-        CompileCallbackMgr(
-            orc::createLocalCompileCallbackManager(TM->getTargetTriple(), 0)) {
+        CompileCallbackMgr(orc::createLocalCompileCallbackManager(
+            TM->getTargetTriple(), ES, 0)) {
     auto IndirectStubsMgrBuilder =
       orc::createLocalIndirectStubsManagerBuilder(TM->getTargetTriple());
     IndirectStubsMgr = IndirectStubsMgrBuilder();
@@ -134,22 +134,6 @@ public:
   }
 
   Error addFunctionAST(std::unique_ptr<FunctionAST> FnAST) {
-    // Create a CompileCallback - this is the re-entry point into the compiler
-    // for functions that haven't been compiled yet.
-    auto CCInfo = cantFail(CompileCallbackMgr->getCompileCallback());
-
-    // Create an indirect stub. This serves as the functions "canonical
-    // definition" - an unchanging (constant address) entry point to the
-    // function implementation.
-    // Initially we point the stub's function-pointer at the compile callback
-    // that we just created. In the compile action for the callback (see below)
-    // we will update the stub's function pointer to point at the function
-    // implementation that we just implemented.
-    if (auto Err = IndirectStubsMgr->createStub(mangle(FnAST->getName()),
-                                                CCInfo.getAddress(),
-                                                JITSymbolFlags::Exported))
-      return Err;
-
     // Move ownership of FnAST to a shared pointer - C++11 lambdas don't support
     // capture-by-move, which is be required for unique_ptr.
     auto SharedFnAST = std::shared_ptr<FunctionAST>(std::move(FnAST));
@@ -170,23 +154,37 @@ public:
     //     The JIT runtime (the resolver block) will use the return address of
     //     this function as the address to continue at once it has reset the
     //     CPU state to what it was immediately before the call.
-    CCInfo.setCompileAction(
-      [this, SharedFnAST]() {
-        auto M = irgenAndTakeOwnership(*SharedFnAST, "$impl");
-        addModule(std::move(M));
-        auto Sym = findSymbol(SharedFnAST->getName() + "$impl");
-        assert(Sym && "Couldn't find compiled function?");
-        JITTargetAddress SymAddr = cantFail(Sym.getAddress());
-        if (auto Err =
-              IndirectStubsMgr->updatePointer(mangle(SharedFnAST->getName()),
-                                              SymAddr)) {
-          logAllUnhandledErrors(std::move(Err), errs(),
-                                "Error updating function pointer: ");
-          exit(1);
-        }
+    auto CompileAction = [this, SharedFnAST]() {
+      auto M = irgenAndTakeOwnership(*SharedFnAST, "$impl");
+      addModule(std::move(M));
+      auto Sym = findSymbol(SharedFnAST->getName() + "$impl");
+      assert(Sym && "Couldn't find compiled function?");
+      JITTargetAddress SymAddr = cantFail(Sym.getAddress());
+      if (auto Err = IndirectStubsMgr->updatePointer(
+              mangle(SharedFnAST->getName()), SymAddr)) {
+        logAllUnhandledErrors(std::move(Err), errs(),
+                              "Error updating function pointer: ");
+        exit(1);
+      }
 
-        return SymAddr;
-      });
+      return SymAddr;
+    };
+
+    // Create a CompileCallback using the CompileAction - this is the re-entry
+    // point into the compiler for functions that haven't been compiled yet.
+    auto CCAddr = cantFail(
+        CompileCallbackMgr->getCompileCallback(std::move(CompileAction)));
+
+    // Create an indirect stub. This serves as the functions "canonical
+    // definition" - an unchanging (constant address) entry point to the
+    // function implementation.
+    // Initially we point the stub's function-pointer at the compile callback
+    // that we just created. When the compile action for the callback is run we
+    // will update the stub's function pointer to point at the function
+    // implementation that we just implemented.
+    if (auto Err = IndirectStubsMgr->createStub(
+            mangle(SharedFnAST->getName()), CCAddr, JITSymbolFlags::Exported))
+      return Err;
 
     return Error::success();
   }

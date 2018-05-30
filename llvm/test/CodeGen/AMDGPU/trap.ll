@@ -26,7 +26,7 @@ declare void @llvm.debugtrap() #1
 ; NOMESA-TRAP-NEXT: .long   144
 
 ; GCN-LABEL: {{^}}hsa_trap:
-; HSA-TRAP: enable_trap_handler = 1
+; HSA-TRAP: enable_trap_handler = 0
 ; HSA-TRAP: s_mov_b64 s[0:1], s[4:5]
 ; HSA-TRAP: s_trap 2
 
@@ -56,7 +56,7 @@ define amdgpu_kernel void @hsa_trap(i32 addrspace(1)* nocapture readonly %arg0) 
 
 ; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (i32 addrspace(1)*): debugtrap handler not supported
 ; GCN-LABEL: {{^}}hsa_debugtrap:
-; HSA-TRAP: enable_trap_handler = 1
+; HSA-TRAP: enable_trap_handler = 0
 ; HSA-TRAP: s_trap 3
 ; HSA-TRAP: flat_store_dword v[0:1], v3
 

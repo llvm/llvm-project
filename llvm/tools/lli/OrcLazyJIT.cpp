@@ -121,15 +121,6 @@ int llvm::runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms,
   EB.setOptLevel(getOptLevel());
   auto TM = std::unique_ptr<TargetMachine>(EB.selectTarget());
   Triple T(TM->getTargetTriple());
-  auto CompileCallbackMgr = orc::createLocalCompileCallbackManager(T, 0);
-
-  // If we couldn't build the factory function then there must not be a callback
-  // manager for this target. Bail out.
-  if (!CompileCallbackMgr) {
-    errs() << "No callback manager available for target '"
-           << TM->getTargetTriple().str() << "'.\n";
-    return 1;
-  }
 
   auto IndirectStubsMgrBuilder = orc::createLocalIndirectStubsManagerBuilder(T);
 
@@ -141,8 +132,7 @@ int llvm::runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms,
   }
 
   // Everything looks good. Build the JIT.
-  OrcLazyJIT J(std::move(TM), std::move(CompileCallbackMgr),
-               std::move(IndirectStubsMgrBuilder),
+  OrcLazyJIT J(std::move(TM), std::move(IndirectStubsMgrBuilder),
                OrcInlineStubs);
 
   // Add the module, look up main and run it.

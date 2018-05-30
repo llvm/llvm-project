@@ -23,16 +23,48 @@
 // DATA-LABEL: Name: .text
 // DATA:       SectionData (
 
-// DATA-NEXT:  0000: 24620000 24620000
+// DATA-NEXT:  0000: 3C030000 24620000 3C030000 24620000
+        lui   $3, %hi(%neg(%gp_rel(foo)))     // RELOC: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16 foo
+                                              // ENCBE: lui $3, %hi(%neg(%gp_rel(foo))) # encoding: [0x3c,0x03,A,A]
+                                              // ENCLE: lui $3, %hi(%neg(%gp_rel(foo))) # encoding: [A,A,0x03,0x3c]
+                                              // FIXUP: # fixup A - offset: 0, value: %hi(%neg(%gp_rel(foo))), kind: fixup_Mips_GPOFF_HI
+
         addiu $2, $3, %lo(%neg(%gp_rel(foo))) // RELOC: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16 foo
                                               // ENCBE: addiu $2, $3, %lo(%neg(%gp_rel(foo))) # encoding: [0x24,0x62,A,A]
                                               // ENCLE: addiu $2, $3, %lo(%neg(%gp_rel(foo))) # encoding: [A,A,0x62,0x24]
                                               // FIXUP: # fixup A - offset: 0, value: %lo(%neg(%gp_rel(foo))), kind: fixup_Mips_GPOFF_LO
 
+        lui   $3, %hi(%neg(%gp_rel(bar)))     // RELOC: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16 .data
+                                              // ENCBE: lui $3, %hi(%neg(%gp_rel(bar))) # encoding: [0x3c,0x03,A,A]
+                                              // ENCLE: lui $3, %hi(%neg(%gp_rel(bar))) # encoding: [A,A,0x03,0x3c]
+                                              // FIXUP: # fixup A - offset: 0, value: %hi(%neg(%gp_rel(bar))), kind: fixup_Mips_GPOFF_HI
+
         addiu $2, $3, %lo(%neg(%gp_rel(bar))) // RELOC: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16 .data
                                               // ENCBE: addiu $2, $3, %lo(%neg(%gp_rel(bar))) # encoding: [0x24,0x62,A,A]
                                               // ENCLE: addiu $2, $3, %lo(%neg(%gp_rel(bar))) # encoding: [A,A,0x62,0x24]
                                               // FIXUP: # fixup A - offset: 0, value: %lo(%neg(%gp_rel(bar))), kind: fixup_Mips_GPOFF_LO
+
+// DATA-NEXT:  0010: 41A30000 30430000 41A30000 30430000
+        .set micromips
+        lui   $3, %hi(%neg(%gp_rel(foo)))     // RELOC: R_MICROMIPS_GPREL16/R_MICROMIPS_SUB/R_MICROMIPS_HI16 foo
+                                              // ENCBE: lui $3, %hi(%neg(%gp_rel(foo))) # encoding: [0x41,0xa3,A,A]
+                                              // ENCLE: lui $3, %hi(%neg(%gp_rel(foo))) # encoding: [0xa3'A',0x41'A',0x00,0x00]
+                                              // FIXUP: # fixup A - offset: 0, value: %hi(%neg(%gp_rel(foo))), kind: fixup_MICROMIPS_GPOFF_HI
+
+        addiu $2, $3, %lo(%neg(%gp_rel(foo))) // RELOC: R_MICROMIPS_GPREL16/R_MICROMIPS_SUB/R_MICROMIPS_LO16 foo
+                                              // ENCBE: addiu $2, $3, %lo(%neg(%gp_rel(foo))) # encoding: [0x30,0x43,A,A]
+                                              // ENCLE: addiu $2, $3, %lo(%neg(%gp_rel(foo))) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                              // FIXUP: # fixup A - offset: 0, value: %lo(%neg(%gp_rel(foo))), kind: fixup_MICROMIPS_GPOFF_LO
+
+        lui   $3, %hi(%neg(%gp_rel(bar)))     // RELOC: R_MICROMIPS_GPREL16/R_MICROMIPS_SUB/R_MICROMIPS_HI16 bar
+                                              // ENCBE: lui $3, %hi(%neg(%gp_rel(bar))) # encoding: [0x41,0xa3,A,A]
+                                              // ENCLE: lui $3, %hi(%neg(%gp_rel(bar))) # encoding: [0xa3'A',0x41'A',0x00,0x00]
+                                              // FIXUP: # fixup A - offset: 0, value: %hi(%neg(%gp_rel(bar))), kind: fixup_MICROMIPS_GPOFF_HI
+
+        addiu $2, $3, %lo(%neg(%gp_rel(bar))) // RELOC: R_MICROMIPS_GPREL16/R_MICROMIPS_SUB/R_MICROMIPS_LO16 bar
+                                              // ENCBE: addiu $2, $3, %lo(%neg(%gp_rel(bar))) # encoding: [0x30,0x43,A,A]
+                                              // ENCLE: addiu $2, $3, %lo(%neg(%gp_rel(bar))) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                              // FIXUP: # fixup A - offset: 0, value: %lo(%neg(%gp_rel(bar))), kind: fixup_MICROMIPS_GPOFF_LO
 
         .data
         .word 0

@@ -693,7 +693,7 @@ public:
           || ELFRefKind == AArch64MCExpr::VK_SECREL_LO12;
     }
 
-    // If it's a constant, it should be a real immediate in range:
+    // If it's a constant, it should be a real immediate in range.
     if (auto ShiftedVal = getShiftedVal<12>())
       return ShiftedVal->first >= 0 && ShiftedVal->first <= 0xfff;
 
@@ -706,20 +706,11 @@ public:
     if (!isShiftedImm() && !isImm())
       return false;
 
-    const MCExpr *Expr;
+    // Otherwise it should be a real negative immediate in range.
+    if (auto ShiftedVal = getShiftedVal<12>())
+      return ShiftedVal->first < 0 && -ShiftedVal->first <= 0xfff;
 
-    // An ADD/SUB shifter is either 'lsl #0' or 'lsl #12'.
-    if (isShiftedImm()) {
-      unsigned Shift = ShiftedImm.ShiftAmount;
-      Expr = ShiftedImm.Val;
-      if (Shift != 0 && Shift != 12)
-        return false;
-    } else
-      Expr = getImm();
-
-    // Otherwise it should be a real negative immediate in range:
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr);
-    return CE != nullptr && CE->getValue() < 0 && -CE->getValue() <= 0xfff;
+    return false;
   }
 
   // Signed value in the range -128 to +127. For element widths of
@@ -738,6 +729,24 @@ public:
       if (!(IsByte && ShiftedImm->second) &&
           AArch64_AM::isSVECpyImm<T>(uint64_t(ShiftedImm->first)
                                      << ShiftedImm->second))
+        return DiagnosticPredicateTy::Match;
+
+    return DiagnosticPredicateTy::NearMatch;
+  }
+
+  // Unsigned value in the range 0 to 255. For element widths of
+  // 16 bits or higher it may also be a signed multiple of 256 in the
+  // range 0 to 65280.
+  template <typename T> DiagnosticPredicate isSVEAddSubImm() const {
+    if (!isShiftedImm() && (!isImm() || !isa<MCConstantExpr>(getImm())))
+      return DiagnosticPredicateTy::NoMatch;
+
+    bool IsByte =
+        std::is_same<int8_t, typename std::make_signed<T>::type>::value;
+    if (auto ShiftedImm = getShiftedVal<8>())
+      if (!(IsByte && ShiftedImm->second) &&
+          AArch64_AM::isSVEAddSubImm<T>(ShiftedImm->first
+                                        << ShiftedImm->second))
         return DiagnosticPredicateTy::Match;
 
     return DiagnosticPredicateTy::NearMatch;
@@ -2274,9 +2283,9 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
   const AsmToken &Tok = Parser.getTok();
   if (Tok.is(AsmToken::Real) || Tok.is(AsmToken::Integer)) {
     int64_t Val;
-    if (Tok.is(AsmToken::Integer) && !isNegative && Tok.getString().startswith("0x")) {
+    if (Tok.is(AsmToken::Integer) && Tok.getString().startswith("0x")) {
       Val = Tok.getIntVal();
-      if (Val > 255 || Val < 0) {
+      if (Val > 255 || isNegative) {
         TokError("encoded floating point value out of range");
         return MatchOperand_ParseFail;
       }
@@ -3808,6 +3817,14 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [1, 32].");
   case Match_InvalidImm1_64:
     return Error(Loc, "immediate must be an integer in range [1, 64].");
+  case Match_InvalidSVEAddSubImm8:
+    return Error(Loc, "immediate must be an integer in range [0, 255]"
+                      " with a shift amount of 0");
+  case Match_InvalidSVEAddSubImm16:
+  case Match_InvalidSVEAddSubImm32:
+  case Match_InvalidSVEAddSubImm64:
+    return Error(Loc, "immediate must be an integer in range [0, 255] or a "
+                      "multiple of 256 in range [256, 65280]");
   case Match_InvalidSVECpyImm8:
     return Error(Loc, "immediate must be an integer in range [-128, 255]"
                       " with a shift amount of 0");
@@ -4344,6 +4361,10 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm1_16:
   case Match_InvalidImm1_32:
   case Match_InvalidImm1_64:
+  case Match_InvalidSVEAddSubImm8:
+  case Match_InvalidSVEAddSubImm16:
+  case Match_InvalidSVEAddSubImm32:
+  case Match_InvalidSVEAddSubImm64:
   case Match_InvalidSVECpyImm8:
   case Match_InvalidSVECpyImm16:
   case Match_InvalidSVECpyImm32:

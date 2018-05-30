@@ -15,10 +15,25 @@ let Predicates = [HasSVE] in {
   defm ADD_ZZZ   : sve_int_bin_cons_arit_0<0b000, "add">;
   defm SUB_ZZZ   : sve_int_bin_cons_arit_0<0b001, "sub">;
 
-  defm AND_ZI    : sve_int_log_imm<0b10, "and", "bic">;
+  def AND_ZZZ : sve_int_bin_cons_log<0b00, "and">;
+  def ORR_ZZZ : sve_int_bin_cons_log<0b01, "orr">;
+  def EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor">;
+  def BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic">;
 
   defm ADD_ZPmZ  : sve_int_bin_pred_arit_0<0b000, "add">;
   defm SUB_ZPmZ  : sve_int_bin_pred_arit_0<0b001, "sub">;
+
+  defm ORR_ZPmZ : sve_int_bin_pred_log<0b000, "orr">;
+  defm EOR_ZPmZ : sve_int_bin_pred_log<0b001, "eor">;
+  defm AND_ZPmZ : sve_int_bin_pred_log<0b010, "and">;
+  defm BIC_ZPmZ : sve_int_bin_pred_log<0b011, "bic">;
+
+  defm ADD_ZI   : sve_int_arith_imm0<0b000, "add">;
+  defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub">;
+
+  defm ORR_ZI : sve_int_log_imm<0b00, "orr", "orn">;
+  defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon">;
+  defm AND_ZI : sve_int_log_imm<0b10, "and", "bic">;
 
   // Splat immediate (unpredicated)
   defm DUP_ZI   : sve_int_dup_imm<"dup">;
@@ -456,4 +471,11 @@ let Predicates = [HasSVE] in {
 
   defm LSR_ZZI : sve_int_bin_cons_shift_b_right<0b01, "lsr">;
   defm LSL_ZZI : sve_int_bin_cons_shift_b_left< 0b11, "lsl">;
+
+  defm LSR_ZPmZ  : sve_int_bin_pred_shift_1<0b001, "lsr">;
+  defm LSL_ZPmZ  : sve_int_bin_pred_shift_1<0b011, "lsl">;
+
+  // InstAliases
+  def : InstAlias<"mov $Zd, $Zn",
+                  (ORR_ZZZ ZPR64:$Zd, ZPR64:$Zn, ZPR64:$Zn), 1>;
 }

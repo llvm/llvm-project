@@ -579,11 +579,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::GlobalAddress);
 
-  MaxStoresPerMemset = MaxStoresPerMemsetOptSize = 8;
-  MaxGluedStoresPerMemcpy = 4;
+  // In case of strict alignment, avoid an excessive number of byte wide stores.
+  MaxStoresPerMemsetOptSize = 8;
+  MaxStoresPerMemset = Subtarget->requiresStrictAlign()
+                       ? MaxStoresPerMemsetOptSize : 32;
 
-  MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = 4;
-  MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = 4;
+  MaxGluedStoresPerMemcpy = 4;
+  MaxStoresPerMemcpyOptSize = 4;
+  MaxStoresPerMemcpy = Subtarget->requiresStrictAlign()
+                       ? MaxStoresPerMemcpyOptSize : 16;
+
+  MaxStoresPerMemmoveOptSize = MaxStoresPerMemmove = 4;
 
   setStackPointerRegisterToSaveRestore(AArch64::SP);
 

@@ -141,6 +141,18 @@ bool wouldInstructionBeTriviallyDead(Instruction *I,
 bool RecursivelyDeleteTriviallyDeadInstructions(Value *V,
                                         const TargetLibraryInfo *TLI = nullptr);
 
+/// Delete all of the instructions in `DeadInsts`, and all other instructions
+/// that deleting these in turn causes to be trivially dead.
+///
+/// The initial instructions in the provided vector must all have empty use
+/// lists and satisfy `isInstructionTriviallyDead`.
+///
+/// `DeadInsts` will be used as scratch storage for this routine and will be
+/// empty afterward.
+void RecursivelyDeleteTriviallyDeadInstructions(
+    SmallVectorImpl<Instruction *> &DeadInsts,
+    const TargetLibraryInfo *TLI = nullptr);
+
 /// If the specified value is an effectively dead PHI node, due to being a
 /// def-use chain of single-use nodes that either forms a cycle or is terminated
 /// by a trivially dead instruction, delete it. If that makes any of its

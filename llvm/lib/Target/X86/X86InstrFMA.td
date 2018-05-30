@@ -364,6 +364,30 @@ defm VFNMADD : fma3s<0x9D, 0xAD, 0xBD, "vfnmadd", X86Fnmadds1, X86Fnmadd,
 defm VFNMSUB : fma3s<0x9F, 0xAF, 0xBF, "vfnmsub", X86Fnmsubs1, X86Fnmsub,
                      SchedWriteFMA.Scl>, VEX_LIG;
 
+multiclass scalar_fma_patterns<SDNode Op, string Prefix, string Suffix,
+                               SDNode Move, ValueType VT, ValueType EltVT,
+                               RegisterClass RC> {
+  let Predicates = [HasFMA, NoAVX512] in {
+    def : Pat<(VT (Move (VT VR128:$src1), (VT (scalar_to_vector
+                (Op RC:$src2,
+                    (EltVT (extractelt (VT VR128:$src1), (iPTR 0))),
+                    RC:$src3))))),
+              (!cast<I>(Prefix#"213"#Suffix#"r_Int")
+               VR128:$src1, (COPY_TO_REGCLASS RC:$src2, VR128),
+               (COPY_TO_REGCLASS RC:$src3, VR128))>;
+  }
+}
+
+defm : scalar_fma_patterns<X86Fmadd, "VFMADD", "SS", X86Movss, v4f32, f32, FR32>;
+defm : scalar_fma_patterns<X86Fmsub, "VFMSUB", "SS", X86Movss, v4f32, f32, FR32>;
+defm : scalar_fma_patterns<X86Fnmadd, "VFNMADD", "SS", X86Movss, v4f32, f32, FR32>;
+defm : scalar_fma_patterns<X86Fnmsub, "VFNMSUB", "SS", X86Movss, v4f32, f32, FR32>;
+
+defm : scalar_fma_patterns<X86Fmadd, "VFMADD", "SD", X86Movsd, v2f64, f64, FR64>;
+defm : scalar_fma_patterns<X86Fmsub, "VFMSUB", "SD", X86Movsd, v2f64, f64, FR64>;
+defm : scalar_fma_patterns<X86Fnmadd, "VFNMADD", "SD", X86Movsd, v2f64, f64, FR64>;
+defm : scalar_fma_patterns<X86Fnmsub, "VFNMSUB", "SD", X86Movsd, v2f64, f64, FR64>;
+
 //===----------------------------------------------------------------------===//
 // FMA4 - AMD 4 operand Fused Multiply-Add instructions
 //===----------------------------------------------------------------------===//
