@@ -1,8 +1,8 @@
 
 if (DEFINED TARGET_TRIPLE)
-    # Ignore the minor and patchlevel versions of the darwin
+    # Ignore the major, minor, and patchlevel versions of the darwin
     # target.
-    string(REGEX REPLACE "darwin16\\.[0-9]\\.[0-9]" "darwin16"
+    string(REGEX REPLACE "darwin([0-9]+)\\.([0-9]+)\\.([0-9]+)" "darwin"
       GENERIC_TARGET_TRIPLE "${TARGET_TRIPLE}")
 endif()
 

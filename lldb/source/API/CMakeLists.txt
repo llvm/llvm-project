@@ -162,8 +162,7 @@ if (LLDB_WRAP_PYTHON)
 endif()
 
 if(LLDB_BUILD_FRAMEWORK)
-  file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h
-      ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
+  file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h)
   file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
   file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
   list(REMOVE_ITEM root_public_headers ${root_private_headers})

@@ -219,7 +219,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   }
 
   if (isRelExprOneOf<R_TLSDESC, R_TLSDESC_PAGE, R_TLSDESC_CALL, R_TLSGD,
-                     R_TLSGD_PC>(Expr)) {
+                     R_TLSGD_GOT, R_TLSGD_PC>(Expr)) {
     if (Config->Shared) {
       if (InX::Got->addDynTlsEntry(Sym)) {
         uint64_t Off = InX::Got->getGlobalDynOffset(Sym);
@@ -347,9 +347,9 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
   if (isRelExprOneOf<R_GOT_FROM_END, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
                      R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32,
                      R_MIPS_GOT_GP_PC, R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC,
-                     R_GOTONLY_PC, R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_PC,
-                     R_TLSGD, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_TLSDESC_PAGE,
-                     R_HINT>(E))
+                     R_GOTONLY_PC, R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT,
+                     R_TLSGD_PC, R_TLSGD, R_PPC_CALL_PLT, R_TLSDESC_CALL,
+                     R_TLSDESC_PAGE, R_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
