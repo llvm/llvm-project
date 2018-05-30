@@ -81,14 +81,8 @@ using EditLineStringStreamType = std::stringstream;
 using EditLineCharType = char;
 #endif
 
-#ifdef EL_CLIENTDATA	/* editline with wide support + wide char read function */
-using EditLineGetCharType = wchar_t;
-#else
-using EditLineGetCharType = char;
-#endif
-
 typedef int (*EditlineGetCharCallbackType)(::EditLine *editline,
-                                           EditLineGetCharType *c);
+                                           EditLineCharType *c);
 typedef unsigned char (*EditlineCommandCallbackType)(::EditLine *editline,
                                                      int ch);
 typedef const char *(*EditlinePromptCallbackType)(::EditLine *editline);
@@ -275,7 +269,7 @@ private:
 
   /// Character reading implementation for EditLine that supports our multi-line
   /// editing trickery.
-  int GetCharacter(EditLineGetCharType *c);
+  int GetCharacter(EditLineCharType *c);
 
   /// Prompt implementation for EditLine.
   const char *Prompt();
@@ -328,7 +322,7 @@ private:
   /// single or multi-line editing.
   void ConfigureEditor(bool multiline);
 
-  bool CompleteCharacter(char ch, EditLineGetCharType &out);
+  bool CompleteCharacter(char ch, EditLineCharType &out);
 
 private:
 #if LLDB_EDITLINE_USE_WCHAR

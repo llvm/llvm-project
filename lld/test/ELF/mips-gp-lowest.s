@@ -41,4 +41,4 @@ foo:
 
 # CHECK:      Name: _gp (5)
 # CHECK-NEXT: Value: 0x80E0
-#                    ^-- 0xE0 + 0x7ff0
+#                    ^-- 0xF0 + 0x7ff0

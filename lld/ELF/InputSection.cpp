@@ -633,6 +633,8 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
            getAArch64Page(P);
   case R_TLSGD:
     return InX::Got->getGlobalDynOffset(Sym) + A - InX::Got->getSize();
+  case R_TLSGD_GOT:
+    return InX::Got->getGlobalDynOffset(Sym) + A;
   case R_TLSGD_PC:
     return InX::Got->getGlobalDynAddr(Sym) + A - P;
   case R_TLSLD:
