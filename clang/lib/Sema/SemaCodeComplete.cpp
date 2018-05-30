@@ -439,53 +439,6 @@ ResultBuilder::ShadowMapEntry::end() const {
   return iterator(DeclOrVector.get<DeclIndexPairVector *>()->end());
 }
 
-/// Compute the qualification required to get from the current context
-/// (\p CurContext) to the target context (\p TargetContext).
-///
-/// \param Context the AST context in which the qualification will be used.
-///
-/// \param CurContext the context where an entity is being named, which is
-/// typically based on the current scope.
-///
-/// \param TargetContext the context in which the named entity actually 
-/// resides.
-///
-/// \returns a nested name specifier that refers into the target context, or
-/// NULL if no qualification is needed.
-static NestedNameSpecifier *
-getRequiredQualification(ASTContext &Context,
-                         const DeclContext *CurContext,
-                         const DeclContext *TargetContext) {
-  SmallVector<const DeclContext *, 4> TargetParents;
-  
-  for (const DeclContext *CommonAncestor = TargetContext;
-       CommonAncestor && !CommonAncestor->Encloses(CurContext);
-       CommonAncestor = CommonAncestor->getLookupParent()) {
-    if (CommonAncestor->isTransparentContext() ||
-        CommonAncestor->isFunctionOrMethod())
-      continue;
-    
-    TargetParents.push_back(CommonAncestor);
-  }
-
-  NestedNameSpecifier *Result = nullptr;
-  while (!TargetParents.empty()) {
-    const DeclContext *Parent = TargetParents.pop_back_val();
-
-    if (const NamespaceDecl *Namespace = dyn_cast<NamespaceDecl>(Parent)) {
-      if (!Namespace->getIdentifier())
-        continue;
-
-      Result = NestedNameSpecifier::Create(Context, Result, Namespace);
-    }
-    else if (const TagDecl *TD = dyn_cast<TagDecl>(Parent))
-      Result = NestedNameSpecifier::Create(Context, Result,
-                                           false,
-                                     Context.getTypeDeclType(TD).getTypePtr());
-  }  
-  return Result;
-}
-
 /// Determine whether \p Id is a name reserved for the implementation (C99
 /// 7.1.3, C++ [lib.global.names]).
 static bool isReservedName(const IdentifierInfo *Id,
