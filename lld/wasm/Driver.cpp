@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TargetSelect.h"
 
 #define DEBUG_TYPE "lld"
 
@@ -47,6 +48,17 @@ enum {
 #include "Options.inc"
 #undef OPTION
 };
+
+// This function is called on startup. We need this for LTO since
+// LTO calls LLVM functions to compile bitcode files to native code.
+// Technically this can be delayed until we read bitcode files, but
+// we don't bother to do lazily because the initialization is fast.
+static void initLLVM() {
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
+}
 
 class LinkerDriver {
 public:
@@ -72,6 +84,7 @@ bool lld::wasm::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Config = make<Configuration>();
   Symtab = make<SymbolTable>();
 
+  initLLVM();
   LinkerDriver().link(Args);
 
   // Exit immediately if we don't need to return to the caller.
@@ -173,7 +186,8 @@ void LinkerDriver::addFile(StringRef Path) {
     return;
   MemoryBufferRef MBRef = *Buffer;
 
-  if (identify_magic(MBRef.getBuffer()) == file_magic::archive) {
+  switch (identify_magic(MBRef.getBuffer())) {
+  case file_magic::archive: {
     SmallString<128> ImportFile = Path;
     path::replace_extension(ImportFile, ".imports");
     if (fs::exists(ImportFile))
@@ -182,8 +196,12 @@ void LinkerDriver::addFile(StringRef Path) {
     Files.push_back(make<ArchiveFile>(MBRef));
     return;
   }
-
-  Files.push_back(make<ObjFile>(MBRef));
+  case file_magic::bitcode:
+    Files.push_back(make<BitcodeFile>(MBRef));
+    break;
+  default:
+    Files.push_back(make<ObjFile>(MBRef));
+  }
 }
 
 // Add a given library by searching it from input search paths.
@@ -261,6 +279,17 @@ static void handleWeakUndefines() {
   }
 }
 
+// Force Sym to be entered in the output. Used for -u or equivalent.
+static Symbol *addUndefined(StringRef Name) {
+  Symbol *S = Symtab->addUndefinedFunction(Name, 0, nullptr, nullptr);
+
+  // Since symbol S may not be used inside the program, LTO may
+  // eliminate it. Mark the symbol as "used" to prevent it.
+  S->IsUsedInRegularObj = true;
+
+  return S;
+}
+
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   WasmOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -288,12 +317,15 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
+  Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
   Config->ExportTable = Args.hasArg(OPT_export_table);
   errorHandler().FatalWarnings =
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
   Config->ImportTable = Args.hasArg(OPT_import_table);
+  Config->LTOO = args::getInteger(Args, OPT_lto_O, 2);
+  Config->LTOPartitions = args::getInteger(Args, OPT_lto_partitions, 1);
   Config->Optimize = args::getInteger(Args, OPT_O, 0);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
@@ -304,10 +336,16 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
                    !Config->Relocatable);
   Config->PrintGcSections =
       Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
+  Config->SaveTemps = Args.hasArg(OPT_save_temps);
   Config->SearchPaths = args::getStrings(Args, OPT_L);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
   Config->StackFirst = Args.hasArg(OPT_stack_first);
+  Config->ThinLTOCacheDir = Args.getLastArgValue(OPT_thinlto_cache_dir);
+  Config->ThinLTOCachePolicy = CHECK(
+      parseCachePruningPolicy(Args.getLastArgValue(OPT_thinlto_cache_policy)),
+      "--thinlto-cache-policy: invalid cache policy");
+  Config->ThinLTOJobs = args::getInteger(Args, OPT_thinlto_jobs, -1u);
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
 
@@ -318,6 +356,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
 
   Config->CompressRelocTargets = Config->Optimize > 0 && !Config->Relocatable;
+
+  if (Config->LTOO > 3)
+    error("invalid optimization level for LTO: " + Twine(Config->LTOO));
+  if (Config->LTOPartitions == 0)
+    error("--lto-partitions: number of threads must be > 0");
+  if (Config->ThinLTOJobs == 0)
+    error("--thinlto-jobs: number of threads must be > 0");
 
   if (auto *Arg = Args.getLastArg(OPT_allow_undefined_file))
     readImportFile(Arg->getValue());
@@ -372,12 +417,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // For now, since we don't actually use the start function as the
     // wasm start symbol, we don't need to care about it signature.
     if (!Config->Entry.empty())
-      EntrySym =
-          Symtab->addUndefinedFunction(Config->Entry, 0, nullptr, nullptr);
+      EntrySym = addUndefined(Config->Entry);
 
     // Handle the `--undefined <sym>` options.
     for (auto *Arg : Args.filtered(OPT_undefined))
-      Symtab->addUndefinedFunction(Arg->getValue(), 0, nullptr, nullptr);
+      addUndefined(Arg->getValue());
   }
 
   createFiles(Args);
@@ -388,10 +432,18 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // symbols that we need to the symbol table.
   for (InputFile *F : Files)
     Symtab->addFile(F);
+  if (errorCount())
+    return;
 
   // Add synthetic dummies for weak undefined functions.
   if (!Config->Relocatable)
     handleWeakUndefines();
+
+  // Do link-time optimization if given files are LLVM bitcode files.
+  // This compiles bitcode files into real object files.
+  Symtab->addCombinedLTOObject();
+  if (errorCount())
+    return;
 
   // Make sure we have resolved all symbols.
   if (!Config->Relocatable && !Config->AllowUndefined) {
