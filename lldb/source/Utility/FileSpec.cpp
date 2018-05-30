@@ -839,36 +839,16 @@ void FileSpec::AppendPathComponent(const FileSpec &new_path) {
   return AppendPathComponent(new_path.GetPath(false));
 }
 
-void FileSpec::RemoveLastPathComponent() {
-  // CLEANUP: Use StringRef for string handling.
-
-  const bool resolve = false;
-  if (m_filename.IsEmpty() && m_directory.IsEmpty()) {
-    SetFile("", resolve);
-    return;
+bool FileSpec::RemoveLastPathComponent() {
+  llvm::SmallString<64> current_path;
+  auto style = m_syntax == ePathSyntaxWindows ? llvm::sys::path::Style::windows
+                                              : llvm::sys::path::Style::posix;
+  GetPath(current_path, false);
+  if (llvm::sys::path::has_parent_path(current_path, style)) {
+    SetFile(llvm::sys::path::parent_path(current_path, style), false, m_syntax);
+    return true;
   }
-  if (m_directory.IsEmpty()) {
-    SetFile("", resolve);
-    return;
-  }
-  if (m_filename.IsEmpty()) {
-    const char *dir_cstr = m_directory.GetCString();
-    const char *last_slash_ptr = ::strrchr(dir_cstr, '/');
-
-    // check for obvious cases before doing the full thing
-    if (!last_slash_ptr) {
-      SetFile("", resolve);
-      return;
-    }
-    if (last_slash_ptr == dir_cstr) {
-      SetFile("/", resolve);
-      return;
-    }
-    size_t last_slash_pos = last_slash_ptr - dir_cstr + 1;
-    ConstString new_path(dir_cstr, last_slash_pos);
-    SetFile(new_path.GetCString(), resolve);
-  } else
-    SetFile(m_directory.GetCString(), resolve);
+  return false;
 }
 //------------------------------------------------------------------
 /// Returns true if the filespec represents an implementation source
