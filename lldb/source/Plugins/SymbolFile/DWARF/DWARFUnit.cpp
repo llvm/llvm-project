@@ -205,8 +205,6 @@ bool DWARFUnit::ExtractDIEsIfNeeded() {
 // Final checks for both ExtractUnitDIEIfNeeded() and ExtractDIEsIfNeeded().
 //--------------------------------------------------------------------------
 void DWARFUnit::ExtractDIEsEndCheck(lldb::offset_t offset) const {
-  lldb::offset_t next_cu_offset = GetNextCompileUnitOffset();
-
   // Give a little bit of info if we encounter corrupt DWARF (our offset should
   // always terminate at or before the start of the next compilation unit
   // header).
@@ -450,8 +448,6 @@ DWARFFormValue::FixedFormSizes DWARFUnit::GetFixedFormSizes() {
 }
 
 void DWARFUnit::SetBaseAddress(dw_addr_t base_addr) { m_base_addr = base_addr; }
-
-bool DWARFUnit::HasDIEsParsed() const { return m_die_array.size() > 1; }
 
 //----------------------------------------------------------------------
 // Compare function DWARFDebugAranges::Range structures

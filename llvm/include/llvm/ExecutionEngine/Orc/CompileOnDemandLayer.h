@@ -349,22 +349,21 @@ private:
         // Create a callback, associate it with the stub for the function,
         // and set the compile action to compile the partition containing the
         // function.
-        if (auto CCInfoOrErr = CompileCallbackMgr.getCompileCallback()) {
-          auto &CCInfo = *CCInfoOrErr;
+        auto CompileAction = [this, &LD, LMId, &F]() -> JITTargetAddress {
+          if (auto FnImplAddrOrErr = this->extractAndCompile(LD, LMId, F))
+            return *FnImplAddrOrErr;
+          else {
+            // FIXME: Report error, return to 'abort' or something similar.
+            consumeError(FnImplAddrOrErr.takeError());
+            return 0;
+          }
+        };
+        if (auto CCAddr =
+                CompileCallbackMgr.getCompileCallback(std::move(CompileAction)))
           StubInits[MangledName] =
-            std::make_pair(CCInfo.getAddress(),
-                           JITSymbolFlags::fromGlobalValue(F));
-          CCInfo.setCompileAction([this, &LD, LMId, &F]() -> JITTargetAddress {
-              if (auto FnImplAddrOrErr = this->extractAndCompile(LD, LMId, F))
-                return *FnImplAddrOrErr;
-              else {
-                // FIXME: Report error, return to 'abort' or something similar.
-                consumeError(FnImplAddrOrErr.takeError());
-                return 0;
-              }
-            });
-        } else
-          return CCInfoOrErr.takeError();
+              std::make_pair(*CCAddr, JITSymbolFlags::fromGlobalValue(F));
+        else
+          return CCAddr.takeError();
       }
 
       if (auto Err = LD.StubsMgr->createStubs(StubInits))

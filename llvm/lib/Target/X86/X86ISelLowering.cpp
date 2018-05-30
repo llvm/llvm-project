@@ -32142,8 +32142,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         cast<ConstantSDNode>(AndNode.getOperand(1))->getAPIntValue() == 1) {
       // LHS and RHS swapped due to
       // setcc outputting 1 when AND resulted in 0 and vice versa.
-      if (AndNode.getValueType() != MVT::i8)
-        AndNode = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, AndNode);
+      AndNode = DAG.getZExtOrTrunc(AndNode, DL, MVT::i8);
       return DAG.getNode(ISD::SELECT, DL, VT, AndNode, RHS, LHS);
     }
   }

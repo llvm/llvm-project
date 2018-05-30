@@ -142,6 +142,10 @@ opt::InputArgList WasmOptTable::parse(ArrayRef<const char *> Argv) {
 
   unsigned MissingIndex;
   unsigned MissingCount;
+
+  // Expand response files (arguments in the form of @<filename>)
+  cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Vec);
+
   opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
 
   handleColorDiagnostics(Args);

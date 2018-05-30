@@ -9,7 +9,7 @@
 
 // <stack>
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// UNSUPPORTED: clang-5
+// UNSUPPORTED: clang-5, apple-clang-9
 // UNSUPPORTED: libcpp-no-deduction-guides
 // Clang 5 will generate bad implicit deduction guides
 //	Specifically, for the copy constructor.

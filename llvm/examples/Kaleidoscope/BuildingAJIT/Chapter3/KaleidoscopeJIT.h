@@ -76,8 +76,8 @@ public:
                       [this](std::unique_ptr<Module> M) {
                         return optimizeModule(std::move(M));
                       }),
-        CompileCallbackManager(
-            orc::createLocalCompileCallbackManager(TM->getTargetTriple(), 0)),
+        CompileCallbackManager(orc::createLocalCompileCallbackManager(
+            TM->getTargetTriple(), ES, 0)),
         CODLayer(ES, OptimizeLayer,
                  [&](orc::VModuleKey K) { return Resolvers[K]; },
                  [&](orc::VModuleKey K, std::shared_ptr<SymbolResolver> R) {

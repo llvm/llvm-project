@@ -888,7 +888,7 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
   // operands, i.e., source and destination of any given memcpy must no-alias.
   // If Loc must-aliases either one of these two locations, then it necessarily
   // no-aliases the other.
-  if (auto *Inst = dyn_cast<MemCpyInst>(CS.getInstruction())) {
+  if (auto *Inst = dyn_cast<AnyMemCpyInst>(CS.getInstruction())) {
     AliasResult SrcAA, DestAA;
 
     if ((SrcAA = getBestAAResults().alias(MemoryLocation::getForSource(Inst),

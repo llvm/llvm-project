@@ -602,19 +602,28 @@ size_t Writer::addEntryToStringTable(StringRef Str) {
 }
 
 Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
-  // Relative symbols are unrepresentable in a COFF symbol table.
-  if (isa<DefinedSynthetic>(Def))
+  coff_symbol16 Sym;
+  switch (Def->kind()) {
+  case Symbol::DefinedAbsoluteKind:
+    Sym.Value = Def->getRVA();
+    Sym.SectionNumber = IMAGE_SYM_ABSOLUTE;
+    break;
+  case Symbol::DefinedSyntheticKind:
+    // Relative symbols are unrepresentable in a COFF symbol table.
     return None;
-
-  // Don't write dead symbols or symbols in codeview sections to the symbol
-  // table.
-  if (!Def->isLive())
-    return None;
-  if (auto *D = dyn_cast<DefinedRegular>(Def))
-    if (D->getChunk()->isCodeView())
+  default: {
+    // Don't write symbols that won't be written to the output to the symbol
+    // table.
+    OutputSection *OS = Def->getChunk()->getOutputSection();
+    if (!OS)
       return None;
 
-  coff_symbol16 Sym;
+    Sym.Value = Def->getRVA() - OS->getRVA();
+    Sym.SectionNumber = OS->SectionIndex;
+    break;
+  }
+  }
+
   StringRef Name = Def->getName();
   if (Name.size() > COFF::NameSize) {
     Sym.Name.Offset.Zeroes = 0;
@@ -633,25 +642,6 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
     Sym.StorageClass = IMAGE_SYM_CLASS_EXTERNAL;
   }
   Sym.NumberOfAuxSymbols = 0;
-
-  switch (Def->kind()) {
-  case Symbol::DefinedAbsoluteKind:
-    Sym.Value = Def->getRVA();
-    Sym.SectionNumber = IMAGE_SYM_ABSOLUTE;
-    break;
-  default: {
-    uint64_t RVA = Def->getRVA();
-    OutputSection *Sec = nullptr;
-    for (OutputSection *S : OutputSections) {
-      if (S->getRVA() > RVA)
-        break;
-      Sec = S;
-    }
-    Sym.Value = RVA - Sec->getRVA();
-    Sym.SectionNumber = Sec->SectionIndex;
-    break;
-  }
-  }
   return Sym;
 }
 

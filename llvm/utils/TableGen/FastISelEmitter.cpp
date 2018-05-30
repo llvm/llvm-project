@@ -39,6 +39,12 @@ struct InstructionMemo {
   std::vector<std::string> PhysRegs;
   std::string PredicateCheck;
 
+  InstructionMemo(std::string Name, const CodeGenRegisterClass *RC,
+                  std::string SubRegNo, std::vector<std::string> PhysRegs,
+                  std::string PredicateCheck)
+    : Name(Name), RC(RC), SubRegNo(SubRegNo), PhysRegs(PhysRegs),
+      PredicateCheck(PredicateCheck) {}
+
   // Make sure we do not copy InstructionMemo.
   InstructionMemo(const InstructionMemo &Other) = delete;
   InstructionMemo(InstructionMemo &&Other) = default;
@@ -576,13 +582,13 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     std::string PredicateCheck = Pattern.getPredicateCheck();
 
     // Ok, we found a pattern that we can handle. Remember it.
-    InstructionMemo Memo = {
+    InstructionMemo Memo(
       Pattern.getDstPattern()->getOperator()->getName(),
       DstRC,
       SubRegNo,
       PhysRegInputs,
       PredicateCheck
-    };
+    );
 
     int complexity = Pattern.getPatternComplexity(CGP);
 

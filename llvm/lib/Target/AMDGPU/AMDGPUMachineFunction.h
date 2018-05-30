@@ -20,6 +20,7 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// local memory space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
 
+protected:
   uint64_t KernArgSize;
   unsigned MaxKernArgAlign;
 

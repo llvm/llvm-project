@@ -14,14 +14,14 @@
 
 ; SYM_FORMAT: ---SYMBOLS---
 ; SYM_FORMAT: symbolformat.obj
-; SYM_FORMAT-DAG: func [{{.*}}] (EBP) int __cdecl _purecall()
-; SYM_FORMAT-DAG: func [{{.*}}] (EBP) int __cdecl main(int argc, char** argv)
-; SYM_FORMAT-DAG: func [{{.*}}] (EBP) void A::A()
-; SYM_FORMAT-DAG: func [{{.*}}] (EBP) void B::B()
+; SYM_FORMAT-DAG: func [{{.*}}] (CVRegEBP) int __cdecl _purecall()
+; SYM_FORMAT-DAG: func [{{.*}}] (CVRegEBP) int __cdecl main(int argc, char** argv)
+; SYM_FORMAT-DAG: func [{{.*}}] (CVRegEBP) void A::A()
+; SYM_FORMAT-DAG: func [{{.*}}] (CVRegEBP) void B::B()
 ; SYM_FORMAT-DAG: thunk [{{.*}}] (Pcode) B::`vcall'{0}'
-; SYM_FORMAT-DAG: func [{{.*}}] (EBP) virtual void B::PureFunc()
-; SYM_FORMAT-DAG: func [{{.*}}] (EBP) void A::RegularFunc()
-; SYM_FORMAT-DAG: func [{{.*}}] (EBP) virtual void A::VirtualFunc()
+; SYM_FORMAT-DAG: func [{{.*}}] (CVRegEBP) virtual void B::PureFunc()
+; SYM_FORMAT-DAG: func [{{.*}}] (CVRegEBP) void A::RegularFunc()
+; SYM_FORMAT-DAG: func [{{.*}}] (CVRegEBP) virtual void A::VirtualFunc()
 
 ; TYPES_FORMAT: ---TYPES---
 ; TYPES_FORMAT: Enums

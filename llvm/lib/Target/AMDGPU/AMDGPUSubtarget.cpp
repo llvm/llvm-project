@@ -414,12 +414,16 @@ bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {
 
 unsigned SISubtarget::getKernArgSegmentSize(const Function &F,
                                             unsigned ExplicitArgBytes) const {
+  uint64_t TotalSize = ExplicitArgBytes;
   unsigned ImplicitBytes = getImplicitArgNumBytes(F);
-  if (ImplicitBytes == 0)
-    return ExplicitArgBytes;
 
-  unsigned Alignment = getAlignmentForImplicitArgPtr();
-  return alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
+  if (ImplicitBytes != 0) {
+    unsigned Alignment = getAlignmentForImplicitArgPtr();
+    TotalSize = alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
+  }
+
+  // Being able to dereference past the end is useful for emitting scalar loads.
+  return alignTo(TotalSize, 4);
 }
 
 unsigned SISubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
