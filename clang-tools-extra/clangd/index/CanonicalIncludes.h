@@ -90,4 +90,4 @@ void addSystemHeadersMapping(CanonicalIncludes *Includes);
 } // namespace clangd
 } // namespace clang
 
-#endif //LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_HEADERMAPCOLLECTOR_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_HEADERMAPCOLLECTOR_H

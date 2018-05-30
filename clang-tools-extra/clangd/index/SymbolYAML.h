@@ -40,7 +40,7 @@ std::string SymbolToYAML(Symbol Sym);
 
 // Convert symbols to a YAML-format string.
 // The YAML result is safe to concatenate if you have multiple symbol slabs.
-void SymbolsToYAML(const SymbolSlab& Symbols, llvm::raw_ostream &OS);
+void SymbolsToYAML(const SymbolSlab &Symbols, llvm::raw_ostream &OS);
 
 } // namespace clangd
 } // namespace clang
