@@ -57,12 +57,11 @@ public:
   using IndirectStubsManagerBuilder = CODLayerT::IndirectStubsManagerBuilderT;
 
   OrcLazyJIT(std::unique_ptr<TargetMachine> TM,
-             std::unique_ptr<CompileCallbackMgr> CCMgr,
              IndirectStubsManagerBuilder IndirectStubsMgrBuilder,
              bool InlineStubs)
-      : TM(std::move(TM)),
-        DL(this->TM->createDataLayout()),
-        CCMgr(std::move(CCMgr)),
+      : TM(std::move(TM)), DL(this->TM->createDataLayout()),
+        CCMgr(orc::createLocalCompileCallbackManager(
+            this->TM->getTargetTriple(), ES, 0)),
         ObjectLayer(ES,
                     [this](orc::VModuleKey K) {
                       auto ResolverI = Resolvers.find(K);

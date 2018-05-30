@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Process.h"
@@ -49,95 +50,26 @@ namespace orc {
 /// Target-independent base class for compile callback management.
 class JITCompileCallbackManager {
 public:
-  using CompileFtor = std::function<JITTargetAddress()>;
-
-  /// Handle to a newly created compile callback. Can be used to get an
-  ///        IR constant representing the address of the trampoline, and to set
-  ///        the compile action for the callback.
-  class CompileCallbackInfo {
-  public:
-    CompileCallbackInfo(JITTargetAddress Addr, CompileFtor &Compile)
-        : Addr(Addr), Compile(Compile) {}
-
-    JITTargetAddress getAddress() const { return Addr; }
-    void setCompileAction(CompileFtor Compile) {
-      this->Compile = std::move(Compile);
-    }
-
-  private:
-    JITTargetAddress Addr;
-    CompileFtor &Compile;
-  };
+  using CompileFunction = std::function<JITTargetAddress()>;
 
   /// Construct a JITCompileCallbackManager.
   /// @param ErrorHandlerAddress The address of an error handler in the target
   ///                            process to be used if a compile callback fails.
-  JITCompileCallbackManager(JITTargetAddress ErrorHandlerAddress)
-      : ErrorHandlerAddress(ErrorHandlerAddress) {}
+  JITCompileCallbackManager(ExecutionSession &ES,
+                            JITTargetAddress ErrorHandlerAddress)
+      : ES(ES), CallbacksVSO(ES.createVSO("<Callbacks>")),
+        ErrorHandlerAddress(ErrorHandlerAddress) {}
 
   virtual ~JITCompileCallbackManager() = default;
 
+  /// Reserve a compile callback.
+  Expected<JITTargetAddress> getCompileCallback(CompileFunction Compile);
+
   /// Execute the callback for the given trampoline id. Called by the JIT
   ///        to compile functions on demand.
-  JITTargetAddress executeCompileCallback(JITTargetAddress TrampolineAddr) {
-    auto I = ActiveTrampolines.find(TrampolineAddr);
-    // FIXME: Also raise an error in the Orc error-handler when we finally have
-    //        one.
-    if (I == ActiveTrampolines.end())
-      return ErrorHandlerAddress;
-
-    // Found a callback handler. Yank this trampoline out of the active list and
-    // put it back in the available trampolines list, then try to run the
-    // handler's compile and update actions.
-    // Moving the trampoline ID back to the available list first means there's
-    // at
-    // least one available trampoline if the compile action triggers a request
-    // for
-    // a new one.
-    auto Compile = std::move(I->second);
-    ActiveTrampolines.erase(I);
-    AvailableTrampolines.push_back(TrampolineAddr);
-
-    if (auto Addr = Compile())
-      return Addr;
-
-    return ErrorHandlerAddress;
-  }
-
-  /// Reserve a compile callback.
-  Expected<CompileCallbackInfo> getCompileCallback() {
-    if (auto TrampolineAddrOrErr = getAvailableTrampolineAddr()) {
-      const auto &TrampolineAddr = *TrampolineAddrOrErr;
-      auto &Compile = this->ActiveTrampolines[TrampolineAddr];
-      return CompileCallbackInfo(TrampolineAddr, Compile);
-    } else
-      return TrampolineAddrOrErr.takeError();
-  }
-
-  /// Get a CompileCallbackInfo for an existing callback.
-  CompileCallbackInfo getCompileCallbackInfo(JITTargetAddress TrampolineAddr) {
-    auto I = ActiveTrampolines.find(TrampolineAddr);
-    assert(I != ActiveTrampolines.end() && "Not an active trampoline.");
-    return CompileCallbackInfo(I->first, I->second);
-  }
-
-  /// Release a compile callback.
-  ///
-  ///   Note: Callbacks are auto-released after they execute. This method should
-  /// only be called to manually release a callback that is not going to
-  /// execute.
-  void releaseCompileCallback(JITTargetAddress TrampolineAddr) {
-    auto I = ActiveTrampolines.find(TrampolineAddr);
-    assert(I != ActiveTrampolines.end() && "Not an active trampoline.");
-    ActiveTrampolines.erase(I);
-    AvailableTrampolines.push_back(TrampolineAddr);
-  }
+  JITTargetAddress executeCompileCallback(JITTargetAddress TrampolineAddr);
 
 protected:
-  JITTargetAddress ErrorHandlerAddress;
-
-  using TrampolineMapT = std::map<JITTargetAddress, CompileFtor>;
-  TrampolineMapT ActiveTrampolines;
   std::vector<JITTargetAddress> AvailableTrampolines;
 
 private:
@@ -156,6 +88,13 @@ private:
   virtual Error grow() = 0;
 
   virtual void anchor();
+
+  std::mutex CCMgrMutex;
+  ExecutionSession &ES;
+  VSO &CallbacksVSO;
+  JITTargetAddress ErrorHandlerAddress;
+  std::map<JITTargetAddress, SymbolStringPtr> AddrToSymbol;
+  size_t NextCallbackId = 0;
 };
 
 /// Manage compile callbacks for in-process JITs.
@@ -165,8 +104,9 @@ public:
   /// Construct a InProcessJITCompileCallbackManager.
   /// @param ErrorHandlerAddress The address of an error handler in the target
   ///                            process to be used if a compile callback fails.
-  LocalJITCompileCallbackManager(JITTargetAddress ErrorHandlerAddress)
-      : JITCompileCallbackManager(ErrorHandlerAddress) {
+  LocalJITCompileCallbackManager(ExecutionSession &ES,
+                                 JITTargetAddress ErrorHandlerAddress)
+      : JITCompileCallbackManager(ES, ErrorHandlerAddress) {
     /// Set up the resolver block.
     std::error_code EC;
     ResolverBlock = sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
@@ -360,7 +300,7 @@ private:
 /// ErrorHandlerAddress will be used by the resulting compile callback
 /// manager if a compile callback fails.
 std::unique_ptr<JITCompileCallbackManager>
-createLocalCompileCallbackManager(const Triple &T,
+createLocalCompileCallbackManager(const Triple &T, ExecutionSession &ES,
                                   JITTargetAddress ErrorHandlerAddress);
 
 /// Create a local indriect stubs manager builder.

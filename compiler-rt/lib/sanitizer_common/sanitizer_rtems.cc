@@ -275,14 +275,4 @@ uptr MainThreadTlsBase, MainThreadTlsSize;
 
 } // namespace __sanitizer
 
-extern "C" {
-void __sanitizer_startup_hook(void *stack_base, size_t stack_size,
-                              void *tls_base, size_t tls_size) {
-  __sanitizer::MainThreadStackBase = reinterpret_cast<uintptr_t>(stack_base);
-  __sanitizer::MainThreadStackSize = stack_size;
-  __sanitizer::MainThreadTlsBase = reinterpret_cast<uintptr_t>(tls_base);
-  __sanitizer::MainThreadTlsSize = tls_size;
-}
-}  // extern "C"
-
 #endif  // SANITIZER_RTEMS

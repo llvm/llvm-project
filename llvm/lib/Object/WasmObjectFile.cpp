@@ -995,7 +995,7 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
 }
 
 const uint8_t *WasmObjectFile::getPtr(size_t Offset) const {
-  return reinterpret_cast<const uint8_t *>(getData().substr(Offset, 1).data());
+  return reinterpret_cast<const uint8_t *>(getData().data() + Offset);
 }
 
 const wasm::WasmObjectHeader &WasmObjectFile::getHeader() const {

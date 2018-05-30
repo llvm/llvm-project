@@ -181,7 +181,7 @@ int test() {
     int (*fp2)(int) = [](auto b) -> int {  return b; };
     int (*fp3)(char) = [](auto c) -> int { return c; };
     char (*fp4)(int) = [](auto d) { return d; }; //expected-error{{no viable conversion}}\
-                                                 //expected-note{{candidate function[with $0 = int]}}
+                                                 //expected-note{{candidate function [with $0 = int]}}
     char (*fp5)(char) = [](auto e) -> int { return e; }; //expected-error{{no viable conversion}}\
                                                  //expected-note{{candidate template ignored}}
 

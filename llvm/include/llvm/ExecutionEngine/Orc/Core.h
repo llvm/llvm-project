@@ -610,10 +610,10 @@ private:
 /// VSOs will be searched in order and no VSO pointer may be null.
 /// All symbols must be found within the given VSOs or an error
 /// will be returned.
-Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names);
+Expected<SymbolMap> lookup(const VSO::VSOList &VSOs, SymbolNameSet Names);
 
 /// Look up a symbol by searching a list of VSOs.
-Expected<JITEvaluatedSymbol> lookup(const std::vector<VSO *> VSOs,
+Expected<JITEvaluatedSymbol> lookup(const VSO::VSOList &VSOs,
                                     SymbolStringPtr Name);
 
 } // End namespace orc

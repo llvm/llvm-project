@@ -47,10 +47,7 @@ MutexImpl::MutexImpl( bool recursive)
 {
   // Declare the pthread_mutex data structures
   pthread_mutex_t* mutex =
-    static_cast<pthread_mutex_t*>(malloc(sizeof(pthread_mutex_t)));
-
-  if (mutex == nullptr)
-    report_bad_alloc_error("Mutex allocation failed");
+    static_cast<pthread_mutex_t*>(safe_malloc(sizeof(pthread_mutex_t)));
 
   pthread_mutexattr_t attr;
 

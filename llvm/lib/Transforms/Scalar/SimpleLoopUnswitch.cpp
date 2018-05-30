@@ -1466,7 +1466,7 @@ void visitDomSubTree(DominatorTree &DT, BasicBlock *BB, CallableT Callable) {
 static bool unswitchInvariantBranch(
     Loop &L, BranchInst &BI, DominatorTree &DT, LoopInfo &LI,
     AssumptionCache &AC,
-    function_ref<void(bool, ArrayRef<Loop *>)> NonTrivialUnswitchCB) {
+    function_ref<void(bool, ArrayRef<Loop *>)> UnswitchCB) {
   assert(BI.isConditional() && "Can only unswitch a conditional branch!");
   assert(L.isLoopInvariant(BI.getCondition()) &&
          "Can only unswitch an invariant branch condition!");
@@ -1706,7 +1706,7 @@ static bool unswitchInvariantBranch(
   for (Loop *UpdatedL : llvm::concat<Loop *>(NonChildClonedLoops, HoistedLoops))
     if (UpdatedL->getParentLoop() == ParentL)
       SibLoops.push_back(UpdatedL);
-  NonTrivialUnswitchCB(IsStillLoop, SibLoops);
+  UnswitchCB(IsStillLoop, SibLoops);
 
   ++NumBranches;
   return true;
@@ -1754,23 +1754,27 @@ computeDomSubtreeCost(DomTreeNode &N,
 static bool
 unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
              TargetTransformInfo &TTI, bool NonTrivial,
-             function_ref<void(bool, ArrayRef<Loop *>)> NonTrivialUnswitchCB) {
+             function_ref<void(bool, ArrayRef<Loop *>)> UnswitchCB) {
   assert(L.isRecursivelyLCSSAForm(DT, LI) &&
          "Loops must be in LCSSA form before unswitching.");
-  bool Changed = false;
 
   // Must be in loop simplified form: we need a preheader and dedicated exits.
   if (!L.isLoopSimplifyForm())
     return false;
 
   // Try trivial unswitch first before loop over other basic blocks in the loop.
-  Changed |= unswitchAllTrivialConditions(L, DT, LI);
+  if (unswitchAllTrivialConditions(L, DT, LI)) {
+    // If we unswitched successfully we will want to clean up the loop before
+    // processing it further so just mark it as unswitched and return.
+    UnswitchCB(/*CurrentLoopValid*/ true, {});
+    return true;
+  }
 
   // If we're not doing non-trivial unswitching, we're done. We both accept
   // a parameter but also check a local flag that can be used for testing
   // a debugging.
   if (!NonTrivial && !EnableNonTrivialUnswitch)
-    return Changed;
+    return false;
 
   // Collect all remaining invariant branch conditions within this loop (as
   // opposed to an inner loop which would be handled when visiting that inner
@@ -1785,7 +1789,7 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
 
   // If we didn't find any candidates, we're done.
   if (UnswitchCandidates.empty())
-    return Changed;
+    return false;
 
   // Check if there are irreducible CFG cycles in this loop. If so, we cannot
   // easily unswitch non-trivial edges out of the loop. Doing so might turn the
@@ -1796,7 +1800,7 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
   LoopBlocksRPO RPOT(&L);
   RPOT.perform(&LI);
   if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
-    return Changed;
+    return false;
 
   LLVM_DEBUG(
       dbgs() << "Considering " << UnswitchCandidates.size()
@@ -1824,10 +1828,10 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
         continue;
 
       if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
-        return Changed;
+        return false;
       if (auto CS = CallSite(&I))
         if (CS.isConvergent() || CS.cannotDuplicate())
-          return Changed;
+          return false;
 
       Cost += TTI.getUserCost(&I);
     }
@@ -1898,18 +1902,17 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
     }
   }
 
-  if (BestUnswitchCost < UnswitchThreshold) {
-    LLVM_DEBUG(dbgs() << "  Trying to unswitch non-trivial (cost = "
-                      << BestUnswitchCost << ") branch: " << *BestUnswitchTI
-                      << "\n");
-    Changed |= unswitchInvariantBranch(L, cast<BranchInst>(*BestUnswitchTI), DT,
-                                       LI, AC, NonTrivialUnswitchCB);
-  } else {
+  if (BestUnswitchCost >= UnswitchThreshold) {
     LLVM_DEBUG(dbgs() << "Cannot unswitch, lowest cost found: "
                       << BestUnswitchCost << "\n");
+    return false;
   }
 
-  return Changed;
+  LLVM_DEBUG(dbgs() << "  Trying to unswitch non-trivial (cost = "
+                    << BestUnswitchCost << ") branch: " << *BestUnswitchTI
+                    << "\n");
+  return unswitchInvariantBranch(L, cast<BranchInst>(*BestUnswitchTI), DT, LI,
+                                 AC, UnswitchCB);
 }
 
 PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
@@ -1925,10 +1928,11 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
   // after it has been deleted.
   std::string LoopName = L.getName();
 
-  auto NonTrivialUnswitchCB = [&L, &U, &LoopName](bool CurrentLoopValid,
-                                                  ArrayRef<Loop *> NewLoops) {
+  auto UnswitchCB = [&L, &U, &LoopName](bool CurrentLoopValid,
+                                        ArrayRef<Loop *> NewLoops) {
     // If we did a non-trivial unswitch, we have added new (cloned) loops.
-    U.addSiblingLoops(NewLoops);
+    if (!NewLoops.empty())
+      U.addSiblingLoops(NewLoops);
 
     // If the current loop remains valid, we should revisit it to catch any
     // other unswitch opportunities. Otherwise, we need to mark it as deleted.
@@ -1939,7 +1943,7 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
   };
 
   if (!unswitchLoop(L, AR.DT, AR.LI, AR.AC, AR.TTI, NonTrivial,
-                    NonTrivialUnswitchCB))
+                    UnswitchCB))
     return PreservedAnalyses::all();
 
   // Historically this pass has had issues with the dominator tree so verify it
@@ -1987,8 +1991,8 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  auto NonTrivialUnswitchCB = [&L, &LPM](bool CurrentLoopValid,
-                                         ArrayRef<Loop *> NewLoops) {
+  auto UnswitchCB = [&L, &LPM](bool CurrentLoopValid,
+                               ArrayRef<Loop *> NewLoops) {
     // If we did a non-trivial unswitch, we have added new (cloned) loops.
     for (auto *NewL : NewLoops)
       LPM.addLoop(*NewL);
@@ -2003,7 +2007,7 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   };
 
   bool Changed =
-      unswitchLoop(*L, DT, LI, AC, TTI, NonTrivial, NonTrivialUnswitchCB);
+      unswitchLoop(*L, DT, LI, AC, TTI, NonTrivial, UnswitchCB);
 
   // If anything was unswitched, also clear any cached information about this
   // loop.

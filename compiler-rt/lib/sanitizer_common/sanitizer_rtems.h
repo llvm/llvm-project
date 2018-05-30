@@ -17,12 +17,5 @@
 #if SANITIZER_RTEMS
 #include "sanitizer_common.h"
 
-namespace __sanitizer {
-
-extern uptr MainThreadStackBase, MainThreadStackSize;
-extern uptr MainThreadTlsBase, MainThreadTlsSize;
-
-}  // namespace __sanitizer
-
 #endif  // SANITIZER_RTEMS
 #endif  // SANITIZER_RTEMS_H
