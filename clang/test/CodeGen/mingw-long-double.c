@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple i686-windows-gnu -emit-llvm -o - %s \
 // RUN:    | FileCheck %s --check-prefix=GNU32
+// RUN: %clang_cc1 -triple i686-windows-gnu -emit-llvm -o - %s -mms-bitfields \
+// RUN:    | FileCheck %s --check-prefix=GNU32
 // RUN: %clang_cc1 -triple x86_64-windows-gnu -emit-llvm -o - %s \
 // RUN:    | FileCheck %s --check-prefix=GNU64
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -o - %s \

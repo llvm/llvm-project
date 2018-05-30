@@ -1751,7 +1751,12 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
       QualType T = Context.getBaseElementType(D->getType());
       if (const BuiltinType *BTy = T->getAs<BuiltinType>()) {
         CharUnits TypeSize = Context.getTypeSizeInChars(BTy);
-        if (TypeSize > FieldAlign)
+        assert(
+            (llvm::isPowerOf2_64(TypeSize.getQuantity()) ||
+             Context.getTargetInfo().getTriple().isWindowsGNUEnvironment()) &&
+            "Non PowerOf2 size outside of GNU mode");
+        if (TypeSize > FieldAlign &&
+            llvm::isPowerOf2_64(TypeSize.getQuantity()))
           FieldAlign = TypeSize;
       }
     }
