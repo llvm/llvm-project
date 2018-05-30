@@ -8543,9 +8543,6 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
             (LHSValue.Base && isZeroSized(RHSValue)))
           return Error(E);
         // Pointers with different bases cannot represent the same object.
-        // (Note that clang defaults to -fmerge-all-constants, which can
-        // lead to inconsistent results for comparisons involving the address
-        // of a constant; this generally doesn't matter in practice.)
         return Success(E->getOpcode() == BO_NE, E);
       }
 
