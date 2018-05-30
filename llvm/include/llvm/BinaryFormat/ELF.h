@@ -1305,7 +1305,7 @@ enum {
 };
 
 // Property types used in GNU_PROPERTY_TYPE_0 notes.
-enum {
+enum : unsigned {
   GNU_PROPERTY_STACK_SIZE = 1,
   GNU_PROPERTY_NO_COPY_ON_PROTECTED = 2,
   GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002

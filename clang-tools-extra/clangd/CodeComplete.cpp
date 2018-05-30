@@ -235,6 +235,7 @@ struct CompletionCandidate {
                        llvm::StringRef SemaDocComment) const {
     assert(bool(SemaResult) == bool(SemaCCS));
     CompletionItem I;
+    bool ShouldInsertInclude = true;
     if (SemaResult) {
       I.kind = toCompletionItemKind(SemaResult->Kind, SemaResult->CursorKind);
       getLabelAndInsertText(*SemaCCS, &I.label, &I.insertText,
@@ -242,6 +243,20 @@ struct CompletionCandidate {
       I.filterText = getFilterText(*SemaCCS);
       I.documentation = formatDocumentation(*SemaCCS, SemaDocComment);
       I.detail = getDetail(*SemaCCS);
+      // Avoid inserting new #include if the declaration is found in the current
+      // file e.g. the symbol is forward declared.
+      if (SemaResult->Kind == CodeCompletionResult::RK_Declaration) {
+        if (const auto *D = SemaResult->getDeclaration()) {
+          const auto &SM = D->getASTContext().getSourceManager();
+          ShouldInsertInclude =
+              ShouldInsertInclude &&
+              std::none_of(D->redecls_begin(), D->redecls_end(),
+                           [&SM](const Decl *RD) {
+                             return SM.isInMainFile(
+                                 SM.getExpansionLoc(RD->getLocStart()));
+                           });
+        }
+      }
     }
     if (IndexResult) {
       if (I.kind == CompletionItemKind::Missing)
@@ -263,7 +278,7 @@ struct CompletionCandidate {
           I.documentation = D->Documentation;
         if (I.detail.empty())
           I.detail = D->CompletionDetail;
-        if (Includes && !D->IncludeHeader.empty()) {
+        if (ShouldInsertInclude && Includes && !D->IncludeHeader.empty()) {
           auto Edit = [&]() -> Expected<Optional<TextEdit>> {
             auto ResolvedDeclaring = toHeaderFile(
                 IndexResult->CanonicalDeclaration.FileURI, FileName);

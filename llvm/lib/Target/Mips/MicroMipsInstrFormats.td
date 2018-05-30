@@ -7,8 +7,8 @@
 // This class does not depend on the instruction size.
 //
 class MicroMipsInstBase<dag outs, dag ins, string asmstr, list<dag> pattern,
-                        InstrItinClass itin, Format f> : Instruction
-{
+                        InstrItinClass itin, Format f> : Instruction,
+                        PredicateControl {
   let Namespace = "Mips";
   let DecoderNamespace = "MicroMips";
 
@@ -19,7 +19,7 @@ class MicroMipsInstBase<dag outs, dag ins, string asmstr, list<dag> pattern,
   let Pattern     = pattern;
   let Itinerary   = itin;
 
-  let Predicates = [InMicroMips];
+  let EncodingPredicates = [InMicroMips];
 
   Format Form = f;
 }
@@ -961,7 +961,7 @@ class LWM_FM_MM<bits<4> funct> : MMArch {
   let Inst{11-0}  = addr{11-0};
 }
 
-class LWM_FM_MM16<bits<4> funct> : MMArch, PredicateControl {
+class LWM_FM_MM16<bits<4> funct> : MMArch {
   bits<2> rt;
   bits<4> addr;
 

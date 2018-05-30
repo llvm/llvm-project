@@ -13,6 +13,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using llvm::yaml::Input;
@@ -25,6 +26,7 @@ using llvm::yaml::Hex8;
 using llvm::yaml::Hex16;
 using llvm::yaml::Hex32;
 using llvm::yaml::Hex64;
+using ::testing::StartsWith;
 
 
 
@@ -249,6 +251,72 @@ TEST(YAMLIO, TestGivenFilename) {
   EXPECT_TRUE(!!yin.error());
 }
 
+struct WithStringField {
+  std::string str1;
+  std::string str2;
+  std::string str3;
+};
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<WithStringField> {
+  static void mapping(IO &io, WithStringField &fb) {
+    io.mapRequired("str1", fb.str1);
+    io.mapRequired("str2", fb.str2);
+    io.mapRequired("str3", fb.str3);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+TEST(YAMLIO, MultilineStrings) {
+  WithStringField Original;
+  Original.str1 = "a multiline string\nfoobarbaz";
+  Original.str2 = "another one\rfoobarbaz";
+  Original.str3 = "a one-line string";
+
+  std::string Serialized;
+  {
+    llvm::raw_string_ostream OS(Serialized);
+    Output YOut(OS);
+    YOut << Original;
+  }
+  auto Expected = "---\n"
+                  "str1:            'a multiline string\n"
+                  "foobarbaz'\n"
+                  "str2:            'another one\r"
+                  "foobarbaz'\n"
+                  "str3:            a one-line string\n"
+                  "...\n";
+  ASSERT_EQ(Serialized, Expected);
+
+  // Also check it parses back without the errors.
+  WithStringField Deserialized;
+  {
+    Input YIn(Serialized);
+    YIn >> Deserialized;
+    ASSERT_FALSE(YIn.error())
+        << "Parsing error occurred during deserialization. Serialized string:\n"
+        << Serialized;
+  }
+  EXPECT_EQ(Original.str1, Deserialized.str1);
+  EXPECT_EQ(Original.str2, Deserialized.str2);
+  EXPECT_EQ(Original.str3, Deserialized.str3);
+}
+
+TEST(YAMLIO, NoQuotesForTab) {
+  WithStringField WithTab;
+  WithTab.str1 = "aba\tcaba";
+  std::string Serialized;
+  {
+    llvm::raw_string_ostream OS(Serialized);
+    Output YOut(OS);
+    YOut << WithTab;
+  }
+  auto ExpectedPrefix = "---\n"
+                        "str1:            aba\tcaba\n";
+  EXPECT_THAT(Serialized, StartsWith(ExpectedPrefix));
+}
 
 //===----------------------------------------------------------------------===//
 //  Test built-in types
