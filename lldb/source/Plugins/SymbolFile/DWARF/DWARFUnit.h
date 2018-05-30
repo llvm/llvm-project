@@ -118,8 +118,6 @@ public:
 
   DWARFDIE DIE() { return DWARFDIE(this, DIEPtr()); }
 
-  bool HasDIEsParsed() const;
-
   DWARFDIE GetDIE(dw_offset_t die_offset);
 
   static uint8_t GetAddressByteSize(const DWARFUnit *cu);

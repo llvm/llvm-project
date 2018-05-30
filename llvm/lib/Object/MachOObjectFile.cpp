@@ -107,7 +107,7 @@ getSectionPtr(const MachOObjectFile &O, MachOObjectFile::LoadCommandInfo L,
 }
 
 static const char *getPtr(const MachOObjectFile &O, size_t Offset) {
-  return O.getData().substr(Offset, 1).data();
+  return O.getData().data() + Offset;
 }
 
 static MachO::nlist_base

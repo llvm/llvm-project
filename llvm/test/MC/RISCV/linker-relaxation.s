@@ -19,8 +19,8 @@ call foo
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
 # RELAX-RELOC: R_RISCV_CALL foo 0x0
 # RELAX-RELOC: R_RISCV_RELAX foo 0x0
-# RELAX-FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_relax
-# RELAX-FIXUP: fixup B - offset: 0, value: foo, kind:
+# RELAX-FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_call
+# RELAX-FIXUP: fixup B - offset: 0, value: foo, kind: fixup_riscv_relax
 beq s1, s1, .L1
 # RELAX-RELOC: R_RISCV_BRANCH .L1 0x0
 # RELAX-FIXUP: fixup A - offset: 0, value: .L1, kind: fixup_riscv_branch

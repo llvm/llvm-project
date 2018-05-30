@@ -93,8 +93,8 @@ define <2 x double> @combine_scalar_mask3_fmadd_32(<2 x double> %a, <2 x double>
 ; CHECK-LABEL: combine_scalar_mask3_fmadd_32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vfmadd231ss %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0xb9,0xd1]
-; CHECK-NEXT:    # xmm2 = (xmm0 * xmm1) + xmm2
+; CHECK-NEXT:    vfmadd231ss %xmm0, %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf2,0x75,0x09,0xb9,0xd0]
+; CHECK-NEXT:    # xmm2 = (xmm1 * xmm0) + xmm2
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # encoding: [0xc5,0xf8,0x28,0xc2]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -118,8 +118,8 @@ define <2 x double> @combine_scalar_mask3_fmadd_64(<2 x double> %a, <2 x double>
 ; CHECK-LABEL: combine_scalar_mask3_fmadd_64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vfmadd231sd %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0xb9,0xd1]
-; CHECK-NEXT:    # xmm2 = (xmm0 * xmm1) + xmm2
+; CHECK-NEXT:    vfmadd231sd %xmm0, %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf2,0xf5,0x09,0xb9,0xd0]
+; CHECK-NEXT:    # xmm2 = (xmm1 * xmm0) + xmm2
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc2]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -227,8 +227,8 @@ define <2 x double> @combine_scalar_mask3_fmsub_32(<2 x double> %a, <2 x double>
 ; CHECK-LABEL: combine_scalar_mask3_fmsub_32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vfmsub231ss %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0xbb,0xd1]
-; CHECK-NEXT:    # xmm2 = (xmm0 * xmm1) - xmm2
+; CHECK-NEXT:    vfmsub231ss %xmm0, %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf2,0x75,0x09,0xbb,0xd0]
+; CHECK-NEXT:    # xmm2 = (xmm1 * xmm0) - xmm2
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # encoding: [0xc5,0xf8,0x28,0xc2]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -252,8 +252,8 @@ define <2 x double> @combine_scalar_mask3_fmsub_64(<2 x double> %a, <2 x double>
 ; CHECK-LABEL: combine_scalar_mask3_fmsub_64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vfmsub231sd %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0xbb,0xd1]
-; CHECK-NEXT:    # xmm2 = (xmm0 * xmm1) - xmm2
+; CHECK-NEXT:    vfmsub231sd %xmm0, %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf2,0xf5,0x09,0xbb,0xd0]
+; CHECK-NEXT:    # xmm2 = (xmm1 * xmm0) - xmm2
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc2]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -361,8 +361,8 @@ define <2 x double> @combine_scalar_mask3_fnmadd_32(<2 x double> %a, <2 x double
 ; CHECK-LABEL: combine_scalar_mask3_fnmadd_32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vfnmadd231ss %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0xbd,0xd1]
-; CHECK-NEXT:    # xmm2 = -(xmm0 * xmm1) + xmm2
+; CHECK-NEXT:    vfnmadd231ss %xmm0, %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf2,0x75,0x09,0xbd,0xd0]
+; CHECK-NEXT:    # xmm2 = -(xmm1 * xmm0) + xmm2
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # encoding: [0xc5,0xf8,0x28,0xc2]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -386,8 +386,8 @@ define <2 x double> @combine_scalar_mask3_fnmadd_64(<2 x double> %a, <2 x double
 ; CHECK-LABEL: combine_scalar_mask3_fnmadd_64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vfnmadd231sd %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0xbd,0xd1]
-; CHECK-NEXT:    # xmm2 = -(xmm0 * xmm1) + xmm2
+; CHECK-NEXT:    vfnmadd231sd %xmm0, %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf2,0xf5,0x09,0xbd,0xd0]
+; CHECK-NEXT:    # xmm2 = -(xmm1 * xmm0) + xmm2
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc2]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -499,8 +499,8 @@ define <2 x double> @combine_scalar_mask3_fnmsub_32(<2 x double> %a, <2 x double
 ; CHECK-LABEL: combine_scalar_mask3_fnmsub_32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vfnmsub231ss %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0xbf,0xd1]
-; CHECK-NEXT:    # xmm2 = -(xmm0 * xmm1) - xmm2
+; CHECK-NEXT:    vfnmsub231ss %xmm0, %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf2,0x75,0x09,0xbf,0xd0]
+; CHECK-NEXT:    # xmm2 = -(xmm1 * xmm0) - xmm2
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0 # encoding: [0xc5,0xf8,0x28,0xc2]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -525,8 +525,8 @@ define <2 x double> @combine_scalar_mask3_fnmsub_64(<2 x double> %a, <2 x double
 ; CHECK-LABEL: combine_scalar_mask3_fnmsub_64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vfnmsub231sd %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0xbf,0xd1]
-; CHECK-NEXT:    # xmm2 = -(xmm0 * xmm1) - xmm2
+; CHECK-NEXT:    vfnmsub231sd %xmm0, %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf2,0xf5,0x09,0xbf,0xd0]
+; CHECK-NEXT:    # xmm2 = -(xmm1 * xmm0) - xmm2
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc2]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:

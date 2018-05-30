@@ -2820,7 +2820,7 @@ def warn_alias_with_section : Warning<
   "%select{alias|ifunc}1 will not be in section '%0' but in the same section as the %select{aliasee|resolver}2">,
   InGroup<IgnoredAttributes>;
 def err_duplicate_mangled_name : Error<
-  "definition with same mangled name as another definition">;
+  "definition with same mangled name '%0' as another definition">;
 def err_cyclic_alias : Error<
   "%select{alias|ifunc}0 definition is part of a cycle">;
 def err_ifunc_resolver_return : Error<
@@ -3525,27 +3525,29 @@ def err_ovl_deleted_member_call : Error<
 def note_ovl_too_many_candidates : Note<
     "remaining %0 candidate%s0 omitted; "
     "pass -fshow-overloads=all to show them">;
-def note_ovl_candidate : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "is the implicit default constructor|"
-    "is the implicit copy constructor|"
-    "is the implicit move constructor|"
-    "is the implicit copy assignment operator|"
-    "is the implicit move assignment operator|"
-    "inherited constructor|"
-    "inherited constructor }0%2"
-    "%select{| has different class%diff{ (expected $ but has $)|}4,5"
-    "| has different number of parameters (expected %4 but has %5)"
-    "| has type mismatch at %ordinal4 parameter"
-    "%diff{ (expected $ but has $)|}5,6"
-    "| has different return type%diff{ ($ expected but has $)|}4,5"
+
+def select_ovl_candidate_kind : TextSubstitution<
+  "%select{function|function|constructor|"
+    "constructor (the implicit default constructor)|"
+    "constructor (the implicit copy constructor)|"
+    "constructor (the implicit move constructor)|"
+    "function (the implicit copy assignment operator)|"
+    "function (the implicit move assignment operator)|"
+    "inherited constructor}0%select{| template| %2}1">;
+
+def note_ovl_candidate : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,3"
+    "%select{| has different class%diff{ (expected $ but has $)|}5,6"
+    "| has different number of parameters (expected %5 but has %6)"
+    "| has type mismatch at %ordinal5 parameter"
+    "%diff{ (expected $ but has $)|}6,7"
+    "| has different return type%diff{ ($ expected but has $)|}5,6"
     "| has different qualifiers (expected "
     "%select{none|const|restrict|const and restrict|volatile|const and volatile"
-    "|volatile and restrict|const, volatile, and restrict}4 but found "
+    "|volatile and restrict|const, volatile, and restrict}5 but found "
     "%select{none|const|restrict|const and restrict|volatile|const and volatile"
-    "|volatile and restrict|const, volatile, and restrict}5)"
-    "| has different exception specification}3">;
+    "|volatile and restrict|const, volatile, and restrict}6)"
+    "| has different exception specification}4">;
 
 def note_ovl_candidate_inherited_constructor : Note<
     "constructor from base class %0 inherited here">;
@@ -3615,225 +3617,97 @@ def note_ovl_candidate_non_deduced_mismatch_qualified : Note<
 
 // Note that we don't treat templates differently for this diagnostic.
 def note_ovl_candidate_arity : Note<"candidate "
-    "%select{function|function|constructor|function|function|constructor|"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor}0 %select{|template }1"
-    "not viable: requires%select{ at least| at most|}2 %3 argument%s3, but %4 "
-    "%plural{1:was|:were}4 provided">;
+    "%sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "requires%select{ at least| at most|}3 %4 argument%s4, but %5 "
+    "%plural{1:was|:were}5 provided">;
 
 def note_ovl_candidate_arity_one : Note<"candidate "
-    "%select{function|function|constructor|function|function|constructor|"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor}0 %select{|template }1not viable: "
-    "%select{requires at least|allows at most single|requires single}2 "
-    "argument %3, but %plural{0:no|:%4}4 arguments were provided">;
+    "%sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "%select{requires at least|allows at most single|requires single}3 "
+    "argument %4, but %plural{0:no|:%5}5 arguments were provided">;
 
 def note_ovl_candidate_deleted : Note<
-    "candidate %select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1 has been "
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 has been "
     "%select{explicitly made unavailable|explicitly deleted|"
-    "implicitly deleted}2">;
+    "implicitly deleted}3">;
 
 // Giving the index of the bad argument really clutters this message, and
 // it's relatively unimportant because 1) it's generally obvious which
 // argument(s) are of the given object type and 2) the fix is usually
 // to complete the type, which doesn't involve changes to the call line
 // anyway.  If people complain, we can change it.
-def note_ovl_candidate_bad_conv_incomplete : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1 "
-    "not viable: cannot convert argument of incomplete type "
-    "%diff{$ to $|to parameter type}2,3 for "
-    "%select{%ordinal5 argument|object argument}4"
+def note_ovl_candidate_bad_conv_incomplete : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "cannot convert argument of incomplete type "
+    "%diff{$ to $|to parameter type}3,4 for "
+    "%select{%ordinal6 argument|object argument}5"
     "%select{|; dereference the argument with *|"
     "; take the address of the argument with &|"
     "; remove *|"
-    "; remove &}6">;
-def note_ovl_candidate_bad_list_argument : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1 "
-    "not viable: cannot convert initializer list argument to %3">;
-def note_ovl_candidate_bad_overload : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1"
-    " not viable: no overload of %3 matching %2 for %ordinal4 argument">;
-def note_ovl_candidate_bad_conv : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1"
-    " not viable: no known conversion "
-    "%diff{from $ to $|from argument type to parameter type}2,3 for "
-    "%select{%ordinal5 argument|object argument}4"
+    "; remove &}7">;
+def note_ovl_candidate_bad_list_argument : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "cannot convert initializer list argument to %4">;
+def note_ovl_candidate_bad_overload : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "no overload of %4 matching %3 for %ordinal5 argument">;
+def note_ovl_candidate_bad_conv : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "no known conversion "
+    "%diff{from $ to $|from argument type to parameter type}3,4 for "
+    "%select{%ordinal6 argument|object argument}5"
     "%select{|; dereference the argument with *|"
     "; take the address of the argument with &|"
     "; remove *|"
-    "; remove &}6">;
-def note_ovl_candidate_bad_arc_conv : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1"
-    " not viable: cannot implicitly convert argument "
-    "%diff{of type $ to $|type to parameter type}2,3 for "
-    "%select{%ordinal5 argument|object argument}4 under ARC">;
-def note_ovl_candidate_bad_lvalue : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1"
-    " not viable: expects an l-value for "
-    "%select{%ordinal3 argument|object argument}2">;
-def note_ovl_candidate_bad_addrspace : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1 not viable: "
-    "%select{%ordinal6|'this'}5 argument (%2) is in "
-    "address space %3, but parameter must be in address space %4">;
-def note_ovl_candidate_bad_gc : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1 not viable: "
-    "%select{%ordinal6|'this'}5 argument (%2) has %select{no|__weak|__strong}3 "
-    "ownership, but parameter has %select{no|__weak|__strong}4 ownership">;
-def note_ovl_candidate_bad_ownership : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1 not viable: "
-    "%select{%ordinal6|'this'}5 argument (%2) has "
-    "%select{no|__unsafe_unretained|__strong|__weak|__autoreleasing}3 ownership,"
+    "; remove &}7">;
+def note_ovl_candidate_bad_arc_conv : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "cannot implicitly convert argument "
+    "%diff{of type $ to $|type to parameter type}3,4 for "
+    "%select{%ordinal6 argument|object argument}5 under ARC">;
+def note_ovl_candidate_bad_lvalue : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "expects an l-value for "
+    "%select{%ordinal4 argument|object argument}3">;
+def note_ovl_candidate_bad_addrspace : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "%select{%ordinal7|'this'}6 argument (%3) is in "
+    "address space %4, but parameter must be in address space %5">;
+def note_ovl_candidate_bad_gc : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "%select{%ordinal7|'this'}6 argument (%3) has %select{no|__weak|__strong}4 "
+    "ownership, but parameter has %select{no|__weak|__strong}5 ownership">;
+def note_ovl_candidate_bad_ownership : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "%select{%ordinal7|'this'}6 argument (%3) has "
+    "%select{no|__unsafe_unretained|__strong|__weak|__autoreleasing}4 ownership,"
     " but parameter has %select{no|__unsafe_unretained|__strong|__weak|"
-    "__autoreleasing}4 ownership">;
-def note_ovl_candidate_bad_cvr_this : Note<"candidate "
-    "%select{|function|||function|||||"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)||}0 not viable: "
-    "'this' argument has type %2, but method is not marked "
+    "__autoreleasing}5 ownership">;
+def note_ovl_candidate_bad_cvr_this : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "'this' argument has type %3, but method is not marked "
     "%select{const|restrict|const or restrict|volatile|const or volatile|"
-    "volatile or restrict|const, volatile, or restrict}3">;
-def note_ovl_candidate_bad_cvr : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1 not viable: "
-    "%ordinal4 argument (%2) would lose "
+    "volatile or restrict|const, volatile, or restrict}4">;
+def note_ovl_candidate_bad_cvr : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "%ordinal5 argument (%3) would lose "
     "%select{const|restrict|const and restrict|volatile|const and volatile|"
-    "volatile and restrict|const, volatile, and restrict}3 qualifier"
-    "%select{||s||s|s|s}3">;
-def note_ovl_candidate_bad_unaligned : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1 not viable: "
-    "%ordinal4 argument (%2) would lose __unaligned qualifier">;
-def note_ovl_candidate_bad_base_to_derived_conv : Note<"candidate "
-    "%select{function|function|constructor|"
-    "function |function |constructor |"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor }0%1 not viable: "
-    "cannot %select{convert from|convert from|bind}2 "
-    "%select{base class pointer|superclass|base class object of type}2 %3 to "
-    "%select{derived class pointer|subclass|derived class reference}2 %4 for "
-    "%ordinal5 argument">;
+    "volatile and restrict|const, volatile, and restrict}4 qualifier"
+    "%select{||s||s|s|s}4">;
+def note_ovl_candidate_bad_unaligned : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "%ordinal5 argument (%3) would lose __unaligned qualifier">;
+def note_ovl_candidate_bad_base_to_derived_conv : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
+    "cannot %select{convert from|convert from|bind}3 "
+    "%select{base class pointer|superclass|base class object of type}3 %4 to "
+    "%select{derived class pointer|subclass|derived class reference}3 %5 for "
+    "%ordinal6 argument">;
 def note_ovl_candidate_bad_target : Note<
-    "candidate %select{function|function|constructor|"
-    "function|function|constructor|"
-    "constructor (the implicit default constructor)|"
-    "constructor (the implicit copy constructor)|"
-    "constructor (the implicit move constructor)|"
-    "function (the implicit copy assignment operator)|"
-    "function (the implicit move assignment operator)|"
-    "inherited constructor|"
-    "inherited constructor}0 not viable: "
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "call to "
-    "%select{__device__|__global__|__host__|__host__ __device__|invalid}1 function from"
-    " %select{__device__|__global__|__host__|__host__ __device__|invalid}2 function">;
+    "%select{__device__|__global__|__host__|__host__ __device__|invalid}3 function from"
+    " %select{__device__|__global__|__host__|__host__ __device__|invalid}4 function">;
 def note_implicit_member_target_infer_collision : Note<
     "implicit %sub{select_special_member_kind}0 inferred target collision: call to both "
     "%select{__device__|__global__|__host__|__host__ __device__}1 and "
@@ -6476,6 +6350,8 @@ def err_bad_memptr_rhs : Error<
 def err_bad_memptr_lhs : Error<
   "left hand operand to %0 must be a %select{|pointer to }1class "
   "compatible with the right hand operand, but is %2">;
+def err_memptr_incomplete : Error<
+  "member pointer has incomplete base type %0">;
 def warn_exception_caught_by_earlier_handler : Warning<
   "exception of type %0 will be caught by earlier handler">,
   InGroup<Exceptions>;

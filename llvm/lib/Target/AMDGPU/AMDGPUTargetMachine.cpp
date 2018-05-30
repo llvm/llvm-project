@@ -126,7 +126,7 @@ static cl::opt<bool> EnableAMDGPUFunctionCalls(
 // Enable lib calls simplifications
 static cl::opt<bool> EnableLibCallSimplify(
   "amdgpu-simplify-libcall",
-  cl::desc("Enable mdgpu library simplifications"),
+  cl::desc("Enable amdgpu library simplifications"),
   cl::init(true),
   cl::Hidden);
 

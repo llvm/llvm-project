@@ -29,19 +29,22 @@
 
 namespace __asan {
 
+static void ResetShadowMemory() {
+  uptr shadow_start = SHADOW_OFFSET;
+  uptr shadow_end = MEM_TO_SHADOW(kMyriadMemoryEnd32);
+  uptr gap_start = MEM_TO_SHADOW(shadow_start);
+  uptr gap_end = MEM_TO_SHADOW(shadow_end);
+
+  REAL(memset)((void *)shadow_start, 0, shadow_end - shadow_start);
+  REAL(memset)((void *)gap_start, kAsanShadowGap, gap_end - gap_start);
+}
+
 void InitializeShadowMemory() {
   kHighMemEnd = 0;
   kMidMemBeg =  0;
   kMidMemEnd =  0;
 
-  uptr shadow_start = SHADOW_OFFSET;
-  uptr shadow_end = MEM_TO_SHADOW(kMyriadMemoryEnd32);
-  uptr shadow_size = shadow_end - shadow_start;
-  uptr gap_start = MEM_TO_SHADOW(shadow_start);
-  uptr gap_end = MEM_TO_SHADOW(shadow_end);
-
-  REAL(memset)((void *)shadow_start, 0, shadow_size);
-  REAL(memset)((void *)gap_start, kAsanShadowGap, gap_end - gap_start);
+  ResetShadowMemory();
 }
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
@@ -66,13 +69,8 @@ void EarlyInit() {
   // Provide early initialization of shadow memory so that
   // instrumented code running before full initialzation will not
   // report spurious errors.
-  InitializeShadowMemory();
+  ResetShadowMemory();
 }
-
-// Main thread information.  Initialized in CreateMainThread() and
-// used by ThreadStartHook().
-static uptr MainThreadSelf;
-static AsanThread *MainThread;
 
 // We can use a plain thread_local variable for TSD.
 static thread_local void *per_thread;
@@ -118,10 +116,8 @@ static AsanThread *CreateAsanThread(StackTrace *stack, u32 parent_tid,
 }
 
 // This gets the same arguments passed to Init by CreateAsanThread, above.
-// We're in the creator thread before the new thread is actually started,
-// but its stack address range is already known.  We don't bother tracking
-// the static TLS address range because the system itself already uses an
-// ASan-aware allocator for that.
+// We're in the creator thread before the new thread is actually started, but
+// its stack and tls address range are already known.
 void AsanThread::SetThreadStackAndTls(const AsanThread::InitOptions *options) {
   DCHECK_NE(GetCurrentThread(), this);
   DCHECK_NE(GetCurrentThread(), nullptr);
@@ -133,18 +129,12 @@ void AsanThread::SetThreadStackAndTls(const AsanThread::InitOptions *options) {
   tls_end_ = options->tls_bottom + options->tls_size;
 }
 
-// Called by __asan::AsanInitInternal (asan_rtl.c).
+// Called by __asan::AsanInitInternal (asan_rtl.c).  Unlike other ports, the
+// main thread on RTEMS does not require special treatment; its AsanThread is
+// already created by the provided hooks.  This function simply looks up and
+// returns the created thread.
 AsanThread *CreateMainThread() {
-  CHECK_NE(__sanitizer::MainThreadStackBase, 0);
-  CHECK_GT(__sanitizer::MainThreadStackSize, 0);
-  AsanThread *t = CreateAsanThread(
-      nullptr, 0, GetThreadSelf(), true,
-      __sanitizer::MainThreadStackBase, __sanitizer::MainThreadStackSize,
-      __sanitizer::MainThreadTlsBase, __sanitizer::MainThreadTlsSize);
-  SetCurrentThread(t);
-  MainThreadSelf = pthread_self();
-  MainThread = t;
-  return t;
+  return GetThreadContextByTidLocked(0)->thread;
 }
 
 // This is called before each thread creation is attempted.  So, in
@@ -178,16 +168,14 @@ static void ThreadCreateHook(void *hook, bool aborted) {
   }
 }
 
-// This is called (1) in the newly-created thread before it runs
-// anything else, with the pointer returned by BeforeThreadCreateHook
-// (above).  cf. asan_interceptors.cc:asan_thread_start.  (2) before
-// a thread restart.
+// This is called (1) in the newly-created thread before it runs anything else,
+// with the pointer returned by BeforeThreadCreateHook (above).  (2) before a
+// thread restart.
 static void ThreadStartHook(void *hook, uptr os_id) {
-  if (!hook && !MainThreadSelf)
+  if (!hook)
     return;
 
-  DCHECK(hook || os_id == MainThreadSelf);
-  AsanThread *thread = hook ? static_cast<AsanThread *>(hook) : MainThread;
+  AsanThread *thread = static_cast<AsanThread *>(hook);
   SetCurrentThread(thread);
 
   ThreadStatus status =
@@ -219,8 +207,10 @@ static void HandleExit() {
   // Disable ASan by setting it to uninitialized.  Also reset the
   // shadow memory to avoid reporting errors after the run-time has
   // been desroyed.
-  asan_inited = false;
-  //  InitializeShadowMemory();
+  if (asan_inited) {
+    asan_inited = false;
+    ResetShadowMemory();
+  }
 }
 
 }  // namespace __asan

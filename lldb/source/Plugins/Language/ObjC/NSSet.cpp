@@ -269,7 +269,8 @@ bool lldb_private::formatters::NSSetSummaryProvider(
   if (!class_name || !*class_name)
     return false;
 
-  if (!strcmp(class_name, "__NSSetI")) {
+  if (!strcmp(class_name, "__NSSetI") ||
+      !strcmp(class_name, "__NSOrderedSetI")) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
@@ -289,32 +290,7 @@ bool lldb_private::formatters::NSSetSummaryProvider(
     }
     if (error.Fail())
       return false;
-  }
-  /*else if (!strcmp(class_name,"__NSCFSet"))
-   {
-   Status error;
-   value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + (is_64bit ?
-   20 : 12), 4, 0, error);
-   if (error.Fail())
-   return false;
-   if (is_64bit)
-   value &= ~0x1fff000000000000UL;
-   }
-   else if (!strcmp(class_name,"NSCountedSet"))
-   {
-   Status error;
-   value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
-   ptr_size, 0, error);
-   if (error.Fail())
-   return false;
-   value = process_sp->ReadUnsignedIntegerFromMemory(value + (is_64bit ? 20 :
-   12), 4, 0, error);
-   if (error.Fail())
-   return false;
-   if (is_64bit)
-   value &= ~0x1fff000000000000UL;
-   }*/
-  else {
+  } else {
     auto &map(NSSet_Additionals::GetAdditionalSummaries());
     auto iter = map.find(class_name_cs), end = map.end();
     if (iter != end)
@@ -371,7 +347,8 @@ lldb_private::formatters::NSSetSyntheticFrontEndCreator(
   if (!class_name || !*class_name)
     return nullptr;
 
-  if (!strcmp(class_name, "__NSSetI")) {
+  if (!strcmp(class_name, "__NSSetI") ||
+      !strcmp(class_name, "__NSOrderedSetI")) {
     return (new NSSetISyntheticFrontEnd(valobj_sp));
   } else if (!strcmp(class_name, "__NSSetM")) {
     AppleObjCRuntime *apple_runtime =

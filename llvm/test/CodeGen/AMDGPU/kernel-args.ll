@@ -5,6 +5,7 @@
 ; RUN: llc < %s -march=r600 -mcpu=cayman -verify-machineinstrs | FileCheck -enable-var-scope --check-prefix=EG --check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}i8_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG: AND_INT {{[ *]*}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z
 ; SI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xb
@@ -25,6 +26,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i8_zext_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG: MOV {{[ *]*}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z
 ; SI: s_load_dword s{{[0-9]}}, s[0:1], 0xb
@@ -44,6 +46,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i8_sext_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG: MOV {{[ *]*}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z
 ; SI: s_load_dword s{{[0-9]}}, s[0:1], 0xb
@@ -63,7 +66,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i16_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
+
 ; EG: AND_INT {{[ *]*}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z
 ; SI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xb
 ; MESA-VI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x2c
@@ -83,7 +88,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i16_zext_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
+
 ; EG: MOV {{[ *]*}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z
 ; SI: s_load_dword s{{[0-9]}}, s[0:1], 0xb
 ; MESA-VI: s_load_dword s{{[0-9]}}, s[0:1], 0x2c
@@ -102,7 +109,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i16_sext_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
+
 ; EG: MOV {{[ *]*}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z
 ; SI: s_load_dword s{{[0-9]}}, s[0:1], 0xb
 ; MESA-VI: s_load_dword s{{[0-9]}}, s[0:1], 0x2c
@@ -121,7 +130,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i32_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
+
 ; EG: T{{[0-9]\.[XYZW]}}, KC0[2].Z
 ; SI: s_load_dword s{{[0-9]}}, s[0:1], 0xb
 ; MESA-VI: s_load_dword s{{[0-9]}}, s[0:1], 0x2c
@@ -133,6 +144,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG: T{{[0-9]\.[XYZW]}}, KC0[2].Z
 ; SI: s_load_dword s{{[0-9]}}, s[0:1], 0xb
@@ -145,7 +157,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v2i8_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
+
 ; EG: VTX_READ_8
 ; EG: VTX_READ_8
 ; MESA-GCN: buffer_load_ubyte
@@ -159,7 +173,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v2i16_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
+
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
 
@@ -174,7 +190,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v2i32_arg:
+; HSA-VI: kernarg_segment_byte_size = 16
 ; HSA-VI: kernarg_segment_alignment = 4
+
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].X
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[2].W
 ; SI: s_load_dwordx2 s{{\[[0-9]:[0-9]\]}}, s[0:1], 0xb
@@ -187,7 +205,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v2f32_arg:
+; HSA-VI: kernarg_segment_byte_size = 16
 ; HSA-VI: kernarg_segment_alignment = 4
+
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].X
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[2].W
 ; SI: s_load_dwordx2 s{{\[[0-9]:[0-9]\]}}, s[0:1], 0xb
@@ -200,7 +220,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v3i8_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
+
 ; EG-DAG: VTX_READ_8 T{{[0-9]}}.X, T{{[0-9]}}.X, 40
 ; EG-DAG: VTX_READ_8 T{{[0-9]}}.X, T{{[0-9]}}.X, 41
 ; EG-DAG: VTX_READ_8 T{{[0-9]}}.X, T{{[0-9]}}.X, 42
@@ -217,7 +239,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v3i16_arg:
+; HSA-VI: kernarg_segment_byte_size = 16
 ; HSA-VI: kernarg_segment_alignment = 4
+
 ; EG-DAG: VTX_READ_16 T{{[0-9]}}.X, T{{[0-9]}}.X, 44
 ; EG-DAG: VTX_READ_16 T{{[0-9]}}.X, T{{[0-9]}}.X, 46
 ; EG-DAG: VTX_READ_16 T{{[0-9]}}.X, T{{[0-9]}}.X, 48
@@ -233,6 +257,7 @@ entry:
   ret void
 }
 ; FUNC-LABEL: {{^}}v3i32_arg:
+; HSA-VI: kernarg_segment_byte_size = 32
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].Y
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].Z
@@ -247,6 +272,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v3f32_arg:
+; HSA-VI: kernarg_segment_byte_size = 32
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].Y
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].Z
@@ -261,6 +287,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v4i8_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG: VTX_READ_8
 ; EG: VTX_READ_8
@@ -281,6 +308,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v4i16_arg:
+; HSA-VI: kernarg_segment_byte_size = 16
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
@@ -301,6 +329,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v4i32_arg:
+; HSA-VI: kernarg_segment_byte_size = 32
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].Y
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].Z
@@ -317,6 +346,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v4f32_arg:
+; HSA-VI: kernarg_segment_byte_size = 32
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].Y
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[3].Z
@@ -332,6 +362,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v8i8_arg:
+; HSA-VI: kernarg_segment_byte_size = 16
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG: VTX_READ_8
 ; EG: VTX_READ_8
@@ -363,6 +394,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v8i16_arg:
+; HSA-VI: kernarg_segment_byte_size = 32
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
@@ -393,6 +425,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v8i32_arg:
+; HSA-VI: kernarg_segment_byte_size = 64
 ; HSA-VI: kernarg_segment_alignment = 5
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[4].Y
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[4].Z
@@ -412,6 +445,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v8f32_arg:
+; HSA-VI: kernarg_segment_byte_size = 64
 ; HSA-VI: kernarg_segment_alignment = 5
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[4].Y
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[4].Z
@@ -429,6 +463,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v16i8_arg:
+; HSA-VI: kernarg_segment_byte_size = 32
 ; HSA-VI: kernarg_segment_alignment = 4
 ; EG: VTX_READ_8
 ; EG: VTX_READ_8
@@ -485,6 +520,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v16i16_arg:
+; HSA-VI: kernarg_segment_byte_size = 64
 ; HSA-VI: kernarg_segment_alignment = 5
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
@@ -535,6 +571,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v16i32_arg:
+; HSA-VI: kernarg_segment_byte_size = 128
 ; HSA-VI: kernarg_segment_alignment = 6
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[6].Y
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[6].Z
@@ -562,6 +599,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}v16f32_arg:
+; HSA-VI: kernarg_segment_byte_size = 128
 ; HSA-VI: kernarg_segment_alignment = 6
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[6].Y
 ; EG-DAG: T{{[0-9]\.[XYZW]}}, KC0[6].Z
@@ -621,6 +659,9 @@ entry:
 ; }
 
 ; FUNC-LABEL: {{^}}i1_arg:
+; HSA-VI: kernarg_segment_byte_size = 12
+; HSA-VI: kernarg_segment_alignment = 4
+
 ; SI: buffer_load_ubyte
 ; SI: v_and_b32_e32
 ; SI: buffer_store_byte
@@ -631,6 +672,9 @@ define amdgpu_kernel void @i1_arg(i1 addrspace(1)* %out, i1 %x) nounwind {
 }
 
 ; FUNC-LABEL: {{^}}i1_arg_zext_i32:
+; HSA-VI: kernarg_segment_byte_size = 12
+; HSA-VI: kernarg_segment_alignment = 4
+
 ; SI: buffer_load_ubyte
 ; SI: buffer_store_dword
 ; SI: s_endpgm
@@ -641,6 +685,9 @@ define amdgpu_kernel void @i1_arg_zext_i32(i32 addrspace(1)* %out, i1 %x) nounwi
 }
 
 ; FUNC-LABEL: {{^}}i1_arg_zext_i64:
+; HSA-VI: kernarg_segment_byte_size = 12
+; HSA-VI: kernarg_segment_alignment = 4
+
 ; SI: buffer_load_ubyte
 ; SI: buffer_store_dwordx2
 ; SI: s_endpgm
@@ -651,6 +698,9 @@ define amdgpu_kernel void @i1_arg_zext_i64(i64 addrspace(1)* %out, i1 %x) nounwi
 }
 
 ; FUNC-LABEL: {{^}}i1_arg_sext_i32:
+; HSA-VI: kernarg_segment_byte_size = 12
+; HSA-VI: kernarg_segment_alignment = 4
+
 ; SI: buffer_load_ubyte
 ; SI: buffer_store_dword
 ; SI: s_endpgm
@@ -661,6 +711,9 @@ define amdgpu_kernel void @i1_arg_sext_i32(i32 addrspace(1)* %out, i1 %x) nounwi
 }
 
 ; FUNC-LABEL: {{^}}i1_arg_sext_i64:
+; HSA-VI: kernarg_segment_byte_size = 12
+; HSA-VI: kernarg_segment_alignment = 4
+
 ; SI: buffer_load_ubyte
 ; SI: v_bfe_i32
 ; SI: v_ashrrev_i32

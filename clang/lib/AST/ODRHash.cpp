@@ -383,6 +383,7 @@ public:
     if (hasDefaultArgument) {
       AddTemplateArgument(D->getDefaultArgument());
     }
+    Hash.AddBoolean(D->isParameterPack());
 
     Inherited::VisitTemplateTypeParmDecl(D);
   }
@@ -395,6 +396,7 @@ public:
     if (hasDefaultArgument) {
       AddStmt(D->getDefaultArgument());
     }
+    Hash.AddBoolean(D->isParameterPack());
 
     Inherited::VisitNonTypeTemplateParmDecl(D);
   }
@@ -407,8 +409,26 @@ public:
     if (hasDefaultArgument) {
       AddTemplateArgument(D->getDefaultArgument().getArgument());
     }
+    Hash.AddBoolean(D->isParameterPack());
 
     Inherited::VisitTemplateTemplateParmDecl(D);
+  }
+
+  void VisitTemplateDecl(const TemplateDecl *D) {
+    Hash.AddTemplateParameterList(D->getTemplateParameters());
+
+    Inherited::VisitTemplateDecl(D);
+  }
+
+  void VisitRedeclarableTemplateDecl(const RedeclarableTemplateDecl *D) {
+    Hash.AddBoolean(D->isMemberSpecialization());
+    Inherited::VisitRedeclarableTemplateDecl(D);
+  }
+
+  void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
+    Visit(D->getTemplatedDecl());
+    ID.AddInteger(D->getTemplatedDecl()->getODRHash());
+    Inherited::VisitFunctionTemplateDecl(D);
   }
 };
 } // namespace
@@ -428,6 +448,7 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const CXXRecordDecl *Parent) {
     case Decl::CXXMethod:
     case Decl::Field:
     case Decl::Friend:
+    case Decl::FunctionTemplate:
     case Decl::StaticAssert:
     case Decl::TypeAlias:
     case Decl::Typedef:

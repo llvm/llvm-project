@@ -2754,6 +2754,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
           << A->getAsString(Args) << A->getValue();
     }
   }
+
+  Opts.CompleteMemberPointers = Args.hasArg(OPT_fcomplete_member_pointers);
 }
 
 static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {

@@ -1858,17 +1858,13 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.USER_SGPR``.
-     6       1 bit   ENABLE_TRAP_HANDLER             Set to 1 if code contains a
-                                                     TRAP instruction which
-                                                     requires a trap handler to
-                                                     be enabled.
+     6       1 bit   ENABLE_TRAP_HANDLER             Must be 0.
 
-                                                     CP sets
-                                                     ``COMPUTE_PGM_RSRC2.TRAP_PRESENT``
-                                                     if the runtime has
-                                                     installed a trap handler
-                                                     regardless of the setting
-                                                     of this field.
+                                                     This bit represents
+                                                     ``COMPUTE_PGM_RSRC2.TRAP_PRESENT``,
+                                                     which is set by the CP if
+                                                     the runtime has installed a
+                                                     trap handler.
      7       1 bit   ENABLE_SGPR_WORKGROUP_ID_X      Enable the setup of the
                                                      system SGPR register for
                                                      the work-group id in the X

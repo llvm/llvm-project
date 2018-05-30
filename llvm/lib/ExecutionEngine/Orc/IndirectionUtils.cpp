@@ -13,8 +13,41 @@
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <sstream>
+
+using namespace llvm;
+using namespace llvm::orc;
+
+namespace {
+
+class CompileCallbackMaterializationUnit : public orc::MaterializationUnit {
+public:
+  using CompileFunction = JITCompileCallbackManager::CompileFunction;
+
+  CompileCallbackMaterializationUnit(SymbolStringPtr Name,
+                                     CompileFunction Compile)
+      : MaterializationUnit(SymbolFlagsMap({{Name, JITSymbolFlags::Exported}})),
+        Name(std::move(Name)), Compile(std::move(Compile)) {}
+
+private:
+  void materialize(MaterializationResponsibility R) {
+    SymbolMap Result;
+    Result[Name] = JITEvaluatedSymbol(Compile(), JITSymbolFlags::Exported);
+    R.resolve(Result);
+    R.finalize();
+  }
+
+  void discard(const VSO &V, SymbolStringPtr Name) {
+    llvm_unreachable("Discard should never occur on a LMU?");
+  }
+
+  SymbolStringPtr Name;
+  CompileFunction Compile;
+};
+
+} // namespace
 
 namespace llvm {
 namespace orc {
@@ -22,29 +55,81 @@ namespace orc {
 void JITCompileCallbackManager::anchor() {}
 void IndirectStubsManager::anchor() {}
 
+Expected<JITTargetAddress>
+JITCompileCallbackManager::getCompileCallback(CompileFunction Compile) {
+  if (auto TrampolineAddr = getAvailableTrampolineAddr()) {
+    auto CallbackName = ES.getSymbolStringPool().intern(
+        std::string("cc") + std::to_string(++NextCallbackId));
+
+    std::lock_guard<std::mutex> Lock(CCMgrMutex);
+    AddrToSymbol[*TrampolineAddr] = CallbackName;
+    cantFail(CallbacksVSO.define(
+        llvm::make_unique<CompileCallbackMaterializationUnit>(
+            std::move(CallbackName), std::move(Compile))));
+    return *TrampolineAddr;
+  } else
+    return TrampolineAddr.takeError();
+}
+
+JITTargetAddress JITCompileCallbackManager::executeCompileCallback(
+    JITTargetAddress TrampolineAddr) {
+  SymbolStringPtr Name;
+
+  {
+    std::unique_lock<std::mutex> Lock(CCMgrMutex);
+    auto I = AddrToSymbol.find(TrampolineAddr);
+
+    // If this address is not associated with a compile callback then report an
+    // error to the execution session and return ErrorHandlerAddress to the
+    // callee.
+    if (I == AddrToSymbol.end()) {
+      Lock.unlock();
+      std::string ErrMsg;
+      {
+        raw_string_ostream ErrMsgStream(ErrMsg);
+        ErrMsgStream << "No compile callback for trampoline at "
+                     << format("0x%016x", TrampolineAddr);
+      }
+      ES.reportError(
+          make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode()));
+      return ErrorHandlerAddress;
+    } else
+      Name = I->second;
+  }
+
+  if (auto Sym = lookup({&CallbacksVSO}, Name))
+    return Sym->getAddress();
+  else {
+    // If anything goes wrong materializing Sym then report it to the session
+    // and return the ErrorHandlerAddress;
+    ES.reportError(Sym.takeError());
+    return ErrorHandlerAddress;
+  }
+}
+
 std::unique_ptr<JITCompileCallbackManager>
-createLocalCompileCallbackManager(const Triple &T,
+createLocalCompileCallbackManager(const Triple &T, ExecutionSession &ES,
                                   JITTargetAddress ErrorHandlerAddress) {
   switch (T.getArch()) {
     default: return nullptr;
 
     case Triple::aarch64: {
       typedef orc::LocalJITCompileCallbackManager<orc::OrcAArch64> CCMgrT;
-      return llvm::make_unique<CCMgrT>(ErrorHandlerAddress);
+      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
     }
 
     case Triple::x86: {
       typedef orc::LocalJITCompileCallbackManager<orc::OrcI386> CCMgrT;
-      return llvm::make_unique<CCMgrT>(ErrorHandlerAddress);
+      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
     }
 
     case Triple::x86_64: {
       if ( T.getOS() == Triple::OSType::Win32 ) {
         typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_Win32> CCMgrT;
-        return llvm::make_unique<CCMgrT>(ErrorHandlerAddress);
+        return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
       } else {
         typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_SysV> CCMgrT;
-        return llvm::make_unique<CCMgrT>(ErrorHandlerAddress);
+        return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
       }
     }
 

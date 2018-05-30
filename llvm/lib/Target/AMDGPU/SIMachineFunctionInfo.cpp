@@ -71,8 +71,11 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     if (F.hasFnAttribute("amdgpu-implicitarg-ptr"))
       ImplicitArgPtr = true;
   } else {
-    if (F.hasFnAttribute("amdgpu-implicitarg-ptr"))
+    if (F.hasFnAttribute("amdgpu-implicitarg-ptr")) {
       KernargSegmentPtr = true;
+      assert(MaxKernArgAlign == 0);
+      MaxKernArgAlign =  ST.getAlignmentForImplicitArgPtr();
+    }
   }
 
   CallingConv::ID CC = F.getCallingConv();
