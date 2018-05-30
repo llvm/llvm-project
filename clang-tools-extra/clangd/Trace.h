@@ -45,7 +45,7 @@ public:
   // The Context returned by beginSpan is active, but Args is not ready.
   // Tracers should not override this unless they need to observe strict
   // per-thread nesting. Instead they should observe context destruction.
-  virtual void endSpan() {};
+  virtual void endSpan(){};
 
   /// Called for instant events.
   virtual void instant(llvm::StringRef Name, json::obj &&Args) = 0;

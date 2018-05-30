@@ -28,3 +28,14 @@ entry:
   ret double %2
 }
 
+; CHECK-LABEL: test_constraint_float_reg:
+; CHECK: fadds %f20, %f20, %f20
+; CHECK: faddd %f20, %f20, %f20
+; CHECK: faddq %f40, %f40, %f40
+define void @test_constraint_float_reg() {
+entry:
+  tail call void asm sideeffect "fadds $0,$1,$2", "{f20},{f20},{f20}"(float 6.0, float 7.0, float 8.0)
+  tail call void asm sideeffect "faddd $0,$1,$2", "{f20},{f20},{f20}"(double 9.0, double 10.0, double 11.0)
+  tail call void asm sideeffect "faddq $0,$1,$2", "{f40},{f40},{f40}"(fp128 0xL0, fp128 0xL0, fp128 0xL0)
+  ret void
+}

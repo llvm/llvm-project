@@ -99,8 +99,8 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
         EncodedInst |= MCRI.getEncodingValue(MI.getOperand(0).getReg()); // reg
         SymbolLookUp(DisInfo, EncodedInst, &ReferenceType, Address,
                      &ReferenceName);
-        CommentStream << format("0x%llx",
-                                0xfffffffffffff000LL & (Address + Value));
+        CommentStream << format("0x%llx", (0xfffffffffffff000LL & Address) +
+                                              Value * 0x1000);
     } else if (MI.getOpcode() == AArch64::ADDXri ||
                MI.getOpcode() == AArch64::LDRXui ||
                MI.getOpcode() == AArch64::LDRXl ||

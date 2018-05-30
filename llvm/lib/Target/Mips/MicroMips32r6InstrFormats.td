@@ -17,13 +17,6 @@ class MMR6Arch<string opstr> {
   string DecoderNamespace = "MicroMipsR6";
 }
 
-// Class used for microMIPS32r6 instructions.
-class MicroMipsR6Inst16 : PredicateControl {
-  string DecoderNamespace = "MicroMipsR6";
-  let InsnPredicates = [HasMips32r6];
-  let EncodingPredicates = [InMicroMips];
-}
-
 //===----------------------------------------------------------------------===//
 //
 // Disambiguators
@@ -51,7 +44,7 @@ class BC16_FM_MM16R6 {
   let Inst{9-0}   = offset;
 }
 
-class BEQZC_BNEZC_FM_MM16R6<bits<6> op> : MicroMipsR6Inst16 {
+class BEQZC_BNEZC_FM_MM16R6<bits<6> op> {
   bits<3> rs;
   bits<7> offset;
 
@@ -699,7 +692,7 @@ class POOL32F_MATH_FM_MMR6<string instr_asm, bits<1> fmt, bits<8> funct>
   let Inst{5-0}   = 0b111011;
 }
 
-class POOL16A_ADDU16_FM_MMR6 : MicroMipsR6Inst16 {
+class POOL16A_ADDU16_FM_MMR6 {
   bits<3> rs;
   bits<3> rt;
   bits<3> rd;
@@ -713,7 +706,7 @@ class POOL16A_ADDU16_FM_MMR6 : MicroMipsR6Inst16 {
   let Inst{0}     = 0;
 }
 
-class POOL16C_AND16_FM_MMR6 : MicroMipsR6Inst16 {
+class POOL16C_AND16_FM_MMR6 {
   bits<3> rt;
   bits<3> rs;
 
@@ -725,7 +718,7 @@ class POOL16C_AND16_FM_MMR6 : MicroMipsR6Inst16 {
   let Inst{3-0}   = 0b0001;
 }
 
-class POOL16C_NOT16_FM_MMR6 : MicroMipsR6Inst16 {
+class POOL16C_NOT16_FM_MMR6 {
   bits<3> rt;
   bits<3> rs;
 
@@ -737,7 +730,7 @@ class POOL16C_NOT16_FM_MMR6 : MicroMipsR6Inst16 {
   let Inst{3-0}   = 0b0000;
 }
 
-class POOL16C_MOVEP16_FM_MMR6 : MicroMipsR6Inst16 {
+class POOL16C_MOVEP16_FM_MMR6 {
   bits<3> dst_regs;
   bits<3> rt;
   bits<3> rs;
@@ -752,7 +745,7 @@ class POOL16C_MOVEP16_FM_MMR6 : MicroMipsR6Inst16 {
   let Inst{1-0}   = rs{1-0};
 }
 
-class POOL16C_OR16_XOR16_FM_MMR6<bits<4> op> : MicroMipsR6Inst16 {
+class POOL16C_OR16_XOR16_FM_MMR6<bits<4> op> {
   bits<3> rt;
   bits<3> rs;
 
@@ -787,7 +780,8 @@ class POOL16A_SUBU16_FM_MMR6 {
   let Inst{0}     = 0b1;
 }
 
-class POOL32A_WRPGPR_WSBH_FM_MMR6<bits<10> funct> : MipsR6Inst {
+class POOL32A_WRPGPR_WSBH_FM_MMR6<string instr_asm, bits<10> funct>
+    : MMR6Arch<instr_asm>, MipsR6Inst {
   bits<5> rt;
   bits<5> rs;
 
