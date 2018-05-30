@@ -111,7 +111,7 @@
 ; OBJ:      VarName: param
 ; OBJ:    }
 ; OBJ:    DefRangeRegisterRelSym {
-; OBJ:      BaseRegister: RSP (0x14F)
+; OBJ:      BaseRegister: CVRegRSP (0x14F)
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
 ; OBJ:      BasePointerOffset: 52
@@ -128,7 +128,7 @@
 ; OBJ:      VarName: a
 ; OBJ:    }
 ; OBJ:    DefRangeRegisterRelSym {
-; OBJ:      BaseRegister: RSP (0x14F)
+; OBJ:      BaseRegister: CVRegRSP (0x14F)
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
 ; OBJ:      BasePointerOffset: 40
@@ -145,7 +145,7 @@
 ; OBJ:      VarName: b
 ; OBJ:    }
 ; OBJ:    DefRangeRegisterRelSym {
-; OBJ:      BaseRegister: RSP (0x14F)
+; OBJ:      BaseRegister: CVRegRSP (0x14F)
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
 ; OBJ:      BasePointerOffset: 36
@@ -173,7 +173,7 @@
 ; OBJ:      VarName: v
 ; OBJ:    }
 ; OBJ:    DefRangeRegisterRelSym {
-; OBJ:      BaseRegister: RSP (0x14F)
+; OBJ:      BaseRegister: CVRegRSP (0x14F)
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
 ; OBJ:      BasePointerOffset: 44
@@ -203,7 +203,7 @@
 ; OBJ:      VarName: v
 ; OBJ:    }
 ; OBJ:    DefRangeRegisterRelSym {
-; OBJ:      BaseRegister: RSP (0x14F)
+; OBJ:      BaseRegister: CVRegRSP (0x14F)
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
 ; OBJ:      BasePointerOffset: 48
