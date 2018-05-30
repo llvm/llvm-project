@@ -2015,7 +2015,14 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         if (const auto *Tag = Typedef->getUnderlyingType()->getAs<TagType>())
           Found = Tag->getDecl();
       }
-      
+
+      if (D->getDescribedTemplate()) {
+        if (auto *Template = dyn_cast<ClassTemplateDecl>(Found))
+          Found = Template->getTemplatedDecl();
+        else
+          continue;
+      }
+
       if (auto *FoundRecord = dyn_cast<RecordDecl>(Found)) {
         if (!SearchName) {
           // If both unnamed structs/unions are in a record context, make sure

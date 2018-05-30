@@ -186,9 +186,7 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
 
-  const auto &TC =
-      static_cast<const toolchains::HIPToolChain &>(getToolChain());
-  assert(TC.getTriple().getArch() == llvm::Triple::amdgcn &&
+  assert(getToolChain().getTriple().getArch() == llvm::Triple::amdgcn &&
          "Unsupported target");
 
   std::string SubArchName = JA.getOffloadingArch();
@@ -224,6 +222,7 @@ void HIPToolChain::addClangTargetOptions(
 
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
   assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
+  (void) GpuArch;
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
          "Only HIP offloading kinds are supported for GPUs.");
 

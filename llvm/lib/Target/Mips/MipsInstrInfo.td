@@ -2608,15 +2608,15 @@ def : MipsInstAlias<"jalr $rs", (JALR RA, GPR32Opnd:$rs), 0>;
 }
 def : MipsInstAlias<"jalr.hb $rs", (JALR_HB RA, GPR32Opnd:$rs), 1>,
       ISA_MIPS32;
-def : MipsInstAlias<"neg $rt, $rs",
-                    (SUB GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>;
-def : MipsInstAlias<"neg $rt",
-                    (SUB GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>;
-def : MipsInstAlias<"negu $rt, $rs",
-                    (SUBu GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>;
-def : MipsInstAlias<"negu $rt",
-                    (SUBu GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>;
 let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsInstAlias<"neg $rt, $rs",
+                      (SUB GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>;
+  def : MipsInstAlias<"neg $rt",
+                      (SUB GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>;
+  def : MipsInstAlias<"negu $rt, $rs",
+                      (SUBu GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>;
+  def : MipsInstAlias<"negu $rt",
+                      (SUBu GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>;
   def : MipsInstAlias<
           "sgt $rd, $rs, $rt",
           (SLT GPR32Opnd:$rd, GPR32Opnd:$rt, GPR32Opnd:$rs), 0>;

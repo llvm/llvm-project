@@ -5179,6 +5179,34 @@ static bool HasExtraNeonArgument(unsigned BuiltinID) {
   return true;
 }
 
+Value *CodeGenFunction::EmitISOVolatileLoad(const CallExpr *E) {
+  Value *Ptr = EmitScalarExpr(E->getArg(0));
+  QualType ElTy = E->getArg(0)->getType()->getPointeeType();
+  CharUnits LoadSize = getContext().getTypeSizeInChars(ElTy);
+  llvm::Type *ITy = llvm::IntegerType::get(getLLVMContext(),
+                                           LoadSize.getQuantity() * 8);
+  Ptr = Builder.CreateBitCast(Ptr, ITy->getPointerTo());
+  llvm::LoadInst *Load =
+    Builder.CreateAlignedLoad(Ptr, LoadSize);
+  Load->setVolatile(true);
+  return Load;
+}
+
+Value *CodeGenFunction::EmitISOVolatileStore(const CallExpr *E) {
+  Value *Ptr = EmitScalarExpr(E->getArg(0));
+  Value *Value = EmitScalarExpr(E->getArg(1));
+  QualType ElTy = E->getArg(0)->getType()->getPointeeType();
+  CharUnits StoreSize = getContext().getTypeSizeInChars(ElTy);
+  llvm::Type *ITy = llvm::IntegerType::get(getLLVMContext(),
+                                           StoreSize.getQuantity() * 8);
+  Ptr = Builder.CreateBitCast(Ptr, ITy->getPointerTo());
+  llvm::StoreInst *Store =
+    Builder.CreateAlignedStore(Value, Ptr,
+                               StoreSize);
+  Store->setVolatile(true);
+  return Store;
+}
+
 Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E,
                                            llvm::Triple::ArchType Arch) {
@@ -5421,35 +5449,13 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   case ARM::BI__iso_volatile_load8:
   case ARM::BI__iso_volatile_load16:
   case ARM::BI__iso_volatile_load32:
-  case ARM::BI__iso_volatile_load64: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    QualType ElTy = E->getArg(0)->getType()->getPointeeType();
-    CharUnits LoadSize = getContext().getTypeSizeInChars(ElTy);
-    llvm::Type *ITy = llvm::IntegerType::get(getLLVMContext(),
-                                             LoadSize.getQuantity() * 8);
-    Ptr = Builder.CreateBitCast(Ptr, ITy->getPointerTo());
-    llvm::LoadInst *Load =
-      Builder.CreateAlignedLoad(Ptr, LoadSize);
-    Load->setVolatile(true);
-    return Load;
-  }
+  case ARM::BI__iso_volatile_load64:
+    return EmitISOVolatileLoad(E);
   case ARM::BI__iso_volatile_store8:
   case ARM::BI__iso_volatile_store16:
   case ARM::BI__iso_volatile_store32:
-  case ARM::BI__iso_volatile_store64: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    Value *Value = EmitScalarExpr(E->getArg(1));
-    QualType ElTy = E->getArg(0)->getType()->getPointeeType();
-    CharUnits StoreSize = getContext().getTypeSizeInChars(ElTy);
-    llvm::Type *ITy = llvm::IntegerType::get(getLLVMContext(),
-                                             StoreSize.getQuantity() * 8);
-    Ptr = Builder.CreateBitCast(Ptr, ITy->getPointerTo());
-    llvm::StoreInst *Store =
-      Builder.CreateAlignedStore(Value, Ptr,
-                                 StoreSize);
-    Store->setVolatile(true);
-    return Store;
-  }
+  case ARM::BI__iso_volatile_store64:
+    return EmitISOVolatileStore(E);
   }
 
   if (BuiltinID == ARM::BI__builtin_arm_clrex) {
@@ -8199,6 +8205,16 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Int = Intrinsic::aarch64_neon_suqadd;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vuqadd");
   }
+  case AArch64::BI__iso_volatile_load8:
+  case AArch64::BI__iso_volatile_load16:
+  case AArch64::BI__iso_volatile_load32:
+  case AArch64::BI__iso_volatile_load64:
+    return EmitISOVolatileLoad(E);
+  case AArch64::BI__iso_volatile_store8:
+  case AArch64::BI__iso_volatile_store16:
+  case AArch64::BI__iso_volatile_store32:
+  case AArch64::BI__iso_volatile_store64:
+    return EmitISOVolatileStore(E);
   }
 }
 

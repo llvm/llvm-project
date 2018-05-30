@@ -2283,9 +2283,9 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
   const AsmToken &Tok = Parser.getTok();
   if (Tok.is(AsmToken::Real) || Tok.is(AsmToken::Integer)) {
     int64_t Val;
-    if (Tok.is(AsmToken::Integer) && !isNegative && Tok.getString().startswith("0x")) {
+    if (Tok.is(AsmToken::Integer) && Tok.getString().startswith("0x")) {
       Val = Tok.getIntVal();
-      if (Val > 255 || Val < 0) {
+      if (Val > 255 || isNegative) {
         TokError("encoded floating point value out of range");
         return MatchOperand_ParseFail;
       }

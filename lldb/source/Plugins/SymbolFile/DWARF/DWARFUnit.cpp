@@ -192,13 +192,12 @@ bool DWARFUnit::ExtractDIEsIfNeeded() {
 
   ExtractDIEsEndCheck(offset);
 
-  if (!m_dwo_symbol_file)
-    return m_die_array.size();
+  if (m_dwo_symbol_file) {
+    DWARFUnit *dwo_cu = m_dwo_symbol_file->GetCompileUnit();
+    dwo_cu->ExtractDIEsIfNeeded();
+  }
 
-  DWARFUnit *dwo_cu = m_dwo_symbol_file->GetCompileUnit();
-  size_t dwo_die_count = dwo_cu->ExtractDIEsIfNeeded();
-  return m_die_array.size() + dwo_die_count -
-         1; // We have 2 CU die, but we want to count it only as one
+  return true;
 }
 
 //--------------------------------------------------------------------------
