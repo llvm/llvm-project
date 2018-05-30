@@ -1454,6 +1454,9 @@ FindMostPopularDest(BasicBlock *BB,
     if (PredToDest.second)
       DestPopularity[PredToDest.second]++;
 
+  if (DestPopularity.empty())
+    return nullptr;
+
   // Find the most popular dest.
   DenseMap<BasicBlock*, unsigned>::iterator DPI = DestPopularity.begin();
   BasicBlock *MostPopularDest = DPI->first;
@@ -1629,8 +1632,20 @@ bool JumpThreadingPass::ProcessThreadableEdges(Value *Cond, BasicBlock *BB,
   // threadable destination (the common case) we can avoid this.
   BasicBlock *MostPopularDest = OnlyDest;
 
-  if (MostPopularDest == MultipleDestSentinel)
+  if (MostPopularDest == MultipleDestSentinel) {
+    // Remove any loop headers from the Dest list, ThreadEdge conservatively
+    // won't process them, but we might have other destination that are eligible
+    // and we still want to process.
+    erase_if(PredToDestList,
+             [&](const std::pair<BasicBlock *, BasicBlock *> &PredToDest) {
+               return LoopHeaders.count(PredToDest.second) != 0;
+             });
+
+    if (PredToDestList.empty())
+      return false;
+
     MostPopularDest = FindMostPopularDest(BB, PredToDestList);
+  }
 
   // Now that we know what the most popular destination is, factor all
   // predecessors that will jump to it into a single predecessor.
