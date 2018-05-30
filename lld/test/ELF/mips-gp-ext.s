@@ -30,7 +30,7 @@
 # REL-NEXT:  0030 3c080000 2108010c 8f82ffcc
 #                 ^-- %hi(_gp_disp)
 #                          ^-- %lo(_gp_disp)
-#                                   ^-- 8 - (0x10c - 0x100)
+#                                   ^-- 8 - (0x13c - 0x100)
 #                                       G - (GP - .got)
 
 # REL:      Contents of section .reginfo:
@@ -40,7 +40,8 @@
 
 # REL:      Contents of section .data:
 # REL-NEXT:  00f0 fffffef4
-#                 ^-- 0-0x10c
+#                 ^-- 0x30-0x13c
+#                     foo - GP
 
 # REL: 00000030         .text           00000000 foo
 # REL: 00000000         *ABS*           00000000 .hidden _gp_disp
@@ -60,7 +61,8 @@
 
 # ABS:      Contents of section .data:
 # ABS-NEXT:  00f0 fffffe30
-#                 ^-- 0-0x200
+#                 ^-- 0x30-0x200
+#                     foo - GP
 
 # ABS: 00000030         .text           00000000 foo
 # ABS: 00000000         *ABS*           00000000 .hidden _gp_disp

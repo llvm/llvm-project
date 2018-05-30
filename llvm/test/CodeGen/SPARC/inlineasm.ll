@@ -120,3 +120,13 @@ entry:
   call void asm "std %l0, $0", "=*m,r"(i64* nonnull %out, i64 0)
   ret void
 }
+
+; CHECK-LABEL: test_constraint_float_reg:
+; CHECK: fadds %f20, %f20, %f20
+; CHECK: faddd %f20, %f20, %f20
+define void @test_constraint_float_reg() {
+entry:
+  tail call void asm sideeffect "fadds $0,$1,$2", "{f20},{f20},{f20}"(float 6.0, float 7.0, float 8.0)
+  tail call void asm sideeffect "faddd $0,$1,$2", "{f20},{f20},{f20}"(double 9.0, double 10.0, double 11.0)
+  ret void
+}

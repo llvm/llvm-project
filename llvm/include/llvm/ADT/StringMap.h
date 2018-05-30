@@ -164,9 +164,7 @@ public:
 
     StringMapEntry *NewItem =
       static_cast<StringMapEntry*>(Allocator.Allocate(AllocSize,Alignment));
-
-    if (NewItem == nullptr)
-      report_bad_alloc_error("Allocation of StringMap entry failed.");
+    assert(NewItem && "Unhandled out-of-memory");
 
     // Construct the value.
     new (NewItem) StringMapEntry(KeyLength, std::forward<InitTy>(InitVals)...);
