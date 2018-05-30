@@ -11,7 +11,7 @@ class MyClass {
 };
 void MyClass::meth() { } // expected-note {{previous}}
 extern "C" {
-  void _ZN7MyClass4methEv() { } // expected-error {{definition with same mangled name as another definition}}
+  void _ZN7MyClass4methEv() { } // expected-error {{definition with same mangled name '_ZN7MyClass4methEv' as another definition}}
 }
 
 #elif TEST2
@@ -49,7 +49,7 @@ float foo() {
 extern "C" void _ZN2T2D2Ev() {}; // expected-note {{previous definition is here}}
 
 struct T2 {
-  ~T2() {} // expected-error {{definition with same mangled name as another definition}}
+  ~T2() {} // expected-error {{definition with same mangled name '_ZN2T2D2Ev' as another definition}}
 };
 
 void foo() {
@@ -64,7 +64,7 @@ extern "C" {
 }
 
 namespace nm {
-  float abc = 2; // expected-error {{definition with same mangled name as another definition}}
+  float abc = 2; // expected-error {{definition with same mangled name '_ZN2nm3abcE' as another definition}}
 }
 
 float foo() {

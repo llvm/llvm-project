@@ -533,10 +533,10 @@ namespace dr437 { // dr437: sup 1308
 
 namespace dr444 { // dr444: yes
   struct D;
-  struct B { // expected-note {{candidate is the implicit copy}} expected-note 0-1 {{implicit move}}
+  struct B {                    // expected-note {{candidate function (the implicit copy}} expected-note 0-1 {{implicit move}}
     D &operator=(D &) = delete; // expected-error 0-1{{extension}} expected-note {{deleted}}
   };
-  struct D : B { // expected-note {{candidate is the implicit}} expected-note 0-1 {{implicit move}}
+  struct D : B { // expected-note {{candidate function (the implicit copy}} expected-note 0-1 {{implicit move}}
     using B::operator=;
   } extern d;
   void f() {

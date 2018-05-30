@@ -197,9 +197,6 @@ defm keep_unique: Eq<"keep-unique">, HelpText<"Do not fold this symbol during IC
 defm library: Eq<"library">, HelpText<"Root name of library to use">,
   MetaVarName<"<libName>">;
 
-def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
-  HelpText<"Optimization level for LTO">;
-
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 
 defm Map: Eq<"Map">, HelpText<"Print a link map to the specified file">;
@@ -409,6 +406,8 @@ def lto_new_pass_manager: F<"lto-new-pass-manager">,
   HelpText<"Use new pass manager">;
 def lto_newpm_passes: J<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
+def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
+  HelpText<"Optimization level for LTO">;
 def lto_partitions: J<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
 def lto_sample_profile: J<"lto-sample-profile=">,

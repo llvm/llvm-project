@@ -69,5 +69,15 @@ LANGBUILTIN(__dmb, "vUi", "nc", ALL_MS_LANGUAGES)
 LANGBUILTIN(__dsb, "vUi", "nc", ALL_MS_LANGUAGES)
 LANGBUILTIN(__isb, "vUi", "nc", ALL_MS_LANGUAGES)
 
+// MSVC intrinsics for volatile but non-acquire/release loads and stores
+LANGBUILTIN(__iso_volatile_load8,   "ccCD*",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_load16,  "ssCD*",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_load32,  "iiCD*",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_load64,  "LLiLLiCD*", "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store8,  "vcD*c",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store16, "vsD*s",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store32, "viD*i",     "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__iso_volatile_store64, "vLLiD*LLi", "n", ALL_MS_LANGUAGES)
+
 #undef BUILTIN
 #undef LANGBUILTIN

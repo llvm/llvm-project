@@ -168,11 +168,11 @@ def err_module_odr_violation_mismatch_decl : Error<
   "%select{definition in module '%2'|defined here}1 found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member|friend declaration}3">;
+  "data member|friend declaration|function template}3">;
 def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member|friend declaration}1">;
+  "data member|friend declaration|function template}1">;
 
 def err_module_odr_violation_mismatch_decl_diff : Error<
   "%q0 has different definitions in different modules; first difference is "
@@ -227,6 +227,18 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
   "friend %select{class|function}4|"
   "friend %4|"
   "friend function %4|"
+  "function template %4 with %5 template parameter%s5|"
+  "function template %4 with %ordinal5 template parameter being a "
+    "%select{type|non-type|template}6 template parameter|"
+  "function template %4 with %ordinal5 template parameter "
+    "%select{with no name|named %7}6|"
+  "function template %4 with %ordinal5 template parameter with "
+    "%select{no |}6default argument|"
+  "function template %4 with %ordinal5 template parameter with "
+    "default argument %6|"
+  "function template %4 with %ordinal5 template parameter with one type|"
+  "function template %4 with %ordinal5 template parameter %select{not |}6"
+    "being a template parameter pack|"
   "}3">;
 
 def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
@@ -280,6 +292,18 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "friend %select{class|function}2|"
   "friend %2|"
   "friend function %2|"
+  "function template %2 with %3 template parameter%s3|"
+  "function template %2 with %ordinal3 template paramter being a "
+    "%select{type|non-type|template}4 template parameter|"
+  "function template %2 with %ordinal3 template parameter "
+    "%select{with no name|named %5}4|"
+  "function template %2 with %ordinal3 template parameter with "
+    "%select{no |}4default argument|"
+  "function template %2 with %ordinal3 template parameter with "
+    "default argument %4|"
+  "function template %2 with %ordinal3 template parameter with different type|"
+  "function template %2 with %ordinal3 template parameter %select{not |}4"
+    "being a template parameter pack|"
   "}1">;
 
 def err_module_odr_violation_function : Error<

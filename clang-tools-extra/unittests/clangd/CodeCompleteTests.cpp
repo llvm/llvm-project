@@ -159,7 +159,7 @@ Symbol func(StringRef Name) { // Assumes the function has no args.
   return sym(Name, index::SymbolKind::Function, "@F@\\0#"); // no args
 }
 Symbol cls(StringRef Name) {
-  return sym(Name, index::SymbolKind::Class, "@S@\\0@S@\\0");
+  return sym(Name, index::SymbolKind::Class, "@S@\\0");
 }
 Symbol var(StringRef Name) {
   return sym(Name, index::SymbolKind::Variable, "@\\0");
@@ -425,10 +425,9 @@ TEST(CompletionTest, NoDuplicates) {
   auto Results = completions(
       R"cpp(
           class Adapter {
-            void method();
           };
 
-          void Adapter::method() {
+          void f() {
             Adapter^
           }
       )cpp",
@@ -557,6 +556,37 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
                         {Sym});
   EXPECT_THAT(Results.items,
               ElementsAre(AllOf(Named("X"), Not(HasAdditionalEdits()))));
+}
+
+TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  Symbol::Details Scratch;
+  Symbol SymX = cls("ns::X");
+  Symbol SymY = cls("ns::Y");
+  std::string BarHeader = testPath("bar.h");
+  auto BarURI = URI::createFile(BarHeader).toString();
+  SymX.CanonicalDeclaration.FileURI = BarURI;
+  SymY.CanonicalDeclaration.FileURI = BarURI;
+  Scratch.IncludeHeader = "<bar>";
+  SymX.Detail = &Scratch;
+  SymY.Detail = &Scratch;
+  // Shoten include path based on search dirctory and insert.
+  auto Results = completions(Server,
+                             R"cpp(
+          namespace ns {
+            class X;
+            class Y {}
+          }
+          int main() { ns::^ }
+      )cpp",
+                             {SymX, SymY});
+  EXPECT_THAT(Results.items,
+              ElementsAre(AllOf(Named("X"), Not(HasAdditionalEdits())),
+                          AllOf(Named("Y"), Not(HasAdditionalEdits()))));
 }
 
 TEST(CompletionTest, IndexSuppressesPreambleCompletions) {

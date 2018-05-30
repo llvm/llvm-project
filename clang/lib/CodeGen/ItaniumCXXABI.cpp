@@ -2450,8 +2450,12 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     if (InitIsInitFunc) {
       if (Init) {
         llvm::CallInst *CallVal = Builder.CreateCall(Init);
-        if (isThreadWrapperReplaceable(VD, CGM))
+        if (isThreadWrapperReplaceable(VD, CGM)) {
           CallVal->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
+          llvm::Function *Fn =
+              cast<llvm::Function>(cast<llvm::GlobalAlias>(Init)->getAliasee());
+          Fn->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
+        }
       }
     } else {
       // Don't know whether we have an init function. Call it if it exists.
@@ -3623,22 +3627,12 @@ static StructorCodegen getCodegenToUse(CodeGenModule &CGM,
   }
   llvm::GlobalValue::LinkageTypes Linkage = CGM.getFunctionLinkage(AliasDecl);
 
-  // All discardable structors can be RAUWed, but we don't want to do that in
-  // unoptimized code, as that makes complete structor symbol disappear
-  // completely, which degrades debugging experience.
-  // Symbols with private linkage can be safely aliased, so we special case them
-  // here.
-  if (llvm::GlobalValue::isLocalLinkage(Linkage))
-    return CGM.getCodeGenOpts().OptimizationLevel > 0 ? StructorCodegen::RAUW
-                                                      : StructorCodegen::Alias;
+  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage))
+    return StructorCodegen::RAUW;
 
-  // Linkonce structors cannot be aliased nor placed in a comdat, so these need
-  // to be emitted separately.
   // FIXME: Should we allow available_externally aliases?
-  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage) ||
-      !llvm::GlobalAlias::isValidLinkage(Linkage))
-    return CGM.getCodeGenOpts().OptimizationLevel > 0 ? StructorCodegen::RAUW
-                                                      : StructorCodegen::Emit;
+  if (!llvm::GlobalAlias::isValidLinkage(Linkage))
+    return StructorCodegen::RAUW;
 
   if (llvm::GlobalValue::isWeakForLinker(Linkage)) {
     // Only ELF and wasm support COMDATs with arbitrary names (C5/D5).
