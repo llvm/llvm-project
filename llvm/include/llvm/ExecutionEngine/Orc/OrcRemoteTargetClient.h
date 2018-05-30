@@ -451,8 +451,9 @@ public:
   class RemoteCompileCallbackManager : public JITCompileCallbackManager {
   public:
     RemoteCompileCallbackManager(OrcRemoteTargetClient &Client,
+                                 ExecutionSession &ES,
                                  JITTargetAddress ErrorHandlerAddress)
-        : JITCompileCallbackManager(ErrorHandlerAddress), Client(Client) {}
+        : JITCompileCallbackManager(ES, ErrorHandlerAddress), Client(Client) {}
 
   private:
     Error grow() override {
@@ -477,10 +478,10 @@ public:
   /// Channel is the ChannelT instance to communicate on. It is assumed that
   /// the channel is ready to be read from and written to.
   static Expected<std::unique_ptr<OrcRemoteTargetClient>>
-  Create(rpc::RawByteChannel &Channel, std::function<void(Error)> ReportError) {
+  Create(rpc::RawByteChannel &Channel, ExecutionSession &ES) {
     Error Err = Error::success();
     auto Client = std::unique_ptr<OrcRemoteTargetClient>(
-        new OrcRemoteTargetClient(Channel, std::move(ReportError), Err));
+        new OrcRemoteTargetClient(Channel, ES, Err));
     if (Err)
       return std::move(Err);
     return std::move(Client);
@@ -534,12 +535,14 @@ public:
 
   Expected<RemoteCompileCallbackManager &>
   enableCompileCallbacks(JITTargetAddress ErrorHandlerAddress) {
+    assert(!CallbackManager && "CallbackManager already obtained");
+
     // Emit the resolver block on the JIT server.
     if (auto Err = callB<stubs::EmitResolverBlock>())
       return std::move(Err);
 
     // Create the callback manager.
-    CallbackManager.emplace(*this, ErrorHandlerAddress);
+    CallbackManager.emplace(*this, ES, ErrorHandlerAddress);
     RemoteCompileCallbackManager &Mgr = *CallbackManager;
     return Mgr;
   }
@@ -557,10 +560,10 @@ public:
   Error terminateSession() { return callB<utils::TerminateSession>(); }
 
 private:
-  OrcRemoteTargetClient(rpc::RawByteChannel &Channel,
-                        std::function<void(Error)> ReportError, Error &Err)
+  OrcRemoteTargetClient(rpc::RawByteChannel &Channel, ExecutionSession &ES,
+                        Error &Err)
       : rpc::SingleThreadedRPCEndpoint<rpc::RawByteChannel>(Channel, true),
-        ReportError(std::move(ReportError)) {
+        ES(ES) {
     ErrorAsOutParameter EAO(&Err);
 
     addHandler<utils::RequestCompile>(
@@ -580,7 +583,7 @@ private:
 
   void deregisterEHFrames(JITTargetAddress Addr, uint32_t Size) {
     if (auto Err = callB<eh::RegisterEHFrames>(Addr, Size))
-      ReportError(std::move(Err));
+      ES.reportError(std::move(Err));
   }
 
   void destroyRemoteAllocator(ResourceIdMgr::ResourceId Id) {
@@ -595,7 +598,7 @@ private:
   void destroyIndirectStubsManager(ResourceIdMgr::ResourceId Id) {
     IndirectStubOwnerIds.release(Id);
     if (auto Err = callB<stubs::DestroyIndirectStubsOwner>(Id))
-      ReportError(std::move(Err));
+      ES.reportError(std::move(Err));
   }
 
   Expected<std::tuple<JITTargetAddress, JITTargetAddress, uint32_t>>
@@ -628,7 +631,7 @@ private:
     if (auto AddrOrErr = callB<mem::ReserveMem>(Id, Size, Align))
       return *AddrOrErr;
     else {
-      ReportError(AddrOrErr.takeError());
+      ES.reportError(AddrOrErr.takeError());
       return 0;
     }
   }
@@ -636,7 +639,7 @@ private:
   bool setProtections(ResourceIdMgr::ResourceId Id,
                       JITTargetAddress RemoteSegAddr, unsigned ProtFlags) {
     if (auto Err = callB<mem::SetProtections>(Id, RemoteSegAddr, ProtFlags)) {
-      ReportError(std::move(Err));
+      ES.reportError(std::move(Err));
       return true;
     } else
       return false;
@@ -644,7 +647,7 @@ private:
 
   bool writeMem(JITTargetAddress Addr, const char *Src, uint64_t Size) {
     if (auto Err = callB<mem::WriteMem>(DirectBufferWriter(Src, Addr, Size))) {
-      ReportError(std::move(Err));
+      ES.reportError(std::move(Err));
       return true;
     } else
       return false;
@@ -656,6 +659,7 @@ private:
 
   static Error doNothing() { return Error::success(); }
 
+  ExecutionSession &ES;
   std::function<void(Error)> ReportError;
   std::string RemoteTargetTriple;
   uint32_t RemotePointerSize = 0;

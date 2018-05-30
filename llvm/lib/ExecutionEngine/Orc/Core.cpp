@@ -869,7 +869,7 @@ VSO &ExecutionSession::createVSO(std::string Name) {
   });
 }
 
-Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names) {
+Expected<SymbolMap> lookup(const VSO::VSOList &VSOs, SymbolNameSet Names) {
 #if LLVM_ENABLE_THREADS
   // In the threaded case we use promises to return the results.
   std::promise<SymbolMap> PromisedResult;
@@ -975,7 +975,7 @@ Expected<SymbolMap> lookup(const std::vector<VSO *> &VSOs, SymbolNameSet Names) 
 }
 
 /// Look up a symbol by searching a list of VSOs.
-Expected<JITEvaluatedSymbol> lookup(const std::vector<VSO *> VSOs,
+Expected<JITEvaluatedSymbol> lookup(const VSO::VSOList &VSOs,
                                     SymbolStringPtr Name) {
   SymbolNameSet Names({Name});
   if (auto ResultMap = lookup(VSOs, std::move(Names))) {

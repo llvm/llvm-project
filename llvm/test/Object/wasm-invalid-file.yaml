@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s > %t.wasm
-# RUN: echo -en "\x01" >> %t.wasm
+# RUN: echo -e -n "\x01" >> %t.wasm
 # Append a new section but truncate the encoding of the section size
 # RUN: not llvm-objdump -h %t.wasm 2>&1 | FileCheck %s -check-prefix=CHECK-LEB-DECODE
 

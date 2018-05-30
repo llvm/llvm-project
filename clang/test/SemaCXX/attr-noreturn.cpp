@@ -244,11 +244,11 @@ namespace PR15291 {
   template <typename T>
   void qux(T) {}
 
-  // expected-note@+5 {{candidate function not viable: no overload of 'baz' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
-  // expected-note@+4 {{candidate function not viable: no overload of 'qux' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
-  // expected-note@+3 {{candidate function not viable: no overload of 'bar' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
-  // expected-note@+2 {{candidate function not viable: no overload of 'bar' matching 'void (*)(int)' for 1st argument}}
-  // expected-note@+1 {{candidate function not viable: no overload of 'bar' matching 'void (*)(int)' for 1st argument}}
+  // expected-note@+5 {{candidate function template not viable: no overload of 'baz' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
+  // expected-note@+4 {{candidate function template not viable: no overload of 'qux' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
+  // expected-note@+3 {{candidate function template not viable: no overload of 'bar' matching 'void (*)(int) __attribute__((noreturn))' for 1st argument}}
+  // expected-note@+2 {{candidate function template not viable: no overload of 'bar' matching 'void (*)(int)' for 1st argument}}
+  // expected-note@+1 {{candidate function template not viable: no overload of 'bar' matching 'void (*)(int)' for 1st argument}}
   template <typename T> void accept_T(T) {}
 
   // expected-note@+1 {{candidate function not viable: no overload of 'bar' matching 'void (*)(int)' for 1st argument}}

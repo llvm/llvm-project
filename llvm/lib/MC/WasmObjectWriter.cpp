@@ -270,9 +270,9 @@ private:
     Globals.clear();
     DataSegments.clear();
     SectionFunctions.clear();
-    MCObjectWriter::reset();
     NumFunctionImports = 0;
     NumGlobalImports = 0;
+    MCObjectWriter::reset();
   }
 
   void writeHeader(const MCAssembler &Asm);

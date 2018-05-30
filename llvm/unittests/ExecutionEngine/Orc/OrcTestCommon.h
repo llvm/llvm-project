@@ -71,11 +71,12 @@ public:
       // Use ability to create callback manager to detect whether Orc
       // has indirection support on this platform. This way the test
       // and Orc code do not get out of sync.
-      SupportsIndirection = !!orc::createLocalCompileCallbackManager(TT, 0);
+      SupportsIndirection = !!orc::createLocalCompileCallbackManager(TT, ES, 0);
     }
   };
 
 protected:
+  orc::ExecutionSession ES;
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
   bool SupportsJIT = false;

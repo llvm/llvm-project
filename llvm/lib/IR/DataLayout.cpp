@@ -596,10 +596,8 @@ const StructLayout *DataLayout::getStructLayout(StructType *Ty) const {
   // Otherwise, create the struct layout.  Because it is variable length, we
   // malloc it, then use placement new.
   int NumElts = Ty->getNumElements();
-  StructLayout *L =
-    (StructLayout *)malloc(sizeof(StructLayout)+(NumElts-1) * sizeof(uint64_t));
-  if (L == nullptr)
-    report_bad_alloc_error("Allocation of StructLayout elements failed.");
+  StructLayout *L = (StructLayout *)
+      safe_malloc(sizeof(StructLayout)+(NumElts-1) * sizeof(uint64_t));
 
   // Set SL before calling StructLayout's ctor.  The ctor could cause other
   // entries to be added to TheMap, invalidating our reference.

@@ -612,8 +612,10 @@ int main(int argc, char **argv, char * const *envp) {
     }
 
     // Create a remote target client running over the channel.
+    llvm::orc::ExecutionSession ES;
+    ES.setErrorReporter([&](Error Err) { ExitOnErr(std::move(Err)); });
     typedef orc::remote::OrcRemoteTargetClient MyRemote;
-    auto R = ExitOnErr(MyRemote::Create(*C, ExitOnErr));
+    auto R = ExitOnErr(MyRemote::Create(*C, ES));
 
     // Create a remote memory manager.
     auto RemoteMM = ExitOnErr(R->createRemoteMemoryManager());

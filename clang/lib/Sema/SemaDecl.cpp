@@ -1798,8 +1798,6 @@ static void CheckPoppedLabel(LabelDecl *L, Sema &S) {
 }
 
 void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
-  S->mergeNRVOIntoParent();
-
   if (S->decl_empty()) return;
   assert((S->getFlags() & (Scope::DeclScope | Scope::TemplateParamScope)) &&
          "Scope shouldn't contain decls!");
@@ -10799,11 +10797,12 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // we do not warn to warn spuriously when 'x' and 'y' are on separate
     // paths through the function. This should be revisited if
     // -Wrepeated-use-of-weak is made flow-sensitive.
-    if ((VDecl->getType().getObjCLifetime() == Qualifiers::OCL_Strong ||
-         VDecl->getType().isNonWeakInMRRWithObjCWeak(Context)) &&
-        !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak,
-                         Init->getLocStart()))
-      getCurFunction()->markSafeWeakUse(Init);
+    if (FunctionScopeInfo *FSI = getCurFunction())
+      if ((VDecl->getType().getObjCLifetime() == Qualifiers::OCL_Strong ||
+           VDecl->getType().isNonWeakInMRRWithObjCWeak(Context)) &&
+          !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak,
+                           Init->getLocStart()))
+        FSI->markSafeWeakUse(Init);
   }
 
   // The initialization is usually a full-expression.
@@ -12610,21 +12609,24 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 /// optimization.
 ///
 /// Each of the variables that is subject to the named return value
-/// optimization will be marked as NRVO variables in the AST, and any
+/// optimization will be marked as NRVO variable candidates in the AST, and any
 /// return statement that has a marked NRVO variable as its NRVO candidate can
 /// use the named return value optimization.
 ///
-/// This function applies a very simplistic algorithm for NRVO: if every return
-/// statement in the scope of a variable has the same NRVO candidate, that
-/// candidate is an NRVO variable.
+/// This function applies a very simplistic algorithm for NRVO: if every
+/// reachable return statement in the scope of a variable has the same NRVO
+/// candidate, that candidate is an NRVO variable.
 void Sema::computeNRVO(Stmt *Body, FunctionScopeInfo *Scope) {
-  ReturnStmt **Returns = Scope->Returns.data();
+  for (ReturnStmt *Return : Scope->Returns) {
+    const VarDecl *Candidate = Return->getNRVOCandidate();
+    if (!Candidate)
+      continue;
 
-  for (unsigned I = 0, E = Scope->Returns.size(); I != E; ++I) {
-    if (const VarDecl *NRVOCandidate = Returns[I]->getNRVOCandidate()) {
-      if (!NRVOCandidate->isNRVOVariable())
-        Returns[I]->setNRVOCandidate(nullptr);
-    }
+    if (Candidate->isNRVOCandidate())
+      const_cast<VarDecl*>(Candidate)->setNRVOVariable(true);
+
+    if (!Candidate->isNRVOVariable())
+      Return->setNRVOCandidate(nullptr);
   }
 }
 
@@ -12753,12 +12755,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       else if (CXXDestructorDecl *Destructor = dyn_cast<CXXDestructorDecl>(FD))
         MarkVTableUsed(FD->getLocation(), Destructor->getParent());
 
-      // Try to apply the named return value optimization. We have to check
-      // if we can do this here because lambdas keep return statements around
-      // to deduce an implicit return type.
-      if (FD->getReturnType()->isRecordType() &&
-          (!getLangOpts().CPlusPlus || !FD->isDependentContext()))
-        computeNRVO(Body, getCurFunction());
+      // Try to apply the named return value optimization.
+      computeNRVO(Body, getCurFunction());
     }
 
     // GNU warning -Wmissing-prototypes:
