@@ -402,7 +402,6 @@ lldb::ThreadSP OperatingSystemGo::CreateThread(lldb::tid_t tid,
 
 ValueObjectSP OperatingSystemGo::FindGlobal(TargetSP target, const char *name) {
   VariableList variable_list;
-  const bool append = true;
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OS));
 
@@ -414,7 +413,7 @@ ValueObjectSP OperatingSystemGo::FindGlobal(TargetSP target, const char *name) {
   }
 
   uint32_t match_count = target->GetImages().FindGlobalVariables(
-      ConstString(name), append, 1, variable_list);
+      ConstString(name), 1, variable_list);
   if (match_count > 0) {
     ExecutionContextScope *exe_scope = target->GetProcessSP().get();
     if (exe_scope == NULL)

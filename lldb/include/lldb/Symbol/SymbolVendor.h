@@ -81,11 +81,11 @@ public:
 
   virtual size_t FindGlobalVariables(const ConstString &name,
                                      const CompilerDeclContext *parent_decl_ctx,
-                                     bool append, size_t max_matches,
+                                     size_t max_matches,
                                      VariableList &variables);
 
   virtual size_t FindGlobalVariables(const RegularExpression &regex,
-                                     bool append, size_t max_matches,
+                                     size_t max_matches,
                                      VariableList &variables);
 
   virtual size_t FindFunctions(const ConstString &name,
