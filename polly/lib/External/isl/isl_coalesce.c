@@ -2703,9 +2703,9 @@ static isl_bool same_divs(__isl_keep isl_basic_map *bmap1,
 	total = isl_basic_map_total_dim(bmap1);
 	for (i = 0; i < bmap1->n_div; ++i)
 		if (!isl_seq_eq(bmap1->div[i], bmap2->div[i], 2 + total))
-			return 0;
+			return isl_bool_false;
 
-	return 1;
+	return isl_bool_true;
 }
 
 /* Assuming that "tab" contains the equality constraints and

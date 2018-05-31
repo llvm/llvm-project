@@ -1248,7 +1248,7 @@ error:
 	isl_constraint_free(lower);
 	isl_constraint_free(upper);
 	isl_basic_set_free(context);
-	return -1;
+	return isl_stat_error;
 }
 
 __isl_give isl_aff *isl_constraint_get_bound(

@@ -427,7 +427,6 @@ __isl_give UNION *FN(UNION,align_params)(__isl_take UNION *u,
 		return u;
 	}
 
-	model = isl_space_params(model);
 	r = isl_parameter_alignment_reordering(u->space, model);
 	isl_space_free(model);
 

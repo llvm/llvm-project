@@ -370,6 +370,48 @@ void ArchiveFile::addMember(const Archive::Symbol *Sym) {
   Symtab->addFile(Obj);
 }
 
+static uint8_t mapVisibility(GlobalValue::VisibilityTypes GvVisibility) {
+  switch (GvVisibility) {
+  case GlobalValue::DefaultVisibility:
+    return WASM_SYMBOL_VISIBILITY_DEFAULT;
+  case GlobalValue::HiddenVisibility:
+  case GlobalValue::ProtectedVisibility:
+    return WASM_SYMBOL_VISIBILITY_HIDDEN;
+  }
+  llvm_unreachable("unknown visibility");
+}
+
+static Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &ObjSym,
+                                   BitcodeFile &F) {
+  StringRef Name = Saver.save(ObjSym.getName());
+
+  uint32_t Flags = ObjSym.isWeak() ? WASM_SYMBOL_BINDING_WEAK : 0;
+  Flags |= mapVisibility(ObjSym.getVisibility());
+
+  if (ObjSym.isUndefined()) {
+    if (ObjSym.isExecutable())
+      return Symtab->addUndefinedFunction(Name, Flags, &F, nullptr);
+    return Symtab->addUndefinedData(Name, Flags, &F);
+  }
+
+  if (ObjSym.isExecutable())
+    return Symtab->addDefinedFunction(Name, Flags, &F, nullptr);
+  return Symtab->addDefinedData(Name, Flags, &F, nullptr, 0, 0);
+}
+
+void BitcodeFile::parse() {
+  Obj = check(lto::InputFile::create(MemoryBufferRef(
+      MB.getBuffer(), Saver.save(ParentName + MB.getBufferIdentifier()))));
+  Triple T(Obj->getTargetTriple());
+  if (T.getArch() != Triple::wasm32) {
+    error(toString(MB.getBufferIdentifier()) + ": machine type must be wasm32");
+    return;
+  }
+
+  for (const lto::InputFile::Symbol &ObjSym : Obj->symbols())
+    Symbols.push_back(createBitcodeSymbol(ObjSym, *this));
+}
+
 // Returns a string in the format of "foo.o" or "foo.a(bar.o)".
 std::string lld::toString(const wasm::InputFile *File) {
   if (!File)

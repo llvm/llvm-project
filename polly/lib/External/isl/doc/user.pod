@@ -607,6 +607,10 @@ in which the object was created.
 	isl_ctx *isl_ast_node_get_ctx(
 		__isl_keep isl_ast_node *node);
 
+	#include <isl/stride_info.h>
+	isl_ctx *isl_stride_info_get_ctx(
+		__isl_keep isl_stride_info *si);
+
 =head2 Return Types
 
 C<isl> uses two special return types for functions that either return
@@ -2277,8 +2281,9 @@ from
 	#include <isl/map.h>
 	int isl_map_n_basic_map(__isl_keep isl_map *map);
 
-It is also possible to obtain a list of basic sets from a set
-or union set
+It is also possible to obtain a list of (basic) sets from a set
+or union set, a list of basic maps from a map and a list of maps from a union
+map.
 
 	#include <isl/set.h>
 	__isl_give isl_basic_set_list *isl_set_get_basic_set_list(
@@ -2288,6 +2293,16 @@ or union set
 	__isl_give isl_basic_set_list *
 	isl_union_set_get_basic_set_list(
 		__isl_keep isl_union_set *uset);
+	__isl_give isl_set_list *isl_union_set_get_set_list(
+		__isl_keep isl_union_set *uset);
+
+	#include <isl/map.h>
+	__isl_give isl_basic_map_list *isl_map_get_basic_map_list(
+		__isl_keep isl_map *map);
+
+	#include <isl/union_map.h>
+	__isl_give isl_map_list *isl_union_map_get_map_list(
+		__isl_keep isl_union_map *umap);
 
 The returned list can be manipulated using the functions in L<"Lists">.
 
@@ -4011,9 +4026,12 @@ using the following functions.
 	__isl_give isl_aff *isl_stride_info_get_offset(
 		__isl_keep isl_stride_info *si);
 
-The stride info object can be released using the following function.
+The stride info object can be copied and released using the following
+functions.
 
 	#include <isl/stride_info.h>
+	__isl_give isl_stride_info *isl_stride_info_copy(
+		__isl_keep isl_stride_info *si);
 	__isl_null isl_stride_info *isl_stride_info_free(
 		__isl_take isl_stride_info *si);
 
@@ -9959,18 +9977,22 @@ Exact division.  That is, the result is known to be an integer.
 
 Result of integer division, rounded towards negative
 infinity.
+The divisor is known to be positive.
 
 =item C<isl_ast_op_pdiv_q>
 
 Result of integer division, where dividend is known to be non-negative.
+The divisor is known to be positive.
 
 =item C<isl_ast_op_pdiv_r>
 
 Remainder of integer division, where dividend is known to be non-negative.
+The divisor is known to be positive.
 
 =item C<isl_ast_op_zdiv_r>
 
 Equal to zero iff the remainder on integer division is zero.
+The divisor is known to be positive.
 
 =item C<isl_ast_op_cond>
 
@@ -10139,7 +10161,10 @@ the context of an C<isl_ast_build>.
 
 The function C<isl_ast_expr_address_of> can be applied to an
 C<isl_ast_expr> of type C<isl_ast_op_access> only. It is meant
-to represent the address of the C<isl_ast_expr_access>. The function
+to represent the address of the C<isl_ast_expr_access>.
+The second argument of the functions C<isl_ast_expr_pdiv_q> and
+C<isl_ast_expr_pdiv_r> should always evaluate to a positive number.
+The function
 C<isl_ast_expr_and_then> as well as C<isl_ast_expr_or_else> are short-circuit
 versions of C<isl_ast_expr_and> and C<isl_ast_expr_or>, respectively.
 
@@ -10167,7 +10192,7 @@ versions of C<isl_ast_expr_and> and C<isl_ast_expr_or>, respectively.
 		__isl_keep isl_ast_build *build,
 		__isl_take isl_multi_pw_aff *mpa);
 
-The set <set> and
+The set C<set> and
 the domains of C<pa>, C<mpa> and C<pma> should correspond
 to the schedule space of C<build>.
 The tuple id of C<mpa> or C<pma> is used as the array being accessed or

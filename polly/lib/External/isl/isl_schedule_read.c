@@ -714,7 +714,7 @@ static __isl_give isl_schedule_tree *isl_stream_read_schedule_tree(
 		break;
 	case isl_schedule_key_child:
 		isl_die(isl_stream_get_ctx(s), isl_error_unsupported,
-			"cannot identity node type", return NULL);
+			"cannot identify node type", return NULL);
 	case isl_schedule_key_end:
 	case isl_schedule_key_error:
 		return NULL;
