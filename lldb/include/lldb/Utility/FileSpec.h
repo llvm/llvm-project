@@ -549,14 +549,7 @@ public:
   void AppendPathComponent(llvm::StringRef component);
   void AppendPathComponent(const FileSpec &new_path);
 
-  //------------------------------------------------------------------
-  /// Removes the last path component by replacing the current path with its
-  /// parent. When the current path has no parent, this is a no-op.
-  ///
-  /// @return
-  ///     A boolean value indicating whether the path was updated.
-  //------------------------------------------------------------------
-  bool RemoveLastPathComponent();
+  void RemoveLastPathComponent();
 
   ConstString GetLastPathComponent() const;
 
