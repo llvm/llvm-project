@@ -432,27 +432,26 @@ size_t ModuleList::FindCompileUnits(const FileSpec &path, bool append,
   return sc_list.GetSize();
 }
 
-size_t ModuleList::FindGlobalVariables(const ConstString &name, bool append,
+size_t ModuleList::FindGlobalVariables(const ConstString &name,
                                        size_t max_matches,
                                        VariableList &variable_list) const {
   size_t initial_size = variable_list.GetSize();
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   for (pos = m_modules.begin(); pos != end; ++pos) {
-    (*pos)->FindGlobalVariables(name, nullptr, append, max_matches,
-                                variable_list);
+    (*pos)->FindGlobalVariables(name, nullptr, max_matches, variable_list);
   }
   return variable_list.GetSize() - initial_size;
 }
 
 size_t ModuleList::FindGlobalVariables(const RegularExpression &regex,
-                                       bool append, size_t max_matches,
+                                       size_t max_matches,
                                        VariableList &variable_list) const {
   size_t initial_size = variable_list.GetSize();
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   for (pos = m_modules.begin(); pos != end; ++pos) {
-    (*pos)->FindGlobalVariables(regex, append, max_matches, variable_list);
+    (*pos)->FindGlobalVariables(regex, max_matches, variable_list);
   }
   return variable_list.GetSize() - initial_size;
 }

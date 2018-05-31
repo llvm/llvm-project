@@ -1196,6 +1196,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Args.hasFlag(OPT_incremental, OPT_incremental_no,
                    !Config->DoGC && !Config->DoICF && !Args.hasArg(OPT_order) &&
                        !Args.hasArg(OPT_profile));
+  Config->IntegrityCheck =
+      Args.hasFlag(OPT_integritycheck, OPT_integritycheck_no, false);
   Config->NxCompat = Args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
   Config->TerminalServerAware =
       !Config->DLL && Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);

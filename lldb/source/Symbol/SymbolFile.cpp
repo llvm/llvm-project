@@ -96,19 +96,16 @@ uint32_t SymbolFile::ResolveSymbolContext(const FileSpec &file_spec,
   return 0;
 }
 
-uint32_t SymbolFile::FindGlobalVariables(
-    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
-    bool append, uint32_t max_matches, VariableList &variables) {
-  if (!append)
-    variables.Clear();
+uint32_t
+SymbolFile::FindGlobalVariables(const ConstString &name,
+                                const CompilerDeclContext *parent_decl_ctx,
+                                uint32_t max_matches, VariableList &variables) {
   return 0;
 }
 
 uint32_t SymbolFile::FindGlobalVariables(const RegularExpression &regex,
-                                         bool append, uint32_t max_matches,
+                                         uint32_t max_matches,
                                          VariableList &variables) {
-  if (!append)
-    variables.Clear();
   return 0;
 }
 

@@ -35,6 +35,18 @@ public:
   bool usesPreprocessorOnly() const override { return false; }
 };
 
+class DumpCompilerOptionsAction : public FrontendAction {
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override {
+    return nullptr;
+  }
+
+  void ExecuteAction() override;
+
+public:
+  bool usesPreprocessorOnly() const override { return true; }
+};
+
 //===----------------------------------------------------------------------===//
 // AST Consumer Actions
 //===----------------------------------------------------------------------===//
