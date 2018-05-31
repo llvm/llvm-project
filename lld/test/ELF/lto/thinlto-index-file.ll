@@ -6,7 +6,7 @@
 ; RUN: opt -module-summary %p/Inputs/thinlto_empty.ll -o %t3.o
 
 ; Ensure lld writes linked files to linked objects file
-; RUN: ld.lld -m elf_x86_64 --plugin-opt=thinlto-index-only=%t.idx -shared %t1.o %t2.o %t3.o -o %t4
+; RUN: ld.lld --plugin-opt=thinlto-index-only=%t.idx -shared %t1.o %t2.o %t3.o -o %t4
 ; RUN: FileCheck %s < %t.idx
 ; CHECK: {{.*}}thinlto-index-file.ll.tmp1.o
 ; CHECK: {{.*}}thinlto-index-file.ll.tmp2.o

@@ -4,8 +4,8 @@
 define i64 @zext(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @zext(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Z:%.*]] to i64
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 0, i32 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i32 [[SEL]] to i64
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %cmp = icmp eq i32 %x, %y
@@ -17,8 +17,8 @@ define i64 @zext(i32 %x, i32 %y, i32 %z) {
 define <2 x i32> @zext_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @zext_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i8> [[Z:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[TMP1]], <2 x i32> <i32 42, i32 7>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[Z:%.*]], <2 x i8> <i8 42, i8 7>
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i8> [[SEL]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %cmp = icmp ugt <2 x i8> %x, %y
@@ -30,8 +30,8 @@ define <2 x i32> @zext_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 define i64 @sext(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sext(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[Z:%.*]] to i64
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i64 42, i64 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 42, i8 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[SEL]] to i64
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %cmp = icmp ult i8 %x, %y
@@ -43,8 +43,8 @@ define i64 @sext(i8 %x, i8 %y, i8 %z) {
 define <2 x i32> @sext_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @sext_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[Z:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[TMP1]], <2 x i32> <i32 42, i32 7>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[Z:%.*]], <2 x i8> <i8 42, i8 7>
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i8> [[SEL]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %cmp = icmp ugt <2 x i8> %x, %y
@@ -56,8 +56,8 @@ define <2 x i32> @sext_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 define i16 @trunc(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @trunc(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Z:%.*]] to i16
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i16 42, i16 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 42, i32 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[SEL]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %cmp = icmp ult i32 %x, %y
@@ -69,8 +69,8 @@ define i16 @trunc(i32 %x, i32 %y, i32 %z) {
 define <2 x i32> @trunc_vec(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
 ; CHECK-LABEL: @trunc_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i64> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[Z:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[TMP1]], <2 x i32> <i32 42, i32 7>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i64> [[Z:%.*]], <2 x i64> <i64 42, i64 7>
+; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i64> [[SEL]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %cmp = icmp ugt <2 x i64> %x, %y
@@ -82,8 +82,8 @@ define <2 x i32> @trunc_vec(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
 define double @fpext(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fpext(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fpext float [[Z:%.*]] to double
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], double 1.700000e+01, double [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float 1.700000e+01, float [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fpext float [[SEL]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %cmp = fcmp oeq float %x, %y
@@ -95,8 +95,8 @@ define double @fpext(float %x, float %y, float %z) {
 define <2 x double> @fpext_vec(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fpext_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt <2 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fpext <2 x float> [[Z:%.*]] to <2 x double>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x double> [[TMP1]], <2 x double> <double 4.200000e+01, double -2.000000e+00>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x float> [[Z:%.*]], <2 x float> <float 4.200000e+01, float -2.000000e+00>
+; CHECK-NEXT:    [[R:%.*]] = fpext <2 x float> [[SEL]] to <2 x double>
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %cmp = fcmp ugt <2 x float> %x, %y
@@ -108,8 +108,8 @@ define <2 x double> @fpext_vec(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 define float @fptrunc(double %x, double %y, double %z) {
 ; CHECK-LABEL: @fptrunc(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult double [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[Z:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], float 4.200000e+01, float [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], double 4.200000e+01, double [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fptrunc double [[SEL]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %cmp = fcmp ult double %x, %y
@@ -121,8 +121,8 @@ define float @fptrunc(double %x, double %y, double %z) {
 define <2 x float> @fptrunc_vec(<2 x double> %x, <2 x double> %y, <2 x double> %z) {
 ; CHECK-LABEL: @fptrunc_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge <2 x double> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x double> [[Z:%.*]] to <2 x float>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x float> [[TMP1]], <2 x float> <float -4.200000e+01, float 1.200000e+01>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x double> [[Z:%.*]], <2 x double> <double -4.200000e+01, double 1.200000e+01>
+; CHECK-NEXT:    [[R:%.*]] = fptrunc <2 x double> [[SEL]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %cmp = fcmp oge <2 x double> %x, %y

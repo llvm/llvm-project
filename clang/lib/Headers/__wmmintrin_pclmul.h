@@ -55,8 +55,8 @@
 ///    Bit[4]=1 indicates that bits[127:64] of operand \a __Y are used.
 /// \returns The 128-bit integer vector containing the result of the carry-less
 ///    multiplication of the selected 64-bit values.
-#define _mm_clmulepi64_si128(__X, __Y, __I) \
-  ((__m128i)__builtin_ia32_pclmulqdq128((__v2di)(__m128i)(__X), \
-                                        (__v2di)(__m128i)(__Y), (char)(__I)))
+#define _mm_clmulepi64_si128(X, Y, I) \
+  ((__m128i)__builtin_ia32_pclmulqdq128((__v2di)(__m128i)(X), \
+                                        (__v2di)(__m128i)(Y), (char)(I)))
 
 #endif /* __WMMINTRIN_PCLMUL_H */

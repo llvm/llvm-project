@@ -2281,10 +2281,10 @@ static isl_stat add_div_constraints(struct isl_tab *tab, unsigned div,
 
 	isl_vec_free(ineq);
 
-	return 0;
+	return isl_stat_ok;
 error:
 	isl_vec_free(ineq);
-	return -1;
+	return isl_stat_error;
 }
 
 /* Check whether the div described by "div" is obviously non-negative.
@@ -3681,7 +3681,8 @@ static isl_stat perform_undo_var(struct isl_tab *tab, struct isl_tab_undo *undo)
 	case isl_tab_undo_redundant:
 		if (!var->is_row || var->index != tab->n_redundant - 1)
 			isl_die(isl_tab_get_ctx(tab), isl_error_internal,
-				"not undoing last redundant row", return -1);
+				"not undoing last redundant row",
+				return isl_stat_error);
 		return restore_last_redundant(tab);
 	case isl_tab_undo_freeze:
 		var->frozen = 0;

@@ -57,7 +57,7 @@
 
 // static_assert checked below
 
-#if check(deduction_guides, 0, 0, 0, 201611)
+#if check(deduction_guides, 0, 0, 0, 201703)
 #error "wrong value for __cpp_deduction_guides"
 #endif
 

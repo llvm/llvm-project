@@ -136,3 +136,16 @@ def alias_initial_memory_i: Flag<["-"], "i">, Alias<initial_memory>;
 def alias_max_memory_m: Flag<["-"], "m">, Alias<max_memory>;
 def alias_relocatable_r: Flag<["-"], "r">, Alias<relocatable>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
+
+// LTO-related options.
+def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
+  HelpText<"Optimization level for LTO">;
+def lto_partitions: J<"lto-partitions=">,
+  HelpText<"Number of LTO codegen partitions">;
+def disable_verify: F<"disable-verify">;
+def save_temps: F<"save-temps">;
+def thinlto_cache_dir: J<"thinlto-cache-dir=">,
+  HelpText<"Path to ThinLTO cached object file directory">;
+defm thinlto_cache_policy: Eq<"thinlto-cache-policy">,
+  HelpText<"Pruning policy for the ThinLTO cache">;
+def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;

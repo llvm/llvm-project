@@ -1198,15 +1198,7 @@ define <4 x float> @test_mm_rcp_ss(<4 x float> %a0) {
 ; X64-NEXT:    rcpss %xmm0, %xmm0
 ; X64-NEXT:    retq
   %rcp = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %a0)
-  %ext0 = extractelement <4 x float> %rcp, i32 0
-  %ins0 = insertelement <4 x float> undef, float %ext0, i32 0
-  %ext1 = extractelement <4 x float> %a0, i32 1
-  %ins1 = insertelement <4 x float> %ins0, float %ext1, i32 1
-  %ext2 = extractelement <4 x float> %a0, i32 2
-  %ins2 = insertelement <4 x float> %ins1, float %ext2, i32 2
-  %ext3 = extractelement <4 x float> %a0, i32 3
-  %ins3 = insertelement <4 x float> %ins2, float %ext3, i32 3
-  ret <4 x float> %ins3
+  ret <4 x float> %rcp
 }
 declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
 
@@ -1236,15 +1228,7 @@ define <4 x float> @test_mm_rsqrt_ss(<4 x float> %a0) {
 ; X64-NEXT:    rsqrtss %xmm0, %xmm0
 ; X64-NEXT:    retq
   %rsqrt = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %a0)
-  %ext0 = extractelement <4 x float> %rsqrt, i32 0
-  %ins0 = insertelement <4 x float> undef, float %ext0, i32 0
-  %ext1 = extractelement <4 x float> %a0, i32 1
-  %ins1 = insertelement <4 x float> %ins0, float %ext1, i32 1
-  %ext2 = extractelement <4 x float> %a0, i32 2
-  %ins2 = insertelement <4 x float> %ins1, float %ext2, i32 2
-  %ext3 = extractelement <4 x float> %a0, i32 3
-  %ins3 = insertelement <4 x float> %ins2, float %ext3, i32 3
-  ret <4 x float> %ins3
+  ret <4 x float> %rsqrt
 }
 declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
 
@@ -1589,15 +1573,7 @@ define <4 x float> @test_mm_sqrt_ss(<4 x float> %a0) {
 ; X64-NEXT:    sqrtss %xmm0, %xmm0
 ; X64-NEXT:    retq
   %sqrt = call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %a0)
-  %ext0 = extractelement <4 x float> %sqrt, i32 0
-  %ins0 = insertelement <4 x float> undef, float %ext0, i32 0
-  %ext1 = extractelement <4 x float> %a0, i32 1
-  %ins1 = insertelement <4 x float> %ins0, float %ext1, i32 1
-  %ext2 = extractelement <4 x float> %a0, i32 2
-  %ins2 = insertelement <4 x float> %ins1, float %ext2, i32 2
-  %ext3 = extractelement <4 x float> %a0, i32 3
-  %ins3 = insertelement <4 x float> %ins2, float %ext3, i32 3
-  ret <4 x float> %ins3
+  ret <4 x float> %sqrt
 }
 declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
 

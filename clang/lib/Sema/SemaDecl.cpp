@@ -1798,6 +1798,8 @@ static void CheckPoppedLabel(LabelDecl *L, Sema &S) {
 }
 
 void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
+  S->mergeNRVOIntoParent();
+
   if (S->decl_empty()) return;
   assert((S->getFlags() & (Scope::DeclScope | Scope::TemplateParamScope)) &&
          "Scope shouldn't contain decls!");
@@ -12609,24 +12611,21 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 /// optimization.
 ///
 /// Each of the variables that is subject to the named return value
-/// optimization will be marked as NRVO variable candidates in the AST, and any
+/// optimization will be marked as NRVO variables in the AST, and any
 /// return statement that has a marked NRVO variable as its NRVO candidate can
 /// use the named return value optimization.
 ///
-/// This function applies a very simplistic algorithm for NRVO: if every
-/// reachable return statement in the scope of a variable has the same NRVO
-/// candidate, that candidate is an NRVO variable.
+/// This function applies a very simplistic algorithm for NRVO: if every return
+/// statement in the scope of a variable has the same NRVO candidate, that
+/// candidate is an NRVO variable.
 void Sema::computeNRVO(Stmt *Body, FunctionScopeInfo *Scope) {
-  for (ReturnStmt *Return : Scope->Returns) {
-    const VarDecl *Candidate = Return->getNRVOCandidate();
-    if (!Candidate)
-      continue;
+  ReturnStmt **Returns = Scope->Returns.data();
 
-    if (Candidate->isNRVOCandidate())
-      const_cast<VarDecl*>(Candidate)->setNRVOVariable(true);
-
-    if (!Candidate->isNRVOVariable())
-      Return->setNRVOCandidate(nullptr);
+  for (unsigned I = 0, E = Scope->Returns.size(); I != E; ++I) {
+    if (const VarDecl *NRVOCandidate = Returns[I]->getNRVOCandidate()) {
+      if (!NRVOCandidate->isNRVOVariable())
+        Returns[I]->setNRVOCandidate(nullptr);
+    }
   }
 }
 
@@ -12660,9 +12659,15 @@ bool Sema::canSkipFunctionBody(Decl *D) {
   // rest of the file.
   // We cannot skip the body of a function with an undeduced return type,
   // because any callers of that function need to know the type.
-  if (const FunctionDecl *FD = D->getAsFunction())
-    if (FD->isConstexpr() || FD->getReturnType()->isUndeducedType())
+  if (const FunctionDecl *FD = D->getAsFunction()) {
+    if (FD->isConstexpr())
       return false;
+    // We can't simply call Type::isUndeducedType here, because inside template
+    // auto can be deduced to a dependent type, which is not considered
+    // "undeduced".
+    if (FD->getReturnType()->getContainedDeducedType())
+      return false;
+  }
   return Consumer.shouldSkipFunctionBody(D);
 }
 
@@ -12755,8 +12760,12 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       else if (CXXDestructorDecl *Destructor = dyn_cast<CXXDestructorDecl>(FD))
         MarkVTableUsed(FD->getLocation(), Destructor->getParent());
 
-      // Try to apply the named return value optimization.
-      computeNRVO(Body, getCurFunction());
+      // Try to apply the named return value optimization. We have to check
+      // if we can do this here because lambdas keep return statements around
+      // to deduce an implicit return type.
+      if (FD->getReturnType()->isRecordType() &&
+          (!getLangOpts().CPlusPlus || !FD->isDependentContext()))
+        computeNRVO(Body, getCurFunction());
     }
 
     // GNU warning -Wmissing-prototypes:
@@ -14278,7 +14287,6 @@ CreateNewDecl:
   // PrevDecl.
   TagDecl *New;
 
-  bool IsForwardReference = false;
   if (Kind == TTK_Enum) {
     // FIXME: Tag decls should be chained to any simultaneous vardecls, e.g.:
     // enum X { A, B, C } D;    D should chain to X.
@@ -14308,12 +14316,6 @@ CreateNewDecl:
         else if (getLangOpts().CPlusPlus)
           DiagID = diag::err_forward_ref_enum;
         Diag(Loc, DiagID);
-
-        // If this is a forward-declared reference to an enumeration, make a
-        // note of it; we won't actually be introducing the declaration into
-        // the declaration context.
-        if (TUK == TUK_Reference)
-          IsForwardReference = true;
       }
     }
 
@@ -14471,9 +14473,7 @@ CreateNewDecl:
         PushOnScopeChains(New, EnclosingScope, /* AddToContext = */ false);
   } else if (Name) {
     S = getNonFieldDeclScope(S);
-    PushOnScopeChains(New, S, !IsForwardReference);
-    if (IsForwardReference)
-      SearchDC->makeDeclVisibleInContext(New);
+    PushOnScopeChains(New, S, true);
   } else {
     CurContext->addDecl(New);
   }

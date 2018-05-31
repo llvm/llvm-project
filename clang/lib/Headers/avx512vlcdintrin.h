@@ -77,7 +77,7 @@ _mm_maskz_conflict_epi64 (__mmask8 __U, __m128i __A)
 {
   return (__m128i) __builtin_ia32_vpconflictdi_128_mask ((__v2di) __A,
                (__v2di)
-               _mm_setzero_di (),
+               _mm_setzero_si128 (),
                (__mmask8) __U);
 }
 
@@ -217,7 +217,7 @@ _mm_maskz_lzcnt_epi64 (__mmask8 __U, __m128i __A)
 {
   return (__m128i)__builtin_ia32_selectq_128((__mmask8)__U,
                                              (__v2di)_mm_lzcnt_epi64(__A),
-                                             (__v2di)_mm_setzero_di());
+                                             (__v2di)_mm_setzero_si128());
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS

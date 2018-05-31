@@ -31,7 +31,7 @@ int main(int argc, const char *argv[]) {
   if (!argc) {
     return 0;
   // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:8 = #4
-  RBRAC // CHECK-NEXT: [[@LINE]]:8 -> [[@LINE+1]]:2 = (((#0 - #2) - #3) - #4)
+  RBRAC
 }
 
 // CHECK-NEXT: File 1, 3:15 -> 3:16 = #2

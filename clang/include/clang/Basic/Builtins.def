@@ -862,6 +862,7 @@ LIBBUILTIN(sscanf, "icC*RcC*R.",  "fs:1:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vscanf, "icC*Ra",      "fS:0:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vfscanf, "iP*RcC*Ra",  "fS:1:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vsscanf, "icC*RcC*Ra", "fS:1:", "stdio.h", ALL_LANGUAGES)
+LIBBUILTIN(fopen, "P*cC*cC*",     "f",     "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(fread, "zv*zzP*",      "f",     "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(fwrite, "zvC*zzP*",    "f",     "stdio.h", ALL_LANGUAGES)
 

@@ -255,6 +255,10 @@ inline StringRef getOrdinalSuffix(unsigned Val) {
 /// it if it is not printable or if it is an escape char.
 void PrintEscapedString(StringRef Name, raw_ostream &Out);
 
+/// Print each character of the specified string, escaping HTML special
+/// characters.
+void PrintHTMLEscaped(StringRef String, raw_ostream &Out);
+
 /// printLowerCase - Print each character as lowercase if it is uppercase.
 void printLowerCase(StringRef String, raw_ostream &Out);
 

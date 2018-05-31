@@ -29,6 +29,7 @@
 #include <set_from_map.c>
 #include <uset_to_umap.c>
 #include <uset_from_umap.c>
+#include <set_list_from_map_list_inl.c>
 
 /* Return the number of parameters of "umap", where "type"
  * is required to be set to isl_dim_param.
@@ -254,7 +255,6 @@ __isl_give isl_union_map *isl_union_map_align_params(
 		return umap;
 	}
 
-	model = isl_space_params(model);
 	data.exp = isl_parameter_alignment_reordering(umap->dim, model);
 	if (!data.exp)
 		goto error;
@@ -550,6 +550,52 @@ isl_bool isl_union_map_every_map(__isl_keep isl_union_map *umap,
 	if (data.failed)
 		return isl_bool_false;
 	return isl_bool_error;
+}
+
+/* Add "map" to "list".
+ */
+static isl_stat add_list_map(__isl_take isl_map *map, void *user)
+{
+	isl_map_list **list = user;
+
+	*list = isl_map_list_add(*list, map);
+
+	if (!*list)
+		return isl_stat_error;
+	return isl_stat_ok;
+}
+
+/* Return the maps in "umap" as a list.
+ *
+ * First construct a list of the appropriate size and then add all the
+ * elements.
+ */
+__isl_give isl_map_list *isl_union_map_get_map_list(
+	__isl_keep isl_union_map *umap)
+{
+	int n_maps;
+	isl_ctx *ctx;
+	isl_map_list *list;
+
+	if (!umap)
+		return NULL;
+	ctx = isl_union_map_get_ctx(umap);
+	n_maps = isl_union_map_n_map(umap);
+	list = isl_map_list_alloc(ctx, n_maps);
+
+	if (isl_union_map_foreach_map(umap, &add_list_map, &list) < 0)
+		list = isl_map_list_free(list);
+
+	return list;
+}
+
+/* Return the sets in "uset" as a list.
+ */
+__isl_give isl_set_list *isl_union_set_get_set_list(
+	__isl_keep isl_union_set *uset)
+{
+	return set_list_from_map_list(
+		isl_union_map_get_map_list(uset_to_umap(uset)));
 }
 
 static isl_stat copy_map(void **entry, void *user)

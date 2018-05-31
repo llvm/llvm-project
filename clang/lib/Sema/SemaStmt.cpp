@@ -3455,9 +3455,12 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                            ExpressionEvaluationContext::DiscardedStatement)
     return R;
 
-  VarDecl *VD =
-      const_cast<VarDecl*>(cast<ReturnStmt>(R.get())->getNRVOCandidate());
-  CurScope->setNRVOCandidate(VD);
+  if (VarDecl *VD =
+      const_cast<VarDecl*>(cast<ReturnStmt>(R.get())->getNRVOCandidate())) {
+    CurScope->addNRVOCandidate(VD);
+  } else {
+    CurScope->setNoNRVO();
+  }
 
   CheckJumpOutOfSEHFinally(*this, ReturnLoc, *CurScope->getFnParent());
 

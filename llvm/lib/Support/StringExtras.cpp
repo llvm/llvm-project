@@ -68,6 +68,23 @@ void llvm::PrintEscapedString(StringRef Name, raw_ostream &Out) {
   }
 }
 
+void llvm::PrintHTMLEscaped(StringRef String, raw_ostream &Out) {
+  for (char C : String) {
+    if (C == '&')
+      Out << "&amp;";
+    else if (C == '<')
+      Out << "&lt;";
+    else if (C == '>')
+      Out << "&gt;";
+    else if (C == '\"')
+      Out << "&quot;";
+    else if (C == '\'')
+      Out << "&apos;";
+    else
+      Out << C;
+  }
+}
+
 void llvm::printLowerCase(StringRef String, raw_ostream &Out) {
   for (const char C : String)
     Out << toLower(C);

@@ -2833,7 +2833,10 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D) {
 
 Decl *
 TemplateDeclInstantiator::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
-  return VisitFunctionDecl(D, nullptr);
+  Decl *Inst = VisitFunctionDecl(D, nullptr);
+  if (Inst && !D->getDescribedFunctionTemplate())
+    Owner->addDecl(Inst);
+  return Inst;
 }
 
 Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D) {

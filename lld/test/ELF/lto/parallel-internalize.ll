@@ -1,7 +1,7 @@
 ; REQUIRES: x86
 ; RUN: llvm-as -o %t.bc %s
 ; RUN: rm -f %t.lto.o %t1.lto.o
-; RUN: ld.lld -m elf_x86_64 --lto-partitions=2 -save-temps -o %t %t.bc \
+; RUN: ld.lld --lto-partitions=2 -save-temps -o %t %t.bc \
 ; RUN:   -e foo --lto-O0
 ; RUN: llvm-readobj -t -dyn-symbols %t | FileCheck %s
 ; RUN: llvm-nm %t.lto.o | FileCheck --check-prefix=CHECK0 %s

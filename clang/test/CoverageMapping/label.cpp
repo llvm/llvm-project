@@ -16,11 +16,10 @@ void func() {                // CHECK-NEXT: File 0, [[@LINE]]:13 -> {{[0-9]+}}:2
       goto x;                // CHECK: File 0, [[@LINE]]:7 -> [[@LINE]]:13 = (#1 - #2)
     int k = 3;               // CHECK-NEXT: File 0, [[@LINE-1]]:13 -> [[@LINE]]:5 = #3
   }                          // CHECK-NEXT: File 0, [[@LINE-1]]:5 -> [[@LINE]]:4 = #3
-  static int j = 0;          // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+5]]:2 = ((#0 + #3) - #1)
+  static int j = 0;          // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+4]]:2 = ((#0 + #3) - #1)
   ++j;
   if(j == 1)                 // CHECK-NEXT: File 0, [[@LINE]]:6 -> [[@LINE]]:12 = ((#0 + #3) - #1)
     goto x;                  // CHECK: File 0, [[@LINE]]:5 -> [[@LINE]]:11 = #4
-                             // CHECK-NEXT: File 0, [[@LINE-1]]:11 -> [[@LINE+1]]:2 = (((#0 + #3) - #1) - #4)
 }
 
                              // CHECK-NEXT: test1
@@ -28,7 +27,7 @@ void test1(int x) {          // CHECK-NEXT: File 0, [[@LINE]]:19 -> {{[0-9]+}}:2
   if(x == 0)                 // CHECK-NEXT: File 0, [[@LINE]]:6 -> [[@LINE]]:12 = #0
     goto a;                  // CHECK: File 0, [[@LINE]]:5 -> [[@LINE]]:11 = #1
                              // CHECK-NEXT: File 0, [[@LINE-1]]:11 -> [[@LINE+1]]:3 = (#0 - #1)
-  goto b;                    // CHECK: Gap,File 0, [[@LINE]]:3 -> [[@LINE+5]]:2 = #3
+  goto b;                    // CHECK: File 0, [[@LINE]]:3 -> [[@LINE+5]]:2 = (#0 - #1)
                              // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:9 -> [[@LINE+1]]:1 = #2
 a:                           // CHECK-NEXT: File 0, [[@LINE]]:1 -> [[@LINE+3]]:2 = #2
 b:                           // CHECK-NEXT: File 0, [[@LINE]]:1 -> [[@LINE+2]]:2 = #3

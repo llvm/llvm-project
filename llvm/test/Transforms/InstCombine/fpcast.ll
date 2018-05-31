@@ -54,8 +54,8 @@ define half @test4-fast(float %a) {
 define half @test5(float %a, float %b, float %c) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[D:%.*]] = fcmp ogt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[C:%.*]] to half
-; CHECK-NEXT:    [[F:%.*]] = select i1 [[D]], half [[TMP1]], half 0xH3C00
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[D]], float [[C:%.*]], float 1.000000e+00
+; CHECK-NEXT:    [[F:%.*]] = fptrunc float [[E]] to half
 ; CHECK-NEXT:    ret half [[F]]
 ;
   %d = fcmp ogt float %a, %b

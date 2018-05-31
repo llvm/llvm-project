@@ -366,9 +366,8 @@ public:
   // True if this class has no memory members.
   bool definesNoMemory() const { return StoreCount == 0 && memory_empty(); }
 
-  // Return true if two congruence classes are equivalent to each other.  This
-  // means
-  // that every field but the ID number and the dead field are equivalent.
+  // Return true if two congruence classes are equivalent to each other. This
+  // means that every field but the ID number and the dead field are equivalent.
   bool isEquivalentTo(const CongruenceClass *Other) const {
     if (!Other)
       return false;
@@ -383,10 +382,12 @@ public:
       if (!DefiningExpr || !Other->DefiningExpr ||
           *DefiningExpr != *Other->DefiningExpr)
         return false;
-    // We need some ordered set
-    std::set<Value *> AMembers(Members.begin(), Members.end());
-    std::set<Value *> BMembers(Members.begin(), Members.end());
-    return AMembers == BMembers;
+
+    if (Members.size() != Other->Members.size())
+      return false;
+
+    return all_of(Members,
+                  [&](const Value *V) { return Other->Members.count(V); });
   }
 
 private:
