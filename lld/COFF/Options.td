@@ -117,7 +117,10 @@ defm highentropyva : B<"highentropyva",
                        "Disable 64-bit ASLR">;
 defm incremental : B<"incremental",
                      "Keep original import library if contents are unchanged",
-                     "Replace import library file even if contents are unchanged">;
+                     "Overwrite import library even if contents are unchanged">;
+defm integritycheck : B<"integritycheck",
+                        "Set FORCE_INTEGRITY bit in PE header",
+                        "No effect (default)">;
 defm largeaddressaware : B<"largeaddressaware",
                            "Enable large addresses (default on 64-bit)",
                            "Disable large addresses (default on 32-bit)">;
