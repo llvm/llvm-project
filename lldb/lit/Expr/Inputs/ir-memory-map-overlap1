@@ -1,0 +1,10 @@
+malloc 8 16
+malloc 16 8
+malloc 64 32
+malloc 1 8
+malloc 64 32
+malloc 64 8
+malloc 1024 32
+malloc 1 16
+malloc 8 16
+malloc 1024 16

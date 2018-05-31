@@ -31,7 +31,7 @@ def build_id: F<"build-id">, HelpText<"Generate build ID note">;
 
 def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">;
 
-defm check_sections : B<"check-sections",
+defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
     "Do not check section addresses for overlaps">;
 
@@ -96,7 +96,7 @@ def discard_locals: F<"discard-locals">,
   HelpText<"Delete temporary local symbols">;
 
 def discard_none: F<"discard-none">,
-  HelpText<"Keep all symbols in the symbol table (default)">;
+  HelpText<"Keep all symbols in the symbol table">;
 
 defm dynamic_linker: Eq<"dynamic-linker", "Which dynamic linker to use">;
 
@@ -244,6 +244,12 @@ defm print_icf_sections: B<"print-icf-sections",
     "List identical folded sections",
     "Do not list identical folded sections (default)">;
 
+def pop_state: F<"pop-state">,
+  HelpText<"Undo the effect of -push-state">;
+
+def push_state: F<"push-state">,
+  HelpText<"Save the current state of -as-needed, -static and -whole-archive">;
+
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
@@ -328,7 +334,7 @@ defm warn_common: B<"warn-common",
     "Warn about duplicate common symbols",
     "Do not warn about duplicate common symbols (default)">;
 
-defm warn_symbol_ordering : B<"warn-symbol-ordering",
+defm warn_symbol_ordering: B<"warn-symbol-ordering",
     "Warn about problems with the symbol ordering file (default)",
     "Do not warn about problems with the symbol ordering file">;
 
@@ -346,45 +352,45 @@ def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
 
 // Aliases
-def alias_auxiliary: Separate<["-"], "f">, Alias<auxiliary>;
-def alias_Bdynamic_call_shared: F<"call_shared">, Alias<Bdynamic>;
-def alias_Bdynamic_dy: F<"dy">, Alias<Bdynamic>;
-def alias_Bstatic_dn: F<"dn">, Alias<Bstatic>;
-def alias_Bstatic_non_shared: F<"non_shared">, Alias<Bstatic>;
-def alias_Bstatic_static: F<"static">, Alias<Bstatic>;
-def alias_define_common_d: Flag<["-"], "d">, Alias<define_common>;
-def alias_define_common_dc: F<"dc">, Alias<define_common>;
-def alias_define_common_dp: F<"dp">, Alias<define_common>;
-def alias_discard_all_x: Flag<["-"], "x">, Alias<discard_all>;
-def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
-def alias_emit_relocs: Flag<["-"], "q">, Alias<emit_relocs>;
-def alias_end_group_paren: Flag<["-"], ")">, Alias<end_group>;
-def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
-def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;
-def alias_filter: Separate<["-"], "F">, Alias<filter>;
-def alias_format_b: Separate<["-"], "b">, Alias<format>;
-def alias_library: JoinedOrSeparate<["-"], "l">, Alias<library>;
-def alias_library_path: JoinedOrSeparate<["-"], "L">, Alias<library_path>;
-def alias_no_pie_pic_executable: F<"no-pic-executable">, Alias<no_pie>;
-def alias_omagic: Flag<["-"], "N">, Alias<omagic>;
-def alias_o_output: Joined<["--"], "output=">, Alias<o>;
-def alias_o_output2 : Separate<["--"], "output">, Alias<o>;
-def alias_pie_pic_executable: F<"pic-executable">, Alias<pie>;
-def alias_print_map_M: Flag<["-"], "M">, Alias<print_map>;
-def alias_relocatable_r: Flag<["-"], "r">, Alias<relocatable>;
-def alias_rpath_R: JoinedOrSeparate<["-"], "R">, Alias<rpath>;
-def alias_script_T: JoinedOrSeparate<["-"], "T">, Alias<script>;
-def alias_shared_Bshareable: F<"Bshareable">, Alias<shared>;
-def alias_soname_h: JoinedOrSeparate<["-"], "h">, Alias<soname>;
-def alias_start_group_paren: Flag<["-"], "(">, Alias<start_group>;
-def alias_strip_all: Flag<["-"], "s">, Alias<strip_all>;
-def alias_strip_debug_S: Flag<["-"], "S">, Alias<strip_debug>;
-def alias_trace: Flag<["-"], "t">, Alias<trace>;
-def alias_trace_symbol_y : JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>;
-def alias_Ttext_segment: Separate<["-", "--"], "Ttext-segment">, Alias<Ttext>;
-def alias_Ttext_segment_eq: Joined<["-", "--"], "Ttext-segment=">, Alias<Ttext>;
-def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
-def alias_version_V: Flag<["-"], "V">, Alias<version>;
+def: Separate<["-"], "f">, Alias<auxiliary>, HelpText<"Alias for --auxiliary">;
+def: F<"call_shared">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
+def: F<"dy">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
+def: F<"dn">, Alias<Bstatic>, HelpText<"Alias for --Bstatic">;
+def: F<"non_shared">, Alias<Bstatic>, HelpText<"Alias for --Bstatic">;
+def: F<"static">, Alias<Bstatic>, HelpText<"Alias for --Bstatic">;
+def: Flag<["-"], "d">, Alias<define_common>, HelpText<"Alias for --define-common">;
+def: F<"dc">, Alias<define_common>, HelpText<"Alias for --define-common">;
+def: F<"dp">, Alias<define_common>, HelpText<"Alias for --define-common">;
+def: Flag<["-"], "x">, Alias<discard_all>, HelpText<"Alias for --discard-all">;
+def: Flag<["-"], "X">, Alias<discard_locals>, HelpText<"Alias for --discard-locals">;
+def: Flag<["-"], "q">, Alias<emit_relocs>, HelpText<"Alias for --emit-relocs">;
+def: Flag<["-"], ")">, Alias<end_group>, HelpText<"Alias for --end-group">;
+def: JoinedOrSeparate<["-"], "e">, Alias<entry>, HelpText<"Alias for --entry">;
+def: Flag<["-"], "E">, Alias<export_dynamic>, HelpText<"Alias for --export-dynamic">;
+def: Separate<["-"], "F">, Alias<filter>, HelpText<"Alias for --filter">;
+def: Separate<["-"], "b">, Alias<format>, HelpText<"Alias for --format">;
+def: JoinedOrSeparate<["-"], "l">, Alias<library>, HelpText<"Alias for --library">;
+def: JoinedOrSeparate<["-"], "L">, Alias<library_path>, HelpText<"Alias for --library-path">;
+def: F<"no-pic-executable">, Alias<no_pie>, HelpText<"Alias for --no-pie">;
+def: Flag<["-"], "N">, Alias<omagic>, HelpText<"Alias for --omagic">;
+def: Joined<["--"], "output=">, Alias<o>, HelpText<"Alias for -o">;
+def: Separate<["--"], "output">, Alias<o>, HelpText<"Alias for -o">;
+def: F<"pic-executable">, Alias<pie>, HelpText<"Alias for --pie">;
+def: Flag<["-"], "M">, Alias<print_map>, HelpText<"Alias for --print-map">;
+def: Flag<["-"], "r">, Alias<relocatable>, HelpText<"Alias for --relocatable">;
+def: JoinedOrSeparate<["-"], "R">, Alias<rpath>, HelpText<"Alias for --rpath">;
+def: JoinedOrSeparate<["-"], "T">, Alias<script>, HelpText<"Alias for --script">;
+def: F<"Bshareable">, Alias<shared>, HelpText<"Alias for --shared">;
+def: JoinedOrSeparate<["-"], "h">, Alias<soname>, HelpText<"Alias for --soname">;
+def: Flag<["-"], "(">, Alias<start_group>, HelpText<"Alias for --start-group">;
+def: Flag<["-"], "s">, Alias<strip_all>, HelpText<"Alias for --strip-all">;
+def: Flag<["-"], "S">, Alias<strip_debug>, HelpText<"Alias for --strip-debug">;
+def: Flag<["-"], "t">, Alias<trace>, HelpText<"Alias for --trace">;
+def: JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>, HelpText<"Alias for --trace-symbol">;
+def: Separate<["-", "--"], "Ttext-segment">, Alias<Ttext>, HelpText<"Alias for --Ttext">;
+def: Joined<["-", "--"], "Ttext-segment=">, Alias<Ttext>, HelpText<"Alias for --Ttext">;
+def: JoinedOrSeparate<["-"], "u">, Alias<undefined>, HelpText<"Alias for --undefined">;
+def: Flag<["-"], "V">, Alias<version>, HelpText<"Alias for --version">;
 
 // LTO-related options.
 def lto_aa_pipeline: J<"lto-aa-pipeline=">,
@@ -414,16 +420,19 @@ def thinlto_cache_dir: J<"thinlto-cache-dir=">,
 defm thinlto_cache_policy: Eq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
 def thinlto_jobs: J<"thinlto-jobs=">, HelpText<"Number of ThinLTO jobs">;
 
-def plugin_opt_O: J<"plugin-opt=O">, Alias<lto_O>;
-def plugin_opt_debug_pass_manager: F<"plugin-opt=debug-pass-manager">, Alias<lto_debug_pass_manager>;
-def plugin_opt_disable_verify: F<"plugin-opt=disable-verify">, Alias<disable_verify>;
-def plugin_opt_jobs_eq: J<"plugin-opt=jobs=">, Alias<thinlto_jobs>;
-def plugin_opt_lto_partitions_eq: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>;
+def: J<"plugin-opt=O">, Alias<lto_O>, HelpText<"Alias for -lto-O">;
+def: F<"plugin-opt=debug-pass-manager">,
+  Alias<lto_debug_pass_manager>, HelpText<"Alias for -lto-debug-pass-manager">;
+def: F<"plugin-opt=disable-verify">, Alias<disable_verify>, HelpText<"Alias for -disable-verify">;
+def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs>, HelpText<"Alias for -thinlto-jobs">;
+def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for -lto-partitions">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
-def plugin_opt_new_pass_manager: F<"plugin-opt=new-pass-manager">, Alias<lto_new_pass_manager>;
+def: F<"plugin-opt=new-pass-manager">,
+  Alias<lto_new_pass_manager>, HelpText<"Alias for -lto-new-pass-manager">;
 def plugin_opt_obj_path_eq: J<"plugin-opt=obj-path=">;
-def plugin_opt_sample_profile_eq: J<"plugin-opt=sample-profile=">, Alias<lto_sample_profile>;
-def plugin_opt_save_temps: F<"plugin-opt=save-temps">, Alias<save_temps>;
+def: J<"plugin-opt=sample-profile=">,
+  Alias<lto_sample_profile>, HelpText<"Alias for -lto-sample-profile">;
+def: F<"plugin-opt=save-temps">, Alias<save_temps>, HelpText<"Alias for -save-temps">;
 def plugin_opt_thinlto_emit_imports_files: F<"plugin-opt=thinlto-emit-imports-files">;
 def plugin_opt_thinlto_index_only: F<"plugin-opt=thinlto-index-only">;
 def plugin_opt_thinlto_index_only_eq: J<"plugin-opt=thinlto-index-only=">;
@@ -445,25 +454,25 @@ def plugin_opt_thinlto: J<"plugin-opt=thinlto">;
 def plugin_opt_slash: J<"plugin-opt=/">;
 
 // Options listed below are silently ignored for now for compatibility.
-def allow_shlib_undefined: F<"allow-shlib-undefined">;
-def detect_odr_violations: F<"detect-odr-violations">;
-def g: Flag<["-"], "g">;
-def long_plt: F<"long-plt">;
-def no_add_needed: F<"no-add-needed">;
-def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;
-def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">;
-def no_ctors_in_init_array: F<"no-ctors-in-init-array">;
-def no_keep_memory: F<"no-keep-memory">;
-def no_mmap_output_file: F<"no-mmap-output-file">;
-def no_warn_mismatch: F<"no-warn-mismatch">;
-def rpath_link: J<"rpath-link">;
-def rpath_link_eq: J<"rpath-link=">;
-def sort_common: F<"sort-common">;
-def stats: F<"stats">;
-def warn_execstack: F<"warn-execstack">;
-def warn_once: F<"warn-once">;
-def warn_shared_textrel: F<"warn-shared-textrel">;
-def EB : F<"EB">;
-def EL : F<"EL">;
-def G: JoinedOrSeparate<["-"], "G">;
-def Qy : F<"Qy">;
+def: F<"allow-shlib-undefined">;
+def: F<"detect-odr-violations">;
+def: Flag<["-"], "g">;
+def: F<"long-plt">;
+def: F<"no-add-needed">;
+def: F<"no-allow-shlib-undefined">;
+def: F<"no-copy-dt-needed-entries">;
+def: F<"no-ctors-in-init-array">;
+def: F<"no-keep-memory">;
+def: F<"no-mmap-output-file">;
+def: F<"no-warn-mismatch">;
+def: Separate<["--", "-"], "rpath-link">;
+def: J<"rpath-link=">;
+def: F<"sort-common">;
+def: F<"stats">;
+def: F<"warn-execstack">;
+def: F<"warn-once">;
+def: F<"warn-shared-textrel">;
+def: F<"EB">;
+def: F<"EL">;
+def: JoinedOrSeparate<["-"], "G">;
+def: F<"Qy">;
