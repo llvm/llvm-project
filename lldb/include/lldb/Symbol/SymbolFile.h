@@ -148,10 +148,10 @@ public:
                                         SymbolContextList &sc_list);
   virtual uint32_t
   FindGlobalVariables(const ConstString &name,
-                      const CompilerDeclContext *parent_decl_ctx, bool append,
+                      const CompilerDeclContext *parent_decl_ctx,
                       uint32_t max_matches, VariableList &variables);
   virtual uint32_t FindGlobalVariables(const RegularExpression &regex,
-                                       bool append, uint32_t max_matches,
+                                       uint32_t max_matches,
                                        VariableList &variables);
   virtual uint32_t FindFunctions(const ConstString &name,
                                  const CompilerDeclContext *parent_decl_ctx,

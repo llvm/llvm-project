@@ -1968,14 +1968,15 @@ bool SymbolFileDWARF::DeclContextMatchesThisSymbolFile(
 
 uint32_t SymbolFileDWARF::FindGlobalVariables(
     const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
-    bool append, uint32_t max_matches, VariableList &variables) {
+    uint32_t max_matches, VariableList &variables) {
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
   if (log)
     GetObjectFile()->GetModule()->LogMessage(
-        log, "SymbolFileDWARF::FindGlobalVariables (name=\"%s\", "
-             "parent_decl_ctx=%p, append=%u, max_matches=%u, variables)",
-        name.GetCString(), static_cast<const void *>(parent_decl_ctx), append,
+        log,
+        "SymbolFileDWARF::FindGlobalVariables (name=\"%s\", "
+        "parent_decl_ctx=%p, max_matches=%u, variables)",
+        name.GetCString(), static_cast<const void *>(parent_decl_ctx),
         max_matches);
 
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
@@ -1985,12 +1986,7 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
   if (info == NULL)
     return 0;
 
-  // If we aren't appending the results to this list, then clear the list
-  if (!append)
-    variables.Clear();
-
-  // Remember how many variables are in the list before we search in case we
-  // are appending the results to a variable list.
+  // Remember how many variables are in the list before we search.
   const uint32_t original_size = variables.GetSize();
 
   DIEArray die_offsets;
@@ -2047,36 +2043,33 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
   const uint32_t num_matches = variables.GetSize() - original_size;
   if (log && num_matches > 0) {
     GetObjectFile()->GetModule()->LogMessage(
-        log, "SymbolFileDWARF::FindGlobalVariables (name=\"%s\", "
-             "parent_decl_ctx=%p, append=%u, max_matches=%u, variables) => %u",
-        name.GetCString(), static_cast<const void *>(parent_decl_ctx), append,
+        log,
+        "SymbolFileDWARF::FindGlobalVariables (name=\"%s\", "
+        "parent_decl_ctx=%p, max_matches=%u, variables) => %u",
+        name.GetCString(), static_cast<const void *>(parent_decl_ctx),
         max_matches, num_matches);
   }
   return num_matches;
 }
 
 uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
-                                              bool append, uint32_t max_matches,
+                                              uint32_t max_matches,
                                               VariableList &variables) {
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
   if (log) {
     GetObjectFile()->GetModule()->LogMessage(
-        log, "SymbolFileDWARF::FindGlobalVariables (regex=\"%s\", append=%u, "
-             "max_matches=%u, variables)",
-        regex.GetText().str().c_str(), append, max_matches);
+        log,
+        "SymbolFileDWARF::FindGlobalVariables (regex=\"%s\", "
+        "max_matches=%u, variables)",
+        regex.GetText().str().c_str(), max_matches);
   }
 
   DWARFDebugInfo *info = DebugInfo();
   if (info == NULL)
     return 0;
 
-  // If we aren't appending the results to this list, then clear the list
-  if (!append)
-    variables.Clear();
-
-  // Remember how many variables are in the list before we search in case we
-  // are appending the results to a variable list.
+  // Remember how many variables are in the list before we search.
   const uint32_t original_size = variables.GetSize();
 
   DIEArray die_offsets;

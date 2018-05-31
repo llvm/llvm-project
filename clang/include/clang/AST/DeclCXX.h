@@ -751,6 +751,21 @@ public:
     return const_cast<CXXRecordDecl*>(this)->getMostRecentDecl();
   }
 
+  CXXRecordDecl *getMostRecentNonInjectedDecl() {
+    CXXRecordDecl *Recent =
+        static_cast<CXXRecordDecl *>(this)->getMostRecentDecl();
+    while (Recent->isInjectedClassName()) {
+      // FIXME: Does injected class name need to be in the redeclarations chain?
+      assert(Recent->getPreviousDecl());
+      Recent = Recent->getPreviousDecl();
+    }
+    return Recent;
+  }
+
+  const CXXRecordDecl *getMostRecentNonInjectedDecl() const {
+    return const_cast<CXXRecordDecl*>(this)->getMostRecentNonInjectedDecl();
+  }
+
   CXXRecordDecl *getDefinition() const {
     // We only need an update if we don't already know which
     // declaration is the definition.

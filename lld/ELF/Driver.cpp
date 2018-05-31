@@ -940,6 +940,10 @@ static bool getBinaryOption(StringRef S) {
 }
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {
+  // For --{push,pop}-state.
+  std::vector<std::tuple<bool, bool, bool>> Stack;
+
+  // Iterate over argv to process input files and positional arguments.
   for (auto *Arg : Args) {
     switch (Arg->getOption().getUnaliasedOption().getID()) {
     case OPT_library:
@@ -1015,6 +1019,17 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       InLib = false;
       InputFile::IsInGroup = false;
       ++InputFile::NextGroupId;
+      break;
+    case OPT_push_state:
+      Stack.emplace_back(Config->AsNeeded, Config->Static, InWholeArchive);
+      break;
+    case OPT_pop_state:
+      if (Stack.empty()) {
+        error("unbalanced --push-state/--pop-state");
+        break;
+      }
+      std::tie(Config->AsNeeded, Config->Static, InWholeArchive) = Stack.back();
+      Stack.pop_back();
       break;
     }
   }

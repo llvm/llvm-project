@@ -748,9 +748,6 @@ static Value *foldLogOpOfMaskedICmps(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
   return nullptr;
 }
 
-static Instruction *foldMaskedMerge(BinaryOperator &I,
-                                    InstCombiner::BuilderTy &Builder);
-
 /// Try to fold a signed range checked with lower bound 0 to an unsigned icmp.
 /// Example: (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
 /// If \p Inverted is true then the check is for the inverted range, e.g.
@@ -1651,9 +1648,6 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
       A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, Op0, Constant::getNullValue(I.getType()));
 
-  if (Instruction *MM = foldMaskedMerge(I, Builder))
-    return MM;
-
   return Changed ? &I : nullptr;
 }
 
@@ -2293,9 +2287,6 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     }
   }
 
-  if (Instruction *MM = foldMaskedMerge(I, Builder))
-    return MM;
-
   return Changed ? &I : nullptr;
 }
 
@@ -2427,33 +2418,6 @@ Value *InstCombiner::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
       }
     }
   }
-
-  return nullptr;
-}
-
-/// Bitwise masked merge (bitwise select) is typically coded as:
-/// (x & m) | (y & ~m)
-/// Another variant is:
-/// (x | ~m) & (y | m)
-/// Canonicalize those to a form with one less IR instruction:
-/// ((x ^ y) & m) ^ y
-static Instruction *foldMaskedMerge(BinaryOperator &I,
-                                    InstCombiner::BuilderTy &Builder) {
-  Value *X, *Y;
-
-  Value *M;
-  if (match(&I, m_c_Or(m_OneUse(m_c_And(m_Value(Y), m_Not(m_Value(M)))),
-                       m_OneUse(m_c_And(m_Value(X), m_Deferred(M))))) ||
-      match(&I, m_c_And(m_OneUse(m_c_Or(m_Value(X), m_Not(m_Value(M)))),
-                        m_OneUse(m_c_Or(m_Value(Y), m_Deferred(M)))))) {
-    assert(!isa<Constant>(M) && "Shouldn't have matched a constant.");
-
-    Value *D = Builder.CreateXor(X, Y);
-    Value *A = Builder.CreateAnd(D, M);
-    return BinaryOperator::CreateXor(A, Y);
-  }
-
-  // FIXME: we still want to canonicalize the patterns with constants somewhat.
 
   return nullptr;
 }

@@ -614,3 +614,49 @@ for.body:                                         ; preds = %entry, %for.body
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+;;  for(int i = 0; i < N; i+=1) {
+;;    A[M*N*i] = 1;
+;;    for(int j = 0; j < M; j+=1)
+;;      A[M*N + M*i + j] = 2;
+
+define void @couple_weakzerosiv(i32* noalias nocapture %A, i64 %N, i64 %M) {
+entry:
+  %cmp29 = icmp sgt i64 %N, 0
+  br i1 %cmp29, label %for.body.lr.ph, label %for.cond.cleanup
+
+; CHECK-LABEL: couple_weakzerosiv
+; CHECK: da analyze - none!
+; CHECK: da analyze - output [p>]!
+; CHECK: da analyze - none!
+
+for.body.lr.ph:                                   ; preds = %entry
+  %mul = mul nsw i64 %M, %N
+  br label %for.body.us
+
+for.body.us:                                      ; preds = %for.body.lr.ph, %for.cond.cleanup4.loopexit.us
+  %i.030.us = phi i64 [ %add12.us, %for.cond.cleanup4.loopexit.us ], [ 0, %for.body.lr.ph ]
+  %mul1.us = mul nsw i64 %i.030.us, %mul
+  %arrayidx.us = getelementptr inbounds i32, i32* %A, i64 %mul1.us
+  store i32 1, i32* %arrayidx.us, align 4
+  %mul6.us = mul nsw i64 %i.030.us, %M
+  %add.us = add i64 %mul6.us, %mul
+  br label %for.body5.us
+
+for.body5.us:                                     ; preds = %for.body5.us, %for.body.us
+  %j.028.us = phi i64 [ 0, %for.body.us ], [ %add10.us, %for.body5.us ]
+  %add8.us = add i64 %add.us, %j.028.us
+  %arrayidx9.us = getelementptr inbounds i32, i32* %A, i64 %add8.us
+  store i32 2, i32* %arrayidx9.us, align 4
+  %add10.us = add nuw nsw i64 %j.028.us, 1
+  %exitcond.us = icmp eq i64 %add10.us, %M
+  br i1 %exitcond.us, label %for.cond.cleanup4.loopexit.us, label %for.body5.us
+
+for.cond.cleanup4.loopexit.us:                    ; preds = %for.body5.us
+  %add12.us = add nuw nsw i64 %i.030.us, 1
+  %exitcond31.us = icmp eq i64 %add12.us, %N
+  br i1 %exitcond31.us, label %for.cond.cleanup, label %for.body.us
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup4.loopexit.us, %entry
+  ret void
+}

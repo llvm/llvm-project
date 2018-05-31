@@ -122,6 +122,9 @@ class Compilation {
   /// Whether an error during the parsing of the input args.
   bool ContainsError;
 
+  /// Whether to keep temporary files regardless of -save-temps.
+  bool ForceKeepTempFiles = false;
+
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
               llvm::opt::InputArgList *Args,

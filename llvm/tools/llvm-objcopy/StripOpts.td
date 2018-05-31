@@ -7,6 +7,10 @@ multiclass Eq<string name> {
 
 def help : Flag<["-", "--"], "help">;
 
+defm output : Eq<"o">,
+              MetaVarName<"output">,
+              HelpText<"Write output to <file>">;
+
 def strip_debug : Flag<["-", "--"], "strip-debug">,
                   HelpText<"Remove debugging symbols only">;
 

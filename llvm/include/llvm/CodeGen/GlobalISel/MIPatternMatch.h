@@ -222,6 +222,12 @@ m_GFMul(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_FSUB, false>
+m_GFSub(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_FSUB, false>(L, R);
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, TargetOpcode::G_AND, true>
 m_GAnd(const LHS &L, const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_AND, true>(L, R);
@@ -302,6 +308,11 @@ m_GFPTrunc(const SrcTy &Src) {
 template <typename SrcTy>
 inline UnaryOp_match<SrcTy, TargetOpcode::G_FABS> m_GFabs(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::G_FABS>(Src);
+}
+
+template <typename SrcTy>
+inline UnaryOp_match<SrcTy, TargetOpcode::G_FNEG> m_GFNeg(const SrcTy &Src) {
+  return UnaryOp_match<SrcTy, TargetOpcode::G_FNEG>(Src);
 }
 
 template <typename SrcTy>

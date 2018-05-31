@@ -212,6 +212,14 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   ASSERT_EQ(Cst, 42);
   ASSERT_EQ(Src0, Copies[0]);
 
+  // FSUB
+  auto MIBFSub = B.buildInstr(TargetOpcode::G_FSUB, s64, Copies[0],
+                              B.buildConstant(s64, 42));
+  match = mi_match(MIBFSub->getOperand(0).getReg(), MRI,
+                   m_GFSub(m_Reg(Src0), m_Reg()));
+  ASSERT_TRUE(match);
+  ASSERT_EQ(Src0, Copies[0]);
+
   // Build AND %0, %1
   auto MIBAnd = B.buildAnd(s64, Copies[0], Copies[1]);
   // Try to match AND.
@@ -283,7 +291,13 @@ TEST(PatternMatchInstr, MatchFPUnaryOp) {
   auto MIBFabs = B.buildInstr(TargetOpcode::G_FABS, s32, Copy0s32);
   bool match = mi_match(MIBFabs->getOperand(0).getReg(), MRI, m_GFabs(m_Reg()));
   ASSERT_TRUE(match);
+
   unsigned Src;
+  auto MIBFNeg = B.buildInstr(TargetOpcode::G_FNEG, s32, Copy0s32);
+  match = mi_match(MIBFNeg->getOperand(0).getReg(), MRI, m_GFNeg(m_Reg(Src)));
+  ASSERT_TRUE(match);
+  ASSERT_EQ(Src, Copy0s32->getOperand(0).getReg());
+
   match = mi_match(MIBFabs->getOperand(0).getReg(), MRI, m_GFabs(m_Reg(Src)));
   ASSERT_TRUE(match);
   ASSERT_EQ(Src, Copy0s32->getOperand(0).getReg());

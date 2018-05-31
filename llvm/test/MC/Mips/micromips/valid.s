@@ -2,53 +2,99 @@
 
 .set noat
 addiusp -16                 # CHECK: addiusp -16        # encoding: [0x4f,0xf9]
+                            # CHECK:                    # <MCInst #{{.*}} ADDIUSP_MM
 addiusp -1028               # CHECK: addiusp -1028      # encoding: [0x4f,0xff]
+                            # CHECK:                    # <MCInst #{{.*}} ADDIUSP_MM
 addiusp -1032               # CHECK: addiusp -1032      # encoding: [0x4f,0xfd]
+                            # CHECK:                    # <MCInst #{{.*}} ADDIUSP_MM
 addiusp 1024                # CHECK: addiusp 1024       # encoding: [0x4c,0x01]
+                            # CHECK:                    # <MCInst #{{.*}} ADDIUSP_MM
 addiusp 1028                # CHECK: addiusp 1028       # encoding: [0x4c,0x03]
+                            # CHECK:                    # <MCInst #{{.*}} ADDIUSP_MM
 andi16 $16, $2, 31          # CHECK: andi16 $16, $2, 31 # encoding: [0x2c,0x29]
+                            # CHECK:                    # <MCInst #{{.*}} ANDI16_MM
 jraddiusp 20                # CHECK: jraddiusp 20       # encoding: [0x47,0x05]
+                            # CHECK:                    # <MCInst #{{.*}} JRADDIUSP
 addu16 $6, $17, $4          # CHECK: addu16 $6, $17, $4 # encoding: [0x07,0x42]
+                            # CHECK:                    # <MCInst #{{.*}} ADDU16_MM
 subu16 $5, $16, $3          # CHECK: subu16 $5, $16, $3 # encoding: [0x06,0xb1]
+                            # CHECK:                    # <MCInst #{{.*}} SUBU16_MM
 and16 $16, $2               # CHECK: and16 $16, $2      # encoding: [0x44,0x82]
+                            # CHECK:                    # <MCInst #{{.*}} AND16_MM
 not16 $17, $3               # CHECK: not16 $17, $3      # encoding: [0x44,0x0b]
+                            # CHECK:                    # <MCInst #{{.*}} NOT16_MM
 or16 $16, $4                # CHECK: or16 $16, $4       # encoding: [0x44,0xc4]
+                            # CHECK:                    # <MCInst #{{.*}} OR16_MM
 xor16 $17, $5               # CHECK: xor16 $17, $5      # encoding: [0x44,0x4d]
+                            # CHECK:                    # <MCInst #{{.*}} XOR16_MM
 sll16 $3, $16, 5            # CHECK: sll16 $3, $16, 5   # encoding: [0x25,0x8a]
+                            # CHECK:                    # <MCInst #{{.*}} SLL16_MM
 srl16 $4, $17, 6            # CHECK: srl16 $4, $17, 6   # encoding: [0x26,0x1d]
+                            # CHECK:                    # <MCInst #{{.*}} SRL16_MM
 lbu16 $3, 4($17)            # CHECK: lbu16 $3, 4($17)   # encoding: [0x09,0x94]
+                            # CHECK:                    # <MCInst #{{.*}} LBU16_MM
 lbu16 $3, -1($16)           # CHECK: lbu16 $3, -1($16)  # encoding: [0x09,0x8f]
+                            # CHECK:                    # <MCInst #{{.*}} LBU16_MM
 lhu16 $3, 4($16)            # CHECK: lhu16 $3, 4($16)   # encoding: [0x29,0x82]
+                            # CHECK:                    # <MCInst #{{.*}} LHU16_MM
 lw16 $4, 8($17)             # CHECK: lw16 $4, 8($17)    # encoding: [0x6a,0x12]
+                            # CHECK:                    # <MCInst #{{.*}} LW16_MM
 sb16 $3, 4($16)             # CHECK: sb16 $3, 4($16)    # encoding: [0x89,0x84]
+                            # CHECK:                    # <MCInst #{{.*}} SB16_MM
 sh16 $4, 8($17)             # CHECK: sh16 $4, 8($17)    # encoding: [0xaa,0x14]
+                            # CHECK:                    # <MCInst #{{.*}} SH16_MM
 sw16 $4, 4($17)             # CHECK: sw16 $4, 4($17)    # encoding: [0xea,0x11]
+                            # CHECK:                    # <MCInst #{{.*}} SW16_MM
 sw16 $zero, 4($17)          # CHECK: sw16 $zero, 4($17) # encoding: [0xe8,0x11]
+                            # CHECK:                    # <MCInst #{{.*}} SW16_MM
 mfhi16 $9                   # CHECK: mfhi16 $9          # encoding: [0x46,0x09]
+                            # CHECK:                    # <MCInst #{{.*}} MFHI16_MM
 mflo16 $9                   # CHECK: mflo16 $9          # encoding: [0x46,0x49]
+                            # CHECK:                    # <MCInst #{{.*}} MFLO16_MM
 move $25, $1                # CHECK: move $25, $1       # encoding: [0x0f,0x21]
+                            # CHECK:                    # <MCInst #{{.*}} MOVE16_MM
 jrc $9                      # CHECK: jrc $9             # encoding: [0x45,0xa9]
+                            # CHECK:                    # <MCInst #{{.*}} JRC16_MM
 jalr $9                     # CHECK: jalr $9            # encoding: [0x45,0xc9]
+                            # CHECK:                    # <MCInst #{{.*}} JALR16_MM
 jalrs16 $9                  # CHECK: jalrs16 $9         # encoding: [0x45,0xe9]
+                            # CHECK:                    # <MCInst #{{.*}} MOVE16_MM
 jr16 $9                     # CHECK: jr16 $9            # encoding: [0x45,0x89]
+                            # CHECK:                    # <MCInst #{{.*}} JR16_MM
 li16 $3, -1                 # CHECK: li16 $3, -1        # encoding: [0xed,0xff]
+                            # CHECK:                    # <MCInst #{{.*}} LI16_MM
 li16 $3, 126                # CHECK: li16 $3, 126       # encoding: [0xed,0xfe]
+                            # CHECK:                    # <MCInst #{{.*}} LI16_MM
 addiur1sp $7, 4             # CHECK: addiur1sp $7, 4    # encoding: [0x6f,0x83]
+                            # CHECK:                    # <MCInst #{{.*}} ADDIUR1SP_MM
 addiur2 $6, $7, -1          # CHECK: addiur2 $6, $7, -1 # encoding: [0x6f,0x7e]
+                            # CHECK:                    # <MCInst #{{.*}} ADDIUR2_MM
 addiur2 $6, $7, 12          # CHECK: addiur2 $6, $7, 12 # encoding: [0x6f,0x76]
+                            # CHECK:                    # <MCInst #{{.*}} ADDIUR2_MM
 addius5 $7, -2              # CHECK: addius5 $7, -2     # encoding: [0x4c,0xfc]
 nop                         # CHECK: nop                # encoding: [0x00,0x00,0x00,0x00]
 beqz16 $6, 20               # CHECK: beqz16 $6, 20      # encoding: [0x8f,0x0a]
+                            # CHECK:                    # <MCInst #{{.*}} BEQZ16_MM
 bnez16 $6, 20               # CHECK: bnez16 $6, 20      # encoding: [0xaf,0x0a]
+                            # CHECK:                    # <MCInst #{{.*}} BNEZ16_MM
 b16 132                     # CHECK: b16 132            # encoding: [0xcc,0x42]
+                            # CHECK:                    # <MCInst #{{.*}} B16_MM
 lwm16 $16, $17, $ra, 8($sp) # CHECK: lwm16 $16, $17, $ra, 8($sp) # encoding: [0x45,0x12]
+                            # CHECK:                             # <MCInst #{{.*}} LWM16_MM
 swm16 $16, $17, $ra, 8($sp) # CHECK: swm16 $16, $17, $ra, 8($sp) # encoding: [0x45,0x52]
-movep $5, $6, $2, $3        # CHECK: movep $5, $6, $2, $3        # encoding: [0x84,0x34]
-break16 8                   # CHECK: break16 8          # encoding: [0x46,0x88]
-sdbbp16 14                  # CHECK: sdbbp16 14         # encoding: [0x46,0xce]
-lw $3, 32($sp)              # CHECK: lw $3, 32($sp)     # encoding: [0x48,0x68]
-sw $4, 124($sp)             # CHECK: sw $4, 124($sp)    # encoding: [0xc8,0x9f]
-lw $3, 32($gp)              # CHECK: lw $3, 32($gp)     # encoding: [0x65,0x88]
+                            # CHECK:                      # <MCInst #{{.*}} SWM16_MM
+movep $5, $6, $2, $3        # CHECK: movep $5, $6, $2, $3 # encoding: [0x84,0x34]
+                            # CHECK:                      # <MCInst #{{.*}} MOVEP_MM
+break16 8                   # CHECK: break16 8            # encoding: [0x46,0x88]
+                            # CHECK:                      # <MCInst #{{.*}} BREAK16_MM
+sdbbp16 14                  # CHECK: sdbbp16 14           # encoding: [0x46,0xce]
+                            # CHECK:                      # <MCInst #{{.*}} SDBBP16_MM
+lw $3, 32($sp)              # CHECK: lw $3, 32($sp)       # encoding: [0x48,0x68]
+                            # CHECK:                      # <MCInst #{{.*}} LWSP_MM
+sw $4, 124($sp)             # CHECK: sw $4, 124($sp)      # encoding: [0xc8,0x9f]
+                            # CHECK:                      # <MCInst #{{.*}} SWSP_MM
+lw $3, 32($gp)              # CHECK: lw $3, 32($gp)       # encoding: [0x65,0x88]
+                            # CHECK:                      # <MCInst #{{.*}} LWGP_MM
 abs.s $f0, $f2              # CHECK:  abs.s $f0, $f2    # encoding: [0x54,0x02,0x03,0x7b]
                             # CHECK-NEXT:               # <MCInst #{{[0-9]+}} FABS_S_MM
 abs.d $f4, $f6              # CHECK:  abs.d $f4, $f6    # encoding: [0x54,0x86,0x23,0x7b]

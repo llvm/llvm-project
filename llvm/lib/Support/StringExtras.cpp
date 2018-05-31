@@ -58,7 +58,7 @@ void llvm::SplitString(StringRef Source,
   }
 }
 
-void llvm::PrintEscapedString(StringRef Name, raw_ostream &Out) {
+void llvm::printEscapedString(StringRef Name, raw_ostream &Out) {
   for (unsigned i = 0, e = Name.size(); i != e; ++i) {
     unsigned char C = Name[i];
     if (isprint(C) && C != '\\' && C != '"')
@@ -68,7 +68,7 @@ void llvm::PrintEscapedString(StringRef Name, raw_ostream &Out) {
   }
 }
 
-void llvm::PrintHTMLEscaped(StringRef String, raw_ostream &Out) {
+void llvm::printHTMLEscaped(StringRef String, raw_ostream &Out) {
   for (char C : String) {
     if (C == '&')
       Out << "&amp;";

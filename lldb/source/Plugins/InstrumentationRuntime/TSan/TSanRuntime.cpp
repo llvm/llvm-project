@@ -573,7 +573,7 @@ static void GetSymbolDeclarationFromAddress(ProcessSP process_sp, addr_t addr,
     return;
 
   VariableList var_list;
-  module->FindGlobalVariables(sym_name, nullptr, true, 1U, var_list);
+  module->FindGlobalVariables(sym_name, nullptr, 1U, var_list);
   if (var_list.GetSize() < 1)
     return;
 

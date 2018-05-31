@@ -756,3 +756,51 @@ void PrintPreambleAction::ExecuteAction() {
     llvm::outs().write((*Buffer)->getBufferStart(), Preamble);
   }
 }
+
+void DumpCompilerOptionsAction::ExecuteAction() {
+  CompilerInstance &CI = getCompilerInstance();
+  std::unique_ptr<raw_ostream> OSP =
+      CI.createDefaultOutputFile(false, getCurrentFile());
+  if (!OSP)
+    return;
+
+  raw_ostream &OS = *OSP;
+  const Preprocessor &PP = CI.getPreprocessor();
+  const LangOptions &LangOpts = PP.getLangOpts();
+
+  // FIXME: Rather than manually format the JSON (which is awkward due to
+  // needing to remove trailing commas), this should make use of a JSON library.
+  // FIXME: Instead of printing enums as an integral value and specifying the
+  // type as a separate field, use introspection to print the enumerator.
+
+  OS << "{\n";
+  OS << "\n\"features\" : [\n";
+  {
+    llvm::SmallString<128> Str;
+#define FEATURE(Name, Predicate)                                               \
+  ("\t{\"" #Name "\" : " + llvm::Twine(Predicate ? "true" : "false") + "},\n") \
+      .toVector(Str);
+#include "clang/Basic/Features.def"
+#undef FEATURE
+    // Remove the newline and comma from the last entry to ensure this remains
+    // valid JSON.
+    OS << Str.substr(0, Str.size() - 2);
+  }
+  OS << "\n],\n";
+
+  OS << "\n\"extensions\" : [\n";
+  {
+    llvm::SmallString<128> Str;
+#define EXTENSION(Name, Predicate)                                             \
+  ("\t{\"" #Name "\" : " + llvm::Twine(Predicate ? "true" : "false") + "},\n") \
+      .toVector(Str);
+#include "clang/Basic/Features.def"
+#undef EXTENSION
+    // Remove the newline and comma from the last entry to ensure this remains
+    // valid JSON.
+    OS << Str.substr(0, Str.size() - 2);
+  }
+  OS << "\n]\n";
+
+  OS << "}";
+}

@@ -5,9 +5,10 @@ define <4 x i32> @psignd_3(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @psignd_3(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, [[A:%.*]]
 ; CHECK-NEXT:    [[B_LOBIT1:%.*]] = ashr <4 x i32> [[B:%.*]], <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[SUB]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], [[B_LOBIT1]]
-; CHECK-NEXT:    [[COND:%.*]] = xor <4 x i32> [[TMP2]], [[A]]
+; CHECK-NEXT:    [[T1:%.*]] = xor <4 x i32> [[B_LOBIT1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[T2:%.*]] = and <4 x i32> [[T1]], [[A]]
+; CHECK-NEXT:    [[T3:%.*]] = and <4 x i32> [[B_LOBIT1]], [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = or <4 x i32> [[T2]], [[T3]]
 ; CHECK-NEXT:    ret <4 x i32> [[COND]]
 ;
   %cmp = icmp slt <4 x i32> %b, zeroinitializer
@@ -26,9 +27,10 @@ define <4 x i32> @test1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, [[A:%.*]]
 ; CHECK-NEXT:    [[B_LOBIT1:%.*]] = ashr <4 x i32> [[B:%.*]], <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[SUB]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], [[B_LOBIT1]]
-; CHECK-NEXT:    [[COND:%.*]] = xor <4 x i32> [[TMP2]], [[SUB]]
+; CHECK-NEXT:    [[B_LOBIT1_NOT:%.*]] = xor <4 x i32> [[B_LOBIT1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[T2:%.*]] = and <4 x i32> [[B_LOBIT1]], [[A]]
+; CHECK-NEXT:    [[T3:%.*]] = and <4 x i32> [[B_LOBIT1_NOT]], [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = or <4 x i32> [[T2]], [[T3]]
 ; CHECK-NEXT:    ret <4 x i32> [[COND]]
 ;
   %cmp = icmp sgt <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>

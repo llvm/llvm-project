@@ -31,7 +31,7 @@ def build_id: F<"build-id">, HelpText<"Generate build ID note">;
 
 def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">;
 
-defm check_sections : B<"check-sections",
+defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
     "Do not check section addresses for overlaps">;
 
@@ -96,7 +96,7 @@ def discard_locals: F<"discard-locals">,
   HelpText<"Delete temporary local symbols">;
 
 def discard_none: F<"discard-none">,
-  HelpText<"Keep all symbols in the symbol table (default)">;
+  HelpText<"Keep all symbols in the symbol table">;
 
 defm dynamic_linker: Eq<"dynamic-linker", "Which dynamic linker to use">;
 
@@ -244,6 +244,12 @@ defm print_icf_sections: B<"print-icf-sections",
     "List identical folded sections",
     "Do not list identical folded sections (default)">;
 
+def pop_state: F<"pop-state">,
+  HelpText<"Undo the effect of -push-state">;
+
+def push_state: F<"push-state">,
+  HelpText<"Save the current state of -as-needed, -static and -whole-archive">;
+
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
@@ -328,7 +334,7 @@ defm warn_common: B<"warn-common",
     "Warn about duplicate common symbols",
     "Do not warn about duplicate common symbols (default)">;
 
-defm warn_symbol_ordering : B<"warn-symbol-ordering",
+defm warn_symbol_ordering: B<"warn-symbol-ordering",
     "Warn about problems with the symbol ordering file (default)",
     "Do not warn about problems with the symbol ordering file">;
 
@@ -445,25 +451,25 @@ def plugin_opt_thinlto: J<"plugin-opt=thinlto">;
 def plugin_opt_slash: J<"plugin-opt=/">;
 
 // Options listed below are silently ignored for now for compatibility.
-def allow_shlib_undefined: F<"allow-shlib-undefined">;
-def detect_odr_violations: F<"detect-odr-violations">;
-def g: Flag<["-"], "g">;
-def long_plt: F<"long-plt">;
-def no_add_needed: F<"no-add-needed">;
-def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;
-def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">;
-def no_ctors_in_init_array: F<"no-ctors-in-init-array">;
-def no_keep_memory: F<"no-keep-memory">;
-def no_mmap_output_file: F<"no-mmap-output-file">;
-def no_warn_mismatch: F<"no-warn-mismatch">;
-def rpath_link: J<"rpath-link">;
-def rpath_link_eq: J<"rpath-link=">;
-def sort_common: F<"sort-common">;
-def stats: F<"stats">;
-def warn_execstack: F<"warn-execstack">;
-def warn_once: F<"warn-once">;
-def warn_shared_textrel: F<"warn-shared-textrel">;
-def EB : F<"EB">;
-def EL : F<"EL">;
-def G: JoinedOrSeparate<["-"], "G">;
-def Qy : F<"Qy">;
+def: F<"allow-shlib-undefined">;
+def: F<"detect-odr-violations">;
+def: Flag<["-"], "g">;
+def: F<"long-plt">;
+def: F<"no-add-needed">;
+def: F<"no-allow-shlib-undefined">;
+def: F<"no-copy-dt-needed-entries">;
+def: F<"no-ctors-in-init-array">;
+def: F<"no-keep-memory">;
+def: F<"no-mmap-output-file">;
+def: F<"no-warn-mismatch">;
+def: Separate<["--", "-"], "rpath-link">;
+def: J<"rpath-link=">;
+def: F<"sort-common">;
+def: F<"stats">;
+def: F<"warn-execstack">;
+def: F<"warn-once">;
+def: F<"warn-shared-textrel">;
+def: F<"EB">;
+def: F<"EL">;
+def: JoinedOrSeparate<["-"], "G">;
+def: F<"Qy">;

@@ -1066,7 +1066,7 @@ Constant *DevirtModule::importConstant(VTableSlot Slot, ArrayRef<uint64_t> Args,
 
   // We only need to set metadata if the global is newly created, in which
   // case it would not have hidden visibility.
-  if (GV->getMetadata(LLVMContext::MD_absolute_symbol))
+  if (GV->hasMetadata(LLVMContext::MD_absolute_symbol))
     return C;
 
   auto SetAbsRange = [&](uint64_t Min, uint64_t Max) {
