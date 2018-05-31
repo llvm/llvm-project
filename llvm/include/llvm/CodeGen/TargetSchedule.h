@@ -185,6 +185,7 @@ public:
   /// if converter after moving it to TargetSchedModel).
   unsigned computeInstrLatency(const MachineInstr *MI,
                                bool UseDefaultDefLatency = true) const;
+  unsigned computeInstrLatency(const MCInst &MI) const;
   unsigned computeInstrLatency(unsigned Opcode) const;
 
 
@@ -196,6 +197,7 @@ public:
 
   /// Compute the reciprocal throughput of the given instruction.
   Optional<double> computeReciprocalThroughput(const MachineInstr *MI) const;
+  Optional<double> computeReciprocalThroughput(const MCInst &MI) const;
   Optional<double> computeReciprocalThroughput(unsigned Opcode) const;
 };
 

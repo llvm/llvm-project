@@ -45,7 +45,7 @@ static isl_stat compressed_guarded_poly_bound(__isl_take isl_basic_set *bset,
 error:
 	isl_basic_set_free(bset);
 	isl_qpolynomial_free(poly);
-	return -1;
+	return isl_stat_error;
 }
 
 static isl_stat unwrapped_guarded_poly_bound(__isl_take isl_basic_set *bset,

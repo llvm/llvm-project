@@ -1,14 +1,25 @@
 # RUN: yaml2obj %s > %t
+# RUN: cp %t %t3
 # RUN: llvm-objcopy --strip-all %t %t2
 # RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
 
-# We run yaml2obj again rather than copy %t to avoid interfering
-# with llvm-objcopy's test (which potentially could have corrupted/updated the binary).
+# Verify that the previous llvm-objcopy's run has not modified the input.
+# RUN: cmp %t %t3
 
-# RUN: yaml2obj %s > %t3
 # RUN: llvm-strip %t3 
-# RUN: llvm-readobj -file-headers -sections %t3 | FileCheck %s
 # RUN: cmp %t2 %t3
+
+# RUN: cp %t %t4
+# RUN: llvm-strip %t4 -o %t5
+# RUN: cmp %t2 %t5
+
+# Verify that the previous llvm-strip's run has not modified the input.
+# RUN: cmp %t %t4
+
+# RUN: cp %t %t-should-remain-the-same
+# RUN: llvm-strip %t4 -o %t-should-remain-the-same -o %t-should-be-stripped
+# RUN: cmp %t2 %t-should-be-stripped
+# RUN: cmp %t %t-should-remain-the-same
 
 !ELF
 FileHeader:

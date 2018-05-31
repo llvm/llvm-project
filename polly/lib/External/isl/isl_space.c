@@ -2562,7 +2562,6 @@ __isl_give isl_space *isl_space_align_params(__isl_take isl_space *space1,
 	    isl_space_check_named_params(space2) < 0)
 		goto error;
 
-	space2 = isl_space_params(space2);
 	exp = isl_parameter_alignment_reordering(space1, space2);
 	exp = isl_reordering_extend_space(exp, space1);
 	isl_space_free(space2);

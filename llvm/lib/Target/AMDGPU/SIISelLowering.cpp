@@ -7729,6 +7729,8 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   MRI.replaceRegWith(AMDGPU::SCRATCH_WAVE_OFFSET_REG,
                      Info->getScratchWaveOffsetReg());
 
+  Info->limitOccupancy(MF);
+
   TargetLoweringBase::finalizeLowering(MF);
 }
 

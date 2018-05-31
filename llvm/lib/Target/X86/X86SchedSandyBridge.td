@@ -148,6 +148,9 @@ defm : SBWriteResPair<WriteBEXTR, [SBPort05,SBPort1], 2, [1,1], 2>;
 defm : SBWriteResPair<WriteBZHI, [SBPort1], 1>;
 
 // Scalar and vector floating point.
+defm : X86WriteRes<WriteFLD0,          [SBPort5], 1, [1], 1>;
+defm : X86WriteRes<WriteFLD1,          [SBPort0,SBPort5], 1, [1,1], 2>;
+defm : X86WriteRes<WriteFLDC,          [SBPort0,SBPort1], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFLoad,         [SBPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteFLoadX,        [SBPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteFLoadY,        [SBPort23], 7, [1], 1>;

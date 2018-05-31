@@ -261,7 +261,13 @@ TargetSchedModel::computeInstrLatency(const MCSchedClassDesc &SCDesc) const {
 unsigned TargetSchedModel::computeInstrLatency(unsigned Opcode) const {
   assert(hasInstrSchedModel() && "Only call this function with a SchedModel");
   unsigned SCIdx = TII->get(Opcode).getSchedClass();
-  return SchedModel.computeInstrLatency(*STI, SCIdx);
+  return capLatency(SchedModel.computeInstrLatency(*STI, SCIdx));
+}
+
+unsigned TargetSchedModel::computeInstrLatency(const MCInst &Inst) const {
+  if (hasInstrSchedModel())
+    return capLatency(SchedModel.computeInstrLatency(*STI, *TII, Inst));
+  return computeInstrLatency(Inst.getOpcode());
 }
 
 unsigned
@@ -342,3 +348,11 @@ TargetSchedModel::computeReciprocalThroughput(unsigned Opcode) const {
   }
   return Optional<double>();
 }
+
+Optional<double>
+TargetSchedModel::computeReciprocalThroughput(const MCInst &MI) const {
+  if (hasInstrSchedModel())
+    return SchedModel.getReciprocalThroughput(*STI, *TII, MI);
+  return computeReciprocalThroughput(MI.getOpcode());
+}
+

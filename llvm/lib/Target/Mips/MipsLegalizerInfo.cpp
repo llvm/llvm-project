@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsLegalizerInfo.h"
+#include "MipsTargetMachine.h"
 
 using namespace llvm;
 
@@ -23,4 +24,5 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   getActionDefinitionsBuilder(G_ADD).legalFor({s32});
 
   computeTables();
+  verify(*ST.getInstrInfo());
 }

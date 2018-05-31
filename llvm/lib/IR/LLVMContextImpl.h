@@ -1164,7 +1164,7 @@ public:
   /// Remove an attachment.
   ///
   /// Remove the attachment at \c ID, if any.
-  void erase(unsigned ID);
+  bool erase(unsigned ID);
 
   /// Copy out all the attachments.
   ///
@@ -1197,10 +1197,14 @@ public:
   /// Appends all attachments with the given ID to \c Result in insertion order.
   /// If the global has no attachments with the given ID, or if ID is invalid,
   /// leaves Result unchanged.
-  void get(unsigned ID, SmallVectorImpl<MDNode *> &Result);
+  void get(unsigned ID, SmallVectorImpl<MDNode *> &Result) const;
+
+  /// Returns the first attachment with the given ID or nullptr if no such
+  /// attachment exists.
+  MDNode *lookup(unsigned ID) const;
 
   void insert(unsigned ID, MDNode &MD);
-  void erase(unsigned ID);
+  bool erase(unsigned ID);
 
   /// Appends all attachments for the global to \c Result, sorting by attachment
   /// ID. Attachments with the same ID appear in insertion order. This function

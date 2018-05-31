@@ -763,6 +763,8 @@ public:
   /// Prints the full selector name (e.g. "foo:bar:").
   void print(llvm::raw_ostream &OS) const;
 
+  void dump() const;
+
   /// Derive the conventional family of this method.
   ObjCMethodFamily getMethodFamily() const {
     return getMethodFamilyImpl(*this);

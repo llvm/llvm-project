@@ -289,6 +289,15 @@ Create a position independent executable.
 List removed unused sections.
 .It Fl -print-map
 Print a link map to the standard output.
+.It Fl -push-state
+Save the current state of
+.Fl -as-needed ,
+.Fl -static ,
+and
+.Fl -while-archive.
+.It Fl -pop-state
+Undo the effect of
+.Fl -push-state.
 .It Fl -relocatable
 Create relocatable object file.
 .It Fl -reproduce Ns = Ns Ar value

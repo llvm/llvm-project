@@ -309,6 +309,33 @@ static void filterByName(const StringSet<> &Names,
 
 }
 
+template <typename AccelTable>
+static void getDIEOffset(const AccelTable &Accel, StringRef Name,
+                         SmallVectorImpl<uint64_t> &Offsets) {
+  for (const auto &Entry : Accel.equal_range(Name))
+    if (llvm::Optional<uint64_t> Off = Entry.getDIESectionOffset())
+      Offsets.push_back(*Off);
+}
+
+/// Print only DIEs that have a certain name.
+static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
+                              raw_ostream &OS) {
+  SmallVector<uint64_t, 4> Offsets;
+  for (const auto &Name : Names) {
+    getDIEOffset(DICtx.getAppleNames(), Name, Offsets);
+    getDIEOffset(DICtx.getAppleTypes(), Name, Offsets);
+    getDIEOffset(DICtx.getAppleNamespaces(), Name, Offsets);
+    getDIEOffset(DICtx.getDebugNames(), Name, Offsets);
+  }
+  llvm::sort(Offsets.begin(), Offsets.end());
+  Offsets.erase(std::unique(Offsets.begin(), Offsets.end()), Offsets.end());
+
+  for (uint64_t Off: Offsets) {
+    DWARFDie Die = DICtx.getDIEForOffset(Off);
+    Die.dump(OS, 0, getDumpOpts());
+  }
+}
+
 /// Handle the --lookup option and dump the DIEs and line info for the given
 /// address.
 static bool lookup(DWARFContext &DICtx, uint64_t Address, raw_ostream &OS) {
@@ -335,15 +362,6 @@ static bool lookup(DWARFContext &DICtx, uint64_t Address, raw_ostream &OS) {
 bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
                                Twine Filename, raw_ostream &OS);
 
-template <typename AccelTable>
-static llvm::Optional<uint64_t> getDIEOffset(const AccelTable &Accel,
-                                       StringRef Name) {
-  for (const auto &Entry : Accel.equal_range(Name))
-    if (llvm::Optional<uint64_t> Off = Entry.getDIESectionOffset())
-      return *Off;
-  return None;
-}
-
 static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
                            raw_ostream &OS) {
   logAllUnhandledErrors(DICtx.loadRegisterInfo(Obj), errs(),
@@ -369,22 +387,8 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
 
   // Handle the --find option and lower it to --debug-info=<offset>.
   if (!Find.empty()) {
-    DumpOffsets[DIDT_ID_DebugInfo] = [&]() -> llvm::Optional<uint64_t> {
-      for (auto Name : Find) {
-        if (auto Offset = getDIEOffset(DICtx.getAppleNames(), Name))
-          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
-        if (auto Offset = getDIEOffset(DICtx.getAppleTypes(), Name))
-          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
-        if (auto Offset = getDIEOffset(DICtx.getAppleNamespaces(), Name))
-          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
-        if (auto Offset = getDIEOffset(DICtx.getDebugNames(), Name))
-          return DumpOffsets[DIDT_ID_DebugInfo] = *Offset;
-      }
-      return None;
-    }();
-    // Early exit if --find was specified but the current file doesn't have it.
-    if (!DumpOffsets[DIDT_ID_DebugInfo])
-      return true;
+    filterByAccelName(Find, DICtx, OS);
+    return true;
   }
 
   // Dump the complete DWARF structure.

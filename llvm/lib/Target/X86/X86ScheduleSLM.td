@@ -136,6 +136,9 @@ defm : SLMWriteResPair<WriteIDiv32, [SLM_IEC_RSV01, SLMDivider], 25, [1,25], 1, 
 defm : SLMWriteResPair<WriteIDiv64, [SLM_IEC_RSV01, SLMDivider], 25, [1,25], 1, 4>;
 
 // Scalar and vector floating point.
+defm : X86WriteRes<WriteFLD0,       [SLM_FPC_RSV01], 1, [1], 1>;
+defm : X86WriteRes<WriteFLD1,       [SLM_FPC_RSV01], 1, [1], 1>;
+defm : X86WriteRes<WriteFLDC,       [SLM_FPC_RSV01], 1, [2], 2>;
 def  : WriteRes<WriteFLoad,         [SLM_MEC_RSV]> { let Latency = 3; }
 def  : WriteRes<WriteFLoadX,        [SLM_MEC_RSV]> { let Latency = 3; }
 def  : WriteRes<WriteFLoadY,        [SLM_MEC_RSV]> { let Latency = 3; }

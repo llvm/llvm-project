@@ -197,19 +197,19 @@ static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
   if (!BI.OmitShortVersion()) {
     PL << "\t\t<key>CFBundleShortVersionString</key>\n";
     PL << "\t\t<string>";
-    PrintHTMLEscaped(BI.ShortVersionStr, PL);
+    printHTMLEscaped(BI.ShortVersionStr, PL);
     PL << "</string>\n";
   }
 
   PL << "\t\t<key>CFBundleVersion</key>\n";
   PL << "\t\t<string>";
-  PrintHTMLEscaped(BI.VersionStr, PL);
+  printHTMLEscaped(BI.VersionStr, PL);
   PL << "</string>\n";
 
   if (!Toolchain.empty()) {
     PL << "\t\t<key>Toolchain</key>\n";
     PL << "\t\t<string>";
-    PrintHTMLEscaped(Toolchain, PL);
+    printHTMLEscaped(Toolchain, PL);
     PL << "</string>\n";
   }
 

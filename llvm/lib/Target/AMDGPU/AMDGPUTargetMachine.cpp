@@ -171,6 +171,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIDebuggerInsertNopsPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
   initializeSIFixWWMLivenessPass(*PR);
+  initializeSIFormMemoryClausesPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
   initializeAMDGPUUseNativeCallsPass(*PR);
@@ -846,6 +847,8 @@ void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
 
 void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
   insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
+
+  insertPass(&SIOptimizeExecMaskingPreRAID, &SIFormMemoryClausesID);
 
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of

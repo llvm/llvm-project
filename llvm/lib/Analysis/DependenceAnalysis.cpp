@@ -1621,9 +1621,9 @@ bool isRemainderZero(const SCEVConstant *Dividend,
 //
 // If i is not an integer, there's no dependence.
 // If i < 0 or > UB, there's no dependence.
-// If i = 0, the direction is <= and peeling the
+// If i = 0, the direction is >= and peeling the
 // 1st iteration will break the dependence.
-// If i = UB, the direction is >= and peeling the
+// If i = UB, the direction is <= and peeling the
 // last iteration will break the dependence.
 // Otherwise, the direction is *.
 //
@@ -1657,7 +1657,7 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (isKnownPredicate(CmpInst::ICMP_EQ, SrcConst, DstConst)) {
     if (Level < CommonLevels) {
-      Result.DV[Level].Direction &= Dependence::DVEntry::LE;
+      Result.DV[Level].Direction &= Dependence::DVEntry::GE;
       Result.DV[Level].PeelFirst = true;
       ++WeakZeroSIVsuccesses;
     }
@@ -1685,7 +1685,7 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
     if (isKnownPredicate(CmpInst::ICMP_EQ, NewDelta, Product)) {
       // dependences caused by last iteration
       if (Level < CommonLevels) {
-        Result.DV[Level].Direction &= Dependence::DVEntry::GE;
+        Result.DV[Level].Direction &= Dependence::DVEntry::LE;
         Result.DV[Level].PeelLast = true;
         ++WeakZeroSIVsuccesses;
       }

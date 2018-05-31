@@ -25,31 +25,29 @@ namespace {
 
 // Return a string with the special characters in \p Str escaped.
 std::string escape(StringRef Str, const CoverageViewOptions &Opts) {
-  std::string Result;
+  std::string TabExpandedResult;
   unsigned ColNum = 0; // Record the column number.
   for (char C : Str) {
-    ++ColNum;
-    if (C == '&')
-      Result += "&amp;";
-    else if (C == '<')
-      Result += "&lt;";
-    else if (C == '>')
-      Result += "&gt;";
-    else if (C == '\"')
-      Result += "&quot;";
-    else if (C == '\n' || C == '\r') {
-      Result += C;
-      ColNum = 0;
-    } else if (C == '\t') {
-      // Replace '\t' with TabSize spaces.
-      unsigned NumSpaces = Opts.TabSize - (--ColNum % Opts.TabSize);
+    if (C == '\t') {
+      // Replace '\t' with up to TabSize spaces.
+      unsigned NumSpaces = Opts.TabSize - (ColNum % Opts.TabSize);
       for (unsigned I = 0; I < NumSpaces; ++I)
-        Result += "&nbsp;";
+        TabExpandedResult += ' ';
       ColNum += NumSpaces;
-    } else
-      Result += C;
+    } else {
+      TabExpandedResult += C;
+      if (C == '\n' || C == '\r')
+        ColNum = 0;
+      else
+        ++ColNum;
+    }
   }
-  return Result;
+  std::string EscapedHTML;
+  {
+    raw_string_ostream OS{EscapedHTML};
+    printHTMLEscaped(TabExpandedResult, OS);
+  }
+  return EscapedHTML;
 }
 
 // Create a \p Name tag around \p Str, and optionally set its \p ClassName.

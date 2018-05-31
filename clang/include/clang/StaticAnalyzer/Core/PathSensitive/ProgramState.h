@@ -177,20 +177,20 @@ public:
   ///
   /// This returns a new state with the added constraint on \p cond.
   /// If no new state is feasible, NULL is returned.
-  ProgramStateRef assume(DefinedOrUnknownSVal cond, bool assumption) const;
+  LLVM_NODISCARD ProgramStateRef assume(DefinedOrUnknownSVal cond,
+                                        bool assumption) const;
 
   /// Assumes both "true" and "false" for \p cond, and returns both
   /// corresponding states (respectively).
   ///
   /// This is more efficient than calling assume() twice. Note that one (but not
   /// both) of the returned states may be NULL.
-  std::pair<ProgramStateRef, ProgramStateRef>
+  LLVM_NODISCARD std::pair<ProgramStateRef, ProgramStateRef>
   assume(DefinedOrUnknownSVal cond) const;
 
-  ProgramStateRef assumeInBound(DefinedOrUnknownSVal idx,
-                               DefinedOrUnknownSVal upperBound,
-                               bool assumption,
-                               QualType IndexType = QualType()) const;
+  LLVM_NODISCARD ProgramStateRef
+  assumeInBound(DefinedOrUnknownSVal idx, DefinedOrUnknownSVal upperBound,
+                bool assumption, QualType IndexType = QualType()) const;
 
   /// Assumes that the value of \p Val is bounded with [\p From; \p To]
   /// (if \p assumption is "true") or it is fully out of this range
@@ -198,17 +198,17 @@ public:
   ///
   /// This returns a new state with the added constraint on \p cond.
   /// If no new state is feasible, NULL is returned.
-  ProgramStateRef assumeInclusiveRange(DefinedOrUnknownSVal Val,
-                                       const llvm::APSInt &From,
-                                       const llvm::APSInt &To,
-                                       bool assumption) const;
+  LLVM_NODISCARD ProgramStateRef assumeInclusiveRange(DefinedOrUnknownSVal Val,
+                                                      const llvm::APSInt &From,
+                                                      const llvm::APSInt &To,
+                                                      bool assumption) const;
 
   /// Assumes given range both "true" and "false" for \p Val, and returns both
   /// corresponding states (respectively).
   ///
   /// This is more efficient than calling assume() twice. Note that one (but not
   /// both) of the returned states may be NULL.
-  std::pair<ProgramStateRef, ProgramStateRef>
+  LLVM_NODISCARD std::pair<ProgramStateRef, ProgramStateRef>
   assumeInclusiveRange(DefinedOrUnknownSVal Val, const llvm::APSInt &From,
                        const llvm::APSInt &To) const;
 
@@ -232,15 +232,16 @@ public:
 
   /// Create a new state by binding the value 'V' to the statement 'S' in the
   /// state's environment.
-  ProgramStateRef BindExpr(const Stmt *S, const LocationContext *LCtx,
-                               SVal V, bool Invalidate = true) const;
+  LLVM_NODISCARD ProgramStateRef BindExpr(const Stmt *S,
+                                          const LocationContext *LCtx, SVal V,
+                                          bool Invalidate = true) const;
 
-  ProgramStateRef bindLoc(Loc location,
-                          SVal V,
-                          const LocationContext *LCtx,
-                          bool notifyChanges = true) const;
+  LLVM_NODISCARD ProgramStateRef bindLoc(Loc location, SVal V,
+                                         const LocationContext *LCtx,
+                                         bool notifyChanges = true) const;
 
-  ProgramStateRef bindLoc(SVal location, SVal V, const LocationContext *LCtx) const;
+  LLVM_NODISCARD ProgramStateRef bindLoc(SVal location, SVal V,
+                                         const LocationContext *LCtx) const;
 
   /// Initializes the region of memory represented by \p loc with an initial
   /// value. Once initialized, all values loaded from any sub-regions of that
@@ -248,14 +249,15 @@ public:
   /// This method should not be used on regions that are already initialized.
   /// If you need to indicate that memory contents have suddenly become unknown
   /// within a certain region of memory, consider invalidateRegions().
-  ProgramStateRef bindDefaultInitial(SVal loc, SVal V,
-                                     const LocationContext *LCtx) const;
+  LLVM_NODISCARD ProgramStateRef
+  bindDefaultInitial(SVal loc, SVal V, const LocationContext *LCtx) const;
 
   /// Performs C++ zero-initialization procedure on the region of memory
   /// represented by \p loc.
-  ProgramStateRef bindDefaultZero(SVal loc, const LocationContext *LCtx) const;
+  LLVM_NODISCARD ProgramStateRef
+  bindDefaultZero(SVal loc, const LocationContext *LCtx) const;
 
-  ProgramStateRef killBinding(Loc LV) const;
+  LLVM_NODISCARD ProgramStateRef killBinding(Loc LV) const;
 
   /// Returns the state with bindings for the given regions
   ///  cleared from the store.
@@ -275,14 +277,14 @@ public:
   ///        the call and should be considered directly invalidated.
   /// \param ITraits information about special handling for a particular
   ///        region/symbol.
-  ProgramStateRef
+  LLVM_NODISCARD ProgramStateRef
   invalidateRegions(ArrayRef<const MemRegion *> Regions, const Expr *E,
                     unsigned BlockCount, const LocationContext *LCtx,
                     bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
-  ProgramStateRef
+  LLVM_NODISCARD ProgramStateRef
   invalidateRegions(ArrayRef<SVal> Regions, const Expr *E,
                     unsigned BlockCount, const LocationContext *LCtx,
                     bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
@@ -291,8 +293,8 @@ public:
 
   /// enterStackFrame - Returns the state for entry to the given stack frame,
   ///  preserving the current state.
-  ProgramStateRef enterStackFrame(const CallEvent &Call,
-                                  const StackFrameContext *CalleeCtx) const;
+  LLVM_NODISCARD ProgramStateRef enterStackFrame(
+      const CallEvent &Call, const StackFrameContext *CalleeCtx) const;
 
   /// Get the lvalue for a base class object reference.
   Loc getLValue(const CXXBaseSpecifier &BaseSpec, const SubRegion *Super) const;
@@ -370,27 +372,29 @@ public:
                        const MemRegion * const *end) const;
 
   /// Create a new state in which the statement is marked as tainted.
-  ProgramStateRef addTaint(const Stmt *S, const LocationContext *LCtx,
-                               TaintTagType Kind = TaintTagGeneric) const;
+  LLVM_NODISCARD ProgramStateRef
+  addTaint(const Stmt *S, const LocationContext *LCtx,
+           TaintTagType Kind = TaintTagGeneric) const;
 
   /// Create a new state in which the value is marked as tainted.
-  ProgramStateRef addTaint(SVal V, TaintTagType Kind = TaintTagGeneric) const;
+  LLVM_NODISCARD ProgramStateRef
+  addTaint(SVal V, TaintTagType Kind = TaintTagGeneric) const;
 
   /// Create a new state in which the symbol is marked as tainted.
-  ProgramStateRef addTaint(SymbolRef S,
+  LLVM_NODISCARD ProgramStateRef addTaint(SymbolRef S,
                                TaintTagType Kind = TaintTagGeneric) const;
 
   /// Create a new state in which the region symbol is marked as tainted.
-  ProgramStateRef addTaint(const MemRegion *R,
-                               TaintTagType Kind = TaintTagGeneric) const;
+  LLVM_NODISCARD ProgramStateRef
+  addTaint(const MemRegion *R, TaintTagType Kind = TaintTagGeneric) const;
 
   /// Create a new state in a which a sub-region of a given symbol is tainted.
   /// This might be necessary when referring to regions that can not have an
   /// individual symbol, e.g. if they are represented by the default binding of
   /// a LazyCompoundVal.
-  ProgramStateRef addPartialTaint(SymbolRef ParentSym,
-                                  const SubRegion *SubRegion,
-                                  TaintTagType Kind = TaintTagGeneric) const;
+  LLVM_NODISCARD ProgramStateRef
+  addPartialTaint(SymbolRef ParentSym, const SubRegion *SubRegion,
+                  TaintTagType Kind = TaintTagGeneric) const;
 
   /// Check if the statement is tainted in the current state.
   bool isTainted(const Stmt *S, const LocationContext *LCtx,
@@ -405,8 +409,9 @@ public:
 
   void *const* FindGDM(void *K) const;
 
-  template<typename T>
-  ProgramStateRef add(typename ProgramStateTrait<T>::key_type K) const;
+  template <typename T>
+  LLVM_NODISCARD ProgramStateRef
+  add(typename ProgramStateTrait<T>::key_type K) const;
 
   template <typename T>
   typename ProgramStateTrait<T>::data_type
@@ -424,27 +429,31 @@ public:
   template <typename T>
   typename ProgramStateTrait<T>::context_type get_context() const;
 
-
-  template<typename T>
-  ProgramStateRef remove(typename ProgramStateTrait<T>::key_type K) const;
-
-  template<typename T>
-  ProgramStateRef remove(typename ProgramStateTrait<T>::key_type K,
-                        typename ProgramStateTrait<T>::context_type C) const;
   template <typename T>
-  ProgramStateRef remove() const;
+  LLVM_NODISCARD ProgramStateRef
+  remove(typename ProgramStateTrait<T>::key_type K) const;
 
-  template<typename T>
-  ProgramStateRef set(typename ProgramStateTrait<T>::data_type D) const;
+  template <typename T>
+  LLVM_NODISCARD ProgramStateRef
+  remove(typename ProgramStateTrait<T>::key_type K,
+         typename ProgramStateTrait<T>::context_type C) const;
 
-  template<typename T>
-  ProgramStateRef set(typename ProgramStateTrait<T>::key_type K,
-                     typename ProgramStateTrait<T>::value_type E) const;
+  template <typename T> LLVM_NODISCARD ProgramStateRef remove() const;
 
-  template<typename T>
-  ProgramStateRef set(typename ProgramStateTrait<T>::key_type K,
-                     typename ProgramStateTrait<T>::value_type E,
-                     typename ProgramStateTrait<T>::context_type C) const;
+  template <typename T>
+  LLVM_NODISCARD ProgramStateRef
+  set(typename ProgramStateTrait<T>::data_type D) const;
+
+  template <typename T>
+  LLVM_NODISCARD ProgramStateRef
+  set(typename ProgramStateTrait<T>::key_type K,
+      typename ProgramStateTrait<T>::value_type E) const;
+
+  template <typename T>
+  LLVM_NODISCARD ProgramStateRef
+  set(typename ProgramStateTrait<T>::key_type K,
+      typename ProgramStateTrait<T>::value_type E,
+      typename ProgramStateTrait<T>::context_type C) const;
 
   template<typename T>
   bool contains(typename ProgramStateTrait<T>::key_type key) const {

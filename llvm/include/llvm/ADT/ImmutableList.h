@@ -166,7 +166,7 @@ public:
     if (ownsAllocator()) delete &getAllocator();
   }
 
-  ImmutableList<T> concat(const T& Head, ImmutableList<T> Tail) {
+  LLVM_NODISCARD ImmutableList<T> concat(const T &Head, ImmutableList<T> Tail) {
     // Profile the new list to see if it already exists in our cache.
     FoldingSetNodeID ID;
     void* InsertPos;
@@ -188,7 +188,7 @@ public:
     return L;
   }
 
-  ImmutableList<T> add(const T& D, ImmutableList<T> L) {
+  LLVM_NODISCARD ImmutableList<T> add(const T& D, ImmutableList<T> L) {
     return concat(D, L);
   }
 

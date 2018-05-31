@@ -171,12 +171,11 @@ private:
 VariableSP FindGlobalVariable(TargetSP target, llvm::Twine name) {
   ConstString fullname(name.str());
   VariableList variable_list;
-  const bool append = true;
   if (!target) {
     return nullptr;
   }
-  const uint32_t match_count = target->GetImages().FindGlobalVariables(
-      fullname, append, 1, variable_list);
+  const uint32_t match_count =
+      target->GetImages().FindGlobalVariables(fullname, 1, variable_list);
   if (match_count == 1) {
     return variable_list.GetVariableAtIndex(0);
   }

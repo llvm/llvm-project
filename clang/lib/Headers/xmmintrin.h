@@ -2183,8 +2183,8 @@ void _mm_sfence(void);
 ///    2: Bits [47:32] are copied to the destination. \n
 ///    3: Bits [63:48] are copied to the destination.
 /// \returns A 16-bit integer containing the extracted 16 bits of packed data.
-#define _mm_extract_pi16(a, n) __extension__ ({ \
-  (int)__builtin_ia32_vec_ext_v4hi((__m64)a, (int)n); })
+#define _mm_extract_pi16(a, n) \
+  (int)__builtin_ia32_vec_ext_v4hi((__m64)a, (int)n)
 
 /// Copies data from the 64-bit vector of [4 x i16] to the destination,
 ///    and inserts the lower 16-bits of an integer operand at the 16-bit offset
@@ -2214,8 +2214,8 @@ void _mm_sfence(void);
 ///    bits in operand \a a.
 /// \returns A 64-bit integer vector containing the copied packed data from the
 ///    operands.
-#define _mm_insert_pi16(a, d, n) __extension__ ({ \
-  (__m64)__builtin_ia32_vec_set_v4hi((__m64)a, (int)d, (int)n); })
+#define _mm_insert_pi16(a, d, n) \
+  (__m64)__builtin_ia32_vec_set_v4hi((__m64)a, (int)d, (int)n)
 
 /// Compares each of the corresponding packed 16-bit integer values of
 ///    the 64-bit integer vectors, and writes the greater value to the
@@ -2361,8 +2361,8 @@ _mm_mulhi_pu16(__m64 __a, __m64 __b)
 ///    10: assigned from bits [47:32] of \a a. \n
 ///    11: assigned from bits [63:48] of \a a.
 /// \returns A 64-bit integer vector containing the shuffled values.
-#define _mm_shuffle_pi16(a, n) __extension__ ({ \
-  (__m64)__builtin_ia32_pshufw((__v4hi)(__m64)(a), (n)); })
+#define _mm_shuffle_pi16(a, n) \
+  (__m64)__builtin_ia32_pshufw((__v4hi)(__m64)(a), (n))
 
 /// Conditionally copies the values from each 8-bit element in the first
 ///    64-bit integer vector operand to the specified memory location, as
@@ -2603,12 +2603,12 @@ void _mm_setcsr(unsigned int __i);
 ///    10: Bits [95:64] copied from the specified operand. \n
 ///    11: Bits [127:96] copied from the specified operand.
 /// \returns A 128-bit vector of [4 x float] containing the shuffled values.
-#define _mm_shuffle_ps(a, b, mask) __extension__ ({ \
+#define _mm_shuffle_ps(a, b, mask) \
   (__m128)__builtin_shufflevector((__v4sf)(__m128)(a), (__v4sf)(__m128)(b), \
                                   0 + (((mask) >> 0) & 0x3), \
                                   0 + (((mask) >> 2) & 0x3), \
                                   4 + (((mask) >> 4) & 0x3), \
-                                  4 + (((mask) >> 6) & 0x3)); })
+                                  4 + (((mask) >> 6) & 0x3))
 
 /// Unpacks the high-order (index 2,3) values from two 128-bit vectors of
 ///    [4 x float] and interleaves them into a 128-bit vector of [4 x float].

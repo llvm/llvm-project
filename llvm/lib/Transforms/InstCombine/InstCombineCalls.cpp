@@ -1427,6 +1427,28 @@ static Value *simplifyNeonTbl1(const IntrinsicInst &II,
   return Builder.CreateShuffleVector(V1, V2, ShuffleMask);
 }
 
+/// Convert a vector load intrinsic into a simple llvm load instruction.
+/// This is beneficial when the underlying object being addressed comes
+/// from a constant, since we get constant-folding for free.
+static Value *simplifyNeonVld1(const IntrinsicInst &II,
+                               unsigned MemAlign,
+                               InstCombiner::BuilderTy &Builder) {
+  auto *IntrAlign = dyn_cast<ConstantInt>(II.getArgOperand(1));
+
+  if (!IntrAlign)
+    return nullptr;
+
+  unsigned Alignment = IntrAlign->getLimitedValue() < MemAlign ?
+                       MemAlign : IntrAlign->getLimitedValue();
+
+  if (!isPowerOf2_32(Alignment))
+    return nullptr;
+
+  auto *BCastInst = Builder.CreateBitCast(II.getArgOperand(0),
+                                          PointerType::get(II.getType(), 0));
+  return Builder.CreateAlignedLoad(BCastInst, Alignment);
+}
+
 // Returns true iff the 2 intrinsics have the same operands, limiting the
 // comparison to the first NumOperands.
 static bool haveSameOperands(const IntrinsicInst &I, const IntrinsicInst &E,
@@ -2941,7 +2963,14 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     }
     break;
 
-  case Intrinsic::arm_neon_vld1:
+  case Intrinsic::arm_neon_vld1: {
+    unsigned MemAlign = getKnownAlignment(II->getArgOperand(0),
+                                          DL, II, &AC, &DT);
+    if (Value *V = simplifyNeonVld1(*II, MemAlign, Builder))
+      return replaceInstUsesWith(*II, V);
+    break;
+  }
+
   case Intrinsic::arm_neon_vld2:
   case Intrinsic::arm_neon_vld3:
   case Intrinsic::arm_neon_vld4:

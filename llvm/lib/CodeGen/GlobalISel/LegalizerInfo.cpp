@@ -564,6 +564,9 @@ void LegalizerInfo::verify(const MCInstrInfo &MII) const {
     for (unsigned Opcode : FailedOpcodes)
       errs() << " " << MII.getName(Opcode);
     errs() << "\n";
+
+    report_fatal_error("ill-defined LegalizerInfo"
+                       ", try -debug-only=legalizer-info for details");
   }
 #endif
 }

@@ -66,7 +66,7 @@ private:
 
   static Chunk SentinelChunk;
 
-  AllocatorType *Allocator;
+  AllocatorType *Alloc;
   Chunk *Head = &SentinelChunk;
   Chunk *Tail = &SentinelChunk;
   size_t Size = 0;
@@ -88,7 +88,7 @@ private:
       return FreeChunk;
     }
 
-    auto Block = Allocator->Allocate();
+    auto Block = Alloc->Allocate();
     if (Block.Data == nullptr)
       return nullptr;
     // TODO: Maybe use a separate managed allocator for Chunk instances?
@@ -200,11 +200,11 @@ private:
   };
 
 public:
-  explicit Array(AllocatorType &A) : Allocator(&A) {}
+  explicit Array(AllocatorType &A) : Alloc(&A) {}
   Array() : Array(GetGlobalAllocator()) {}
 
   Array(const Array &) = delete;
-  Array(Array &&O) NOEXCEPT : Allocator(O.Allocator),
+  Array(Array &&O) NOEXCEPT : Alloc(O.Alloc),
                               Head(O.Head),
                               Tail(O.Tail),
                               Size(O.Size) {
@@ -216,8 +216,8 @@ public:
   bool empty() const { return Size == 0; }
 
   AllocatorType &allocator() const {
-    DCHECK_NE(Allocator, nullptr);
-    return *Allocator;
+    DCHECK_NE(Alloc, nullptr);
+    return *Alloc;
   }
 
   size_t size() const { return Size; }

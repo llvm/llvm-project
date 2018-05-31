@@ -1763,12 +1763,10 @@ PlatformDarwin::FindBundleBinaryInExecSearchPaths (const ModuleSpec &module_spec
 
     FileSpec platform_pull_apart(platform_file);
     std::vector<std::string> path_parts;
-    ConstString unix_root_dir("/");
-    while (true) {
+    path_parts.push_back(
+        platform_pull_apart.GetLastPathComponent().AsCString());
+    while (platform_pull_apart.RemoveLastPathComponent()) {
       ConstString part = platform_pull_apart.GetLastPathComponent();
-      platform_pull_apart.RemoveLastPathComponent();
-      if (part.IsEmpty() || part == unix_root_dir)
-        break;
       path_parts.push_back(part.AsCString());
     }
     const size_t path_parts_size = path_parts.size();

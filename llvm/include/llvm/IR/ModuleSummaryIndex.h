@@ -296,7 +296,7 @@ public:
 
   /// Returns the hash of the original name, it is identical to the GUID for
   /// externally visible symbols, but not for local ones.
-  GlobalValue::GUID getOriginalName() { return OriginalName; }
+  GlobalValue::GUID getOriginalName() const { return OriginalName; }
 
   /// Initialize the original name hash in this summary.
   void setOriginalName(GlobalValue::GUID Name) { OriginalName = Name; }

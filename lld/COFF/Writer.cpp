@@ -849,6 +849,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_ISOLATION;
   if (Config->GuardCF != GuardCFLevel::Off)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_GUARD_CF;
+  if (Config->IntegrityCheck)
+    PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_FORCE_INTEGRITY;
   if (SetNoSEHCharacteristic)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_SEH;
   if (Config->TerminalServerAware)

@@ -564,10 +564,19 @@ def LD_Fp180 : FpI_<(outs RFP80:$dst), (ins), ZeroArgFP,
                 [(set RFP80:$dst, fpimm1)]>;
 }
 
-let SchedRW = [WriteZero] in {
+let SchedRW = [WriteFLD0] in
 def LD_F0 : FPI<0xD9, MRM_EE, (outs), (ins), "fldz">;
+
+let SchedRW = [WriteFLD1] in
 def LD_F1 : FPI<0xD9, MRM_E8, (outs), (ins), "fld1">;
-}
+
+let SchedRW = [WriteFLDC], Defs = [FPSW] in {
+def FLDL2T : I<0xD9, MRM_E9, (outs), (ins), "fldl2t", []>;
+def FLDL2E : I<0xD9, MRM_EA, (outs), (ins), "fldl2e", []>;
+def FLDPI : I<0xD9, MRM_EB, (outs), (ins), "fldpi", []>;
+def FLDLG2 : I<0xD9, MRM_EC, (outs), (ins), "fldlg2", []>;
+def FLDLN2 : I<0xD9, MRM_ED, (outs), (ins), "fldln2", []>;
+} // SchedRW
 
 // Floating point compares.
 let SchedRW = [WriteFCom] in {
@@ -648,11 +657,6 @@ let SchedRW = [WriteMicrocoded] in {
 let Defs = [FPSW] in {
 def WAIT : I<0x9B, RawFrm, (outs), (ins), "wait", []>;
 def FXAM : I<0xD9, MRM_E5, (outs), (ins), "fxam", []>;
-def FLDL2T : I<0xD9, MRM_E9, (outs), (ins), "fldl2t", []>;
-def FLDL2E : I<0xD9, MRM_EA, (outs), (ins), "fldl2e", []>;
-def FLDPI : I<0xD9, MRM_EB, (outs), (ins), "fldpi", []>;
-def FLDLG2 : I<0xD9, MRM_EC, (outs), (ins), "fldlg2", []>;
-def FLDLN2 : I<0xD9, MRM_ED, (outs), (ins), "fldln2", []>;
 def F2XM1 : I<0xD9, MRM_F0, (outs), (ins), "f2xm1", []>;
 def FYL2X : I<0xD9, MRM_F1, (outs), (ins), "fyl2x", []>;
 def FPTAN : I<0xD9, MRM_F2, (outs), (ins), "fptan", []>;
