@@ -3103,14 +3103,38 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
       Member->setInvalidDecl();
     }
 
+    NamedDecl *NonTemplateMember = Member;
+    if (FunctionTemplateDecl *FunTmpl = dyn_cast<FunctionTemplateDecl>(Member))
+      NonTemplateMember = FunTmpl->getTemplatedDecl();
+    else if (VarTemplateDecl *VarTmpl = dyn_cast<VarTemplateDecl>(Member))
+      NonTemplateMember = VarTmpl->getTemplatedDecl();
+
     Member->setAccess(AS);
 
     // If we have declared a member function template or static data member
     // template, set the access of the templated declaration as well.
-    if (FunctionTemplateDecl *FunTmpl = dyn_cast<FunctionTemplateDecl>(Member))
-      FunTmpl->getTemplatedDecl()->setAccess(AS);
-    else if (VarTemplateDecl *VarTmpl = dyn_cast<VarTemplateDecl>(Member))
-      VarTmpl->getTemplatedDecl()->setAccess(AS);
+    if (NonTemplateMember != Member)
+      NonTemplateMember->setAccess(AS);
+
+    // C++ [temp.deduct.guide]p3:
+    //   A deduction guide [...] for a member class template [shall be
+    //   declared] with the same access [as the template].
+    if (auto *DG = dyn_cast<CXXDeductionGuideDecl>(NonTemplateMember)) {
+      auto *TD = DG->getDeducedTemplate();
+      if (AS != TD->getAccess()) {
+        Diag(DG->getLocStart(), diag::err_deduction_guide_wrong_access);
+        Diag(TD->getLocStart(), diag::note_deduction_guide_template_access)
+          << TD->getAccess();
+        const AccessSpecDecl *LastAccessSpec = nullptr;
+        for (const auto *D : cast<CXXRecordDecl>(CurContext)->decls()) {
+          if (const auto *AccessSpec = dyn_cast<AccessSpecDecl>(D))
+            LastAccessSpec = AccessSpec;
+        }
+        assert(LastAccessSpec && "differing access with no access specifier");
+        Diag(LastAccessSpec->getLocStart(), diag::note_deduction_guide_access)
+          << AS;
+      }
+    }
   }
 
   if (VS.isOverrideSpecified())

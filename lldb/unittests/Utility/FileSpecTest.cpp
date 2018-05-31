@@ -320,3 +320,44 @@ TEST(FileSpecTest, IsRelative) {
   }
 }
 
+TEST(FileSpecTest, RemoveLastPathComponent) {
+  FileSpec fs_posix("/foo/bar/baz", false, FileSpec::Style::posix);
+  EXPECT_STREQ("/foo/bar/baz", fs_posix.GetCString());
+  EXPECT_TRUE(fs_posix.RemoveLastPathComponent());
+  EXPECT_STREQ("/foo/bar", fs_posix.GetCString());
+  EXPECT_TRUE(fs_posix.RemoveLastPathComponent());
+  EXPECT_STREQ("/foo", fs_posix.GetCString());
+  EXPECT_TRUE(fs_posix.RemoveLastPathComponent());
+  EXPECT_STREQ("/", fs_posix.GetCString());
+  EXPECT_FALSE(fs_posix.RemoveLastPathComponent());
+  EXPECT_STREQ("/", fs_posix.GetCString());
+
+  FileSpec fs_posix_relative("./foo/bar/baz", false, FileSpec::Style::posix);
+  EXPECT_STREQ("foo/bar/baz", fs_posix_relative.GetCString());
+  EXPECT_TRUE(fs_posix_relative.RemoveLastPathComponent());
+  EXPECT_STREQ("foo/bar", fs_posix_relative.GetCString());
+  EXPECT_TRUE(fs_posix_relative.RemoveLastPathComponent());
+  EXPECT_STREQ("foo", fs_posix_relative.GetCString());
+  EXPECT_FALSE(fs_posix_relative.RemoveLastPathComponent());
+  EXPECT_STREQ("foo", fs_posix_relative.GetCString());
+
+  FileSpec fs_posix_relative2("./", false, FileSpec::Style::posix);
+  EXPECT_STREQ(".", fs_posix_relative2.GetCString());
+  EXPECT_FALSE(fs_posix_relative2.RemoveLastPathComponent());
+  EXPECT_STREQ(".", fs_posix_relative2.GetCString());
+  EXPECT_FALSE(fs_posix_relative.RemoveLastPathComponent());
+  EXPECT_STREQ(".", fs_posix_relative2.GetCString());
+
+  FileSpec fs_windows("C:\\foo\\bar\\baz", false, FileSpec::Style::windows);
+  EXPECT_STREQ("C:\\foo\\bar\\baz", fs_windows.GetCString());
+  EXPECT_TRUE(fs_windows.RemoveLastPathComponent());
+  EXPECT_STREQ("C:\\foo\\bar", fs_windows.GetCString());
+  EXPECT_TRUE(fs_windows.RemoveLastPathComponent());
+  EXPECT_STREQ("C:\\foo", fs_windows.GetCString());
+  EXPECT_TRUE(fs_windows.RemoveLastPathComponent());
+  EXPECT_STREQ("C:\\", fs_windows.GetCString());
+  EXPECT_TRUE(fs_windows.RemoveLastPathComponent());
+  EXPECT_STREQ("C:", fs_windows.GetCString());
+  EXPECT_FALSE(fs_windows.RemoveLastPathComponent());
+  EXPECT_STREQ("C:", fs_windows.GetCString());
+}

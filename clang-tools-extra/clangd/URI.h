@@ -107,9 +107,8 @@ public:
 
   /// Returns the include path of the file (e.g. <path>, "path"), which can be
   /// #included directly. See URI::includeSpelling for details.
-  virtual llvm::Expected<std::string>
-  getIncludeSpelling(const URI& U) const {
-    return "";  // no customized include path for this scheme.
+  virtual llvm::Expected<std::string> getIncludeSpelling(const URI &U) const {
+    return ""; // no customized include path for this scheme.
   }
 };
 

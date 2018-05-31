@@ -13385,9 +13385,13 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   if (Body && getCurFunction()->HasPotentialAvailabilityViolations)
     DiagnoseUnguardedAvailabilityViolations(BSI->TheDecl);
 
-  // Try to apply the named return value optimization.
-  computeNRVO(Body, BSI);
-
+  // Try to apply the named return value optimization. We have to check again
+  // if we can do this, though, because blocks keep return statements around
+  // to deduce an implicit return type.
+  if (getLangOpts().CPlusPlus && RetTy->isRecordType() &&
+      !BSI->TheDecl->isDependentContext())
+    computeNRVO(Body, BSI);
+  
   BlockExpr *Result = new (Context) BlockExpr(BSI->TheDecl, BlockTy);
   AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
   PopFunctionScopeInfo(&WP, Result->getBlockDecl(), Result);

@@ -4273,10 +4273,6 @@ __isl_give isl_qpolynomial *isl_qpolynomial_align_params(
 	if (!equal_params) {
 		isl_reordering *exp;
 
-		model = isl_space_drop_dims(model, isl_dim_in,
-					0, isl_space_dim(model, isl_dim_in));
-		model = isl_space_drop_dims(model, isl_dim_out,
-					0, isl_space_dim(model, isl_dim_out));
 		exp = isl_parameter_alignment_reordering(qp->dim, model);
 		exp = isl_reordering_extend_space(exp,
 					isl_qpolynomial_get_domain_space(qp));
@@ -4380,7 +4376,7 @@ static isl_stat set_div(__isl_take isl_set *set,
 error:
 	isl_set_free(set);
 	isl_qpolynomial_free(qp);
-	return -1;
+	return isl_stat_error;
 }
 
 /* Split the domain "set" such that integer division "div"

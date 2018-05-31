@@ -1295,7 +1295,7 @@ _mm_cmpgt_pi32(__m64 __m1, __m64 __m2)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_setzero_si64(void)
 {
-    return (__m64){ 0LL };
+    return __extension__ (__m64){ 0LL };
 }
 
 /// Constructs a 64-bit integer vector initialized with the specified

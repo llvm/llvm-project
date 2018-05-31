@@ -25,18 +25,56 @@ using namespace ento;
 namespace {
 
 class TrustNonnullChecker : public Checker<check::PostCall> {
+private:
+  /// \returns Whether we trust the result of the method call to be
+  /// a non-null pointer.
+  bool isNonNullPtr(const CallEvent &Call, CheckerContext &C) const {
+    QualType ExprRetType = Call.getResultType();
+    if (!ExprRetType->isAnyPointerType())
+      return false;
+
+    if (getNullabilityAnnotation(ExprRetType) == Nullability::Nonnull)
+      return true;
+
+    // The logic for ObjC instance method calls is more complicated,
+    // as the return value is nil when the receiver is nil.
+    if (!isa<ObjCMethodCall>(&Call))
+      return false;
+
+    const auto *MCall = cast<ObjCMethodCall>(&Call);
+    const ObjCMethodDecl *MD = MCall->getDecl();
+
+    // Distrust protocols.
+    if (isa<ObjCProtocolDecl>(MD->getDeclContext()))
+      return false;
+
+    QualType DeclRetType = MD->getReturnType();
+    if (getNullabilityAnnotation(DeclRetType) != Nullability::Nonnull)
+      return false;
+
+    // For class messages it is sufficient for the declaration to be
+    // annotated _Nonnull.
+    if (!MCall->isInstanceMessage())
+      return true;
+
+    // Alternatively, the analyzer could know that the receiver is not null.
+    SVal Receiver = MCall->getReceiverSVal();
+    ConditionTruthVal TV = C.getState()->isNonNull(Receiver);
+    if (TV.isConstrainedTrue())
+      return true;
+
+    return false;
+  }
+
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const {
     // Only trust annotations for system headers for non-protocols.
     if (!Call.isInSystemHeader())
       return;
 
-    QualType RetType = Call.getResultType();
-    if (!RetType->isAnyPointerType())
-      return;
-
     ProgramStateRef State = C.getState();
-    if (getNullabilityAnnotation(RetType) == Nullability::Nonnull)
+
+    if (isNonNullPtr(Call, C))
       if (auto L = Call.getReturnValue().getAs<Loc>())
         State = State->assume(*L, /*Assumption=*/true);
 

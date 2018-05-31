@@ -689,29 +689,25 @@ let DecoderNamespace = "MicroMips" in {
                  ISA_MICROMIPS32_NOT_MIPS32R6;
   def LWM16_MM : LoadMultMM16<"lwm16", II_LWM>, LWM_FM_MM16<0x4>,
                  ISA_MICROMIPS32_NOT_MIPS32R6;
-  let AdditionalPredicates = [InMicroMips] in {
-    def CFC2_MM : InstSE<(outs GPR32Opnd:$rt), (ins COP2Opnd:$impl),
-                         "cfc2\t$rt, $impl", [], II_CFC2, FrmFR, "cfc2">,
-                  POOL32A_CFTC2_FM_MM<0b1100110100>;
-    def CTC2_MM : InstSE<(outs COP2Opnd:$impl), (ins GPR32Opnd:$rt),
-                         "ctc2\t$rt, $impl", [], II_CTC2, FrmFR, "ctc2">,
-                  POOL32A_CFTC2_FM_MM<0b1101110100>;
-  }
+  def CFC2_MM : InstSE<(outs GPR32Opnd:$rt), (ins COP2Opnd:$impl),
+                       "cfc2\t$rt, $impl", [], II_CFC2, FrmFR, "cfc2">,
+                POOL32A_CFTC2_FM_MM<0b1100110100>, ISA_MICROMIPS;
+  def CTC2_MM : InstSE<(outs COP2Opnd:$impl), (ins GPR32Opnd:$rt),
+                       "ctc2\t$rt, $impl", [], II_CTC2, FrmFR, "ctc2">,
+                POOL32A_CFTC2_FM_MM<0b1101110100>, ISA_MICROMIPS;
 }
 
 class WaitMM<string opstr> :
   InstSE<(outs), (ins uimm10:$code_), !strconcat(opstr, "\t$code_"), [],
          II_WAIT, FrmOther, opstr>;
 
-let DecoderNamespace = "MicroMips", Predicates = [InMicroMips, NotMips32r6,
-                                                  NotMips64r6] in {
+let DecoderNamespace = "MicroMips" in {
   /// Compact Branch Instructions
   def BEQZC_MM : CompactBranchMM<"beqzc", brtarget_mm, seteq, GPR32Opnd>,
-                 COMPACT_BRANCH_FM_MM<0x7>;
+                 COMPACT_BRANCH_FM_MM<0x7>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def BNEZC_MM : CompactBranchMM<"bnezc", brtarget_mm, setne, GPR32Opnd>,
-                 COMPACT_BRANCH_FM_MM<0x5>;
-}
-let DecoderNamespace = "MicroMips" in {
+                 COMPACT_BRANCH_FM_MM<0x5>, ISA_MICROMIPS32_NOT_MIPS32R6;
+
   /// Arithmetic Instructions (ALU Immediate)
   def ADDiu_MM : MMRel, ArithLogicI<"addiu", simm16, GPR32Opnd, II_ADDIU>,
                  ADDI_FM_MM<0xc>, ISA_MICROMIPS32_NOT_MIPS32R6;

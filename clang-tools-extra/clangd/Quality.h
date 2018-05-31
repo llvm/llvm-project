@@ -116,8 +116,8 @@ private:
   Compare Greater;
 };
 
-/// Returns a string that sorts in the same order as (-Score, Tiebreak), for LSP.
-/// (The highest score compares smallest so it sorts at the top).
+/// Returns a string that sorts in the same order as (-Score, Tiebreak), for
+/// LSP. (The highest score compares smallest so it sorts at the top).
 std::string sortText(float Score, llvm::StringRef Tiebreak = "");
 
 } // namespace clangd

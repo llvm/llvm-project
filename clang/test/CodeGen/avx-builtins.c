@@ -1430,48 +1430,48 @@ float test_mm256_cvtss_f32(__m256 __a)
 
 __m256 test_mm256_cmp_ps_true(__m256 a, __m256 b) {
  // CHECK-LABEL: @test_mm256_cmp_ps_true
- // CHECK: store <8 x float> <float 0xFFFFFFFFE0000000,
+ // CHECK: ret <8 x float> <float 0xFFFFFFFFE0000000,
  return _mm256_cmp_ps(a, b, _CMP_TRUE_UQ);
 }
 
-__m256 test_mm256_cmp_pd_true(__m256 a, __m256 b) {
+__m256d test_mm256_cmp_pd_true(__m256d a, __m256d b) {
  // CHECK-LABEL: @test_mm256_cmp_pd_true
- // CHECK: store <4 x double> <double 0xFFFFFFFFFFFFFFFF,
+ // CHECK: ret <4 x double> <double 0xFFFFFFFFFFFFFFFF,
   return _mm256_cmp_pd(a, b, _CMP_TRUE_UQ);
 }
 
 __m256 test_mm256_cmp_ps_false(__m256 a, __m256 b) {
  // CHECK-LABEL: @test_mm256_cmp_ps_false
- // CHECK: store <8 x float> zeroinitializer, <8 x float>* %tmp, align 32
+ // CHECK: ret <8 x float> zeroinitializer
  return _mm256_cmp_ps(a, b, _CMP_FALSE_OQ);
 }
 
-__m256 test_mm256_cmp_pd_false(__m256 a, __m256 b) {
+__m256d test_mm256_cmp_pd_false(__m256d a, __m256d b) {
  // CHECK-LABEL: @test_mm256_cmp_pd_false
- // CHECK: store <4 x double> zeroinitializer, <4 x double>* %tmp, align 32
+ // CHECK: ret <4 x double> zeroinitializer
   return _mm256_cmp_pd(a, b, _CMP_FALSE_OQ);
 }
 
 __m256 test_mm256_cmp_ps_strue(__m256 a, __m256 b) {
  // CHECK-LABEL: @test_mm256_cmp_ps_strue
- // CHECK: store <8 x float> <float 0xFFFFFFFFE0000000,
+ // CHECK: ret <8 x float> <float 0xFFFFFFFFE0000000,
  return _mm256_cmp_ps(a, b, _CMP_TRUE_US);
 }
 
-__m256 test_mm256_cmp_pd_strue(__m256 a, __m256 b) {
+__m256d test_mm256_cmp_pd_strue(__m256d a, __m256d b) {
  // CHECK-LABEL: @test_mm256_cmp_pd_strue
- // CHECK: store <4 x double> <double 0xFFFFFFFFFFFFFFFF,
+ // CHECK: ret <4 x double> <double 0xFFFFFFFFFFFFFFFF,
   return _mm256_cmp_pd(a, b, _CMP_TRUE_US);
 }
 
 __m256 test_mm256_cmp_ps_sfalse(__m256 a, __m256 b) {
  // CHECK-LABEL: @test_mm256_cmp_ps_sfalse
- // CHECK: store <8 x float> zeroinitializer, <8 x float>* %tmp, align 32
+ // CHECK: ret <8 x float> zeroinitializer
  return _mm256_cmp_ps(a, b, _CMP_FALSE_OS);
 }
 
-__m256 test_mm256_cmp_pd_sfalse(__m256 a, __m256 b) {
+__m256d test_mm256_cmp_pd_sfalse(__m256d a, __m256d b) {
  // CHECK-LABEL: @test_mm256_cmp_pd_sfalse
- // CHECK: store <4 x double> zeroinitializer, <4 x double>* %tmp, align 32
+ // CHECK: ret <4 x double> zeroinitializer
   return _mm256_cmp_pd(a, b, _CMP_FALSE_OS);
 }

@@ -1716,6 +1716,11 @@ bool LowerTypeTestsModule::lower() {
           F->clearMetadata();
         }
 
+        // Update the linkage for extern_weak declarations when a definition
+        // exists.
+        if (Linkage == CFL_Definition && F->hasExternalWeakLinkage())
+          F->setLinkage(GlobalValue::ExternalLinkage);
+
         // If the function in the full LTO module is a declaration, replace its
         // type metadata with the type metadata we found in cfi.functions. That
         // metadata is presumed to be more accurate than the metadata attached

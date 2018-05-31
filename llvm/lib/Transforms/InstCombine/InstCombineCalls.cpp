@@ -1387,6 +1387,46 @@ static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
   return maxnum(Src0, Src1);
 }
 
+/// Convert a table lookup to shufflevector if the mask is constant.
+/// This could benefit tbl1 if the mask is { 7,6,5,4,3,2,1,0 }, in
+/// which case we could lower the shufflevector with rev64 instructions
+/// as it's actually a byte reverse.
+static Value *simplifyNeonTbl1(const IntrinsicInst &II,
+                               InstCombiner::BuilderTy &Builder) {
+  // Bail out if the mask is not a constant.
+  auto *C = dyn_cast<Constant>(II.getArgOperand(1));
+  if (!C)
+    return nullptr;
+
+  auto *VecTy = cast<VectorType>(II.getType());
+  unsigned NumElts = VecTy->getNumElements();
+
+  // Only perform this transformation for <8 x i8> vector types.
+  if (!VecTy->getElementType()->isIntegerTy(8) || NumElts != 8)
+    return nullptr;
+
+  uint32_t Indexes[8];
+
+  for (unsigned I = 0; I < NumElts; ++I) {
+    Constant *COp = C->getAggregateElement(I);
+
+    if (!COp || !isa<ConstantInt>(COp))
+      return nullptr;
+
+    Indexes[I] = cast<ConstantInt>(COp)->getLimitedValue();
+
+    // Make sure the mask indices are in range.
+    if (Indexes[I] >= NumElts)
+      return nullptr;
+  }
+
+  auto *ShuffleMask = ConstantDataVector::get(II.getContext(),
+                                              makeArrayRef(Indexes));
+  auto *V1 = II.getArgOperand(0);
+  auto *V2 = Constant::getNullValue(V1->getType());
+  return Builder.CreateShuffleVector(V1, V2, ShuffleMask);
+}
+
 // Returns true iff the 2 intrinsics have the same operands, limiting the
 // comparison to the first NumOperands.
 static bool haveSameOperands(const IntrinsicInst &I, const IntrinsicInst &E,
@@ -2927,6 +2967,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     }
     break;
   }
+
+  case Intrinsic::arm_neon_vtbl1:
+  case Intrinsic::aarch64_neon_tbl1:
+    if (Value *V = simplifyNeonTbl1(*II, Builder))
+      return replaceInstUsesWith(*II, V);
+    break;
 
   case Intrinsic::arm_neon_vmulls:
   case Intrinsic::arm_neon_vmullu:

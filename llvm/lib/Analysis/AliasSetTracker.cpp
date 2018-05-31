@@ -389,7 +389,7 @@ void AliasSetTracker::add(VAArgInst *VAAI) {
              AliasSet::ModRefAccess);
 }
 
-void AliasSetTracker::add(MemSetInst *MSI) {
+void AliasSetTracker::add(AnyMemSetInst *MSI) {
   AAMDNodes AAInfo;
   MSI->getAAMetadata(AAInfo);
 
@@ -402,11 +402,12 @@ void AliasSetTracker::add(MemSetInst *MSI) {
 
   AliasSet &AS =
       addPointer(MSI->getRawDest(), Len, AAInfo, AliasSet::ModAccess);
-  if (MSI->isVolatile())
+  auto *MS = dyn_cast<MemSetInst>(MSI);
+  if (MS && MS->isVolatile())
     AS.setVolatile();
 }
 
-void AliasSetTracker::add(MemTransferInst *MTI) {
+void AliasSetTracker::add(AnyMemTransferInst *MTI) {
   AAMDNodes AAInfo;
   MTI->getAAMetadata(AAInfo);
 
@@ -418,13 +419,15 @@ void AliasSetTracker::add(MemTransferInst *MTI) {
 
   AliasSet &ASSrc =
       addPointer(MTI->getRawSource(), Len, AAInfo, AliasSet::RefAccess);
-  if (MTI->isVolatile())
-    ASSrc.setVolatile();
 
   AliasSet &ASDst =
       addPointer(MTI->getRawDest(), Len, AAInfo, AliasSet::ModAccess);
-  if (MTI->isVolatile())
+
+  auto* MT = dyn_cast<MemTransferInst>(MTI);
+  if (MT && MT->isVolatile()) {
+    ASSrc.setVolatile();
     ASDst.setVolatile();
+  }
 }
 
 void AliasSetTracker::addUnknown(Instruction *Inst) {
@@ -464,9 +467,9 @@ void AliasSetTracker::add(Instruction *I) {
     return add(SI);
   if (VAArgInst *VAAI = dyn_cast<VAArgInst>(I))
     return add(VAAI);
-  if (MemSetInst *MSI = dyn_cast<MemSetInst>(I))
+  if (AnyMemSetInst *MSI = dyn_cast<AnyMemSetInst>(I))
     return add(MSI);
-  if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(I))
+  if (AnyMemTransferInst *MTI = dyn_cast<AnyMemTransferInst>(I))
     return add(MTI);
   return addUnknown(I);
 }

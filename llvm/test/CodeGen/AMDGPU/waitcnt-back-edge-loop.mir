@@ -57,3 +57,37 @@ body:             |
     EXP_DONE 12, killed $vgpr4, undef $vgpr0, undef $vgpr0, undef $vgpr0, 0, 0, 15, implicit $exec
     S_ENDPGM
 ...
+---
+
+# GCN-LABEL: name: waitcnt-multiple-back-edges{{$}}
+# GCN: bb.0:
+# GCN: S_WAITCNT 0
+# GCN-NEXT: S_BRANCH %bb.2
+
+name: waitcnt-multiple-back-edges
+body: |
+  bb.0:
+    S_BRANCH %bb.2
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+
+  bb.3:
+    S_CBRANCH_VCCNZ %bb.5, implicit $vcc
+
+  bb.4:
+    BUFFER_ATOMIC_ADD_OFFSET renamable $vgpr0, renamable $sgpr12_sgpr13_sgpr14_sgpr15, 0, 4, 0, implicit $exec
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+    S_BRANCH %bb.6
+
+  bb.5:
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+    S_BRANCH %bb.6
+
+  bb.6:
+    S_CBRANCH_SCC1 %bb.0, implicit $scc
+    S_ENDPGM
+...

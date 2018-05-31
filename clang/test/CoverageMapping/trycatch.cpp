@@ -18,7 +18,7 @@ void func(int i) {                    // CHECK-NEXT: File 0, [[@LINE]]:18 -> {{[
                                       // CHECK: File 0, [[@LINE+1]]:10 -> [[@LINE+2]]:27 = (#0 - #1)
   } else if(i == 8)                   // CHECK-NEXT: File 0, [[@LINE]]:13 -> [[@LINE]]:19 = (#0 - #1)
     throw ImportantError();           // CHECK: File 0, [[@LINE]]:5 -> [[@LINE]]:27 = #2
-}                                     // CHECK-NEXT: File 0, [[@LINE-1]]:27 -> [[@LINE]]:2 = ((#0 - #1) - #2)
+}
 
                                       // CHECK-NEXT: main
 int main() {                          // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+13]]:2 = #0

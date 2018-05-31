@@ -1795,8 +1795,10 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
         return NV;
 
   // X - C --> X + (-C)
+  // But don't transform constant expressions because there's an inverse fold
+  // for X + (-Y) --> X - Y.
   Constant *C;
-  if (match(Op1, m_Constant(C)))
+  if (match(Op1, m_Constant(C)) && !isa<ConstantExpr>(Op1))
     return BinaryOperator::CreateFAddFMF(Op0, ConstantExpr::getFNeg(C), &I);
   
   // X - (-Y) --> X + Y

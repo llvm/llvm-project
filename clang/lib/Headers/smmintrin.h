@@ -244,8 +244,8 @@
 ///      10: Upward (toward positive infinity) \n
 ///      11: Truncated
 /// \returns A 128-bit vector of [4 x float] containing the rounded values.
-#define _mm_round_ps(X, M) __extension__ ({ \
-  (__m128)__builtin_ia32_roundps((__v4sf)(__m128)(X), (M)); })
+#define _mm_round_ps(X, M) \
+  (__m128)__builtin_ia32_roundps((__v4sf)(__m128)(X), (M))
 
 /// Copies three upper elements of the first 128-bit vector operand to
 ///    the corresponding three upper elements of the 128-bit result vector of
@@ -285,9 +285,9 @@
 ///      11: Truncated
 /// \returns A 128-bit vector of [4 x float] containing the copied and rounded
 ///    values.
-#define _mm_round_ss(X, Y, M) __extension__ ({ \
+#define _mm_round_ss(X, Y, M) \
   (__m128)__builtin_ia32_roundss((__v4sf)(__m128)(X), \
-                                 (__v4sf)(__m128)(Y), (M)); })
+                                 (__v4sf)(__m128)(Y), (M))
 
 /// Rounds each element of the 128-bit vector of [2 x double] to an
 ///    integer value according to the rounding control specified by the second
@@ -319,8 +319,8 @@
 ///      10: Upward (toward positive infinity) \n
 ///      11: Truncated
 /// \returns A 128-bit vector of [2 x double] containing the rounded values.
-#define _mm_round_pd(X, M) __extension__ ({ \
-  (__m128d)__builtin_ia32_roundpd((__v2df)(__m128d)(X), (M)); })
+#define _mm_round_pd(X, M) \
+  (__m128d)__builtin_ia32_roundpd((__v2df)(__m128d)(X), (M))
 
 /// Copies the upper element of the first 128-bit vector operand to the
 ///    corresponding upper element of the 128-bit result vector of [2 x double].
@@ -360,9 +360,9 @@
 ///      11: Truncated
 /// \returns A 128-bit vector of [2 x double] containing the copied and rounded
 ///    values.
-#define _mm_round_sd(X, Y, M) __extension__ ({ \
+#define _mm_round_sd(X, Y, M) \
   (__m128d)__builtin_ia32_roundsd((__v2df)(__m128d)(X), \
-                                  (__v2df)(__m128d)(Y), (M)); })
+                                  (__v2df)(__m128d)(Y), (M))
 
 /* SSE4 Packed Blending Intrinsics.  */
 /// Returns a 128-bit vector of [2 x double] where the values are
@@ -389,11 +389,11 @@
 ///    When a mask bit is 1, the corresponding 64-bit element in operand \a V2
 ///    is copied to the same position in the result.
 /// \returns A 128-bit vector of [2 x double] containing the copied values.
-#define _mm_blend_pd(V1, V2, M) __extension__ ({ \
+#define _mm_blend_pd(V1, V2, M) \
   (__m128d)__builtin_shufflevector((__v2df)(__m128d)(V1), \
                                    (__v2df)(__m128d)(V2), \
                                    (((M) & 0x01) ? 2 : 0), \
-                                   (((M) & 0x02) ? 3 : 1)); })
+                                   (((M) & 0x02) ? 3 : 1))
 
 /// Returns a 128-bit vector of [4 x float] where the values are selected
 ///    from either the first or second operand as specified by the third
@@ -419,12 +419,12 @@
 ///    When a mask bit is 1, the corresponding 32-bit element in operand \a V2
 ///    is copied to the same position in the result.
 /// \returns A 128-bit vector of [4 x float] containing the copied values.
-#define _mm_blend_ps(V1, V2, M) __extension__ ({ \
+#define _mm_blend_ps(V1, V2, M) \
   (__m128)__builtin_shufflevector((__v4sf)(__m128)(V1), (__v4sf)(__m128)(V2), \
                                   (((M) & 0x01) ? 4 : 0), \
                                   (((M) & 0x02) ? 5 : 1), \
                                   (((M) & 0x04) ? 6 : 2), \
-                                  (((M) & 0x08) ? 7 : 3)); })
+                                  (((M) & 0x08) ? 7 : 3))
 
 /// Returns a 128-bit vector of [2 x double] where the values are
 ///    selected from either the first or second operand as specified by the
@@ -531,7 +531,7 @@ _mm_blendv_epi8 (__m128i __V1, __m128i __V2, __m128i __M)
 ///    When a mask bit is 1, the corresponding 16-bit element in operand \a V2
 ///    is copied to the same position in the result.
 /// \returns A 128-bit vector of [8 x i16] containing the copied values.
-#define _mm_blend_epi16(V1, V2, M) __extension__ ({ \
+#define _mm_blend_epi16(V1, V2, M) \
   (__m128i)__builtin_shufflevector((__v8hi)(__m128i)(V1), \
                                    (__v8hi)(__m128i)(V2), \
                                    (((M) & 0x01) ?  8 : 0), \
@@ -541,7 +541,7 @@ _mm_blendv_epi8 (__m128i __V1, __m128i __V2, __m128i __M)
                                    (((M) & 0x10) ? 12 : 4), \
                                    (((M) & 0x20) ? 13 : 5), \
                                    (((M) & 0x40) ? 14 : 6), \
-                                   (((M) & 0x80) ? 15 : 7)); })
+                                   (((M) & 0x80) ? 15 : 7))
 
 /* SSE4 Dword Multiply Instructions.  */
 /// Multiples corresponding elements of two 128-bit vectors of [4 x i32]
@@ -616,9 +616,9 @@ _mm_mul_epi32 (__m128i __V1, __m128i __V2)
 ///    each [4 x float] subvector. If a bit is set, the dot product is returned
 ///    in the corresponding element; otherwise that element is set to zero.
 /// \returns A 128-bit vector of [4 x float] containing the dot product.
-#define _mm_dp_ps(X, Y, M) __extension__ ({ \
+#define _mm_dp_ps(X, Y, M) \
   (__m128) __builtin_ia32_dpps((__v4sf)(__m128)(X), \
-                               (__v4sf)(__m128)(Y), (M)); })
+                               (__v4sf)(__m128)(Y), (M))
 
 /// Computes the dot product of the two 128-bit vectors of [2 x double]
 ///    and returns it in the elements of the 128-bit result vector of
@@ -651,9 +651,9 @@ _mm_mul_epi32 (__m128i __V1, __m128i __V2)
 ///    to the lowest element and bit [1] corresponding to the highest element of
 ///    each [2 x double] vector. If a bit is set, the dot product is returned in
 ///    the corresponding element; otherwise that element is set to zero.
-#define _mm_dp_pd(X, Y, M) __extension__ ({\
+#define _mm_dp_pd(X, Y, M) \
   (__m128d) __builtin_ia32_dppd((__v2df)(__m128d)(X), \
-                                (__v2df)(__m128d)(Y), (M)); })
+                                (__v2df)(__m128d)(Y), (M))
 
 /* SSE4 Streaming Load Hint Instruction.  */
 /// Loads integer values from a 128-bit aligned memory location to a
@@ -1546,9 +1546,9 @@ _mm_packus_epi32(__m128i __V1, __m128i __V2)
 ///    \endcode
 /// \returns A 128-bit integer vector containing the sums of the sets of
 ///    absolute differences between both operands.
-#define _mm_mpsadbw_epu8(X, Y, M) __extension__ ({ \
+#define _mm_mpsadbw_epu8(X, Y, M) \
   (__m128i) __builtin_ia32_mpsadbw128((__v16qi)(__m128i)(X), \
-                                      (__v16qi)(__m128i)(Y), (M)); })
+                                      (__v16qi)(__m128i)(Y), (M))
 
 /// Finds the minimum unsigned 16-bit element in the input 128-bit
 ///    vector of [8 x u16] and returns it and along with its index.

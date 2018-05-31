@@ -459,7 +459,7 @@ public:
   /// \param T The target triple.
   /// \param Ctx The target context.
   /// \param TAB The target assembler backend object. Takes ownership.
-  /// \param OS The stream object.
+  /// \param OW The stream object.
   /// \param Emitter The target independent assembler object.Takes ownership.
   /// \param RelaxAll Relax all fixups?
   MCStreamer *createMCObjectStreamer(const Triple &T, MCContext &Ctx,

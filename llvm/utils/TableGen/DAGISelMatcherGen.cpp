@@ -58,7 +58,7 @@ namespace {
     /// PatWithNoTypes - This is a clone of Pattern.getSrcPattern() that starts
     /// out with all of the types removed.  This allows us to insert type checks
     /// as we scan the tree.
-    TreePatternNode *PatWithNoTypes;
+    TreePatternNodePtr PatWithNoTypes;
 
     /// VariableMap - A map from variable names ('$dst') to the recorded operand
     /// number that they were captured as.  These are biased by 1 to make
@@ -100,10 +100,6 @@ namespace {
     Matcher *CurPredicate;
   public:
     MatcherGen(const PatternToMatch &pattern, const CodeGenDAGPatterns &cgp);
-
-    ~MatcherGen() {
-      delete PatWithNoTypes;
-    }
 
     bool EmitMatcherCode(unsigned Variant);
     void EmitResultCode();
@@ -521,7 +517,8 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
   }
 
   // Emit the matcher for the pattern structure and types.
-  EmitMatchCode(Pattern.getSrcPattern(), PatWithNoTypes, Pattern.ForceMode);
+  EmitMatchCode(Pattern.getSrcPattern(), PatWithNoTypes.get(),
+                Pattern.ForceMode);
 
   // If the pattern has a predicate on it (e.g. only enabled when a subtarget
   // feature is around, do the check).
@@ -533,7 +530,7 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
   // because they are generally more expensive to evaluate and more difficult to
   // factor.
   for (unsigned i = 0, e = MatchedComplexPatterns.size(); i != e; ++i) {
-    const TreePatternNode *N = MatchedComplexPatterns[i].first;
+    auto N = MatchedComplexPatterns[i].first;
 
     // Remember where the results of this match get stuck.
     if (N->isLeaf()) {
@@ -673,7 +670,7 @@ GetInstPatternNode(const DAGInstruction &Inst, const TreePatternNode *N) {
   // FIXME2?: Assume actual pattern comes before "implicit".
   TreePatternNode *InstPatNode;
   if (InstPat)
-    InstPatNode = InstPat->getTree(0);
+    InstPatNode = InstPat->getTree(0).get();
   else if (/*isRoot*/ N == Pattern.getDstPattern())
     InstPatNode = Pattern.getSrcPattern();
   else
@@ -784,7 +781,7 @@ EmitResultInstructionAsOperand(const TreePatternNode *N,
       const DAGDefaultOperand &DefaultOp
         = CGP.getDefaultOperand(OperandNode);
       for (unsigned i = 0, e = DefaultOp.DefaultOps.size(); i != e; ++i)
-        EmitResultOperand(DefaultOp.DefaultOps[i], InstOps);
+        EmitResultOperand(DefaultOp.DefaultOps[i].get(), InstOps);
       continue;
     }
 

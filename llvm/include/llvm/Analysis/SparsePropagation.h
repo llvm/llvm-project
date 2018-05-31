@@ -238,7 +238,7 @@ SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getValueState(LatticeKey Key) {
   // If this value is untracked, don't add it to the map.
   if (LV == LatticeFunc->getUntrackedVal())
     return LV;
-  return ValueState[Key] = LV;
+  return ValueState[Key] = std::move(LV);
 }
 
 template <class LatticeKey, class LatticeVal, class KeyInfo>
@@ -250,7 +250,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::UpdateState(LatticeKey Key,
 
   // Update the state of the given LatticeKey and add its corresponding LLVM
   // value to the work list.
-  ValueState[Key] = LV;
+  ValueState[Key] = std::move(LV);
   if (Value *V = KeyInfo::getValueFromLatticeKey(Key))
     ValueWorkList.push_back(V);
 }
@@ -318,7 +318,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getFeasibleSuccessors(
 
     Constant *C =
         dyn_cast_or_null<Constant>(LatticeFunc->GetValueFromLatticeVal(
-            BCValue, BI->getCondition()->getType()));
+            std::move(BCValue), BI->getCondition()->getType()));
     if (!C || !isa<ConstantInt>(C)) {
       // Non-constant values can go either way.
       Succs[0] = Succs[1] = true;
@@ -360,7 +360,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getFeasibleSuccessors(
     return;
 
   Constant *C = dyn_cast_or_null<Constant>(LatticeFunc->GetValueFromLatticeVal(
-      SCValue, SI.getCondition()->getType()));
+      std::move(SCValue), SI.getCondition()->getType()));
   if (!C || !isa<ConstantInt>(C)) {
     // All destinations are executable!
     Succs.assign(TI.getNumSuccessors(), true);
@@ -408,7 +408,8 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::visitPHINode(PHINode &PN) {
     LatticeFunc->ComputeInstructionState(PN, ChangedValues, *this);
     for (auto &ChangedValue : ChangedValues)
       if (ChangedValue.second != LatticeFunc->getUntrackedVal())
-        UpdateState(ChangedValue.first, ChangedValue.second);
+        UpdateState(std::move(ChangedValue.first),
+                    std::move(ChangedValue.second));
     return;
   }
 

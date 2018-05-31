@@ -93,10 +93,6 @@ public:
                            reinterpret_cast<uintptr_t>(MD));
   }
 
-  static VTableComponent getFromOpaqueInteger(uint64_t I) {
-    return VTableComponent(I);
-  }
-
   /// Get the kind of this vtable component.
   Kind getKind() const {
     return (Kind)(Value & 0x7);
@@ -225,9 +221,6 @@ private:
 
     return static_cast<uintptr_t>(Value & ~7ULL);
   }
-
-  explicit VTableComponent(uint64_t Value)
-    : Value(Value) { }
 
   /// The kind is stored in the lower 3 bits of the value. For offsets, we
   /// make use of the facts that classes can't be larger than 2^55 bytes,

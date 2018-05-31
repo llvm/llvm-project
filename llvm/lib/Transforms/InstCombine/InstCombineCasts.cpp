@@ -283,10 +283,16 @@ Instruction *InstCombiner::commonCastTransforms(CastInst &CI) {
     }
   }
 
-  // If we are casting a select, then fold the cast into the select.
-  if (auto *SI = dyn_cast<SelectInst>(Src))
-    if (Instruction *NV = FoldOpIntoSelect(CI, SI))
-      return NV;
+  if (auto *Sel = dyn_cast<SelectInst>(Src)) {
+    // We are casting a select. Try to fold the cast into the select, but only
+    // if the select does not have a compare instruction with matching operand
+    // types. Creating a select with operands that are different sizes than its
+    // condition may inhibit other folds and lead to worse codegen.
+    auto *Cmp = dyn_cast<CmpInst>(Sel->getCondition());
+    if (!Cmp || Cmp->getOperand(0)->getType() != Sel->getType())
+      if (Instruction *NV = FoldOpIntoSelect(CI, Sel))
+        return NV;
+  }
 
   // If we are casting a PHI, then fold the cast into the PHI.
   if (auto *PN = dyn_cast<PHINode>(Src)) {

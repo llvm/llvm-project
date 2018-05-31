@@ -242,3 +242,17 @@ define float @neg_trunc_op1_extra_uses(double %a, float %b) {
   ret float %t3
 }
 
+; Don't negate a constant expression to form fadd and induce infinite looping:
+; https://bugs.llvm.org/show_bug.cgi?id=37605
+
+@b = external global i16, align 1
+
+define float @PR37605(float %conv) {
+; CHECK-LABEL: @PR37605(
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[CONV:%.*]], bitcast (i32 ptrtoint (i16* @b to i32) to float)
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %conv, bitcast (i32 ptrtoint (i16* @b to i32) to float)
+  ret float %sub
+}
+
