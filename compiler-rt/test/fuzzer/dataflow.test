@@ -54,6 +54,9 @@ RUN:%t-ThreeFunctionsTestDF 2 4 %t/IN/FUZZMU > %t-merge-2
 RUN:%t-ThreeFunctionsTestDF 4 6 %t/IN/FUZZMU > %t-merge-3
 RUN:%libfuzzer_src/scripts/merge_data_flow.py  %t-merge-* | FileCheck %s --check-prefix=IN_FUZZMU
 
+# Test collect_data_flow
+RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ThreeFunctionsTestDF %t/IN/FUZZMU | FileCheck %s --check-prefix=IN_FUZZMU
+
 IN_FUZZMU-DAG: F{{[012]}} 0000100
 IN_FUZZMU-DAG: F{{[012]}} 1111001
 IN_FUZZMU-DAG: F{{[012]}} 0000011
@@ -65,3 +68,5 @@ OUT_OF_LABELS: ==FATAL: DataFlowSanitizer: out of labels
 RUN: %t-ExplodeDFSanLabelsTestDF 0 2  %t/IN/1234567890123456
 RUN: %t-ExplodeDFSanLabelsTestDF 2 4  %t/IN/1234567890123456
 RUN: %t-ExplodeDFSanLabelsTestDF 4 6  %t/IN/1234567890123456
+# Or we can use collect_data_flow
+RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-ExplodeDFSanLabelsTestDF %t/IN/1234567890123456
