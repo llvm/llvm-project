@@ -414,6 +414,30 @@ public:
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr);
 
+  /// Create and insert an element unordered-atomic memset of the region of
+  /// memory starting at the given pointer to the given value.
+  ///
+  /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
+  /// specified, it will be added to the instruction. Likewise with alias.scope
+  /// and noalias tags.
+  CallInst *CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val,
+                                               uint64_t Size, unsigned Align,
+                                               uint32_t ElementSize,
+                                               MDNode *TBAATag = nullptr,
+                                               MDNode *ScopeTag = nullptr,
+                                               MDNode *NoAliasTag = nullptr) {
+    return CreateElementUnorderedAtomicMemSet(Ptr, Val, getInt64(Size), Align,
+                                              ElementSize, TBAATag, ScopeTag,
+                                              NoAliasTag);
+  }
+
+  CallInst *CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val,
+                                               Value *Size, unsigned Align,
+                                               uint32_t ElementSize,
+                                               MDNode *TBAATag = nullptr,
+                                               MDNode *ScopeTag = nullptr,
+                                               MDNode *NoAliasTag = nullptr);
+
   /// Create and insert a memcpy between the specified pointers.
   ///
   /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
@@ -479,6 +503,31 @@ public:
                           Value *Size, bool isVolatile = false, MDNode *TBAATag = nullptr,
                           MDNode *ScopeTag = nullptr,
                           MDNode *NoAliasTag = nullptr);
+
+  /// \brief Create and insert an element unordered-atomic memmove between the
+  /// specified pointers.
+  ///
+  /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers,
+  /// respectively.
+  ///
+  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
+  /// specified, it will be added to the instruction. Likewise with alias.scope
+  /// and noalias tags.
+  CallInst *CreateElementUnorderedAtomicMemMove(
+      Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
+      uint64_t Size, uint32_t ElementSize, MDNode *TBAATag = nullptr,
+      MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
+      MDNode *NoAliasTag = nullptr) {
+    return CreateElementUnorderedAtomicMemMove(
+        Dst, DstAlign, Src, SrcAlign, getInt64(Size), ElementSize, TBAATag,
+        TBAAStructTag, ScopeTag, NoAliasTag);
+  }
+
+  CallInst *CreateElementUnorderedAtomicMemMove(
+      Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign, Value *Size,
+      uint32_t ElementSize, MDNode *TBAATag = nullptr,
+      MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
+      MDNode *NoAliasTag = nullptr);
 
   /// Create a vector fadd reduction intrinsic of the source vector.
   /// The first parameter is a scalar accumulator value for ordered reductions.

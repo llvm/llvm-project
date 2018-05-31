@@ -10,6 +10,8 @@
 // Allows setting up fake filesystem environments for tests.
 //
 //===----------------------------------------------------------------------===//
+#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTFS_H
+#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTFS_H
 #include "ClangdServer.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -56,3 +58,4 @@ std::string testPath(PathRef File);
 
 } // namespace clangd
 } // namespace clang
+#endif

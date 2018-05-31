@@ -15,6 +15,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -23,17 +24,22 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
+#include <cstdio>
 #include <thread>
 
 using namespace lldb;
@@ -46,6 +52,15 @@ static cl::SubCommand BreakpointSubcommand("breakpoints",
 cl::SubCommand ModuleSubcommand("module-sections",
                                 "Display LLDB Module Information");
 cl::SubCommand SymbolsSubcommand("symbols", "Dump symbols for an object file");
+cl::SubCommand IRMemoryMapSubcommand("ir-memory-map", "Test IRMemoryMap");
+cl::opt<std::string> Log("log", cl::desc("Path to a log file"), cl::init(""),
+                         cl::sub(IRMemoryMapSubcommand));
+
+/// Create a target using the file pointed to by \p Filename, or abort.
+TargetSP createTarget(Debugger &Dbg, const std::string &Filename);
+
+/// Read \p Filename into a null-terminated buffer, or abort.
+std::unique_ptr<MemoryBuffer> openFile(const std::string &Filename);
 
 namespace breakpoint {
 static cl::opt<std::string> Target(cl::Positional, cl::desc("<target>"),
@@ -135,7 +150,48 @@ static Error dumpModule(lldb_private::Module &Module);
 
 static int dumpSymbols(Debugger &Dbg);
 }
+
+namespace irmemorymap {
+static cl::opt<std::string> Target(cl::Positional, cl::desc("<target>"),
+                                   cl::Required,
+                                   cl::sub(IRMemoryMapSubcommand));
+static cl::opt<std::string> CommandFile(cl::Positional,
+                                        cl::desc("<command-file>"),
+                                        cl::init("-"),
+                                        cl::sub(IRMemoryMapSubcommand));
+using AllocationT = std::pair<addr_t, addr_t>;
+bool areAllocationsOverlapping(const AllocationT &L, const AllocationT &R);
+using AddrIntervalMap =
+      IntervalMap<addr_t, bool, 8, IntervalMapHalfOpenInfo<addr_t>>;
+bool evalMalloc(IRMemoryMap &IRMemMap, StringRef Line,
+                AddrIntervalMap &AllocatedIntervals);
+int evaluateMemoryMapCommands(Debugger &Dbg);
+} // namespace irmemorymap
+
 } // namespace opts
+
+TargetSP opts::createTarget(Debugger &Dbg, const std::string &Filename) {
+  TargetSP Target;
+  Status ST =
+      Dbg.GetTargetList().CreateTarget(Dbg, Filename, /*triple*/ "",
+                                       /*get_dependent_modules*/ false,
+                                       /*platform_options*/ nullptr, Target);
+  if (ST.Fail()) {
+    errs() << formatv("Failed to create target '{0}: {1}\n", Filename, ST);
+    exit(1);
+  }
+  return Target;
+}
+
+std::unique_ptr<MemoryBuffer> opts::openFile(const std::string &Filename) {
+  auto MB = MemoryBuffer::getFileOrSTDIN(Filename);
+  if (!MB) {
+    errs() << formatv("Could not open file '{0}: {1}\n", Filename,
+                      MB.getError().message());
+    exit(1);
+  }
+  return std::move(*MB);
+}
 
 void opts::breakpoint::dumpState(const BreakpointList &List, LinePrinter &P) {
   P.formatLine("{0} breakpoint{1}", List.GetSize(), plural(List.GetSize()));
@@ -177,7 +233,7 @@ std::string opts::breakpoint::substitute(StringRef Cmd) {
     switch (Cmd[0]) {
     case '%':
       if (Cmd.consume_front("%p") && (Cmd.empty() || !isalnum(Cmd[0]))) {
-        OS << sys::path::parent_path(CommandFile);
+        OS << sys::path::parent_path(breakpoint::CommandFile);
         break;
       }
       // fall through
@@ -192,26 +248,11 @@ std::string opts::breakpoint::substitute(StringRef Cmd) {
 }
 
 int opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {
-  TargetSP Target;
-  Status ST =
-      Dbg.GetTargetList().CreateTarget(Dbg, breakpoint::Target, /*triple*/ "",
-                                       /*get_dependent_modules*/ false,
-                                       /*platform_options*/ nullptr, Target);
-  if (ST.Fail()) {
-    errs() << formatv("Failed to create target '{0}: {1}\n", breakpoint::Target,
-                      ST);
-    exit(1);
-  }
-
-  auto MB = MemoryBuffer::getFileOrSTDIN(CommandFile);
-  if (!MB) {
-    errs() << formatv("Could not open file '{0}: {1}\n", CommandFile,
-                      MB.getError().message());
-    exit(1);
-  }
+  TargetSP Target = opts::createTarget(Dbg, breakpoint::Target);
+  std::unique_ptr<MemoryBuffer> MB = opts::openFile(breakpoint::CommandFile);
 
   LinePrinter P(4, outs());
-  StringRef Rest = (*MB)->getBuffer();
+  StringRef Rest = MB->getBuffer();
   int HadErrors = 0;
   while (!Rest.empty()) {
     StringRef Line;
@@ -459,6 +500,123 @@ static int dumpModules(Debugger &Dbg) {
   return HadErrors;
 }
 
+/// Check if two half-open intervals intersect:
+///   http://world.std.com/~swmcd/steven/tech/interval.html
+bool opts::irmemorymap::areAllocationsOverlapping(const AllocationT &L,
+                                                  const AllocationT &R) {
+  return R.first < L.second && L.first < R.second;
+}
+
+bool opts::irmemorymap::evalMalloc(IRMemoryMap &IRMemMap, StringRef Line,
+                                   AddrIntervalMap &AllocatedIntervals) {
+  // ::= malloc <size> <alignment>
+  size_t Size;
+  uint8_t Alignment;
+  int Matches = sscanf(Line.data(), "malloc %zu %hhu", &Size, &Alignment);
+  if (Matches != 2)
+    return false;
+
+  outs() << formatv("Command: malloc(size={0}, alignment={1})\n", Size,
+                    Alignment);
+  if (!isPowerOf2_32(Alignment)) {
+    outs() << "Malloc error: alignment is not a power of 2\n";
+    exit(1);
+  }
+
+  // Issue the malloc in the target process with "-rw" permissions.
+  const uint32_t Permissions = 0x3;
+  const bool ZeroMemory = false;
+  IRMemoryMap::AllocationPolicy Policy =
+      IRMemoryMap::eAllocationPolicyProcessOnly;
+  Status ST;
+  addr_t Addr =
+      IRMemMap.Malloc(Size, Alignment, Permissions, Policy, ZeroMemory, ST);
+  if (ST.Fail()) {
+    outs() << formatv("Malloc error: {0}\n", ST);
+    return true;
+  }
+
+  // Print the result of the allocation before checking its validity.
+  outs() << formatv("Malloc: address = {0:x}\n", Addr);
+
+  // Check that the allocation is aligned.
+  if (!Addr || Addr % Alignment != 0) {
+    outs() << "Malloc error: zero or unaligned allocation detected\n";
+    exit(1);
+  }
+
+  // Check that the allocation does not overlap another allocation. Do so by
+  // testing each allocation which may cover the interval [Addr, EndOfRegion).
+  addr_t EndOfRegion = Addr + Size;
+  auto Probe = AllocatedIntervals.begin();
+  Probe.advanceTo(Addr); //< First interval s.t stop >= Addr.
+  AllocationT NewAllocation = {Addr, EndOfRegion};
+  while (Probe != AllocatedIntervals.end() && Probe.start() < EndOfRegion) {
+    AllocationT ProbeAllocation = {Probe.start(), Probe.stop()};
+    if (areAllocationsOverlapping(ProbeAllocation, NewAllocation)) {
+      outs() << "Malloc error: overlapping allocation detected"
+             << formatv(", previous allocation at [{0:x}, {1:x})\n",
+                        Probe.start(), Probe.stop());
+      exit(1);
+    }
+    ++Probe;
+  }
+
+  // Insert the new allocation into the interval map.
+  if (Size)
+    AllocatedIntervals.insert(Addr, EndOfRegion, true);
+
+  return true;
+}
+
+int opts::irmemorymap::evaluateMemoryMapCommands(Debugger &Dbg) {
+  // Set up a Target.
+  TargetSP Target = opts::createTarget(Dbg, irmemorymap::Target);
+
+  // Set up a Process. In order to allocate memory within a target, this
+  // process must be alive and must support JIT'ing.
+  CommandReturnObject Result;
+  Dbg.SetAsyncExecution(false);
+  CommandInterpreter &CI = Dbg.GetCommandInterpreter();
+  auto IssueCmd = [&](const char *Cmd) -> bool {
+    return CI.HandleCommand(Cmd, eLazyBoolNo, Result);
+  };
+  if (!IssueCmd("b main") || !IssueCmd("run")) {
+    outs() << formatv("Failed: {0}\n", Result.GetErrorData());
+    exit(1);
+  }
+
+  ProcessSP Process = Target->GetProcessSP();
+  if (!Process || !Process->IsAlive() || !Process->CanJIT()) {
+    outs() << "Cannot use process to test IRMemoryMap\n";
+    exit(1);
+  }
+
+  // Set up an IRMemoryMap and associated testing state.
+  IRMemoryMap IRMemMap(Target);
+  AddrIntervalMap::Allocator AIMapAllocator;
+  AddrIntervalMap AllocatedIntervals(AIMapAllocator);
+
+  // Parse and apply commands from the command file.
+  std::unique_ptr<MemoryBuffer> MB = opts::openFile(irmemorymap::CommandFile);
+  StringRef Rest = MB->getBuffer();
+  while (!Rest.empty()) {
+    StringRef Line;
+    std::tie(Line, Rest) = Rest.split('\n');
+    Line = Line.ltrim();
+
+    if (Line.empty() || Line[0] == '#')
+      continue;
+
+    if (evalMalloc(IRMemMap, Line, AllocatedIntervals))
+      continue;
+
+    errs() << "Could not parse line: " << Line << "\n";
+    exit(1);
+  }
+  return 0;
+}
+
 int main(int argc, const char *argv[]) {
   StringRef ToolName = argv[0];
   sys::PrintStackTraceOnErrorSignal(ToolName);
@@ -474,12 +632,17 @@ int main(int argc, const char *argv[]) {
 
   auto Dbg = lldb_private::Debugger::CreateInstance();
 
+  if (!opts::Log.empty())
+    Dbg->EnableLog("lldb", {"all"}, opts::Log, 0, errs());
+
   if (opts::BreakpointSubcommand)
     return opts::breakpoint::evaluateBreakpoints(*Dbg);
   if (opts::ModuleSubcommand)
     return dumpModules(*Dbg);
   if (opts::SymbolsSubcommand)
     return opts::symbols::dumpSymbols(*Dbg);
+  if (opts::IRMemoryMapSubcommand)
+    return opts::irmemorymap::evaluateMemoryMapCommands(*Dbg);
 
   WithColor::error() << "No command specified.\n";
   return 1;

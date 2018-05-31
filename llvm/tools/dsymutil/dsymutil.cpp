@@ -18,6 +18,7 @@
 #include "MachOUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/DIContext.h"
@@ -193,16 +194,24 @@ static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
      << "\t\t<key>CFBundleSignature</key>\n"
      << "\t\t<string>\?\?\?\?</string>\n";
 
-  if (!BI.OmitShortVersion())
-    PL << "\t\t<key>CFBundleShortVersionString</key>\n"
-       << "\t\t<string>" << BI.ShortVersionStr << "</string>\n";
+  if (!BI.OmitShortVersion()) {
+    PL << "\t\t<key>CFBundleShortVersionString</key>\n";
+    PL << "\t\t<string>";
+    PrintHTMLEscaped(BI.ShortVersionStr, PL);
+    PL << "</string>\n";
+  }
 
-  PL << "\t\t<key>CFBundleVersion</key>\n"
-     << "\t\t<string>" << BI.VersionStr << "</string>\n";
+  PL << "\t\t<key>CFBundleVersion</key>\n";
+  PL << "\t\t<string>";
+  PrintHTMLEscaped(BI.VersionStr, PL);
+  PL << "</string>\n";
 
-  if (!Toolchain.empty())
-    PL << "\t\t<key>Toolchain</key>\n"
-       << "\t\t<string>" << Toolchain << "</string>\n";
+  if (!Toolchain.empty()) {
+    PL << "\t\t<key>Toolchain</key>\n";
+    PL << "\t\t<string>";
+    PrintHTMLEscaped(Toolchain, PL);
+    PL << "</string>\n";
+  }
 
   PL << "\t</dict>\n"
      << "</plist>\n";

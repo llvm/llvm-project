@@ -27,7 +27,7 @@
 #ifndef __AVX512ERINTRIN_H
 #define __AVX512ERINTRIN_H
 
-// exp2a23
+/* exp2a23 */
 #define _mm512_exp2a23_round_pd(A, R) __extension__ ({ \
   (__m512d)__builtin_ia32_exp2pd_mask((__v8df)(__m512d)(A), \
                                       (__v8df)_mm512_setzero_pd(), \
@@ -76,7 +76,7 @@
 #define _mm512_maskz_exp2a23_ps(M, A) \
   _mm512_maskz_exp2a23_round_ps((M), (A), _MM_FROUND_CUR_DIRECTION)
 
-// rsqrt28
+/* rsqrt28 */
 #define _mm512_rsqrt28_round_pd(A, R) __extension__ ({ \
   (__m512d)__builtin_ia32_rsqrt28pd_mask((__v8df)(__m512d)(A), \
                                          (__v8df)_mm512_setzero_pd(), \
@@ -179,7 +179,7 @@
 #define _mm_maskz_rsqrt28_sd(M, A, B) \
   _mm_maskz_rsqrt28_round_sd((M), (A), (B), _MM_FROUND_CUR_DIRECTION)
 
-// rcp28
+/* rcp28 */
 #define _mm512_rcp28_round_pd(A, R) __extension__ ({ \
   (__m512d)__builtin_ia32_rcp28pd_mask((__v8df)(__m512d)(A), \
                                        (__v8df)_mm512_setzero_pd(), \
@@ -282,4 +282,4 @@
 #define _mm_maskz_rcp28_sd(M, A, B) \
   _mm_maskz_rcp28_round_sd((M), (A), (B), _MM_FROUND_CUR_DIRECTION)
 
-#endif // __AVX512ERINTRIN_H
+#endif /* __AVX512ERINTRIN_H */

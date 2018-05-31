@@ -44,7 +44,7 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_compress_epi16(__mmask32 __U, __m512i __D)
 {
   return (__m512i) __builtin_ia32_compresshi512_mask ((__v32hi) __D,
-              (__v32hi) _mm512_setzero_hi(),
+              (__v32hi) _mm512_setzero_si512(),
               __U);
 }
 
@@ -60,7 +60,7 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_compress_epi8(__mmask64 __U, __m512i __D)
 {
   return (__m512i) __builtin_ia32_compressqi512_mask ((__v64qi) __D,
-              (__v64qi) _mm512_setzero_qi(),
+              (__v64qi) _mm512_setzero_si512(),
               __U);
 }
 
@@ -90,7 +90,7 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_expand_epi16(__mmask32 __U, __m512i __D)
 {
   return (__m512i) __builtin_ia32_expandhi512_mask ((__v32hi) __D,
-              (__v32hi) _mm512_setzero_hi(),
+              (__v32hi) _mm512_setzero_si512(),
               __U);
 }
 
@@ -106,7 +106,7 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_expand_epi8(__mmask64 __U, __m512i __D)
 {
   return (__m512i) __builtin_ia32_expandqi512_mask ((__v64qi) __D,
-              (__v64qi) _mm512_setzero_qi(),
+              (__v64qi) _mm512_setzero_si512(),
               __U);
 }
 
@@ -122,7 +122,7 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_expandloadu_epi16(__mmask32 __U, void const *__P)
 {
   return (__m512i) __builtin_ia32_expandloadhi512_mask ((const __v32hi *)__P,
-              (__v32hi) _mm512_setzero_hi(),
+              (__v32hi) _mm512_setzero_si512(),
               __U);
 }
 
@@ -138,7 +138,7 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_expandloadu_epi8(__mmask64 __U, void const *__P)
 {
   return (__m512i) __builtin_ia32_expandloadqi512_mask ((const __v64qi *)__P,
-              (__v64qi) _mm512_setzero_qi(),
+              (__v64qi) _mm512_setzero_si512(),
               __U);
 }
 
@@ -150,7 +150,7 @@ _mm512_maskz_expandloadu_epi8(__mmask64 __U, void const *__P)
                                           (__mmask8)(U)); })
 
 #define _mm512_maskz_shldi_epi64(U, A, B, I) \
-  _mm512_mask_shldi_epi64(_mm512_setzero_hi(), (U), (A), (B), (I))
+  _mm512_mask_shldi_epi64(_mm512_setzero_si512(), (U), (A), (B), (I))
 
 #define _mm512_shldi_epi64(A, B, I) \
   _mm512_mask_shldi_epi64(_mm512_undefined(), (__mmask8)(-1), (A), (B), (I))
@@ -163,7 +163,7 @@ _mm512_maskz_expandloadu_epi8(__mmask64 __U, void const *__P)
                                           (__mmask16)(U)); })
 
 #define _mm512_maskz_shldi_epi32(U, A, B, I) \
-  _mm512_mask_shldi_epi32(_mm512_setzero_hi(), (U), (A), (B), (I))
+  _mm512_mask_shldi_epi32(_mm512_setzero_si512(), (U), (A), (B), (I))
 
 #define _mm512_shldi_epi32(A, B, I) \
   _mm512_mask_shldi_epi32(_mm512_undefined(), (__mmask16)(-1), (A), (B), (I))
@@ -176,7 +176,7 @@ _mm512_maskz_expandloadu_epi8(__mmask64 __U, void const *__P)
                                           (__mmask32)(U)); })
 
 #define _mm512_maskz_shldi_epi16(U, A, B, I) \
-  _mm512_mask_shldi_epi16(_mm512_setzero_hi(), (U), (A), (B), (I))
+  _mm512_mask_shldi_epi16(_mm512_setzero_si512(), (U), (A), (B), (I))
 
 #define _mm512_shldi_epi16(A, B, I) \
   _mm512_mask_shldi_epi16(_mm512_undefined(), (__mmask32)(-1), (A), (B), (I))
@@ -189,7 +189,7 @@ _mm512_maskz_expandloadu_epi8(__mmask64 __U, void const *__P)
                                           (__mmask8)(U)); })
 
 #define _mm512_maskz_shrdi_epi64(U, A, B, I) \
-  _mm512_mask_shrdi_epi64(_mm512_setzero_hi(), (U), (A), (B), (I))
+  _mm512_mask_shrdi_epi64(_mm512_setzero_si512(), (U), (A), (B), (I))
 
 #define _mm512_shrdi_epi64(A, B, I) \
   _mm512_mask_shrdi_epi64(_mm512_undefined(), (__mmask8)(-1), (A), (B), (I))
@@ -202,7 +202,7 @@ _mm512_maskz_expandloadu_epi8(__mmask64 __U, void const *__P)
                                           (__mmask16)(U)); })
 
 #define _mm512_maskz_shrdi_epi32(U, A, B, I) \
-  _mm512_mask_shrdi_epi32(_mm512_setzero_hi(), (U), (A), (B), (I))
+  _mm512_mask_shrdi_epi32(_mm512_setzero_si512(), (U), (A), (B), (I))
 
 #define _mm512_shrdi_epi32(A, B, I) \
   _mm512_mask_shrdi_epi32(_mm512_undefined(), (__mmask16)(-1), (A), (B), (I))
@@ -215,7 +215,7 @@ _mm512_maskz_expandloadu_epi8(__mmask64 __U, void const *__P)
                                           (__mmask32)(U)); })
 
 #define _mm512_maskz_shrdi_epi16(U, A, B, I) \
-  _mm512_mask_shrdi_epi16(_mm512_setzero_hi(), (U), (A), (B), (I))
+  _mm512_mask_shrdi_epi16(_mm512_setzero_si512(), (U), (A), (B), (I))
 
 #define _mm512_shrdi_epi16(A, B, I) \
   _mm512_mask_shrdi_epi16(_mm512_undefined(), (__mmask32)(-1), (A), (B), (I))

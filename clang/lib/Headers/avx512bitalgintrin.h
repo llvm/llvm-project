@@ -48,7 +48,7 @@ _mm512_mask_popcnt_epi16(__m512i __A, __mmask32 __U, __m512i __B)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_popcnt_epi16(__mmask32 __U, __m512i __B)
 {
-  return _mm512_mask_popcnt_epi16((__m512i) _mm512_setzero_hi(),
+  return _mm512_mask_popcnt_epi16((__m512i) _mm512_setzero_si512(),
               __U,
               __B);
 }
@@ -70,7 +70,7 @@ _mm512_mask_popcnt_epi8(__m512i __A, __mmask64 __U, __m512i __B)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_popcnt_epi8(__mmask64 __U, __m512i __B)
 {
-  return _mm512_mask_popcnt_epi8((__m512i) _mm512_setzero_qi(),
+  return _mm512_mask_popcnt_epi8((__m512i) _mm512_setzero_si512(),
               __U,
               __B);
 }

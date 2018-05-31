@@ -38,5 +38,5 @@
                                        (__v8di)(__m512i)(B),  \
                                        (char)(I)); })
 
-#endif // __VPCLMULQDQINTRIN_H
+#endif /* __VPCLMULQDQINTRIN_H */
 

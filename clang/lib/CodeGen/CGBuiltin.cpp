@@ -8427,6 +8427,84 @@ static Value *EmitX86MinMax(CodeGenFunction &CGF, ICmpInst::Predicate Pred,
   return Res;
 }
 
+// Lowers X86 FMA intrinsics to IR.
+static Value *EmitX86FMAExpr(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
+                             unsigned BuiltinID) {
+
+  bool IsAddSub = false;
+  bool IsScalar = false;
+
+  // 4 operands always means rounding mode without a mask here.
+  bool IsRound = Ops.size() == 4;
+
+  Intrinsic::ID ID;
+  switch (BuiltinID) {
+  default: break;
+  case clang::X86::BI__builtin_ia32_vfmaddss3: IsScalar = true; break;
+  case clang::X86::BI__builtin_ia32_vfmaddsd3: IsScalar = true; break;
+  case clang::X86::BI__builtin_ia32_vfmaddps512:
+    ID = llvm::Intrinsic::x86_avx512_vfmadd_ps_512; break;
+  case clang::X86::BI__builtin_ia32_vfmaddpd512:
+    ID = llvm::Intrinsic::x86_avx512_vfmadd_pd_512; break;
+  case clang::X86::BI__builtin_ia32_vfmaddsubps: IsAddSub = true; break;
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd: IsAddSub = true; break;
+  case clang::X86::BI__builtin_ia32_vfmaddsubps256: IsAddSub = true; break;
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd256: IsAddSub = true; break;
+  case clang::X86::BI__builtin_ia32_vfmaddsubps512: {
+    ID = llvm::Intrinsic::x86_avx512_vfmaddsub_ps_512;
+    IsAddSub = true;
+    break;
+  }
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd512: {
+    ID = llvm::Intrinsic::x86_avx512_vfmaddsub_pd_512;
+    IsAddSub = true;
+    break;
+  }
+  }
+
+  // Only handle in case of _MM_FROUND_CUR_DIRECTION/4 (no rounding).
+  if (IsRound) {
+    Function *Intr = CGF.CGM.getIntrinsic(ID);
+    if (cast<llvm::ConstantInt>(Ops[3])->getZExtValue() != (uint64_t)4)
+      return CGF.Builder.CreateCall(Intr, Ops);
+  }
+
+  Value *A = Ops[0];
+  Value *B = Ops[1];
+  Value *C = Ops[2];
+
+  if (IsScalar) {
+    A = CGF.Builder.CreateExtractElement(A, (uint64_t)0);
+    B = CGF.Builder.CreateExtractElement(B, (uint64_t)0);
+    C = CGF.Builder.CreateExtractElement(C, (uint64_t)0);
+  }
+
+  llvm::Type *Ty = A->getType();
+  Function *FMA = CGF.CGM.getIntrinsic(Intrinsic::fma, Ty);
+  Value *Res = CGF.Builder.CreateCall(FMA, {A, B, C} );
+
+  if (IsScalar)
+    return CGF.Builder.CreateInsertElement(Ops[0], Res, (uint64_t)0);
+
+  if (IsAddSub) {
+    // Negate even elts in C using a mask.
+    unsigned NumElts = Ty->getVectorNumElements();
+    SmallVector<Constant *, 16> NMask;
+    Constant *Zero = ConstantInt::get(CGF.Builder.getInt1Ty(), 0);
+    Constant *One = ConstantInt::get(CGF.Builder.getInt1Ty(), 1);
+    for (unsigned i = 0; i < NumElts; ++i) {
+      NMask.push_back(i % 2 == 0 ? One : Zero);
+    }
+    Value *NegMask = ConstantVector::get(NMask);
+
+    Value *NegC = CGF.Builder.CreateFNeg(C);
+    Value *FMSub = CGF.Builder.CreateCall(FMA, {A, B, NegC} );
+    Res = CGF.Builder.CreateSelect(NegMask, FMSub, Res);
+  }
+
+  return Res;
+}
+
 static Value *EmitX86Muldq(CodeGenFunction &CGF, bool IsSigned,
                            ArrayRef<Value *> Ops) {
   llvm::Type *Ty = Ops[0]->getType();
@@ -8819,6 +8897,22 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_cvtq2mask256:
   case X86::BI__builtin_ia32_cvtq2mask512:
     return EmitX86ConvertToMask(*this, Ops[0]);
+
+  case X86::BI__builtin_ia32_vfmaddss3:
+  case X86::BI__builtin_ia32_vfmaddsd3:
+  case X86::BI__builtin_ia32_vfmaddps:
+  case X86::BI__builtin_ia32_vfmaddpd:
+  case X86::BI__builtin_ia32_vfmaddps256:
+  case X86::BI__builtin_ia32_vfmaddpd256:
+  case X86::BI__builtin_ia32_vfmaddps512:
+  case X86::BI__builtin_ia32_vfmaddpd512:
+  case X86::BI__builtin_ia32_vfmaddsubps:
+  case X86::BI__builtin_ia32_vfmaddsubpd:
+  case X86::BI__builtin_ia32_vfmaddsubps256:
+  case X86::BI__builtin_ia32_vfmaddsubpd256:
+  case X86::BI__builtin_ia32_vfmaddsubps512:
+  case X86::BI__builtin_ia32_vfmaddsubpd512:
+    return EmitX86FMAExpr(*this, Ops, BuiltinID);
 
   case X86::BI__builtin_ia32_movdqa32store128_mask:
   case X86::BI__builtin_ia32_movdqa64store128_mask:

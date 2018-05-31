@@ -32,9 +32,10 @@
 #define __DEFAULT_FN_ATTRS \
   __attribute__((__always_inline__, __nodebug__, __target__("f16c")))
 
-// NOTE: Intel documents the 128-bit versions of these as being in emmintrin.h,
-// but that's because icc can emulate these without f16c using a library call.
-// Since we don't do that let's leave these in f16cintrin.h.
+/* NOTE: Intel documents the 128-bit versions of these as being in emmintrin.h,
+ * but that's because icc can emulate these without f16c using a library call.
+ * Since we don't do that let's leave these in f16cintrin.h.
+ */
 
 /// Converts a 16-bit half-precision float value into a 32-bit float
 ///    value.

@@ -71,7 +71,7 @@
         (__v64qi)(__m512i)(S)); })
 
 #define _mm512_maskz_gf2p8affineinv_epi64_epi8(U, A, B, I) __extension__ ({       \
-  (__m512i)_mm512_mask_gf2p8affineinv_epi64_epi8((__m512i)_mm512_setzero_qi(),    \
+  (__m512i)_mm512_mask_gf2p8affineinv_epi64_epi8((__m512i)_mm512_setzero_si512(),    \
         U, A, B, I); })
 
 #define _mm_gf2p8affine_epi64_epi8(A, B, I) __extension__ ({                      \
@@ -116,7 +116,7 @@
         (__v64qi)(__m512i)(S)); })
 
 #define _mm512_maskz_gf2p8affine_epi64_epi8(U, A, B, I) __extension__ ({          \
-  (__m512i)_mm512_mask_gf2p8affine_epi64_epi8((__m512i)_mm512_setzero_qi(),       \
+  (__m512i)_mm512_mask_gf2p8affine_epi64_epi8((__m512i)_mm512_setzero_si512(),       \
         U, A, B, I); })
 
 /* Default attributes for simple form (no masking). */
@@ -193,7 +193,7 @@ _mm512_mask_gf2p8mul_epi8(__m512i __S, __mmask64 __U, __m512i __A, __m512i __B)
 static __inline__ __m512i __DEFAULT_FN_ATTRS_Z
 _mm512_maskz_gf2p8mul_epi8(__mmask64 __U, __m512i __A, __m512i __B)
 {
-  return _mm512_mask_gf2p8mul_epi8((__m512i)_mm512_setzero_qi(),
+  return _mm512_mask_gf2p8mul_epi8((__m512i)_mm512_setzero_si512(),
               __U, __A, __B);
 }
 
@@ -202,5 +202,5 @@ _mm512_maskz_gf2p8mul_epi8(__mmask64 __U, __m512i __A, __m512i __B)
 #undef __DEFAULT_FN_ATTRS_Z
 #undef __DEFAULT_FN_ATTRS_VL
 
-#endif // __GFNIINTRIN_H
+#endif /* __GFNIINTRIN_H */
 

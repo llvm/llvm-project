@@ -2130,6 +2130,24 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   // "} n, m;" will end up in one unwrapped line.
 }
 
+void UnwrappedLineParser::parseObjCMethod() {
+  assert(FormatTok->Tok.isOneOf(tok::l_paren, tok::identifier) &&
+         "'(' or identifier expected.");
+  do {
+    if (FormatTok->Tok.is(tok::semi)) {
+      nextToken();
+      addUnwrappedLine();
+      return;
+    } else if (FormatTok->Tok.is(tok::l_brace)) {
+      parseBlock(/*MustBeDeclaration=*/false);
+      addUnwrappedLine();
+      return;
+    } else {
+      nextToken();
+    }
+  } while (!eof());
+}
+
 void UnwrappedLineParser::parseObjCProtocolList() {
   assert(FormatTok->Tok.is(tok::less) && "'<' expected.");
   do {
@@ -2157,6 +2175,9 @@ void UnwrappedLineParser::parseObjCUntilAtEnd() {
       // Ignore stray "}". parseStructuralElement doesn't consume them.
       nextToken();
       addUnwrappedLine();
+    } else if (FormatTok->isOneOf(tok::minus, tok::plus)) {
+      nextToken();
+      parseObjCMethod();
     } else {
       parseStructuralElement();
     }

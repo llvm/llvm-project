@@ -387,6 +387,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   }
 
   computeTables();
+  verify(*ST.getInstrInfo());
 }
 
 bool AArch64LegalizerInfo::legalizeCustom(MachineInstr &MI,

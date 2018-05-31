@@ -3055,7 +3055,7 @@ static __inline __m128 __DEFAULT_FN_ATTRS
 _mm_broadcast_ss(float const *__a)
 {
   float __f = *__a;
-  return (__m128)(__v4sf){ __f, __f, __f, __f };
+  return __extension__ (__m128)(__v4sf){ __f, __f, __f, __f };
 }
 
 /// Loads a scalar double-precision floating point value from the
@@ -3074,7 +3074,7 @@ static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_broadcast_sd(double const *__a)
 {
   double __d = *__a;
-  return (__m256d)(__v4df){ __d, __d, __d, __d };
+  return __extension__ (__m256d)(__v4df){ __d, __d, __d, __d };
 }
 
 /// Loads a scalar single-precision floating point value from the
@@ -3093,7 +3093,7 @@ static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_broadcast_ss(float const *__a)
 {
   float __f = *__a;
-  return (__m256)(__v8sf){ __f, __f, __f, __f, __f, __f, __f, __f };
+  return __extension__ (__m256)(__v8sf){ __f, __f, __f, __f, __f, __f, __f, __f };
 }
 
 /// Loads the data from a 128-bit vector of [2 x double] from the
@@ -3698,7 +3698,7 @@ _mm256_undefined_si256(void)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_set_pd(double __a, double __b, double __c, double __d)
 {
-  return (__m256d){ __d, __c, __b, __a };
+  return __extension__ (__m256d){ __d, __c, __b, __a };
 }
 
 /// Constructs a 256-bit floating-point vector of [8 x float] initialized
@@ -3738,7 +3738,7 @@ static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_set_ps(float __a, float __b, float __c, float __d,
               float __e, float __f, float __g, float __h)
 {
-  return (__m256){ __h, __g, __f, __e, __d, __c, __b, __a };
+  return __extension__ (__m256){ __h, __g, __f, __e, __d, __c, __b, __a };
 }
 
 /// Constructs a 256-bit integer vector initialized with the specified
@@ -3770,7 +3770,7 @@ static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_set_epi32(int __i0, int __i1, int __i2, int __i3,
                  int __i4, int __i5, int __i6, int __i7)
 {
-  return (__m256i)(__v8si){ __i7, __i6, __i5, __i4, __i3, __i2, __i1, __i0 };
+  return __extension__ (__m256i)(__v8si){ __i7, __i6, __i5, __i4, __i3, __i2, __i1, __i0 };
 }
 
 /// Constructs a 256-bit integer vector initialized with the specified
@@ -3820,7 +3820,7 @@ _mm256_set_epi16(short __w15, short __w14, short __w13, short __w12,
                  short __w07, short __w06, short __w05, short __w04,
                  short __w03, short __w02, short __w01, short __w00)
 {
-  return (__m256i)(__v16hi){ __w00, __w01, __w02, __w03, __w04, __w05, __w06,
+  return __extension__ (__m256i)(__v16hi){ __w00, __w01, __w02, __w03, __w04, __w05, __w06,
     __w07, __w08, __w09, __w10, __w11, __w12, __w13, __w14, __w15 };
 }
 
@@ -3907,7 +3907,7 @@ _mm256_set_epi8(char __b31, char __b30, char __b29, char __b28,
                 char __b07, char __b06, char __b05, char __b04,
                 char __b03, char __b02, char __b01, char __b00)
 {
-  return (__m256i)(__v32qi){
+  return __extension__ (__m256i)(__v32qi){
     __b00, __b01, __b02, __b03, __b04, __b05, __b06, __b07,
     __b08, __b09, __b10, __b11, __b12, __b13, __b14, __b15,
     __b16, __b17, __b18, __b19, __b20, __b21, __b22, __b23,
@@ -3935,7 +3935,7 @@ _mm256_set_epi8(char __b31, char __b30, char __b29, char __b28,
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_set_epi64x(long long __a, long long __b, long long __c, long long __d)
 {
-  return (__m256i)(__v4di){ __d, __c, __b, __a };
+  return __extension__ (__m256i)(__v4di){ __d, __c, __b, __a };
 }
 
 /* Create vectors with elements in reverse order */
@@ -3964,7 +3964,7 @@ _mm256_set_epi64x(long long __a, long long __b, long long __c, long long __d)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_setr_pd(double __a, double __b, double __c, double __d)
 {
-  return (__m256d){ __a, __b, __c, __d };
+  return _mm256_set_pd(__a, __b, __c, __d);
 }
 
 /// Constructs a 256-bit floating-point vector of [8 x float],
@@ -4005,7 +4005,7 @@ static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_setr_ps(float __a, float __b, float __c, float __d,
                float __e, float __f, float __g, float __h)
 {
-  return (__m256){ __a, __b, __c, __d, __e, __f, __g, __h };
+  return _mm256_set_ps(__a, __b, __c, __d, __e, __f, __g, __h);
 }
 
 /// Constructs a 256-bit integer vector, initialized in reverse order
@@ -4037,7 +4037,7 @@ static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_setr_epi32(int __i0, int __i1, int __i2, int __i3,
                   int __i4, int __i5, int __i6, int __i7)
 {
-  return (__m256i)(__v8si){ __i0, __i1, __i2, __i3, __i4, __i5, __i6, __i7 };
+  return _mm256_set_epi32(__i0, __i1, __i2, __i3, __i4, __i5, __i6, __i7);
 }
 
 /// Constructs a 256-bit integer vector, initialized in reverse order
@@ -4087,8 +4087,10 @@ _mm256_setr_epi16(short __w15, short __w14, short __w13, short __w12,
        short __w07, short __w06, short __w05, short __w04,
        short __w03, short __w02, short __w01, short __w00)
 {
-  return (__m256i)(__v16hi){ __w15, __w14, __w13, __w12, __w11, __w10, __w09,
-    __w08, __w07, __w06, __w05, __w04, __w03, __w02, __w01, __w00 };
+  return _mm256_set_epi16(__w15, __w14, __w13, __w12,
+                          __w11, __w10, __w09, __w08,
+                          __w07, __w06, __w05, __w04,
+                          __w03, __w02, __w01, __w00);
 }
 
 /// Constructs a 256-bit integer vector, initialized in reverse order
@@ -4174,11 +4176,10 @@ _mm256_setr_epi8(char __b31, char __b30, char __b29, char __b28,
                  char __b07, char __b06, char __b05, char __b04,
                  char __b03, char __b02, char __b01, char __b00)
 {
-  return (__m256i)(__v32qi){
-    __b31, __b30, __b29, __b28, __b27, __b26, __b25, __b24,
-    __b23, __b22, __b21, __b20, __b19, __b18, __b17, __b16,
-    __b15, __b14, __b13, __b12, __b11, __b10, __b09, __b08,
-    __b07, __b06, __b05, __b04, __b03, __b02, __b01, __b00 };
+  return _mm256_set_epi8(__b31, __b30, __b29, __b28, __b27, __b26, __b25, __b24,
+                         __b23, __b22, __b21, __b20, __b19, __b18, __b17, __b16,
+                         __b15, __b14, __b13, __b12, __b11, __b10, __b09, __b08,
+                         __b07, __b06, __b05, __b04, __b03, __b02, __b01, __b00);
 }
 
 /// Constructs a 256-bit integer vector, initialized in reverse order
@@ -4201,7 +4202,7 @@ _mm256_setr_epi8(char __b31, char __b30, char __b29, char __b28,
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_setr_epi64x(long long __a, long long __b, long long __c, long long __d)
 {
-  return (__m256i)(__v4di){ __a, __b, __c, __d };
+  return _mm256_set_epi64x(__a, __b, __c, __d);
 }
 
 /* Create vectors with repeated elements */
@@ -4220,7 +4221,7 @@ _mm256_setr_epi64x(long long __a, long long __b, long long __c, long long __d)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_set1_pd(double __w)
 {
-  return (__m256d){ __w, __w, __w, __w };
+  return _mm256_set_pd(__w, __w, __w, __w);
 }
 
 /// Constructs a 256-bit floating-point vector of [8 x float], with each
@@ -4239,7 +4240,7 @@ _mm256_set1_pd(double __w)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_set1_ps(float __w)
 {
-  return (__m256){ __w, __w, __w, __w, __w, __w, __w, __w };
+  return _mm256_set_ps(__w, __w, __w, __w, __w, __w, __w, __w);
 }
 
 /// Constructs a 256-bit integer vector of [8 x i32], with each of the
@@ -4258,7 +4259,7 @@ _mm256_set1_ps(float __w)
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_set1_epi32(int __i)
 {
-  return (__m256i)(__v8si){ __i, __i, __i, __i, __i, __i, __i, __i };
+  return _mm256_set_epi32(__i, __i, __i, __i, __i, __i, __i, __i);
 }
 
 /// Constructs a 256-bit integer vector of [16 x i16], with each of the
@@ -4276,8 +4277,8 @@ _mm256_set1_epi32(int __i)
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_set1_epi16(short __w)
 {
-  return (__m256i)(__v16hi){ __w, __w, __w, __w, __w, __w, __w, __w, __w, __w,
-    __w, __w, __w, __w, __w, __w };
+  return _mm256_set_epi16(__w, __w, __w, __w, __w, __w, __w, __w,
+                          __w, __w, __w, __w, __w, __w, __w, __w);
 }
 
 /// Constructs a 256-bit integer vector of [32 x i8], with each of the
@@ -4294,9 +4295,10 @@ _mm256_set1_epi16(short __w)
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_set1_epi8(char __b)
 {
-  return (__m256i)(__v32qi){ __b, __b, __b, __b, __b, __b, __b, __b, __b, __b,
-    __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b,
-    __b, __b, __b, __b, __b, __b, __b };
+  return _mm256_set_epi8(__b, __b, __b, __b, __b, __b, __b, __b,
+                         __b, __b, __b, __b, __b, __b, __b, __b,
+                         __b, __b, __b, __b, __b, __b, __b, __b,
+                         __b, __b, __b, __b, __b, __b, __b, __b);
 }
 
 /// Constructs a 256-bit integer vector of [4 x i64], with each of the
@@ -4314,7 +4316,7 @@ _mm256_set1_epi8(char __b)
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_set1_epi64x(long long __q)
 {
-  return (__m256i)(__v4di){ __q, __q, __q, __q };
+  return _mm256_set_epi64x(__q, __q, __q, __q);
 }
 
 /* Create __zeroed vectors */
@@ -4329,7 +4331,7 @@ _mm256_set1_epi64x(long long __q)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_setzero_pd(void)
 {
-  return (__m256d){ 0, 0, 0, 0 };
+  return __extension__ (__m256d){ 0, 0, 0, 0 };
 }
 
 /// Constructs a 256-bit floating-point vector of [8 x float] with all
@@ -4343,7 +4345,7 @@ _mm256_setzero_pd(void)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_setzero_ps(void)
 {
-  return (__m256){ 0, 0, 0, 0, 0, 0, 0, 0 };
+  return __extension__ (__m256){ 0, 0, 0, 0, 0, 0, 0, 0 };
 }
 
 /// Constructs a 256-bit integer vector initialized to zero.
@@ -4356,7 +4358,7 @@ _mm256_setzero_ps(void)
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_setzero_si256(void)
 {
-  return (__m256i){ 0LL, 0LL, 0LL, 0LL };
+  return __extension__ (__m256i)(__v4di){ 0, 0, 0, 0 };
 }
 
 /* Cast between vector types */

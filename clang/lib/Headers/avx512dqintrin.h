@@ -1178,7 +1178,7 @@ _mm512_maskz_broadcast_i64x2(__mmask8 __M, __m128i __A)
 #define _mm512_maskz_extracti64x2_epi64(U, A, imm) __extension__ ({ \
   (__m128d)__builtin_ia32_selectq_128((__mmask8)(U), \
                                 (__v2di)_mm512_extracti64x2_epi64((A), (imm)), \
-                                (__v2di)_mm_setzero_di()); })
+                                (__v2di)_mm_setzero_si128()); })
 
 #define _mm512_insertf32x8(A, B, imm) __extension__ ({ \
   (__m512)__builtin_shufflevector((__v16sf)(__m512)(A), \

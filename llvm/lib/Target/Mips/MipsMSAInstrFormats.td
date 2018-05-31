@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 class MSAInst : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther>,
-                PredicateControl, ASE_MSA {
+                ASE_MSA {
   let EncodingPredicates = [HasStdEnc];
   let Inst{31-26} = 0b011110;
 }

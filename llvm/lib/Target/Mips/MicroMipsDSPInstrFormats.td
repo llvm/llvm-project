@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 class MMDSPInst<string opstr = "">
-    : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther>, PredicateControl {
+    : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther> {
   let ASEPredicate = [HasDSP];
   let AdditionalPredicates = [InMicroMips];
   string BaseOpcode = opstr;
