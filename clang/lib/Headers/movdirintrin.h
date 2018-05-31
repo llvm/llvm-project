@@ -27,7 +27,7 @@
 #ifndef _MOVDIRINTRIN_H
 #define _MOVDIRINTRIN_H
 
-// Move doubleword as direct store
+/* Move doubleword as direct store */
 static __inline__ void
 __attribute__((__always_inline__, __nodebug__,  __target__("movdiri")))
 _directstoreu_u32 (void *__dst, unsigned int  __value)
@@ -37,7 +37,7 @@ _directstoreu_u32 (void *__dst, unsigned int  __value)
 
 #ifdef __x86_64__
 
-// Move quadword as direct store
+/* Move quadword as direct store */
 static __inline__ void
 __attribute__((__always_inline__, __nodebug__,  __target__("movdiri")))
 _directstoreu_u64 (void *__dst, unsigned long __value)

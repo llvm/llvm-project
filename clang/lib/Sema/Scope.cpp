@@ -92,6 +92,7 @@ void Scope::Init(Scope *parent, unsigned flags) {
   UsingDirectives.clear();
   Entity = nullptr;
   ErrorTrap.reset();
+  NRVO.setPointerAndInt(nullptr, 0);
 }
 
 bool Scope::containedInPrototypeScope() const {
@@ -118,15 +119,19 @@ void Scope::AddFlags(unsigned FlagsToSet) {
   Flags |= FlagsToSet;
 }
 
-void Scope::setNRVOCandidate(VarDecl *Candidate) {
-  for (Decl *D : DeclsInScope) {
-    VarDecl *VD = dyn_cast<VarDecl>(D);
-    if (VD && VD != Candidate && VD->isNRVOCandidate())
-      VD->setNRVOVariable(false);
+void Scope::mergeNRVOIntoParent() {
+  if (VarDecl *Candidate = NRVO.getPointer()) {
+    if (isDeclScope(Candidate))
+      Candidate->setNRVOVariable(true);
   }
 
-  if (Scope *parent = getParent())
-    parent->setNRVOCandidate(Candidate);
+  if (getEntity())
+    return;
+
+  if (NRVO.getInt())
+    getParent()->setNoNRVO();
+  else if (NRVO.getPointer())
+    getParent()->addNRVOCandidate(NRVO.getPointer());
 }
 
 LLVM_DUMP_METHOD void Scope::dump() const { dumpImpl(llvm::errs()); }
@@ -186,4 +191,9 @@ void Scope::dumpImpl(raw_ostream &OS) const {
   OS << "MSCurManglingNumber: " << getMSCurManglingNumber() << '\n';
   if (const DeclContext *DC = getEntity())
     OS << "Entity : (clang::DeclContext*)" << DC << '\n';
+
+  if (NRVO.getInt())
+    OS << "NRVO not allowed\n";
+  else if (NRVO.getPointer())
+    OS << "NRVO candidate : (clang::VarDecl*)" << NRVO.getPointer() << '\n';
 }

@@ -125,7 +125,6 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   // have some flexibility in defining the base region, we can achieve
   // various levels of conservatism in our buffer overflow checking.
   ProgramStateRef state = checkerContext.getState();
-  ProgramStateRef originalState = state;
 
   SValBuilder &svalBuilder = checkerContext.getSValBuilder();
   const RegionRawOffsetV2 &rawOffset =
@@ -224,8 +223,7 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   }
   while (false);
 
-  if (state != originalState)
-    checkerContext.addTransition(state);
+  checkerContext.addTransition(state);
 }
 
 void ArrayBoundCheckerV2::reportOOB(

@@ -5,7 +5,8 @@
 // RUN:  -fno-builtin-strcpy -fno-builtin-stpcpy -fno-builtin-strncpy -fno-builtin-strlen \
 // RUN:  -fno-builtin-strpbrk -fno-builtin-strspn -fno-builtin-strtod -fno-builtin-strtof \
 // RUN:  -fno-builtin-strtold -fno-builtin-strtol -fno-builtin-strtoll -fno-builtin-strtoul \
-// RUN:  -fno-builtin-strtoull -fno-builtin-fread -fno-builtin-fwrite -o - %s | FileCheck %s
+// RUN:  -fno-builtin-strtoull -fno-builtin-fread -fno-builtin-fwrite -fno-builtin-fopen \
+// RUN:  -o - %s | FileCheck %s
 // RUN: %clang_cc1 -S -O3 -fno-builtin -o - %s | FileCheck --check-prefix=ASM %s
 // RUN: %clang_cc1 -S -O3 -fno-builtin-ceil -o - %s | FileCheck --check-prefix=ASM-INDIV %s
 
@@ -41,6 +42,7 @@ unsigned long long int strtoull(const char *nptr, char **endptr, int base);
 size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 size_t fwrite(const void *ptr, size_t size, size_t nmemb,
               FILE *stream);
+FILE *fopen(const char *path, const char *mode);
 
 double t1(double x) { return ceil(x); }
 // CHECK-LABEL: t1
@@ -151,5 +153,11 @@ void t25(FILE *fp, int *buf) {
 // CHECK-LABEL: t25
 // CHECK: call{{.*}}@fwrite{{.*}} [[ATTR]]
 // CHECK: call{{.*}}@fread{{.*}} [[ATTR]]
+
+FILE *t26(const char *path, const char *mode) {
+  return fopen(path, mode);
+}
+// CHECK-LABEL: t26
+// CHECK: call{{.*}}@fopen{{.*}} [[ATTR]]
 
 // CHECK: [[ATTR]] = { nobuiltin }

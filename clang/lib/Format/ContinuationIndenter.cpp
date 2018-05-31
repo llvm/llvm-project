@@ -1387,29 +1387,6 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
        (Current.is(tok::greater) && Current.is(TT_DictLiteral))))
     State.Stack.pop_back();
 
-  // Reevaluate whether ObjC message arguments fit into one line.
-  // If a receiver spans multiple lines, e.g.:
-  //   [[object block:^{
-  //     return 42;
-  //   }] a:42 b:42];
-  // BreakBeforeParameter is calculated based on an incorrect assumption
-  // (it is checked whether the whole expression fits into one line without
-  // considering a line break inside a message receiver).
-  // We check whether arguements fit after receiver scope closer (into the same
-  // line).
-  if (Current.MatchingParen && Current.MatchingParen->Previous) {
-    const FormatToken &CurrentScopeOpener = *Current.MatchingParen->Previous;
-    if (CurrentScopeOpener.is(TT_ObjCMethodExpr) &&
-        CurrentScopeOpener.MatchingParen) {
-      int NecessarySpaceInLine =
-          getLengthToMatchingParen(CurrentScopeOpener, State.Stack) +
-          CurrentScopeOpener.TotalLength - Current.TotalLength - 1;
-      if (State.Column + Current.ColumnWidth + NecessarySpaceInLine <=
-          Style.ColumnLimit)
-        State.Stack.back().BreakBeforeParameter = false;
-    }
-  }
-
   if (Current.is(tok::r_square)) {
     // If this ends the array subscript expr, reset the corresponding value.
     const FormatToken *NextNonComment = Current.getNextNonComment();

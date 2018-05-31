@@ -1012,31 +1012,30 @@ void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
   CharUnits PointerWidth =
       Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(0));
 
-  typedef std::pair<const CXXRecordDecl *, unsigned> BSEntry;
-  std::vector<BSEntry> BitsetEntries;
-  // Create a bit set entry for each address point.
+  typedef std::pair<const CXXRecordDecl *, unsigned> TypeMetadata;
+  std::vector<TypeMetadata> TypeMetadatas;
+  // Create type metadata for each address point.
   for (auto &&AP : VTLayout.getAddressPoints())
-    BitsetEntries.push_back(
-        std::make_pair(AP.first.getBase(),
-                       VTLayout.getVTableOffset(AP.second.VTableIndex) +
-                           AP.second.AddressPointIndex));
+    TypeMetadatas.push_back(std::make_pair(
+        AP.first.getBase(), VTLayout.getVTableOffset(AP.second.VTableIndex) +
+                                AP.second.AddressPointIndex));
 
-  // Sort the bit set entries for determinism.
-  llvm::sort(BitsetEntries.begin(), BitsetEntries.end(),
-             [this](const BSEntry &E1, const BSEntry &E2) {
-    if (&E1 == &E2)
+  // Sort the type metadata for determinism.
+  llvm::sort(TypeMetadatas.begin(), TypeMetadatas.end(),
+             [this](const TypeMetadata &M1, const TypeMetadata &M2) {
+    if (&M1 == &M2)
       return false;
 
     std::string S1;
     llvm::raw_string_ostream O1(S1);
     getCXXABI().getMangleContext().mangleTypeName(
-        QualType(E1.first->getTypeForDecl(), 0), O1);
+        QualType(M1.first->getTypeForDecl(), 0), O1);
     O1.flush();
 
     std::string S2;
     llvm::raw_string_ostream O2(S2);
     getCXXABI().getMangleContext().mangleTypeName(
-        QualType(E2.first->getTypeForDecl(), 0), O2);
+        QualType(M2.first->getTypeForDecl(), 0), O2);
     O2.flush();
 
     if (S1 < S2)
@@ -1044,10 +1043,10 @@ void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
     if (S1 != S2)
       return false;
 
-    return E1.second < E2.second;
+    return M1.second < M2.second;
   });
 
-  for (auto BitsetEntry : BitsetEntries)
-    AddVTableTypeMetadata(VTable, PointerWidth * BitsetEntry.second,
-                          BitsetEntry.first);
+  for (auto TypeMetadata : TypeMetadatas)
+    AddVTableTypeMetadata(VTable, PointerWidth * TypeMetadata.second,
+                          TypeMetadata.first);
 }

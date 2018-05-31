@@ -180,15 +180,7 @@ bool DWARFUnit::ExtractDIEsIfNeeded() {
     m_first_die = m_die_array.front();
   }
 
-  // Since std::vector objects will double their size, we really need to make a
-  // new array with the perfect size so we don't end up wasting space. So here
-  // we copy and swap to make sure we don't have any extra memory taken up.
-
-  if (m_die_array.size() < m_die_array.capacity()) {
-    DWARFDebugInfoEntry::collection exact_size_die_array(m_die_array.begin(),
-                                                         m_die_array.end());
-    exact_size_die_array.swap(m_die_array);
-  }
+  m_die_array.shrink_to_fit();
 
   ExtractDIEsEndCheck(offset);
 

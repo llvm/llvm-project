@@ -130,13 +130,17 @@ X test2(bool B) {
 }
 
 // CHECK-LABEL: define void @_Z5test3b
-X test3(bool B, X x) {
+X test3(bool B) {
   // CHECK: tail call {{.*}} @_ZN1XC1Ev
+  // CHECK-NOT: call {{.*}} @_ZN1XC1ERKS_
+  // CHECK: call {{.*}} @_ZN1XC1Ev
+  // CHECK: call {{.*}} @_ZN1XC1ERKS_
   if (B) {
     X y;
     return y;
   }
-  // CHECK: tail call {{.*}} @_ZN1XC1ERKS_
+  // FIXME: we should NRVO this variable too.
+  X x;
   return x;
 }
 
@@ -187,13 +191,9 @@ X test6() {
 }
 
 // CHECK-LABEL: define void @_Z5test7b
-// CHECK-EH-LABEL: define void @_Z5test7b
 X test7(bool b) {
   // CHECK: tail call {{.*}} @_ZN1XC1Ev
   // CHECK-NEXT: ret
-
-  // CHECK-EH: tail call {{.*}} @_ZN1XC1Ev
-  // CHECK-EH-NEXT: ret
   if (b) {
     X x;
     return x;
@@ -202,14 +202,10 @@ X test7(bool b) {
 }
 
 // CHECK-LABEL: define void @_Z5test8b
-// CHECK-EH-LABEL: define void @_Z5test8b
 X test8(bool b) {
   // CHECK: tail call {{.*}} @_ZN1XC1Ev
   // CHECK-NEXT: ret
-
-  // CHECK-EH: tail call {{.*}} @_ZN1XC1Ev
-  // CHECK-EH-NEXT: ret
-if (b) {
+  if (b) {
     X x;
     return x;
   } else {
@@ -224,38 +220,5 @@ Y<int> test9() {
 
 // CHECK-LABEL: define linkonce_odr void @_ZN1YIiE1fEv
 // CHECK: tail call {{.*}} @_ZN1YIiEC1Ev
-
-// CHECK-LABEL: define void @_Z6test10b
-X test10(bool B, X x) {
-  if (B) {
-    // CHECK: tail call {{.*}} @_ZN1XC1ERKS_
-    // CHECK-EH: tail call {{.*}} @_ZN1XC1ERKS_
-    return x;
-  }
-  // CHECK: tail call {{.*}} @_ZN1XC1Ev
-  // CHECK-NOT: call {{.*}} @_ZN1XC1ERKS_
-
-  // CHECK-EH: tail call {{.*}} @_ZN1XC1Ev
-  // CHECK-EH-NOT: call {{.*}} @_ZN1XC1ERKS_
-  X y;
-  return y;
-}
-
-// CHECK-LABEL: define {{.*}} void @_Z6test11I1XET_v
-// CHECK-EH-LABEL: define {{.*}} void @_Z6test11I1XET_v
-template <typename T>
-T test11() {
-  // CHECK:      tail call {{.*}} @_ZN1XC1Ev
-  // CHECK-NEXT: ret void
-
-  // CHECK-EH:      tail call {{.*}} @_ZN1XC1Ev
-  // CHECK-EH-NEXT: ret void
-  T t;
-  return t;
-}
-
-void test12() {
-  test11<X>();
-}
 
 // CHECK-EH-03: attributes [[NR_NUW]] = { noreturn nounwind }

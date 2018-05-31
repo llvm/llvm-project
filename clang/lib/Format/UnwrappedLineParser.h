@@ -120,6 +120,7 @@ private:
   // parses the record as a child block, i.e. if the class declaration is an
   // expression.
   void parseRecord(bool ParseAsExpr = false);
+  void parseObjCMethod();
   void parseObjCProtocolList();
   void parseObjCUntilAtEnd();
   void parseObjCInterfaceOrImplementation();
