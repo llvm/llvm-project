@@ -462,7 +462,7 @@ def: F<"no-ctors-in-init-array">;
 def: F<"no-keep-memory">;
 def: F<"no-mmap-output-file">;
 def: F<"no-warn-mismatch">;
-def: J<"rpath-link">;
+def: Separate<["--", "-"], "rpath-link">;
 def: J<"rpath-link=">;
 def: F<"sort-common">;
 def: F<"stats">;

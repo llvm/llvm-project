@@ -175,7 +175,13 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   case R_PPC64_GOT_TLSGD16_HI:
   case R_PPC64_GOT_TLSGD16_LO:
     return R_TLSGD_GOT;
+  case R_PPC64_GOT_TLSLD16:
+  case R_PPC64_GOT_TLSLD16_HA:
+  case R_PPC64_GOT_TLSLD16_HI:
+  case R_PPC64_GOT_TLSLD16_LO:
+    return R_TLSLD_GOT;
   case R_PPC64_TLSGD:
+  case R_PPC64_TLSLD:
     return R_HINT;
   default:
     return R_ABS;
@@ -221,17 +227,21 @@ static std::pair<RelType, uint64_t> toAddr16Rel(RelType Type, uint64_t Val) {
   uint64_t V = Val - PPC64TocOffset;
   switch (Type) {
   case R_PPC64_GOT_TLSGD16:
+  case R_PPC64_GOT_TLSLD16:
   case R_PPC64_TOC16:
     return {R_PPC64_ADDR16, V};
   case R_PPC64_TOC16_DS:
     return {R_PPC64_ADDR16_DS, V};
   case R_PPC64_GOT_TLSGD16_HA:
+  case R_PPC64_GOT_TLSLD16_HA:
   case R_PPC64_TOC16_HA:
     return {R_PPC64_ADDR16_HA, V};
   case R_PPC64_GOT_TLSGD16_HI:
+  case R_PPC64_GOT_TLSLD16_HI:
   case R_PPC64_TOC16_HI:
     return {R_PPC64_ADDR16_HI, V};
   case R_PPC64_GOT_TLSGD16_LO:
+  case R_PPC64_GOT_TLSLD16_LO:
   case R_PPC64_TOC16_LO:
     return {R_PPC64_ADDR16_LO, V};
   case R_PPC64_TOC16_LO_DS:
