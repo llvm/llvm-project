@@ -1110,14 +1110,14 @@ void MDAttachmentMap::set(unsigned ID, MDNode &MD) {
                            std::make_tuple(&MD));
 }
 
-void MDAttachmentMap::erase(unsigned ID) {
+bool MDAttachmentMap::erase(unsigned ID) {
   if (empty())
-    return;
+    return false;
 
   // Common case is one/last value.
   if (Attachments.back().first == ID) {
     Attachments.pop_back();
-    return;
+    return true;
   }
 
   for (auto I = Attachments.begin(), E = std::prev(Attachments.end()); I != E;
@@ -1125,8 +1125,10 @@ void MDAttachmentMap::erase(unsigned ID) {
     if (I->first == ID) {
       *I = std::move(Attachments.back());
       Attachments.pop_back();
-      return;
+      return true;
     }
+
+  return false;
 }
 
 MDNode *MDAttachmentMap::lookup(unsigned ID) const {
@@ -1149,29 +1151,31 @@ void MDGlobalAttachmentMap::insert(unsigned ID, MDNode &MD) {
   Attachments.push_back({ID, TrackingMDNodeRef(&MD)});
 }
 
+MDNode *MDGlobalAttachmentMap::lookup(unsigned ID) const {
+  for (const auto &A : Attachments)
+    if (A.MDKind == ID)
+      return A.Node;
+  return nullptr;
+}
+
 void MDGlobalAttachmentMap::get(unsigned ID,
-                                SmallVectorImpl<MDNode *> &Result) {
-  for (auto A : Attachments)
+                                SmallVectorImpl<MDNode *> &Result) const {
+  for (const auto &A : Attachments)
     if (A.MDKind == ID)
       Result.push_back(A.Node);
 }
 
-void MDGlobalAttachmentMap::erase(unsigned ID) {
-  auto Follower = Attachments.begin();
-  for (auto Leader = Attachments.begin(), E = Attachments.end(); Leader != E;
-       ++Leader) {
-    if (Leader->MDKind != ID) {
-      if (Follower != Leader)
-        *Follower = std::move(*Leader);
-      ++Follower;
-    }
-  }
-  Attachments.resize(Follower - Attachments.begin());
+bool MDGlobalAttachmentMap::erase(unsigned ID) {
+  auto I = std::remove_if(Attachments.begin(), Attachments.end(),
+                          [ID](const Attachment &A) { return A.MDKind == ID; });
+  bool Changed = I != Attachments.end();
+  Attachments.erase(I, Attachments.end());
+  return Changed;
 }
 
 void MDGlobalAttachmentMap::getAll(
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Result) const {
-  for (auto &A : Attachments)
+  for (const auto &A : Attachments)
     Result.emplace_back(A.MDKind, A.Node);
 
   // Sort the resulting array so it is stable with respect to metadata IDs. We
@@ -1398,15 +1402,16 @@ void GlobalObject::addMetadata(StringRef Kind, MDNode &MD) {
   addMetadata(getContext().getMDKindID(Kind), MD);
 }
 
-void GlobalObject::eraseMetadata(unsigned KindID) {
+bool GlobalObject::eraseMetadata(unsigned KindID) {
   // Nothing to unset.
   if (!hasMetadata())
-    return;
+    return false;
 
   auto &Store = getContext().pImpl->GlobalObjectMetadata[this];
-  Store.erase(KindID);
+  bool Changed = Store.erase(KindID);
   if (Store.empty())
     clearMetadata();
+  return Changed;
 }
 
 void GlobalObject::getAllMetadata(
@@ -1437,11 +1442,9 @@ void GlobalObject::setMetadata(StringRef Kind, MDNode *N) {
 }
 
 MDNode *GlobalObject::getMetadata(unsigned KindID) const {
-  SmallVector<MDNode *, 1> MDs;
-  getMetadata(KindID, MDs);
-  if (MDs.empty())
-    return nullptr;
-  return MDs[0];
+  if (hasMetadata())
+    return getContext().pImpl->GlobalObjectMetadata[this].lookup(KindID);
+  return nullptr;
 }
 
 MDNode *GlobalObject::getMetadata(StringRef Kind) const {

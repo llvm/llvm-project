@@ -195,4 +195,5 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const SISubtarget &ST,
   }
 
   computeTables();
+  verify(*ST.getInstrInfo());
 }

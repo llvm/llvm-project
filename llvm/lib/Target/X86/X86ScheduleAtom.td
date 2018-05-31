@@ -184,6 +184,8 @@ def : WriteRes<WriteNop, [AtomPort01]>;
 // Floating point. This covers both scalar and vector operations.
 ////////////////////////////////////////////////////////////////////////////////
 
+defm : X86WriteRes<WriteFLD0,       [AtomPort01], 1, [1], 1>;
+defm : X86WriteRes<WriteFLD1,       [AtomPort01], 6, [6], 1>;
 def  : WriteRes<WriteFLoad,         [AtomPort0]>;
 def  : WriteRes<WriteFLoadX,        [AtomPort0]>;
 def  : WriteRes<WriteFLoadY,        [AtomPort0]>;
@@ -202,7 +204,7 @@ def  : WriteRes<WriteFMaskedStoreY, [AtomPort0]>;
 def  : WriteRes<WriteFMove,         [AtomPort01]>;
 def  : WriteRes<WriteFMoveX,        [AtomPort01]>;
 def  : WriteRes<WriteFMoveY,        [AtomPort01]>;
-                                    
+
 defm : X86WriteRes<WriteEMMS,       [AtomPort01], 5, [5], 1>;
 
 defm : AtomWriteResPair<WriteFAdd,           [AtomPort0],  [AtomPort0],  5,  5,  [5],  [5]>;
@@ -492,7 +494,7 @@ def AtomWrite01_1 : SchedWriteRes<[AtomPort01]> {
   let Latency = 1;
   let ResourceCycles = [1];
 }
-def : InstRW<[AtomWrite01_1], (instrs FDECSTP, FFREE, FFREEP, FINCSTP, LD_F0, WAIT,
+def : InstRW<[AtomWrite01_1], (instrs FDECSTP, FFREE, FFREEP, FINCSTP, WAIT,
                                       LFENCE,
                                       STOSB, STOSL, STOSQ, STOSW,
                                       MOVSSrr, MOVSSrr_REV,
@@ -560,7 +562,7 @@ def AtomWrite01_6 : SchedWriteRes<[AtomPort01]> {
   let Latency = 6;
   let ResourceCycles = [6];
 }
-def : InstRW<[AtomWrite01_6], (instrs LD_F1, CMPXCHG8rm, INTO, XLAT,
+def : InstRW<[AtomWrite01_6], (instrs CMPXCHG8rm, INTO, XLAT,
                                       SHLD16rrCL, SHRD16rrCL,
                                       SHLD16rri8, SHRD16rri8,
                                       SHLD16mrCL, SHRD16mrCL,
@@ -603,7 +605,7 @@ def AtomWrite01_10 : SchedWriteRes<[AtomPort01]> {
   let Latency = 10;
   let ResourceCycles = [10];
 }
-def : InstRW<[AtomWrite01_10], (instrs FLDL2E, FLDL2T, FLDLG2, FLDLN2, FLDPI)>;
+def : SchedAlias<WriteFLDC, AtomWrite01_10>;
 def : InstRW<[AtomWrite01_10], (instregex "(U)?COMIS(D|S)rm",
                                           "CVT(T)?SS2SI64rm(_Int)?")>;
 

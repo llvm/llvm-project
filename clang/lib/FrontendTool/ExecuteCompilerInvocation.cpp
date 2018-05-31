@@ -45,6 +45,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case ASTDump:                return llvm::make_unique<ASTDumpAction>();
   case ASTPrint:               return llvm::make_unique<ASTPrintAction>();
   case ASTView:                return llvm::make_unique<ASTViewAction>();
+  case DumpCompilerOptions:
+    return llvm::make_unique<DumpCompilerOptionsAction>();
   case DumpRawTokens:          return llvm::make_unique<DumpRawTokensAction>();
   case DumpTokens:             return llvm::make_unique<DumpTokensAction>();
   case EmitAssembly:           return llvm::make_unique<EmitAssemblyAction>();

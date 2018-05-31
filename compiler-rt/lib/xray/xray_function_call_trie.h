@@ -150,7 +150,6 @@ public:
     using NodeAllocatorType = NodeArray::AllocatorType;
     using RootAllocatorType = RootArray::AllocatorType;
     using ShadowStackAllocatorType = ShadowStackArray::AllocatorType;
-    using NodeIdPairAllocatorType = NodeIdPairAllocatorType;
 
     NodeAllocatorType *NodeAllocator = nullptr;
     RootAllocatorType *RootAllocator = nullptr;
@@ -240,11 +239,10 @@ public:
         profilerFlags()->per_thread_allocator_max, 0);
     A.ShadowStackAllocator = ShadowStackAllocator;
 
-    auto NodeIdPairAllocator =
-        reinterpret_cast<Allocators::NodeIdPairAllocatorType *>(
-            InternalAlloc(sizeof(Allocators::NodeIdPairAllocatorType)));
-    new (NodeIdPairAllocator) Allocators::NodeIdPairAllocatorType(
-        profilerFlags()->per_thread_allocator_max, 0);
+    auto NodeIdPairAllocator = reinterpret_cast<NodeIdPairAllocatorType *>(
+        InternalAlloc(sizeof(NodeIdPairAllocatorType)));
+    new (NodeIdPairAllocator)
+        NodeIdPairAllocatorType(profilerFlags()->per_thread_allocator_max, 0);
     A.NodeIdPairAllocator = NodeIdPairAllocator;
     return A;
   }

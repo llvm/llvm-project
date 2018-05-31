@@ -1253,9 +1253,6 @@ void Driver::generateCompilationDiagnostics(
 
   // If any of the preprocessing commands failed, clean up and exit.
   if (!FailingCommands.empty()) {
-    if (!isSaveTempsEnabled())
-      C.CleanupFileList(C.getTempFiles(), true);
-
     Diag(clang::diag::note_drv_command_failed_diag_msg)
         << "Error generating preprocessed source(s).";
     return;
@@ -1371,9 +1368,6 @@ int Driver::ExecuteCompilation(
     setUpResponseFiles(C, Job);
 
   C.ExecuteJobs(C.getJobs(), FailingCommands);
-
-  // Remove temp files.
-  C.CleanupFileList(C.getTempFiles());
 
   // If the command succeeded, we are done.
   if (FailingCommands.empty())

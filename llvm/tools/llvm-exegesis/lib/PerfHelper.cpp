@@ -96,9 +96,12 @@ Counter::Counter(const PerfEvent &Event) {
   const uint32_t Flags = 0;
   perf_event_attr AttrCopy = *Event.attribute();
   FileDescriptor = perf_event_open(&AttrCopy, Pid, Cpu, GroupFd, Flags);
-  assert(FileDescriptor != -1 &&
-         "Unable to open event, make sure your kernel allows user space perf "
-         "monitoring.");
+  if (FileDescriptor == -1) {
+    llvm::errs() << "Unable to open event, make sure your kernel allows user "
+                    "space perf monitoring.\nYou may want to try:\n$ sudo sh "
+                    "-c 'echo -1 > /proc/sys/kernel/perf_event_paranoid'\n";
+  }
+  assert(FileDescriptor != -1 && "Unable to open event");
 }
 
 Counter::~Counter() { close(FileDescriptor); }

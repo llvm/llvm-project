@@ -54,7 +54,7 @@ std::tuple<u32, u32, u64> ParseBlockHeader(XRayBuffer B) {
   internal_memcpy(&BlockSize, LocalBuffer, sizeof(u32));
   internal_memcpy(&BlockNumber, LocalBuffer + sizeof(u32), sizeof(u32));
   internal_memcpy(&ThreadId, LocalBuffer + (2 * sizeof(u32)), sizeof(u64));
-  return {BlockSize, BlockNumber, ThreadId};
+  return std::make_tuple(BlockSize, BlockNumber, ThreadId);
 }
 
 struct Profile {
@@ -80,7 +80,7 @@ std::tuple<Profile, const char *> ParseProfile(const char *P) {
   // Then read the CumulativeLocalTime.
   internal_memcpy(&Result.CumulativeLocalTime, P, sizeof(int64_t));
   P += sizeof(int64_t);
-  return {std::move(Result), P};
+  return std::make_tuple(std::move(Result), P);
 }
 
 TEST(profileCollectorServiceTest, PostSerializeCollect) {

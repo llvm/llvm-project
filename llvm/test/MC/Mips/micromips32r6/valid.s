@@ -6,14 +6,23 @@
   addu $3, $4, $5          # CHECK: addu $3, $4, $5     # encoding: [0x00,0xa4,0x19,0x50]
   addiupc $4, 100          # CHECK: lapc $4, 100        # encoding: [0x78,0x80,0x00,0x19]
   addiur1sp $7, 4          # CHECK: addiur1sp $7, 4     # encoding: [0x6f,0x83]
+                           # CHECK:                     # <MCInst #{{.*}} ADDIUR1SP_MM
   addiur2 $6, $7, -1       # CHECK: addiur2 $6, $7, -1  # encoding: [0x6f,0x7e]
+                           # CHECK:                     # <MCInst #{{.*}} ADDIUR2_MM
   addiur2 $6, $7, 12       # CHECK: addiur2 $6, $7, 12  # encoding: [0x6f,0x76]
+                           # CHECK:                     # <MCInst #{{.*}} ADDIUR2_MM
   addius5 $7, -2           # CHECK: addius5 $7, -2      # encoding: [0x4c,0xfc]
+                           # CHECK:                     # <MCInst #{{.*}} ADDIUS5_MM
   addiusp -1028            # CHECK: addiusp -1028       # encoding: [0x4f,0xff]
+                           # CHECK:                     # <MCInst #{{.*}} ADDIUSP_MM
   addiusp -1032            # CHECK: addiusp -1032       # encoding: [0x4f,0xfd]
+                           # CHECK:                     # <MCInst #{{.*}} ADDIUSP_MM
   addiusp 1024             # CHECK: addiusp 1024        # encoding: [0x4c,0x01]
+                           # CHECK:                     # <MCInst #{{.*}} ADDIUSP_MM
   addiusp 1028             # CHECK: addiusp 1028        # encoding: [0x4c,0x03]
+                           # CHECK:                     # <MCInst #{{.*}} ADDIUSP_MM
   addiusp -16              # CHECK: addiusp -16         # encoding: [0x4f,0xf9]
+                           # CHECK:                     # <MCInst #{{.*}} ADDIUSP_MM
   aluipc $3, 56            # CHECK: aluipc $3, 56       # encoding: [0x78,0x7f,0x00,0x38]
   and $3, $4, $5           # CHECK: and $3, $4, $5      # encoding: [0x00,0xa4,0x1a,0x50]
   andi $3, $4, 1234        # CHECK: andi $3, $4, 1234   # encoding: [0xd0,0x64,0x04,0xd2]
@@ -36,11 +45,15 @@
   bnezc   $3, 64           # CHECK: bnezc   $3, 64      # encoding: [0xa0,0x60,0x00,0x10]
   balc 7286128             # CHECK: balc 7286128        # encoding: [0xb4,0x37,0x96,0xb8]
   b 132                    # CHECK: bc16 132            # encoding: [0xcc,0x42]
+                           # CHECK:                     # <MCInst #{{.*}} BC16_MMR6
   bc 7286128               # CHECK: bc 7286128          # encoding: [0x94,0x37,0x96,0xb8]
-                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} BC_MMR6
+                           # CHECK:                     # <MCInst #{{.*}} BC_MMR6
   bc16 132                 # CHECK: bc16 132            # encoding: [0xcc,0x42]
-  beqzc16 $6, 20           # CHECK: beqzc16 $6, 20      # encoding: [0x8f,0x0a]
-  bnezc16 $6, 20           # CHECK: bnezc16 $6, 20      # encoding: [0xaf,0x0a]
+                           # CHECK:                     # <MCInst #{{.*}} BC16_MMR6
+  beqzc16 $6, 20           # CHECK: beqzc16  $6, 20     # encoding: [0x8f,0x0a]
+                           # CHECK:                     # <MCInst #{{.*}} BEQZC16_MMR6
+  bnezc16 $6, 20           # CHECK: bnezc16  $6, 20     # encoding: [0xaf,0x0a]
+                           # CHECK:                     # <MCInst #{{.*}} BNEZC16_MMR6
   bitswap $4, $2           # CHECK: bitswap $4, $2      # encoding: [0x00,0x44,0x0b,0x3c]
   break                    # CHECK: break               # encoding: [0x00,0x00,0x00,0x07]
   break 7                  # CHECK: break 7             # encoding: [0x00,0x07,0x00,0x07]

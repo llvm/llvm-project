@@ -194,6 +194,7 @@ struct Configuration {
   bool WarnMissingOrderSymbol = true;
   bool WarnLocallyDefinedImported = true;
   bool Incremental = true;
+  bool IntegrityCheck = false;
   bool KillAt = false;
   bool Repro = false;
 };

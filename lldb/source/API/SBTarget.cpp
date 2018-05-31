@@ -1804,9 +1804,8 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
   TargetSP target_sp(GetSP());
   if (name && target_sp) {
     VariableList variable_list;
-    const bool append = true;
     const uint32_t match_count = target_sp->GetImages().FindGlobalVariables(
-        ConstString(name), append, max_matches, variable_list);
+        ConstString(name), max_matches, variable_list);
 
     if (match_count > 0) {
       ExecutionContextScope *exe_scope = target_sp->GetProcessSP().get();
@@ -1833,23 +1832,22 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
   if (name && target_sp) {
     llvm::StringRef name_ref(name);
     VariableList variable_list;
-    const bool append = true;
 
     std::string regexstr;
     uint32_t match_count;
     switch (matchtype) {
     case eMatchTypeNormal:
       match_count = target_sp->GetImages().FindGlobalVariables(
-          ConstString(name), append, max_matches, variable_list);
+          ConstString(name), max_matches, variable_list);
       break;
     case eMatchTypeRegex:
       match_count = target_sp->GetImages().FindGlobalVariables(
-          RegularExpression(name_ref), append, max_matches, variable_list);
+          RegularExpression(name_ref), max_matches, variable_list);
       break;
     case eMatchTypeStartsWith:
       regexstr = llvm::Regex::escape(name) + ".*";
       match_count = target_sp->GetImages().FindGlobalVariables(
-          RegularExpression(regexstr), append, max_matches, variable_list);
+          RegularExpression(regexstr), max_matches, variable_list);
       break;
     }
 

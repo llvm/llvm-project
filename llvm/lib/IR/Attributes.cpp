@@ -419,7 +419,7 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     {
       raw_string_ostream OS(Result);
       OS << "=\"";
-      PrintEscapedString(AttrVal, OS);
+      printEscapedString(AttrVal, OS);
       OS << "\"";
     }
     return Result;

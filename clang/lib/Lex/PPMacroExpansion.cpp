@@ -1099,187 +1099,11 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
   if (Feature.startswith("__") && Feature.endswith("__") && Feature.size() >= 4)
     Feature = Feature.substr(2, Feature.size() - 4);
 
+#define FEATURE(Name, Predicate) .Case(#Name, Predicate)
   return llvm::StringSwitch<bool>(Feature)
-      .Case("address_sanitizer",
-            LangOpts.Sanitize.hasOneOf(SanitizerKind::Address |
-                                       SanitizerKind::KernelAddress))
-      .Case("hwaddress_sanitizer",
-            LangOpts.Sanitize.hasOneOf(SanitizerKind::HWAddress |
-                                       SanitizerKind::KernelHWAddress))
-      .Case("assume_nonnull", true)
-      .Case("attribute_analyzer_noreturn", true)
-      .Case("attribute_availability", true)
-      .Case("attribute_availability_with_message", true)
-      .Case("attribute_availability_app_extension", true)
-      .Case("attribute_availability_with_version_underscores", true)
-      .Case("attribute_availability_tvos", true)
-      .Case("attribute_availability_watchos", true)
-      .Case("attribute_availability_with_strict", true)
-      .Case("attribute_availability_with_replacement", true)
-      .Case("attribute_availability_in_templates", true)
-      .Case("attribute_cf_returns_not_retained", true)
-      .Case("attribute_cf_returns_retained", true)
-      .Case("attribute_cf_returns_on_parameters", true)
-      .Case("attribute_deprecated_with_message", true)
-      .Case("attribute_deprecated_with_replacement", true)
-      .Case("attribute_ext_vector_type", true)
-      .Case("attribute_ns_returns_not_retained", true)
-      .Case("attribute_ns_returns_retained", true)
-      .Case("attribute_ns_consumes_self", true)
-      .Case("attribute_ns_consumed", true)
-      .Case("attribute_cf_consumed", true)
-      .Case("attribute_objc_ivar_unused", true)
-      .Case("attribute_objc_method_family", true)
-      .Case("attribute_overloadable", true)
-      .Case("attribute_unavailable_with_message", true)
-      .Case("attribute_unused_on_fields", true)
-      .Case("attribute_diagnose_if_objc", true)
-      .Case("blocks", LangOpts.Blocks)
-      .Case("c_thread_safety_attributes", true)
-      .Case("cxx_exceptions", LangOpts.CXXExceptions)
-      .Case("cxx_rtti", LangOpts.RTTI && LangOpts.RTTIData)
-      .Case("enumerator_attributes", true)
-      .Case("nullability", true)
-      .Case("nullability_on_arrays", true)
-      .Case("memory_sanitizer", LangOpts.Sanitize.has(SanitizerKind::Memory))
-      .Case("thread_sanitizer", LangOpts.Sanitize.has(SanitizerKind::Thread))
-      .Case("dataflow_sanitizer",
-            LangOpts.Sanitize.has(SanitizerKind::DataFlow))
-      .Case("efficiency_sanitizer",
-            LangOpts.Sanitize.hasOneOf(SanitizerKind::Efficiency))
-      .Case("scudo", LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
-      // Objective-C features
-      .Case("objc_arr", LangOpts.ObjCAutoRefCount) // FIXME: REMOVE?
-      .Case("objc_arc", LangOpts.ObjCAutoRefCount)
-      .Case("objc_arc_fields", true)
-      .Case("objc_arc_weak", LangOpts.ObjCWeak)
-      .Case("objc_default_synthesize_properties", LangOpts.ObjC2)
-      .Case("objc_fixed_enum", LangOpts.ObjC2)
-      .Case("objc_instancetype", LangOpts.ObjC2)
-      .Case("objc_kindof", LangOpts.ObjC2)
-      .Case("objc_modules", LangOpts.ObjC2 && LangOpts.Modules)
-      .Case("objc_nonfragile_abi", LangOpts.ObjCRuntime.isNonFragile())
-      .Case("objc_property_explicit_atomic",
-            true) // Does clang support explicit "atomic" keyword?
-      .Case("objc_protocol_qualifier_mangling", true)
-      .Case("objc_weak_class", LangOpts.ObjCRuntime.hasWeakClassImport())
-      .Case("ownership_holds", true)
-      .Case("ownership_returns", true)
-      .Case("ownership_takes", true)
-      .Case("objc_bool", true)
-      .Case("objc_subscripting", LangOpts.ObjCRuntime.isNonFragile())
-      .Case("objc_array_literals", LangOpts.ObjC2)
-      .Case("objc_dictionary_literals", LangOpts.ObjC2)
-      .Case("objc_boxed_expressions", LangOpts.ObjC2)
-      .Case("objc_boxed_nsvalue_expressions", LangOpts.ObjC2)
-      .Case("arc_cf_code_audited", true)
-      .Case("objc_bridge_id", true)
-      .Case("objc_bridge_id_on_typedefs", true)
-      .Case("objc_generics", LangOpts.ObjC2)
-      .Case("objc_generics_variance", LangOpts.ObjC2)
-      .Case("objc_class_property", LangOpts.ObjC2)
-      // C11 features
-      .Case("c_alignas", LangOpts.C11)
-      .Case("c_alignof", LangOpts.C11)
-      .Case("c_atomic", LangOpts.C11)
-      .Case("c_generic_selections", LangOpts.C11)
-      .Case("c_static_assert", LangOpts.C11)
-      .Case("c_thread_local",
-            LangOpts.C11 && PP.getTargetInfo().isTLSSupported())
-      // C++11 features
-      .Case("cxx_access_control_sfinae", LangOpts.CPlusPlus11)
-      .Case("cxx_alias_templates", LangOpts.CPlusPlus11)
-      .Case("cxx_alignas", LangOpts.CPlusPlus11)
-      .Case("cxx_alignof", LangOpts.CPlusPlus11)
-      .Case("cxx_atomic", LangOpts.CPlusPlus11)
-      .Case("cxx_attributes", LangOpts.CPlusPlus11)
-      .Case("cxx_auto_type", LangOpts.CPlusPlus11)
-      .Case("cxx_constexpr", LangOpts.CPlusPlus11)
-      .Case("cxx_constexpr_string_builtins", LangOpts.CPlusPlus11)
-      .Case("cxx_decltype", LangOpts.CPlusPlus11)
-      .Case("cxx_decltype_incomplete_return_types", LangOpts.CPlusPlus11)
-      .Case("cxx_default_function_template_args", LangOpts.CPlusPlus11)
-      .Case("cxx_defaulted_functions", LangOpts.CPlusPlus11)
-      .Case("cxx_delegating_constructors", LangOpts.CPlusPlus11)
-      .Case("cxx_deleted_functions", LangOpts.CPlusPlus11)
-      .Case("cxx_explicit_conversions", LangOpts.CPlusPlus11)
-      .Case("cxx_generalized_initializers", LangOpts.CPlusPlus11)
-      .Case("cxx_implicit_moves", LangOpts.CPlusPlus11)
-      .Case("cxx_inheriting_constructors", LangOpts.CPlusPlus11)
-      .Case("cxx_inline_namespaces", LangOpts.CPlusPlus11)
-      .Case("cxx_lambdas", LangOpts.CPlusPlus11)
-      .Case("cxx_local_type_template_args", LangOpts.CPlusPlus11)
-      .Case("cxx_nonstatic_member_init", LangOpts.CPlusPlus11)
-      .Case("cxx_noexcept", LangOpts.CPlusPlus11)
-      .Case("cxx_nullptr", LangOpts.CPlusPlus11)
-      .Case("cxx_override_control", LangOpts.CPlusPlus11)
-      .Case("cxx_range_for", LangOpts.CPlusPlus11)
-      .Case("cxx_raw_string_literals", LangOpts.CPlusPlus11)
-      .Case("cxx_reference_qualified_functions", LangOpts.CPlusPlus11)
-      .Case("cxx_rvalue_references", LangOpts.CPlusPlus11)
-      .Case("cxx_strong_enums", LangOpts.CPlusPlus11)
-      .Case("cxx_static_assert", LangOpts.CPlusPlus11)
-      .Case("cxx_thread_local",
-            LangOpts.CPlusPlus11 && PP.getTargetInfo().isTLSSupported())
-      .Case("cxx_trailing_return", LangOpts.CPlusPlus11)
-      .Case("cxx_unicode_literals", LangOpts.CPlusPlus11)
-      .Case("cxx_unrestricted_unions", LangOpts.CPlusPlus11)
-      .Case("cxx_user_literals", LangOpts.CPlusPlus11)
-      .Case("cxx_variadic_templates", LangOpts.CPlusPlus11)
-      // C++14 features
-      .Case("cxx_aggregate_nsdmi", LangOpts.CPlusPlus14)
-      .Case("cxx_binary_literals", LangOpts.CPlusPlus14)
-      .Case("cxx_contextual_conversions", LangOpts.CPlusPlus14)
-      .Case("cxx_decltype_auto", LangOpts.CPlusPlus14)
-      .Case("cxx_generic_lambdas", LangOpts.CPlusPlus14)
-      .Case("cxx_init_captures", LangOpts.CPlusPlus14)
-      .Case("cxx_relaxed_constexpr", LangOpts.CPlusPlus14)
-      .Case("cxx_return_type_deduction", LangOpts.CPlusPlus14)
-      .Case("cxx_variable_templates", LangOpts.CPlusPlus14)
-      // NOTE: For features covered by SD-6, it is preferable to provide *only*
-      // the SD-6 macro and not a __has_feature check.
-
-      // C++ TSes
-      //.Case("cxx_runtime_arrays", LangOpts.CPlusPlusTSArrays)
-      //.Case("cxx_concepts", LangOpts.CPlusPlusTSConcepts)
-      // FIXME: Should this be __has_feature or __has_extension?
-      //.Case("raw_invocation_type", LangOpts.CPlusPlus)
-      // Type traits
-      // N.B. Additional type traits should not be added to the following list.
-      // Instead, they should be detected by has_extension.
-      .Case("has_nothrow_assign", LangOpts.CPlusPlus)
-      .Case("has_nothrow_copy", LangOpts.CPlusPlus)
-      .Case("has_nothrow_constructor", LangOpts.CPlusPlus)
-      .Case("has_trivial_assign", LangOpts.CPlusPlus)
-      .Case("has_trivial_copy", LangOpts.CPlusPlus)
-      .Case("has_trivial_constructor", LangOpts.CPlusPlus)
-      .Case("has_trivial_destructor", LangOpts.CPlusPlus)
-      .Case("has_virtual_destructor", LangOpts.CPlusPlus)
-      .Case("is_abstract", LangOpts.CPlusPlus)
-      .Case("is_base_of", LangOpts.CPlusPlus)
-      .Case("is_class", LangOpts.CPlusPlus)
-      .Case("is_constructible", LangOpts.CPlusPlus)
-      .Case("is_convertible_to", LangOpts.CPlusPlus)
-      .Case("is_empty", LangOpts.CPlusPlus)
-      .Case("is_enum", LangOpts.CPlusPlus)
-      .Case("is_final", LangOpts.CPlusPlus)
-      .Case("is_literal", LangOpts.CPlusPlus)
-      .Case("is_standard_layout", LangOpts.CPlusPlus)
-      .Case("is_pod", LangOpts.CPlusPlus)
-      .Case("is_polymorphic", LangOpts.CPlusPlus)
-      .Case("is_sealed", LangOpts.CPlusPlus && LangOpts.MicrosoftExt)
-      .Case("is_trivial", LangOpts.CPlusPlus)
-      .Case("is_trivially_assignable", LangOpts.CPlusPlus)
-      .Case("is_trivially_constructible", LangOpts.CPlusPlus)
-      .Case("is_trivially_copyable", LangOpts.CPlusPlus)
-      .Case("is_union", LangOpts.CPlusPlus)
-      .Case("modules", LangOpts.Modules)
-      .Case("safe_stack", LangOpts.Sanitize.has(SanitizerKind::SafeStack))
-      .Case("shadow_call_stack",
-            LangOpts.Sanitize.has(SanitizerKind::ShadowCallStack))
-      .Case("tls", PP.getTargetInfo().isTLSSupported())
-      .Case("underlying_type", LangOpts.CPlusPlus)
+#include "clang/Basic/Features.def"
       .Default(false);
+#undef FEATURE
 }
 
 /// HasExtension - Return true if we recognize and implement the feature
@@ -1302,35 +1126,13 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
       Extension.size() >= 4)
     Extension = Extension.substr(2, Extension.size() - 4);
 
-  // Because we inherit the feature list from HasFeature, this string switch
-  // must be less restrictive than HasFeature's.
+    // Because we inherit the feature list from HasFeature, this string switch
+    // must be less restrictive than HasFeature's.
+#define EXTENSION(Name, Predicate) .Case(#Name, Predicate)
   return llvm::StringSwitch<bool>(Extension)
-           // C11 features supported by other languages as extensions.
-           .Case("c_alignas", true)
-           .Case("c_alignof", true)
-           .Case("c_atomic", true)
-           .Case("c_generic_selections", true)
-           .Case("c_static_assert", true)
-           .Case("c_thread_local", PP.getTargetInfo().isTLSSupported())
-           // C++11 features supported by other languages as extensions.
-           .Case("cxx_atomic", LangOpts.CPlusPlus)
-           .Case("cxx_deleted_functions", LangOpts.CPlusPlus)
-           .Case("cxx_explicit_conversions", LangOpts.CPlusPlus)
-           .Case("cxx_inline_namespaces", LangOpts.CPlusPlus)
-           .Case("cxx_local_type_template_args", LangOpts.CPlusPlus)
-           .Case("cxx_nonstatic_member_init", LangOpts.CPlusPlus)
-           .Case("cxx_override_control", LangOpts.CPlusPlus)
-           .Case("cxx_range_for", LangOpts.CPlusPlus)
-           .Case("cxx_reference_qualified_functions", LangOpts.CPlusPlus)
-           .Case("cxx_rvalue_references", LangOpts.CPlusPlus)
-           .Case("cxx_variadic_templates", LangOpts.CPlusPlus)
-           // C++14 features supported by other languages as extensions.
-           .Case("cxx_binary_literals", true)
-           .Case("cxx_init_captures", LangOpts.CPlusPlus11)
-           .Case("cxx_variable_templates", LangOpts.CPlusPlus)
-           // Miscellaneous language extensions
-           .Case("overloadable_unmarked", true)
-           .Default(false);
+#include "clang/Basic/Features.def"
+      .Default(false);
+#undef EXTENSION
 }
 
 /// EvaluateHasIncludeCommon - Process a '__has_include("path")'

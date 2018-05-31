@@ -71,8 +71,15 @@ private:
     static constexpr auto BlockPtrCount =
         (kCacheLineSize / sizeof(Block *)) - 1;
 
+    BlockLink() {
+      // Zero out Blocks.
+      // FIXME: Use a braced member initializer when we drop support for GCC
+      // 4.8.
+      internal_memset(Blocks, 0, sizeof(Blocks));
+    }
+
     // FIXME: Align this to cache-line address boundaries?
-    Block Blocks[BlockPtrCount]{};
+    Block Blocks[BlockPtrCount];
     BlockLink *Prev = nullptr;
   };
 

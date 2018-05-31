@@ -291,14 +291,19 @@ void codegen(Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
     return;
 
   std::unique_ptr<ToolOutputFile> DwoOut;
+  SmallString<1024> DwoFile(Conf.DwoPath);
   if (!Conf.DwoDir.empty()) {
     std::error_code EC;
     if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
       report_fatal_error("Failed to create directory " + Conf.DwoDir + ": " +
                          EC.message());
 
-    SmallString<1024> DwoFile(Conf.DwoDir);
+    DwoFile = Conf.DwoDir;
     sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
+  }
+
+  if (!DwoFile.empty()) {
+    std::error_code EC;
     TM->Options.MCOptions.SplitDwarfFile = DwoFile.str().str();
     DwoOut = llvm::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::F_None);
     if (EC)

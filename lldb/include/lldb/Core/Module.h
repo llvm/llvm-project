@@ -447,26 +447,19 @@ public:
   /// @param[in] parent_decl_ctx
   ///     If valid, a decl context that results must exist within
   ///
-  /// @param[in] append
-  ///     If \b true, any matches will be appended to \a
-  ///     variable_list, else matches replace the contents of
-  ///     \a variable_list.
-  ///
   /// @param[in] max_matches
   ///     Allow the number of matches to be limited to \a
   ///     max_matches. Specify UINT32_MAX to get all possible matches.
   ///
   /// @param[in] variable_list
-  ///     A list of variables that gets the matches appended to (if
-  ///     \a append it \b true), or replace (if \a append is \b false).
+  ///     A list of variables that gets the matches appended to.
   ///
   /// @return
   ///     The number of matches added to \a variable_list.
   //------------------------------------------------------------------
   size_t FindGlobalVariables(const ConstString &name,
                              const CompilerDeclContext *parent_decl_ctx,
-                             bool append, size_t max_matches,
-                             VariableList &variable_list);
+                             size_t max_matches, VariableList &variable_list);
 
   //------------------------------------------------------------------
   /// Find global and static variables by regular expression.
@@ -474,24 +467,18 @@ public:
   /// @param[in] regex
   ///     A regular expression to use when matching the name.
   ///
-  /// @param[in] append
-  ///     If \b true, any matches will be appended to \a
-  ///     variable_list, else matches replace the contents of
-  ///     \a variable_list.
-  ///
   /// @param[in] max_matches
   ///     Allow the number of matches to be limited to \a
   ///     max_matches. Specify UINT32_MAX to get all possible matches.
   ///
   /// @param[in] variable_list
-  ///     A list of variables that gets the matches appended to (if
-  ///     \a append it \b true), or replace (if \a append is \b false).
+  ///     A list of variables that gets the matches appended to.
   ///
   /// @return
   ///     The number of matches added to \a variable_list.
   //------------------------------------------------------------------
-  size_t FindGlobalVariables(const RegularExpression &regex, bool append,
-                             size_t max_matches, VariableList &variable_list);
+  size_t FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
+                             VariableList &variable_list);
 
   //------------------------------------------------------------------
   /// Find types by name.

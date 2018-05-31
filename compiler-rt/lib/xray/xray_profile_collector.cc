@@ -16,6 +16,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "xray_profiler_flags.h"
+#include <pthread.h>
 #include <memory>
 #include <utility>
 
