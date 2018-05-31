@@ -599,21 +599,21 @@ uint32_t Module::ResolveSymbolContextsForFileSpec(const FileSpec &file_spec,
 
 size_t Module::FindGlobalVariables(const ConstString &name,
                                    const CompilerDeclContext *parent_decl_ctx,
-                                   bool append, size_t max_matches,
-                                   VariableList &variables) {
-  SymbolVendor *symbols = GetSymbolVendor();
-  if (symbols)
-    return symbols->FindGlobalVariables(name, parent_decl_ctx, append,
-                                        max_matches, variables);
-  return 0;
-}
-
-size_t Module::FindGlobalVariables(const RegularExpression &regex, bool append,
                                    size_t max_matches,
                                    VariableList &variables) {
   SymbolVendor *symbols = GetSymbolVendor();
   if (symbols)
-    return symbols->FindGlobalVariables(regex, append, max_matches, variables);
+    return symbols->FindGlobalVariables(name, parent_decl_ctx, max_matches,
+                                        variables);
+  return 0;
+}
+
+size_t Module::FindGlobalVariables(const RegularExpression &regex,
+                                   size_t max_matches,
+                                   VariableList &variables) {
+  SymbolVendor *symbols = GetSymbolVendor();
+  if (symbols)
+    return symbols->FindGlobalVariables(regex, max_matches, variables);
   return 0;
 }
 

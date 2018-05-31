@@ -949,10 +949,8 @@ SymbolFilePDB::ParseVariables(const lldb_private::SymbolContext &sc,
 
 uint32_t SymbolFilePDB::FindGlobalVariables(
     const lldb_private::ConstString &name,
-    const lldb_private::CompilerDeclContext *parent_decl_ctx, bool append,
+    const lldb_private::CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, lldb_private::VariableList &variables) {
-  if (!append)
-    variables.Clear();
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return 0;
   if (name.IsEmpty())
@@ -989,7 +987,7 @@ uint32_t SymbolFilePDB::FindGlobalVariables(
 
 uint32_t
 SymbolFilePDB::FindGlobalVariables(const lldb_private::RegularExpression &regex,
-                                   bool append, uint32_t max_matches,
+                                   uint32_t max_matches,
                                    lldb_private::VariableList &variables) {
   if (!regex.IsValid())
     return 0;

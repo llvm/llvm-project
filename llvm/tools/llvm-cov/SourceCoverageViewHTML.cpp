@@ -45,7 +45,7 @@ std::string escape(StringRef Str, const CoverageViewOptions &Opts) {
   std::string EscapedHTML;
   {
     raw_string_ostream OS{EscapedHTML};
-    PrintHTMLEscaped(TabExpandedResult, OS);
+    printHTMLEscaped(TabExpandedResult, OS);
   }
   return EscapedHTML;
 }

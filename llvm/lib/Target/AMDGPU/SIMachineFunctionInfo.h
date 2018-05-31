@@ -186,6 +186,9 @@ private:
 
   unsigned HighBitsOf32BitAddress;
 
+  // Current recorded maximum possible occupancy.
+  unsigned Occupancy;
+
   MCPhysReg getNextUserSGPR() const;
 
   MCPhysReg getNextSystemSGPR() const;
@@ -640,6 +643,29 @@ public:
       ImgRsrc,
       llvm::make_unique<AMDGPUImagePseudoSourceValue>(TII));
     return PSV.first->second.get();
+  }
+
+  unsigned getOccupancy() const {
+    return Occupancy;
+  }
+
+  unsigned getMinAllowedOccupancy() const {
+    if (!isMemoryBound() && !needsWaveLimiter())
+      return Occupancy;
+    return (Occupancy < 4) ? Occupancy : 4;
+  }
+
+  void limitOccupancy(const MachineFunction &MF);
+
+  void limitOccupancy(unsigned Limit) {
+    if (Occupancy > Limit)
+      Occupancy = Limit;
+  }
+
+  void increaseOccupancy(const MachineFunction &MF, unsigned Limit) {
+    if (Occupancy < Limit)
+      Occupancy = Limit;
+    limitOccupancy(MF);
   }
 };
 

@@ -159,7 +159,7 @@ __m512d test_mm512_mul_pd(__m512d a, __m512d b)
 void test_mm512_storeu_si512 (void *__P, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_storeu_si512
-  // CHECK: store <16 x i32> %{{.*}}, <16 x i32>* %{{.*}}, align 1{{$}}
+  // CHECK: store <8 x i64> %{{.*}}, <8 x i64>* %{{.*}}, align 1{{$}}
   // CHECK-NEXT: ret void
   _mm512_storeu_si512 ( __P,__A);
 }
@@ -253,7 +253,7 @@ void test_mm512_mask_storeu_epi64(void *__P, __mmask8 __U, __m512i __A) {
 __m512i test_mm512_loadu_si512 (void *__P)
 {
   // CHECK-LABEL: @test_mm512_loadu_si512 
-  // CHECK: load <16 x i32>, <16 x i32>* %{{.*}}, align 1{{$}}
+  // CHECK: load <8 x i64>, <8 x i64>* %{{.*}}, align 1{{$}}
   return _mm512_loadu_si512 ( __P);
 }
 

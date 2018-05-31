@@ -161,6 +161,9 @@ def : WriteRes<WriteZero,  []>;
 defm : SKLWriteResPair<WriteJump,  [SKLPort06],   1>;
 
 // Floating point. This covers both scalar and vector operations.
+defm : X86WriteRes<WriteFLD0,          [SKLPort05], 1, [1], 1>;
+defm : X86WriteRes<WriteFLD1,          [SKLPort05], 1, [2], 2>;
+defm : X86WriteRes<WriteFLDC,          [SKLPort05], 1, [2], 2>;
 defm : X86WriteRes<WriteFLoad,         [SKLPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteFLoadX,        [SKLPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteFLoadY,        [SKLPort23], 7, [1], 1>;

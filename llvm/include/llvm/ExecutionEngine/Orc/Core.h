@@ -116,6 +116,12 @@ public:
   ///        into.
   const VSO &getTargetVSO() const { return V; }
 
+  /// Returns the names of any symbols covered by this
+  /// MaterializationResponsibility object that have queries pending. This
+  /// information can be used to return responsibility for unrequested symbols
+  /// back to the VSO via the delegate method.
+  SymbolNameSet getRequestedSymbols();
+
   /// Resolves the given symbols. Individual calls to this method may
   ///        resolve a subset of the symbols, but all symbols must have been
   ///        resolved prior to calling finalize.
@@ -574,6 +580,8 @@ private:
   Error defineMaterializing(const SymbolFlagsMap &SymbolFlags);
 
   void replace(std::unique_ptr<MaterializationUnit> MU);
+
+  SymbolNameSet getRequestedSymbols(const SymbolFlagsMap &SymbolFlags);
 
   void addDependencies(const SymbolFlagsMap &Dependents,
                        const SymbolDependenceMap &Dependencies);

@@ -455,9 +455,17 @@ public:
         return CU::UNWIND_ARM64_MODE_DWARF;
       case MCCFIInstruction::OpDefCfa: {
         // Defines a frame pointer.
-        assert(getXRegFromWReg(MRI.getLLVMRegNum(Inst.getRegister(), true)) ==
-                   AArch64::FP &&
-               "Invalid frame pointer!");
+        unsigned XReg =
+            getXRegFromWReg(MRI.getLLVMRegNum(Inst.getRegister(), true));
+
+        // Other CFA registers than FP are not supported by compact unwind.
+        // Fallback on DWARF.
+        // FIXME: When opt-remarks are supported in MC, add a remark to notify
+        // the user.
+        if (XReg != AArch64::FP)
+          return CU::UNWIND_ARM64_MODE_DWARF;
+
+        assert(XReg == AArch64::FP && "Invalid frame pointer!");
         assert(i + 2 < e && "Insufficient CFI instructions to define a frame!");
 
         const MCCFIInstruction &LRPush = Instrs[++i];

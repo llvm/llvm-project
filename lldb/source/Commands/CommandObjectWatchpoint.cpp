@@ -838,7 +838,7 @@ protected:
                                     VariableList &variable_list) {
     Target *target = static_cast<Target *>(baton);
     if (target) {
-      return target->GetImages().FindGlobalVariables(ConstString(name), true,
+      return target->GetImages().FindGlobalVariables(ConstString(name),
                                                      UINT32_MAX, variable_list);
     }
     return 0;

@@ -478,13 +478,19 @@ unsigned GCNIterativeScheduler::tryMaximizeOccupancy(unsigned TargetOcc) {
   }
   LLVM_DEBUG(dbgs() << "New occupancy = " << NewOcc
                     << ", prev occupancy = " << Occ << '\n');
+  if (NewOcc > Occ) {
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    MFI->increaseOccupancy(MF, NewOcc);
+  }
+
   return std::max(NewOcc, Occ);
 }
 
 void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
   bool TryMaximizeOccupancy) {
   const auto &ST = MF.getSubtarget<SISubtarget>();
-  auto TgtOcc = ST.getOccupancyWithLocalMemSize(MF);
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  auto TgtOcc = MFI->getMinAllowedOccupancy();
 
   sortRegionsByPressure(TgtOcc);
   auto Occ = Regions.front()->MaxPressure.getOccupancy(ST);
@@ -501,6 +507,7 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
                        "target occupancy = "
                     << TgtOcc << '\n');
   GCNMaxOccupancySchedStrategy LStrgy(Context);
+  unsigned FinalOccupancy = std::min(Occ, MFI->getOccupancy());
 
   for (int I = 0; I < NumPasses; ++I) {
     // running first pass with TargetOccupancy = 0 mimics previous scheduling
@@ -525,8 +532,10 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
           assert(R->MaxPressure.getOccupancy(ST) >= TgtOcc);
         }
       }
+      FinalOccupancy = std::min(FinalOccupancy, RP.getOccupancy(ST));
     }
   }
+  MFI->limitOccupancy(FinalOccupancy);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -534,7 +543,8 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
 
 void GCNIterativeScheduler::scheduleMinReg(bool force) {
   const auto &ST = MF.getSubtarget<SISubtarget>();
-  const auto TgtOcc = ST.getOccupancyWithLocalMemSize(MF);
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  const auto TgtOcc = MFI->getOccupancy();
   sortRegionsByPressure(TgtOcc);
 
   auto MaxPressure = Regions.front()->MaxPressure;
@@ -567,9 +577,8 @@ void GCNIterativeScheduler::scheduleMinReg(bool force) {
 void GCNIterativeScheduler::scheduleILP(
   bool TryMaximizeOccupancy) {
   const auto &ST = MF.getSubtarget<SISubtarget>();
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  auto TgtOcc = std::min(ST.getOccupancyWithLocalMemSize(MF),
-                         MFI->getMaxWavesPerEU());
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  auto TgtOcc = MFI->getMinAllowedOccupancy();
 
   sortRegionsByPressure(TgtOcc);
   auto Occ = Regions.front()->MaxPressure.getOccupancy(ST);
@@ -582,6 +591,7 @@ void GCNIterativeScheduler::scheduleILP(
                        "target occupancy = "
                     << TgtOcc << '\n');
 
+  unsigned FinalOccupancy = std::min(Occ, MFI->getOccupancy());
   for (auto R : Regions) {
     BuildDAG DAG(*R, *this);
     const auto ILPSchedule = makeGCNILPScheduler(DAG.getBottomRoots(), *this);
@@ -599,6 +609,8 @@ void GCNIterativeScheduler::scheduleILP(
     } else {
       scheduleRegion(*R, ILPSchedule, RP);
       LLVM_DEBUG(printSchedResult(dbgs(), R, RP));
+      FinalOccupancy = std::min(FinalOccupancy, RP.getOccupancy(ST));
     }
   }
+  MFI->limitOccupancy(FinalOccupancy);
 }

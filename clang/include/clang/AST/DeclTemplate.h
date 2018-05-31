@@ -1720,14 +1720,8 @@ public:
   // it's not clear that we should override that, because the most recent
   // declaration as a CXXRecordDecl sometimes is the injected-class-name.
   ClassTemplateSpecializationDecl *getMostRecentDecl() {
-    CXXRecordDecl *Recent = static_cast<CXXRecordDecl *>(
-                              this)->getMostRecentDecl();
-    while (!isa<ClassTemplateSpecializationDecl>(Recent)) {
-      // FIXME: Does injected class name need to be in the redeclarations chain?
-      assert(Recent->isInjectedClassName() && Recent->getPreviousDecl());
-      Recent = Recent->getPreviousDecl();
-    }
-    return cast<ClassTemplateSpecializationDecl>(Recent);
+    return cast<ClassTemplateSpecializationDecl>(
+        getMostRecentNonInjectedDecl());
   }
 
   /// Retrieve the template that this specialization specializes.

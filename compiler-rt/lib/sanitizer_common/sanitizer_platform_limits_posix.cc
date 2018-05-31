@@ -259,7 +259,7 @@ namespace __sanitizer {
   || defined(__x86_64__)
 #define SIZEOF_STRUCT_USTAT 32
 #elif defined(__arm__) || defined(__i386__) || defined(__mips__) \
-  || defined(__powerpc__) || defined(__s390__)
+  || defined(__powerpc__) || defined(__s390__) || defined(__sparc__)
 #define SIZEOF_STRUCT_USTAT 20
 #else
 #error Unknown size of struct ustat

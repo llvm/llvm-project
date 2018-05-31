@@ -284,8 +284,7 @@ opts::symbols::getDeclContext(SymbolVendor &Vendor) {
   if (Context.empty())
     return CompilerDeclContext();
   VariableList List;
-  Vendor.FindGlobalVariables(ConstString(Context), nullptr, false, UINT32_MAX,
-                             List);
+  Vendor.FindGlobalVariables(ConstString(Context), nullptr, UINT32_MAX, List);
   if (List.Empty()) {
     return make_error<StringError>("Context search didn't find a match.",
                                    inconvertibleErrorCode());
@@ -367,7 +366,7 @@ Error opts::symbols::findVariables(lldb_private::Module &Module) {
   if (Regex) {
     RegularExpression RE(Name);
     assert(RE.IsValid());
-    Vendor.FindGlobalVariables(RE, false, UINT32_MAX, List);
+    Vendor.FindGlobalVariables(RE, UINT32_MAX, List);
   } else {
     Expected<CompilerDeclContext> ContextOr = getDeclContext(Vendor);
     if (!ContextOr)
@@ -375,8 +374,7 @@ Error opts::symbols::findVariables(lldb_private::Module &Module) {
     CompilerDeclContext *ContextPtr =
         ContextOr->IsValid() ? &*ContextOr : nullptr;
 
-    Vendor.FindGlobalVariables(ConstString(Name), ContextPtr, false, UINT32_MAX,
-                               List);
+    Vendor.FindGlobalVariables(ConstString(Name), ContextPtr, UINT32_MAX, List);
   }
   outs() << formatv("Found {0} variables:\n", List.GetSize());
   StreamString Stream;

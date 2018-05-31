@@ -82,6 +82,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       G_CONSTANT, 0, widenToLargerTypesAndNarrowToLargest);
 
   computeTables();
+  verify(*STI.getInstrInfo());
 }
 
 void X86LegalizerInfo::setLegalizerInfo32bit() {
@@ -129,7 +130,7 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
         .legalForCartesianProduct({s1, s8, s16, s32}, {p0})
         .maxScalar(0, s32)
         .widenScalarToNextPow2(0, /*Min*/ 8);
-    getActionDefinitionsBuilder(G_INTTOPTR).legalFor({s32, p0});
+    getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
 
     // Shifts and SDIV
     getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR, G_SDIV})
@@ -201,7 +202,7 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
       .legalForCartesianProduct({s1, s8, s16, s32, s64}, {p0})
       .maxScalar(0, s64)
       .widenScalarToNextPow2(0, /*Min*/ 8);
-  getActionDefinitionsBuilder(G_INTTOPTR).legalFor({s64, p0});
+  getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s64}});
 
   // Constants
   setAction({TargetOpcode::G_CONSTANT, s64}, Legal);

@@ -296,6 +296,16 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::aff_list add(isl::aff el) const;
+  static inline isl::aff_list alloc(isl::ctx ctx, int n);
+  inline isl::aff_list concat(isl::aff_list list2) const;
+  inline isl::aff_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::aff)> &fn) const;
+  static inline isl::aff_list from_aff(isl::aff el);
+  inline isl::aff get_aff(int index) const;
+  inline isl::aff_list insert(unsigned int pos, isl::aff el) const;
+  inline int n_aff() const;
+  inline isl::aff_list set_aff(int index, isl::aff el) const;
 };
 
 // declarations for isl::ast_build
@@ -422,6 +432,16 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::ast_expr_list add(isl::ast_expr el) const;
+  static inline isl::ast_expr_list alloc(isl::ctx ctx, int n);
+  inline isl::ast_expr_list concat(isl::ast_expr_list list2) const;
+  inline isl::ast_expr_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::ast_expr)> &fn) const;
+  static inline isl::ast_expr_list from_ast_expr(isl::ast_expr el);
+  inline isl::ast_expr get_ast_expr(int index) const;
+  inline isl::ast_expr_list insert(unsigned int pos, isl::ast_expr el) const;
+  inline int n_ast_expr() const;
+  inline isl::ast_expr_list set_ast_expr(int index, isl::ast_expr el) const;
 };
 
 // declarations for isl::ast_node
@@ -499,6 +519,16 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::ast_node_list add(isl::ast_node el) const;
+  static inline isl::ast_node_list alloc(isl::ctx ctx, int n);
+  inline isl::ast_node_list concat(isl::ast_node_list list2) const;
+  inline isl::ast_node_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::ast_node)> &fn) const;
+  static inline isl::ast_node_list from_ast_node(isl::ast_node el);
+  inline isl::ast_node get_ast_node(int index) const;
+  inline isl::ast_node_list insert(unsigned int pos, isl::ast_node el) const;
+  inline int n_ast_node() const;
+  inline isl::ast_node_list set_ast_node(int index, isl::ast_node el) const;
 };
 
 // declarations for isl::basic_map
@@ -661,6 +691,17 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::basic_map_list add(isl::basic_map el) const;
+  static inline isl::basic_map_list alloc(isl::ctx ctx, int n);
+  inline isl::basic_map_list concat(isl::basic_map_list list2) const;
+  inline isl::basic_map_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::basic_map)> &fn) const;
+  static inline isl::basic_map_list from_basic_map(isl::basic_map el);
+  inline isl::basic_map get_basic_map(int index) const;
+  inline isl::basic_map_list insert(unsigned int pos, isl::basic_map el) const;
+  inline isl::basic_map intersect() const;
+  inline int n_basic_map() const;
+  inline isl::basic_map_list set_basic_map(int index, isl::basic_map el) const;
 };
 
 // declarations for isl::basic_set
@@ -793,6 +834,18 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::basic_set_list add(isl::basic_set el) const;
+  static inline isl::basic_set_list alloc(isl::ctx ctx, int n);
+  inline isl::basic_set_list coefficients() const;
+  inline isl::basic_set_list concat(isl::basic_set_list list2) const;
+  inline isl::basic_set_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::basic_set)> &fn) const;
+  static inline isl::basic_set_list from_basic_set(isl::basic_set el);
+  inline isl::basic_set get_basic_set(int index) const;
+  inline isl::basic_set_list insert(unsigned int pos, isl::basic_set el) const;
+  inline isl::basic_set intersect() const;
+  inline int n_basic_set() const;
+  inline isl::basic_set_list set_basic_set(int index, isl::basic_set el) const;
 };
 
 // declarations for isl::constraint
@@ -871,6 +924,16 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::constraint_list add(isl::constraint el) const;
+  static inline isl::constraint_list alloc(isl::ctx ctx, int n);
+  inline isl::constraint_list concat(isl::constraint_list list2) const;
+  inline isl::constraint_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::constraint)> &fn) const;
+  static inline isl::constraint_list from_constraint(isl::constraint el);
+  inline isl::constraint get_constraint(int index) const;
+  inline isl::constraint_list insert(unsigned int pos, isl::constraint el) const;
+  inline int n_constraint() const;
+  inline isl::constraint_list set_constraint(int index, isl::constraint el) const;
 };
 
 // declarations for isl::id
@@ -934,6 +997,16 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::id_list add(isl::id el) const;
+  static inline isl::id_list alloc(isl::ctx ctx, int n);
+  inline isl::id_list concat(isl::id_list list2) const;
+  inline isl::id_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::id)> &fn) const;
+  static inline isl::id_list from_id(isl::id el);
+  inline isl::id get_id(int index) const;
+  inline isl::id_list insert(unsigned int pos, isl::id el) const;
+  inline int n_id() const;
+  inline isl::id_list set_id(int index, isl::id el) const;
 };
 
 // declarations for isl::id_to_ast_expr
@@ -1111,6 +1184,7 @@ public:
   static inline isl::map from_pw_multi_aff(isl::pw_multi_aff pma);
   static inline isl::map from_range(isl::set set);
   static inline isl::map from_union_map(isl::union_map umap);
+  inline isl::basic_map_list get_basic_map_list() const;
   inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
   inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
   inline uint32_t get_hash() const;
@@ -1250,6 +1324,16 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::map_list add(isl::map el) const;
+  static inline isl::map_list alloc(isl::ctx ctx, int n);
+  inline isl::map_list concat(isl::map_list list2) const;
+  inline isl::map_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::map)> &fn) const;
+  static inline isl::map_list from_map(isl::map el);
+  inline isl::map get_map(int index) const;
+  inline isl::map_list insert(unsigned int pos, isl::map el) const;
+  inline int n_map() const;
+  inline isl::map_list set_map(int index, isl::map el) const;
 };
 
 // declarations for isl::mat
@@ -1856,6 +1940,24 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::pw_aff_list add(isl::pw_aff el) const;
+  static inline isl::pw_aff_list alloc(isl::ctx ctx, int n);
+  inline isl::pw_aff_list concat(isl::pw_aff_list list2) const;
+  inline isl::pw_aff_list drop(unsigned int first, unsigned int n) const;
+  inline isl::set eq_set(isl::pw_aff_list list2) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::pw_aff)> &fn) const;
+  static inline isl::pw_aff_list from_pw_aff(isl::pw_aff el);
+  inline isl::set ge_set(isl::pw_aff_list list2) const;
+  inline isl::pw_aff get_pw_aff(int index) const;
+  inline isl::set gt_set(isl::pw_aff_list list2) const;
+  inline isl::pw_aff_list insert(unsigned int pos, isl::pw_aff el) const;
+  inline isl::set le_set(isl::pw_aff_list list2) const;
+  inline isl::set lt_set(isl::pw_aff_list list2) const;
+  inline isl::pw_aff max() const;
+  inline isl::pw_aff min() const;
+  inline int n_pw_aff() const;
+  inline isl::set ne_set(isl::pw_aff_list list2) const;
+  inline isl::pw_aff_list set_pw_aff(int index, isl::pw_aff el) const;
 };
 
 // declarations for isl::pw_multi_aff
@@ -2470,6 +2572,17 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::set_list add(isl::set el) const;
+  static inline isl::set_list alloc(isl::ctx ctx, int n);
+  inline isl::set_list concat(isl::set_list list2) const;
+  inline isl::set_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::set)> &fn) const;
+  static inline isl::set_list from_set(isl::set el);
+  inline isl::set get_set(int index) const;
+  inline isl::set_list insert(unsigned int pos, isl::set el) const;
+  inline int n_set() const;
+  inline isl::set_list set_set(int index, isl::set el) const;
+  inline isl::set unite() const;
 };
 
 // declarations for isl::space
@@ -2743,6 +2856,7 @@ public:
   static inline isl::union_map from_range(isl::union_set uset);
   inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
   inline uint32_t get_hash() const;
+  inline isl::map_list get_map_list() const;
   inline isl::space get_space() const;
   inline isl::union_map gist(isl::union_map context) const;
   inline isl::union_map gist_domain(isl::union_set uset) const;
@@ -2835,6 +2949,16 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::union_map_list add(isl::union_map el) const;
+  static inline isl::union_map_list alloc(isl::ctx ctx, int n);
+  inline isl::union_map_list concat(isl::union_map_list list2) const;
+  inline isl::union_map_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::union_map)> &fn) const;
+  static inline isl::union_map_list from_union_map(isl::union_map el);
+  inline isl::union_map get_union_map(int index) const;
+  inline isl::union_map_list insert(unsigned int pos, isl::union_map el) const;
+  inline int n_union_map() const;
+  inline isl::union_map_list set_union_map(int index, isl::union_map el) const;
 };
 
 // declarations for isl::union_pw_aff
@@ -2930,6 +3054,16 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::union_pw_aff_list add(isl::union_pw_aff el) const;
+  static inline isl::union_pw_aff_list alloc(isl::ctx ctx, int n);
+  inline isl::union_pw_aff_list concat(isl::union_pw_aff_list list2) const;
+  inline isl::union_pw_aff_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::union_pw_aff)> &fn) const;
+  static inline isl::union_pw_aff_list from_union_pw_aff(isl::union_pw_aff el);
+  inline isl::union_pw_aff get_union_pw_aff(int index) const;
+  inline isl::union_pw_aff_list insert(unsigned int pos, isl::union_pw_aff el) const;
+  inline int n_union_pw_aff() const;
+  inline isl::union_pw_aff_list set_union_pw_aff(int index, isl::union_pw_aff el) const;
 };
 
 // declarations for isl::union_pw_multi_aff
@@ -3028,6 +3162,16 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::union_pw_multi_aff_list add(isl::union_pw_multi_aff el) const;
+  static inline isl::union_pw_multi_aff_list alloc(isl::ctx ctx, int n);
+  inline isl::union_pw_multi_aff_list concat(isl::union_pw_multi_aff_list list2) const;
+  inline isl::union_pw_multi_aff_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::union_pw_multi_aff)> &fn) const;
+  static inline isl::union_pw_multi_aff_list from_union_pw_multi_aff(isl::union_pw_multi_aff el);
+  inline isl::union_pw_multi_aff get_union_pw_multi_aff(int index) const;
+  inline isl::union_pw_multi_aff_list insert(unsigned int pos, isl::union_pw_multi_aff el) const;
+  inline int n_union_pw_multi_aff() const;
+  inline isl::union_pw_multi_aff_list set_union_pw_multi_aff(int index, isl::union_pw_multi_aff el) const;
 };
 
 // declarations for isl::union_pw_qpolynomial
@@ -3137,6 +3281,7 @@ public:
   inline isl::stat foreach_set(const std::function<isl::stat(isl::set)> &fn) const;
   inline isl::basic_set_list get_basic_set_list() const;
   inline uint32_t get_hash() const;
+  inline isl::set_list get_set_list() const;
   inline isl::space get_space() const;
   inline isl::union_set gist(isl::union_set context) const;
   inline isl::union_set gist_params(isl::set set) const;
@@ -3206,6 +3351,17 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::union_set_list add(isl::union_set el) const;
+  static inline isl::union_set_list alloc(isl::ctx ctx, int n);
+  inline isl::union_set_list concat(isl::union_set_list list2) const;
+  inline isl::union_set_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::union_set)> &fn) const;
+  static inline isl::union_set_list from_union_set(isl::union_set el);
+  inline isl::union_set get_union_set(int index) const;
+  inline isl::union_set_list insert(unsigned int pos, isl::union_set el) const;
+  inline int n_union_set() const;
+  inline isl::union_set_list set_union_set(int index, isl::union_set el) const;
+  inline isl::union_set unite() const;
 };
 
 // declarations for isl::val
@@ -3320,6 +3476,16 @@ public:
   inline isl::ctx get_ctx() const;
   inline void dump() const;
 
+  inline isl::val_list add(isl::val el) const;
+  static inline isl::val_list alloc(isl::ctx ctx, int n);
+  inline isl::val_list concat(isl::val_list list2) const;
+  inline isl::val_list drop(unsigned int first, unsigned int n) const;
+  inline isl::stat foreach(const std::function<isl::stat(isl::val)> &fn) const;
+  static inline isl::val_list from_val(isl::val el);
+  inline isl::val get_val(int index) const;
+  inline isl::val_list insert(unsigned int pos, isl::val el) const;
+  inline int n_val() const;
+  inline isl::val_list set_val(int index, isl::val el) const;
 };
 
 // declarations for isl::vec
@@ -3938,6 +4104,73 @@ void aff_list::dump() const {
 }
 
 
+isl::aff_list aff_list::add(isl::aff el) const
+{
+  auto res = isl_aff_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::aff_list aff_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_aff_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::aff_list aff_list::concat(isl::aff_list list2) const
+{
+  auto res = isl_aff_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::aff_list aff_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_aff_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat aff_list::foreach(const std::function<isl::stat(isl::aff)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::aff)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_aff *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_aff_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::aff_list aff_list::from_aff(isl::aff el)
+{
+  auto res = isl_aff_list_from_aff(el.release());
+  return manage(res);
+}
+
+isl::aff aff_list::get_aff(int index) const
+{
+  auto res = isl_aff_list_get_aff(get(), index);
+  return manage(res);
+}
+
+isl::aff_list aff_list::insert(unsigned int pos, isl::aff el) const
+{
+  auto res = isl_aff_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int aff_list::n_aff() const
+{
+  auto res = isl_aff_list_n_aff(get());
+  return res;
+}
+
+isl::aff_list aff_list::set_aff(int index, isl::aff el) const
+{
+  auto res = isl_aff_list_set_aff(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::ast_build
 isl::ast_build manage(__isl_take isl_ast_build *ptr) {
@@ -4374,6 +4607,73 @@ void ast_expr_list::dump() const {
 }
 
 
+isl::ast_expr_list ast_expr_list::add(isl::ast_expr el) const
+{
+  auto res = isl_ast_expr_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::ast_expr_list ast_expr_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_ast_expr_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::ast_expr_list ast_expr_list::concat(isl::ast_expr_list list2) const
+{
+  auto res = isl_ast_expr_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::ast_expr_list ast_expr_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_ast_expr_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat ast_expr_list::foreach(const std::function<isl::stat(isl::ast_expr)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::ast_expr)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_ast_expr *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_ast_expr_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::ast_expr_list ast_expr_list::from_ast_expr(isl::ast_expr el)
+{
+  auto res = isl_ast_expr_list_from_ast_expr(el.release());
+  return manage(res);
+}
+
+isl::ast_expr ast_expr_list::get_ast_expr(int index) const
+{
+  auto res = isl_ast_expr_list_get_ast_expr(get(), index);
+  return manage(res);
+}
+
+isl::ast_expr_list ast_expr_list::insert(unsigned int pos, isl::ast_expr el) const
+{
+  auto res = isl_ast_expr_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int ast_expr_list::n_ast_expr() const
+{
+  auto res = isl_ast_expr_list_n_ast_expr(get());
+  return res;
+}
+
+isl::ast_expr_list ast_expr_list::set_ast_expr(int index, isl::ast_expr el) const
+{
+  auto res = isl_ast_expr_list_set_ast_expr(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::ast_node
 isl::ast_node manage(__isl_take isl_ast_node *ptr) {
@@ -4624,6 +4924,73 @@ void ast_node_list::dump() const {
 }
 
 
+isl::ast_node_list ast_node_list::add(isl::ast_node el) const
+{
+  auto res = isl_ast_node_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::ast_node_list ast_node_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_ast_node_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::ast_node_list ast_node_list::concat(isl::ast_node_list list2) const
+{
+  auto res = isl_ast_node_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::ast_node_list ast_node_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_ast_node_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat ast_node_list::foreach(const std::function<isl::stat(isl::ast_node)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::ast_node)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_ast_node *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_ast_node_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::ast_node_list ast_node_list::from_ast_node(isl::ast_node el)
+{
+  auto res = isl_ast_node_list_from_ast_node(el.release());
+  return manage(res);
+}
+
+isl::ast_node ast_node_list::get_ast_node(int index) const
+{
+  auto res = isl_ast_node_list_get_ast_node(get(), index);
+  return manage(res);
+}
+
+isl::ast_node_list ast_node_list::insert(unsigned int pos, isl::ast_node el) const
+{
+  auto res = isl_ast_node_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int ast_node_list::n_ast_node() const
+{
+  auto res = isl_ast_node_list_n_ast_node(get());
+  return res;
+}
+
+isl::ast_node_list ast_node_list::set_ast_node(int index, isl::ast_node el) const
+{
+  auto res = isl_ast_node_list_set_ast_node(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::basic_map
 isl::basic_map manage(__isl_take isl_basic_map *ptr) {
@@ -5391,6 +5758,79 @@ void basic_map_list::dump() const {
 }
 
 
+isl::basic_map_list basic_map_list::add(isl::basic_map el) const
+{
+  auto res = isl_basic_map_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::basic_map_list basic_map_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_basic_map_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::basic_map_list basic_map_list::concat(isl::basic_map_list list2) const
+{
+  auto res = isl_basic_map_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::basic_map_list basic_map_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_basic_map_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat basic_map_list::foreach(const std::function<isl::stat(isl::basic_map)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::basic_map)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_basic_map *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_basic_map_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::basic_map_list basic_map_list::from_basic_map(isl::basic_map el)
+{
+  auto res = isl_basic_map_list_from_basic_map(el.release());
+  return manage(res);
+}
+
+isl::basic_map basic_map_list::get_basic_map(int index) const
+{
+  auto res = isl_basic_map_list_get_basic_map(get(), index);
+  return manage(res);
+}
+
+isl::basic_map_list basic_map_list::insert(unsigned int pos, isl::basic_map el) const
+{
+  auto res = isl_basic_map_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+isl::basic_map basic_map_list::intersect() const
+{
+  auto res = isl_basic_map_list_intersect(copy());
+  return manage(res);
+}
+
+int basic_map_list::n_basic_map() const
+{
+  auto res = isl_basic_map_list_n_basic_map(get());
+  return res;
+}
+
+isl::basic_map_list basic_map_list::set_basic_map(int index, isl::basic_map el) const
+{
+  auto res = isl_basic_map_list_set_basic_map(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::basic_set
 isl::basic_set manage(__isl_take isl_basic_set *ptr) {
@@ -5985,6 +6425,85 @@ void basic_set_list::dump() const {
 }
 
 
+isl::basic_set_list basic_set_list::add(isl::basic_set el) const
+{
+  auto res = isl_basic_set_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::basic_set_list basic_set_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_basic_set_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::basic_set_list basic_set_list::coefficients() const
+{
+  auto res = isl_basic_set_list_coefficients(copy());
+  return manage(res);
+}
+
+isl::basic_set_list basic_set_list::concat(isl::basic_set_list list2) const
+{
+  auto res = isl_basic_set_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::basic_set_list basic_set_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_basic_set_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat basic_set_list::foreach(const std::function<isl::stat(isl::basic_set)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::basic_set)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_basic_set *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_basic_set_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::basic_set_list basic_set_list::from_basic_set(isl::basic_set el)
+{
+  auto res = isl_basic_set_list_from_basic_set(el.release());
+  return manage(res);
+}
+
+isl::basic_set basic_set_list::get_basic_set(int index) const
+{
+  auto res = isl_basic_set_list_get_basic_set(get(), index);
+  return manage(res);
+}
+
+isl::basic_set_list basic_set_list::insert(unsigned int pos, isl::basic_set el) const
+{
+  auto res = isl_basic_set_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+isl::basic_set basic_set_list::intersect() const
+{
+  auto res = isl_basic_set_list_intersect(copy());
+  return manage(res);
+}
+
+int basic_set_list::n_basic_set() const
+{
+  auto res = isl_basic_set_list_n_basic_set(get());
+  return res;
+}
+
+isl::basic_set_list basic_set_list::set_basic_set(int index, isl::basic_set el) const
+{
+  auto res = isl_basic_set_list_set_basic_set(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::constraint
 isl::constraint manage(__isl_take isl_constraint *ptr) {
@@ -6237,6 +6756,73 @@ void constraint_list::dump() const {
 }
 
 
+isl::constraint_list constraint_list::add(isl::constraint el) const
+{
+  auto res = isl_constraint_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::constraint_list constraint_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_constraint_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::constraint_list constraint_list::concat(isl::constraint_list list2) const
+{
+  auto res = isl_constraint_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::constraint_list constraint_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_constraint_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat constraint_list::foreach(const std::function<isl::stat(isl::constraint)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::constraint)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_constraint *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_constraint_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::constraint_list constraint_list::from_constraint(isl::constraint el)
+{
+  auto res = isl_constraint_list_from_constraint(el.release());
+  return manage(res);
+}
+
+isl::constraint constraint_list::get_constraint(int index) const
+{
+  auto res = isl_constraint_list_get_constraint(get(), index);
+  return manage(res);
+}
+
+isl::constraint_list constraint_list::insert(unsigned int pos, isl::constraint el) const
+{
+  auto res = isl_constraint_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int constraint_list::n_constraint() const
+{
+  auto res = isl_constraint_list_n_constraint(get());
+  return res;
+}
+
+isl::constraint_list constraint_list::set_constraint(int index, isl::constraint el) const
+{
+  auto res = isl_constraint_list_set_constraint(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::id
 isl::id manage(__isl_take isl_id *ptr) {
@@ -6402,6 +6988,73 @@ void id_list::dump() const {
 }
 
 
+isl::id_list id_list::add(isl::id el) const
+{
+  auto res = isl_id_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::id_list id_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_id_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::id_list id_list::concat(isl::id_list list2) const
+{
+  auto res = isl_id_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::id_list id_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_id_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat id_list::foreach(const std::function<isl::stat(isl::id)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::id)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_id *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_id_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::id_list id_list::from_id(isl::id el)
+{
+  auto res = isl_id_list_from_id(el.release());
+  return manage(res);
+}
+
+isl::id id_list::get_id(int index) const
+{
+  auto res = isl_id_list_get_id(get(), index);
+  return manage(res);
+}
+
+isl::id_list id_list::insert(unsigned int pos, isl::id el) const
+{
+  auto res = isl_id_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int id_list::n_id() const
+{
+  auto res = isl_id_list_n_id(get());
+  return res;
+}
+
+isl::id_list id_list::set_id(int index, isl::id el) const
+{
+  auto res = isl_id_list_set_id(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::id_to_ast_expr
 isl::id_to_ast_expr manage(__isl_take isl_id_to_ast_expr *ptr) {
@@ -7155,6 +7808,12 @@ isl::map map::from_union_map(isl::union_map umap)
   return manage(res);
 }
 
+isl::basic_map_list map::get_basic_map_list() const
+{
+  auto res = isl_map_get_basic_map_list(get());
+  return manage(res);
+}
+
 isl::id map::get_dim_id(isl::dim type, unsigned int pos) const
 {
   auto res = isl_map_get_dim_id(get(), static_cast<enum isl_dim_type>(type), pos);
@@ -7882,6 +8541,73 @@ void map_list::dump() const {
 }
 
 
+isl::map_list map_list::add(isl::map el) const
+{
+  auto res = isl_map_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::map_list map_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_map_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::map_list map_list::concat(isl::map_list list2) const
+{
+  auto res = isl_map_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::map_list map_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_map_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat map_list::foreach(const std::function<isl::stat(isl::map)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::map)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_map *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_map_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::map_list map_list::from_map(isl::map el)
+{
+  auto res = isl_map_list_from_map(el.release());
+  return manage(res);
+}
+
+isl::map map_list::get_map(int index) const
+{
+  auto res = isl_map_list_get_map(get(), index);
+  return manage(res);
+}
+
+isl::map_list map_list::insert(unsigned int pos, isl::map el) const
+{
+  auto res = isl_map_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int map_list::n_map() const
+{
+  auto res = isl_map_list_n_map(get());
+  return res;
+}
+
+isl::map_list map_list::set_map(int index, isl::map el) const
+{
+  auto res = isl_map_list_set_map(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::mat
 isl::mat manage(__isl_take isl_mat *ptr) {
@@ -10662,6 +11388,121 @@ void pw_aff_list::dump() const {
 }
 
 
+isl::pw_aff_list pw_aff_list::add(isl::pw_aff el) const
+{
+  auto res = isl_pw_aff_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::pw_aff_list pw_aff_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_pw_aff_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::pw_aff_list pw_aff_list::concat(isl::pw_aff_list list2) const
+{
+  auto res = isl_pw_aff_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::pw_aff_list pw_aff_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_pw_aff_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::set pw_aff_list::eq_set(isl::pw_aff_list list2) const
+{
+  auto res = isl_pw_aff_list_eq_set(copy(), list2.release());
+  return manage(res);
+}
+
+isl::stat pw_aff_list::foreach(const std::function<isl::stat(isl::pw_aff)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::pw_aff)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_pw_aff *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_pw_aff_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::pw_aff_list pw_aff_list::from_pw_aff(isl::pw_aff el)
+{
+  auto res = isl_pw_aff_list_from_pw_aff(el.release());
+  return manage(res);
+}
+
+isl::set pw_aff_list::ge_set(isl::pw_aff_list list2) const
+{
+  auto res = isl_pw_aff_list_ge_set(copy(), list2.release());
+  return manage(res);
+}
+
+isl::pw_aff pw_aff_list::get_pw_aff(int index) const
+{
+  auto res = isl_pw_aff_list_get_pw_aff(get(), index);
+  return manage(res);
+}
+
+isl::set pw_aff_list::gt_set(isl::pw_aff_list list2) const
+{
+  auto res = isl_pw_aff_list_gt_set(copy(), list2.release());
+  return manage(res);
+}
+
+isl::pw_aff_list pw_aff_list::insert(unsigned int pos, isl::pw_aff el) const
+{
+  auto res = isl_pw_aff_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+isl::set pw_aff_list::le_set(isl::pw_aff_list list2) const
+{
+  auto res = isl_pw_aff_list_le_set(copy(), list2.release());
+  return manage(res);
+}
+
+isl::set pw_aff_list::lt_set(isl::pw_aff_list list2) const
+{
+  auto res = isl_pw_aff_list_lt_set(copy(), list2.release());
+  return manage(res);
+}
+
+isl::pw_aff pw_aff_list::max() const
+{
+  auto res = isl_pw_aff_list_max(copy());
+  return manage(res);
+}
+
+isl::pw_aff pw_aff_list::min() const
+{
+  auto res = isl_pw_aff_list_min(copy());
+  return manage(res);
+}
+
+int pw_aff_list::n_pw_aff() const
+{
+  auto res = isl_pw_aff_list_n_pw_aff(get());
+  return res;
+}
+
+isl::set pw_aff_list::ne_set(isl::pw_aff_list list2) const
+{
+  auto res = isl_pw_aff_list_ne_set(copy(), list2.release());
+  return manage(res);
+}
+
+isl::pw_aff_list pw_aff_list::set_pw_aff(int index, isl::pw_aff el) const
+{
+  auto res = isl_pw_aff_list_set_pw_aff(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::pw_multi_aff
 isl::pw_multi_aff manage(__isl_take isl_pw_multi_aff *ptr) {
@@ -13543,6 +14384,79 @@ void set_list::dump() const {
 }
 
 
+isl::set_list set_list::add(isl::set el) const
+{
+  auto res = isl_set_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::set_list set_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_set_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::set_list set_list::concat(isl::set_list list2) const
+{
+  auto res = isl_set_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::set_list set_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_set_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat set_list::foreach(const std::function<isl::stat(isl::set)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::set)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_set *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_set_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::set_list set_list::from_set(isl::set el)
+{
+  auto res = isl_set_list_from_set(el.release());
+  return manage(res);
+}
+
+isl::set set_list::get_set(int index) const
+{
+  auto res = isl_set_list_get_set(get(), index);
+  return manage(res);
+}
+
+isl::set_list set_list::insert(unsigned int pos, isl::set el) const
+{
+  auto res = isl_set_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int set_list::n_set() const
+{
+  auto res = isl_set_list_n_set(get());
+  return res;
+}
+
+isl::set_list set_list::set_set(int index, isl::set el) const
+{
+  auto res = isl_set_list_set_set(copy(), index, el.release());
+  return manage(res);
+}
+
+isl::set set_list::unite() const
+{
+  auto res = isl_set_list_union(copy());
+  return manage(res);
+}
 
 // implementations for isl::space
 isl::space manage(__isl_take isl_space *ptr) {
@@ -14658,6 +15572,12 @@ uint32_t union_map::get_hash() const
   return res;
 }
 
+isl::map_list union_map::get_map_list() const
+{
+  auto res = isl_union_map_get_map_list(get());
+  return manage(res);
+}
+
 isl::space union_map::get_space() const
 {
   auto res = isl_union_map_get_space(get());
@@ -15101,6 +16021,73 @@ void union_map_list::dump() const {
 }
 
 
+isl::union_map_list union_map_list::add(isl::union_map el) const
+{
+  auto res = isl_union_map_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::union_map_list union_map_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_union_map_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::union_map_list union_map_list::concat(isl::union_map_list list2) const
+{
+  auto res = isl_union_map_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::union_map_list union_map_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_union_map_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat union_map_list::foreach(const std::function<isl::stat(isl::union_map)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::union_map)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_union_map *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_union_map_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::union_map_list union_map_list::from_union_map(isl::union_map el)
+{
+  auto res = isl_union_map_list_from_union_map(el.release());
+  return manage(res);
+}
+
+isl::union_map union_map_list::get_union_map(int index) const
+{
+  auto res = isl_union_map_list_get_union_map(get(), index);
+  return manage(res);
+}
+
+isl::union_map_list union_map_list::insert(unsigned int pos, isl::union_map el) const
+{
+  auto res = isl_union_map_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int union_map_list::n_union_map() const
+{
+  auto res = isl_union_map_list_n_union_map(get());
+  return res;
+}
+
+isl::union_map_list union_map_list::set_union_map(int index, isl::union_map el) const
+{
+  auto res = isl_union_map_list_set_union_map(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::union_pw_aff
 isl::union_pw_aff manage(__isl_take isl_union_pw_aff *ptr) {
@@ -15462,6 +16449,73 @@ void union_pw_aff_list::dump() const {
 }
 
 
+isl::union_pw_aff_list union_pw_aff_list::add(isl::union_pw_aff el) const
+{
+  auto res = isl_union_pw_aff_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::union_pw_aff_list union_pw_aff_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_union_pw_aff_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::union_pw_aff_list union_pw_aff_list::concat(isl::union_pw_aff_list list2) const
+{
+  auto res = isl_union_pw_aff_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::union_pw_aff_list union_pw_aff_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_union_pw_aff_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat union_pw_aff_list::foreach(const std::function<isl::stat(isl::union_pw_aff)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::union_pw_aff)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_union_pw_aff *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_union_pw_aff_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::union_pw_aff_list union_pw_aff_list::from_union_pw_aff(isl::union_pw_aff el)
+{
+  auto res = isl_union_pw_aff_list_from_union_pw_aff(el.release());
+  return manage(res);
+}
+
+isl::union_pw_aff union_pw_aff_list::get_union_pw_aff(int index) const
+{
+  auto res = isl_union_pw_aff_list_get_union_pw_aff(get(), index);
+  return manage(res);
+}
+
+isl::union_pw_aff_list union_pw_aff_list::insert(unsigned int pos, isl::union_pw_aff el) const
+{
+  auto res = isl_union_pw_aff_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int union_pw_aff_list::n_union_pw_aff() const
+{
+  auto res = isl_union_pw_aff_list_n_union_pw_aff(get());
+  return res;
+}
+
+isl::union_pw_aff_list union_pw_aff_list::set_union_pw_aff(int index, isl::union_pw_aff el) const
+{
+  auto res = isl_union_pw_aff_list_set_union_pw_aff(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::union_pw_multi_aff
 isl::union_pw_multi_aff manage(__isl_take isl_union_pw_multi_aff *ptr) {
@@ -15839,6 +16893,73 @@ void union_pw_multi_aff_list::dump() const {
 }
 
 
+isl::union_pw_multi_aff_list union_pw_multi_aff_list::add(isl::union_pw_multi_aff el) const
+{
+  auto res = isl_union_pw_multi_aff_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::union_pw_multi_aff_list union_pw_multi_aff_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_union_pw_multi_aff_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::union_pw_multi_aff_list union_pw_multi_aff_list::concat(isl::union_pw_multi_aff_list list2) const
+{
+  auto res = isl_union_pw_multi_aff_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::union_pw_multi_aff_list union_pw_multi_aff_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_union_pw_multi_aff_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat union_pw_multi_aff_list::foreach(const std::function<isl::stat(isl::union_pw_multi_aff)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::union_pw_multi_aff)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_union_pw_multi_aff *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_union_pw_multi_aff_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::union_pw_multi_aff_list union_pw_multi_aff_list::from_union_pw_multi_aff(isl::union_pw_multi_aff el)
+{
+  auto res = isl_union_pw_multi_aff_list_from_union_pw_multi_aff(el.release());
+  return manage(res);
+}
+
+isl::union_pw_multi_aff union_pw_multi_aff_list::get_union_pw_multi_aff(int index) const
+{
+  auto res = isl_union_pw_multi_aff_list_get_union_pw_multi_aff(get(), index);
+  return manage(res);
+}
+
+isl::union_pw_multi_aff_list union_pw_multi_aff_list::insert(unsigned int pos, isl::union_pw_multi_aff el) const
+{
+  auto res = isl_union_pw_multi_aff_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int union_pw_multi_aff_list::n_union_pw_multi_aff() const
+{
+  auto res = isl_union_pw_multi_aff_list_n_union_pw_multi_aff(get());
+  return res;
+}
+
+isl::union_pw_multi_aff_list union_pw_multi_aff_list::set_union_pw_multi_aff(int index, isl::union_pw_multi_aff el) const
+{
+  auto res = isl_union_pw_multi_aff_list_set_union_pw_multi_aff(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::union_pw_qpolynomial
 isl::union_pw_qpolynomial manage(__isl_take isl_union_pw_qpolynomial *ptr) {
@@ -16303,6 +17424,12 @@ uint32_t union_set::get_hash() const
   return res;
 }
 
+isl::set_list union_set::get_set_list() const
+{
+  auto res = isl_union_set_get_set_list(get());
+  return manage(res);
+}
+
 isl::space union_set::get_space() const
 {
   auto res = isl_union_set_get_space(get());
@@ -16608,6 +17735,79 @@ void union_set_list::dump() const {
 }
 
 
+isl::union_set_list union_set_list::add(isl::union_set el) const
+{
+  auto res = isl_union_set_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::union_set_list union_set_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_union_set_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::union_set_list union_set_list::concat(isl::union_set_list list2) const
+{
+  auto res = isl_union_set_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::union_set_list union_set_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_union_set_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat union_set_list::foreach(const std::function<isl::stat(isl::union_set)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::union_set)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_union_set *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_union_set_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::union_set_list union_set_list::from_union_set(isl::union_set el)
+{
+  auto res = isl_union_set_list_from_union_set(el.release());
+  return manage(res);
+}
+
+isl::union_set union_set_list::get_union_set(int index) const
+{
+  auto res = isl_union_set_list_get_union_set(get(), index);
+  return manage(res);
+}
+
+isl::union_set_list union_set_list::insert(unsigned int pos, isl::union_set el) const
+{
+  auto res = isl_union_set_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int union_set_list::n_union_set() const
+{
+  auto res = isl_union_set_list_n_union_set(get());
+  return res;
+}
+
+isl::union_set_list union_set_list::set_union_set(int index, isl::union_set el) const
+{
+  auto res = isl_union_set_list_set_union_set(copy(), index, el.release());
+  return manage(res);
+}
+
+isl::union_set union_set_list::unite() const
+{
+  auto res = isl_union_set_list_union(copy());
+  return manage(res);
+}
 
 // implementations for isl::val
 isl::val manage(__isl_take isl_val *ptr) {
@@ -17076,6 +18276,73 @@ void val_list::dump() const {
 }
 
 
+isl::val_list val_list::add(isl::val el) const
+{
+  auto res = isl_val_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::val_list val_list::alloc(isl::ctx ctx, int n)
+{
+  auto res = isl_val_list_alloc(ctx.release(), n);
+  return manage(res);
+}
+
+isl::val_list val_list::concat(isl::val_list list2) const
+{
+  auto res = isl_val_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::val_list val_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_val_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+isl::stat val_list::foreach(const std::function<isl::stat(isl::val)> &fn) const
+{
+  struct fn_data {
+    const std::function<isl::stat(isl::val)> *func;
+  } fn_data = { &fn };
+  auto fn_lambda = [](isl_val *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    stat ret = (*data->func)(isl::manage(arg_0));
+    return isl_stat(ret);
+  };
+  auto res = isl_val_list_foreach(get(), fn_lambda, &fn_data);
+  return isl::stat(res);
+}
+
+isl::val_list val_list::from_val(isl::val el)
+{
+  auto res = isl_val_list_from_val(el.release());
+  return manage(res);
+}
+
+isl::val val_list::get_val(int index) const
+{
+  auto res = isl_val_list_get_val(get(), index);
+  return manage(res);
+}
+
+isl::val_list val_list::insert(unsigned int pos, isl::val el) const
+{
+  auto res = isl_val_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+int val_list::n_val() const
+{
+  auto res = isl_val_list_n_val(get());
+  return res;
+}
+
+isl::val_list val_list::set_val(int index, isl::val el) const
+{
+  auto res = isl_val_list_set_val(copy(), index, el.release());
+  return manage(res);
+}
 
 // implementations for isl::vec
 isl::vec manage(__isl_take isl_vec *ptr) {

@@ -43,6 +43,9 @@ enum ActionKind {
   /// Parse ASTs and view them in Graphviz.
   ASTView,
 
+  /// Dump the compiler configuration.
+  DumpCompilerOptions,
+
   /// Dump out raw tokens.
   DumpRawTokens,
 

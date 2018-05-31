@@ -504,6 +504,8 @@ void Selector::print(llvm::raw_ostream &OS) const {
   OS << getAsString();
 }
 
+LLVM_DUMP_METHOD void Selector::dump() const { print(llvm::errs()); }
+
 /// Interpreting the given string using the normal CamelCase
 /// conventions, determine whether the given string starts with the
 /// given "word", which is assumed to end in a lowercase letter.

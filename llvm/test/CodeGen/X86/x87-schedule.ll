@@ -2849,38 +2849,38 @@ define void @test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz() optsize {
 ; SLM-LABEL: test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fld1 # sched: [1:?]
-; SLM-NEXT:    fldl2e # sched: [100:1.00]
-; SLM-NEXT:    fldl2t # sched: [100:1.00]
-; SLM-NEXT:    fldlg2 # sched: [100:1.00]
-; SLM-NEXT:    fldln2 # sched: [100:1.00]
-; SLM-NEXT:    fldpi # sched: [100:1.00]
-; SLM-NEXT:    fldz # sched: [1:?]
+; SLM-NEXT:    fld1 # sched: [1:0.50]
+; SLM-NEXT:    fldl2e # sched: [1:1.00]
+; SLM-NEXT:    fldl2t # sched: [1:1.00]
+; SLM-NEXT:    fldlg2 # sched: [1:1.00]
+; SLM-NEXT:    fldln2 # sched: [1:1.00]
+; SLM-NEXT:    fldpi # sched: [1:1.00]
+; SLM-NEXT:    fldz # sched: [1:0.50]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    fld1 # sched: [1:?]
-; SANDY-NEXT:    fldl2e # sched: [100:0.33]
-; SANDY-NEXT:    fldl2t # sched: [100:0.33]
-; SANDY-NEXT:    fldlg2 # sched: [100:0.33]
-; SANDY-NEXT:    fldln2 # sched: [100:0.33]
-; SANDY-NEXT:    fldpi # sched: [100:0.33]
-; SANDY-NEXT:    fldz # sched: [1:?]
+; SANDY-NEXT:    fld1 # sched: [1:1.00]
+; SANDY-NEXT:    fldl2e # sched: [1:1.00]
+; SANDY-NEXT:    fldl2t # sched: [1:1.00]
+; SANDY-NEXT:    fldlg2 # sched: [1:1.00]
+; SANDY-NEXT:    fldln2 # sched: [1:1.00]
+; SANDY-NEXT:    fldpi # sched: [1:1.00]
+; SANDY-NEXT:    fldz # sched: [1:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fld1 # sched: [1:?]
-; HASWELL-NEXT:    fldl2e # sched: [1:0.50]
-; HASWELL-NEXT:    fldl2t # sched: [1:0.50]
-; HASWELL-NEXT:    fldlg2 # sched: [1:0.50]
-; HASWELL-NEXT:    fldln2 # sched: [1:0.50]
-; HASWELL-NEXT:    fldpi # sched: [1:0.50]
+; HASWELL-NEXT:    fld1 # sched: [1:1.00]
+; HASWELL-NEXT:    fldl2e # sched: [1:1.00]
+; HASWELL-NEXT:    fldl2t # sched: [1:1.00]
+; HASWELL-NEXT:    fldlg2 # sched: [1:1.00]
+; HASWELL-NEXT:    fldln2 # sched: [1:1.00]
+; HASWELL-NEXT:    fldpi # sched: [1:1.00]
 ; HASWELL-NEXT:    fldz # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
@@ -2888,52 +2888,52 @@ define void @test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz() optsize {
 ; BROADWELL-LABEL: test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    fld1 # sched: [1:?]
-; BROADWELL-NEXT:    fldl2e # sched: [100:0.25]
-; BROADWELL-NEXT:    fldl2t # sched: [100:0.25]
-; BROADWELL-NEXT:    fldlg2 # sched: [100:0.25]
-; BROADWELL-NEXT:    fldln2 # sched: [100:0.25]
-; BROADWELL-NEXT:    fldpi # sched: [100:0.25]
-; BROADWELL-NEXT:    fldz # sched: [1:?]
+; BROADWELL-NEXT:    fld1 # sched: [1:1.00]
+; BROADWELL-NEXT:    fldl2e # sched: [1:1.00]
+; BROADWELL-NEXT:    fldl2t # sched: [1:1.00]
+; BROADWELL-NEXT:    fldlg2 # sched: [1:1.00]
+; BROADWELL-NEXT:    fldln2 # sched: [1:1.00]
+; BROADWELL-NEXT:    fldpi # sched: [1:1.00]
+; BROADWELL-NEXT:    fldz # sched: [1:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKYLAKE-LABEL: test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    fld1 # sched: [1:?]
-; SKYLAKE-NEXT:    fldl2e # sched: [100:0.25]
-; SKYLAKE-NEXT:    fldl2t # sched: [100:0.25]
-; SKYLAKE-NEXT:    fldlg2 # sched: [100:0.25]
-; SKYLAKE-NEXT:    fldln2 # sched: [100:0.25]
-; SKYLAKE-NEXT:    fldpi # sched: [100:0.25]
-; SKYLAKE-NEXT:    fldz # sched: [1:?]
+; SKYLAKE-NEXT:    fld1 # sched: [1:1.00]
+; SKYLAKE-NEXT:    fldl2e # sched: [1:1.00]
+; SKYLAKE-NEXT:    fldl2t # sched: [1:1.00]
+; SKYLAKE-NEXT:    fldlg2 # sched: [1:1.00]
+; SKYLAKE-NEXT:    fldln2 # sched: [1:1.00]
+; SKYLAKE-NEXT:    fldpi # sched: [1:1.00]
+; SKYLAKE-NEXT:    fldz # sched: [1:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKX-LABEL: test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    fld1 # sched: [1:?]
-; SKX-NEXT:    fldl2e # sched: [100:0.25]
-; SKX-NEXT:    fldl2t # sched: [100:0.25]
-; SKX-NEXT:    fldlg2 # sched: [100:0.25]
-; SKX-NEXT:    fldln2 # sched: [100:0.25]
-; SKX-NEXT:    fldpi # sched: [100:0.25]
-; SKX-NEXT:    fldz # sched: [1:?]
+; SKX-NEXT:    fld1 # sched: [1:1.00]
+; SKX-NEXT:    fldl2e # sched: [1:1.00]
+; SKX-NEXT:    fldl2t # sched: [1:1.00]
+; SKX-NEXT:    fldlg2 # sched: [1:1.00]
+; SKX-NEXT:    fldln2 # sched: [1:1.00]
+; SKX-NEXT:    fldpi # sched: [1:1.00]
+; SKX-NEXT:    fldz # sched: [1:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
 ; BTVER2-LABEL: test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fld1 # sched: [1:?]
-; BTVER2-NEXT:    fldl2e # sched: [100:0.50]
-; BTVER2-NEXT:    fldl2t # sched: [100:0.50]
-; BTVER2-NEXT:    fldlg2 # sched: [100:0.50]
-; BTVER2-NEXT:    fldln2 # sched: [100:0.50]
-; BTVER2-NEXT:    fldpi # sched: [100:0.50]
-; BTVER2-NEXT:    fldz # sched: [1:?]
+; BTVER2-NEXT:    fld1 # sched: [3:1.00]
+; BTVER2-NEXT:    fldl2e # sched: [3:1.00]
+; BTVER2-NEXT:    fldl2t # sched: [3:1.00]
+; BTVER2-NEXT:    fldlg2 # sched: [3:1.00]
+; BTVER2-NEXT:    fldln2 # sched: [3:1.00]
+; BTVER2-NEXT:    fldpi # sched: [3:1.00]
+; BTVER2-NEXT:    fldz # sched: [3:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;

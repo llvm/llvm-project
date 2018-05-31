@@ -281,13 +281,13 @@ fyl2xp1
 # CHECK-NEXT:  1      5     1.00    *             *     fldt	(%eax)
 # CHECK-NEXT:  1      5     1.00    *             *     fldcw	(%eax)
 # CHECK-NEXT:  1      100   0.50                  *     fldenv	(%eax)
-# CHECK-NEXT:  1      1      -                    *     fld1
-# CHECK-NEXT:  1      100   0.50                  *     fldl2e
-# CHECK-NEXT:  1      100   0.50                  *     fldl2t
-# CHECK-NEXT:  1      100   0.50                  *     fldlg2
-# CHECK-NEXT:  1      100   0.50                  *     fldln2
-# CHECK-NEXT:  1      100   0.50                  *     fldpi
-# CHECK-NEXT:  1      1      -                    *     fldz
+# CHECK-NEXT:  1      3     1.00                  *     fld1
+# CHECK-NEXT:  1      3     1.00                  *     fldl2e
+# CHECK-NEXT:  1      3     1.00                  *     fldl2t
+# CHECK-NEXT:  1      3     1.00                  *     fldlg2
+# CHECK-NEXT:  1      3     1.00                  *     fldln2
+# CHECK-NEXT:  1      3     1.00                  *     fldpi
+# CHECK-NEXT:  1      3     1.00                  *     fldz
 # CHECK-NEXT:  1      2     1.00                  *     fmul	%st(0), %st(1)
 # CHECK-NEXT:  1      2     1.00                  *     fmul	%st(2)
 # CHECK-NEXT:  1      7     1.00    *             *     fmuls	(%ecx)
@@ -373,7 +373,7 @@ fyl2xp1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 44.50  22.50   -     54.00  349.00 54.00  27.00  39.00   -     13.00   -      -      -      -
+# CHECK-NEXT: 42.00  20.00   -     54.00  349.00 54.00  34.00  39.00   -     13.00  7.00    -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -452,13 +452,13 @@ fyl2xp1
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     fldt	(%eax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     fldcw	(%eax)
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     fldenv	(%eax)
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     fld1
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     fldl2e
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     fldl2t
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     fldlg2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     fldln2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     fldpi
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     fldz
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     fld1
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     fldl2e
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     fldl2t
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     fldlg2
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     fldln2
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     fldpi
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     fldz
 # CHECK-NEXT:  -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -     fmul	%st(0), %st(1)
 # CHECK-NEXT:  -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -     fmul	%st(2)
 # CHECK-NEXT:  -      -      -      -     1.00    -     1.00   1.00    -      -      -      -      -      -     fmuls	(%ecx)
