@@ -841,11 +841,10 @@ void FileSpec::AppendPathComponent(const FileSpec &new_path) {
 
 bool FileSpec::RemoveLastPathComponent() {
   llvm::SmallString<64> current_path;
-  auto style = m_syntax == ePathSyntaxWindows ? llvm::sys::path::Style::windows
-                                              : llvm::sys::path::Style::posix;
   GetPath(current_path, false);
-  if (llvm::sys::path::has_parent_path(current_path, style)) {
-    SetFile(llvm::sys::path::parent_path(current_path, style), false, m_syntax);
+  if (llvm::sys::path::has_parent_path(current_path, m_style)) {
+    SetFile(llvm::sys::path::parent_path(current_path, m_style), false,
+            m_style);
     return true;
   }
   return false;
