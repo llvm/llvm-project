@@ -1943,6 +1943,10 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
     }
   }
 
+  // Some of the tests below are recursive, so bail out if we hit the limit.
+  if (Depth++ >= MaxDepth)
+    return false;
+
   // Check for pointer simplifications.
   if (V->getType()->isPointerTy()) {
     // Alloca never returns null, malloc might.
@@ -1963,13 +1967,10 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
       if (CS.isReturnNonNull())
         return true;
       if (const auto *RP = getArgumentAliasingToReturnedPointer(CS))
-        return isKnownNonZero(RP, Depth + 1, Q);
+        return isKnownNonZero(RP, Depth, Q);
     }
   }
 
-  // The remaining tests are all recursive, so bail out if we hit the limit.
-  if (Depth++ >= MaxDepth)
-    return false;
 
   // Check for recursive pointer simplifications.
   if (V->getType()->isPointerTy()) {

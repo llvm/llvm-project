@@ -162,10 +162,11 @@ entry:
 
 ; EG: VTX_READ_8
 ; EG: VTX_READ_8
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
+
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+
+; HSA: flat_load_ushort
 define amdgpu_kernel void @v2i8_arg(<2 x i8> addrspace(1)* %out, <2 x i8> %in) {
 entry:
   store <2 x i8> %in, <2 x i8> addrspace(1)* %out
@@ -179,10 +180,9 @@ entry:
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
 
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-
-; VI: s_load_dword s
+; SI: s_load_dword s{{[0-9]+}}, s[0:1], 0xb
+; MESA-VI: s_load_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 0x2c
+; HSA-VI: s_load_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 0x8
 define amdgpu_kernel void @v2i16_arg(<2 x i16> addrspace(1)* %out, <2 x i16> %in) {
 entry:
   store <2 x i16> %in, <2 x i16> addrspace(1)* %out
@@ -226,11 +226,14 @@ entry:
 ; EG-DAG: VTX_READ_8 T{{[0-9]}}.X, T{{[0-9]}}.X, 40
 ; EG-DAG: VTX_READ_8 T{{[0-9]}}.X, T{{[0-9]}}.X, 41
 ; EG-DAG: VTX_READ_8 T{{[0-9]}}.X, T{{[0-9]}}.X, 42
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+
+; MESA-VI: buffer_load_ushort
+; MESA-VI: buffer_load_ubyte
+
+; HSA-VI: flat_load_ushort
 ; HSA-VI: flat_load_ubyte
 define amdgpu_kernel void @v3i8_arg(<3 x i8> addrspace(1)* nocapture %out, <3 x i8> %in) nounwind {
 entry:
@@ -245,12 +248,9 @@ entry:
 ; EG-DAG: VTX_READ_16 T{{[0-9]}}.X, T{{[0-9]}}.X, 44
 ; EG-DAG: VTX_READ_16 T{{[0-9]}}.X, T{{[0-9]}}.X, 46
 ; EG-DAG: VTX_READ_16 T{{[0-9]}}.X, T{{[0-9]}}.X, 48
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; MESA-GCN: buffer_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
-; HSA-VI: flat_load_ushort
+
+; GCN-DAG: s_load_dword s
+; GCN-DAG: {{buffer|flat}}_load_ushort
 define amdgpu_kernel void @v3i16_arg(<3 x i16> addrspace(1)* nocapture %out, <3 x i16> %in) nounwind {
 entry:
   store <3 x i16> %in, <3 x i16> addrspace(1)* %out, align 4
@@ -293,14 +293,13 @@ entry:
 ; EG: VTX_READ_8
 ; EG: VTX_READ_8
 ; EG: VTX_READ_8
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
+
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+
+; VI: s_load_dword s
 define amdgpu_kernel void @v4i8_arg(<4 x i8> addrspace(1)* %out, <4 x i8> %in) {
 entry:
   store <4 x i8> %in, <4 x i8> addrspace(1)* %out
@@ -315,13 +314,14 @@ entry:
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
 
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
+; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0xb
+; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x9
 
-; VI: s_load_dword s
-; VI: s_load_dword s
+; MESA-VI-DAG: s_load_dword s{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0x2c
+; MESA-VI-DAG: s_load_dword s{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0x30
+
+; HSA-VI-DAG: s_load_dword s{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0x8
+; HSA-VI-DAG: s_load_dword s{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0xc
 define amdgpu_kernel void @v4i16_arg(<4 x i16> addrspace(1)* %out, <4 x i16> %in) {
 entry:
   store <4 x i16> %in, <4 x i16> addrspace(1)* %out
@@ -372,21 +372,17 @@ entry:
 ; EG: VTX_READ_8
 ; EG: VTX_READ_8
 ; EG: VTX_READ_8
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; HSA-GCN: float_load_ubyte
-; HSA-GCN: float_load_ubyte
-; HSA-GCN: float_load_ubyte
-; HSA-GCN: float_load_ubyte
-; HSA-GCN: float_load_ubyte
-; HSA-GCN: float_load_ubyte
-; HSA-GCN: float_load_ubyte
-; HSA-GCN: float_load_ubyte
+
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+
+; VI: s_load_dwordx2
+; VI: s_load_dwordx2
 define amdgpu_kernel void @v8i8_arg(<8 x i8> addrspace(1)* %out, <8 x i8> %in) {
 entry:
   store <8 x i8> %in, <8 x i8> addrspace(1)* %out
@@ -405,15 +401,11 @@ entry:
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
 
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
+; SI: s_load_dwordx2
+; SI: s_load_dwordx2
+; SI: s_load_dwordx2
 
+; VI: s_load_dwordx2
 ; VI: s_load_dword s
 ; VI: s_load_dword s
 ; VI: s_load_dword s
@@ -481,38 +473,27 @@ entry:
 ; EG: VTX_READ_8
 ; EG: VTX_READ_8
 ; EG: VTX_READ_8
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; MESA-GCN: buffer_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
-; HSA-VI: flat_load_ubyte
+
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+; SI: buffer_load_ubyte
+
+; VI: s_load_dwordx2
+; VI: s_load_dwordx2
+; VI: s_load_dwordx2
 define amdgpu_kernel void @v16i8_arg(<16 x i8> addrspace(1)* %out, <16 x i8> %in) {
 entry:
   store <16 x i8> %in, <16 x i8> addrspace(1)* %out
@@ -539,22 +520,13 @@ entry:
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
 
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
+; SI: s_load_dword s
+; SI: s_load_dword s
+; SI: s_load_dword s
+; SI: s_load_dword s
+; SI: s_load_dwordx2
+; SI: s_load_dwordx2
+; SI: s_load_dwordx2
 
 ; VI: s_load_dword s
 ; VI: s_load_dword s

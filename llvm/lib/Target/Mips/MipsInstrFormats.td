@@ -70,7 +70,7 @@ class StdArch {
 
 // Generic Mips Format
 class MipsInst<dag outs, dag ins, string asmstr, list<dag> pattern,
-               InstrItinClass itin, Format f>: Instruction
+               InstrItinClass itin, Format f>: Instruction, PredicateControl
 {
   field bits<32> Inst;
   Format Form = f;
@@ -119,7 +119,7 @@ class MipsInst<dag outs, dag ins, string asmstr, list<dag> pattern,
 // Mips32/64 Instruction Format
 class InstSE<dag outs, dag ins, string asmstr, list<dag> pattern,
              InstrItinClass itin, Format f, string opstr = ""> :
-  MipsInst<outs, ins, asmstr, pattern, itin, f>, PredicateControl {
+  MipsInst<outs, ins, asmstr, pattern, itin, f> {
   let EncodingPredicates = [HasStdEnc];
   string BaseOpcode = opstr;
   string Arch;
@@ -128,7 +128,7 @@ class InstSE<dag outs, dag ins, string asmstr, list<dag> pattern,
 // Mips Pseudo Instructions Format
 class MipsPseudo<dag outs, dag ins, list<dag> pattern,
                  InstrItinClass itin = IIPseudo> :
-  MipsInst<outs, ins, "", pattern, itin, Pseudo>, PredicateControl {
+  MipsInst<outs, ins, "", pattern, itin, Pseudo> {
   let isCodeGenOnly = 1;
   let isPseudo = 1;
 }
@@ -144,7 +144,7 @@ class PseudoSE<dag outs, dag ins, list<dag> pattern,
 // These are aliases that require C++ handling to convert to the target
 // instruction, while InstAliases can be handled directly by tblgen.
 class MipsAsmPseudoInst<dag outs, dag ins, string asmstr>:
-  MipsInst<outs, ins, asmstr, [], IIPseudo, Pseudo>, PredicateControl {
+  MipsInst<outs, ins, asmstr, [], IIPseudo, Pseudo> {
   let isPseudo = 1;
   let Pattern = [];
 }

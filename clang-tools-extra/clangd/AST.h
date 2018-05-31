@@ -26,7 +26,7 @@ namespace clangd {
 ///
 /// The returned location is usually the spelling location where the name of the
 /// decl occurs in the code.
-SourceLocation findNameLoc(const clang::Decl* D);
+SourceLocation findNameLoc(const clang::Decl *D);
 
 } // namespace clangd
 } // namespace clang

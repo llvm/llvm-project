@@ -579,6 +579,9 @@ private:
 
   bool processNode(DomTreeNode *Node);
 
+  bool handleBranchCondition(Instruction *CondInst, const BranchInst *BI,
+                             const BasicBlock *BB, const BasicBlock *Pred);
+
   Value *getOrCreateResult(Value *Inst, Type *ExpectedType) const {
     if (auto *LI = dyn_cast<LoadInst>(Inst))
       return LI;
@@ -707,6 +710,33 @@ bool EarlyCSE::isOperatingOnInvariantMemAt(Instruction *I, unsigned GenAt) {
   return AvailableInvariants.lookup(MemLoc) <= GenAt;
 }
 
+bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
+                                     const BranchInst *BI, const BasicBlock *BB,
+                                     const BasicBlock *Pred) {
+  assert(BI->isConditional() && "Should be a conditional branch!");
+  assert(BI->getCondition() == CondInst && "Wrong condition?");
+  assert(BI->getSuccessor(0) == BB || BI->getSuccessor(1) == BB);
+  auto *TorF = (BI->getSuccessor(0) == BB)
+                   ? ConstantInt::getTrue(BB->getContext())
+                   : ConstantInt::getFalse(BB->getContext());
+  AvailableValues.insert(CondInst, TorF);
+  LLVM_DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
+                    << CondInst->getName() << "' as " << *TorF << " in "
+                    << BB->getName() << "\n");
+  if (!DebugCounter::shouldExecute(CSECounter)) {
+    LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
+  } else {
+    // Replace all dominated uses with the known value.
+    if (unsigned Count = replaceDominatedUsesWith(CondInst, TorF, DT,
+                                                  BasicBlockEdge(Pred, BB))) {
+
+      NumCSECVP += Count;
+      return true;
+    }
+  }
+  return false;
+}
+
 bool EarlyCSE::processNode(DomTreeNode *Node) {
   bool Changed = false;
   BasicBlock *BB = Node->getBlock();
@@ -730,26 +760,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
     if (BI && BI->isConditional()) {
       auto *CondInst = dyn_cast<Instruction>(BI->getCondition());
-      if (CondInst && SimpleValue::canHandle(CondInst)) {
-        assert(BI->getSuccessor(0) == BB || BI->getSuccessor(1) == BB);
-        auto *TorF = (BI->getSuccessor(0) == BB)
-                         ? ConstantInt::getTrue(BB->getContext())
-                         : ConstantInt::getFalse(BB->getContext());
-        AvailableValues.insert(CondInst, TorF);
-        LLVM_DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
-                          << CondInst->getName() << "' as " << *TorF << " in "
-                          << BB->getName() << "\n");
-        if (!DebugCounter::shouldExecute(CSECounter)) {
-          LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
-        } else {
-          // Replace all dominated uses with the known value.
-          if (unsigned Count = replaceDominatedUsesWith(
-                  CondInst, TorF, DT, BasicBlockEdge(Pred, BB))) {
-            Changed = true;
-            NumCSECVP += Count;
-          }
-        }
-      }
+      if (CondInst && SimpleValue::canHandle(CondInst))
+        Changed |= handleBranchCondition(CondInst, BI, BB, Pred);
     }
   }
 

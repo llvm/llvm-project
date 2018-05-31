@@ -7,7 +7,7 @@
 
 ; Ensure lld doesn't generates index files when thinlto-index-only is not enabled
 ; RUN: rm -f %t1.o.thinlto.bc %t2.o.thinlto.bc %t3.o.thinlto.bc
-; RUN: ld.lld -m elf_x86_64 -shared %t1.o %t2.o %t3.o -o %t4
+; RUN: ld.lld -shared %t1.o %t2.o %t3.o -o %t4
 ; RUN: not ls %t1.o.thinlto.bc
 ; RUN: not ls %t2.o.thinlto.bc
 ; RUN: not ls %t3.o.thinlto.bc

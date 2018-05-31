@@ -6,6 +6,7 @@ add_lld_library(lldWasm
   Driver.cpp
   InputChunks.cpp
   InputFiles.cpp
+  LTO.cpp
   MarkLive.cpp
   OutputSections.cpp
   SymbolTable.cpp
@@ -18,6 +19,8 @@ add_lld_library(lldWasm
   BinaryFormat
   Core
   Demangle
+  LTO
+  MC
   Object
   Option
   Support

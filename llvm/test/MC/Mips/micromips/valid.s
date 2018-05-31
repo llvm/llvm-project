@@ -70,7 +70,7 @@ subu $4, $3, $5             # CHECK: subu $4, $3, $5        # encoding: [0x00,0x
 sub $6, $zero, $7           # CHECK: neg $6, $7             # encoding: [0x00,0xe0,0x31,0x90]
 sub.d $f0, $f2, $f4         # CHECK: sub.d $f0, $f2, $f4    # encoding: [0x54,0x82,0x01,0x70]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FSUB_D32_MM
-subu $6, $zero, $7          # CHECK: subu $6, $zero, $7     # encoding: [0x00,0xe0,0x31,0xd0]
+subu $6, $zero, $7          # CHECK: negu $6, $7            # encoding: [0x00,0xe0,0x31,0xd0]
 addu $7, $8, $zero          # CHECK: addu $7, $8, $zero     # encoding: [0x00,0x08,0x39,0x50]
 slt $3, $3, $5              # CHECK: slt $3, $3, $5         # encoding: [0x00,0xa3,0x1b,0x50]
 slti $3, $3, 103            # CHECK: slti $3, $3, 103       # encoding: [0x90,0x63,0x00,0x67]

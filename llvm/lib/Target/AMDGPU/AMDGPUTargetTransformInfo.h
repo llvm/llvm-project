@@ -47,6 +47,29 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   const AMDGPUSubtarget *ST;
   const AMDGPUTargetLowering *TLI;
+
+public:
+  explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
+    : BaseT(TM, F.getParent()->getDataLayout()),
+      ST(TM->getSubtargetImpl(F)),
+      TLI(ST->getTargetLowering()) {}
+
+  const AMDGPUSubtarget *getST() const { return ST; }
+  const AMDGPUTargetLowering *getTLI() const { return TLI; }
+
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP);
+};
+
+class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
+  using BaseT = BasicTTIImplBase<GCNTTIImpl>;
+  using TTI = TargetTransformInfo;
+
+  friend BaseT;
+
+  const AMDGPUSubtarget *ST;
+  const AMDGPUTargetLowering *TLI;
+  AMDGPUTTIImpl CommonTTI;
   bool IsGraphicsShader;
 
   const FeatureBitset InlineFeatureIgnoreList = {
@@ -99,10 +122,11 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
   }
 
 public:
-  explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
+  explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getParent()->getDataLayout()),
       ST(TM->getSubtargetImpl(F)),
       TLI(ST->getTargetLowering()),
+      CommonTTI(TM, F),
       IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())) {}
 
   bool hasBranchDivergence() { return true; }
@@ -180,6 +204,46 @@ public:
   int getMinMaxReductionCost(Type *Ty, Type *CondTy,
                              bool IsPairwiseForm,
                              bool IsUnsigned);
+};
+
+class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
+  using BaseT = BasicTTIImplBase<R600TTIImpl>;
+  using TTI = TargetTransformInfo;
+
+  friend BaseT;
+
+  const AMDGPUSubtarget *ST;
+  const AMDGPUTargetLowering *TLI;
+  AMDGPUTTIImpl CommonTTI;
+
+public:
+  explicit R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
+    : BaseT(TM, F.getParent()->getDataLayout()),
+      ST(TM->getSubtargetImpl(F)),
+      TLI(ST->getTargetLowering()),
+      CommonTTI(TM, F)	{}
+
+  const AMDGPUSubtarget *getST() const { return ST; }
+  const AMDGPUTargetLowering *getTLI() const { return TLI; }
+
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP);
+  unsigned getHardwareNumberOfRegisters(bool Vec) const;
+  unsigned getNumberOfRegisters(bool Vec) const;
+  unsigned getRegisterBitWidth(bool Vector) const;
+  unsigned getMinVectorRegisterBitWidth() const;
+  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
+  bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes, unsigned Alignment,
+                                  unsigned AddrSpace) const;
+  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
+		                   unsigned Alignment,
+                                   unsigned AddrSpace) const;
+  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
+                                    unsigned Alignment,
+                                    unsigned AddrSpace) const;
+  unsigned getMaxInterleaveFactor(unsigned VF);
+  unsigned getCFInstrCost(unsigned Opcode);
+  int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
 };
 
 } // end namespace llvm

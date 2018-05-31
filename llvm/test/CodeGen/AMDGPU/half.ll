@@ -13,17 +13,10 @@ define amdgpu_kernel void @load_f16_arg(half addrspace(1)* %out, half %arg) #0 {
   ret void
 }
 
-; FIXME: Should always be the same
 ; GCN-LABEL: {{^}}load_v2f16_arg:
-; SI-DAG: buffer_load_ushort [[V0:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:44
-; SI-DAG: buffer_load_ushort [[V1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:46
-; SI: v_lshlrev_b32_e32 [[HI:v[0-9]+]], 16, [[V1]]
-; SI: v_or_b32_e32 [[PACKED:v[0-9]+]],  [[V0]], [[HI]]
-; SI: buffer_store_dword [[PACKED]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
-
-; VI: s_load_dword [[ARG:s[0-9]+]]
-; VI: v_mov_b32_e32 [[V_ARG:v[0-9]+]], [[ARG]]
-; VI: buffer_store_dword [[V_ARG]]
+; GCN: s_load_dword [[ARG:s[0-9]+]]
+; GCN: v_mov_b32_e32 [[V_ARG:v[0-9]+]], [[ARG]]
+; GCN: buffer_store_dword [[V_ARG]]
 define amdgpu_kernel void @load_v2f16_arg(<2 x half> addrspace(1)* %out, <2 x half> %arg) #0 {
   store <2 x half> %arg, <2 x half> addrspace(1)* %out
   ret void
@@ -31,8 +24,8 @@ define amdgpu_kernel void @load_v2f16_arg(<2 x half> addrspace(1)* %out, <2 x ha
 
 ; GCN-LABEL: {{^}}load_v3f16_arg:
 ; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
-; GCN: buffer_load_ushort
+; GCN: s_load_dword s
+
 ; GCN-NOT: buffer_load
 ; GCN-DAG: buffer_store_dword
 ; GCN-DAG: buffer_store_short
@@ -43,19 +36,14 @@ define amdgpu_kernel void @load_v3f16_arg(<3 x half> addrspace(1)* %out, <3 x ha
   ret void
 }
 
-; GCN-LABEL: {{^}}load_v4f16_arg:
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_store_dwordx2
 
 ; FIXME: Why not one load?
-; VI-DAG: s_load_dword [[ARG0_LO:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
-; VI-DAG: s_load_dword [[ARG0_HI:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x30
-; VI-DAG: v_mov_b32_e32 v[[V_ARG0_LO:[0-9]+]], [[ARG0_LO]]
-; VI-DAG: v_mov_b32_e32 v[[V_ARG0_HI:[0-9]+]], [[ARG0_HI]]
-; VI: buffer_store_dwordx2 v{{\[}}[[V_ARG0_LO]]:[[V_ARG0_HI]]{{\]}}
+; GCN-LABEL: {{^}}load_v4f16_arg:
+; GCN-DAG: s_load_dword [[ARG0_LO:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; GCN-DAG: s_load_dword [[ARG0_HI:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
+; GCN-DAG: v_mov_b32_e32 v[[V_ARG0_LO:[0-9]+]], [[ARG0_LO]]
+; GCN-DAG: v_mov_b32_e32 v[[V_ARG0_HI:[0-9]+]], [[ARG0_HI]]
+; GCN: buffer_store_dwordx2 v{{\[}}[[V_ARG0_LO]]:[[V_ARG0_HI]]{{\]}}
 define amdgpu_kernel void @load_v4f16_arg(<4 x half> addrspace(1)* %out, <4 x half> %arg) #0 {
   store <4 x half> %arg, <4 x half> addrspace(1)* %out
   ret void

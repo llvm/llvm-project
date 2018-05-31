@@ -540,11 +540,14 @@ inline QuotingType needsQuotes(StringRef S) {
     case '.':
     case ',':
     case ' ':
-    // TAB (0x9), LF (0xA), CR (0xD) and NEL (0x85) are allowed.
+    // TAB (0x9) is allowed in unquoted strings.
     case 0x9:
+      continue;
+    // LF(0xA) and CR(0xD) may delimit values and so require at least single
+    // quotes.
     case 0xA:
     case 0xD:
-    case 0x85:
+      MaxQuotingNeeded = QuotingType::Single;
       continue;
     // DEL (0x7F) are excluded from the allowed character range.
     case 0x7F:

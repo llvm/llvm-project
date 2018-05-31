@@ -401,15 +401,17 @@ void GroupSection::markSymbols() {
 }
 
 void Section::initialize(SectionTableRef SecTable) {
-  if (Link != ELF::SHN_UNDEF)
+  if (Link != ELF::SHN_UNDEF) {
     LinkSection =
         SecTable.getSection(Link, "Link field value " + Twine(Link) +
                                       " in section " + Name + " is invalid");
+    if (LinkSection->Type == ELF::SHT_SYMTAB)
+      LinkSection = nullptr;
+  }
 }
 
 void Section::finalize() {
-  if (LinkSection)
-    this->Link = LinkSection->Index;
+  this->Link = LinkSection ? LinkSection->Index : 0;
 }
 
 void GnuDebugLinkSection::init(StringRef File, StringRef Data) {

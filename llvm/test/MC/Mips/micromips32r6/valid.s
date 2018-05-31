@@ -400,3 +400,7 @@
   blezc $2, 256            # CHECK: blezc $2, 256          # encoding: [0xf4,0x40,0x00,0x40]
   bgezc $16, 512           # CHECK: bgezc $16, 512         # encoding: [0xf6,0x10,0x00,0x80]
   bgtzc $12, 1024          # CHECK: bgtzc $12, 1024        # encoding: [0xd5,0x80,0x01,0x00]
+  neg $4, $5               # CHECK: neg $4, $5             # encoding: [0x00,0xa0,0x21,0x90]
+  neg $4, $4               # CHECK: neg $4, $4             # encoding: [0x00,0x80,0x21,0x90]
+  negu  $4, $5             # CHECK: negu  $4, $5           # encoding: [0x00,0xa0,0x21,0xd0]
+  negu  $4, $4             # CHECK: negu  $4, $4           # encoding: [0x00,0x80,0x21,0xd0]

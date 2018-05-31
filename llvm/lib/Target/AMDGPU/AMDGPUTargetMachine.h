@@ -55,7 +55,6 @@ public:
   const AMDGPUIntrinsicInfo *getIntrinsicInfo() const override {
     return &IntrinsicInfo;
   }
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
@@ -91,6 +90,8 @@ public:
 
   const R600Subtarget *getSubtargetImpl(const Function &) const override;
 
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+
   bool isMachineVerifierClean() const override {
     return false;
   }
@@ -113,6 +114,8 @@ public:
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
   const SISubtarget *getSubtargetImpl(const Function &) const override;
+
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 
   bool useIPRA() const override {
     return true;

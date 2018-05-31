@@ -312,6 +312,7 @@ void AppleAcceleratorTable::ValueIterator::Next() {
   if (Data >= NumData ||
       !AccelSection.isValidOffsetForDataOfSize(DataOffset, 4)) {
     NumData = 0;
+    DataOffset = 0;
     return;
   }
   Current.extract(*AccelTable, &DataOffset);
@@ -849,8 +850,8 @@ void DWARFDebugNames::ValueIterator::next() {
   if (getEntryAtCurrentOffset())
     return;
 
-  // If we're a local iterator, we're done.
-  if (IsLocal) {
+  // If we're a local iterator or we have reached the last Index, we're done.
+  if (IsLocal || CurrentIndex == &CurrentIndex->Section.NameIndices.back()) {
     setEnd();
     return;
   }

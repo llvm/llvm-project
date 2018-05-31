@@ -11,6 +11,7 @@
 #define LLD_WASM_SYMBOL_TABLE_H
 
 #include "InputFiles.h"
+#include "LTO.h"
 #include "Symbols.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
@@ -39,8 +40,10 @@ class InputSegment;
 class SymbolTable {
 public:
   void addFile(InputFile *File);
+  void addCombinedLTOObject();
 
   std::vector<ObjFile *> ObjectFiles;
+  std::vector<BitcodeFile *> BitcodeFiles;
   std::vector<InputFunction *> SyntheticFunctions;
   std::vector<InputGlobal *> SyntheticGlobals;
 
@@ -80,6 +83,9 @@ private:
   std::vector<Symbol *> SymVector;
 
   llvm::DenseSet<llvm::CachedHashStringRef> Comdats;
+
+  // For LTO.
+  std::unique_ptr<BitcodeCompiler> LTO;
 };
 
 extern SymbolTable *Symtab;
