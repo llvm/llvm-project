@@ -993,7 +993,7 @@ __isl_give isl_ast_node *isl_ast_node_from_graft_list(
 	return isl_ast_node_from_ast_node_list(node_list);
 }
 
-void *isl_ast_graft_free(__isl_take isl_ast_graft *graft)
+__isl_null isl_ast_graft *isl_ast_graft_free(__isl_take isl_ast_graft *graft)
 {
 	if (!graft)
 		return NULL;

@@ -515,7 +515,6 @@ __isl_give MULTI(BASE) *FN(MULTI(BASE),align_params)(
 		if (!multi)
 			goto error;
 	}
-	model = isl_space_params(model);
 	exp = isl_parameter_alignment_reordering(multi->space, model);
 	exp = isl_reordering_extend_space(exp,
 				    FN(MULTI(BASE),get_domain_space)(multi));
