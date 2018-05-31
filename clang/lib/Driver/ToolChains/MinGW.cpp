@@ -141,22 +141,21 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("console");
   }
 
+  if (Args.hasArg(options::OPT_mdll))
+    CmdArgs.push_back("--dll");
+  else if (Args.hasArg(options::OPT_shared))
+    CmdArgs.push_back("--shared");
   if (Args.hasArg(options::OPT_static))
     CmdArgs.push_back("-Bstatic");
-  else {
-    if (Args.hasArg(options::OPT_mdll))
-      CmdArgs.push_back("--dll");
-    else if (Args.hasArg(options::OPT_shared))
-      CmdArgs.push_back("--shared");
+  else
     CmdArgs.push_back("-Bdynamic");
-    if (Args.hasArg(options::OPT_mdll) || Args.hasArg(options::OPT_shared)) {
-      CmdArgs.push_back("-e");
-      if (TC.getArch() == llvm::Triple::x86)
-        CmdArgs.push_back("_DllMainCRTStartup@12");
-      else
-        CmdArgs.push_back("DllMainCRTStartup");
-      CmdArgs.push_back("--enable-auto-image-base");
-    }
+  if (Args.hasArg(options::OPT_mdll) || Args.hasArg(options::OPT_shared)) {
+    CmdArgs.push_back("-e");
+    if (TC.getArch() == llvm::Triple::x86)
+      CmdArgs.push_back("_DllMainCRTStartup@12");
+    else
+      CmdArgs.push_back("DllMainCRTStartup");
+    CmdArgs.push_back("--enable-auto-image-base");
   }
 
   CmdArgs.push_back("-o");
