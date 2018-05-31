@@ -2,10 +2,35 @@
 
 #include "Inputs/system-header-simulator-for-nullability.h"
 
-NSString* getUnknownString();
-
 NSString* _Nonnull trust_nonnull_framework_annotation() {
   NSString* out = [NSString generateString];
+  if (out) {}
+  return out; // no-warning
+}
+
+NSString* _Nonnull trust_instancemsg_annotation(NSString* _Nonnull param) {
+  NSString* out = [param stringByAppendingString:@"string"];
+  if (out) {}
+  return out; // no-warning
+}
+
+NSString* _Nonnull distrust_instancemsg_noannotation(NSString* param) {
+  if (param) {}
+  NSString* out = [param stringByAppendingString:@"string"];
+  if (out) {}
+  return out; // expected-warning{{}}
+}
+
+NSString* _Nonnull trust_analyzer_knowledge(NSString* param) {
+  if (!param)
+    return @"";
+  NSString* out = [param stringByAppendingString:@"string"];
+  if (out) {}
+  return out; // no-warning
+}
+
+NSString* _Nonnull trust_assume_nonnull_macro() {
+  NSString* out = [NSString generateImplicitlyNonnullString];
   if (out) {}
   return out; // no-warning
 }
@@ -41,3 +66,4 @@ NSString * _Nonnull distrustProtocol(id<MyProtocol> o) {
   if (out) {};
   return out; // expected-warning{{}}
 }
+

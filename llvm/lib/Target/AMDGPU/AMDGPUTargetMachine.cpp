@@ -439,6 +439,11 @@ const R600Subtarget *R600TargetMachine::getSubtargetImpl(
   return I.get();
 }
 
+TargetTransformInfo
+R600TargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(R600TTIImpl(this, F));
+}
+
 //===----------------------------------------------------------------------===//
 // GCN Target Machine (SI+)
 //===----------------------------------------------------------------------===//
@@ -470,6 +475,11 @@ const SISubtarget *GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   I->setScalarizeGlobalBehavior(ScalarizeGlobal);
 
   return I.get();
+}
+
+TargetTransformInfo
+GCNTargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(GCNTTIImpl(this, F));
 }
 
 //===----------------------------------------------------------------------===//
@@ -560,11 +570,6 @@ public:
 };
 
 } // end anonymous namespace
-
-TargetTransformInfo
-AMDGPUTargetMachine::getTargetTransformInfo(const Function &F) {
-  return TargetTransformInfo(AMDGPUTTIImpl(this, F));
-}
 
 void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {
   if (getOptLevel() == CodeGenOpt::Aggressive)

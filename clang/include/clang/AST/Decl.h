@@ -879,12 +879,6 @@ protected:
     DAK_Normal
   };
 
-  enum NRVOMode {
-    NRVO_Candidate,
-    NRVO_Disabled,
-    NRVO_Enabled,
-  };
-
   class ParmVarDeclBitfields {
     friend class ASTDeclReader;
     friend class ParmVarDecl;
@@ -937,7 +931,7 @@ protected:
     /// Whether this local variable could be allocated in the return
     /// slot of its function, enabling the named return value optimization
     /// (NRVO).
-    unsigned NRVOMode : 2;
+    unsigned NRVOVariable : 1;
 
     /// Whether this variable is the for-range-declaration in a C++0x
     /// for-range statement.
@@ -1325,20 +1319,12 @@ public:
   /// return slot when returning from the function. Within the function body,
   /// each return that returns the NRVO object will have this variable as its
   /// NRVO candidate.
-  NRVOMode getNRVOMode() const {
-    if (isa<ParmVarDecl>(this))
-      return NRVO_Disabled;
-    return static_cast<NRVOMode>(NonParmVarDeclBits.NRVOMode);
-  }
-  bool isNRVOCandidate() const {
-    return isa<ParmVarDecl>(this) ? false : NonParmVarDeclBits.NRVOMode == NRVO_Candidate;
-  }
   bool isNRVOVariable() const {
-    return isa<ParmVarDecl>(this) ? false : NonParmVarDeclBits.NRVOMode == NRVO_Enabled;
+    return isa<ParmVarDecl>(this) ? false : NonParmVarDeclBits.NRVOVariable;
   }
   void setNRVOVariable(bool NRVO) {
     assert(!isa<ParmVarDecl>(this));
-    NonParmVarDeclBits.NRVOMode = NRVO ? NRVO_Enabled : NRVO_Disabled;
+    NonParmVarDeclBits.NRVOVariable = NRVO;
   }
 
   /// Determine whether this variable is the for-range-declaration in

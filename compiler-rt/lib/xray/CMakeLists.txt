@@ -19,6 +19,7 @@ set(XRAY_BASIC_MODE_SOURCES
     xray_basic_logging.cc)
 
 set(XRAY_PROFILER_MODE_SOURCES
+    xray_profile_collector.cc
     xray_profiler_flags.cc)
 
 # Implementation files for all XRay architectures.

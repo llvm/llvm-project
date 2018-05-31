@@ -224,8 +224,7 @@ _mm_div_ps(__m128 __a, __m128 __b)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_sqrt_ss(__m128 __a)
 {
-  __m128 __c = __builtin_ia32_sqrtss((__v4sf)__a);
-  return (__m128) { __c[0], __a[1], __a[2], __a[3] };
+  return (__m128)__builtin_ia32_sqrtss((__v4sf)__a);
 }
 
 /// Calculates the square roots of the values stored in a 128-bit vector
@@ -260,8 +259,7 @@ _mm_sqrt_ps(__m128 __a)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_rcp_ss(__m128 __a)
 {
-  __m128 __c = __builtin_ia32_rcpss((__v4sf)__a);
-  return (__m128) { __c[0], __a[1], __a[2], __a[3] };
+  return (__m128)__builtin_ia32_rcpss((__v4sf)__a);
 }
 
 /// Calculates the approximate reciprocals of the values stored in a
@@ -278,7 +276,7 @@ _mm_rcp_ss(__m128 __a)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_rcp_ps(__m128 __a)
 {
-  return __builtin_ia32_rcpps((__v4sf)__a);
+  return (__m128)__builtin_ia32_rcpps((__v4sf)__a);
 }
 
 /// Calculates the approximate reciprocal of the square root of the value
@@ -297,8 +295,7 @@ _mm_rcp_ps(__m128 __a)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_rsqrt_ss(__m128 __a)
 {
-  __m128 __c = __builtin_ia32_rsqrtss((__v4sf)__a);
-  return (__m128) { __c[0], __a[1], __a[2], __a[3] };
+  return __builtin_ia32_rsqrtss((__v4sf)__a);
 }
 
 /// Calculates the approximate reciprocals of the square roots of the
@@ -1695,7 +1692,7 @@ _mm_load_ss(const float *__p)
     float __u;
   } __attribute__((__packed__, __may_alias__));
   float __u = ((struct __mm_load_ss_struct*)__p)->__u;
-  return (__m128){ __u, 0, 0, 0 };
+  return __extension__ (__m128){ __u, 0, 0, 0 };
 }
 
 /// Loads a 32-bit float value and duplicates it to all four vector
@@ -1717,7 +1714,7 @@ _mm_load1_ps(const float *__p)
     float __u;
   } __attribute__((__packed__, __may_alias__));
   float __u = ((struct __mm_load1_ps_struct*)__p)->__u;
-  return (__m128){ __u, __u, __u, __u };
+  return __extension__ (__m128){ __u, __u, __u, __u };
 }
 
 #define        _mm_load_ps1(p) _mm_load1_ps(p)
@@ -1809,7 +1806,7 @@ _mm_undefined_ps(void)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_set_ss(float __w)
 {
-  return (__m128){ __w, 0, 0, 0 };
+  return __extension__ (__m128){ __w, 0, 0, 0 };
 }
 
 /// Constructs a 128-bit floating-point vector of [4 x float], with each
@@ -1827,7 +1824,7 @@ _mm_set_ss(float __w)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_set1_ps(float __w)
 {
-  return (__m128){ __w, __w, __w, __w };
+  return __extension__ (__m128){ __w, __w, __w, __w };
 }
 
 /* Microsoft specific. */
@@ -1873,7 +1870,7 @@ _mm_set_ps1(float __w)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_set_ps(float __z, float __y, float __x, float __w)
 {
-  return (__m128){ __w, __x, __y, __z };
+  return __extension__ (__m128){ __w, __x, __y, __z };
 }
 
 /// Constructs a 128-bit floating-point vector of [4 x float],
@@ -1901,7 +1898,7 @@ _mm_set_ps(float __z, float __y, float __x, float __w)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_setr_ps(float __z, float __y, float __x, float __w)
 {
-  return (__m128){ __z, __y, __x, __w };
+  return __extension__ (__m128){ __z, __y, __x, __w };
 }
 
 /// Constructs a 128-bit floating-point vector of [4 x float] initialized
@@ -1916,7 +1913,7 @@ _mm_setr_ps(float __z, float __y, float __x, float __w)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_setzero_ps(void)
 {
-  return (__m128){ 0, 0, 0, 0 };
+  return __extension__ (__m128){ 0, 0, 0, 0 };
 }
 
 /// Stores the upper 64 bits of a 128-bit vector of [4 x float] to a
@@ -2048,7 +2045,7 @@ _mm_store1_ps(float *__p, __m128 __a)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_store_ps1(float *__p, __m128 __a)
 {
-  return _mm_store1_ps(__p, __a);
+  _mm_store1_ps(__p, __a);
 }
 
 /// Stores float values from a 128-bit vector of [4 x float] to an
@@ -2186,8 +2183,8 @@ void _mm_sfence(void);
 ///    2: Bits [47:32] are copied to the destination. \n
 ///    3: Bits [63:48] are copied to the destination.
 /// \returns A 16-bit integer containing the extracted 16 bits of packed data.
-#define _mm_extract_pi16(a, n) __extension__ ({ \
-  (int)__builtin_ia32_vec_ext_v4hi((__m64)a, (int)n); })
+#define _mm_extract_pi16(a, n) \
+  (int)__builtin_ia32_vec_ext_v4hi((__m64)a, (int)n)
 
 /// Copies data from the 64-bit vector of [4 x i16] to the destination,
 ///    and inserts the lower 16-bits of an integer operand at the 16-bit offset
@@ -2217,8 +2214,8 @@ void _mm_sfence(void);
 ///    bits in operand \a a.
 /// \returns A 64-bit integer vector containing the copied packed data from the
 ///    operands.
-#define _mm_insert_pi16(a, d, n) __extension__ ({ \
-  (__m64)__builtin_ia32_vec_set_v4hi((__m64)a, (int)d, (int)n); })
+#define _mm_insert_pi16(a, d, n) \
+  (__m64)__builtin_ia32_vec_set_v4hi((__m64)a, (int)d, (int)n)
 
 /// Compares each of the corresponding packed 16-bit integer values of
 ///    the 64-bit integer vectors, and writes the greater value to the
@@ -2364,8 +2361,8 @@ _mm_mulhi_pu16(__m64 __a, __m64 __b)
 ///    10: assigned from bits [47:32] of \a a. \n
 ///    11: assigned from bits [63:48] of \a a.
 /// \returns A 64-bit integer vector containing the shuffled values.
-#define _mm_shuffle_pi16(a, n) __extension__ ({ \
-  (__m64)__builtin_ia32_pshufw((__v4hi)(__m64)(a), (n)); })
+#define _mm_shuffle_pi16(a, n) \
+  (__m64)__builtin_ia32_pshufw((__v4hi)(__m64)(a), (n))
 
 /// Conditionally copies the values from each 8-bit element in the first
 ///    64-bit integer vector operand to the specified memory location, as
@@ -2606,12 +2603,12 @@ void _mm_setcsr(unsigned int __i);
 ///    10: Bits [95:64] copied from the specified operand. \n
 ///    11: Bits [127:96] copied from the specified operand.
 /// \returns A 128-bit vector of [4 x float] containing the shuffled values.
-#define _mm_shuffle_ps(a, b, mask) __extension__ ({ \
+#define _mm_shuffle_ps(a, b, mask) \
   (__m128)__builtin_shufflevector((__v4sf)(__m128)(a), (__v4sf)(__m128)(b), \
                                   0 + (((mask) >> 0) & 0x3), \
                                   0 + (((mask) >> 2) & 0x3), \
                                   4 + (((mask) >> 4) & 0x3), \
-                                  4 + (((mask) >> 6) & 0x3)); })
+                                  4 + (((mask) >> 6) & 0x3))
 
 /// Unpacks the high-order (index 2,3) values from two 128-bit vectors of
 ///    [4 x float] and interleaves them into a 128-bit vector of [4 x float].

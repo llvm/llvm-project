@@ -265,11 +265,6 @@ ShadowExceptionHandler(PEXCEPTION_POINTERS exception_pointers) {
   // Determine the address of the page that is being accessed.
   uptr page = RoundDownTo(addr, page_size);
 
-  // Query the existing page.
-  MEMORY_BASIC_INFORMATION mem_info = {};
-  if (::VirtualQuery((LPVOID)page, &mem_info, sizeof(mem_info)) == 0)
-    return EXCEPTION_CONTINUE_SEARCH;
-
   // Commit the page.
   uptr result =
       (uptr)::VirtualAlloc((LPVOID)page, page_size, MEM_COMMIT, PAGE_READWRITE);

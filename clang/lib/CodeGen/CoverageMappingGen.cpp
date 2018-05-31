@@ -834,22 +834,6 @@ struct CounterCoverageMappingBuilder
     handleFileExit(getEnd(S));
   }
 
-  /// Determine whether the final deferred region emitted in \p Body should be
-  /// discarded.
-  static bool discardFinalDeferredRegionInDecl(Stmt *Body) {
-    if (auto *CS = dyn_cast<CompoundStmt>(Body)) {
-      Stmt *LastStmt = CS->body_back();
-      if (auto *IfElse = dyn_cast<IfStmt>(LastStmt)) {
-        if (auto *Else = dyn_cast_or_null<CompoundStmt>(IfElse->getElse()))
-          LastStmt = Else->body_back();
-        else
-          LastStmt = IfElse->getElse();
-      }
-      return dyn_cast_or_null<ReturnStmt>(LastStmt);
-    }
-    return false;
-  }
-
   void VisitDecl(const Decl *D) {
     assert(!DeferredRegion && "Deferred region never completed");
 
@@ -859,17 +843,13 @@ struct CounterCoverageMappingBuilder
     if (Body && SM.isInSystemHeader(SM.getSpellingLoc(getStart(Body))))
       return;
 
-    Counter ExitCount = propagateCounts(getRegionCounter(Body), Body);
+    propagateCounts(getRegionCounter(Body), Body);
     assert(RegionStack.empty() && "Regions entered but never exited");
 
-    if (DeferredRegion) {
-      // Complete (or discard) any deferred regions introduced by the last
-      // statement.
-      if (discardFinalDeferredRegionInDecl(Body))
-        DeferredRegion = None;
-      else
-        popRegions(completeDeferred(ExitCount, getEnd(Body)));
-    }
+    // Discard the last uncompleted deferred region in a decl, if one exists.
+    // This prevents lines at the end of a function containing only whitespace
+    // or closing braces from being marked as uncovered.
+    DeferredRegion = None;
   }
 
   void VisitReturnStmt(const ReturnStmt *S) {

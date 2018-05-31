@@ -236,7 +236,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_sqrt_sd(__m128d __a, __m128d __b)
 {
   __m128d __c = __builtin_ia32_sqrtsd((__v2df)__b);
-  return (__m128d) { __c[0], __a[1] };
+  return __extension__ (__m128d) { __c[0], __a[1] };
 }
 
 /// Calculates the square root of the each of two values stored in a
@@ -769,7 +769,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpgt_sd(__m128d __a, __m128d __b)
 {
   __m128d __c = __builtin_ia32_cmpltsd((__v2df)__b, (__v2df)__a);
-  return (__m128d) { __c[0], __a[1] };
+  return __extension__ (__m128d) { __c[0], __a[1] };
 }
 
 /// Compares the lower double-precision floating-point values in each of
@@ -795,7 +795,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpge_sd(__m128d __a, __m128d __b)
 {
   __m128d __c = __builtin_ia32_cmplesd((__v2df)__b, (__v2df)__a);
-  return (__m128d) { __c[0], __a[1] };
+  return __extension__ (__m128d) { __c[0], __a[1] };
 }
 
 /// Compares the lower double-precision floating-point values in each of
@@ -951,7 +951,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpngt_sd(__m128d __a, __m128d __b)
 {
   __m128d __c = __builtin_ia32_cmpnltsd((__v2df)__b, (__v2df)__a);
-  return (__m128d) { __c[0], __a[1] };
+  return __extension__ (__m128d) { __c[0], __a[1] };
 }
 
 /// Compares the lower double-precision floating-point values in each of
@@ -977,7 +977,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnge_sd(__m128d __a, __m128d __b)
 {
   __m128d __c = __builtin_ia32_cmpnlesd((__v2df)__b, (__v2df)__a);
-  return (__m128d) { __c[0], __a[1] };
+  return __extension__ (__m128d) { __c[0], __a[1] };
 }
 
 /// Compares the lower double-precision floating-point values in each of
@@ -1610,7 +1610,7 @@ _mm_load1_pd(double const *__dp)
     double __u;
   } __attribute__((__packed__, __may_alias__));
   double __u = ((struct __mm_load1_pd_struct*)__dp)->__u;
-  return (__m128d){ __u, __u };
+  return __extension__ (__m128d){ __u, __u };
 }
 
 #define        _mm_load_pd1(dp)        _mm_load1_pd(dp)
@@ -1674,7 +1674,7 @@ _mm_loadu_si64(void const *__a)
     long long __v;
   } __attribute__((__packed__, __may_alias__));
   long long __u = ((struct __loadu_si64*)__a)->__v;
-  return (__m128i){__u, 0L};
+  return __extension__ (__m128i)(__v2di){__u, 0L};
 }
 
 /// Loads a 64-bit double-precision value to the low element of a
@@ -1695,7 +1695,7 @@ _mm_load_sd(double const *__dp)
     double __u;
   } __attribute__((__packed__, __may_alias__));
   double __u = ((struct __mm_load_sd_struct*)__dp)->__u;
-  return (__m128d){ __u, 0 };
+  return __extension__ (__m128d){ __u, 0 };
 }
 
 /// Loads a double-precision value into the high-order bits of a 128-bit
@@ -1722,7 +1722,7 @@ _mm_loadh_pd(__m128d __a, double const *__dp)
     double __u;
   } __attribute__((__packed__, __may_alias__));
   double __u = ((struct __mm_loadh_pd_struct*)__dp)->__u;
-  return (__m128d){ __a[0], __u };
+  return __extension__ (__m128d){ __a[0], __u };
 }
 
 /// Loads a double-precision value into the low-order bits of a 128-bit
@@ -1749,7 +1749,7 @@ _mm_loadl_pd(__m128d __a, double const *__dp)
     double __u;
   } __attribute__((__packed__, __may_alias__));
   double __u = ((struct __mm_loadl_pd_struct*)__dp)->__u;
-  return (__m128d){ __u, __a[1] };
+  return __extension__ (__m128d){ __u, __a[1] };
 }
 
 /// Constructs a 128-bit floating-point vector of [2 x double] with
@@ -1786,7 +1786,7 @@ _mm_undefined_pd(void)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_set_sd(double __w)
 {
-  return (__m128d){ __w, 0 };
+  return __extension__ (__m128d){ __w, 0 };
 }
 
 /// Constructs a 128-bit floating-point vector of [2 x double], with each
@@ -1804,7 +1804,7 @@ _mm_set_sd(double __w)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_set1_pd(double __w)
 {
-  return (__m128d){ __w, __w };
+  return __extension__ (__m128d){ __w, __w };
 }
 
 /// Constructs a 128-bit floating-point vector of [2 x double], with each
@@ -1842,7 +1842,7 @@ _mm_set_pd1(double __w)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_set_pd(double __w, double __x)
 {
-  return (__m128d){ __x, __w };
+  return __extension__ (__m128d){ __x, __w };
 }
 
 /// Constructs a 128-bit floating-point vector of [2 x double],
@@ -1863,7 +1863,7 @@ _mm_set_pd(double __w, double __x)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_setr_pd(double __w, double __x)
 {
-  return (__m128d){ __w, __x };
+  return __extension__ (__m128d){ __w, __x };
 }
 
 /// Constructs a 128-bit floating-point vector of [2 x double]
@@ -1878,7 +1878,7 @@ _mm_setr_pd(double __w, double __x)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_setzero_pd(void)
 {
-  return (__m128d){ 0, 0 };
+  return __extension__ (__m128d){ 0, 0 };
 }
 
 /// Constructs a 128-bit floating-point vector of [2 x double]. The lower
@@ -1899,7 +1899,7 @@ _mm_setzero_pd(void)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_move_sd(__m128d __a, __m128d __b)
 {
-  return (__m128d){ __b[0], __a[1] };
+  return __extension__ (__m128d){ __b[0], __a[1] };
 }
 
 /// Stores the lower 64 bits of a 128-bit vector of [2 x double] to a
@@ -1979,7 +1979,7 @@ _mm_store1_pd(double *__dp, __m128d __a)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_store_pd1(double *__dp, __m128d __a)
 {
-  return _mm_store1_pd(__dp, __a);
+  _mm_store1_pd(__dp, __a);
 }
 
 /// Stores a 128-bit vector of [2 x double] into an unaligned memory
@@ -2792,7 +2792,7 @@ _mm_xor_si128(__m128i __a, __m128i __b)
 ///    An immediate value specifying the number of bytes to left-shift operand
 ///    \a a.
 /// \returns A 128-bit integer vector containing the left-shifted value.
-#define _mm_slli_si128(a, imm) __extension__ ({                              \
+#define _mm_slli_si128(a, imm) \
   (__m128i)__builtin_shufflevector(                                          \
                                  (__v16qi)_mm_setzero_si128(),               \
                                  (__v16qi)(__m128i)(a),                      \
@@ -2811,7 +2811,7 @@ _mm_xor_si128(__m128i __a, __m128i __b)
                                  ((char)(imm)&0xF0) ? 12 : 28 - (char)(imm), \
                                  ((char)(imm)&0xF0) ? 13 : 29 - (char)(imm), \
                                  ((char)(imm)&0xF0) ? 14 : 30 - (char)(imm), \
-                                 ((char)(imm)&0xF0) ? 15 : 31 - (char)(imm)); })
+                                 ((char)(imm)&0xF0) ? 15 : 31 - (char)(imm))
 
 #define _mm_bslli_si128(a, imm) \
   _mm_slli_si128((a), (imm))
@@ -3027,7 +3027,7 @@ _mm_sra_epi32(__m128i __a, __m128i __count)
 ///    An immediate value specifying the number of bytes to right-shift operand
 ///    \a a.
 /// \returns A 128-bit integer vector containing the right-shifted value.
-#define _mm_srli_si128(a, imm) __extension__ ({                              \
+#define _mm_srli_si128(a, imm) \
   (__m128i)__builtin_shufflevector(                                          \
                                  (__v16qi)(__m128i)(a),                      \
                                  (__v16qi)_mm_setzero_si128(),               \
@@ -3046,7 +3046,7 @@ _mm_sra_epi32(__m128i __a, __m128i __count)
                                  ((char)(imm)&0xF0) ? 28 : (char)(imm) + 12, \
                                  ((char)(imm)&0xF0) ? 29 : (char)(imm) + 13, \
                                  ((char)(imm)&0xF0) ? 30 : (char)(imm) + 14, \
-                                 ((char)(imm)&0xF0) ? 31 : (char)(imm) + 15); })
+                                 ((char)(imm)&0xF0) ? 31 : (char)(imm) + 15)
 
 #define _mm_bsrli_si128(a, imm) \
   _mm_srli_si128((a), (imm))
@@ -3471,7 +3471,7 @@ _mm_cvttps_epi32(__m128 __a)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtsi32_si128(int __a)
 {
-  return (__m128i)(__v4si){ __a, 0, 0, 0 };
+  return __extension__ (__m128i)(__v4si){ __a, 0, 0, 0 };
 }
 
 #ifdef __x86_64__
@@ -3488,7 +3488,7 @@ _mm_cvtsi32_si128(int __a)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtsi64_si128(long long __a)
 {
-  return (__m128i){ __a, 0 };
+  return __extension__ (__m128i)(__v2di){ __a, 0 };
 }
 #endif
 
@@ -3582,7 +3582,7 @@ _mm_loadl_epi64(__m128i const *__p)
   struct __mm_loadl_epi64_struct {
     long long __u;
   } __attribute__((__packed__, __may_alias__));
-  return (__m128i) { ((struct __mm_loadl_epi64_struct*)__p)->__u, 0};
+  return __extension__ (__m128i) { ((struct __mm_loadl_epi64_struct*)__p)->__u, 0};
 }
 
 /// Generates a 128-bit vector of [4 x i32] with unspecified content.
@@ -3619,7 +3619,7 @@ _mm_undefined_si128(void)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_set_epi64x(long long __q1, long long __q0)
 {
-  return (__m128i){ __q0, __q1 };
+  return __extension__ (__m128i)(__v2di){ __q0, __q1 };
 }
 
 /// Initializes both 64-bit values in a 128-bit vector of [2 x i64] with
@@ -3641,7 +3641,7 @@ _mm_set_epi64x(long long __q1, long long __q0)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_set_epi64(__m64 __q1, __m64 __q0)
 {
-  return (__m128i){ (long long)__q0, (long long)__q1 };
+  return _mm_set_epi64x((long long)__q1, (long long)__q0);
 }
 
 /// Initializes the 32-bit values in a 128-bit vector of [4 x i32] with
@@ -3669,7 +3669,7 @@ _mm_set_epi64(__m64 __q1, __m64 __q0)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_set_epi32(int __i3, int __i2, int __i1, int __i0)
 {
-  return (__m128i)(__v4si){ __i0, __i1, __i2, __i3};
+  return __extension__ (__m128i)(__v4si){ __i0, __i1, __i2, __i3};
 }
 
 /// Initializes the 16-bit values in a 128-bit vector of [8 x i16] with
@@ -3709,7 +3709,7 @@ _mm_set_epi32(int __i3, int __i2, int __i1, int __i0)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_set_epi16(short __w7, short __w6, short __w5, short __w4, short __w3, short __w2, short __w1, short __w0)
 {
-  return (__m128i)(__v8hi){ __w0, __w1, __w2, __w3, __w4, __w5, __w6, __w7 };
+  return __extension__ (__m128i)(__v8hi){ __w0, __w1, __w2, __w3, __w4, __w5, __w6, __w7 };
 }
 
 /// Initializes the 8-bit values in a 128-bit vector of [16 x i8] with
@@ -3757,7 +3757,7 @@ _mm_set_epi16(short __w7, short __w6, short __w5, short __w4, short __w3, short 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_set_epi8(char __b15, char __b14, char __b13, char __b12, char __b11, char __b10, char __b9, char __b8, char __b7, char __b6, char __b5, char __b4, char __b3, char __b2, char __b1, char __b0)
 {
-  return (__m128i)(__v16qi){ __b0, __b1, __b2, __b3, __b4, __b5, __b6, __b7, __b8, __b9, __b10, __b11, __b12, __b13, __b14, __b15 };
+  return __extension__ (__m128i)(__v16qi){ __b0, __b1, __b2, __b3, __b4, __b5, __b6, __b7, __b8, __b9, __b10, __b11, __b12, __b13, __b14, __b15 };
 }
 
 /// Initializes both values in a 128-bit integer vector with the
@@ -3776,7 +3776,7 @@ _mm_set_epi8(char __b15, char __b14, char __b13, char __b12, char __b11, char __
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_set1_epi64x(long long __q)
 {
-  return (__m128i){ __q, __q };
+  return _mm_set_epi64x(__q, __q);
 }
 
 /// Initializes both values in a 128-bit vector of [2 x i64] with the
@@ -3795,7 +3795,7 @@ _mm_set1_epi64x(long long __q)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_set1_epi64(__m64 __q)
 {
-  return (__m128i){ (long long)__q, (long long)__q };
+  return _mm_set_epi64(__q, __q);
 }
 
 /// Initializes all values in a 128-bit vector of [4 x i32] with the
@@ -3814,7 +3814,7 @@ _mm_set1_epi64(__m64 __q)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_set1_epi32(int __i)
 {
-  return (__m128i)(__v4si){ __i, __i, __i, __i };
+  return _mm_set_epi32(__i, __i, __i, __i);
 }
 
 /// Initializes all values in a 128-bit vector of [8 x i16] with the
@@ -3833,7 +3833,7 @@ _mm_set1_epi32(int __i)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_set1_epi16(short __w)
 {
-  return (__m128i)(__v8hi){ __w, __w, __w, __w, __w, __w, __w, __w };
+  return _mm_set_epi16(__w, __w, __w, __w, __w, __w, __w, __w);
 }
 
 /// Initializes all values in a 128-bit vector of [16 x i8] with the
@@ -3852,7 +3852,7 @@ _mm_set1_epi16(short __w)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_set1_epi8(char __b)
 {
-  return (__m128i)(__v16qi){ __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b };
+  return _mm_set_epi8(__b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b, __b);
 }
 
 /// Constructs a 128-bit integer vector, initialized in reverse order
@@ -3872,7 +3872,7 @@ _mm_set1_epi8(char __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_setr_epi64(__m64 __q0, __m64 __q1)
 {
-  return (__m128i){ (long long)__q0, (long long)__q1 };
+  return _mm_set_epi64(__q1, __q0);
 }
 
 /// Constructs a 128-bit integer vector, initialized in reverse order
@@ -3895,7 +3895,7 @@ _mm_setr_epi64(__m64 __q0, __m64 __q1)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_setr_epi32(int __i0, int __i1, int __i2, int __i3)
 {
-  return (__m128i)(__v4si){ __i0, __i1, __i2, __i3};
+  return _mm_set_epi32(__i3, __i2, __i1, __i0);
 }
 
 /// Constructs a 128-bit integer vector, initialized in reverse order
@@ -3926,7 +3926,7 @@ _mm_setr_epi32(int __i0, int __i1, int __i2, int __i3)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_setr_epi16(short __w0, short __w1, short __w2, short __w3, short __w4, short __w5, short __w6, short __w7)
 {
-  return (__m128i)(__v8hi){ __w0, __w1, __w2, __w3, __w4, __w5, __w6, __w7 };
+  return _mm_set_epi16(__w7, __w6, __w5, __w4, __w3, __w2, __w1, __w0);
 }
 
 /// Constructs a 128-bit integer vector, initialized in reverse order
@@ -3973,7 +3973,7 @@ _mm_setr_epi16(short __w0, short __w1, short __w2, short __w3, short __w4, short
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_setr_epi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5, char __b6, char __b7, char __b8, char __b9, char __b10, char __b11, char __b12, char __b13, char __b14, char __b15)
 {
-  return (__m128i)(__v16qi){ __b0, __b1, __b2, __b3, __b4, __b5, __b6, __b7, __b8, __b9, __b10, __b11, __b12, __b13, __b14, __b15 };
+  return _mm_set_epi8(__b15, __b14, __b13, __b12, __b11, __b10, __b9, __b8, __b7, __b6, __b5, __b4, __b3, __b2, __b1, __b0);
 }
 
 /// Creates a 128-bit integer vector initialized to zero.
@@ -3987,7 +3987,7 @@ _mm_setr_epi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5, 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_setzero_si128(void)
 {
-  return (__m128i){ 0LL, 0LL };
+  return __extension__ (__m128i)(__v2di){ 0LL, 0LL };
 }
 
 /// Stores a 128-bit integer vector to a memory location aligned on a
@@ -4384,11 +4384,11 @@ _mm_movemask_epi8(__m128i __a)
 ///    10: assign values from bits [95:64] of \a a. \n
 ///    11: assign values from bits [127:96] of \a a.
 /// \returns A 128-bit integer vector containing the shuffled values.
-#define _mm_shuffle_epi32(a, imm) __extension__ ({ \
+#define _mm_shuffle_epi32(a, imm) \
   (__m128i)__builtin_shufflevector((__v4si)(__m128i)(a), \
                                    (__v4si)_mm_undefined_si128(), \
                                    ((imm) >> 0) & 0x3, ((imm) >> 2) & 0x3, \
-                                   ((imm) >> 4) & 0x3, ((imm) >> 6) & 0x3); })
+                                   ((imm) >> 4) & 0x3, ((imm) >> 6) & 0x3)
 
 /// Constructs a 128-bit integer vector by shuffling four lower 16-bit
 ///    elements of a 128-bit integer vector of [8 x i16], using the immediate
@@ -4417,12 +4417,12 @@ _mm_movemask_epi8(__m128i __a)
 ///    10: assign values from bits [47:32] of \a a. \n
 ///    11: assign values from bits [63:48] of \a a. \n
 /// \returns A 128-bit integer vector containing the shuffled values.
-#define _mm_shufflelo_epi16(a, imm) __extension__ ({ \
+#define _mm_shufflelo_epi16(a, imm) \
   (__m128i)__builtin_shufflevector((__v8hi)(__m128i)(a), \
                                    (__v8hi)_mm_undefined_si128(), \
                                    ((imm) >> 0) & 0x3, ((imm) >> 2) & 0x3, \
                                    ((imm) >> 4) & 0x3, ((imm) >> 6) & 0x3, \
-                                   4, 5, 6, 7); })
+                                   4, 5, 6, 7)
 
 /// Constructs a 128-bit integer vector by shuffling four upper 16-bit
 ///    elements of a 128-bit integer vector of [8 x i16], using the immediate
@@ -4451,14 +4451,14 @@ _mm_movemask_epi8(__m128i __a)
 ///    10: assign values from bits [111:96] of \a a. \n
 ///    11: assign values from bits [127:112] of \a a. \n
 /// \returns A 128-bit integer vector containing the shuffled values.
-#define _mm_shufflehi_epi16(a, imm) __extension__ ({ \
+#define _mm_shufflehi_epi16(a, imm) \
   (__m128i)__builtin_shufflevector((__v8hi)(__m128i)(a), \
                                    (__v8hi)_mm_undefined_si128(), \
                                    0, 1, 2, 3, \
                                    4 + (((imm) >> 0) & 0x3), \
                                    4 + (((imm) >> 2) & 0x3), \
                                    4 + (((imm) >> 4) & 0x3), \
-                                   4 + (((imm) >> 6) & 0x3)); })
+                                   4 + (((imm) >> 6) & 0x3))
 
 /// Unpacks the high-order (index 8-15) values from two 128-bit vectors
 ///    of [16 x i8] and interleaves them into a 128-bit vector of [16 x i8].
@@ -4704,7 +4704,7 @@ _mm_movepi64_pi64(__m128i __a)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_movpi64_epi64(__m64 __a)
 {
-  return (__m128i){ (long long)__a, 0 };
+  return __extension__ (__m128i)(__v2di){ (long long)__a, 0 };
 }
 
 /// Moves the lower 64 bits of a 128-bit integer vector to a 128-bit
@@ -4722,7 +4722,7 @@ _mm_movpi64_epi64(__m64 __a)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_move_epi64(__m128i __a)
 {
-  return __builtin_shufflevector((__v2di)__a, (__m128i){ 0 }, 0, 2);
+  return __builtin_shufflevector((__v2di)__a, _mm_setzero_si128(), 0, 2);
 }
 
 /// Unpacks the high-order 64-bit elements from two 128-bit vectors of
@@ -4811,10 +4811,10 @@ _mm_movemask_pd(__m128d __a)
 ///    Bit[1] = 0: lower element of \a b copied to upper element of result. \n
 ///    Bit[1] = 1: upper element of \a b copied to upper element of result. \n
 /// \returns A 128-bit vector of [2 x double] containing the shuffled values.
-#define _mm_shuffle_pd(a, b, i) __extension__ ({ \
+#define _mm_shuffle_pd(a, b, i) \
   (__m128d)__builtin_shufflevector((__v2df)(__m128d)(a), (__v2df)(__m128d)(b), \
                                    0 + (((i) >> 0) & 0x1), \
-                                   2 + (((i) >> 1) & 0x1)); })
+                                   2 + (((i) >> 1) & 0x1))
 
 /// Casts a 128-bit floating-point vector of [2 x double] into a 128-bit
 ///    floating-point vector of [4 x float].

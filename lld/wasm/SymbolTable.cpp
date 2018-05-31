@@ -29,17 +29,46 @@ void SymbolTable::addFile(InputFile *File) {
   log("Processing: " + toString(File));
   File->parse();
 
-  if (auto *F = dyn_cast<ObjFile>(File))
+  // LLVM bitcode file
+  if (auto *F = dyn_cast<BitcodeFile>(File))
+    BitcodeFiles.push_back(F);
+  else if (auto *F = dyn_cast<ObjFile>(File))
     ObjectFiles.push_back(F);
+}
+
+// This function is where all the optimizations of link-time
+// optimization happens. When LTO is in use, some input files are
+// not in native object file format but in the LLVM bitcode format.
+// This function compiles bitcode files into a few big native files
+// using LLVM functions and replaces bitcode symbols with the results.
+// Because all bitcode files that the program consists of are passed
+// to the compiler at once, it can do whole-program optimization.
+void SymbolTable::addCombinedLTOObject() {
+  if (BitcodeFiles.empty())
+    return;
+
+  // Compile bitcode files and replace bitcode symbols.
+  LTO.reset(new BitcodeCompiler);
+  for (BitcodeFile *F : BitcodeFiles)
+    LTO->add(*F);
+
+  for (StringRef Filename : LTO->compile()) {
+    auto *Obj = make<ObjFile>(MemoryBufferRef(Filename, "lto.tmp"));
+    Obj->parse();
+    ObjectFiles.push_back(Obj);
+  }
 }
 
 void SymbolTable::reportRemainingUndefines() {
   SetVector<Symbol *> Undefs;
   for (Symbol *Sym : SymVector) {
-    if (Sym->isUndefined() && !Sym->isWeak() &&
-        Config->AllowUndefinedSymbols.count(Sym->getName()) == 0) {
-      Undefs.insert(Sym);
-    }
+    if (!Sym->isUndefined() || Sym->isWeak())
+      continue;
+    if (Config->AllowUndefinedSymbols.count(Sym->getName()) != 0)
+      continue;
+    if (!Sym->IsUsedInRegularObj)
+      continue;
+    Undefs.insert(Sym);
   }
 
   if (Undefs.empty())
@@ -64,6 +93,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
   if (Sym)
     return {Sym, false};
   Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+  Sym->IsUsedInRegularObj = false;
   SymVector.emplace_back(Sym);
   return {Sym, true};
 }
@@ -178,12 +208,16 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
 
+  if (!File || File->kind() == InputFile::ObjectKind)
+    S->IsUsedInRegularObj = true;
+
   if (WasInserted || S->isLazy()) {
     replaceSymbol<DefinedFunction>(S, Name, Flags, File, Function);
     return S;
   }
 
-  checkFunctionType(S, File, &Function->Signature);
+  if (Function)
+    checkFunctionType(S, File, &Function->Signature);
 
   if (shouldReplace(S, File, Flags))
     replaceSymbol<DefinedFunction>(S, Name, Flags, File, Function);
@@ -198,6 +232,9 @@ Symbol *SymbolTable::addDefinedData(StringRef Name, uint32_t Flags,
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
+
+  if (!File || File->kind() == InputFile::ObjectKind)
+    S->IsUsedInRegularObj = true;
 
   if (WasInserted || S->isLazy()) {
     replaceSymbol<DefinedData>(S, Name, Flags, File, Segment, Address, Size);
@@ -217,6 +254,9 @@ Symbol *SymbolTable::addDefinedGlobal(StringRef Name, uint32_t Flags,
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
+
+  if (!File || File->kind() == InputFile::ObjectKind)
+    S->IsUsedInRegularObj = true;
 
   if (WasInserted || S->isLazy()) {
     replaceSymbol<DefinedGlobal>(S, Name, Flags, File, Global);
@@ -238,6 +278,9 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, uint32_t Flags,
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
+
+  if (!File || File->kind() == InputFile::ObjectKind)
+    S->IsUsedInRegularObj = true;
 
   if (WasInserted)
     replaceSymbol<UndefinedFunction>(S, Name, Flags, File, Sig);
@@ -273,6 +316,9 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef Name, uint32_t Flags,
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
+
+  if (!File || File->kind() == InputFile::ObjectKind)
+    S->IsUsedInRegularObj = true;
 
   if (WasInserted)
     replaceSymbol<UndefinedGlobal>(S, Name, Flags, File, Type);

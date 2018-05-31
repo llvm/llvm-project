@@ -11753,10 +11753,6 @@ __isl_give isl_map *isl_map_align_params(__isl_take isl_map *map,
 	if (!aligned) {
 		isl_reordering *exp;
 
-		model = isl_space_drop_dims(model, isl_dim_in,
-					0, isl_space_dim(model, isl_dim_in));
-		model = isl_space_drop_dims(model, isl_dim_out,
-					0, isl_space_dim(model, isl_dim_out));
 		exp = isl_parameter_alignment_reordering(map->dim, model);
 		exp = isl_reordering_extend_space(exp, isl_map_get_space(map));
 		map = isl_map_realign(map, exp);
@@ -11801,10 +11797,6 @@ __isl_give isl_basic_map *isl_basic_map_align_params(
 		isl_reordering *exp;
 		struct isl_dim_map *dim_map;
 
-		model = isl_space_drop_dims(model, isl_dim_in,
-					0, isl_space_dim(model, isl_dim_in));
-		model = isl_space_drop_dims(model, isl_dim_out,
-					0, isl_space_dim(model, isl_dim_out));
 		exp = isl_parameter_alignment_reordering(bmap->dim, model);
 		exp = isl_reordering_extend_space(exp,
 					isl_basic_map_get_space(bmap));

@@ -715,6 +715,8 @@ void Writer::calculateImports() {
       continue;
     if (!Sym->isLive())
       continue;
+    if (!Sym->IsUsedInRegularObj)
+      continue;
 
     LLVM_DEBUG(dbgs() << "import: " << Sym->getName() << "\n");
     ImportedSymbols.emplace_back(Sym);

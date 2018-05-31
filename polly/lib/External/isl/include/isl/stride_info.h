@@ -15,10 +15,13 @@ extern "C" {
 struct isl_stride_info;
 typedef struct isl_stride_info isl_stride_info;
 
+isl_ctx *isl_stride_info_get_ctx(__isl_keep isl_stride_info *si);
 __isl_give isl_val *isl_stride_info_get_stride(__isl_keep isl_stride_info *si);
 __isl_give isl_aff *isl_stride_info_get_offset(__isl_keep isl_stride_info *si);
 __isl_null isl_stride_info *isl_stride_info_free(
 	__isl_take isl_stride_info *si);
+__isl_give isl_stride_info *isl_stride_info_copy(
+	__isl_keep isl_stride_info *si);
 
 #if defined(__cplusplus)
 }

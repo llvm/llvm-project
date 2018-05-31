@@ -18,6 +18,7 @@
 #include "xray_profiler_flags.h"
 #include "xray_segmented_array.h"
 #include <utility>
+#include <memory>  // For placement new.
 
 namespace __xray {
 

@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
@@ -81,6 +82,28 @@ LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
   }
   LLVM_DEBUG(dbgs() << ".. unsupported\n");
   return {LegalizeAction::Unsupported, 0, LLT{}};
+}
+
+bool LegalizeRuleSet::verifyTypeIdxsCoverage(unsigned NumTypeIdxs) const {
+#ifndef NDEBUG
+  if (Rules.empty()) {
+    LLVM_DEBUG(
+        dbgs() << ".. type index coverage check SKIPPED: no rules defined\n");
+    return true;
+  }
+  const int64_t FirstUncovered = TypeIdxsCovered.find_first_unset();
+  if (FirstUncovered < 0) {
+    LLVM_DEBUG(dbgs() << ".. type index coverage check SKIPPED:"
+                         " user-defined predicate detected\n");
+    return true;
+  }
+  const bool AllCovered = (FirstUncovered >= NumTypeIdxs);
+  LLVM_DEBUG(dbgs() << ".. the first uncovered type index: " << FirstUncovered
+                    << ", " << (AllCovered ? "OK" : "FAIL") << "\n");
+  return AllCovered;
+#else
+  return true;
+#endif
 }
 
 LegalizerInfo::LegalizerInfo() : TablesInitialized(false) {
@@ -514,6 +537,38 @@ LegalizerInfo::findVectorLegalAction(const InstrAspect &Aspect) const {
   return {NumElementsAndAction.second,
           LLT::vector(NumElementsAndAction.first,
                       IntermediateType.getScalarSizeInBits())};
+}
+
+/// \pre Type indices of every opcode form a dense set starting from 0.
+void LegalizerInfo::verify(const MCInstrInfo &MII) const {
+#ifndef NDEBUG
+  std::vector<unsigned> FailedOpcodes;
+  for (unsigned Opcode = FirstOp; Opcode <= LastOp; ++Opcode) {
+    const MCInstrDesc &MCID = MII.get(Opcode);
+    const unsigned NumTypeIdxs = std::accumulate(
+        MCID.opInfo_begin(), MCID.opInfo_end(), 0U,
+        [](unsigned Acc, const MCOperandInfo &OpInfo) {
+          return OpInfo.isGenericType()
+                     ? std::max(OpInfo.getGenericTypeIndex() + 1U, Acc)
+                     : Acc;
+        });
+    LLVM_DEBUG(dbgs() << MII.getName(Opcode) << " (opcode " << Opcode
+                      << "): " << NumTypeIdxs << " type ind"
+                      << (NumTypeIdxs == 1 ? "ex" : "ices") << "\n");
+    const LegalizeRuleSet &RuleSet = getActionDefinitions(Opcode);
+    if (!RuleSet.verifyTypeIdxsCoverage(NumTypeIdxs))
+      FailedOpcodes.push_back(Opcode);
+  }
+  if (!FailedOpcodes.empty()) {
+    errs() << "The following opcodes have ill-defined legalization rules:";
+    for (unsigned Opcode : FailedOpcodes)
+      errs() << " " << MII.getName(Opcode);
+    errs() << "\n";
+
+    report_fatal_error("ill-defined LegalizerInfo"
+                       ", try -debug-only=legalizer-info for details");
+  }
+#endif
 }
 
 #ifndef NDEBUG

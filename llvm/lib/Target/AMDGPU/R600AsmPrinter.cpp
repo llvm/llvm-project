@@ -103,6 +103,10 @@ void R600AsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
 
 bool R600AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
+
+  // Functions needs to be cacheline (256B) aligned.
+  MF.ensureAlignment(8);
+
   SetupMachineFunction(MF);
 
   MCContext &Context = getObjFileLowering().getContext();

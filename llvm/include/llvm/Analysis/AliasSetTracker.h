@@ -37,8 +37,8 @@ namespace llvm {
 class AliasSetTracker;
 class BasicBlock;
 class LoadInst;
-class MemSetInst;
-class MemTransferInst;
+class AnyMemSetInst;
+class AnyMemTransferInst;
 class raw_ostream;
 class StoreInst;
 class VAArgInst;
@@ -367,8 +367,8 @@ public:
   void add(LoadInst *LI);
   void add(StoreInst *SI);
   void add(VAArgInst *VAAI);
-  void add(MemSetInst *MSI);
-  void add(MemTransferInst *MTI);
+  void add(AnyMemSetInst *MSI);
+  void add(AnyMemTransferInst *MTI);
   void add(Instruction *I);       // Dispatch to one of the other add methods...
   void add(BasicBlock &BB);       // Add all instructions in basic block
   void add(const AliasSetTracker &AST); // Add alias relations from another AST
