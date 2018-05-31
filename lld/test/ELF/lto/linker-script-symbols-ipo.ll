@@ -4,7 +4,7 @@
 ; RUN: echo "bar = foo;" > %t.script
 
 ;; Check that without linkerscript bar is inlined.
-; RUN: ld.lld  -m elf_x86_64 %t1.o %t2.o -o %t3 -save-temps
+; RUN: ld.lld %t1.o %t2.o -o %t3 -save-temps
 ; RUN: llvm-objdump -d %t3 | FileCheck %s --check-prefix=IPO
 ; IPO:      Disassembly of section .text:
 ; IPO:      _start:
@@ -12,7 +12,7 @@
 ; IPO-NEXT:   201005: {{.*}} retq
 
 ;; Check that LTO does not do IPO for symbols assigned by script.
-; RUN: ld.lld  -m elf_x86_64 %t1.o %t2.o -o %t4 --script %t.script -save-temps
+; RUN: ld.lld %t1.o %t2.o -o %t4 --script %t.script -save-temps
 ; RUN: llvm-objdump -d %t4 | FileCheck %s --check-prefix=NOIPO
 ; NOIPO:      Disassembly of section .text:
 ; NOIPO:      foo:

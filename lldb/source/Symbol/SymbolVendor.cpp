@@ -260,28 +260,28 @@ uint32_t SymbolVendor::ResolveSymbolContext(const FileSpec &file_spec,
   return 0;
 }
 
-size_t SymbolVendor::FindGlobalVariables(
-    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
-    bool append, size_t max_matches, VariableList &variables) {
+size_t
+SymbolVendor::FindGlobalVariables(const ConstString &name,
+                                  const CompilerDeclContext *parent_decl_ctx,
+                                  size_t max_matches, VariableList &variables) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->FindGlobalVariables(name, parent_decl_ctx, append,
+      return m_sym_file_ap->FindGlobalVariables(name, parent_decl_ctx,
                                                 max_matches, variables);
   }
   return 0;
 }
 
 size_t SymbolVendor::FindGlobalVariables(const RegularExpression &regex,
-                                         bool append, size_t max_matches,
+                                         size_t max_matches,
                                          VariableList &variables) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->FindGlobalVariables(regex, append, max_matches,
-                                                variables);
+      return m_sym_file_ap->FindGlobalVariables(regex, max_matches, variables);
   }
   return 0;
 }

@@ -720,9 +720,9 @@ lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
   VariableList vars;
 
   if (module && namespace_decl)
-    module->FindGlobalVariables(name, namespace_decl, true, -1, vars);
+    module->FindGlobalVariables(name, namespace_decl, -1, vars);
   else
-    target.GetImages().FindGlobalVariables(name, true, -1, vars);
+    target.GetImages().FindGlobalVariables(name, -1, vars);
 
   if (vars.GetSize()) {
     if (type) {

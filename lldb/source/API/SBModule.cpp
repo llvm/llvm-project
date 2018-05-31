@@ -367,7 +367,7 @@ SBValueList SBModule::FindGlobalVariables(SBTarget &target, const char *name,
   if (name && module_sp) {
     VariableList variable_list;
     const uint32_t match_count = module_sp->FindGlobalVariables(
-        ConstString(name), NULL, false, max_matches, variable_list);
+        ConstString(name), NULL, max_matches, variable_list);
 
     if (match_count > 0) {
       for (uint32_t i = 0; i < match_count; ++i) {

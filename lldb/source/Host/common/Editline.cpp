@@ -467,7 +467,7 @@ unsigned char Editline::RecallHistory(bool earlier) {
   return CC_NEWLINE;
 }
 
-int Editline::GetCharacter(EditLineCharType *c) {
+int Editline::GetCharacter(EditLineGetCharType *c) {
   const LineInfoW *info = el_wline(m_editline);
 
   // Paint a faint version of the desired prompt over the version libedit draws
@@ -961,7 +961,7 @@ void Editline::ConfigureEditor(bool multiline) {
          }));
 
   el_wset(m_editline, EL_GETCFN, (EditlineGetCharCallbackType)([](
-                                     EditLine *editline, EditLineCharType *c) {
+                                     EditLine *editline, EditLineGetCharType *c) {
             return Editline::InstanceFor(editline)->GetCharacter(c);
           }));
 
@@ -1350,12 +1350,12 @@ void Editline::PrintAsync(Stream *stream, const char *s, size_t len) {
   }
 }
 
-bool Editline::CompleteCharacter(char ch, EditLineCharType &out) {
+bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
 #if !LLDB_EDITLINE_USE_WCHAR
   if (ch == (char)EOF)
     return false;
 
-  out = ch;
+  out = (unsigned char)ch;
   return true;
 #else
   std::codecvt_utf8<wchar_t> cvt;

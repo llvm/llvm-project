@@ -371,7 +371,7 @@ enum isl_ast_loop_type isl_schedule_band_member_get_ast_loop_type(
 
 	if (pos < 0 || pos >= band->n)
 		isl_die(isl_schedule_band_get_ctx(band), isl_error_invalid,
-			"invalid member position", return -1);
+			"invalid member position", return isl_ast_loop_error);
 
 	if (!band->loop_type)
 		return isl_ast_loop_default;
@@ -426,7 +426,7 @@ enum isl_ast_loop_type isl_schedule_band_member_get_isolate_ast_loop_type(
 
 	if (pos < 0 || pos >= band->n)
 		isl_die(isl_schedule_band_get_ctx(band), isl_error_invalid,
-			"invalid member position", return -1);
+			"invalid member position", return isl_ast_loop_error);
 
 	if (!band->isolate_loop_type)
 		return isl_ast_loop_default;
