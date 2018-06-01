@@ -8,14 +8,14 @@
 # CHECK:   "args": {
 # CHECK:     "File": "{{.*(/|\\)}}foo.c"
 # CHECK:   },
-# CHECK:   "name": "Preamble",
+# CHECK:   "name": "BuildPreamble",
 # CHECK:   "ph": "X",
 # CHECK: }
 # CHECK: {
 # CHECK:   "args": {
 # CHECK:     "File": "{{.*(/|\\)}}foo.c"
 # CHECK:   },
-# CHECK:   "name": "Build",
+# CHECK:   "name": "BuildAST",
 # CHECK:   "ph": "X",
 # CHECK: }
 # CHECK: },
