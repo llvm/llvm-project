@@ -1,4 +1,4 @@
-# REQUIRES: nowindows
+# XFAIL: windows
 
 # RUN: %cxx %p/Inputs/call-function.cpp -g -o %t
 
