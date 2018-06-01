@@ -75,7 +75,7 @@ public:
 
   /// Returns result of getUsedBytes() for the AST cached by \p K.
   /// If no AST is cached, 0 is returned.
-  bool getUsedBytes(Key K) {
+  std::size_t getUsedBytes(Key K) {
     std::lock_guard<std::mutex> Lock(Mut);
     auto It = findByKey(K);
     if (It == LRU.end() || !It->second)
