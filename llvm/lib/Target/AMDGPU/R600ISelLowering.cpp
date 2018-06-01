@@ -472,7 +472,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     unsigned IntrinsicID =
                          cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
     switch (IntrinsicID) {
-    case AMDGPUIntrinsic::r600_store_swizzle: {
+    case Intrinsic::r600_store_swizzle: {
       SDLoc DL(Op);
       const SDValue Args[8] = {
         Chain,
@@ -499,14 +499,14 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     EVT VT = Op.getValueType();
     SDLoc DL(Op);
     switch (IntrinsicID) {
-    case AMDGPUIntrinsic::r600_tex:
-    case AMDGPUIntrinsic::r600_texc: {
+    case Intrinsic::r600_tex:
+    case Intrinsic::r600_texc: {
       unsigned TextureOp;
       switch (IntrinsicID) {
-      case AMDGPUIntrinsic::r600_tex:
+      case Intrinsic::r600_tex:
         TextureOp = 0;
         break;
-      case AMDGPUIntrinsic::r600_texc:
+      case Intrinsic::r600_texc:
         TextureOp = 1;
         break;
       default:
@@ -536,7 +536,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
       };
       return DAG.getNode(AMDGPUISD::TEXTURE_FETCH, DL, MVT::v4f32, TexArgs);
     }
-    case AMDGPUIntrinsic::r600_dot4: {
+    case Intrinsic::r600_dot4: {
       SDValue Args[8] = {
       DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, Op.getOperand(1),
           DAG.getConstant(0, DL, MVT::i32)),

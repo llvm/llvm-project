@@ -656,7 +656,12 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     addPass(createDwarfEHPass());
     break;
   case ExceptionHandling::Wasm:
-    // TODO to prevent warning
+    // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
+    // on catchpads and cleanuppads because it does not outline them into
+    // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
+    // should remove PHIs there.
+    addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/false));
+    addPass(createWasmEHPass());
     break;
   case ExceptionHandling::None:
     addPass(createLowerInvokePass());

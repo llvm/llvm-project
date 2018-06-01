@@ -872,6 +872,7 @@ struct CounterCoverageMappingBuilder
     Counter LabelCount = getRegionCounter(S);
     SourceLocation Start = getStart(S);
     completeTopLevelDeferredRegion(LabelCount, Start);
+    completeDeferred(LabelCount, Start);
     // We can't extendRegion here or we risk overlapping with our new region.
     handleFileExit(Start);
     pushRegion(LabelCount, Start);

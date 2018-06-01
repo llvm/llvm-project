@@ -288,8 +288,8 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
           AllocV, CNE->getType(),
           getContext().getPointerType(getContext().VoidTy));
 
-      state =
-          setCXXNewAllocatorValue(state, CNE, calleeCtx->getParent(), AllocV);
+      state = addObjectUnderConstruction(state, CNE, calleeCtx->getParent(),
+                                         AllocV);
     }
   }
 
@@ -354,8 +354,9 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
                                                  /*WasInlined=*/true);
       for (auto I : DstPostPostCallCallback) {
         getCheckerManager().runCheckersForNewAllocator(
-            CNE, getCXXNewAllocatorValue(I->getState(), CNE,
-                                         calleeCtx->getParent()),
+            CNE,
+            *getObjectUnderConstruction(I->getState(), CNE,
+                                        calleeCtx->getParent()),
             DstPostCall, I, *this,
             /*WasInlined=*/true);
       }
@@ -588,8 +589,8 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     // Conjure a temporary if the function returns an object by value.
     MemRegionManager &MRMgr = svalBuilder.getRegionManager();
     const CXXTempObjectRegion *TR = MRMgr.getCXXTempObjectRegion(E, LCtx);
-    State = addAllNecessaryTemporaryInfo(State, RTC->getConstructionContext(),
-                                         LCtx, TR);
+    State = markStatementsCorrespondingToConstructedObject(
+        State, RTC->getConstructionContext(), LCtx, loc::MemRegionVal(TR));
 
     // Invalidate the region so that it didn't look uninitialized. Don't notify
     // the checkers.

@@ -1304,7 +1304,7 @@ static int readDisplacement(struct InternalInstruction* insn) {
  * @return      - 0 if the information was successfully read; nonzero otherwise.
  */
 static int readModRM(struct InternalInstruction* insn) {
-  uint8_t mod, rm, reg;
+  uint8_t mod, rm, reg, evexrm;
 
   dbgprintf(insn, "readModRM()");
 
@@ -1341,16 +1341,18 @@ static int readModRM(struct InternalInstruction* insn) {
 
   reg |= rFromREX(insn->rexPrefix) << 3;
   rm  |= bFromREX(insn->rexPrefix) << 3;
-  if (insn->vectorExtensionType == TYPE_EVEX) {
+
+  evexrm = 0;
+  if (insn->vectorExtensionType == TYPE_EVEX && insn->mode == MODE_64BIT) {
     reg |= r2FromEVEX2of4(insn->vectorExtensionPrefix[1]) << 4;
-    rm  |=  xFromEVEX2of4(insn->vectorExtensionPrefix[1]) << 4;
+    evexrm = xFromEVEX2of4(insn->vectorExtensionPrefix[1]) << 4;
   }
 
   insn->reg = (Reg)(insn->regBase + reg);
 
   switch (insn->addressSize) {
-  case 2:
-    insn->eaBaseBase = EA_BASE_BX_SI;
+  case 2: {
+    EABase eaBaseBase = EA_BASE_BX_SI;
 
     switch (mod) {
     case 0x0:
@@ -1360,19 +1362,19 @@ static int readModRM(struct InternalInstruction* insn) {
         if (readDisplacement(insn))
           return -1;
       } else {
-        insn->eaBase = (EABase)(insn->eaBaseBase + rm);
+        insn->eaBase = (EABase)(eaBaseBase + rm);
         insn->eaDisplacement = EA_DISP_NONE;
       }
       break;
     case 0x1:
-      insn->eaBase = (EABase)(insn->eaBaseBase + rm);
+      insn->eaBase = (EABase)(eaBaseBase + rm);
       insn->eaDisplacement = EA_DISP_8;
       insn->displacementSize = 1;
       if (readDisplacement(insn))
         return -1;
       break;
     case 0x2:
-      insn->eaBase = (EABase)(insn->eaBaseBase + rm);
+      insn->eaBase = (EABase)(eaBaseBase + rm);
       insn->eaDisplacement = EA_DISP_16;
       if (readDisplacement(insn))
         return -1;
@@ -1384,9 +1386,10 @@ static int readModRM(struct InternalInstruction* insn) {
       break;
     }
     break;
+  }
   case 4:
-  case 8:
-    insn->eaBaseBase = (insn->addressSize == 4 ? EA_BASE_EAX : EA_BASE_RAX);
+  case 8: {
+    EABase eaBaseBase = (insn->addressSize == 4 ? EA_BASE_EAX : EA_BASE_RAX);
 
     switch (mod) {
     case 0x0:
@@ -1408,7 +1411,7 @@ static int readModRM(struct InternalInstruction* insn) {
           return -1;
         break;
       default:
-        insn->eaBase = (EABase)(insn->eaBaseBase + rm);
+        insn->eaBase = (EABase)(eaBaseBase + rm);
         break;
       }
       break;
@@ -1424,7 +1427,7 @@ static int readModRM(struct InternalInstruction* insn) {
           return -1;
         break;
       default:
-        insn->eaBase = (EABase)(insn->eaBaseBase + rm);
+        insn->eaBase = (EABase)(eaBaseBase + rm);
         if (readDisplacement(insn))
           return -1;
         break;
@@ -1432,10 +1435,11 @@ static int readModRM(struct InternalInstruction* insn) {
       break;
     case 0x3:
       insn->eaDisplacement = EA_DISP_NONE;
-      insn->eaBase = (EABase)(insn->eaRegBase + rm);
+      insn->eaBase = (EABase)(insn->eaRegBase + rm + evexrm);
       break;
     }
     break;
+  }
   } /* switch (insn->addressSize) */
 
   return 0;
@@ -1455,6 +1459,7 @@ static int readModRM(struct InternalInstruction* insn) {
     case TYPE_Rv:                                         \
       return base + index;                                \
     case TYPE_R8:                                         \
+      index &= 0xf;                                       \
       if (insn->rexPrefix &&                              \
          index >= 4 && index <= 7) {                      \
         return prefix##_SPL + (index - 4);                \
@@ -1462,11 +1467,11 @@ static int readModRM(struct InternalInstruction* insn) {
         return prefix##_AL + index;                       \
       }                                                   \
     case TYPE_R16:                                        \
-      return prefix##_AX + index;                         \
+      return prefix##_AX + (index & 0xf);                 \
     case TYPE_R32:                                        \
-      return prefix##_EAX + index;                        \
+      return prefix##_EAX + (index & 0xf);                \
     case TYPE_R64:                                        \
-      return prefix##_RAX + index;                        \
+      return prefix##_RAX + (index & 0xf);                \
     case TYPE_ZMM:                                        \
       return prefix##_ZMM0 + index;                       \
     case TYPE_YMM:                                        \
@@ -1695,7 +1700,7 @@ static int readVVVV(struct InternalInstruction* insn) {
     return -1;
 
   if (insn->mode != MODE_64BIT)
-    vvvv &= 0x7;
+    vvvv &= 0xf; // Can only clear bit 4. Bit 3 must be cleared later.
 
   insn->vvvv = static_cast<Reg>(vvvv);
   return 0;
@@ -1759,7 +1764,7 @@ static int readOperands(struct InternalInstruction* insn) {
         insn->sibIndex = (SIBIndex)4;
 
       // If EVEX.v2 is set this is one of the 16-31 registers.
-      if (insn->vectorExtensionType == TYPE_EVEX &&
+      if (insn->vectorExtensionType == TYPE_EVEX && insn->mode == MODE_64BIT &&
           v2FromEVEX4of4(insn->vectorExtensionPrefix[3]))
         insn->sibIndex = (SIBIndex)(insn->sibIndex + 16);
 
@@ -1860,6 +1865,8 @@ static int readOperands(struct InternalInstruction* insn) {
       needVVVV = 0; /* Mark that we have found a VVVV operand. */
       if (!hasVVVV)
         return -1;
+      if (insn->mode != MODE_64BIT)
+        insn->vvvv = static_cast<Reg>(insn->vvvv & 0x7);
       if (fixupReg(insn, &Op))
         return -1;
       break;
