@@ -48,4 +48,32 @@ void computeProcResourceMasks(const MCSchedModel &SM,
     ProcResourceID++;
   }
 }
+
+double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,
+                               unsigned NumMicroOps,
+                               ArrayRef<unsigned> ProcResourceUsage) {
+  // The block throughput is bounded from above by the hardware dispatch
+  // throughput. That is because the DispatchWidth is an upper bound on the
+  // number of opcodes that can be part of a single dispatch group.
+  double Max = static_cast<double>(NumMicroOps) / DispatchWidth;
+
+  // The block throughput is also limited by the amount of hardware parallelism.
+  // The number of available resource units affects the resource pressure
+  // distribution, as well as how many blocks can be executed every cycle.
+  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    unsigned ResourceCycles = ProcResourceUsage[I];
+    if (!ResourceCycles)
+      continue;
+
+    const MCProcResourceDesc &MCDesc = *SM.getProcResource(I);
+    double Throughput = static_cast<double>(ResourceCycles) / MCDesc.NumUnits;
+    Max = std::max(Max, Throughput);
+  }
+
+  // The block reciprocal throughput is computed as the MAX of:
+  //  - (NumMicroOps / DispatchWidth)
+  //  - (NumUnits / ResourceCycles)   for every consumed processor resource.
+  return Max;
+}
+
 } // namespace mca

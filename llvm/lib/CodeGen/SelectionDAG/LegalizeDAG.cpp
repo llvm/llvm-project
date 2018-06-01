@@ -3499,15 +3499,25 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::USUBO: {
     SDValue LHS = Node->getOperand(0);
     SDValue RHS = Node->getOperand(1);
-    SDValue Sum = DAG.getNode(Node->getOpcode() == ISD::UADDO ?
-                              ISD::ADD : ISD::SUB, dl, LHS.getValueType(),
-                              LHS, RHS);
+    bool IsAdd = Node->getOpcode() == ISD::UADDO;
+    // If ADD/SUBCARRY is legal, use that instead.
+    unsigned OpcCarry = IsAdd ? ISD::ADDCARRY : ISD::SUBCARRY;
+    if (TLI.isOperationLegalOrCustom(OpcCarry, Node->getValueType(0))) {
+      SDValue CarryIn = DAG.getConstant(0, dl, Node->getValueType(1));
+      SDValue NodeCarry = DAG.getNode(OpcCarry, dl, Node->getVTList(),
+                                      { LHS, RHS, CarryIn });
+      Results.push_back(SDValue(NodeCarry.getNode(), 0));
+      Results.push_back(SDValue(NodeCarry.getNode(), 1));
+      break;
+    }
+
+    SDValue Sum = DAG.getNode(IsAdd ? ISD::ADD : ISD::SUB, dl,
+                              LHS.getValueType(), LHS, RHS);
     Results.push_back(Sum);
 
     EVT ResultType = Node->getValueType(1);
     EVT SetCCType = getSetCCResultType(Node->getValueType(0));
-    ISD::CondCode CC
-      = Node->getOpcode() == ISD::UADDO ? ISD::SETULT : ISD::SETUGT;
+    ISD::CondCode CC = IsAdd ? ISD::SETULT : ISD::SETUGT;
     SDValue SetCC = DAG.getSetCC(dl, SetCCType, Sum, LHS, CC);
 
     Results.push_back(DAG.getBoolExtOrTrunc(SetCC, dl, ResultType, ResultType));

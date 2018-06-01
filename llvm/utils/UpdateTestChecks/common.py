@@ -3,6 +3,7 @@ import re
 import string
 import subprocess
 import sys
+import copy
 
 if sys.version_info[0] > 2:
   class string:
@@ -80,13 +81,29 @@ def scrub_body(body):
   body = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', body)
   return body
 
+def do_scrub(body, scrubber, scrubber_args, extra):
+  if scrubber_args:
+    local_args = copy.deepcopy(scrubber_args)
+    local_args[0].extra_scrub = extra
+    return scrubber(body, *local_args)
+  return scrubber(body, *scrubber_args)
+
 # Build up a dictionary of all the function bodies.
+class function_body(object):
+  def __init__(self, string, extra):
+    self.scrub = string
+    self.extrascrub = extra
+  def __str__(self):
+    return self.scrub
+
 def build_function_body_dictionary(function_re, scrubber, scrubber_args, raw_tool_output, prefixes, func_dict, verbose):
   for m in function_re.finditer(raw_tool_output):
     if not m:
       continue
     func = m.group('func')
-    scrubbed_body = scrubber(m.group('body'), *scrubber_args)
+    body = m.group('body')
+    scrubbed_body = do_scrub(body, scrubber, scrubber_args, extra = False)
+    scrubbed_extra = do_scrub(body, scrubber, scrubber_args, extra = True)
     if m.groupdict().has_key('analysis'):
       analysis = m.group('analysis')
       if analysis.lower() != 'cost model analysis':
@@ -99,15 +116,19 @@ def build_function_body_dictionary(function_re, scrubber, scrubber_args, raw_too
       for l in scrubbed_body.splitlines():
         print('  ' + l, file=sys.stderr)
     for prefix in prefixes:
-      if func in func_dict[prefix] and func_dict[prefix][func] != scrubbed_body:
-        if prefix == prefixes[-1]:
-          print('WARNING: Found conflicting asm under the '
-                               'same prefix: %r!' % (prefix,), file=sys.stderr)
-        else:
-          func_dict[prefix][func] = None
+      if func in func_dict[prefix] and str(func_dict[prefix][func]) != scrubbed_body:
+        if func_dict[prefix][func] and func_dict[prefix][func].extrascrub == scrubbed_extra:
+          func_dict[prefix][func].scrub = scrubbed_extra
           continue
+        else:
+          if prefix == prefixes[-1]:
+            print('WARNING: Found conflicting asm under the '
+                                 'same prefix: %r!' % (prefix,), file=sys.stderr)
+          else:
+            func_dict[prefix][func] = None
+            continue
 
-      func_dict[prefix][func] = scrubbed_body
+      func_dict[prefix][func] = function_body(scrubbed_body, scrubbed_extra)
 
 ##### Generator of LLVM IR CHECK lines
 
@@ -188,7 +209,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
 
       printed_prefixes.append(checkprefix)
       output_lines.append(check_label_format % (checkprefix, func_name))
-      func_body = func_dict[checkprefix][func_name].splitlines()
+      func_body = str(func_dict[checkprefix][func_name]).splitlines()
 
       # For ASM output, just emit the check lines.
       if is_asm == True:

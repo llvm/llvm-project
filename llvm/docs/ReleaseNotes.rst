@@ -156,6 +156,12 @@ Changes to the C API
   interface was made a deprecated no-op in LLVM 5. Use
   ``LLVMAddSLPVectorizePass`` instead to get the supported SLP vectorizer.
 
+Changes to the DAG infrastructure
+---------------------------------
+* ADDC/ADDE/SUBC/SUBE are now deprecated and will default to expand. Backends
+  that wish to continue to use these opcodes should explicitely request so
+  using ``setOperationAction`` in their ``TargetLowering``. New backends
+  should use UADDO/ADDCARRY/USUBO/SUBCARRY instead of the deprecated opcodes.
 
 External Open Source Projects Using LLVM 7
 ==========================================

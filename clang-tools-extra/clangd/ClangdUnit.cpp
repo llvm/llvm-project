@@ -220,8 +220,32 @@ std::size_t ParsedAST::getUsedBytes() const {
   auto &AST = getASTContext();
   // FIXME(ibiryukov): we do not account for the dynamically allocated part of
   // Message and Fixes inside each diagnostic.
-  return AST.getASTAllocatedMemory() + AST.getSideTableAllocatedMemory() +
-         ::getUsedBytes(LocalTopLevelDecls) + ::getUsedBytes(Diags);
+  std::size_t Total =
+      ::getUsedBytes(LocalTopLevelDecls) + ::getUsedBytes(Diags);
+
+  // FIXME: the rest of the function is almost a direct copy-paste from
+  // libclang's clang_getCXTUResourceUsage. We could share the implementation.
+
+  // Sum up variaous allocators inside the ast context and the preprocessor.
+  Total += AST.getASTAllocatedMemory();
+  Total += AST.getSideTableAllocatedMemory();
+  Total += AST.Idents.getAllocator().getTotalMemory();
+  Total += AST.Selectors.getTotalMemory();
+
+  Total += AST.getSourceManager().getContentCacheSize();
+  Total += AST.getSourceManager().getDataStructureSizes();
+  Total += AST.getSourceManager().getMemoryBufferSizes().malloc_bytes;
+
+  if (ExternalASTSource *Ext = AST.getExternalSource())
+    Total += Ext->getMemoryBufferSizes().malloc_bytes;
+
+  const Preprocessor &PP = getPreprocessor();
+  Total += PP.getTotalMemory();
+  if (PreprocessingRecord *PRec = PP.getPreprocessingRecord())
+    Total += PRec->getTotalMemory();
+  Total += PP.getHeaderSearchInfo().getTotalMemory();
+
+  return Total;
 }
 
 const std::vector<Inclusion> &ParsedAST::getInclusions() const {

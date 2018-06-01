@@ -101,12 +101,12 @@ define <4 x double> @test_x86_avx_vbroadcastf128_pd_256(i8* %a0) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X86-NEXT:    ret{{[l|q]}}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_avx_vbroadcastf128_pd_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-NEXT:    ret{{[l|q]}}
+; X64-NEXT:    retq
   %res = call <4 x double> @llvm.x86.avx.vbroadcastf128.pd.256(i8* %a0) ; <<4 x double>> [#uses=1]
   ret <4 x double> %res
 }
@@ -118,12 +118,12 @@ define <8 x float> @test_x86_avx_vbroadcastf128_ps_256(i8* %a0) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X86-NEXT:    ret{{[l|q]}}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_avx_vbroadcastf128_ps_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-NEXT:    ret{{[l|q]}}
+; X64-NEXT:    retq
   %res = call <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(i8* %a0) ; <<8 x float>> [#uses=1]
   ret <8 x float> %res
 }
@@ -402,14 +402,14 @@ define void @test_x86_sse2_storeu_dq(i8* %a0, <16 x i8> %a1) {
 ; X86-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqu %xmm0, (%eax)
-; X86-NEXT:    ret{{[l|q]}}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_sse2_storeu_dq:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqu %xmm0, (%rdi)
-; X64-NEXT:    ret{{[l|q]}}
+; X64-NEXT:    retq
   %a2 = add <16 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   call void @llvm.x86.sse2.storeu.dq(i8* %a0, <16 x i8> %a2)
   ret void
@@ -426,7 +426,7 @@ define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
 ; X86-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; X86-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovupd %xmm0, (%eax)
-; X86-NEXT:    ret{{[l|q]}}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_sse2_storeu_pd:
 ; X64:       # %bb.0:
@@ -434,7 +434,7 @@ define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
 ; X64-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; X64-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovupd %xmm0, (%rdi)
-; X64-NEXT:    ret{{[l|q]}}
+; X64-NEXT:    retq
   %a2 = fadd <2 x double> %a1, <double 0x0, double 0x4200000000000000>
   call void @llvm.x86.sse2.storeu.pd(i8* %a0, <2 x double> %a2)
   ret void
@@ -447,12 +447,12 @@ define void @test_x86_sse_storeu_ps(i8* %a0, <4 x float> %a1) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovups %xmm0, (%eax)
-; X86-NEXT:    ret{{[l|q]}}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_sse_storeu_ps:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovups %xmm0, (%rdi)
-; X64-NEXT:    ret{{[l|q]}}
+; X64-NEXT:    retq
   call void @llvm.x86.sse.storeu.ps(i8* %a0, <4 x float> %a1)
   ret void
 }
@@ -472,7 +472,7 @@ define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
 ; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X86-NEXT:    vmovups %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
-; X86-NEXT:    ret{{[l|q]}}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_avx_storeu_dq_256:
 ; X64:       # %bb.0:
@@ -483,7 +483,7 @@ define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
 ; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X64-NEXT:    vmovups %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
-; X64-NEXT:    ret{{[l|q]}}
+; X64-NEXT:    retq
   %a2 = add <32 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   call void @llvm.x86.avx.storeu.dq.256(i8* %a0, <32 x i8> %a2)
   ret void
@@ -500,7 +500,7 @@ define void @test_x86_avx_storeu_pd_256(i8* %a0, <4 x double> %a1) {
 ; X86-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vmovupd %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
-; X86-NEXT:    ret{{[l|q]}}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_avx_storeu_pd_256:
 ; X64:       # %bb.0:
@@ -508,7 +508,7 @@ define void @test_x86_avx_storeu_pd_256(i8* %a0, <4 x double> %a1) {
 ; X64-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vmovupd %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
-; X64-NEXT:    ret{{[l|q]}}
+; X64-NEXT:    retq
   %a2 = fadd <4 x double> %a1, <double 0x0, double 0x0, double 0x0, double 0x0>
   call void @llvm.x86.avx.storeu.pd.256(i8* %a0, <4 x double> %a2)
   ret void
@@ -522,13 +522,13 @@ define void @test_x86_avx_storeu_ps_256(i8* %a0, <8 x float> %a1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovups %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
-; X86-NEXT:    ret{{[l|q]}}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_x86_avx_storeu_ps_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovups %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper
-; X64-NEXT:    ret{{[l|q]}}
+; X64-NEXT:    retq
   call void @llvm.x86.avx.storeu.ps.256(i8* %a0, <8 x float> %a1)
   ret void
 }

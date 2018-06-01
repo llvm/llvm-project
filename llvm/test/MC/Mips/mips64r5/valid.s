@@ -194,20 +194,21 @@ a:
         jalr.hb   $4, $5               # CHECK: jalr.hb  $4, $5 # encoding: [0x00,0xa0,0x24,0x09]
         l.s       $f2, 8($3)           # CHECK: lwc1 $f2, 8($3) # encoding: [0xc4,0x62,0x00,0x08]
         l.d       $f2, 8($3)           # CHECK: ldc1 $f2, 8($3) # encoding: [0xd4,0x62,0x00,0x08]
-        lb        $24,-14515($10)
-        lbu       $8,30195($v1)
-        ld        $sp,-28645($s1)
+        lb        $24,-2147483649($10)
+        lbu       $24,-2147483649($10)
+        ld        $sp,-2147483649($s1)
         ldc1      $f11,16391($s0)
         ldc2      $8,-21181($at)        # CHECK: ldc2 $8, -21181($1)   # encoding: [0xd8,0x28,0xad,0x43]
         ldl       $24,-4167($24)
         ldr       $14,-30358($s4)
         ldxc1     $f8,$s7($15)
-        lh        $11,-8556($s5)
-        lhu       $s3,-22851($v0)
+        lh        $11,-2147483649($s5)
+        lhu       $s3,-2147483649($v0)
         li        $at,-29773
         li        $zero,-29889
         ll        $v0,-7321($s2)       # CHECK: ll $2, -7321($18)     # encoding: [0xc2,0x42,0xe3,0x67]
         lld       $zero,-14736($ra)    # CHECK: lld $zero, -14736($ra) # encoding: [0xd3,0xe0,0xc6,0x70]
+        lld       $24,-2147483649($10)
         luxc1     $f19,$s6($s5)
         lw        $8,5674($a1)
         lwc1      $f16,10225($k0)

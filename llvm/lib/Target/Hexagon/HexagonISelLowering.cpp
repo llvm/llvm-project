@@ -1327,35 +1327,18 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setMinimumJumpTableEntries(std::numeric_limits<int>::max());
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
 
-  // Hexagon has instructions for add/sub with carry. The problem with
-  // modeling these instructions is that they produce 2 results: Rdd and Px.
-  // To model the update of Px, we will have to use Defs[p0..p3] which will
-  // cause any predicate live range to spill. So, we pretend we dont't have
-  // these instructions.
-  setOperationAction(ISD::ADDE, MVT::i8,  Expand);
-  setOperationAction(ISD::ADDE, MVT::i16, Expand);
-  setOperationAction(ISD::ADDE, MVT::i32, Expand);
-  setOperationAction(ISD::ADDE, MVT::i64, Expand);
-  setOperationAction(ISD::SUBE, MVT::i8,  Expand);
-  setOperationAction(ISD::SUBE, MVT::i16, Expand);
-  setOperationAction(ISD::SUBE, MVT::i32, Expand);
-  setOperationAction(ISD::SUBE, MVT::i64, Expand);
-  setOperationAction(ISD::ADDC, MVT::i8,  Expand);
-  setOperationAction(ISD::ADDC, MVT::i16, Expand);
-  setOperationAction(ISD::ADDC, MVT::i32, Expand);
-  setOperationAction(ISD::ADDC, MVT::i64, Expand);
-  setOperationAction(ISD::SUBC, MVT::i8,  Expand);
-  setOperationAction(ISD::SUBC, MVT::i16, Expand);
-  setOperationAction(ISD::SUBC, MVT::i32, Expand);
-  setOperationAction(ISD::SUBC, MVT::i64, Expand);
-
-  // Only add and sub that detect overflow are the saturating ones.
+  // Hexagon has A4_addp_c and A4_subp_c that take and generate a carry bit,
+  // but they only operate on i64.
   for (MVT VT : MVT::integer_valuetypes()) {
-    setOperationAction(ISD::UADDO, VT, Expand);
-    setOperationAction(ISD::SADDO, VT, Expand);
-    setOperationAction(ISD::USUBO, VT, Expand);
-    setOperationAction(ISD::SSUBO, VT, Expand);
+    setOperationAction(ISD::UADDO,    VT, Expand);
+    setOperationAction(ISD::USUBO,    VT, Expand);
+    setOperationAction(ISD::SADDO,    VT, Expand);
+    setOperationAction(ISD::SSUBO,    VT, Expand);
+    setOperationAction(ISD::ADDCARRY, VT, Expand);
+    setOperationAction(ISD::SUBCARRY, VT, Expand);
   }
+  setOperationAction(ISD::ADDCARRY, MVT::i64, Custom);
+  setOperationAction(ISD::SUBCARRY, MVT::i64, Custom);
 
   setOperationAction(ISD::CTLZ, MVT::i8,  Promote);
   setOperationAction(ISD::CTLZ, MVT::i16, Promote);
@@ -1428,10 +1411,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   // either "custom" or "legal" for specific cases.
   static const unsigned VectExpOps[] = {
     // Integer arithmetic:
-    ISD::ADD,     ISD::SUB,     ISD::MUL,     ISD::SDIV,    ISD::UDIV,
-    ISD::SREM,    ISD::UREM,    ISD::SDIVREM, ISD::UDIVREM, ISD::ADDC,
-    ISD::SUBC,    ISD::SADDO,   ISD::UADDO,   ISD::SSUBO,   ISD::USUBO,
-    ISD::SMUL_LOHI,             ISD::UMUL_LOHI,
+    ISD::ADD,     ISD::SUB,     ISD::MUL,     ISD::SDIV,      ISD::UDIV,
+    ISD::SREM,    ISD::UREM,    ISD::SDIVREM, ISD::UDIVREM,   ISD::SADDO,
+    ISD::UADDO,   ISD::SSUBO,   ISD::USUBO,   ISD::SMUL_LOHI, ISD::UMUL_LOHI,
     // Logical/bit:
     ISD::AND,     ISD::OR,      ISD::XOR,     ISD::ROTL,    ISD::ROTR,
     ISD::CTPOP,   ISD::CTLZ,    ISD::CTTZ,
@@ -1704,6 +1686,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
 const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((HexagonISD::NodeType)Opcode) {
+  case HexagonISD::ADDC:          return "HexagonISD::ADDC";
+  case HexagonISD::SUBC:          return "HexagonISD::SUBC";
   case HexagonISD::ALLOCA:        return "HexagonISD::ALLOCA";
   case HexagonISD::AT_GOT:        return "HexagonISD::AT_GOT";
   case HexagonISD::AT_PCREL:      return "HexagonISD::AT_PCREL";
@@ -2729,6 +2713,24 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
 }
 
 SDValue
+HexagonTargetLowering::LowerAddSubCarry(SDValue Op, SelectionDAG &DAG) const {
+  const SDLoc &dl(Op);
+  unsigned Opc = Op.getOpcode();
+  SDValue X = Op.getOperand(0), Y = Op.getOperand(1), C = Op.getOperand(2);
+
+  if (Opc == ISD::ADDCARRY)
+    return DAG.getNode(HexagonISD::ADDC, dl, Op.getNode()->getVTList(),
+                       { X, Y, C });
+
+  EVT CarryTy = C.getValueType();
+  SDValue SubC = DAG.getNode(HexagonISD::SUBC, dl, Op.getNode()->getVTList(),
+                             { X, Y, DAG.getLogicalNOT(dl, C, CarryTy) });
+  SDValue Out[] = { SubC.getValue(0),
+                    DAG.getLogicalNOT(dl, SubC.getValue(1), CarryTy) };
+  return DAG.getMergeValues(Out, dl);
+}
+
+SDValue
 HexagonTargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain     = Op.getOperand(0);
   SDValue Offset    = Op.getOperand(1);
@@ -2786,6 +2788,8 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::VECTOR_SHUFFLE:       return LowerVECTOR_SHUFFLE(Op, DAG);
     case ISD::BITCAST:              return LowerBITCAST(Op, DAG);
     case ISD::LOAD:                 return LowerUnalignedLoad(Op, DAG);
+    case ISD::ADDCARRY:
+    case ISD::SUBCARRY:             return LowerAddSubCarry(Op, DAG);
     case ISD::SRA:
     case ISD::SHL:
     case ISD::SRL:                  return LowerVECTOR_SHIFT(Op, DAG);

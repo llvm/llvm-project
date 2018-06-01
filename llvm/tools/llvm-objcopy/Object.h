@@ -367,7 +367,8 @@ public:
                  SectionBase *DefinedIn, uint64_t Value, uint8_t Visibility,
                  uint16_t Shndx, uint64_t Sz);
   void addSymbolNames();
-  bool empty() const { return Symbols.empty(); }
+  // An 'empty' symbol table still contains a null symbol.
+  bool empty() const { return Symbols.size() == 1; }
   const SectionBase *getStrTab() const { return SymbolNames; }
   const Symbol *getSymbolByIndex(uint32_t Index) const;
   Symbol *getSymbolByIndex(uint32_t Index);

@@ -107,7 +107,7 @@ def scrub_asm_x86(asm, args):
   asm = SCRUB_X86_RIP_RE.sub(r'{{.*}}(%rip)', asm)
   # Generically match a LCP symbol.
   asm = SCRUB_X86_LCP_RE.sub(r'{{\.LCPI.*}}', asm)
-  if getattr(args, 'x86_extra_scrub', False):
+  if getattr(args, 'extra_scrub', False):
     # Avoid generating different checks for 32- and 64-bit because of 'retl' vs 'retq'.
     asm = SCRUB_X86_RET_RE.sub(r'ret{{[l|q]}}', asm)
   # Strip kill operands inserted into the asm.

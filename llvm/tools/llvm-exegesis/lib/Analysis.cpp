@@ -9,6 +9,7 @@
 
 #include "Analysis.h"
 #include "BenchmarkResult.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <unordered_set>
 #include <vector>
@@ -172,11 +173,11 @@ void Analysis::printSchedClassClustersHtml(std::vector<size_t> PointIds,
   assert(!PointIds.empty());
   // Sort the points by cluster id so that we can display them grouped by
   // cluster.
-  std::sort(PointIds.begin(), PointIds.end(),
-            [this](const size_t A, const size_t B) {
-              return Clustering_.getClusterIdForPoint(A) <
-                     Clustering_.getClusterIdForPoint(B);
-            });
+  llvm::sort(PointIds.begin(), PointIds.end(),
+             [this](const size_t A, const size_t B) {
+               return Clustering_.getClusterIdForPoint(A) <
+                      Clustering_.getClusterIdForPoint(B);
+             });
   const auto &Points = Clustering_.getPoints();
   OS << "<table class=\"sched-class-clusters\">";
   OS << "<tr><th>ClusterId</th><th>Opcode/Config</th>";
@@ -303,8 +304,11 @@ void Analysis::printSchedClassDescHtml(const llvm::MCSchedClassDesc &SCDesc,
                                        llvm::raw_ostream &OS) const {
   OS << "<table class=\"sched-class-desc\">";
   OS << "<tr><th>Valid</th><th>Variant</th><th>uOps</th><th>Latency</"
-        "th><th>WriteProcRes</th></tr>";
+        "th><th>WriteProcRes</th><th title=\"This is the idealized unit "
+        "resource (port) pressure assuming ideal distribution\">Idealized "
+        "Resource Pressure</th></tr>";
   if (SCDesc.isValid()) {
+    const auto &SM = SubtargetInfo_->getSchedModel();
     OS << "<tr><td>&#10004;</td>";
     OS << "<td>" << (SCDesc.isVariant() ? "&#10004;" : "&#10005;") << "</td>";
     OS << "<td>" << SCDesc.NumMicroOps << "</td>";
@@ -323,13 +327,24 @@ void Analysis::printSchedClassDescHtml(const llvm::MCSchedClassDesc &SCDesc,
     OS << "</ul></td>";
     // WriteProcRes.
     OS << "<td><ul>";
-    for (const auto &WPR :
-         getNonRedundantWriteProcRes(SCDesc, *SubtargetInfo_)) {
+    const auto ProcRes = getNonRedundantWriteProcRes(SCDesc, *SubtargetInfo_);
+    for (const auto &WPR : ProcRes) {
+      OS << "<li><span class=\"mono\">";
+      writeEscaped<kEscapeHtml>(OS,
+                                SM.getProcResource(WPR.ProcResourceIdx)->Name);
+      OS << "</span>: " << WPR.Cycles << "</li>";
+    }
+    OS << "</ul></td>";
+    // Idealized port pressure.
+    OS << "<td><ul>";
+    for (const auto &Pressure : computeIdealizedProcResPressure(SM, ProcRes)) {
       OS << "<li><span class=\"mono\">";
       writeEscaped<kEscapeHtml>(OS, SubtargetInfo_->getSchedModel()
-                                        .getProcResource(WPR.ProcResourceIdx)
+                                        .getProcResource(Pressure.first)
                                         ->Name);
-      OS << "</span>: " << WPR.Cycles << "</li>";
+      OS << "</span>: ";
+      writeMeasurementValue<kEscapeHtml>(OS, Pressure.second);
+      OS << "</li>";
     }
     OS << "</ul></td>";
     OS << "</tr>";
@@ -444,6 +459,120 @@ llvm::Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
 
   OS << "</body></html>";
   return llvm::Error::success();
+}
+
+// Distributes a pressure budget as evenly as possible on the provided subunits
+// given the already existing port pressure distribution.
+//
+// The algorithm is as follows: while there is remaining pressure to
+// distribute, find the subunits with minimal pressure, and distribute
+// remaining pressure equally up to the pressure of the unit with
+// second-to-minimal pressure.
+// For example, let's assume we want to distribute 2*P1256
+// (Subunits = [P1,P2,P5,P6]), and the starting DensePressure is:
+//     DensePressure =        P0   P1   P2   P3   P4   P5   P6   P7
+//                           0.1  0.3  0.2  0.0  0.0  0.5  0.5  0.5
+//     RemainingPressure = 2.0
+// We sort the subunits by pressure:
+//     Subunits = [(P2,p=0.2), (P1,p=0.3), (P5,p=0.5), (P6, p=0.5)]
+// We'll first start by the subunits with minimal pressure, which are at
+// the beginning of the sorted array. In this example there is one (P2).
+// The subunit with second-to-minimal pressure is the next one in the
+// array (P1). So we distribute 0.1 pressure to P2, and remove 0.1 cycles
+// from the budget.
+//     Subunits = [(P2,p=0.3), (P1,p=0.3), (P5,p=0.5), (P5,p=0.5)]
+//     RemainingPressure = 1.9
+// We repeat this process: distribute 0.2 pressure on each of the minimal
+// P2 and P1, decrease budget by 2*0.2:
+//     Subunits = [(P2,p=0.5), (P1,p=0.5), (P5,p=0.5), (P5,p=0.5)]
+//     RemainingPressure = 1.5
+// There are no second-to-minimal subunits so we just share the remaining
+// budget (1.5 cycles) equally:
+//     Subunits = [(P2,p=0.875), (P1,p=0.875), (P5,p=0.875), (P5,p=0.875)]
+//     RemainingPressure = 0.0
+// We stop as there is no remaining budget to distribute.
+void distributePressure(float RemainingPressure,
+                        llvm::SmallVector<uint16_t, 32> Subunits,
+                        llvm::SmallVector<float, 32> &DensePressure) {
+  // Find the number of subunits with minimal pressure (they are at the
+  // front).
+  llvm::sort(Subunits.begin(), Subunits.end(),
+             [&DensePressure](const uint16_t A, const uint16_t B) {
+               return DensePressure[A] < DensePressure[B];
+             });
+  const auto getPressureForSubunit = [&DensePressure,
+                                      &Subunits](size_t I) -> float & {
+    return DensePressure[Subunits[I]];
+  };
+  size_t NumMinimalSU = 1;
+  while (NumMinimalSU < Subunits.size() &&
+         getPressureForSubunit(NumMinimalSU) == getPressureForSubunit(0)) {
+    ++NumMinimalSU;
+  }
+  while (RemainingPressure > 0.0f) {
+    if (NumMinimalSU == Subunits.size()) {
+      // All units are minimal, just distribute evenly and be done.
+      for (size_t I = 0; I < NumMinimalSU; ++I) {
+        getPressureForSubunit(I) += RemainingPressure / NumMinimalSU;
+      }
+      return;
+    }
+    // Distribute the remaining pressure equally.
+    const float MinimalPressure = getPressureForSubunit(NumMinimalSU - 1);
+    const float SecondToMinimalPressure = getPressureForSubunit(NumMinimalSU);
+    assert(MinimalPressure < SecondToMinimalPressure);
+    const float Increment = SecondToMinimalPressure - MinimalPressure;
+    if (RemainingPressure <= NumMinimalSU * Increment) {
+      // There is not enough remaining pressure.
+      for (size_t I = 0; I < NumMinimalSU; ++I) {
+        getPressureForSubunit(I) += RemainingPressure / NumMinimalSU;
+      }
+      return;
+    }
+    // Bump all minimal pressure subunits to `SecondToMinimalPressure`.
+    for (size_t I = 0; I < NumMinimalSU; ++I) {
+      getPressureForSubunit(I) = SecondToMinimalPressure;
+      RemainingPressure -= SecondToMinimalPressure;
+    }
+    while (NumMinimalSU < Subunits.size() &&
+           getPressureForSubunit(NumMinimalSU) == SecondToMinimalPressure) {
+      ++NumMinimalSU;
+    }
+  }
+}
+
+std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
+    const llvm::MCSchedModel &SM,
+    llvm::SmallVector<llvm::MCWriteProcResEntry, 8> WPRS) {
+  // DensePressure[I] is the port pressure for Proc Resource I.
+  llvm::SmallVector<float, 32> DensePressure(SM.getNumProcResourceKinds());
+  llvm::sort(WPRS.begin(), WPRS.end(),
+             [](const llvm::MCWriteProcResEntry &A,
+                const llvm::MCWriteProcResEntry &B) {
+               return A.ProcResourceIdx < B.ProcResourceIdx;
+             });
+  for (const llvm::MCWriteProcResEntry &WPR : WPRS) {
+    // Get units for the entry.
+    const llvm::MCProcResourceDesc *const ProcResDesc =
+        SM.getProcResource(WPR.ProcResourceIdx);
+    if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
+      // This is a ProcResUnit.
+      DensePressure[WPR.ProcResourceIdx] += WPR.Cycles;
+    } else {
+      // This is a ProcResGroup.
+      llvm::SmallVector<uint16_t, 32> Subunits(ProcResDesc->SubUnitsIdxBegin,
+                                               ProcResDesc->SubUnitsIdxBegin +
+                                                   ProcResDesc->NumUnits);
+      distributePressure(WPR.Cycles, Subunits, DensePressure);
+    }
+  }
+  // Turn dense pressure into sparse pressure by removing zero entries.
+  std::vector<std::pair<uint16_t, float>> Pressure;
+  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    if (DensePressure[I] > 0.0f)
+      Pressure.emplace_back(I, DensePressure[I]);
+  }
+  return Pressure;
 }
 
 } // namespace exegesis

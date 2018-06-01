@@ -259,10 +259,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask8)(U))
 
 #define _mm256_maskz_shldi_epi64(U, A, B, I) \
-  _mm256_mask_shldi_epi64(_mm256_setzero_si256(), (U), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshldq256_mask((__v4di)(__m256i)(A), \
+                                          (__v4di)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v4di)_mm256_setzero_si256(), \
+                                          (__mmask8)(U))
 
 #define _mm256_shldi_epi64(A, B, I) \
-  _mm256_mask_shldi_epi64(_mm256_undefined_si256(), (__mmask8)(-1), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshldq256_mask((__v4di)(__m256i)(A), \
+                                          (__v4di)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v4di)_mm256_undefined_si256(), \
+                                          (__mmask8)-1)
 
 #define _mm_mask_shldi_epi64(S, U, A, B, I) \
   (__m128i)__builtin_ia32_vpshldq128_mask((__v2di)(__m128i)(A), \
@@ -272,10 +280,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask8)(U))
 
 #define _mm_maskz_shldi_epi64(U, A, B, I) \
-  _mm_mask_shldi_epi64(_mm_setzero_si128(), (U), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshldq128_mask((__v2di)(__m128i)(A), \
+                                          (__v2di)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v2di)_mm_setzero_si128(), \
+                                          (__mmask8)(U))
 
 #define _mm_shldi_epi64(A, B, I) \
-  _mm_mask_shldi_epi64(_mm_undefined_si128(), (__mmask8)(-1), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshldq128_mask((__v2di)(__m128i)(A), \
+                                          (__v2di)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v2di)_mm_undefined_si128(), \
+                                          (__mmask8)-1)
 
 #define _mm256_mask_shldi_epi32(S, U, A, B, I) \
   (__m256i)__builtin_ia32_vpshldd256_mask((__v8si)(__m256i)(A), \
@@ -285,10 +301,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask8)(U))
 
 #define _mm256_maskz_shldi_epi32(U, A, B, I) \
-  _mm256_mask_shldi_epi32(_mm256_setzero_si256(), (U), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshldd256_mask((__v8si)(__m256i)(A), \
+                                          (__v8si)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v8si)_mm256_setzero_si256(), \
+                                          (__mmask8)(U))
 
 #define _mm256_shldi_epi32(A, B, I) \
-  _mm256_mask_shldi_epi32(_mm256_undefined_si256(), (__mmask8)(-1), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshldd256_mask((__v8si)(__m256i)(A), \
+                                          (__v8si)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v8si)_mm256_undefined_si256(), \
+                                          (__mmask8)-1)
 
 #define _mm_mask_shldi_epi32(S, U, A, B, I) \
   (__m128i)__builtin_ia32_vpshldd128_mask((__v4si)(__m128i)(A), \
@@ -298,10 +322,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask8)(U))
 
 #define _mm_maskz_shldi_epi32(U, A, B, I) \
-  _mm_mask_shldi_epi32(_mm_setzero_si128(), (U), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshldd128_mask((__v4si)(__m128i)(A), \
+                                          (__v4si)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v4si)_mm_setzero_si128(), \
+                                          (__mmask8)(U))
 
 #define _mm_shldi_epi32(A, B, I) \
-  _mm_mask_shldi_epi32(_mm_undefined_si128(), (__mmask8)(-1), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshldd128_mask((__v4si)(__m128i)(A), \
+                                          (__v4si)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v4si)_mm_undefined_si128(), \
+                                          (__mmask8)-1)
 
 #define _mm256_mask_shldi_epi16(S, U, A, B, I) \
   (__m256i)__builtin_ia32_vpshldw256_mask((__v16hi)(__m256i)(A), \
@@ -311,10 +343,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask16)(U))
 
 #define _mm256_maskz_shldi_epi16(U, A, B, I) \
-  _mm256_mask_shldi_epi16(_mm256_setzero_si256(), (U), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshldw256_mask((__v16hi)(__m256i)(A), \
+                                          (__v16hi)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v16hi)_mm256_setzero_si256(), \
+                                          (__mmask16)(U))
 
 #define _mm256_shldi_epi16(A, B, I) \
-  _mm256_mask_shldi_epi16(_mm256_undefined_si256(), (__mmask8)(-1), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshldw256_mask((__v16hi)(__m256i)(A), \
+                                          (__v16hi)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v16hi)_mm256_undefined_si256(), \
+                                          (__mmask16)-1)
 
 #define _mm_mask_shldi_epi16(S, U, A, B, I) \
   (__m128i)__builtin_ia32_vpshldw128_mask((__v8hi)(__m128i)(A), \
@@ -324,10 +364,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask8)(U))
 
 #define _mm_maskz_shldi_epi16(U, A, B, I) \
-  _mm_mask_shldi_epi16(_mm_setzero_si128(), (U), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshldw128_mask((__v8hi)(__m128i)(A), \
+                                          (__v8hi)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v8hi)_mm_setzero_si128(), \
+                                          (__mmask8)(U))
 
 #define _mm_shldi_epi16(A, B, I) \
-  _mm_mask_shldi_epi16(_mm_undefined_si128(), (__mmask8)(-1), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshldw128_mask((__v8hi)(__m128i)(A), \
+                                          (__v8hi)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v8hi)_mm_undefined_si128(), \
+                                          (__mmask8)-1)
 
 #define _mm256_mask_shrdi_epi64(S, U, A, B, I) \
   (__m256i)__builtin_ia32_vpshrdq256_mask((__v4di)(__m256i)(A), \
@@ -337,10 +385,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask8)(U))
 
 #define _mm256_maskz_shrdi_epi64(U, A, B, I) \
-  _mm256_mask_shrdi_epi64(_mm256_setzero_si256(), (U), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshrdq256_mask((__v4di)(__m256i)(A), \
+                                          (__v4di)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v4di)_mm256_setzero_si256(), \
+                                          (__mmask8)(U))
 
 #define _mm256_shrdi_epi64(A, B, I) \
-  _mm256_mask_shrdi_epi64(_mm256_undefined_si256(), (__mmask8)(-1), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshrdq256_mask((__v4di)(__m256i)(A), \
+                                          (__v4di)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v4di)_mm256_undefined_si256(), \
+                                          (__mmask8)-1)
 
 #define _mm_mask_shrdi_epi64(S, U, A, B, I) \
   (__m128i)__builtin_ia32_vpshrdq128_mask((__v2di)(__m128i)(A), \
@@ -350,10 +406,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask8)(U))
 
 #define _mm_maskz_shrdi_epi64(U, A, B, I) \
-  _mm_mask_shrdi_epi64(_mm_setzero_si128(), (U), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshrdq128_mask((__v2di)(__m128i)(A), \
+                                          (__v2di)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v2di)_mm_setzero_si128(), \
+                                          (__mmask8)(U))
 
 #define _mm_shrdi_epi64(A, B, I) \
-  _mm_mask_shrdi_epi64(_mm_undefined_si128(), (__mmask8)(-1), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshrdq128_mask((__v2di)(__m128i)(A), \
+                                          (__v2di)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v2di)_mm_undefined_si128(), \
+                                          (__mmask8)-1)
 
 #define _mm256_mask_shrdi_epi32(S, U, A, B, I) \
   (__m256i)__builtin_ia32_vpshrdd256_mask((__v8si)(__m256i)(A), \
@@ -363,10 +427,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask8)(U))
 
 #define _mm256_maskz_shrdi_epi32(U, A, B, I) \
-  _mm256_mask_shrdi_epi32(_mm256_setzero_si256(), (U), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshrdd256_mask((__v8si)(__m256i)(A), \
+                                          (__v8si)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v8si)_mm256_setzero_si256(), \
+                                          (__mmask8)(U))
 
 #define _mm256_shrdi_epi32(A, B, I) \
-  _mm256_mask_shrdi_epi32(_mm256_undefined_si256(), (__mmask8)(-1), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshrdd256_mask((__v8si)(__m256i)(A), \
+                                          (__v8si)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v8si)_mm256_undefined_si256(), \
+                                          (__mmask8)-1)
 
 #define _mm_mask_shrdi_epi32(S, U, A, B, I) \
   (__m128i)__builtin_ia32_vpshrdd128_mask((__v4si)(__m128i)(A), \
@@ -376,10 +448,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask8)(U))
 
 #define _mm_maskz_shrdi_epi32(U, A, B, I) \
-  _mm_mask_shrdi_epi32(_mm_setzero_si128(), (U), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshrdd128_mask((__v4si)(__m128i)(A), \
+                                          (__v4si)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v4si)_mm_setzero_si128(), \
+                                          (__mmask8)(U))
 
 #define _mm_shrdi_epi32(A, B, I) \
-  _mm_mask_shrdi_epi32(_mm_undefined_si128(), (__mmask8)(-1), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshrdd128_mask((__v4si)(__m128i)(A), \
+                                          (__v4si)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v4si)_mm_undefined_si128(), \
+                                          (__mmask8)-1)
 
 #define _mm256_mask_shrdi_epi16(S, U, A, B, I) \
   (__m256i)__builtin_ia32_vpshrdw256_mask((__v16hi)(__m256i)(A), \
@@ -389,10 +469,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask16)(U))
 
 #define _mm256_maskz_shrdi_epi16(U, A, B, I) \
-  _mm256_mask_shrdi_epi16(_mm256_setzero_si256(), (U), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshrdw256_mask((__v16hi)(__m256i)(A), \
+                                          (__v16hi)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v16hi)_mm256_setzero_si256(), \
+                                          (__mmask16)(U))
 
 #define _mm256_shrdi_epi16(A, B, I) \
-  _mm256_mask_shrdi_epi16(_mm256_undefined_si256(), (__mmask8)(-1), (A), (B), (I))
+  (__m256i)__builtin_ia32_vpshrdw256_mask((__v16hi)(__m256i)(A), \
+                                          (__v16hi)(__m256i)(B), \
+                                          (int)(I), \
+                                          (__v16hi)_mm256_undefined_si256(), \
+                                          (__mmask16)-1)
 
 #define _mm_mask_shrdi_epi16(S, U, A, B, I) \
   (__m128i)__builtin_ia32_vpshrdw128_mask((__v8hi)(__m128i)(A), \
@@ -402,10 +490,18 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
                                           (__mmask8)(U))
 
 #define _mm_maskz_shrdi_epi16(U, A, B, I) \
-  _mm_mask_shrdi_epi16(_mm_setzero_si128(), (U), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshrdw128_mask((__v8hi)(__m128i)(A), \
+                                          (__v8hi)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v8hi)_mm_setzero_si128(), \
+                                          (__mmask8)(U))
 
 #define _mm_shrdi_epi16(A, B, I) \
-  _mm_mask_shrdi_epi16(_mm_undefined_si128(), (__mmask8)(-1), (A), (B), (I))
+  (__m128i)__builtin_ia32_vpshrdw128_mask((__v8hi)(__m128i)(A), \
+                                          (__v8hi)(__m128i)(B), \
+                                          (int)(I), \
+                                          (__v8hi)_mm_undefined_si128(), \
+                                          (__mmask8)-1)
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_mask_shldv_epi64(__m256i __S, __mmask8 __U, __m256i __A, __m256i __B)
