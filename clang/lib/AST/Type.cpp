@@ -2030,7 +2030,7 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
       return false;
     // The inheritance attribute might only be present on the most recent
     // CXXRecordDecl, use that one.
-    RD = RD->getMostRecentDecl();
+    RD = RD->getMostRecentNonInjectedDecl();
     // Nothing interesting to do if the inheritance attribute is already set.
     if (RD->hasAttr<MSInheritanceAttr>())
       return false;
@@ -3926,5 +3926,5 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
 }
 
 CXXRecordDecl *MemberPointerType::getMostRecentCXXRecordDecl() const {
-  return getClass()->getAsCXXRecordDecl()->getMostRecentDecl();
+  return getClass()->getAsCXXRecordDecl()->getMostRecentNonInjectedDecl();
 }

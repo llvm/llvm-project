@@ -367,6 +367,15 @@ public:
     return loc::ConcreteInt(BasicVals.getValue(integer));
   }
 
+  /// Make an SVal that represents the given symbol. This follows the convention
+  /// of representing Loc-type symbols (symbolic pointers and references)
+  /// as Loc values wrapping the symbol rather than as plain symbol values.
+  SVal makeSymbolVal(SymbolRef Sym) {
+    if (Loc::isLocType(Sym->getType()))
+      return makeLoc(Sym);
+    return nonloc::SymbolVal(Sym);
+  }
+
   /// Return a memory region for the 'this' object reference.
   loc::MemRegionVal getCXXThis(const CXXMethodDecl *D,
                                const StackFrameContext *SFC);

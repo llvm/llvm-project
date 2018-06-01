@@ -694,6 +694,11 @@ def warn_mmap_mismatched_private_module_name : Warning<
   InGroup<PrivateModule>;
 def note_mmap_rename_top_level_private_module : Note<
   "rename '%0' to ensure it can be found by name">;
+def warn_mmap_incomplete_framework_module_declaration : Warning<
+  "skipping '%0' because module declaration of '%1' lacks the 'framework' qualifier">,
+  InGroup<IncompleteFrameworkModuleDeclaration>;
+def note_mmap_add_framework_keyword : Note<
+  "use 'framework module' to declare module '%0'">;
 
 def err_mmap_duplicate_header_attribute : Error<
   "header attribute '%0' specified multiple times">;

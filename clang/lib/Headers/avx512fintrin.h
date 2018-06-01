@@ -2226,13 +2226,13 @@ _mm512_maskz_sub_ps(__mmask16 __U, __m512 __A, __m512 __B) {
   (__m512)__builtin_ia32_subps512_mask((__v16sf)(__m512)(A), \
                                        (__v16sf)(__m512)(B), \
                                        (__v16sf)(__m512)(W), (__mmask16)(U), \
-                                       (int)(R));
+                                       (int)(R))
 
 #define _mm512_maskz_sub_round_ps(U, A, B, R)  \
   (__m512)__builtin_ia32_subps512_mask((__v16sf)(__m512)(A), \
                                        (__v16sf)(__m512)(B), \
                                        (__v16sf)_mm512_setzero_ps(), \
-                                       (__mmask16)(U), (int)(R));
+                                       (__mmask16)(U), (int)(R))
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_mask_mul_ss(__m128 __W, __mmask8 __U,__m128 __A, __m128 __B) {
@@ -2361,13 +2361,13 @@ _mm512_maskz_mul_ps(__mmask16 __U, __m512 __A, __m512 __B) {
   (__m512)__builtin_ia32_mulps512_mask((__v16sf)(__m512)(A), \
                                        (__v16sf)(__m512)(B), \
                                        (__v16sf)(__m512)(W), (__mmask16)(U), \
-                                       (int)(R));
+                                       (int)(R))
 
 #define _mm512_maskz_mul_round_ps(U, A, B, R)  \
   (__m512)__builtin_ia32_mulps512_mask((__v16sf)(__m512)(A), \
                                        (__v16sf)(__m512)(B), \
                                        (__v16sf)_mm512_setzero_ps(), \
-                                       (__mmask16)(U), (int)(R));
+                                       (__mmask16)(U), (int)(R))
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_mask_div_ss(__m128 __W, __mmask8 __U,__m128 __A, __m128 __B) {
@@ -2509,13 +2509,13 @@ _mm512_maskz_div_ps(__mmask16 __U, __m512 __A, __m512 __B) {
   (__m512)__builtin_ia32_divps512_mask((__v16sf)(__m512)(A), \
                                        (__v16sf)(__m512)(B), \
                                        (__v16sf)(__m512)(W), (__mmask16)(U), \
-                                       (int)(R));
+                                       (int)(R))
 
 #define _mm512_maskz_div_round_ps(U, A, B, R)  \
   (__m512)__builtin_ia32_divps512_mask((__v16sf)(__m512)(A), \
                                        (__v16sf)(__m512)(B), \
                                        (__v16sf)_mm512_setzero_ps(), \
-                                       (__mmask16)(U), (int)(R));
+                                       (__mmask16)(U), (int)(R))
 
 #define _mm512_roundscale_ps(A, B) \
   (__m512)__builtin_ia32_rndscaleps_mask((__v16sf)(__m512)(A), (int)(B), \

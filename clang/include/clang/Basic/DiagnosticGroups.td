@@ -285,6 +285,8 @@ def IncompatiblePointerTypes
     [IncompatiblePointerTypesDiscardsQualifiers,
      IncompatibleFunctionPointerTypes]>;
 def IncompleteUmbrella : DiagGroup<"incomplete-umbrella">;
+def IncompleteFrameworkModuleDeclaration
+  : DiagGroup<"incomplete-framework-module-declaration">;
 def NonModularIncludeInFrameworkModule
   : DiagGroup<"non-modular-include-in-framework-module">;
 def NonModularIncludeInModule : DiagGroup<"non-modular-include-in-module",

@@ -3,6 +3,124 @@
 // RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -DINCOMPLETE_VIRTUAL -fms-extensions -verify
 // RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -DINCOMPLETE_VIRTUAL -DMEMFUN -fms-extensions -verify
 
+namespace pr37399 {
+template <typename T>
+struct Functor {
+  void (T::*PtrToMemberFunction)();
+};
+// CHECK-DAG: %"struct.pr37399::Functor" = type { i8* }
+
+template <typename SomeType>
+class SimpleDerivedFunctor;
+template <typename SomeType>
+class SimpleDerivedFunctor : public Functor<SimpleDerivedFunctor<SomeType>> {};
+// CHECK-DAG: %"class.pr37399::SimpleDerivedFunctor" = type { %"struct.pr37399::Functor" }
+
+SimpleDerivedFunctor<void> SimpleFunctor;
+// CHECK-DAG: @"?SimpleFunctor@pr37399@@3V?$SimpleDerivedFunctor@X@1@A" = dso_local global %"class.pr37399::SimpleDerivedFunctor" zeroinitializer, align 4
+
+short Global = 0;
+template <typename SomeType>
+class DerivedFunctor;
+template <typename SomeType>
+class DerivedFunctor
+    : public Functor<DerivedFunctor<void>> {
+public:
+  void Foo() {
+    Global = 42;
+  }
+};
+
+class MultipleBase {
+public:
+  MultipleBase() : Value() {}
+  short Value;
+};
+// CHECK-DAG: %"class.pr37399::MultipleBase" = type { i16 }
+
+template <typename SomeType>
+class MultiplyDerivedFunctor;
+template <typename SomeType>
+class MultiplyDerivedFunctor
+    : public Functor<MultiplyDerivedFunctor<void>>,
+      public MultipleBase {
+public:
+  void Foo() {
+    MultipleBase::Value = 42*2;
+  }
+};
+
+class VirtualBase {
+public:
+  VirtualBase() : Value() {}
+  short Value;
+};
+// CHECK-DAG: %"class.pr37399::VirtualBase" = type { i16 }
+
+template <typename SomeType>
+class VirtBaseFunctor
+    : public Functor<SomeType>,
+      public virtual VirtualBase{};
+template <typename SomeType>
+class VirtuallyDerivedFunctor;
+template <typename SomeType>
+class VirtuallyDerivedFunctor
+    : public VirtBaseFunctor<VirtuallyDerivedFunctor<void>>,
+      public virtual VirtualBase {
+public:
+  void Foo() {
+    VirtualBase::Value = 42*3;
+  }
+};
+} // namespace pr37399
+
+pr37399::DerivedFunctor<int>           BFunctor;
+// CHECK-DAG: @"?BFunctor@@3V?$DerivedFunctor@H@pr37399@@A" = dso_local global %"[[BFUNCTOR:class.pr37399::DerivedFunctor(\.[0-9]+)?]]" zeroinitializer, align 8
+// CHECK-DAG: %"[[BFUNCTOR]]" = type { %"[[BFUNCTORBASE:struct.pr37399::Functor(\.[0-9]+)?]]" }
+// CHECK-DAG: %"[[BFUNCTORBASE]]" = type { { i8*, i32, i32, i32 } }
+pr37399::DerivedFunctor<void>          AFunctor;
+// CHECK-DAG: @"?AFunctor@@3V?$DerivedFunctor@X@pr37399@@A" = dso_local global %"[[AFUNCTOR:class.pr37399::DerivedFunctor(\.[0-9]+)?]]" zeroinitializer, align 8
+// CHECK-DAG: %"[[AFUNCTOR]]" = type { %"[[AFUNCTORBASE:struct.pr37399::Functor(\.[0-9]+)?]]" }
+// CHECK-DAG: %"[[AFUNCTORBASE]]" = type { { i8*, i32, i32, i32 } }
+
+pr37399::MultiplyDerivedFunctor<int>   DFunctor;
+// CHECK-DAG: @"?DFunctor@@3V?$MultiplyDerivedFunctor@H@pr37399@@A" = dso_local global %"[[DFUNCTOR:class.pr37399::MultiplyDerivedFunctor(\.[0-9]+)?]]" zeroinitializer, align 8
+// CHECK-DAG: %"[[DFUNCTOR]]" = type { %"[[DFUNCTORBASE:struct.pr37399::Functor(\.[0-9]+)?]]", %"class.pr37399::MultipleBase", [6 x i8] }
+// CHECK-DAG: %"[[DFUNCTORBASE]]" = type { { i8*, i32, i32, i32 } }
+pr37399::MultiplyDerivedFunctor<void>  CFunctor;
+// CHECK-DAG: @"?CFunctor@@3V?$MultiplyDerivedFunctor@X@pr37399@@A" = dso_local global %"[[CFUNCTOR:class.pr37399::MultiplyDerivedFunctor(\.[0-9]+)?]]" zeroinitializer, align 8
+// CHECK-DAG: %"[[CFUNCTOR]]" = type { %"[[CFUNCTORBASE:struct.pr37399::Functor(\.[0-9]+)?]]", %"class.pr37399::MultipleBase", [6 x i8] }
+// CHECK-DAG: %"[[CFUNCTORBASE]]" = type { { i8*, i32, i32, i32 } }
+
+pr37399::VirtuallyDerivedFunctor<int>  FFunctor;
+// CHECK-DAG: @"?FFunctor@@3V?$VirtuallyDerivedFunctor@H@pr37399@@A" = dso_local global %"[[FFUNCTOR:class.pr37399::VirtuallyDerivedFunctor(\.[0-9]+)?]]" zeroinitializer, align 8
+// CHECK-DAG: %"[[FFUNCTOR]]" = type { %"class.pr37399::VirtBaseFunctor.base", %"class.pr37399::VirtualBase" }
+pr37399::VirtuallyDerivedFunctor<void> EFunctor;
+// CHECK-DAG: @"?EFunctor@@3V?$VirtuallyDerivedFunctor@X@pr37399@@A" = dso_local global %"[[EFUNCTOR:class.pr37399::VirtuallyDerivedFunctor(\.[0-9]+)?]]" zeroinitializer, align 8
+// CHECK-DAG: %"[[EFUNCTOR]]" = type { %"class.pr37399::VirtBaseFunctor.base", %"class.pr37399::VirtualBase" }
+
+// CHECK-DAG: %"class.pr37399::VirtBaseFunctor.base" = type <{ %"[[VFUNCTORBASE:struct.pr37399::Functor(\.[0-9]+)?]]", i32*, [4 x i8] }>
+// CHECK-DAG: %"[[VFUNCTORBASE]]" = type { { i8*, i32, i32, i32 } }
+
+namespace pr37399 {
+void SingleInheritanceFnPtrCall() {
+  BFunctor.PtrToMemberFunction = &DerivedFunctor<void>::Foo;
+  (AFunctor.*(BFunctor.PtrToMemberFunction))();
+}
+void MultipleInheritanceFnPtrCall() {
+  DFunctor.PtrToMemberFunction = &MultiplyDerivedFunctor<void>::Foo;
+  Global = CFunctor.MultipleBase::Value;
+  (CFunctor.*(DFunctor.PtrToMemberFunction))();
+  Global = CFunctor.MultipleBase::Value;
+}
+void VirtualInheritanceFnPtrCall() {
+  FFunctor.PtrToMemberFunction = &VirtuallyDerivedFunctor<void>::Foo;
+  Global = EFunctor.VirtualBase::Value;
+  (EFunctor.*(FFunctor.PtrToMemberFunction))();
+  Global = EFunctor.VirtualBase::Value;
+}
+} // namespace pr37399
+
 struct PR26313_Y;
 typedef void (PR26313_Y::*PR26313_FUNC)();
 struct PR26313_X {
