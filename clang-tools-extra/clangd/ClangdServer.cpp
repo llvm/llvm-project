@@ -100,7 +100,7 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                        std::shared_ptr<Preprocessor>
                            PP) { FileIdx->update(Path, &AST, std::move(PP)); }
               : PreambleParsedCallback(),
-          Opts.UpdateDebounce) {
+          Opts.UpdateDebounce, Opts.RetentionPolicy) {
   if (FileIdx && Opts.StaticIndex) {
     MergedIndex = mergeIndex(FileIdx.get(), Opts.StaticIndex);
     Index = MergedIndex.get();

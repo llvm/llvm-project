@@ -1590,6 +1590,11 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
 
+  setOperationAction(ISD::ADDC, MVT::i32, Custom);
+  setOperationAction(ISD::ADDE, MVT::i32, Custom);
+  setOperationAction(ISD::SUBC, MVT::i32, Custom);
+  setOperationAction(ISD::SUBE, MVT::i32, Custom);
+
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::ADDC, MVT::i64, Custom);
     setOperationAction(ISD::ADDE, MVT::i64, Custom);

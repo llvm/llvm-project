@@ -576,3 +576,15 @@
 
 #CHECK: enclv
 0x0f 0x01 0xc0
+
+# Make sure we ignore EVEX.X when the index register isn't being used.
+#CHECK: vaddps (%rax), %xmm16, %xmm1
+0x62 0xb1 0x7c 0x00 0x58 0x08
+
+# Make sure we ignore EVEX.X when modrm.rm encodes a GPR.
+#CHECK: vcvtusi2sdq %rax, %xmm1, %xmm1
+0x62 0xb1 0xf7 0x08 0x7b 0xc8
+
+# Make sure we ignore EVEX.X when modrm.rm encodes a k-register.
+#CHECK: vpmovm2b %k0, %xmm0
+0x62,0xb2,0x7e,0x08,0x28,0xc0

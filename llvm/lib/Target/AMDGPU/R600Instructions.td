@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "R600Intrinsics.td"
 include "R600InstrFormats.td"
 
 // FIXME: Should not be arbitrarily split from other R600 inst classes.

@@ -111,11 +111,10 @@ SVal ExprEngine::makeZeroElementRegion(ProgramStateRef State, SVal LValue,
 }
 
 
-const MemRegion *
-ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
-                                          ExplodedNode *Pred,
-                                          const ConstructionContext *CC,
-                                          EvalCallOptions &CallOpts) {
+SVal ExprEngine::getLocationForConstructedObject(const CXXConstructExpr *CE,
+                                                 ExplodedNode *Pred,
+                                                 const ConstructionContext *CC,
+                                                 EvalCallOptions &CallOpts) {
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
   MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
@@ -130,9 +129,8 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       const auto *Var = cast<VarDecl>(DS->getSingleDecl());
       SVal LValue = State->getLValue(Var, LCtx);
       QualType Ty = Var->getType();
-      LValue =
-          makeZeroElementRegion(State, LValue, Ty, CallOpts.IsArrayCtorOrDtor);
-      return LValue.getAsRegion();
+      return makeZeroElementRegion(State, LValue, Ty,
+                                   CallOpts.IsArrayCtorOrDtor);
     }
     case ConstructionContext::SimpleConstructorInitializerKind: {
       const auto *ICC = cast<ConstructorInitializerConstructionContext>(CC);
@@ -156,25 +154,26 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       QualType Ty = Field->getType();
       FieldVal = makeZeroElementRegion(State, FieldVal, Ty,
                                        CallOpts.IsArrayCtorOrDtor);
-      return FieldVal.getAsRegion();
+      return FieldVal;
     }
     case ConstructionContext::NewAllocatedObjectKind: {
       if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
         const auto *NECC = cast<NewAllocatedObjectConstructionContext>(CC);
         const auto *NE = NECC->getCXXNewExpr();
-        // TODO: Detect when the allocator returns a null pointer.
-        // Constructor shall not be called in this case.
-        if (const SubRegion *MR = dyn_cast_or_null<SubRegion>(
-                getCXXNewAllocatorValue(State, NE, LCtx).getAsRegion())) {
+        SVal V = *getObjectUnderConstruction(State, NE, LCtx);
+        if (const SubRegion *MR =
+                dyn_cast_or_null<SubRegion>(V.getAsRegion())) {
           if (NE->isArray()) {
             // TODO: In fact, we need to call the constructor for every
             // allocated element, not just the first one!
             CallOpts.IsArrayCtorOrDtor = true;
-            return getStoreManager().GetElementZeroRegion(
-                MR, NE->getType()->getPointeeType());
+            return loc::MemRegionVal(getStoreManager().GetElementZeroRegion(
+                MR, NE->getType()->getPointeeType()));
           }
-          return MR;
+          return V;
         }
+        // TODO: Detect when the allocator returns a null pointer.
+        // Constructor shall not be called in this case.
       }
       break;
     }
@@ -205,7 +204,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
       // TODO: Support temporaries lifetime-extended via static references.
       // They'd need a getCXXStaticTempObjectRegion().
       CallOpts.IsTemporaryCtorOrDtor = true;
-      return MRMgr.getCXXTempObjectRegion(CE, LCtx);
+      return loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(CE, LCtx));
     }
     case ConstructionContext::SimpleReturnedValueKind: {
       // The temporary is to be managed by the parent stack frame.
@@ -226,7 +225,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
           CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
         } else if (!isa<TemporaryObjectConstructionContext>(
                        RTC->getConstructionContext())) {
-          // FXIME: The return value is constructed directly into a
+          // FIXME: The return value is constructed directly into a
           // non-temporary due to C++17 mandatory copy elision. This is not
           // implemented yet.
           assert(getContext().getLangOpts().CPlusPlus17);
@@ -235,7 +234,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
         TempLCtx = CallerLCtx;
       }
       CallOpts.IsTemporaryCtorOrDtor = true;
-      return MRMgr.getCXXTempObjectRegion(CE, TempLCtx);
+      return loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(CE, TempLCtx));
     }
     case ConstructionContext::CXX17ElidedCopyVariableKind:
     case ConstructionContext::CXX17ElidedCopyReturnedValueKind:
@@ -247,7 +246,7 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
   // If we couldn't find an existing region to construct into, assume we're
   // constructing a temporary. Notify the caller of our failure.
   CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
-  return MRMgr.getCXXTempObjectRegion(CE, LCtx);
+  return loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(CE, LCtx));
 }
 
 const CXXConstructExpr *
@@ -285,7 +284,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
 
-  const MemRegion *Target = nullptr;
+  SVal Target = UnknownVal();
 
   // FIXME: Handle arrays, which run the same constructor for every element.
   // For now, we just run the first constructor (which should still invalidate
@@ -298,7 +297,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
 
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete: {
-    Target = getRegionForConstructedObject(CE, Pred, CC, CallOpts);
+    Target = getLocationForConstructedObject(CE, Pred, CC, CallOpts);
     break;
   }
   case CXXConstructExpr::CK_VirtualBase:
@@ -334,7 +333,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
     // otherwise always available during construction.
     if (dyn_cast_or_null<InitListExpr>(LCtx->getParentMap().getParent(CE))) {
       MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
-      Target = MRMgr.getCXXTempObjectRegion(CE, LCtx);
+      Target = loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(CE, LCtx));
       CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
       break;
     }
@@ -346,14 +345,14 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
     SVal ThisVal = State->getSVal(ThisPtr);
 
     if (CE->getConstructionKind() == CXXConstructExpr::CK_Delegating) {
-      Target = ThisVal.getAsRegion();
+      Target = ThisVal;
     } else {
       // Cast to the base type.
       bool IsVirtual =
         (CE->getConstructionKind() == CXXConstructExpr::CK_VirtualBase);
       SVal BaseVal = getStoreManager().evalDerivedToBase(ThisVal, CE->getType(),
                                                          IsVirtual);
-      Target = BaseVal.getAsRegion();
+      Target = BaseVal;
     }
     break;
   }
@@ -361,7 +360,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
 
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<CXXConstructorCall> Call =
-    CEMgr.getCXXConstructorCall(CE, Target, State, LCtx);
+    CEMgr.getCXXConstructorCall(CE, Target.getAsRegion(), State, LCtx);
 
   ExplodedNodeSet DstPreVisit;
   getCheckerManager().runCheckersForPreStmt(DstPreVisit, Pred, CE, *this);
@@ -387,10 +386,11 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
         // actually make things worse. Placement new makes this tricky as well,
         // since it's then possible to be initializing one part of a multi-
         // dimensional array.
-        State = State->bindDefaultZero(loc::MemRegionVal(Target), LCtx);
+        State = State->bindDefaultZero(Target, LCtx);
       }
 
-      State = addAllNecessaryTemporaryInfo(State, CC, LCtx, Target);
+      State = markStatementsCorrespondingToConstructedObject(State, CC, LCtx,
+                                                             Target);
 
       Bldr.generateNode(CE, *I, State, /*tag=*/nullptr,
                         ProgramPoint::PreStmtKind);
@@ -550,8 +550,8 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
           State = State->assume(RetVal.castAs<DefinedOrUnknownSVal>(), true);
     }
 
-    ValueBldr.generateNode(CNE, I,
-                           setCXXNewAllocatorValue(State, CNE, LCtx, RetVal));
+    ValueBldr.generateNode(
+        CNE, I, addObjectUnderConstruction(State, CNE, LCtx, RetVal));
   }
 
   ExplodedNodeSet DstPostPostCallCallback;
@@ -559,7 +559,8 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
                                              DstPostValue, *Call, *this);
   for (auto I : DstPostPostCallCallback) {
     getCheckerManager().runCheckersForNewAllocator(
-        CNE, getCXXNewAllocatorValue(I->getState(), CNE, LCtx), Dst, I, *this);
+        CNE, *getObjectUnderConstruction(I->getState(), CNE, LCtx), Dst, I,
+        *this);
   }
 }
 
@@ -582,8 +583,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
 
   // Retrieve the stored operator new() return value.
   if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
-    symVal = getCXXNewAllocatorValue(State, CNE, LCtx);
-    State = clearCXXNewAllocatorValue(State, CNE, LCtx);
+    symVal = *getObjectUnderConstruction(State, CNE, LCtx);
+    State = finishObjectConstruction(State, CNE, LCtx);
   }
 
   // We assume all standard global 'operator new' functions allocate memory in

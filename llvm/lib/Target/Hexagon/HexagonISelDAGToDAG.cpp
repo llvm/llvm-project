@@ -762,6 +762,15 @@ void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
   ReplaceNode(N, R);
 }
 
+void HexagonDAGToDAGISel::SelectAddSubCarry(SDNode *N) {
+  unsigned OpcCarry = N->getOpcode() == HexagonISD::ADDC ? Hexagon::A4_addp_c
+                                                         : Hexagon::A4_subp_c;
+  SDNode *C = CurDAG->getMachineNode(OpcCarry, SDLoc(N), N->getVTList(),
+                                     { N->getOperand(0), N->getOperand(1),
+                                       N->getOperand(2) });
+  ReplaceNode(N, C);
+}
+
 void HexagonDAGToDAGISel::SelectVAlign(SDNode *N) {
   MVT ResTy = N->getValueType(0).getSimpleVT();
   if (HST->isHVXVectorType(ResTy, true))
@@ -875,6 +884,9 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
   case ISD::STORE:                return SelectStore(N);
   case ISD::INTRINSIC_W_CHAIN:    return SelectIntrinsicWChain(N);
   case ISD::INTRINSIC_WO_CHAIN:   return SelectIntrinsicWOChain(N);
+
+  case HexagonISD::ADDC:
+  case HexagonISD::SUBC:          return SelectAddSubCarry(N);
   case HexagonISD::VALIGN:        return SelectVAlign(N);
   case HexagonISD::VALIGNADDR:    return SelectVAlignAddr(N);
   case HexagonISD::TYPECAST:      return SelectTypecast(N);

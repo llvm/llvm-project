@@ -53,7 +53,10 @@ cl::SubCommand ModuleSubcommand("module-sections",
                                 "Display LLDB Module Information");
 cl::SubCommand SymbolsSubcommand("symbols", "Dump symbols for an object file");
 cl::SubCommand IRMemoryMapSubcommand("ir-memory-map", "Test IRMemoryMap");
+
 cl::opt<std::string> Log("log", cl::desc("Path to a log file"), cl::init(""),
+                         cl::sub(BreakpointSubcommand),
+                         cl::sub(ModuleSubcommand), cl::sub(SymbolsSubcommand),
                          cl::sub(IRMemoryMapSubcommand));
 
 /// Create a target using the file pointed to by \p Filename, or abort.
@@ -159,12 +162,18 @@ static cl::opt<std::string> CommandFile(cl::Positional,
                                         cl::desc("<command-file>"),
                                         cl::init("-"),
                                         cl::sub(IRMemoryMapSubcommand));
+static cl::opt<bool> UseHostOnlyAllocationPolicy(
+    "host-only", cl::desc("Use the host-only allocation policy"),
+    cl::init(false), cl::sub(IRMemoryMapSubcommand));
+
 using AllocationT = std::pair<addr_t, addr_t>;
 bool areAllocationsOverlapping(const AllocationT &L, const AllocationT &R);
 using AddrIntervalMap =
-      IntervalMap<addr_t, bool, 8, IntervalMapHalfOpenInfo<addr_t>>;
+      IntervalMap<addr_t, unsigned, 8, IntervalMapHalfOpenInfo<addr_t>>;
 bool evalMalloc(IRMemoryMap &IRMemMap, StringRef Line,
                 AddrIntervalMap &AllocatedIntervals);
+bool evalFree(IRMemoryMap &IRMemMap, StringRef Line,
+              AddrIntervalMap &AllocatedIntervals);
 int evaluateMemoryMapCommands(Debugger &Dbg);
 } // namespace irmemorymap
 
@@ -521,14 +530,16 @@ bool opts::irmemorymap::evalMalloc(IRMemoryMap &IRMemMap, StringRef Line,
     exit(1);
   }
 
+  IRMemoryMap::AllocationPolicy AP =
+      UseHostOnlyAllocationPolicy ? IRMemoryMap::eAllocationPolicyHostOnly
+                                  : IRMemoryMap::eAllocationPolicyProcessOnly;
+
   // Issue the malloc in the target process with "-rw" permissions.
   const uint32_t Permissions = 0x3;
   const bool ZeroMemory = false;
-  IRMemoryMap::AllocationPolicy Policy =
-      IRMemoryMap::eAllocationPolicyProcessOnly;
   Status ST;
   addr_t Addr =
-      IRMemMap.Malloc(Size, Alignment, Permissions, Policy, ZeroMemory, ST);
+      IRMemMap.Malloc(Size, Alignment, Permissions, AP, ZeroMemory, ST);
   if (ST.Fail()) {
     outs() << formatv("Malloc error: {0}\n", ST);
     return true;
@@ -560,9 +571,45 @@ bool opts::irmemorymap::evalMalloc(IRMemoryMap &IRMemMap, StringRef Line,
     ++Probe;
   }
 
-  // Insert the new allocation into the interval map.
+  // Insert the new allocation into the interval map. Use unique allocation IDs
+  // to inhibit interval coalescing.
+  static unsigned AllocationID = 0;
   if (Size)
-    AllocatedIntervals.insert(Addr, EndOfRegion, true);
+    AllocatedIntervals.insert(Addr, EndOfRegion, AllocationID++);
+
+  return true;
+}
+
+bool opts::irmemorymap::evalFree(IRMemoryMap &IRMemMap, StringRef Line,
+                                 AddrIntervalMap &AllocatedIntervals) {
+  // ::= free <allocation-index>
+  size_t AllocIndex;
+  int Matches = sscanf(Line.data(), "free %zu", &AllocIndex);
+  if (Matches != 1)
+    return false;
+
+  outs() << formatv("Command: free(allocation-index={0})\n", AllocIndex);
+
+  // Find and free the AllocIndex-th allocation.
+  auto Probe = AllocatedIntervals.begin();
+  for (size_t I = 0; I < AllocIndex && Probe != AllocatedIntervals.end(); ++I)
+    ++Probe;
+
+  if (Probe == AllocatedIntervals.end()) {
+    outs() << "Free error: Invalid allocation index\n";
+    exit(1);
+  }
+
+  Status ST;
+  IRMemMap.Free(Probe.start(), ST);
+  if (ST.Fail()) {
+    outs() << formatv("Free error: {0}\n", ST);
+    exit(1);
+  }
+
+  // Erase the allocation from the live interval map.
+  outs() << formatv("Free: [{0:x}, {1:x})\n", Probe.start(), Probe.stop());
+  Probe.erase();
 
   return true;
 }
@@ -607,6 +654,9 @@ int opts::irmemorymap::evaluateMemoryMapCommands(Debugger &Dbg) {
       continue;
 
     if (evalMalloc(IRMemMap, Line, AllocatedIntervals))
+      continue;
+
+    if (evalFree(IRMemMap, Line, AllocatedIntervals))
       continue;
 
     errs() << "Could not parse line: " << Line << "\n";

@@ -170,10 +170,13 @@ static void appendSubframeworkPaths(Module *Mod,
     llvm::sys::path::append(Path, "Frameworks", Paths[I-1] + ".framework");
 }
 
-const FileEntry *
-ModuleMap::findHeader(Module *M,
-                      const Module::UnresolvedHeaderDirective &Header,
-                      SmallVectorImpl<char> &RelativePathName) {
+const FileEntry *ModuleMap::findHeader(
+    Module *M, const Module::UnresolvedHeaderDirective &Header,
+    SmallVectorImpl<char> &RelativePathName, bool &NeedsFramework) {
+  // Search for the header file within the module's home directory.
+  auto *Directory = M->Directory;
+  SmallString<128> FullPathName(Directory->getName());
+
   auto GetFile = [&](StringRef Filename) -> const FileEntry * {
     auto *File = SourceMgr.getFileManager().getFile(Filename);
     if (!File ||
@@ -183,18 +186,8 @@ ModuleMap::findHeader(Module *M,
     return File;
   };
 
-  if (llvm::sys::path::is_absolute(Header.FileName)) {
-    RelativePathName.clear();
-    RelativePathName.append(Header.FileName.begin(), Header.FileName.end());
-    return GetFile(Header.FileName);
-  }
-
-  // Search for the header file within the module's home directory.
-  auto *Directory = M->Directory;
-  SmallString<128> FullPathName(Directory->getName());
-  unsigned FullPathLength = FullPathName.size();
-
-  if (M->isPartOfFramework()) {
+  auto GetFrameworkFile = [&]() -> const FileEntry * {
+    unsigned FullPathLength = FullPathName.size();
     appendSubframeworkPaths(M, RelativePathName);
     unsigned RelativePathLength = RelativePathName.size();
 
@@ -219,18 +212,46 @@ ModuleMap::findHeader(Module *M,
                             Header.FileName);
     llvm::sys::path::append(FullPathName, RelativePathName);
     return GetFile(FullPathName);
+  };
+
+  if (llvm::sys::path::is_absolute(Header.FileName)) {
+    RelativePathName.clear();
+    RelativePathName.append(Header.FileName.begin(), Header.FileName.end());
+    return GetFile(Header.FileName);
   }
+
+  if (M->isPartOfFramework())
+    return GetFrameworkFile();
 
   // Lookup for normal headers.
   llvm::sys::path::append(RelativePathName, Header.FileName);
   llvm::sys::path::append(FullPathName, RelativePathName);
-  return GetFile(FullPathName);
+  auto *NormalHdrFile = GetFile(FullPathName);
+
+  if (M && !NormalHdrFile && Directory->getName().endswith(".framework")) {
+    // The lack of 'framework' keyword in a module declaration it's a simple
+    // mistake we can diagnose when the header exists within the proper
+    // framework style path.
+    FullPathName.assign(Directory->getName());
+    RelativePathName.clear();
+    if (GetFrameworkFile()) {
+      Diags.Report(Header.FileNameLoc,
+                   diag::warn_mmap_incomplete_framework_module_declaration)
+          << Header.FileName << M->getFullModuleName();
+      NeedsFramework = true;
+    }
+    return nullptr;
+  }
+
+  return NormalHdrFile;
 }
 
 void ModuleMap::resolveHeader(Module *Mod,
-                              const Module::UnresolvedHeaderDirective &Header) {
+                              const Module::UnresolvedHeaderDirective &Header,
+                              bool &NeedsFramework) {
   SmallString<128> RelativePathName;
-  if (const FileEntry *File = findHeader(Mod, Header, RelativePathName)) {
+  if (const FileEntry *File =
+          findHeader(Mod, Header, RelativePathName, NeedsFramework)) {
     if (Header.IsUmbrella) {
       const DirectoryEntry *UmbrellaDir = File->getDir();
       if (Module *UmbrellaMod = UmbrellaDirs[UmbrellaDir])
@@ -1056,7 +1077,8 @@ void ModuleMap::setUmbrellaDir(Module *Mod, const DirectoryEntry *UmbrellaDir,
 }
 
 void ModuleMap::addUnresolvedHeader(Module *Mod,
-                                    Module::UnresolvedHeaderDirective Header) {
+                                    Module::UnresolvedHeaderDirective Header,
+                                    bool &NeedsFramework) {
   // If there is a builtin counterpart to this file, add it now so it can
   // wrap the system header.
   if (resolveAsBuiltinHeader(Mod, Header)) {
@@ -1087,7 +1109,7 @@ void ModuleMap::addUnresolvedHeader(Module *Mod,
 
   // We don't have stat information or can't defer looking this file up.
   // Perform the lookup now.
-  resolveHeader(Mod, Header);
+  resolveHeader(Mod, Header, NeedsFramework);
 }
 
 void ModuleMap::resolveHeaderDirectives(const FileEntry *File) const {
@@ -1107,10 +1129,11 @@ void ModuleMap::resolveHeaderDirectives(const FileEntry *File) const {
 }
 
 void ModuleMap::resolveHeaderDirectives(Module *Mod) const {
+  bool NeedsFramework = false;
   for (auto &Header : Mod->UnresolvedHeaders)
     // This operation is logically const; we're just changing how we represent
     // the header information for this file.
-    const_cast<ModuleMap*>(this)->resolveHeader(Mod, Header);
+    const_cast<ModuleMap*>(this)->resolveHeader(Mod, Header, NeedsFramework);
   Mod->UnresolvedHeaders.clear();
 }
 
@@ -1323,7 +1346,10 @@ namespace clang {
 
     /// The current module map file.
     const FileEntry *ModuleMapFile;
-    
+
+    /// Source location of most recent parsed module declaration
+    SourceLocation CurrModuleDeclLoc;
+
     /// The directory that file names in this module map file should
     /// be resolved relative to.
     const DirectoryEntry *Directory;
@@ -1743,7 +1769,7 @@ void ModuleMapParser::parseModuleDecl() {
     HadError = true;
     return;
   }
-  consumeToken(); // 'module' keyword
+  CurrModuleDeclLoc = consumeToken(); // 'module' keyword
 
   // If we have a wildcard for the module name, this is an inferred submodule.
   // Parse it. 
@@ -2267,7 +2293,13 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
     }
   }
 
-  Map.addUnresolvedHeader(ActiveModule, std::move(Header));
+  bool NeedsFramework = false;
+  Map.addUnresolvedHeader(ActiveModule, std::move(Header), NeedsFramework);
+
+  if (NeedsFramework && ActiveModule)
+    Diags.Report(CurrModuleDeclLoc, diag::note_mmap_add_framework_keyword)
+      << ActiveModule->getFullModuleName()
+      << FixItHint::CreateReplacement(CurrModuleDeclLoc, "framework module");
 }
 
 static int compareModuleHeaders(const Module::Header *A,

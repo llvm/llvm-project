@@ -57,7 +57,7 @@
 
 #define _mm256_maskz_gf2p8affineinv_epi64_epi8(U, A, B, I) \
   (__m256i)_mm256_mask_gf2p8affineinv_epi64_epi8((__m256i)_mm256_setzero_si256(), \
-        U, A, B, I);
+        U, A, B, I)
 
 
 #define _mm512_gf2p8affineinv_epi64_epi8(A, B, I) \

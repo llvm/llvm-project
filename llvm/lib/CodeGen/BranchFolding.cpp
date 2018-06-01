@@ -164,7 +164,7 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
 
   // Remove the block.
   MF->erase(MBB);
-  FuncletMembership.erase(MBB);
+  EHScopeMembership.erase(MBB);
   if (MLI)
     MLI->removeBlock(MBB);
 }
@@ -199,8 +199,8 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
       MadeChange |= MBB.CorrectExtraCFGEdges(TBB, FBB, !Cond.empty());
   }
 
-  // Recalculate funclet membership.
-  FuncletMembership = getEHScopeMembership(MF);
+  // Recalculate EH scope membership.
+  EHScopeMembership = getEHScopeMembership(MF);
 
   bool MadeChangeThisIteration = true;
   while (MadeChangeThisIteration) {
@@ -475,11 +475,11 @@ MachineBasicBlock *BranchFolder::SplitMBBAt(MachineBasicBlock &CurMBB,
   if (UpdateLiveIns)
     computeAndAddLiveIns(LiveRegs, *NewMBB);
 
-  // Add the new block to the funclet.
-  const auto &FuncletI = FuncletMembership.find(&CurMBB);
-  if (FuncletI != FuncletMembership.end()) {
-    auto n = FuncletI->second;
-    FuncletMembership[NewMBB] = n;
+  // Add the new block to the EH scope.
+  const auto &EHScopeI = EHScopeMembership.find(&CurMBB);
+  if (EHScopeI != EHScopeMembership.end()) {
+    auto n = EHScopeI->second;
+    EHScopeMembership[NewMBB] = n;
   }
 
   return NewMBB;
@@ -626,7 +626,7 @@ static bool blockEndsInUnreachable(const MachineBasicBlock *MBB) {
 /// SuccBB          A common successor of MBB1, MBB2 which are in a canonical form
 ///                 relative to SuccBB
 /// PredBB          The layout predecessor of SuccBB, if any.
-/// FuncletMembership  map from block to funclet #.
+/// EHScopeMembership  map from block to EH scope #.
 /// AfterPlacement  True if we are merging blocks after layout. Stricter
 ///                 thresholds apply to prevent undoing tail-duplication.
 static bool
@@ -635,15 +635,15 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
                   MachineBasicBlock::iterator &I1,
                   MachineBasicBlock::iterator &I2, MachineBasicBlock *SuccBB,
                   MachineBasicBlock *PredBB,
-                  DenseMap<const MachineBasicBlock *, int> &FuncletMembership,
+                  DenseMap<const MachineBasicBlock *, int> &EHScopeMembership,
                   bool AfterPlacement) {
-  // It is never profitable to tail-merge blocks from two different funclets.
-  if (!FuncletMembership.empty()) {
-    auto Funclet1 = FuncletMembership.find(MBB1);
-    assert(Funclet1 != FuncletMembership.end());
-    auto Funclet2 = FuncletMembership.find(MBB2);
-    assert(Funclet2 != FuncletMembership.end());
-    if (Funclet1->second != Funclet2->second)
+  // It is never profitable to tail-merge blocks from two different EH scopes.
+  if (!EHScopeMembership.empty()) {
+    auto EHScope1 = EHScopeMembership.find(MBB1);
+    assert(EHScope1 != EHScopeMembership.end());
+    auto EHScope2 = EHScopeMembership.find(MBB2);
+    assert(EHScope2 != EHScopeMembership.end());
+    if (EHScope1->second != EHScope2->second)
       return false;
   }
 
@@ -743,7 +743,7 @@ unsigned BranchFolder::ComputeSameTails(unsigned CurHash,
                             MinCommonTailLength,
                             CommonTailLen, TrialBBI1, TrialBBI2,
                             SuccBB, PredBB,
-                            FuncletMembership,
+                            EHScopeMembership,
                             AfterBlockPlacement)) {
         if (CommonTailLen > maxCommonTailLength) {
           SameTails.clear();
@@ -1292,8 +1292,8 @@ bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
 
   // Make sure blocks are numbered in order
   MF.RenumberBlocks();
-  // Renumbering blocks alters funclet membership, recalculate it.
-  FuncletMembership = getEHScopeMembership(MF);
+  // Renumbering blocks alters EH scope membership, recalculate it.
+  EHScopeMembership = getEHScopeMembership(MF);
 
   for (MachineFunction::iterator I = std::next(MF.begin()), E = MF.end();
        I != E; ) {
@@ -1412,14 +1412,14 @@ ReoptimizeBlock:
   MachineFunction::iterator FallThrough = MBB->getIterator();
   ++FallThrough;
 
-  // Make sure MBB and FallThrough belong to the same funclet.
-  bool SameFunclet = true;
-  if (!FuncletMembership.empty() && FallThrough != MF.end()) {
-    auto MBBFunclet = FuncletMembership.find(MBB);
-    assert(MBBFunclet != FuncletMembership.end());
-    auto FallThroughFunclet = FuncletMembership.find(&*FallThrough);
-    assert(FallThroughFunclet != FuncletMembership.end());
-    SameFunclet = MBBFunclet->second == FallThroughFunclet->second;
+  // Make sure MBB and FallThrough belong to the same EH scope.
+  bool SameEHScope = true;
+  if (!EHScopeMembership.empty() && FallThrough != MF.end()) {
+    auto MBBEHScope = EHScopeMembership.find(MBB);
+    assert(MBBEHScope != EHScopeMembership.end());
+    auto FallThroughEHScope = EHScopeMembership.find(&*FallThrough);
+    assert(FallThroughEHScope != EHScopeMembership.end());
+    SameEHScope = MBBEHScope->second == FallThroughEHScope->second;
   }
 
   // If this block is empty, make everyone use its fall-through, not the block
@@ -1427,7 +1427,7 @@ ReoptimizeBlock:
   // points to this block.  Blocks with their addresses taken shouldn't be
   // optimized away.
   if (IsEmptyBlock(MBB) && !MBB->isEHPad() && !MBB->hasAddressTaken() &&
-      SameFunclet) {
+      SameEHScope) {
     salvageDebugInfoFromEmptyBlock(TII, *MBB);
     // Dead block?  Leave for cleanup later.
     if (MBB->pred_empty()) return MadeChange;

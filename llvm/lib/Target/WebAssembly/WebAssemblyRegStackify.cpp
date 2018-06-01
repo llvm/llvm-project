@@ -160,10 +160,9 @@ static void QueryCallee(const MachineInstr &MI, unsigned CalleeOpNo, bool &Read,
 // and/or uses the stack pointer value.
 static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
                   bool &Write, bool &Effects, bool &StackPointer) {
-  assert(!MI.isPosition());
   assert(!MI.isTerminator());
 
-  if (MI.isDebugInstr())
+  if (MI.isDebugInstr() || MI.isPosition())
     return;
 
   // Check for loads.

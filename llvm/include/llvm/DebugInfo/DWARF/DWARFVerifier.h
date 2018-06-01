@@ -242,7 +242,7 @@ private:
                                     const DWARFDebugNames::Abbrev &Abbr,
                                     DWARFDebugNames::AttributeEncoding AttrEnc);
   unsigned verifyNameIndexEntries(const DWARFDebugNames::NameIndex &NI,
-                                  uint32_t Name, const DataExtractor &StrData);
+                                  const DWARFDebugNames::NameTableEntry &NTE);
   unsigned verifyNameIndexCompleteness(const DWARFDie &Die,
                                        const DWARFDebugNames::NameIndex &NI);
 

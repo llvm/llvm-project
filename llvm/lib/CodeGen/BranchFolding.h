@@ -75,7 +75,7 @@ class TargetRegisterInfo;
 
     std::vector<MergePotentialsElt> MergePotentials;
     SmallPtrSet<const MachineBasicBlock*, 2> TriedMerging;
-    DenseMap<const MachineBasicBlock *, int> FuncletMembership;
+    DenseMap<const MachineBasicBlock *, int> EHScopeMembership;
 
     class SameTailElt {
       MPIterator MPIter;

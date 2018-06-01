@@ -353,6 +353,7 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeDWARFDebugLoc:
           case eSectionTypeDWARFDebugMacInfo:
           case eSectionTypeDWARFDebugMacro:
+          case eSectionTypeDWARFDebugNames:
           case eSectionTypeDWARFDebugPubNames:
           case eSectionTypeDWARFDebugPubTypes:
           case eSectionTypeDWARFDebugRanges:

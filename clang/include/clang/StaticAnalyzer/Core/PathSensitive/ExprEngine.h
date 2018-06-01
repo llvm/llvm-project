@@ -753,68 +753,48 @@ private:
   /// determine the region into which an object will be constructed by \p CE.
   /// When the lookahead fails, a temporary region is returned, and the
   /// IsConstructorWithImproperlyModeledTargetRegion flag is set in \p CallOpts.
-  const MemRegion *getRegionForConstructedObject(const CXXConstructExpr *CE,
-                                                 ExplodedNode *Pred,
-                                                 const ConstructionContext *CC,
-                                                 EvalCallOptions &CallOpts);
+  SVal getLocationForConstructedObject(const CXXConstructExpr *CE,
+                                       ExplodedNode *Pred,
+                                       const ConstructionContext *CC,
+                                       EvalCallOptions &CallOpts);
 
-  /// Store the region of a C++ temporary object corresponding to a
-  /// CXXBindTemporaryExpr for later destruction.
-  static ProgramStateRef addInitializedTemporary(
-      ProgramStateRef State, const CXXBindTemporaryExpr *BTE,
-      const LocationContext *LC, const CXXTempObjectRegion *R);
+  /// Store the location of a C++ object corresponding to a statement
+  /// until the statement is actually encountered. For example, if a DeclStmt
+  /// has CXXConstructExpr as its initializer, the object would be considered
+  /// to be "under construction" between CXXConstructExpr and DeclStmt.
+  /// This allows, among other things, to keep bindings to variable's fields
+  /// made within the constructor alive until its declaration actually
+  /// goes into scope.
+  static ProgramStateRef addObjectUnderConstruction(
+      ProgramStateRef State, const Stmt *S,
+      const LocationContext *LC, SVal V);
 
-  /// Check if all initialized temporary regions are clear for the given
-  /// context range (including FromLC, not including ToLC).
+  /// Mark the object sa fully constructed, cleaning up the state trait
+  /// that tracks objects under construction.
+  static ProgramStateRef finishObjectConstruction(ProgramStateRef State,
+                                                  const Stmt *S,
+                                                  const LocationContext *LC);
+
+  /// If the given statement corresponds to an object under construction,
+  /// being part of its construciton context, retrieve that object's location.
+  static Optional<SVal> getObjectUnderConstruction(ProgramStateRef State,
+                                                   const Stmt *S,
+                                                   const LocationContext *LC);
+
+  /// Check if all objects under construction have been fully constructed
+  /// for the given context range (including FromLC, not including ToLC).
   /// This is useful for assertions.
-  static bool areInitializedTemporariesClear(ProgramStateRef State,
-                                             const LocationContext *FromLC,
-                                             const LocationContext *ToLC);
-
-  /// Store the region of a C++ temporary object corresponding to a
-  /// CXXBindTemporaryExpr for later destruction.
-  static ProgramStateRef addTemporaryMaterialization(
-      ProgramStateRef State, const MaterializeTemporaryExpr *MTE,
-      const LocationContext *LC, const CXXTempObjectRegion *R);
-
-  /// Check if all temporary materialization regions are clear for the given
-  /// context range (including FromLC, not including ToLC).
-  /// This is useful for assertions.
-  static bool areTemporaryMaterializationsClear(ProgramStateRef State,
-                                                const LocationContext *FromLC,
-                                                const LocationContext *ToLC);
+  static bool areAllObjectsFullyConstructed(ProgramStateRef State,
+                                            const LocationContext *FromLC,
+                                            const LocationContext *ToLC);
 
   /// Adds an initialized temporary and/or a materialization, whichever is
   /// necessary, by looking at the whole construction context. Handles
   /// function return values, which need the construction context of the parent
   /// stack frame, automagically.
-  ProgramStateRef addAllNecessaryTemporaryInfo(
+  ProgramStateRef markStatementsCorrespondingToConstructedObject(
       ProgramStateRef State, const ConstructionContext *CC,
-      const LocationContext *LC, const MemRegion *R);
-
-  /// Store the region returned by operator new() so that the constructor
-  /// that follows it knew what location to initialize. The value should be
-  /// cleared once the respective CXXNewExpr CFGStmt element is processed.
-  static ProgramStateRef
-  setCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
-                          const LocationContext *CallerLC, SVal V);
-
-  /// Retrieve the location returned by the current operator new().
-  static SVal
-  getCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
-                          const LocationContext *CallerLC);
-
-  /// Clear the location returned by the respective operator new(). This needs
-  /// to be done as soon as CXXNewExpr CFG block is evaluated.
-  static ProgramStateRef
-  clearCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
-                            const LocationContext *CallerLC);
-
-  /// Check if all allocator values are clear for the given context range
-  /// (including FromLC, not including ToLC). This is useful for assertions.
-  static bool areCXXNewAllocatorValuesClear(ProgramStateRef State,
-                                            const LocationContext *FromLC,
-                                            const LocationContext *ToLC);
+      const LocationContext *LC, SVal V);
 };
 
 /// Traits for storing the call processing policy inside GDM.

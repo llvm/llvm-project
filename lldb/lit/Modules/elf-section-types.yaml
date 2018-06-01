@@ -14,6 +14,11 @@
 # CHECK-NEXT: VM size: 0
 # CHECK-NEXT: File size: 8
 
+# CHECK: Name: .debug_names
+# CHECK-NEXT: Type: dwarf-names
+# CHECK-NEXT: VM size: 0
+# CHECK-NEXT: File size: 8
+
 # CHECK: Name: .gnu_debugaltlink
 # CHECK-NEXT: Type: dwarf-gnu-debugaltlink
 # CHECK-NEXT: VM size: 0
@@ -39,6 +44,10 @@ Sections:
     AddressAlign:    0x0000000000000001
     Content:         DEADBEEFBAADF00D
   - Name:            .debug_types
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_names
     Type:            SHT_PROGBITS
     AddressAlign:    0x0000000000000001
     Content:         DEADBEEFBAADF00D

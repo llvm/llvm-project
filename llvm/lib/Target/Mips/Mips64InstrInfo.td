@@ -323,9 +323,10 @@ let AdditionalPredicates = [NotInMicroMips] in {
              ISA_MIPS64R2;
   def DSHD : SubwordSwap<"dshd", GPR64Opnd, II_DSHD>, SEB_FM<5, 0x24>,
              ISA_MIPS64R2;
+
+  def LEA_ADDiu64 : EffectiveAddress<"daddiu", GPR64Opnd>, LW_FM<0x19>;
 }
 
-def LEA_ADDiu64 : EffectiveAddress<"daddiu", GPR64Opnd>, LW_FM<0x19>;
 
 let isCodeGenOnly = 1 in
 def RDHWR64 : ReadHardware<GPR64Opnd, HWRegsOpnd>, RDHWR_FM;

@@ -447,6 +447,7 @@ int main(int argc, char **argv) {
   initializePostInlineEntryExitInstrumenterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeExpandReductionsPass(Registry);
+  initializeWasmEHPreparePass(Registry);
   initializeWriteBitcodePassPass(Registry);
 
 #ifdef LINK_POLLY_INTO_TOOLS

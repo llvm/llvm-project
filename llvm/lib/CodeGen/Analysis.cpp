@@ -629,9 +629,9 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
   return true;
 }
 
-static void
-collectEHScopeMembers(DenseMap<const MachineBasicBlock *, int> &ScopeMembership,
-                      int Scope, const MachineBasicBlock *MBB) {
+static void collectEHScopeMembers(
+    DenseMap<const MachineBasicBlock *, int> &EHScopeMembership, int EHScope,
+    const MachineBasicBlock *MBB) {
   SmallVector<const MachineBasicBlock *, 16> Worklist = {MBB};
   while (!Worklist.empty()) {
     const MachineBasicBlock *Visiting = Worklist.pop_back_val();
@@ -640,11 +640,11 @@ collectEHScopeMembers(DenseMap<const MachineBasicBlock *, int> &ScopeMembership,
       continue;
 
     // Add this MBB to our scope.
-    auto P = ScopeMembership.insert(std::make_pair(Visiting, Scope));
+    auto P = EHScopeMembership.insert(std::make_pair(Visiting, EHScope));
 
     // Don't revisit blocks.
     if (!P.second) {
-      assert(P.first->second == Scope && "MBB is part of two scopes!");
+      assert(P.first->second == EHScope && "MBB is part of two scopes!");
       continue;
     }
 
@@ -660,24 +660,24 @@ collectEHScopeMembers(DenseMap<const MachineBasicBlock *, int> &ScopeMembership,
 
 DenseMap<const MachineBasicBlock *, int>
 llvm::getEHScopeMembership(const MachineFunction &MF) {
-  DenseMap<const MachineBasicBlock *, int> ScopeMembership;
+  DenseMap<const MachineBasicBlock *, int> EHScopeMembership;
 
   // We don't have anything to do if there aren't any EH pads.
   if (!MF.hasEHScopes())
-    return ScopeMembership;
+    return EHScopeMembership;
 
   int EntryBBNumber = MF.front().getNumber();
   bool IsSEH = isAsynchronousEHPersonality(
       classifyEHPersonality(MF.getFunction().getPersonalityFn()));
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  SmallVector<const MachineBasicBlock *, 16> ScopeBlocks;
+  SmallVector<const MachineBasicBlock *, 16> EHScopeBlocks;
   SmallVector<const MachineBasicBlock *, 16> UnreachableBlocks;
   SmallVector<const MachineBasicBlock *, 16> SEHCatchPads;
   SmallVector<std::pair<const MachineBasicBlock *, int>, 16> CatchRetSuccessors;
   for (const MachineBasicBlock &MBB : MF) {
     if (MBB.isEHScopeEntry()) {
-      ScopeBlocks.push_back(&MBB);
+      EHScopeBlocks.push_back(&MBB);
     } else if (IsSEH && MBB.isEHPad()) {
       SEHCatchPads.push_back(&MBB);
     } else if (MBB.pred_empty()) {
@@ -700,24 +700,24 @@ llvm::getEHScopeMembership(const MachineFunction &MF) {
   }
 
   // We don't have anything to do if there aren't any EH pads.
-  if (ScopeBlocks.empty())
-    return ScopeMembership;
+  if (EHScopeBlocks.empty())
+    return EHScopeMembership;
 
   // Identify all the basic blocks reachable from the function entry.
-  collectEHScopeMembers(ScopeMembership, EntryBBNumber, &MF.front());
+  collectEHScopeMembers(EHScopeMembership, EntryBBNumber, &MF.front());
   // All blocks not part of a scope are in the parent function.
   for (const MachineBasicBlock *MBB : UnreachableBlocks)
-    collectEHScopeMembers(ScopeMembership, EntryBBNumber, MBB);
+    collectEHScopeMembers(EHScopeMembership, EntryBBNumber, MBB);
   // Next, identify all the blocks inside the scopes.
-  for (const MachineBasicBlock *MBB : ScopeBlocks)
-    collectEHScopeMembers(ScopeMembership, MBB->getNumber(), MBB);
+  for (const MachineBasicBlock *MBB : EHScopeBlocks)
+    collectEHScopeMembers(EHScopeMembership, MBB->getNumber(), MBB);
   // SEH CatchPads aren't really scopes, handle them separately.
   for (const MachineBasicBlock *MBB : SEHCatchPads)
-    collectEHScopeMembers(ScopeMembership, EntryBBNumber, MBB);
+    collectEHScopeMembers(EHScopeMembership, EntryBBNumber, MBB);
   // Finally, identify all the targets of a catchret.
   for (std::pair<const MachineBasicBlock *, int> CatchRetPair :
        CatchRetSuccessors)
-    collectEHScopeMembers(ScopeMembership, CatchRetPair.second,
+    collectEHScopeMembers(EHScopeMembership, CatchRetPair.second,
                           CatchRetPair.first);
-  return ScopeMembership;
+  return EHScopeMembership;
 }
