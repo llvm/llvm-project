@@ -84,6 +84,51 @@ def sve_logical_imm32 : Operand<i64> {
   }];
 }
 
+class SVEPreferredLogicalImmOperand<int Width> : AsmOperandClass {
+  let Name = "SVEPreferredLogicalImm" # Width;
+  let PredicateMethod = "isSVEPreferredLogicalImm<int" # Width # "_t>";
+  let RenderMethod = "addLogicalImmOperands<int" # Width # "_t>";
+}
+
+def sve_preferred_logical_imm16 : Operand<i64> {
+  let ParserMatchClass = SVEPreferredLogicalImmOperand<16>;
+  let PrintMethod = "printSVELogicalImm<int16_t>";
+
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm())
+      return false;
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements<int16_t>(Val) &&
+           AArch64_AM::isSVEMoveMaskPreferredLogicalImmediate(Val);
+  }];
+}
+
+def sve_preferred_logical_imm32 : Operand<i64> {
+  let ParserMatchClass =  SVEPreferredLogicalImmOperand<32>;
+  let PrintMethod = "printSVELogicalImm<int32_t>";
+
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm())
+      return false;
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements<int32_t>(Val) &&
+           AArch64_AM::isSVEMoveMaskPreferredLogicalImmediate(Val);
+  }];
+}
+
+def sve_preferred_logical_imm64 : Operand<i64> {
+  let ParserMatchClass = SVEPreferredLogicalImmOperand<64>;
+  let PrintMethod = "printSVELogicalImm<int64_t>";
+
+  let MCOperandPredicate = [{
+    if (!MCOp.isImm())
+      return false;
+    int64_t Val = AArch64_AM::decodeLogicalImmediate(MCOp.getImm(), 64);
+    return AArch64_AM::isSVEMaskOfIdenticalElements<int64_t>(Val) &&
+           AArch64_AM::isSVEMoveMaskPreferredLogicalImmediate(Val);
+  }];
+}
+
 class SVELogicalImmNotOperand<int Width> : AsmOperandClass {
   let Name = "SVELogicalImm" # Width # "Not";
   let DiagnosticType = "LogicalSecondSource";
@@ -277,6 +322,40 @@ multiclass sve_int_log_imm<bits<2> opc, string asm, string alias> {
                   (!cast<Instruction>(NAME) ZPR32:$Zdn, sve_logical_imm32_not:$imm), 0>;
   def : InstAlias<alias # "\t$Zdn, $Zdn, $imm",
                   (!cast<Instruction>(NAME) ZPR64:$Zdn, logical_imm64_not:$imm), 0>;
+}
+
+class sve_int_dup_mask_imm<string asm>
+: I<(outs ZPR64:$Zd), (ins logical_imm64:$imms),
+  asm, "\t$Zd, $imms",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<13> imms;
+  let Inst{31-18} = 0b00000101110000;
+  let Inst{17-5} = imms;
+  let Inst{4-0} = Zd;
+
+  let isReMaterializable = 1;
+  let DecoderMethod = "DecodeSVELogicalImmInstruction";
+}
+
+multiclass sve_int_dup_mask_imm<string asm> {
+  def NAME : sve_int_dup_mask_imm<asm>;
+
+  def : InstAlias<"dupm $Zd, $imm",
+                  (!cast<Instruction>(NAME) ZPR8:$Zd, sve_logical_imm8:$imm), 4>;
+  def : InstAlias<"dupm $Zd, $imm",
+                  (!cast<Instruction>(NAME) ZPR16:$Zd, sve_logical_imm16:$imm), 3>;
+  def : InstAlias<"dupm $Zd, $imm",
+                  (!cast<Instruction>(NAME) ZPR32:$Zd, sve_logical_imm32:$imm), 2>;
+
+  // All Zd.b forms have a CPY/DUP equivalent, hence no byte alias here.
+  def : InstAlias<"mov $Zd, $imm",
+                  (!cast<Instruction>(NAME) ZPR16:$Zd, sve_preferred_logical_imm16:$imm), 7>;
+  def : InstAlias<"mov $Zd, $imm",
+                  (!cast<Instruction>(NAME) ZPR32:$Zd, sve_preferred_logical_imm32:$imm), 6>;
+  def : InstAlias<"mov $Zd, $imm",
+                  (!cast<Instruction>(NAME) ZPR64:$Zd, sve_preferred_logical_imm64:$imm), 5>;
 }
 
 //===----------------------------------------------------------------------===//

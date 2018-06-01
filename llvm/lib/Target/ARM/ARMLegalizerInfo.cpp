@@ -101,7 +101,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       setAction({Op, s32}, Libcall);
   }
 
-  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT}).legalFor({s32});
+  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
+      .legalForCartesianProduct({s32}, {s1, s8, s16});
 
   getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
   getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{s32, p0}});
@@ -172,8 +173,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     else
       setFCmpLibcallsGNU();
 
-    getActionDefinitionsBuilder(G_FPEXT).libcallFor({s64, s32});
-    getActionDefinitionsBuilder(G_FPTRUNC).libcallFor({s32, s64});
+    getActionDefinitionsBuilder(G_FPEXT).libcallFor({{s64, s32}});
+    getActionDefinitionsBuilder(G_FPTRUNC).libcallFor({{s32, s64}});
 
     getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
         .libcallForCartesianProduct({s32}, {s32, s64});
@@ -189,6 +190,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
 
   computeTables();
+  verify(*ST.getInstrInfo());
 }
 
 void ARMLegalizerInfo::setFCmpLibcallsAEABI() {

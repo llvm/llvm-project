@@ -474,7 +474,7 @@ static void printSyncScope(raw_ostream &OS, const LLVMContext &Context,
       Context.getSyncScopeNames(SSNs);
 
     OS << "syncscope(\"";
-    PrintEscapedString(SSNs[SSID], OS);
+    printEscapedString(SSNs[SSID], OS);
     OS << "\") ";
     break;
   }

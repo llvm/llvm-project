@@ -1587,8 +1587,15 @@ void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
 
   // Emit target predicates.
   emitSchedModelHelpersImpl(OS);
+  
+  OS << "} // " << ClassName << "::resolveSchedClass\n\n";
 
-  OS << "} // " << ClassName << "::resolveSchedClass\n";
+  OS << "unsigned " << ClassName
+     << "\n::resolveVariantSchedClass(unsigned SchedClass, const MCInst *MI,"
+     << " unsigned CPUID) const {\n"
+     << "  return " << Target << "_MC"
+     << "::resolveVariantSchedClassImpl(SchedClass, MI, CPUID);\n"
+     << "} // " << ClassName << "::resolveVariantSchedClass\n";
 }
 
 void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
@@ -1655,6 +1662,13 @@ void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS,
 }
 
 void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
+  OS << "namespace " << Target << "_MC {\n"
+     << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,\n"
+     << "    const MCInst *MI, unsigned CPUID) {\n";
+  emitSchedModelHelpersImpl(OS, /* OnlyExpandMCPredicates */ true);
+  OS << "}\n";
+  OS << "} // end of namespace " << Target << "_MC\n\n";
+
   OS << "struct " << Target
      << "GenMCSubtargetInfo : public MCSubtargetInfo {\n";
   OS << "  " << Target << "GenMCSubtargetInfo(const Triple &TT, \n"
@@ -1668,8 +1682,9 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "      MCSubtargetInfo(TT, CPU, FS, PF, PD, ProcSched,\n"
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
-     << "      const MCInst *MI, unsigned CPUID) const override {\n";
-  emitSchedModelHelpersImpl(OS, /* OnlyExpandMCPredicates */ true);
+     << "      const MCInst *MI, unsigned CPUID) const override {\n"
+     << "    return " << Target << "_MC"
+     << "::resolveVariantSchedClassImpl(SchedClass, MI, CPUID); \n";
   OS << "  }\n";
   OS << "};\n";
 }
@@ -1754,6 +1769,10 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   std::string ClassName = Target + "GenSubtargetInfo";
   OS << "namespace llvm {\n";
   OS << "class DFAPacketizer;\n";
+  OS << "namespace " << Target << "_MC {\n"
+     << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,"
+     << " const MCInst *MI, unsigned CPUID);\n"
+     << "}\n\n";
   OS << "struct " << ClassName << " : public TargetSubtargetInfo {\n"
      << "  explicit " << ClassName << "(const Triple &TT, StringRef CPU, "
      << "StringRef FS);\n"
@@ -1761,6 +1780,8 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << "  unsigned resolveSchedClass(unsigned SchedClass, "
      << " const MachineInstr *DefMI,"
      << " const TargetSchedModel *SchedModel) const override;\n"
+     << "  unsigned resolveVariantSchedClass(unsigned SchedClass,"
+     << " const MCInst *MI, unsigned CPUID) const override;\n"
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
      << " const;\n";
   if (TGT.getHwModes().getNumModeIds() > 1)

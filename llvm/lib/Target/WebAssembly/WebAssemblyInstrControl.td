@@ -140,9 +140,25 @@ def TRY     : I<(outs), (ins Signature:$sig), [], "try     \t$sig", 0x06>;
 def END_TRY : I<(outs), (ins), [], "end_try", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
 
-} // Defs = [ARGUMENTS]
+// Catching an exception: catch / catch_all
+let hasCtrlDep = 1 in {
+def CATCH_I32 : I<(outs I32:$dst), (ins i32imm:$tag),
+                  [(set I32:$dst, (int_wasm_catch imm:$tag))],
+                  "i32.catch   \t$dst, $tag", 0x07>;
+def CATCH_I64 : I<(outs I64:$dst), (ins i32imm:$tag),
+                  [(set I64:$dst, (int_wasm_catch imm:$tag))],
+                  "i64.catch   \t$dst, $tag", 0x07>;
+def CATCH_ALL : I<(outs), (ins), [], "catch_all", 0x05>;
+}
 
-// rethrow takes a relative depth as an argument, for which currently only 0 is
-// possible for C++. Once other languages need depths other than 0, depths will
-// be computed in CFGStackify.
-def : Pat<(int_wasm_rethrow), (RETHROW 0)>;
+// Pseudo instructions: cleanupret / catchret
+// They are not return instructions in wasm, but setting 'isReturn' to true as
+// in X86 is necessary for computing funclet membership.
+let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
+    isCodeGenOnly = 1, isReturn = 1 in {
+  def CLEANUPRET : I<(outs), (ins), [(cleanupret)], "", 0>;
+  def CATCHRET : I<(outs), (ins bb_op:$dst, bb_op:$from),
+                   [(catchret bb:$dst, bb:$from)], "", 0>;
+}
+
+} // Defs = [ARGUMENTS]

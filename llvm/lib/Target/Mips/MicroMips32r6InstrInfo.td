@@ -1692,6 +1692,14 @@ def : MipsInstAlias<"negu $rt, $rs",
 def : MipsInstAlias<"negu $rt",
                     (SUBU_MMR6 GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>,
       ISA_MICROMIPS32R6;
+def : MipsInstAlias<"beqz16 $rs, $offset", (BEQZC16_MMR6 GPRMM16Opnd:$rs,
+                                                         brtarget7_mm:$offset),
+                    0>, ISA_MICROMIPS32R6;
+def : MipsInstAlias<"bnez16 $rs, $offset", (BNEZC16_MMR6 GPRMM16Opnd:$rs,
+                                                         brtarget7_mm:$offset),
+                    0>, ISA_MICROMIPS32R6;
+def : MipsInstAlias<"b16 $offset", (BC16_MMR6 brtarget10_mm:$offset), 0>,
+                    ISA_MICROMIPS32R6;
 
 //===----------------------------------------------------------------------===//
 //

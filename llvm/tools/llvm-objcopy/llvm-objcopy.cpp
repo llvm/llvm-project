@@ -582,7 +582,8 @@ CopyConfig ParseStripOptions(ArrayRef<const char *> ArgsArr) {
 
   CopyConfig Config;
   Config.InputFilename = Positional[0];
-  Config.OutputFilename = Positional[0];
+  Config.OutputFilename =
+      InputArgs.getLastArgValue(STRIP_output, Positional[0]);
 
   // Strip debug info only.
   Config.StripDebug = InputArgs.hasArg(STRIP_strip_debug);

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -64,6 +65,26 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
   llvm_unreachable("unsupported variant scheduling class");
 }
 
+int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
+                                      const MCInstrInfo &MCII,
+                                      const MCInst &Inst) const {
+  unsigned SchedClass = MCII.get(Inst.getOpcode()).getSchedClass();
+  const MCSchedClassDesc *SCDesc = getSchedClassDesc(SchedClass);
+  if (!SCDesc->isValid())
+    return 0;
+
+  unsigned CPUID = getProcessorID();
+  while (SCDesc->isVariant()) {
+    SchedClass = STI.resolveVariantSchedClass(SchedClass, &Inst, CPUID);
+    SCDesc = getSchedClassDesc(SchedClass);
+  }
+
+  if (SchedClass)
+    return MCSchedModel::computeInstrLatency(STI, *SCDesc);
+
+  llvm_unreachable("unsupported variant scheduling class");
+}
+
 Optional<double>
 MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
                                       const MCSchedClassDesc &SCDesc) {
@@ -79,6 +100,28 @@ MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
     Throughput = Throughput ? std::min(Throughput.getValue(), Temp) : Temp;
   }
   return Throughput ? 1 / Throughput.getValue() : Throughput;
+}
+
+Optional<double>
+MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
+                                      const MCInstrInfo &MCII,
+                                      const MCInst &Inst) const {
+  Optional<double> Throughput;
+  unsigned SchedClass = MCII.get(Inst.getOpcode()).getSchedClass();
+  const MCSchedClassDesc *SCDesc = getSchedClassDesc(SchedClass);
+  if (!SCDesc->isValid())
+    return Throughput;
+
+  unsigned CPUID = getProcessorID();
+  while (SCDesc->isVariant()) {
+    SchedClass = STI.resolveVariantSchedClass(SchedClass, &Inst, CPUID);
+    SCDesc = getSchedClassDesc(SchedClass);
+  }
+
+  if (SchedClass)
+    return MCSchedModel::getReciprocalThroughput(STI, *SCDesc);
+
+  llvm_unreachable("unsupported variant scheduling class");
 }
 
 Optional<double>

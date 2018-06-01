@@ -49,12 +49,17 @@ static cl::opt<bool> DisableCleanups(
     cl::desc("Do not remove implausible terminators or other similar cleanups"),
     cl::init(false));
 
+static cl::opt<bool> DemoteCatchSwitchPHIOnlyOpt(
+    "demote-catchswitch-only", cl::Hidden,
+    cl::desc("Demote catchswitch BBs only (for wasm EH)"), cl::init(false));
+
 namespace {
   
 class WinEHPrepare : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
-  WinEHPrepare() : FunctionPass(ID) {}
+  WinEHPrepare(bool DemoteCatchSwitchPHIOnly = false)
+      : FunctionPass(ID), DemoteCatchSwitchPHIOnly(DemoteCatchSwitchPHIOnly) {}
 
   bool runOnFunction(Function &Fn) override;
 
@@ -77,11 +82,13 @@ private:
   bool prepareExplicitEH(Function &F);
   void colorFunclets(Function &F);
 
-  void demotePHIsOnFunclets(Function &F);
+  void demotePHIsOnFunclets(Function &F, bool DemoteCatchSwitchPHIOnly);
   void cloneCommonBlocks(Function &F);
   void removeImplausibleInstructions(Function &F);
   void cleanupPreparedFunclets(Function &F);
   void verifyPreparedFunclets(Function &F);
+
+  bool DemoteCatchSwitchPHIOnly;
 
   // All fields are reset by runOnFunction.
   EHPersonality Personality = EHPersonality::Unknown;
@@ -97,7 +104,9 @@ char WinEHPrepare::ID = 0;
 INITIALIZE_PASS(WinEHPrepare, DEBUG_TYPE, "Prepare Windows exceptions",
                 false, false)
 
-FunctionPass *llvm::createWinEHPass() { return new WinEHPrepare(); }
+FunctionPass *llvm::createWinEHPass(bool DemoteCatchSwitchPHIOnly) {
+  return new WinEHPrepare(DemoteCatchSwitchPHIOnly);
+}
 
 bool WinEHPrepare::runOnFunction(Function &Fn) {
   if (!Fn.hasPersonalityFn())
@@ -678,13 +687,17 @@ void WinEHPrepare::colorFunclets(Function &F) {
   }
 }
 
-void WinEHPrepare::demotePHIsOnFunclets(Function &F) {
+void WinEHPrepare::demotePHIsOnFunclets(Function &F,
+                                        bool DemoteCatchSwitchPHIOnly) {
   // Strip PHI nodes off of EH pads.
   SmallVector<PHINode *, 16> PHINodes;
   for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE;) {
     BasicBlock *BB = &*FI++;
     if (!BB->isEHPad())
       continue;
+    if (DemoteCatchSwitchPHIOnly && !isa<CatchSwitchInst>(BB->getFirstNonPHI()))
+      continue;
+
     for (BasicBlock::iterator BI = BB->begin(), BE = BB->end(); BI != BE;) {
       Instruction *I = &*BI++;
       auto *PN = dyn_cast<PHINode>(I);
@@ -1032,7 +1045,8 @@ bool WinEHPrepare::prepareExplicitEH(Function &F) {
   cloneCommonBlocks(F);
 
   if (!DisableDemotion)
-    demotePHIsOnFunclets(F);
+    demotePHIsOnFunclets(F, DemoteCatchSwitchPHIOnly ||
+                                DemoteCatchSwitchPHIOnlyOpt);
 
   if (!DisableCleanups) {
     LLVM_DEBUG(verifyFunction(F));

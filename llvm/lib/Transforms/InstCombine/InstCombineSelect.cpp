@@ -1164,6 +1164,11 @@ static Instruction *foldAddSubSelect(SelectInst &SI,
 }
 
 Instruction *InstCombiner::foldSelectExtConst(SelectInst &Sel) {
+  Constant *C;
+  if (!match(Sel.getTrueValue(), m_Constant(C)) &&
+      !match(Sel.getFalseValue(), m_Constant(C)))
+    return nullptr;
+
   Instruction *ExtInst;
   if (!match(Sel.getTrueValue(), m_Instruction(ExtInst)) &&
       !match(Sel.getFalseValue(), m_Instruction(ExtInst)))
@@ -1173,20 +1178,18 @@ Instruction *InstCombiner::foldSelectExtConst(SelectInst &Sel) {
   if (ExtOpcode != Instruction::ZExt && ExtOpcode != Instruction::SExt)
     return nullptr;
 
-  // TODO: Handle larger types? That requires adjusting FoldOpIntoSelect too.
+  // If we are extending from a boolean type or if we can create a select that
+  // has the same size operands as its condition, try to narrow the select.
   Value *X = ExtInst->getOperand(0);
   Type *SmallType = X->getType();
-  if (!SmallType->isIntOrIntVectorTy(1))
-    return nullptr;
-
-  Constant *C;
-  if (!match(Sel.getTrueValue(), m_Constant(C)) &&
-      !match(Sel.getFalseValue(), m_Constant(C)))
+  Value *Cond = Sel.getCondition();
+  auto *Cmp = dyn_cast<CmpInst>(Cond);
+  if (!SmallType->isIntOrIntVectorTy(1) &&
+      (!Cmp || Cmp->getOperand(0)->getType() != SmallType))
     return nullptr;
 
   // If the constant is the same after truncation to the smaller type and
   // extension to the original type, we can narrow the select.
-  Value *Cond = Sel.getCondition();
   Type *SelType = Sel.getType();
   Constant *TruncC = ConstantExpr::getTrunc(C, SmallType);
   Constant *ExtC = ConstantExpr::getCast(ExtOpcode, TruncC, SelType);

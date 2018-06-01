@@ -137,7 +137,7 @@ json::Expr toJSON(const TextEdit &P) {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const TextEdit &TE) {
   OS << TE.range << " => \"";
-  PrintEscapedString(TE.newText, OS);
+  printEscapedString(TE.newText, OS);
   return OS << '"';
 }
 

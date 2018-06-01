@@ -156,6 +156,9 @@ defm : HWWriteResPair<WriteIDiv32, [HWPort0, HWDivider], 25, [1,10], 1, 4>;
 defm : HWWriteResPair<WriteIDiv64, [HWPort0, HWDivider], 25, [1,10], 1, 4>;
 
 // Scalar and vector floating point.
+defm : X86WriteRes<WriteFLD0,          [HWPort01], 1, [1], 1>;
+defm : X86WriteRes<WriteFLD1,          [HWPort01], 1, [2], 2>;
+defm : X86WriteRes<WriteFLDC,          [HWPort01], 1, [2], 2>;
 defm : X86WriteRes<WriteFLoad,         [HWPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteFLoadX,        [HWPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteFLoadY,        [HWPort23], 7, [1], 1>;
@@ -656,12 +659,6 @@ def : InstRW<[HWWriteFBLD], (instregex "FBLDm")>;
 // FST(P).
 // r.
 def : InstRW<[HWWriteP01], (instregex "ST_(F|FP)rr")>;
-
-// FLDZ.
-def : InstRW<[HWWriteP01], (instregex "LD_F0")>;
-
-// FLDPI FLDL2E etc.
-def : InstRW<[HWWrite2P01], (instregex "FLDPI", "FLDL2(T|E)", "FLDL(G|N)2")>;
 
 // FFREE.
 def : InstRW<[HWWriteP01], (instregex "FFREE")>;

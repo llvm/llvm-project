@@ -1,0 +1,25 @@
+malloc 0 1
+malloc 1 1
+
+malloc 2 1
+malloc 2 2
+malloc 2 4
+
+malloc 3 1
+malloc 3 2
+malloc 3 4
+
+malloc 128 1
+malloc 128 2
+malloc 128 4
+malloc 128 128
+
+malloc 2048 1
+malloc 2048 2
+malloc 2048 4
+
+malloc 3968 1
+malloc 3968 2
+malloc 3968 4
+
+malloc 0 1
