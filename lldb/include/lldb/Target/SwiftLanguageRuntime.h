@@ -206,7 +206,6 @@ public:
     struct SwiftPureNativeError {
     public:
       lldb::addr_t metadata_location;
-      lldb::addr_t witness_table_location;
       lldb::addr_t payload_ptr;
     };
 

@@ -1601,8 +1601,6 @@ bool SwiftLanguageRuntime::IsValidErrorValue(
           SwiftErrorDescriptor::Kind::eSwiftPureNative;
       out_error_descriptor->m_pure_native.metadata_location =
           metadata_ptr_value;
-      out_error_descriptor->m_pure_native.witness_table_location =
-          witness_table_ptr_value;
       out_error_descriptor->m_pure_native.payload_ptr = payload_location;
     }
   }
