@@ -164,18 +164,16 @@ bool ResourceManager::canBeIssued(const InstrDesc &Desc) const {
 bool ResourceManager::mustIssueImmediately(const InstrDesc &Desc) {
   if (!canBeIssued(Desc))
     return false;
-  bool AllInOrderResources = std::all_of(
-      Desc.Buffers.begin(), Desc.Buffers.end(), [&](const unsigned BufferMask) {
-        const ResourceState &Resource = *Resources[BufferMask];
-        return Resource.isInOrder() || Resource.isADispatchHazard();
-      });
+  bool AllInOrderResources = all_of(Desc.Buffers, [&](uint64_t BufferMask) {
+    const ResourceState &Resource = *Resources[BufferMask];
+    return Resource.isInOrder() || Resource.isADispatchHazard();
+  });
   if (!AllInOrderResources)
     return false;
 
-  return std::any_of(Desc.Buffers.begin(), Desc.Buffers.end(),
-                     [&](const unsigned BufferMask) {
-                       return Resources[BufferMask]->isADispatchHazard();
-                     });
+  return any_of(Desc.Buffers, [&](uint64_t BufferMask) {
+    return Resources[BufferMask]->isADispatchHazard();
+  });
 }
 
 void ResourceManager::issueInstruction(

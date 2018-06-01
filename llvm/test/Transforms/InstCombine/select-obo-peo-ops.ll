@@ -5,11 +5,11 @@ define i64 @test_shl_nuw_nsw__all_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw_nsw__all_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 15
   %2 = shl nuw nsw i32 %1, 2
@@ -24,11 +24,11 @@ define i64 @test_shl_nuw__all_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw__all_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 15
   %2 = shl nuw i32 %1, 2
@@ -43,11 +43,11 @@ define i64 @test_shl_nsw__all_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nsw__all_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 15
   %2 = shl nsw i32 %1, 2
@@ -62,11 +62,11 @@ define i64 @test_shl__all_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl__all_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 15
   %2 = shl i32 %1, 2
@@ -81,11 +81,11 @@ define i64 @test_shl_nuw_nsw__nuw_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw_nsw__nuw_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1073741822
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 1073741822
   %2 = shl nuw nsw i32 %1, 2
@@ -100,11 +100,11 @@ define i64 @test_shl_nuw__nuw_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw__nuw_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1073741822
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 1073741822
   %2 = shl nuw i32 %1, 2
@@ -119,11 +119,11 @@ define i64 @test_shl_nsw__nuw_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nsw__nuw_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1073741822
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 1073741822
   %2 = shl nsw i32 %1, 2
@@ -138,11 +138,11 @@ define i64 @test_shl__nuw_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl__nuw_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1073741822
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 1073741822
   %2 = shl i32 %1, 2
@@ -234,11 +234,11 @@ define i64 @test_shl_nuw_nsw__none_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw_nsw__none_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 4294967294
   %2 = shl nuw nsw i32 %1, 2
@@ -253,11 +253,11 @@ define i64 @test_shl_nuw__none_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nuw__none_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 4294967294
   %2 = shl nuw i32 %1, 2
@@ -272,11 +272,11 @@ define i64 @test_shl_nsw__none_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl_nsw__none_are_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 4294967294
   %2 = shl nsw i32 %1, 2
@@ -289,13 +289,11 @@ define i64 @test_shl_nsw__none_are_safe(i32 %x, i64 %y) {
 
 define i64 @test_shl__none_are_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_shl__none_are_safe(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -8
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
+; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   %1 = and i32 %x, 4294967294
   %2 = shl i32 %1, 2
@@ -310,11 +308,11 @@ define i64 @test_lshr_exact__exact_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_lshr_exact__exact_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 60
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr exact i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 60
   %2 = lshr exact i32 %1, 2
@@ -329,11 +327,11 @@ define i64 @test_lshr__exact_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_lshr__exact_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 60
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr exact i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 60
   %2 = lshr i32 %1, 2
@@ -348,11 +346,11 @@ define i64 @test_lshr_exact__exact_is_unsafe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_lshr_exact__exact_is_unsafe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 63
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr exact i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, 63
   %2 = lshr exact i32 %1, 2
@@ -365,13 +363,11 @@ define i64 @test_lshr_exact__exact_is_unsafe(i32 %x, i64 %y) {
 
 define i64 @test_lshr__exact_is_unsafe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_lshr__exact_is_unsafe(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 15
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
+; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   %1 = and i32 %x, 63
   %2 = lshr i32 %1, 2
@@ -386,11 +382,11 @@ define i64 @test_ashr_exact__exact_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_ashr_exact__exact_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2147483588
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr exact i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, -2147483588
   %2 = ashr exact i32 %1, 2
@@ -405,11 +401,11 @@ define i64 @test_ashr__exact_is_safe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_ashr__exact_is_safe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2147483588
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr exact i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, -2147483588
   %2 = ashr i32 %1, 2
@@ -424,11 +420,11 @@ define i64 @test_ashr_exact__exact_is_unsafe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_ashr_exact__exact_is_unsafe(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2147483585
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr exact i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i64 [[Y:%.*]], [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %1 = and i32 %x, -2147483585
   %2 = ashr exact i32 %1, 2
@@ -441,13 +437,11 @@ define i64 @test_ashr_exact__exact_is_unsafe(i32 %x, i64 %y) {
 
 define i64 @test_ashr__exact_is_unsafe(i32 %x, i64 %y) {
 ; CHECK-LABEL: @test_ashr__exact_is_unsafe(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2147483585
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -536870897
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[Y:%.*]], [[TMP5]]
-; CHECK-NEXT:    ret i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[Y:%.*]], [[TMP3]]
+; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   %1 = and i32 %x, -2147483585
   %2 = ashr i32 %1, 2

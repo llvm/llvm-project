@@ -500,7 +500,8 @@ public:
 
     // { DomainDef[] -> ValInst[] }
     isl::map ExpectedVal = makeValInst(Inst, UseStmt, UseLoop);
-    assert(isNormalized(ExpectedVal) && "LoadInsts are always normalized");
+    assert(!isNormalized(ExpectedVal).is_false() &&
+           "LoadInsts are always normalized");
 
     // { DomainUse[] -> DomainTarget[] }
     isl::map UseToTarget = getDefToTarget(UseStmt, TargetStmt);

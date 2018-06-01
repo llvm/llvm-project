@@ -237,6 +237,10 @@ MaterializationResponsibility::~MaterializationResponsibility() {
          "All symbols should have been explicitly materialized or failed");
 }
 
+SymbolNameSet MaterializationResponsibility::getRequestedSymbols() {
+  return V.getRequestedSymbols(SymbolFlags);
+}
+
 void MaterializationResponsibility::resolve(const SymbolMap &Symbols) {
   for (auto &KV : Symbols) {
     auto I = SymbolFlags.find(KV.first);
@@ -368,16 +372,18 @@ void VSO::replace(std::unique_ptr<MaterializationUnit> MU) {
                  "Can not replace symbol that is not materializing");
           assert(UnmaterializedInfos.count(KV.first) == 0 &&
                  "Symbol being replaced should have no UnmaterializedInfo");
-          assert(MaterializingInfos.count(KV.first) &&
-                 "Symbol being replaced should have a MaterializingInfo");
         }
 #endif // NDEBUG
 
         // If any symbol has pending queries against it then we need to
         // materialize MU immediately.
-        for (auto &KV : MU->getSymbols())
-          if (!MaterializingInfos[KV.first].PendingQueries.empty())
-            return std::move(MU);
+        for (auto &KV : MU->getSymbols()) {
+          auto MII = MaterializingInfos.find(KV.first);
+          if (MII != MaterializingInfos.end()) {
+            if (!MII->second.PendingQueries.empty())
+              return std::move(MU);
+          }
+        }
 
         // Otherwise, make MU responsible for all the symbols.
         auto UMI = std::make_shared<UnmaterializedInfo>(std::move(MU));
@@ -388,8 +394,10 @@ void VSO::replace(std::unique_ptr<MaterializationUnit> MU) {
                  "Materializing flags should be managed internally.");
 
           auto SymI = Symbols.find(KV.first);
-          SymI->second.getFlags() = KV.second;
-          SymI->second.getFlags() |= JITSymbolFlags::Lazy;
+          JITSymbolFlags ReplaceFlags = KV.second;
+          ReplaceFlags |= JITSymbolFlags::Lazy;
+          SymI->second = JITEvaluatedSymbol(SymI->second.getAddress(),
+                                            std::move(ReplaceFlags));
           UnmaterializedInfos[KV.first] = UMI;
         }
 
@@ -398,6 +406,27 @@ void VSO::replace(std::unique_ptr<MaterializationUnit> MU) {
 
   if (MustRunMU)
     ES.dispatchMaterialization(*this, std::move(MustRunMU));
+}
+
+SymbolNameSet VSO::getRequestedSymbols(const SymbolFlagsMap &SymbolFlags) {
+  return ES.runSessionLocked([&]() {
+    SymbolNameSet RequestedSymbols;
+
+    for (auto &KV : SymbolFlags) {
+      assert(Symbols.count(KV.first) && "VSO does not cover this symbol?");
+      assert(Symbols[KV.first].getFlags().isMaterializing() &&
+             "getRequestedSymbols can only be called for materializing "
+             "symbols");
+      auto I = MaterializingInfos.find(KV.first);
+      if (I == MaterializingInfos.end())
+        continue;
+
+      if (!I->second.PendingQueries.empty())
+        RequestedSymbols.insert(KV.first);
+    }
+
+    return RequestedSymbols;
+  });
 }
 
 void VSO::addDependencies(const SymbolFlagsMap &Dependants,
@@ -870,6 +899,7 @@ VSO &ExecutionSession::createVSO(std::string Name) {
 }
 
 Expected<SymbolMap> lookup(const VSO::VSOList &VSOs, SymbolNameSet Names) {
+
 #if LLVM_ENABLE_THREADS
   // In the threaded case we use promises to return the results.
   std::promise<SymbolMap> PromisedResult;

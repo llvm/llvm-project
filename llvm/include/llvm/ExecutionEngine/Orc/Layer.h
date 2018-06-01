@@ -63,11 +63,10 @@ public:
 
 protected:
   std::unique_ptr<Module> M;
+  std::map<SymbolStringPtr, GlobalValue *> SymbolToDefinition;
 
 private:
   void discard(const VSO &V, SymbolStringPtr Name) override;
-
-  std::map<SymbolStringPtr, GlobalValue *> Discardable;
 };
 
 /// MaterializationUnit that materializes modules by calling the 'emit' method

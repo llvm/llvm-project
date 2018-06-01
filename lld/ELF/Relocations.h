@@ -81,6 +81,7 @@ enum RelExpr {
   R_TLSGD_GOT_FROM_END,
   R_TLSGD_PC,
   R_TLSLD_GOT_FROM_END,
+  R_TLSLD_GOT,
   R_TLSLD_PC,
 };
 

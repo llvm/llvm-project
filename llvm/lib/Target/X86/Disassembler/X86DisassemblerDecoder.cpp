@@ -1341,7 +1341,7 @@ static int readModRM(struct InternalInstruction* insn) {
 
   reg |= rFromREX(insn->rexPrefix) << 3;
   rm  |= bFromREX(insn->rexPrefix) << 3;
-  if (insn->vectorExtensionType == TYPE_EVEX) {
+  if (insn->vectorExtensionType == TYPE_EVEX && insn->mode == MODE_64BIT) {
     reg |= r2FromEVEX2of4(insn->vectorExtensionPrefix[1]) << 4;
     rm  |=  xFromEVEX2of4(insn->vectorExtensionPrefix[1]) << 4;
   }
@@ -1695,7 +1695,7 @@ static int readVVVV(struct InternalInstruction* insn) {
     return -1;
 
   if (insn->mode != MODE_64BIT)
-    vvvv &= 0x7;
+    vvvv &= 0xf; // Can only clear bit 4. Bit 3 must be cleared later.
 
   insn->vvvv = static_cast<Reg>(vvvv);
   return 0;
@@ -1759,7 +1759,7 @@ static int readOperands(struct InternalInstruction* insn) {
         insn->sibIndex = (SIBIndex)4;
 
       // If EVEX.v2 is set this is one of the 16-31 registers.
-      if (insn->vectorExtensionType == TYPE_EVEX &&
+      if (insn->vectorExtensionType == TYPE_EVEX && insn->mode == MODE_64BIT &&
           v2FromEVEX4of4(insn->vectorExtensionPrefix[3]))
         insn->sibIndex = (SIBIndex)(insn->sibIndex + 16);
 
@@ -1860,6 +1860,8 @@ static int readOperands(struct InternalInstruction* insn) {
       needVVVV = 0; /* Mark that we have found a VVVV operand. */
       if (!hasVVVV)
         return -1;
+      if (insn->mode != MODE_64BIT)
+        insn->vvvv = static_cast<Reg>(insn->vvvv & 0x7);
       if (fixupReg(insn, &Op))
         return -1;
       break;

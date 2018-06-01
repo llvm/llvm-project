@@ -303,8 +303,15 @@ private:
   Module *resolveModuleId(const ModuleId &Id, Module *Mod, bool Complain) const;
 
   /// Add an unresolved header to a module.
+  ///
+  /// \param Mod The module in which we're adding the unresolved header
+  ///        directive.
+  /// \param Header The unresolved header directive.
+  /// \param NeedsFramework If Mod is not a framework but a missing header would
+  ///        be found in case Mod was, set it to true. False otherwise.
   void addUnresolvedHeader(Module *Mod,
-                           Module::UnresolvedHeaderDirective Header);
+                           Module::UnresolvedHeaderDirective Header,
+                           bool &NeedsFramework);
 
   /// Look up the given header directive to find an actual header file.
   ///
@@ -312,14 +319,22 @@ private:
   /// \param Header The header directive to resolve.
   /// \param RelativePathName Filled in with the relative path name from the
   ///        module to the resolved header.
+  /// \param NeedsFramework If M is not a framework but a missing header would
+  ///        be found in case M was, set it to true. False otherwise.
   /// \return The resolved file, if any.
   const FileEntry *findHeader(Module *M,
                               const Module::UnresolvedHeaderDirective &Header,
-                              SmallVectorImpl<char> &RelativePathName);
+                              SmallVectorImpl<char> &RelativePathName,
+                              bool &NeedsFramework);
 
   /// Resolve the given header directive.
-  void resolveHeader(Module *M,
-                     const Module::UnresolvedHeaderDirective &Header);
+  ///
+  /// \param M The module in which we're resolving the header directive.
+  /// \param Header The header directive to resolve.
+  /// \param NeedsFramework If M is not a framework but a missing header would
+  ///        be found in case M was, set it to true. False otherwise.
+  void resolveHeader(Module *M, const Module::UnresolvedHeaderDirective &Header,
+                     bool &NeedsFramework);
 
   /// Attempt to resolve the specified header directive as naming a builtin
   /// header.

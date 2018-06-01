@@ -1316,6 +1316,7 @@ static bool detectCTLZIdiom(Loop *CurLoop, PHINode *&PhiX,
     return false;
 
   // step 2: detect instructions corresponding to "x.next = x >> 1"
+  // TODO: Support loops that use LShr.
   if (!DefX || DefX->getOpcode() != Instruction::AShr)
     return false;
   ConstantInt *Shft = dyn_cast<ConstantInt>(DefX->getOperand(1));
@@ -1397,6 +1398,13 @@ bool LoopIdiomRecognize::recognizeAndInsertCTLZ() {
   // parent function RunOnLoop.
   BasicBlock *PH = CurLoop->getLoopPreheader();
   Value *InitX = PhiX->getIncomingValueForBlock(PH);
+
+  // Make sure the initial value can't be negative otherwise the ashr in the
+  // loop might never reach zero which would make the loop infinite.
+  // TODO: Support loops that use lshr and wouldn't need this check.
+  if (!isKnownNonNegative(InitX, *DL))
+    return false;
+
   // If we check X != 0 before entering the loop we don't need a zero
   // check in CTLZ intrinsic, but only if Cnt Phi is not used outside of the
   // loop (if it is used we count CTLZ(X >> 1)).

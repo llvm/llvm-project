@@ -1380,14 +1380,17 @@ void SelectionDAGBuilder::visitCatchPad(const CatchPadInst &I) {
   bool IsMSVCCXX = Pers == EHPersonality::MSVC_CXX;
   bool IsCoreCLR = Pers == EHPersonality::CoreCLR;
   bool IsSEH = isAsynchronousEHPersonality(Pers);
+  bool IsWasmCXX = Pers == EHPersonality::Wasm_CXX;
   MachineBasicBlock *CatchPadMBB = FuncInfo.MBB;
   if (!IsSEH)
     CatchPadMBB->setIsEHScopeEntry();
   // In MSVC C++ and CoreCLR, catchblocks are funclets and need prologues.
   if (IsMSVCCXX || IsCoreCLR)
     CatchPadMBB->setIsEHFuncletEntry();
-
-  DAG.setRoot(DAG.getNode(ISD::CATCHPAD, getCurSDLoc(), MVT::Other, getControlRoot()));
+  // Wasm does not need catchpads anymore
+  if (!IsWasmCXX)
+    DAG.setRoot(DAG.getNode(ISD::CATCHPAD, getCurSDLoc(), MVT::Other,
+                            getControlRoot()));
 }
 
 void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
@@ -6172,6 +6175,12 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     HasTailCall = true;
     return nullptr;
   }
+
+  case Intrinsic::wasm_landingpad_index: {
+    // TODO store landing pad index in a map, which will be used when generating
+    // LSDA information
+    return nullptr;
+  }
   }
 }
 
@@ -6321,7 +6330,10 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
     DAG.setRoot(DAG.getEHLabel(getCurSDLoc(), getRoot(), EndLabel));
 
     // Inform MachineModuleInfo of range.
-    if (MF.hasEHFunclets()) {
+    auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
+    // There is a platform (e.g. wasm) that uses funclet style IR but does not
+    // actually use outlined funclets and their LSDA info style.
+    if (MF.hasEHFunclets() && isFuncletEHPersonality(Pers)) {
       assert(CLI.CS);
       WinEHFuncInfo *EHInfo = DAG.getMachineFunction().getWinEHFuncInfo();
       EHInfo->addIPToStateRange(cast<InvokeInst>(CLI.CS.getInstruction()),
