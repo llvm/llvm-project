@@ -110,7 +110,10 @@ public:
       return llvm::None;
     std::unique_ptr<ParsedAST> V = std::move(Existing->second);
     LRU.erase(Existing);
-    return V;
+    // GCC 4.8 fails to compile `return V;`, as it tries to call the copy
+    // constructor of unique_ptr, so we call the move ctor explicitly to avoid
+    // this miscompile.
+    return llvm::Optional<std::unique_ptr<ParsedAST>>(std::move(V));
   }
 
 private:
