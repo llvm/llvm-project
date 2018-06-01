@@ -444,6 +444,10 @@ def : StorePatExternSymOffOnly<i64, truncstorei32, STORE32_I64>;
 let Defs = [ARGUMENTS] in {
 
 // Current memory size.
+def MEMORY_SIZE_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
+                        [(set I32:$dst, (int_wasm_memory_size (i32 imm:$flags)))],
+                        "memory.size\t$dst, $flags", 0x3f>,
+                      Requires<[HasAddr32]>;
 def MEM_SIZE_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
                      [(set I32:$dst, (int_wasm_mem_size (i32 imm:$flags)))],
                      "mem.size\t$dst, $flags", 0x3f>,
@@ -454,6 +458,11 @@ def CURRENT_MEMORY_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
                          Requires<[HasAddr32]>;
 
 // Grow memory.
+def MEMORY_GROW_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
+                        [(set I32:$dst,
+                              (int_wasm_memory_grow (i32 imm:$flags), I32:$delta))],
+                        "memory.grow\t$dst, $flags, $delta", 0x3f>,
+                      Requires<[HasAddr32]>;
 def MEM_GROW_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
                      [(set I32:$dst,
                            (int_wasm_mem_grow (i32 imm:$flags), I32:$delta))],

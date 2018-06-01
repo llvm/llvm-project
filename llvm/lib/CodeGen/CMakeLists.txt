@@ -158,6 +158,7 @@ add_llvm_library(LLVMCodeGen
   UnreachableBlockElim.cpp
   ValueTypes.cpp
   VirtRegMap.cpp
+  WasmEHPrepare.cpp
   WinEHPrepare.cpp
   XRayInstrumentation.cpp
 

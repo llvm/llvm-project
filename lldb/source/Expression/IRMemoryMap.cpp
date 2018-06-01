@@ -301,15 +301,21 @@ lldb::addr_t IRMemoryMap::Malloc(size_t size, uint8_t alignment,
   lldb::addr_t allocation_address = LLDB_INVALID_ADDRESS;
   lldb::addr_t aligned_address = LLDB_INVALID_ADDRESS;
 
-  size_t alignment_mask = alignment - 1;
   size_t allocation_size;
 
-  if (size == 0)
+  if (size == 0) {
+    // FIXME: Malloc(0) should either return an invalid address or assert, in
+    // order to cut down on unnecessary allocations.
     allocation_size = alignment;
-  else
-    allocation_size = (size & alignment_mask)
-                          ? ((size + alignment) & (~alignment_mask))
-                          : size;
+  } else {
+    // Round up the requested size to an aligned value.
+    allocation_size = llvm::alignTo(size, alignment);
+
+    // The process page cache does not see the requested alignment. We can't
+    // assume its result will be any more than 1-byte aligned. To work around
+    // this, request `alignment - 1` additional bytes.
+    allocation_size += alignment - 1;
+  }
 
   switch (policy) {
   default:

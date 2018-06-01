@@ -69,3 +69,12 @@ int main() {                 // CHECK-NEXT: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2
   test1(0);
   test2(2);
 }
+
+// CHECK-LABEL: _Z5test3v:
+#define a b
+void test3() {
+  if (0)
+    goto b; // CHECK: Gap,File 0, [[@LINE]]:11 -> [[@LINE+1]]:1 = [[retnCount:#[0-9]+]]
+a: // CHECK-NEXT: Expansion,File 0, [[@LINE]]:1 -> [[@LINE]]:2 = [[retnCount]] (Expanded file = 1)
+  return; // CHECK-NEXT: File 0, [[@LINE-1]]:2 -> [[@LINE]]:9 = [[retnCount]]
+}

@@ -607,6 +607,17 @@ CGCXXABI *CreateItaniumCXXABI(CodeGenModule &CGM);
 /// Creates a Microsoft-family ABI.
 CGCXXABI *CreateMicrosoftCXXABI(CodeGenModule &CGM);
 
+struct CatchRetScope final : EHScopeStack::Cleanup {
+  llvm::CatchPadInst *CPI;
+
+  CatchRetScope(llvm::CatchPadInst *CPI) : CPI(CPI) {}
+
+  void Emit(CodeGenFunction &CGF, Flags flags) override {
+    llvm::BasicBlock *BB = CGF.createBasicBlock("catchret.dest");
+    CGF.Builder.CreateCatchRet(CPI, BB);
+    CGF.EmitBlock(BB);
+  }
+};
 }
 }
 

@@ -859,20 +859,6 @@ void MicrosoftCXXABI::emitRethrow(CodeGenFunction &CGF, bool isNoReturn) {
     CGF.EmitRuntimeCallOrInvoke(Fn, Args);
 }
 
-namespace {
-struct CatchRetScope final : EHScopeStack::Cleanup {
-  llvm::CatchPadInst *CPI;
-
-  CatchRetScope(llvm::CatchPadInst *CPI) : CPI(CPI) {}
-
-  void Emit(CodeGenFunction &CGF, Flags flags) override {
-    llvm::BasicBlock *BB = CGF.createBasicBlock("catchret.dest");
-    CGF.Builder.CreateCatchRet(CPI, BB);
-    CGF.EmitBlock(BB);
-  }
-};
-}
-
 void MicrosoftCXXABI::emitBeginCatch(CodeGenFunction &CGF,
                                      const CXXCatchStmt *S) {
   // In the MS ABI, the runtime handles the copy, and the catch handler is

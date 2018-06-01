@@ -30,7 +30,8 @@ using namespace llvm;
 
 WebAssemblyInstrInfo::WebAssemblyInstrInfo(const WebAssemblySubtarget &STI)
     : WebAssemblyGenInstrInfo(WebAssembly::ADJCALLSTACKDOWN,
-                              WebAssembly::ADJCALLSTACKUP),
+                              WebAssembly::ADJCALLSTACKUP,
+                              WebAssembly::CATCHRET),
       RI(STI.getTargetTriple()) {}
 
 bool WebAssemblyInstrInfo::isReallyTriviallyReMaterializable(

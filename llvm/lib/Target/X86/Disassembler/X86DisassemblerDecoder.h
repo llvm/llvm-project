@@ -627,7 +627,6 @@ struct InternalInstruction {
 
   // These fields determine the allowable values for the ModR/M fields, which
   // depend on operand and address widths.
-  EABase                        eaBaseBase;
   EABase                        eaRegBase;
   Reg                           regBase;
 
