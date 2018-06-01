@@ -1480,3 +1480,22 @@ void AArch64InstPrinter::printImm8OptLsl(const MCInst *MI, unsigned OpNum,
 
   printImmSVE(Val, O);
 }
+
+template <typename T>
+void AArch64InstPrinter::printSVELogicalImm(const MCInst *MI, unsigned OpNum,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
+  typedef typename std::make_signed<T>::type SignedT;
+  typedef typename std::make_unsigned<T>::type UnsignedT;
+
+  uint64_t Val = MI->getOperand(OpNum).getImm();
+  UnsignedT PrintVal = AArch64_AM::decodeLogicalImmediate(Val, 64);
+
+  // Prefer the default format for 16bit values, hex otherwise.
+  if ((int16_t)PrintVal == (SignedT)PrintVal)
+    printImmSVE((T)PrintVal, O);
+  else if ((uint16_t)PrintVal == PrintVal)
+    printImmSVE(PrintVal, O);
+  else
+    O << '#' << formatHex((uint64_t)PrintVal);
+}

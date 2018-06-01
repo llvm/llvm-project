@@ -11,6 +11,7 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "index/FileIndex.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -208,18 +209,6 @@ vector<Ty> make_vector(Arg A) {}
 TEST(FileIndexTest, RebuildWithPreamble) {
   auto FooCpp = testPath("foo.cpp");
   auto FooH = testPath("foo.h");
-  FileIndex Index;
-  bool IndexUpdated = false;
-  CppFile File("foo.cpp", /*StorePreambleInMemory=*/true,
-               std::make_shared<PCHContainerOperations>(),
-               [&Index, &IndexUpdated](PathRef FilePath, ASTContext &Ctx,
-                                       std::shared_ptr<Preprocessor> PP) {
-                 EXPECT_FALSE(IndexUpdated)
-                     << "Expected only a single index update";
-                 IndexUpdated = true;
-                 Index.update(FilePath, &Ctx, std::move(PP));
-               });
-
   // Preparse ParseInputs.
   ParseInputs PI;
   PI.CompileCommand.Directory = testRoot();
@@ -243,7 +232,19 @@ TEST(FileIndexTest, RebuildWithPreamble) {
   )cpp";
 
   // Rebuild the file.
-  File.rebuild(std::move(PI));
+  auto CI = buildCompilerInvocation(PI);
+
+  FileIndex Index;
+  bool IndexUpdated = false;
+  buildPreamble(
+      FooCpp, *CI, /*OldPreamble=*/nullptr, tooling::CompileCommand(), PI,
+      std::make_shared<PCHContainerOperations>(), /*StoreInMemory=*/true,
+      [&Index, &IndexUpdated](PathRef FilePath, ASTContext &Ctx,
+                              std::shared_ptr<Preprocessor> PP) {
+        EXPECT_FALSE(IndexUpdated) << "Expected only a single index update";
+        IndexUpdated = true;
+        Index.update(FilePath, &Ctx, std::move(PP));
+      });
   ASSERT_TRUE(IndexUpdated);
 
   // Check the index contains symbols from the preamble, but not from the main

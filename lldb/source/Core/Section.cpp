@@ -91,6 +91,8 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-str-offsets";
   case eSectionTypeDWARFDebugTypes:
     return "dwarf-types";
+  case eSectionTypeDWARFDebugNames:
+    return "dwarf-names";
   case eSectionTypeELFSymbolTable:
     return "elf-symbol-table";
   case eSectionTypeELFDynamicSymbols:
