@@ -234,7 +234,7 @@ const FileEntry *ModuleMap::findHeader(
     // framework style path.
     FullPathName.assign(Directory->getName());
     RelativePathName.clear();
-    if (auto *FrameworkHdr = GetFrameworkFile()) {
+    if (GetFrameworkFile()) {
       Diags.Report(Header.FileNameLoc,
                    diag::warn_mmap_incomplete_framework_module_declaration)
           << Header.FileName << M->getFullModuleName();

@@ -80,11 +80,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   for (auto VT : {MVT::i1, MVT::i8, MVT::i16})
     setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
 
-  setOperationAction(ISD::ADDC, XLenVT, Expand);
-  setOperationAction(ISD::ADDE, XLenVT, Expand);
-  setOperationAction(ISD::SUBC, XLenVT, Expand);
-  setOperationAction(ISD::SUBE, XLenVT, Expand);
-
   if (!Subtarget.hasStdExtM()) {
     setOperationAction(ISD::MUL, XLenVT, Expand);
     setOperationAction(ISD::MULHS, XLenVT, Expand);

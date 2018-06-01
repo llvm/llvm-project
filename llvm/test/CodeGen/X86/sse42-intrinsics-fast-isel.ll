@@ -195,34 +195,22 @@ define i32 @test_mm_cmpestrz(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nou
 declare i32 @llvm.x86.sse42.pcmpestriz128(<16 x i8>, i32, <16 x i8>, i32, i8) nounwind readnone
 
 define <2 x i64> @test_mm_cmpgt_epi64(<2 x i64> %a0, <2 x i64> %a1) {
-; X32-LABEL: test_mm_cmpgt_epi64:
-; X32:       # %bb.0:
-; X32-NEXT:    pcmpgtq %xmm1, %xmm0
-; X32-NEXT:    retl
-;
-; X64-LABEL: test_mm_cmpgt_epi64:
-; X64:       # %bb.0:
-; X64-NEXT:    pcmpgtq %xmm1, %xmm0
-; X64-NEXT:    retq
+; ALL-LABEL: test_mm_cmpgt_epi64:
+; ALL:       # %bb.0:
+; ALL-NEXT:    pcmpgtq %xmm1, %xmm0
+; ALL-NEXT:    ret{{[l|q]}}
   %cmp = icmp sgt <2 x i64> %a0, %a1
   %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }
 
 define i32 @test_mm_cmpistra(<2 x i64> %a0, <2 x i64> %a1) {
-; X32-LABEL: test_mm_cmpistra:
-; X32:       # %bb.0:
-; X32-NEXT:    xorl %eax, %eax
-; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X32-NEXT:    seta %al
-; X32-NEXT:    retl
-;
-; X64-LABEL: test_mm_cmpistra:
-; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X64-NEXT:    seta %al
-; X64-NEXT:    retq
+; ALL-LABEL: test_mm_cmpistra:
+; ALL:       # %bb.0:
+; ALL-NEXT:    xorl %eax, %eax
+; ALL-NEXT:    pcmpistri $7, %xmm1, %xmm0
+; ALL-NEXT:    seta %al
+; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
   %res = call i32 @llvm.x86.sse42.pcmpistria128(<16 x i8> %arg0, <16 x i8> %arg1, i8 7)
@@ -231,19 +219,12 @@ define i32 @test_mm_cmpistra(<2 x i64> %a0, <2 x i64> %a1) {
 declare i32 @llvm.x86.sse42.pcmpistria128(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
 define i32 @test_mm_cmpistrc(<2 x i64> %a0, <2 x i64> %a1) {
-; X32-LABEL: test_mm_cmpistrc:
-; X32:       # %bb.0:
-; X32-NEXT:    xorl %eax, %eax
-; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X32-NEXT:    setb %al
-; X32-NEXT:    retl
-;
-; X64-LABEL: test_mm_cmpistrc:
-; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X64-NEXT:    setb %al
-; X64-NEXT:    retq
+; ALL-LABEL: test_mm_cmpistrc:
+; ALL:       # %bb.0:
+; ALL-NEXT:    xorl %eax, %eax
+; ALL-NEXT:    pcmpistri $7, %xmm1, %xmm0
+; ALL-NEXT:    setb %al
+; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
   %res = call i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %arg0, <16 x i8> %arg1, i8 7)
@@ -252,17 +233,11 @@ define i32 @test_mm_cmpistrc(<2 x i64> %a0, <2 x i64> %a1) {
 declare i32 @llvm.x86.sse42.pcmpistric128(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
 define i32 @test_mm_cmpistri(<2 x i64> %a0, <2 x i64> %a1) {
-; X32-LABEL: test_mm_cmpistri:
-; X32:       # %bb.0:
-; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X32-NEXT:    movl %ecx, %eax
-; X32-NEXT:    retl
-;
-; X64-LABEL: test_mm_cmpistri:
-; X64:       # %bb.0:
-; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    retq
+; ALL-LABEL: test_mm_cmpistri:
+; ALL:       # %bb.0:
+; ALL-NEXT:    pcmpistri $7, %xmm1, %xmm0
+; ALL-NEXT:    movl %ecx, %eax
+; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
   %res = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %arg0, <16 x i8> %arg1, i8 7)
@@ -271,15 +246,10 @@ define i32 @test_mm_cmpistri(<2 x i64> %a0, <2 x i64> %a1) {
 declare i32 @llvm.x86.sse42.pcmpistri128(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_cmpistrm(<2 x i64> %a0, <2 x i64> %a1) {
-; X32-LABEL: test_mm_cmpistrm:
-; X32:       # %bb.0:
-; X32-NEXT:    pcmpistrm $7, %xmm1, %xmm0
-; X32-NEXT:    retl
-;
-; X64-LABEL: test_mm_cmpistrm:
-; X64:       # %bb.0:
-; X64-NEXT:    pcmpistrm $7, %xmm1, %xmm0
-; X64-NEXT:    retq
+; ALL-LABEL: test_mm_cmpistrm:
+; ALL:       # %bb.0:
+; ALL-NEXT:    pcmpistrm $7, %xmm1, %xmm0
+; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
   %res = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %arg0, <16 x i8> %arg1, i8 7)
@@ -289,19 +259,12 @@ define <2 x i64> @test_mm_cmpistrm(<2 x i64> %a0, <2 x i64> %a1) {
 declare <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
 define i32 @test_mm_cmpistro(<2 x i64> %a0, <2 x i64> %a1) {
-; X32-LABEL: test_mm_cmpistro:
-; X32:       # %bb.0:
-; X32-NEXT:    xorl %eax, %eax
-; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X32-NEXT:    seto %al
-; X32-NEXT:    retl
-;
-; X64-LABEL: test_mm_cmpistro:
-; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X64-NEXT:    seto %al
-; X64-NEXT:    retq
+; ALL-LABEL: test_mm_cmpistro:
+; ALL:       # %bb.0:
+; ALL-NEXT:    xorl %eax, %eax
+; ALL-NEXT:    pcmpistri $7, %xmm1, %xmm0
+; ALL-NEXT:    seto %al
+; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
   %res = call i32 @llvm.x86.sse42.pcmpistrio128(<16 x i8> %arg0, <16 x i8> %arg1, i8 7)
@@ -310,19 +273,12 @@ define i32 @test_mm_cmpistro(<2 x i64> %a0, <2 x i64> %a1) {
 declare i32 @llvm.x86.sse42.pcmpistrio128(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
 define i32 @test_mm_cmpistrs(<2 x i64> %a0, <2 x i64> %a1) {
-; X32-LABEL: test_mm_cmpistrs:
-; X32:       # %bb.0:
-; X32-NEXT:    xorl %eax, %eax
-; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X32-NEXT:    sets %al
-; X32-NEXT:    retl
-;
-; X64-LABEL: test_mm_cmpistrs:
-; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X64-NEXT:    sets %al
-; X64-NEXT:    retq
+; ALL-LABEL: test_mm_cmpistrs:
+; ALL:       # %bb.0:
+; ALL-NEXT:    xorl %eax, %eax
+; ALL-NEXT:    pcmpistri $7, %xmm1, %xmm0
+; ALL-NEXT:    sets %al
+; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
   %res = call i32 @llvm.x86.sse42.pcmpistris128(<16 x i8> %arg0, <16 x i8> %arg1, i8 7)
@@ -331,19 +287,12 @@ define i32 @test_mm_cmpistrs(<2 x i64> %a0, <2 x i64> %a1) {
 declare i32 @llvm.x86.sse42.pcmpistris128(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
 define i32 @test_mm_cmpistrz(<2 x i64> %a0, <2 x i64> %a1) {
-; X32-LABEL: test_mm_cmpistrz:
-; X32:       # %bb.0:
-; X32-NEXT:    xorl %eax, %eax
-; X32-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X32-NEXT:    sete %al
-; X32-NEXT:    retl
-;
-; X64-LABEL: test_mm_cmpistrz:
-; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    pcmpistri $7, %xmm1, %xmm0
-; X64-NEXT:    sete %al
-; X64-NEXT:    retq
+; ALL-LABEL: test_mm_cmpistrz:
+; ALL:       # %bb.0:
+; ALL-NEXT:    xorl %eax, %eax
+; ALL-NEXT:    pcmpistri $7, %xmm1, %xmm0
+; ALL-NEXT:    sete %al
+; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
   %res = call i32 @llvm.x86.sse42.pcmpistriz128(<16 x i8> %arg0, <16 x i8> %arg1, i8 7)

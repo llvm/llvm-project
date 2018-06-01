@@ -88,10 +88,6 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MULHS, VT, Expand);
     setOperationAction(ISD::UMUL_LOHI, VT, Expand);
     setOperationAction(ISD::SMUL_LOHI, VT, Expand);
-    setOperationAction(ISD::ADDC, VT, Expand);
-    setOperationAction(ISD::ADDE, VT, Expand);
-    setOperationAction(ISD::SUBC, VT, Expand);
-    setOperationAction(ISD::SUBE, VT, Expand);
     setOperationAction(ISD::ROTR, VT, Expand);
     setOperationAction(ISD::ROTL, VT, Expand);
     setOperationAction(ISD::SHL_PARTS, VT, Expand);

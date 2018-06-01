@@ -245,12 +245,6 @@ class MipsAsmParser : public MCTargetAsmParser {
   void expandMemInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                      const MCSubtargetInfo *STI, bool IsLoad);
 
-  void expandLoadInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                      const MCSubtargetInfo *STI);
-
-  void expandStoreInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                       const MCSubtargetInfo *STI);
-
   bool expandLoadStoreMultiple(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                                const MCSubtargetInfo *STI);
 
@@ -1326,7 +1320,7 @@ public:
       return false;
     if (!getMemBase()->isGPRAsmReg())
       return false;
-    const unsigned PtrBits = 32;
+    const unsigned PtrBits = AsmParser.getABI().ArePtrs64bit() ? 64 : 32;
     if (isa<MCTargetExpr>(getMemOff()) ||
         (isConstantMemOff() && isIntN(PtrBits, getConstantMemOff())))
       return true;
@@ -2143,7 +2137,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
           (OpInfo.OperandType == MCOI::OPERAND_UNKNOWN)) {
         MCOperand &Op = Inst.getOperand(i);
         if (Op.isImm()) {
-          int MemOffset = Op.getImm();
+          int64_t MemOffset = Op.getImm();
           if (MemOffset < -32768 || MemOffset > 32767) {
             // Offset can't exceed 16bit value.
             expandMemInst(Inst, IDLoc, Out, STI, MCID.mayLoad());
@@ -3569,14 +3563,6 @@ bool MipsAsmParser::expandBranchImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
 void MipsAsmParser::expandMemInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                                   const MCSubtargetInfo *STI, bool IsLoad) {
-  if (IsLoad)
-    expandLoadInst(Inst, IDLoc, Out, STI);
-  else
-    expandStoreInst(Inst, IDLoc, Out, STI);
-}
-
-void MipsAsmParser::expandLoadInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                                   const MCSubtargetInfo *STI) {
   const MCOperand &DstRegOp = Inst.getOperand(0);
   assert(DstRegOp.isReg() && "expected register operand kind");
   const MCOperand &BaseRegOp = Inst.getOperand(1);
@@ -3595,7 +3581,7 @@ void MipsAsmParser::expandLoadInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   bool IsGPR = (DstRegClassID == Mips::GPR32RegClassID) ||
                (DstRegClassID == Mips::GPR64RegClassID);
 
-  if (!IsGPR || (BaseReg == DstReg)) {
+  if (!IsLoad || !IsGPR || (BaseReg == DstReg)) {
     // At this point we need AT to perform the expansions
     // and we exit if it is not available.
     TmpReg = getATReg(IDLoc);
@@ -3604,8 +3590,27 @@ void MipsAsmParser::expandLoadInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   }
 
   if (OffsetOp.isImm()) {
-    TOut.emitLoadWithImmOffset(Inst.getOpcode(), DstReg, BaseReg,
-                               OffsetOp.getImm(), TmpReg, IDLoc, STI);
+    int64_t LoOffset = OffsetOp.getImm() & 0xffff;
+    int64_t HiOffset = OffsetOp.getImm() & ~0xffff;
+
+    // If msb of LoOffset is 1(negative number) we must increment
+    // HiOffset to account for the sign-extension of the low part.
+    if (LoOffset & 0x8000)
+      HiOffset += 0x10000;
+
+    bool IsLargeOffset = HiOffset != 0;
+
+    if (IsLargeOffset) {
+      bool Is32BitImm = (HiOffset >> 32) == 0;
+      if (loadImmediate(HiOffset, TmpReg, Mips::NoRegister, Is32BitImm, true,
+                        IDLoc, Out, STI))
+        return;
+    }
+
+    if (BaseReg != Mips::ZERO && BaseReg != Mips::ZERO_64)
+      TOut.emitRRR(isGP64bit() ? Mips::DADDu : Mips::ADDu, TmpReg, TmpReg,
+                   BaseReg, IDLoc, STI);
+    TOut.emitRRI(Inst.getOpcode(), DstReg, TmpReg, LoOffset, IDLoc, STI);
   } else {
     assert(OffsetOp.isExpr() && "expected expression operand kind");
     const MCExpr *ExprOffset = OffsetOp.getExpr();
@@ -3613,42 +3618,14 @@ void MipsAsmParser::expandLoadInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
         MipsMCExpr::create(MipsMCExpr::MEK_LO, ExprOffset, getContext()));
     MCOperand HiOperand = MCOperand::createExpr(
         MipsMCExpr::create(MipsMCExpr::MEK_HI, ExprOffset, getContext()));
-    TOut.emitLoadWithSymOffset(Inst.getOpcode(), DstReg, BaseReg, HiOperand,
-                               LoOperand, TmpReg, IDLoc, STI);
+
+    if (IsLoad)
+      TOut.emitLoadWithSymOffset(Inst.getOpcode(), DstReg, BaseReg, HiOperand,
+                                 LoOperand, TmpReg, IDLoc, STI);
+    else
+      TOut.emitStoreWithSymOffset(Inst.getOpcode(), DstReg, BaseReg, HiOperand,
+                                  LoOperand, TmpReg, IDLoc, STI);
   }
-}
-
-void MipsAsmParser::expandStoreInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                                    const MCSubtargetInfo *STI) {
-  const MCOperand &SrcRegOp = Inst.getOperand(0);
-  assert(SrcRegOp.isReg() && "expected register operand kind");
-  const MCOperand &BaseRegOp = Inst.getOperand(1);
-  assert(BaseRegOp.isReg() && "expected register operand kind");
-  const MCOperand &OffsetOp = Inst.getOperand(2);
-
-  MipsTargetStreamer &TOut = getTargetStreamer();
-  unsigned SrcReg = SrcRegOp.getReg();
-  unsigned BaseReg = BaseRegOp.getReg();
-
-  if (OffsetOp.isImm()) {
-    TOut.emitStoreWithImmOffset(Inst.getOpcode(), SrcReg, BaseReg,
-                                OffsetOp.getImm(),
-                                [&]() { return getATReg(IDLoc); }, IDLoc, STI);
-    return;
-  }
-
-  unsigned ATReg = getATReg(IDLoc);
-  if (!ATReg)
-    return;
-
-  assert(OffsetOp.isExpr() && "expected expression operand kind");
-  const MCExpr *ExprOffset = OffsetOp.getExpr();
-  MCOperand LoOperand = MCOperand::createExpr(
-      MipsMCExpr::create(MipsMCExpr::MEK_LO, ExprOffset, getContext()));
-  MCOperand HiOperand = MCOperand::createExpr(
-      MipsMCExpr::create(MipsMCExpr::MEK_HI, ExprOffset, getContext()));
-  TOut.emitStoreWithSymOffset(Inst.getOpcode(), SrcReg, BaseReg, HiOperand,
-                              LoOperand, ATReg, IDLoc, STI);
 }
 
 bool MipsAsmParser::expandLoadStoreMultiple(MCInst &Inst, SMLoc IDLoc,

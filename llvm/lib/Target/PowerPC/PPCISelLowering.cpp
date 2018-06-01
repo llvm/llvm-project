@@ -172,6 +172,15 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setIndexedStoreAction(ISD::PRE_INC, MVT::f32, Legal);
   setIndexedStoreAction(ISD::PRE_INC, MVT::f64, Legal);
 
+  // PowerPC uses ADDC/ADDE/SUBC/SUBE to propagate carry.
+  const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
+  for (MVT VT : ScalarIntVTs) {
+    setOperationAction(ISD::ADDC, VT, Legal);
+    setOperationAction(ISD::ADDE, VT, Legal);
+    setOperationAction(ISD::SUBC, VT, Legal);
+    setOperationAction(ISD::SUBE, VT, Legal);
+  }
+
   if (Subtarget.useCRBits()) {
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 

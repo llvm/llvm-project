@@ -20,12 +20,8 @@
         dmfc0  $4, $3, 8     # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
         sd $32, 65536($32)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register number
         lb $32, 8($5)        # CHECK: :[[@LINE]]:12: error: invalid register number
-        lb $4, -2147483649($5)    # CHECK: :[[@LINE]]:16: error: expected memory with 32-bit signed offset
-        lb $4, 2147483648($5)     # CHECK: :[[@LINE]]:16: error: expected memory with 32-bit signed offset
         lb $4, 8($32)        # CHECK: :[[@LINE]]:18: error: invalid register number
         lbu $32, 8($5)       # CHECK: :[[@LINE]]:13: error: invalid register number
-        lbu $4, -2147483649($5)   # CHECK: :[[@LINE]]:17: error: expected memory with 32-bit signed offset
-        lbu $4, 2147483648($5)    # CHECK: :[[@LINE]]:17: error: expected memory with 32-bit signed offset
         lbu $4, 8($32)       # CHECK: :[[@LINE]]:19: error: invalid register number
         ldc1 $f32, 300($10)   # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
         ldc1 $f7, -32769($10) # CHECK: :[[@LINE]]:19: error: expected memory with 16-bit signed offset

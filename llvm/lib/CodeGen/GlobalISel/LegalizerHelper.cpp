@@ -726,17 +726,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
         WideTy != LLT::scalar(8))
       return UnableToLegalize;
 
-    const auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-    switch (TLI.getBooleanContents(false, false)) {
-    case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
-      widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_SEXT);
-      break;
-    case TargetLoweringBase::ZeroOrOneBooleanContent:
-      widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ZEXT);
-      break;
-    default:
-      widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ANYEXT);
-    }
+    widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ZEXT);
     MIRBuilder.recordInsertion(&MI);
     return Legalized;
   }

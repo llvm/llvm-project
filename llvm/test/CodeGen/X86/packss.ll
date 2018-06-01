@@ -74,28 +74,28 @@ define <8 x i16> @trunc_ashr_v4i32_icmp_v4i32(<4 x i32> %a, <4 x i32> %b) nounwi
 ; X86-SSE-NEXT:    psrad $31, %xmm0
 ; X86-SSE-NEXT:    pcmpgtd {{\.LCPI.*}}, %xmm1
 ; X86-SSE-NEXT:    packssdw %xmm1, %xmm0
-; X86-SSE-NEXT:    ret{{[l|q]}}
+; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: trunc_ashr_v4i32_icmp_v4i32:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vpcmpgtd {{\.LCPI.*}}, %xmm1, %xmm1
 ; X86-AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; X86-AVX-NEXT:    ret{{[l|q]}}
+; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: trunc_ashr_v4i32_icmp_v4i32:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    psrad $31, %xmm0
 ; X64-SSE-NEXT:    pcmpgtd {{.*}}(%rip), %xmm1
 ; X64-SSE-NEXT:    packssdw %xmm1, %xmm0
-; X64-SSE-NEXT:    ret{{[l|q]}}
+; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: trunc_ashr_v4i32_icmp_v4i32:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; X64-AVX-NEXT:    vpcmpgtd {{.*}}(%rip), %xmm1, %xmm1
 ; X64-AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; X64-AVX-NEXT:    ret{{[l|q]}}
+; X64-AVX-NEXT:    retq
   %1 = ashr <4 x i32> %a, <i32 31, i32 31, i32 31, i32 31>
   %2 = icmp sgt <4 x i32> %b, <i32 1, i32 16, i32 255, i32 65535>
   %3 = sext <4 x i1> %2 to <4 x i32>

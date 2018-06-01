@@ -393,17 +393,10 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::UDIV, MVT::i64, Expand);
   setOperationAction(ISD::UREM, MVT::i64, Expand);
 
-  if (!(Subtarget.hasDSP() && Subtarget.hasMips32r2())) {
-    setOperationAction(ISD::ADDC, MVT::i32, Expand);
-    setOperationAction(ISD::ADDE, MVT::i32, Expand);
+  if (Subtarget.hasDSP() && Subtarget.hasMips32r2()) {
+    setOperationAction(ISD::ADDC, MVT::i32, Legal);
+    setOperationAction(ISD::ADDE, MVT::i32, Legal);
   }
-
-  setOperationAction(ISD::ADDC, MVT::i64, Expand);
-  setOperationAction(ISD::ADDE, MVT::i64, Expand);
-  setOperationAction(ISD::SUBC, MVT::i32, Expand);
-  setOperationAction(ISD::SUBE, MVT::i32, Expand);
-  setOperationAction(ISD::SUBC, MVT::i64, Expand);
-  setOperationAction(ISD::SUBE, MVT::i64, Expand);
 
   // Operations not directly supported by Mips.
   setOperationAction(ISD::BR_CC,             MVT::f32,   Expand);

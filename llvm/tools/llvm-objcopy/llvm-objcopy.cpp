@@ -292,9 +292,7 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
         return true;
       }
 
-      // TODO: We might handle the 'null symbol' in a different way
-      // by probably handling it the same way as we handle 'null section' ?
-      if (Config.StripUnneeded && !Sym.Referenced && Sym.Index != 0 &&
+      if (Config.StripUnneeded && !Sym.Referenced &&
           (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&
           Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
         return true;
