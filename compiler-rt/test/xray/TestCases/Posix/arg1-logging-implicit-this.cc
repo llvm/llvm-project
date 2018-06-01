@@ -4,7 +4,7 @@
 // RUN: rm log-args-this-* || true
 // RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_logfile_base=log-args-this-" %run %t
 //
-// XFAIL: freebsd || arm || aarch64 || mips
+// XFAIL: FreeBSD || arm || aarch64 || mips
 // UNSUPPORTED: powerpc64le
 #include "xray/xray_interface.h"
 #include <cassert>
