@@ -752,6 +752,12 @@ public:
     return DiagnosticPredicateTy::NearMatch;
   }
 
+  template <typename T> DiagnosticPredicate isSVEPreferredLogicalImm() const {
+    if (isLogicalImm<T>() && !isSVECpyImm<T>())
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NoMatch;
+  }
+
   bool isCondCode() const { return Kind == k_CondCode; }
 
   bool isSIMDImmType10() const {

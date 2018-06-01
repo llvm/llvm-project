@@ -200,6 +200,8 @@ llvm::SmallVector<ReduceEntry, 16> MicroMipsSizeReduce::ReduceTable = {
      OpInfo(OT_OperandsAll), ImmField(0, -1, 15, 2)},
     {RT_OneInstr, OpCodes(Mips::LEA_ADDiu, Mips::ADDIUR1SP_MM),
      ReduceADDIUToADDIUR1SP, OpInfo(OT_Operands02), ImmField(2, 0, 64, 2)},
+    {RT_OneInstr, OpCodes(Mips::LEA_ADDiu_MM, Mips::ADDIUR1SP_MM),
+     ReduceADDIUToADDIUR1SP, OpInfo(OT_Operands02), ImmField(2, 0, 64, 2)},
     {RT_OneInstr, OpCodes(Mips::LHu, Mips::LHU16_MM), ReduceLXUtoLXU16,
      OpInfo(OT_OperandsAll), ImmField(1, 0, 16, 2)},
     {RT_OneInstr, OpCodes(Mips::LHu_MM, Mips::LHU16_MM), ReduceLXUtoLXU16,

@@ -1759,7 +1759,8 @@ static DecodeStatus DecodeSVELogicalImmInstruction(llvm::MCInst &Inst,
 
   // The same (tied) operand is added twice to the instruction.
   DecodeZPRRegisterClass(Inst, Zdn, Addr, Decoder);
-  DecodeZPRRegisterClass(Inst, Zdn, Addr, Decoder);
+  if (Inst.getOpcode() != AArch64::DUPM_ZI)
+    DecodeZPRRegisterClass(Inst, Zdn, Addr, Decoder);
   Inst.addOperand(MCOperand::createImm(imm));
   return Success;
 }

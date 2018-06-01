@@ -163,7 +163,7 @@ public:
 
 char WasmEHPrepare::ID = 0;
 INITIALIZE_PASS(WasmEHPrepare, DEBUG_TYPE, "Prepare WebAssembly exceptions",
-                false, false);
+                false, false)
 
 FunctionPass *llvm::createWasmEHPass() { return new WasmEHPrepare(); }
 

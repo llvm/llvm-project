@@ -1,9 +1,9 @@
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=UNPACKED %s
-; RUN: llc < %s -march=amdgcn -mcpu=gfx810 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=PACKED -check-prefix=GFX81 %s
-; RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=PACKED -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,UNPACKED %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,GFX81 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,GFX9 %s
 
 ; GCN-LABEL: {{^}}buffer_store_format_d16_x:
-; GCN: v_trunc_f16_e32 v[[LO:[0-9]+]], s{{[0-9]+}}
+; GCN: {{buffer|flat|global}}_load_ushort v[[LO:[0-9]+]]
 ; GCN: buffer_store_format_d16_x v[[LO]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 define amdgpu_kernel void @buffer_store_format_d16_x(<4 x i32> %rsrc, half %data, i32 %index) {
 main_body:
@@ -13,7 +13,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}buffer_store_format_d16_xy:
 
-; UNPACKED: s_load_dword [[S_DATA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x34
+; UNPACKED: s_load_dword [[S_DATA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x10
 ; UNPACKED-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[S_DATA]], 16
 ; UNPACKED-DAG: s_and_b32 [[MASKED:s[0-9]+]], [[S_DATA]], 0xffff{{$}}
 ; UNPACKED-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], [[MASKED]]
@@ -29,8 +29,8 @@ main_body:
 
 ; GCN-LABEL: {{^}}buffer_store_format_d16_xyzw:
 
-; UNPACKED-DAG: s_load_dword [[S_DATA_0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x34
-; UNPACKED-DAG: s_load_dword [[S_DATA_1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x38
+; UNPACKED-DAG: s_load_dword [[S_DATA_0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x10
+; UNPACKED-DAG: s_load_dword [[S_DATA_1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x14
 
 ; UNPACKED-DAG: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
 ; UNPACKED-DAG: s_lshr_b32 [[SHR0:s[0-9]+]], [[S_DATA_0]], 16
@@ -44,9 +44,8 @@ main_body:
 ; UNPACKED: buffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 
 
-
-; PACKED-DAG: s_load_dword [[S_DATA_0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x34
-; PACKED-DAG: s_load_dword [[S_DATA_1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x38
+; PACKED-DAG: s_load_dword [[S_DATA_0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x10
+; PACKED-DAG: s_load_dword [[S_DATA_1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x14
 
 ; PACKED: v_mov_b32_e32 v[[LO:[0-9]+]], [[S_DATA_0]]
 ; PACKED: v_mov_b32_e32 v[[HI:[0-9]+]], [[S_DATA_1]]

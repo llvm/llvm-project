@@ -1,7 +1,7 @@
 // We run clang in completion mode to force skipping of function bodies and
 // check if the function bodies were skipped by observing the warnings that
 // clang produces.
-// RUN: not %clang_cc1 -fsyntax-only -code-completion-at=%s:42:1 %s -o - 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -fsyntax-only -code-completion-at=%s:60:1 %s -o - 2>&1 | FileCheck %s
 template <class T>
 auto not_skipped() {
   int x;
@@ -36,6 +36,24 @@ auto lambda_skipped = []() -> int {
   // CHECK: 34:9: warning: using the result of an assignment as a condition without parentheses
   return 1;
 };
+
+template <class T>
+decltype(auto)** not_skipped_ptr() {
+  int x;
+  if (x = 10) {}
+  // Check that this function is not skipped.
+  // CHECK: 43:9: warning: using the result of an assignment as a condition without parentheses
+  return T();
+}
+
+template <class T>
+decltype(auto) not_skipped_decltypeauto() {
+  int x;
+  if (x = 10) {}
+  // Check that this function is not skipped.
+  // CHECK: 52:9: warning: using the result of an assignment as a condition without parentheses
+  return 1;
+}
 
 int test() {
   int complete_in_this_function;

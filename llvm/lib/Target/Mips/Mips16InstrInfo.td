@@ -1914,3 +1914,7 @@ def CONSTPOOL_ENTRY :
 MipsPseudo16<(outs), (ins cpinst_operand:$instid, cpinst_operand:$cpidx,
                       i32imm:$size), "foo", []>;
 
+// Instruction Aliases
+
+let EncodingPredicates = [InMips16Mode] in
+def : MipsInstAlias<"nop", (Move32R16 ZERO, S0)>;
