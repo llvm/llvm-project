@@ -657,6 +657,7 @@ enum SectionType {
                                // address
   eSectionTypeDWARFGNUDebugAltLink,
   eSectionTypeDWARFDebugTypes, // DWARF .debug_types section
+  eSectionTypeDWARFDebugNames, // DWARF v5 .debug_names
   eSectionTypeOther
 };
 

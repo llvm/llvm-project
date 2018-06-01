@@ -7,7 +7,7 @@
 // RUN: %clang_asan -O3 -xc %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // Unwind problem on arm: "main" is missing from the allocation stack trace.
-// UNSUPPORTED: win32,s390,armv7l-unknown-linux-gnueabihf
+// UNSUPPORTED: win32,s390,arm && !fast-unwinder-works
 
 #include <string.h>
 

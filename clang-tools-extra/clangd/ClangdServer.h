@@ -70,6 +70,9 @@ public:
     /// If 0, all requests are processed on the calling thread.
     unsigned AsyncThreadsCount = getDefaultAsyncThreadsCount();
 
+    /// AST caching policy. The default is to keep up to 3 ASTs in memory.
+    ASTRetentionPolicy RetentionPolicy;
+
     /// Cached preambles are potentially large. If false, store them on disk.
     bool StorePreamblesInMemory = true;
 

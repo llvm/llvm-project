@@ -1445,7 +1445,7 @@ static int readModRM(struct InternalInstruction* insn) {
   return 0;
 }
 
-#define GENERIC_FIXUP_FUNC(name, base, prefix)            \
+#define GENERIC_FIXUP_FUNC(name, base, prefix, mask)      \
   static uint16_t name(struct InternalInstruction *insn,  \
                        OperandType type,                  \
                        uint8_t index,                     \
@@ -1459,7 +1459,9 @@ static int readModRM(struct InternalInstruction* insn) {
     case TYPE_Rv:                                         \
       return base + index;                                \
     case TYPE_R8:                                         \
-      index &= 0xf;                                       \
+      index &= mask;                                      \
+      if (index > 0xf)                                    \
+        *valid = 0;                                       \
       if (insn->rexPrefix &&                              \
          index >= 4 && index <= 7) {                      \
         return prefix##_SPL + (index - 4);                \
@@ -1467,11 +1469,20 @@ static int readModRM(struct InternalInstruction* insn) {
         return prefix##_AL + index;                       \
       }                                                   \
     case TYPE_R16:                                        \
-      return prefix##_AX + (index & 0xf);                 \
+      index &= mask;                                      \
+      if (index > 0xf)                                    \
+        *valid = 0;                                       \
+      return prefix##_AX + index;                         \
     case TYPE_R32:                                        \
-      return prefix##_EAX + (index & 0xf);                \
+      index &= mask;                                      \
+      if (index > 0xf)                                    \
+        *valid = 0;                                       \
+      return prefix##_EAX + index;                        \
     case TYPE_R64:                                        \
-      return prefix##_RAX + (index & 0xf);                \
+      index &= mask;                                      \
+      if (index > 0xf)                                    \
+        *valid = 0;                                       \
+      return prefix##_RAX + index;                        \
     case TYPE_ZMM:                                        \
       return prefix##_ZMM0 + index;                       \
     case TYPE_YMM:                                        \
@@ -1479,6 +1490,7 @@ static int readModRM(struct InternalInstruction* insn) {
     case TYPE_XMM:                                        \
       return prefix##_XMM0 + index;                       \
     case TYPE_VK:                                         \
+      index &= 0xf;                                       \
       if (index > 7)                                      \
         *valid = 0;                                       \
       return prefix##_K0 + index;                         \
@@ -1518,8 +1530,8 @@ static int readModRM(struct InternalInstruction* insn) {
  *                field is valid for the register class; 0 if not.
  * @return      - The proper value.
  */
-GENERIC_FIXUP_FUNC(fixupRegValue, insn->regBase,    MODRM_REG)
-GENERIC_FIXUP_FUNC(fixupRMValue,  insn->eaRegBase,  EA_REG)
+GENERIC_FIXUP_FUNC(fixupRegValue, insn->regBase,    MODRM_REG, 0x1f)
+GENERIC_FIXUP_FUNC(fixupRMValue,  insn->eaRegBase,  EA_REG,    0xf)
 
 /*
  * fixupReg - Consults an operand specifier to determine which of the
