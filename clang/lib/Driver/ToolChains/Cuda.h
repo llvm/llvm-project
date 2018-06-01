@@ -115,7 +115,7 @@ class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 class LLVM_LIBRARY_VISIBILITY OpenMPLinker : public Tool {
  public:
    OpenMPLinker(const ToolChain &TC)
-       : Tool("NVPTX::OpenMPLinker", "fatbinary", TC, RF_Full, llvm::sys::WEM_UTF8,
+       : Tool("NVPTX::OpenMPLinker", "nvlink", TC, RF_Full, llvm::sys::WEM_UTF8,
               "--options-file") {}
 
    bool hasIntegratedCPP() const override { return false; }

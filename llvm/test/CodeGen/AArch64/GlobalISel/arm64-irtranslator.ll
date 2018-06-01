@@ -1859,3 +1859,14 @@ define void @test_nested_aggregate_const(%agg.nested *%ptr) {
   store %agg.nested { i32 1, i32 1, %agg.inner { i16 2, i8 3, %agg.inner.inner {i64 5, i64 8} }, i32 13}, %agg.nested *%ptr
   ret void
 }
+
+define i1 @return_i1_zext() {
+; AAPCS ABI says that booleans can only be 1 or 0, so we need to zero-extend.
+; CHECK-LABEL: name: return_i1_zext
+; CHECK: [[CST:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+; CHECK: [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[CST]](s1)
+; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ZEXT]](s8)
+; CHECK: $w0 = COPY [[ANYEXT]](s32)
+; CHECK: RET_ReallyLR implicit $w0
+  ret i1 true
+}

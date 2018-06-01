@@ -105,6 +105,7 @@ public:
   void SelectV65Gather(SDNode *N);
   void SelectV65GatherPred(SDNode *N);
   void SelectHVXDualOutput(SDNode *N);
+  void SelectAddSubCarry(SDNode *N);
   void SelectVAlign(SDNode *N);
   void SelectVAlignAddr(SDNode *N);
   void SelectTypecast(SDNode *N);

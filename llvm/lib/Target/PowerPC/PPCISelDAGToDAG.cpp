@@ -2253,7 +2253,7 @@ public:
     // set of bit groups, and then mask in the zeros at the end. With early
     // masking, we only insert the non-zero parts of the result at every step.
 
-    unsigned InstCnt, InstCntLateMask;
+    unsigned InstCnt = 0, InstCntLateMask = 0;
     LLVM_DEBUG(dbgs() << "\tEarly masking:\n");
     SDNode *RN = Select(N, false, &InstCnt);
     LLVM_DEBUG(dbgs() << "\t\tisel would use " << InstCnt << " instructions\n");

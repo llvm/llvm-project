@@ -229,9 +229,14 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   assert(((Val && VReg) || (!Val && !VReg)) && "Return value without a vreg");
   bool Success = true;
   if (VReg) {
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+
+    // We zero-extend i1s to i8.
+    if (MRI.getType(VReg).getSizeInBits() == 1)
+      VReg = MIRBuilder.buildZExt(LLT::scalar(8), VReg)->getOperand(0).getReg();
+
     const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
     CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
-    MachineRegisterInfo &MRI = MF.getRegInfo();
     auto &DL = F.getParent()->getDataLayout();
 
     ArgInfo OrigArg{VReg, Val->getType()};
