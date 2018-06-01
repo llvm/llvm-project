@@ -249,7 +249,6 @@ Status ProcessWindows::DoLaunch(Module *exe_module,
   bool stop_at_entry = launch_info.GetFlags().Test(eLaunchFlagStopAtEntry);
   m_session_data.reset(new ProcessWindowsData(stop_at_entry));
 
-  SetPrivateState(eStateLaunching);
   DebugDelegateSP delegate(new LocalDebugDelegate(shared_from_this()));
   m_session_data->m_debugger.reset(new DebuggerThread(delegate));
   DebuggerThreadSP debugger = m_session_data->m_debugger;
