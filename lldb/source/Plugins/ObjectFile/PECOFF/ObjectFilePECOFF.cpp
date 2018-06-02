@@ -692,6 +692,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
         static ConstString g_sect_name_dwarf_debug_line(".debug_line");
         static ConstString g_sect_name_dwarf_debug_loc(".debug_loc");
         static ConstString g_sect_name_dwarf_debug_macinfo(".debug_macinfo");
+        static ConstString g_sect_name_dwarf_debug_names(".debug_names");
         static ConstString g_sect_name_dwarf_debug_pubnames(".debug_pubnames");
         static ConstString g_sect_name_dwarf_debug_pubtypes(".debug_pubtypes");
         static ConstString g_sect_name_dwarf_debug_ranges(".debug_ranges");
@@ -737,6 +738,8 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
           section_type = eSectionTypeDWARFDebugLoc;
         else if (const_sect_name == g_sect_name_dwarf_debug_macinfo)
           section_type = eSectionTypeDWARFDebugMacInfo;
+        else if (const_sect_name == g_sect_name_dwarf_debug_names)
+          section_type = eSectionTypeDWARFDebugNames;
         else if (const_sect_name == g_sect_name_dwarf_debug_pubnames)
           section_type = eSectionTypeDWARFDebugPubNames;
         else if (const_sect_name == g_sect_name_dwarf_debug_pubtypes)

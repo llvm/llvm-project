@@ -2688,8 +2688,7 @@ StateType
 Process::WaitForProcessStopPrivate(EventSP &event_sp,
                                    const Timeout<std::micro> &timeout) {
   StateType state;
-  // Now wait for the process to launch and return control to us, and then call
-  // DidLaunch:
+
   while (true) {
     event_sp.reset();
     state = GetStateChangedEventsPrivate(event_sp, timeout);
@@ -2767,6 +2766,9 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
           }
         } else {
           EventSP event_sp;
+
+          // Now wait for the process to launch and return control to us, and then call
+          // DidLaunch:
           StateType state = WaitForProcessStopPrivate(event_sp, seconds(10));
 
           if (state == eStateInvalid || !event_sp) {

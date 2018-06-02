@@ -842,20 +842,26 @@ bool ZoneAlgorithm::isNormalizable(MemoryAccess *MA) {
   return true;
 }
 
-bool ZoneAlgorithm::isNormalized(isl::map Map) {
+isl::boolean ZoneAlgorithm::isNormalized(isl::map Map) {
   isl::space Space = Map.get_space();
   isl::space RangeSpace = Space.range();
 
-  if (!RangeSpace.is_wrapping())
-    return true;
+  isl::boolean IsWrapping = RangeSpace.is_wrapping();
+  if (!IsWrapping.is_true())
+    return !IsWrapping;
+  isl::space Unwrapped = RangeSpace.unwrap();
 
-  auto *PHI = dyn_cast<PHINode>(static_cast<Value *>(
-      RangeSpace.unwrap().get_tuple_id(isl::dim::out).get_user()));
+  isl::id OutTupleId = Unwrapped.get_tuple_id(isl::dim::out);
+  if (OutTupleId.is_null())
+    return isl::boolean();
+  auto *PHI = dyn_cast<PHINode>(static_cast<Value *>(OutTupleId.get_user()));
   if (!PHI)
     return true;
 
-  auto *IncomingStmt = static_cast<ScopStmt *>(
-      RangeSpace.unwrap().get_tuple_id(isl::dim::in).get_user());
+  isl::id InTupleId = Unwrapped.get_tuple_id(isl::dim::in);
+  if (OutTupleId.is_null())
+    return isl::boolean();
+  auto *IncomingStmt = static_cast<ScopStmt *>(InTupleId.get_user());
   MemoryAccess *PHIRead = IncomingStmt->lookupPHIReadOf(PHI);
   if (!isNormalizable(PHIRead))
     return true;
@@ -863,13 +869,15 @@ bool ZoneAlgorithm::isNormalized(isl::map Map) {
   return false;
 }
 
-bool ZoneAlgorithm::isNormalized(isl::union_map UMap) {
-  auto Result = UMap.foreach_map([this](isl::map Map) -> isl::stat {
-    if (isNormalized(Map))
+isl::boolean ZoneAlgorithm::isNormalized(isl::union_map UMap) {
+  isl::boolean Result = true;
+  UMap.foreach_map([this, &Result](isl::map Map) -> isl::stat {
+    Result = isNormalized(Map);
+    if (Result.is_true())
       return isl::stat::ok;
     return isl::stat::error;
   });
-  return Result == isl::stat::ok;
+  return Result;
 }
 
 void ZoneAlgorithm::computeCommon() {

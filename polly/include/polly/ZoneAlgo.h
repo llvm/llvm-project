@@ -336,8 +336,8 @@ protected:
   /// should have been replaced by their incoming values.
   ///
   /// @see #NormalizedPHI
-  bool isNormalized(isl::map Map);
-  bool isNormalized(isl::union_map Map);
+  isl::boolean isNormalized(isl::map Map);
+  isl::boolean isNormalized(isl::union_map Map);
   /// @}
 
 public:
