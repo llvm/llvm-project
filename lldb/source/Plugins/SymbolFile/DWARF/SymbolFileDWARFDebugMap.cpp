@@ -411,13 +411,15 @@ Module *SymbolFileDWARFDebugMap::GetModuleByOSOIndex(uint32_t oso_idx) {
 Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
     CompileUnitInfo *comp_unit_info) {
   if (!comp_unit_info->oso_sp) {
-    auto pos = m_oso_map.find(comp_unit_info->oso_path);
+    auto pos = m_oso_map.find(
+        {comp_unit_info->oso_path, comp_unit_info->oso_mod_time});
     if (pos != m_oso_map.end()) {
       comp_unit_info->oso_sp = pos->second;
     } else {
       ObjectFile *obj_file = GetObjectFile();
       comp_unit_info->oso_sp.reset(new OSOInfo());
-      m_oso_map[comp_unit_info->oso_path] = comp_unit_info->oso_sp;
+      m_oso_map[{comp_unit_info->oso_path, comp_unit_info->oso_mod_time}] =
+          comp_unit_info->oso_sp;
       const char *oso_path = comp_unit_info->oso_path.GetCString();
       FileSpec oso_file(oso_path, false);
       ConstString oso_object;

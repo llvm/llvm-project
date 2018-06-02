@@ -296,9 +296,6 @@ private:
   /// \invariant { Size > 0 }
   virtual void write_impl(const char *Ptr, size_t Size) = 0;
 
-  // An out of line virtual method to provide a home for the class vtable.
-  virtual void handle();
-
   /// Return the current position within the stream, not counting the bytes
   /// currently in the buffer.
   virtual uint64_t current_pos() const = 0;
