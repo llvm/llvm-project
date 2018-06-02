@@ -44,6 +44,9 @@ enum StateType {
                    ///launched or attached to anything yet
   eStateAttaching, ///< Process is currently trying to attach
   eStateLaunching, ///< Process is in the process of launching
+  // The state changes eStateAttaching and eStateLaunching are both sent while the
+  // private state thread is either not yet started or paused. For that reason, they
+  // should only be signaled as public state changes, and not private state changes.
   eStateStopped,   ///< Process or thread is stopped and can be examined.
   eStateRunning,   ///< Process or thread is running and can't be examined.
   eStateStepping,  ///< Process or thread is in the process of stepping and can
@@ -657,6 +660,7 @@ enum SectionType {
                                // address
   eSectionTypeDWARFGNUDebugAltLink,
   eSectionTypeDWARFDebugTypes, // DWARF .debug_types section
+  eSectionTypeDWARFDebugNames, // DWARF v5 .debug_names
   eSectionTypeOther
 };
 

@@ -187,6 +187,9 @@ if(LLDB_BUILD_FRAMEWORK)
     PUBLIC_HEADER "${framework_headers}")
 
   if(NOT IOS)
+    if (NOT LLDB_BUILT_STANDALONE)
+      add_dependencies(liblldb clang-headers)
+    endif()
     add_custom_command(TARGET liblldb POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders $<TARGET_FILE_DIR:liblldb>/Headers
       COMMAND ${CMAKE_COMMAND} -E create_symlink Versions/Current/Headers ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Headers
