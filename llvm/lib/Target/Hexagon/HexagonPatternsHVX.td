@@ -250,7 +250,19 @@ let Predicates = [UseHVX] in {
   def: Pat<(VecPI32 (HexagonVSPLATW I32:$Rs)), (Rep (Vsplatrw $Rs))>;
 }
 
+class Vneg1<ValueType VecTy>
+  : PatFrag<(ops), (VecTy (HexagonVSPLATW (i32 -1)))>;
+
+class Vnot<ValueType VecTy>
+  : PatFrag<(ops node:$Vs), (xor $Vs, Vneg1<VecTy>)>;
+
 let Predicates = [UseHVX] in {
+  let AddedComplexity = 200 in {
+    def: Pat<(Vnot<VecI8>   HVI8:$Vs), (V6_vnot HvxVR:$Vs)>;
+    def: Pat<(Vnot<VecI16> HVI16:$Vs), (V6_vnot HvxVR:$Vs)>;
+    def: Pat<(Vnot<VecI32> HVI32:$Vs), (V6_vnot HvxVR:$Vs)>;
+  }
+
   def: OpR_RR_pat<V6_vaddb,    Add,   VecI8,  HVI8>;
   def: OpR_RR_pat<V6_vaddh,    Add,  VecI16, HVI16>;
   def: OpR_RR_pat<V6_vaddw,    Add,  VecI32, HVI32>;
@@ -378,6 +390,21 @@ let Predicates = [UseHVX] in {
            (V6_vdelta HvxVR:$Vs, (V6_lvsplatw (A2_tfrsi 0x01010101)))>;
   def: Pat<(VecI32 (bswap HVI32:$Vs)),
            (V6_vdelta HvxVR:$Vs, (V6_lvsplatw (A2_tfrsi 0x03030303)))>;
+
+  def: Pat<(VecI8 (ctpop HVI8:$Vs)),
+           (V6_vpackeb (V6_vpopcounth (HiVec (V6_vunpackub HvxVR:$Vs))),
+                       (V6_vpopcounth (LoVec (V6_vunpackub HvxVR:$Vs))))>;
+  def: Pat<(VecI16 (ctpop HVI16:$Vs)), (V6_vpopcounth HvxVR:$Vs)>;
+  def: Pat<(VecI32 (ctpop HVI32:$Vs)),
+           (V6_vaddw (LoVec (V6_vzh (V6_vpopcounth HvxVR:$Vs))),
+                     (HiVec (V6_vzh (V6_vpopcounth HvxVR:$Vs))))>;
+
+  def: Pat<(VecI8 (ctlz HVI8:$Vs)),
+           (V6_vsubb (V6_vpackeb (V6_vcl0h (HiVec (V6_vunpackub HvxVR:$Vs))),
+                                 (V6_vcl0h (LoVec (V6_vunpackub HvxVR:$Vs)))),
+                     (V6_lvsplatw (A2_tfrsi 0x08080808)))>;
+  def: Pat<(VecI16 (ctlz HVI16:$Vs)), (V6_vcl0h HvxVR:$Vs)>;
+  def: Pat<(VecI32 (ctlz HVI32:$Vs)), (V6_vcl0w HvxVR:$Vs)>;
 }
 
 class HvxSel_pat<InstHexagon MI, PatFrag RegPred>

@@ -147,7 +147,8 @@ static unsigned getMatchingLoType(const ELFRelocationEntry &Reloc) {
   if (Type == ELF::R_MIPS16_HI16)
     return ELF::R_MIPS16_LO16;
 
-  if (Reloc.OriginalSymbol->getBinding() != ELF::STB_LOCAL)
+  if (Reloc.OriginalSymbol &&
+      Reloc.OriginalSymbol->getBinding() != ELF::STB_LOCAL)
     return ELF::R_MIPS_NONE;
 
   if (Type == ELF::R_MIPS_GOT16)

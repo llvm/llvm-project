@@ -29,6 +29,15 @@ Symbols:
 
 #STRIPALL: Symbols [
 #STRIPALL-NEXT:  Symbol {
+#STRIPALL-NEXT:    Name:
+#STRIPALL-NEXT:    Value: 0x0
+#STRIPALL-NEXT:    Size: 0
+#STRIPALL-NEXT:    Binding: Local
+#STRIPALL-NEXT:    Type: None
+#STRIPALL-NEXT:    Other: 0
+#STRIPALL-NEXT:    Section: Undefined
+#STRIPALL-NEXT:  }
+#STRIPALL-NEXT:  Symbol {
 #STRIPALL-NEXT:    Name: foo
 #STRIPALL-NEXT:    Value: 0x0
 #STRIPALL-NEXT:    Size: 0

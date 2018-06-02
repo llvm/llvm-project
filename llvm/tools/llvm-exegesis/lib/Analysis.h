@@ -58,6 +58,13 @@ private:
   std::unordered_map<std::string, unsigned> MnemonicToOpcode_;
 };
 
+// Computes the idealized ProcRes Unit pressure. This is the expected
+// distribution if the CPU scheduler can distribute the load as evenly as
+// possible.
+std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
+    const llvm::MCSchedModel &SM,
+    llvm::SmallVector<llvm::MCWriteProcResEntry, 8> WPRS);
+
 } // namespace exegesis
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_CLUSTERING_H

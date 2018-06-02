@@ -15,6 +15,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_SUPPORT_H
 #define LLVM_TOOLS_LLVM_MCA_SUPPORT_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 
@@ -44,6 +45,14 @@ namespace mca {
 /// problems with simple bit manipulation operations.
 void computeProcResourceMasks(const llvm::MCSchedModel &SM,
                               llvm::SmallVectorImpl<uint64_t> &Masks);
+
+/// Compute the reciprocal block throughput from a set of processor resource
+/// cycles. The reciprocal block throughput is computed as the MAX between:
+///  - NumMicroOps / DispatchWidth
+///  - ProcResourceCycles / #ProcResourceUnits  (for every consumed resource).
+double computeBlockRThroughput(const llvm::MCSchedModel &SM,
+                               unsigned DispatchWidth, unsigned NumMicroOps,
+                               llvm::ArrayRef<unsigned> ProcResourceUsage);
 } // namespace mca
 
 #endif

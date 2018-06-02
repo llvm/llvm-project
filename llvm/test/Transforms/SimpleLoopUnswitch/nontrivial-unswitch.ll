@@ -2562,3 +2562,104 @@ outer.latch:
 exit:
   ret void
 }
+
+; Non-trivial loop unswitching where there are two invariant conditions, but the
+; second one is only in the cloned copy of the loop after unswitching.
+define i32 @test24(i1* %ptr, i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @test24(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 %cond1, label %entry.split.us, label %entry.split
+
+loop_begin:
+  br i1 %cond1, label %loop_a, label %loop_b
+
+loop_a:
+  br i1 %cond2, label %loop_a_a, label %loop_a_c
+; The second unswitched condition.
+;
+; CHECK:       entry.split.us:
+; CHECK-NEXT:    br i1 %cond2, label %entry.split.us.split.us, label %entry.split.us.split
+
+loop_a_a:
+  call void @a()
+  br label %latch
+; The 'loop_a_a' unswitched loop.
+;
+; CHECK:       entry.split.us.split.us:
+; CHECK-NEXT:    br label %loop_begin.us.us
+;
+; CHECK:       loop_begin.us.us:
+; CHECK-NEXT:    br label %loop_a.us.us
+;
+; CHECK:       loop_a.us.us:
+; CHECK-NEXT:    br label %loop_a_a.us.us
+;
+; CHECK:       loop_a_a.us.us:
+; CHECK-NEXT:    call void @a()
+; CHECK-NEXT:    br label %latch.us.us
+;
+; CHECK:       latch.us.us:
+; CHECK-NEXT:    %[[V:.*]] = load i1, i1* %ptr
+; CHECK-NEXT:    br i1 %[[V]], label %loop_begin.us.us, label %loop_exit.split.us.split.us
+;
+; CHECK:       loop_exit.split.us.split.us:
+; CHECK-NEXT:    br label %loop_exit.split
+
+loop_a_c:
+  call void @c()
+  br label %latch
+; The 'loop_a_c' unswitched loop.
+;
+; CHECK:       entry.split.us.split:
+; CHECK-NEXT:    br label %loop_begin.us
+;
+; CHECK:       loop_begin.us:
+; CHECK-NEXT:    br label %loop_a.us
+;
+; CHECK:       loop_a.us:
+; CHECK-NEXT:    br label %loop_a_c.us
+;
+; CHECK:       loop_a_c.us:
+; CHECK-NEXT:    call void @c()
+; CHECK-NEXT:    br label %latch
+;
+; CHECK:       latch.us:
+; CHECK-NEXT:    %[[V:.*]] = load i1, i1* %ptr
+; CHECK-NEXT:    br i1 %[[V]], label %loop_begin.us, label %loop_exit.split.us.split
+;
+; CHECK:       loop_exit.split.us.split:
+; CHECK-NEXT:    br label %loop_exit.split
+
+loop_b:
+  call void @b()
+  br label %latch
+; The 'loop_b' unswitched loop.
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
+;
+; CHECK:       loop_begin:
+; CHECK-NEXT:    br label %loop_b
+;
+; CHECK:       loop_b:
+; CHECK-NEXT:    call void @b()
+; CHECK-NEXT:    br label %latch
+;
+; CHECK:       latch:
+; CHECK-NEXT:    %[[V:.*]] = load i1, i1* %ptr
+; CHECK-NEXT:    br i1 %[[V]], label %loop_begin, label %loop_exit.split
+;
+; CHECK:       loop_exit.split:
+; CHECK-NEXT:    br label %loop_exit
+
+latch:
+  %v = load i1, i1* %ptr
+  br i1 %v, label %loop_begin, label %loop_exit
+
+loop_exit:
+  ret i32 0
+; CHECK:       loop_exit:
+; CHECK-NEXT:    ret
+}

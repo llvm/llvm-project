@@ -527,6 +527,44 @@ multiclass sve_int_dup_imm<string asm> {
                   (!cast<Instruction>(NAME # _S) ZPR32:$Zd, cpy_imm8_opt_lsl_i32:$imm), 1>;
   def : InstAlias<"mov $Zd, $imm",
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, cpy_imm8_opt_lsl_i64:$imm), 1>;
+
+  def : InstAlias<"fmov $Zd, #0.0",
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, 0, 0), 1>;
+  def : InstAlias<"fmov $Zd, #0.0",
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, 0, 0), 1>;
+  def : InstAlias<"fmov $Zd, #0.0",
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, 0, 0), 1>;
+}
+
+class sve_int_dup_fpimm<bits<2> sz8_64, Operand fpimmtype,
+                        string asm, ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins fpimmtype:$imm8),
+  asm, "\t$Zd, $imm8",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<8> imm8;
+  let Inst{31-24} = 0b00100101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-14} = 0b11100111;
+  let Inst{13}    = 0b0;
+  let Inst{12-5}  = imm8;
+  let Inst{4-0}   = Zd;
+
+  let isReMaterializable = 1;
+}
+
+multiclass sve_int_dup_fpimm<string asm> {
+  def _H : sve_int_dup_fpimm<0b01, fpimm16, asm, ZPR16>;
+  def _S : sve_int_dup_fpimm<0b10, fpimm32, asm, ZPR32>;
+  def _D : sve_int_dup_fpimm<0b11, fpimm64, asm, ZPR64>;
+
+  def : InstAlias<"fmov $Zd, $imm8",
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, fpimm16:$imm8), 1>;
+  def : InstAlias<"fmov $Zd, $imm8",
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, fpimm32:$imm8), 1>;
+  def : InstAlias<"fmov $Zd, $imm8",
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, fpimm64:$imm8), 1>;
 }
 
 class sve_int_arith_imm0<bits<2> sz8_64, bits<3> opc, string asm,

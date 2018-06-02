@@ -739,7 +739,7 @@ let DecoderNamespace = "MicroMips" in {
                  ISA_MICROMIPS32_NOT_MIPS32R6;
 
   def LEA_ADDiu_MM : MMRel, EffectiveAddress<"addiu", GPR32Opnd>,
-                     LW_FM_MM<0xc>;
+                     LW_FM_MM<0xc>, ISA_MICROMIPS;
 
   /// Arithmetic Instructions (3-Operand, R-Type)
   def ADDu_MM  : MMRel, ArithLogicR<"addu", GPR32Opnd, 1, II_ADDU, add>,
@@ -1278,8 +1278,8 @@ let Predicates = [InMicroMips] in {
                                      II_DIVU, 0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
 
   def : MipsInstAlias<"wait", (WAIT_MM 0x0), 1>, ISA_MICROMIPS;
-  def : MipsInstAlias<"nop", (SLL_MM ZERO, ZERO, 0), 1>;
-  def : MipsInstAlias<"nop", (MOVE16_MM ZERO, ZERO), 1>;
+  def : MipsInstAlias<"nop", (SLL_MM ZERO, ZERO, 0), 1>, ISA_MICROMIPS;
+  def : MipsInstAlias<"nop", (MOVE16_MM ZERO, ZERO), 1>, ISA_MICROMIPS;
   def : MipsInstAlias<"ei", (EI_MM ZERO), 1>, ISA_MICROMIPS;
   def : MipsInstAlias<"di", (DI_MM ZERO), 1>, ISA_MICROMIPS;
   def : MipsInstAlias<"neg $rt, $rs",
@@ -1376,6 +1376,9 @@ let Predicates = [InMicroMips] in {
   def : MipsInstAlias<"break $imm", (BREAK_MM uimm10:$imm, 0), 1>,
         ISA_MICROMIPS;
   def : MipsInstAlias<"bal $offset", (BGEZAL_MM ZERO, brtarget_mm:$offset), 1>,
+        ISA_MICROMIPS32_NOT_MIPS32R6;
+
+  def : MipsInstAlias<"j $rs", (JR_MM GPR32Opnd:$rs), 0>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
 }
 def : MipsInstAlias<"hypcall", (HYPCALL_MM 0), 1>,

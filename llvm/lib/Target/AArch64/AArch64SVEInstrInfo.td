@@ -37,6 +37,7 @@ let Predicates = [HasSVE] in {
 
   // Splat immediate (unpredicated)
   defm DUP_ZI   : sve_int_dup_imm<"dup">;
+  defm FDUP_ZI  : sve_int_dup_fpimm<"fdup">;
   defm DUPM_ZI : sve_int_dup_mask_imm<"dupm">;
 
   // continuous load with reg+immediate

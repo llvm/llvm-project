@@ -16,6 +16,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>

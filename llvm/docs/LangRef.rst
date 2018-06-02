@@ -7293,7 +7293,7 @@ by the corresponding shift amount in ``op2``.
 If the ``nuw`` keyword is present, then the shift produces a poison
 value if it shifts out any non-zero bits.
 If the ``nsw`` keyword is present, then the shift produces a poison
-value it shifts out any bits that disagree with the resultant sign bit.
+value if it shifts out any bits that disagree with the resultant sign bit.
 
 Example:
 """"""""

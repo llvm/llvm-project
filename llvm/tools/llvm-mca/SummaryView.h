@@ -45,10 +45,15 @@ class SummaryView : public View {
   unsigned TotalCycles;
   // The total number of micro opcodes contributed by a block of instructions.
   unsigned NumMicroOps;
-  // For each processor resource, this map stores the cumulative number of
-  // resource cycles consumed by a block of instructions. The resource mask ID
-  // is used as the key value to access elements of this map.
-  llvm::DenseMap<uint64_t, unsigned> ProcResourceUsage;
+  // For each processor resource, this vector stores the cumulative number of
+  // resource cycles consumed by the analyzed code block.
+  llvm::SmallVector<unsigned, 8> ProcResourceUsage;
+
+  // Each processor resource is associated with a so-called processor resource
+  // mask. This vector allows to correlate processor resource IDs with processor
+  // resource masks. There is exactly one element per each processor resource
+  // declared by the scheduling model.
+  llvm::SmallVector<uint64_t, 8> ProcResourceMasks;
 
   // Compute the reciprocal throughput for the analyzed code block.
   // The reciprocal block throughput is computed as the MAX between:
@@ -58,9 +63,7 @@ class SummaryView : public View {
 
 public:
   SummaryView(const llvm::MCSchedModel &Model, const SourceMgr &S,
-              unsigned Width)
-      : SM(Model), Source(S), DispatchWidth(Width), TotalCycles(0),
-        NumMicroOps(0) {}
+              unsigned Width);
 
   void onCycleEnd() override { ++TotalCycles; }
 

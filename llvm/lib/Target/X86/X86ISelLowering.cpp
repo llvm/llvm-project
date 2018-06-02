@@ -21641,7 +21641,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     if (isAllOnesConstant(Mask)) // Return a regular (unmasked) vector load.
       return DAG.getLoad(VT, dl, Chain, Addr, MemIntr->getMemOperand());
     if (X86::isZeroNode(Mask))
-      return DAG.getUNDEF(VT);
+      return DAG.getMergeValues({PassThru, Chain}, dl);
 
     MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
     SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);

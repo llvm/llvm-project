@@ -459,6 +459,62 @@ TEST_F(IRBuilderTest, DIBuilder) {
   EXPECT_TRUE(verifyModule(*M));
 }
 
+TEST_F(IRBuilderTest, createArtificialSubprogram) {
+  IRBuilder<> Builder(BB);
+  DIBuilder DIB(*M);
+  auto File = DIB.createFile("main.c", "/");
+  auto CU = DIB.createCompileUnit(dwarf::DW_LANG_C, File, "clang",
+                                  /*isOptimized=*/true, /*Flags=*/"",
+                                  /*Runtime Version=*/0);
+  auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray(None));
+  auto SP = DIB.createFunction(CU, "foo", /*LinkageName=*/"", File,
+                               /*LineNo=*/1, Type, /*isLocalToUnit=*/false,
+                               /*isDefinition=*/true, /*ScopeLine=*/2,
+                               DINode::FlagZero, /*isOptimized=*/true);
+  EXPECT_TRUE(SP->isDistinct());
+
+  F->setSubprogram(SP);
+  AllocaInst *I = Builder.CreateAlloca(Builder.getInt8Ty());
+  ReturnInst *R = Builder.CreateRetVoid();
+  I->setDebugLoc(DebugLoc::get(3, 2, SP));
+  R->setDebugLoc(DebugLoc::get(4, 2, SP));
+  DIB.finalize();
+  EXPECT_FALSE(verifyModule(*M));
+
+  Function *G = Function::Create(F->getFunctionType(),
+                                 Function::ExternalLinkage, "", M.get());
+  BasicBlock *GBB = BasicBlock::Create(Ctx, "", G);
+  Builder.SetInsertPoint(GBB);
+  I->removeFromParent();
+  Builder.Insert(I);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M));
+
+  DISubprogram *GSP = DIBuilder::createArtificialSubprogram(F->getSubprogram());
+  EXPECT_EQ(SP->getFile(), GSP->getFile());
+  EXPECT_EQ(SP->getType(), GSP->getType());
+  EXPECT_EQ(SP->getLine(), GSP->getLine());
+  EXPECT_EQ(SP->getScopeLine(), GSP->getScopeLine());
+  EXPECT_TRUE(GSP->isDistinct());
+
+  G->setSubprogram(GSP);
+  EXPECT_TRUE(verifyModule(*M));
+
+  auto *InlinedAtNode =
+      DILocation::getDistinct(Ctx, GSP->getScopeLine(), 0, GSP);
+  DebugLoc DL = I->getDebugLoc();
+  DenseMap<const MDNode *, MDNode *> IANodes;
+  auto IA = DebugLoc::appendInlinedAt(DL, InlinedAtNode, Ctx, IANodes);
+  auto NewDL = DebugLoc::get(DL.getLine(), DL.getCol(), DL.getScope(), IA);
+  I->setDebugLoc(NewDL);
+  EXPECT_FALSE(verifyModule(*M));
+
+  EXPECT_EQ("foo", SP->getName());
+  EXPECT_EQ("foo", GSP->getName());
+  EXPECT_FALSE(SP->isArtificial());
+  EXPECT_TRUE(GSP->isArtificial());
+}
+
 TEST_F(IRBuilderTest, InsertExtractElement) {
   IRBuilder<> Builder(BB);
 

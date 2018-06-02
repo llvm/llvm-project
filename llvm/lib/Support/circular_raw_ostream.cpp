@@ -33,7 +33,7 @@ void circular_raw_ostream::write_impl(const char *Ptr, size_t Size) {
       Cur = BufferArray;
       Filled = true;
     }
-  }    
+  }
 }
 
 void circular_raw_ostream::flushBufferWithBanner() {

@@ -452,7 +452,7 @@ define <4 x i32> @mul_const_splat(<4 x i32> %v) {
 
 define <4 x i32> @lshr_const_half_splat(<4 x i32> %v) {
 ; CHECK-LABEL: @lshr_const_half_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 undef, i32 8, i32 9, i32 undef>, [[V:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 8, i32 8, i32 9, i32 8>, [[V:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 2>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -582,3 +582,26 @@ define <2 x i32*> @pr23113(<4 x i32*> %A) {
   %1 = shufflevector <4 x i32*> %A, <4 x i32*> undef, <2 x i32> <i32 0, i32 1>
   ret <2 x i32*> %1
 }
+
+; Unused lanes in the new binop should not kill the entire op (although it may simplify anyway as shown here).
+
+define <2 x i32> @PR37648(<2 x i32> %x) {
+; CHECK-LABEL: @PR37648(
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+;
+  %splat = shufflevector <2 x i32> %x, <2 x i32> undef, <2 x i32> zeroinitializer
+  %r = urem <2 x i32> %splat, <i32 1, i32 1>
+  ret <2 x i32> %r
+}
+
+define <2 x float> @splat_first_fp(<2 x float> %x) {
+; CHECK-LABEL: @splat_first_fp(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[X:%.*]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x float> [[TMP2]]
+;
+  %splat = shufflevector <2 x float> %x, <2 x float> undef, <2 x i32> zeroinitializer
+  %r = fadd <2 x float> %splat, <float 1.0, float 1.0>
+  ret <2 x float> %r
+}
+

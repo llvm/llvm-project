@@ -29,7 +29,7 @@ namespace llvm {
 
 /// X86Operand - Instances of this class represent a parsed X86 machine
 /// instruction.
-struct X86Operand : public MCParsedAsmOperand {
+struct X86Operand final : public MCParsedAsmOperand {
   enum KindTy { Token, Register, Immediate, Memory, Prefix } Kind;
 
   SMLoc StartLoc, EndLoc;

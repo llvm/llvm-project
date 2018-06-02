@@ -9409,6 +9409,10 @@ multiclass expand_by_vec_width_lowering<X86VectorVTInfo _ > {
             (!cast<Instruction>(NAME#_.ZSuffix##rmkz)
                                         _.KRCWM:$mask, addr:$src)>;
 
+  def : Pat<(_.VT (X86mExpandingLoad addr:$src, _.KRCWM:$mask, _.ImmAllZerosV)),
+            (!cast<Instruction>(NAME#_.ZSuffix##rmkz)
+                                        _.KRCWM:$mask, addr:$src)>;
+
   def : Pat<(_.VT (X86mExpandingLoad addr:$src, _.KRCWM:$mask,
                                                (_.VT _.RC:$src0))),
             (!cast<Instruction>(NAME#_.ZSuffix##rmk)
@@ -11292,3 +11296,47 @@ defm VGF2P8AFFINEINVQB : GF2P8AFFINE_avx512_common<0xCF, "vgf2p8affineinvqb",
 defm VGF2P8AFFINEQB    : GF2P8AFFINE_avx512_common<0xCE, "vgf2p8affineqb",
                          X86GF2P8affineqb, SchedWriteVecIMul>,
                          EVEX_4V, EVEX_CD8<8, CD8VF>, VEX_W, AVX512AIi8Base;
+
+
+//===----------------------------------------------------------------------===//
+// AVX5124FMAPS
+//===----------------------------------------------------------------------===//
+
+let hasSideEffects = 0, mayLoad = 1, ExeDomain = SSEPackedSingle in {
+defm V4FMADDPSrm : AVX512_maskable_in_asm<0x9A, MRMSrcMem, v16f32_info,
+                    (outs VR512:$dst), (ins VR512:$src1, f128mem:$src2),
+                    "v4fmaddps", "$src2, $src1", "$src1, $src2",
+                    []>, EVEX_V512, EVEX_4V, T8XD, EVEX_CD8<32, CD8VQ>;
+
+defm V4FNMADDPSrm : AVX512_maskable_in_asm<0xAA, MRMSrcMem, v16f32_info,
+                     (outs VR512:$dst), (ins VR512:$src1, f128mem:$src2),
+                     "v4fnmaddps", "$src2, $src1", "$src1, $src2",
+                     []>, EVEX_V512, EVEX_4V, T8XD, EVEX_CD8<32, CD8VQ>;
+
+defm V4FMADDSSrm : AVX512_maskable_in_asm<0x9B, MRMSrcMem, f32x_info,
+                    (outs VR128X:$dst), (ins VR128X:$src1, f128mem:$src2),
+                    "v4fmaddss", "$src2, $src1", "$src1, $src2",
+                    []>, EVEX_V128, EVEX_4V, T8XD, EVEX_CD8<32, CD8VF>;
+
+defm V4FNMADDSSrm : AVX512_maskable_in_asm<0xAB, MRMSrcMem, f32x_info,
+                     (outs VR128X:$dst), (ins VR128X:$src1, f128mem:$src2),
+                     "v4fnmaddss", "$src2, $src1", "$src1, $src2",
+                     []>, EVEX_V128, EVEX_4V, T8XD, EVEX_CD8<32, CD8VF>;
+}
+
+//===----------------------------------------------------------------------===//
+// AVX5124VNNIW
+//===----------------------------------------------------------------------===//
+
+let hasSideEffects = 0, mayLoad = 1, ExeDomain = SSEPackedInt in {
+defm VP4DPWSSDrm : AVX512_maskable_in_asm<0x52, MRMSrcMem, v16i32_info,
+                    (outs VR512:$dst), (ins VR512:$src1, f128mem:$src2),
+                     "vp4dpwssd", "$src2, $src1", "$src1, $src2",
+                    []>, EVEX_V512, EVEX_4V, T8XD, EVEX_CD8<32, CD8VQ>;
+
+defm VP4DPWSSDSrm : AVX512_maskable_in_asm<0x53, MRMSrcMem, v16i32_info,
+                     (outs VR512:$dst), (ins VR512:$src1, f128mem:$src2),
+                     "vp4dpwssds", "$src2, $src1", "$src1, $src2",
+                     []>, EVEX_V512, EVEX_4V, T8XD, EVEX_CD8<32, CD8VQ>;
+}
+
