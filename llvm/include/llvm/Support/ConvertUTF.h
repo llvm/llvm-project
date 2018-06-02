@@ -286,6 +286,21 @@ bool convertUTF16ToUTF8String(ArrayRef<UTF16> Src, std::string &Out);
 bool convertUTF8ToUTF16String(StringRef SrcUTF8,
                               SmallVectorImpl<UTF16> &DstUTF16);
 
+#if defined(_WIN32)
+namespace sys {
+namespace windows {
+std::error_code UTF8ToUTF16(StringRef utf8, SmallVectorImpl<wchar_t> &utf16);
+/// Convert to UTF16 from the current code page used in the system
+std::error_code CurCPToUTF16(StringRef utf8, SmallVectorImpl<wchar_t> &utf16);
+std::error_code UTF16ToUTF8(const wchar_t *utf16, size_t utf16_len,
+                            SmallVectorImpl<char> &utf8);
+/// Convert from UTF16 to the current code page used in the system
+std::error_code UTF16ToCurCP(const wchar_t *utf16, size_t utf16_len,
+                             SmallVectorImpl<char> &utf8);
+} // namespace windows
+} // namespace sys
+#endif
+
 } /* end namespace llvm */
 
 #endif

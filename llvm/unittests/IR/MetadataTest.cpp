@@ -1051,7 +1051,7 @@ TEST_F(DITypeTest, clone) {
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
 }
 
-TEST_F(DITypeTest, setFlags) {
+TEST_F(DITypeTest, cloneWithFlags) {
   // void (void)
   Metadata *TypesOps[] = {nullptr};
   Metadata *Types = MDTuple::get(Context, TypesOps);
@@ -1059,17 +1059,15 @@ TEST_F(DITypeTest, setFlags) {
   DIType *D =
       DISubroutineType::getDistinct(Context, DINode::FlagZero, 0, Types);
   EXPECT_EQ(DINode::FlagZero, D->getFlags());
-  D->setFlags(DINode::FlagRValueReference);
-  EXPECT_EQ(DINode::FlagRValueReference, D->getFlags());
-  D->setFlags(DINode::FlagZero);
+  TempDIType D2 = D->cloneWithFlags(DINode::FlagRValueReference);
+  EXPECT_EQ(DINode::FlagRValueReference, D2->getFlags());
   EXPECT_EQ(DINode::FlagZero, D->getFlags());
 
   TempDIType T =
       DISubroutineType::getTemporary(Context, DINode::FlagZero, 0, Types);
   EXPECT_EQ(DINode::FlagZero, T->getFlags());
-  T->setFlags(DINode::FlagRValueReference);
-  EXPECT_EQ(DINode::FlagRValueReference, T->getFlags());
-  T->setFlags(DINode::FlagZero);
+  TempDIType T2 = T->cloneWithFlags(DINode::FlagRValueReference);
+  EXPECT_EQ(DINode::FlagRValueReference, T2->getFlags());
   EXPECT_EQ(DINode::FlagZero, T->getFlags());
 }
 

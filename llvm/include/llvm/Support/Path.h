@@ -467,6 +467,10 @@ StringRef remove_leading_dotslash(StringRef path, Style style = Style::native);
 bool remove_dots(SmallVectorImpl<char> &path, bool remove_dot_dot = false,
                  Style style = Style::native);
 
+#if defined(_WIN32)
+std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16);
+#endif
+
 } // end namespace path
 } // end namespace sys
 } // end namespace llvm

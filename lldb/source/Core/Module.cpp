@@ -1030,6 +1030,7 @@ size_t Module::FindTypes(
         std::string name_str(name.AsCString(""));
         typesmap.RemoveMismatchedTypes(type_scope, name_str, type_class,
                                        exact_match);
+        num_matches = typesmap.GetSize();
       }
     }
   }
