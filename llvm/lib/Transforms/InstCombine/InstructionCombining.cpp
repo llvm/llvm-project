@@ -1351,11 +1351,7 @@ Value *InstCombiner::Descale(Value *Val, APInt Scale, bool &NoSignedWrap) {
   } while (true);
 }
 
-/// Makes transformation of binary operation specific for vector types.
-/// \param Inst Binary operator to transform.
-/// \return Pointer to node that must replace the original binary operator, or
-///         null pointer if no transformation was made.
-Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
+Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
   if (!Inst.getType()->isVectorTy()) return nullptr;
 
   // It may not be safe to reorder shuffles and things like div, urem, etc.
@@ -1373,7 +1369,7 @@ Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
     Value *XY = Builder.CreateBinOp(Inst.getOpcode(), X, Y);
     if (auto *BO = dyn_cast<BinaryOperator>(XY))
       BO->copyIRFlags(&Inst);
-    return Builder.CreateShuffleVector(XY, UndefValue::get(XY->getType()), M);
+    return new ShuffleVectorInst(XY, UndefValue::get(XY->getType()), M);
   };
 
   // If both arguments of the binary operation are shuffles that use the same

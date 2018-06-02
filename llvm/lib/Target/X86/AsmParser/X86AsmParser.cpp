@@ -2737,8 +2737,8 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
       StringRef RegName = X86IntelInstPrinter::getRegisterName(Src2);
       unsigned GroupStart = (Src2Enc / 4) * 4;
       unsigned GroupEnd = GroupStart + 3;
-      return Warning(Ops[Ops.size()-2]->getStartLoc(),
-                     "source register implicitly denotes '" +
+      return Warning(Ops[0]->getStartLoc(),
+                     "source register '" + RegName + "' implicitly denotes '" +
                      RegName.take_front(3) + Twine(GroupStart) + "' to '" +
                      RegName.take_front(3) + Twine(GroupEnd) +
                      "' source group");
