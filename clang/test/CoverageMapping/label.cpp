@@ -48,7 +48,17 @@ b:                           // CHECK-NEXT: File 0, [[@LINE]]:1 -> [[@LINE+2]]:2
   x = x + 1;
 }
 
-                             // CHECK-NEXT: main
+// CHECK-NEXT: test3
+#define a b
+void test3() {
+  if (0)
+    goto b; // CHECK: Gap,File 0, [[@LINE]]:11 -> [[@LINE+1]]:1 = [[retnCount:#[0-9]+]]
+a: // CHECK-NEXT: Expansion,File 0, [[@LINE]]:1 -> [[@LINE]]:2 = [[retnCount]] (Expanded file = 1)
+  return; // CHECK-NEXT: File 0, [[@LINE-1]]:2 -> [[@LINE]]:9 = [[retnCount]]
+}
+#undef a
+
+                             // CHECK: main
 int main() {                 // CHECK-NEXT: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 = #0
   int j = 0;
   for(int i = 0; i < 10; ++i) { // CHECK: File 0, [[@LINE]]:31 -> [[@LINE+13]]:4 = #1
@@ -68,13 +78,4 @@ int main() {                 // CHECK-NEXT: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2
   func();                    // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+3]]:2 = ((#0 + #7) - #1)
   test1(0);
   test2(2);
-}
-
-// CHECK-LABEL: _Z5test3v:
-#define a b
-void test3() {
-  if (0)
-    goto b; // CHECK: Gap,File 0, [[@LINE]]:11 -> [[@LINE+1]]:1 = [[retnCount:#[0-9]+]]
-a: // CHECK-NEXT: Expansion,File 0, [[@LINE]]:1 -> [[@LINE]]:2 = [[retnCount]] (Expanded file = 1)
-  return; // CHECK-NEXT: File 0, [[@LINE-1]]:2 -> [[@LINE]]:9 = [[retnCount]]
 }

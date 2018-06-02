@@ -42,6 +42,7 @@ module Clang_Basic {
   textual header "Basic/BuiltinsX86_64.def"
   textual header "Basic/BuiltinsXCore.def"
   textual header "Basic/DiagnosticOptions.def"
+  textual header "Basic/Features.def"
   textual header "Basic/LangOptions.def"
   textual header "Basic/OpenCLExtensions.def"
   textual header "Basic/OpenCLImageTypes.def"
