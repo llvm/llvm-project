@@ -15,13 +15,6 @@ class BSDArchivesTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Find the line number in a(int) to break at.
-        self.line = line_number(
-            'a.c', '// Set file and line breakpoint inside a().')
-
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24527.  Makefile.rules doesn't know how to build static libs on Windows")
