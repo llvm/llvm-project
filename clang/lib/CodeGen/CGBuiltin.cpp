@@ -8263,42 +8263,32 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
 }
 
 static Value *EmitX86MaskedStore(CodeGenFunction &CGF,
-                                 SmallVectorImpl<Value *> &Ops,
+                                 ArrayRef<Value *> Ops,
                                  unsigned Align) {
   // Cast the pointer to right type.
-  Ops[0] = CGF.Builder.CreateBitCast(Ops[0],
+  Value *Ptr = CGF.Builder.CreateBitCast(Ops[0],
                                llvm::PointerType::getUnqual(Ops[1]->getType()));
-
-  // If the mask is all ones just emit a regular store.
-  if (const auto *C = dyn_cast<Constant>(Ops[2]))
-    if (C->isAllOnesValue())
-      return CGF.Builder.CreateAlignedStore(Ops[1], Ops[0], Align);
 
   Value *MaskVec = getMaskVecValue(CGF, Ops[2],
                                    Ops[1]->getType()->getVectorNumElements());
 
-  return CGF.Builder.CreateMaskedStore(Ops[1], Ops[0], Align, MaskVec);
+  return CGF.Builder.CreateMaskedStore(Ops[1], Ptr, Align, MaskVec);
 }
 
 static Value *EmitX86MaskedLoad(CodeGenFunction &CGF,
-                                SmallVectorImpl<Value *> &Ops, unsigned Align) {
+                                ArrayRef<Value *> Ops, unsigned Align) {
   // Cast the pointer to right type.
-  Ops[0] = CGF.Builder.CreateBitCast(Ops[0],
+  Value *Ptr = CGF.Builder.CreateBitCast(Ops[0],
                                llvm::PointerType::getUnqual(Ops[1]->getType()));
-
-  // If the mask is all ones just emit a regular store.
-  if (const auto *C = dyn_cast<Constant>(Ops[2]))
-    if (C->isAllOnesValue())
-      return CGF.Builder.CreateAlignedLoad(Ops[0], Align);
 
   Value *MaskVec = getMaskVecValue(CGF, Ops[2],
                                    Ops[1]->getType()->getVectorNumElements());
 
-  return CGF.Builder.CreateMaskedLoad(Ops[0], Align, MaskVec, Ops[1]);
+  return CGF.Builder.CreateMaskedLoad(Ptr, Align, MaskVec, Ops[1]);
 }
 
 static Value *EmitX86MaskLogic(CodeGenFunction &CGF, Instruction::BinaryOps Opc,
-                              unsigned NumElts, SmallVectorImpl<Value *> &Ops,
+                              unsigned NumElts, ArrayRef<Value *> Ops,
                               bool InvertLHS = false) {
   Value *LHS = getMaskVecValue(CGF, Ops[0], NumElts);
   Value *RHS = getMaskVecValue(CGF, Ops[1], NumElts);
@@ -8308,26 +8298,6 @@ static Value *EmitX86MaskLogic(CodeGenFunction &CGF, Instruction::BinaryOps Opc,
 
   return CGF.Builder.CreateBitCast(CGF.Builder.CreateBinOp(Opc, LHS, RHS),
                                   CGF.Builder.getIntNTy(std::max(NumElts, 8U)));
-}
-
-static Value *EmitX86SubVectorBroadcast(CodeGenFunction &CGF,
-                                        SmallVectorImpl<Value *> &Ops,
-                                        llvm::Type *DstTy,
-                                        unsigned SrcSizeInBits,
-                                        unsigned Align) {
-  // Load the subvector.
-  Ops[0] = CGF.Builder.CreateAlignedLoad(Ops[0], Align);
-
-  // Create broadcast mask.
-  unsigned NumDstElts = DstTy->getVectorNumElements();
-  unsigned NumSrcElts = SrcSizeInBits / DstTy->getScalarSizeInBits();
-
-  SmallVector<uint32_t, 8> Mask;
-  for (unsigned i = 0; i != NumDstElts; i += NumSrcElts)
-    for (unsigned j = 0; j != NumSrcElts; ++j)
-      Mask.push_back(j);
-
-  return CGF.Builder.CreateShuffleVector(Ops[0], Ops[0], Mask, "subvecbcst");
 }
 
 static Value *EmitX86Select(CodeGenFunction &CGF,
@@ -8968,12 +8938,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_movdqa32load512_mask:
   case X86::BI__builtin_ia32_movdqa64load512_mask:
     return EmitX86MaskedLoad(*this, Ops, 64);
-
-  case X86::BI__builtin_ia32_vbroadcastf128_pd256:
-  case X86::BI__builtin_ia32_vbroadcastf128_ps256: {
-    llvm::Type *DstTy = ConvertType(E->getType());
-    return EmitX86SubVectorBroadcast(*this, Ops, DstTy, 128, 1);
-  }
 
   case X86::BI__builtin_ia32_storehps:
   case X86::BI__builtin_ia32_storelps: {

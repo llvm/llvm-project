@@ -1571,11 +1571,22 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     return BinaryOperator::CreateSub(Y, X);
 
   if (Constant *C = dyn_cast<Constant>(Op0)) {
+    bool IsNegate = match(C, m_ZeroInt());
     Value *X;
-    // C - zext(bool) -> bool ? C - 1 : C
-    if (match(Op1, m_ZExt(m_Value(X))) &&
-        X->getType()->getScalarSizeInBits() == 1)
+    if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
+      // 0 - (zext bool) --> sext bool
+      // C - (zext bool) --> bool ? C - 1 : C
+      if (IsNegate)
+        return CastInst::CreateSExtOrBitCast(X, I.getType());
       return SelectInst::Create(X, SubOne(C), C);
+    }
+    if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
+      // 0 - (sext bool) --> zext bool
+      // C - (sext bool) --> bool ? C + 1 : C
+      if (IsNegate)
+        return CastInst::CreateZExtOrBitCast(X, I.getType());
+      return SelectInst::Create(X, AddOne(C), C);
+    }
 
     // C - ~X == X + (1+C)
     if (match(Op1, m_Not(m_Value(X))))
@@ -1595,16 +1606,6 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     Constant *C2;
     if (match(Op1, m_Add(m_Value(X), m_Constant(C2))))
       return BinaryOperator::CreateSub(ConstantExpr::getSub(C, C2), X);
-
-    // Fold (sub 0, (zext bool to B)) --> (sext bool to B)
-    if (C->isNullValue() && match(Op1, m_ZExt(m_Value(X))))
-      if (X->getType()->isIntOrIntVectorTy(1))
-        return CastInst::CreateSExtOrBitCast(X, Op1->getType());
-
-    // Fold (sub 0, (sext bool to B)) --> (zext bool to B)
-    if (C->isNullValue() && match(Op1, m_SExt(m_Value(X))))
-      if (X->getType()->isIntOrIntVectorTy(1))
-        return CastInst::CreateZExtOrBitCast(X, Op1->getType());
   }
 
   const APInt *Op0C;
