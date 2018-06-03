@@ -7,68 +7,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2  | FileCheck %s --check-prefix=CHECK --check-prefix=BTVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=znver1  | FileCheck %s --check-prefix=CHECK --check-prefix=ZNVER1
 
-define i16 @test_andn_i16(i16 zeroext %a0, i16 zeroext %a1, i16 *%a2) {
-; GENERIC-LABEL: test_andn_i16:
-; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    andnl %esi, %edi, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    notl %edi # sched: [1:0.33]
-; GENERIC-NEXT:    andw (%rdx), %di # sched: [6:0.50]
-; GENERIC-NEXT:    addl %edi, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
-; GENERIC-NEXT:    retq # sched: [1:1.00]
-;
-; HASWELL-LABEL: test_andn_i16:
-; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    andnl %esi, %edi, %eax # sched: [1:0.50]
-; HASWELL-NEXT:    notl %edi # sched: [1:0.25]
-; HASWELL-NEXT:    andw (%rdx), %di # sched: [6:0.50]
-; HASWELL-NEXT:    addl %edi, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    # kill: def $ax killed $ax killed $eax
-; HASWELL-NEXT:    retq # sched: [7:1.00]
-;
-; BROADWELL-LABEL: test_andn_i16:
-; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    andnl %esi, %edi, %eax # sched: [1:0.50]
-; BROADWELL-NEXT:    notl %edi # sched: [1:0.25]
-; BROADWELL-NEXT:    andw (%rdx), %di # sched: [6:0.50]
-; BROADWELL-NEXT:    addl %edi, %eax # sched: [1:0.25]
-; BROADWELL-NEXT:    # kill: def $ax killed $ax killed $eax
-; BROADWELL-NEXT:    retq # sched: [7:1.00]
-;
-; SKYLAKE-LABEL: test_andn_i16:
-; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    andnl %esi, %edi, %eax # sched: [1:0.50]
-; SKYLAKE-NEXT:    notl %edi # sched: [1:0.25]
-; SKYLAKE-NEXT:    andw (%rdx), %di # sched: [6:0.50]
-; SKYLAKE-NEXT:    addl %edi, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    # kill: def $ax killed $ax killed $eax
-; SKYLAKE-NEXT:    retq # sched: [7:1.00]
-;
-; BTVER2-LABEL: test_andn_i16:
-; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    andnl %esi, %edi, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    notl %edi # sched: [1:0.50]
-; BTVER2-NEXT:    andw (%rdx), %di # sched: [4:1.00]
-; BTVER2-NEXT:    addl %edi, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    # kill: def $ax killed $ax killed $eax
-; BTVER2-NEXT:    retq # sched: [4:1.00]
-;
-; ZNVER1-LABEL: test_andn_i16:
-; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    andnl %esi, %edi, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    notl %edi # sched: [1:0.25]
-; ZNVER1-NEXT:    andw (%rdx), %di # sched: [5:0.50]
-; ZNVER1-NEXT:    addl %edi, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    # kill: def $ax killed $ax killed $eax
-; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = load i16, i16 *%a2
-  %2 = xor i16 %a0, -1
-  %3 = and i16 %2, %a1
-  %4 = and i16 %2, %1
-  %5 = add i16 %3, %4
-  ret i16 %5
-}
-
 define i32 @test_andn_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: test_andn_i32:
 ; GENERIC:       # %bb.0:

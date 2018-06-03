@@ -300,7 +300,9 @@ protected:
   std::vector<CompileUnitInfo> m_compile_unit_infos;
   std::vector<uint32_t> m_func_indexes; // Sorted by address
   std::vector<uint32_t> m_glob_indexes;
-  std::map<lldb_private::ConstString, OSOInfoSP> m_oso_map;
+  std::map<std::pair<lldb_private::ConstString, llvm::sys::TimePoint<>>,
+           OSOInfoSP>
+      m_oso_map;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   lldb_private::LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
   DebugMap m_debug_map;

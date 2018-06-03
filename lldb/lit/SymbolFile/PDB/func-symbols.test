@@ -27,6 +27,11 @@ CHECK-DAG: [[TY30:.*]]:   Type{[[UID30:.*]]} , name = "FunctionCall", decl = Fun
 CHECK-DAG: [[TY31:.*]]:   Type{[[UID31:.*]]} , name = "`anonymous namespace'::StaticFunction", decl = FuncSymbols.cpp:4, compiler_type = {{.*}} long (int)
 CHECK-DAG: [[TY32:.*]]:   Type{[[UID32:.*]]} , name = "InlinedFunction", decl = FuncSymbols.cpp:10, compiler_type = {{.*}} int (long)
 
+CHECK: {{.*}}:   CompileUnit{{.*}}, language = "c++", file = '{{.*}}\FuncSymbols.cpp'
+CHECK-DAG: Function{[[UID30]]}, mangled = ?FunctionCall@@YAXXZ, demangled = {{.*}}, type = [[TY30]]
+CHECK-DAG: Function{[[UID31]]}, demangled = {{.*}}`anonymous namespace'::StaticFunction{{.*}}, type = [[TY31]]
+CHECK-DAG: Function{[[UID32]]}, demangled = {{.*}}InlinedFunction{{.*}}, type = [[TY32]]
+
 CHECK: {{.*}}:   CompileUnit{{.*}}, language = "c++", file = '{{.*}}\FuncSymbolsTestMain.cpp'
 CHECK-DAG: Function{[[UID0]]}, mangled = ?Func_arg_array@@YAHQAH@Z, demangled = {{.*}}, type = [[TY0]]
 CHECK-DAG: Function{[[UID1]]}, mangled = ?Func_arg_void@@YAXXZ, demangled = {{.*}}, type = [[TY1]]
@@ -34,14 +39,9 @@ CHECK-DAG: Function{[[UID2]]}, mangled = ?Func_arg_none@@YAXXZ, demangled = {{.*
 CHECK-DAG: Function{[[UID3]]}, mangled = ?Func_varargs@@YAXZZ, demangled = {{.*}}, type = [[TY3]]
 CHECK-DAG: Function{[[UID4]]}, mangled = ?Func@NS@@YAXDH@Z, demangled = {{.*}}, type = [[TY4]]
 CHECK-DAG: Function{[[UID5]]}, mangled = _main, demangled = {{.*}}, type = [[TY5]]
-CHECK-DAG: Function{[[UID6]]}, demangled = `anonymous namespace'::Func, type = [[TY6]]
-CHECK-DAG: Function{[[UID7]]}, demangled = StaticFunction, type = [[TY7]]
+CHECK-DAG: Function{[[UID6]]}, demangled = {{.*}}`anonymous namespace'::Func{{.*}}, type = [[TY6]]
+CHECK-DAG: Function{[[UID7]]}, demangled = {{.*}}StaticFunction{{.*}}, type = [[TY7]]
 CHECK-DAG: Function{[[UID8]]}, mangled = ?Func@A@MemberTest@@QAAHHZZ, demangled = {{.*}}, type = [[TY8]]
 CHECK-DAG: Function{[[UID9]]}, mangled = ??$TemplateFunc@$00H@@YAXH@Z, demangled = {{.*}}, type = [[TY9]]
 CHECK-DAG: Function{[[UID10]]}, mangled = ??$TemplateFunc@$00HHH@@YAXHHH@Z, demangled = {{.*}}, type = [[TY10]]
 CHECK-DAG: Function{[[UID11]]}, mangled = ?InlinedFunction@@YAXJ@Z, demangled = {{.*}}, type = [[TY11]]
-
-CHECK: {{.*}}:   CompileUnit{{.*}}, language = "c++", file = '{{.*}}\FuncSymbols.cpp'
-CHECK-DAG: Function{[[UID30]]}, mangled = ?FunctionCall@@YAXXZ, demangled = {{.*}}, type = [[TY30]]
-CHECK-DAG: Function{[[UID31]]}, demangled = `anonymous namespace'::StaticFunction, type = [[TY31]]
-CHECK-DAG: Function{[[UID32]]}, demangled = InlinedFunction, type = [[TY32]]

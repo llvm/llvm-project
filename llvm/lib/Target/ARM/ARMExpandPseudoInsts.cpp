@@ -110,6 +110,9 @@ namespace {
   // OddDblSpc depending on the lane number operand.
   enum NEONRegSpacing {
     SingleSpc,
+    SingleLowSpc ,  // Single spacing, low registers, three and four vectors.
+    SingleHighQSpc, // Single spacing, high registers, four vectors.
+    SingleHighTSpc, // Single spacing, high registers, three vectors.
     EvenDblSpc,
     OddDblSpc
   };
@@ -154,12 +157,34 @@ static const NEONLdStTableEntry NEONLdStTable[] = {
 { ARM::VLD1LNq8Pseudo,      ARM::VLD1LNd8,      true, false, false, EvenDblSpc, 1, 8 ,true},
 { ARM::VLD1LNq8Pseudo_UPD,  ARM::VLD1LNd8_UPD, true, true, true,  EvenDblSpc, 1, 8 ,true},
 
+{ ARM::VLD1d16QPseudo,      ARM::VLD1d16Q,     true,  false, false, SingleSpc,  4, 4 ,false},
+{ ARM::VLD1d16TPseudo,      ARM::VLD1d16T,     true,  false, false, SingleSpc,  3, 4 ,false},
+{ ARM::VLD1d32QPseudo,      ARM::VLD1d32Q,     true,  false, false, SingleSpc,  4, 2 ,false},
+{ ARM::VLD1d32TPseudo,      ARM::VLD1d32T,     true,  false, false, SingleSpc,  3, 2 ,false},
 { ARM::VLD1d64QPseudo,      ARM::VLD1d64Q,     true,  false, false, SingleSpc,  4, 1 ,false},
 { ARM::VLD1d64QPseudoWB_fixed,  ARM::VLD1d64Qwb_fixed,   true,  true, false, SingleSpc,  4, 1 ,false},
 { ARM::VLD1d64QPseudoWB_register,  ARM::VLD1d64Qwb_register,   true,  true, true, SingleSpc,  4, 1 ,false},
 { ARM::VLD1d64TPseudo,      ARM::VLD1d64T,     true,  false, false, SingleSpc,  3, 1 ,false},
 { ARM::VLD1d64TPseudoWB_fixed,  ARM::VLD1d64Twb_fixed,   true,  true, false, SingleSpc,  3, 1 ,false},
 { ARM::VLD1d64TPseudoWB_register,  ARM::VLD1d64Twb_register, true, true, true,  SingleSpc,  3, 1 ,false},
+{ ARM::VLD1d8QPseudo,       ARM::VLD1d8Q,      true,  false, false, SingleSpc,  4, 8 ,false},
+{ ARM::VLD1d8TPseudo,       ARM::VLD1d8T,      true,  false, false, SingleSpc,  3, 8 ,false},
+{ ARM::VLD1q16HighQPseudo,  ARM::VLD1d16Q,     true,  false, false, SingleHighQSpc,  4, 4 ,false},
+{ ARM::VLD1q16HighTPseudo,  ARM::VLD1d16T,     true,  false, false, SingleHighTSpc,  3, 4 ,false},
+{ ARM::VLD1q16LowQPseudo_UPD,  ARM::VLD1d16Qwb_fixed,   true,  true, true, SingleLowSpc,  4, 4 ,false},
+{ ARM::VLD1q16LowTPseudo_UPD,  ARM::VLD1d16Twb_fixed,   true,  true, true, SingleLowSpc,  3, 4 ,false},
+{ ARM::VLD1q32HighQPseudo,  ARM::VLD1d32Q,     true,  false, false, SingleHighQSpc,  4, 2 ,false},
+{ ARM::VLD1q32HighTPseudo,  ARM::VLD1d32T,     true,  false, false, SingleHighTSpc,  3, 2 ,false},
+{ ARM::VLD1q32LowQPseudo_UPD,  ARM::VLD1d32Qwb_fixed,   true,  true, true, SingleLowSpc,  4, 2 ,false},
+{ ARM::VLD1q32LowTPseudo_UPD,  ARM::VLD1d32Twb_fixed,   true,  true, true, SingleLowSpc,  3, 2 ,false},
+{ ARM::VLD1q64HighQPseudo,  ARM::VLD1d64Q,     true,  false, false, SingleHighQSpc,  4, 1 ,false},
+{ ARM::VLD1q64HighTPseudo,  ARM::VLD1d64T,     true,  false, false, SingleHighTSpc,  3, 1 ,false},
+{ ARM::VLD1q64LowQPseudo_UPD,  ARM::VLD1d64Qwb_fixed,   true,  true, true, SingleLowSpc,  4, 1 ,false},
+{ ARM::VLD1q64LowTPseudo_UPD,  ARM::VLD1d64Twb_fixed,   true,  true, true, SingleLowSpc,  3, 1 ,false},
+{ ARM::VLD1q8HighQPseudo,   ARM::VLD1d8Q,     true,  false, false, SingleHighQSpc,  4, 8 ,false},
+{ ARM::VLD1q8HighTPseudo,   ARM::VLD1d8T,     true,  false, false, SingleHighTSpc,  3, 8 ,false},
+{ ARM::VLD1q8LowQPseudo_UPD,  ARM::VLD1d8Qwb_fixed,   true,  true, true, SingleLowSpc,  4, 8 ,false},
+{ ARM::VLD1q8LowTPseudo_UPD,  ARM::VLD1d8Twb_fixed,   true,  true, true, SingleLowSpc,  3, 8 ,false},
 
 { ARM::VLD2LNd16Pseudo,     ARM::VLD2LNd16,     true, false, false, SingleSpc,  2, 4 ,true},
 { ARM::VLD2LNd16Pseudo_UPD, ARM::VLD2LNd16_UPD, true, true, true,  SingleSpc,  2, 4 ,true},
@@ -370,11 +395,21 @@ static const NEONLdStTableEntry *LookupNEONLdSt(unsigned Opcode) {
 static void GetDSubRegs(unsigned Reg, NEONRegSpacing RegSpc,
                         const TargetRegisterInfo *TRI, unsigned &D0,
                         unsigned &D1, unsigned &D2, unsigned &D3) {
-  if (RegSpc == SingleSpc) {
+  if (RegSpc == SingleSpc || RegSpc == SingleLowSpc) {
     D0 = TRI->getSubReg(Reg, ARM::dsub_0);
     D1 = TRI->getSubReg(Reg, ARM::dsub_1);
     D2 = TRI->getSubReg(Reg, ARM::dsub_2);
     D3 = TRI->getSubReg(Reg, ARM::dsub_3);
+  } else if (RegSpc == SingleHighQSpc) {
+    D0 = TRI->getSubReg(Reg, ARM::dsub_4);
+    D1 = TRI->getSubReg(Reg, ARM::dsub_5);
+    D2 = TRI->getSubReg(Reg, ARM::dsub_6);
+    D3 = TRI->getSubReg(Reg, ARM::dsub_7);
+  } else if (RegSpc == SingleHighTSpc) {
+    D0 = TRI->getSubReg(Reg, ARM::dsub_3);
+    D1 = TRI->getSubReg(Reg, ARM::dsub_4);
+    D2 = TRI->getSubReg(Reg, ARM::dsub_5);
+    D3 = TRI->getSubReg(Reg, ARM::dsub_6);
   } else if (RegSpc == EvenDblSpc) {
     D0 = TRI->getSubReg(Reg, ARM::dsub_0);
     D1 = TRI->getSubReg(Reg, ARM::dsub_2);
@@ -422,15 +457,40 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
   // Copy the addrmode6 operands.
   MIB.add(MI.getOperand(OpIdx++));
   MIB.add(MI.getOperand(OpIdx++));
+
   // Copy the am6offset operand.
-  if (TableEntry->hasWritebackOperand)
-    MIB.add(MI.getOperand(OpIdx++));
+  if (TableEntry->hasWritebackOperand) {
+    // TODO: The writing-back pseudo instructions we translate here are all
+    // defined to take am6offset nodes that are capable to represent both fixed
+    // and register forms. Some real instructions, however, do not rely on
+    // am6offset and have separate definitions for such forms. When this is the
+    // case, fixed forms do not take any offset nodes, so here we skip them for
+    // such intructions. Once all real and pseudo writing-back instructions are
+    // rewritten without use of am6offset nodes, this code will go away.
+    const MachineOperand &AM6Offset = MI.getOperand(OpIdx++);
+    if (TableEntry->RealOpc == ARM::VLD1d8Qwb_fixed ||
+        TableEntry->RealOpc == ARM::VLD1d16Qwb_fixed ||
+        TableEntry->RealOpc == ARM::VLD1d32Qwb_fixed ||
+        TableEntry->RealOpc == ARM::VLD1d64Qwb_fixed ||
+        TableEntry->RealOpc == ARM::VLD1d8Twb_fixed ||
+        TableEntry->RealOpc == ARM::VLD1d16Twb_fixed ||
+        TableEntry->RealOpc == ARM::VLD1d32Twb_fixed ||
+        TableEntry->RealOpc == ARM::VLD1d64Twb_fixed) {
+      assert(AM6Offset.getReg() == 0 &&
+             "A fixed writing-back pseudo intruction provides an offset "
+             "register!");
+    } else {
+      MIB.add(AM6Offset);
+    }
+  }
 
   // For an instruction writing double-spaced subregs, the pseudo instruction
   // has an extra operand that is a use of the super-register.  Record the
   // operand index and skip over it.
   unsigned SrcOpIdx = 0;
-  if (RegSpc == EvenDblSpc || RegSpc == OddDblSpc)
+  if (RegSpc == EvenDblSpc || RegSpc == OddDblSpc ||
+      RegSpc == SingleLowSpc || RegSpc == SingleHighQSpc ||
+      RegSpc == SingleHighTSpc)
     SrcOpIdx = OpIdx++;
 
   // Copy the predicate operands.
@@ -1503,6 +1563,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case ARM::VLD3d8Pseudo:
     case ARM::VLD3d16Pseudo:
     case ARM::VLD3d32Pseudo:
+    case ARM::VLD1d8TPseudo:
+    case ARM::VLD1d16TPseudo:
+    case ARM::VLD1d32TPseudo:
     case ARM::VLD1d64TPseudo:
     case ARM::VLD1d64TPseudoWB_fixed:
     case ARM::VLD1d64TPseudoWB_register:
@@ -1521,9 +1584,28 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case ARM::VLD4d8Pseudo:
     case ARM::VLD4d16Pseudo:
     case ARM::VLD4d32Pseudo:
+    case ARM::VLD1d8QPseudo:
+    case ARM::VLD1d16QPseudo:
+    case ARM::VLD1d32QPseudo:
     case ARM::VLD1d64QPseudo:
     case ARM::VLD1d64QPseudoWB_fixed:
     case ARM::VLD1d64QPseudoWB_register:
+    case ARM::VLD1q8HighQPseudo:
+    case ARM::VLD1q8LowQPseudo_UPD:
+    case ARM::VLD1q8HighTPseudo:
+    case ARM::VLD1q8LowTPseudo_UPD:
+    case ARM::VLD1q16HighQPseudo:
+    case ARM::VLD1q16LowQPseudo_UPD:
+    case ARM::VLD1q16HighTPseudo:
+    case ARM::VLD1q16LowTPseudo_UPD:
+    case ARM::VLD1q32HighQPseudo:
+    case ARM::VLD1q32LowQPseudo_UPD:
+    case ARM::VLD1q32HighTPseudo:
+    case ARM::VLD1q32LowTPseudo_UPD:
+    case ARM::VLD1q64HighQPseudo:
+    case ARM::VLD1q64LowQPseudo_UPD:
+    case ARM::VLD1q64HighTPseudo:
+    case ARM::VLD1q64LowTPseudo_UPD:
     case ARM::VLD4d8Pseudo_UPD:
     case ARM::VLD4d16Pseudo_UPD:
     case ARM::VLD4d32Pseudo_UPD:

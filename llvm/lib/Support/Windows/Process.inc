@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/WindowsError.h"
 #include <malloc.h>

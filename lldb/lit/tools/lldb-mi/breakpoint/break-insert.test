@@ -1,3 +1,7 @@
+# REQUIRES: nowindows
+# -> llvm.org/pr24452
+# Rather than XFAILing the test, skip it on Windows because it hangs
+
 # RUN: %cc %p/inputs/break-insert.c -g
 # RUN: %lldbmi < %s | FileCheck %s
 

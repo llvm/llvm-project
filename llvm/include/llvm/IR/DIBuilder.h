@@ -515,12 +515,15 @@ namespace llvm {
                          DINode::DIFlags Flags = DINode::FlagZero,
                          unsigned CC = 0);
 
-    /// Create a new DIType* with "artificial" flag set.
-    DIType *createArtificialType(DIType *Ty);
+    /// Create a distinct clone of \p SP with FlagArtificial set.
+    static DISubprogram *createArtificialSubprogram(DISubprogram *SP);
 
-    /// Create a new DIType* with the "object pointer"
-    /// flag set.
-    DIType *createObjectPointerType(DIType *Ty);
+    /// Create a uniqued clone of \p Ty with FlagArtificial set.
+    static DIType *createArtificialType(DIType *Ty);
+
+    /// Create a uniqued clone of \p Ty with FlagObjectPointer and
+    /// FlagArtificial set.
+    static DIType *createObjectPointerType(DIType *Ty);
 
     /// Create a permanent forward-declared type.
     DICompositeType *createForwardDecl(unsigned Tag, StringRef Name,

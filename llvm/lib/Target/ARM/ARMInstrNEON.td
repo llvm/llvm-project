@@ -770,9 +770,21 @@ defm VLD1d16Twb : VLD1D3WB<{0,1,0,?}, "16", addrmode6align64>;
 defm VLD1d32Twb : VLD1D3WB<{1,0,0,?}, "32", addrmode6align64>;
 defm VLD1d64Twb : VLD1D3WB<{1,1,0,?}, "64", addrmode6align64>;
 
+def VLD1d8TPseudo  : VLDQQPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
+def VLD1d16TPseudo : VLDQQPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
+def VLD1d32TPseudo : VLDQQPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
 def VLD1d64TPseudo : VLDQQPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
 def VLD1d64TPseudoWB_fixed : VLDQQWBfixedPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
 def VLD1d64TPseudoWB_register : VLDQQWBregisterPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
+
+def VLD1q8HighTPseudo     : VLDQQQQPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
+def VLD1q8LowTPseudo_UPD  : VLDQQQQWBPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
+def VLD1q16HighTPseudo    : VLDQQQQPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
+def VLD1q16LowTPseudo_UPD : VLDQQQQWBPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
+def VLD1q32HighTPseudo    : VLDQQQQPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
+def VLD1q32LowTPseudo_UPD : VLDQQQQWBPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
+def VLD1q64HighTPseudo    : VLDQQQQPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
+def VLD1q64LowTPseudo_UPD : VLDQQQQWBPseudo<IIC_VLD1x3>, Sched<[WriteVLD3]>;
 
 // ...with 4 registers
 class VLD1D4<bits<4> op7_4, string Dt, Operand AddrMode>
@@ -811,9 +823,21 @@ defm VLD1d16Qwb  : VLD1D4WB<{0,1,?,?}, "16", addrmode6align64or128or256>;
 defm VLD1d32Qwb  : VLD1D4WB<{1,0,?,?}, "32", addrmode6align64or128or256>;
 defm VLD1d64Qwb  : VLD1D4WB<{1,1,?,?}, "64", addrmode6align64or128or256>;
 
+def VLD1d8QPseudo  : VLDQQPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
+def VLD1d16QPseudo : VLDQQPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
+def VLD1d32QPseudo : VLDQQPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
 def VLD1d64QPseudo : VLDQQPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
 def VLD1d64QPseudoWB_fixed : VLDQQWBfixedPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
 def VLD1d64QPseudoWB_register : VLDQQWBregisterPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
+
+def VLD1q8LowQPseudo_UPD  : VLDQQQQWBPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
+def VLD1q8HighQPseudo     : VLDQQQQPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
+def VLD1q16LowQPseudo_UPD : VLDQQQQWBPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
+def VLD1q16HighQPseudo    : VLDQQQQPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
+def VLD1q32LowQPseudo_UPD : VLDQQQQWBPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
+def VLD1q32HighQPseudo    : VLDQQQQPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
+def VLD1q64LowQPseudo_UPD : VLDQQQQWBPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
+def VLD1q64HighQPseudo    : VLDQQQQPseudo<IIC_VLD1x4>, Sched<[WriteVLD4]>;
 
 //   VLD2     : Vector Load (multiple 2-element structures)
 class VLD2<bits<4> op11_8, bits<4> op7_4, string Dt, RegisterOperand VdTy,

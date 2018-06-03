@@ -69,6 +69,9 @@ public:
 
   void EmitValueToAlignment(unsigned, int64_t, unsigned, unsigned) override;
 
+  void emitCGProfileEntry(const MCSymbolRefExpr *From,
+                          const MCSymbolRefExpr *To, uint64_t Count) override;
+
   void FinishImpl() override;
 
   void EmitBundleAlignMode(unsigned AlignPow2) override;
@@ -81,6 +84,8 @@ private:
   void EmitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
 
   void fixSymbolsInTLSFixups(const MCExpr *expr);
+  void finalizeCGProfileEntry(const MCSymbolRefExpr *&S);
+  void finalizeCGProfile();
 
   /// Merge the content of the fragment \p EF into the fragment \p DF.
   void mergeFragment(MCDataFragment *, MCDataFragment *);

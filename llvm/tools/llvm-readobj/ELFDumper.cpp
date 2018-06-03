@@ -100,6 +100,7 @@ using namespace ELF;
   using Elf_Vernaux = typename ELFT::Vernaux;                                  \
   using Elf_Verdef = typename ELFT::Verdef;                                    \
   using Elf_Verdaux = typename ELFT::Verdaux;                                  \
+  using Elf_CGProfile = typename ELFT::CGProfile;                              \
   using uintX_t = typename ELFT::uint;
 
 namespace {
@@ -164,6 +165,8 @@ public:
 
   void printHashHistogram() override;
 
+  void printCGProfile() override;
+
   void printNotes() override;
 
   void printELFLinkerOptions() override;
@@ -210,6 +213,7 @@ private:
   const Elf_Hash *HashTable = nullptr;
   const Elf_GnuHash *GnuHashTable = nullptr;
   const Elf_Shdr *DotSymtabSec = nullptr;
+  const Elf_Shdr *DotCGProfileSec = nullptr;
   StringRef DynSymtabName;
   ArrayRef<Elf_Word> ShndxTable;
 
@@ -257,9 +261,11 @@ public:
   void getSectionNameIndex(const Elf_Sym *Symbol, const Elf_Sym *FirstSym,
                            StringRef &SectionName,
                            unsigned &SectionIndex) const;
+  StringRef getStaticSymbolName(uint32_t Index) const;
 
   void printSymbolsHelper(bool IsDynamic) const;
   const Elf_Shdr *getDotSymtabSec() const { return DotSymtabSec; }
+  const Elf_Shdr *getDotCGProfileSec() const { return DotCGProfileSec; }
   ArrayRef<Elf_Word> getShndxTable() const { return ShndxTable; }
   StringRef getDynamicStringTable() const { return DynamicStringTable; }
   const DynRegionInfo &getDynRelRegion() const { return DynRelRegion; }
@@ -319,6 +325,7 @@ public:
                            bool IsDynamic) = 0;
   virtual void printProgramHeaders(const ELFFile<ELFT> *Obj) = 0;
   virtual void printHashHistogram(const ELFFile<ELFT> *Obj) = 0;
+  virtual void printCGProfile(const ELFFile<ELFT> *Obj) = 0;
   virtual void printNotes(const ELFFile<ELFT> *Obj) = 0;
   virtual void printELFLinkerOptions(const ELFFile<ELFT> *Obj) = 0;
   virtual void printMipsGOT(const MipsGOTParser<ELFT> &Parser) = 0;
@@ -349,6 +356,7 @@ public:
                           size_t Offset) override;
   void printProgramHeaders(const ELFO *Obj) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
+  void printCGProfile(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
   void printELFLinkerOptions(const ELFFile<ELFT> *Obj) override;
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
@@ -410,6 +418,7 @@ public:
   void printDynamicRelocations(const ELFO *Obj) override;
   void printProgramHeaders(const ELFO *Obj) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
+  void printCGProfile(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
   void printELFLinkerOptions(const ELFFile<ELFT> *Obj) override;
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
@@ -734,6 +743,16 @@ StringRef ELFDumper<ELFT>::getSymbolVersion(StringRef StrTab,
   if (name_offset >= StrTab.size())
     reportError("Invalid string offset");
   return StringRef(StrTab.data() + name_offset);
+}
+
+template <typename ELFT>
+StringRef ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
+  StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*DotSymtabSec));
+  Elf_Sym_Range Syms = unwrapOrError(Obj->symbols(DotSymtabSec));
+  if (Index >= Syms.size())
+    reportError("Invalid symbol index");
+  const Elf_Sym *Sym = &Syms[Index];
+  return unwrapOrError(Sym->getName(StrTable));
 }
 
 template <typename ELFT>
@@ -1390,6 +1409,10 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer)
         reportError("Multiple SHT_GNU_verneed");
       dot_gnu_version_r_sec = &Sec;
       break;
+    case ELF::SHT_LLVM_CALL_GRAPH_PROFILE:
+      if (DotCGProfileSec != nullptr)
+        reportError("Multiple .note.llvm.cgprofile");
+      DotCGProfileSec = &Sec;
     }
   }
 
@@ -1532,6 +1555,10 @@ void ELFDumper<ELFT>::printDynamicSymbols() {
 
 template <class ELFT> void ELFDumper<ELFT>::printHashHistogram() {
   ELFDumperStyle->printHashHistogram(Obj);
+}
+
+template <class ELFT> void ELFDumper<ELFT>::printCGProfile() {
+  ELFDumperStyle->printCGProfile(Obj);
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printNotes() {
@@ -2721,6 +2748,8 @@ std::string getSectionTypeString(unsigned Arch, unsigned Type) {
     return "LLVM_ODRTAB";
   case SHT_LLVM_LINKER_OPTIONS:
     return "LLVM_LINKER_OPTIONS";
+  case SHT_LLVM_CALL_GRAPH_PROFILE:
+    return "LLVM_CALL_GRAPH_PROFILE";
   // FIXME: Parse processor specific GNU attributes
   case SHT_GNU_ATTRIBUTES:
     return "ATTRIBUTES";
@@ -3372,6 +3401,11 @@ void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
                    (CumulativeNonZero * 100.0) / TotalSyms);
     }
   }
+}
+
+template <class ELFT>
+void GNUStyle<ELFT>::printCGProfile(const ELFFile<ELFT> *Obj) {
+  OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
 static std::string getGNUNoteTypeName(const uint32_t NT) {
@@ -4135,6 +4169,24 @@ void LLVMStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
 template <class ELFT>
 void LLVMStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
   W.startLine() << "Hash Histogram not implemented!\n";
+}
+
+template <class ELFT>
+void LLVMStyle<ELFT>::printCGProfile(const ELFFile<ELFT> *Obj) {
+  ListScope L(W, "CGProfile");
+  if (!this->dumper()->getDotCGProfileSec())
+    return;
+  auto CGProfile =
+      unwrapOrError(Obj->template getSectionContentsAsArray<Elf_CGProfile>(
+          this->dumper()->getDotCGProfileSec()));
+  for (const Elf_CGProfile &CGPE : CGProfile) {
+    DictScope D(W, "CGProfileEntry");
+    W.printNumber("From", this->dumper()->getStaticSymbolName(CGPE.cgp_from),
+                  CGPE.cgp_from);
+    W.printNumber("To", this->dumper()->getStaticSymbolName(CGPE.cgp_to),
+                  CGPE.cgp_to);
+    W.printNumber("Weight", CGPE.cgp_weight);
+  }
 }
 
 template <class ELFT>
