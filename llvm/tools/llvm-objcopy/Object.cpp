@@ -200,8 +200,8 @@ void SymbolTableSection::removeSectionReferences(const SectionBase *Sec) {
 }
 
 void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
-  for (auto &Sym : Symbols)
-    Callable(*Sym);
+  std::for_each(std::begin(Symbols) + 1, std::end(Symbols),
+                [Callable](SymPtr &Sym) { Callable(*Sym); });
   std::stable_partition(
       std::begin(Symbols), std::end(Symbols),
       [](const SymPtr &Sym) { return Sym->Binding == STB_LOCAL; });
@@ -211,7 +211,7 @@ void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
 void SymbolTableSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   Symbols.erase(
-      std::remove_if(std::begin(Symbols), std::end(Symbols),
+      std::remove_if(std::begin(Symbols) + 1, std::end(Symbols),
                      [ToRemove](const SymPtr &Sym) { return ToRemove(*Sym); }),
       std::end(Symbols));
   Size = Symbols.size() * EntrySize;

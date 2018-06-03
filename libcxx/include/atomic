@@ -698,7 +698,7 @@ static inline void __c11_atomic_store(_Atomic(_Tp)* __a,  _Tp __val,
 }
 
 template <typename _Tp>
-static inline _Tp __c11_atomic_load(volatile _Atomic(_Tp)* __a,
+static inline _Tp __c11_atomic_load(const volatile _Atomic(_Tp)* __a,
                                     memory_order __order) {
   _Tp __ret;
   __atomic_load(&__a->__a_value, &__ret,
@@ -707,7 +707,7 @@ static inline _Tp __c11_atomic_load(volatile _Atomic(_Tp)* __a,
 }
 
 template <typename _Tp>
-static inline _Tp __c11_atomic_load(_Atomic(_Tp)* __a, memory_order __order) {
+static inline _Tp __c11_atomic_load(const _Atomic(_Tp)* __a, memory_order __order) {
   _Tp __ret;
   __atomic_load(&__a->__a_value, &__ret,
                 __gcc_atomic::__to_gcc_order(__order));

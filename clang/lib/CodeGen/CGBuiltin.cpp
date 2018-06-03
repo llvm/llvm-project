@@ -8918,18 +8918,20 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_movdqa64store128_mask:
   case X86::BI__builtin_ia32_storeaps128_mask:
   case X86::BI__builtin_ia32_storeapd128_mask:
+    return EmitX86MaskedStore(*this, Ops, 16);
+
   case X86::BI__builtin_ia32_movdqa32store256_mask:
   case X86::BI__builtin_ia32_movdqa64store256_mask:
   case X86::BI__builtin_ia32_storeaps256_mask:
   case X86::BI__builtin_ia32_storeapd256_mask:
+    return EmitX86MaskedStore(*this, Ops, 32);
+
   case X86::BI__builtin_ia32_movdqa32store512_mask:
   case X86::BI__builtin_ia32_movdqa64store512_mask:
   case X86::BI__builtin_ia32_storeaps512_mask:
-  case X86::BI__builtin_ia32_storeapd512_mask: {
-    unsigned Align =
-      getContext().getTypeAlignInChars(E->getArg(1)->getType()).getQuantity();
-    return EmitX86MaskedStore(*this, Ops, Align);
-  }
+  case X86::BI__builtin_ia32_storeapd512_mask:
+    return EmitX86MaskedStore(*this, Ops, 64);
+
   case X86::BI__builtin_ia32_loadups128_mask:
   case X86::BI__builtin_ia32_loadups256_mask:
   case X86::BI__builtin_ia32_loadups512_mask:
@@ -8950,26 +8952,25 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_loaddqudi512_mask:
     return EmitX86MaskedLoad(*this, Ops, 1);
 
+  case X86::BI__builtin_ia32_loadaps128_mask:
+  case X86::BI__builtin_ia32_loadapd128_mask:
   case X86::BI__builtin_ia32_loadss128_mask:
   case X86::BI__builtin_ia32_loadsd128_mask:
-    return EmitX86MaskedLoad(*this, Ops, 1);
-
-  case X86::BI__builtin_ia32_loadaps128_mask:
-  case X86::BI__builtin_ia32_loadaps256_mask:
-  case X86::BI__builtin_ia32_loadaps512_mask:
-  case X86::BI__builtin_ia32_loadapd128_mask:
-  case X86::BI__builtin_ia32_loadapd256_mask:
-  case X86::BI__builtin_ia32_loadapd512_mask:
   case X86::BI__builtin_ia32_movdqa32load128_mask:
-  case X86::BI__builtin_ia32_movdqa32load256_mask:
-  case X86::BI__builtin_ia32_movdqa32load512_mask:
   case X86::BI__builtin_ia32_movdqa64load128_mask:
+    return EmitX86MaskedLoad(*this, Ops, 16);
+
+  case X86::BI__builtin_ia32_loadaps256_mask:
+  case X86::BI__builtin_ia32_loadapd256_mask:
+  case X86::BI__builtin_ia32_movdqa32load256_mask:
   case X86::BI__builtin_ia32_movdqa64load256_mask:
-  case X86::BI__builtin_ia32_movdqa64load512_mask: {
-    unsigned Align =
-      getContext().getTypeAlignInChars(E->getArg(1)->getType()).getQuantity();
-    return EmitX86MaskedLoad(*this, Ops, Align);
-  }
+    return EmitX86MaskedLoad(*this, Ops, 32);
+
+  case X86::BI__builtin_ia32_loadaps512_mask:
+  case X86::BI__builtin_ia32_loadapd512_mask:
+  case X86::BI__builtin_ia32_movdqa32load512_mask:
+  case X86::BI__builtin_ia32_movdqa64load512_mask:
+    return EmitX86MaskedLoad(*this, Ops, 64);
 
   case X86::BI__builtin_ia32_vbroadcastf128_pd256:
   case X86::BI__builtin_ia32_vbroadcastf128_ps256: {

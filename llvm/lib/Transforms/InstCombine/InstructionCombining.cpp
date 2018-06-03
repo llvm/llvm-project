@@ -1421,6 +1421,22 @@ Value *InstCombiner::SimplifyVectorOp(BinaryOperator &Inst) {
       }
     }
     if (MayChange) {
+      // It's not safe to use a vector with undef elements because the entire
+      // instruction can be folded to undef (for example, div/rem divisors).
+      // Replace undef lanes with the first non-undef element. Vector demanded
+      // elements can change those back to undef values if that is safe.
+      Constant *SafeDummyConstant = nullptr;
+      for (unsigned i = 0; i < VWidth; ++i) {
+        if (!isa<UndefValue>(NewVecC[i])) {
+          SafeDummyConstant = NewVecC[i];
+          break;
+        }
+      }
+      assert(SafeDummyConstant && "Undef constant vector was not simplified?");
+      for (unsigned i = 0; i < VWidth; ++i)
+        if (isa<UndefValue>(NewVecC[i]))
+          NewVecC[i] = SafeDummyConstant;
+
       // Op(shuffle(V1, Mask), C) -> shuffle(Op(V1, NewC), Mask)
       // Op(C, shuffle(V1, Mask)) -> shuffle(Op(NewC, V1), Mask)
       Constant *NewC = ConstantVector::get(NewVecC);

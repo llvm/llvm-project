@@ -1169,16 +1169,17 @@ HexagonTargetLowering::LowerHvxCttz(SDValue Op, SelectionDAG &DAG) const {
   // Calculate the vectors of 1 and bitwidth(x).
   MVT ElemTy = ty(InpV).getVectorElementType();
   unsigned ElemWidth = ElemTy.getSizeInBits();
-  uint32_t Splat1 = 0, SplatW = 0;
+  // Using uint64_t because a shift by 32 can happen.
+  uint64_t Splat1 = 0, SplatW = 0;
   assert(isPowerOf2_32(ElemWidth) && ElemWidth <= 32);
   for (unsigned i = 0; i != 32/ElemWidth; ++i) {
     Splat1 = (Splat1 << ElemWidth) | 1;
     SplatW = (SplatW << ElemWidth) | ElemWidth;
   }
   SDValue Vec1 = DAG.getNode(HexagonISD::VSPLATW, dl, ResTy,
-                             DAG.getConstant(Splat1, dl, MVT::i32));
+                             DAG.getConstant(uint32_t(Splat1), dl, MVT::i32));
   SDValue VecW = DAG.getNode(HexagonISD::VSPLATW, dl, ResTy,
-                             DAG.getConstant(SplatW, dl, MVT::i32));
+                             DAG.getConstant(uint32_t(SplatW), dl, MVT::i32));
   SDValue VecN1 = DAG.getNode(HexagonISD::VSPLATW, dl, ResTy,
                               DAG.getConstant(-1, dl, MVT::i32));
   // Do not use DAG.getNOT, because that would create BUILD_VECTOR with
