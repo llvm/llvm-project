@@ -1761,9 +1761,7 @@ void ARMDAGToDAGISel::SelectVLD(SDNode *N, bool isUpdating, unsigned NumVecs,
   case MVT::v4f32:
   case MVT::v4i32: OpcodeIndex = 2; break;
   case MVT::v2f64:
-  case MVT::v2i64: OpcodeIndex = 3;
-    assert(NumVecs == 1 && "v2i64 type only supported for VLD1");
-    break;
+  case MVT::v2i64: OpcodeIndex = 3; break;
   }
 
   EVT ResTy;
@@ -3438,6 +3436,51 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       static const uint16_t QOpcodes[] = { ARM::VLD1q8, ARM::VLD1q16,
                                            ARM::VLD1q32, ARM::VLD1q64};
       SelectVLD(N, false, 1, DOpcodes, QOpcodes, nullptr);
+      return;
+    }
+
+    case Intrinsic::arm_neon_vld1x2: {
+      static const uint16_t DOpcodes[] = { ARM::VLD1q8, ARM::VLD1q16,
+                                           ARM::VLD1q32, ARM::VLD1q64 };
+      static const uint16_t QOpcodes[] = { ARM::VLD1d8QPseudo,
+                                           ARM::VLD1d16QPseudo,
+                                           ARM::VLD1d32QPseudo,
+                                           ARM::VLD1d64QPseudo };
+      SelectVLD(N, false, 2, DOpcodes, QOpcodes, nullptr);
+      return;
+    }
+
+    case Intrinsic::arm_neon_vld1x3: {
+      static const uint16_t DOpcodes[] = { ARM::VLD1d8TPseudo,
+                                           ARM::VLD1d16TPseudo,
+                                           ARM::VLD1d32TPseudo,
+                                           ARM::VLD1d64TPseudo };
+      static const uint16_t QOpcodes0[] = { ARM::VLD1q8LowTPseudo_UPD,
+                                            ARM::VLD1q16LowTPseudo_UPD,
+                                            ARM::VLD1q32LowTPseudo_UPD,
+                                            ARM::VLD1q64LowTPseudo_UPD };
+      static const uint16_t QOpcodes1[] = { ARM::VLD1q8HighTPseudo,
+                                            ARM::VLD1q16HighTPseudo,
+                                            ARM::VLD1q32HighTPseudo,
+                                            ARM::VLD1q64HighTPseudo };
+      SelectVLD(N, false, 3, DOpcodes, QOpcodes0, QOpcodes1);
+      return;
+    }
+
+    case Intrinsic::arm_neon_vld1x4: {
+      static const uint16_t DOpcodes[] = { ARM::VLD1d8QPseudo,
+                                           ARM::VLD1d16QPseudo,
+                                           ARM::VLD1d32QPseudo,
+                                           ARM::VLD1d64QPseudo };
+      static const uint16_t QOpcodes0[] = { ARM::VLD1q8LowQPseudo_UPD,
+                                            ARM::VLD1q16LowQPseudo_UPD,
+                                            ARM::VLD1q32LowQPseudo_UPD,
+                                            ARM::VLD1q64LowQPseudo_UPD };
+      static const uint16_t QOpcodes1[] = { ARM::VLD1q8HighQPseudo,
+                                            ARM::VLD1q16HighQPseudo,
+                                            ARM::VLD1q32HighQPseudo,
+                                            ARM::VLD1q64HighQPseudo };
+      SelectVLD(N, false, 4, DOpcodes, QOpcodes0, QOpcodes1);
       return;
     }
 

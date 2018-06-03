@@ -150,6 +150,8 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << "llvm_odrtab";
   else if (Type == ELF::SHT_LLVM_LINKER_OPTIONS)
     OS << "llvm_linker_options";
+  else if (Type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE)
+    OS << "llvm_call_graph_profile";
   else
     report_fatal_error("unsupported type 0x" + Twine::utohexstr(Type) +
                        " for section " + getSectionName());

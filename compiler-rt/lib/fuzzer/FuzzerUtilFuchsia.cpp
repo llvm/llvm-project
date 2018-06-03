@@ -18,7 +18,7 @@
 #include <cinttypes>
 #include <cstdint>
 #include <fcntl.h>
-#include <launchpad/launchpad.h>
+#include <fdio/spawn.h>
 #include <string>
 #include <sys/select.h>
 #include <thread>
@@ -169,16 +169,10 @@ int ExecuteCommand(const Command &Cmd) {
   auto Args = Cmd.getArguments();
   size_t Argc = Args.size();
   assert(Argc != 0);
-  std::unique_ptr<const char *[]> Argv(new const char *[Argc]);
+  std::unique_ptr<const char *[]> Argv(new const char *[Argc + 1]);
   for (size_t i = 0; i < Argc; ++i)
     Argv[i] = Args[i].c_str();
-
-  // Create the basic launchpad.  Clone everything except stdio.
-  launchpad_t *lp;
-  launchpad_create(ZX_HANDLE_INVALID, Argv[0], &lp);
-  launchpad_load_from_file(lp, Argv[0]);
-  launchpad_set_args(lp, Argc, Argv.get());
-  launchpad_clone(lp, LP_CLONE_ALL & (~LP_CLONE_FDIO_STDIO));
+  Argv[Argc] = nullptr;
 
   // Determine stdout
   int FdOut = STDOUT_FILENO;
@@ -200,17 +194,40 @@ int ExecuteCommand(const Command &Cmd) {
     FdErr = FdOut;
 
   // Clone the file descriptors into the new process
-  if ((rc = launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO)) != ZX_OK ||
-      (rc = launchpad_clone_fd(lp, FdOut, STDOUT_FILENO)) != ZX_OK ||
-      (rc = launchpad_clone_fd(lp, FdErr, STDERR_FILENO)) != ZX_OK) {
-    Printf("libFuzzer: failed to clone FDIO: %s\n", _zx_status_get_string(rc));
-    return rc;
-  }
+  fdio_spawn_action_t SpawnAction[] = {
+      {
+          .action = FDIO_SPAWN_ACTION_CLONE_FD,
+          .fd =
+              {
+                  .local_fd = STDIN_FILENO,
+                  .target_fd = STDIN_FILENO,
+              },
+      },
+      {
+          .action = FDIO_SPAWN_ACTION_CLONE_FD,
+          .fd =
+              {
+                  .local_fd = FdOut,
+                  .target_fd = STDOUT_FILENO,
+              },
+      },
+      {
+          .action = FDIO_SPAWN_ACTION_CLONE_FD,
+          .fd =
+              {
+                  .local_fd = FdErr,
+                  .target_fd = STDERR_FILENO,
+              },
+      },
+  };
 
-  // Start the process
+  // Start the process.
+  char ErrorMsg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_handle_t ProcessHandle = ZX_HANDLE_INVALID;
-  const char *ErrorMsg = nullptr;
-  if ((rc = launchpad_go(lp, &ProcessHandle, &ErrorMsg)) != ZX_OK) {
+  rc = fdio_spawn_etc(
+      ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & (~FDIO_SPAWN_CLONE_STDIO),
+      Argv[0], Argv.get(), nullptr, 3, SpawnAction, &ProcessHandle, ErrorMsg);
+  if (rc != ZX_OK) {
     Printf("libFuzzer: failed to launch '%s': %s, %s\n", Argv[0], ErrorMsg,
            _zx_status_get_string(rc));
     return rc;

@@ -25,6 +25,8 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "dwarfdebug"
+
 Optional<DbgVariableLocation>
 DbgVariableLocation::extractFromMachineInstruction(
     const MachineInstr &Instruction) {
@@ -190,6 +192,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
   assert(DbgValues.empty() && "DbgValues map wasn't cleaned!");
   calculateDbgValueHistory(MF, Asm->MF->getSubtarget().getRegisterInfo(),
                            DbgValues);
+  LLVM_DEBUG(DbgValues.dump());
 
   // Request labels for the full history.
   for (const auto &I : DbgValues) {

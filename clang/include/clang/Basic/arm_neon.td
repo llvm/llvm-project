@@ -338,6 +338,12 @@ def VSLI_N : WInst<"vsli_n", "dddi",
 // E.3.14 Loads and stores of a single vector
 def VLD1      : WInst<"vld1", "dc",
                       "QUcQUsQUiQUlQcQsQiQlQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
+def VLD1_X2   : WInst<"vld1_x2", "2c",
+                      "cfhilsUcUiUlUsQcQfQhQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+def VLD1_X3   : WInst<"vld1_x3", "3c",
+                      "cfhilsUcUiUlUsQcQfQhQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+def VLD1_X4   : WInst<"vld1_x4", "4c",
+                      "cfhilsUcUiUlUsQcQfQhQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
 def VLD1_LANE : WInst<"vld1_lane", "dcdi",
                       "QUcQUsQUiQUlQcQsQiQlQhQfQPcQPsUcUsUiUlcsilhfPcPs">;
 def VLD1_DUP  : WInst<"vld1_dup", "dc",
@@ -569,11 +575,11 @@ def ST3 : WInst<"vst3", "vp3", "QUlQldQdPlQPl">;
 def ST4 : WInst<"vst4", "vp4", "QUlQldQdPlQPl">;
 
 def LD1_X2 : WInst<"vld1_x2", "2c",
-                   "QUcQUsQUiQcQsQiQhQfQPcQPsUcUsUiUlcsilhfPcPsQUlQldQdPlQPl">;
-def LD3_x3 : WInst<"vld1_x3", "3c",
-                   "QUcQUsQUiQcQsQiQhQfQPcQPsUcUsUiUlcsilhfPcPsQUlQldQdPlQPl">;
-def LD4_x4 : WInst<"vld1_x4", "4c",
-                   "QUcQUsQUiQcQsQiQhQfQPcQPsUcUsUiUlcsilhfPcPsQUlQldQdPlQPl">;
+                   "dQdPlQPl">;
+def LD1_X3 : WInst<"vld1_x3", "3c",
+                   "dQdPlQPl">;
+def LD1_X4 : WInst<"vld1_x4", "4c",
+                   "dQdPlQPl">;
 
 def ST1_X2 : WInst<"vst1_x2", "vp2",
                    "QUcQUsQUiQcQsQiQhQfQPcQPsUcUsUiUlcsilhfPcPsQUlQldQdPlQPl">;

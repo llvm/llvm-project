@@ -1,5 +1,5 @@
 REQUIRES: windows
-RUN: clang-cl /Z7 /c %S/Inputs/VariablesTest.cpp /o %T/VariablesTest.cpp.obj
+RUN: clang-cl /Z7 /c /GS- %S/Inputs/VariablesTest.cpp /o %T/VariablesTest.cpp.obj
 RUN: link %T/VariablesTest.cpp.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/VariablesTest.cpp.exe
 RUN: lldb-test symbols %T/VariablesTest.cpp.exe | FileCheck %s
 

@@ -284,6 +284,8 @@ namespace opts {
   cl::alias HashHistogramShort("I", cl::desc("Alias for -elf-hash-histogram"),
                                cl::aliasopt(HashHistogram));
 
+  cl::opt<bool> CGProfile("elf-cg-profile", cl::desc("Display callgraph profile section"));
+
   cl::opt<OutputStyleTy>
       Output("elf-output-style", cl::desc("Specify ELF dump style"),
              cl::values(clEnumVal(LLVM, "LLVM default style"),
@@ -441,6 +443,8 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
       Dumper->printGroupSections();
     if (opts::HashHistogram)
       Dumper->printHashHistogram();
+    if (opts::CGProfile)
+      Dumper->printCGProfile();
     if (opts::Notes)
       Dumper->printNotes();
   }

@@ -976,6 +976,7 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
     break;
 
   case ELF::SHT_SYMTAB_SHNDX:
+  case ELF::SHT_LLVM_CALL_GRAPH_PROFILE:
     sh_link = SymbolTableIndex;
     break;
 
@@ -1091,6 +1092,14 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
     }
   }
 
+  MCSectionELF *CGProfileSection = nullptr;
+  if (!Asm.CGProfile.empty()) {
+    CGProfileSection = Ctx.getELFSection(".llvm.call-graph-profile",
+                                         ELF::SHT_LLVM_CALL_GRAPH_PROFILE,
+                                         ELF::SHF_EXCLUDE, 16, "");
+    SectionIndexMap[CGProfileSection] = addToSectionTable(CGProfileSection);
+  }
+
   for (MCSectionELF *Group : Groups) {
     align(Group->getAlignment());
 
@@ -1130,6 +1139,17 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
       uint64_t SecEnd = W.OS.tell();
       SectionOffsets[RelSection] = std::make_pair(SecStart, SecEnd);
     }
+  }
+
+  if (CGProfileSection) {
+    uint64_t SecStart = W.OS.tell();
+    for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
+      W.write<uint32_t>(CGPE.From->getSymbol().getIndex());
+      W.write<uint32_t>(CGPE.To->getSymbol().getIndex());
+      W.write<uint64_t>(CGPE.Count);
+    }
+    uint64_t SecEnd = W.OS.tell();
+    SectionOffsets[CGProfileSection] = std::make_pair(SecStart, SecEnd);
   }
 
   {

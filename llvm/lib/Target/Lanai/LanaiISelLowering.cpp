@@ -87,7 +87,6 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
   setOperationAction(ISD::SETCC, MVT::i32, Custom);
-  setOperationAction(ISD::SETCCE, MVT::i32, Custom);
   setOperationAction(ISD::SELECT, MVT::i32, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
 
@@ -193,8 +192,6 @@ SDValue LanaiTargetLowering::LowerOperation(SDValue Op,
     return LowerSELECT_CC(Op, DAG);
   case ISD::SETCC:
     return LowerSETCC(Op, DAG);
-  case ISD::SETCCE:
-    return LowerSETCCE(Op, DAG);
   case ISD::SHL_PARTS:
     return LowerSHL_PARTS(Op, DAG);
   case ISD::SRL_PARTS:
@@ -967,19 +964,6 @@ SDValue LanaiTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
       Res = DAG.getNode(ISD::SUB, DL, VT, Res, Op);
   }
   return Res;
-}
-
-SDValue LanaiTargetLowering::LowerSETCCE(SDValue Op, SelectionDAG &DAG) const {
-  SDValue LHS = Op.getOperand(0);
-  SDValue RHS = Op.getOperand(1);
-  SDValue Carry = Op.getOperand(2);
-  SDValue Cond = Op.getOperand(3);
-  SDLoc DL(Op);
-
-  LPCC::CondCode CC = IntCondCCodeToICC(Cond, DL, RHS, DAG);
-  SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i32);
-  SDValue Flag = DAG.getNode(LanaiISD::SUBBF, DL, MVT::Glue, LHS, RHS, Carry);
-  return DAG.getNode(LanaiISD::SETCC, DL, Op.getValueType(), TargetCC, Flag);
 }
 
 SDValue LanaiTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {

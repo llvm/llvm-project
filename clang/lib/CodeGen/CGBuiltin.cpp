@@ -3864,8 +3864,14 @@ static const NeonIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP2(vhsubq_v, arm_neon_vhsubu, arm_neon_vhsubs, Add1ArgType | UnsignedAlts),
   NEONMAP0(vld1_dup_v),
   NEONMAP1(vld1_v, arm_neon_vld1, 0),
+  NEONMAP1(vld1_x2_v, arm_neon_vld1x2, 0),
+  NEONMAP1(vld1_x3_v, arm_neon_vld1x3, 0),
+  NEONMAP1(vld1_x4_v, arm_neon_vld1x4, 0),
   NEONMAP0(vld1q_dup_v),
   NEONMAP1(vld1q_v, arm_neon_vld1, 0),
+  NEONMAP1(vld1q_x2_v, arm_neon_vld1x2, 0),
+  NEONMAP1(vld1q_x3_v, arm_neon_vld1x3, 0),
+  NEONMAP1(vld1q_x4_v, arm_neon_vld1x4, 0),
   NEONMAP1(vld2_lane_v, arm_neon_vld2lane, 0),
   NEONMAP1(vld2_v, arm_neon_vld2, 0),
   NEONMAP1(vld2q_lane_v, arm_neon_vld2lane, 0),
@@ -4058,6 +4064,12 @@ static const NeonIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP2(vhaddq_v, aarch64_neon_uhadd, aarch64_neon_shadd, Add1ArgType | UnsignedAlts),
   NEONMAP2(vhsub_v, aarch64_neon_uhsub, aarch64_neon_shsub, Add1ArgType | UnsignedAlts),
   NEONMAP2(vhsubq_v, aarch64_neon_uhsub, aarch64_neon_shsub, Add1ArgType | UnsignedAlts),
+  NEONMAP1(vld1_x2_v, aarch64_neon_ld1x2, 0),
+  NEONMAP1(vld1_x3_v, aarch64_neon_ld1x3, 0),
+  NEONMAP1(vld1_x4_v, aarch64_neon_ld1x4, 0),
+  NEONMAP1(vld1q_x2_v, aarch64_neon_ld1x2, 0),
+  NEONMAP1(vld1q_x3_v, aarch64_neon_ld1x3, 0),
+  NEONMAP1(vld1q_x4_v, aarch64_neon_ld1x4, 0),
   NEONMAP0(vmovl_v),
   NEONMAP0(vmovn_v),
   NEONMAP1(vmul_v, aarch64_neon_pmul, Add1ArgType),
@@ -4725,6 +4737,21 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     llvm::Type *Tys[] = {Ty, Int8PtrTy};
     Ops.push_back(getAlignmentValue32(PtrOp0));
     return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Tys), Ops, "vld1");
+  }
+  case NEON::BI__builtin_neon_vld1_x2_v:
+  case NEON::BI__builtin_neon_vld1q_x2_v:
+  case NEON::BI__builtin_neon_vld1_x3_v:
+  case NEON::BI__builtin_neon_vld1q_x3_v:
+  case NEON::BI__builtin_neon_vld1_x4_v:
+  case NEON::BI__builtin_neon_vld1q_x4_v: {
+    llvm::Type *PTy = llvm::PointerType::getUnqual(VTy->getVectorElementType());
+    Ops[1] = Builder.CreateBitCast(Ops[1], PTy);
+    llvm::Type *Tys[2] = { VTy, PTy };
+    Function *F = CGM.getIntrinsic(LLVMIntrinsic, Tys);
+    Ops[1] = Builder.CreateCall(F, Ops[1], "vld1xN");
+    Ty = llvm::PointerType::getUnqual(Ops[1]->getType());
+    Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
+    return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
   }
   case NEON::BI__builtin_neon_vld2_v:
   case NEON::BI__builtin_neon_vld2q_v:
@@ -7843,36 +7870,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
     // FIXME: Sharing loads & stores with 32-bit is complicated by the absence
     // of an Align parameter here.
-  case NEON::BI__builtin_neon_vld1_x2_v:
-  case NEON::BI__builtin_neon_vld1q_x2_v:
-  case NEON::BI__builtin_neon_vld1_x3_v:
-  case NEON::BI__builtin_neon_vld1q_x3_v:
-  case NEON::BI__builtin_neon_vld1_x4_v:
-  case NEON::BI__builtin_neon_vld1q_x4_v: {
-    llvm::Type *PTy = llvm::PointerType::getUnqual(VTy->getVectorElementType());
-    Ops[1] = Builder.CreateBitCast(Ops[1], PTy);
-    llvm::Type *Tys[2] = { VTy, PTy };
-    unsigned Int;
-    switch (BuiltinID) {
-    case NEON::BI__builtin_neon_vld1_x2_v:
-    case NEON::BI__builtin_neon_vld1q_x2_v:
-      Int = Intrinsic::aarch64_neon_ld1x2;
-      break;
-    case NEON::BI__builtin_neon_vld1_x3_v:
-    case NEON::BI__builtin_neon_vld1q_x3_v:
-      Int = Intrinsic::aarch64_neon_ld1x3;
-      break;
-    case NEON::BI__builtin_neon_vld1_x4_v:
-    case NEON::BI__builtin_neon_vld1q_x4_v:
-      Int = Intrinsic::aarch64_neon_ld1x4;
-      break;
-    }
-    Function *F = CGM.getIntrinsic(Int, Tys);
-    Ops[1] = Builder.CreateCall(F, Ops[1], "vld1xN");
-    Ty = llvm::PointerType::getUnqual(Ops[1]->getType());
-    Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
-    return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
-  }
   case NEON::BI__builtin_neon_vst1_x2_v:
   case NEON::BI__builtin_neon_vst1q_x2_v:
   case NEON::BI__builtin_neon_vst1_x3_v:
@@ -8918,18 +8915,20 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_movdqa64store128_mask:
   case X86::BI__builtin_ia32_storeaps128_mask:
   case X86::BI__builtin_ia32_storeapd128_mask:
+    return EmitX86MaskedStore(*this, Ops, 16);
+
   case X86::BI__builtin_ia32_movdqa32store256_mask:
   case X86::BI__builtin_ia32_movdqa64store256_mask:
   case X86::BI__builtin_ia32_storeaps256_mask:
   case X86::BI__builtin_ia32_storeapd256_mask:
+    return EmitX86MaskedStore(*this, Ops, 32);
+
   case X86::BI__builtin_ia32_movdqa32store512_mask:
   case X86::BI__builtin_ia32_movdqa64store512_mask:
   case X86::BI__builtin_ia32_storeaps512_mask:
-  case X86::BI__builtin_ia32_storeapd512_mask: {
-    unsigned Align =
-      getContext().getTypeAlignInChars(E->getArg(1)->getType()).getQuantity();
-    return EmitX86MaskedStore(*this, Ops, Align);
-  }
+  case X86::BI__builtin_ia32_storeapd512_mask:
+    return EmitX86MaskedStore(*this, Ops, 64);
+
   case X86::BI__builtin_ia32_loadups128_mask:
   case X86::BI__builtin_ia32_loadups256_mask:
   case X86::BI__builtin_ia32_loadups512_mask:
@@ -8950,26 +8949,25 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_loaddqudi512_mask:
     return EmitX86MaskedLoad(*this, Ops, 1);
 
+  case X86::BI__builtin_ia32_loadaps128_mask:
+  case X86::BI__builtin_ia32_loadapd128_mask:
   case X86::BI__builtin_ia32_loadss128_mask:
   case X86::BI__builtin_ia32_loadsd128_mask:
-    return EmitX86MaskedLoad(*this, Ops, 1);
-
-  case X86::BI__builtin_ia32_loadaps128_mask:
-  case X86::BI__builtin_ia32_loadaps256_mask:
-  case X86::BI__builtin_ia32_loadaps512_mask:
-  case X86::BI__builtin_ia32_loadapd128_mask:
-  case X86::BI__builtin_ia32_loadapd256_mask:
-  case X86::BI__builtin_ia32_loadapd512_mask:
   case X86::BI__builtin_ia32_movdqa32load128_mask:
-  case X86::BI__builtin_ia32_movdqa32load256_mask:
-  case X86::BI__builtin_ia32_movdqa32load512_mask:
   case X86::BI__builtin_ia32_movdqa64load128_mask:
+    return EmitX86MaskedLoad(*this, Ops, 16);
+
+  case X86::BI__builtin_ia32_loadaps256_mask:
+  case X86::BI__builtin_ia32_loadapd256_mask:
+  case X86::BI__builtin_ia32_movdqa32load256_mask:
   case X86::BI__builtin_ia32_movdqa64load256_mask:
-  case X86::BI__builtin_ia32_movdqa64load512_mask: {
-    unsigned Align =
-      getContext().getTypeAlignInChars(E->getArg(1)->getType()).getQuantity();
-    return EmitX86MaskedLoad(*this, Ops, Align);
-  }
+    return EmitX86MaskedLoad(*this, Ops, 32);
+
+  case X86::BI__builtin_ia32_loadaps512_mask:
+  case X86::BI__builtin_ia32_loadapd512_mask:
+  case X86::BI__builtin_ia32_movdqa32load512_mask:
+  case X86::BI__builtin_ia32_movdqa64load512_mask:
+    return EmitX86MaskedLoad(*this, Ops, 64);
 
   case X86::BI__builtin_ia32_vbroadcastf128_pd256:
   case X86::BI__builtin_ia32_vbroadcastf128_ps256: {

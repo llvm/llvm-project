@@ -1,3 +1,5 @@
+# XFAIL: windows
+
 # RUN: %cxx %p/Inputs/call-function.cpp -g -o %t
 
 # RUN: lldb-test ir-memory-map %t %S/Inputs/ir-memory-map-basic

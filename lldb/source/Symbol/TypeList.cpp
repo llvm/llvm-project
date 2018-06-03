@@ -77,6 +77,7 @@ uint32_t TypeList::GetSize() const { return m_types.size(); }
 TypeSP TypeList::GetTypeAtIndex(uint32_t idx) {
   iterator pos, end;
   uint32_t i = idx;
+  assert(i < GetSize() && "Accessing past the end of a TypeList");
   for (pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
     if (i == 0)
       return *pos;

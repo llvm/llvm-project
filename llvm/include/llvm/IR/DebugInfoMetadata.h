@@ -679,9 +679,11 @@ public:
   Metadata *getRawScope() const { return getOperand(1); }
   MDString *getRawName() const { return getOperandAs<MDString>(2); }
 
-  void setFlags(DIFlags NewFlags) {
-    assert(!isUniqued() && "Cannot set flags on uniqued nodes");
-    Flags = NewFlags;
+  /// Returns a new temporary DIType with updated Flags
+  TempDIType cloneWithFlags(DIFlags NewFlags) const {
+    auto NewTy = clone();
+    NewTy->Flags = NewFlags;
+    return NewTy;
   }
 
   bool isPrivate() const {
@@ -1678,6 +1680,13 @@ public:
        ThrownTypes))
 
   TempDISubprogram clone() const { return cloneImpl(); }
+
+  /// Returns a new temporary DISubprogram with updated Flags
+  TempDISubprogram cloneWithFlags(DIFlags NewFlags) const {
+    auto NewSP = clone();
+    NewSP->Flags = NewFlags;
+    return NewSP;
+  }
 
 public:
   unsigned getLine() const { return Line; }
