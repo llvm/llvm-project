@@ -99,6 +99,19 @@ bool CMICmdCmdExecRun::ParseArgs() {
 bool CMICmdCmdExecRun::Execute() {
   CMICmnLLDBDebugSessionInfo &rSessionInfo(
       CMICmnLLDBDebugSessionInfo::Instance());
+
+  {
+    // Check we have a valid target.
+    // Note: target created via 'file-exec-and-symbols' command.
+    lldb::SBTarget sbTarget = rSessionInfo.GetTarget();
+    if (!sbTarget.IsValid() ||
+        sbTarget == rSessionInfo.GetDebugger().GetDummyTarget()) {
+      SetError(CMIUtilString::Format(MIRSRC(IDS_CMD_ERR_INVALID_TARGET_CURRENT),
+                                     m_cmdData.strMiCmd.c_str()));
+      return MIstatus::failure;
+    }
+  }
+
   lldb::SBError error;
   lldb::SBStream errMsg;
   lldb::SBLaunchInfo launchInfo = rSessionInfo.GetTarget().GetLaunchInfo();

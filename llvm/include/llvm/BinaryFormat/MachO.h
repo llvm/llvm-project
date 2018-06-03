@@ -1973,9 +1973,11 @@ const uint32_t PPC_THREAD_STATE_COUNT =
 // Define a union of all load command structs
 #define LOAD_COMMAND_STRUCT(LCStruct) LCStruct LCStruct##_data;
 
-union macho_load_command {
+LLVM_PACKED_START
+union LLVM_ALIGNAS(4) macho_load_command {
 #include "llvm/BinaryFormat/MachO.def"
 };
+LLVM_PACKED_END
 
 } // end namespace MachO
 } // end namespace llvm

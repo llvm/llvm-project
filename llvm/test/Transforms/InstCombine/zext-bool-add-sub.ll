@@ -214,8 +214,8 @@ define <2 x i64> @sext_negate_vec(<2 x i1> %A) {
 
 define <2 x i64> @sext_negate_vec_undef_elt(<2 x i1> %A) {
 ; CHECK-LABEL: @sext_negate_vec_undef_elt(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[SUB:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[SUB]]
 ;
   %ext = sext <2 x i1> %A to <2 x i64>
   %sub = sub <2 x i64> <i64 0, i64 undef>, %ext
@@ -232,12 +232,10 @@ define i64 @sext_sub_const(i1 %A) {
   ret i64 %sub
 }
 
-; FIXME: This doesn't correspond to the zext pattern above. We should have a select.
-
 define i64 @sext_sub_const_extra_use(i1 %A) {
 ; CHECK-LABEL: @sext_sub_const_extra_use(
 ; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[A:%.*]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 42, [[EXT]]
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[A]], i64 43, i64 42
 ; CHECK-NEXT:    call void @use(i64 [[EXT]])
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ;
