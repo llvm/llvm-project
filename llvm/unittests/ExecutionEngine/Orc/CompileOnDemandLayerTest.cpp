@@ -36,11 +36,11 @@ public:
     llvm_unreachable("Not implemented");
   }
 
-  JITSymbol findStub(StringRef Name, bool ExportedStubsOnly) override {
+  JITEvaluatedSymbol findStub(StringRef Name, bool ExportedStubsOnly) override {
     llvm_unreachable("Not implemented");
   }
 
-  JITSymbol findPointer(StringRef Name) override {
+  JITEvaluatedSymbol findPointer(StringRef Name) override {
     llvm_unreachable("Not implemented");
   }
 

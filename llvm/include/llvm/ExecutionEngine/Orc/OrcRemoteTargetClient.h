@@ -358,25 +358,25 @@ public:
       return Error::success();
     }
 
-    JITSymbol findStub(StringRef Name, bool ExportedStubsOnly) override {
+    JITEvaluatedSymbol findStub(StringRef Name, bool ExportedStubsOnly) override {
       auto I = StubIndexes.find(Name);
       if (I == StubIndexes.end())
         return nullptr;
       auto Key = I->second.first;
       auto Flags = I->second.second;
-      auto StubSymbol = JITSymbol(getStubAddr(Key), Flags);
+      auto StubSymbol = JITEvaluatedSymbol(getStubAddr(Key), Flags);
       if (ExportedStubsOnly && !StubSymbol.getFlags().isExported())
         return nullptr;
       return StubSymbol;
     }
 
-    JITSymbol findPointer(StringRef Name) override {
+    JITEvaluatedSymbol findPointer(StringRef Name) override {
       auto I = StubIndexes.find(Name);
       if (I == StubIndexes.end())
         return nullptr;
       auto Key = I->second.first;
       auto Flags = I->second.second;
-      return JITSymbol(getPtrAddr(Key), Flags);
+      return JITEvaluatedSymbol(getPtrAddr(Key), Flags);
     }
 
     Error updatePointer(StringRef Name, JITTargetAddress NewAddr) override {
