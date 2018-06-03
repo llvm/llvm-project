@@ -3111,7 +3111,9 @@ _mm256_broadcast_ss(float const *__a)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_broadcast_pd(__m128d const *__a)
 {
-  return (__m256d)__builtin_ia32_vbroadcastf128_pd256((__v2df const *)__a);
+  __m128d __b = _mm_loadu_pd((const double *)__a);
+  return (__m256d)__builtin_shufflevector((__v2df)__b, (__v2df)__b,
+                                          0, 1, 0, 1);
 }
 
 /// Loads the data from a 128-bit vector of [4 x float] from the
@@ -3129,7 +3131,9 @@ _mm256_broadcast_pd(__m128d const *__a)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_broadcast_ps(__m128 const *__a)
 {
-  return (__m256)__builtin_ia32_vbroadcastf128_ps256((__v4sf const *)__a);
+  __m128 __b = _mm_loadu_ps((const float *)__a);
+  return (__m256)__builtin_shufflevector((__v4sf)__b, (__v4sf)__b,
+                                         0, 1, 2, 3, 0, 1, 2, 3);
 }
 
 /* SIMD load ops */

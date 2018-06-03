@@ -59,11 +59,23 @@ private:
 /// their linkage is changed to available-externally.
 class IRMaterializationUnit : public MaterializationUnit {
 public:
+  using SymbolNameToDefinitionMap = std::map<SymbolStringPtr, GlobalValue *>;
+
+  /// Create an IRMaterializationLayer. Scans the module to build the
+  /// SymbolFlags and SymbolToDefinition maps.
   IRMaterializationUnit(ExecutionSession &ES, std::unique_ptr<Module> M);
+
+  /// Create an IRMaterializationLayer from a module, and pre-existing
+  /// SymbolFlags and SymbolToDefinition maps. The maps must provide
+  /// entries for each definition in M.
+  /// This constructor is useful for delegating work from one
+  /// IRMaterializationUnit to another.
+  IRMaterializationUnit(std::unique_ptr<Module> M, SymbolFlagsMap SymbolFlags,
+                        SymbolNameToDefinitionMap SymbolToDefinition);
 
 protected:
   std::unique_ptr<Module> M;
-  std::map<SymbolStringPtr, GlobalValue *> SymbolToDefinition;
+  SymbolNameToDefinitionMap SymbolToDefinition;
 
 private:
   void discard(const VSO &V, SymbolStringPtr Name) override;
