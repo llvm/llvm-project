@@ -285,6 +285,50 @@ The following directives are specified:
     The paramter identifies an additional library search path to be considered
     when looking up libraries after the inclusion of this option.
 
+``SHT_LLVM_CALL_GRAPH_PROFILE`` Section (Call Graph Profile)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section is used to pass a call graph profile to the linker which can be
+used to optimize the placement of sections.  It contains a sequence of
+(from symbol, to symbol, weight) tuples.
+
+It shall have a type of ``SHT_LLVM_CALL_GRAPH_PROFILE`` (0x6fff4c02), shall
+have the ``SHF_EXCLUDE`` flag set, the ``sh_link`` member shall hold the section
+header index of the associated symbol table, and shall have a ``sh_entsize`` of
+16.  It should be named ``.llvm.call-graph-profile``.
+
+The contents of the section shall be a sequence of ``Elf_CGProfile`` entries.
+
+.. code-block:: c
+
+  typedef struct {
+    Elf_Word cgp_from;
+    Elf_Word cgp_to;
+    Elf_Xword cgp_weight;
+  } Elf_CGProfile;
+
+cgp_from
+  The symbol index of the source of the edge.
+
+cgp_to
+  The symbol index of the destination of the edge.
+
+cgp_weight
+  The weight of the edge.
+
+This is represented in assembly as:
+
+.. code-block:: gas
+
+  .cg_profile from, to, 42
+
+``.cg_profile`` directives are processed at the end of the file.  It is an error
+if either ``from`` or ``to`` are undefined temporary symbols.  If either symbol
+is a temporary symbol, then the section symbol is used instead.  If either
+symbol is undefined, then that symbol is defined as if ``.weak symbol`` has been
+written at the end of the file.  This forces the symbol to show up in the symbol
+table.
+
 Target Specific Behaviour
 =========================
 

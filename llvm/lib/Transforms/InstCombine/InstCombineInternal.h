@@ -709,8 +709,8 @@ private:
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                     APInt &UndefElts, unsigned Depth = 0);
 
-  Value *SimplifyVectorOp(BinaryOperator &Inst);
-
+  /// Canonicalize the position of binops relative to shufflevector.
+  Instruction *foldShuffledBinop(BinaryOperator &Inst);
 
   /// Given a binary operator, cast instruction, or select which has a PHI node
   /// as operand #0, see if we can fold the instruction into the PHI (which is

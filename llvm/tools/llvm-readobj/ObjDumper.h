@@ -47,6 +47,7 @@ public:
   virtual void printVersionInfo() {}
   virtual void printGroupSections() {}
   virtual void printHashHistogram() {}
+  virtual void printCGProfile() {}
   virtual void printNotes() {}
   virtual void printELFLinkerOptions() {}
 

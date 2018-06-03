@@ -803,6 +803,7 @@ enum : unsigned {
   SHT_ANDROID_RELA = 0x60000002,
   SHT_LLVM_ODRTAB = 0x6fff4c00,         // LLVM ODR table.
   SHT_LLVM_LINKER_OPTIONS = 0x6fff4c01, // LLVM Linker Options.
+  SHT_LLVM_CALL_GRAPH_PROFILE = 0x6fff4c02, // LLVM Call Graph Profile.
   SHT_GNU_ATTRIBUTES = 0x6ffffff5,      // Object attributes.
   SHT_GNU_HASH = 0x6ffffff6,            // GNU-style hash table.
   SHT_GNU_verdef = 0x6ffffffd,          // GNU version definitions.

@@ -355,6 +355,12 @@ void MCELFStreamer::EmitValueToAlignment(unsigned ByteAlignment,
                                          ValueSize, MaxBytesToEmit);
 }
 
+void MCELFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
+                                       const MCSymbolRefExpr *To,
+                                       uint64_t Count) {
+  getAssembler().CGProfile.push_back({From, To, Count});
+}
+
 void MCELFStreamer::EmitIdent(StringRef IdentString) {
   MCSection *Comment = getAssembler().getContext().getELFSection(
       ".comment", ELF::SHT_PROGBITS, ELF::SHF_MERGE | ELF::SHF_STRINGS, 1, "");
@@ -444,6 +450,37 @@ void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
   case MCExpr::Unary:
     fixSymbolsInTLSFixups(cast<MCUnaryExpr>(expr)->getSubExpr());
     break;
+  }
+}
+
+void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
+  const MCSymbol *S = &SRE->getSymbol();
+  if (S->isTemporary()) {
+    if (!S->isInSection()) {
+      getContext().reportError(
+          SRE->getLoc(), Twine("Reference to undefined temporary symbol ") +
+                             "`" + S->getName() + "`");
+      return;
+    }
+    S = S->getSection().getBeginSymbol();
+    S->setUsedInReloc();
+    SRE =
+        MCSymbolRefExpr::create(S, SRE->getKind(), getContext(), SRE->getLoc());
+    return;
+  }
+  // Not a temporary, referece it as a weak undefined.
+  bool Created;
+  getAssembler().registerSymbol(*S, &Created);
+  if (Created) {
+    cast<MCSymbolELF>(S)->setBinding(ELF::STB_WEAK);
+    cast<MCSymbolELF>(S)->setExternal(true);
+  }
+}
+
+void MCELFStreamer::finalizeCGProfile() {
+  for (MCAssembler::CGProfileEntry &E : getAssembler().CGProfile) {
+    finalizeCGProfileEntry(E.From);
+    finalizeCGProfileEntry(E.To);
   }
 }
 
@@ -612,6 +649,7 @@ void MCELFStreamer::FinishImpl() {
   MCSection *CurSection = getCurrentSectionOnly();
   setSectionAlignmentForBundling(getAssembler(), CurSection);
 
+  finalizeCGProfile();
   EmitFrames(nullptr);
 
   this->MCObjectStreamer::FinishImpl();

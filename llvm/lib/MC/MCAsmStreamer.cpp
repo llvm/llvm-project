@@ -304,6 +304,9 @@ public:
                         SMLoc Loc) override;
   void EmitWinEHHandlerData(SMLoc Loc) override;
 
+  void emitCGProfileEntry(const MCSymbolRefExpr *From,
+                          const MCSymbolRefExpr *To, uint64_t Count) override;
+
   void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                        bool PrintSchedInfo) override;
 
@@ -1647,6 +1650,17 @@ void MCAsmStreamer::EmitWinCFIEndProlog(SMLoc Loc) {
   MCStreamer::EmitWinCFIEndProlog(Loc);
 
   OS << "\t.seh_endprologue";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
+                                       const MCSymbolRefExpr *To,
+                                       uint64_t Count) {
+  OS << "\t.cg_profile ";
+  From->getSymbol().print(OS, MAI);
+  OS << ", ";
+  To->getSymbol().print(OS, MAI);
+  OS << ", " << Count;
   EmitEOL();
 }
 
