@@ -48,6 +48,7 @@ target_link_libraries(ClangdTests
   clangSema
   clangTooling
   clangToolingCore
+  clangToolingInclusions
   LLVMSupport
   LLVMTestingSupport
   )
