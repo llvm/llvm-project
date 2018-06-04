@@ -702,6 +702,16 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     // floating point types of the same size.
     Encoding = llvm::dwarf::DW_ATE_float;
     break;
+  case BuiltinType::ShortAccum:
+  case BuiltinType::Accum:
+  case BuiltinType::LongAccum:
+    Encoding = llvm::dwarf::DW_ATE_signed_fixed;
+    break;
+  case BuiltinType::UShortAccum:
+  case BuiltinType::UAccum:
+  case BuiltinType::ULongAccum:
+    Encoding = llvm::dwarf::DW_ATE_unsigned_fixed;
+    break;
   }
 
   switch (BT->getKind()) {

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Core/HeaderIncludes.h"
+#include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "../Tooling/ReplacementTest.h"
 #include "../Tooling/RewriterTestContext.h"
 #include "clang/Format/Format.h"

@@ -168,6 +168,8 @@ def ext_clang_enable_if : Extension<"'enable_if' is a clang extension">,
                           InGroup<GccCompat>;
 def ext_clang_diagnose_if : Extension<"'diagnose_if' is a clang extension">,
                             InGroup<GccCompat>;
+def err_fixed_point_not_enabled : Error<"compile with "
+  "'-ffixed-point' to enable fixed point types">;
 
 // SEH
 def err_seh_expected_handler : Error<
