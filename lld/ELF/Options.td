@@ -27,18 +27,20 @@ def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">
 
 def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 
-def build_id: F<"build-id">, HelpText<"Generate build ID note">;
+def build_id: F<"build-id">, HelpText<"Alias for --build-id=fast">;
 
-def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">;
+def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">,
+  MetaVarName<"[fast,md5,sha,uuid,0x<hexstring>]">;
 
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
     "Do not check section addresses for overlaps">;
 
 defm compress_debug_sections:
-  Eq<"compress-debug-sections", "Compress DWARF debug sections">;
+  Eq<"compress-debug-sections", "Compress DWARF debug sections">,
+  MetaVarName<"[none,zlib]">;
 
-defm defsym: Eq<"defsym", "Define a symbol alias">;
+defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
 defm library_path:
   Eq<"library-path", "Add a directory to the library search path">, MetaVarName<"<dir>">;
@@ -70,10 +72,11 @@ defm call_graph_ordering_file:
 def chroot: Separate<["--", "-"], "chroot">;
 
 def color_diagnostics: F<"color-diagnostics">,
-  HelpText<"Use colors in diagnostics">;
+  HelpText<"Alias for --color-diagnostics=always">;
 
 def color_diagnostics_eq: J<"color-diagnostics=">,
-  HelpText<"Use colors in diagnostics; one of 'always', 'never', 'auto'">;
+  HelpText<"Use colors in diagnostics">,
+  MetaVarName<"[auto,always,never]">;
 
 defm cref: B<"cref",
     "Output cross reference table",
@@ -147,7 +150,7 @@ def fix_cortex_a53_843419: F<"fix-cortex-a53-843419">,
   HelpText<"Apply fixes for AArch64 Cortex-A53 erratum 843419">;
 
 defm format: Eq<"format", "Change the input format of the inputs following this option">,
-  MetaVarName<"<input-format>">;
+  MetaVarName<"[default,elf,binary]">;
 
 defm gc_sections: B<"gc-sections",
     "Enable garbage collection of unused sections",
@@ -229,8 +232,8 @@ defm orphan_handling:
   Eq<"orphan-handling", "Control how orphan sections are handled when linker script used">;
 
 defm pack_dyn_relocs:
-  Eq<"pack-dyn-relocs", "Pack dynamic relocations in the given format (none or android)">,
-  MetaVarName<"<format>">;
+  Eq<"pack-dyn-relocs", "Pack dynamic relocations in the given format">,
+  MetaVarName<"[none,android]">;
 
 defm pie: B<"pie",
     "Create a position independent executable",
@@ -306,7 +309,8 @@ def trace: F<"trace">, HelpText<"Print the names of the input files">;
 
 defm trace_symbol: Eq<"trace-symbol", "Trace references to symbols">;
 
-defm undefined: Eq<"undefined", "Force undefined symbol during linking">;
+defm undefined: Eq<"undefined", "Force undefined symbol during linking">,
+  MetaVarName<"<symbol>">;
 
 defm unresolved_symbols:
   Eq<"unresolved-symbols", "Determine how to handle unresolved symbols">;
@@ -315,8 +319,8 @@ defm undefined_version: B<"undefined-version",
   "Allow unused version in version script (default)",
   "Report version scripts that refer undefined symbols">;
 
-defm rsp_quoting:
-  Eq<"rsp-quoting", "Quoting style for response files. Values supported: windows|posix">;
+defm rsp_quoting: Eq<"rsp-quoting", "Quoting style for response files">,
+  MetaVarName<"[posix,windows]">;
 
 def v: Flag<["-"], "v">, HelpText<"Display the version number">;
 
@@ -346,7 +350,7 @@ defm whole_archive: B<"whole-archive",
     "Do not force load of all members in a static library (default)">;
 
 defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
-  MetaVarName<"<symbol>">;
+  MetaVarName<"<symbol>=<symbol>">;
 
 def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
@@ -446,7 +450,7 @@ def plugin_opt_thinlto_prefix_replace_eq: J<"plugin-opt=thinlto-prefix-replace="
 // just ignore the option on lld side as it's easier. In fact, the linker could
 // be called 'ld' and understanding which linker is used would require parsing of
 // --version output.
-def plugin: J<"plugin">;
+defm plugin: Eq<"plugin", "Ignored for compatibility with GNU linkers">;
 
 def plugin_opt_fresolution_eq: J<"plugin-opt=-fresolution=">;
 def plugin_opt_pass_through_eq: J<"plugin-opt=-pass-through=">;
