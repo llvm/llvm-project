@@ -1,6 +1,3 @@
-// llvm.org/pr37537
-// XFAIL: *
-
 // RUN: clang %s -g -c -o %t --target=x86_64-apple-macosx
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=method %t | \
 // RUN:   FileCheck %s
