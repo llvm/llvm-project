@@ -2519,7 +2519,8 @@ _mm512_maskz_div_ps(__mmask16 __U, __m512 __A, __m512 __B) {
 
 #define _mm512_roundscale_ps(A, B) \
   (__m512)__builtin_ia32_rndscaleps_mask((__v16sf)(__m512)(A), (int)(B), \
-                                         (__v16sf)(__m512)(A), (__mmask16)-1, \
+                                         (__v16sf)_mm512_undefined_ps(), \
+                                         (__mmask16)-1, \
                                          _MM_FROUND_CUR_DIRECTION)
 
 #define _mm512_mask_roundscale_ps(A, B, C, imm) \
@@ -2550,7 +2551,8 @@ _mm512_maskz_div_ps(__mmask16 __U, __m512 __A, __m512 __B) {
 
 #define _mm512_roundscale_pd(A, B) \
   (__m512d)__builtin_ia32_rndscalepd_mask((__v8df)(__m512d)(A), (int)(B), \
-                                          (__v8df)(__m512d)(A), (__mmask8)-1, \
+                                          (__v8df)_mm512_undefined_pd(), \
+                                          (__mmask8)-1, \
                                           _MM_FROUND_CUR_DIRECTION)
 
 #define _mm512_mask_roundscale_pd(A, B, C, imm) \
@@ -2915,7 +2917,7 @@ _mm512_mask_fmadd_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __C)
                     __builtin_ia32_vfmaddps512 ((__v16sf) __A,
                                                 (__v16sf) __B,
                                                 (__v16sf) __C,
-                                                _MM_FROUND_CUR_DIRECTION), \
+                                                _MM_FROUND_CUR_DIRECTION),
             (__v16sf) __A);
 }
 
@@ -2926,7 +2928,7 @@ _mm512_mask3_fmadd_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 __U)
                     __builtin_ia32_vfmaddps512 ((__v16sf) __A,
                                                 (__v16sf) __B,
                                                 (__v16sf) __C,
-                                                _MM_FROUND_CUR_DIRECTION), \
+                                                _MM_FROUND_CUR_DIRECTION),
             (__v16sf) __C);
 }
 
@@ -3230,7 +3232,7 @@ _mm512_mask_fmaddsub_ps(__m512 __A, __mmask16 __U, __m512 __B, __m512 __C)
                     __builtin_ia32_vfmaddsubps512 ((__v16sf) __A,
                                                    (__v16sf) __B,
                                                    (__v16sf) __C,
-                                                   _MM_FROUND_CUR_DIRECTION), \
+                                                   _MM_FROUND_CUR_DIRECTION),
             (__v16sf) __A);
 }
 
@@ -3241,7 +3243,7 @@ _mm512_mask3_fmaddsub_ps(__m512 __A, __m512 __B, __m512 __C, __mmask16 __U)
                     __builtin_ia32_vfmaddsubps512 ((__v16sf) __A,
                                                    (__v16sf) __B,
                                                    (__v16sf) __C,
-                                                   _MM_FROUND_CUR_DIRECTION), \
+                                                   _MM_FROUND_CUR_DIRECTION),
             (__v16sf) __C);
 }
 
