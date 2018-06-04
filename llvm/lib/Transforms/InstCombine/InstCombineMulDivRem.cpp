@@ -581,9 +581,9 @@ bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
   Type *CondTy = SelectCond->getType();
   while (BBI != BBFront) {
     --BBI;
-    // If we found a call to a function, we can't assume it will return, so
+    // If we found an instruction that we can't assume will return, so
     // information from below it cannot be propagated above it.
-    if (isa<CallInst>(BBI) && !isa<IntrinsicInst>(BBI))
+    if (!isGuaranteedToTransferExecutionToSuccessor(&*BBI))
       break;
 
     // Replace uses of the select or its condition with the known values.

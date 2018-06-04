@@ -87,14 +87,27 @@ bool applyDebugifyMetadata(Module &M,
       for (Instruction &I : BB)
         I.setDebugLoc(DILocation::get(Ctx, NextLine++, 1, SP));
 
+      // Inserting debug values into EH pads can break IR invariants.
+      if (BB.isEHPad())
+        continue;
+
+      // Debug values must be inserted before a musttail call (if one is
+      // present), or before the block terminator otherwise.
+      Instruction *LastInst = BB.getTerminatingMustTailCall();
+      if (!LastInst)
+        LastInst = BB.getTerminator();
+
       // Attach debug values.
-      for (Instruction &I : BB) {
+      for (auto It = BB.begin(), End = LastInst->getIterator(); It != End;
+           ++It) {
+        Instruction &I = *It;
+
         // Skip void-valued instructions.
         if (I.getType()->isVoidTy())
           continue;
 
-        // Skip the terminator instruction and any just-inserted intrinsics.
-        if (isa<TerminatorInst>(&I) || isa<DbgValueInst>(&I))
+        // Skip any just-inserted intrinsics.
+        if (isa<DbgValueInst>(&I))
           break;
 
         std::string Name = utostr(NextVar++);
@@ -103,7 +116,7 @@ bool applyDebugifyMetadata(Module &M,
                                                getCachedDIType(I.getType()),
                                                /*AlwaysPreserve=*/true);
         DIB.insertDbgValueIntrinsic(&I, LocalVar, DIB.createExpression(), Loc,
-                                    BB.getTerminator());
+                                    LastInst);
       }
     }
     DIB.finalizeSubprogram(SP);
@@ -310,11 +323,13 @@ PreservedAnalyses NewPMDebugifyPass::run(Module &M, ModuleAnalysisManager &) {
   return PreservedAnalyses::all();
 }
 
-ModulePass *createCheckDebugifyModulePass(bool Strip, StringRef NameOfWrappedPass) {
+ModulePass *createCheckDebugifyModulePass(bool Strip,
+                                          StringRef NameOfWrappedPass) {
   return new CheckDebugifyModulePass(Strip, NameOfWrappedPass);
 }
 
-FunctionPass *createCheckDebugifyFunctionPass(bool Strip, StringRef NameOfWrappedPass) {
+FunctionPass *createCheckDebugifyFunctionPass(bool Strip,
+                                              StringRef NameOfWrappedPass) {
   return new CheckDebugifyFunctionPass(Strip, NameOfWrappedPass);
 }
 
@@ -326,16 +341,16 @@ PreservedAnalyses NewPMCheckDebugifyPass::run(Module &M,
 
 char DebugifyModulePass::ID = 0;
 static RegisterPass<DebugifyModulePass> DM("debugify",
-                                    "Attach debug info to everything");
+                                           "Attach debug info to everything");
 
 char CheckDebugifyModulePass::ID = 0;
-static RegisterPass<CheckDebugifyModulePass> CDM("check-debugify",
-                                         "Check debug info from -debugify");
+static RegisterPass<CheckDebugifyModulePass>
+    CDM("check-debugify", "Check debug info from -debugify");
 
 char DebugifyFunctionPass::ID = 0;
 static RegisterPass<DebugifyFunctionPass> DF("debugify-function",
-                                    "Attach debug info to a function");
+                                             "Attach debug info to a function");
 
 char CheckDebugifyFunctionPass::ID = 0;
-static RegisterPass<CheckDebugifyFunctionPass> CDF("check-debugify-function",
-                                         "Check debug info from -debugify-function");
+static RegisterPass<CheckDebugifyFunctionPass>
+    CDF("check-debugify-function", "Check debug info from -debugify-function");
