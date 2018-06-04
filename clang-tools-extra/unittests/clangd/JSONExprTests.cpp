@@ -38,6 +38,8 @@ TEST(JSONExprTests, Constructors) {
   EXPECT_EQ(R"({"A":{"B":{}}})", s(obj{{"A", obj{{"B", obj{}}}}}));
   EXPECT_EQ(R"({"A":{"B":{"X":"Y"}}})",
             s(obj{{"A", obj{{"B", obj{{"X", "Y"}}}}}}));
+  EXPECT_EQ("null", s(llvm::Optional<double>()));
+  EXPECT_EQ("2.5", s(llvm::Optional<double>(2.5)));
 }
 
 TEST(JSONExprTests, StringOwnership) {

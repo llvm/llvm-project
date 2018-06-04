@@ -136,7 +136,7 @@ enum RegisterMapping {
 // "s_waitcnt 0" before use.
 class BlockWaitcntBrackets {
 public:
-  BlockWaitcntBrackets() {
+  BlockWaitcntBrackets(const SISubtarget *SubTarget) : ST(SubTarget) {
     for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
          T = (enum InstCounterType)(T + 1)) {
       memset(VgprScores[T], 0, sizeof(VgprScores[T]));
@@ -314,6 +314,7 @@ public:
   void dump() { print(dbgs()); }
 
 private:
+  const SISubtarget *ST = nullptr;
   bool WaitAtBeginning = false;
   bool RevisitLoop = false;
   bool MixedExpTypes = false;
@@ -735,9 +736,12 @@ unsigned int BlockWaitcntBrackets::updateByWait(InstCounterType T,
   const int32_t LB = getScoreLB(T);
   const int32_t UB = getScoreUB(T);
   if ((UB >= ScoreToWait) && (ScoreToWait > LB)) {
-    if (T == VM_CNT && hasPendingFlat()) {
-      // If there is a pending FLAT operation, and this is a VM waitcnt,
-      // then we need to force a waitcnt 0 for VM.
+    if ((T == VM_CNT || T == LGKM_CNT) &&
+        hasPendingFlat() &&
+        !ST->hasFlatLgkmVMemCountInOrder()) {
+      // If there is a pending FLAT operation, and this is a VMem or LGKM
+      // waitcnt and the target can report early completion, then we need
+      // to force a waitcnt 0.
       NeedWait = CNT_MASK(T);
       setScoreLB(T, getScoreUB(T));
     } else if (counterOutOfOrder(T)) {
@@ -1200,7 +1204,7 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
           if (!ScoreBracket) {
             assert(!BlockVisitedSet.count(TBB));
             BlockWaitcntBracketsMap[TBB] =
-                llvm::make_unique<BlockWaitcntBrackets>();
+                llvm::make_unique<BlockWaitcntBrackets>(ST);
             ScoreBracket = BlockWaitcntBracketsMap[TBB].get();
           }
           ScoreBracket->setRevisitLoop(true);
@@ -1879,7 +1883,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
     BlockWaitcntBrackets *ScoreBrackets = BlockWaitcntBracketsMap[&MBB].get();
     if (!ScoreBrackets) {
-      BlockWaitcntBracketsMap[&MBB] = llvm::make_unique<BlockWaitcntBrackets>();
+      BlockWaitcntBracketsMap[&MBB] = llvm::make_unique<BlockWaitcntBrackets>(ST);
       ScoreBrackets = BlockWaitcntBracketsMap[&MBB].get();
     }
     ScoreBrackets->setPostOrder(MBB.getNumber());

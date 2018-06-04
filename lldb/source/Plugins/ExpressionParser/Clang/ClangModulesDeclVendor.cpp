@@ -25,6 +25,7 @@
 #include "llvm/Support/Threading.h"
 
 // Project includes
+#include "ClangHost.h"
 #include "ClangModulesDeclVendor.h"
 
 #include "lldb/Core/ModuleList.h"
@@ -142,18 +143,6 @@ void StoringDiagnosticConsumer::DumpDiagnostics(Stream &error_stream) {
       break;
     }
   }
-}
-
-static FileSpec GetResourceDir() {
-  static FileSpec g_cached_resource_dir;
-
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    HostInfo::GetLLDBPath(lldb::ePathTypeClangDir, g_cached_resource_dir);
-  });
-
-  return g_cached_resource_dir;
 }
 
 ClangModulesDeclVendor::ClangModulesDeclVendor() {}
@@ -610,7 +599,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   }
 
   {
-    FileSpec clang_resource_dir = GetResourceDir();
+    FileSpec clang_resource_dir = GetClangResourceDir();
 
     if (llvm::sys::fs::is_directory(clang_resource_dir.GetPath())) {
       compiler_invocation_arguments.push_back("-resource-dir");

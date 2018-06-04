@@ -34,7 +34,7 @@ namespace doc {
 static const unsigned VersionNumber = 2;
 
 struct BitCodeConstants {
-  static constexpr unsigned RecordSize = 16U;
+  static constexpr unsigned RecordSize = 32U;
   static constexpr unsigned SignatureBitSize = 8U;
   static constexpr unsigned SubblockIDSize = 4U;
   static constexpr unsigned BoolSize = 1U;
@@ -45,6 +45,8 @@ struct BitCodeConstants {
   static constexpr unsigned ReferenceTypeSize = 8U;
   static constexpr unsigned USRLengthSize = 6U;
   static constexpr unsigned USRBitLengthSize = 8U;
+  static constexpr char Signature[4] = {'D', 'O', 'C', 'S'};
+  static constexpr int USRHashSize = 20;
 };
 
 // New Ids need to be added to both the enum here and the relevant IdNameMap in
@@ -113,7 +115,7 @@ static constexpr unsigned RecordIdCount = RI_LAST - RI_FIRST;
 #undef INFORECORDS
 
 // Identifiers for differentiating between subblocks
-enum class FieldId { F_namespace = 1, F_parent, F_vparent, F_type };
+enum class FieldId { F_default, F_namespace, F_parent, F_vparent, F_type };
 
 class ClangDocBitcodeWriter {
 public:
@@ -123,12 +125,8 @@ public:
     emitVersionBlock();
   }
 
-#ifndef NDEBUG // Don't want explicit dtor unless needed.
-  ~ClangDocBitcodeWriter() {
-    // Check that the static size is large-enough.
-    assert(Record.capacity() > BitCodeConstants::RecordSize);
-  }
-#endif
+  // Write a specific info to a bitcode stream.
+  bool dispatchInfoForWrite(Info *I);
 
   // Block emission of different info types.
   void emitBlock(const NamespaceInfo &I);

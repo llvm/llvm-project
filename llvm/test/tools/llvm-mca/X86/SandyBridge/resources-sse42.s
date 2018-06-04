@@ -97,4 +97,3 @@ pcmpgtq     (%rax), %xmm2
 # CHECK-NEXT:  -      -     3.00    -      -      -     0.50   0.50   pcmpistrm	$1, (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     pcmpgtq	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   pcmpgtq	(%rax), %xmm2
-

@@ -28,7 +28,7 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   InstructionBenchmark ToDisk;
 
   ToDisk.Key.OpcodeName = "name";
-  ToDisk.Key.Mode = "mode";
+  ToDisk.Key.Mode = InstructionBenchmarkKey::Latency;
   ToDisk.Key.Config = "config";
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";

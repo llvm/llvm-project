@@ -513,4 +513,3 @@ fyl2xp1
 # CHECK-NEXT: 12.50  12.50  fxtract
 # CHECK-NEXT: 73.00  73.00  fyl2x
 # CHECK-NEXT: 73.50  73.50  fyl2xp1
-

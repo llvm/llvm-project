@@ -1700,4 +1700,3 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.50   0.50   xorq	%rdi, %rdi
 # CHECK-NEXT: 1.00    -     xorq	%rdi, (%rax)
 # CHECK-NEXT: 1.00    -     xorq	(%rax), %rdi
-

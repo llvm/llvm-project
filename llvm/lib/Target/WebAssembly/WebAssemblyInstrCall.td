@@ -68,15 +68,15 @@ multiclass SIMD_CALL<ValueType vt, string prefix> {
 }
 
 let Uses = [SP32, SP64], isCall = 1 in {
-  defm : CALL<I32, "i32.">;
-  defm : CALL<I64, "i64.">;
-  defm : CALL<F32, "f32.">;
-  defm : CALL<F64, "f64.">;
-  defm : CALL<EXCEPT_REF, "except_ref.">;
-  defm : SIMD_CALL<v16i8, "i8x16.">;
-  defm : SIMD_CALL<v8i16, "i16x8.">;
-  defm : SIMD_CALL<v4i32, "i32x4.">;
-  defm : SIMD_CALL<v4f32, "f32x4.">;
+  defm "" : CALL<I32, "i32.">;
+  defm "" : CALL<I64, "i64.">;
+  defm "" : CALL<F32, "f32.">;
+  defm "" : CALL<F64, "f64.">;
+  defm "" : CALL<EXCEPT_REF, "except_ref.">;
+  defm "" : SIMD_CALL<v16i8, "i8x16.">;
+  defm "" : SIMD_CALL<v8i16, "i16x8.">;
+  defm "" : SIMD_CALL<v4i32, "i32x4.">;
+  defm "" : SIMD_CALL<v4f32, "f32x4.">;
 
   def CALL_VOID : I<(outs), (ins function32_op:$callee, variable_ops),
                     [(WebAssemblycall0 (i32 imm:$callee))],

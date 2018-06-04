@@ -629,14 +629,24 @@ TEST(Hover, All) {
           )cpp",
           "Declared in union outer::(anonymous)\n\nint def",
       },
+      {
+          R"cpp(// Nothing
+            void foo() {
+              ^
+            }
+          )cpp",
+          "",
+      },
   };
 
   for (const OneTest &Test : Tests) {
     Annotations T(Test.Input);
     auto AST = TestTU::withCode(T.code()).build();
-    Hover H = getHover(AST, T.point());
-
-    EXPECT_EQ(H.contents.value, Test.ExpectedHover) << Test.Input;
+    if (auto H = getHover(AST, T.point())) {
+      EXPECT_NE("", Test.ExpectedHover) << Test.Input;
+      EXPECT_EQ(H->contents.value, Test.ExpectedHover) << Test.Input;
+    } else
+      EXPECT_EQ("", Test.ExpectedHover) << Test.Input;
   }
 }
 

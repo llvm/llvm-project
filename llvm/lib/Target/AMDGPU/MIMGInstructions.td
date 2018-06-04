@@ -41,8 +41,8 @@ class MIMG_NoSampler_Helper <bits<7> op, string asm,
                              string dns=""> : MIMG_Helper <
   (outs dst_rc:$vdata),
   (ins addr_rc:$vaddr, SReg_256:$srsrc,
-       dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
-       r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
+       DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
+       R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
   asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"#!if(d16_bit, " d16", ""),
   dns>, MIMGe<op> {
   let ssamp = 0;
@@ -101,8 +101,8 @@ class MIMG_Store_Helper <bits<7> op, string asm,
                          string dns = ""> : MIMG_Helper <
   (outs),
   (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
-       dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
-       r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
+       DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
+       R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
   asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"#!if(d16_bit, " d16", ""), dns>, MIMGe<op> {
   let ssamp = 0;
   let mayLoad = 0;
@@ -163,8 +163,8 @@ class MIMG_Atomic_Helper <string asm, RegisterClass data_rc,
                           bit enableDasm = 0> : MIMG_Helper <
     (outs data_rc:$vdst),
     (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
-         dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
-         r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
+         DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
+         R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
     asm#" $vdst, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da",
     !if(enableDasm, dns, "")> {
   let mayLoad = 1;
@@ -250,8 +250,8 @@ class MIMG_Sampler_Helper <bits<7> op, string asm,
                            string dns=""> : MIMG_Helper <
   (outs dst_rc:$vdata),
   (ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
-       dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
-       r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
+       DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
+       R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
   asm#" $vdata, $vaddr, $srsrc, $ssamp$dmask$unorm$glc$slc$r128$tfe$lwe$da"#!if(d16_bit, " d16", ""),
   dns>, MIMGe<op> {
   let WQM = wqm;
@@ -280,15 +280,15 @@ multiclass MIMG_Sampler_Src_Helper_Helper <bits<7> op, string asm,
 multiclass MIMG_Sampler_Src_Helper <bits<7> op, string asm,
                                     RegisterClass dst_rc,
                                     int channels, bit wqm> {
-  defm : MIMG_Sampler_Src_Helper_Helper <op, asm, dst_rc, channels, wqm, 0, "">;
+  defm "" : MIMG_Sampler_Src_Helper_Helper <op, asm, dst_rc, channels, wqm, 0, "">;
 
   let d16 = 1 in {
     let SubtargetPredicate = HasPackedD16VMem in {
-      defm : MIMG_Sampler_Src_Helper_Helper <op, asm, dst_rc, channels, wqm, 1, "_D16">;
+      defm "" : MIMG_Sampler_Src_Helper_Helper <op, asm, dst_rc, channels, wqm, 1, "_D16">;
     } // End HasPackedD16VMem.
 
     let SubtargetPredicate = HasUnpackedD16VMem, DecoderNamespace = "GFX80_UNPACKED" in {
-      defm : MIMG_Sampler_Src_Helper_Helper <op, asm, dst_rc, channels, wqm, 1, "_D16_gfx80">;
+      defm "" : MIMG_Sampler_Src_Helper_Helper <op, asm, dst_rc, channels, wqm, 1, "_D16_gfx80">;
     } // End HasUnpackedD16VMem.
   } // End d16 = 1.
 }
@@ -310,8 +310,8 @@ class MIMG_Gather_Helper <bits<7> op, string asm,
                           string dns=""> : MIMG <
   (outs dst_rc:$vdata),
   (ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
-       dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
-       r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
+       DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
+       R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
   asm#" $vdata, $vaddr, $srsrc, $ssamp$dmask$unorm$glc$slc$r128$tfe$lwe$da"#!if(d16_bit, " d16", ""),
   []>, MIMGe<op> {
   let mayLoad = 1;
@@ -348,15 +348,15 @@ multiclass MIMG_Gather_Src_Helper <bits<7> op, string asm,
 }
 
 multiclass MIMG_Gather <bits<7> op, string asm, bit wqm=0> {
-  defm : MIMG_Gather_Src_Helper<op, asm, VReg_128, wqm, 0, "_V4", "">;
+  defm "" : MIMG_Gather_Src_Helper<op, asm, VReg_128, wqm, 0, "_V4", "">;
 
   let d16 = 1 in {
     let AssemblerPredicate = HasPackedD16VMem in {
-      defm : MIMG_Gather_Src_Helper<op, asm, VReg_64, wqm, 1, "_V2", "_D16">;
+      defm "" : MIMG_Gather_Src_Helper<op, asm, VReg_64, wqm, 1, "_V2", "_D16">;
     } // End HasPackedD16VMem.
 
     let AssemblerPredicate = HasUnpackedD16VMem, DecoderNamespace = "GFX80_UNPACKED" in {
-      defm : MIMG_Gather_Src_Helper<op, asm, VReg_128, wqm, 1, "_V4", "_D16_gfx80">;
+      defm "" : MIMG_Gather_Src_Helper<op, asm, VReg_128, wqm, 1, "_V4", "_D16_gfx80">;
     } // End HasUnpackedD16VMem.
   } // End d16 = 1.
 }

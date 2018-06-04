@@ -366,4 +366,3 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  -      -     0.67   0.67   0.50   0.50    -     0.67    -      -     roundsd	$1, (%rax), %xmm2
 # CHECK-NEXT:  -      -     0.67   0.67    -      -      -     0.67    -      -     roundss	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -     0.67   0.67   0.50   0.50    -     0.67    -      -     roundss	$1, (%rax), %xmm2
-

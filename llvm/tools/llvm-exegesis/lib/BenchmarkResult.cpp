@@ -34,6 +34,16 @@ template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
   static const bool flow = true;
 };
 
+template <>
+struct ScalarEnumerationTraits<exegesis::InstructionBenchmarkKey::ModeE> {
+  static void enumeration(IO &Io,
+                          exegesis::InstructionBenchmarkKey::ModeE &Value) {
+    Io.enumCase(Value, "", exegesis::InstructionBenchmarkKey::Unknown);
+    Io.enumCase(Value, "latency", exegesis::InstructionBenchmarkKey::Latency);
+    Io.enumCase(Value, "uops", exegesis::InstructionBenchmarkKey::Uops);
+  }
+};
+
 template <> struct MappingTraits<exegesis::InstructionBenchmarkKey> {
   static void mapping(IO &Io, exegesis::InstructionBenchmarkKey &Obj) {
     Io.mapRequired("opcode_name", Obj.OpcodeName);

@@ -323,4 +323,3 @@ cmovgq    (%rax), %rdi
 # CHECK-NEXT:  -      -     0.75   0.25   0.50   0.50    -     0.25   0.75    -     cmovgeq	(%rax), %rdi
 # CHECK-NEXT:  -      -     0.75   0.25   0.50   0.50    -     0.25   0.75    -     cmovleq	(%rax), %rdi
 # CHECK-NEXT:  -      -     0.75   0.25   0.50   0.50    -     0.25   0.75    -     cmovgq	(%rax), %rdi
-

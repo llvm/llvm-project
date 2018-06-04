@@ -29,4 +29,3 @@ add %eax, %eax
 
 # ALL:          [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # ALL-NEXT:      1      1     0.50                        addl	%eax, %eax
-

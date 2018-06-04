@@ -812,6 +812,48 @@ TEST_F(SymbolCollectorTest, DoubleCheckProtoHeaderComment) {
                                    QName("nx::Kind"), QName("nx::Kind_Fine")));
 }
 
+TEST_F(SymbolCollectorTest, DoNotIndexSymbolsInFriendDecl) {
+  Annotations Header(R"(
+    namespace nx {
+      class $z[[Z]] {};
+      class X {
+        friend class Y;
+        friend class Z;
+        friend void foo();
+        friend void $bar[[bar]]() {}
+      };
+      class $y[[Y]] {};
+      void $foo[[foo]]();
+    }
+  )");
+  runSymbolCollector(Header.code(), /*Main=*/"");
+
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  QName("nx"), QName("nx::X"),
+                  AllOf(QName("nx::Y"), DeclRange(Header.range("y"))),
+                  AllOf(QName("nx::Z"), DeclRange(Header.range("z"))),
+                  AllOf(QName("nx::foo"), DeclRange(Header.range("foo"))),
+                  AllOf(QName("nx::bar"), DeclRange(Header.range("bar")))));
+}
+
+TEST_F(SymbolCollectorTest, ReferencesInFriendDecl) {
+  const std::string Header = R"(
+    class X;
+    class Y;
+  )";
+  const std::string Main = R"(
+    class C {
+      friend ::X;
+      friend class Y;
+    };
+  )";
+  CollectorOpts.CountReferences = true;
+  runSymbolCollector(Header, Main);
+  EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), Refs(1)),
+                                            AllOf(QName("Y"), Refs(1))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

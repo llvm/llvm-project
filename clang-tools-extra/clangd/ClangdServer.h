@@ -158,7 +158,8 @@ public:
                               Callback<std::vector<DocumentHighlight>> CB);
 
   /// Get code hover for a given position.
-  void findHover(PathRef File, Position Pos, Callback<Hover> CB);
+  void findHover(PathRef File, Position Pos,
+                 Callback<llvm::Optional<Hover>> CB);
 
   /// Retrieve the top symbols from the workspace matching a query.
   void workspaceSymbols(StringRef Query, int Limit,

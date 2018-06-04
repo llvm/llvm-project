@@ -546,5 +546,36 @@ def JWriteJVZEROUPPER: SchedWriteRes<[]> {
   let NumMicroOps = 37;
 }
 def : InstRW<[JWriteJVZEROUPPER], (instrs VZEROUPPER)>;
-} // SchedModel
 
+///////////////////////////////////////////////////////////////////////////////
+//  SchedWriteVariant definitions.
+///////////////////////////////////////////////////////////////////////////////
+
+def JWriteZeroLatency : SchedWriteRes<[]> {
+  let Latency = 0;
+}
+
+// Vector XOR instructions that use the same register for both source 
+// operands do not have a real dependency on the previous contents of the
+// register, and thus, do not have to wait before completing. They can be
+// optimized out at register renaming stage.
+// Reference: Section 10.8 of the "Software Optimization Guide for AMD Family
+// 15h Processors".
+// Reference: Agner's Fog "The microarchitecture of Intel, AMD and VIA CPUs",
+// Section 21.8 [Dependency-breaking instructions].
+
+def JWriteFZeroIdiom : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
+    SchedVar<MCSchedPredicate<TruePred>,           [WriteFLogic]>
+]>;
+
+def : InstRW<[JWriteFZeroIdiom], (instrs XORPSrr, VXORPSrr, XORPDrr, VXORPDrr)>;
+
+def JWriteVZeroIdiom : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
+    SchedVar<MCSchedPredicate<TruePred>,           [WriteVecLogicX]>
+]>;
+
+def : InstRW<[JWriteVZeroIdiom], (instrs PXORrr, VPXORrr)>;
+
+} // SchedModel

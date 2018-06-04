@@ -98,15 +98,15 @@ multiclass SIMD_RETURN<ValueType vt> {
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
 
 let isReturn = 1 in {
-  defm : RETURN<I32>;
-  defm : RETURN<I64>;
-  defm : RETURN<F32>;
-  defm : RETURN<F64>;
-  defm : RETURN<EXCEPT_REF>;
-  defm : SIMD_RETURN<v16i8>;
-  defm : SIMD_RETURN<v8i16>;
-  defm : SIMD_RETURN<v4i32>;
-  defm : SIMD_RETURN<v4f32>;
+  defm "": RETURN<I32>;
+  defm "": RETURN<I64>;
+  defm "": RETURN<F32>;
+  defm "": RETURN<F64>;
+  defm "": RETURN<EXCEPT_REF>;
+  defm "": SIMD_RETURN<v16i8>;
+  defm "": SIMD_RETURN<v8i16>;
+  defm "": SIMD_RETURN<v4i32>;
+  defm "": SIMD_RETURN<v4f32>;
 
   def RETURN_VOID : I<(outs), (ins), [(WebAssemblyreturn)], "return", 0x0f>;
 

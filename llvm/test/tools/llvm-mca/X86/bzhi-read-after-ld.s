@@ -74,4 +74,3 @@ bzhil	%esi, (%rdi), %eax
 # ALL:                [0]    [1]    [2]    [3]
 # ALL-NEXT:     0.     1     1.0    1.0    0.0       addl	%edi, %esi
 # ALL-NEXT:     1.     1     1.0    0.0    0.0       bzhil	%esi, (%rdi), %eax
-

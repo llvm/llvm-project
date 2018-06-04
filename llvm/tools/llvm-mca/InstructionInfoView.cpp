@@ -36,9 +36,16 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   for (unsigned I = 0, E = Instructions; I < E; ++I) {
     const MCInst &Inst = Source.getMCInstFromIndex(I);
     const MCInstrDesc &MCDesc = MCII.get(Inst.getOpcode());
-    const MCSchedClassDesc &SCDesc =
-        *SM.getSchedClassDesc(MCDesc.getSchedClass());
 
+    // Obtain the scheduling class information from the instruction.
+    unsigned SchedClassID = MCDesc.getSchedClass();
+    unsigned CPUID = SM.getProcessorID();
+
+    // Try to solve variant scheduling classes.
+    while (SchedClassID && SM.getSchedClassDesc(SchedClassID)->isVariant())
+      SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &Inst, CPUID);
+
+    const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
     unsigned NumMicroOpcodes = SCDesc.NumMicroOps;
     unsigned Latency = MCSchedModel::computeInstrLatency(STI, SCDesc);
     Optional<double> RThroughput =

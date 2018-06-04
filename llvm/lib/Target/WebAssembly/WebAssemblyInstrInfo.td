@@ -162,15 +162,15 @@ multiclass SIMD_ARGUMENT<ValueType vt> {
                             [(set (vt V128:$res),
                                   (WebAssemblyargument timm:$argno))]>;
 }
-defm : ARGUMENT<I32>;
-defm : ARGUMENT<I64>;
-defm : ARGUMENT<F32>;
-defm : ARGUMENT<F64>;
-defm : ARGUMENT<EXCEPT_REF>;
-defm : SIMD_ARGUMENT<v16i8>;
-defm : SIMD_ARGUMENT<v8i16>;
-defm : SIMD_ARGUMENT<v4i32>;
-defm : SIMD_ARGUMENT<v4f32>;
+defm "": ARGUMENT<I32>;
+defm "": ARGUMENT<I64>;
+defm "": ARGUMENT<F32>;
+defm "": ARGUMENT<F64>;
+defm "": ARGUMENT<EXCEPT_REF>;
+defm "": SIMD_ARGUMENT<v16i8>;
+defm "": SIMD_ARGUMENT<v8i16>;
+defm "": SIMD_ARGUMENT<v4i32>;
+defm "": SIMD_ARGUMENT<v4f32>;
 
 let Defs = [ARGUMENTS] in {
 
@@ -228,12 +228,12 @@ let hasSideEffects = 0 in {
 
 } // hasSideEffects = 0
 }
-defm : LOCAL<I32>;
-defm : LOCAL<I64>;
-defm : LOCAL<F32>;
-defm : LOCAL<F64>;
-defm : LOCAL<V128>, Requires<[HasSIMD128]>;
-defm : LOCAL<EXCEPT_REF>, Requires<[HasExceptionHandling]>;
+defm "" : LOCAL<I32>;
+defm "" : LOCAL<I64>;
+defm "" : LOCAL<F32>;
+defm "" : LOCAL<F64>;
+defm "" : LOCAL<V128>, Requires<[HasSIMD128]>;
+defm "" : LOCAL<EXCEPT_REF>, Requires<[HasExceptionHandling]>;
 
 let isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1 in {
 def CONST_I32 : I<(outs I32:$res), (ins i32imm_op:$imm),

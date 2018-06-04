@@ -16,6 +16,7 @@
 #include "ClangdUnit.h"
 #include "Protocol.h"
 #include "index/Index.h"
+#include "llvm/ADT/Optional.h"
 #include <vector>
 
 namespace clang {
@@ -30,7 +31,7 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                                                       Position Pos);
 
 /// Get the hover information when hovering at \p Pos.
-Hover getHover(ParsedAST &AST, Position Pos);
+llvm::Optional<Hover> getHover(ParsedAST &AST, Position Pos);
 
 } // namespace clangd
 } // namespace clang
