@@ -32,13 +32,8 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_CXX03_LANG
-template <class _Key, class _Tp>
-union __hash_value_type;
-#else
 template <class _Key, class _Tp>
 struct __hash_value_type;
-#endif
 
 template <class _Key, class _Cp, class _Hash,
           bool =  is_empty<_Hash>::value && !__libcpp_is_final<_Hash>::value>
@@ -172,7 +167,7 @@ struct __hash_key_value_types {
   }
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_INLINE_VISIBILITY
-  static  __container_value_type&& __move(__node_value_type& __v) {
+  static __container_value_type&& __move(__node_value_type& __v) {
     return _VSTD::move(__v);
   }
 #endif
@@ -184,7 +179,6 @@ struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
   typedef _Tp                                          mapped_type;
   typedef __hash_value_type<_Key, _Tp>                 __node_value_type;
   typedef pair<const _Key, _Tp>                        __container_value_type;
-  typedef pair<_Key, _Tp>                              __nc_value_type;
   typedef __container_value_type                       __map_value_type;
   static const bool __is_map = true;
 
@@ -198,7 +192,7 @@ struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
   static typename enable_if<__is_same_uncvref<_Up, __node_value_type>::value,
       __container_value_type const&>::type
   __get_value(_Up& __t) {
-    return __t.__cc;
+    return __t.__get_value();
   }
 
   template <class _Up>
@@ -211,12 +205,12 @@ struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
 
   _LIBCPP_INLINE_VISIBILITY
   static __container_value_type* __get_ptr(__node_value_type& __n) {
-    return _VSTD::addressof(__n.__cc);
+    return _VSTD::addressof(__n.__get_value());
   }
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_INLINE_VISIBILITY
-  static __nc_value_type&& __move(__node_value_type& __v) {
-    return _VSTD::move(__v.__nc);
+  static pair<key_type&&, mapped_type&&> __move(__node_value_type& __v) {
+    return __v.__move();
   }
 #endif
 
