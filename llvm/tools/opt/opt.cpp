@@ -121,6 +121,9 @@ static cl::opt<bool>
 StripDebug("strip-debug",
            cl::desc("Strip debugger symbol info from translation unit"));
 
+static cl::opt<bool> StripModuleFlags("strip-module-flags",
+                                      cl::desc("Strip module flags metadata"));
+
 static cl::opt<bool>
 DisableInline("disable-inlining", cl::desc("Do not run the inliner pass"));
 
@@ -266,8 +269,8 @@ public:
   using super = legacy::PassManager;
 
   void add(Pass *P) override {
-    bool WrapWithDebugify =
-        DebugifyEach && !P->getAsImmutablePass() && !isIRPrintingPass(P);
+    bool WrapWithDebugify = DebugifyEach && !P->getAsImmutablePass() &&
+                            !isIRPrintingPass(P) && !isBitcodeWriterPass(P);
     if (!WrapWithDebugify) {
       super::add(P);
       return;
@@ -499,6 +502,11 @@ int main(int argc, char **argv) {
   // Strip debug info before running the verifier.
   if (StripDebug)
     StripDebugInfo(*M);
+
+  // Erase module flags metadata, if requested.
+  if (StripModuleFlags)
+    if (NamedMDNode *ModFlags = M->getModuleFlagsMetadata())
+      M->eraseNamedMetadata(ModFlags);
 
   // If we are supposed to override the target triple or data layout, do so now.
   if (!TargetTriple.empty())

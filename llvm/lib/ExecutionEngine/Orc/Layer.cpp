@@ -51,6 +51,12 @@ IRMaterializationUnit::IRMaterializationUnit(ExecutionSession &ES,
   }
 }
 
+IRMaterializationUnit::IRMaterializationUnit(
+    std::unique_ptr<Module> M, SymbolFlagsMap SymbolFlags,
+    SymbolNameToDefinitionMap SymbolToDefinition)
+    : MaterializationUnit(std::move(SymbolFlags)), M(std::move(M)),
+      SymbolToDefinition(std::move(SymbolToDefinition)) {}
+
 void IRMaterializationUnit::discard(const VSO &V, SymbolStringPtr Name) {
   auto I = SymbolToDefinition.find(Name);
   assert(I != SymbolToDefinition.end() &&

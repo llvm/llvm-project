@@ -932,52 +932,47 @@ def fpimm0 : FPImmLeaf<fAny, [{
 }]>;
 
 // Vector lane operands
-class AsmVectorIndex<string Suffix> : AsmOperandClass {
-  let Name = "VectorIndex" # Suffix;
-  let DiagnosticType = "InvalidIndex" # Suffix;
+class AsmVectorIndex<int Min, int Max, string NamePrefix=""> : AsmOperandClass {
+  let Name = NamePrefix # "IndexRange" # Min # "_" # Max;
+  let DiagnosticType = "Invalid" # Name;
+  let PredicateMethod = "isVectorIndex<" # Min # ", " # Max #  ">";
   let RenderMethod = "addVectorIndexOperands";
 }
-def VectorIndex1Operand : AsmVectorIndex<"1">;
-def VectorIndexBOperand : AsmVectorIndex<"B">;
-def VectorIndexHOperand : AsmVectorIndex<"H">;
-def VectorIndexSOperand : AsmVectorIndex<"S">;
-def VectorIndexDOperand : AsmVectorIndex<"D">;
 
-def VectorIndex1 : Operand<i64>, ImmLeaf<i64, [{
-  return ((uint64_t)Imm) == 1;
-}]> {
-  let ParserMatchClass = VectorIndex1Operand;
+class AsmVectorIndexOpnd<AsmOperandClass mc, code pred>
+    : Operand<i64>, ImmLeaf<i64, pred> {
+  let ParserMatchClass = mc;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i64imm);
 }
-def VectorIndexB : Operand<i64>, ImmLeaf<i64, [{
-  return ((uint64_t)Imm) < 16;
-}]> {
-  let ParserMatchClass = VectorIndexBOperand;
-  let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i64imm);
-}
-def VectorIndexH : Operand<i64>, ImmLeaf<i64, [{
-  return ((uint64_t)Imm) < 8;
-}]> {
-  let ParserMatchClass = VectorIndexHOperand;
-  let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i64imm);
-}
-def VectorIndexS : Operand<i64>, ImmLeaf<i64, [{
-  return ((uint64_t)Imm) < 4;
-}]> {
-  let ParserMatchClass = VectorIndexSOperand;
-  let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i64imm);
-}
-def VectorIndexD : Operand<i64>, ImmLeaf<i64, [{
-  return ((uint64_t)Imm) < 2;
-}]> {
-  let ParserMatchClass = VectorIndexDOperand;
-  let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i64imm);
-}
+
+def VectorIndex1Operand : AsmVectorIndex<1, 1>;
+def VectorIndexBOperand : AsmVectorIndex<0, 15>;
+def VectorIndexHOperand : AsmVectorIndex<0, 7>;
+def VectorIndexSOperand : AsmVectorIndex<0, 3>;
+def VectorIndexDOperand : AsmVectorIndex<0, 1>;
+
+def VectorIndex1 : AsmVectorIndexOpnd<VectorIndex1Operand, [{ return ((uint64_t)Imm) == 1; }]>;
+def VectorIndexB : AsmVectorIndexOpnd<VectorIndexBOperand, [{ return ((uint64_t)Imm) < 16; }]>;
+def VectorIndexH : AsmVectorIndexOpnd<VectorIndexHOperand, [{ return ((uint64_t)Imm) < 8; }]>;
+def VectorIndexS : AsmVectorIndexOpnd<VectorIndexSOperand, [{ return ((uint64_t)Imm) < 4; }]>;
+def VectorIndexD : AsmVectorIndexOpnd<VectorIndexDOperand, [{ return ((uint64_t)Imm) < 2; }]>;
+
+def SVEVectorIndexExtDupBOperand : AsmVectorIndex<0, 63, "SVE">;
+def SVEVectorIndexExtDupHOperand : AsmVectorIndex<0, 31, "SVE">;
+def SVEVectorIndexExtDupSOperand : AsmVectorIndex<0, 15, "SVE">;
+def SVEVectorIndexExtDupDOperand : AsmVectorIndex<0, 7, "SVE">;
+def SVEVectorIndexExtDupQOperand : AsmVectorIndex<0, 3, "SVE">;
+
+def sve_elm_idx_extdup_b
+  : AsmVectorIndexOpnd<SVEVectorIndexExtDupBOperand, [{ return ((uint64_t)Imm) < 64; }]>;
+def sve_elm_idx_extdup_h
+  : AsmVectorIndexOpnd<SVEVectorIndexExtDupHOperand, [{ return ((uint64_t)Imm) < 32; }]>;
+def sve_elm_idx_extdup_s
+  : AsmVectorIndexOpnd<SVEVectorIndexExtDupSOperand, [{ return ((uint64_t)Imm) < 16; }]>;
+def sve_elm_idx_extdup_d
+  : AsmVectorIndexOpnd<SVEVectorIndexExtDupDOperand, [{ return ((uint64_t)Imm) < 8; }]>;
+def sve_elm_idx_extdup_q
+  : AsmVectorIndexOpnd<SVEVectorIndexExtDupQOperand, [{ return ((uint64_t)Imm) < 4; }]>;
 
 // 8-bit immediate for AdvSIMD where 64-bit values of the form:
 // aaaaaaaa bbbbbbbb cccccccc dddddddd eeeeeeee ffffffff gggggggg hhhhhhhh
@@ -7933,9 +7928,10 @@ multiclass SIMDFPScalarRShift<bit U, bits<5> opc, string asm> {
     let Inst{19-16} = imm{3-0};
     let Inst{23-22} = 0b11;
   }
-  def SHr : BaseSIMDScalarShift<U, opc, {?,?,?,?,?,?,?},
+  def SHr : BaseSIMDScalarShift<U, opc, {0,0,1,?,?,?,?},
                                 FPR32, FPR16, vecshiftR32, asm, []> {
     let Inst{19-16} = imm{3-0};
+    let Inst{22-21} = 0b01;
   }
   def HDr : BaseSIMDScalarShift<U, opc, {?,?,?,?,?,?,?},
                                 FPR16, FPR64, vecshiftR32, asm, []> {

@@ -146,6 +146,14 @@ void AppleDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
     m_apple_namespaces_up->FindByName(name.GetStringRef(), offsets);
 }
 
+static bool KeepFunctionDIE(DWARFDIE die, uint32_t name_type_mask) {
+  bool looking_for_methods = name_type_mask & eFunctionNameTypeMethod;
+  bool looking_for_functions = name_type_mask & eFunctionNameTypeBase;
+  if (looking_for_methods && looking_for_functions)
+    return true;
+  return looking_for_methods == die.IsMethod();
+}
+
 void AppleDWARFIndex::GetFunctions(
     ConstString name, DWARFDebugInfo &info,
     llvm::function_ref<bool(const DWARFDIE &die, bool include_inlines,
@@ -228,47 +236,15 @@ void AppleDWARFIndex::GetFunctions(
         if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
           continue; // The containing decl contexts don't match
 
-        // If we get to here, the die is good, and we should add it:
-        if (resolved_dies.find(die.GetDIE()) == resolved_dies.end() &&
-            resolve_function(die, include_inlines, sc_list)) {
-          bool keep_die = true;
-          if ((name_type_mask &
-               (eFunctionNameTypeBase | eFunctionNameTypeMethod)) !=
-              (eFunctionNameTypeBase | eFunctionNameTypeMethod)) {
-            // We are looking for either basenames or methods, so we need
-            // to trim out the ones we won't want by looking at the type
-            SymbolContext sc;
-            if (sc_list.GetLastContext(sc)) {
-              if (sc.block) {
-                // We have an inlined function
-              } else if (sc.function) {
-                Type *type = sc.function->GetType();
+        if (!KeepFunctionDIE(die, name_type_mask))
+          continue;
 
-                if (type) {
-                  CompilerDeclContext decl_ctx =
-                      get_decl_context_containing_uid(type->GetID());
-                  if (decl_ctx.IsStructUnionOrClass()) {
-                    if (name_type_mask & eFunctionNameTypeBase) {
-                      sc_list.RemoveContextAtIndex(sc_list.GetSize() - 1);
-                      keep_die = false;
-                    }
-                  } else {
-                    if (name_type_mask & eFunctionNameTypeMethod) {
-                      sc_list.RemoveContextAtIndex(sc_list.GetSize() - 1);
-                      keep_die = false;
-                    }
-                  }
-                } else {
-                  m_module.ReportWarning(
-                      "function at die offset 0x%8.8x had no function type",
-                      die_ref.die_offset);
-                }
-              }
-            }
-          }
-          if (keep_die)
-            resolved_dies.insert(die.GetDIE());
-        }
+        if (resolved_dies.find(die.GetDIE()) != resolved_dies.end())
+          continue;
+
+        // If we get to here, the die is good, and we should add it:
+        if (resolve_function(die, include_inlines, sc_list))
+          resolved_dies.insert(die.GetDIE());
       } else
         ReportInvalidDIEOffset(die_ref.die_offset, name.GetStringRef());
     }
