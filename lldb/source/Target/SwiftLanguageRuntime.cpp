@@ -1587,12 +1587,6 @@ bool SwiftLanguageRuntime::IsValidErrorValue(
       return false;
 
     lldb::addr_t witness_table_location = metadata_location + ptr_size;
-    lldb::addr_t witness_table_ptr_value =
-        m_process->ReadPointerFromMemory(witness_table_location, error);
-    if (witness_table_ptr_value == 0 ||
-        witness_table_ptr_value == LLDB_INVALID_ADDRESS || error.Fail())
-      return false;
-
     lldb::addr_t payload_location = witness_table_location + ptr_size;
 
     if (out_error_descriptor) {
