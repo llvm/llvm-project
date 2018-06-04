@@ -80,6 +80,12 @@ private:
   Options Opts;
   // Decls referenced from the current TU, flushed on finish().
   llvm::DenseSet<const NamedDecl *> ReferencedDecls;
+  // Maps canonical declaration provided by clang to canonical declaration for
+  // an index symbol, if clangd prefers a different declaration than that
+  // provided by clang. For example, friend declaration might be considered
+  // canonical by clang but should not be considered canonical in the index
+  // unless it's a definition.
+  llvm::DenseMap<const Decl *, const Decl *> CanonicalDecls;
 };
 
 } // namespace clangd
