@@ -36,21 +36,12 @@ public:
   virtual void GetTypes(ConstString name, DIEArray &offsets) = 0;
   virtual void GetTypes(const DWARFDeclContext &context, DIEArray &offsets) = 0;
   virtual void GetNamespaces(ConstString name, DIEArray &offsets) = 0;
-  virtual void GetFunctions(
-      ConstString name, DWARFDebugInfo &info,
-      llvm::function_ref<bool(const DWARFDIE &die, bool include_inlines,
-                              lldb_private::SymbolContextList &sc_list)>
-          resolve_function,
-      llvm::function_ref<CompilerDeclContext(lldb::user_id_t type_uid)>
-          get_decl_context_containing_uid,
-      const CompilerDeclContext *parent_decl_ctx, uint32_t name_type_mask,
-      bool include_inlines, SymbolContextList &sc_list) = 0;
-  virtual void GetFunctions(
-      const RegularExpression &regex, DWARFDebugInfo &info,
-      llvm::function_ref<bool(const DWARFDIE &die, bool include_inlines,
-                              lldb_private::SymbolContextList &sc_list)>
-          resolve_function,
-      bool include_inlines, SymbolContextList &sc_list) = 0;
+  virtual void GetFunctions(ConstString name, DWARFDebugInfo &info,
+                            const CompilerDeclContext &parent_decl_ctx,
+                            uint32_t name_type_mask,
+                            std::vector<DWARFDIE> &dies) = 0;
+  virtual void GetFunctions(const RegularExpression &regex,
+                            DIEArray &offsets) = 0;
 
   virtual void ReportInvalidDIEOffset(dw_offset_t offset,
                                       llvm::StringRef name) = 0;
@@ -58,13 +49,6 @@ public:
 
 protected:
   Module &m_module;
-
-  void ParseFunctions(
-      const DIEArray &offsets, DWARFDebugInfo &info,
-      llvm::function_ref<bool(const DWARFDIE &die, bool include_inlines,
-                              lldb_private::SymbolContextList &sc_list)>
-          resolve_function,
-      bool include_inlines, SymbolContextList &sc_list);
 };
 } // namespace lldb_private
 

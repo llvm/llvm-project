@@ -75,4 +75,3 @@ aeskeygenassist $22, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   aesimc	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   aeskeygenassist	$22, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   aeskeygenassist	$22, (%rax), %xmm2
-

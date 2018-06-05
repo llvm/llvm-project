@@ -54,6 +54,15 @@ namespace llvm {
 namespace sys {
 namespace fs {
 
+#if defined(_WIN32)
+// A Win32 HANDLE is a typedef of void*
+using file_t = void *;
+#else
+using file_t = int;
+#endif
+
+extern const file_t kInvalidFile;
+
 /// An enumeration for the file system's view of the type.
 enum class file_type {
   status_error,
@@ -835,6 +844,22 @@ inline OpenFlags &operator|=(OpenFlags &A, OpenFlags B) {
 std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
                                  OpenFlags Flags, unsigned Mode = 0666);
 
+/// @brief Opens the file with the given name in a write-only or read-write
+/// mode, returning its open file descriptor. If the file does not exist, it
+/// is created.
+///
+/// The caller is responsible for closing the freeing the file once they are
+/// finished with it.
+///
+/// @param Name The path of the file to open, relative or absolute.
+/// @param Flags Additional flags used to determine whether the file should be
+///              opened in, for example, read-write or in write-only mode.
+/// @param Mode The access permissions of the file, represented in octal.
+/// @returns a platform-specific file descriptor if \a Name has been opened,
+///          otherwise an error object.
+Expected<file_t> openNativeFileForWrite(const Twine &Name, OpenFlags Flags,
+                                        unsigned Mode = 0666);
+
 /// @brief Opens the file with the given name in a read-only mode, returning
 /// its open file descriptor.
 ///
@@ -851,6 +876,29 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
 ///          platform-specific error_code.
 std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 SmallVectorImpl<char> *RealPath = nullptr);
+
+/// @brief Opens the file with the given name in a read-only mode, returning
+/// its open file descriptor.
+///
+/// The caller is responsible for closing the freeing the file once they are
+/// finished with it.
+///
+/// @param Name The path of the file to open, relative or absolute.
+/// @param RealPath If nonnull, extra work is done to determine the real path
+///                 of the opened file, and that path is stored in this
+///                 location.
+/// @returns a platform-specific file descriptor if \a Name has been opened,
+///          otherwise an error object.
+Expected<file_t>
+openNativeFileForRead(const Twine &Name,
+                      SmallVectorImpl<char> *RealPath = nullptr);
+
+/// @brief Close the file object.  This should be used instead of ::close for
+/// portability.
+///
+/// @param F On input, this is the file to close.  On output, the file is
+/// set to kInvalidFile.
+void closeFile(file_t &F);
 
 std::error_code getUniqueID(const Twine Path, UniqueID &Result);
 

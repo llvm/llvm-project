@@ -13,6 +13,8 @@
 #include "DWARFDIE.h"
 #include "DWARFDebugInfoEntry.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/Support/RWMutex.h"
+#include <atomic>
 
 class DWARFUnit;
 class DWARFCompileUnit;
@@ -40,7 +42,20 @@ public:
   virtual ~DWARFUnit();
 
   void ExtractUnitDIEIfNeeded();
-  bool ExtractDIEsIfNeeded();
+  void ExtractDIEsIfNeeded();
+
+  class ScopedExtractDIEs {
+    DWARFUnit *m_cu;
+  public:
+    bool m_clear_dies = false;
+    ScopedExtractDIEs(DWARFUnit *cu);
+    ~ScopedExtractDIEs();
+    DISALLOW_COPY_AND_ASSIGN(ScopedExtractDIEs);
+    ScopedExtractDIEs(ScopedExtractDIEs &&rhs);
+    ScopedExtractDIEs &operator=(ScopedExtractDIEs &&rhs);
+  };
+  ScopedExtractDIEs ExtractDIEsScoped();
+
   DWARFDIE LookupAddress(const dw_addr_t address);
   size_t AppendDIEsWithTag(const dw_tag_t tag,
                            DWARFDIECollection &matching_dies,
@@ -100,7 +115,6 @@ public:
   dw_addr_t GetRangesBase() const { return m_ranges_base; }
   void SetAddrBase(dw_addr_t addr_base, dw_addr_t ranges_base,
                    dw_offset_t base_obj_offset);
-  void ClearDIEs();
   void BuildAddressRangeTable(SymbolFileDWARF *dwarf,
                               DWARFDebugAranges *debug_aranges);
 
@@ -172,10 +186,17 @@ protected:
   void *m_user_data = nullptr;
   // The compile unit debug information entry item
   DWARFDebugInfoEntry::collection m_die_array;
+  mutable llvm::sys::RWMutex m_die_array_mutex;
+  // It is used for tracking of ScopedExtractDIEs instances.
+  mutable llvm::sys::RWMutex m_die_array_scoped_mutex;
+  // ScopedExtractDIEs instances should not call ClearDIEsRWLocked()
+  // as someone called ExtractDIEsIfNeeded().
+  std::atomic<bool> m_cancel_scopes;
   // GetUnitDIEPtrOnly() needs to return pointer to the first DIE.
   // But the first element of m_die_array after ExtractUnitDIEIfNeeded()
   // would possibly move in memory after later ExtractDIEsIfNeeded().
   DWARFDebugInfoEntry m_first_die;
+  llvm::sys::RWMutex m_first_die_mutex;
   // A table similar to the .debug_aranges table, but this one points to the
   // exact DW_TAG_subprogram DIEs
   std::unique_ptr<DWARFDebugAranges> m_func_aranges_ap;
@@ -201,11 +222,14 @@ protected:
 
 private:
   void ParseProducerInfo();
+  void ExtractDIEsRWLocked();
+  void ClearDIEsRWLocked();
 
   // Get the DWARF unit DWARF debug informration entry. Parse the single DIE
   // if needed.
   const DWARFDebugInfoEntry *GetUnitDIEPtrOnly() {
     ExtractUnitDIEIfNeeded();
+    // m_first_die_mutex is not required as m_first_die is never cleared.
     if (!m_first_die)
       return NULL;
     return &m_first_die;

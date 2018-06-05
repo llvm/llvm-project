@@ -214,6 +214,8 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
 
 // AbbreviationMap
 
+constexpr char BitCodeConstants::Signature[];
+
 void ClangDocBitcodeWriter::AbbreviationMap::add(RecordId RID,
                                                  unsigned AbbrevID) {
   assert(RecordIdNameMap[RID] && "Unknown RecordId.");
@@ -232,7 +234,7 @@ unsigned ClangDocBitcodeWriter::AbbreviationMap::get(RecordId RID) const {
 /// \brief Emits the magic number header to check that its the right format,
 /// in this case, 'DOCS'.
 void ClangDocBitcodeWriter::emitHeader() {
-  for (char C : llvm::StringRef("DOCS"))
+  for (char C : BitCodeConstants::Signature)
     Stream.Emit((unsigned)C, BitCodeConstants::SignatureBitSize);
 }
 
@@ -424,22 +426,24 @@ void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {
     emitBlock(*C);
 }
 
-#define EMITINFO(X)                                                            \
-  emitRecord(I.USR, X##_USR);                                                  \
-  emitRecord(I.Name, X##_NAME);                                                \
-  for (const auto &N : I.Namespace)                                            \
-    emitBlock(N, FieldId::F_namespace);                                        \
-  for (const auto &CI : I.Description)                                         \
-    emitBlock(CI);
-
 void ClangDocBitcodeWriter::emitBlock(const NamespaceInfo &I) {
   StreamSubBlockGuard Block(Stream, BI_NAMESPACE_BLOCK_ID);
-  EMITINFO(NAMESPACE)
+  emitRecord(I.USR, NAMESPACE_USR);
+  emitRecord(I.Name, NAMESPACE_NAME);
+  for (const auto &N : I.Namespace)
+    emitBlock(N, FieldId::F_namespace);
+  for (const auto &CI : I.Description)
+    emitBlock(CI);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const EnumInfo &I) {
   StreamSubBlockGuard Block(Stream, BI_ENUM_BLOCK_ID);
-  EMITINFO(ENUM)
+  emitRecord(I.USR, ENUM_USR);
+  emitRecord(I.Name, ENUM_NAME);
+  for (const auto &N : I.Namespace)
+    emitBlock(N, FieldId::F_namespace);
+  for (const auto &CI : I.Description)
+    emitBlock(CI);
   if (I.DefLoc)
     emitRecord(I.DefLoc.getValue(), ENUM_DEFLOCATION);
   for (const auto &L : I.Loc)
@@ -451,7 +455,12 @@ void ClangDocBitcodeWriter::emitBlock(const EnumInfo &I) {
 
 void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
   StreamSubBlockGuard Block(Stream, BI_RECORD_BLOCK_ID);
-  EMITINFO(RECORD)
+  emitRecord(I.USR, RECORD_USR);
+  emitRecord(I.Name, RECORD_NAME);
+  for (const auto &N : I.Namespace)
+    emitBlock(N, FieldId::F_namespace);
+  for (const auto &CI : I.Description)
+    emitBlock(CI);
   if (I.DefLoc)
     emitRecord(I.DefLoc.getValue(), RECORD_DEFLOCATION);
   for (const auto &L : I.Loc)
@@ -467,7 +476,12 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
 
 void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
   StreamSubBlockGuard Block(Stream, BI_FUNCTION_BLOCK_ID);
-  EMITINFO(FUNCTION)
+  emitRecord(I.USR, FUNCTION_USR);
+  emitRecord(I.Name, FUNCTION_NAME);
+  for (const auto &N : I.Namespace)
+    emitBlock(N, FieldId::F_namespace);
+  for (const auto &CI : I.Description)
+    emitBlock(CI);
   emitRecord(I.IsMethod, FUNCTION_IS_METHOD);
   if (I.DefLoc)
     emitRecord(I.DefLoc.getValue(), FUNCTION_DEFLOCATION);
@@ -479,7 +493,26 @@ void ClangDocBitcodeWriter::emitBlock(const FunctionInfo &I) {
     emitBlock(N);
 }
 
-#undef EMITINFO
+bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
+  switch (I->IT) {
+  case InfoType::IT_namespace:
+    emitBlock(*static_cast<clang::doc::NamespaceInfo *>(I));
+    break;
+  case InfoType::IT_record:
+    emitBlock(*static_cast<clang::doc::RecordInfo *>(I));
+    break;
+  case InfoType::IT_enum:
+    emitBlock(*static_cast<clang::doc::EnumInfo *>(I));
+    break;
+  case InfoType::IT_function:
+    emitBlock(*static_cast<clang::doc::FunctionInfo *>(I));
+    break;
+  default:
+    llvm::errs() << "Unexpected info, unable to write.\n";
+    return true;
+  }
+  return false;
+}
 
 } // namespace doc
 } // namespace clang

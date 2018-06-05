@@ -55,4 +55,3 @@ adox        (%rbx), %rcx
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     adoxl	(%rbx), %ecx
 # CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     adoxq	%rbx, %rcx
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -      -     0.50    -     adoxq	(%rbx), %rcx
-

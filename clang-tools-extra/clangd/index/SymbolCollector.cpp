@@ -9,6 +9,7 @@
 
 #include "SymbolCollector.h"
 #include "../AST.h"
+#include "../CodeComplete.h"
 #include "../CodeCompletionStrings.h"
 #include "../Logger.h"
 #include "../SourceCode.h"
@@ -149,21 +150,20 @@ bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
   if (ND->isInAnonymousNamespace())
     return true;
 
-  // We only want:
-  //   * symbols in namespaces or translation unit scopes (e.g. no class
-  //     members)
-  //   * enum constants in unscoped enum decl (e.g. "red" in "enum {red};")
-  auto InTopLevelScope = hasDeclContext(
-      anyOf(namespaceDecl(), translationUnitDecl(), linkageSpecDecl()));
-  // Don't index template specializations.
+  // We want most things but not "local" symbols such as symbols inside
+  // FunctionDecl, BlockDecl, ObjCMethodDecl and OMPDeclareReductionDecl.
+  // FIXME: Need a matcher for ExportDecl in order to include symbols declared
+  // within an export.
+  auto InNonLocalContext = hasDeclContext(anyOf(
+      translationUnitDecl(), namespaceDecl(), linkageSpecDecl(), recordDecl(),
+      enumDecl(), objcProtocolDecl(), objcInterfaceDecl(), objcCategoryDecl(),
+      objcCategoryImplDecl(), objcImplementationDecl()));
+  // Don't index template specializations and expansions in main files.
   auto IsSpecialization =
       anyOf(functionDecl(isExplicitTemplateSpecialization()),
             cxxRecordDecl(isExplicitTemplateSpecialization()),
             varDecl(isExplicitTemplateSpecialization()));
-  if (match(decl(allOf(unless(isExpansionInMainFile()),
-                       anyOf(InTopLevelScope,
-                             hasDeclContext(enumDecl(InTopLevelScope,
-                                                     unless(isScoped())))),
+  if (match(decl(allOf(unless(isExpansionInMainFile()), InNonLocalContext,
                        unless(IsSpecialization))),
             *ND, *ASTCtx)
           .empty())
@@ -290,6 +290,19 @@ bool SymbolCollector::handleDeclOccurence(
     index::IndexDataConsumer::ASTNodeInfo ASTNode) {
   assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
   assert(CompletionAllocator && CompletionTUInfo);
+  assert(ASTNode.OrigD);
+  // If OrigD is an declaration associated with a friend declaration and it's
+  // not a definition, skip it. Note that OrigD is the occurrence that the
+  // collector is currently visiting.
+  if ((ASTNode.OrigD->getFriendObjectKind() !=
+       Decl::FriendObjectKind::FOK_None) &&
+      !(Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
+    return true;
+  // A declaration created for a friend declaration should not be used as the
+  // canonical declaration in the index. Use OrigD instead, unless we've already
+  // picked a replacement for D
+  if (D->getFriendObjectKind() != Decl::FriendObjectKind::FOK_None)
+    D = CanonicalDecls.try_emplace(D, ASTNode.OrigD).first->second;
   const NamedDecl *ND = llvm::dyn_cast<NamedDecl>(D);
   if (!ND)
     return true;
@@ -364,6 +377,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   Symbol S;
   S.ID = std::move(ID);
   std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
+
+  S.IsIndexedForCodeCompletion = isIndexedForCodeCompletion(ND, Ctx);
   S.SymInfo = index::getSymbolInfo(&ND);
   std::string FileURI;
   if (auto DeclLoc =

@@ -4604,23 +4604,35 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
 
   const APInt *C1;
   if (match(CmpRHS, m_APInt(C1))) {
-    if ((CmpLHS == TrueVal && match(FalseVal, m_Neg(m_Specific(CmpLHS)))) ||
-        (CmpLHS == FalseVal && match(TrueVal, m_Neg(m_Specific(CmpLHS))))) {
-      // Set RHS to the negate operand. LHS was assigned to CmpLHS earlier.
-      RHS = (CmpLHS == TrueVal) ? FalseVal : TrueVal;
+    // Sign-extending LHS does not change its sign, so TrueVal/FalseVal can
+    // match against either LHS or sext(LHS).
+    auto MaybeSExtLHS = m_CombineOr(m_Specific(CmpLHS),
+                                    m_SExt(m_Specific(CmpLHS)));
+    if ((match(TrueVal, MaybeSExtLHS) &&
+         match(FalseVal, m_Neg(m_Specific(TrueVal)))) ||
+        (match(FalseVal, MaybeSExtLHS) &&
+         match(TrueVal, m_Neg(m_Specific(FalseVal))))) {
+      // Set LHS and RHS so that RHS is the negated operand of the select
+      if (match(TrueVal, MaybeSExtLHS)) {
+        LHS = TrueVal;
+        RHS = FalseVal;
+      } else {
+        LHS = FalseVal;
+        RHS = TrueVal;
+      }
 
       // ABS(X) ==> (X >s 0) ? X : -X and (X >s -1) ? X : -X
       // NABS(X) ==> (X >s 0) ? -X : X and (X >s -1) ? -X : X
       if (Pred == ICmpInst::ICMP_SGT &&
           (C1->isNullValue() || C1->isAllOnesValue())) {
-        return {(CmpLHS == TrueVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
+        return {(LHS == TrueVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
       }
 
       // ABS(X) ==> (X <s 0) ? -X : X and (X <s 1) ? -X : X
       // NABS(X) ==> (X <s 0) ? X : -X and (X <s 1) ? X : -X
       if (Pred == ICmpInst::ICMP_SLT &&
           (C1->isNullValue() || C1->isOneValue())) {
-        return {(CmpLHS == FalseVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
+        return {(LHS == FalseVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
       }
     }
   }

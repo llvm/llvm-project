@@ -887,6 +887,11 @@ def fno_force_enable_int128 : Flag<["-"], "fno-force-enable-int128">,
   Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Disable support for int128_t type">;
 
+def ffixed_point : Flag<["-"], "ffixed-point">, Group<f_Group>,
+                   Flags<[CC1Option]>, HelpText<"Enable fixed point types">;
+def fno_fixed_point : Flag<["-"], "fno-fixed-point">, Group<f_Group>,
+                      HelpText<"Disable fixed point types">;
+
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
 let Flags = [CC1Option, CoreOption] in {

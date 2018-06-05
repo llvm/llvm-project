@@ -472,6 +472,10 @@ public:
     return FlatScratchInsts;
   }
 
+  bool hasFlatLgkmVMemCountInOrder() const {
+    return getGeneration() > GFX9;
+  }
+
   bool hasD16LoadStore() const {
     return getGeneration() >= GFX9;
   }

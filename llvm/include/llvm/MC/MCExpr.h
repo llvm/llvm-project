@@ -581,6 +581,9 @@ public:
   virtual bool evaluateAsRelocatableImpl(MCValue &Res,
                                          const MCAsmLayout *Layout,
                                          const MCFixup *Fixup) const = 0;
+  // This should be set when assigned expressions are not valid ".set"
+  // expressions, e.g. registers, and must be inlined.
+  virtual bool inlineAssignedExpr() const { return false; }
   virtual void visitUsedExpr(MCStreamer& Streamer) const = 0;
   virtual MCFragment *findAssociatedFragment() const = 0;
 

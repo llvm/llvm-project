@@ -25,7 +25,7 @@ public:
   ~LatencyBenchmarkRunner() override;
 
 private:
-  const char *getDisplayName() const override;
+  InstructionBenchmarkKey::ModeE getMode() const override;
 
   llvm::Expected<std::vector<llvm::MCInst>>
   createSnippet(RegisterAliasingTrackerCache &RATC, unsigned OpcodeIndex,

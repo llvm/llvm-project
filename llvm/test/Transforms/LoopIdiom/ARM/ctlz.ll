@@ -199,3 +199,48 @@ while.cond:                                       ; preds = %while.cond, %entry
 while.end:                                        ; preds = %while.cond
   ret i32 %i.0
 }
+
+; Recognize CTLZ builtin pattern.
+; Here it will replace the loop -
+; assume builtin is always profitable.
+;
+; int ctlz_sext(short in)
+; {
+;   int n = in;
+;   if (in < 0)
+;     n = -n;
+;   int i = 0;
+;   while(n >>= 1) {
+;     i++;
+;   }
+;   return i;
+; }
+;
+; ALL:  entry
+; ALL:  %0 = ashr i32 %abs_n, 1
+; ALL-NEXT:  %1 = call i32 @llvm.ctlz.i32(i32 %0, i1 false)
+; ALL-NEXT:  %2 = sub i32 32, %1
+; ALL-NEXT:  %3 = add i32 %2, 1
+; ALL:  %i.0.lcssa = phi i32 [ %2, %while.cond ]
+; ALL:  ret i32 %i.0.lcssa
+
+; Function Attrs: norecurse nounwind readnone uwtable
+define i32 @ctlz_sext(i16 %in) {
+entry:
+  %n = sext i16 %in to i32
+  %c = icmp sgt i16 %in, 0
+  %negn = sub nsw i32 0, %n
+  %abs_n = select i1 %c, i32 %n, i32 %negn
+  br label %while.cond
+
+while.cond:                                       ; preds = %while.cond, %entry
+  %n.addr.0 = phi i32 [ %abs_n, %entry ], [ %shr, %while.cond ]
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %while.cond ]
+  %shr = ashr i32 %n.addr.0, 1
+  %tobool = icmp eq i32 %shr, 0
+  %inc = add nsw i32 %i.0, 1
+  br i1 %tobool, label %while.end, label %while.cond
+
+while.end:                                        ; preds = %while.cond
+  ret i32 %i.0
+}

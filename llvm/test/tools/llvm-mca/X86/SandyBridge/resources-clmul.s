@@ -34,4 +34,3 @@ pclmulqdq     $11, (%rax), %xmm2
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
 # CHECK-NEXT:  -      -     6.00   6.00    -     6.00    -      -     pclmulqdq	$11, %xmm0, %xmm2
 # CHECK-NEXT:  -      -     5.67   5.67    -     5.67   0.50   0.50   pclmulqdq	$11, (%rax), %xmm2
-

@@ -54,7 +54,7 @@ protected:
   const llvm::MCRegisterInfo &MCRegisterInfo;
 
 private:
-  virtual const char *getDisplayName() const = 0;
+  virtual InstructionBenchmarkKey::ModeE getMode() const = 0;
 
   virtual llvm::Expected<std::vector<llvm::MCInst>>
   createSnippet(RegisterAliasingTrackerCache &RATC, unsigned Opcode,

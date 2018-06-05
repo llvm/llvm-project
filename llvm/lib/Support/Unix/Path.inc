@@ -93,6 +93,9 @@ using namespace llvm;
 namespace llvm {
 namespace sys  {
 namespace fs {
+
+const file_t kInvalidFile = -1;
+
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
     defined(__minix) || defined(__FreeBSD_kernel__) || defined(__linux__) ||   \
     defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX)
@@ -761,6 +764,15 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
   return std::error_code();
 }
 
+Expected<file_t> openNativeFileForRead(const Twine &Name,
+                                       SmallVectorImpl<char> *RealPath) {
+  file_t ResultFD;
+  std::error_code EC = openFileForRead(Name, ResultFD, RealPath);
+  if (EC)
+    return errorCodeToError(EC);
+  return ResultFD;
+}
+
 std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
                             sys::fs::OpenFlags Flags, unsigned Mode) {
   // Verify that we don't have both "append" and "excl".
@@ -796,6 +808,20 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
   assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
 #endif
   return std::error_code();
+}
+
+Expected<file_t> openNativeFileForWrite(const Twine &Name, OpenFlags Flags,
+                                        unsigned Mode) {
+  file_t ResultFD;
+  std::error_code EC = openFileForWrite(Name, ResultFD, Flags, Mode);
+  if (EC)
+    return errorCodeToError(EC);
+  return ResultFD;
+}
+
+void closeFile(file_t &F) {
+  ::close(F);
+  F = kInvalidFile;
 }
 
 template <typename T>

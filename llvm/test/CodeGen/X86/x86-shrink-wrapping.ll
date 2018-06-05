@@ -1,4 +1,5 @@
-; RUN: llc %s -o - -enable-shrink-wrap=true | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
+; RUN: llc %s -o - -enable-shrink-wrap=true -pass-remarks-output=%t | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
+; RUN: cat %t | FileCheck %s --check-prefix=REMARKS
 ; RUN: llc %s -o - -enable-shrink-wrap=false | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
 ;
 ; Note: Lots of tests use inline asm instead of regular calls.
@@ -940,6 +941,13 @@ attributes #3 = { nounwind }
 ; CHECK: popq
 ; CHECK-NEXT: popq
 ; CHECK-NEXT: retq
+; Make sure we emit missed optimization remarks for this.
+; REMARKS: Pass:            shrink-wrap
+; REMARKS-NEXT: Name:            UnsupportedIrreducibleCFG
+; REMARKS-NEXT: Function:        irreducibleCFG
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          Irreducible CFGs are not supported yet
+
 define i32 @irreducibleCFG() #4 {
 entry:
   %i0 = load i32, i32* @irreducibleCFGa, align 4

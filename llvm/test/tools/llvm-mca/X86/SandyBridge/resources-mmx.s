@@ -391,4 +391,3 @@ pxor        (%rax), %mm2
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   punpcklwd	(%rax), %mm2
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     pxor	%mm0, %mm2
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33   0.50   0.50   pxor	(%rax), %mm2
-

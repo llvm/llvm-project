@@ -1926,6 +1926,12 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificalTagType(TTK_Struct, "_Half", {"__clang"});
     break;
 
+  case BuiltinType::ShortAccum:
+  case BuiltinType::Accum:
+  case BuiltinType::LongAccum:
+  case BuiltinType::UShortAccum:
+  case BuiltinType::UAccum:
+  case BuiltinType::ULongAccum:
   case BuiltinType::Char8:
   case BuiltinType::Float128: {
     DiagnosticsEngine &Diags = Context.getDiags();

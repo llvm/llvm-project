@@ -12,10 +12,6 @@
 #include "TestingSupport/TestUtilities.h"
 #include "gtest/gtest.h"
 
-#ifdef __APPLE__
-#include "lldb/Host/macosx/HostInfoMacOSX.h"
-#endif
-
 using namespace lldb_private;
 using namespace llvm;
 
@@ -48,58 +44,3 @@ TEST_F(HostInfoTest, GetAugmentedArchSpec) {
   EXPECT_EQ(HostInfo::GetAugmentedArchSpec(LLDB_ARCH_DEFAULT).GetTriple(),
             HostInfo::GetArchitecture(HostInfo::eArchKindDefault).GetTriple());
 }
-
-
-#ifdef __APPLE__
-
-struct HostInfoMacOSXTest : public HostInfoMacOSX {
-  static std::string ComputeClangDir(std::string lldb_shlib_path,
-                                     bool verify = false) {
-    FileSpec clang_dir;
-    FileSpec lldb_shlib_spec(lldb_shlib_path, false);
-    ComputeClangDirectory(lldb_shlib_spec, clang_dir, verify);
-    return clang_dir.GetPath();
-  }
-};
-
-
-TEST_F(HostInfoTest, MacOSX) {
-  // This returns whatever the POSIX fallback returns.
-  std::string posix = "/usr/lib/liblldb.dylib";
-  EXPECT_FALSE(HostInfoMacOSXTest::ComputeClangDir(posix).empty());
-
-  std::string build =
-    "/lldb-macosx-x86_64/Library/Frameworks/LLDB.framework/Versions/A";
-  std::string build_clang =
-    "/lldb-macosx-x86_64/Library/Frameworks/LLDB.framework/Resources/Clang";
-  EXPECT_EQ(HostInfoMacOSXTest::ComputeClangDir(build), build_clang);
-
-  std::string xcode =
-    "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A";
-  std::string xcode_clang =
-    "/Applications/Xcode.app/Contents/Developer/Toolchains/"
-    "XcodeDefault.xctoolchain/usr/lib/swift/clang";
-  EXPECT_EQ(HostInfoMacOSXTest::ComputeClangDir(xcode), xcode_clang);
-
-  std::string toolchain =
-      "/Applications/Xcode.app/Contents/Developer/Toolchains/"
-      "Swift-4.1-development-snapshot.xctoolchain/System/Library/"
-      "PrivateFrameworks/LLDB.framework";
-  std::string toolchain_clang =
-      "/Applications/Xcode.app/Contents/Developer/Toolchains/"
-      "Swift-4.1-development-snapshot.xctoolchain/usr/lib/swift/clang";
-  EXPECT_EQ(HostInfoMacOSXTest::ComputeClangDir(toolchain), toolchain_clang);
-
-  std::string cltools = "/Library/Developer/CommandLineTools/Library/"
-                        "PrivateFrameworks/LLDB.framework";
-  std::string cltools_clang =
-      "/Library/Developer/CommandLineTools/Library/PrivateFrameworks/"
-      "LLDB.framework/Resources/Clang";
-  EXPECT_EQ(HostInfoMacOSXTest::ComputeClangDir(cltools), cltools_clang);
-
-
-  // Test that a bogus path is detected.
-  EXPECT_NE(HostInfoMacOSXTest::ComputeClangDir(GetInputFilePath(xcode), true),
-            HostInfoMacOSXTest::ComputeClangDir(GetInputFilePath(xcode)));
-}
-#endif

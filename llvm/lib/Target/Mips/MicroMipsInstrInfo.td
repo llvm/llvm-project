@@ -1024,6 +1024,7 @@ let DecoderNamespace = "MicroMips" in {
                    ISA_MICROMIPS;
   def DI_MM      : MMRel, DEI_FT<"di", GPR32Opnd, II_DI>, EI_FM_MM<0x11d>,
                    ISA_MICROMIPS;
+  def TRAP_MM    : TrapBase<BREAK_MM>, ISA_MICROMIPS;
 
   /// Trap Instructions
   def TEQ_MM  : MMRel, TEQ_FT<"teq", GPR32Opnd, uimm4, II_TEQ>, TEQ_FM_MM<0x0>,

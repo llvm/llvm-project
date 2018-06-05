@@ -970,8 +970,7 @@ _mm256_movepi64_mask (__m256i __A)
 static __inline__ __m256 __DEFAULT_FN_ATTRS
 _mm256_broadcast_f32x2 (__m128 __A)
 {
-  return (__m256)__builtin_shufflevector((__v4sf)__A,
-                                         (__v4sf)_mm_undefined_ps(),
+  return (__m256)__builtin_shufflevector((__v4sf)__A, (__v4sf)__A,
                                          0, 1, 0, 1, 0, 1, 0, 1);
 }
 
@@ -1017,8 +1016,7 @@ _mm256_maskz_broadcast_f64x2 (__mmask8 __M, __m128d __A)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_broadcast_i32x2 (__m128i __A)
 {
-  return (__m128i)__builtin_shufflevector((__v4si)__A,
-                                          (__v4si)_mm_undefined_si128(),
+  return (__m128i)__builtin_shufflevector((__v4si)__A, (__v4si)__A,
                                           0, 1, 0, 1);
 }
 
@@ -1041,8 +1039,7 @@ _mm_maskz_broadcast_i32x2 (__mmask8 __M, __m128i __A)
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_broadcast_i32x2 (__m128i __A)
 {
-  return (__m256i)__builtin_shufflevector((__v4si)__A,
-                                          (__v4si)_mm_undefined_si128(),
+  return (__m256i)__builtin_shufflevector((__v4si)__A, (__v4si)__A,
                                           0, 1, 0, 1, 0, 1, 0, 1);
 }
 

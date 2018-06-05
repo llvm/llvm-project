@@ -39,6 +39,19 @@ bool isFunctionSkipped(Function &F) {
   return F.isDeclaration() || !F.hasExactDefinition();
 }
 
+/// Find a suitable insertion point for debug values intrinsics.
+///
+/// These must be inserted before the terminator. Special care is needed to
+/// handle musttail and deopt calls, as these behave like (but are in fact not)
+/// terminators.
+Instruction *findDebugValueInsertionPoint(BasicBlock &BB) {
+  if (auto *I = BB.getTerminatingMustTailCall())
+    return I;
+  if (auto *I = BB.getTerminatingDeoptimizeCall())
+    return I;
+  return BB.getTerminator();
+}
+
 bool applyDebugifyMetadata(Module &M,
                            iterator_range<Module::iterator> Functions,
                            StringRef Banner) {
@@ -67,8 +80,8 @@ bool applyDebugifyMetadata(Module &M,
   unsigned NextLine = 1;
   unsigned NextVar = 1;
   auto File = DIB.createFile(M.getName(), "/");
-  auto CU = DIB.createCompileUnit(dwarf::DW_LANG_C, File,
-                            "debugify", /*isOptimized=*/true, "", 0);
+  auto CU = DIB.createCompileUnit(dwarf::DW_LANG_C, File, "debugify",
+                                  /*isOptimized=*/true, "", 0);
 
   // Visit each instruction.
   for (Function &F : Functions) {
@@ -91,11 +104,7 @@ bool applyDebugifyMetadata(Module &M,
       if (BB.isEHPad())
         continue;
 
-      // Debug values must be inserted before a musttail call (if one is
-      // present), or before the block terminator otherwise.
-      Instruction *LastInst = BB.getTerminatingMustTailCall();
-      if (!LastInst)
-        LastInst = BB.getTerminator();
+      Instruction *LastInst = findDebugValueInsertionPoint(BB);
 
       // Attach debug values.
       for (auto It = BB.begin(), End = LastInst->getIterator(); It != End;
@@ -145,8 +154,7 @@ bool applyDebugifyMetadata(Module &M,
 
 bool checkDebugifyMetadata(Module &M,
                            iterator_range<Module::iterator> Functions,
-                           StringRef NameOfWrappedPass,
-                           StringRef Banner,
+                           StringRef NameOfWrappedPass, StringRef Banner,
                            bool Strip) {
   // Skip modules without debugify metadata.
   NamedMDNode *NMD = M.getNamedMetadata("llvm.debugify");
@@ -252,7 +260,7 @@ struct DebugifyFunctionPass : public FunctionPass {
     Module &M = *F.getParent();
     auto FuncIt = F.getIterator();
     return applyDebugifyMetadata(M, make_range(FuncIt, std::next(FuncIt)),
-                     "FunctionDebugify: ");
+                                 "FunctionDebugify: ");
   }
 
   DebugifyFunctionPass() : FunctionPass(ID) {}
@@ -274,6 +282,10 @@ struct CheckDebugifyModulePass : public ModulePass {
 
   CheckDebugifyModulePass(bool Strip = false, StringRef NameOfWrappedPass = "")
       : ModulePass(ID), Strip(Strip), NameOfWrappedPass(NameOfWrappedPass) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
 
   static char ID; // Pass identification.
 
@@ -310,9 +322,7 @@ private:
 
 } // end anonymous namespace
 
-ModulePass *createDebugifyModulePass() {
-  return new DebugifyModulePass();
-}
+ModulePass *createDebugifyModulePass() { return new DebugifyModulePass(); }
 
 FunctionPass *createDebugifyFunctionPass() {
   return new DebugifyFunctionPass();

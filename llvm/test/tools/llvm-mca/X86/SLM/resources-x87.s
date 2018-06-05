@@ -519,4 +519,3 @@ fyl2xp1
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     fxtract
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     fyl2x
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     fyl2xp1
-

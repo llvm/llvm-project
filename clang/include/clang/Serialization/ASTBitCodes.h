@@ -939,6 +939,24 @@ namespace serialization {
       /// The C++ 'char8_t' type.
       PREDEF_TYPE_CHAR8_ID = 45,
 
+      /// \brief The 'short _Accum' type
+      PREDEF_TYPE_SHORT_ACCUM_ID    = 46,
+
+      /// \brief The '_Accum' type
+      PREDEF_TYPE_ACCUM_ID      = 47,
+
+      /// \brief The 'long _Accum' type
+      PREDEF_TYPE_LONG_ACCUM_ID = 48,
+
+      /// \brief The 'unsigned short _Accum' type
+      PREDEF_TYPE_USHORT_ACCUM_ID   = 49,
+
+      /// \brief The 'unsigned _Accum' type
+      PREDEF_TYPE_UACCUM_ID     = 50,
+
+      /// \brief The 'unsigned long _Accum' type
+      PREDEF_TYPE_ULONG_ACCUM_ID    = 51,
+
       /// OpenCL image types with auto numeration
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
       PREDEF_TYPE_##Id##_ID,

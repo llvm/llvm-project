@@ -60,7 +60,6 @@ def VAL3 : bar<foo1, somedef1>;
 // CHECK-NEXT:  dag Dag1 = (somedef1 1);
 // CHECK-NEXT:  dag Dag2 = (somedef1 2);
 // CHECK-NEXT:  dag Dag3 = (somedef1 2);
-// CHECK-NEXT:  NAME = ?
 // CHECK-NEXT: }
 
 
@@ -69,7 +68,6 @@ def VAL4 : bar<foo2, somedef2>;
 // CHECK-NEXT:  dag Dag1 = (somedef1 1);
 // CHECK-NEXT:  dag Dag2 = (somedef2 2);
 // CHECK-NEXT:  dag Dag3 = (somedef2 2);
-// CHECK-NEXT:  NAME = ?
 // CHECK-NEXT: }
 
 def VAL5 : bar<foo2, somedef2> {

@@ -106,6 +106,9 @@ protected:
 
   GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
 
+  void reset(const MachineInstr &MI, const LiveRegSet *LiveRegsCopy,
+             bool After);
+
 public:
   // live regs for the current state
   const decltype(LiveRegs) &getLiveRegs() const { return LiveRegs; }

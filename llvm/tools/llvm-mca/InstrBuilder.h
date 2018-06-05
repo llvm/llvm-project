@@ -40,9 +40,10 @@ class InstrBuilder {
   llvm::SmallVector<uint64_t, 8> ProcResourceMasks;
 
   llvm::DenseMap<unsigned short, std::unique_ptr<const InstrDesc>> Descriptors;
+  llvm::DenseMap<const llvm::MCInst *, std::unique_ptr<const InstrDesc>>
+      VariantDescriptors;
 
   const InstrDesc &createInstrDescImpl(const llvm::MCInst &MCI);
-
   InstrBuilder(const InstrBuilder &) = delete;
   InstrBuilder &operator=(const InstrBuilder &) = delete;
 

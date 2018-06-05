@@ -14,6 +14,15 @@ defm output : Eq<"o">,
 def strip_debug : Flag<["-", "--"], "strip-debug">,
                   HelpText<"Remove debugging symbols only">;
 
+def d : Flag<["-"], "d">,
+        Alias<strip_debug>;
+
+def g : Flag<["-"], "g">,
+        Alias<strip_debug>;
+
+def S : Flag<["-"], "S">,
+        Alias<strip_debug>;
+
 defm remove_section : Eq<"remove-section">,
                       MetaVarName<"section">,
                       HelpText<"Remove <section>">;

@@ -8,6 +8,8 @@
 //===---------------------------------------------------------------------===//
 #include "Quality.h"
 #include "index/Index.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
@@ -17,9 +19,18 @@ namespace clang {
 namespace clangd {
 using namespace llvm;
 
+static bool hasDeclInMainFile(const Decl &D) {
+  auto &SourceMgr = D.getASTContext().getSourceManager();
+  for (auto *Redecl : D.redecls()) {
+    auto Loc = SourceMgr.getSpellingLoc(Redecl->getLocation());
+    if (SourceMgr.isWrittenInMainFile(Loc))
+      return true;
+  }
+  return false;
+}
+
 void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
   SemaCCPriority = SemaCCResult.Priority;
-
   if (SemaCCResult.Availability == CXAvailability_Deprecated)
     Deprecated = true;
 }
@@ -60,12 +71,25 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
   if (SemaCCResult.Availability == CXAvailability_NotAvailable ||
       SemaCCResult.Availability == CXAvailability_NotAccessible)
     Forbidden = true;
+
+  if (SemaCCResult.Declaration) {
+    // We boost things that have decls in the main file.
+    // The real proximity scores would be more general when we have them.
+    float DeclProximity =
+        hasDeclInMainFile(*SemaCCResult.Declaration) ? 1.0 : 0.0;
+    ProximityScore = std::max(DeclProximity, ProximityScore);
+  }
 }
 
 float SymbolRelevanceSignals::evaluate() const {
   if (Forbidden)
     return 0;
-  return NameMatch;
+
+  float Score = NameMatch;
+  // Proximity scores are [0,1] and we translate them into a multiplier in the
+  // range from 1 to 2.
+  Score *= 1 + ProximityScore;
+  return Score;
 }
 raw_ostream &operator<<(raw_ostream &OS, const SymbolRelevanceSignals &S) {
   OS << formatv("=== Symbol relevance: {0}\n", S.evaluate());

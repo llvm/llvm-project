@@ -143,4 +143,3 @@ shrx        %rax, (%rbx), %rcx
 # CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     shrxl	%eax, (%rbx), %ecx
 # CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     shrxq	%rax, %rbx, %rcx
 # CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     shrxq	%rax, (%rbx), %rcx
-

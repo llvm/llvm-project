@@ -963,8 +963,7 @@ _mm512_movepi64_mask (__m512i __A)
 static __inline__ __m512 __DEFAULT_FN_ATTRS
 _mm512_broadcast_f32x2 (__m128 __A)
 {
-  return (__m512)__builtin_shufflevector((__v4sf)__A,
-                                         (__v4sf)_mm_undefined_ps(),
+  return (__m512)__builtin_shufflevector((__v4sf)__A, (__v4sf)__A,
                                          0, 1, 0, 1, 0, 1, 0, 1,
                                          0, 1, 0, 1, 0, 1, 0, 1);
 }
@@ -1035,8 +1034,7 @@ _mm512_maskz_broadcast_f64x2(__mmask8 __M, __m128d __A)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_broadcast_i32x2 (__m128i __A)
 {
-  return (__m512i)__builtin_shufflevector((__v4si)__A,
-                                          (__v4si)_mm_undefined_si128(),
+  return (__m512i)__builtin_shufflevector((__v4si)__A, (__v4si)__A,
                                           0, 1, 0, 1, 0, 1, 0, 1,
                                           0, 1, 0, 1, 0, 1, 0, 1);
 }

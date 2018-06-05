@@ -58,17 +58,36 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
 }
 
 TEST(QualityTests, SymbolRelevanceSignalExtraction) {
-  auto AST = TestTU::withHeaderCode(R"cpp(
+  TestTU Test;
+  Test.HeaderCode = R"cpp(
+    int header();
+    int header_main();
+    )cpp";
+  Test.Code = R"cpp(
+    int ::header_main() {}
+    int main();
+
     [[deprecated]]
-    int f() { return 0; }
-  )cpp")
-                 .build();
+    int deprecated() { return 0; }
+  )cpp";
+  auto AST = Test.build();
 
   SymbolRelevanceSignals Relevance;
-  Relevance.merge(CodeCompletionResult(&findDecl(AST, "f"), /*Priority=*/42,
-                                       nullptr, false, /*Accessible=*/false));
+  Relevance.merge(CodeCompletionResult(&findDecl(AST, "deprecated"),
+                                       /*Priority=*/42, nullptr, false,
+                                       /*Accessible=*/false));
   EXPECT_EQ(Relevance.NameMatch, SymbolRelevanceSignals().NameMatch);
   EXPECT_TRUE(Relevance.Forbidden);
+
+  Relevance = {};
+  Relevance.merge(CodeCompletionResult(&findDecl(AST, "main"), 42));
+  EXPECT_FLOAT_EQ(Relevance.ProximityScore, 1.0) << "Decl in current file";
+  Relevance = {};
+  Relevance.merge(CodeCompletionResult(&findDecl(AST, "header"), 42));
+  EXPECT_FLOAT_EQ(Relevance.ProximityScore, 0.0) << "Decl from header";
+  Relevance = {};
+  Relevance.merge(CodeCompletionResult(&findDecl(AST, "header_main"), 42));
+  EXPECT_FLOAT_EQ(Relevance.ProximityScore, 1.0) << "Current file and header";
 }
 
 // Do the signals move the scores in the direction we expect?
@@ -104,6 +123,10 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   SymbolRelevanceSignals PoorNameMatch;
   PoorNameMatch.NameMatch = 0.2f;
   EXPECT_LT(PoorNameMatch.evaluate(), Default.evaluate());
+
+  SymbolRelevanceSignals WithProximity;
+  WithProximity.ProximityScore = 0.2f;
+  EXPECT_GT(WithProximity.evaluate(), Default.evaluate());
 }
 
 TEST(QualityTests, SortText) {

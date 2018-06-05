@@ -50,7 +50,7 @@ define void @f3(i32 %x) !type !8 {
 
 ; CHECK-DAG: @g                    = alias void (), void ()* [[JT2]]
 
-; CHECK-DAG: define internal void @h.cfi(i8 {{.*}}) !type !{{.*}}
+; CHECK-DAG: define hidden void @h.cfi(i8 {{.*}}) !type !{{.*}}
 ; CHECK-DAG: declare !type !{{.*}} void @external()
 ; CHECK-DAG: declare !type !{{.*}} void @external_weak()
 ; CHECK-DAG: declare !type !{{.*}} void @f.cfi(i32)

@@ -41,4 +41,3 @@
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imull	%esi
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       imull	(%rdi)
-

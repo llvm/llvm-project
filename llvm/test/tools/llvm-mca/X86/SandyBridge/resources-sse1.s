@@ -459,4 +459,3 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   unpcklps	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     xorps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   xorps	(%rax), %xmm2
-

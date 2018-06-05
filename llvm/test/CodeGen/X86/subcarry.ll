@@ -37,22 +37,18 @@ entry:
 define %S @negate(%S* nocapture readonly %this) {
 ; CHECK-LABEL: negate:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq (%rsi), %rax
-; CHECK-NEXT:    movq 8(%rsi), %rcx
-; CHECK-NEXT:    notq %rax
-; CHECK-NEXT:    addq $1, %rax
-; CHECK-NEXT:    notq %rcx
-; CHECK-NEXT:    adcq $0, %rcx
-; CHECK-NEXT:    movq 16(%rsi), %rdx
-; CHECK-NEXT:    notq %rdx
-; CHECK-NEXT:    adcq $0, %rdx
-; CHECK-NEXT:    movq 24(%rsi), %rsi
-; CHECK-NEXT:    notq %rsi
-; CHECK-NEXT:    adcq $0, %rsi
-; CHECK-NEXT:    movq %rax, (%rdi)
-; CHECK-NEXT:    movq %rcx, 8(%rdi)
-; CHECK-NEXT:    movq %rdx, 16(%rdi)
-; CHECK-NEXT:    movq %rsi, 24(%rdi)
+; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    subq (%rsi), %rcx
+; CHECK-NEXT:    movl $0, %edx
+; CHECK-NEXT:    sbbq 8(%rsi), %rdx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    sbbq 16(%rsi), %rax
+; CHECK-NEXT:    sbbq 24(%rsi), %r8
+; CHECK-NEXT:    movq %rcx, (%rdi)
+; CHECK-NEXT:    movq %rdx, 8(%rdi)
+; CHECK-NEXT:    movq %rax, 16(%rdi)
+; CHECK-NEXT:    movq %r8, 24(%rdi)
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:

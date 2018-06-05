@@ -37,4 +37,3 @@ vadd.f32 s0, s2, s2
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    Instructions:
 # CHECK-NEXT: 1.00    -      -      -     1.00    -      -     vadd.f32	s0, s2, s2
-

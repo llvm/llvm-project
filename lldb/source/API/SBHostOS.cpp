@@ -17,6 +17,8 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangHost.h"
+
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
 
@@ -41,7 +43,12 @@ SBFileSpec SBHostOS::GetLLDBPythonPath() {
 SBFileSpec SBHostOS::GetLLDBPath(lldb::PathType path_type) {
   SBFileSpec sb_fspec;
   FileSpec fspec;
-  if (HostInfo::GetLLDBPath(path_type, fspec))
+  bool Success = true;
+  if (path_type == ePathTypeClangDir)
+    fspec = GetClangResourceDir();
+  else
+    Success = HostInfo::GetLLDBPath(path_type, fspec);
+  if (Success)
     sb_fspec.SetFileSpec(fspec);
   return sb_fspec;
 }

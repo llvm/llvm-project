@@ -696,12 +696,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
       if (CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion)
         return CIP_DisallowedOnce;
 
-      // If the temporary is lifetime-extended by binding a smaller object
-      // within it to a reference, automatic destructors don't work properly.
-      if (CallOpts.IsTemporaryLifetimeExtendedViaSubobject)
-        return CIP_DisallowedOnce;
-
-      // If the temporary is lifetime-extended by binding it to a reference-typ
+      // If the temporary is lifetime-extended by binding it to a reference-type
       // field within an aggregate, automatic destructors don't work properly.
       if (CallOpts.IsTemporaryLifetimeExtendedViaAggregate)
         return CIP_DisallowedOnce;

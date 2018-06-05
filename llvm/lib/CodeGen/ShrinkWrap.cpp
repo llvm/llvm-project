@@ -63,6 +63,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
@@ -130,6 +131,9 @@ class ShrinkWrap : public MachineFunctionPass {
   /// are in the same loop.
   MachineLoopInfo *MLI;
 
+  // Emit remarks.
+  MachineOptimizationRemarkEmitter *ORE = nullptr;
+
   /// Frequency of the Entry block.
   uint64_t EntryFreq;
 
@@ -189,6 +193,7 @@ class ShrinkWrap : public MachineFunctionPass {
     Restore = nullptr;
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
     MLI = &getAnalysis<MachineLoopInfo>();
+    ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
     EntryFreq = MBFI->getEntryFreq();
     const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
     const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
@@ -222,6 +227,7 @@ public:
     AU.addRequired<MachineDominatorTree>();
     AU.addRequired<MachinePostDominatorTree>();
     AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineOptimizationRemarkEmitterPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -248,6 +254,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
 INITIALIZE_PASS_END(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
 
 bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
@@ -432,6 +439,19 @@ void ShrinkWrap::updateSaveRestorePoints(MachineBasicBlock &MBB,
   }
 }
 
+static bool giveUpWithRemarks(MachineOptimizationRemarkEmitter *ORE,
+                              StringRef RemarkName, StringRef RemarkMessage,
+                              const DiagnosticLocation &Loc,
+                              const MachineBasicBlock *MBB) {
+  ORE->emit([&]() {
+    return MachineOptimizationRemarkMissed(DEBUG_TYPE, RemarkName, Loc, MBB)
+           << RemarkMessage;
+  });
+
+  LLVM_DEBUG(dbgs() << RemarkMessage << '\n');
+  return false;
+}
+
 bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()) || MF.empty() || !isShrinkWrapEnabled(MF))
     return false;
@@ -448,8 +468,9 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
     // results. Moreover, we may miss that the prologue and
     // epilogue are not in the same loop, leading to unbalanced
     // construction/deconstruction of the stack frame.
-    LLVM_DEBUG(dbgs() << "Irreducible CFGs are not supported yet\n");
-    return false;
+    return giveUpWithRemarks(ORE, "UnsupportedIrreducibleCFG",
+                             "Irreducible CFGs are not supported yet.",
+                             MF.getFunction().getSubprogram(), &MF.front());
   }
 
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
@@ -460,10 +481,10 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
     LLVM_DEBUG(dbgs() << "Look into: " << MBB.getNumber() << ' '
                       << MBB.getName() << '\n');
 
-    if (MBB.isEHFuncletEntry()) {
-      LLVM_DEBUG(dbgs() << "EH Funclets are not supported yet.\n");
-      return false;
-    }
+    if (MBB.isEHFuncletEntry())
+      return giveUpWithRemarks(ORE, "UnsupportedEHFunclets",
+                               "EH Funclets are not supported yet.",
+                               MBB.front().getDebugLoc(), &MBB);
 
     if (MBB.isEHPad()) {
       // Push the prologue and epilogue outside of

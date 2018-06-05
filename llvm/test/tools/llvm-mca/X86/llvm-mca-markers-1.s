@@ -7,4 +7,3 @@
 # LLVM-MCA-END
 
 # CHECK: error: no assembly instructions found.
-

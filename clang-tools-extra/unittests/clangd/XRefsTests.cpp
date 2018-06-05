@@ -643,7 +643,7 @@ TEST(Hover, All) {
     Annotations T(Test.Input);
     auto AST = TestTU::withCode(T.code()).build();
     if (auto H = getHover(AST, T.point())) {
-      EXPECT_EQ("", Test.ExpectedHover) << Test.Input;
+      EXPECT_NE("", Test.ExpectedHover) << Test.Input;
       EXPECT_EQ(H->contents.value, Test.ExpectedHover) << Test.Input;
     } else
       EXPECT_EQ("", Test.ExpectedHover) << Test.Input;

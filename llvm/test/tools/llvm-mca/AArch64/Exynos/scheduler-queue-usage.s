@@ -23,4 +23,3 @@
 
 # ALL:      Scheduler's queue usage:
 # ALL-NEXT: No scheduler resources used.
-

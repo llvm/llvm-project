@@ -149,9 +149,11 @@ struct Symbol {
   // The number of translation units that reference this symbol from their main
   // file. This number is only meaningful if aggregated in an index.
   unsigned References = 0;
-
+  /// Whether or not this symbol is meant to be used for the code completion.
+  /// See also isIndexedForCodeCompletion().
+  bool IsIndexedForCodeCompletion = false;
   /// A brief description of the symbol that can be displayed in the completion
-  /// candidate list. For example, "Foo(X x, Y y) const" is a labal for a
+  /// candidate list. For example, "Foo(X x, Y y) const" is a label for a
   /// function.
   llvm::StringRef CompletionLabel;
   /// The piece of text that the user is expected to type to match the
@@ -267,6 +269,8 @@ struct FuzzyFindRequest {
   /// \brief The number of top candidates to return. The index may choose to
   /// return more than this, e.g. if it doesn't know which candidates are best.
   size_t MaxCandidateCount = UINT_MAX;
+  /// If set to true, only symbols for completion support will be considered.
+  bool RestrictForCodeCompletion = false;
 };
 
 struct LookupRequest {

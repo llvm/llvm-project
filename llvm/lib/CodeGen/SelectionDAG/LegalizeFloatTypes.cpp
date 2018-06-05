@@ -2102,13 +2102,12 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_LOAD(SDNode *N) {
 
   // Load the value as an integer value with the same number of bits.
   EVT IVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
-  auto MMOFlags =
-      L->getMemOperand()->getFlags() &
-      ~(MachineMemOperand::MOInvariant | MachineMemOperand::MODereferenceable);
   SDValue newL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), IVT,
                              SDLoc(N), L->getChain(), L->getBasePtr(),
                              L->getOffset(), L->getPointerInfo(), IVT,
-                             L->getAlignment(), MMOFlags, L->getAAInfo());
+                             L->getAlignment(),
+                             L->getMemOperand()->getFlags(),
+                             L->getAAInfo());
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
   ReplaceValueWith(SDValue(N, 1), newL.getValue(1));

@@ -11,13 +11,13 @@ target datalayout = "e-p:64:64"
 ; WASM32: private constant [0 x i8] zeroinitializer
 @0 = private unnamed_addr constant [2 x void ()*] [void ()* @f, void ()* @g], align 16
 
-; X64: define internal void @f.cfi()
+; X64: define hidden void @f.cfi()
 ; WASM32: define void @f() !type !{{[0-9]+}} !wasm.index ![[I0:[0-9]+]]
 define void @f() !type !0 {
   ret void
 }
 
-; X64: define internal void @g.cfi()
+; X64: define hidden void @g.cfi()
 ; WASM32: define void @g() !type !{{[0-9]+}} !wasm.index ![[I1:[0-9]+]]
 define void @g() !type !1 {
   ret void
