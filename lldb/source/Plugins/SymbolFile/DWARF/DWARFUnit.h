@@ -14,6 +14,7 @@
 #include "DWARFDebugInfoEntry.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/Support/RWMutex.h"
+#include <atomic>
 
 class DWARFUnit;
 class DWARFCompileUnit;
