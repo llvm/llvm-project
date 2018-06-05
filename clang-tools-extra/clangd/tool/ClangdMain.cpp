@@ -238,5 +238,5 @@ int main(int argc, char *argv[]) {
   llvm::set_thread_name("clangd.main");
   // Change stdin to binary to not lose \r\n on windows.
   llvm::sys::ChangeStdinToBinary();
-  return LSPServer.run(std::cin, InputStyle) ? 0 : NoShutdownRequestErrorCode;
+  return LSPServer.run(stdin, InputStyle) ? 0 : NoShutdownRequestErrorCode;
 }

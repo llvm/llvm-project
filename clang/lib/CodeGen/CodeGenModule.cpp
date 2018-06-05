@@ -4900,7 +4900,7 @@ llvm::Constant *CodeGenModule::GetAddrOfRTTIDescriptor(QualType Ty,
   // Return a bogus pointer if RTTI is disabled, unless it's for EH.
   // FIXME: should we even be calling this method if RTTI is disabled
   // and it's not for EH?
-  if (!ForEH && !getLangOpts().RTTI)
+  if ((!ForEH && !getLangOpts().RTTI) || getLangOpts().CUDAIsDevice)
     return llvm::Constant::getNullValue(Int8PtrTy);
 
   if (ForEH && Ty->isObjCObjectPointerType() &&

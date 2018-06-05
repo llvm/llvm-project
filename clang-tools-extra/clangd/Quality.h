@@ -61,11 +61,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &,
 
 /// Attributes of a symbol-query pair that affect how much we like it.
 struct SymbolRelevanceSignals {
-  // 0-1 fuzzy-match score for unqualified name. Must be explicitly assigned.
+  /// 0-1 fuzzy-match score for unqualified name. Must be explicitly assigned.
   float NameMatch = 1;
   bool Forbidden = false; // Unavailable (e.g const) or inaccessible (private).
-  /// Proximity between the best declaration and the query location. [0-1] score
-  /// where 1 is closest
+  /// Proximity between best declaration and the query. [0-1], 1 is closest.
   float ProximityScore = 0;
 
   void merge(const CodeCompletionResult &SemaResult);

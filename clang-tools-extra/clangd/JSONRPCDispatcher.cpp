@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/SourceMgr.h"
 #include <istream>
 
@@ -66,7 +67,7 @@ void JSONOutput::writeMessage(const json::Expr &Message) {
     Outs << "Content-Length: " << S.size() << "\r\n\r\n" << S;
     Outs.flush();
   }
-  log(llvm::Twine("--> ") + S);
+  log(llvm::Twine("--> ") + S + "\n");
 }
 
 void JSONOutput::log(const Twine &Message) {
@@ -180,27 +181,43 @@ bool JSONRPCDispatcher::call(const json::Expr &Message, JSONOutput &Out) const {
   return true;
 }
 
-static llvm::Optional<std::string> readStandardMessage(std::istream &In,
+// Tries to read a line up to and including \n.
+// If failing, feof() or ferror() will be set.
+static bool readLine(std::FILE *In, std::string &Out) {
+  static constexpr int BufSize = 1024;
+  size_t Size = 0;
+  Out.clear();
+  for (;;) {
+    Out.resize(Size + BufSize);
+    // Handle EINTR which is sent when a debugger attaches on some platforms.
+    if (!llvm::sys::RetryAfterSignal(nullptr, ::fgets, &Out[Size], BufSize, In))
+      return false;
+    clearerr(In);
+    // If the line contained null bytes, anything after it (including \n) will
+    // be ignored. Fortunately this is not a legal header or JSON.
+    size_t Read = std::strlen(&Out[Size]);
+    if (Read > 0 && Out[Size + Read - 1] == '\n') {
+      Out.resize(Size + Read);
+      return true;
+    }
+    Size += Read;
+  }
+}
+
+// Returns None when:
+//  - ferror() or feof() are set.
+//  - Content-Length is missing or empty (protocol error)
+static llvm::Optional<std::string> readStandardMessage(std::FILE *In,
                                                        JSONOutput &Out) {
   // A Language Server Protocol message starts with a set of HTTP headers,
   // delimited  by \r\n, and terminated by an empty line (\r\n).
   unsigned long long ContentLength = 0;
-  while (In.good()) {
-    std::string Line;
-    std::getline(In, Line);
-    if (!In.good() && errno == EINTR) {
-      In.clear();
-      continue;
-    }
+  std::string Line;
+  while (true) {
+    if (feof(In) || ferror(In) || !readLine(In, Line))
+      return llvm::None;
 
     Out.mirrorInput(Line);
-    // Mirror '\n' that gets consumed by std::getline, but is not included in
-    // the resulting Line.
-    // Note that '\r' is part of Line, so we don't need to mirror it
-    // separately.
-    if (!In.eof())
-      Out.mirrorInput("\n");
-
     llvm::StringRef LineRef(Line);
 
     // We allow comments in headers. Technically this isn't part
@@ -208,19 +225,13 @@ static llvm::Optional<std::string> readStandardMessage(std::istream &In,
     if (LineRef.startswith("#"))
       continue;
 
-    // Content-Type is a specified header, but does nothing.
-    // Content-Length is a mandatory header. It specifies the length of the
-    // following JSON.
-    // It is unspecified what sequence headers must be supplied in, so we
-    // allow any sequence.
-    // The end of headers is signified by an empty line.
+    // Content-Length is a mandatory header, and the only one we handle.
     if (LineRef.consume_front("Content-Length: ")) {
       if (ContentLength != 0) {
         log("Warning: Duplicate Content-Length header received. "
             "The previous value for this message (" +
-            llvm::Twine(ContentLength) + ") was ignored.\n");
+            llvm::Twine(ContentLength) + ") was ignored.");
       }
-
       llvm::getAsUnsignedInteger(LineRef.trim(), 0, ContentLength);
       continue;
     } else if (!LineRef.trim().empty()) {
@@ -233,46 +244,45 @@ static llvm::Optional<std::string> readStandardMessage(std::istream &In,
     }
   }
 
-  // Guard against large messages. This is usually a bug in the client code
-  // and we don't want to crash downstream because of it.
+  // The fuzzer likes crashing us by sending "Content-Length: 9999999999999999"
   if (ContentLength > 1 << 30) { // 1024M
-    In.ignore(ContentLength);
-    log("Skipped overly large message of " + Twine(ContentLength) +
-        " bytes.\n");
+    log("Refusing to read message with long Content-Length: " +
+        Twine(ContentLength) + ". Expect protocol errors.");
+    return llvm::None;
+  }
+  if (ContentLength == 0) {
+    log("Warning: Missing Content-Length header, or zero-length message.");
     return llvm::None;
   }
 
-  if (ContentLength > 0) {
-    std::string JSON(ContentLength, '\0');
-    In.read(&JSON[0], ContentLength);
-    Out.mirrorInput(StringRef(JSON.data(), In.gcount()));
-
-    // If the stream is aborted before we read ContentLength bytes, In
-    // will have eofbit and failbit set.
-    if (!In) {
-      log("Input was aborted. Read only " + llvm::Twine(In.gcount()) +
-          " bytes of expected " + llvm::Twine(ContentLength) + ".\n");
+  std::string JSON(ContentLength, '\0');
+  for (size_t Pos = 0, Read; Pos < ContentLength; Pos += Read) {
+    // Handle EINTR which is sent when a debugger attaches on some platforms.
+    Read = llvm::sys::RetryAfterSignal(0u, ::fread, &JSON[Pos], 1,
+                                       ContentLength - Pos, In);
+    Out.mirrorInput(StringRef(&JSON[Pos], Read));
+    if (Read == 0) {
+      log("Input was aborted. Read only " + llvm::Twine(Pos) +
+          " bytes of expected " + llvm::Twine(ContentLength) + ".");
       return llvm::None;
     }
-    return std::move(JSON);
-  } else {
-    log("Warning: Missing Content-Length header, or message has zero "
-        "length.\n");
-    return llvm::None;
+    clearerr(In); // If we're done, the error was transient. If we're not done,
+                  // either it was transient or we'll see it again on retry.
+    Pos += Read;
   }
+  return std::move(JSON);
 }
 
 // For lit tests we support a simplified syntax:
 // - messages are delimited by '---' on a line by itself
 // - lines starting with # are ignored.
 // This is a testing path, so favor simplicity over performance here.
-static llvm::Optional<std::string> readDelimitedMessage(std::istream &In,
+// When returning None, feof() or ferror() will be set.
+static llvm::Optional<std::string> readDelimitedMessage(std::FILE *In,
                                                         JSONOutput &Out) {
   std::string JSON;
   std::string Line;
-  while (std::getline(In, Line)) {
-    Line.push_back('\n'); // getline() consumed the newline.
-
+  while (readLine(In, Line)) {
     auto LineRef = llvm::StringRef(Line).trim();
     if (LineRef.startswith("#")) // comment
       continue;
@@ -284,39 +294,47 @@ static llvm::Optional<std::string> readDelimitedMessage(std::istream &In,
     JSON += Line;
   }
 
-  if (In.bad()) {
+  if (ferror(In)) {
     log("Input error while reading message!");
     return llvm::None;
-  } else {
+  } else { // Including EOF
     Out.mirrorInput(
         llvm::formatv("Content-Length: {0}\r\n\r\n{1}", JSON.size(), JSON));
     return std::move(JSON);
   }
 }
 
-void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
+// The use of C-style std::FILE* IO deserves some explanation.
+// Previously, std::istream was used. When a debugger attached on MacOS, the
+// process received EINTR, the stream went bad, and clangd exited.
+// A retry-on-EINTR loop around reads solved this problem, but caused clangd to
+// sometimes hang rather than exit on other OSes. The interaction between
+// istreams and signals isn't well-specified, so it's hard to get this right.
+// The C APIs seem to be clearer in this respect.
+void clangd::runLanguageServerLoop(std::FILE *In, JSONOutput &Out,
                                    JSONStreamStyle InputStyle,
                                    JSONRPCDispatcher &Dispatcher,
                                    bool &IsDone) {
   auto &ReadMessage =
       (InputStyle == Delimited) ? readDelimitedMessage : readStandardMessage;
-  while (In.good()) {
+  while (!IsDone && !feof(In)) {
+    if (ferror(In)) {
+      log("IO error: " + llvm::sys::StrError());
+      return;
+    }
     if (auto JSON = ReadMessage(In, Out)) {
       if (auto Doc = json::parse(*JSON)) {
         // Log the formatted message.
         log(llvm::formatv(Out.Pretty ? "<-- {0:2}\n" : "<-- {0}\n", *Doc));
         // Finally, execute the action for this JSON message.
         if (!Dispatcher.call(*Doc, Out))
-          log("JSON dispatch failed!\n");
+          log("JSON dispatch failed!");
       } else {
         // Parse error. Log the raw message.
         log(llvm::formatv("<-- {0}\n" , *JSON));
         log(llvm::Twine("JSON parse error: ") +
-            llvm::toString(Doc.takeError()) + "\n");
+            llvm::toString(Doc.takeError()));
       }
     }
-    // If we're done, exit the loop.
-    if (IsDone)
-      break;
   }
 }

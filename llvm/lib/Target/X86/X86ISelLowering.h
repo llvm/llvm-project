@@ -1331,8 +1331,14 @@ namespace llvm {
     MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr &MI,
                                         MachineBasicBlock *MBB) const;
 
+    void emitSetJmpShadowStackFix(MachineInstr &MI,
+                                  MachineBasicBlock *MBB) const;
+
     MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
                                          MachineBasicBlock *MBB) const;
+
+    MachineBasicBlock *emitLongJmpShadowStackFix(MachineInstr &MI,
+                                                 MachineBasicBlock *MBB) const;
 
     MachineBasicBlock *emitFMA3Instr(MachineInstr &MI,
                                      MachineBasicBlock *MBB) const;

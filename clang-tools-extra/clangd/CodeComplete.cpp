@@ -25,6 +25,7 @@
 #include "Trace.h"
 #include "URI.h"
 #include "index/Index.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -949,6 +950,7 @@ private:
     if (Opts.Limit)
       Req.MaxCandidateCount = Opts.Limit;
     Req.Query = Filter->pattern();
+    Req.RestrictForCodeCompletion = true;
     Req.Scopes = getQueryScopes(Recorder->CCContext,
                                 Recorder->CCSema->getSourceManager());
     log(llvm::formatv("Code complete: fuzzyFind(\"{0}\", scopes=[{1}])",
@@ -1087,6 +1089,17 @@ SignatureHelp signatureHelp(PathRef FileName,
                    {FileName, Command, Preamble, PreambleInclusions, Contents,
                     Pos, std::move(VFS), std::move(PCHs)});
   return Result;
+}
+
+bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
+  using namespace clang::ast_matchers;
+  auto InTopLevelScope = hasDeclContext(
+      anyOf(namespaceDecl(), translationUnitDecl(), linkageSpecDecl()));
+  return !match(decl(anyOf(InTopLevelScope,
+                           hasDeclContext(
+                               enumDecl(InTopLevelScope, unless(isScoped()))))),
+                ND, ASTCtx)
+              .empty();
 }
 
 } // namespace clangd
