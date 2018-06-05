@@ -43,15 +43,10 @@ public:
   void GetTypes(ConstString name, DIEArray &offsets) override;
   void GetTypes(const DWARFDeclContext &context, DIEArray &offsets) override;
   void GetNamespaces(ConstString name, DIEArray &offsets) override;
-  void GetFunctions(
-      ConstString name, DWARFDebugInfo &info,
-      llvm::function_ref<bool(const DWARFDIE &die, bool include_inlines,
-                              lldb_private::SymbolContextList &sc_list)>
-          resolve_function,
-      llvm::function_ref<CompilerDeclContext(lldb::user_id_t type_uid)>
-          get_decl_context_containing_uid,
-      const CompilerDeclContext *parent_decl_ctx, uint32_t name_type_mask,
-      bool include_inlines, SymbolContextList &sc_list) override;
+  void GetFunctions(ConstString name, DWARFDebugInfo &info,
+                    const CompilerDeclContext &parent_decl_ctx,
+                    uint32_t name_type_mask,
+                    std::vector<DWARFDIE> &dies) override;
   void GetFunctions(
       const RegularExpression &regex, DWARFDebugInfo &info,
       llvm::function_ref<bool(const DWARFDIE &die, bool include_inlines,

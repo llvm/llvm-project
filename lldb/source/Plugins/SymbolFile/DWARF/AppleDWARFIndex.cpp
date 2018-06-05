@@ -154,101 +154,66 @@ static bool KeepFunctionDIE(DWARFDIE die, uint32_t name_type_mask) {
   return looking_for_methods == die.IsMethod();
 }
 
-void AppleDWARFIndex::GetFunctions(
-    ConstString name, DWARFDebugInfo &info,
-    llvm::function_ref<bool(const DWARFDIE &die, bool include_inlines,
-                            lldb_private::SymbolContextList &sc_list)>
-        resolve_function,
-    llvm::function_ref<CompilerDeclContext(lldb::user_id_t type_uid)>
-        get_decl_context_containing_uid,
-    const CompilerDeclContext *parent_decl_ctx, uint32_t name_type_mask,
-    bool include_inlines, SymbolContextList &sc_list) {
-  if (!m_apple_names_up)
-    return;
-
-  std::set<const DWARFDebugInfoEntry *> resolved_dies;
-  DIEArray offsets;
-
-  uint32_t num_matches = 0;
-
+void AppleDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
+                                   const CompilerDeclContext &parent_decl_ctx,
+                                   uint32_t name_type_mask,
+                                   std::vector<DWARFDIE> &dies) {
   if (name_type_mask & eFunctionNameTypeFull) {
     // If they asked for the full name, match what they typed.  At some
     // point we may want to canonicalize this (strip double spaces, etc.
     // For now, we just add all the dies that we find by exact match.
-    num_matches = m_apple_names_up->FindByName(name.GetStringRef(), offsets);
-    for (uint32_t i = 0; i < num_matches; i++) {
-      const DIERef &die_ref = offsets[i];
+    DIEArray offsets;
+    m_apple_names_up->FindByName(name.GetStringRef(), offsets);
+    for (const DIERef &die_ref: offsets) {
       DWARFDIE die = info.GetDIE(die_ref);
-      if (die) {
-        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-          continue; // The containing decl contexts don't match
-
-        if (resolved_dies.find(die.GetDIE()) == resolved_dies.end()) {
-          if (resolve_function(die, include_inlines, sc_list))
-            resolved_dies.insert(die.GetDIE());
-        }
-      } else
+      if (!die) {
         ReportInvalidDIEOffset(die_ref.die_offset, name.GetStringRef());
+        continue;
+      }
+      if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die))
+        dies.push_back(die);
     }
   }
+  if (name_type_mask & eFunctionNameTypeSelector &&
+      !parent_decl_ctx.IsValid()) {
+    DIEArray offsets;
+    m_apple_names_up->FindByName(name.GetStringRef(), offsets);
 
-  if (name_type_mask & eFunctionNameTypeSelector) {
-    if (parent_decl_ctx && parent_decl_ctx->IsValid())
-      return; // no selectors in namespaces
-
-    num_matches = m_apple_names_up->FindByName(name.GetStringRef(), offsets);
     // Now make sure these are actually ObjC methods.  In this case we can
     // simply look up the name, and if it is an ObjC method name, we're
     // good.
-
-    for (uint32_t i = 0; i < num_matches; i++) {
-      const DIERef &die_ref = offsets[i];
+    for (const DIERef &die_ref: offsets) {
       DWARFDIE die = info.GetDIE(die_ref);
-      if (die) {
-        const char *die_name = die.GetName();
-        if (ObjCLanguage::IsPossibleObjCMethodName(die_name)) {
-          if (resolved_dies.find(die.GetDIE()) == resolved_dies.end()) {
-            if (resolve_function(die, include_inlines, sc_list))
-              resolved_dies.insert(die.GetDIE());
-          }
-        }
-      } else
+      if (!die) {
         ReportInvalidDIEOffset(die_ref.die_offset, name.GetStringRef());
+        continue;
+      }
+      const char *die_name = die.GetName();
+      if (ObjCLanguage::IsPossibleObjCMethodName(die_name))
+        dies.push_back(die);
     }
-    offsets.clear();
   }
-
-  if (((name_type_mask & eFunctionNameTypeMethod) && !parent_decl_ctx) ||
+  if (((name_type_mask & eFunctionNameTypeMethod) &&
+       !parent_decl_ctx.IsValid()) ||
       name_type_mask & eFunctionNameTypeBase) {
     // The apple_names table stores just the "base name" of C++ methods in
     // the table.  So we have to extract the base name, look that up, and
     // if there is any other information in the name we were passed in we
     // have to post-filter based on that.
 
-    // FIXME: Arrange the logic above so that we don't calculate the base
-    // name twice:
-    num_matches = m_apple_names_up->FindByName(name.GetStringRef(), offsets);
+    DIEArray offsets;
+    m_apple_names_up->FindByName(name.GetStringRef(), offsets);
 
-    for (uint32_t i = 0; i < num_matches; i++) {
-      const DIERef &die_ref = offsets[i];
+    for (const DIERef &die_ref: offsets) {
       DWARFDIE die = info.GetDIE(die_ref);
-      if (die) {
-        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-          continue; // The containing decl contexts don't match
-
-        if (!KeepFunctionDIE(die, name_type_mask))
-          continue;
-
-        if (resolved_dies.find(die.GetDIE()) != resolved_dies.end())
-          continue;
-
-        // If we get to here, the die is good, and we should add it:
-        if (resolve_function(die, include_inlines, sc_list))
-          resolved_dies.insert(die.GetDIE());
-      } else
+      if (!die) {
         ReportInvalidDIEOffset(die_ref.die_offset, name.GetStringRef());
+        continue;
+      }
+      if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die) &&
+          KeepFunctionDIE(die, name_type_mask))
+        dies.push_back(die);
     }
-    offsets.clear();
   }
 }
 

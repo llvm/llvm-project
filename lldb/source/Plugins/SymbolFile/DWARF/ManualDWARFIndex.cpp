@@ -407,89 +407,54 @@ void ManualDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
   m_set.namespaces.Find(name, offsets);
 }
 
-void ManualDWARFIndex::GetFunctions(
-    ConstString name, DWARFDebugInfo &info,
-    llvm::function_ref<bool(const DWARFDIE &die, bool include_inlines,
-                            lldb_private::SymbolContextList &sc_list)>
-        resolve_function,
-    llvm::function_ref<CompilerDeclContext(lldb::user_id_t type_uid)>
-        get_decl_context_containing_uid,
-    const CompilerDeclContext *parent_decl_ctx, uint32_t name_type_mask,
-    bool include_inlines, SymbolContextList &sc_list) {
-
+void ManualDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
+                                    const CompilerDeclContext &parent_decl_ctx,
+                                    uint32_t name_type_mask,
+                                    std::vector<DWARFDIE> &dies) {
   Index();
 
-  std::set<const DWARFDebugInfoEntry *> resolved_dies;
-  DIEArray offsets;
   if (name_type_mask & eFunctionNameTypeFull) {
-    uint32_t num_matches = m_set.function_basenames.Find(name, offsets);
-    num_matches += m_set.function_methods.Find(name, offsets);
-    num_matches += m_set.function_fullnames.Find(name, offsets);
-    for (uint32_t i = 0; i < num_matches; i++) {
-      const DIERef &die_ref = offsets[i];
+    DIEArray offsets;
+    m_set.function_basenames.Find(name, offsets);
+    m_set.function_methods.Find(name, offsets);
+    m_set.function_fullnames.Find(name, offsets);
+    for (const DIERef &die_ref: offsets) {
       DWARFDIE die = info.GetDIE(die_ref);
-      if (die) {
-        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-          continue; // The containing decl contexts don't match
-
-        if (resolved_dies.find(die.GetDIE()) == resolved_dies.end()) {
-          if (resolve_function(die, include_inlines, sc_list))
-            resolved_dies.insert(die.GetDIE());
-        }
-      }
+      if (!die)
+        continue;
+      if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die))
+        dies.push_back(die);
     }
-    offsets.clear();
   }
   if (name_type_mask & eFunctionNameTypeBase) {
-    uint32_t num_base = m_set.function_basenames.Find(name, offsets);
-    for (uint32_t i = 0; i < num_base; i++) {
-      DWARFDIE die = info.GetDIE(offsets[i]);
-      if (die) {
-        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-          continue; // The containing decl contexts don't match
-
-        // If we get to here, the die is good, and we should add it:
-        if (resolved_dies.find(die.GetDIE()) == resolved_dies.end()) {
-          if (resolve_function(die, include_inlines, sc_list))
-            resolved_dies.insert(die.GetDIE());
-        }
-      }
+    DIEArray offsets;
+    m_set.function_basenames.Find(name, offsets);
+    for (const DIERef &die_ref: offsets) {
+      DWARFDIE die = info.GetDIE(die_ref);
+      if (!die)
+        continue;
+      if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die))
+        dies.push_back(die);
     }
     offsets.clear();
   }
 
-  if (name_type_mask & eFunctionNameTypeMethod) {
-    if (parent_decl_ctx && parent_decl_ctx->IsValid())
-      return; // no methods in namespaces
-
-    uint32_t num_base = m_set.function_methods.Find(name, offsets);
-    {
-      for (uint32_t i = 0; i < num_base; i++) {
-        DWARFDIE die = info.GetDIE(offsets[i]);
-        if (die) {
-          // If we get to here, the die is good, and we should add it:
-          if (resolved_dies.find(die.GetDIE()) == resolved_dies.end()) {
-            if (resolve_function(die, include_inlines, sc_list))
-              resolved_dies.insert(die.GetDIE());
-          }
-        }
-      }
+  if (name_type_mask & eFunctionNameTypeMethod && !parent_decl_ctx.IsValid()) {
+    DIEArray offsets;
+    m_set.function_methods.Find(name, offsets);
+    for (const DIERef &die_ref: offsets) {
+      if (DWARFDIE die = info.GetDIE(die_ref))
+        dies.push_back(die);
     }
-    offsets.clear();
   }
 
-  if ((name_type_mask & eFunctionNameTypeSelector) &&
-      (!parent_decl_ctx || !parent_decl_ctx->IsValid())) {
-    uint32_t num_selectors = m_set.function_selectors.Find(name, offsets);
-    for (uint32_t i = 0; i < num_selectors; i++) {
-      DWARFDIE die = info.GetDIE(offsets[i]);
-      if (die) {
-        // If we get to here, the die is good, and we should add it:
-        if (resolved_dies.find(die.GetDIE()) == resolved_dies.end()) {
-          if (resolve_function(die, include_inlines, sc_list))
-            resolved_dies.insert(die.GetDIE());
-        }
-      }
+  if (name_type_mask & eFunctionNameTypeSelector &&
+      !parent_decl_ctx.IsValid()) {
+    DIEArray offsets;
+    m_set.function_selectors.Find(name, offsets);
+    for (const DIERef &die_ref: offsets) {
+      if (DWARFDIE die = info.GetDIE(die_ref))
+        dies.push_back(die);
     }
   }
 }

@@ -2228,16 +2228,18 @@ SymbolFileDWARF::FindFunctions(const ConstString &name,
   if (info == NULL)
     return 0;
 
-  m_index->GetFunctions(name, *info,
-                        [this](const DWARFDIE &die, bool include_inlines,
-                               lldb_private::SymbolContextList &sc_list) {
-                          return ResolveFunction(die, include_inlines, sc_list);
-                        },
-                        [this](lldb::user_id_t type_uid) {
-                          return GetDeclContextContainingUID(type_uid);
-                        },
-                        parent_decl_ctx, name_type_mask, include_inlines,
-                        sc_list);
+  llvm::DenseSet<const DWARFDebugInfoEntry *> resolved_dies;
+  DIEArray offsets;
+  CompilerDeclContext empty_decl_ctx;
+  if (!parent_decl_ctx)
+    parent_decl_ctx = &empty_decl_ctx;
+
+  std::vector<DWARFDIE> dies;
+  m_index->GetFunctions(name, *info, *parent_decl_ctx, name_type_mask, dies);
+  for (const DWARFDIE &die: dies) {
+    if (resolved_dies.insert(die.GetDIE()).second)
+      ResolveFunction(die, include_inlines, sc_list);
+  }
 
   // Return the number of variable that were appended to the list
   const uint32_t num_matches = sc_list.GetSize() - original_size;
