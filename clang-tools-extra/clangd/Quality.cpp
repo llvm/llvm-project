@@ -69,7 +69,7 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolQualitySignals &S) {
 
 static SymbolRelevanceSignals::AccessibleScope
 ComputeScope(const NamedDecl &D) {
-  bool InClass;
+  bool InClass = true;
   for (const DeclContext *DC = D.getDeclContext(); !DC->isFileContext();
        DC = DC->getParent()) {
     if (DC->isFunctionOrMethod())
@@ -103,7 +103,7 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
   }
 
   // Declarations are scoped, others (like macros) are assumed global.
-  if (SemaCCResult.Kind == CodeCompletionResult::RK_Declaration)
+  if (SemaCCResult.Declaration)
     Scope = std::min(Scope, ComputeScope(*SemaCCResult.Declaration));
 }
 
@@ -142,6 +142,9 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolRelevanceSignals &S) {
   OS << formatv("=== Symbol relevance: {0}\n", S.evaluate());
   OS << formatv("\tName match: {0}\n", S.NameMatch);
   OS << formatv("\tForbidden: {0}\n", S.Forbidden);
+  OS << formatv("\tProximity: {0}\n", S.ProximityScore);
+  OS << formatv("\tQuery type: {0}\n", static_cast<int>(S.Query));
+  OS << formatv("\tScope: {0}\n", static_cast<int>(S.Scope));
   return OS;
 }
 
