@@ -10,7 +10,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SimpleConstraintManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConstraintManager.h"
 
 #include "clang/Config/config.h"
 
@@ -880,6 +880,12 @@ public:
 
   /// Reset the solver and remove all constraints.
   void reset() { Z3_solver_reset(Z3Context::ZC, Solver); }
+
+  void print(raw_ostream &OS) const {
+    OS << Z3_solver_to_string(Z3Context::ZC, Solver);
+  }
+
+  LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
 }; // end class Z3Solver
 
 void Z3ErrorHandler(Z3_context Context, Z3_error_code Error) {
@@ -887,16 +893,23 @@ void Z3ErrorHandler(Z3_context Context, Z3_error_code Error) {
                            llvm::Twine(Z3_get_error_msg_ex(Context, Error)));
 }
 
-class Z3ConstraintManager : public SimpleConstraintManager {
+class Z3ConstraintManager : public SMTConstraintManager {
   Z3Context Context;
   mutable Z3Solver Solver;
 
 public:
   Z3ConstraintManager(SubEngine *SE, SValBuilder &SB)
-      : SimpleConstraintManager(SE, SB),
+      : SMTConstraintManager(SE, SB),
         Solver(Z3_mk_simple_solver(Z3Context::ZC)) {
     Z3_set_error_handler(Z3Context::ZC, Z3ErrorHandler);
   }
+  //===------------------------------------------------------------------===//
+  // Implementation for Refutation.
+  //===------------------------------------------------------------------===//
+
+  void addRangeConstraints(clang::ento::ConstraintRangeTy CR) override;
+
+  ConditionTruthVal isModelFeasible() override;
 
   //===------------------------------------------------------------------===//
   // Implementation for interface from ConstraintManager.
@@ -1240,6 +1253,48 @@ Z3ConstraintManager::removeDeadBindings(ProgramStateRef State,
   }
 
   return State->set<ConstraintZ3>(CZ);
+}
+
+void Z3ConstraintManager::addRangeConstraints(ConstraintRangeTy CR) {
+  for (const auto &I : CR) {
+    SymbolRef Sym = I.first;
+
+    Z3Expr Constraints = Z3Expr::fromBoolean(false);
+
+    for (const auto &Range : I.second) {
+      const llvm::APSInt &From = Range.From();
+      const llvm::APSInt &To = Range.To();
+
+      QualType FromTy;
+      llvm::APSInt NewFromInt;
+      std::tie(NewFromInt, FromTy) = fixAPSInt(From);
+      Z3Expr FromExp = Z3Expr::fromAPSInt(NewFromInt);
+      QualType SymTy;
+      Z3Expr Exp = getZ3Expr(Sym, &SymTy);
+      bool IsSignedTy = SymTy->isSignedIntegerOrEnumerationType();
+      QualType ToTy;
+      llvm::APSInt NewToInt;
+      std::tie(NewToInt, ToTy) = fixAPSInt(To);
+      Z3Expr ToExp = Z3Expr::fromAPSInt(NewToInt);
+      assert(FromTy == ToTy && "Range values have different types!");
+
+      Z3Expr LHS =
+          getZ3BinExpr(Exp, SymTy, BO_GE, FromExp, FromTy, /*RetTy=*/nullptr);
+      Z3Expr RHS =
+          getZ3BinExpr(Exp, SymTy, BO_LE, ToExp, FromTy, /*RetTy=*/nullptr);
+      Z3Expr SymRange = Z3Expr::fromBinOp(LHS, BO_LAnd, RHS, IsSignedTy);
+      Constraints =
+          Z3Expr::fromBinOp(Constraints, BO_LOr, SymRange, IsSignedTy);
+    }
+    Solver.addConstraint(Constraints);
+  }
+}
+
+clang::ento::ConditionTruthVal Z3ConstraintManager::isModelFeasible() {
+  if (Solver.check() == Z3_L_FALSE)
+    return false;
+
+  return ConditionTruthVal();
 }
 
 //===------------------------------------------------------------------===//

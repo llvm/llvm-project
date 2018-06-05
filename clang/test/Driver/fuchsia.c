@@ -114,3 +114,16 @@
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-SHARED
 // CHECK-SCUDO-SHARED: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-SHARED: "{{.*[/\\]}}libclang_rt.scudo-x86_64.so"
+
+// RUN: %clang %s -### --target=aarch64-fuchsia \
+// RUN:     -O3 -flto -mcpu=cortex-a53 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-LTO
+// CHECK-LTO: "-plugin-opt=mcpu=cortex-a53"
+// CHECK-LTO: "-plugin-opt=O3"
+
+// RUN: %clang %s -### --target=x86_64-fuchsia \
+// RUN:     -flto=thin -flto-jobs=8 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-THINLTO
+// CHECK-THINLTO: "-plugin-opt=mcpu=x86-64"
+// CHECK-THINLTO: "-plugin-opt=thinlto"
+// CHECK-THINLTO: "-plugin-opt=jobs=8"

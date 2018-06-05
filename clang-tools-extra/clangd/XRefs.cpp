@@ -526,7 +526,7 @@ static Hover getHoverContents(StringRef MacroName) {
   return H;
 }
 
-Hover getHover(ParsedAST &AST, Position Pos) {
+Optional<Hover> getHover(ParsedAST &AST, Position Pos) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
   SourceLocation SourceLocationBeg =
       getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
@@ -539,7 +539,7 @@ Hover getHover(ParsedAST &AST, Position Pos) {
   if (!Symbols.Decls.empty())
     return getHoverContents(Symbols.Decls[0]);
 
-  return Hover();
+  return None;
 }
 
 } // namespace clangd

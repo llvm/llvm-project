@@ -16,6 +16,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTERVISITORS_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -352,6 +353,27 @@ private:
 public:
   TaintBugVisitor(const SVal V) : V(V) {}
   void Profile(llvm::FoldingSetNodeID &ID) const override { ID.Add(V); }
+
+  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                 const ExplodedNode *PrevN,
+                                                 BugReporterContext &BRC,
+                                                 BugReport &BR) override;
+};
+
+/// The bug visitor will walk all the nodes in a path and collect all the
+/// constraints. When it reaches the root node, will create a refutation
+/// manager and check if the constraints are satisfiable
+class FalsePositiveRefutationBRVisitor final
+    : public BugReporterVisitorImpl<FalsePositiveRefutationBRVisitor> {
+private:
+  /// Holds the constraints in a given path
+  // TODO: should we use a set?
+  llvm::SmallVector<ConstraintRangeTy, 32> Constraints;
+
+public:
+  FalsePositiveRefutationBRVisitor() = default;
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override;
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
                                                  const ExplodedNode *PrevN,

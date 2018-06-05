@@ -2552,6 +2552,13 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::Float16:
     Out << "DF16_";
     break;
+  case BuiltinType::ShortAccum:
+  case BuiltinType::Accum:
+  case BuiltinType::LongAccum:
+  case BuiltinType::UShortAccum:
+  case BuiltinType::UAccum:
+  case BuiltinType::ULongAccum:
+    llvm_unreachable("Fixed point types are disabled for c++");
   case BuiltinType::Half:
     Out << "Dh";
     break;

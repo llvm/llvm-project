@@ -3580,6 +3580,16 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_float16, Loc, PrevSpec,
                                      DiagID, Policy);
       break;
+    case tok::kw__Accum:
+      if (!getLangOpts().FixedPoint) {
+        DiagID = diag::err_fixed_point_not_enabled;
+        PrevSpec = "";  // Not used by diagnostic
+        isInvalid = true;
+      } else {
+        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_accum, Loc, PrevSpec,
+                                       DiagID, Policy);
+      }
+      break;
     case tok::kw___float128:
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_float128, Loc, PrevSpec,
                                      DiagID, Policy);
@@ -4606,6 +4616,7 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
+  case tok::kw__Accum:
   case tok::kw__Float16:
   case tok::kw___float128:
   case tok::kw_bool:
@@ -4683,6 +4694,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
+  case tok::kw__Accum:
   case tok::kw__Float16:
   case tok::kw___float128:
   case tok::kw_bool:
@@ -4841,6 +4853,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw_half:
   case tok::kw_float:
   case tok::kw_double:
+  case tok::kw__Accum:
   case tok::kw__Float16:
   case tok::kw___float128:
   case tok::kw_bool:

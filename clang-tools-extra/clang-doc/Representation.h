@@ -1,4 +1,4 @@
-///===-- Representation.h - ClangDoc Represenation --------------*- C++ -*-===//
+///===-- Representation.h - ClangDoc Representation -------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -26,6 +26,7 @@
 namespace clang {
 namespace doc {
 
+// SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
 
 struct Info;
@@ -40,7 +41,8 @@ enum class InfoType {
 // A representation of a parsed comment.
 struct CommentInfo {
   CommentInfo() = default;
-  CommentInfo(CommentInfo &&Other) : Children(std::move(Other.Children)) {}
+  CommentInfo(CommentInfo &Other) = delete;
+  CommentInfo(CommentInfo &&Other) = default;
 
   SmallString<16> Kind; // Kind of comment (TextComment, InlineCommandComment,
                         // HTMLStartTagComment, HTMLEndTagComment,
@@ -128,21 +130,35 @@ struct Location {
 /// A base struct for Infos.
 struct Info {
   Info() = default;
-  Info(Info &&Other) : Description(std::move(Other.Description)) {}
-  virtual ~Info() = default;
+  Info(InfoType IT) : IT(IT) {}
+  Info(const Info &Other) = delete;
+  Info(Info &&Other) = default;
 
-  SymbolID USR; // Unique identifier for the decl described by this Info.
-  SmallString<16> Name; // Unqualified name of the decl.
+  SymbolID USR =
+      SymbolID(); // Unique identifier for the decl described by this Info.
+  const InfoType IT = InfoType::IT_default; // InfoType of this particular Info.
+  SmallString<16> Name;                     // Unqualified name of the decl.
   llvm::SmallVector<Reference, 4>
       Namespace; // List of parent namespaces for this decl.
   std::vector<CommentInfo> Description; // Comment description of this decl.
+
+  void mergeBase(Info &&I);
+  bool mergeable(const Info &Other);
 };
 
 // Info for namespaces.
-struct NamespaceInfo : public Info {};
+struct NamespaceInfo : public Info {
+  NamespaceInfo() : Info(InfoType::IT_namespace) {}
+
+  void merge(NamespaceInfo &&I);
+};
 
 // Info for symbols.
 struct SymbolInfo : public Info {
+  SymbolInfo(InfoType IT) : Info(IT) {}
+
+  void merge(SymbolInfo &&I);
+
   llvm::Optional<Location> DefLoc;    // Location where this decl is defined.
   llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
 };
@@ -150,6 +166,10 @@ struct SymbolInfo : public Info {
 // TODO: Expand to allow for documenting templating and default args.
 // Info for functions.
 struct FunctionInfo : public SymbolInfo {
+  FunctionInfo() : SymbolInfo(InfoType::IT_function) {}
+
+  void merge(FunctionInfo &&I);
+
   bool IsMethod = false; // Indicates whether this function is a class method.
   Reference Parent;      // Reference to the parent class decl for this method.
   TypeInfo ReturnType;   // Info about the return type of this function.
@@ -163,12 +183,18 @@ struct FunctionInfo : public SymbolInfo {
 // friend classes
 // Info for types.
 struct RecordInfo : public SymbolInfo {
-  TagTypeKind TagType = TagTypeKind::TTK_Struct; // Type of this record (struct,
-                                                 // class, union, interface).
+  RecordInfo() : SymbolInfo(InfoType::IT_record) {}
+
+  void merge(RecordInfo &&I);
+
+  TagTypeKind TagType = TagTypeKind::TTK_Struct; // Type of this record
+                                                 // (struct, class, union,
+                                                 // interface).
   llvm::SmallVector<MemberTypeInfo, 4>
       Members;                             // List of info about record members.
-  llvm::SmallVector<Reference, 4> Parents; // List of base/parent records (does
-                                           // not include virtual parents).
+  llvm::SmallVector<Reference, 4> Parents; // List of base/parent records
+                                           // (does not include virtual
+                                           // parents).
   llvm::SmallVector<Reference, 4>
       VirtualParents; // List of virtual base/parent records.
 };
@@ -176,12 +202,22 @@ struct RecordInfo : public SymbolInfo {
 // TODO: Expand to allow for documenting templating.
 // Info for types.
 struct EnumInfo : public SymbolInfo {
+  EnumInfo() : SymbolInfo(InfoType::IT_enum) {}
+
+  void merge(EnumInfo &&I);
+
   bool Scoped =
       false; // Indicates whether this enum is scoped (e.g. enum class).
   llvm::SmallVector<SmallString<16>, 4> Members; // List of enum members.
 };
 
 // TODO: Add functionality to include separate markdown pages.
+
+// A standalone function to call to merge a vector of infos into one.
+// This assumes that all infos in the vector are of the same type, and will fail
+// if they are different.
+llvm::Expected<std::unique_ptr<Info>>
+mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
 
 } // namespace doc
 } // namespace clang

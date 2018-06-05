@@ -91,6 +91,24 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::LongDouble:
     ID = PREDEF_TYPE_LONGDOUBLE_ID;
     break;
+  case BuiltinType::ShortAccum:
+    ID = PREDEF_TYPE_SHORT_ACCUM_ID;
+    break;
+  case BuiltinType::Accum:
+    ID = PREDEF_TYPE_ACCUM_ID;
+    break;
+  case BuiltinType::LongAccum:
+    ID = PREDEF_TYPE_LONG_ACCUM_ID;
+    break;
+  case BuiltinType::UShortAccum:
+    ID = PREDEF_TYPE_USHORT_ACCUM_ID;
+    break;
+  case BuiltinType::UAccum:
+    ID = PREDEF_TYPE_UACCUM_ID;
+    break;
+  case BuiltinType::ULongAccum:
+    ID = PREDEF_TYPE_ULONG_ACCUM_ID;
+    break;
   case BuiltinType::Float16:
     ID = PREDEF_TYPE_FLOAT16_ID;
     break;

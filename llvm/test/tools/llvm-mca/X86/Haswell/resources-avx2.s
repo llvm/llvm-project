@@ -1074,4 +1074,3 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vpunpcklwd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpxor	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpxor	(%rax), %ymm1, %ymm2
-

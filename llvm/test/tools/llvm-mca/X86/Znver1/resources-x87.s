@@ -523,4 +523,3 @@ fyl2xp1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     fxtract
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     fyl2x
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     fyl2xp1
-

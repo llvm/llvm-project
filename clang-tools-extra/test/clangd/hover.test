@@ -14,6 +14,11 @@
 # CHECK-NEXT:  }
 # CHECK-NEXT:}
 ---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/hover","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":0,"character":10}}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": null
+---
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}

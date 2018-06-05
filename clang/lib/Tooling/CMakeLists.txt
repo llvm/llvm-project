@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_subdirectory(Core)
+add_subdirectory(Inclusions)
 add_subdirectory(Refactoring)
 add_subdirectory(ASTDiff)
 

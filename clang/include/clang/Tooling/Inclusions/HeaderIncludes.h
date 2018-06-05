@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_CORE_HEADERINCLUDES_H
-#define LLVM_CLANG_TOOLING_CORE_HEADERINCLUDES_H
+#ifndef LLVM_CLANG_TOOLING_INCLUSIONS_HEADERINCLUDES_H
+#define LLVM_CLANG_TOOLING_INCLUSIONS_HEADERINCLUDES_H
 
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "clang/Tooling/Core/IncludeStyle.h"
+#include "clang/Tooling/Inclusions/IncludeStyle.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include <unordered_map>
@@ -134,4 +134,4 @@ private:
 } // namespace tooling
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLING_CORE_HEADERINCLUDES_H
+#endif // LLVM_CLANG_TOOLING_INCLUSIONS_HEADERINCLUDES_H

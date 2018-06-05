@@ -58,17 +58,46 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
 }
 
 TEST(QualityTests, SymbolRelevanceSignalExtraction) {
-  auto AST = TestTU::withHeaderCode(R"cpp(
-    [[deprecated]]
-    int f() { return 0; }
-  )cpp")
-                 .build();
+  TestTU Test;
+  Test.HeaderCode = R"cpp(
+    int test_func_in_header();
+    int test_func_in_header_and_cpp();
+    )cpp";
+  Test.Code = R"cpp(
+    int ::test_func_in_header_and_cpp() {
+    }
+    int test_func_in_cpp();
 
-  SymbolRelevanceSignals Relevance;
-  Relevance.merge(CodeCompletionResult(&findDecl(AST, "f"), /*Priority=*/42,
-                                       nullptr, false, /*Accessible=*/false));
-  EXPECT_EQ(Relevance.NameMatch, SymbolRelevanceSignals().NameMatch);
-  EXPECT_TRUE(Relevance.Forbidden);
+    [[deprecated]]
+    int test_deprecated() { return 0; }
+  )cpp";
+  auto AST = Test.build();
+
+  SymbolRelevanceSignals Deprecated;
+  Deprecated.merge(CodeCompletionResult(&findDecl(AST, "test_deprecated"),
+                                        /*Priority=*/42, nullptr, false,
+                                        /*Accessible=*/false));
+  EXPECT_EQ(Deprecated.NameMatch, SymbolRelevanceSignals().NameMatch);
+  EXPECT_TRUE(Deprecated.Forbidden);
+
+  // Test proximity scores.
+  SymbolRelevanceSignals FuncInCpp;
+  FuncInCpp.merge(CodeCompletionResult(&findDecl(AST, "test_func_in_cpp"),
+                                       CCP_Declaration));
+  /// Decls in the current file should get a proximity score of 1.0.
+  EXPECT_FLOAT_EQ(FuncInCpp.ProximityScore, 1.0);
+
+  SymbolRelevanceSignals FuncInHeader;
+  FuncInHeader.merge(CodeCompletionResult(&findDecl(AST, "test_func_in_header"),
+                                          CCP_Declaration));
+  /// Decls outside current file currently don't get a proximity score boost.
+  EXPECT_FLOAT_EQ(FuncInHeader.ProximityScore, 0.0);
+
+  SymbolRelevanceSignals FuncInHeaderAndCpp;
+  FuncInHeaderAndCpp.merge(CodeCompletionResult(
+      &findDecl(AST, "test_func_in_header_and_cpp"), CCP_Declaration));
+  /// Decls in both header **and** the main file get the same boost.
+  EXPECT_FLOAT_EQ(FuncInHeaderAndCpp.ProximityScore, 1.0);
 }
 
 // Do the signals move the scores in the direction we expect?
@@ -104,6 +133,10 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   SymbolRelevanceSignals PoorNameMatch;
   PoorNameMatch.NameMatch = 0.2f;
   EXPECT_LT(PoorNameMatch.evaluate(), Default.evaluate());
+
+  SymbolRelevanceSignals WithProximity;
+  WithProximity.ProximityScore = 0.2;
+  EXPECT_LT(Default.evaluate(), WithProximity.evaluate());
 }
 
 TEST(QualityTests, SortText) {

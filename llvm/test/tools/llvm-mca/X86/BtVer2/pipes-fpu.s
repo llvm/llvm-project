@@ -106,4 +106,3 @@ vsqrtps     %ymm0, %ymm2
 # CHECK-NEXT: 5.     1     1.0    1.0    0.0       vsqrtps	%xmm0, %xmm2
 # CHECK-NEXT: 6.     1     1.0    1.0    17.0      vaddps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 7.     1     20.0   20.0   0.0       vsqrtps	%ymm0, %ymm2
-

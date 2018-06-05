@@ -2566,10 +2566,12 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
     return Res;
   }
 
-  if (IntInit *II = dyn_cast<IntInit>(TheInit)) {
+  if (isa<IntInit>(TheInit) || isa<BitInit>(TheInit)) {
     if (!OpName.empty())
-      error("Constant int argument should not have a name!");
-    return std::make_shared<TreePatternNode>(II, 1);
+      error("Constant int or bit argument should not have a name!");
+    if (isa<BitInit>(TheInit))
+      TheInit = TheInit->convertInitializerTo(IntRecTy::get());
+    return std::make_shared<TreePatternNode>(TheInit, 1);
   }
 
   if (BitsInit *BI = dyn_cast<BitsInit>(TheInit)) {

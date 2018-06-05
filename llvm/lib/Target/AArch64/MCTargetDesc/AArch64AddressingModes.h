@@ -768,10 +768,16 @@ static inline bool isSVEMaskOfIdenticalElements(int64_t Imm) {
 /// Returns true if Imm is valid for CPY/DUP.
 template <typename T>
 static inline bool isSVECpyImm(int64_t Imm) {
+  bool IsImm8 = int8_t(Imm) == Imm;
+  bool IsImm16 = int16_t(Imm & ~0xff) == Imm;
+
   if (std::is_same<int8_t, typename std::make_signed<T>::type>::value)
-    return uint8_t(Imm) == Imm || int8_t(Imm) == Imm;
-  else
-    return int8_t(Imm) == Imm || int16_t(Imm & ~0xff) == Imm;
+    return IsImm8 || uint8_t(Imm) == Imm;
+
+  if (std::is_same<int16_t, typename std::make_signed<T>::type>::value)
+    return IsImm8 || IsImm16 || uint16_t(Imm & ~0xff) == Imm;
+
+  return IsImm8 || IsImm16;
 }
 
 /// Returns true if Imm is valid for ADD/SUB.

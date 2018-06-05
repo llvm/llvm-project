@@ -17,28 +17,12 @@
 #include "cxx_proto.pb.h"
 #include "handle-cxx/handle_cxx.h"
 #include "proto-to-cxx/proto_to_cxx.h"
-
+#include "fuzzer-initialize/fuzzer_initialize.h"
 #include "src/libfuzzer/libfuzzer_macro.h"
-
-#include <cstring>
 
 using namespace clang_fuzzer;
 
-static std::vector<const char *> CLArgs;
-
-extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
-  CLArgs.push_back("-O2");
-  for (int I = 1; I < *argc; I++) {
-    if (strcmp((*argv)[I], "-ignore_remaining_args=1") == 0) {
-      for (I++; I < *argc; I++)
-        CLArgs.push_back((*argv)[I]);
-      break;
-    }
-  }
-  return 0;
-}
-
 DEFINE_BINARY_PROTO_FUZZER(const Function& input) {
   auto S = FunctionToString(input);
-  HandleCXX(S, CLArgs);
+  HandleCXX(S, GetCLArgs());
 }

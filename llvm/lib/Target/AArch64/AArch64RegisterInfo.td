@@ -859,6 +859,22 @@ def ZPR32   : ZPRRegOp<"s", ZPRAsmOp32,  ZPR>;
 def ZPR64   : ZPRRegOp<"d", ZPRAsmOp64,  ZPR>;
 def ZPR128  : ZPRRegOp<"q", ZPRAsmOp128, ZPR>;
 
+class FPRasZPR<int Width> : AsmOperandClass{
+  let Name = "FPR" # Width # "asZPR";
+  let PredicateMethod = "isFPRasZPR<AArch64::FPR" # Width # "RegClassID>";
+  let RenderMethod = "addFPRasZPRRegOperands<" # Width # ">";
+}
+
+class FPRasZPROperand<int Width> : RegisterOperand<ZPR> {
+  let ParserMatchClass = FPRasZPR<Width>;
+  let PrintMethod = "printZPRasFPR<" # Width # ">";
+}
+
+def FPR8asZPR   : FPRasZPROperand<8>;
+def FPR16asZPR  : FPRasZPROperand<16>;
+def FPR32asZPR  : FPRasZPROperand<32>;
+def FPR64asZPR  : FPRasZPROperand<64>;
+def FPR128asZPR : FPRasZPROperand<128>;
 
 let Namespace = "AArch64" in {
   def zsub0 : SubRegIndex<128, -1>;

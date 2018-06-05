@@ -113,9 +113,6 @@ public:
     }
 
     this->MCountName = "\01mcount";
-
-    // Cap vector alignment at 16 bytes for all Darwin platforms.
-    this->MaxVectorAlign = 128;
   }
 
   std::string isValidSectionSpecifier(StringRef SR) const override {

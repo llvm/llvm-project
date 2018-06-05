@@ -1,10 +1,10 @@
-malloc 8 16
-malloc 16 8
-malloc 64 32
-malloc 1 8
-malloc 64 32
-malloc 64 8
-malloc 1024 32
-malloc 1 16
-malloc 8 16
-malloc 1024 16
+L1 = malloc 8 16
+L2 = malloc 16 8
+L3 = malloc 64 32
+L4 = malloc 1 8
+L5 = malloc 64 32
+L6 = malloc 64 8
+L7 = malloc 1024 32
+L8 = malloc 1 16
+L9 = malloc 8 16
+L10 = malloc 1024 16

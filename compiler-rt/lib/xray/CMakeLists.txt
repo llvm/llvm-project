@@ -65,6 +65,10 @@ include_directories(../../include)
 
 set(XRAY_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 set(XRAY_COMMON_DEFINITIONS XRAY_HAS_EXCEPTIONS=1)
+
+# We don't need RTTI in XRay, so turn that off.
+append_rtti_flag(OFF XRAY_CFLAGS)
+
 append_list_if(
   COMPILER_RT_HAS_XRAY_COMPILER_FLAG XRAY_SUPPORTED=1 XRAY_COMMON_DEFINITIONS)
 append_list_if(

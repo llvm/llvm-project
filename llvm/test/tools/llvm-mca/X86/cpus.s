@@ -39,4 +39,3 @@ add %edi, %eax
 # SKX-AVX512-NEXT:  Block RThroughput: 0.3
 # SLM-NEXT:         Block RThroughput: 0.5
 # ZNVER1-NEXT:      Block RThroughput: 0.3
-

@@ -4947,13 +4947,12 @@ bool AArch64InstrInfo::canOutlineWithoutLRSave(
   return LRU.available(AArch64::LR);
 }
 
-AArch64GenInstrInfo::MachineOutlinerInfo
+outliner::TargetCostInfo
 AArch64InstrInfo::getOutlininingCandidateInfo(
-    std::vector<
-        std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
-        &RepeatedSequenceLocs) const {
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize = std::accumulate(
-      RepeatedSequenceLocs[0].first, std::next(RepeatedSequenceLocs[0].second),
+      RepeatedSequenceLocs[0].front(),
+      std::next(RepeatedSequenceLocs[0].back()),
       0, [this](unsigned Sum, const MachineInstr &MI) {
         return Sum + getInstSizeInBytes(MI);
       });
@@ -4962,15 +4961,14 @@ AArch64InstrInfo::getOutlininingCandidateInfo(
   unsigned NumBytesForCall = 12;
   unsigned NumBytesToCreateFrame = 4;
 
-  auto DoesntNeedLRSave =
-      [this](std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>
-                 &I) { return canOutlineWithoutLRSave(I.second); };
+  auto DoesntNeedLRSave = 
+    [this](outliner::Candidate &I) {return canOutlineWithoutLRSave(I.back());};
 
-  unsigned LastInstrOpcode = RepeatedSequenceLocs[0].second->getOpcode();
+  unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back()->getOpcode();
 
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
-  if (RepeatedSequenceLocs[0].second->isTerminator()) {
+  if (RepeatedSequenceLocs[0].back()->isTerminator()) {
     CallID = MachineOutlinerTailCall;
     FrameID = MachineOutlinerTailCall;
     NumBytesForCall = 4;
@@ -4995,7 +4993,8 @@ AArch64InstrInfo::getOutlininingCandidateInfo(
 
   // Check if the range contains a call. These require a save + restore of the
   // link register.
-  if (std::any_of(RepeatedSequenceLocs[0].first, RepeatedSequenceLocs[0].second,
+  if (std::any_of(RepeatedSequenceLocs[0].front(),
+                  RepeatedSequenceLocs[0].back(),
                   [](const MachineInstr &MI) { return MI.isCall(); }))
     NumBytesToCreateFrame += 8; // Save + restore the link register.
 
@@ -5005,10 +5004,10 @@ AArch64InstrInfo::getOutlininingCandidateInfo(
   // it being valid to tail call this sequence. We should consider this as well.
   else if (FrameID != MachineOutlinerThunk &&
            FrameID != MachineOutlinerTailCall &&
-           RepeatedSequenceLocs[0].second->isCall())
+           RepeatedSequenceLocs[0].back()->isCall())
     NumBytesToCreateFrame += 8;
 
-  return MachineOutlinerInfo(SequenceSize, NumBytesForCall,
+  return outliner::TargetCostInfo(SequenceSize, NumBytesForCall,
                              NumBytesToCreateFrame, CallID, FrameID);
 }
 
@@ -5062,7 +5061,7 @@ AArch64InstrInfo::getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const {
   return Flags;
 }
 
-AArch64GenInstrInfo::MachineOutlinerInstrType
+outliner::InstrType
 AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
                                    unsigned Flags) const {
   MachineInstr &MI = *MIT;
@@ -5072,45 +5071,45 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
 
   // Don't outline LOHs.
   if (FuncInfo->getLOHRelated().count(&MI))
-    return MachineOutlinerInstrType::Illegal;
+    return outliner::InstrType::Illegal;
 
   // Don't allow debug values to impact outlining type.
   if (MI.isDebugInstr() || MI.isIndirectDebugValue())
-    return MachineOutlinerInstrType::Invisible;
+    return outliner::InstrType::Invisible;
 
   // At this point, KILL instructions don't really tell us much so we can go
   // ahead and skip over them.
   if (MI.isKill())
-    return MachineOutlinerInstrType::Invisible;
+    return outliner::InstrType::Invisible;
   
   // Is this a terminator for a basic block?
   if (MI.isTerminator()) {
 
     // Is this the end of a function?
     if (MI.getParent()->succ_empty())
-      return MachineOutlinerInstrType::Legal;
+      return outliner::InstrType::Legal;
     
     // It's not, so don't outline it.
-    return MachineOutlinerInstrType::Illegal;
+    return outliner::InstrType::Illegal;
   }
 
   // Make sure none of the operands are un-outlinable.
   for (const MachineOperand &MOP : MI.operands()) {
     if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
         MOP.isTargetIndex())
-      return MachineOutlinerInstrType::Illegal;
+      return outliner::InstrType::Illegal;
 
     // If it uses LR or W30 explicitly, then don't touch it.
     if (MOP.isReg() && !MOP.isImplicit() &&
         (MOP.getReg() == AArch64::LR || MOP.getReg() == AArch64::W30))
-      return MachineOutlinerInstrType::Illegal;
+      return outliner::InstrType::Illegal;
   }
 
   // Special cases for instructions that can always be outlined, but will fail
   // the later tests. e.g, ADRPs, which are PC-relative use LR, but can always
   // be outlined because they don't require a *specific* value to be in LR.
   if (MI.getOpcode() == AArch64::ADRP)
-    return MachineOutlinerInstrType::Legal;
+    return outliner::InstrType::Legal;
 
   // If MI is a call we might be able to outline it. We don't want to outline
   // any calls that rely on the position of items on the stack. When we outline
@@ -5139,15 +5138,15 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     // Never outline calls to mcount.  There isn't any rule that would require
     // this, but the Linux kernel's "ftrace" feature depends on it.
     if (Callee && Callee->getName() == "\01_mcount")
-      return MachineOutlinerInstrType::Illegal;
+      return outliner::InstrType::Illegal;
 
     // If we don't know anything about the callee, assume it depends on the
     // stack layout of the caller. In that case, it's only legal to outline
     // as a tail-call.  Whitelist the call instructions we know about so we
     // don't get unexpected results with call pseudo-instructions.
-    auto UnknownCallOutlineType = MachineOutlinerInstrType::Illegal;
+    auto UnknownCallOutlineType = outliner::InstrType::Illegal;
     if (MI.getOpcode() == AArch64::BLR || MI.getOpcode() == AArch64::BL)
-      UnknownCallOutlineType = MachineOutlinerInstrType::LegalTerminator;
+      UnknownCallOutlineType = outliner::InstrType::LegalTerminator;
 
     if (!Callee)
       return UnknownCallOutlineType;
@@ -5170,17 +5169,17 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
 
     // At this point, we can say that CalleeMF ought to not pass anything on the
     // stack. Therefore, we can outline it.
-    return MachineOutlinerInstrType::Legal;
+    return outliner::InstrType::Legal;
   }
 
   // Don't outline positions.
   if (MI.isPosition())
-    return MachineOutlinerInstrType::Illegal;
+    return outliner::InstrType::Illegal;
 
   // Don't touch the link register or W30.
   if (MI.readsRegister(AArch64::W30, &getRegisterInfo()) ||
       MI.modifiesRegister(AArch64::W30, &getRegisterInfo()))
-    return MachineOutlinerInstrType::Illegal;
+    return outliner::InstrType::Illegal;
 
   // Does this use the stack?
   if (MI.modifiesRegister(AArch64::SP, &RI) ||
@@ -5229,13 +5228,13 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     // SUBXris are extremely common in prologue/epilogue code, so supporting
     // them in the outliner can be a pretty big win!
     if (!MightNeedStackFixUp)
-      return MachineOutlinerInstrType::Legal;
+      return outliner::InstrType::Legal;
 
     // Any modification of SP will break our code to save/restore LR.
     // FIXME: We could handle some instructions which add a constant offset to
     // SP, with a bit more work.
     if (MI.modifiesRegister(AArch64::SP, &RI))
-      return MachineOutlinerInstrType::Illegal;
+      return outliner::InstrType::Illegal;
 
     // At this point, we have a stack instruction that we might need to fix
     // up. We'll handle it if it's a load or store.
@@ -5247,7 +5246,7 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
       // Does it allow us to offset the base register and is the base SP?
       if (!getMemOpBaseRegImmOfsWidth(MI, Base, Offset, DummyWidth, &RI) ||
           Base != AArch64::SP)
-        return MachineOutlinerInstrType::Illegal;
+        return outliner::InstrType::Illegal;
 
       // Find the minimum/maximum offset for this instruction and check if
       // fixing it up would be in range.
@@ -5260,19 +5259,19 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
       // to a MIR test, it really ought to be checked.
       Offset += 16; // Update the offset to what it would be if we outlined.
       if (Offset < MinOffset * Scale || Offset > MaxOffset * Scale)
-        return MachineOutlinerInstrType::Illegal;
+        return outliner::InstrType::Illegal;
 
       // It's in range, so we can outline it.
-      return MachineOutlinerInstrType::Legal;
+      return outliner::InstrType::Legal;
     }
 
     // FIXME: Add handling for instructions like "add x0, sp, #8".
 
     // We can't fix it up, so don't outline it.
-    return MachineOutlinerInstrType::Illegal;
+    return outliner::InstrType::Illegal;
   }
 
-  return MachineOutlinerInstrType::Legal;
+  return outliner::InstrType::Legal;
 }
 
 void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
@@ -5305,10 +5304,10 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 
 void AArch64InstrInfo::insertOutlinerEpilogue(
     MachineBasicBlock &MBB, MachineFunction &MF,
-    const MachineOutlinerInfo &MInfo) const {
+    const outliner::TargetCostInfo &TCI) const {
   // For thunk outlining, rewrite the last instruction from a call to a
   // tail-call.
-  if (MInfo.FrameConstructionID == MachineOutlinerThunk) {
+  if (TCI.FrameConstructionID == MachineOutlinerThunk) {
     MachineInstr *Call = &*--MBB.instr_end();
     unsigned TailOpcode;
     if (Call->getOpcode() == AArch64::BL) {
@@ -5331,7 +5330,7 @@ void AArch64InstrInfo::insertOutlinerEpilogue(
   if (std::any_of(MBB.instr_begin(), MBB.instr_end(), IsNonTailCall)) {
     // Fix up the instructions in the range, since we're going to modify the
     // stack.
-    assert(MInfo.FrameConstructionID != MachineOutlinerDefault &&
+    assert(TCI.FrameConstructionID != MachineOutlinerDefault &&
            "Can only fix up stack references once");
     fixupPostOutline(MBB);
 
@@ -5341,8 +5340,8 @@ void AArch64InstrInfo::insertOutlinerEpilogue(
     MachineBasicBlock::iterator It = MBB.begin();
     MachineBasicBlock::iterator Et = MBB.end();
 
-    if (MInfo.FrameConstructionID == MachineOutlinerTailCall ||
-        MInfo.FrameConstructionID == MachineOutlinerThunk)
+    if (TCI.FrameConstructionID == MachineOutlinerTailCall ||
+        TCI.FrameConstructionID == MachineOutlinerThunk)
       Et = std::prev(MBB.end());
 
     // Insert a save before the outlined region
@@ -5382,8 +5381,8 @@ void AArch64InstrInfo::insertOutlinerEpilogue(
   }
 
   // If this is a tail call outlined function, then there's already a return.
-  if (MInfo.FrameConstructionID == MachineOutlinerTailCall ||
-      MInfo.FrameConstructionID == MachineOutlinerThunk)
+  if (TCI.FrameConstructionID == MachineOutlinerTailCall ||
+      TCI.FrameConstructionID == MachineOutlinerThunk)
     return;
 
   // It's not a tail call, so we have to insert the return ourselves.
@@ -5392,7 +5391,7 @@ void AArch64InstrInfo::insertOutlinerEpilogue(
   MBB.insert(MBB.end(), ret);
 
   // Did we have to modify the stack by saving the link register?
-  if (MInfo.FrameConstructionID == MachineOutlinerNoLRSave)
+  if (TCI.FrameConstructionID == MachineOutlinerNoLRSave)
     return;
 
   // We modified the stack.
@@ -5402,14 +5401,14 @@ void AArch64InstrInfo::insertOutlinerEpilogue(
 
 void AArch64InstrInfo::insertOutlinerPrologue(
     MachineBasicBlock &MBB, MachineFunction &MF,
-    const MachineOutlinerInfo &MInfo) const {}
+    const outliner::TargetCostInfo &TCI) const {}
 
 MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
     Module &M, MachineBasicBlock &MBB, MachineBasicBlock::iterator &It,
-    MachineFunction &MF, const MachineOutlinerInfo &MInfo) const {
+    MachineFunction &MF, const outliner::TargetCostInfo &TCI) const {
 
   // Are we tail calling?
-  if (MInfo.CallConstructionID == MachineOutlinerTailCall) {
+  if (TCI.CallConstructionID == MachineOutlinerTailCall) {
     // If yes, then we can just branch to the label.
     It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(AArch64::TCRETURNdi))
                             .addGlobalAddress(M.getNamedValue(MF.getName()))
@@ -5418,8 +5417,8 @@ MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
   }
 
   // Are we saving the link register?
-  if (MInfo.CallConstructionID == MachineOutlinerNoLRSave ||
-      MInfo.CallConstructionID == MachineOutlinerThunk) {
+  if (TCI.CallConstructionID == MachineOutlinerNoLRSave ||
+      TCI.CallConstructionID == MachineOutlinerThunk) {
     // No, so just insert the call.
     It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(AArch64::BL))
                             .addGlobalAddress(M.getNamedValue(MF.getName())));

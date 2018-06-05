@@ -9,4 +9,3 @@
 # CHECK:      llvm-mca-markers-7.s:7:2: warning: Ignoring invalid region end
 # CHECK-NEXT: # LLVM-MCA-END
 # CHECK-NEXT:  ^
-

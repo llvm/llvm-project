@@ -44,6 +44,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SubEngine.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConstraintManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -2353,4 +2354,47 @@ TaintBugVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
     return nullptr;
 
   return std::make_shared<PathDiagnosticEventPiece>(L, "Taint originated here");
+}
+
+static bool
+areConstraintsUnfeasible(BugReporterContext &BRC,
+                         const llvm::SmallVector<ConstraintRangeTy, 32> &Cs) {
+  // Create a refutation manager
+  std::unique_ptr<ConstraintManager> RefutationMgr = CreateZ3ConstraintManager(
+      BRC.getStateManager(), BRC.getStateManager().getOwningEngine());
+
+  SMTConstraintManager *SMTRefutationMgr =
+      static_cast<SMTConstraintManager *>(RefutationMgr.get());
+
+  // Add constraints to the solver
+  for (const auto &C : Cs)
+    SMTRefutationMgr->addRangeConstraints(C);
+
+  // And check for satisfiability
+  return SMTRefutationMgr->isModelFeasible().isConstrainedFalse();
+}
+
+std::shared_ptr<PathDiagnosticPiece>
+FalsePositiveRefutationBRVisitor::VisitNode(const ExplodedNode *N,
+                                            const ExplodedNode *PrevN,
+                                            BugReporterContext &BRC,
+                                            BugReport &BR) {
+  // Collect the constraint for the current state
+  const ConstraintRangeTy &CR = N->getState()->get<ConstraintRange>();
+  Constraints.push_back(CR);
+
+  // If there are no predecessor, we reached the root node. In this point,
+  // a new refutation manager will be created and the path will be checked
+  // for reachability
+  if (PrevN->pred_size() == 0 && areConstraintsUnfeasible(BRC, Constraints)) {
+    BR.markInvalid("Infeasible constraints", N->getLocationContext());
+  }
+
+  return nullptr;
+}
+
+void FalsePositiveRefutationBRVisitor::Profile(
+    llvm::FoldingSetNodeID &ID) const {
+  static int Tag = 0;
+  ID.AddPointer(&Tag);
 }
