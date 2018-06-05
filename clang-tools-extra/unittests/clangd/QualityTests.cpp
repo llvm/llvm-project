@@ -135,7 +135,7 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   EXPECT_LT(PoorNameMatch.evaluate(), Default.evaluate());
 
   SymbolRelevanceSignals WithProximity;
-  WithProximity.ProximityScore = 0.2;
+  WithProximity.ProximityScore = 0.2f;
   EXPECT_LT(Default.evaluate(), WithProximity.evaluate());
 }
 
