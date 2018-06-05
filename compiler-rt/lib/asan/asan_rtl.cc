@@ -384,6 +384,7 @@ static void AsanInitInternal() {
   asan_init_is_running = true;
 
   CacheBinaryName();
+  CheckASLR();
 
   // Initialize flags. This must be done early, because most of the
   // initialization steps look at flags().
