@@ -4,6 +4,8 @@ add_lldb_unittest(ExpressionTests
 
   LINK_LIBS
     lldbCore
-    lldbPluginExpressionParserGo
     lldbPluginExpressionParserClang
+    lldbPluginExpressionParserGo
+    lldbUtility
+    lldbUtilityHelpers
   )

@@ -38,9 +38,12 @@ void ManualDWARFIndex::Index() {
 
   std::vector<IndexSet> sets(num_compile_units);
 
-  // std::vector<bool> might be implemented using bit test-and-set, so use
-  // uint8_t instead.
-  std::vector<uint8_t> clear_cu_dies(num_compile_units, false);
+  //----------------------------------------------------------------------
+  // Keep memory down by clearing DIEs for any compile units if indexing
+  // caused us to load the compile unit's DIEs.
+  //----------------------------------------------------------------------
+  std::vector<llvm::Optional<DWARFUnit::ScopedExtractDIEs>>
+      clear_cu_dies(num_compile_units);
   auto parser_fn = [&](size_t cu_idx) {
     DWARFUnit *dwarf_cu = debug_info.GetCompileUnitAtIndex(cu_idx);
     if (dwarf_cu)
@@ -49,12 +52,8 @@ void ManualDWARFIndex::Index() {
 
   auto extract_fn = [&debug_info, &clear_cu_dies](size_t cu_idx) {
     DWARFUnit *dwarf_cu = debug_info.GetCompileUnitAtIndex(cu_idx);
-    if (dwarf_cu) {
-      // dwarf_cu->ExtractDIEsIfNeeded() will return false if the DIEs
-      // for a compile unit have already been parsed.
-      if (dwarf_cu->ExtractDIEsIfNeeded())
-        clear_cu_dies[cu_idx] = true;
-    }
+    if (dwarf_cu)
+      clear_cu_dies[cu_idx] = dwarf_cu->ExtractDIEsScoped();
   };
 
   // Create a task runner that extracts dies for each DWARF compile unit in a
@@ -89,15 +88,6 @@ void ManualDWARFIndex::Index() {
                      [&]() { finalize_fn(&IndexSet::globals); },
                      [&]() { finalize_fn(&IndexSet::types); },
                      [&]() { finalize_fn(&IndexSet::namespaces); });
-
-  //----------------------------------------------------------------------
-  // Keep memory down by clearing DIEs for any compile units if indexing
-  // caused us to load the compile unit's DIEs.
-  //----------------------------------------------------------------------
-  for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-    if (clear_cu_dies[cu_idx])
-      debug_info.GetCompileUnitAtIndex(cu_idx)->ClearDIEs();
-  }
 }
 
 void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, IndexSet &set) {

@@ -9,6 +9,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
 #include "gtest/gtest.h"
 
@@ -23,7 +24,7 @@ static std::string ComputeClangDir(std::string lldb_shlib_path,
   return clang_dir.GetPath();
 }
 
-TEST_F(HostInfoTest, MacOSX) {
+TEST(ClangHostTest, MacOSX) {
   // This returns whatever the POSIX fallback returns.
   std::string posix = "/usr/lib/liblldb.dylib";
   EXPECT_FALSE(ComputeClangDir(posix).empty());

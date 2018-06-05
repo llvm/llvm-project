@@ -18,6 +18,7 @@
 #include "llvm/Support/Threading.h"
 
 // Project includes
+#include "lldb/Host/HostInfo.h"
 #if !defined(_WIN32)
 #include "lldb/Host/posix/HostInfoPosix.h"
 #endif
