@@ -19,6 +19,7 @@
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -30,6 +31,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionCOFF.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -538,6 +540,42 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
 void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
+
+  if (TT.isOSBinFormatELF()) {
+    // Assemble feature flags that may require creation of a note section.
+    unsigned FeatureFlagsAnd = 0;
+    if (M.getModuleFlag("cf-protection-branch"))
+      FeatureFlagsAnd |= ELF::GNU_PROPERTY_X86_FEATURE_1_IBT;
+    if (M.getModuleFlag("cf-protection-return"))
+      FeatureFlagsAnd |= ELF::GNU_PROPERTY_X86_FEATURE_1_SHSTK;
+
+    if (FeatureFlagsAnd) {
+      // Emit a .note.gnu.property section with the flags.
+      if (!TT.isArch32Bit() && !TT.isArch64Bit())
+        llvm_unreachable("CFProtection used on invalid architecture!");
+      MCSection *Cur = OutStreamer->getCurrentSectionOnly();
+      MCSection *Nt = MMI->getContext().getELFSection(
+          ".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
+      OutStreamer->SwitchSection(Nt);
+
+      // Emitting note header.
+      int WordSize = TT.isArch64Bit() ? 8 : 4;
+      EmitAlignment(WordSize == 4 ? 2 : 3);
+      OutStreamer->EmitIntValue(4, 4 /*size*/); // data size for "GNU\0"
+      OutStreamer->EmitIntValue(8 + WordSize, 4 /*size*/); // Elf_Prop size
+      OutStreamer->EmitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4 /*size*/);
+      OutStreamer->EmitBytes(StringRef("GNU", 4)); // note name
+
+      // Emitting an Elf_Prop for the CET properties.
+      OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
+      OutStreamer->EmitIntValue(WordSize, 4);               // data size
+      OutStreamer->EmitIntValue(FeatureFlagsAnd, WordSize); // data
+      EmitAlignment(WordSize == 4 ? 2 : 3);                 // padding
+
+      OutStreamer->endSection(Nt);
+      OutStreamer->SwitchSection(Cur);
+    }
+  }
 
   if (TT.isOSBinFormatMachO())
     OutStreamer->SwitchSection(getObjFileLowering().getTextSection());

@@ -2076,7 +2076,7 @@ define void @trunc_usat_v8i32_v8i8_store(<8 x i32> %a0, <8 x i8> *%p1) {
 ; AVX1-NEXT:    vpminud %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpminud %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -2087,7 +2087,7 @@ define void @trunc_usat_v8i32_v8i8_store(<8 x i32> %a0, <8 x i8> *%p1) {
 ; AVX2-NEXT:    vpminud %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

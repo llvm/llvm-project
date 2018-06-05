@@ -173,6 +173,8 @@ Changes to the DAG infrastructure
   using ``setOperationAction`` in their ``TargetLowering``. New backends
   should use UADDO/ADDCARRY/USUBO/SUBCARRY instead of the deprecated opcodes.
 
+* The SETCCE opcode has now been removed in favor of SETCCCARRY.
+
 External Open Source Projects Using LLVM 7
 ==========================================
 

@@ -329,7 +329,6 @@ namespace {
     SDValue visitVSELECT(SDNode *N);
     SDValue visitSELECT_CC(SDNode *N);
     SDValue visitSETCC(SDNode *N);
-    SDValue visitSETCCE(SDNode *N);
     SDValue visitSETCCCARRY(SDNode *N);
     SDValue visitSIGN_EXTEND(SDNode *N);
     SDValue visitZERO_EXTEND(SDNode *N);
@@ -1538,7 +1537,6 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VSELECT:            return visitVSELECT(N);
   case ISD::SELECT_CC:          return visitSELECT_CC(N);
   case ISD::SETCC:              return visitSETCC(N);
-  case ISD::SETCCE:             return visitSETCCE(N);
   case ISD::SETCCCARRY:         return visitSETCCCARRY(N);
   case ISD::SIGN_EXTEND:        return visitSIGN_EXTEND(N);
   case ISD::ZERO_EXTEND:        return visitZERO_EXTEND(N);
@@ -2055,6 +2053,11 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
       DAG.haveNoCommonBitsSet(N0, N1))
     return DAG.getNode(ISD::OR, DL, VT, N0, N1);
 
+  // fold (add (xor a, -1), 1) -> (sub 0, a)
+  if (isBitwiseNot(N0) && isOneConstantOrOneSplatConstant(N1))
+    return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                       N0.getOperand(0));
+
   if (SDValue Combined = visitADDLike(N0, N1, N))
     return Combined;
 
@@ -2190,6 +2193,38 @@ SDValue DAGCombiner::visitADDC(SDNode *N) {
   return SDValue();
 }
 
+static SDValue flipBoolean(SDValue V, const SDLoc &DL, EVT VT,
+                           SelectionDAG &DAG, const TargetLowering &TLI) {
+  SDValue Cst;
+  switch (TLI.getBooleanContents(VT)) {
+  case TargetLowering::ZeroOrOneBooleanContent:
+  case TargetLowering::UndefinedBooleanContent:
+    Cst = DAG.getConstant(1, DL, VT);
+    break;
+  case TargetLowering::ZeroOrNegativeOneBooleanContent:
+    Cst = DAG.getConstant(-1, DL, VT);
+    break;
+  }
+
+  return DAG.getNode(ISD::XOR, DL, VT, V, Cst);
+}
+
+static bool isBooleanFlip(SDValue V, EVT VT, const TargetLowering &TLI) {
+  if (V.getOpcode() != ISD::XOR) return false;
+  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V.getOperand(1));
+  if (!Const) return false;
+
+  switch(TLI.getBooleanContents(VT)) {
+    case TargetLowering::ZeroOrOneBooleanContent:
+      return Const->isOne();
+    case TargetLowering::ZeroOrNegativeOneBooleanContent:
+      return Const->isAllOnesValue();
+    case TargetLowering::UndefinedBooleanContent:
+      return (Const->getAPIntValue() & 0x01) == 1;
+  }
+  llvm_unreachable("Unsupported boolean content");
+}
+
 SDValue DAGCombiner::visitUADDO(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -2219,6 +2254,15 @@ SDValue DAGCombiner::visitUADDO(SDNode *N) {
   if (DAG.computeOverflowKind(N0, N1) == SelectionDAG::OFK_Never)
     return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
                      DAG.getConstant(0, DL, CarryVT));
+
+  // fold (uaddo (xor a, -1), 1) -> (usub 0, a) and flip carry.
+  if (isBitwiseNot(N0) && isOneConstantOrOneSplatConstant(N1)) {
+    SDValue Sub = DAG.getNode(ISD::USUBO, DL, N->getVTList(),
+                              DAG.getConstant(0, DL, VT),
+                              N0.getOperand(0));
+    return CombineTo(N, Sub,
+                     flipBoolean(Sub.getValue(1), DL, CarryVT, DAG, TLI));
+  }
 
   if (SDValue Combined = visitUADDOLike(N0, N1, N))
     return Combined;
@@ -2289,15 +2333,26 @@ SDValue DAGCombiner::visitADDCARRY(SDNode *N) {
       return DAG.getNode(ISD::UADDO, DL, N->getVTList(), N0, N1);
   }
 
+  EVT CarryVT = CarryIn.getValueType();
+
   // fold (addcarry 0, 0, X) -> (and (ext/trunc X), 1) and no carry.
   if (isNullConstant(N0) && isNullConstant(N1)) {
     EVT VT = N0.getValueType();
-    EVT CarryVT = CarryIn.getValueType();
     SDValue CarryExt = DAG.getBoolExtOrTrunc(CarryIn, DL, VT, CarryVT);
     AddToWorklist(CarryExt.getNode());
     return CombineTo(N, DAG.getNode(ISD::AND, DL, VT, CarryExt,
                                     DAG.getConstant(1, DL, VT)),
                      DAG.getConstant(0, DL, CarryVT));
+  }
+
+  // fold (addcarry (xor a, -1), 0, !b) -> (subcarry 0, a, b) and flip carry.
+  if (isBitwiseNot(N0) && isNullConstant(N1) &&
+      isBooleanFlip(CarryIn, CarryVT, TLI)) {
+    SDValue Sub = DAG.getNode(ISD::SUBCARRY, DL, N->getVTList(),
+                              DAG.getConstant(0, DL, N0.getValueType()),
+                              N0.getOperand(0), CarryIn.getOperand(0));
+    return CombineTo(N, Sub,
+                     flipBoolean(Sub.getValue(1), DL, CarryVT, DAG, TLI));
   }
 
   if (SDValue Combined = visitADDCARRYLike(N0, N1, CarryIn, N))
@@ -7357,19 +7412,6 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   }
 
   return Combined;
-}
-
-SDValue DAGCombiner::visitSETCCE(SDNode *N) {
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-  SDValue Carry = N->getOperand(2);
-  SDValue Cond = N->getOperand(3);
-
-  // If Carry is false, fold to a regular SETCC.
-  if (Carry.getOpcode() == ISD::CARRY_FALSE)
-    return DAG.getNode(ISD::SETCC, SDLoc(N), N->getVTList(), LHS, RHS, Cond);
-
-  return SDValue();
 }
 
 SDValue DAGCombiner::visitSETCCCARRY(SDNode *N) {

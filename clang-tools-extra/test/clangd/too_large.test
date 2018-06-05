@@ -4,4 +4,4 @@
 #
 Content-Length: 2147483648
 
-# STDERR: Skipped overly large message
+# STDERR: Refusing to read message

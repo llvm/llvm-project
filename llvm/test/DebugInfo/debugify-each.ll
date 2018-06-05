@@ -16,17 +16,17 @@
 ; Check that stripped textual IR compares equal before and after applying
 ; debugify.
 ; RUN: opt -O1 < %s -S -o - | \
-; RUN:   opt -strip -strip-dead-prototypes -strip-module-flags -S -o %t.before
+; RUN:   opt -strip -strip-dead-prototypes -strip-named-metadata -S -o %t.before
 ; RUN: opt -O1 -debugify-each < %s -S -o - | \
-; RUN:   opt -strip -strip-dead-prototypes -strip-module-flags -S -o %t.after
+; RUN:   opt -strip -strip-dead-prototypes -strip-named-metadata -S -o %t.after
 ; RUN: diff %t.before %t.after
 
 ; Check that stripped IR compares equal before and after applying debugify.
 ; RUN: opt -O1 < %s | \
-; RUN:   opt -strip -strip-dead-prototypes -strip-module-flags | \
+; RUN:   opt -strip -strip-dead-prototypes -strip-named-metadata | \
 ; RUN:   llvm-dis -o %t.before
 ; RUN: opt -O1 -debugify-each < %s | \
-; RUN:   opt -strip -strip-dead-prototypes -strip-module-flags | \
+; RUN:   opt -strip -strip-dead-prototypes -strip-named-metadata | \
 ; RUN:   llvm-dis -o %t.after
 ; RUN: diff %t.before %t.after
 

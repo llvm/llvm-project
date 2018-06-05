@@ -518,9 +518,11 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     return swapHalfWords(out, Endian == support::little);
   }
   case ARM::fixup_arm_thumb_bl: {
-    // FIXME: We get both thumb1 and thumb2 in here, so we can only check for
-    // the less strict thumb2 value.
-    if (!isInt<26>(Value - 4)) {
+    if (!isInt<25>(Value - 4) ||
+        (!STI.getFeatureBits()[ARM::FeatureThumb2] &&
+         !STI.getFeatureBits()[ARM::HasV8MBaselineOps] &&
+         !STI.getFeatureBits()[ARM::HasV6MOps] &&
+         !isInt<23>(Value - 4))) {
       Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
       return 0;
     }

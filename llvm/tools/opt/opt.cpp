@@ -121,11 +121,12 @@ static cl::opt<bool>
 StripDebug("strip-debug",
            cl::desc("Strip debugger symbol info from translation unit"));
 
-static cl::opt<bool> StripModuleFlags("strip-module-flags",
-                                      cl::desc("Strip module flags metadata"));
-
 static cl::opt<bool>
-DisableInline("disable-inlining", cl::desc("Do not run the inliner pass"));
+    StripNamedMetadata("strip-named-metadata",
+                       cl::desc("Strip module-level named metadata"));
+
+static cl::opt<bool> DisableInline("disable-inlining",
+                                   cl::desc("Do not run the inliner pass"));
 
 static cl::opt<bool>
 DisableOptimizations("disable-opt",
@@ -503,10 +504,13 @@ int main(int argc, char **argv) {
   if (StripDebug)
     StripDebugInfo(*M);
 
-  // Erase module flags metadata, if requested.
-  if (StripModuleFlags)
-    if (NamedMDNode *ModFlags = M->getModuleFlagsMetadata())
-      M->eraseNamedMetadata(ModFlags);
+  // Erase module-level named metadata, if requested.
+  if (StripNamedMetadata) {
+    while (!M->named_metadata_empty()) {
+      NamedMDNode *NMD = &*M->named_metadata_begin();
+      M->eraseNamedMetadata(NMD);
+    }
+  }
 
   // If we are supposed to override the target triple or data layout, do so now.
   if (!TargetTriple.empty())

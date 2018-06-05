@@ -396,7 +396,7 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out,
       SupportedSymbolKinds(defaultSymbolKinds()),
       Server(CDB, FSProvider, /*DiagConsumer=*/*this, Opts) {}
 
-bool ClangdLSPServer::run(std::istream &In, JSONStreamStyle InputStyle) {
+bool ClangdLSPServer::run(std::FILE *In, JSONStreamStyle InputStyle) {
   assert(!IsDone && "Run was called before");
 
   // Set up JSONRPCDispatcher.

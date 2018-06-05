@@ -321,12 +321,10 @@ entry:
 define i128 @addcarry1_not(i128 %n) {
 ; CHECK-LABEL: addcarry1_not:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notq %rsi
-; CHECK-NEXT:    notq %rdi
-; CHECK-NEXT:    addq $1, %rdi
-; CHECK-NEXT:    adcq $0, %rsi
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    negq %rdi
+; CHECK-NEXT:    sbbq %rsi, %rdx
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    retq
   %1 = xor i128 %n, -1
   %2 = add i128 %1, 1

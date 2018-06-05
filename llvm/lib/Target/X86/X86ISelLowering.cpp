@@ -27619,6 +27619,60 @@ X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
   return BB;
 }
 
+/// SetJmp implies future control flow change upon calling the corresponding
+/// LongJmp.
+/// Instead of using the 'return' instruction, the long jump fixes the stack and
+/// performs an indirect branch. To do so it uses the registers that were stored
+/// in the jump buffer (when calling SetJmp).
+/// In case the shadow stack is enabled we need to fix it as well, because some
+/// return addresses will be skipped.
+/// The function will save the SSP for future fixing in the function
+/// emitLongJmpShadowStackFix.
+/// \sa emitLongJmpShadowStackFix
+/// \param [in] MI The temporary Machine Instruction for the builtin.
+/// \param [in] MBB The Machine Basic Block that will be modified.
+void X86TargetLowering::emitSetJmpShadowStackFix(MachineInstr &MI,
+                                                 MachineBasicBlock *MBB) const {
+  DebugLoc DL = MI.getDebugLoc();
+  MachineFunction *MF = MBB->getParent();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  MachineInstrBuilder MIB;
+
+  // Memory Reference
+  MachineInstr::mmo_iterator MMOBegin = MI.memoperands_begin();
+  MachineInstr::mmo_iterator MMOEnd = MI.memoperands_end();
+
+  // Initialize a register with zero.
+  MVT PVT = getPointerTy(MF->getDataLayout());
+  const TargetRegisterClass *PtrRC = getRegClassFor(PVT);
+  unsigned ZReg = MRI.createVirtualRegister(PtrRC);
+  unsigned XorRROpc = (PVT == MVT::i64) ? X86::XOR64rr : X86::XOR32rr;
+  BuildMI(*MBB, MI, DL, TII->get(XorRROpc))
+      .addDef(ZReg)
+      .addReg(ZReg, RegState::Undef)
+      .addReg(ZReg, RegState::Undef);
+
+  // Read the current SSP Register value to the zeroed register.
+  unsigned SSPCopyReg = MRI.createVirtualRegister(PtrRC);
+  unsigned RdsspOpc = (PVT == MVT::i64) ? X86::RDSSPQ : X86::RDSSPD;
+  BuildMI(*MBB, MI, DL, TII->get(RdsspOpc), SSPCopyReg).addReg(ZReg);
+
+  // Write the SSP register value to offset 3 in input memory buffer.
+  unsigned PtrStoreOpc = (PVT == MVT::i64) ? X86::MOV64mr : X86::MOV32mr;
+  MIB = BuildMI(*MBB, MI, DL, TII->get(PtrStoreOpc));
+  const int64_t SSPOffset = 3 * PVT.getStoreSize();
+  const unsigned MemOpndSlot = 1;
+  for (unsigned i = 0; i < X86::AddrNumOperands; ++i) {
+    if (i == X86::AddrDisp)
+      MIB.addDisp(MI.getOperand(MemOpndSlot + i), SSPOffset);
+    else
+      MIB.add(MI.getOperand(MemOpndSlot + i));
+  }
+  MIB.addReg(SSPCopyReg);
+  MIB.setMemRefs(MMOBegin, MMOEnd);
+}
+
 MachineBasicBlock *
 X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const {
@@ -27728,6 +27782,11 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   else
     MIB.addMBB(restoreMBB);
   MIB.setMemRefs(MMOBegin, MMOEnd);
+
+  if (MF->getMMI().getModule()->getModuleFlag("cf-protection-return")) {
+    emitSetJmpShadowStackFix(MI, thisMBB);
+  }
+
   // Setup
   MIB = BuildMI(*thisMBB, MI, DL, TII->get(X86::EH_SjLj_Setup))
           .addMBB(restoreMBB);
@@ -27769,6 +27828,183 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   return sinkMBB;
 }
 
+/// Fix the shadow stack using the previously saved SSP pointer.
+/// \sa emitSetJmpShadowStackFix
+/// \param [in] MI The temporary Machine Instruction for the builtin.
+/// \param [in] MBB The Machine Basic Block that will be modified.
+/// \return The sink MBB that will perform the future indirect branch.
+MachineBasicBlock *
+X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
+                                             MachineBasicBlock *MBB) const {
+  DebugLoc DL = MI.getDebugLoc();
+  MachineFunction *MF = MBB->getParent();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  // Memory Reference
+  MachineInstr::mmo_iterator MMOBegin = MI.memoperands_begin();
+  MachineInstr::mmo_iterator MMOEnd = MI.memoperands_end();
+
+  MVT PVT = getPointerTy(MF->getDataLayout());
+  const TargetRegisterClass *PtrRC = getRegClassFor(PVT);
+
+  // checkSspMBB:
+  //         xor vreg1, vreg1
+  //         rdssp vreg1
+  //         test vreg1, vreg1
+  //         je sinkMBB   # Jump if Shadow Stack is not supported
+  // fallMBB:
+  //         mov buf+24/12(%rip), vreg2
+  //         sub vreg1, vreg2
+  //         jbe sinkMBB  # No need to fix the Shadow Stack
+  // fixShadowMBB:
+  //         shr 3/2, vreg2
+  //         incssp vreg2  # fix the SSP according to the lower 8 bits
+  //         shr 8, vreg2
+  //         je sinkMBB
+  // fixShadowLoopPrepareMBB:
+  //         shl vreg2
+  //         mov 128, vreg3
+  // fixShadowLoopMBB:
+  //         incssp vreg3
+  //         dec vreg2
+  //         jne fixShadowLoopMBB # Iterate until you finish fixing
+  //                              # the Shadow Stack
+  // sinkMBB:
+
+  MachineFunction::iterator I = ++MBB->getIterator();
+  const BasicBlock *BB = MBB->getBasicBlock();
+
+  MachineBasicBlock *checkSspMBB = MF->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *fallMBB = MF->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *fixShadowMBB = MF->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *fixShadowLoopPrepareMBB = MF->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *fixShadowLoopMBB = MF->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *sinkMBB = MF->CreateMachineBasicBlock(BB);
+  MF->insert(I, checkSspMBB);
+  MF->insert(I, fallMBB);
+  MF->insert(I, fixShadowMBB);
+  MF->insert(I, fixShadowLoopPrepareMBB);
+  MF->insert(I, fixShadowLoopMBB);
+  MF->insert(I, sinkMBB);
+
+  // Transfer the remainder of BB and its successor edges to sinkMBB.
+  sinkMBB->splice(sinkMBB->begin(), MBB, MachineBasicBlock::iterator(MI),
+                  MBB->end());
+  sinkMBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+  MBB->addSuccessor(checkSspMBB);
+
+  // Initialize a register with zero.
+  unsigned ZReg = MRI.createVirtualRegister(PtrRC);
+  unsigned XorRROpc = (PVT == MVT::i64) ? X86::XOR64rr : X86::XOR32rr;
+  BuildMI(checkSspMBB, DL, TII->get(XorRROpc))
+      .addDef(ZReg)
+      .addReg(ZReg, RegState::Undef)
+      .addReg(ZReg, RegState::Undef);
+
+  // Read the current SSP Register value to the zeroed register.
+  unsigned SSPCopyReg = MRI.createVirtualRegister(PtrRC);
+  unsigned RdsspOpc = (PVT == MVT::i64) ? X86::RDSSPQ : X86::RDSSPD;
+  BuildMI(checkSspMBB, DL, TII->get(RdsspOpc), SSPCopyReg).addReg(ZReg);
+
+  // Check whether the result of the SSP register is zero and jump directly
+  // to the sink.
+  unsigned TestRROpc = (PVT == MVT::i64) ? X86::TEST64rr : X86::TEST32rr;
+  BuildMI(checkSspMBB, DL, TII->get(TestRROpc))
+      .addReg(SSPCopyReg)
+      .addReg(SSPCopyReg);
+  BuildMI(checkSspMBB, DL, TII->get(X86::JE_1)).addMBB(sinkMBB);
+  checkSspMBB->addSuccessor(sinkMBB);
+  checkSspMBB->addSuccessor(fallMBB);
+
+  // Reload the previously saved SSP register value.
+  unsigned PrevSSPReg = MRI.createVirtualRegister(PtrRC);
+  unsigned PtrLoadOpc = (PVT == MVT::i64) ? X86::MOV64rm : X86::MOV32rm;
+  const int64_t SPPOffset = 3 * PVT.getStoreSize();
+  MachineInstrBuilder MIB =
+      BuildMI(fallMBB, DL, TII->get(PtrLoadOpc), PrevSSPReg);
+  for (unsigned i = 0; i < X86::AddrNumOperands; ++i) {
+    if (i == X86::AddrDisp)
+      MIB.addDisp(MI.getOperand(i), SPPOffset);
+    else
+      MIB.add(MI.getOperand(i));
+  }
+  MIB.setMemRefs(MMOBegin, MMOEnd);
+
+  // Subtract the current SSP from the previous SSP.
+  unsigned SspSubReg = MRI.createVirtualRegister(PtrRC);
+  unsigned SubRROpc = (PVT == MVT::i64) ? X86::SUB64rr : X86::SUB32rr;
+  BuildMI(fallMBB, DL, TII->get(SubRROpc), SspSubReg)
+      .addReg(PrevSSPReg)
+      .addReg(SSPCopyReg);
+
+  // Jump to sink in case PrevSSPReg <= SSPCopyReg.
+  BuildMI(fallMBB, DL, TII->get(X86::JBE_1)).addMBB(sinkMBB);
+  fallMBB->addSuccessor(sinkMBB);
+  fallMBB->addSuccessor(fixShadowMBB);
+
+  // Shift right by 2/3 for 32/64 because incssp multiplies the argument by 4/8.
+  unsigned ShrRIOpc = (PVT == MVT::i64) ? X86::SHR64ri : X86::SHR32ri;
+  unsigned Offset = (PVT == MVT::i64) ? 3 : 2;
+  unsigned SspFirstShrReg = MRI.createVirtualRegister(PtrRC);
+  BuildMI(fixShadowMBB, DL, TII->get(ShrRIOpc), SspFirstShrReg)
+      .addReg(SspSubReg)
+      .addImm(Offset);
+
+  // Increase SSP when looking only on the lower 8 bits of the delta.
+  unsigned IncsspOpc = (PVT == MVT::i64) ? X86::INCSSPQ : X86::INCSSPD;
+  BuildMI(fixShadowMBB, DL, TII->get(IncsspOpc)).addReg(SspFirstShrReg);
+
+  // Reset the lower 8 bits.
+  unsigned SspSecondShrReg = MRI.createVirtualRegister(PtrRC);
+  BuildMI(fixShadowMBB, DL, TII->get(ShrRIOpc), SspSecondShrReg)
+      .addReg(SspFirstShrReg)
+      .addImm(8);
+
+  // Jump if the result of the shift is zero.
+  BuildMI(fixShadowMBB, DL, TII->get(X86::JE_1)).addMBB(sinkMBB);
+  fixShadowMBB->addSuccessor(sinkMBB);
+  fixShadowMBB->addSuccessor(fixShadowLoopPrepareMBB);
+
+  // Do a single shift left.
+  unsigned ShlR1Opc = (PVT == MVT::i64) ? X86::SHL64r1 : X86::SHL32r1;
+  unsigned SspAfterShlReg = MRI.createVirtualRegister(PtrRC);
+  BuildMI(fixShadowLoopPrepareMBB, DL, TII->get(ShlR1Opc), SspAfterShlReg)
+      .addReg(SspSecondShrReg);
+
+  // Save the value 128 to a register (will be used next with incssp).
+  unsigned Value128InReg = MRI.createVirtualRegister(PtrRC);
+  unsigned MovRIOpc = (PVT == MVT::i64) ? X86::MOV64ri32 : X86::MOV32ri;
+  BuildMI(fixShadowLoopPrepareMBB, DL, TII->get(MovRIOpc), Value128InReg)
+      .addImm(128);
+  fixShadowLoopPrepareMBB->addSuccessor(fixShadowLoopMBB);
+
+  // Since incssp only looks at the lower 8 bits, we might need to do several
+  // iterations of incssp until we finish fixing the shadow stack.
+  unsigned DecReg = MRI.createVirtualRegister(PtrRC);
+  unsigned CounterReg = MRI.createVirtualRegister(PtrRC);
+  BuildMI(fixShadowLoopMBB, DL, TII->get(X86::PHI), CounterReg)
+      .addReg(SspAfterShlReg)
+      .addMBB(fixShadowLoopPrepareMBB)
+      .addReg(DecReg)
+      .addMBB(fixShadowLoopMBB);
+
+  // Every iteration we increase the SSP by 128.
+  BuildMI(fixShadowLoopMBB, DL, TII->get(IncsspOpc)).addReg(Value128InReg);
+
+  // Every iteration we decrement the counter by 1.
+  unsigned DecROpc = (PVT == MVT::i64) ? X86::DEC64r : X86::DEC32r;
+  BuildMI(fixShadowLoopMBB, DL, TII->get(DecROpc), DecReg).addReg(CounterReg);
+
+  // Jump if the counter is not zero yet.
+  BuildMI(fixShadowLoopMBB, DL, TII->get(X86::JNE_1)).addMBB(fixShadowLoopMBB);
+  fixShadowLoopMBB->addSuccessor(sinkMBB);
+  fixShadowLoopMBB->addSuccessor(fixShadowLoopMBB);
+
+  return sinkMBB;
+}
+
 MachineBasicBlock *
 X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
                                      MachineBasicBlock *MBB) const {
@@ -27801,13 +28037,21 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
   unsigned PtrLoadOpc = (PVT == MVT::i64) ? X86::MOV64rm : X86::MOV32rm;
   unsigned IJmpOpc = (PVT == MVT::i64) ? X86::JMP64r : X86::JMP32r;
 
+  MachineBasicBlock *thisMBB = MBB;
+
+  // When CET and shadow stack is enabled, we need to fix the Shadow Stack.
+  if (MF->getMMI().getModule()->getModuleFlag("cf-protection-return")) {
+    thisMBB = emitLongJmpShadowStackFix(MI, thisMBB);
+  }
+
   // Reload FP
-  MIB = BuildMI(*MBB, MI, DL, TII->get(PtrLoadOpc), FP);
+  MIB = BuildMI(*thisMBB, MI, DL, TII->get(PtrLoadOpc), FP);
   for (unsigned i = 0; i < X86::AddrNumOperands; ++i)
     MIB.add(MI.getOperand(i));
   MIB.setMemRefs(MMOBegin, MMOEnd);
+
   // Reload IP
-  MIB = BuildMI(*MBB, MI, DL, TII->get(PtrLoadOpc), Tmp);
+  MIB = BuildMI(*thisMBB, MI, DL, TII->get(PtrLoadOpc), Tmp);
   for (unsigned i = 0; i < X86::AddrNumOperands; ++i) {
     if (i == X86::AddrDisp)
       MIB.addDisp(MI.getOperand(i), LabelOffset);
@@ -27815,8 +28059,9 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
       MIB.add(MI.getOperand(i));
   }
   MIB.setMemRefs(MMOBegin, MMOEnd);
+
   // Reload SP
-  MIB = BuildMI(*MBB, MI, DL, TII->get(PtrLoadOpc), SP);
+  MIB = BuildMI(*thisMBB, MI, DL, TII->get(PtrLoadOpc), SP);
   for (unsigned i = 0; i < X86::AddrNumOperands; ++i) {
     if (i == X86::AddrDisp)
       MIB.addDisp(MI.getOperand(i), SPOffset);
@@ -27824,11 +28069,12 @@ X86TargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
       MIB.add(MI.getOperand(i));
   }
   MIB.setMemRefs(MMOBegin, MMOEnd);
+
   // Jump
-  BuildMI(*MBB, MI, DL, TII->get(IJmpOpc)).addReg(Tmp);
+  BuildMI(*thisMBB, MI, DL, TII->get(IJmpOpc)).addReg(Tmp);
 
   MI.eraseFromParent();
-  return MBB;
+  return thisMBB;
 }
 
 void X86TargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
@@ -28496,6 +28742,19 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
         Known.Zero.setHighBits(ShAmt);
       }
     }
+    break;
+  }
+  case X86ISD::PACKUS: {
+    // PACKUS is just a truncation if the upper half is zero.
+    // TODO: Add DemandedElts support.
+    KnownBits Known2;
+    DAG.computeKnownBits(Op.getOperand(0), Known, Depth + 1);
+    DAG.computeKnownBits(Op.getOperand(1), Known2, Depth + 1);
+    Known.One &= Known2.One;
+    Known.Zero &= Known2.Zero;
+    if (Known.countMinLeadingZeros() < BitWidth)
+      Known.resetAll();
+    Known = Known.trunc(BitWidth);
     break;
   }
   case X86ISD::VZEXT: {
