@@ -1,8 +1,7 @@
-# REQUIRES: nowindows
+# XFAIL: windows
 # -> llvm.org/pr24452
-# Rather than XFAILing the test, skip it on Windows because it hangs
-
-# RUN: %cc %p/inputs/break-insert.c -g
+#
+# RUN: %cc -o a.exe %p/inputs/break-insert.c -g
 # RUN: %lldbmi < %s | FileCheck %s
 
 # Test that a breakpoint can be inserted before creating a target.
@@ -10,7 +9,7 @@
 -break-insert breakpoint
 # CHECK: ^done,bkpt={number="1"
 
--file-exec-and-symbols a.out
+-file-exec-and-symbols a.exe
 # CHECK: ^done
 
 -exec-run

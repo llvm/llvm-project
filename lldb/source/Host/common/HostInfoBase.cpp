@@ -116,6 +116,8 @@ llvm::Optional<HostInfoBase::ArchitectureKind> HostInfoBase::ParseArchitectureKi
 bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
   file_spec.Clear();
 
+  assert(type != lldb::ePathTypeClangDir);
+
 #if defined(LLDB_DISABLE_PYTHON)
   if (type == lldb::ePathTypePythonDir)
     return false;
@@ -193,21 +195,6 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
     if (success)
       result = &g_fields->m_lldb_python_dir;
   } break;
-  case lldb::ePathTypeClangDir: {
-    static std::once_flag g_once_flag;
-    static bool success = false;
-    llvm::call_once(g_once_flag, []() {
-      success =
-          HostInfo::ComputeClangDirectory(g_fields->m_lldb_clang_resource_dir);
-      Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
-      if (log)
-        log->Printf(
-            "HostInfoBase::GetLLDBPath(ePathTypeClangResourceDir) => '%s'",
-            g_fields->m_lldb_clang_resource_dir.GetPath().c_str());
-    });
-    if (success)
-      result = &g_fields->m_lldb_clang_resource_dir;
-  } break;
   case lldb::ePathTypeSwiftDir: {
     static std::once_flag g_once_flag;
     static bool success = false;
@@ -283,6 +270,8 @@ bool HostInfoBase::GetLLDBPath(lldb::PathType type, FileSpec &file_spec) {
     if (success)
       result = &g_fields->m_lldb_global_tmp_dir;
   } break;
+  default:
+    llvm_unreachable("Unreachable!");
   }
 
   if (!result)
@@ -393,12 +382,6 @@ bool HostInfoBase::ComputeHeaderDirectory(FileSpec &file_spec) {
 bool HostInfoBase::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
   // TODO(zturner): Figure out how to compute the system plugins directory for
   // all platforms.
-  return false;
-}
-
-bool HostInfoBase::ComputeClangDirectory(FileSpec &file_spec) {
-  // TODO(zturner): Figure out how to compute the clang directory for all
-  // platforms.
   return false;
 }
 
