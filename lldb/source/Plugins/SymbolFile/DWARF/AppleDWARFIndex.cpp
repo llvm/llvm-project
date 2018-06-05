@@ -217,21 +217,14 @@ void AppleDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
   }
 }
 
-void AppleDWARFIndex::GetFunctions(
-    const RegularExpression &regex, DWARFDebugInfo &info,
-    llvm::function_ref<bool(const DWARFDIE &die, bool include_inlines,
-                            lldb_private::SymbolContextList &sc_list)>
-        resolve_function,
-    bool include_inlines, SymbolContextList &sc_list) {
+void AppleDWARFIndex::GetFunctions(const RegularExpression &regex,
+                                   DIEArray &offsets) {
   if (!m_apple_names_up)
     return;
 
-  DIEArray offsets;
   DWARFMappedHash::DIEInfoArray hash_data;
-  if (m_apple_names_up->AppendAllDIEsThatMatchingRegex(regex, hash_data)) {
+  if (m_apple_names_up->AppendAllDIEsThatMatchingRegex(regex, hash_data))
     DWARFMappedHash::ExtractDIEArray(hash_data, offsets);
-    ParseFunctions(offsets, info, resolve_function, include_inlines, sc_list);
-  }
 }
 
 void AppleDWARFIndex::ReportInvalidDIEOffset(dw_offset_t offset,

@@ -2283,12 +2283,11 @@ uint32_t SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
   // appending the results to a variable list.
   uint32_t original_size = sc_list.GetSize();
 
-  m_index->GetFunctions(regex, *info,
-                        [this](const DWARFDIE &die, bool include_inlines,
-                               lldb_private::SymbolContextList &sc_list) {
-                          return ResolveFunction(die, include_inlines, sc_list);
-                        },
-                        include_inlines, sc_list);
+  DIEArray offsets;
+  m_index->GetFunctions(regex, offsets);
+
+  for (DIERef ref : offsets)
+    ResolveFunction(ref, include_inlines, sc_list);
 
   // Return the number of variable that were appended to the list
   return sc_list.GetSize() - original_size;

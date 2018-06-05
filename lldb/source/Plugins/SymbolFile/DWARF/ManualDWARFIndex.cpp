@@ -459,18 +459,12 @@ void ManualDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
   }
 }
 
-void ManualDWARFIndex::GetFunctions(
-    const RegularExpression &regex, DWARFDebugInfo &info,
-    llvm::function_ref<bool(const DWARFDIE &die, bool include_inlines,
-                            lldb_private::SymbolContextList &sc_list)>
-        resolve_function,
-    bool include_inlines, SymbolContextList &sc_list) {
+void ManualDWARFIndex::GetFunctions(const RegularExpression &regex,
+                                    DIEArray &offsets) {
   Index();
 
-  DIEArray offsets;
   m_set.function_basenames.Find(regex, offsets);
   m_set.function_fullnames.Find(regex, offsets);
-  ParseFunctions(offsets, info, resolve_function, include_inlines, sc_list);
 }
 
 void ManualDWARFIndex::Dump(Stream &s) {
