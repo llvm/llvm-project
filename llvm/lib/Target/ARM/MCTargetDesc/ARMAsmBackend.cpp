@@ -487,6 +487,11 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     return 0xffffff & ((Value - 8) >> 2);
   case ARM::fixup_t2_uncondbranch: {
     Value = Value - 4;
+    if (!isInt<25>(Value)) {
+      Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
+      return 0;
+    }
+
     Value >>= 1; // Low bit is not encoded.
 
     uint32_t out = 0;
@@ -506,6 +511,11 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
   case ARM::fixup_t2_condbranch: {
     Value = Value - 4;
+    if (!isInt<21>(Value)) {
+      Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
+      return 0;
+    }
+
     Value >>= 1; // Low bit is not encoded.
 
     uint64_t out = 0;
@@ -518,9 +528,11 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     return swapHalfWords(out, Endian == support::little);
   }
   case ARM::fixup_arm_thumb_bl: {
-    // FIXME: We get both thumb1 and thumb2 in here, so we can only check for
-    // the less strict thumb2 value.
-    if (!isInt<26>(Value - 4)) {
+    if (!isInt<25>(Value - 4) ||
+        (!STI.getFeatureBits()[ARM::FeatureThumb2] &&
+         !STI.getFeatureBits()[ARM::HasV8MBaselineOps] &&
+         !STI.getFeatureBits()[ARM::HasV6MOps] &&
+         !isInt<23>(Value - 4))) {
       Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
       return 0;
     }

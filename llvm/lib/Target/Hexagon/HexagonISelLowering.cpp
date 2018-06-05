@@ -1356,22 +1356,21 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
   setOperationAction(ISD::BSWAP, MVT::i32, Legal);
   setOperationAction(ISD::BSWAP, MVT::i64, Legal);
-  setOperationAction(ISD::MUL,   MVT::i64, Legal);
 
   for (unsigned IntExpOp :
-       { ISD::SDIV,      ISD::UDIV,      ISD::SREM,      ISD::UREM,
-         ISD::SDIVREM,   ISD::UDIVREM,   ISD::ROTL,      ISD::ROTR,
-         ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS,
-         ISD::SMUL_LOHI, ISD::UMUL_LOHI }) {
-    setOperationAction(IntExpOp, MVT::i32, Expand);
-    setOperationAction(IntExpOp, MVT::i64, Expand);
+       {ISD::SDIV,      ISD::UDIV,      ISD::SREM,      ISD::UREM,
+        ISD::SDIVREM,   ISD::UDIVREM,   ISD::ROTL,      ISD::ROTR,
+        ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS,
+        ISD::SMUL_LOHI, ISD::UMUL_LOHI}) {
+    for (MVT VT : MVT::integer_valuetypes())
+      setOperationAction(IntExpOp, VT, Expand);
   }
 
   for (unsigned FPExpOp :
        {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS, ISD::FSINCOS,
         ISD::FPOW, ISD::FCOPYSIGN}) {
-    setOperationAction(FPExpOp, MVT::f32, Expand);
-    setOperationAction(FPExpOp, MVT::f64, Expand);
+    for (MVT VT : MVT::fp_valuetypes())
+      setOperationAction(FPExpOp, VT, Expand);
   }
 
   // No extending loads from i32.

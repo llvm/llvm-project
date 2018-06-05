@@ -367,7 +367,7 @@ def GR16 : RegisterClass<"X86", [i16], 16,
 
 let isAllocatable = 0 in
 def GRH16 : RegisterClass<"X86", [i16], 16,
-                          (add HAX, HCX, HDX, HSI, HSI, HBX, HBP, HSP, HIP)>;
+                          (add HAX, HCX, HDX, HSI, HDI, HBX, HBP, HSP, HIP)>;
 
 def GR32 : RegisterClass<"X86", [i32], 32,
                          (add EAX, ECX, EDX, ESI, EDI, EBX, EBP, ESP,

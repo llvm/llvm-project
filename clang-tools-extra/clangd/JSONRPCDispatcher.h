@@ -102,7 +102,9 @@ enum JSONStreamStyle {
 /// if it is.
 /// Input stream(\p In) must be opened in binary mode to avoid preliminary
 /// replacements of \r\n with \n.
-void runLanguageServerLoop(std::istream &In, JSONOutput &Out,
+/// We use C-style FILE* for reading as std::istream has unclear interaction
+/// with signals, which are sent by debuggers on some OSs.
+void runLanguageServerLoop(std::FILE *In, JSONOutput &Out,
                            JSONStreamStyle InputStyle,
                            JSONRPCDispatcher &Dispatcher, bool &IsDone);
 

@@ -92,6 +92,21 @@ static unsigned GetOpcodeOrDie(const llvm::MCInstrInfo &MCInstrInfo) {
   llvm::report_fatal_error(llvm::Twine("unknown opcode ").concat(OpcodeName));
 }
 
+static BenchmarkResultContext
+getBenchmarkResultContext(const LLVMState &State) {
+  BenchmarkResultContext Ctx;
+
+  const llvm::MCInstrInfo &InstrInfo = State.getInstrInfo();
+  for (unsigned E = InstrInfo.getNumOpcodes(), I = 0; I < E; ++I)
+    Ctx.addInstrEntry(I, InstrInfo.getName(I).data());
+
+  const llvm::MCRegisterInfo &RegInfo = State.getRegInfo();
+  for (unsigned E = RegInfo.getNumRegs(), I = 0; I < E; ++I)
+    Ctx.addRegEntry(I, RegInfo.getName(I));
+
+  return Ctx;
+}
+
 void benchmarkMain() {
   if (exegesis::pfm::pfmInitialize())
     llvm::report_fatal_error("cannot initialize libpfm");
@@ -124,7 +139,7 @@ void benchmarkMain() {
     llvm::report_fatal_error("--num-repetitions must be greater than zero");
 
   Runner->run(GetOpcodeOrDie(State.getInstrInfo()), Filter, NumRepetitions)
-      .writeYamlOrDie(BenchmarkFile);
+      .writeYamlOrDie(getBenchmarkResultContext(State), BenchmarkFile);
   exegesis::pfm::pfmTerminate();
 }
 
@@ -132,7 +147,7 @@ void benchmarkMain() {
 // if OutputFilename is non-empty.
 template <typename Pass>
 static void maybeRunAnalysis(const Analysis &Analyzer, const std::string &Name,
-                      const std::string &OutputFilename) {
+                             const std::string &OutputFilename) {
   if (OutputFilename.empty())
     return;
   if (OutputFilename != "-") {
@@ -149,9 +164,14 @@ static void maybeRunAnalysis(const Analysis &Analyzer, const std::string &Name,
 }
 
 static void analysisMain() {
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+
   // Read benchmarks.
+  const LLVMState State;
   const std::vector<InstructionBenchmark> Points =
-      InstructionBenchmark::readYamlsOrDie(BenchmarkFile);
+      InstructionBenchmark::readYamlsOrDie(getBenchmarkResultContext(State),
+                                           BenchmarkFile);
   llvm::outs() << "Parsed " << Points.size() << " benchmark points\n";
   if (Points.empty()) {
     llvm::errs() << "no benchmarks to analyze\n";
@@ -159,9 +179,6 @@ static void analysisMain() {
   }
   // FIXME: Check that all points have the same triple/cpu.
   // FIXME: Merge points from several runs (latency and uops).
-
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
 
   std::string Error;
   const auto *TheTarget =

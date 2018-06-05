@@ -221,6 +221,7 @@ bool SetEnv(const char *name, const char *value);
 
 u32 GetUid();
 void ReExec();
+void CheckASLR();
 char **GetArgv();
 void PrintCmdline();
 bool StackSizeIsUnlimited();

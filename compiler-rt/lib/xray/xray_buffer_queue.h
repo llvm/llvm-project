@@ -30,7 +30,7 @@ namespace __xray {
 class BufferQueue {
 public:
   struct alignas(64) BufferExtents {
-    __sanitizer::atomic_uint64_t Size;
+    atomic_uint64_t Size;
   };
 
   struct Buffer {
@@ -39,7 +39,6 @@ public:
     BufferExtents *Extents;
   };
 
-private:
   struct BufferRep {
     // The managed buffer.
     Buffer Buff;
@@ -49,6 +48,7 @@ private:
     bool Used = false;
   };
 
+private:
   // This models a ForwardIterator. |T| Must be either a `Buffer` or `const
   // Buffer`. Note that we only advance to the "used" buffers, when
   // incrementing, so that at dereference we're always at a valid point.
@@ -112,8 +112,8 @@ private:
   // Amount of pre-allocated buffers.
   size_t BufferCount;
 
-  __sanitizer::SpinMutex Mutex;
-  __sanitizer::atomic_uint8_t Finalizing;
+  SpinMutex Mutex;
+  atomic_uint8_t Finalizing;
 
   // Pointers to buffers managed/owned by the BufferQueue.
   void **OwnedBuffers;
@@ -180,8 +180,7 @@ public:
   ErrorCode releaseBuffer(Buffer &Buf);
 
   bool finalizing() const {
-    return __sanitizer::atomic_load(&Finalizing,
-                                    __sanitizer::memory_order_acquire);
+    return atomic_load(&Finalizing, memory_order_acquire);
   }
 
   /// Returns the configured size of the buffers in the buffer queue.
@@ -200,7 +199,7 @@ public:
   /// Buffer is marked 'used' (i.e. has been the result of getBuffer(...) and a
   /// releaseBuffer(...) operation).
   template <class F> void apply(F Fn) {
-    __sanitizer::SpinMutexLock G(&Mutex);
+    SpinMutexLock G(&Mutex);
     for (auto I = begin(), E = end(); I != E; ++I)
       Fn(*I);
   }

@@ -40,7 +40,7 @@ struct TestTU {
   std::string Code;
   std::string Filename = "TestTU.cpp";
 
-  // Define contents of a header to be included by TestTU.cpp.
+  // Define contents of a header which will be implicitly included by Code.
   std::string HeaderCode;
   std::string HeaderFilename = "TestTU.h";
 

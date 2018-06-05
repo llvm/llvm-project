@@ -1161,6 +1161,10 @@ class BitPermutationSelector {
         return true;
       else if (NumGroups < Other.NumGroups)
         return false;
+      else if (RLAmt == 0 && Other.RLAmt != 0)
+        return true;
+      else if (RLAmt != 0 && Other.RLAmt == 0)
+        return false;
       else if (FirstGroupStartIdx < Other.FirstGroupStartIdx)
         return true;
       return false;
@@ -1374,7 +1378,9 @@ class BitPermutationSelector {
   }
 
   // Take all (SDValue, RLAmt) pairs and sort them by the number of groups
-  // associated with each. If there is a degeneracy, pick the one that occurs
+  // associated with each. If the number of groups are same, we prefer a group
+  // which does not require rotate, i.e. RLAmt is 0, to avoid the first rotate
+  // instruction. If there is a degeneracy, pick the one that occurs
   // first (in the final value).
   void collectValueRotInfo() {
     ValueRots.clear();

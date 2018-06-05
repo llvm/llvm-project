@@ -160,7 +160,7 @@ TEST(FDRLoggingTest, MultiThreadedCycling) {
     std::thread t{[I, &Threads] {
       fdrLoggingHandleArg0(I + 1, XRayEntryType::ENTRY);
       fdrLoggingHandleArg0(I + 1, XRayEntryType::EXIT);
-      Threads[I] = __sanitizer::GetTid();
+      Threads[I] = GetTid();
     }};
     t.join();
   }

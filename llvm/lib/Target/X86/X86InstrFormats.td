@@ -518,8 +518,8 @@ class PI<bits<8> o, Format F, dag outs, dag ins, string asm, list<dag> pattern,
 class MMXPI<bits<8> o, Format F, dag outs, dag ins, string asm, list<dag> pattern,
             Domain d>
       : I<o, F, outs, ins, asm, pattern, d> {
-  let Predicates = !if(!eq(OpPrefix.Value, PD.Value), [HasSSE2],
-                       [HasSSE1]);
+  let Predicates = !if(!eq(OpPrefix.Value, PD.Value), [HasMMX, HasSSE2],
+                       [HasMMX, HasSSE1]);
 }
 
 // PIi8 - SSE 1 & 2 packed instructions with immediate
@@ -627,10 +627,10 @@ class S2I<bits<8> o, Format F, dag outs, dag ins, string asm,
       : I<o, F, outs, ins, asm, pattern>, PD, Requires<[UseSSE2]>;
 class MMXSDIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
                list<dag> pattern>
-      : Ii8<o, F, outs, ins, asm, pattern>, XD, Requires<[HasSSE2]>;
+      : Ii8<o, F, outs, ins, asm, pattern>, XD, Requires<[HasMMX, HasSSE2]>;
 class MMXS2SIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
                 list<dag> pattern>
-      : Ii8<o, F, outs, ins, asm, pattern>, XS, Requires<[HasSSE2]>;
+      : Ii8<o, F, outs, ins, asm, pattern>, XS, Requires<[HasMMX, HasSSE2]>;
 
 // SSE3 Instruction Templates:
 //
@@ -674,11 +674,11 @@ class SS3AI<bits<8> o, Format F, dag outs, dag ins, string asm,
 class MMXSS38I<bits<8> o, Format F, dag outs, dag ins, string asm,
                list<dag> pattern>
       : I<o, F, outs, ins, asm, pattern, SSEPackedInt>, T8PS,
-        Requires<[HasSSSE3]>;
+        Requires<[HasMMX, HasSSSE3]>;
 class MMXSS3AI<bits<8> o, Format F, dag outs, dag ins, string asm,
                list<dag> pattern>
       : Ii8<o, F, outs, ins, asm, pattern, SSEPackedInt>, TAPS,
-        Requires<[HasSSSE3]>;
+        Requires<[HasMMX, HasSSSE3]>;
 
 // SSE4.1 Instruction Templates:
 //
