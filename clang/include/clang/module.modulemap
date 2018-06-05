@@ -154,3 +154,8 @@ module Clang_ToolingCore {
   requires cplusplus
   umbrella "Tooling/Core" module * { export * }
 }
+
+module Clang_ToolingInclusions {
+  requires cplusplus
+  umbrella "Tooling/Inclusions" module * { export * }
+}

@@ -38,7 +38,7 @@ entry:
 ; CHECK: define void @call_f() {
 define void @call_f() {
 entry:
-; CHECK: call void select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null)()
+; CHECK: call void @f()
   call void @f()
   ret void
 }

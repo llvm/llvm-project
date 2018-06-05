@@ -386,23 +386,20 @@ entry:
 define i32 @inc_not(i32 %a) {
 ; X32-LABEL: inc_not:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    notl %eax
-; X32-NEXT:    incl %eax
+; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: inc_not:
 ; X64-LINUX:       # %bb.0:
-; X64-LINUX-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-LINUX-NEXT:    notl %edi
-; X64-LINUX-NEXT:    leal 1(%rdi), %eax
+; X64-LINUX-NEXT:    negl %edi
+; X64-LINUX-NEXT:    movl %edi, %eax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: inc_not:
 ; X64-WIN32:       # %bb.0:
-; X64-WIN32-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; X64-WIN32-NEXT:    notl %ecx
-; X64-WIN32-NEXT:    leal 1(%rcx), %eax
+; X64-WIN32-NEXT:    negl %ecx
+; X64-WIN32-NEXT:    movl %ecx, %eax
 ; X64-WIN32-NEXT:    retq
   %nota = xor i32 %a, -1
   %r = add i32 %nota, 1
@@ -414,27 +411,24 @@ define void @uaddo1_not(i32 %a, i32* %p0, i1* %p1) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    notl %edx
-; X32-NEXT:    addl $1, %edx
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl %edx, (%ecx)
-; X32-NEXT:    setb (%eax)
+; X32-NEXT:    setae (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: uaddo1_not:
 ; X64-LINUX:       # %bb.0:
-; X64-LINUX-NEXT:    notl %edi
-; X64-LINUX-NEXT:    addl $1, %edi
+; X64-LINUX-NEXT:    negl %edi
 ; X64-LINUX-NEXT:    movl %edi, (%rsi)
-; X64-LINUX-NEXT:    setb (%rdx)
+; X64-LINUX-NEXT:    setae (%rdx)
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: uaddo1_not:
 ; X64-WIN32:       # %bb.0:
-; X64-WIN32-NEXT:    notl %ecx
-; X64-WIN32-NEXT:    addl $1, %ecx
+; X64-WIN32-NEXT:    negl %ecx
 ; X64-WIN32-NEXT:    movl %ecx, (%rdx)
-; X64-WIN32-NEXT:    setb (%r8)
+; X64-WIN32-NEXT:    setae (%r8)
 ; X64-WIN32-NEXT:    retq
   %nota = xor i32 %a, -1
   %uaddo = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %nota, i32 1)

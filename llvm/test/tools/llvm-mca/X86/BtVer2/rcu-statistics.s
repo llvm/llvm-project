@@ -55,4 +55,3 @@
 # CHECK-NEXT: [# retired], [# cycles]
 # CHECK-NEXT:  0,           23  (74.2%)
 # CHECK-NEXT:  2,           8  (25.8%)
-

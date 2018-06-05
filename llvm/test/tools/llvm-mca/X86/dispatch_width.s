@@ -16,4 +16,3 @@ add %eax, %eax
 
 # CUSTOM-NEXT:  Block RThroughput: 1.0
 # DEFAULT-NEXT: Block RThroughput: 0.5
-

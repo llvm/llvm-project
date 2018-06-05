@@ -947,4 +947,3 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   unpcklpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     xorpd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   xorpd	(%rax), %xmm2
-

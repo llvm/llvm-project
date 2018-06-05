@@ -94,4 +94,3 @@ movsldup  (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   movshdup	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     movsldup	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   movsldup	(%rax), %xmm2
-

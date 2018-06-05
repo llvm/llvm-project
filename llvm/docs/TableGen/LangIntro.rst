@@ -152,8 +152,8 @@ supported include:
 ``foreach <var> = [ <list> ] in <def>``
     Replicate <body> or <def>, replacing instances of <var> with each value
     in <list>.  <var> is scoped at the level of the ``foreach`` loop and must
-    not conflict with any other object introduced in <body> or <def>.  Currently
-    only ``def``\s are expanded within <body>.
+    not conflict with any other object introduced in <body> or <def>.  Only
+    ``def``\s and ``defm``\s are expanded within <body>.
 
 ``foreach <var> = 0-15 in ...``
 
@@ -347,6 +347,23 @@ the ``V`` field for all of its subclasses:
 In this case, the ``Z`` definition will have a zero value for its ``V`` value,
 despite the fact that it derives (indirectly) from the ``C`` class, because the
 ``D`` class overrode its value.
+
+References between variables in a record are substituted late, which gives
+``let`` expressions unusual power. Consider this admittedly silly example:
+
+.. code-block:: text
+
+  class A<int x> {
+    int Y = x;
+    int Yplus1 = !add(Y, 1);
+    int xplus1 = !add(x, 1);
+  }
+  def Z : A<5> {
+    let Y = 10;
+  }
+
+The value of ``Z.xplus1`` will be 6, but the value of ``Z.Yplus1`` is 11. Use
+this power wisely.
 
 .. _template arguments:
 

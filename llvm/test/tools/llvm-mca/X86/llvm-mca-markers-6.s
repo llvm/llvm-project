@@ -10,4 +10,3 @@
 # CHECK-NEXT: # LLVM-MCA-BEGIN  bar
 # CHECK-NEXT:  ^
 # CHECK-NEXT: error: no assembly instructions found.
-

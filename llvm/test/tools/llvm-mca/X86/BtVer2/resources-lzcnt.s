@@ -54,4 +54,3 @@ lzcntq      (%rax), %rcx
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -      -      -     lzcntl	(%rax), %ecx
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     lzcntq	%rax, %rcx
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -      -      -     lzcntq	(%rax), %rcx
-

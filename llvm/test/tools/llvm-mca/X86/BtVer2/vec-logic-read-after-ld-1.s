@@ -38,4 +38,3 @@ vandps (%rdi), %xmm1, %xmm2
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       vaddps	%xmm0, %xmm0, %xmm1
 # CHECK-NEXT: 1.     1     1.0    0.0    0.0       vandps	(%rdi), %xmm1, %xmm2
-

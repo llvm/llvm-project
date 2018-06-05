@@ -46,6 +46,7 @@ typedef signed char __v16qs __attribute__((__vector_size__(16)));
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse2")))
+#define __DEFAULT_FN_ATTRS_MMX __attribute__((__always_inline__, __nodebug__, __target__("mmx,sse2")))
 
 /// Adds lower double-precision values in both operands and returns the
 ///    sum in the lower 64 bits of the result. The upper 64 bits of the result
@@ -1514,7 +1515,7 @@ _mm_cvttsd_si32(__m128d __a)
 /// \param __a
 ///    A 128-bit vector of [2 x double].
 /// \returns A 64-bit vector of [2 x i32] containing the converted values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
+static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX
 _mm_cvtpd_pi32(__m128d __a)
 {
   return (__m64)__builtin_ia32_cvtpd2pi((__v2df)__a);
@@ -1534,7 +1535,7 @@ _mm_cvtpd_pi32(__m128d __a)
 /// \param __a
 ///    A 128-bit vector of [2 x double].
 /// \returns A 64-bit vector of [2 x i32] containing the converted values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
+static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX
 _mm_cvttpd_pi32(__m128d __a)
 {
   return (__m64)__builtin_ia32_cvttpd2pi((__v2df)__a);
@@ -1551,7 +1552,7 @@ _mm_cvttpd_pi32(__m128d __a)
 /// \param __a
 ///    A 64-bit vector of [2 x i32].
 /// \returns A 128-bit vector of [2 x double] containing the converted values.
-static __inline__ __m128d __DEFAULT_FN_ATTRS
+static __inline__ __m128d __DEFAULT_FN_ATTRS_MMX
 _mm_cvtpi32_pd(__m64 __a)
 {
   return __builtin_ia32_cvtpi2pd((__v2si)__a);
@@ -2142,7 +2143,7 @@ _mm_add_epi32(__m128i __a, __m128i __b)
 /// \param __b
 ///    A 64-bit integer.
 /// \returns A 64-bit integer containing the sum of both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
+static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX
 _mm_add_si64(__m64 __a, __m64 __b)
 {
   return (__m64)__builtin_ia32_paddq((__v1di)__a, (__v1di)__b);
@@ -2482,7 +2483,7 @@ _mm_mullo_epi16(__m128i __a, __m128i __b)
 /// \param __b
 ///    A 64-bit integer containing one of the source operands.
 /// \returns A 64-bit integer vector containing the product of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
+static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX
 _mm_mul_su32(__m64 __a, __m64 __b)
 {
   return __builtin_ia32_pmuludq((__v2si)__a, (__v2si)__b);
@@ -2596,7 +2597,7 @@ _mm_sub_epi32(__m128i __a, __m128i __b)
 ///    A 64-bit integer vector containing the subtrahend.
 /// \returns A 64-bit integer vector containing the difference of the values in
 ///    the operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
+static __inline__ __m64 __DEFAULT_FN_ATTRS_MMX
 _mm_sub_si64(__m64 __a, __m64 __b)
 {
   return (__m64)__builtin_ia32_psubq((__v1di)__a, (__v1di)__b);
@@ -4935,6 +4936,7 @@ void _mm_pause(void);
 } // extern "C"
 #endif
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_MMX
 
 #define _MM_SHUFFLE2(x, y) (((x) << 1) | (y))
 

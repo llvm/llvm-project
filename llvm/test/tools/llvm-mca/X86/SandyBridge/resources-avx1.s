@@ -2401,4 +2401,3 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vxorps	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vzeroall
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     vzeroupper
-

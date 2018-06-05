@@ -33,12 +33,10 @@ public:
   public:
     static ClusterId noise() { return ClusterId(kNoise); }
     static ClusterId error() { return ClusterId(kError); }
-    static ClusterId makeValid(size_t Id) {
-      return ClusterId(Id);
-    }
+    static ClusterId makeValid(size_t Id) { return ClusterId(Id); }
     ClusterId() : Id_(kUndef) {}
     bool operator==(const ClusterId &O) const { return Id_ == O.Id_; }
-    bool operator<(const ClusterId &O) const {return Id_ < O.Id_; }
+    bool operator<(const ClusterId &O) const { return Id_ < O.Id_; }
 
     bool isValid() const { return Id_ <= kMaxValid; }
     bool isUndef() const { return Id_ == kUndef; }
@@ -53,7 +51,8 @@ public:
 
   private:
     explicit ClusterId(size_t Id) : Id_(Id) {}
-    static constexpr const size_t kMaxValid = std::numeric_limits<size_t>::max() - 4;
+    static constexpr const size_t kMaxValid =
+        std::numeric_limits<size_t>::max() - 4;
     static constexpr const size_t kNoise = kMaxValid + 1;
     static constexpr const size_t kError = kMaxValid + 2;
     static constexpr const size_t kUndef = kMaxValid + 3;
@@ -88,12 +87,19 @@ public:
 
   const std::vector<Cluster> &getValidClusters() const { return Clusters_; }
 
+  // Returns true if the given point is within a distance Epsilon of each other.
+  bool isNeighbour(const std::vector<BenchmarkMeasure> &P,
+                   const std::vector<BenchmarkMeasure> &Q) const;
+
 private:
   InstructionBenchmarkClustering(
-      const std::vector<InstructionBenchmark> &Points);
+      const std::vector<InstructionBenchmark> &Points, double EpsilonSquared);
   llvm::Error validateAndSetup();
-  void dbScan(size_t MinPts, double EpsilonSquared);
+  void dbScan(size_t MinPts);
+  std::vector<size_t> rangeQuery(size_t Q) const;
+
   const std::vector<InstructionBenchmark> &Points_;
+  const double EpsilonSquared_;
   int NumDimensions_ = 0;
   // ClusterForPoint_[P] is the cluster id for Points[P].
   std::vector<ClusterId> ClusterIdForPoint_;

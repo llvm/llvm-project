@@ -441,6 +441,12 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
   case BuiltinType::Char32:
   case BuiltinType::Int128:
   case BuiltinType::LongDouble:
+  case BuiltinType::ShortAccum:
+  case BuiltinType::Accum:
+  case BuiltinType::LongAccum:
+  case BuiltinType::UShortAccum:
+  case BuiltinType::UAccum:
+  case BuiltinType::ULongAccum:
   case BuiltinType::UInt128:
   case BuiltinType::Float16:
   case BuiltinType::Float128:

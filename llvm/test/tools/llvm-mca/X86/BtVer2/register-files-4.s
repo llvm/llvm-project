@@ -64,4 +64,3 @@ idiv %eax
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     25.0   0.3    0.0       idivl	%eax
-

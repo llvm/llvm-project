@@ -292,7 +292,7 @@ class RAGreedy : public MachineFunctionPass,
   public:
     using EvictorInfo =
         std::pair<unsigned /* evictor */, unsigned /* physreg */>;
-    using EvicteeInfo = llvm::MapVector<unsigned /* evictee */, EvictorInfo>;
+    using EvicteeInfo = llvm::DenseMap<unsigned /* evictee */, EvictorInfo>;
 
   private:
     /// Each Vreg that has been evicted in the last stage of selectOrSplit will

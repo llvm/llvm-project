@@ -126,10 +126,9 @@ private:  // Semantic analysis methods.
   // iteration space.
   typedef std::vector<IterRecord> IterSet;
 
-  bool addDefOne(std::unique_ptr<Record> Rec, Init *DefmName,
-                 IterSet &IterVals);
-  bool addDefForeach(Record *Rec, Init *DefmName, IterSet &IterVals);
-  bool addDef(std::unique_ptr<Record> Rec, Init *DefmName);
+  bool addDefOne(std::unique_ptr<Record> Rec, IterSet &IterVals);
+  bool addDefForeach(Record *Rec, IterSet &IterVals);
+  bool addDef(std::unique_ptr<Record> Rec);
 
 private:  // Parser methods.
   bool ParseObjectList(MultiClass *MC = nullptr);

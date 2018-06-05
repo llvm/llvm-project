@@ -203,6 +203,7 @@ def addsub_imm8_opt_lsl_i64 : imm8_opt_lsl<64, "uint64_t", SVEAddSubImmOperand64
   return AArch64_AM::isSVEAddSubImm<int64_t>(Imm);
 }]>;
 
+
 //===----------------------------------------------------------------------===//
 // SVE PTrue - These are used extensively throughout the pattern matching so
 //             it's important we define them first.
@@ -282,6 +283,67 @@ multiclass sve_int_perm_dup_r<string asm> {
                   (!cast<Instruction>(NAME # _S) ZPR32:$Zd, GPR32sp:$Rn), 1>;
   def : InstAlias<"mov $Zd, $Rn",
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, GPR64sp:$Rn), 1>;
+}
+
+class sve_int_perm_dup_i<bits<5> tsz, Operand immtype, string asm,
+                         ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins zprty:$Zn, immtype:$idx),
+  asm, "\t$Zd, $Zn$idx",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<7> idx;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = {?,?}; // imm3h
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = tsz;
+  let Inst{15-10} = 0b001000;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_perm_dup_i<string asm> {
+  def _B : sve_int_perm_dup_i<{?,?,?,?,1}, sve_elm_idx_extdup_b, asm, ZPR8> {
+    let Inst{23-22} = idx{5-4};
+    let Inst{20-17} = idx{3-0};
+  }
+  def _H : sve_int_perm_dup_i<{?,?,?,1,0}, sve_elm_idx_extdup_h, asm, ZPR16> {
+    let Inst{23-22} = idx{4-3};
+    let Inst{20-18} = idx{2-0};
+  }
+  def _S : sve_int_perm_dup_i<{?,?,1,0,0}, sve_elm_idx_extdup_s, asm, ZPR32> {
+    let Inst{23-22} = idx{3-2};
+    let Inst{20-19}    = idx{1-0};
+  }
+  def _D : sve_int_perm_dup_i<{?,1,0,0,0}, sve_elm_idx_extdup_d, asm, ZPR64> {
+    let Inst{23-22} = idx{2-1};
+    let Inst{20}    = idx{0};
+  }
+  def _Q : sve_int_perm_dup_i<{1,0,0,0,0}, sve_elm_idx_extdup_q, asm, ZPR128> {
+    let Inst{23-22} = idx{1-0};
+  }
+
+  def : InstAlias<"mov $Zd, $Zn$idx",
+                  (!cast<Instruction>(NAME # _B) ZPR8:$Zd, ZPR8:$Zn, sve_elm_idx_extdup_b:$idx), 1>;
+  def : InstAlias<"mov $Zd, $Zn$idx",
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, ZPR16:$Zn, sve_elm_idx_extdup_h:$idx), 1>;
+  def : InstAlias<"mov $Zd, $Zn$idx",
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, ZPR32:$Zn, sve_elm_idx_extdup_s:$idx), 1>;
+  def : InstAlias<"mov $Zd, $Zn$idx",
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, ZPR64:$Zn, sve_elm_idx_extdup_d:$idx), 1>;
+  def : InstAlias<"mov $Zd, $Zn$idx",
+                  (!cast<Instruction>(NAME # _Q) ZPR128:$Zd, ZPR128:$Zn, sve_elm_idx_extdup_q:$idx), 1>;
+  def : InstAlias<"mov $Zd, $Bn",
+                  (!cast<Instruction>(NAME # _B) ZPR8:$Zd, FPR8asZPR:$Bn, 0), 2>;
+  def : InstAlias<"mov $Zd, $Hn",
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, FPR16asZPR:$Hn, 0), 2>;
+  def : InstAlias<"mov $Zd, $Sn",
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, FPR32asZPR:$Sn, 0), 2>;
+  def : InstAlias<"mov $Zd, $Dn",
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, FPR64asZPR:$Dn, 0), 2>;
+  def : InstAlias<"mov $Zd, $Qn",
+                  (!cast<Instruction>(NAME # _Q) ZPR128:$Zd, FPR128asZPR:$Qn, 0), 2>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -614,6 +676,104 @@ class sve_int_bin_cons_log<bits<2> opc, string asm>
   let Inst{15-10} = 0b001100;
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
+}
+
+
+//===----------------------------------------------------------------------===//
+// SVE Integer Wide Immediate - Predicated Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_dup_fpimm_pred<bits<2> sz, Operand fpimmtype,
+                             string asm, ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins zprty:$_Zd, PPRAny:$Pg, fpimmtype:$imm8),
+  asm, "\t$Zd, $Pg/m, $imm8",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pg;
+  bits<5> Zd;
+  bits<8> imm8;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz;
+  let Inst{21-20} = 0b01;
+  let Inst{19-16} = Pg;
+  let Inst{15-13} = 0b110;
+  let Inst{12-5}  = imm8;
+  let Inst{4-0}   = Zd;
+
+  let Constraints = "$Zd = $_Zd";
+}
+
+multiclass sve_int_dup_fpimm_pred<string asm> {
+  def _H : sve_int_dup_fpimm_pred<0b01, fpimm16, asm, ZPR16>;
+  def _S : sve_int_dup_fpimm_pred<0b10, fpimm32, asm, ZPR32>;
+  def _D : sve_int_dup_fpimm_pred<0b11, fpimm64, asm, ZPR64>;
+
+  def : InstAlias<"fmov $Zd, $Pg/m, $imm8",
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg, fpimm16:$imm8), 1>;
+  def : InstAlias<"fmov $Zd, $Pg/m, $imm8",
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, fpimm32:$imm8), 1>;
+  def : InstAlias<"fmov $Zd, $Pg/m, $imm8",
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, fpimm64:$imm8), 1>;
+}
+
+class sve_int_dup_imm_pred<bits<2> sz8_64, bit m, string asm,
+                           ZPRRegOp zprty, string pred_qual, dag iops>
+: I<(outs zprty:$Zd), iops,
+  asm, "\t$Zd, $Pg"#pred_qual#", $imm",
+  "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<4> Pg;
+  bits<9> imm;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-20} = 0b01;
+  let Inst{19-16} = Pg;
+  let Inst{15}    = 0b0;
+  let Inst{14}    = m;
+  let Inst{13}    = imm{8};   // sh
+  let Inst{12-5}  = imm{7-0}; // imm8
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_dup_imm_pred_merge<string asm> {
+  let Constraints = "$Zd = $_Zd" in {
+  def _B : sve_int_dup_imm_pred<0b00, 1, asm, ZPR8,  "/m", (ins ZPR8:$_Zd,  PPRAny:$Pg, cpy_imm8_opt_lsl_i8:$imm)>;
+  def _H : sve_int_dup_imm_pred<0b01, 1, asm, ZPR16, "/m", (ins ZPR16:$_Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i16:$imm)>;
+  def _S : sve_int_dup_imm_pred<0b10, 1, asm, ZPR32, "/m", (ins ZPR32:$_Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i32:$imm)>;
+  def _D : sve_int_dup_imm_pred<0b11, 1, asm, ZPR64, "/m", (ins ZPR64:$_Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i64:$imm)>;
+  }
+
+  def : InstAlias<"mov $Zd, $Pg/m, $imm",
+                  (!cast<Instruction>(NAME # _B) ZPR8:$Zd,  PPRAny:$Pg, cpy_imm8_opt_lsl_i8:$imm), 1>;
+  def : InstAlias<"mov $Zd, $Pg/m, $imm",
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i16:$imm), 1>;
+  def : InstAlias<"mov $Zd, $Pg/m, $imm",
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i32:$imm), 1>;
+  def : InstAlias<"mov $Zd, $Pg/m, $imm",
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i64:$imm), 1>;
+
+  def : InstAlias<"fmov $Zd, $Pg/m, #0.0",
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg, 0, 0), 0>;
+  def : InstAlias<"fmov $Zd, $Pg/m, #0.0",
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, 0, 0), 0>;
+  def : InstAlias<"fmov $Zd, $Pg/m, #0.0",
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, 0, 0), 0>;
+}
+
+multiclass sve_int_dup_imm_pred_zero<string asm> {
+  def _B : sve_int_dup_imm_pred<0b00, 0, asm, ZPR8,  "/z", (ins PPRAny:$Pg, cpy_imm8_opt_lsl_i8:$imm)>;
+  def _H : sve_int_dup_imm_pred<0b01, 0, asm, ZPR16, "/z", (ins PPRAny:$Pg, cpy_imm8_opt_lsl_i16:$imm)>;
+  def _S : sve_int_dup_imm_pred<0b10, 0, asm, ZPR32, "/z", (ins PPRAny:$Pg, cpy_imm8_opt_lsl_i32:$imm)>;
+  def _D : sve_int_dup_imm_pred<0b11, 0, asm, ZPR64, "/z", (ins PPRAny:$Pg, cpy_imm8_opt_lsl_i64:$imm)>;
+
+  def : InstAlias<"mov $Zd, $Pg/z, $imm",
+                  (!cast<Instruction>(NAME # _B) ZPR8:$Zd,  PPRAny:$Pg, cpy_imm8_opt_lsl_i8:$imm), 1>;
+  def : InstAlias<"mov $Zd, $Pg/z, $imm",
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i16:$imm), 1>;
+  def : InstAlias<"mov $Zd, $Pg/z, $imm",
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i32:$imm), 1>;
+  def : InstAlias<"mov $Zd, $Pg/z, $imm",
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i64:$imm), 1>;
 }
 
 //===----------------------------------------------------------------------===//

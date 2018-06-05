@@ -389,6 +389,9 @@ KEYWORD(char8_t                     , CHAR8SUPPORT)
 // C11 Extension
 KEYWORD(_Float16                    , KEYALL)
 
+// ISO/IEC JTC1 SC22 WG14 N1169 Extension
+KEYWORD(_Accum                      , KEYNOCXX)
+
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
 KEYWORD(_Decimal64                  , KEYALL)

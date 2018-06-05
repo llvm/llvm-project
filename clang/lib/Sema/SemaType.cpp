@@ -1391,6 +1391,39 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     }
     break;
   }
+  case DeclSpec::TST_accum: {
+    if (DS.getTypeSpecSign() != DeclSpec::TSS_unsigned) {
+      switch (DS.getTypeSpecWidth()) {
+        case DeclSpec::TSW_short:
+          Result = Context.ShortAccumTy;
+          break;
+        case DeclSpec::TSW_unspecified:
+          Result = Context.AccumTy;
+          break;
+        case DeclSpec::TSW_long:
+          Result = Context.LongAccumTy;
+          break;
+        case DeclSpec::TSW_longlong:
+          // Unreachable b/c this is caught in final analysis of the DeclSpec.
+          llvm_unreachable("Unable to specify long long as _Accum width");
+      }
+    } else {
+      switch (DS.getTypeSpecWidth()) {
+        case DeclSpec::TSW_short:
+          Result = Context.UnsignedShortAccumTy;
+          break;
+        case DeclSpec::TSW_unspecified:
+          Result = Context.UnsignedAccumTy;
+          break;
+        case DeclSpec::TSW_long:
+          Result = Context.UnsignedLongAccumTy;
+          break;
+        case DeclSpec::TSW_longlong:
+          llvm_unreachable("Unable to specify long long as _Accum width");
+      }
+    }
+    break;
+  }
   case DeclSpec::TST_int128:
     if (!S.Context.getTargetInfo().hasInt128Type())
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)

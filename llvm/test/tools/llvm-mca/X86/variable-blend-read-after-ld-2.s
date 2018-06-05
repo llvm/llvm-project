@@ -118,4 +118,3 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 # SANDY-NEXT:   1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
 # SKYLAKE-NEXT: 1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
 # ZNVER1-NEXT:  1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
-

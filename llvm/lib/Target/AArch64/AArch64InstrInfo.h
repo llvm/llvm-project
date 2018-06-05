@@ -243,21 +243,19 @@ public:
   canOutlineWithoutLRSave(MachineBasicBlock::iterator &CallInsertionPt) const;
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
-  MachineOutlinerInfo getOutlininingCandidateInfo(
-      std::vector<
-          std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
-          &RepeatedSequenceLocs) const override;
-  AArch64GenInstrInfo::MachineOutlinerInstrType
+  outliner::TargetCostInfo getOutlininingCandidateInfo(
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+  outliner::InstrType
   getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
   unsigned getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const override;
   void insertOutlinerEpilogue(MachineBasicBlock &MBB, MachineFunction &MF,
-                              const MachineOutlinerInfo &MInfo) const override;
+                            const outliner::TargetCostInfo &TCI) const override;
   void insertOutlinerPrologue(MachineBasicBlock &MBB, MachineFunction &MF,
-                              const MachineOutlinerInfo &MInfo) const override;
+                            const outliner::TargetCostInfo &TCI) const override;
   MachineBasicBlock::iterator
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
-                     const MachineOutlinerInfo &MInfo) const override;
+                     const outliner::TargetCostInfo &TCI) const override;
   /// Returns true if the instruction sets to an immediate value that can be
   /// executed more efficiently.
   bool isExynosResetFast(const MachineInstr &MI) const;

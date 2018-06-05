@@ -2656,6 +2656,18 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "double";
   case LongDouble:
     return "long double";
+  case ShortAccum:
+    return "short _Accum";
+  case Accum:
+    return "_Accum";
+  case LongAccum:
+    return "long _Accum";
+  case UShortAccum:
+    return "unsigned short _Accum";
+  case UAccum:
+    return "unsigned _Accum";
+  case ULongAccum:
+    return "unsigned long _Accum";
   case Float16:
     return "_Float16";
   case Float128:

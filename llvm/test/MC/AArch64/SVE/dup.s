@@ -180,3 +180,63 @@ dup     z21.d, #32512
 // CHECK-ENCODING: [0xf5,0xef,0xf8,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: f5 ef f8 25 <unknown>
+
+dup     z0.b, z0.b[0]
+// CHECK-INST: mov     z0.b, b0
+// CHECK-ENCODING: [0x00,0x20,0x21,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 20 21 05 <unknown>
+
+dup     z0.h, z0.h[0]
+// CHECK-INST: mov     z0.h, h0
+// CHECK-ENCODING: [0x00,0x20,0x22,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 20 22 05 <unknown>
+
+dup     z0.s, z0.s[0]
+// CHECK-INST: mov     z0.s, s0
+// CHECK-ENCODING: [0x00,0x20,0x24,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 20 24 05 <unknown>
+
+dup     z0.d, z0.d[0]
+// CHECK-INST: mov     z0.d, d0
+// CHECK-ENCODING: [0x00,0x20,0x28,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 20 28 05 <unknown>
+
+dup     z0.q, z0.q[0]
+// CHECK-INST: mov     z0.q, q0
+// CHECK-ENCODING: [0x00,0x20,0x30,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 20 30 05 <unknown>
+
+dup     z31.b, z31.b[63]
+// CHECK-INST: mov     z31.b, z31.b[63]
+// CHECK-ENCODING: [0xff,0x23,0xff,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 23 ff 05 <unknown>
+
+dup     z31.h, z31.h[31]
+// CHECK-INST: mov     z31.h, z31.h[31]
+// CHECK-ENCODING: [0xff,0x23,0xfe,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 23 fe 05 <unknown>
+
+dup     z31.s, z31.s[15]
+// CHECK-INST: mov     z31.s, z31.s[15]
+// CHECK-ENCODING: [0xff,0x23,0xfc,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 23 fc 05 <unknown>
+
+dup     z31.d, z31.d[7]
+// CHECK-INST: mov     z31.d, z31.d[7]
+// CHECK-ENCODING: [0xff,0x23,0xf8,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 23 f8 05 <unknown>
+
+dup     z5.q, z17.q[3]
+// CHECK-INST: mov     z5.q, z17.q[3]
+// CHECK-ENCODING: [0x25,0x22,0xf0,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 25 22 f0 05 <unknown>

@@ -290,6 +290,19 @@ bool SymbolCollector::handleDeclOccurence(
     index::IndexDataConsumer::ASTNodeInfo ASTNode) {
   assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
   assert(CompletionAllocator && CompletionTUInfo);
+  assert(ASTNode.OrigD);
+  // If OrigD is an declaration associated with a friend declaration and it's
+  // not a definition, skip it. Note that OrigD is the occurrence that the
+  // collector is currently visiting.
+  if ((ASTNode.OrigD->getFriendObjectKind() !=
+       Decl::FriendObjectKind::FOK_None) &&
+      !(Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
+    return true;
+  // A declaration created for a friend declaration should not be used as the
+  // canonical declaration in the index. Use OrigD instead, unless we've already
+  // picked a replacement for D
+  if (D->getFriendObjectKind() != Decl::FriendObjectKind::FOK_None)
+    D = CanonicalDecls.try_emplace(D, ASTNode.OrigD).first->second;
   const NamedDecl *ND = llvm::dyn_cast<NamedDecl>(D);
   if (!ND)
     return true;

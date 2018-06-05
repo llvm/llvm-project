@@ -84,7 +84,6 @@
 #include <cstdint>
 #include <cstring>
 #include <new>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1960,65 +1959,6 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
   llvm_unreachable("unsupported constant type in printAggregateConstant()");
 }
 
-// buildTypeNameMap - Run through symbol table looking for type names.
-//
-
-bool NVPTXAsmPrinter::ignoreLoc(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-  case NVPTX::CallArgBeginInst:
-  case NVPTX::CallArgEndInst0:
-  case NVPTX::CallArgEndInst1:
-  case NVPTX::CallArgF32:
-  case NVPTX::CallArgF64:
-  case NVPTX::CallArgI16:
-  case NVPTX::CallArgI32:
-  case NVPTX::CallArgI32imm:
-  case NVPTX::CallArgI64:
-  case NVPTX::CallArgParam:
-  case NVPTX::CallVoidInst:
-  case NVPTX::CallVoidInstReg:
-  case NVPTX::Callseq_End:
-  case NVPTX::CallVoidInstReg64:
-  case NVPTX::DeclareParamInst:
-  case NVPTX::DeclareRetMemInst:
-  case NVPTX::DeclareRetRegInst:
-  case NVPTX::DeclareRetScalarInst:
-  case NVPTX::DeclareScalarParamInst:
-  case NVPTX::DeclareScalarRegInst:
-  case NVPTX::StoreParamF32:
-  case NVPTX::StoreParamF64:
-  case NVPTX::StoreParamI16:
-  case NVPTX::StoreParamI32:
-  case NVPTX::StoreParamI64:
-  case NVPTX::StoreParamI8:
-  case NVPTX::StoreRetvalF32:
-  case NVPTX::StoreRetvalF64:
-  case NVPTX::StoreRetvalI16:
-  case NVPTX::StoreRetvalI32:
-  case NVPTX::StoreRetvalI64:
-  case NVPTX::StoreRetvalI8:
-  case NVPTX::LastCallArgF32:
-  case NVPTX::LastCallArgF64:
-  case NVPTX::LastCallArgI16:
-  case NVPTX::LastCallArgI32:
-  case NVPTX::LastCallArgI32imm:
-  case NVPTX::LastCallArgI64:
-  case NVPTX::LastCallArgParam:
-  case NVPTX::LoadParamMemF32:
-  case NVPTX::LoadParamMemF64:
-  case NVPTX::LoadParamMemI16:
-  case NVPTX::LoadParamMemI32:
-  case NVPTX::LoadParamMemI64:
-  case NVPTX::LoadParamMemI8:
-  case NVPTX::PrototypeInst:
-  case NVPTX::DBG_VALUE:
-    return true;
-  }
-  return false;
-}
-
 /// lowerConstantForGV - Return an MCExpr for the given Constant.  This is mostly
 /// a copy from AsmPrinter::lowerConstant, except customized to only handle
 /// expressions that are representable in PTX and create
@@ -2317,44 +2257,6 @@ void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
     O << "+";
     printOperand(MI, opNum + 1, O);
   }
-}
-
-void NVPTXAsmPrinter::emitSrcInText(StringRef filename, unsigned line) {
-  std::stringstream temp;
-  LineReader *reader = this->getReader(filename);
-  temp << "\n//";
-  temp << filename.str();
-  temp << ":";
-  temp << line;
-  temp << " ";
-  temp << reader->readLine(line);
-  temp << "\n";
-  this->OutStreamer->EmitRawText(temp.str());
-}
-
-LineReader *NVPTXAsmPrinter::getReader(const std::string &filename) {
-  if (!reader) {
-    reader = new LineReader(filename);
-  }
-
-  if (reader->fileName() != filename) {
-    delete reader;
-    reader = new LineReader(filename);
-  }
-
-  return reader;
-}
-
-std::string LineReader::readLine(unsigned lineNum) {
-  if (lineNum < theCurLine) {
-    theCurLine = 0;
-    fstr.seekg(0, std::ios::beg);
-  }
-  while (theCurLine < lineNum) {
-    fstr.getline(buff, 500);
-    theCurLine++;
-  }
-  return buff;
 }
 
 // Force static initialization.

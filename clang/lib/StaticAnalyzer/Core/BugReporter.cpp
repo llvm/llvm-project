@@ -3143,10 +3143,15 @@ bool GRBugReporter::generatePathDiagnostic(PathDiagnostic& PD,
     PathDiagnosticBuilder PDB(*this, R, ErrorGraph.BackMap, &PC);
     const ExplodedNode *N = ErrorGraph.ErrorNode;
 
+    // Register refutation visitors first, if they mark the bug invalid no
+    // further analysis is required
+    R->addVisitor(llvm::make_unique<LikelyFalsePositiveSuppressionBRVisitor>());
+    if (getAnalyzerOptions().shouldCrosscheckWithZ3())
+      R->addVisitor(llvm::make_unique<FalsePositiveRefutationBRVisitor>());
+
     // Register additional node visitors.
     R->addVisitor(llvm::make_unique<NilReceiverBRVisitor>());
     R->addVisitor(llvm::make_unique<ConditionBRVisitor>());
-    R->addVisitor(llvm::make_unique<LikelyFalsePositiveSuppressionBRVisitor>());
     R->addVisitor(llvm::make_unique<CXXSelfAssignmentBRVisitor>());
 
     BugReport::VisitorList visitors;

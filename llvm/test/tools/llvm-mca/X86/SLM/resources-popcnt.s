@@ -48,4 +48,3 @@ popcntq     (%rax), %rcx
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00   popcntl	(%rax), %ecx
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     popcntq	%rax, %rcx
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00   popcntq	(%rax), %rcx
-

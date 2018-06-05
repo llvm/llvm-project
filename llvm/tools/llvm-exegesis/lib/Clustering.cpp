@@ -29,38 +29,41 @@ namespace exegesis {
 // [1] https://en.wikipedia.org/wiki/DBSCAN
 // [2] https://en.wikipedia.org/wiki/OPTICS_algorithm
 
-namespace {
-
 // Finds the points at distance less than sqrt(EpsilonSquared) of Q (not
 // including Q).
-std::vector<size_t> rangeQuery(const std::vector<InstructionBenchmark> &Points,
-                               const size_t Q, const double EpsilonSquared) {
+std::vector<size_t>
+InstructionBenchmarkClustering::rangeQuery(const size_t Q) const {
   std::vector<size_t> Neighbors;
-  const auto &QMeasurements = Points[Q].Measurements;
-  for (size_t P = 0, NumPoints = Points.size(); P < NumPoints; ++P) {
+  const auto &QMeasurements = Points_[Q].Measurements;
+  for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
     if (P == Q)
       continue;
-    const auto &PMeasurements = Points[P].Measurements;
+    const auto &PMeasurements = Points_[P].Measurements;
     if (PMeasurements.empty()) // Error point.
       continue;
-    double DistanceSquared = 0;
-    for (size_t I = 0, E = QMeasurements.size(); I < E; ++I) {
-      const auto Diff = PMeasurements[I].Value - QMeasurements[I].Value;
-      DistanceSquared += Diff * Diff;
-    }
-    if (DistanceSquared <= EpsilonSquared) {
+    if (isNeighbour(PMeasurements, QMeasurements)) {
       Neighbors.push_back(P);
     }
   }
   return Neighbors;
 }
 
-} // namespace
+bool InstructionBenchmarkClustering::isNeighbour(
+    const std::vector<BenchmarkMeasure> &P,
+    const std::vector<BenchmarkMeasure> &Q) const {
+  double DistanceSquared = 0.0;
+  for (size_t I = 0, E = P.size(); I < E; ++I) {
+    const auto Diff = P[I].Value - Q[I].Value;
+    DistanceSquared += Diff * Diff;
+  }
+  return DistanceSquared <= EpsilonSquared_;
+}
 
 InstructionBenchmarkClustering::InstructionBenchmarkClustering(
-    const std::vector<InstructionBenchmark> &Points)
-    : Points_(Points), NoiseCluster_(ClusterId::noise()),
-      ErrorCluster_(ClusterId::error()) {}
+    const std::vector<InstructionBenchmark> &Points,
+    const double EpsilonSquared)
+    : Points_(Points), EpsilonSquared_(EpsilonSquared),
+      NoiseCluster_(ClusterId::noise()), ErrorCluster_(ClusterId::error()) {}
 
 llvm::Error InstructionBenchmarkClustering::validateAndSetup() {
   ClusterIdForPoint_.resize(Points_.size());
@@ -97,12 +100,11 @@ llvm::Error InstructionBenchmarkClustering::validateAndSetup() {
   return llvm::Error::success();
 }
 
-void InstructionBenchmarkClustering::dbScan(const size_t MinPts,
-                                            const double EpsilonSquared) {
+void InstructionBenchmarkClustering::dbScan(const size_t MinPts) {
   for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
     if (!ClusterIdForPoint_[P].isUndef())
       continue; // Previously processed in inner loop.
-    const auto Neighbors = rangeQuery(Points_, P, EpsilonSquared);
+    const auto Neighbors = rangeQuery(P);
     if (Neighbors.size() + 1 < MinPts) { // Density check.
       // The region around P is not dense enough to create a new cluster, mark
       // as noise for now.
@@ -136,7 +138,7 @@ void InstructionBenchmarkClustering::dbScan(const size_t MinPts,
       ClusterIdForPoint_[Q] = CurrentCluster.Id;
       CurrentCluster.PointIndices.push_back(Q);
       // And extend to the neighbors of Q if the region is dense enough.
-      const auto Neighbors = rangeQuery(Points_, Q, EpsilonSquared);
+      const auto Neighbors = rangeQuery(Q);
       if (Neighbors.size() + 1 >= MinPts) {
         ToProcess.insert(Neighbors.begin(), Neighbors.end());
       }
@@ -155,7 +157,7 @@ llvm::Expected<InstructionBenchmarkClustering>
 InstructionBenchmarkClustering::create(
     const std::vector<InstructionBenchmark> &Points, const size_t MinPts,
     const double Epsilon) {
-  InstructionBenchmarkClustering Clustering(Points);
+  InstructionBenchmarkClustering Clustering(Points, Epsilon * Epsilon);
   if (auto Error = Clustering.validateAndSetup()) {
     return std::move(Error);
   }
@@ -163,7 +165,7 @@ InstructionBenchmarkClustering::create(
     return Clustering; // Nothing to cluster.
   }
 
-  Clustering.dbScan(MinPts, Epsilon * Epsilon);
+  Clustering.dbScan(MinPts);
   return Clustering;
 }
 

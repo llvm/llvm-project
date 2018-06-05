@@ -123,6 +123,8 @@ std::error_code widenPath(const Twine &Path8,
 
 namespace fs {
 
+const file_t kInvalidFile = INVALID_HANDLE_VALUE;
+
 std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
   SmallVector<wchar_t, MAX_PATH> PathName;
   DWORD Size = ::GetModuleFileNameW(NULL, PathName.data(), PathName.capacity());
@@ -1051,13 +1053,32 @@ static std::error_code directoryRealPath(const Twine &Name,
   return EC;
 }
 
+static std::error_code nativeFileToFd(Expected<HANDLE> H, int &ResultFD,
+                                      int OpenFlags) {
+  ResultFD = -1;
+  if (!H)
+    return errorToErrorCode(H.takeError());
+
+  ResultFD = ::_open_osfhandle(intptr_t(*H), OpenFlags);
+  if (ResultFD == -1) {
+    ::CloseHandle(*H);
+    return mapWindowsError(ERROR_INVALID_HANDLE);
+  }
+  return std::error_code();
+}
+
 std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 SmallVectorImpl<char> *RealPath) {
-  ResultFD = -1;
+  Expected<HANDLE> NativeFile = openNativeFileForRead(Name, RealPath);
+  return nativeFileToFd(std::move(NativeFile), ResultFD, 0);
+}
+
+Expected<file_t> openNativeFileForRead(const Twine &Name,
+                                       SmallVectorImpl<char> *RealPath) {
   SmallVector<wchar_t, 128> PathUTF16;
 
   if (std::error_code EC = widenPath(Name, PathUTF16))
-    return EC;
+    return errorCodeToError(EC);
 
   HANDLE H =
       ::CreateFileW(PathUTF16.begin(), GENERIC_READ,
@@ -1070,36 +1091,42 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
     // This only runs if we failed to open the file, so there is probably
     // no performances issues.
     if (LastError != ERROR_ACCESS_DENIED)
-      return EC;
+      return errorCodeToError(EC);
     if (is_directory(Name))
-      return make_error_code(errc::is_a_directory);
-    return EC;
-  }
-
-  ResultFD = ::_open_osfhandle(intptr_t(H), 0);
-  if (ResultFD == -1) {
-    ::CloseHandle(H);
-    return mapWindowsError(ERROR_INVALID_HANDLE);
+      return errorCodeToError(make_error_code(errc::is_a_directory));
+    return errorCodeToError(EC);
   }
 
   // Fetch the real name of the file, if the user asked
   if (RealPath)
     realPathFromHandle(H, *RealPath);
 
-  return std::error_code();
+  return H;
 }
 
 std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
                             sys::fs::OpenFlags Flags, unsigned Mode) {
+  int OpenFlags = 0;
+  if (Flags & F_Append)
+    OpenFlags |= _O_APPEND;
+
+  if (Flags & F_Text)
+    OpenFlags |= _O_TEXT;
+
+  Expected<HANDLE> NativeFile = openNativeFileForWrite(Name, Flags, Mode);
+  return nativeFileToFd(std::move(NativeFile), ResultFD, OpenFlags);
+}
+
+Expected<file_t> openNativeFileForWrite(const Twine &Name, OpenFlags Flags,
+                                        unsigned Mode) {
   // Verify that we don't have both "append" and "excl".
   assert((!(Flags & sys::fs::F_Excl) || !(Flags & sys::fs::F_Append)) &&
          "Cannot specify both 'excl' and 'append' file creation flags!");
 
-  ResultFD = -1;
   SmallVector<wchar_t, 128> PathUTF16;
 
   if (std::error_code EC = widenPath(Name, PathUTF16))
-    return EC;
+    return errorCodeToError(EC);
 
   DWORD CreationDisposition;
   if (Flags & F_Excl)
@@ -1130,26 +1157,18 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
     // This only runs if we failed to open the file, so there is probably
     // no performances issues.
     if (LastError != ERROR_ACCESS_DENIED)
-      return EC;
+      return errorCodeToError(EC);
     if (is_directory(Name))
-      return make_error_code(errc::is_a_directory);
-    return EC;
+      return errorCodeToError(make_error_code(errc::is_a_directory));
+    return errorCodeToError(EC);
   }
 
-  int OpenFlags = 0;
-  if (Flags & F_Append)
-    OpenFlags |= _O_APPEND;
+  return H;
+}
 
-  if (Flags & F_Text)
-    OpenFlags |= _O_TEXT;
-
-  ResultFD = ::_open_osfhandle(intptr_t(H), OpenFlags);
-  if (ResultFD == -1) {
-    ::CloseHandle(H);
-    return mapWindowsError(ERROR_INVALID_HANDLE);
-  }
-
-  return std::error_code();
+void closeFile(file_t &F) {
+  ::CloseHandle(F);
+  F = kInvalidFile;
 }
 
 std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {

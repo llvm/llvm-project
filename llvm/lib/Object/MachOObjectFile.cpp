@@ -107,6 +107,7 @@ getSectionPtr(const MachOObjectFile &O, MachOObjectFile::LoadCommandInfo L,
 }
 
 static const char *getPtr(const MachOObjectFile &O, size_t Offset) {
+  assert(Offset <= O.getData().size());
   return O.getData().data() + Offset;
 }
 

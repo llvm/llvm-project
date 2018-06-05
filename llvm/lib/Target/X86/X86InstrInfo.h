@@ -593,27 +593,25 @@ public:
   /// X86 supports the MachineOutliner.
   bool useMachineOutliner() const override { return true; }
 
-  virtual MachineOutlinerInfo getOutlininingCandidateInfo(
-      std::vector<
-          std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
-          &RepeatedSequenceLocs) const override;
+  virtual outliner::TargetCostInfo getOutlininingCandidateInfo(
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
 
-  llvm::X86GenInstrInfo::MachineOutlinerInstrType
+  outliner::InstrType
   getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
 
   void insertOutlinerEpilogue(MachineBasicBlock &MBB, MachineFunction &MF,
-                              const MachineOutlinerInfo &MInfo) const override;
+                            const outliner::TargetCostInfo &TCI) const override;
 
   void insertOutlinerPrologue(MachineBasicBlock &MBB, MachineFunction &MF,
-                              const MachineOutlinerInfo &MInfo) const override;
+                            const outliner::TargetCostInfo &TCI) const override;
 
   MachineBasicBlock::iterator
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
-                     const MachineOutlinerInfo &MInfo) const override;
+                     const outliner::TargetCostInfo &TCI) const override;
 
 protected:
   /// Commutes the operands in the given instruction by changing the operands

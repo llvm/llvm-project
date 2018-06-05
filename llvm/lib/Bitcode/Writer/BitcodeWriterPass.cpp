@@ -80,3 +80,7 @@ ModulePass *llvm::createBitcodeWriterPass(raw_ostream &Str,
   return new WriteBitcodePass(Str, ShouldPreserveUseListOrder,
                               EmitSummaryIndex, EmitModuleHash);
 }
+
+bool llvm::isBitcodeWriterPass(Pass *P) {
+  return P->getPassID() == (llvm::AnalysisID)&WriteBitcodePass::ID;
+}

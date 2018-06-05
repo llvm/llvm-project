@@ -58,7 +58,7 @@ __llwpcb (void *__addr)
 ///    Address to the current Lightweight Profiling Control Block (LWPCB).
 ///    If LWP is not currently enabled, returns NULL.
 static __inline__ void* __DEFAULT_FN_ATTRS
-__slwpcb ()
+__slwpcb (void)
 {
   return __builtin_ia32_slwpcb();
 }
