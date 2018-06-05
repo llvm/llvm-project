@@ -946,3 +946,194 @@ bool lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider(
 
   return false;
 }
+
+namespace {
+
+/// Enumerate the kinds of SIMD elements.
+enum class SIMDElementKind {
+  Int32,
+  UInt32,
+  Float32,
+  Float64
+};
+
+/// A helper for formatting a kind of SIMD element.
+class SIMDElementFormatter {
+  SIMDElementKind m_kind;
+
+public:
+  SIMDElementFormatter(SIMDElementKind kind) : m_kind(kind) {}
+
+  /// Create a string representation of a SIMD element given a pointer to it.
+  std::string Format(const uint8_t *data) const {
+    std::string S;
+    llvm::raw_string_ostream OS(S);
+    switch (m_kind) {
+    case SIMDElementKind::Int32: {
+      auto *p = reinterpret_cast<const int32_t *>(data);
+      OS << *p;
+      break;
+    }
+    case SIMDElementKind::UInt32: {
+      auto *p = reinterpret_cast<const uint32_t *>(data);
+      OS << *p;
+      break;
+    }
+    case SIMDElementKind::Float32: {
+      auto *p = reinterpret_cast<const float *>(data);
+      OS << *p;
+      break;
+    }
+    case SIMDElementKind::Float64: {
+      auto *p = reinterpret_cast<const double *>(data);
+      OS << *p;
+      break;
+    }
+    }
+    return S;
+  }
+
+  /// Get the size in bytes of this kind of SIMD element.
+  unsigned getElementSize() const {
+    return (m_kind == SIMDElementKind::Float64) ? 8 : 4;
+  }
+};
+
+/// Read a SIMD vector from the target.
+llvm::Optional<std::vector<std::string>>
+ReadVector(Process &process, ValueObject &valobj,
+           const SIMDElementFormatter &formatter, unsigned num_elements) {
+  Status error;
+  static ConstString g_value("_value");
+  ValueObjectSP value_sp = valobj.GetChildAtNamePath({g_value});
+  if (!value_sp)
+    return llvm::None;
+
+  // The layout of the vector is the same as what you'd expect for a C-style
+  // array. It's a contiguous bag of bytes with no padding.
+  DataExtractor data;
+  uint64_t len = value_sp->GetData(data, error);
+  unsigned elt_size = formatter.getElementSize();
+  if (error.Fail() || (num_elements * elt_size) > len)
+    return llvm::None;
+
+  std::vector<std::string> elements;
+  const uint8_t *buffer = data.GetDataStart();
+  for (unsigned I = 0; I < num_elements; ++I)
+    elements.emplace_back(formatter.Format(buffer + (I * elt_size)));
+  return elements;
+}
+
+/// Print a vector of elements as a row, if possible.
+bool PrintRow(Stream &stream, llvm::Optional<std::vector<std::string>> vec) {
+  if (!vec)
+    return false;
+
+  std::string joined = llvm::join(*vec, ", ");
+  stream.Printf("(%s)", joined.c_str());
+  return true;
+}
+
+} // end anonymous namespace
+
+bool lldb_private::formatters::swift::AccelerateSIMD_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  Status error;
+  ProcessSP process_sp(valobj.GetProcessSP());
+  if (!process_sp)
+    return false;
+
+  Process &process = *process_sp.get();
+
+  // Get the type name without the "simd.simd_" prefix.
+  ConstString full_type_name = valobj.GetTypeName();
+  llvm::StringRef type_name = full_type_name.GetStringRef();
+  if (type_name.startswith("simd."))
+    type_name = type_name.drop_front(5);
+  if (type_name.startswith("simd_"))
+    type_name = type_name.drop_front(5);
+
+  // Get the type of object this is.
+  bool is_quaternion = type_name.startswith("quat");
+  bool is_matrix = type_name[type_name.size() - 2] == 'x';
+  bool is_vector = !is_matrix && !is_quaternion;
+
+  // Get the kind of SIMD element inside of this object.
+  llvm::Optional<SIMDElementKind> kind = llvm::None;
+  if (type_name.startswith("int"))
+    kind = SIMDElementKind::Int32;
+  else if (type_name.startswith("uint"))
+    kind = SIMDElementKind::UInt32;
+  else if ((is_quaternion && type_name.endswith("f")) ||
+           type_name.startswith("float"))
+    kind = SIMDElementKind::Float32;
+  else if ((is_quaternion && type_name.endswith("d")) ||
+           type_name.startswith("double"))
+    kind = SIMDElementKind::Float64;
+  if (!kind)
+    return false;
+
+  SIMDElementFormatter formatter(*kind);
+
+  if (is_vector) {
+    unsigned num_elements = llvm::hexDigitValue(type_name.back());
+    return PrintRow(stream,
+                    ReadVector(process, valobj, formatter, num_elements));
+  } else if (is_quaternion) {
+    static ConstString g_vector("vector");
+    ValueObjectSP vec_sp = valobj.GetChildAtNamePath({g_vector});
+    if (!vec_sp)
+      return false;
+
+    return PrintRow(stream, ReadVector(process, *vec_sp.get(), formatter, 4));
+  } else if (is_matrix) {
+    static ConstString g_columns("columns");
+    ValueObjectSP columns_sp = valobj.GetChildAtNamePath({g_columns});
+    if (!columns_sp)
+      return false;
+
+    unsigned num_columns = llvm::hexDigitValue(type_name[type_name.size() - 3]);
+    unsigned num_rows = llvm::hexDigitValue(type_name[type_name.size() - 1]);
+
+    // SIMD matrices are stored column-major. Collect each column vector as a
+    // precursor for row-by-row pretty-printing.
+    std::vector<std::vector<std::string>> columns;
+    for (unsigned I = 0; I < num_columns; ++I) {
+      std::string col_num_str = llvm::utostr(I);
+      ConstString col_num_const_str(col_num_str.c_str());
+      ValueObjectSP column_sp =
+          columns_sp->GetChildAtNamePath({col_num_const_str});
+      if (!column_sp)
+        return false;
+
+      auto vec = ReadVector(process, *column_sp.get(), formatter, num_rows);
+      if (!vec)
+        return false;
+
+      columns.emplace_back(std::move(*vec));
+    }
+
+    // Print each row.
+    stream.Printf("\n[ ");
+    for (unsigned J = 0; J < num_rows; ++J) {
+      // Join the J-th row's elements with commas.
+      std::vector<std::string> row;
+      for (unsigned I = 0; I < num_columns; ++I)
+        row.emplace_back(std::move(columns[I][J]));
+      std::string joined = llvm::join(row, ", ");
+
+      // Add spacing and punctuation to 1) make it possible to copy the matrix
+      // into a Python repl and 2) to avoid writing '[[' in FileCheck tests.
+      if (J > 0)
+        stream.Printf("  ");
+      stream.Printf("[%s]", joined.c_str());
+      if (J != (num_rows - 1))
+        stream.Printf(",\n");
+      else
+        stream.Printf(" ]\n");
+    }
+    return true;
+  }
+
+  return false;
+}
