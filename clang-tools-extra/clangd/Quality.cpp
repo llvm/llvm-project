@@ -69,7 +69,7 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolQualitySignals &S) {
 
 static SymbolRelevanceSignals::AccessibleScope
 ComputeScope(const NamedDecl &D) {
-  bool InClass = true;
+  bool InClass = false;
   for (const DeclContext *DC = D.getDeclContext(); !DC->isFileContext();
        DC = DC->getParent()) {
     if (DC->isFunctionOrMethod())
