@@ -758,6 +758,7 @@
 		4CD44CFD20B37C440003557C /* AppleDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CFA20B37C440003557C /* AppleDWARFIndex.cpp */; };
 		4CD44D2220B725DA0003557C /* SystemInitializerLLGS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44D2020B725DA0003557C /* SystemInitializerLLGS.cpp */; };
 		4CD44D4220B777850003557C /* DWARFBaseDIE.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44D4020B777850003557C /* DWARFBaseDIE.cpp */; };
+		4CD44D5820C603CB0003557C /* ClangHost.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44D5620C603A80003557C /* ClangHost.cpp */; };
 		4CDB8D6D1DBA91B6006C5B13 /* LibStdcppUniquePointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */; };
 		4CDB8D6E1DBA91B6006C5B13 /* LibStdcppTuple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */; };
 		4CE4EFAA1E8999B900A80C06 /* PlatformOpenBSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CE4EFA61E8999B000A80C06 /* PlatformOpenBSD.cpp */; };
@@ -2667,6 +2668,8 @@
 		4CD44D2320B725F60003557C /* SystemInitializerLLGS.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SystemInitializerLLGS.h; path = "tools/lldb-server/SystemInitializerLLGS.h"; sourceTree = "<group>"; };
 		4CD44D4020B777850003557C /* DWARFBaseDIE.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFBaseDIE.cpp; sourceTree = "<group>"; };
 		4CD44D4120B777850003557C /* DWARFBaseDIE.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFBaseDIE.h; sourceTree = "<group>"; };
+		4CD44D5620C603A80003557C /* ClangHost.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ClangHost.cpp; path = ExpressionParser/Clang/ClangHost.cpp; sourceTree = "<group>"; };
+		4CD44D5720C603A90003557C /* ClangHost.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ClangHost.h; path = ExpressionParser/Clang/ClangHost.h; sourceTree = "<group>"; };
 		4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppUniquePointer.cpp; path = Language/CPlusPlus/LibStdcppUniquePointer.cpp; sourceTree = "<group>"; };
 		4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcppTuple.cpp; path = Language/CPlusPlus/LibStdcppTuple.cpp; sourceTree = "<group>"; };
 		4CE4EFA61E8999B000A80C06 /* PlatformOpenBSD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformOpenBSD.cpp; sourceTree = "<group>"; };
@@ -6003,6 +6006,8 @@
 				4C98D3E0118FB98F00E575D0 /* ClangFunctionCaller.h */,
 				4C98D3DA118FB96F00E575D0 /* ClangFunctionCaller.cpp */,
 				26BC7DC010F1B79500F91463 /* ClangExpressionHelper.h */,
+				4CD44D5720C603A90003557C /* ClangHost.h */,
+				4CD44D5620C603A80003557C /* ClangHost.cpp */,
 				49445E341225AB6A00C11A81 /* ClangUserExpression.h */,
 				26BC7ED510F1B86700F91463 /* ClangUserExpression.cpp */,
 				497C86C1122823F300B54702 /* ClangUtilityFunction.h */,
@@ -8126,6 +8131,7 @@
 				490A36C0180F0E6F00BA31F8 /* PlatformWindows.cpp in Sources */,
 				260CC65015D0440D002BF2E0 /* OptionValueFormat.cpp in Sources */,
 				260CC65115D0440D002BF2E0 /* OptionValueSInt64.cpp in Sources */,
+				4CD44D5820C603CB0003557C /* ClangHost.cpp in Sources */,
 				260CC65215D0440D002BF2E0 /* OptionValueString.cpp in Sources */,
 				6D55B2911A8A806200A70529 /* GDBRemoteCommunicationServerLLGS.cpp in Sources */,
 				260CC65315D0440D002BF2E0 /* OptionValueUInt64.cpp in Sources */,

@@ -40,6 +40,15 @@ let Predicates = [HasSVE] in {
   defm FDUP_ZI  : sve_int_dup_fpimm<"fdup">;
   defm DUPM_ZI : sve_int_dup_mask_imm<"dupm">;
 
+  // Splat immediate (predicated)
+  defm CPY_ZPmI  : sve_int_dup_imm_pred_merge<"cpy">;
+  defm CPY_ZPzI  : sve_int_dup_imm_pred_zero<"cpy">;
+  defm FCPY_ZPmI : sve_int_dup_fpimm_pred<"fcpy">;
+
+  // Splat scalar register (unpredicated, GPR or vector + element index)
+  defm DUP_ZR  : sve_int_perm_dup_r<"dup">;
+  defm DUP_ZZI : sve_int_perm_dup_i<"dup">;
+
   // continuous load with reg+immediate
   defm LD1B_IMM    : sve_mem_cld_si<0b0000, "ld1b",  Z_b, ZPR8>;
   defm LD1B_H_IMM  : sve_mem_cld_si<0b0001, "ld1b",  Z_h, ZPR16>;
@@ -459,8 +468,6 @@ let Predicates = [HasSVE] in {
 
   defm ZIP1_PPP : sve_int_perm_bin_perm_pp<0b000, "zip1">;
   defm ZIP2_PPP : sve_int_perm_bin_perm_pp<0b001, "zip2">;
-
-  defm DUP_ZR  : sve_int_perm_dup_r<"dup">;
 
   def RDVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdvl">;
   def ADDVL_XXI : sve_int_arith_vl<0b0, "addvl">;

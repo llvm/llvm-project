@@ -135,7 +135,7 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
         !con((ins VReg_64:$vaddr),
           !if(EnableSaddr, (ins SReg_64:$saddr), (ins))),
             (ins !if(HasSignedOffset,offset_s13,offset_u12):$offset)),
-            (ins GLC:$glc, slc:$slc)),
+            (ins GLC:$glc, SLC:$slc)),
             !if(HasTiedOutput, (ins regClass:$vdst_in), (ins))),
   " $vdst, $vaddr"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$glc$slc"> {
   let has_data = 0;
@@ -158,7 +158,7 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
       !con((ins VReg_64:$vaddr, vdataClass:$vdata),
         !if(EnableSaddr, (ins SReg_64:$saddr), (ins))),
           (ins !if(HasSignedOffset,offset_s13,offset_u12):$offset)),
-          (ins GLC:$glc, slc:$slc)),
+          (ins GLC:$glc, SLC:$slc)),
   " $vaddr, $vdata"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$glc$slc"> {
   let mayLoad  = 0;
   let mayStore = 1;
@@ -188,8 +188,8 @@ class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
   opName,
   (outs regClass:$vdst),
   !if(EnableSaddr,
-      (ins SReg_32_XEXEC_HI:$saddr, offset_s13:$offset, GLC:$glc, slc:$slc),
-      (ins VGPR_32:$vaddr, offset_s13:$offset, GLC:$glc, slc:$slc)),
+      (ins SReg_32_XEXEC_HI:$saddr, offset_s13:$offset, GLC:$glc, SLC:$slc),
+      (ins VGPR_32:$vaddr, offset_s13:$offset, GLC:$glc, SLC:$slc)),
   " $vdst, "#!if(EnableSaddr, "off", "$vaddr")#!if(EnableSaddr, ", $saddr", ", off")#"$offset$glc$slc"> {
   let has_data = 0;
   let mayLoad = 1;
@@ -204,8 +204,8 @@ class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit En
   opName,
   (outs),
   !if(EnableSaddr,
-    (ins vdataClass:$vdata, SReg_32_XEXEC_HI:$saddr, offset_s13:$offset, GLC:$glc, slc:$slc),
-    (ins vdataClass:$vdata, VGPR_32:$vaddr, offset_s13:$offset, GLC:$glc, slc:$slc)),
+    (ins vdataClass:$vdata, SReg_32_XEXEC_HI:$saddr, offset_s13:$offset, GLC:$glc, SLC:$slc),
+    (ins vdataClass:$vdata, VGPR_32:$vaddr, offset_s13:$offset, GLC:$glc, SLC:$slc)),
   " "#!if(EnableSaddr, "off", "$vaddr")#", $vdata, "#!if(EnableSaddr, "$saddr", "off")#"$offset$glc$slc"> {
   let mayLoad  = 0;
   let mayStore = 1;
@@ -260,7 +260,7 @@ multiclass FLAT_Atomic_Pseudo<
   RegisterClass data_rc = vdst_rc> {
   def "" : FLAT_AtomicNoRet_Pseudo <opName,
     (outs),
-    (ins VReg_64:$vaddr, data_rc:$vdata, offset_u12:$offset, slc:$slc),
+    (ins VReg_64:$vaddr, data_rc:$vdata, offset_u12:$offset, SLC:$slc),
     " $vaddr, $vdata$offset$slc">,
     AtomicNoRet <opName, 0> {
     let PseudoInstr = NAME;
@@ -268,7 +268,7 @@ multiclass FLAT_Atomic_Pseudo<
 
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs vdst_rc:$vdst),
-    (ins VReg_64:$vaddr, data_rc:$vdata, offset_u12:$offset, slc:$slc),
+    (ins VReg_64:$vaddr, data_rc:$vdata, offset_u12:$offset, SLC:$slc),
     " $vdst, $vaddr, $vdata$offset glc$slc",
     [(set vt:$vdst,
       (atomic (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$vdata))]>,
@@ -285,7 +285,7 @@ multiclass FLAT_Global_Atomic_Pseudo<
 
   def "" : FLAT_AtomicNoRet_Pseudo <opName,
     (outs),
-    (ins VReg_64:$vaddr, data_rc:$vdata, offset_s13:$offset, slc:$slc),
+    (ins VReg_64:$vaddr, data_rc:$vdata, offset_s13:$offset, SLC:$slc),
     " $vaddr, $vdata, off$offset$slc">,
     AtomicNoRet <opName, 0> {
     let has_saddr = 1;
@@ -294,7 +294,7 @@ multiclass FLAT_Global_Atomic_Pseudo<
 
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs vdst_rc:$vdst),
-      (ins VReg_64:$vaddr, data_rc:$vdata, offset_s13:$offset, slc:$slc),
+      (ins VReg_64:$vaddr, data_rc:$vdata, offset_s13:$offset, SLC:$slc),
     " $vdst, $vaddr, $vdata, off$offset glc$slc",
     [(set vt:$vdst,
       (atomic (FLATSignedAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$vdata))]>,
@@ -304,7 +304,7 @@ multiclass FLAT_Global_Atomic_Pseudo<
 
   def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
     (outs),
-    (ins VReg_64:$vaddr, data_rc:$vdata, SReg_64:$saddr, offset_s13:$offset, slc:$slc),
+    (ins VReg_64:$vaddr, data_rc:$vdata, SReg_64:$saddr, offset_s13:$offset, SLC:$slc),
     " $vaddr, $vdata, $saddr$offset$slc">,
     AtomicNoRet <opName#"_saddr", 0> {
     let has_saddr = 1;
@@ -314,7 +314,7 @@ multiclass FLAT_Global_Atomic_Pseudo<
 
   def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs vdst_rc:$vdst),
-      (ins VReg_64:$vaddr, data_rc:$vdata, SReg_64:$saddr, offset_s13:$offset, slc:$slc),
+      (ins VReg_64:$vaddr, data_rc:$vdata, SReg_64:$saddr, offset_s13:$offset, SLC:$slc),
     " $vdst, $vaddr, $vdata, $saddr$offset glc$slc">,
     AtomicNoRet <opName#"_saddr", 1> {
      let has_saddr = 1;

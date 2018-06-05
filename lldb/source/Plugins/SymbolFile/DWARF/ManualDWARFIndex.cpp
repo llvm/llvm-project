@@ -288,22 +288,7 @@ void ManualDWARFIndex::IndexUnitImpl(
           }
           // If we have a mangled name, then the DW_AT_name attribute is
           // usually the method name without the class or any parameters
-          const DWARFDebugInfoEntry *parent = die.GetParent();
-          bool is_method = false;
-          if (parent) {
-            DWARFDIE parent_die(&unit, parent);
-            if (parent_die.IsStructClassOrUnion())
-              is_method = true;
-            else {
-              if (specification_die_form.IsValid()) {
-                DWARFDIE specification_die =
-                    unit.GetSymbolFileDWARF()->DebugInfo()->GetDIE(
-                        DIERef(specification_die_form));
-                if (specification_die.GetParent().IsStructClassOrUnion())
-                  is_method = true;
-              }
-            }
-          }
+          bool is_method = DWARFDIE(&unit, &die).IsMethod();
 
           if (is_method)
             set.function_methods.Insert(ConstString(name),

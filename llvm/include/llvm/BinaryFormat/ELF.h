@@ -1309,6 +1309,13 @@ enum {
 enum : unsigned {
   GNU_PROPERTY_STACK_SIZE = 1,
   GNU_PROPERTY_NO_COPY_ON_PROTECTED = 2,
+  GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002
+};
+
+// CET properties
+enum {
+  GNU_PROPERTY_X86_FEATURE_1_IBT = 1 << 0,
+  GNU_PROPERTY_X86_FEATURE_1_SHSTK = 1 << 1
 };
 
 // AMDGPU specific notes.

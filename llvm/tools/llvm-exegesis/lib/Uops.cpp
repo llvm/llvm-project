@@ -141,7 +141,9 @@ static llvm::Error makeError(llvm::Twine Msg) {
 
 UopsBenchmarkRunner::~UopsBenchmarkRunner() = default;
 
-const char *UopsBenchmarkRunner::getDisplayName() const { return "uops"; }
+InstructionBenchmarkKey::ModeE UopsBenchmarkRunner::getMode() const {
+  return InstructionBenchmarkKey::Uops;
+}
 
 llvm::Expected<std::vector<llvm::MCInst>>
 UopsBenchmarkRunner::createSnippet(RegisterAliasingTrackerCache &RATC,

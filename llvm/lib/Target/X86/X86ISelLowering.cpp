@@ -6093,7 +6093,7 @@ static bool setTargetShuffleZeroElements(SDValue N,
 // destination value type.
 static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
                                SmallVectorImpl<SDValue> &Ops,
-                               SelectionDAG &DAG) {
+                               const SelectionDAG &DAG) {
   Mask.clear();
   Ops.clear();
 
@@ -6326,7 +6326,7 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
 static bool resolveTargetShuffleInputs(SDValue Op,
                                        SmallVectorImpl<SDValue> &Inputs,
                                        SmallVectorImpl<int> &Mask,
-                                       SelectionDAG &DAG) {
+                                       const SelectionDAG &DAG) {
   if (!setTargetShuffleZeroElements(Op, Mask, Inputs))
     if (!getFauxShuffleMask(Op, Mask, Inputs, DAG))
       return false;
@@ -30452,8 +30452,9 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
 /// Checks if the shuffle mask takes subsequent elements
 /// alternately from two vectors.
 /// For example <0, 5, 2, 7> or <8, 1, 10, 3, 12, 5, 14, 7> are both correct.
-static bool isAddSubOrSubAddMask(ArrayRef<int> Mask, int ParitySrc[2]) {
+static bool isAddSubOrSubAddMask(ArrayRef<int> Mask, bool &Op0Even) {
 
+  int ParitySrc[2] = {-1, -1};
   unsigned Size = Mask.size();
   for (unsigned i = 0; i != Size; ++i) {
     int M = Mask[i];
@@ -30475,6 +30476,7 @@ static bool isAddSubOrSubAddMask(ArrayRef<int> Mask, int ParitySrc[2]) {
   if (ParitySrc[0] < 0 || ParitySrc[1] < 0 || ParitySrc[0] == ParitySrc[1])
     return false;
 
+  Op0Even = ParitySrc[0] == 0;
   return true;
 }
 
@@ -30533,13 +30535,13 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
   }
 
   ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(N)->getMask();
-  int ParitySrc[2] = {-1, -1};
-  if (!isAddSubOrSubAddMask(Mask, ParitySrc))
+  bool Op0Even;
+  if (!isAddSubOrSubAddMask(Mask, Op0Even))
     return false;
 
   // It's a subadd if the vector in the even parity is an FADD.
-  IsSubAdd = ParitySrc[0] == 0 ? V1->getOpcode() == ISD::FADD
-                               : V2->getOpcode() == ISD::FADD;
+  IsSubAdd = Op0Even ? V1->getOpcode() == ISD::FADD
+                     : V2->getOpcode() == ISD::FADD;
 
   Opnd0 = LHS;
   Opnd1 = RHS;
@@ -30576,13 +30578,13 @@ static SDValue combineShuffleToFMAddSub(SDNode *N,
 
   // Check for correct shuffle mask.
   ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(N)->getMask();
-  int ParitySrc[2] = {-1, -1};
-  if (!isAddSubOrSubAddMask(Mask, ParitySrc))
+  bool Op0Even;
+  if (!isAddSubOrSubAddMask(Mask, Op0Even))
     return SDValue();
 
   // FMAddSub takes zeroth operand from FMSub node.
   SDLoc DL(N);
-  bool IsSubAdd = ParitySrc[0] == 0 ? Op0 == FMAdd : Op1 == FMAdd;
+  bool IsSubAdd = Op0Even ? Op0 == FMAdd : Op1 == FMAdd;
   unsigned Opcode = IsSubAdd ? X86ISD::FMSUBADD : X86ISD::FMADDSUB;
   return DAG.getNode(Opcode, DL, VT, FMAdd.getOperand(0), FMAdd.getOperand(1),
                      FMAdd.getOperand(2));

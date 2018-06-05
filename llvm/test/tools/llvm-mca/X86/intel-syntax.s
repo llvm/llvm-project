@@ -35,4 +35,3 @@
 # INTEL-NEXT:  1      1     0.50                        mov	ebx, 255
 # INTEL-NEXT:  2      3     1.00                        imul	esi, edi
 # INTEL-NEXT:  1      1     0.50                        lea	eax, [rsi + rdi]
-

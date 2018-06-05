@@ -41,7 +41,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
-#include <fstream>
 #include <map>
 #include <memory>
 #include <string>
@@ -59,27 +58,6 @@
 namespace llvm {
 
 class MCOperand;
-
-class LineReader {
-private:
-  unsigned theCurLine;
-  std::ifstream fstr;
-  char buff[512];
-  std::string theFileName;
-  SmallVector<unsigned, 32> lineOffset;
-
-public:
-  LineReader(std::string filename) {
-    theCurLine = 0;
-    fstr.open(filename.c_str());
-    theFileName = filename;
-  }
-
-  ~LineReader() { fstr.close(); }
-
-  std::string fileName() { return theFileName; }
-  std::string readLine(unsigned line);
-};
 
 class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
 
@@ -217,8 +195,6 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
 
   friend class AggBuffer;
 
-  void emitSrcInText(StringRef filename, unsigned line);
-
 private:
   StringRef getPassName() const override { return "NVPTX Assembly Printer"; }
 
@@ -271,8 +247,6 @@ protected:
   bool doFinalization(Module &M) override;
 
 private:
-  std::string CurrentBankselLabelInBasicBlock;
-
   bool GlobalsEmitted;
   
   // This is specific per MachineFunction.
@@ -287,16 +261,8 @@ private:
   // Cache the subtarget here.
   const NVPTXSubtarget *nvptxSubtarget;
 
-  // Build the map between type name and ID based on module's type
-  // symbol table.
-  std::map<Type *, std::string> TypeNameMap;
-
   // List of variables demoted to a function scope.
   std::map<const Function *, std::vector<const GlobalVariable *>> localDecls;
-
-  // To record filename to ID mapping
-  std::map<std::string, unsigned> filenameMap;
-  void recordAndEmitFilenames(Module &);
 
   void emitPTXGlobalVariable(const GlobalVariable *GVar, raw_ostream &O);
   void emitPTXAddressSpace(unsigned int AddressSpace, raw_ostream &O) const;
@@ -317,10 +283,6 @@ private:
 
   bool isLoopHeaderOfNoUnroll(const MachineBasicBlock &MBB) const;
 
-  LineReader *reader = nullptr;
-
-  LineReader *getReader(const std::string &);
-
   // Used to control the need to emit .generic() in the initializer of
   // module scope variables.
   // Although ptx supports the hybrid mode like the following,
@@ -340,18 +302,12 @@ public:
         EmitGeneric(static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() ==
                     NVPTX::CUDA) {}
 
-  ~NVPTXAsmPrinter() override {
-    delete reader;
-  }
-
   bool runOnMachineFunction(MachineFunction &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfo>();
     AsmPrinter::getAnalysisUsage(AU);
   }
-
-  bool ignoreLoc(const MachineInstr &);
 
   std::string getVirtualRegisterName(unsigned) const;
 };

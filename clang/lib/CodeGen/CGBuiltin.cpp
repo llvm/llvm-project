@@ -484,6 +484,37 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   return Builder.CreateCall(F, {Ptr, Min, NullIsUnknown});
 }
 
+static RValue EmitBitTestIntrinsic(CodeGenFunction &CGF, const CallExpr *E,
+                                   char TestAnd, char Size,
+                                   bool Locked = false) {
+  Value *BitBase = CGF.EmitScalarExpr(E->getArg(0));
+  Value *BitPos = CGF.EmitScalarExpr(E->getArg(1));
+
+  // Build the assembly.
+  SmallString<64> Asm;
+  raw_svector_ostream AsmOS(Asm);
+  if (Locked)
+    AsmOS << "lock ";
+  AsmOS << "bt";
+  if (TestAnd)
+    AsmOS << TestAnd;
+  AsmOS << Size << " $2, ($1)\n\tsetc ${0:b}";
+
+  // Build the constraints. FIXME: We should support immediates when possible.
+  std::string Constraints = "=r,r,r,~{cc},~{flags},~{memory},~{fpsr}";
+  llvm::IntegerType *IntType = llvm::IntegerType::get(
+      CGF.getLLVMContext(),
+      CGF.getContext().getTypeSize(E->getArg(1)->getType()));
+  llvm::Type *IntPtrType = IntType->getPointerTo();
+  llvm::FunctionType *FTy =
+      llvm::FunctionType::get(CGF.Int8Ty, {IntPtrType, IntType}, false);
+
+  llvm::InlineAsm *IA =
+      llvm::InlineAsm::get(FTy, Asm, Constraints, /*SideEffects=*/true);
+  CallSite CS = CGF.Builder.CreateCall(IA, {BitBase, BitPos});
+  return RValue::get(CS.getInstruction());
+}
+
 // Many of MSVC builtins are on both x64 and ARM; to avoid repeating code, we
 // handle them here.
 enum class CodeGenFunction::MSVCIntrin {
@@ -497,7 +528,6 @@ enum class CodeGenFunction::MSVCIntrin {
   _InterlockedIncrement,
   _InterlockedOr,
   _InterlockedXor,
-  _interlockedbittestandset,
   __fastfail,
 };
 
@@ -564,22 +594,6 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
     return MakeBinaryAtomicValue(*this, AtomicRMWInst::Or, E);
   case MSVCIntrin::_InterlockedXor:
     return MakeBinaryAtomicValue(*this, AtomicRMWInst::Xor, E);
-
-  case MSVCIntrin::_interlockedbittestandset: {
-    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Bit = EmitScalarExpr(E->getArg(1));
-    AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
-        AtomicRMWInst::Or, Addr,
-        Builder.CreateShl(ConstantInt::get(Bit->getType(), 1), Bit),
-        llvm::AtomicOrdering::SequentiallyConsistent);
-    // Shift the relevant bit to the least significant position, truncate to
-    // the result type, and test the low bit.
-    llvm::Value *Shifted = Builder.CreateLShr(RMWI, Bit);
-    llvm::Value *Truncated =
-        Builder.CreateTrunc(Shifted, ConvertType(E->getType()));
-    return Builder.CreateAnd(Truncated,
-                             ConstantInt::get(Truncated->getType(), 1));
-  }
 
   case MSVCIntrin::_InterlockedDecrement: {
     llvm::Type *IntTy = ConvertType(E->getType());
@@ -2791,9 +2805,32 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI_InterlockedXor16:
   case Builtin::BI_InterlockedXor:
     return RValue::get(EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor, E));
+
+  case Builtin::BI_bittest:
+    return EmitBitTestIntrinsic(*this, E, '\0', 'l');
+  case Builtin::BI_bittestandcomplement:
+    return EmitBitTestIntrinsic(*this, E, 'c', 'l');
+  case Builtin::BI_bittestandreset:
+    return EmitBitTestIntrinsic(*this, E, 'r', 'l');
+  case Builtin::BI_bittestandset:
+    return EmitBitTestIntrinsic(*this, E, 's', 'l');
+  case Builtin::BI_interlockedbittestandreset:
+    return EmitBitTestIntrinsic(*this, E, 'r', 'l', /*Locked=*/true);
   case Builtin::BI_interlockedbittestandset:
-    return RValue::get(
-        EmitMSVCBuiltinExpr(MSVCIntrin::_interlockedbittestandset, E));
+    return EmitBitTestIntrinsic(*this, E, 's', 'l', /*Locked=*/true);
+
+  case Builtin::BI_bittest64:
+    return EmitBitTestIntrinsic(*this, E, '\0', 'q');
+  case Builtin::BI_bittestandcomplement64:
+    return EmitBitTestIntrinsic(*this, E, 'c', 'q');
+  case Builtin::BI_bittestandreset64:
+    return EmitBitTestIntrinsic(*this, E, 'r', 'q');
+  case Builtin::BI_bittestandset64:
+    return EmitBitTestIntrinsic(*this, E, 's', 'q');
+  case Builtin::BI_interlockedbittestandreset64:
+    return EmitBitTestIntrinsic(*this, E, 'r', 'q', /*Locked=*/true);
+  case Builtin::BI_interlockedbittestandset64:
+    return EmitBitTestIntrinsic(*this, E, 's', 'q', /*Locked=*/true);
 
   case Builtin::BI__exception_code:
   case Builtin::BI_exception_code:
@@ -8885,20 +8922,18 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_movdqa64store128_mask:
   case X86::BI__builtin_ia32_storeaps128_mask:
   case X86::BI__builtin_ia32_storeapd128_mask:
-    return EmitX86MaskedStore(*this, Ops, 16);
-
   case X86::BI__builtin_ia32_movdqa32store256_mask:
   case X86::BI__builtin_ia32_movdqa64store256_mask:
   case X86::BI__builtin_ia32_storeaps256_mask:
   case X86::BI__builtin_ia32_storeapd256_mask:
-    return EmitX86MaskedStore(*this, Ops, 32);
-
   case X86::BI__builtin_ia32_movdqa32store512_mask:
   case X86::BI__builtin_ia32_movdqa64store512_mask:
   case X86::BI__builtin_ia32_storeaps512_mask:
-  case X86::BI__builtin_ia32_storeapd512_mask:
-    return EmitX86MaskedStore(*this, Ops, 64);
-
+  case X86::BI__builtin_ia32_storeapd512_mask: {
+    unsigned Align =
+      getContext().getTypeAlignInChars(E->getArg(1)->getType()).getQuantity();
+    return EmitX86MaskedStore(*this, Ops, Align);
+  }
   case X86::BI__builtin_ia32_loadups128_mask:
   case X86::BI__builtin_ia32_loadups256_mask:
   case X86::BI__builtin_ia32_loadups512_mask:
@@ -8919,25 +8954,26 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_loaddqudi512_mask:
     return EmitX86MaskedLoad(*this, Ops, 1);
 
-  case X86::BI__builtin_ia32_loadaps128_mask:
-  case X86::BI__builtin_ia32_loadapd128_mask:
   case X86::BI__builtin_ia32_loadss128_mask:
   case X86::BI__builtin_ia32_loadsd128_mask:
-  case X86::BI__builtin_ia32_movdqa32load128_mask:
-  case X86::BI__builtin_ia32_movdqa64load128_mask:
-    return EmitX86MaskedLoad(*this, Ops, 16);
+    return EmitX86MaskedLoad(*this, Ops, 1);
 
+  case X86::BI__builtin_ia32_loadaps128_mask:
   case X86::BI__builtin_ia32_loadaps256_mask:
-  case X86::BI__builtin_ia32_loadapd256_mask:
-  case X86::BI__builtin_ia32_movdqa32load256_mask:
-  case X86::BI__builtin_ia32_movdqa64load256_mask:
-    return EmitX86MaskedLoad(*this, Ops, 32);
-
   case X86::BI__builtin_ia32_loadaps512_mask:
+  case X86::BI__builtin_ia32_loadapd128_mask:
+  case X86::BI__builtin_ia32_loadapd256_mask:
   case X86::BI__builtin_ia32_loadapd512_mask:
+  case X86::BI__builtin_ia32_movdqa32load128_mask:
+  case X86::BI__builtin_ia32_movdqa32load256_mask:
   case X86::BI__builtin_ia32_movdqa32load512_mask:
-  case X86::BI__builtin_ia32_movdqa64load512_mask:
-    return EmitX86MaskedLoad(*this, Ops, 64);
+  case X86::BI__builtin_ia32_movdqa64load128_mask:
+  case X86::BI__builtin_ia32_movdqa64load256_mask:
+  case X86::BI__builtin_ia32_movdqa64load512_mask: {
+    unsigned Align =
+      getContext().getTypeAlignInChars(E->getArg(1)->getType()).getQuantity();
+    return EmitX86MaskedLoad(*this, Ops, Align);
+  }
 
   case X86::BI__builtin_ia32_storehps:
   case X86::BI__builtin_ia32_storelps: {

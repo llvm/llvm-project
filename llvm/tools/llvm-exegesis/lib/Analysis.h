@@ -21,6 +21,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include <set>
 #include <string>
 #include <unordered_map>
 
@@ -40,11 +41,55 @@ public:
   template <typename Pass> llvm::Error run(llvm::raw_ostream &OS) const;
 
 private:
+  using ClusterId = InstructionBenchmarkClustering::ClusterId;
+
+  // An llvm::MCSchedClassDesc augmented with some additional data.
+  struct SchedClass {
+    SchedClass(const llvm::MCSchedClassDesc &SD,
+               const llvm::MCSubtargetInfo &STI);
+
+    const llvm::MCSchedClassDesc &SCDesc;
+    const llvm::SmallVector<llvm::MCWriteProcResEntry, 8>
+        NonRedundantWriteProcRes;
+    const std::vector<std::pair<uint16_t, float>> IdealizedProcResPressure;
+  };
+
+  // Represents the intersection of a sched class and a cluster.
+  class SchedClassCluster {
+  public:
+    const InstructionBenchmarkClustering::ClusterId &id() const {
+      return ClusterId;
+    }
+
+    const std::vector<size_t> &getPointIds() const { return PointIds; }
+
+    // Return the cluster centroid.
+    const std::vector<BenchmarkMeasureStats> &getRepresentative() const {
+      return Representative;
+    }
+
+    // Returns true if the cluster representative measurements match that of SC.
+    bool
+    measurementsMatch(const llvm::MCSubtargetInfo &STI, const SchedClass &SC,
+                      const InstructionBenchmarkClustering &Clustering) const;
+
+    void addPoint(size_t PointId,
+                  const InstructionBenchmarkClustering &Clustering);
+
+  private:
+    InstructionBenchmarkClustering::ClusterId ClusterId;
+    std::vector<size_t> PointIds;
+    // Measurement stats for the points in the SchedClassCluster.
+    std::vector<BenchmarkMeasureStats> Representative;
+  };
+
   void printInstructionRowCsv(size_t PointId, llvm::raw_ostream &OS) const;
 
-  void printSchedClassClustersHtml(std::vector<size_t> PointIds,
-                                   llvm::raw_ostream &OS) const;
-  void printSchedClassDescHtml(const llvm::MCSchedClassDesc &SCDesc,
+  void
+  printSchedClassClustersHtml(const std::vector<SchedClassCluster> &Clusters,
+                              const SchedClass &SC,
+                              llvm::raw_ostream &OS) const;
+  void printSchedClassDescHtml(const SchedClass &SC,
                                llvm::raw_ostream &OS) const;
 
   // Builds a map of Sched Class -> indices of points that belong to the sched

@@ -245,4 +245,3 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT: 1.00    -     psignw	(%rax), %mm2
 # CHECK-NEXT: 0.50   0.50   psignw	%xmm0, %xmm2
 # CHECK-NEXT: 1.00    -     psignw	(%rax), %xmm2
-

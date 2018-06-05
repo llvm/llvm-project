@@ -284,16 +284,25 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
   return LiveRegs;
 }
 
-void GCNUpwardRPTracker::reset(const MachineInstr &MI,
-                               const LiveRegSet *LiveRegsCopy) {
-  MRI = &MI.getParent()->getParent()->getRegInfo();
+void GCNRPTracker::reset(const MachineInstr &MI,
+                         const LiveRegSet *LiveRegsCopy,
+                         bool After) {
+  const MachineFunction &MF = *MI.getMF();
+  MRI = &MF.getRegInfo();
   if (LiveRegsCopy) {
     if (&LiveRegs != LiveRegsCopy)
       LiveRegs = *LiveRegsCopy;
   } else {
-    LiveRegs = getLiveRegsAfter(MI, LIS);
+    LiveRegs = After ? getLiveRegsAfter(MI, LIS)
+                     : getLiveRegsBefore(MI, LIS);
   }
+
   MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
+}
+
+void GCNUpwardRPTracker::reset(const MachineInstr &MI,
+                               const LiveRegSet *LiveRegsCopy) {
+  GCNRPTracker::reset(MI, LiveRegsCopy, true);
 }
 
 void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
@@ -349,13 +358,7 @@ bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
   NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
   if (NextMI == MBBEnd)
     return false;
-  if (LiveRegsCopy) {
-    if (&LiveRegs != LiveRegsCopy)
-      LiveRegs = *LiveRegsCopy;
-  } else {
-    LiveRegs = getLiveRegsBefore(*NextMI, LIS);
-  }
-  MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
+  GCNRPTracker::reset(*NextMI, LiveRegsCopy, false);
   return true;
 }
 

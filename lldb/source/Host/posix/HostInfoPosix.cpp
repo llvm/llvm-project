@@ -14,8 +14,6 @@
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/Log.h"
 
-#include "clang/Basic/Version.h"
-#include "clang/Config/config.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Path.h"
@@ -166,13 +164,6 @@ bool HostInfoPosix::ComputePathRelativeToLibrary(FileSpec &file_spec,
 
 bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
   return ComputePathRelativeToLibrary(file_spec, "/bin");
-}
-
-bool HostInfoPosix::ComputeClangDirectory(FileSpec &file_spec) {
-  return ComputePathRelativeToLibrary(
-      file_spec, (llvm::Twine("/lib") + CLANG_LIBDIR_SUFFIX + "/clang/" +
-                  CLANG_VERSION_STRING)
-                     .str());
 }
 
 bool HostInfoPosix::ComputeHeaderDirectory(FileSpec &file_spec) {

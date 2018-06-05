@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(BinaryFormatTests
   DwarfTest.cpp
+  MachOTest.cpp
   TestFileMagic.cpp
   )
 

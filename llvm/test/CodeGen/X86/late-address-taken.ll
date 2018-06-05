@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=false | FileCheck %s
 ; Make sure shrink-wrapping does not break the lowering of exception handling.
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=true | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s -enable-shrink-wrap=true -pass-remarks-output=%t | FileCheck %s
+; RUN: cat %t | FileCheck %s --check-prefix=REMARKS
 
 ; Repro cases from PR25168
 
@@ -37,6 +38,11 @@ exit:
 ; CHECK: leaq [[Exit]](%rip), %rax
 ; CHECK: retq # CATCHRET
 
+; REMARKS: Pass:            shrink-wrap
+; REMARKS-NEXT: Name:            UnsupportedEHFunclets
+; REMARKS-NEXT: Function:        catchret
+; REMARKS-NEXT: Args:
+; REMARKS-NEXT:   - String:          EH Funclets are not supported yet.
 
 ; test @setjmp - similar to @catchret, but the MBB in question
 ; is the one generated when the setjmp's block is split

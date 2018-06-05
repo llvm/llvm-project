@@ -302,6 +302,8 @@ ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest,
 
 COMPATIBLE_VALUE_LANGOPT(FunctionAlignment, 5, 0, "Default alignment for functions")
 
+LANGOPT(FixedPoint, 1, 0, "fixed point types")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

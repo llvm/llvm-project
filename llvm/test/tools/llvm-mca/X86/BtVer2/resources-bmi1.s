@@ -117,4 +117,3 @@ tzcnt       (%rax), %rcx
 # CHECK-NEXT: 1.00   1.00    -      -      -      -      -     1.00    -      -      -      -      -      -     tzcntl	(%rax), %ecx
 # CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -     tzcntq	%rax, %rcx
 # CHECK-NEXT: 1.00   1.00    -      -      -      -      -     1.00    -      -      -      -      -      -     tzcntq	(%rax), %rcx
-

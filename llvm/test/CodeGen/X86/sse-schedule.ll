@@ -6225,7 +6225,7 @@ define <4 x float> @test_fnop() nounwind {
 ;
 ; BTVER2-SSE-LABEL: test_fnop:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    xorps %xmm0, %xmm0 # sched: [1:0.50]
+; BTVER2-SSE-NEXT:    xorps %xmm0, %xmm0 # sched: [0:?]
 ; BTVER2-SSE-NEXT:    #APP
 ; BTVER2-SSE-NEXT:    nop # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    #NO_APP
@@ -6233,7 +6233,7 @@ define <4 x float> @test_fnop() nounwind {
 ;
 ; BTVER2-LABEL: test_fnop:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [1:0.50]
+; BTVER2-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [0:?]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    nop # sched: [1:0.50]
 ; BTVER2-NEXT:    #NO_APP

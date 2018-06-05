@@ -28,18 +28,6 @@ GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
     const MachineSchedContext *C) :
     GenericScheduler(C), TargetOccupancy(0), MF(nullptr) { }
 
-static unsigned getMaxWaves(unsigned SGPRs, unsigned VGPRs,
-                            const MachineFunction &MF) {
-
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned MinRegOccupancy = std::min(ST.getOccupancyWithNumSGPRs(SGPRs),
-                                      ST.getOccupancyWithNumVGPRs(VGPRs));
-  return std::min(MinRegOccupancy,
-                  ST.getOccupancyWithLocalMemSize(MFI->getLDSSize(),
-                                                  MF.getFunction()));
-}
-
 void GCNMaxOccupancySchedStrategy::initialize(ScheduleDAGMI *DAG) {
   GenericScheduler::initialize(DAG);
 
@@ -358,12 +346,9 @@ void GCNScheduleDAGMILive::schedule() {
     LLVM_DEBUG(dbgs() << "Pressure in desired limits, done.\n");
     return;
   }
-  unsigned WavesAfter = getMaxWaves(PressureAfter.getSGPRNum(),
-                                    PressureAfter.getVGPRNum(), MF);
-  unsigned WavesBefore = getMaxWaves(PressureBefore.getSGPRNum(),
-                                     PressureBefore.getVGPRNum(), MF);
-  WavesAfter = std::min(WavesAfter, MFI.getMaxWavesPerEU());
-  WavesBefore = std::min(WavesBefore, MFI.getMaxWavesPerEU());
+  unsigned Occ = MFI.getOccupancy();
+  unsigned WavesAfter = std::min(Occ, PressureAfter.getOccupancy(ST));
+  unsigned WavesBefore = std::min(Occ, PressureBefore.getOccupancy(ST));
   LLVM_DEBUG(dbgs() << "Occupancy before scheduling: " << WavesBefore
                     << ", after " << WavesAfter << ".\n");
 

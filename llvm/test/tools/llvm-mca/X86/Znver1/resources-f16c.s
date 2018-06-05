@@ -59,4 +59,3 @@ vcvtps2ph   $0, %ymm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vcvtps2ph	$0, %xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vcvtps2ph	$0, %ymm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vcvtps2ph	$0, %ymm0, (%rax)
-

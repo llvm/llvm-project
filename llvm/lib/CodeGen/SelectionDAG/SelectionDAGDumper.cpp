@@ -252,7 +252,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FPOWI:                      return "fpowi";
   case ISD::STRICT_FPOWI:               return "strict_fpowi";
   case ISD::SETCC:                      return "setcc";
-  case ISD::SETCCE:                     return "setcce";
   case ISD::SETCCCARRY:                 return "setcccarry";
   case ISD::SELECT:                     return "select";
   case ISD::VSELECT:                    return "vselect";

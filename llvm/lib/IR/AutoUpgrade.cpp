@@ -270,6 +270,14 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.vpermi2var.") || // Added in 7.0
       Name.startswith("avx512.mask.vpermt2var.") || // Added in 7.0
       Name.startswith("avx512.maskz.vpermt2var.") || // Added in 7.0
+      Name.startswith("avx512.mask.vpdpbusd.") || // Added in 7.0
+      Name.startswith("avx512.maskz.vpdpbusd.") || // Added in 7.0
+      Name.startswith("avx512.mask.vpdpbusds.") || // Added in 7.0
+      Name.startswith("avx512.maskz.vpdpbusds.") || // Added in 7.0
+      Name.startswith("avx512.mask.vpdpwssd.") || // Added in 7.0
+      Name.startswith("avx512.maskz.vpdpwssd.") || // Added in 7.0
+      Name.startswith("avx512.mask.vpdpwssds.") || // Added in 7.0
+      Name.startswith("avx512.maskz.vpdpwssds.") || // Added in 7.0
       Name == "sse.cvtsi2ss" || // Added in 7.0
       Name == "sse.cvtsi642ss" || // Added in 7.0
       Name == "sse2.cvtsi2sd" || // Added in 7.0
@@ -2662,6 +2670,66 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
                                  : Builder.CreateBitCast(CI->getArgOperand(1),
                                                          CI->getType());
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
+    } else if (IsX86 && (Name.startswith("avx512.mask.vpdpbusd.") ||
+                         Name.startswith("avx512.maskz.vpdpbusd.") ||
+                         Name.startswith("avx512.mask.vpdpbusds.") ||
+                         Name.startswith("avx512.maskz.vpdpbusds."))) {
+      bool ZeroMask = Name[11] == 'z';
+      bool IsSaturating = Name[ZeroMask ? 21 : 20] == 's';
+      unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
+      Intrinsic::ID IID;
+      if (VecWidth == 128 && !IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpbusd_128;
+      else if (VecWidth == 256 && !IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpbusd_256;
+      else if (VecWidth == 512 && !IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpbusd_512;
+      else if (VecWidth == 128 && IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpbusds_128;
+      else if (VecWidth == 256 && IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpbusds_256;
+      else if (VecWidth == 512 && IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpbusds_512;
+      else
+        llvm_unreachable("Unexpected intrinsic");
+
+      Value *Args[] = { CI->getArgOperand(0), CI->getArgOperand(1),
+                        CI->getArgOperand(2)  };
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(), IID),
+                               Args);
+      Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
+                                 : CI->getArgOperand(0);
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
+    } else if (IsX86 && (Name.startswith("avx512.mask.vpdpwssd.") ||
+                         Name.startswith("avx512.maskz.vpdpwssd.") ||
+                         Name.startswith("avx512.mask.vpdpwssds.") ||
+                         Name.startswith("avx512.maskz.vpdpwssds."))) {
+      bool ZeroMask = Name[11] == 'z';
+      bool IsSaturating = Name[ZeroMask ? 21 : 20] == 's';
+      unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
+      Intrinsic::ID IID;
+      if (VecWidth == 128 && !IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpwssd_128;
+      else if (VecWidth == 256 && !IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpwssd_256;
+      else if (VecWidth == 512 && !IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpwssd_512;
+      else if (VecWidth == 128 && IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpwssds_128;
+      else if (VecWidth == 256 && IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpwssds_256;
+      else if (VecWidth == 512 && IsSaturating)
+        IID = Intrinsic::x86_avx512_vpdpwssds_512;
+      else
+        llvm_unreachable("Unexpected intrinsic");
+
+      Value *Args[] = { CI->getArgOperand(0), CI->getArgOperand(1),
+                        CI->getArgOperand(2)  };
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(), IID),
+                               Args);
+      Value *PassThru = ZeroMask ? ConstantAggregateZero::get(CI->getType())
+                                 : CI->getArgOperand(0);
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
     } else if (IsX86 && Name.startswith("avx512.mask.") &&
                upgradeAVX512MaskToSelect(Name, Builder, *CI, Rep)) {

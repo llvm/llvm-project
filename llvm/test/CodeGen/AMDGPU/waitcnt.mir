@@ -1,4 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-insert-waitcnts  %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefix=GFX89 %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefix=GFX89 %s
 
 --- |
   define amdgpu_kernel void @flat_zero_waitcnt(i32 addrspace(1)* %global4,
@@ -30,21 +31,13 @@
 
 # CHECK-LABEL: bb.1:
 # CHECK: FLAT_LOAD_DWORD
-# CHECK: S_WAITCNT 368
+# GFX89: S_WAITCNT 112
 # CHECK: FLAT_LOAD_DWORDX4
-# The first load has no mem operand, so we should assume it accesses the flat
-# address space.
-# s_waitcnt lgkmcnt(1)
-# CHECK-NEXT: S_WAITCNT 383
 
 # CHECK-LABEL: bb.2:
 # CHECK: FLAT_LOAD_DWORD
-# CHECK: S_WAITCNT 368
+# GFX89: S_WAITCNT 112
 # CHECK: FLAT_LOAD_DWORDX4
-
-# One outstanding load accesses the flat address space.
-# s_waitcnt lgkmcnt(1)
-# CHECK-NEXT: S_WAITCNT 383
 
 name: flat_zero_waitcnt
 

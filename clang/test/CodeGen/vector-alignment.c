@@ -1,68 +1,38 @@
 // RUN: %clang_cc1 -w -triple x86_64-apple-darwin10 \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=DARWIN_SSE
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=SSE
 // RUN: %clang_cc1 -w -triple   i386-apple-darwin10 \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=DARWIN_SSE
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=SSE
 // RUN: %clang_cc1 -w -triple x86_64-apple-darwin10 -target-feature +avx \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=DARWIN_AVX
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX
 // RUN: %clang_cc1 -w -triple   i386-apple-darwin10 -target-feature +avx \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=DARWIN_AVX
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX
 // RUN: %clang_cc1 -w -triple x86_64-apple-darwin10 -target-feature +avx512f \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=DARWIN_AVX512
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX512
 // RUN: %clang_cc1 -w -triple   i386-apple-darwin10 -target-feature +avx512f \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=DARWIN_AVX512
-// RUN: %clang_cc1 -w -triple armv7-apple-ios10 \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=DARWIN_ARM32
-// RUN: %clang_cc1 -w -triple arm64-apple-ios10 \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=DARWIN_ARM64
-
-// RUN: %clang_cc1 -w -triple x86_64-pc-linux \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=GENERIC
-// RUN: %clang_cc1 -w -triple   i386-pc-linux \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=GENERIC
-// RUN: %clang_cc1 -w -triple x86_64-pc-linux -target-feature +avx \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=GENERIC
-// RUN: %clang_cc1 -w -triple   i386-pc-linux -target-feature +avx \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=GENERIC
-// RUN: %clang_cc1 -w -triple x86_64-pc-linux -target-feature +avx512f \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=GENERIC
-// RUN: %clang_cc1 -w -triple   i386-pc-linux -target-feature +avx512f \
-// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=GENERIC
-
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX512
 // rdar://11759609
 
 // At or below target max alignment with no aligned attribute should align based
 // on the size of vector.
 double __attribute__((vector_size(16))) v1;
-// DARWIN_SSE: @v1 {{.*}}, align 16
-// DARWIN_AVX: @v1 {{.*}}, align 16
-// DARWIN_AVX512: @v1 {{.*}}, align 16
-// DARWIN_ARM32: @v1 {{.*}}, align 16
-// DARWIN_ARM64: @v1 {{.*}}, align 16
-// GENERIC: @v1 {{.*}}, align 16
+// SSE: @v1 {{.*}}, align 16
+// AVX: @v1 {{.*}}, align 16
+// AVX512: @v1 {{.*}}, align 16
 double __attribute__((vector_size(32))) v2;
-// DARWIN_SSE: @v2 {{.*}}, align 16
-// DARWIN_AVX: @v2 {{.*}}, align 16
-// DARWIN_AVX512: @v2 {{.*}}, align 16
-// DARWIN_ARM32: @v2 {{.*}}, align 16
-// DARWIN_ARM64: @v2 {{.*}}, align 16
-// GENERIC: @v2 {{.*}}, align 32
+// SSE: @v2 {{.*}}, align 16
+// AVX: @v2 {{.*}}, align 32
+// AVX512: @v2 {{.*}}, align 32
 
 // Alignment above target max alignment with no aligned attribute should align
 // based on the target max.
 double __attribute__((vector_size(64))) v3;
-// DARWIN_SSE: @v3 {{.*}}, align 16
-// DARWIN_AVX: @v3 {{.*}}, align 16
-// DARWIN_AVX512: @v3 {{.*}}, align 16
-// DARWIN_ARM32: @v3 {{.*}}, align 16
-// DARWIN_ARM64: @v3 {{.*}}, align 16
-// GENERIC: @v3 {{.*}}, align 64
+// SSE: @v3 {{.*}}, align 16
+// AVX: @v3 {{.*}}, align 32
+// AVX512: @v3 {{.*}}, align 64
 double __attribute__((vector_size(1024))) v4;
-// DARWIN_SSE: @v4 {{.*}}, align 16
-// DARWIN_AVX: @v4 {{.*}}, align 16
-// DARWIN_AVX512: @v4 {{.*}}, align 16
-// DARWIN_ARM32: @v4 {{.*}}, align 16
-// DARWIN_ARM64: @v4 {{.*}}, align 16
-// GENERIC: @v4 {{.*}}, align 1024
+// SSE: @v4 {{.*}}, align 16
+// AVX: @v4 {{.*}}, align 32
+// AVX512: @v4 {{.*}}, align 64
 
 // Aliged attribute should always override.
 double __attribute__((vector_size(16), aligned(16))) v5;
@@ -76,19 +46,13 @@ double __attribute__((vector_size(32), aligned(64))) v8;
 
 // Check non-power of 2 widths.
 double __attribute__((vector_size(24))) v9;
-// DARWIN_SSE: @v9 {{.*}}, align 16
-// DARWIN_AVX: @v9 {{.*}}, align 16
-// DARWIN_AVX512: @v9 {{.*}}, align 16
-// DARWIN_ARM32: @v9 {{.*}}, align 16
-// DARWIN_ARM64: @v9 {{.*}}, align 16
-// GENERIC: @v9 {{.*}}, align 32
+// SSE: @v9 {{.*}}, align 16
+// AVX: @v9 {{.*}}, align 32
+// AVX512: @v9 {{.*}}, align 32
 double __attribute__((vector_size(40))) v10;
-// DARWIN_SSE: @v10 {{.*}}, align 16
-// DARWIN_AVX: @v10 {{.*}}, align 16
-// DARWIN_AVX512: @v10 {{.*}}, align 16
-// DARWIN_ARM32: @v10 {{.*}}, align 16
-// DARWIN_ARM64: @v10 {{.*}}, align 16
-// GENERIC: @v10 {{.*}}, align 64
+// SSE: @v10 {{.*}}, align 16
+// AVX: @v10 {{.*}}, align 32
+// AVX512: @v10 {{.*}}, align 64
 
 // Check non-power of 2 widths with aligned attribute.
 double __attribute__((vector_size(24), aligned(64))) v11;

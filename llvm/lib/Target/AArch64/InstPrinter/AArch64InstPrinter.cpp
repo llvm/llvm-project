@@ -1499,3 +1499,21 @@ void AArch64InstPrinter::printSVELogicalImm(const MCInst *MI, unsigned OpNum,
   else
     O << '#' << formatHex((uint64_t)PrintVal);
 }
+
+template <int Width>
+void AArch64InstPrinter::printZPRasFPR(const MCInst *MI, unsigned OpNum,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  unsigned Base;
+  switch (Width) {
+  case 8:   Base = AArch64::B0; break;
+  case 16:  Base = AArch64::H0; break;
+  case 32:  Base = AArch64::S0; break;
+  case 64:  Base = AArch64::D0; break;
+  case 128: Base = AArch64::Q0; break;
+  default:
+    llvm_unreachable("Unsupported width");
+  }
+  unsigned Reg = MI->getOperand(OpNum).getReg();
+  O << getRegisterName(Reg - AArch64::Z0 + Base);
+}

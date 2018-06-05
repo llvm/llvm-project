@@ -2538,6 +2538,17 @@ TSAN_INTERCEPTOR(void, _lwp_exit) {
 #define TSAN_MAYBE_INTERCEPT__LWP_EXIT
 #endif
 
+#if SANITIZER_FREEBSD
+TSAN_INTERCEPTOR(void, thr_exit, tid_t *state) {
+  SCOPED_TSAN_INTERCEPTOR(thr_exit, state);
+  DestroyThreadState();
+  REAL(thr_exit(state));
+}
+#define TSAN_MAYBE_INTERCEPT_THR_EXIT TSAN_INTERCEPT(thr_exit)
+#else
+#define TSAN_MAYBE_INTERCEPT_THR_EXIT
+#endif
+
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_init, void *c, void *a);
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_signal, void *c);
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_broadcast, void *c);
@@ -2730,6 +2741,7 @@ void InitializeInterceptors() {
 #endif
 
   TSAN_MAYBE_INTERCEPT__LWP_EXIT;
+  TSAN_MAYBE_INTERCEPT_THR_EXIT;
 
 #if !SANITIZER_MAC && !SANITIZER_ANDROID
   // Need to setup it, because interceptors check that the function is resolved.
