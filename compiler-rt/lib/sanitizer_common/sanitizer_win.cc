@@ -1025,6 +1025,10 @@ void MaybeReexec() {
   // No need to re-exec on Windows.
 }
 
+void CheckASLR() {
+  // Do nothing
+}
+
 char **GetArgv() {
   // FIXME: Actually implement this function.
   return 0;

@@ -153,7 +153,7 @@ void threadProcessing() {
   T.exitFunction(2, 3);
   T.exitFunction(1, 4);
 
-  profileCollectorService::post(T, __sanitizer::GetTid());
+  profileCollectorService::post(T, GetTid());
 }
 
 TEST(profileCollectorServiceTest, PostSerializeCollectMultipleThread) {

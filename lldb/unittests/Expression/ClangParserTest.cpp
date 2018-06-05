@@ -9,6 +9,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
 #include "gtest/gtest.h"
 
