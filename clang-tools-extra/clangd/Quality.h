@@ -67,7 +67,21 @@ struct SymbolRelevanceSignals {
   /// Proximity between best declaration and the query. [0-1], 1 is closest.
   float ProximityScore = 0;
 
+  // An approximate measure of where we expect the symbol to be used.
+  enum AccessibleScope {
+    FunctionScope,
+    ClassScope,
+    FileScope,
+    GlobalScope,
+  } Scope = GlobalScope;
+
+  enum QueryType {
+    CodeComplete,
+    Generic,
+  } Query = Generic;
+
   void merge(const CodeCompletionResult &SemaResult);
+  void merge(const Symbol &IndexResult);
 
   // Condense these signals down to a single number, higher is better.
   float evaluate() const;

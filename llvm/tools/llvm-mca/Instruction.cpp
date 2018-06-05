@@ -41,7 +41,7 @@ void WriteState::onInstructionIssued() {
   // Update the number of cycles left based on the WriteDescriptor info.
   CyclesLeft = WD.Latency;
 
-  // Now that the time left before write-back is know, notify
+  // Now that the time left before write-back is known, notify
   // all the users.
   for (const std::pair<ReadState *, int> &User : Users) {
     ReadState *RS = User.first;
@@ -73,16 +73,18 @@ void WriteState::cycleEvent() {
 }
 
 void ReadState::cycleEvent() {
-  // If CyclesLeft is unknown, then bail out immediately.
+  // Update the total number of cycles.
+  if (DependentWrites && TotalCycles) {
+    --TotalCycles;
+    return;
+  }
+
+  // Bail out immediately if we don't know how many cycles are left.
   if (CyclesLeft == UNKNOWN_CYCLES)
     return;
 
-  // If there are still dependent writes, or we reached cycle zero,
-  // then just exit.
-  if (DependentWrites || CyclesLeft == 0)
-    return;
-
-  CyclesLeft--;
+  if (CyclesLeft)
+    --CyclesLeft;
 }
 
 #ifndef NDEBUG

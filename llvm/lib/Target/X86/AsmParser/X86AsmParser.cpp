@@ -9,6 +9,7 @@
 
 #include "InstPrinter/X86IntelInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "X86AsmInstrumentation.h"
 #include "X86AsmParserCommon.h"
@@ -952,6 +953,8 @@ public:
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
 
   void SetFrameRegister(unsigned RegNo) override;
+
+  bool parseAssignmentExpression(const MCExpr *&Res, SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -2018,6 +2021,9 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
   if (getLexer().isNot(AsmToken::LParen)) {
     SMLoc ExprEnd;
     if (getParser().parseExpression(Disp, ExprEnd)) return nullptr;
+    // Disp may be a variable, handle register values.
+    if (auto *RE = dyn_cast<X86MCExpr>(Disp))
+      return X86Operand::CreateReg(RE->getRegNo(), MemStart, ExprEnd);
 
     // After parsing the base expression we could either have a parenthesized
     // memory address or not.  If not, return now.  If so, eat the (.
@@ -2180,6 +2186,25 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
     return X86Operand::CreateMem(getPointerWidth(), SegReg, Disp, BaseReg,
                                  IndexReg, Scale, MemStart, MemEnd);
   return X86Operand::CreateMem(getPointerWidth(), Disp, MemStart, MemEnd);
+}
+
+// Parse either a standard expression or a register.
+bool X86AsmParser::parseAssignmentExpression(const MCExpr *&Res,
+                                             SMLoc &EndLoc) {
+  MCAsmParser &Parser = getParser();
+  if (Parser.parseExpression(Res, EndLoc)) {
+    SMLoc StartLoc = Parser.getTok().getLoc();
+    // Normal Expression parse fails, check if it could be a register.
+    unsigned RegNo;
+    if (Parser.getTargetParser().ParseRegister(RegNo, StartLoc, EndLoc))
+      return true;
+    // Clear previous parse error and return correct expression.
+    Parser.clearPendingErrors();
+    Res = X86MCExpr::create(RegNo, Parser.getContext());
+    return false;
+  }
+
+  return false;
 }
 
 bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,

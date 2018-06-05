@@ -298,9 +298,8 @@ void ClangdServer::dumpAST(PathRef File,
 
 void ClangdServer::findDefinitions(PathRef File, Position Pos,
                                    Callback<std::vector<Location>> CB) {
-  auto FS = FSProvider.getFileSystem();
-  auto Action = [Pos, FS, this](Callback<std::vector<Location>> CB,
-                                llvm::Expected<InputsAndAST> InpAST) {
+  auto Action = [Pos, this](Callback<std::vector<Location>> CB,
+                            llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     CB(clangd::findDefinitions(InpAST->AST, Pos, this->FileIdx.get()));
@@ -391,10 +390,8 @@ ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
 
 void ClangdServer::findDocumentHighlights(
     PathRef File, Position Pos, Callback<std::vector<DocumentHighlight>> CB) {
-
-  auto FS = FSProvider.getFileSystem();
-  auto Action = [FS, Pos](Callback<std::vector<DocumentHighlight>> CB,
-                          llvm::Expected<InputsAndAST> InpAST) {
+  auto Action = [Pos](Callback<std::vector<DocumentHighlight>> CB,
+                      llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     CB(clangd::findDocumentHighlights(InpAST->AST, Pos));
@@ -405,9 +402,8 @@ void ClangdServer::findDocumentHighlights(
 
 void ClangdServer::findHover(PathRef File, Position Pos,
                              Callback<llvm::Optional<Hover>> CB) {
-  auto FS = FSProvider.getFileSystem();
-  auto Action = [Pos, FS](Callback<llvm::Optional<Hover>> CB,
-                          llvm::Expected<InputsAndAST> InpAST) {
+  auto Action = [Pos](Callback<llvm::Optional<Hover>> CB,
+                      llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     CB(clangd::getHover(InpAST->AST, Pos));

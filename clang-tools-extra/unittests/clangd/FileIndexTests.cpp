@@ -145,13 +145,14 @@ TEST(FileIndexTest, RemoveNonExisting) {
   EXPECT_THAT(match(M, FuzzyFindRequest()), UnorderedElementsAre());
 }
 
-TEST(FileIndexTest, IgnoreClassMembers) {
+TEST(FileIndexTest, ClassMembers) {
   FileIndex M;
   update(M, "f1", "class X { static int m1; int m2; static void f(); };");
 
   FuzzyFindRequest Req;
   Req.Query = "";
-  EXPECT_THAT(match(M, Req), UnorderedElementsAre("X"));
+  EXPECT_THAT(match(M, Req),
+              UnorderedElementsAre("X", "X::m1", "X::m2", "X::f"));
 }
 
 TEST(FileIndexTest, NoIncludeCollected) {

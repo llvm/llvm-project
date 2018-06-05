@@ -214,6 +214,8 @@ public:
     return rv;
   }
 
+  void clearPendingErrors() { PendingErrors.clear(); }
+
   bool addErrorSuffix(const Twine &Suffix);
 
   /// Get the next AsmToken in the stream, possibly handling file

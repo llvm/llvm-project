@@ -150,4 +150,3 @@ vpxor  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT: 6.     5     0.0    0.0    0.0       vxorps	%xmm4, %xmm4, %xmm5
 # CHECK-NEXT: 7.     5     0.0    0.0    0.0       vxorpd	%xmm1, %xmm1, %xmm3
 # CHECK-NEXT: 8.     5     0.0    0.0    0.0       vpxor	%xmm3, %xmm3, %xmm5
-

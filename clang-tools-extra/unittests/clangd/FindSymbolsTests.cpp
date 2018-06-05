@@ -120,7 +120,10 @@ TEST_F(WorkspaceSymbolsTest, Unnamed) {
   EXPECT_THAT(getSymbols("UnnamedStruct"),
               ElementsAre(AllOf(Named("UnnamedStruct"),
                                 WithKind(SymbolKind::Variable))));
-  EXPECT_THAT(getSymbols("InUnnamed"), IsEmpty());
+  EXPECT_THAT(
+      getSymbols("InUnnamed"),
+      ElementsAre(AllOf(Named("InUnnamed"), InContainer("(anonymous struct)"),
+                        WithKind(SymbolKind::Field))));
 }
 
 TEST_F(WorkspaceSymbolsTest, InMainFile) {
@@ -221,6 +224,44 @@ TEST_F(WorkspaceSymbolsTest, GlobalNamespaceQueries) {
                 WithKind(SymbolKind::Namespace))));
   EXPECT_THAT(getSymbols(":"), IsEmpty());
   EXPECT_THAT(getSymbols(""), IsEmpty());
+}
+
+TEST_F(WorkspaceSymbolsTest, Enums) {
+  addFile("foo.h", R"cpp(
+    enum {
+      Red
+    };
+    enum Color {
+      Green
+    };
+    enum class Color2 {
+      Yellow
+    };
+    namespace ns {
+      enum {
+        Black
+      };
+      enum Color3 {
+        Blue
+      };
+      enum class Color4 {
+        White
+      };
+    }
+      )cpp");
+  addFile("foo.cpp", R"cpp(
+      #include "foo.h"
+      )cpp");
+  EXPECT_THAT(getSymbols("Red"), ElementsAre(Named("Red")));
+  EXPECT_THAT(getSymbols("::Red"), ElementsAre(Named("Red")));
+  EXPECT_THAT(getSymbols("Green"), ElementsAre(Named("Green")));
+  EXPECT_THAT(getSymbols("Green"), ElementsAre(Named("Green")));
+  EXPECT_THAT(getSymbols("Color2::Yellow"), ElementsAre(Named("Yellow")));
+  EXPECT_THAT(getSymbols("Yellow"), ElementsAre(Named("Yellow")));
+
+  EXPECT_THAT(getSymbols("ns::Black"), ElementsAre(Named("Black")));
+  EXPECT_THAT(getSymbols("ns::Blue"), ElementsAre(Named("Blue")));
+  EXPECT_THAT(getSymbols("ns::Color4::White"), ElementsAre(Named("White")));
 }
 
 TEST_F(WorkspaceSymbolsTest, WithLimit) {

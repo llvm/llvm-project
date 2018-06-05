@@ -101,6 +101,21 @@ define i8 @abs_canonical_4(i8 %x) {
   ret i8 %abs
 }
 
+define i32 @abs_canonical_5(i8 %x) {
+; CHECK-LABEL: @abs_canonical_5(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[X]] to i32
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[CONV]]
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[CONV]]
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+  %cmp = icmp sgt i8 %x, 0
+  %conv = sext i8 %x to i32
+  %neg = sub i32 0, %conv
+  %abs = select i1 %cmp, i32 %conv, i32 %neg
+  ret i32 %abs
+}
+
 ; We have a canonical form of nabs to make CSE easier.
 
 define i8 @nabs_canonical_1(i8 %x) {
@@ -157,6 +172,21 @@ define i8 @nabs_canonical_4(i8 %x) {
   %neg = sub i8 0, %x
   %abs = select i1 %cmp, i8 %x, i8 %neg
   ret i8 %abs
+}
+
+define i32 @nabs_canonical_5(i8 %x) {
+; CHECK-LABEL: @nabs_canonical_5(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[X]] to i32
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[CONV]]
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[CONV]], i32 [[NEG]]
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+  %cmp = icmp sgt i8 %x, 0
+  %conv = sext i8 %x to i32
+  %neg = sub i32 0, %conv
+  %abs = select i1 %cmp, i32 %neg, i32 %conv
+  ret i32 %abs
 }
 
 ; The following 5 tests use a shift+add+xor to implement abs():

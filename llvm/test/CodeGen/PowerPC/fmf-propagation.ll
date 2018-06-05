@@ -457,3 +457,28 @@ define double @log2_approx(double %x) nounwind {
   ret double %r
 }
 
+; -(X - Y) --> (Y - X)
+
+; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fneg_fsub_nozeros_1:'
+; FMFDEBUG:         fsub nsz {{t[0-9]+}}, {{t[0-9]+}}
+; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fneg_fsub_nozeros_1:'
+
+; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fneg_fsub_nozeros_1:'
+; GLOBALDEBUG:         fsub nsz {{t[0-9]+}}, {{t[0-9]+}}
+; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fneg_fsub_nozeros_1:'
+
+define float @fneg_fsub_nozeros_1(float %x, float %y, float %z) {
+; FMF-LABEL: fneg_fsub_nozeros_1:
+; FMF:       # %bb.0:
+; FMF-NEXT:    xssubsp 1, 2, 1
+; FMF-NEXT:    blr
+;
+; GLOBAL-LABEL: fneg_fsub_nozeros_1:
+; GLOBAL:       # %bb.0:
+; GLOBAL-NEXT:    xssubsp 1, 2, 1
+; GLOBAL-NEXT:    blr
+  %neg = fsub float %x, %y
+  %add = fsub nsz float 0.0, %neg
+  ret float %add
+}
+
