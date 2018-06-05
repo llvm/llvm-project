@@ -67,6 +67,28 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolQualitySignals &S) {
   return OS;
 }
 
+static SymbolRelevanceSignals::AccessibleScope
+ComputeScope(const NamedDecl &D) {
+  bool InClass;
+  for (const DeclContext *DC = D.getDeclContext(); !DC->isFileContext();
+       DC = DC->getParent()) {
+    if (DC->isFunctionOrMethod())
+      return SymbolRelevanceSignals::FunctionScope;
+    InClass = InClass || DC->isRecord();
+  }
+  if (InClass)
+    return SymbolRelevanceSignals::ClassScope;
+  // This threshold could be tweaked, e.g. to treat module-visible as global.
+  if (D.getLinkageInternal() < ExternalLinkage)
+    return SymbolRelevanceSignals::FileScope;
+  return SymbolRelevanceSignals::GlobalScope;
+}
+
+void SymbolRelevanceSignals::merge(const Symbol &IndexResult) {
+  // FIXME: Index results always assumed to be at global scope. If Scope becomes
+  // relevant to non-completion requests, we should recognize class members etc.
+}
+
 void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
   if (SemaCCResult.Availability == CXAvailability_NotAvailable ||
       SemaCCResult.Availability == CXAvailability_NotAccessible)
@@ -79,16 +101,41 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
         hasDeclInMainFile(*SemaCCResult.Declaration) ? 1.0 : 0.0;
     ProximityScore = std::max(DeclProximity, ProximityScore);
   }
+
+  // Declarations are scoped, others (like macros) are assumed global.
+  if (SemaCCResult.Kind == CodeCompletionResult::RK_Declaration)
+    Scope = std::min(Scope, ComputeScope(*SemaCCResult.Declaration));
 }
 
 float SymbolRelevanceSignals::evaluate() const {
+  float Score = 1;
+
   if (Forbidden)
     return 0;
 
-  float Score = NameMatch;
+  Score *= NameMatch;
+
   // Proximity scores are [0,1] and we translate them into a multiplier in the
   // range from 1 to 2.
   Score *= 1 + ProximityScore;
+
+  // Symbols like local variables may only be referenced within their scope.
+  // Conversely if we're in that scope, it's likely we'll reference them.
+  if (Query == CodeComplete) {
+    // The narrower the scope where a symbol is visible, the more likely it is
+    // to be relevant when it is available.
+    switch (Scope) {
+    case GlobalScope:
+      break;
+    case FileScope:
+      Score *= 1.5;
+    case ClassScope:
+      Score *= 2;
+    case FunctionScope:
+      Score *= 4;
+    }
+  }
+
   return Score;
 }
 raw_ostream &operator<<(raw_ostream &OS, const SymbolRelevanceSignals &S) {
