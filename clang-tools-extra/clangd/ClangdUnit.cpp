@@ -51,11 +51,11 @@ template <class T> std::size_t getUsedBytes(const std::vector<T> &Vec) {
 
 class DeclTrackingASTConsumer : public ASTConsumer {
 public:
-  DeclTrackingASTConsumer(std::vector<const Decl *> &TopLevelDecls)
+  DeclTrackingASTConsumer(std::vector<Decl *> &TopLevelDecls)
       : TopLevelDecls(TopLevelDecls) {}
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
-    for (const Decl *D : DG) {
+    for (Decl *D : DG) {
       // ObjCMethodDecl are not actually top-level decls.
       if (isa<ObjCMethodDecl>(D))
         continue;
@@ -66,14 +66,12 @@ public:
   }
 
 private:
-  std::vector<const Decl *> &TopLevelDecls;
+  std::vector<Decl *> &TopLevelDecls;
 };
 
 class ClangdFrontendAction : public SyntaxOnlyAction {
 public:
-  std::vector<const Decl *> takeTopLevelDecls() {
-    return std::move(TopLevelDecls);
-  }
+  std::vector<Decl *> takeTopLevelDecls() { return std::move(TopLevelDecls); }
 
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -82,7 +80,7 @@ protected:
   }
 
 private:
-  std::vector<const Decl *> TopLevelDecls;
+  std::vector<Decl *> TopLevelDecls;
 };
 
 class CppFilePreambleCallbacks : public PreambleCallbacks {
@@ -174,7 +172,7 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
   // CompilerInstance won't run this callback, do it directly.
   ASTDiags.EndSourceFile();
 
-  std::vector<const Decl *> ParsedDecls = Action->takeTopLevelDecls();
+  std::vector<Decl *> ParsedDecls = Action->takeTopLevelDecls();
   std::vector<Diag> Diags = ASTDiags.take();
   // Add diagnostics from the preamble, if any.
   if (Preamble)
@@ -210,7 +208,7 @@ const Preprocessor &ParsedAST::getPreprocessor() const {
   return Clang->getPreprocessor();
 }
 
-ArrayRef<const Decl *> ParsedAST::getLocalTopLevelDecls() {
+ArrayRef<Decl *> ParsedAST::getLocalTopLevelDecls() {
   return LocalTopLevelDecls;
 }
 
@@ -261,7 +259,7 @@ PreambleData::PreambleData(PrecompiledPreamble Preamble,
 ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
-                     std::vector<const Decl *> LocalTopLevelDecls,
+                     std::vector<Decl *> LocalTopLevelDecls,
                      std::vector<Diag> Diags, std::vector<Inclusion> Inclusions)
     : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Diags(std::move(Diags)),

@@ -108,6 +108,8 @@ template <> struct MappingTraits<Symbol> {
                    SymbolLocation());
     IO.mapOptional("Definition", Sym.Definition, SymbolLocation());
     IO.mapOptional("References", Sym.References, 0u);
+    IO.mapOptional("IsIndexedForCodeCompletion", Sym.IsIndexedForCodeCompletion,
+                   false);
     IO.mapRequired("CompletionLabel", Sym.CompletionLabel);
     IO.mapRequired("CompletionFilterText", Sym.CompletionFilterText);
     IO.mapRequired("CompletionPlainInsertText", Sym.CompletionPlainInsertText);

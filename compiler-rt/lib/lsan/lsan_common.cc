@@ -100,6 +100,8 @@ static SuppressionContext *GetSuppressionContext() {
 
 static InternalMmapVector<RootRegion> *root_regions;
 
+static uptr initialized_for_pid;
+
 InternalMmapVector<RootRegion> const *GetRootRegions() { return root_regions; }
 
 void InitializeRootRegions() {
@@ -113,6 +115,7 @@ const char *MaybeCallLsanDefaultOptions() {
 }
 
 void InitCommonLsan() {
+  initialized_for_pid = internal_getpid();
   InitializeRootRegions();
   if (common_flags()->detect_leaks) {
     // Initialization which can fail or print warnings should only be done if
@@ -568,6 +571,12 @@ static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
 static bool CheckForLeaks() {
   if (&__lsan_is_turned_off && __lsan_is_turned_off())
       return false;
+  if (initialized_for_pid != internal_getpid()) {
+    // If process was forked and it had threads we fail to detect references
+    // from other threads.
+    Report("WARNING: LeakSanitizer is disabled in forked process.\n");
+    return false;
+  }
   EnsureMainThreadIDIsCorrect();
   CheckForLeaksParam param;
   param.success = false;

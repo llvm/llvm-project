@@ -296,6 +296,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i16, Custom);
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f16, Custom);
+  setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i8, Custom);
+  setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4i8, Custom);
+  setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v8i8, Custom);
+
+  setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i8, Custom);
+  setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i8, Custom);
+  setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v8i8, Custom);
 
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4i16, Custom);
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4f16, Custom);
@@ -4069,14 +4076,18 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue InsVal = Op.getOperand(1);
   SDValue Idx = Op.getOperand(2);
   EVT VecVT = Vec.getValueType();
+  EVT EltVT = VecVT.getVectorElementType();
+  unsigned VecSize = VecVT.getSizeInBits();
+  unsigned EltSize = EltVT.getSizeInBits();
 
-  assert(VecVT.getScalarSizeInBits() == 16);
+
+  assert(VecSize <= 64);
 
   unsigned NumElts = VecVT.getVectorNumElements();
   SDLoc SL(Op);
   auto KIdx = dyn_cast<ConstantSDNode>(Idx);
 
-  if (NumElts == 4 && KIdx) {
+  if (NumElts == 4 && EltSize == 16 && KIdx) {
     SDValue BCVec = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Vec);
 
     SDValue LoHalf = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, BCVec,
@@ -4103,22 +4114,24 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     return DAG.getNode(ISD::BITCAST, SL, VecVT, Concat);
   }
 
-  assert(NumElts == 2 || NumElts == 4);
-
   if (isa<ConstantSDNode>(Idx))
     return SDValue();
 
-  EVT IntVT = NumElts == 2 ? MVT::i32 : MVT::i64;
+  MVT IntVT = MVT::getIntegerVT(VecSize);
 
   // Avoid stack access for dynamic indexing.
-  SDValue Val = DAG.getNode(ISD::BITCAST, SL, MVT::i16, InsVal);
+  SDValue Val = InsVal;
+  if (InsVal.getValueType() == MVT::f16)
+      Val = DAG.getNode(ISD::BITCAST, SL, MVT::i16, InsVal);
 
   // v_bfi_b32 (v_bfm_b32 16, (shl idx, 16)), val, vec
   SDValue ExtVal = DAG.getNode(ISD::ZERO_EXTEND, SL, IntVT, Val);
 
+  assert(isPowerOf2_32(EltSize));
+  SDValue ScaleFactor = DAG.getConstant(Log2_32(EltSize), SL, MVT::i32);
+
   // Convert vector index to bit-index.
-  SDValue ScaledIdx = DAG.getNode(ISD::SHL, SL, MVT::i32, Idx,
-                                  DAG.getConstant(4, SL, MVT::i32));
+  SDValue ScaledIdx = DAG.getNode(ISD::SHL, SL, MVT::i32, Idx, ScaleFactor);
 
   SDValue BCVec = DAG.getNode(ISD::BITCAST, SL, IntVT, Vec);
   SDValue BFM = DAG.getNode(ISD::SHL, SL, IntVT,
@@ -4141,8 +4154,9 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   SDValue Vec = Op.getOperand(0);
   SDValue Idx = Op.getOperand(1);
   EVT VecVT = Vec.getValueType();
-  unsigned NumElts = VecVT.getVectorNumElements();
-  assert(VecVT.getScalarSizeInBits() == 16 && (NumElts == 2 || NumElts == 4));
+  unsigned VecSize = VecVT.getSizeInBits();
+  EVT EltVT = VecVT.getVectorElementType();
+  assert(VecSize <= 64);
 
   DAGCombinerInfo DCI(DAG, AfterLegalizeVectorOps, true, nullptr);
 
@@ -4153,11 +4167,14 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   if (SDValue Combined = performExtractVectorEltCombine(Op.getNode(), DCI))
     return Combined;
 
-  EVT IntVT = NumElts == 2 ? MVT::i32 : MVT::i64;
-  SDValue Four = DAG.getConstant(4, SL, MVT::i32);
+  unsigned EltSize = EltVT.getSizeInBits();
+  assert(isPowerOf2_32(EltSize));
 
-  // Convert vector index to bit-index (* 16)
-  SDValue ScaledIdx = DAG.getNode(ISD::SHL, SL, MVT::i32, Idx, Four);
+  MVT IntVT = MVT::getIntegerVT(VecSize);
+  SDValue ScaleFactor = DAG.getConstant(Log2_32(EltSize), SL, MVT::i32);
+
+  // Convert vector index to bit-index (* EltSize)
+  SDValue ScaledIdx = DAG.getNode(ISD::SHL, SL, MVT::i32, Idx, ScaleFactor);
 
   SDValue BC = DAG.getNode(ISD::BITCAST, SL, IntVT, Vec);
   SDValue Elt = DAG.getNode(ISD::SRL, SL, IntVT, BC, ScaledIdx);

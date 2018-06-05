@@ -17,6 +17,10 @@ add_lldb_unittest(SymbolFilePDBTests
 set(test_inputs
    test-pdb.exe
    test-pdb.pdb
+   test-pdb-function-level-linking.exe
+   test-pdb-function-level-linking.pdb
+   test-pdb-splitted-function.exe
+   test-pdb-splitted-function.pdb
    test-pdb-types.exe
    test-pdb-types.pdb)
 

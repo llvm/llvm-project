@@ -818,7 +818,7 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
 
   // Create the canonical compare.
   Cmp.setPredicate(ICmpInst::ICMP_SLT);
-  Cmp.setOperand(1, ConstantInt::getNullValue(LHS->getType()));
+  Cmp.setOperand(1, ConstantInt::getNullValue(Cmp.getOperand(0)->getType()));
 
   // If the select operands do not change, we're done.
   Value *TVal = Sel.getTrueValue();

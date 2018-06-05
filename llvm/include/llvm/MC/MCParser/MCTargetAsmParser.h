@@ -371,6 +371,11 @@ public:
     SemaCallback = Callback;
   }
 
+  // Target-specific parsing of assembler-level variable assignment.
+  virtual bool parseAssignmentExpression(const MCExpr *&Res, SMLoc &EndLoc) {
+    return getParser().parseExpression(Res, EndLoc);
+  }
+
   virtual bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                              SMLoc &EndLoc) = 0;
 

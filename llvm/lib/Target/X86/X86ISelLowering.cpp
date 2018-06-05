@@ -23240,10 +23240,11 @@ static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
   MVT VT = Amt.getSimpleValueType();
-  bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
+  if (!(VT == MVT::v8i16 || VT == MVT::v4i32 ||
+        (Subtarget.hasInt256() && VT == MVT::v16i16)))
+    return SDValue();
 
-  if (ConstantAmt && (VT == MVT::v8i16 || VT == MVT::v4i32 ||
-                      (Subtarget.hasInt256() && VT == MVT::v16i16))) {
+  if (ISD::isBuildVectorOfConstantSDNodes(Amt.getNode())) {
     SmallVector<SDValue, 8> Elts;
     MVT SVT = VT.getVectorElementType();
     unsigned SVTBits = SVT.getSizeInBits();
@@ -23269,12 +23270,29 @@ static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
     return DAG.getBuildVector(VT, dl, Elts);
   }
 
+  // If the target doesn't support variable shifts, use either FP conversion 
+  // or integer multiplication to avoid shifting each element individually.
   if (VT == MVT::v4i32) {
     Amt = DAG.getNode(ISD::SHL, dl, VT, Amt, DAG.getConstant(23, dl, VT));
     Amt = DAG.getNode(ISD::ADD, dl, VT, Amt,
                       DAG.getConstant(0x3f800000U, dl, VT));
     Amt = DAG.getBitcast(MVT::v4f32, Amt);
     return DAG.getNode(ISD::FP_TO_SINT, dl, VT, Amt);
+  }
+
+  // AVX2 can more effectively perform this as a zext/trunc to/from v8i32.
+  if (VT == MVT::v8i16 && !Subtarget.hasAVX2()) {
+    SDValue Z = getZeroVector(VT, Subtarget, DAG, dl);
+    SDValue Lo = DAG.getBitcast(MVT::v4i32, getUnpackl(DAG, dl, VT, Amt, Z));
+    SDValue Hi = DAG.getBitcast(MVT::v4i32, getUnpackh(DAG, dl, VT, Amt, Z));
+    Lo = convertShiftLeftToScale(Lo, dl, Subtarget, DAG);
+    Hi = convertShiftLeftToScale(Hi, dl, Subtarget, DAG);
+    if (Subtarget.hasSSE41())
+      return DAG.getNode(X86ISD::PACKUS, dl, VT, Lo, Hi);
+
+    return DAG.getVectorShuffle(VT, dl, DAG.getBitcast(VT, Lo),
+                                        DAG.getBitcast(VT, Hi),
+                                        {0, 2, 4, 6, 8, 10, 12, 14});
   }
 
   return SDValue();

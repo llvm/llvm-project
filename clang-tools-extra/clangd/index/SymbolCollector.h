@@ -18,13 +18,18 @@
 namespace clang {
 namespace clangd {
 
-/// \brief Collect top-level symbols from an AST. These are symbols defined
-/// immediately inside a namespace or a translation unit scope. For example,
-/// symbols in classes or functions are not collected. Note that this only
-/// collects symbols that declared in at least one file that is not a main
-/// file (i.e. the source file corresponding to a TU). These are symbols that
-/// can be imported by other files by including the file where symbols are
-/// declared.
+/// \brief Collect declarations (symbols) from an AST.
+/// It collects most declarations except:
+/// - Implicit declarations
+/// - Anonymous declarations (anonymous enum/class/struct, etc)
+/// - Declarations in anonymous namespaces
+/// - Local declarations (in function bodies, blocks, etc)
+/// - Declarations in main files
+/// - Template specializations
+/// - Library-specific private declarations (e.g. private declaration generated
+/// by protobuf compiler)
+///
+/// See also shouldFilterDecl().
 ///
 /// Clients (e.g. clangd) can use SymbolCollector together with
 /// index::indexTopLevelDecls to retrieve all symbols when the source file is
