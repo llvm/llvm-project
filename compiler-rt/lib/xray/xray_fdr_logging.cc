@@ -16,11 +16,14 @@
 //===----------------------------------------------------------------------===//
 #include "xray_fdr_logging.h"
 #include <errno.h>
+#include <limits>
+#include <pthread.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
 
+#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "xray/xray_interface.h"
@@ -28,22 +31,665 @@
 #include "xray_buffer_queue.h"
 #include "xray_defs.h"
 #include "xray_fdr_flags.h"
-#include "xray_fdr_logging_impl.h"
 #include "xray_flags.h"
 #include "xray_tsc.h"
 #include "xray_utils.h"
 
 namespace __xray {
 
+atomic_sint32_t LoggingStatus = {XRayLogInitStatus::XRAY_LOG_UNINITIALIZED};
+
+// Group together thread-local-data in a struct, then hide it behind a function
+// call so that it can be initialized on first use instead of as a global. We
+// force the alignment to 64-bytes for x86 cache line alignment, as this
+// structure is used in the hot path of implementation.
+struct alignas(64) ThreadLocalData {
+  BufferQueue::Buffer Buffer;
+  char *RecordPtr = nullptr;
+  // The number of FunctionEntry records immediately preceding RecordPtr.
+  uint8_t NumConsecutiveFnEnters = 0;
+
+  // The number of adjacent, consecutive pairs of FunctionEntry, Tail Exit
+  // records preceding RecordPtr.
+  uint8_t NumTailCalls = 0;
+
+  // We use a thread_local variable to keep track of which CPUs we've already
+  // run, and the TSC times for these CPUs. This allows us to stop repeating the
+  // CPU field in the function records.
+  //
+  // We assume that we'll support only 65536 CPUs for x86_64.
+  uint16_t CurrentCPU = std::numeric_limits<uint16_t>::max();
+  uint64_t LastTSC = 0;
+  uint64_t LastFunctionEntryTSC = 0;
+
+  // Make sure a thread that's ever called handleArg0 has a thread-local
+  // live reference to the buffer queue for this particular instance of
+  // FDRLogging, and that we're going to clean it up when the thread exits.
+  BufferQueue *BQ = nullptr;
+};
+
+static_assert(std::is_trivially_destructible<ThreadLocalData>::value,
+              "ThreadLocalData must be trivially destructible");
+
+static constexpr auto MetadataRecSize = sizeof(MetadataRecord);
+static constexpr auto FunctionRecSize = sizeof(FunctionRecord);
+
+// Use a global pthread key to identify thread-local data for logging.
+static pthread_key_t Key;
+
+// This function will initialize the thread-local data structure used by the FDR
+// logging implementation and return a reference to it. The implementation
+// details require a bit of care to maintain.
+//
+// First, some requirements on the implementation in general:
+//
+//   - XRay handlers should not call any memory allocation routines that may
+//     delegate to an instrumented implementation. This means functions like
+//     malloc() and free() should not be called while instrumenting.
+//
+//   - We would like to use some thread-local data initialized on first-use of
+//     the XRay instrumentation. These allow us to implement unsynchronized
+//     routines that access resources associated with the thread.
+//
+// The implementation here uses a few mechanisms that allow us to provide both
+// the requirements listed above. We do this by:
+//
+//   1. Using a thread-local aligned storage buffer for representing the
+//      ThreadLocalData struct. This data will be uninitialized memory by
+//      design.
+//
+//   2. Not requiring a thread exit handler/implementation, keeping the
+//      thread-local as purely a collection of references/data that do not
+//      require cleanup.
+//
+// We're doing this to avoid using a `thread_local` object that has a
+// non-trivial destructor, because the C++ runtime might call std::malloc(...)
+// to register calls to destructors. Deadlocks may arise when, for example, an
+// externally provided malloc implementation is XRay instrumented, and
+// initializing the thread-locals involves calling into malloc. A malloc
+// implementation that does global synchronization might be holding a lock for a
+// critical section, calling a function that might be XRay instrumented (and
+// thus in turn calling into malloc by virtue of registration of the
+// thread_local's destructor).
+static ThreadLocalData &getThreadLocalData() {
+  static_assert(alignof(ThreadLocalData) >= 64,
+                "ThreadLocalData must be cache line aligned.");
+  thread_local ThreadLocalData TLD;
+  thread_local bool UNUSED ThreadOnce = [] {
+    pthread_setspecific(Key, &TLD);
+    return false;
+  }();
+  return TLD;
+}
+
+namespace {
+
+class RecursionGuard {
+  volatile bool &Running;
+  const bool Valid;
+
+public:
+  explicit RecursionGuard(volatile bool &R) : Running(R), Valid(!R) {
+    if (Valid)
+      Running = true;
+  }
+
+  RecursionGuard(const RecursionGuard &) = delete;
+  RecursionGuard(RecursionGuard &&) = delete;
+  RecursionGuard &operator=(const RecursionGuard &) = delete;
+  RecursionGuard &operator=(RecursionGuard &&) = delete;
+
+  explicit operator bool() const { return Valid; }
+
+  ~RecursionGuard() noexcept {
+    if (Valid)
+      Running = false;
+  }
+};
+
+} // namespace
+
+static void writeNewBufferPreamble(tid_t Tid,
+                                   timespec TS) XRAY_NEVER_INSTRUMENT {
+  static constexpr int InitRecordsCount = 2;
+  auto &TLD = getThreadLocalData();
+  MetadataRecord Metadata[InitRecordsCount];
+  {
+    // Write out a MetadataRecord to signify that this is the start of a new
+    // buffer, associated with a particular thread, with a new CPU.  For the
+    // data, we have 15 bytes to squeeze as much information as we can.  At this
+    // point we only write down the following bytes:
+    //   - Thread ID (tid_t, cast to 4 bytes type due to Darwin being 8 bytes)
+    auto &NewBuffer = Metadata[0];
+    NewBuffer.Type = uint8_t(RecordType::Metadata);
+    NewBuffer.RecordKind = uint8_t(MetadataRecord::RecordKinds::NewBuffer);
+    int32_t tid = static_cast<int32_t>(Tid);
+    internal_memcpy(&NewBuffer.Data, &tid, sizeof(tid));
+  }
+
+  // Also write the WalltimeMarker record.
+  {
+    static_assert(sizeof(time_t) <= 8, "time_t needs to be at most 8 bytes");
+    auto &WalltimeMarker = Metadata[1];
+    WalltimeMarker.Type = uint8_t(RecordType::Metadata);
+    WalltimeMarker.RecordKind =
+        uint8_t(MetadataRecord::RecordKinds::WalltimeMarker);
+
+    // We only really need microsecond precision here, and enforce across
+    // platforms that we need 64-bit seconds and 32-bit microseconds encoded in
+    // the Metadata record.
+    int32_t Micros = TS.tv_nsec / 1000;
+    int64_t Seconds = TS.tv_sec;
+    internal_memcpy(WalltimeMarker.Data, &Seconds, sizeof(Seconds));
+    internal_memcpy(WalltimeMarker.Data + sizeof(Seconds), &Micros,
+                    sizeof(Micros));
+  }
+
+  TLD.NumConsecutiveFnEnters = 0;
+  TLD.NumTailCalls = 0;
+  if (TLD.BQ == nullptr || TLD.BQ->finalizing())
+    return;
+  internal_memcpy(TLD.RecordPtr, Metadata, sizeof(Metadata));
+  TLD.RecordPtr += sizeof(Metadata);
+  // Since we write out the extents as the first metadata record of the
+  // buffer, we need to write out the extents including the extents record.
+  atomic_store(&TLD.Buffer.Extents->Size, sizeof(Metadata),
+               memory_order_release);
+}
+
+static void setupNewBuffer(int (*wall_clock_reader)(
+    clockid_t, struct timespec *)) XRAY_NEVER_INSTRUMENT {
+  auto &TLD = getThreadLocalData();
+  auto &B = TLD.Buffer;
+  TLD.RecordPtr = static_cast<char *>(B.Data);
+  tid_t Tid = GetTid();
+  timespec TS{0, 0};
+  // This is typically clock_gettime, but callers have injection ability.
+  wall_clock_reader(CLOCK_MONOTONIC, &TS);
+  writeNewBufferPreamble(Tid, TS);
+  TLD.NumConsecutiveFnEnters = 0;
+  TLD.NumTailCalls = 0;
+}
+
+static void incrementExtents(size_t Add) {
+  auto &TLD = getThreadLocalData();
+  atomic_fetch_add(&TLD.Buffer.Extents->Size, Add, memory_order_acq_rel);
+}
+
+static void decrementExtents(size_t Subtract) {
+  auto &TLD = getThreadLocalData();
+  atomic_fetch_sub(&TLD.Buffer.Extents->Size, Subtract, memory_order_acq_rel);
+}
+
+static void writeNewCPUIdMetadata(uint16_t CPU,
+                                  uint64_t TSC) XRAY_NEVER_INSTRUMENT {
+  auto &TLD = getThreadLocalData();
+  MetadataRecord NewCPUId;
+  NewCPUId.Type = uint8_t(RecordType::Metadata);
+  NewCPUId.RecordKind = uint8_t(MetadataRecord::RecordKinds::NewCPUId);
+
+  // The data for the New CPU will contain the following bytes:
+  //   - CPU ID (uint16_t, 2 bytes)
+  //   - Full TSC (uint64_t, 8 bytes)
+  // Total = 10 bytes.
+  internal_memcpy(&NewCPUId.Data, &CPU, sizeof(CPU));
+  internal_memcpy(&NewCPUId.Data[sizeof(CPU)], &TSC, sizeof(TSC));
+  internal_memcpy(TLD.RecordPtr, &NewCPUId, sizeof(MetadataRecord));
+  TLD.RecordPtr += sizeof(MetadataRecord);
+  TLD.NumConsecutiveFnEnters = 0;
+  TLD.NumTailCalls = 0;
+  incrementExtents(sizeof(MetadataRecord));
+}
+
+static void writeTSCWrapMetadata(uint64_t TSC) XRAY_NEVER_INSTRUMENT {
+  auto &TLD = getThreadLocalData();
+  MetadataRecord TSCWrap;
+  TSCWrap.Type = uint8_t(RecordType::Metadata);
+  TSCWrap.RecordKind = uint8_t(MetadataRecord::RecordKinds::TSCWrap);
+
+  // The data for the TSCWrap record contains the following bytes:
+  //   - Full TSC (uint64_t, 8 bytes)
+  // Total = 8 bytes.
+  internal_memcpy(&TSCWrap.Data, &TSC, sizeof(TSC));
+  internal_memcpy(TLD.RecordPtr, &TSCWrap, sizeof(MetadataRecord));
+  TLD.RecordPtr += sizeof(MetadataRecord);
+  TLD.NumConsecutiveFnEnters = 0;
+  TLD.NumTailCalls = 0;
+  incrementExtents(sizeof(MetadataRecord));
+}
+
+// Call Argument metadata records store the arguments to a function in the
+// order of their appearance; holes are not supported by the buffer format.
+static void writeCallArgumentMetadata(uint64_t A) XRAY_NEVER_INSTRUMENT {
+  auto &TLD = getThreadLocalData();
+  MetadataRecord CallArg;
+  CallArg.Type = uint8_t(RecordType::Metadata);
+  CallArg.RecordKind = uint8_t(MetadataRecord::RecordKinds::CallArgument);
+
+  internal_memcpy(CallArg.Data, &A, sizeof(A));
+  internal_memcpy(TLD.RecordPtr, &CallArg, sizeof(MetadataRecord));
+  TLD.RecordPtr += sizeof(MetadataRecord);
+  incrementExtents(sizeof(MetadataRecord));
+}
+
+static void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
+                                XRayEntryType EntryType) XRAY_NEVER_INSTRUMENT {
+  FunctionRecord FuncRecord;
+  FuncRecord.Type = uint8_t(RecordType::Function);
+  // Only take 28 bits of the function id.
+  FuncRecord.FuncId = FuncId & ~(0x0F << 28);
+  FuncRecord.TSCDelta = TSCDelta;
+
+  auto &TLD = getThreadLocalData();
+  switch (EntryType) {
+  case XRayEntryType::ENTRY:
+    ++TLD.NumConsecutiveFnEnters;
+    FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionEnter);
+    break;
+  case XRayEntryType::LOG_ARGS_ENTRY:
+    // We should not rewind functions with logged args.
+    TLD.NumConsecutiveFnEnters = 0;
+    TLD.NumTailCalls = 0;
+    FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionEnter);
+    break;
+  case XRayEntryType::EXIT:
+    // If we've decided to log the function exit, we will never erase the log
+    // before it.
+    TLD.NumConsecutiveFnEnters = 0;
+    TLD.NumTailCalls = 0;
+    FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionExit);
+    break;
+  case XRayEntryType::TAIL:
+    // If we just entered the function we're tail exiting from or erased every
+    // invocation since then, this function entry tail pair is a candidate to
+    // be erased when the child function exits.
+    if (TLD.NumConsecutiveFnEnters > 0) {
+      ++TLD.NumTailCalls;
+      TLD.NumConsecutiveFnEnters = 0;
+    } else {
+      // We will never be able to erase this tail call since we have logged
+      // something in between the function entry and tail exit.
+      TLD.NumTailCalls = 0;
+      TLD.NumConsecutiveFnEnters = 0;
+    }
+    FuncRecord.RecordKind =
+        uint8_t(FunctionRecord::RecordKinds::FunctionTailExit);
+    break;
+  case XRayEntryType::CUSTOM_EVENT: {
+    // This is a bug in patching, so we'll report it once and move on.
+    static bool Once = [&] {
+      Report("Internal error: patched an XRay custom event call as a function; "
+             "func id = %d\n",
+             FuncId);
+      return true;
+    }();
+    (void)Once;
+    return;
+  }
+  case XRayEntryType::TYPED_EVENT: {
+    static bool Once = [&] {
+      Report("Internal error: patched an XRay typed event call as a function; "
+             "func id = %d\n",
+             FuncId);
+      return true;
+    }();
+    (void)Once;
+    return;
+  }
+  }
+
+  internal_memcpy(TLD.RecordPtr, &FuncRecord, sizeof(FunctionRecord));
+  TLD.RecordPtr += sizeof(FunctionRecord);
+  incrementExtents(sizeof(FunctionRecord));
+}
+
+static uint64_t thresholdTicks() {
+  static uint64_t TicksPerSec = probeRequiredCPUFeatures()
+                                    ? getTSCFrequency()
+                                    : __xray::NanosecondsPerSecond;
+  static const uint64_t ThresholdTicks =
+      TicksPerSec * fdrFlags()->func_duration_threshold_us / 1000000;
+  return ThresholdTicks;
+}
+
+// Re-point the thread local pointer into this thread's Buffer before the recent
+// "Function Entry" record and any "Tail Call Exit" records after that.
+static void rewindRecentCall(uint64_t TSC, uint64_t &LastTSC,
+                             uint64_t &LastFunctionEntryTSC, int32_t FuncId) {
+  auto &TLD = getThreadLocalData();
+  TLD.RecordPtr -= FunctionRecSize;
+  decrementExtents(FunctionRecSize);
+  FunctionRecord FuncRecord;
+  internal_memcpy(&FuncRecord, TLD.RecordPtr, FunctionRecSize);
+  DCHECK(FuncRecord.RecordKind ==
+             uint8_t(FunctionRecord::RecordKinds::FunctionEnter) &&
+         "Expected to find function entry recording when rewinding.");
+  DCHECK(FuncRecord.FuncId == (FuncId & ~(0x0F << 28)) &&
+         "Expected matching function id when rewinding Exit");
+  --TLD.NumConsecutiveFnEnters;
+  LastTSC -= FuncRecord.TSCDelta;
+
+  // We unwound one call. Update the state and return without writing a log.
+  if (TLD.NumConsecutiveFnEnters != 0) {
+    LastFunctionEntryTSC -= FuncRecord.TSCDelta;
+    return;
+  }
+
+  // Otherwise we've rewound the stack of all function entries, we might be
+  // able to rewind further by erasing tail call functions that are being
+  // exited from via this exit.
+  LastFunctionEntryTSC = 0;
+  auto RewindingTSC = LastTSC;
+  auto RewindingRecordPtr = TLD.RecordPtr - FunctionRecSize;
+  while (TLD.NumTailCalls > 0) {
+    // Rewind the TSC back over the TAIL EXIT record.
+    FunctionRecord ExpectedTailExit;
+    internal_memcpy(&ExpectedTailExit, RewindingRecordPtr, FunctionRecSize);
+
+    DCHECK(ExpectedTailExit.RecordKind ==
+               uint8_t(FunctionRecord::RecordKinds::FunctionTailExit) &&
+           "Expected to find tail exit when rewinding.");
+    RewindingRecordPtr -= FunctionRecSize;
+    RewindingTSC -= ExpectedTailExit.TSCDelta;
+    FunctionRecord ExpectedFunctionEntry;
+    internal_memcpy(&ExpectedFunctionEntry, RewindingRecordPtr,
+                    FunctionRecSize);
+    DCHECK(ExpectedFunctionEntry.RecordKind ==
+               uint8_t(FunctionRecord::RecordKinds::FunctionEnter) &&
+           "Expected to find function entry when rewinding tail call.");
+    DCHECK(ExpectedFunctionEntry.FuncId == ExpectedTailExit.FuncId &&
+           "Expected funcids to match when rewinding tail call.");
+
+    // This tail call exceeded the threshold duration. It will not be erased.
+    if ((TSC - RewindingTSC) >= thresholdTicks()) {
+      TLD.NumTailCalls = 0;
+      return;
+    }
+
+    // We can erase a tail exit pair that we're exiting through since
+    // its duration is under threshold.
+    --TLD.NumTailCalls;
+    RewindingRecordPtr -= FunctionRecSize;
+    RewindingTSC -= ExpectedFunctionEntry.TSCDelta;
+    TLD.RecordPtr -= 2 * FunctionRecSize;
+    LastTSC = RewindingTSC;
+    decrementExtents(2 * FunctionRecSize);
+  }
+}
+
+static bool releaseThreadLocalBuffer(BufferQueue &BQArg) {
+  auto &TLD = getThreadLocalData();
+  auto EC = BQArg.releaseBuffer(TLD.Buffer);
+  if (EC != BufferQueue::ErrorCode::Ok) {
+    Report("Failed to release buffer at %p; error=%s\n", TLD.Buffer.Data,
+           BufferQueue::getErrorString(EC));
+    return false;
+  }
+  return true;
+}
+
+static bool prepareBuffer(uint64_t TSC, unsigned char CPU,
+                          int (*wall_clock_reader)(clockid_t,
+                                                   struct timespec *),
+                          size_t MaxSize) XRAY_NEVER_INSTRUMENT {
+  auto &TLD = getThreadLocalData();
+  char *BufferStart = static_cast<char *>(TLD.Buffer.Data);
+  if ((TLD.RecordPtr + MaxSize) > (BufferStart + TLD.Buffer.Size)) {
+    if (!releaseThreadLocalBuffer(*TLD.BQ))
+      return false;
+    auto EC = TLD.BQ->getBuffer(TLD.Buffer);
+    if (EC != BufferQueue::ErrorCode::Ok) {
+      Report("Failed to acquire a buffer; error=%s\n",
+             BufferQueue::getErrorString(EC));
+      return false;
+    }
+    setupNewBuffer(wall_clock_reader);
+
+    // Always write the CPU metadata as the first record in the buffer.
+    writeNewCPUIdMetadata(CPU, TSC);
+  }
+  return true;
+}
+
+static bool
+isLogInitializedAndReady(BufferQueue *LBQ, uint64_t TSC, unsigned char CPU,
+                         int (*wall_clock_reader)(clockid_t, struct timespec *))
+    XRAY_NEVER_INSTRUMENT {
+  // Bail out right away if logging is not initialized yet.
+  // We should take the opportunity to release the buffer though.
+  auto Status = atomic_load(&LoggingStatus, memory_order_acquire);
+  auto &TLD = getThreadLocalData();
+  if (Status != XRayLogInitStatus::XRAY_LOG_INITIALIZED) {
+    if (TLD.RecordPtr != nullptr &&
+        (Status == XRayLogInitStatus::XRAY_LOG_FINALIZING ||
+         Status == XRayLogInitStatus::XRAY_LOG_FINALIZED)) {
+      if (!releaseThreadLocalBuffer(*LBQ))
+        return false;
+      TLD.RecordPtr = nullptr;
+      return false;
+    }
+    return false;
+  }
+
+  if (atomic_load(&LoggingStatus, memory_order_acquire) !=
+          XRayLogInitStatus::XRAY_LOG_INITIALIZED ||
+      LBQ->finalizing()) {
+    if (!releaseThreadLocalBuffer(*LBQ))
+      return false;
+    TLD.RecordPtr = nullptr;
+  }
+
+  if (TLD.Buffer.Data == nullptr) {
+    auto EC = LBQ->getBuffer(TLD.Buffer);
+    if (EC != BufferQueue::ErrorCode::Ok) {
+      auto LS = atomic_load(&LoggingStatus, memory_order_acquire);
+      if (LS != XRayLogInitStatus::XRAY_LOG_FINALIZING &&
+          LS != XRayLogInitStatus::XRAY_LOG_FINALIZED)
+        Report("Failed to acquire a buffer; error=%s\n",
+               BufferQueue::getErrorString(EC));
+      return false;
+    }
+
+    setupNewBuffer(wall_clock_reader);
+
+    // Always write the CPU metadata as the first record in the buffer.
+    writeNewCPUIdMetadata(CPU, TSC);
+  }
+
+  if (TLD.CurrentCPU == std::numeric_limits<uint16_t>::max()) {
+    // This means this is the first CPU this thread has ever run on. We set
+    // the current CPU and record this as the first TSC we've seen.
+    TLD.CurrentCPU = CPU;
+    writeNewCPUIdMetadata(CPU, TSC);
+  }
+
+  return true;
+}
+
+// Compute the TSC difference between the time of measurement and the previous
+// event. There are a few interesting situations we need to account for:
+//
+//   - The thread has migrated to a different CPU. If this is the case, then
+//     we write down the following records:
+//
+//       1. A 'NewCPUId' Metadata record.
+//       2. A FunctionRecord with a 0 for the TSCDelta field.
+//
+//   - The TSC delta is greater than the 32 bits we can store in a
+//     FunctionRecord. In this case we write down the following records:
+//
+//       1. A 'TSCWrap' Metadata record.
+//       2. A FunctionRecord with a 0 for the TSCDelta field.
+//
+//   - The TSC delta is representable within the 32 bits we can store in a
+//     FunctionRecord. In this case we write down just a FunctionRecord with
+//     the correct TSC delta.
+static uint32_t writeCurrentCPUTSC(ThreadLocalData &TLD, uint64_t TSC,
+                                   uint8_t CPU) {
+  if (CPU != TLD.CurrentCPU) {
+    // We've moved to a new CPU.
+    writeNewCPUIdMetadata(CPU, TSC);
+    return 0;
+  }
+  // If the delta is greater than the range for a uint32_t, then we write out
+  // the TSC wrap metadata entry with the full TSC, and the TSC for the
+  // function record be 0.
+  uint64_t Delta = TSC - TLD.LastTSC;
+  if (Delta <= std::numeric_limits<uint32_t>::max())
+    return Delta;
+
+  writeTSCWrapMetadata(TSC);
+  return 0;
+}
+
+static void endBufferIfFull() XRAY_NEVER_INSTRUMENT {
+  auto &TLD = getThreadLocalData();
+  auto BufferStart = static_cast<char *>(TLD.Buffer.Data);
+  if ((TLD.RecordPtr + MetadataRecSize) - BufferStart <=
+      ptrdiff_t{MetadataRecSize}) {
+    if (!releaseThreadLocalBuffer(*TLD.BQ))
+      return;
+    TLD.RecordPtr = nullptr;
+  }
+}
+
+thread_local volatile bool Running = false;
+
+/// Here's where the meat of the processing happens. The writer captures
+/// function entry, exit and tail exit points with a time and will create
+/// TSCWrap, NewCPUId and Function records as necessary. The writer might
+/// walk backward through its buffer and erase trivial functions to avoid
+/// polluting the log and may use the buffer queue to obtain or release a
+/// buffer.
+static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
+                                uint64_t TSC, unsigned char CPU, uint64_t Arg1,
+                                int (*wall_clock_reader)(clockid_t,
+                                                         struct timespec *),
+                                BufferQueue *BQ) XRAY_NEVER_INSTRUMENT {
+  __asm volatile("# LLVM-MCA-BEGIN processFunctionHook");
+  // Prevent signal handler recursion, so in case we're already in a log writing
+  // mode and the signal handler comes in (and is also instrumented) then we
+  // don't want to be clobbering potentially partial writes already happening in
+  // the thread. We use a simple thread_local latch to only allow one on-going
+  // handleArg0 to happen at any given time.
+  RecursionGuard Guard{Running};
+  if (!Guard) {
+    DCHECK(Running == true && "RecursionGuard is buggy!");
+    return;
+  }
+
+  auto &TLD = getThreadLocalData();
+
+  // In case the reference has been cleaned up before, we make sure we
+  // initialize it to the provided BufferQueue.
+  if (TLD.BQ == nullptr)
+    TLD.BQ = BQ;
+
+  if (!isLogInitializedAndReady(TLD.BQ, TSC, CPU, wall_clock_reader))
+    return;
+
+  // Before we go setting up writing new function entries, we need to be really
+  // careful about the pointer math we're doing. This means we need to ensure
+  // that the record we are about to write is going to fit into the buffer,
+  // without overflowing the buffer.
+  //
+  // To do this properly, we use the following assumptions:
+  //
+  //   - The least number of bytes we will ever write is 8
+  //     (sizeof(FunctionRecord)) only if the delta between the previous entry
+  //     and this entry is within 32 bits.
+  //   - The most number of bytes we will ever write is 8 + 16 + 16 = 40.
+  //     This is computed by:
+  //
+  //       MaxSize = sizeof(FunctionRecord) + 2 * sizeof(MetadataRecord)
+  //
+  //     These arise in the following cases:
+  //
+  //       1. When the delta between the TSC we get and the previous TSC for the
+  //          same CPU is outside of the uint32_t range, we end up having to
+  //          write a MetadataRecord to indicate a "tsc wrap" before the actual
+  //          FunctionRecord.
+  //       2. When we learn that we've moved CPUs, we need to write a
+  //          MetadataRecord to indicate a "cpu change", and thus write out the
+  //          current TSC for that CPU before writing out the actual
+  //          FunctionRecord.
+  //       3. When we learn about a new CPU ID, we need to write down a "new cpu
+  //          id" MetadataRecord before writing out the actual FunctionRecord.
+  //       4. The second MetadataRecord is the optional function call argument.
+  //
+  // So the math we need to do is to determine whether writing 40 bytes past the
+  // current pointer exceeds the buffer's maximum size. If we don't have enough
+  // space to write 40 bytes in the buffer, we need get a new Buffer, set it up
+  // properly before doing any further writing.
+  size_t MaxSize = FunctionRecSize + 2 * MetadataRecSize;
+  if (!prepareBuffer(TSC, CPU, wall_clock_reader, MaxSize)) {
+    TLD.BQ = nullptr;
+    return;
+  }
+
+  // By this point, we are now ready to write up to 40 bytes (explained above).
+  DCHECK((TLD.RecordPtr + MaxSize) - static_cast<char *>(TLD.Buffer.Data) >=
+             static_cast<ptrdiff_t>(MetadataRecSize) &&
+         "Misconfigured BufferQueue provided; Buffer size not large enough.");
+
+  auto RecordTSCDelta = writeCurrentCPUTSC(TLD, TSC, CPU);
+  TLD.LastTSC = TSC;
+  TLD.CurrentCPU = CPU;
+  switch (Entry) {
+  case XRayEntryType::ENTRY:
+  case XRayEntryType::LOG_ARGS_ENTRY:
+    // Update the thread local state for the next invocation.
+    TLD.LastFunctionEntryTSC = TSC;
+    break;
+  case XRayEntryType::TAIL:
+  case XRayEntryType::EXIT:
+    // Break out and write the exit record if we can't erase any functions.
+    if (TLD.NumConsecutiveFnEnters == 0 ||
+        (TSC - TLD.LastFunctionEntryTSC) >= thresholdTicks())
+      break;
+    rewindRecentCall(TSC, TLD.LastTSC, TLD.LastFunctionEntryTSC, FuncId);
+    return; // without writing log.
+  case XRayEntryType::CUSTOM_EVENT: {
+    // This is a bug in patching, so we'll report it once and move on.
+    static bool Once = [&] {
+      Report("Internal error: patched an XRay custom event call as a function; "
+             "func id = %d",
+             FuncId);
+      return true;
+    }();
+    (void)Once;
+    return;
+  }
+  case XRayEntryType::TYPED_EVENT: {
+    static bool Once = [&] {
+      Report("Internal error: patched an XRay typed event call as a function; "
+             "func id = %d\n",
+             FuncId);
+      return true;
+    }();
+    (void)Once;
+    return;
+  }
+  }
+
+  writeFunctionRecord(FuncId, RecordTSCDelta, Entry);
+  if (Entry == XRayEntryType::LOG_ARGS_ENTRY)
+    writeCallArgumentMetadata(Arg1);
+
+  // If we've exhausted the buffer by this time, we then release the buffer to
+  // make sure that other threads may start using this buffer.
+  endBufferIfFull();
+  __asm volatile("# LLVM-MCA-END");
+}
+
 // Global BufferQueue.
 BufferQueue *BQ = nullptr;
 
-__sanitizer::atomic_sint32_t LogFlushStatus = {
-    XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING};
+atomic_sint32_t LogFlushStatus = {XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING};
 
 FDRLoggingOptions FDROptions;
 
-__sanitizer::SpinMutex FDROptionsMutex;
+SpinMutex FDROptionsMutex;
 
 namespace {
 XRayFileHeader &fdrCommonHeaderInfo() {
@@ -125,40 +771,38 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
 
   XRayBuffer Result;
   Result.Data = It->Data;
-  Result.Size = __sanitizer::atomic_load(&It->Extents->Size,
-                                         __sanitizer::memory_order_acquire);
+  Result.Size = atomic_load(&It->Extents->Size, memory_order_acquire);
   ++It;
   return Result;
 }
 
 // Must finalize before flushing.
 XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
-  if (__sanitizer::atomic_load(&LoggingStatus,
-                               __sanitizer::memory_order_acquire) !=
+  if (atomic_load(&LoggingStatus, memory_order_acquire) !=
       XRayLogInitStatus::XRAY_LOG_FINALIZED) {
-    if (__sanitizer::Verbosity())
+    if (Verbosity())
       Report("Not flushing log, implementation is not finalized.\n");
     return XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
   }
 
   s32 Result = XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
-  if (!__sanitizer::atomic_compare_exchange_strong(
-          &LogFlushStatus, &Result, XRayLogFlushStatus::XRAY_LOG_FLUSHING,
-          __sanitizer::memory_order_release)) {
-    if (__sanitizer::Verbosity())
+  if (!atomic_compare_exchange_strong(&LogFlushStatus, &Result,
+                                      XRayLogFlushStatus::XRAY_LOG_FLUSHING,
+                                      memory_order_release)) {
+    if (Verbosity())
       Report("Not flushing log, implementation is still finalizing.\n");
     return static_cast<XRayLogFlushStatus>(Result);
   }
 
   if (BQ == nullptr) {
-    if (__sanitizer::Verbosity())
+    if (Verbosity())
       Report("Cannot flush when global buffer queue is null.\n");
     return XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
   }
 
   // We wait a number of milliseconds to allow threads to see that we've
   // finalised before attempting to flush the log.
-  __sanitizer::SleepForMillis(fdrFlags()->grace_period_ms);
+  SleepForMillis(fdrFlags()->grace_period_ms);
 
   // At this point, we're going to uninstall the iterator implementation, before
   // we decide to do anything further with the global buffer queue.
@@ -171,9 +815,8 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
     // Clean up the buffer queue, and do not bother writing out the files!
     delete BQ;
     BQ = nullptr;
-    __sanitizer::atomic_store(&LogFlushStatus,
-                              XRayLogFlushStatus::XRAY_LOG_FLUSHED,
-                              __sanitizer::memory_order_release);
+    atomic_store(&LogFlushStatus, XRayLogFlushStatus::XRAY_LOG_FLUSHED,
+                 memory_order_release);
     return XRayLogFlushStatus::XRAY_LOG_FLUSHED;
   }
 
@@ -190,15 +833,14 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   {
     // FIXME: Remove this section of the code, when we remove the struct-based
     // configuration API.
-    __sanitizer::SpinMutexLock Guard(&FDROptionsMutex);
+    SpinMutexLock Guard(&FDROptionsMutex);
     Fd = FDROptions.Fd;
   }
   if (Fd == -1)
     Fd = getLogFD();
   if (Fd == -1) {
     auto Result = XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
-    __sanitizer::atomic_store(&LogFlushStatus, Result,
-                              __sanitizer::memory_order_release);
+    atomic_store(&LogFlushStatus, Result, memory_order_release);
     return Result;
   }
 
@@ -214,13 +856,12 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
     // still use a Metadata record, but fill in the extents instead for the
     // data.
     MetadataRecord ExtentsRecord;
-    auto BufferExtents = __sanitizer::atomic_load(
-        &B.Extents->Size, __sanitizer::memory_order_acquire);
-    assert(BufferExtents <= B.Size);
+    auto BufferExtents = atomic_load(&B.Extents->Size, memory_order_acquire);
+    DCHECK(BufferExtents <= B.Size);
     ExtentsRecord.Type = uint8_t(RecordType::Metadata);
     ExtentsRecord.RecordKind =
         uint8_t(MetadataRecord::RecordKinds::BufferExtents);
-    std::memcpy(ExtentsRecord.Data, &BufferExtents, sizeof(BufferExtents));
+    internal_memcpy(ExtentsRecord.Data, &BufferExtents, sizeof(BufferExtents));
     if (BufferExtents > 0) {
       retryingWriteAll(Fd, reinterpret_cast<char *>(&ExtentsRecord),
                        reinterpret_cast<char *>(&ExtentsRecord) +
@@ -230,19 +871,17 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
     }
   });
 
-  __sanitizer::atomic_store(&LogFlushStatus,
-                            XRayLogFlushStatus::XRAY_LOG_FLUSHED,
-                            __sanitizer::memory_order_release);
+  atomic_store(&LogFlushStatus, XRayLogFlushStatus::XRAY_LOG_FLUSHED,
+               memory_order_release);
   return XRayLogFlushStatus::XRAY_LOG_FLUSHED;
 }
 
 XRayLogInitStatus fdrLoggingFinalize() XRAY_NEVER_INSTRUMENT {
   s32 CurrentStatus = XRayLogInitStatus::XRAY_LOG_INITIALIZED;
-  if (!__sanitizer::atomic_compare_exchange_strong(
-          &LoggingStatus, &CurrentStatus,
-          XRayLogInitStatus::XRAY_LOG_FINALIZING,
-          __sanitizer::memory_order_release)) {
-    if (__sanitizer::Verbosity())
+  if (!atomic_compare_exchange_strong(&LoggingStatus, &CurrentStatus,
+                                      XRayLogInitStatus::XRAY_LOG_FINALIZING,
+                                      memory_order_release)) {
+    if (Verbosity())
       Report("Cannot finalize log, implementation not initialized.\n");
     return static_cast<XRayLogInitStatus>(CurrentStatus);
   }
@@ -251,9 +890,8 @@ XRayLogInitStatus fdrLoggingFinalize() XRAY_NEVER_INSTRUMENT {
   // operations to be performed until re-initialized.
   BQ->finalize();
 
-  __sanitizer::atomic_store(&LoggingStatus,
-                            XRayLogInitStatus::XRAY_LOG_FINALIZED,
-                            __sanitizer::memory_order_release);
+  atomic_store(&LoggingStatus, XRayLogInitStatus::XRAY_LOG_FINALIZED,
+               memory_order_release);
   return XRayLogInitStatus::XRAY_LOG_FINALIZED;
 }
 
@@ -290,20 +928,17 @@ static TSCAndCPU getTimestamp() XRAY_NEVER_INSTRUMENT {
 void fdrLoggingHandleArg0(int32_t FuncId,
                           XRayEntryType Entry) XRAY_NEVER_INSTRUMENT {
   auto TC = getTimestamp();
-  __xray_fdr_internal::processFunctionHook(FuncId, Entry, TC.TSC, TC.CPU, 0,
-                                           clock_gettime, BQ);
+  processFunctionHook(FuncId, Entry, TC.TSC, TC.CPU, 0, clock_gettime, BQ);
 }
 
 void fdrLoggingHandleArg1(int32_t FuncId, XRayEntryType Entry,
                           uint64_t Arg) XRAY_NEVER_INSTRUMENT {
   auto TC = getTimestamp();
-  __xray_fdr_internal::processFunctionHook(FuncId, Entry, TC.TSC, TC.CPU, Arg,
-                                           clock_gettime, BQ);
+  processFunctionHook(FuncId, Entry, TC.TSC, TC.CPU, Arg, clock_gettime, BQ);
 }
 
 void fdrLoggingHandleCustomEvent(void *Event,
                                  std::size_t EventSize) XRAY_NEVER_INSTRUMENT {
-  using namespace __xray_fdr_internal;
   auto TC = getTimestamp();
   auto &TSC = TC.TSC;
   auto &CPU = TC.CPU;
@@ -342,11 +977,11 @@ void fdrLoggingHandleCustomEvent(void *Event,
   CustomEvent.RecordKind =
       uint8_t(MetadataRecord::RecordKinds::CustomEventMarker);
   constexpr auto TSCSize = sizeof(TC.TSC);
-  std::memcpy(&CustomEvent.Data, &ReducedEventSize, sizeof(int32_t));
-  std::memcpy(&CustomEvent.Data[sizeof(int32_t)], &TSC, TSCSize);
-  std::memcpy(TLD.RecordPtr, &CustomEvent, sizeof(CustomEvent));
+  internal_memcpy(&CustomEvent.Data, &ReducedEventSize, sizeof(int32_t));
+  internal_memcpy(&CustomEvent.Data[sizeof(int32_t)], &TSC, TSCSize);
+  internal_memcpy(TLD.RecordPtr, &CustomEvent, sizeof(CustomEvent));
   TLD.RecordPtr += sizeof(CustomEvent);
-  std::memcpy(TLD.RecordPtr, Event, ReducedEventSize);
+  internal_memcpy(TLD.RecordPtr, Event, ReducedEventSize);
   incrementExtents(MetadataRecSize + EventSize);
   endBufferIfFull();
 }
@@ -354,7 +989,6 @@ void fdrLoggingHandleCustomEvent(void *Event,
 void fdrLoggingHandleTypedEvent(
     uint16_t EventType, const void *Event,
     std::size_t EventSize) noexcept XRAY_NEVER_INSTRUMENT {
-  using namespace __xray_fdr_internal;
   auto TC = getTimestamp();
   auto &TSC = TC.TSC;
   auto &CPU = TC.CPU;
@@ -396,14 +1030,14 @@ void fdrLoggingHandleTypedEvent(
   TypedEvent.RecordKind =
       uint8_t(MetadataRecord::RecordKinds::TypedEventMarker);
   constexpr auto TSCSize = sizeof(TC.TSC);
-  std::memcpy(&TypedEvent.Data, &ReducedEventSize, sizeof(int32_t));
-  std::memcpy(&TypedEvent.Data[sizeof(int32_t)], &TSC, TSCSize);
-  std::memcpy(&TypedEvent.Data[sizeof(int32_t) + TSCSize], &EventType,
-              sizeof(EventType));
-  std::memcpy(TLD.RecordPtr, &TypedEvent, sizeof(TypedEvent));
+  internal_memcpy(&TypedEvent.Data, &ReducedEventSize, sizeof(int32_t));
+  internal_memcpy(&TypedEvent.Data[sizeof(int32_t)], &TSC, TSCSize);
+  internal_memcpy(&TypedEvent.Data[sizeof(int32_t) + TSCSize], &EventType,
+                  sizeof(EventType));
+  internal_memcpy(TLD.RecordPtr, &TypedEvent, sizeof(TypedEvent));
 
   TLD.RecordPtr += sizeof(TypedEvent);
-  std::memcpy(TLD.RecordPtr, Event, ReducedEventSize);
+  internal_memcpy(TLD.RecordPtr, Event, ReducedEventSize);
   incrementExtents(MetadataRecSize + EventSize);
   endBufferIfFull();
 }
@@ -415,11 +1049,10 @@ XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
     return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
 
   s32 CurrentStatus = XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
-  if (!__sanitizer::atomic_compare_exchange_strong(
-          &LoggingStatus, &CurrentStatus,
-          XRayLogInitStatus::XRAY_LOG_INITIALIZING,
-          __sanitizer::memory_order_release)) {
-    if (__sanitizer::Verbosity())
+  if (!atomic_compare_exchange_strong(&LoggingStatus, &CurrentStatus,
+                                      XRayLogInitStatus::XRAY_LOG_INITIALIZING,
+                                      memory_order_release)) {
+    if (Verbosity())
       Report("Cannot initialize already initialized implementation.\n");
     return static_cast<XRayLogInitStatus>(CurrentStatus);
   }
@@ -428,7 +1061,7 @@ XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
   // called with BufferSize == 0 and BufferMax == 0 we parse the configuration
   // provided in the Options pointer as a string instead.
   if (BufferSize == 0 && BufferMax == 0) {
-    if (__sanitizer::Verbosity())
+    if (Verbosity())
       Report("Initializing FDR mode with options: %s\n",
              static_cast<const char *>(Options));
 
@@ -463,24 +1096,24 @@ XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
     *fdrFlags() = FDRFlags;
     BufferSize = FDRFlags.buffer_size;
     BufferMax = FDRFlags.buffer_max;
-    __sanitizer::SpinMutexLock Guard(&FDROptionsMutex);
+    SpinMutexLock Guard(&FDROptionsMutex);
     FDROptions.Fd = -1;
     FDROptions.ReportErrors = true;
   } else if (OptionsSize != sizeof(FDRLoggingOptions)) {
     // FIXME: This is deprecated, and should really be removed.
     // At this point we use the flag parser specific to the FDR mode
     // implementation.
-    if (__sanitizer::Verbosity())
+    if (Verbosity())
       Report("Cannot initialize FDR logging; wrong size for options: %d\n",
              OptionsSize);
-    return static_cast<XRayLogInitStatus>(__sanitizer::atomic_load(
-        &LoggingStatus, __sanitizer::memory_order_acquire));
+    return static_cast<XRayLogInitStatus>(
+        atomic_load(&LoggingStatus, memory_order_acquire));
   } else {
-    if (__sanitizer::Verbosity())
+    if (Verbosity())
       Report("XRay FDR: struct-based init is deprecated, please use "
              "string-based configuration instead.\n");
-    __sanitizer::SpinMutexLock Guard(&FDROptionsMutex);
-    memcpy(&FDROptions, Options, OptionsSize);
+    SpinMutexLock Guard(&FDROptionsMutex);
+    internal_memcpy(&FDROptions, Options, OptionsSize);
   }
 
   bool Success = false;
@@ -503,8 +1136,8 @@ XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
   }
 
   static bool UNUSED Once = [] {
-    pthread_key_create(&__xray_fdr_internal::Key, +[](void *) {
-      auto &TLD = __xray_fdr_internal::getThreadLocalData();
+    pthread_key_create(&Key, +[](void *) {
+      auto &TLD = getThreadLocalData();
       if (TLD.BQ == nullptr)
         return;
       auto EC = TLD.BQ->releaseBuffer(TLD.Buffer);
@@ -526,17 +1159,15 @@ XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
   // Install the buffer iterator implementation.
   __xray_log_set_buffer_iterator(fdrIterator);
 
-  __sanitizer::atomic_store(&LoggingStatus,
-                            XRayLogInitStatus::XRAY_LOG_INITIALIZED,
-                            __sanitizer::memory_order_release);
+  atomic_store(&LoggingStatus, XRayLogInitStatus::XRAY_LOG_INITIALIZED,
+               memory_order_release);
 
-  if (__sanitizer::Verbosity())
+  if (Verbosity())
     Report("XRay FDR init successful.\n");
   return XRayLogInitStatus::XRAY_LOG_INITIALIZED;
 }
 
 bool fdrLogDynamicInitializer() XRAY_NEVER_INSTRUMENT {
-  using namespace __xray;
   XRayLogImpl Impl{
       fdrLoggingInit,
       fdrLoggingFinalize,
@@ -545,11 +1176,10 @@ bool fdrLogDynamicInitializer() XRAY_NEVER_INSTRUMENT {
   };
   auto RegistrationResult = __xray_log_register_mode("xray-fdr", Impl);
   if (RegistrationResult != XRayLogRegisterStatus::XRAY_REGISTRATION_OK &&
-      __sanitizer::Verbosity())
+      Verbosity())
     Report("Cannot register XRay FDR mode to 'xray-fdr'; error = %d\n",
            RegistrationResult);
-  if (flags()->xray_fdr_log ||
-      !__sanitizer::internal_strcmp(flags()->xray_mode, "xray-fdr"))
+  if (flags()->xray_fdr_log || !internal_strcmp(flags()->xray_mode, "xray-fdr"))
     __xray_set_log_impl(Impl);
   return true;
 }

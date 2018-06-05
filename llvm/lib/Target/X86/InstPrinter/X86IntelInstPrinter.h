@@ -14,16 +14,16 @@
 #ifndef LLVM_LIB_TARGET_X86_INSTPRINTER_X86INTELINSTPRINTER_H
 #define LLVM_LIB_TARGET_X86_INSTPRINTER_X86INTELINSTPRINTER_H
 
-#include "llvm/MC/MCInstPrinter.h"
+#include "X86InstPrinterCommon.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
-class X86IntelInstPrinter final : public MCInstPrinter {
+class X86IntelInstPrinter final : public X86InstPrinterCommon {
 public:
   X86IntelInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                       const MCRegisterInfo &MRI)
-    : MCInstPrinter(MAI, MII, MRI) {}
+    : X86InstPrinterCommon(MAI, MII, MRI) {}
 
   void printRegName(raw_ostream &OS, unsigned RegNo) const override;
   void printInst(const MCInst *MI, raw_ostream &OS, StringRef Annot,
@@ -33,15 +33,11 @@ public:
   void printInstruction(const MCInst *MI, raw_ostream &O);
   static const char *getRegisterName(unsigned RegNo);
 
-  void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) override;
   void printMemReference(const MCInst *MI, unsigned Op, raw_ostream &O);
-  void printSSEAVXCC(const MCInst *MI, unsigned Op, raw_ostream &O);
-  void printXOPCC(const MCInst *MI, unsigned Op, raw_ostream &O);
-  void printPCRelImm(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printMemOffset(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printSrcIdx(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printDstIdx(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printRoundingControl(const MCInst *MI, unsigned Op, raw_ostream &OS);
   void printU8Imm(const MCInst *MI, unsigned Op, raw_ostream &O);
 
   void printanymem(const MCInst *MI, unsigned OpNo, raw_ostream &O) {

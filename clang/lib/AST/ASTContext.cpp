@@ -8601,6 +8601,38 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
     QualType ResultType = mergeTypes(LHSElem, RHSElem, false, Unqualified);
     if (ResultType.isNull())
       return {};
+
+    const VariableArrayType* LVAT = getAsVariableArrayType(LHS);
+    const VariableArrayType* RVAT = getAsVariableArrayType(RHS);
+
+    // If either side is a variable array, and both are complete, check whether
+    // the current dimension is definite.
+    if (LVAT || RVAT) {
+      auto SizeFetch = [this](const VariableArrayType* VAT,
+          const ConstantArrayType* CAT)
+          -> std::pair<bool,llvm::APInt> {
+        if (VAT) {
+          llvm::APSInt TheInt;
+          Expr *E = VAT->getSizeExpr();
+          if (E && E->isIntegerConstantExpr(TheInt, *this))
+            return std::make_pair(true, TheInt);
+          else
+            return std::make_pair(false, TheInt);
+        } else if (CAT) {
+            return std::make_pair(true, CAT->getSize());
+        } else {
+            return std::make_pair(false, llvm::APInt());
+        }
+      };
+
+      bool HaveLSize, HaveRSize;
+      llvm::APInt LSize, RSize;
+      std::tie(HaveLSize, LSize) = SizeFetch(LVAT, LCAT);
+      std::tie(HaveRSize, RSize) = SizeFetch(RVAT, RCAT);
+      if (HaveLSize && HaveRSize && !llvm::APInt::isSameValue(LSize, RSize))
+        return {}; // Definite, but unequal, array dimension
+    }
+
     if (LCAT && getCanonicalType(LHSElem) == getCanonicalType(ResultType))
       return LHS;
     if (RCAT && getCanonicalType(RHSElem) == getCanonicalType(ResultType))
@@ -8609,8 +8641,6 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
                                           ArrayType::ArraySizeModifier(), 0);
     if (RCAT) return getConstantArrayType(ResultType, RCAT->getSize(),
                                           ArrayType::ArraySizeModifier(), 0);
-    const VariableArrayType* LVAT = getAsVariableArrayType(LHS);
-    const VariableArrayType* RVAT = getAsVariableArrayType(RHS);
     if (LVAT && getCanonicalType(LHSElem) == getCanonicalType(ResultType))
       return LHS;
     if (RVAT && getCanonicalType(RHSElem) == getCanonicalType(ResultType))
