@@ -1281,8 +1281,7 @@ bool SwiftLanguageRuntime::MetadataPromise::IsStaticallyDetermined() {
       return true;
     }
   }
-
-  return true;
+  llvm_unreachable("Unknown metadata kind");
 }
 
 static inline swift::Type GetSwiftType(const CompilerType &type) {
@@ -2118,28 +2117,27 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Archetype(
   if (!GetDynamicTypeAndAddress_Promise(in_value, promise_sp, use_dynamic,
                                         class_type_or_name, address))
     return false;
-  if (promise_sp->FulfillKindPromise() &&
-      promise_sp->FulfillKindPromise().getValue() ==
-          swift::MetadataKind::Class) {
-    // when an archetype represents a class, it will represent the static type
-    // of the class
-    // but the dynamic type might be different
-    Status error;
-    lldb::addr_t addr_of_meta = address.GetLoadAddress(&m_process->GetTarget());
-    addr_of_meta = m_process->ReadPointerFromMemory(addr_of_meta, error);
-    if (addr_of_meta == LLDB_INVALID_ADDRESS || addr_of_meta == 0 ||
-        error.Fail())
-      return true; // my gut says we should fail here, but we seemed to be on a
-                   // good track before..
-    MetadataPromiseSP actual_type_promise(GetMetadataPromise(addr_of_meta));
-    if (actual_type_promise && actual_type_promise.get() != promise_sp.get()) {
-      CompilerType static_type(class_type_or_name.GetCompilerType());
-      class_type_or_name.SetCompilerType(
-          actual_type_promise->FulfillTypePromise());
-      if (error.Fail() ||
-          class_type_or_name.GetCompilerType().IsValid() == false)
-        class_type_or_name.SetCompilerType(static_type);
-    }
+  if (promise_sp->IsStaticallyDetermined())
+    return true;
+
+  // when an archetype represents a class, it will represent the static type
+  // of the class
+  // but the dynamic type might be different
+  Status error;
+  lldb::addr_t addr_of_meta = address.GetLoadAddress(&m_process->GetTarget());
+  addr_of_meta = m_process->ReadPointerFromMemory(addr_of_meta, error);
+  if (addr_of_meta == LLDB_INVALID_ADDRESS || addr_of_meta == 0 ||
+      error.Fail())
+    return true; // my gut says we should fail here, but we seemed to be on a
+                 // good track before..
+  MetadataPromiseSP actual_type_promise(GetMetadataPromise(addr_of_meta));
+  if (actual_type_promise && actual_type_promise.get() != promise_sp.get()) {
+    CompilerType static_type(class_type_or_name.GetCompilerType());
+    class_type_or_name.SetCompilerType(
+        actual_type_promise->FulfillTypePromise());
+    if (error.Fail() ||
+        class_type_or_name.GetCompilerType().IsValid() == false)
+      class_type_or_name.SetCompilerType(static_type);
   }
   return true;
 }
