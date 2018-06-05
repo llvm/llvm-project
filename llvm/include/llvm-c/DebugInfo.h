@@ -678,8 +678,7 @@ LLVMDIBuilderCreateObjCProperty(LLVMDIBuilderRef Builder,
                                 LLVMMetadataRef Ty);
 
 /**
- * Create a new DIType* with the "object pointer"
- * flag set.
+ * Create a uniqued DIType* clone with FlagObjectPointer and FlagArtificial set.
  * \param Builder   The DIBuilder.
  * \param Type      The underlying type to which this pointer points.
  */
@@ -851,7 +850,7 @@ LLVMMetadataRef LLVMDIBuilderCreateClassType(LLVMDIBuilderRef Builder,
     const char *UniqueIdentifier, size_t UniqueIdentifierLen);
 
 /**
- * Create a new DIType* with "artificial" flag set.
+ * Create a uniqued DIType* clone with FlagArtificial set.
  * \param Builder     The DIBuilder.
  * \param Type        The underlying type.
  */

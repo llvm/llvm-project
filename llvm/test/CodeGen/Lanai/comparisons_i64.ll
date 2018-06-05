@@ -28,9 +28,12 @@ define i32 @ne_i64(i64 inreg %x, i64 inreg %y) {
 }
 
 ; CHECK-LABEL: slt_i64:
-; CHECK: sub.f %r7, %r19, %r3
-; CHECK: subb.f %r6, %r18, %r3
-; CHECK-NEXT: slt
+; CHECK: sub.f %r6, %r18, %r0
+; CHECK-NEXT: slt %r3
+; CHECK-NEXT: sub.f %r7, %r19, %r0
+; CHECK-NEXT: sult %r9
+; CHECK-NEXT: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sel.eq %r9, %r3, %rv
 define i32 @slt_i64(i64 inreg %x, i64 inreg %y) {
   %a = icmp slt i64 %x, %y
   %b = zext i1 %a to i32
@@ -38,9 +41,12 @@ define i32 @slt_i64(i64 inreg %x, i64 inreg %y) {
 }
 
 ; CHECK-LABEL: sle_i64:
-; CHECK: sub.f %r19, %r7, %r3
-; CHECK: subb.f %r18, %r6, %r3
-; CHECK-NEXT: sge %rv
+; CHECK: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sle %r3
+; CHECK-NEXT: sub.f %r7, %r19, %r0
+; CHECK-NEXT: sule %r9
+; CHECK-NEXT: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sel.eq %r9, %r3, %rv
 define i32 @sle_i64(i64 inreg %x, i64 inreg %y) {
   %a = icmp sle i64 %x, %y
   %b = zext i1 %a to i32
@@ -48,9 +54,12 @@ define i32 @sle_i64(i64 inreg %x, i64 inreg %y) {
 }
 
 ; CHECK-LABEL: ult_i64:
-; CHECK: sub.f %r7, %r19, %r3
-; CHECK: subb.f %r6, %r18, %r3
-; CHECK-NEXT: sult %rv
+; CHECK: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sult %r3
+; CHECK-NEXT: sub.f %r7, %r19, %r0
+; CHECK-NEXT: sult %r9
+; CHECK-NEXT: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sel.eq %r9, %r3, %rv
 define i32 @ult_i64(i64 inreg %x, i64 inreg %y) {
   %a = icmp ult i64 %x, %y
   %b = zext i1 %a to i32
@@ -58,9 +67,12 @@ define i32 @ult_i64(i64 inreg %x, i64 inreg %y) {
 }
 
 ; CHECK-LABEL: ule_i64:
-; CHECK: sub.f %r19, %r7, %r3
-; CHECK: subb.f %r18, %r6, %r3
-; CHECK-NEXT: suge %rv
+; CHECK: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sule %r3
+; CHECK-NEXT: sub.f %r7, %r19, %r0
+; CHECK-NEXT: sule %r9
+; CHECK-NEXT: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sel.eq %r9, %r3, %rv
 define i32 @ule_i64(i64 inreg %x, i64 inreg %y) {
   %a = icmp ule i64 %x, %y
   %b = zext i1 %a to i32
@@ -68,9 +80,12 @@ define i32 @ule_i64(i64 inreg %x, i64 inreg %y) {
 }
 
 ; CHECK-LABEL: sgt_i64:
-; CHECK: sub.f %r19, %r7, %r3
-; CHECK: subb.f %r18, %r6, %r3
-; CHECK-NEXT: slt %rv
+; CHECK: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sgt %r3
+; CHECK-NEXT: sub.f %r7, %r19, %r0
+; CHECK-NEXT: sugt %r9
+; CHECK-NEXT: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sel.eq %r9, %r3, %rv
 define i32 @sgt_i64(i64 inreg %x, i64 inreg %y) {
   %a = icmp sgt i64 %x, %y
   %b = zext i1 %a to i32
@@ -78,9 +93,12 @@ define i32 @sgt_i64(i64 inreg %x, i64 inreg %y) {
 }
 
 ; CHECK-LABEL: sge_i64:
-; CHECK: sub.f %r7, %r19, %r3
-; CHECK: subb.f %r6, %r18, %r3
-; CHECK-NEXT: sge %rv
+; CHECK: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sge %r3
+; CHECK-NEXT: sub.f %r7, %r19, %r0
+; CHECK-NEXT: suge %r9
+; CHECK-NEXT: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sel.eq %r9, %r3, %rv
 define i32 @sge_i64(i64 inreg %x, i64 inreg %y) {
   %a = icmp sge i64 %x, %y
   %b = zext i1 %a to i32
@@ -88,9 +106,12 @@ define i32 @sge_i64(i64 inreg %x, i64 inreg %y) {
 }
 
 ; CHECK-LABEL: ugt_i64:
-; CHECK: sub.f %r19, %r7, %r3
-; CHECK: subb.f %r18, %r6, %r3
-; CHECK-NEXT: sult %rv
+; CHECK: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sugt %r3
+; CHECK-NEXT: sub.f %r7, %r19, %r0
+; CHECK-NEXT: sugt %r9
+; CHECK-NEXT: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sel.eq %r9, %r3, %rv
 define i32 @ugt_i64(i64 inreg %x, i64 inreg %y) {
   %a = icmp ugt i64 %x, %y
   %b = zext i1 %a to i32
@@ -98,9 +119,12 @@ define i32 @ugt_i64(i64 inreg %x, i64 inreg %y) {
 }
 
 ; CHECK-LABEL: uge_i64:
-; CHECK: sub.f %r7, %r19, %r3
-; CHECK: subb.f %r6, %r18, %r3
-; CHECK-NEXT: suge %rv
+; CHECK: sub.f %r6, %r18, %r0
+; CHECK-NEXT: suge %r3
+; CHECK-NEXT: sub.f %r7, %r19, %r0
+; CHECK-NEXT: suge %r9
+; CHECK-NEXT: sub.f %r6, %r18, %r0
+; CHECK-NEXT: sel.eq %r9, %r3, %rv
 define i32 @uge_i64(i64 inreg %x, i64 inreg %y) {
   %a = icmp uge i64 %x, %y
   %b = zext i1 %a to i32

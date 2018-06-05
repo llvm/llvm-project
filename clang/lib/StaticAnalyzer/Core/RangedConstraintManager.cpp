@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 
 namespace clang {
 

@@ -85,6 +85,7 @@ public:
     addDirectiveHandler<
       &ELFAsmParser::ParseDirectiveSymbolAttribute>(".hidden");
     addDirectiveHandler<&ELFAsmParser::ParseDirectiveSubsection>(".subsection");
+    addDirectiveHandler<&ELFAsmParser::ParseDirectiveCGProfile>(".cg_profile");
   }
 
   // FIXME: Part of this logic is duplicated in the MCELFStreamer. What is
@@ -149,6 +150,7 @@ public:
   bool ParseDirectiveWeakref(StringRef, SMLoc);
   bool ParseDirectiveSymbolAttribute(StringRef, SMLoc);
   bool ParseDirectiveSubsection(StringRef, SMLoc);
+  bool ParseDirectiveCGProfile(StringRef, SMLoc);
 
 private:
   bool ParseSectionName(StringRef &SectionName);
@@ -610,6 +612,8 @@ EndStmt:
       Type = ELF::SHT_LLVM_ODRTAB;
     else if (TypeName == "llvm_linker_options")
       Type = ELF::SHT_LLVM_LINKER_OPTIONS;
+    else if (TypeName == "llvm_call_graph_profile")
+      Type = ELF::SHT_LLVM_CALL_GRAPH_PROFILE;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }
@@ -837,6 +841,47 @@ bool ELFAsmParser::ParseDirectiveSubsection(StringRef, SMLoc) {
   Lex();
 
   getStreamer().SubSection(Subsection);
+  return false;
+}
+
+/// ParseDirectiveCGProfile
+///  ::= .cg_profile identifier, identifier, <number>
+bool ELFAsmParser::ParseDirectiveCGProfile(StringRef, SMLoc) {
+  StringRef From;
+  SMLoc FromLoc = getLexer().getLoc();
+  if (getParser().parseIdentifier(From))
+    return TokError("expected identifier in directive");
+
+  if (getLexer().isNot(AsmToken::Comma))
+    return TokError("expected a comma");
+  Lex();
+
+  StringRef To;
+  SMLoc ToLoc = getLexer().getLoc();
+  if (getParser().parseIdentifier(To))
+    return TokError("expected identifier in directive");
+
+  if (getLexer().isNot(AsmToken::Comma))
+    return TokError("expected a comma");
+  Lex();
+
+  int64_t Count;
+  if (getParser().parseIntToken(
+          Count, "expected integer count in '.cg_profile' directive"))
+    return true;
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in directive");
+
+  MCSymbol *FromSym = getContext().getOrCreateSymbol(From);
+  MCSymbol *ToSym = getContext().getOrCreateSymbol(To);
+
+  getStreamer().emitCGProfileEntry(
+      MCSymbolRefExpr::create(FromSym, MCSymbolRefExpr::VK_None, getContext(),
+                              FromLoc),
+      MCSymbolRefExpr::create(ToSym, MCSymbolRefExpr::VK_None, getContext(),
+                              ToLoc),
+      Count);
   return false;
 }
 

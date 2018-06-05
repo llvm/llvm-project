@@ -10,14 +10,28 @@
 #include "DWARFDIE.h"
 
 #include "DWARFASTParser.h"
-#include "DWARFUnit.h"
 #include "DWARFDIECollection.h"
 #include "DWARFDebugInfo.h"
-#include "DWARFDeclContext.h"
-
 #include "DWARFDebugInfoEntry.h"
+#include "DWARFDeclContext.h"
+#include "DWARFUnit.h"
 
 using namespace lldb_private;
+
+void DWARFDIE::ElaboratingDIEIterator::Next() {
+  assert(!m_worklist.empty() && "Incrementing end iterator?");
+
+  // Pop the current item from the list.
+  DWARFDIE die = m_worklist.back();
+  m_worklist.pop_back();
+
+  // And add back any items that elaborate it.
+  for (dw_attr_t attr : {DW_AT_specification, DW_AT_abstract_origin}) {
+    if (DWARFDIE d = die.GetReferencedDIE(attr))
+      if (m_seen.insert(die.GetID()).second)
+        m_worklist.push_back(d);
+  }
+}
 
 DWARFDIE
 DWARFDIE::GetParent() const {
@@ -209,10 +223,17 @@ DWARFDIE::GetParentDeclContextDIE() const {
     return DWARFDIE();
 }
 
-bool DWARFDIE::IsStructClassOrUnion() const {
+bool DWARFDIE::IsStructUnionOrClass() const {
   const dw_tag_t tag = Tag();
   return tag == DW_TAG_class_type || tag == DW_TAG_structure_type ||
          tag == DW_TAG_union_type;
+}
+
+bool DWARFDIE::IsMethod() const {
+  for (DWARFDIE d: elaborating_dies())
+    if (d.GetParent().IsStructUnionOrClass())
+      return true;
+  return false;
 }
 
 DWARFDIE

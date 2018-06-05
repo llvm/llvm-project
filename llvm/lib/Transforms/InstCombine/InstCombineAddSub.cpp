@@ -1098,14 +1098,14 @@ Value *InstCombiner::SimplifyAddWithRemainder(BinaryOperator &I) {
 
 Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   if (Value *V =
           SimplifyAddInst(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
                           SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   // (A*B)+(A*C) -> A*(B+C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
@@ -1353,13 +1353,12 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
 Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   if (Value *V = SimplifyFAddInst(LHS, RHS, I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   if (Instruction *FoldedFAdd = foldBinOpIntoSelectOrPhi(I))
     return FoldedFAdd;
@@ -1530,14 +1529,13 @@ Value *InstCombiner::OptimizePointerDifference(Value *LHS, Value *RHS,
 
 Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   if (Value *V =
           SimplifySubInst(Op0, Op1, I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
                           SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   // (A*B)-(A*C) -> A*(B-C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
@@ -1573,11 +1571,22 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     return BinaryOperator::CreateSub(Y, X);
 
   if (Constant *C = dyn_cast<Constant>(Op0)) {
+    bool IsNegate = match(C, m_ZeroInt());
     Value *X;
-    // C - zext(bool) -> bool ? C - 1 : C
-    if (match(Op1, m_ZExt(m_Value(X))) &&
-        X->getType()->getScalarSizeInBits() == 1)
+    if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
+      // 0 - (zext bool) --> sext bool
+      // C - (zext bool) --> bool ? C - 1 : C
+      if (IsNegate)
+        return CastInst::CreateSExtOrBitCast(X, I.getType());
       return SelectInst::Create(X, SubOne(C), C);
+    }
+    if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
+      // 0 - (sext bool) --> zext bool
+      // C - (sext bool) --> bool ? C + 1 : C
+      if (IsNegate)
+        return CastInst::CreateZExtOrBitCast(X, I.getType());
+      return SelectInst::Create(X, AddOne(C), C);
+    }
 
     // C - ~X == X + (1+C)
     if (match(Op1, m_Not(m_Value(X))))
@@ -1597,16 +1606,6 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     Constant *C2;
     if (match(Op1, m_Add(m_Value(X), m_Constant(C2))))
       return BinaryOperator::CreateSub(ConstantExpr::getSub(C, C2), X);
-
-    // Fold (sub 0, (zext bool to B)) --> (sext bool to B)
-    if (C->isNullValue() && match(Op1, m_ZExt(m_Value(X))))
-      if (X->getType()->isIntOrIntVectorTy(1))
-        return CastInst::CreateSExtOrBitCast(X, Op1->getType());
-
-    // Fold (sub 0, (sext bool to B)) --> (zext bool to B)
-    if (C->isNullValue() && match(Op1, m_SExt(m_Value(X))))
-      if (X->getType()->isIntOrIntVectorTy(1))
-        return CastInst::CreateZExtOrBitCast(X, Op1->getType());
   }
 
   const APInt *Op0C;
@@ -1762,13 +1761,12 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
 
 Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   if (Value *V = SimplifyFSubInst(Op0, Op1, I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   // Subtraction from -0.0 is the canonical form of fneg.
   // fsub nsz 0, X ==> fsub nsz -0.0, X

@@ -792,9 +792,9 @@ static Loop *cloneLoopNest(Loop &OrigRootL, Loop *RootParentL,
 /// original loop, multiple cloned sibling loops may be created. All of them
 /// are returned so that the newly introduced loop nest roots can be
 /// identified.
-static Loop *buildClonedLoops(Loop &OrigL, ArrayRef<BasicBlock *> ExitBlocks,
-                              const ValueToValueMapTy &VMap, LoopInfo &LI,
-                              SmallVectorImpl<Loop *> &NonChildClonedLoops) {
+static void buildClonedLoops(Loop &OrigL, ArrayRef<BasicBlock *> ExitBlocks,
+                             const ValueToValueMapTy &VMap, LoopInfo &LI,
+                             SmallVectorImpl<Loop *> &NonChildClonedLoops) {
   Loop *ClonedL = nullptr;
 
   auto *OrigPH = OrigL.getLoopPreheader();
@@ -887,6 +887,7 @@ static Loop *buildClonedLoops(Loop &OrigL, ArrayRef<BasicBlock *> ExitBlocks,
     } else {
       LI.addTopLevelLoop(ClonedL);
     }
+    NonChildClonedLoops.push_back(ClonedL);
 
     ClonedL->reserveBlocks(BlocksInClonedLoop.size());
     // We don't want to just add the cloned loop blocks based on how we
@@ -1040,9 +1041,6 @@ static Loop *buildClonedLoops(Loop &OrigL, ArrayRef<BasicBlock *> ExitBlocks,
     NonChildClonedLoops.push_back(cloneLoopNest(
         *ChildL, ExitLoopMap.lookup(ClonedChildHeader), VMap, LI));
   }
-
-  // Return the main cloned loop if any.
-  return ClonedL;
 }
 
 static void
@@ -1608,8 +1606,7 @@ static bool unswitchInvariantBranch(
   // different from the original structure due to the simplified CFG. This also
   // handles inserting all the cloned blocks into the correct loops.
   SmallVector<Loop *, 4> NonChildClonedLoops;
-  Loop *ClonedL =
-      buildClonedLoops(L, ExitBlocks, VMap, LI, NonChildClonedLoops);
+  buildClonedLoops(L, ExitBlocks, VMap, LI, NonChildClonedLoops);
 
   // Delete anything that was made dead in the original loop due to
   // unswitching.
@@ -1638,7 +1635,7 @@ static bool unswitchInvariantBranch(
   // also need to cover any intervening loops. We add all of these loops to
   // a list and sort them by loop depth to achieve this without updating
   // unnecessary loops.
-  auto UpdateLCSSA = [&](Loop &UpdateL) {
+  auto UpdateLoop = [&](Loop &UpdateL) {
 #ifndef NDEBUG
     UpdateL.verifyLoop();
     for (Loop *ChildL : UpdateL) {
@@ -1647,51 +1644,41 @@ static bool unswitchInvariantBranch(
              "Perturbed a child loop's LCSSA form!");
     }
 #endif
+    // First build LCSSA for this loop so that we can preserve it when
+    // forming dedicated exits. We don't want to perturb some other loop's
+    // LCSSA while doing that CFG edit.
     formLCSSA(UpdateL, DT, &LI, nullptr);
+
+    // For loops reached by this loop's original exit blocks we may
+    // introduced new, non-dedicated exits. At least try to re-form dedicated
+    // exits for these loops. This may fail if they couldn't have dedicated
+    // exits to start with.
+    formDedicatedExitBlocks(&UpdateL, &DT, &LI, /*PreserveLCSSA*/ true);
   };
 
   // For non-child cloned loops and hoisted loops, we just need to update LCSSA
   // and we can do it in any order as they don't nest relative to each other.
-  for (Loop *UpdatedL : llvm::concat<Loop *>(NonChildClonedLoops, HoistedLoops))
-    UpdateLCSSA(*UpdatedL);
+  //
+  // Also check if any of the loops we have updated have become top-level loops
+  // as that will necessitate widening the outer loop scope.
+  for (Loop *UpdatedL :
+       llvm::concat<Loop *>(NonChildClonedLoops, HoistedLoops)) {
+    UpdateLoop(*UpdatedL);
+    if (!UpdatedL->getParentLoop())
+      OuterExitL = nullptr;
+  }
+  if (IsStillLoop) {
+    UpdateLoop(L);
+    if (!L.getParentLoop())
+      OuterExitL = nullptr;
+  }
 
   // If the original loop had exit blocks, walk up through the outer most loop
   // of those exit blocks to update LCSSA and form updated dedicated exits.
-  if (OuterExitL != &L) {
-    SmallVector<Loop *, 4> OuterLoops;
-    // We start with the cloned loop and the current loop if they are loops and
-    // move toward OuterExitL. Also, if either the cloned loop or the current
-    // loop have become top level loops we need to walk all the way out.
-    if (ClonedL) {
-      OuterLoops.push_back(ClonedL);
-      if (!ClonedL->getParentLoop())
-        OuterExitL = nullptr;
-    }
-    if (IsStillLoop) {
-      OuterLoops.push_back(&L);
-      if (!L.getParentLoop())
-        OuterExitL = nullptr;
-    }
-    // Grab all of the enclosing loops now.
+  if (OuterExitL != &L)
     for (Loop *OuterL = ParentL; OuterL != OuterExitL;
          OuterL = OuterL->getParentLoop())
-      OuterLoops.push_back(OuterL);
-
-    // Finally, update our list of outer loops. This is nicely ordered to work
-    // inside-out.
-    for (Loop *OuterL : OuterLoops) {
-      // First build LCSSA for this loop so that we can preserve it when
-      // forming dedicated exits. We don't want to perturb some other loop's
-      // LCSSA while doing that CFG edit.
-      UpdateLCSSA(*OuterL);
-
-      // For loops reached by this loop's original exit blocks we may
-      // introduced new, non-dedicated exits. At least try to re-form dedicated
-      // exits for these loops. This may fail if they couldn't have dedicated
-      // exits to start with.
-      formDedicatedExitBlocks(OuterL, &DT, &LI, /*PreserveLCSSA*/ true);
-    }
-  }
+      UpdateLoop(*OuterL);
 
 #ifndef NDEBUG
   // Verify the entire loop structure to catch any incorrect updates before we

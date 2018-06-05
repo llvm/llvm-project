@@ -17,7 +17,7 @@
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
-#include "clang/Tooling/Core/HeaderIncludes.h"
+#include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"

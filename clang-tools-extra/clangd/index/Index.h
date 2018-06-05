@@ -34,12 +34,6 @@ struct SymbolLocation {
 
   // The URI of the source file where a symbol occurs.
   llvm::StringRef FileURI;
-  // The 0-based offsets of the symbol from the beginning of the source file,
-  // using half-open range, [StartOffset, EndOffset).
-  // DO NOT use these fields, as they will be removed immediately.
-  // FIXME(hokein): remove these fields in favor of Position.
-  unsigned StartOffset = 0;
-  unsigned EndOffset = 0;
 
   /// The symbol range, using half-open range [Start, End).
   Position Start;

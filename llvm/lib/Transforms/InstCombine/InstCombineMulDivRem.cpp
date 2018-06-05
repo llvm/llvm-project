@@ -128,12 +128,11 @@ static Constant *getLogBase2(Type *Ty, Constant *C) {
 Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   if (Value *V = SimplifyMulInst(Op0, Op1, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
@@ -409,13 +408,12 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
 Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   if (Value *V = SimplifyFMulInst(Op0, Op1, I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
     return FoldedMul;
@@ -583,9 +581,9 @@ bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
   Type *CondTy = SelectCond->getType();
   while (BBI != BBFront) {
     --BBI;
-    // If we found a call to a function, we can't assume it will return, so
+    // If we found an instruction that we can't assume will return, so
     // information from below it cannot be propagated above it.
-    if (isa<CallInst>(BBI) && !isa<IntrinsicInst>(BBI))
+    if (!isGuaranteedToTransferExecutionToSuccessor(&*BBI))
       break;
 
     // Replace uses of the select or its condition with the known values.
@@ -939,12 +937,11 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
 
 Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   if (Value *V = SimplifyUDivInst(Op0, Op1, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   // Handle the integer div common cases
   if (Instruction *Common = commonIDivTransforms(I))
@@ -1008,12 +1005,11 @@ Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
 
 Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   if (Value *V = SimplifySDivInst(Op0, Op1, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   // Handle the integer div common cases
   if (Instruction *Common = commonIDivTransforms(I))
@@ -1152,13 +1148,12 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
 
 Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   if (Value *V = SimplifyFDivInst(Op0, Op1, I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   if (Instruction *R = foldFDivConstantDivisor(I))
     return R;
@@ -1282,12 +1277,11 @@ Instruction *InstCombiner::commonIRemTransforms(BinaryOperator &I) {
 
 Instruction *InstCombiner::visitURem(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   if (Value *V = SimplifyURemInst(Op0, Op1, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   if (Instruction *common = commonIRemTransforms(I))
     return common;
@@ -1321,12 +1315,11 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
 
 Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   if (Value *V = SimplifySRemInst(Op0, Op1, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   // Handle the integer rem common cases
   if (Instruction *Common = commonIRemTransforms(I))
@@ -1394,13 +1387,12 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
 
 Instruction *InstCombiner::visitFRem(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *V = SimplifyVectorOp(I))
-    return replaceInstUsesWith(I, V);
-
   if (Value *V = SimplifyFRemInst(Op0, Op1, I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *X = foldShuffledBinop(I))
+    return X;
 
   return nullptr;
 }

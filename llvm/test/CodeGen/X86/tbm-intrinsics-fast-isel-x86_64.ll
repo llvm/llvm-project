@@ -6,9 +6,9 @@
 define i64 @test__bextri_u64(i64 %a0) {
 ; X64-LABEL: test__bextri_u64:
 ; X64:       # %bb.0:
-; X64-NEXT:    bextrq $1, %rdi, %rax
+; X64-NEXT:    bextrq $3841, %rdi, %rax # imm = 0xF01
 ; X64-NEXT:    retq
-  %1 = call i64 @llvm.x86.tbm.bextri.u64(i64 %a0, i64 1)
+  %1 = call i64 @llvm.x86.tbm.bextri.u64(i64 %a0, i64 3841)
   ret i64 %1
 }
 

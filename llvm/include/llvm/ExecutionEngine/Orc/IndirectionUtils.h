@@ -188,10 +188,10 @@ public:
   /// Find the stub with the given name. If ExportedStubsOnly is true,
   ///        this will only return a result if the stub's flags indicate that it
   ///        is exported.
-  virtual JITSymbol findStub(StringRef Name, bool ExportedStubsOnly) = 0;
+  virtual JITEvaluatedSymbol findStub(StringRef Name, bool ExportedStubsOnly) = 0;
 
   /// Find the implementation-pointer for the stub.
-  virtual JITSymbol findPointer(StringRef Name) = 0;
+  virtual JITEvaluatedSymbol findPointer(StringRef Name) = 0;
 
   /// Change the value of the implementation pointer for the stub.
   virtual Error updatePointer(StringRef Name, JITTargetAddress NewAddr) = 0;
@@ -226,7 +226,7 @@ public:
     return Error::success();
   }
 
-  JITSymbol findStub(StringRef Name, bool ExportedStubsOnly) override {
+  JITEvaluatedSymbol findStub(StringRef Name, bool ExportedStubsOnly) override {
     auto I = StubIndexes.find(Name);
     if (I == StubIndexes.end())
       return nullptr;
@@ -235,13 +235,13 @@ public:
     assert(StubAddr && "Missing stub address");
     auto StubTargetAddr =
         static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(StubAddr));
-    auto StubSymbol = JITSymbol(StubTargetAddr, I->second.second);
+    auto StubSymbol = JITEvaluatedSymbol(StubTargetAddr, I->second.second);
     if (ExportedStubsOnly && !StubSymbol.getFlags().isExported())
       return nullptr;
     return StubSymbol;
   }
 
-  JITSymbol findPointer(StringRef Name) override {
+  JITEvaluatedSymbol findPointer(StringRef Name) override {
     auto I = StubIndexes.find(Name);
     if (I == StubIndexes.end())
       return nullptr;
@@ -250,7 +250,7 @@ public:
     assert(PtrAddr && "Missing pointer address");
     auto PtrTargetAddr =
         static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(PtrAddr));
-    return JITSymbol(PtrTargetAddr, I->second.second);
+    return JITEvaluatedSymbol(PtrTargetAddr, I->second.second);
   }
 
   Error updatePointer(StringRef Name, JITTargetAddress NewAddr) override {

@@ -13,7 +13,25 @@
 ; Verify that debugify each can be safely used with piping
 ; RUN: opt -debugify-each -O1 < %s | opt -O2 -o /dev/null
 
-define void @foo() {
+; Check that stripped textual IR compares equal before and after applying
+; debugify.
+; RUN: opt -O1 < %s -S -o - | \
+; RUN:   opt -strip -strip-dead-prototypes -strip-module-flags -S -o %t.before
+; RUN: opt -O1 -debugify-each < %s -S -o - | \
+; RUN:   opt -strip -strip-dead-prototypes -strip-module-flags -S -o %t.after
+; RUN: diff %t.before %t.after
+
+; Check that stripped IR compares equal before and after applying debugify.
+; RUN: opt -O1 < %s | \
+; RUN:   opt -strip -strip-dead-prototypes -strip-module-flags | \
+; RUN:   llvm-dis -o %t.before
+; RUN: opt -O1 -debugify-each < %s | \
+; RUN:   opt -strip -strip-dead-prototypes -strip-module-flags | \
+; RUN:   llvm-dis -o %t.after
+; RUN: diff %t.before %t.after
+
+define void @foo(i32 %arg) {
+  call i32 asm "bswap $0", "=r,r"(i32 %arg)
   ret void
 }
 

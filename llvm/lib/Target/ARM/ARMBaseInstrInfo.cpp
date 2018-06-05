@@ -1359,7 +1359,13 @@ unsigned ARMBaseInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     }
     break;
   case ARM::VLD1q64:
+  case ARM::VLD1d8TPseudo:
+  case ARM::VLD1d16TPseudo:
+  case ARM::VLD1d32TPseudo:
   case ARM::VLD1d64TPseudo:
+  case ARM::VLD1d8QPseudo:
+  case ARM::VLD1d16QPseudo:
+  case ARM::VLD1d32QPseudo:
   case ARM::VLD1d64QPseudo:
     if (MI.getOperand(1).isFI() && MI.getOperand(0).getSubReg() == 0) {
       FrameIndex = MI.getOperand(1).getIndex();
@@ -4230,6 +4236,9 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case ARM::VLD3d8Pseudo:
     case ARM::VLD3d16Pseudo:
     case ARM::VLD3d32Pseudo:
+    case ARM::VLD1d8TPseudo:
+    case ARM::VLD1d16TPseudo:
+    case ARM::VLD1d32TPseudo:
     case ARM::VLD1d64TPseudo:
     case ARM::VLD1d64TPseudoWB_fixed:
     case ARM::VLD1d64TPseudoWB_register:
@@ -4248,9 +4257,28 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case ARM::VLD4d8Pseudo:
     case ARM::VLD4d16Pseudo:
     case ARM::VLD4d32Pseudo:
+    case ARM::VLD1d8QPseudo:
+    case ARM::VLD1d16QPseudo:
+    case ARM::VLD1d32QPseudo:
     case ARM::VLD1d64QPseudo:
     case ARM::VLD1d64QPseudoWB_fixed:
     case ARM::VLD1d64QPseudoWB_register:
+    case ARM::VLD1q8HighQPseudo:
+    case ARM::VLD1q8LowQPseudo_UPD:
+    case ARM::VLD1q8HighTPseudo:
+    case ARM::VLD1q8LowTPseudo_UPD:
+    case ARM::VLD1q16HighQPseudo:
+    case ARM::VLD1q16LowQPseudo_UPD:
+    case ARM::VLD1q16HighTPseudo:
+    case ARM::VLD1q16LowTPseudo_UPD:
+    case ARM::VLD1q32HighQPseudo:
+    case ARM::VLD1q32LowQPseudo_UPD:
+    case ARM::VLD1q32HighTPseudo:
+    case ARM::VLD1q32LowTPseudo_UPD:
+    case ARM::VLD1q64HighQPseudo:
+    case ARM::VLD1q64LowQPseudo_UPD:
+    case ARM::VLD1q64HighTPseudo:
+    case ARM::VLD1q64LowTPseudo_UPD:
     case ARM::VLD4d8Pseudo_UPD:
     case ARM::VLD4d16Pseudo_UPD:
     case ARM::VLD4d32Pseudo_UPD:

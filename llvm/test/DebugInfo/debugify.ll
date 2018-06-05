@@ -49,6 +49,14 @@ define weak_odr zeroext i1 @baz() {
   ret i1 false
 }
 
+; CHECK-LABEL: define i32 @boom
+define i32 @boom() {
+; CHECK: [[result:%.*]] = musttail call i32 @bar(), !dbg ![[musttail:.*]]
+  %retval = musttail call i32 @bar()
+; CHECK-NEXT: ret i32 [[result]], !dbg ![[musttailRes:.*]]
+  ret i32 %retval
+}
+
 ; CHECK-DAG: !llvm.dbg.cu = !{![[CU:.*]]}
 ; CHECK-DAG: !llvm.debugify = !{![[NUM_INSTS:.*]], ![[NUM_VARS:.*]]}
 ; CHECK-DAG: "Debug Info Version"
@@ -63,13 +71,15 @@ define weak_odr zeroext i1 @baz() {
 ; CHECK-DAG: ![[CALL1]] = !DILocation(line: 2, column: 1
 ; CHECK-DAG: ![[ADD1]] = !DILocation(line: 3, column: 1
 ; CHECK-DAG: ![[RET2]] = !DILocation(line: 4, column: 1
+; CHECK-DAG: ![[musttail]] = !DILocation(line: 5, column: 1
+; CHECK-DAG: ![[musttailRes]] = !DILocation(line: 6, column: 1
 
 ; --- DILocalVariables
 ; CHECK-DAG: ![[TY32:.*]] = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_unsigned)
 ; CHECK-DAG: !DILocalVariable(name: "1", scope: {{.*}}, file: {{.*}}, line: 3, type: ![[TY32]])
 
 ; --- Metadata counts
-; CHECK-DAG: ![[NUM_INSTS]] = !{i32 4}
+; CHECK-DAG: ![[NUM_INSTS]] = !{i32 6}
 ; CHECK-DAG: ![[NUM_VARS]] = !{i32 1}
 
 ; --- Repeat case
