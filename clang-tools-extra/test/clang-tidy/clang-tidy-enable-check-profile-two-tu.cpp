@@ -1,4 +1,4 @@
-// RUN: clang-tidy -enable-check-profile -checks='-*,readability-function-size' %s %s 2>&1 | FileCheck --match-full-lines -implicit-check-not='{{warning:|error:}}' %s
+// RUN: clang-tidy -enable-check-profile -checks='-*,readability-function-size' %s %s -- 2>&1 | FileCheck --match-full-lines -implicit-check-not='{{warning:|error:}}' %s
 
 // CHECK: ===-------------------------------------------------------------------------===
 // CHECK-NEXT: {{.*}}  --- Name ---
