@@ -1493,19 +1493,18 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
 
 /// Retrieve the type of the temporary object whose lifetime was 
 /// extended by a local reference with the given initializer.
-static QualType getReferenceInitTemporaryType(ASTContext &Context,
-                                              const Expr *Init,
+static QualType getReferenceInitTemporaryType(const Expr *Init,
                                               bool *FoundMTE = nullptr) {
   while (true) {
     // Skip parentheses.
     Init = Init->IgnoreParens();
-    
+
     // Skip through cleanups.
     if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(Init)) {
       Init = EWC->getSubExpr();
       continue;
     }
-    
+
     // Skip through the temporary-materialization expression.
     if (const MaterializeTemporaryExpr *MTE
           = dyn_cast<MaterializeTemporaryExpr>(Init)) {
@@ -1514,26 +1513,17 @@ static QualType getReferenceInitTemporaryType(ASTContext &Context,
         *FoundMTE = true;
       continue;
     }
-    
-    // Skip derived-to-base and no-op casts.
-    if (const CastExpr *CE = dyn_cast<CastExpr>(Init)) {
-      if ((CE->getCastKind() == CK_DerivedToBase ||
-           CE->getCastKind() == CK_UncheckedDerivedToBase ||
-           CE->getCastKind() == CK_NoOp) &&
-          Init->getType()->isRecordType()) {
-        Init = CE->getSubExpr();
-        continue;
-      }
+
+    // Skip sub-object accesses into rvalues.
+    SmallVector<const Expr *, 2> CommaLHSs;
+    SmallVector<SubobjectAdjustment, 2> Adjustments;
+    const Expr *SkippedInit =
+        Init->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+    if (SkippedInit != Init) {
+      Init = SkippedInit;
+      continue;
     }
-    
-    // Skip member accesses into rvalues.
-    if (const MemberExpr *ME = dyn_cast<MemberExpr>(Init)) {
-      if (!ME->isArrow() && ME->getBase()->isRValue()) {
-        Init = ME->getBase();
-        continue;
-      }
-    }
-    
+
     break;
   }
 
@@ -1682,7 +1672,7 @@ void CFGBuilder::addAutomaticObjDtors(LocalScope::const_iterator B,
     // anything built thus far: control won't flow out of this block.
     QualType Ty = (*I)->getType();
     if (Ty->isReferenceType()) {
-      Ty = getReferenceInitTemporaryType(*Context, (*I)->getInit());
+      Ty = getReferenceInitTemporaryType((*I)->getInit());
     }
     Ty = Context->getBaseElementType(Ty);
 
@@ -1795,7 +1785,7 @@ LocalScope* CFGBuilder::addLocalScopeForDeclStmt(DeclStmt *DS,
 bool CFGBuilder::hasTrivialDestructor(VarDecl *VD) {
   // Check for const references bound to temporary. Set type to pointee.
   QualType QT = VD->getType();
-  if (QT.getTypePtr()->isReferenceType()) {
+  if (QT->isReferenceType()) {
     // Attempt to determine whether this declaration lifetime-extends a
     // temporary.
     //
@@ -1805,12 +1795,16 @@ bool CFGBuilder::hasTrivialDestructor(VarDecl *VD) {
     // MaterializeTemporaryExpr instead.
 
     const Expr *Init = VD->getInit();
-    if (!Init)
+    if (!Init) {
+      // Probably an exception catch-by-reference variable.
+      // FIXME: It doesn't really mean that the object has a trivial destructor.
+      // Also are there other cases?
       return true;
+    }
 
-    // Lifetime-extending a temporary.
+    // Lifetime-extending a temporary?
     bool FoundMTE = false;
-    QT = getReferenceInitTemporaryType(*Context, Init, &FoundMTE);
+    QT = getReferenceInitTemporaryType(Init, &FoundMTE);
     if (!FoundMTE)
       return true;
   }
@@ -4596,7 +4590,7 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
       // temporary in an initializer expression.
       if (ty->isReferenceType()) {
         if (const Expr *Init = var->getInit()) {
-          ty = getReferenceInitTemporaryType(astContext, Init);
+          ty = getReferenceInitTemporaryType(Init);
         }
       }
 
@@ -5061,10 +5055,12 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     const VarDecl *VD = DE->getVarDecl();
     Helper.handleDecl(VD, OS);
 
-    const Type* T = VD->getType().getTypePtr();
-    if (const ReferenceType* RT = T->getAs<ReferenceType>())
-      T = RT->getPointeeType().getTypePtr();
-    T = T->getBaseElementTypeUnsafe();
+    ASTContext &ACtx = VD->getASTContext();
+    QualType T = VD->getType();
+    if (T->isReferenceType())
+      T = getReferenceInitTemporaryType(VD->getInit(), nullptr);
+    if (const ArrayType *AT = ACtx.getAsArrayType(T))
+      T = ACtx.getBaseElementType(AT);
 
     OS << ".~" << T->getAsCXXRecordDecl()->getName().str() << "()";
     OS << " (Implicit destructor)\n";

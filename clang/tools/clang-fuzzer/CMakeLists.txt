@@ -40,6 +40,9 @@ if(CLANG_ENABLE_PROTO_FUZZER)
   # Build the protobuf->C++ translation library and driver.
   add_clang_subdirectory(proto-to-cxx)
 
+  # Build the fuzzer initialization library.
+  add_clang_subdirectory(fuzzer-initialize)
+
   # Build the protobuf fuzzer
   add_clang_executable(clang-proto-fuzzer
     ${DUMMY_MAIN}
@@ -52,6 +55,7 @@ if(CLANG_ENABLE_PROTO_FUZZER)
     ${PROTOBUF_LIBRARIES}
     ${LLVM_LIB_FUZZING_ENGINE}
     clangCXXProto
+    clangFuzzerInitialize
     clangHandleCXX
     clangProtoToCXX
     )

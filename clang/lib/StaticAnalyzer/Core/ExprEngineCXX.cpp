@@ -181,22 +181,13 @@ SVal ExprEngine::getLocationForConstructedObject(const CXXConstructExpr *CE,
       const auto *TOCC = cast<TemporaryObjectConstructionContext>(CC);
       if (const auto *MTE = TOCC->getMaterializedTemporaryExpr()) {
         if (const ValueDecl *VD = MTE->getExtendingDecl()) {
-          // Pattern-match various forms of lifetime extension that aren't
-          // currently supported by the CFG.
-          // FIXME: Is there a better way to retrieve this information from
-          // the MaterializeTemporaryExpr?
           assert(MTE->getStorageDuration() != SD_FullExpression);
-          if (VD->getType()->isReferenceType()) {
-            assert(VD->getType()->isReferenceType());
-            if (VD->getType()->getPointeeType().getCanonicalType() !=
-                MTE->GetTemporaryExpr()->getType().getCanonicalType()) {
-              // We're lifetime-extended via our field. Automatic destructors
-              // aren't quite working in this case.
-              CallOpts.IsTemporaryLifetimeExtendedViaSubobject = true;
-            }
-          } else {
+          if (!VD->getType()->isReferenceType()) {
             // We're lifetime-extended by a surrounding aggregate.
-            // Automatic destructors aren't quite working in this case.
+            // Automatic destructors aren't quite working in this case
+            // on the CFG side. We should warn the caller about that.
+            // FIXME: Is there a better way to retrieve this information from
+            // the MaterializeTemporaryExpr?
             CallOpts.IsTemporaryLifetimeExtendedViaAggregate = true;
           }
         }
