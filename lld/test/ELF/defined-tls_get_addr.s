@@ -1,3 +1,4 @@
+// REQUIRES: x86
 // RUN: llvm-mc %s -o %t.o -triple x86_64-pc-linux -filetype=obj
 // RUN: ld.lld %t.o -o %t
 

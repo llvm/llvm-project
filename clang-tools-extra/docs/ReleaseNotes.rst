@@ -57,6 +57,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- The checks profiling info can now be stored as JSON files for futher
+  post-processing and analysis.
+
 - New module `abseil` for checks related to the `Abseil <https://abseil.io>`_
   library.
 

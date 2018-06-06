@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld -z keep-text-section-prefix %t -o %t2
 # RUN: llvm-readelf -l %t2 | FileCheck %s

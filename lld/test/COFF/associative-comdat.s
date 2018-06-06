@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -triple=x86_64-windows-msvc %s -filetype=obj -o %t1.obj
 # RUN: llvm-mc -triple=x86_64-windows-msvc %S/Inputs/associative-comdat-2.s -filetype=obj -o %t2.obj
 
