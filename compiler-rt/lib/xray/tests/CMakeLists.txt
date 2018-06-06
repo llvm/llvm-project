@@ -35,6 +35,7 @@ set(XRAY_IMPL_FILES
   ../../xray_profile_collector.h
   ../../xray_profiler_flags.cc
   ../../xray_profiler_flags.h
+  ../../xray_recursion_guard.h
   ../../xray_segmented_array.h
   ../../xray_trampoline_powerpc64.cc
   ../../xray_tsc.h

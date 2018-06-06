@@ -50,6 +50,15 @@ struct SymbolQualitySignals {
   bool Deprecated = false;
   unsigned References = 0;
 
+  enum SymbolCategory {
+    Variable,
+    Macro,
+    Type,
+    Function,
+    Namespace,
+    Unknown,
+  } Category = Unknown;
+
   void merge(const CodeCompletionResult &SemaCCResult);
   void merge(const Symbol &IndexResult);
 

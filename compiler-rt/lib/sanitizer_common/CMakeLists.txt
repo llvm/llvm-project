@@ -69,6 +69,7 @@ set(SANITIZER_COVERAGE_SOURCES
   sanitizer_coverage_win_sections.cc)
 
 set(SANITIZER_SYMBOLIZER_SOURCES
+  sanitizer_allocator_report.cc
   sanitizer_stackdepot.cc
   sanitizer_stacktrace.cc
   sanitizer_stacktrace_libcdep.cc
@@ -98,6 +99,7 @@ set(SANITIZER_HEADERS
   sanitizer_allocator_local_cache.h
   sanitizer_allocator_primary32.h
   sanitizer_allocator_primary64.h
+  sanitizer_allocator_report.h
   sanitizer_allocator_secondary.h
   sanitizer_allocator_size_class_map.h
   sanitizer_allocator_stats.h
