@@ -83,7 +83,9 @@ bool PolyhedralInfo::checkParallel(Loop *L, isl_pw_aff **MinDepDistPtr) const {
 
   isl_union_map *Deps =
       D.getDependences(Dependences::TYPE_RAW | Dependences::TYPE_WAW |
-                       Dependences::TYPE_WAR | Dependences::TYPE_RED);
+                       Dependences::TYPE_WAR | Dependences::TYPE_RED)
+          .release();
+
   LLVM_DEBUG(dbgs() << "Dependences :\t" << stringFromIslObj(Deps) << "\n");
 
   isl_union_map *Schedule = getScheduleForLoop(S, L);

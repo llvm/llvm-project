@@ -90,7 +90,7 @@ categorize(const index::SymbolInfo &D) {
     case index::SymbolKind::Unknown:
       return SymbolQualitySignals::Unknown;
   }
-  llvm_unreachable("Unknown index::SymbolKind")
+  llvm_unreachable("Unknown index::SymbolKind");
 }
 
 void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
