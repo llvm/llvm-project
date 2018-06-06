@@ -21,6 +21,7 @@
 #include "BitcodeReader.h"
 #include "BitcodeWriter.h"
 #include "ClangDoc.h"
+#include "Generators.h"
 #include "Representation.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/Decl.h"
@@ -67,10 +68,10 @@ enum OutputFormatTy {
   yaml,
 };
 
-static llvm::cl::opt<OutputFormatTy>
-    Format("format", llvm::cl::desc("Format for outputted docs."),
-           llvm::cl::values(clEnumVal(yaml, "Documentation in YAML format.")),
-           llvm::cl::init(yaml), llvm::cl::cat(ClangDocCategory));
+static llvm::cl::opt<OutputFormatTy> FormatEnum(
+    "format", llvm::cl::desc("Format for outputted docs."),
+    llvm::cl::values(clEnumVal(yaml, "Documentation in YAML format.")),
+    llvm::cl::init(yaml), llvm::cl::cat(ClangDocCategory));
 
 static llvm::cl::opt<bool> DoxygenOnly(
     "doxygen",
@@ -116,8 +117,41 @@ bool DumpResultToFile(const Twine &DirName, const Twine &FileName,
   return false;
 }
 
+llvm::Expected<llvm::SmallString<128>>
+getPath(StringRef Root, StringRef Ext, StringRef Name,
+        llvm::SmallVectorImpl<doc::Reference> &Namespaces) {
+  std::error_code OK;
+  llvm::SmallString<128> Path;
+  llvm::sys::path::native(Root, Path);
+  for (auto R = Namespaces.rbegin(), E = Namespaces.rend(); R != E; ++R)
+    llvm::sys::path::append(Path, R->Name);
+
+  if (CreateDirectory(Path))
+    return llvm::make_error<llvm::StringError>("Unable to create directory.\n",
+                                               llvm::inconvertibleErrorCode());
+
+  llvm::sys::path::append(Path, Name + Ext);
+  return Path;
+}
+
+std::string getFormatString(OutputFormatTy Ty) {
+  switch (Ty) {
+  case yaml:
+    return "yaml";
+  }
+}
+
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
+  std::error_code OK;
+
+  // Fail early if an invalid format was provided.
+  std::string Format = getFormatString(FormatEnum);
+  auto G = doc::findGeneratorByName(Format);
+  if (!G) {
+    llvm::errs() << toString(G.takeError()) << "\n";
+    return 1;
+  }
 
   auto Exec = clang::tooling::createExecutorFromCommandLineArgs(
       argc, argv, ClangDocCategory);
@@ -173,7 +207,7 @@ int main(int argc, const char **argv) {
     }
   });
 
-  // Reducing phase
+  // Reducing and generation phases
   llvm::outs() << "Reducing " << MapOutput.size() << " infos...\n";
   llvm::StringMap<std::unique_ptr<doc::Info>> ReduceOutput;
   for (auto &Group : MapOutput) {
@@ -186,16 +220,27 @@ int main(int argc, const char **argv) {
       llvm::BitstreamWriter Stream(Buffer);
       doc::ClangDocBitcodeWriter Writer(Stream);
       Writer.dispatchInfoForWrite(Reduced.get().get());
-      if (DumpResultToFile("bc", Group.getKey() + ".bc", Buffer)) {
-        llvm::errs() << "Error writing " << Group.getKey() << " to file.\n";
-        continue;
-      }
+      if (DumpResultToFile("bc", Group.getKey() + ".bc", Buffer))
+        llvm::errs() << "Error dumping to bitcode.\n";
+      continue;
     }
 
-    ReduceOutput.insert(
-        std::make_pair(Group.getKey(), std::move(Reduced.get())));
+    // Create the relevant ostream and emit the documentation for this decl.
+    doc::Info *I = Reduced.get().get();
+    auto InfoPath = getPath(OutDirectory, "." + Format, I->Name, I->Namespace);
+    if (!InfoPath) {
+      llvm::errs() << toString(InfoPath.takeError()) << "\n";
+      continue;
+    }
+    std::error_code FileErr;
+    llvm::raw_fd_ostream InfoOS(InfoPath.get(), FileErr, llvm::sys::fs::F_None);
+    if (FileErr != OK) {
+      llvm::errs() << "Error opening index file: " << FileErr.message() << "\n";
+      continue;
+    }
 
-    // FIXME: Add support for emitting different output formats.
+    if (G->get()->generateDocForInfo(I, InfoOS))
+      llvm::errs() << "Unable to generate docs for info.\n";
   }
 
   return 0;
