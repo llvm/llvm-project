@@ -314,8 +314,8 @@ define i64 @test14(i64 %x, i32 %y) {
 
 define i64 @test15(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SHL]], -1
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i32 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[NOTMASK]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[UREM:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[UREM]]

@@ -2,7 +2,7 @@
 # (-v is actually sufficient in the case of the internal shell.)
 #
 # RUN: not %{lit} -j 1 -vv %{inputs}/shtest-run-at-line > %t.out
-# RUN: FileCheck --input-file %t.out -Dpdbg0="%{pdbg0}" -Dpdbg1="%{pdbg1}" %s
+# RUN: FileCheck --input-file %t.out %s
 #
 # END.
 
@@ -16,9 +16,9 @@
 # CHECK-LABEL: FAIL: shtest-run-at-line :: external-shell/basic.txt
 
 # CHECK:      Script:
-# CHECK:      [[pdbg0]]RUN: at line 4[[pdbg1]]  true
-# CHECK-NEXT: [[pdbg0]]RUN: at line 5[[pdbg1]]  false
-# CHECK-NEXT: [[pdbg0]]RUN: at line 6[[pdbg1]]  true
+# CHECK:      RUN: at line 4{{.*}}  true
+# CHECK-NEXT: RUN: at line 5{{.*}}  false
+# CHECK-NEXT: RUN: at line 6{{.*}}  true
 
 # CHECK:     RUN: at line 4
 # CHECK:     RUN: at line 5
@@ -27,9 +27,9 @@
 # CHECK-LABEL: FAIL: shtest-run-at-line :: external-shell/line-continuation.txt
 
 # CHECK:      Script:
-# CHECK:      [[pdbg0]]RUN: at line 4[[pdbg1]]  echo 'foo bar'  | FileCheck
-# CHECK-NEXT: [[pdbg0]]RUN: at line 6[[pdbg1]]  echo  'foo baz'  | FileCheck
-# CHECK-NEXT: [[pdbg0]]RUN: at line 9[[pdbg1]]  echo 'foo bar'  | FileCheck
+# CHECK:      RUN: at line 4{{.*}}  echo 'foo bar'  | FileCheck
+# CHECK-NEXT: RUN: at line 6{{.*}}  echo 'foo baz'  | FileCheck
+# CHECK-NEXT: RUN: at line 9{{.*}}  echo 'foo bar'  | FileCheck
 
 # CHECK:     RUN: at line 4
 # CHECK:     RUN: at line 6

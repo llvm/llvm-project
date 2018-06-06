@@ -300,18 +300,34 @@ define float @fmul_fma_fast2(float %x) {
 ; Reduced precision for sqrt is allowed - should use estimate and NR iterations.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn:'
-; FMFDEBUG:         fsqrt afn {{t[0-9]+}}
+; FMFDEBUG:         fmul afn {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_afn:'
-; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
+; GLOBALDEBUG:         fmul afn {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_afn:'
 
 define float @sqrt_afn(float %x) {
 ; FMF-LABEL: sqrt_afn:
-; FMF:       # %bb.0:
-; FMF-NEXT:    xssqrtsp 1, 1
-; FMF-NEXT:    blr
+; FMF:          # %bb.0:
+; FMF-NEXT:       xxlxor 0, 0, 0
+; FMF-NEXT:       fcmpu 0, 1, 0
+; FMF-NEXT:       beq 0, .LBB10_2
+; FMF-NEXT:     # %bb.1:
+; FMF-NEXT:       addis 3, 2, .LCPI10_0@toc@ha
+; FMF-NEXT:       xsrsqrtesp 3, 1
+; FMF-NEXT:       addi 3, 3, .LCPI10_0@toc@l
+; FMF-NEXT:       lfsx 0, 0, 3
+; FMF-NEXT:       xsmulsp 2, 1, 0
+; FMF-NEXT:       xsmulsp 4, 3, 3
+; FMF-NEXT:       xssubsp 2, 2, 1
+; FMF-NEXT:       xsmulsp 2, 2, 4
+; FMF-NEXT:       xssubsp 0, 0, 2
+; FMF-NEXT:       xsmulsp 0, 3, 0
+; FMF-NEXT:       xsmulsp 0, 0, 1
+; FMF-NEXT:     .LBB10_2:
+; FMF-NEXT:       fmr 1, 0
+; FMF-NEXT:       blr
 ;
 ; GLOBAL-LABEL: sqrt_afn:
 ; GLOBAL:       # %bb.0:
@@ -340,18 +356,34 @@ define float @sqrt_afn(float %x) {
 ; The call is now fully 'fast'. This implies that approximation is allowed.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast:'
-; FMFDEBUG:         fsqrt nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
+; FMFDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'sqrt_fast:'
-; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
+; GLOBALDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'sqrt_fast:'
 
 define float @sqrt_fast(float %x) {
 ; FMF-LABEL: sqrt_fast:
-; FMF:       # %bb.0:
-; FMF-NEXT:    xssqrtsp 1, 1
-; FMF-NEXT:    blr
+; FMF:          # %bb.0:
+; FMF-NEXT:       xxlxor 0, 0, 0
+; FMF-NEXT:       fcmpu 0, 1, 0
+; FMF-NEXT:       beq 0, .LBB11_2
+; FMF-NEXT:     # %bb.1:
+; FMF-NEXT:       xsrsqrtesp 2, 1
+; FMF-NEXT:       addis 3, 2, .LCPI11_0@toc@ha
+; FMF-NEXT:       fneg 0, 1
+; FMF-NEXT:       fmr 4, 1
+; FMF-NEXT:       addi 3, 3, .LCPI11_0@toc@l
+; FMF-NEXT:       lfsx 3, 0, 3
+; FMF-NEXT:       xsmaddasp 4, 0, 3
+; FMF-NEXT:       xsmulsp 0, 2, 2
+; FMF-NEXT:       xsmaddasp 3, 4, 0
+; FMF-NEXT:       xsmulsp 0, 2, 3
+; FMF-NEXT:       xsmulsp 0, 0, 1
+; FMF-NEXT:     .LBB11_2:
+; FMF-NEXT:       fmr 1, 0
+; FMF-NEXT:       blr
 ;
 ; GLOBAL-LABEL: sqrt_fast:
 ; GLOBAL:       # %bb.0:

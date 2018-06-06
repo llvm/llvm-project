@@ -485,6 +485,15 @@
 // RUN: %clang -target armv8 -mthumb -mcpu=cortex-a72 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
 // RUN: %clang -target armv8 -mcpu=cortex-a73 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
 // RUN: %clang -target armv8 -mthumb -mcpu=cortex-a73 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
+//
+// RUN: %clang -target armv8 -mcpu=exynos-m1 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mthumb -mcpu=exynos-m1 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mcpu=exynos-m2 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mthumb -mcpu=exynos-m2 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mcpu=exynos-m3 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mthumb -mcpu=exynos-m3 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mcpu=exynos-m4 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mthumb -mcpu=exynos-m4 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
 // ARMV8:#define __ARM_ARCH_EXT_IDIV__ 1
 // ARMV8:#define __ARM_FEATURE_DSP 1
 // ARMV8-NOT:#define __ARM_FP 0x
@@ -502,6 +511,15 @@
 // RUN: %clang -target armv8-eabi -mthumb -mcpu=cortex-a72 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
 // RUN: %clang -target armv8-eabi -mcpu=cortex-a73 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
 // RUN: %clang -target armv8-eabi -mthumb -mcpu=cortex-a73 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
+//
+// RUN: %clang -target armv8-eabi -mcpu=exynos-m1 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
+// RUN: %clang -target armv8-eabi -mthumb -mcpu=exynos-m1 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
+// RUN: %clang -target armv8-eabi -mcpu=exynos-m2 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
+// RUN: %clang -target armv8-eabi -mthumb -mcpu=exynos-m2 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
+// RUN: %clang -target armv8-eabi -mcpu=exynos-m3 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
+// RUN: %clang -target armv8-eabi -mthumb -mcpu=exynos-m3 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
+// RUN: %clang -target armv8-eabi -mcpu=exynos-m4 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
+// RUN: %clang -target armv8-eabi -mthumb -mcpu=exynos-m4 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
 // ARMV8-ALLOW-FP-INSTR:#define __ARM_ARCH_EXT_IDIV__ 1
 // ARMV8-ALLOW-FP-INSTR:#define __ARM_FEATURE_DSP 1
 // ARMV8-ALLOW-FP-INSTR:#define __ARM_FP 0xe

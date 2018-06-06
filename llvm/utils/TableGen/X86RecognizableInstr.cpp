@@ -904,8 +904,8 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
   TYPE("vx256xmem",           TYPE_MVSIBX)
   TYPE("vy128xmem",           TYPE_MVSIBY)
   TYPE("vy256xmem",           TYPE_MVSIBY)
-  TYPE("vy512mem",            TYPE_MVSIBY)
-  TYPE("vz256xmem",           TYPE_MVSIBZ)
+  TYPE("vy512xmem",           TYPE_MVSIBY)
+  TYPE("vz256mem",            TYPE_MVSIBZ)
   TYPE("vz512mem",            TYPE_MVSIBZ)
   TYPE("BNDR",                TYPE_BNDR)
   errs() << "Unhandled type string " << s << "\n";
@@ -1097,8 +1097,8 @@ RecognizableInstr::memoryEncodingFromString(const std::string &s,
   ENCODING("vx256xmem",       ENCODING_VSIB)
   ENCODING("vy128xmem",       ENCODING_VSIB)
   ENCODING("vy256xmem",       ENCODING_VSIB)
-  ENCODING("vy512mem",        ENCODING_VSIB)
-  ENCODING("vz256xmem",       ENCODING_VSIB)
+  ENCODING("vy512xmem",       ENCODING_VSIB)
+  ENCODING("vz256mem",        ENCODING_VSIB)
   ENCODING("vz512mem",        ENCODING_VSIB)
   errs() << "Unhandled memory encoding " << s << "\n";
   llvm_unreachable("Unhandled memory encoding");

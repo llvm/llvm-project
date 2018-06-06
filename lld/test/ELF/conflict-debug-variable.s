@@ -1,3 +1,4 @@
+// REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: llvm-dwarfdump %t.o | FileCheck -check-prefix=INPUT %s
 # RUN: not ld.lld %t.o %t.o -o %t 2>&1 | FileCheck %s

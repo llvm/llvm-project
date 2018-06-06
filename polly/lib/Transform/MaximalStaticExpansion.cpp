@@ -444,7 +444,7 @@ bool MaximalStaticExpander::runOnScop(Scop &S) {
   // Get the RAW Dependences.
   auto &DI = getAnalysis<DependenceInfo>();
   auto &D = DI.getDependences(Dependences::AL_Reference);
-  auto Dependences = isl::manage(D.getDependences(Dependences::TYPE_RAW));
+  isl::union_map Dependences = D.getDependences(Dependences::TYPE_RAW);
 
   SmallVector<ScopArrayInfo *, 4> CurrentSAI(S.arrays().begin(),
                                              S.arrays().end());

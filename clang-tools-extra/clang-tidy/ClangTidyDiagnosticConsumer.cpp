@@ -237,6 +237,18 @@ ClangTidyOptions ClangTidyContext::getOptionsForFile(StringRef File) const {
 
 void ClangTidyContext::setEnableProfiling(bool P) { Profile = P; }
 
+void ClangTidyContext::setProfileStoragePrefix(StringRef Prefix) {
+  ProfilePrefix = Prefix;
+}
+
+llvm::Optional<ClangTidyProfiling::StorageParams>
+ClangTidyContext::getProfileStorageParams() const {
+  if (ProfilePrefix.empty())
+    return llvm::None;
+
+  return ClangTidyProfiling::StorageParams(ProfilePrefix, CurrentFile);
+}
+
 bool ClangTidyContext::isCheckEnabled(StringRef CheckName) const {
   assert(CheckFilter != nullptr);
   return CheckFilter->contains(CheckName);

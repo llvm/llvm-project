@@ -1,4 +1,4 @@
-@ RUN: not llvm-mc -triple armv7a-linux-gnueabihf %s -filetype=obj -o %s.o 2>&1 | FileCheck %s
+@ RUN: not llvm-mc -triple armv7a-linux-gnueabihf %s -filetype=obj -o %t.o 2>&1 | FileCheck %s
 
 @ The relaxations should be applied using the subtarget from the fragment
 @ containing the fixup and not the per module subtarget.

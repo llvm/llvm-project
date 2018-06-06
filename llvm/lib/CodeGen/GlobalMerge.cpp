@@ -500,6 +500,11 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
         GlobalVariable::NotThreadLocal, AddrSpace);
 
     const StructLayout *MergedLayout = DL.getStructLayout(MergedTy);
+    // Set the alignment of the merged struct as the maximum alignment of the
+    // globals to prevent over-alignment. We don't handle globals that are not
+    // default aligned, so the alignment of the MergedLayout struct is
+    // equivalent.
+    MergedGV->setAlignment(MergedLayout->getAlignment());
 
     for (ssize_t k = i, idx = 0; k != j; k = GlobalSet.find_next(k), ++idx) {
       GlobalValue::LinkageTypes Linkage = Globals[k]->getLinkage();
