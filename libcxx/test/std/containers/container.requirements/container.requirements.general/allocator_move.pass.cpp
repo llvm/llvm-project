@@ -15,6 +15,7 @@
 //   allocator shall not exit via an exception.
 
 #include <vector>
+#include <deque>
 #include <list>
 #include <forward_list>
 #include <set>
@@ -67,6 +68,14 @@ int main() {
     test<std::vector<bool, test_allocator<bool> > >();
     test<std::list<int, test_allocator<int> > >();
     test<std::forward_list<int, test_allocator<int> > >();
+
+    // libc++ stores two allocators in deque
+#ifdef _LIBCPP_VERSION
+    int stored_allocators = 2;
+#else
+    int stored_allocators = 1;
+#endif
+    test<std::deque<int, test_allocator<int> > >(stored_allocators);
   }
   { // test associative containers
     test<std::set<int, std::less<int>, test_allocator<int> > >();
