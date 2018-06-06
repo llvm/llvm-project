@@ -90,6 +90,7 @@ categorize(const index::SymbolInfo &D) {
     case index::SymbolKind::Unknown:
       return SymbolQualitySignals::Unknown;
   }
+  llvm_unreachable("Unknown index::SymbolKind")
 }
 
 void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
@@ -128,13 +129,13 @@ float SymbolQualitySignals::evaluate() const {
     case Type:
     case Function:
     case Variable:
-      Score *= 1.1;
+      Score *= 1.1f;
       break;
     case Namespace:
-      Score *= 0.8;
+      Score *= 0.8f;
       break;
     case Macro:
-      Score *= 0.2;
+      Score *= 0.2f;
       break;
     case Unknown:
       break;
