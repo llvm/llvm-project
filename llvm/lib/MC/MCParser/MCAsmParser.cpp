@@ -86,7 +86,6 @@ bool MCAsmParser::TokError(const Twine &Msg, SMRange Range) {
 }
 
 bool MCAsmParser::Error(SMLoc L, const Twine &Msg, SMRange Range) {
-  HadError = true;
 
   MCPendingError PErr;
   PErr.Loc = L;

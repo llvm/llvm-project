@@ -747,7 +747,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  4      7     1.00    *      *            btcq	$7, (%rax)
 # CHECK-NEXT:  4      7     1.00    *      *            btrq	$7, (%rax)
 # CHECK-NEXT:  4      7     1.00    *      *            btsq	$7, (%rax)
-# CHECK-NEXT:  1      1      -                    *     clc
+# CHECK-NEXT:  1      1     0.25                  *     clc
 # CHECK-NEXT:  1      1     0.33                        decb	%dil
 # CHECK-NEXT:  3      7     1.00    *      *            decb	(%rax)
 # CHECK-NEXT:  1      1     0.33                        decw	%di
@@ -822,13 +822,13 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  3      7     1.00    *      *            negl	(%rax)
 # CHECK-NEXT:  1      1     0.33                        negq	%rcx
 # CHECK-NEXT:  3      7     1.00    *      *            negq	(%r10)
-# CHECK-NEXT:  1      1      -                          nop
-# CHECK-NEXT:  1      1      -                          nopw	%di
-# CHECK-NEXT:  1      1      -                          nopw	(%rcx)
-# CHECK-NEXT:  1      1      -                          nopl	%esi
-# CHECK-NEXT:  1      1      -                          nopl	(%r8)
-# CHECK-NEXT:  1      1      -                          nopq	%rdx
-# CHECK-NEXT:  1      1      -                          nopq	(%r9)
+# CHECK-NEXT:  1      1     0.25                        nop
+# CHECK-NEXT:  1      1     0.25                        nopw	%di
+# CHECK-NEXT:  1      1     0.25                        nopw	(%rcx)
+# CHECK-NEXT:  1      1     0.25                        nopl	%esi
+# CHECK-NEXT:  1      1     0.25                        nopl	(%r8)
+# CHECK-NEXT:  1      1     0.25                        nopq	%rdx
+# CHECK-NEXT:  1      1     0.25                        nopq	(%r9)
 # CHECK-NEXT:  1      1     0.33                        notb	%dil
 # CHECK-NEXT:  3      7     1.00    *      *            notb	(%r8)
 # CHECK-NEXT:  1      1     0.33                        notw	%si

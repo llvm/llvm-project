@@ -1,3 +1,4 @@
+// UNSUPPORTED: z3
 // RUN: %clang_analyze_cc1 -w -analyzer-eagerly-assume -fcxx-exceptions -analyzer-checker=core -analyzer-checker=alpha.core.PointerArithm,alpha.core.CastToStruct -analyzer-max-loop 64 -verify %s
 // RUN: %clang_analyze_cc1 -w -analyzer-checker=core -analyzer-checker=cplusplus -fcxx-exceptions -analyzer-checker alpha.core.PointerArithm,alpha.core.CastToStruct -analyzer-max-loop 63 -verify %s
 

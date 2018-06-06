@@ -165,9 +165,20 @@ public:
 /// writes only partially update the register associated to this read.
 class ReadState {
   const ReadDescriptor &RD;
+  // Physical register identified associated to this read.
   unsigned RegisterID;
+  // Number of writes that contribute to the definition of RegisterID.
+  // In the absence of partial register updates, the number of DependentWrites
+  // cannot be more than one.
   unsigned DependentWrites;
+  // Number of cycles left before RegisterID can be read. This value depends on
+  // the latency of all the dependent writes. It defaults to UNKNOWN_CYCLES.
+  // It gets set to the value of field TotalCycles only when the 'CyclesLeft' of
+  // every dependent write is known.
   int CyclesLeft;
+  // This field is updated on every writeStartEvent(). When the number of
+  // dependent writes (i.e. field DependentWrite) is zero, this value is
+  // propagated to field CyclesLeft.
   unsigned TotalCycles;
 
 public:

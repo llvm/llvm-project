@@ -104,14 +104,17 @@ sqrt.s  $f0, $f12           # CHECK:  sqrt.s  $f0, $f12 # encoding: [0x54,0x0c,0
 sqrt.d  $f0, $f12           # CHECK:  sqrt.d  $f0, $f12 # encoding: [0x54,0x0c,0x4a,0x3b]
                             # CHECK-NEXT:               # <MCInst #{{[0-9]+}} FSQRT_D32_MM
 add $9, $6, $7              # CHECK: add $9, $6, $7         # encoding: [0x00,0xe6,0x49,0x10]
+                            # CHECK:                        # <MCInst #{{.*}} ADD_MM
 add.d $f0, $f2, $f4         # CHECK: add.d $f0, $f2, $f4    # encoding: [0x54,0x82,0x01,0x30]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FADD_D32_MM
 addi $9, $6, 17767          # CHECK: addi $9, $6, 17767     # encoding: [0x11,0x26,0x45,0x67]
+                            # CHECK:                        # <MCInst #{{.*}} ADDi_MM
 addiu $9, $6, -15001        # CHECK: addiu $9, $6, -15001   # encoding: [0x31,0x26,0xc5,0x67]
 addi $9, $6, 17767          # CHECK: addi $9, $6, 17767     # encoding: [0x11,0x26,0x45,0x67]
 addiu $9, $6, -15001        # CHECK: addiu $9, $6, -15001   # encoding: [0x31,0x26,0xc5,0x67]
 addu $9, $6, $7             # CHECK: addu $9, $6, $7        # encoding: [0x00,0xe6,0x49,0x50]
 sub $9, $6, $7              # CHECK: sub $9, $6, $7         # encoding: [0x00,0xe6,0x49,0x90]
+                            # CHECK:                        # <MCInst #{{.*}} SUB_MM
 subu $4, $3, $5             # CHECK: subu $4, $3, $5        # encoding: [0x00,0xa3,0x21,0xd0]
 sub $6, $zero, $7           # CHECK: neg $6, $7             # encoding: [0x00,0xe0,0x31,0x90]
 sub.d $f0, $f2, $f4         # CHECK: sub.d $f0, $f2, $f4    # encoding: [0x54,0x82,0x01,0x70]
@@ -124,6 +127,7 @@ slti $3, $3, 103            # CHECK: slti $3, $3, 103       # encoding: [0x90,0x
 sltiu $3, $3, 103           # CHECK: sltiu $3, $3, 103      # encoding: [0xb0,0x63,0x00,0x67]
 sltu $3, $3, $5             # CHECK: sltu $3, $3, $5        # encoding: [0x00,0xa3,0x1b,0x90]
 lui $9, 17767               # CHECK: lui $9, 17767          # encoding: [0x41,0xa9,0x45,0x67]
+                            # CHECK:                        # <MCInst #{{.*}} LUi_MM
 and $9, $6, $7              # CHECK: and $9, $6, $7         # encoding: [0x00,0xe6,0x4a,0x50]
 andi $9, $6, 17767          # CHECK: andi $9, $6, 17767     # encoding: [0xd1,0x26,0x45,0x67]
 or $3, $4, $5               # CHECK: or $3, $4, $5          # encoding: [0x00,0xa4,0x1a,0x90]
@@ -134,10 +138,13 @@ nor $9, $6, $7              # CHECK: nor $9, $6, $7         # encoding: [0x00,0x
 not $7, $8                  # CHECK: not $7, $8             # encoding: [0x00,0x08,0x3a,0xd0]
 not $7                      # CHECK: not $7, $7             # encoding: [0x00,0x07,0x3a,0xd0]
 mul $9, $6, $7              # CHECK: mul $9, $6, $7         # encoding: [0x00,0xe6,0x4a,0x10]
+                            # CHECK:                        # <MCInst #{{.*}} MUL_MM
 mul.d $f0, $f2, $f4         # CHECK: mul.d $f0, $f2, $f4    # encoding: [0x54,0x82,0x01,0xb0]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FMUL_D32_MM
 mult $9, $7                 # CHECK: mult $9, $7            # encoding: [0x00,0xe9,0x8b,0x3c]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} MULT_MM
 multu $9, $7                # CHECK: multu $9, $7           # encoding: [0x00,0xe9,0x9b,0x3c]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} MULTu_MM
 div $zero, $9, $7           # CHECK: div $zero, $9, $7      # encoding: [0x00,0xe9,0xab,0x3c]
 div.d $f0, $f2, $f4         # CHECK: div.d $f0, $f2, $f4    # encoding: [0x54,0x82,0x01,0xf0]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FDIV_D32_MM
@@ -179,18 +186,24 @@ movt $9, $6, $fcc0          # CHECK: movt $9, $6, $fcc0     # encoding: [0x55,0x
 movf $9, $6, $fcc0          # CHECK: movf $9, $6, $fcc0     # encoding: [0x55,0x26,0x01,0x7b]
 # FIXME: MTHI should also have its 16 bit implementation selected in micromips
 mthi   $6                   # CHECK: mthi   $6              # encoding: [0x00,0x06,0x2d,0x7c]
+                            # CHECK:                        # <MCInst {{.*}} MTHI_MM
 mfhi   $6                   # CHECK: mfhi   $6              # encoding: [0x00,0x06,0x0d,0x7c]
 # FIXME: MTLO should also have its 16 bit implementation selected in micromips
 mtlo   $6                   # CHECK: mtlo   $6              # encoding: [0x00,0x06,0x3d,0x7c]
+                            # CHECK:                        # <MCInst {{.*}} MTLO_MM
 mflo   $6                   # CHECK: mflo   $6              # encoding: [0x00,0x06,0x1d,0x7c]
 mfhc1 $4, $f0               # CHECK: mfhc1 $4, $f0          # encoding: [0x54,0x80,0x30,0x3b]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} MFHC1_D32_MM
 mthc1 $4, $f0               # CHECK: mthc1 $4, $f0          # encoding: [0x54,0x80,0x38,0x3b]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} MTHC1_D32_MM
 madd   $4, $5               # CHECK: madd   $4, $5          # encoding: [0x00,0xa4,0xcb,0x3c]
+                            # CHECK:                        # <MCInst {{.*}} MADD_MM
 maddu  $4, $5               # CHECK: maddu  $4, $5          # encoding: [0x00,0xa4,0xdb,0x3c]
+                            # CHECK:                        # <MCInst {{.*}} MADDU_MM
 msub   $4, $5               # CHECK: msub   $4, $5          # encoding: [0x00,0xa4,0xeb,0x3c]
+                            # CHECK:                        # <MCInst {{.*}} MSUB_MM
 msubu  $4, $5               # CHECK: msubu  $4, $5          # encoding: [0x00,0xa4,0xfb,0x3c]
+                            # CHECK:                        # <MCInst {{.*}} MSUBU_MM
 neg.d $f0, $f2              # CHECK: neg.d $f0, $f2         # encoding: [0x54,0x02,0x2b,0x7b]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FNEG_D32_MM
 clz $9, $6                  # CHECK: clz $9, $6             # encoding: [0x01,0x26,0x5b,0x3c]
@@ -255,8 +268,14 @@ swp $16, 8($4)              # CHECK: swp $16, 8($4)         # encoding: [0x22,0x
 lwp $16, 8($4)              # CHECK: lwp $16, 8($4)         # encoding: [0x22,0x04,0x10,0x08]
 nop                         # CHECK: nop                    # encoding: [0x00,0x00,0x00,0x00]
 addiupc $2, 20              # CHECK: addiupc $2, 20         # encoding: [0x79,0x00,0x00,0x05]
+                            # CHECK:                        # <MCInst #{{.*}} ADDIUPC_MM
+                            # CHECK-NOT:                    # <MCInst #{{.*}} ADDIUPC_MMR6
 addiupc $7, 16777212        # CHECK: addiupc $7, 16777212   # encoding: [0x7b,0xbf,0xff,0xff]
+                            # CHECK:                        # <MCInst #{{.*}} ADDIUPC_MM
+                            # CHECK-NOT:                    # <MCInst #{{.*}} ADDIUPC_MMR6
 addiupc $7, -16777216       # CHECK: addiupc $7, -16777216  # encoding: [0x7b,0xc0,0x00,0x00]
+                            # CHECK:                        # <MCInst #{{.*}} ADDIUPC_MM
+                            # CHECK-NOT:                    # <MCInst #{{.*}} ADDIUPC_MMR6
 ei                          # CHECK: ei                     # encoding: [0x00,0x00,0x57,0x7c]
 ei $10                      # CHECK: ei $10                 # encoding: [0x00,0x0a,0x57,0x7c]
 cachee 1, 8($5)             # CHECK: cachee 1, 8($5)        # encoding: [0x60,0x25,0xa6,0x08]

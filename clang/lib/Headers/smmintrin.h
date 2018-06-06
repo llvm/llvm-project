@@ -893,15 +893,14 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    11: Bits [127:96] of parameter \a X are returned.
 /// \returns A 32-bit integer containing the extracted 32 bits of float data.
 #define _mm_extract_ps(X, N) (__extension__                      \
-                              ({ union { int __i; float __f; } __t;  \
-                                 __v4sf __a = (__v4sf)(__m128)(X);       \
-                                 __t.__f = __a[(N) & 3];                 \
-                                 __t.__i;}))
+  ({ union { int __i; float __f; } __t;  \
+     __t.__f = __builtin_ia32_vec_ext_v4sf((__v4sf)(__m128)(X), (int)(N)); \
+     __t.__i;}))
 
 /* Miscellaneous insert and extract macros.  */
 /* Extract a single-precision float from X at index N into D.  */
-#define _MM_EXTRACT_FLOAT(D, X, N) (__extension__ ({ __v4sf __a = (__v4sf)(X); \
-                                                    (D) = __a[N]; }))
+#define _MM_EXTRACT_FLOAT(D, X, N) \
+  { (D) = __builtin_ia32_vec_ext_v4sf((__v4sf)(__m128)(X), (int)(N)); }
 
 /* Or together 2 sets of indexes (X and Y) with the zeroing bits (Z) to create
    an index suitable for _mm_insert_ps.  */
@@ -952,10 +951,9 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    1110: Bits [119:112] of the result are used for insertion. \n
 ///    1111: Bits [127:120] of the result are used for insertion.
 /// \returns A 128-bit integer vector containing the constructed values.
-#define _mm_insert_epi8(X, I, N) (__extension__                           \
-                                  ({ __v16qi __a = (__v16qi)(__m128i)(X); \
-                                     __a[(N) & 15] = (I);                 \
-                                     (__m128i)__a;}))
+#define _mm_insert_epi8(X, I, N) \
+  (__m128i)__builtin_ia32_vec_set_v16qi((__v16qi)(__m128i)(X), \
+                                        (int)(I), (int)(N))
 
 /// Constructs a 128-bit vector of [4 x i32] by first making a copy of
 ///    the 128-bit integer vector parameter, and then inserting the 32-bit
@@ -985,10 +983,9 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    10: Bits [95:64] of the result are used for insertion. \n
 ///    11: Bits [127:96] of the result are used for insertion.
 /// \returns A 128-bit integer vector containing the constructed values.
-#define _mm_insert_epi32(X, I, N) (__extension__                         \
-                                   ({ __v4si __a = (__v4si)(__m128i)(X); \
-                                      __a[(N) & 3] = (I);                \
-                                      (__m128i)__a;}))
+#define _mm_insert_epi32(X, I, N) \
+  (__m128i)__builtin_ia32_vec_set_v4si((__v4si)(__m128i)(X), \
+                                       (int)(I), (int)(N))
 
 #ifdef __x86_64__
 /// Constructs a 128-bit vector of [2 x i64] by first making a copy of
@@ -1017,10 +1014,9 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    0: Bits [63:0] of the result are used for insertion. \n
 ///    1: Bits [127:64] of the result are used for insertion. \n
 /// \returns A 128-bit integer vector containing the constructed values.
-#define _mm_insert_epi64(X, I, N) (__extension__                         \
-                                   ({ __v2di __a = (__v2di)(__m128i)(X); \
-                                      __a[(N) & 1] = (I);                \
-                                      (__m128i)__a;}))
+#define _mm_insert_epi64(X, I, N) \
+  (__m128i)__builtin_ia32_vec_set_v2di((__v2di)(__m128i)(X), \
+                                       (long long)(I), (int)(N))
 #endif /* __x86_64__ */
 
 /* Extract int from packed integer array at index.  This returns the element
@@ -1061,9 +1057,9 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 /// \returns  An unsigned integer, whose lower 8 bits are selected from the
 ///    128-bit integer vector parameter and the remaining bits are assigned
 ///    zeros.
-#define _mm_extract_epi8(X, N) (__extension__                           \
-                                ({ __v16qi __a = (__v16qi)(__m128i)(X); \
-                                   (int)(unsigned char) __a[(N) & 15];}))
+#define _mm_extract_epi8(X, N) \
+  (int)(unsigned char)__builtin_ia32_vec_ext_v16qi((__v16qi)(__m128i)(X), \
+                                                   (int)(N))
 
 /// Extracts a 32-bit element from the 128-bit integer vector of
 ///    [4 x i32], using the immediate value parameter \a N as a selector.
@@ -1087,9 +1083,8 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    11: Bits [127:96] of the parameter \a X are exracted.
 /// \returns  An integer, whose lower 32 bits are selected from the 128-bit
 ///    integer vector parameter and the remaining bits are assigned zeros.
-#define _mm_extract_epi32(X, N) (__extension__                         \
-                                 ({ __v4si __a = (__v4si)(__m128i)(X); \
-                                    (int)__a[(N) & 3];}))
+#define _mm_extract_epi32(X, N) \
+  (int)__builtin_ia32_vec_ext_v4si((__v4si)(__m128i)(X), (int)(N))
 
 #ifdef __x86_64__
 /// Extracts a 64-bit element from the 128-bit integer vector of
@@ -1111,9 +1106,8 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 ///    0: Bits [63:0] are returned. \n
 ///    1: Bits [127:64] are returned. \n
 /// \returns  A 64-bit integer.
-#define _mm_extract_epi64(X, N) (__extension__                         \
-                                 ({ __v2di __a = (__v2di)(__m128i)(X); \
-                                    (long long)__a[(N) & 1];}))
+#define _mm_extract_epi64(X, N) \
+  (long long)__builtin_ia32_vec_ext_v2di((__v2di)(__m128i)(X), (int)(N))
 #endif /* __x86_64 */
 
 /* SSE4 128-bit Packed Integer Comparisons.  */

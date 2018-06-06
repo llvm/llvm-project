@@ -38,6 +38,7 @@ set(CLANG_BOOTSTRAP_TARGETS
   clang-test-depends
   distribution
   install-distribution
+  install-distribution-stripped
   clang CACHE STRING "")
 
 get_cmake_property(variableNames VARIABLES)

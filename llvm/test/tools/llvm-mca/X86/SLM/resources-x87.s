@@ -296,7 +296,7 @@ fyl2xp1
 # CHECK-NEXT:  1      5     2.00                  *     fmulp	%st(2)
 # CHECK-NEXT:  1      8     2.00    *             *     fimuls	(%ecx)
 # CHECK-NEXT:  1      8     2.00    *             *     fimull	(%eax)
-# CHECK-NEXT:  1      1      -                    *     fnop
+# CHECK-NEXT:  1      1     0.50                  *     fnop
 # CHECK-NEXT:  1      100   1.00                  *     fpatan
 # CHECK-NEXT:  1      100   1.00                  *     fprem
 # CHECK-NEXT:  1      100   1.00                  *     fprem1

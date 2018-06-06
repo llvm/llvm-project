@@ -196,9 +196,9 @@ public:
                                 const MachineInstr *DepMI) const;
 
   /// Compute the reciprocal throughput of the given instruction.
-  Optional<double> computeReciprocalThroughput(const MachineInstr *MI) const;
-  Optional<double> computeReciprocalThroughput(const MCInst &MI) const;
-  Optional<double> computeReciprocalThroughput(unsigned Opcode) const;
+  double computeReciprocalThroughput(const MachineInstr *MI) const;
+  double computeReciprocalThroughput(const MCInst &MI) const;
+  double computeReciprocalThroughput(unsigned Opcode) const;
 };
 
 } // end namespace llvm

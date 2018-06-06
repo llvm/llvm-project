@@ -28,15 +28,15 @@ vpxor  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT: [6]: HasSideEffects
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0      -                          xorps	%xmm0, %xmm0
-# CHECK-NEXT:  1      0      -                          xorpd	%xmm1, %xmm1
-# CHECK-NEXT:  1      0      -                          vxorps	%xmm2, %xmm2, %xmm2
-# CHECK-NEXT:  1      0      -                          vxorpd	%xmm1, %xmm1, %xmm1
-# CHECK-NEXT:  1      0      -                          pxor	%xmm2, %xmm2
-# CHECK-NEXT:  1      0      -                          vpxor	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  1      0      -                          vxorps	%xmm4, %xmm4, %xmm5
-# CHECK-NEXT:  1      0      -                          vxorpd	%xmm1, %xmm1, %xmm3
-# CHECK-NEXT:  1      0      -                          vpxor	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  1      0     0.50                        xorps	%xmm0, %xmm0
+# CHECK-NEXT:  1      0     0.50                        xorpd	%xmm1, %xmm1
+# CHECK-NEXT:  1      0     0.50                        vxorps	%xmm2, %xmm2, %xmm2
+# CHECK-NEXT:  1      0     0.50                        vxorpd	%xmm1, %xmm1, %xmm1
+# CHECK-NEXT:  1      0     0.50                        pxor	%xmm2, %xmm2
+# CHECK-NEXT:  1      0     0.50                        vpxor	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  1      0     0.50                        vxorps	%xmm4, %xmm4, %xmm5
+# CHECK-NEXT:  1      0     0.50                        vxorpd	%xmm1, %xmm1, %xmm3
+# CHECK-NEXT:  1      0     0.50                        vpxor	%xmm3, %xmm3, %xmm5
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    0
@@ -150,4 +150,3 @@ vpxor  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT: 6.     5     0.0    0.0    0.0       vxorps	%xmm4, %xmm4, %xmm5
 # CHECK-NEXT: 7.     5     0.0    0.0    0.0       vxorpd	%xmm1, %xmm1, %xmm3
 # CHECK-NEXT: 8.     5     0.0    0.0    0.0       vpxor	%xmm3, %xmm3, %xmm5
-

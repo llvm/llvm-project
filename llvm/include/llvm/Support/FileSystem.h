@@ -727,8 +727,7 @@ enum OpenFlags : unsigned {
 ///          otherwise a platform-specific error_code.
 std::error_code createUniqueFile(const Twine &Model, int &ResultFD,
                                  SmallVectorImpl<char> &ResultPath,
-                                 unsigned Mode = all_read | all_write,
-                                 sys::fs::OpenFlags Flags = sys::fs::F_RW);
+                                 unsigned Mode = all_read | all_write);
 
 /// Simpler version for clients that don't want an open file. An empty
 /// file will still be created.
@@ -784,8 +783,7 @@ public:
 /// running the assembler.
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
                                     int &ResultFD,
-                                    SmallVectorImpl<char> &ResultPath,
-                                    sys::fs::OpenFlags Flags = sys::fs::F_RW);
+                                    SmallVectorImpl<char> &ResultPath);
 
 /// Simpler version for clients that don't want an open file. An empty
 /// file will still be created.

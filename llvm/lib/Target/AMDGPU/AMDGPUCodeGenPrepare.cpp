@@ -465,7 +465,7 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
   return Changed;
 }
 
-bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst  &I) {
+bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
   if ((I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS ||
        I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS_32BIT) &&
       canWidenScalarExtLoad(I)) {
@@ -475,7 +475,28 @@ bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst  &I) {
     Type *I32Ty = Builder.getInt32Ty();
     Type *PT = PointerType::get(I32Ty, I.getPointerAddressSpace());
     Value *BitCast= Builder.CreateBitCast(I.getPointerOperand(), PT);
-    Value *WidenLoad = Builder.CreateLoad(BitCast);
+    LoadInst *WidenLoad = Builder.CreateLoad(BitCast);
+    WidenLoad->copyMetadata(I);
+
+    // If we have range metadata, we need to convert the type, and not make
+    // assumptions about the high bits.
+    if (auto *Range = WidenLoad->getMetadata(LLVMContext::MD_range)) {
+      ConstantInt *Lower =
+        mdconst::extract<ConstantInt>(Range->getOperand(0));
+
+      if (Lower->getValue().isNullValue()) {
+        WidenLoad->setMetadata(LLVMContext::MD_range, nullptr);
+      } else {
+        Metadata *LowAndHigh[] = {
+          ConstantAsMetadata::get(ConstantInt::get(I32Ty, Lower->getValue().zext(32))),
+          // Don't make assumptions about the high bits.
+          ConstantAsMetadata::get(ConstantInt::get(I32Ty, 0))
+        };
+
+        WidenLoad->setMetadata(LLVMContext::MD_range,
+                               MDNode::get(Mod->getContext(), LowAndHigh));
+      }
+    }
 
     int TySize = Mod->getDataLayout().getTypeSizeInBits(I.getType());
     Type *IntNTy = Builder.getIntNTy(TySize);

@@ -88,22 +88,6 @@ entry:
   ret i64 %1
 }
 
-; Don't do the folding if the other operand isn't a constant.
-define i64 @test7(i8* %data, i8 %logop) {
-; CHECK-LABEL: test7:
-; CHECK:       movb
-; CHECK-NEXT:  shrb
-; CHECK-NEXT:  orb
-; CHECK-NEXT:  movzbl
-; CHECK-NEXT:  retq
-entry:
-  %bf.load = load i8, i8* %data, align 4
-  %bf.clear = lshr i8 %bf.load, 2
-  %0 = or i8 %bf.clear, %logop
-  %1 = zext i8 %0 to i64
-  ret i64 %1
-}
-
 ; Load is folded with sext.
 define i64 @test8(i8* %data) {
 ; CHECK-LABEL: test8:

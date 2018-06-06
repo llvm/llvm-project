@@ -104,6 +104,11 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setTargetDAGCombine(ISD::SRL);
     setTargetDAGCombine(ISD::SETCC);
     setTargetDAGCombine(ISD::VSELECT);
+
+    if (Subtarget.hasMips32r2()) {
+      setOperationAction(ISD::ADDC, MVT::i32, Legal);
+      setOperationAction(ISD::ADDE, MVT::i32, Legal);
+    }
   }
 
   if (Subtarget.hasDSPR2())

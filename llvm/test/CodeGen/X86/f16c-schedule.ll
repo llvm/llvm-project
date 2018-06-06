@@ -52,8 +52,8 @@ define <4 x float> @test_vcvtph2ps_128(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; ZNVER1-LABEL: test_vcvtph2ps_128:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [100:?]
-; ZNVER1-NEXT:    vcvtph2ps %xmm0, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [100:0.25]
+; ZNVER1-NEXT:    vcvtph2ps %xmm0, %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <8 x i16>, <8 x i16> *%a1
@@ -109,8 +109,8 @@ define <8 x float> @test_vcvtph2ps_256(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; ZNVER1-LABEL: test_vcvtph2ps_256:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [100:?]
-; ZNVER1-NEXT:    vcvtph2ps %xmm0, %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [100:0.25]
+; ZNVER1-NEXT:    vcvtph2ps %xmm0, %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <8 x i16>, <8 x i16> *%a1
@@ -160,8 +160,8 @@ define <8 x i16> @test_vcvtps2ph_128(<4 x float> %a0, <4 x float> %a1, <4 x i16>
 ;
 ; ZNVER1-LABEL: test_vcvtps2ph_128:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vcvtps2ph $0, %xmm0, %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [100:?]
+; ZNVER1-NEXT:    vcvtps2ph $0, %xmm0, %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a0, i32 0)
   %2 = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a1, i32 0)
@@ -215,9 +215,9 @@ define <8 x i16> @test_vcvtps2ph_256(<8 x float> %a0, <8 x float> %a1, <8 x i16>
 ;
 ; ZNVER1-LABEL: test_vcvtps2ph_256:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [100:?]
-; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
+; ZNVER1-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [100:0.25]
+; ZNVER1-NEXT:    vzeroupper # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %a0, i32 0)
   %2 = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %a1, i32 0)

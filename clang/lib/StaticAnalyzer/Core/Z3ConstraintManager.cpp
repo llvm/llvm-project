@@ -1231,8 +1231,10 @@ const llvm::APSInt *Z3ConstraintManager::getSymVal(ProgramStateRef State,
     if (!LHS || !RHS)
       return nullptr;
 
-    llvm::APSInt ConvertedLHS = *LHS, ConvertedRHS = *RHS;
-    QualType LTy = getAPSIntType(*LHS), RTy = getAPSIntType(*RHS);
+    llvm::APSInt ConvertedLHS, ConvertedRHS;
+    QualType LTy, RTy;
+    std::tie(ConvertedLHS, LTy) = fixAPSInt(*LHS);
+    std::tie(ConvertedRHS, RTy) = fixAPSInt(*RHS);
     doIntTypeConversion<llvm::APSInt, Z3ConstraintManager::castAPSInt>(
         ConvertedLHS, LTy, ConvertedRHS, RTy);
     return BVF.evalAPSInt(BSE->getOpcode(), ConvertedLHS, ConvertedRHS);

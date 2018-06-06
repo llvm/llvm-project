@@ -362,14 +362,14 @@ struct MCSchedModel {
                           const MCInst &Inst) const;
 
   // Returns the reciprocal throughput information from a MCSchedClassDesc.
-  static Optional<double>
+  static double
   getReciprocalThroughput(const MCSubtargetInfo &STI,
                           const MCSchedClassDesc &SCDesc);
 
-  static Optional<double>
+  static double
   getReciprocalThroughput(unsigned SchedClass, const InstrItineraryData &IID);
 
-  Optional<double>
+  double
   getReciprocalThroughput(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
                           const MCInst &Inst) const;
 

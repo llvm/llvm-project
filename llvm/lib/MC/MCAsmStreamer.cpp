@@ -548,12 +548,19 @@ void MCAsmStreamer::EmitThumbFunc(MCSymbol *Func) {
 }
 
 void MCAsmStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
-  OS << ".set ";
-  Symbol->print(OS, MAI);
-  OS << ", ";
-  Value->print(OS, MAI);
+  // Do not emit a .set on inlined target assignments.
+  bool EmitSet = true;
+  if (auto *E = dyn_cast<MCTargetExpr>(Value))
+    if (E->inlineAssignedExpr())
+      EmitSet = false;
+  if (EmitSet) {
+    OS << ".set ";
+    Symbol->print(OS, MAI);
+    OS << ", ";
+    Value->print(OS, MAI);
 
-  EmitEOL();
+    EmitEOL();
+  }
 
   MCStreamer::EmitAssignment(Symbol, Value);
 }

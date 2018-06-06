@@ -78,7 +78,7 @@ define void @test_f2xm1() optsize {
 ; ZNVER1-LABEL: test_f2xm1:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    f2xm1 # sched: [100:?]
+; ZNVER1-NEXT:    f2xm1 # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "f2xm1", ""() nounwind
@@ -448,7 +448,7 @@ define void @test_fbld_fbstp(i8* %a0) optsize {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fbld (%eax) # sched: [47:?]
+; HASWELL-NEXT:    fbld (%eax) # sched: [47:10.75]
 ; HASWELL-NEXT:    fbstp (%eax) # sched: [1:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
@@ -493,8 +493,8 @@ define void @test_fbld_fbstp(i8* %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fbld (%eax) # sched: [100:?]
-; ZNVER1-NEXT:    fbstp (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fbld (%eax) # sched: [100:0.25]
+; ZNVER1-NEXT:    fbstp (%eax) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fbld $0 \0A\09 fbstp $0", "*m"(i8 *%a0) nounwind
@@ -652,7 +652,7 @@ define void @test_fclex() optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    wait # sched: [1:1.00]
-; ZNVER1-NEXT:    fnclex # sched: [100:?]
+; ZNVER1-NEXT:    fnclex # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fclex", ""() nounwind
@@ -726,7 +726,7 @@ define void @test_fnclex() optsize {
 ; ZNVER1-LABEL: test_fnclex:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fnclex # sched: [100:?]
+; ZNVER1-NEXT:    fnclex # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fnclex", ""() nounwind
@@ -863,14 +863,14 @@ define void @test_fcmov() optsize {
 ; ZNVER1-LABEL: test_fcmov:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fcmovb %st(1), %st(0) # sched: [100:?]
-; ZNVER1-NEXT:    fcmovbe %st(1), %st(0) # sched: [100:?]
-; ZNVER1-NEXT:    fcmove %st(1), %st(0) # sched: [100:?]
-; ZNVER1-NEXT:    fcmovnb %st(1), %st(0) # sched: [100:?]
-; ZNVER1-NEXT:    fcmovnbe %st(1), %st(0) # sched: [100:?]
-; ZNVER1-NEXT:    fcmovne %st(1), %st(0) # sched: [100:?]
-; ZNVER1-NEXT:    fcmovnu %st(1), %st(0) # sched: [100:?]
-; ZNVER1-NEXT:    fcmovu %st(1), %st(0) # sched: [100:?]
+; ZNVER1-NEXT:    fcmovb %st(1), %st(0) # sched: [100:0.25]
+; ZNVER1-NEXT:    fcmovbe %st(1), %st(0) # sched: [100:0.25]
+; ZNVER1-NEXT:    fcmove %st(1), %st(0) # sched: [100:0.25]
+; ZNVER1-NEXT:    fcmovnb %st(1), %st(0) # sched: [100:0.25]
+; ZNVER1-NEXT:    fcmovnbe %st(1), %st(0) # sched: [100:0.25]
+; ZNVER1-NEXT:    fcmovne %st(1), %st(0) # sched: [100:0.25]
+; ZNVER1-NEXT:    fcmovnu %st(1), %st(0) # sched: [100:0.25]
+; ZNVER1-NEXT:    fcmovu %st(1), %st(0) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fcmovb %st(1), %st(0) \0A\09 fcmovbe %st(1), %st(0) \0A\09 fcmove %st(1), %st(0) \0A\09 fcmovnb %st(1), %st(0) \0A\09 fcmovnbe %st(1), %st(0) \0A\09 fcmovne %st(1), %st(0) \0A\09 fcmovnu %st(1), %st(0) \0A\09 fcmovu %st(1), %st(0)", ""() nounwind
@@ -1286,7 +1286,7 @@ define void @test_fcos() optsize {
 ; ZNVER1-LABEL: test_fcos:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fcos # sched: [100:?]
+; ZNVER1-NEXT:    fcos # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fcos", ""() nounwind
@@ -2336,7 +2336,7 @@ define void @test_finit() optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    wait # sched: [1:1.00]
-; ZNVER1-NEXT:    fninit # sched: [100:?]
+; ZNVER1-NEXT:    fninit # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "finit", ""() nounwind
@@ -2410,7 +2410,7 @@ define void @test_fninit() optsize {
 ; ZNVER1-LABEL: test_fninit:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fninit # sched: [100:?]
+; ZNVER1-NEXT:    fninit # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fninit", ""() nounwind
@@ -2811,8 +2811,8 @@ define void @test_fldcw_fldenv(i8* %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fldcw (%eax) # sched: [100:?]
-; ZNVER1-NEXT:    fldenv (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fldcw (%eax) # sched: [100:0.25]
+; ZNVER1-NEXT:    fldenv (%eax) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fldcw $0 \0A\09 fldenv $0", "*m"(i8* %a0) nounwind
@@ -3219,7 +3219,7 @@ define void @test_fnop() optsize {
 ; SLM-LABEL: test_fnop:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fnop # sched: [1:?]
+; SLM-NEXT:    fnop # sched: [1:0.50]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3342,7 +3342,7 @@ define void @test_fpatan() optsize {
 ; ZNVER1-LABEL: test_fpatan:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fpatan # sched: [100:?]
+; ZNVER1-NEXT:    fpatan # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fpatan", ""() nounwind
@@ -3385,8 +3385,8 @@ define void @test_fprem_fprem1() optsize {
 ; HASWELL-LABEL: test_fprem_fprem1:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fprem # sched: [19:?]
-; HASWELL-NEXT:    fprem1 # sched: [27:?]
+; HASWELL-NEXT:    fprem # sched: [19:7.00]
+; HASWELL-NEXT:    fprem1 # sched: [27:10.25]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
@@ -3425,8 +3425,8 @@ define void @test_fprem_fprem1() optsize {
 ; ZNVER1-LABEL: test_fprem_fprem1:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fprem # sched: [100:?]
-; ZNVER1-NEXT:    fprem1 # sched: [100:?]
+; ZNVER1-NEXT:    fprem # sched: [100:0.25]
+; ZNVER1-NEXT:    fprem1 # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fprem \0A\09 fprem1", ""() nounwind
@@ -3500,7 +3500,7 @@ define void @test_fptan() optsize {
 ; ZNVER1-LABEL: test_fptan:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fptan # sched: [100:?]
+; ZNVER1-NEXT:    fptan # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fptan", ""() nounwind
@@ -3539,7 +3539,7 @@ define void @test_frndint() optsize {
 ; HASWELL-LABEL: test_frndint:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    frndint # sched: [11:?]
+; HASWELL-NEXT:    frndint # sched: [11:4.25]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
@@ -3574,7 +3574,7 @@ define void @test_frndint() optsize {
 ; ZNVER1-LABEL: test_frndint:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    frndint # sched: [100:?]
+; ZNVER1-NEXT:    frndint # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "frndint", ""() nounwind
@@ -3618,7 +3618,7 @@ define void @test_frstor(i8* %a0) optsize {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    frstor (%eax) # sched: [1:?]
+; HASWELL-NEXT:    frstor (%eax) # sched: [1:22.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
@@ -3658,7 +3658,7 @@ define void @test_frstor(i8* %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    frstor (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    frstor (%eax) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "frstor $0", "*m"(i8* %a0) nounwind
@@ -3707,7 +3707,7 @@ define void @test_fsave(i8* %a0) optsize {
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    wait # sched: [2:0.50]
-; HASWELL-NEXT:    fnsave (%eax) # sched: [1:?]
+; HASWELL-NEXT:    fnsave (%eax) # sched: [1:36.75]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
@@ -3752,7 +3752,7 @@ define void @test_fsave(i8* %a0) optsize {
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    wait # sched: [1:1.00]
-; ZNVER1-NEXT:    fnsave (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fnsave (%eax) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fsave $0", "*m"(i8* %a0) nounwind
@@ -3796,7 +3796,7 @@ define void @test_fnsave(i8* %a0) optsize {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fnsave (%eax) # sched: [1:?]
+; HASWELL-NEXT:    fnsave (%eax) # sched: [1:36.75]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
@@ -3836,7 +3836,7 @@ define void @test_fnsave(i8* %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fnsave (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fnsave (%eax) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fnsave $0", "*m"(i8* %a0) nounwind
@@ -3875,7 +3875,7 @@ define void @test_fscale() optsize {
 ; HASWELL-LABEL: test_fscale:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fscale # sched: [75:?]
+; HASWELL-NEXT:    fscale # sched: [75:12.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
@@ -3910,7 +3910,7 @@ define void @test_fscale() optsize {
 ; ZNVER1-LABEL: test_fscale:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fscale # sched: [100:?]
+; ZNVER1-NEXT:    fscale # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fscale", ""() nounwind
@@ -3984,7 +3984,7 @@ define void @test_fsin() optsize {
 ; ZNVER1-LABEL: test_fsin:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fsin # sched: [100:?]
+; ZNVER1-NEXT:    fsin # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fsin", ""() nounwind
@@ -4058,7 +4058,7 @@ define void @test_fsincos() optsize {
 ; ZNVER1-LABEL: test_fsincos:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fsincos # sched: [100:?]
+; ZNVER1-NEXT:    fsincos # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fsincos", ""() nounwind
@@ -4426,11 +4426,11 @@ define void @test_fstcw_fstenv_fstsw(i8* %a0) optsize {
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    wait # sched: [1:1.00]
-; ZNVER1-NEXT:    fnstcw (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fnstcw (%eax) # sched: [100:0.25]
 ; ZNVER1-NEXT:    wait # sched: [1:1.00]
-; ZNVER1-NEXT:    fnstenv (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fnstenv (%eax) # sched: [100:0.25]
 ; ZNVER1-NEXT:    wait # sched: [1:1.00]
-; ZNVER1-NEXT:    fnstsw (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fnstsw (%eax) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fstcw $0 \0A\09 fstenv $0 \0A\09 fstsw $0", "*m"(i8* %a0) nounwind
@@ -4532,9 +4532,9 @@ define void @test_fnstcw_fnstenv_fnstsw(i8* %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fnstcw (%eax) # sched: [100:?]
-; ZNVER1-NEXT:    fnstenv (%eax) # sched: [100:?]
-; ZNVER1-NEXT:    fnstsw (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fnstcw (%eax) # sched: [100:0.25]
+; ZNVER1-NEXT:    fnstenv (%eax) # sched: [100:0.25]
+; ZNVER1-NEXT:    fnstsw (%eax) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fnstcw $0 \0A\09 fnstenv $0 \0A\09 fnstsw $0", "*m"(i8* %a0) nounwind
@@ -5627,8 +5627,8 @@ define void @test_fxrstor_fxsave(i8* %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fxrstor (%eax) # sched: [100:?]
-; ZNVER1-NEXT:    fxsave (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fxrstor (%eax) # sched: [100:0.25]
+; ZNVER1-NEXT:    fxsave (%eax) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fxrstor $0 \0A\09 fxsave $0", "*m"(i8 *%a0) nounwind
@@ -5667,7 +5667,7 @@ define void @test_fxtract() optsize {
 ; HASWELL-LABEL: test_fxtract:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fxtract # sched: [15:?]
+; HASWELL-NEXT:    fxtract # sched: [15:4.25]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
@@ -5702,7 +5702,7 @@ define void @test_fxtract() optsize {
 ; ZNVER1-LABEL: test_fxtract:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fxtract # sched: [100:?]
+; ZNVER1-NEXT:    fxtract # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fxtract", ""() nounwind
@@ -5776,7 +5776,7 @@ define void @test_fyl2x() optsize {
 ; ZNVER1-LABEL: test_fyl2x:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fyl2x # sched: [100:?]
+; ZNVER1-NEXT:    fyl2x # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fyl2x", ""() nounwind
@@ -5850,7 +5850,7 @@ define void @test_fyl2xp1() optsize {
 ; ZNVER1-LABEL: test_fyl2xp1:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fyl2xp1 # sched: [100:?]
+; ZNVER1-NEXT:    fyl2xp1 # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "fyl2xp1", ""() nounwind

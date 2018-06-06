@@ -556,6 +556,9 @@ protected:
 
     typedef typename __rebind_alloc_helper<__alloc_traits, __node_base>::type __node_base_allocator;
     typedef typename allocator_traits<__node_base_allocator>::pointer __node_base_pointer;
+    static_assert((!is_same<allocator_type, __node_allocator>::value),
+                  "internal allocator type must differ from user-specified "
+                  "type; otherwise overload resolution breaks");
 
     __node_base __end_;
     __compressed_pair<size_type, __node_allocator> __size_alloc_;
@@ -590,6 +593,11 @@ protected:
         _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value);
     _LIBCPP_INLINE_VISIBILITY
     __list_imp(const allocator_type& __a);
+    _LIBCPP_INLINE_VISIBILITY
+    __list_imp(const __node_allocator& __a);
+#ifndef _LIBCPP_CXX03_LANG
+    __list_imp(__node_allocator&& __a) _NOEXCEPT;
+#endif
     ~__list_imp();
     void clear() _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
@@ -713,9 +721,18 @@ __list_imp<_Tp, _Alloc>::__list_imp(const allocator_type& __a)
 }
 
 template <class _Tp, class _Alloc>
-__list_imp<_Tp, _Alloc>::~__list_imp()
-{
-    clear();
+inline __list_imp<_Tp, _Alloc>::__list_imp(const __node_allocator& __a)
+    : __size_alloc_(0, __a) {}
+
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp, class _Alloc>
+inline __list_imp<_Tp, _Alloc>::__list_imp(__node_allocator&& __a) _NOEXCEPT
+    : __size_alloc_(0, std::move(__a)) {}
+#endif
+
+template <class _Tp, class _Alloc>
+__list_imp<_Tp, _Alloc>::~__list_imp() {
+  clear();
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__erase_c(this);
 #endif
@@ -1248,10 +1265,8 @@ list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l, const allocator_type& __a,
 
 template <class _Tp, class _Alloc>
 list<_Tp, _Alloc>::list(const list& __c)
-    : base(allocator_type(
-           __node_alloc_traits::select_on_container_copy_construction(
-                __c.__node_alloc())))
-{
+    : base(__node_alloc_traits::select_on_container_copy_construction(
+          __c.__node_alloc())) {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif
@@ -1296,11 +1311,9 @@ list<_Tp, _Alloc>::list(initializer_list<value_type> __il)
 }
 
 template <class _Tp, class _Alloc>
-inline
-list<_Tp, _Alloc>::list(list&& __c)
+inline list<_Tp, _Alloc>::list(list&& __c)
     _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value)
-    : base(allocator_type(_VSTD::move(__c.__node_alloc())))
-{
+    : base(_VSTD::move(__c.__node_alloc())) {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif

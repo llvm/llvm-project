@@ -14,6 +14,7 @@
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
@@ -200,21 +201,21 @@ INTERCEPTOR(int, mprobe, void *ptr) {
 
 
 // TODO(alekseys): throw std::bad_alloc instead of dying on OOM.
-#define OPERATOR_NEW_BODY(nothrow)                         \
-  ENSURE_LSAN_INITED;                                      \
-  GET_STACK_TRACE_MALLOC;                                  \
-  void *res = lsan_malloc(size, stack);                    \
-  if (!nothrow && UNLIKELY(!res)) DieOnFailure::OnOOM();   \
+#define OPERATOR_NEW_BODY(nothrow)\
+  ENSURE_LSAN_INITED;\
+  GET_STACK_TRACE_MALLOC;\
+  void *res = lsan_malloc(size, stack);\
+  if (!nothrow && UNLIKELY(!res)) ReportOutOfMemory(size, &stack);\
   return res;
-#define OPERATOR_NEW_BODY_ALIGN(nothrow)                   \
-  ENSURE_LSAN_INITED;                                      \
-  GET_STACK_TRACE_MALLOC;                                  \
-  void *res = lsan_memalign((uptr)align, size, stack);     \
-  if (!nothrow && UNLIKELY(!res)) DieOnFailure::OnOOM();   \
+#define OPERATOR_NEW_BODY_ALIGN(nothrow)\
+  ENSURE_LSAN_INITED;\
+  GET_STACK_TRACE_MALLOC;\
+  void *res = lsan_memalign((uptr)align, size, stack);\
+  if (!nothrow && UNLIKELY(!res)) ReportOutOfMemory(size, &stack);\
   return res;
 
-#define OPERATOR_DELETE_BODY \
-  ENSURE_LSAN_INITED;        \
+#define OPERATOR_DELETE_BODY\
+  ENSURE_LSAN_INITED;\
   lsan_free(ptr);
 
 // On OS X it's not enough to just provide our own 'operator new' and

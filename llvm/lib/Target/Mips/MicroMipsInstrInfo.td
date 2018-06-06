@@ -746,8 +746,9 @@ let DecoderNamespace = "MicroMips" in {
                  ADD_FM_MM<0, 0x150>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def SUBu_MM  : MMRel, ArithLogicR<"subu", GPR32Opnd, 0, II_SUBU, sub>,
                  ADD_FM_MM<0, 0x1d0>, ISA_MICROMIPS32_NOT_MIPS32R6;
-  def MUL_MM   : MMRel, ArithLogicR<"mul", GPR32Opnd, 1, II_MUL>,
-                 ADD_FM_MM<0, 0x210>, ISA_MICROMIPS32_NOT_MIPS32R6;
+  let Defs = [HI0, LO0] in
+    def MUL_MM   : MMRel, ArithLogicR<"mul", GPR32Opnd, 1, II_MUL, mul>,
+                   ADD_FM_MM<0, 0x210>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def ADD_MM   : MMRel, ArithLogicR<"add", GPR32Opnd, 1, II_ADD>,
                  ADD_FM_MM<0, 0x110>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def SUB_MM   : MMRel, ArithLogicR<"sub", GPR32Opnd, 0, II_SUB>,
@@ -773,7 +774,8 @@ let DecoderNamespace = "MicroMips" in {
                  MULT_FM_MM<0x2ec>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
   /// Arithmetic Instructions with PC and Immediate
-  def ADDIUPC_MM : AddImmUPC<"addiupc", GPRMM16Opnd>, ADDIUPC_FM_MM;
+  def ADDIUPC_MM : AddImmUPC<"addiupc", GPRMM16Opnd>, ADDIUPC_FM_MM,
+                   ISA_MICROMIPS32_NOT_MIPS32R6;
 
   /// Shift Instructions
   def SLL_MM   : MMRel, shift_rotate_imm<"sll", uimm5, GPR32Opnd, II_SLL>,
