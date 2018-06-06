@@ -220,20 +220,20 @@ __m128 test_mm_floor_ss(__m128 x, __m128 y) {
 
 __m128i test_mm_insert_epi8(__m128i x, char b) {
   // CHECK-LABEL: test_mm_insert_epi8
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 0
-  return _mm_insert_epi8(x, b, 16);
+  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 1
+  return _mm_insert_epi8(x, b, 1);
 }
 
 __m128i test_mm_insert_epi32(__m128i x, int b) {
   // CHECK-LABEL: test_mm_insert_epi32
-  // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 0
-  return _mm_insert_epi32(x, b, 4);
+  // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 1
+  return _mm_insert_epi32(x, b, 1);
 }
 
 __m128i test_mm_insert_epi64(__m128i x, long long b) {
   // CHECK-LABEL: test_mm_insert_epi64
-  // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 0
-  return _mm_insert_epi64(x, b, 2);
+  // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
+  return _mm_insert_epi64(x, b, 1);
 }
 
 __m128 test_mm_insert_ps(__m128 x, __m128 y) {

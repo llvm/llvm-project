@@ -91,7 +91,8 @@ public:
 
   /// This function returns top-level decls present in the main file of the AST.
   /// The result does not include the decls that come from the preamble.
-  ArrayRef<const Decl *> getLocalTopLevelDecls();
+  /// (These should be const, but RecursiveASTVisitor requires Decl*).
+  ArrayRef<Decl *> getLocalTopLevelDecls();
 
   const std::vector<Diag> &getDiagnostics() const;
 
@@ -104,8 +105,8 @@ private:
   ParsedAST(std::shared_ptr<const PreambleData> Preamble,
             std::unique_ptr<CompilerInstance> Clang,
             std::unique_ptr<FrontendAction> Action,
-            std::vector<const Decl *> LocalTopLevelDecls,
-            std::vector<Diag> Diags, std::vector<Inclusion> Inclusions);
+            std::vector<Decl *> LocalTopLevelDecls, std::vector<Diag> Diags,
+            std::vector<Inclusion> Inclusions);
 
   // In-memory preambles must outlive the AST, it is important that this member
   // goes before Clang and Action.
@@ -122,7 +123,7 @@ private:
   std::vector<Diag> Diags;
   // Top-level decls inside the current file. Not that this does not include
   // top-level decls from the preamble.
-  std::vector<const Decl *> LocalTopLevelDecls;
+  std::vector<Decl *> LocalTopLevelDecls;
   std::vector<Inclusion> Inclusions;
 };
 

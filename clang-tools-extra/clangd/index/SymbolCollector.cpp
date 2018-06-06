@@ -9,6 +9,7 @@
 
 #include "SymbolCollector.h"
 #include "../AST.h"
+#include "../CodeComplete.h"
 #include "../CodeCompletionStrings.h"
 #include "../Logger.h"
 #include "../SourceCode.h"
@@ -149,21 +150,20 @@ bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
   if (ND->isInAnonymousNamespace())
     return true;
 
-  // We only want:
-  //   * symbols in namespaces or translation unit scopes (e.g. no class
-  //     members)
-  //   * enum constants in unscoped enum decl (e.g. "red" in "enum {red};")
-  auto InTopLevelScope = hasDeclContext(
-      anyOf(namespaceDecl(), translationUnitDecl(), linkageSpecDecl()));
-  // Don't index template specializations.
+  // We want most things but not "local" symbols such as symbols inside
+  // FunctionDecl, BlockDecl, ObjCMethodDecl and OMPDeclareReductionDecl.
+  // FIXME: Need a matcher for ExportDecl in order to include symbols declared
+  // within an export.
+  auto InNonLocalContext = hasDeclContext(anyOf(
+      translationUnitDecl(), namespaceDecl(), linkageSpecDecl(), recordDecl(),
+      enumDecl(), objcProtocolDecl(), objcInterfaceDecl(), objcCategoryDecl(),
+      objcCategoryImplDecl(), objcImplementationDecl()));
+  // Don't index template specializations and expansions in main files.
   auto IsSpecialization =
       anyOf(functionDecl(isExplicitTemplateSpecialization()),
             cxxRecordDecl(isExplicitTemplateSpecialization()),
             varDecl(isExplicitTemplateSpecialization()));
-  if (match(decl(allOf(unless(isExpansionInMainFile()),
-                       anyOf(InTopLevelScope,
-                             hasDeclContext(enumDecl(InTopLevelScope,
-                                                     unless(isScoped())))),
+  if (match(decl(allOf(unless(isExpansionInMainFile()), InNonLocalContext,
                        unless(IsSpecialization))),
             *ND, *ASTCtx)
           .empty())
@@ -377,6 +377,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   Symbol S;
   S.ID = std::move(ID);
   std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
+
+  S.IsIndexedForCodeCompletion = isIndexedForCodeCompletion(ND, Ctx);
   S.SymInfo = index::getSymbolInfo(&ND);
   std::string FileURI;
   if (auto DeclLoc =

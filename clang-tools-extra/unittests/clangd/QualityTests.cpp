@@ -60,44 +60,47 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
 TEST(QualityTests, SymbolRelevanceSignalExtraction) {
   TestTU Test;
   Test.HeaderCode = R"cpp(
-    int test_func_in_header();
-    int test_func_in_header_and_cpp();
+    int header();
+    int header_main();
     )cpp";
   Test.Code = R"cpp(
-    int ::test_func_in_header_and_cpp() {
-    }
-    int test_func_in_cpp();
+    int ::header_main() {}
+    int main();
 
     [[deprecated]]
-    int test_deprecated() { return 0; }
+    int deprecated() { return 0; }
+
+    namespace { struct X { void y() { int z; } }; }
   )cpp";
   auto AST = Test.build();
 
-  SymbolRelevanceSignals Deprecated;
-  Deprecated.merge(CodeCompletionResult(&findDecl(AST, "test_deprecated"),
-                                        /*Priority=*/42, nullptr, false,
-                                        /*Accessible=*/false));
-  EXPECT_EQ(Deprecated.NameMatch, SymbolRelevanceSignals().NameMatch);
-  EXPECT_TRUE(Deprecated.Forbidden);
+  SymbolRelevanceSignals Relevance;
+  Relevance.merge(CodeCompletionResult(&findDecl(AST, "deprecated"),
+                                       /*Priority=*/42, nullptr, false,
+                                       /*Accessible=*/false));
+  EXPECT_EQ(Relevance.NameMatch, SymbolRelevanceSignals().NameMatch);
+  EXPECT_TRUE(Relevance.Forbidden);
+  EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::GlobalScope);
 
-  // Test proximity scores.
-  SymbolRelevanceSignals FuncInCpp;
-  FuncInCpp.merge(CodeCompletionResult(&findDecl(AST, "test_func_in_cpp"),
-                                       CCP_Declaration));
-  /// Decls in the current file should get a proximity score of 1.0.
-  EXPECT_FLOAT_EQ(FuncInCpp.ProximityScore, 1.0);
+  Relevance = {};
+  Relevance.merge(CodeCompletionResult(&findDecl(AST, "main"), 42));
+  EXPECT_FLOAT_EQ(Relevance.ProximityScore, 1.0) << "Decl in current file";
+  Relevance = {};
+  Relevance.merge(CodeCompletionResult(&findDecl(AST, "header"), 42));
+  EXPECT_FLOAT_EQ(Relevance.ProximityScore, 0.0) << "Decl from header";
+  Relevance = {};
+  Relevance.merge(CodeCompletionResult(&findDecl(AST, "header_main"), 42));
+  EXPECT_FLOAT_EQ(Relevance.ProximityScore, 1.0) << "Current file and header";
 
-  SymbolRelevanceSignals FuncInHeader;
-  FuncInHeader.merge(CodeCompletionResult(&findDecl(AST, "test_func_in_header"),
-                                          CCP_Declaration));
-  /// Decls outside current file currently don't get a proximity score boost.
-  EXPECT_FLOAT_EQ(FuncInHeader.ProximityScore, 0.0);
-
-  SymbolRelevanceSignals FuncInHeaderAndCpp;
-  FuncInHeaderAndCpp.merge(CodeCompletionResult(
-      &findDecl(AST, "test_func_in_header_and_cpp"), CCP_Declaration));
-  /// Decls in both header **and** the main file get the same boost.
-  EXPECT_FLOAT_EQ(FuncInHeaderAndCpp.ProximityScore, 1.0);
+  Relevance = {};
+  Relevance.merge(CodeCompletionResult(&findAnyDecl(AST, "X"), 42));
+  EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FileScope);
+  Relevance = {};
+  Relevance.merge(CodeCompletionResult(&findAnyDecl(AST, "y"), 42));
+  EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::ClassScope);
+  Relevance = {};
+  Relevance.merge(CodeCompletionResult(&findAnyDecl(AST, "z"), 42));
+  EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FunctionScope);
 }
 
 // Do the signals move the scores in the direction we expect?
@@ -135,8 +138,14 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   EXPECT_LT(PoorNameMatch.evaluate(), Default.evaluate());
 
   SymbolRelevanceSignals WithProximity;
-  WithProximity.ProximityScore = 0.2;
-  EXPECT_LT(Default.evaluate(), WithProximity.evaluate());
+  WithProximity.ProximityScore = 0.2f;
+  EXPECT_GT(WithProximity.evaluate(), Default.evaluate());
+
+  SymbolRelevanceSignals Scoped;
+  Scoped.Scope = SymbolRelevanceSignals::FileScope;
+  EXPECT_EQ(Scoped.evaluate(), Default.evaluate());
+  Scoped.Query = SymbolRelevanceSignals::CodeComplete;
+  EXPECT_GT(Scoped.evaluate(), Default.evaluate());
 }
 
 TEST(QualityTests, SortText) {

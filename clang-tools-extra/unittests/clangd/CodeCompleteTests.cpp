@@ -32,6 +32,7 @@ using ::testing::Contains;
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Field;
+using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
 
@@ -153,6 +154,7 @@ Symbol sym(StringRef QName, index::SymbolKind Kind, StringRef USRFormat) {
   Sym.CompletionSnippetInsertText = Sym.Name;
   Sym.CompletionLabel = Sym.Name;
   Sym.SymInfo.Kind = Kind;
+  Sym.IsIndexedForCodeCompletion = true;
   return Sym;
 }
 Symbol func(StringRef Name) { // Assumes the function has no args.
@@ -682,6 +684,20 @@ TEST(CompletionTest, Documentation) {
       Contains(AllOf(Named("bar"), Doc("Doxygen comment.\n\\param int a"))));
   EXPECT_THAT(Results.items,
               Contains(AllOf(Named("baz"), Doc("Multi-line\nblock comment"))));
+}
+
+TEST(CompletionTest, GlobalCompletionFiltering) {
+
+  Symbol Class = cls("XYZ");
+  Class.IsIndexedForCodeCompletion = false;
+  Symbol Func = func("XYZ::foooo");
+  Func.IsIndexedForCodeCompletion = false;
+
+  auto Results = completions(R"(//      void f() {
+      XYZ::foooo^
+      })",
+                             {Class, Func});
+  EXPECT_THAT(Results.items, IsEmpty());
 }
 
 TEST(CodeCompleteTest, DisableTypoCorrection) {

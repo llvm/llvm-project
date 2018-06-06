@@ -40,7 +40,7 @@ struct TestTU {
   std::string Code;
   std::string Filename = "TestTU.cpp";
 
-  // Define contents of a header to be included by TestTU.cpp.
+  // Define contents of a header which will be implicitly included by Code.
   std::string HeaderCode;
   std::string HeaderFilename = "TestTU.h";
 
@@ -53,6 +53,8 @@ struct TestTU {
 const Symbol &findSymbol(const SymbolSlab &, llvm::StringRef QName);
 // Look up an AST symbol by qualified name, which must be unique and top-level.
 const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName);
+// Look up a main-file AST symbol by unqualified name, which must be unique.
+const NamedDecl &findAnyDecl(ParsedAST &AST, llvm::StringRef Name);
 
 } // namespace clangd
 } // namespace clang

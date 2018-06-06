@@ -4934,6 +4934,15 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::UInt128:
       return lldb::eEncodingUint;
 
+    // Fixed point types. Note that they are currently ignored.
+    case clang::BuiltinType::ShortAccum:
+    case clang::BuiltinType::Accum:
+    case clang::BuiltinType::LongAccum:
+    case clang::BuiltinType::UShortAccum:
+    case clang::BuiltinType::UAccum:
+    case clang::BuiltinType::ULongAccum:
+      break;
+
     case clang::BuiltinType::Half:
     case clang::BuiltinType::Float:
     case clang::BuiltinType::Float16:
