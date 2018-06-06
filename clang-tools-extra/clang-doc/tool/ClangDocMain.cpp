@@ -139,6 +139,7 @@ std::string getFormatString(OutputFormatTy Ty) {
   case yaml:
     return "yaml";
   }
+  llvm_unreachable("Unknown OutputFormatTy");
 }
 
 int main(int argc, const char **argv) {
