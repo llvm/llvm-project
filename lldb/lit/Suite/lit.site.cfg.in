@@ -13,6 +13,7 @@ config.target_triple = "@TARGET_TRIPLE@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.dotest_path = "@LLDB_SOURCE_DIR@/test/dotest.py"
 config.dotest_args_str = "@LLDB_DOTEST_ARGS@"
+config.lldb_disable_python = @LLDB_DISABLE_PYTHON@
 
 
 # Additional dotest arguments can be passed to lit by providing a
