@@ -410,8 +410,8 @@ def vx128xmem : X86VMemOperand<VR128X, "printi128mem", X86Mem128_RC128XOperand>;
 def vx256xmem : X86VMemOperand<VR128X, "printi256mem", X86Mem256_RC128XOperand>;
 def vy128xmem : X86VMemOperand<VR256X, "printi128mem", X86Mem128_RC256XOperand>;
 def vy256xmem : X86VMemOperand<VR256X, "printi256mem", X86Mem256_RC256XOperand>;
-def vy512mem  : X86VMemOperand<VR256X, "printi512mem", X86Mem512_RC256XOperand>;
-def vz256xmem : X86VMemOperand<VR512,  "printi256mem", X86Mem256_RC512Operand>;
+def vy512xmem : X86VMemOperand<VR256X, "printi512mem", X86Mem512_RC256XOperand>;
+def vz256mem  : X86VMemOperand<VR512,  "printi256mem", X86Mem256_RC512Operand>;
 def vz512mem  : X86VMemOperand<VR512,  "printi512mem", X86Mem512_RC512Operand>;
 
 // A version of i8mem for use on x86-64 and x32 that uses a NOREX GPR instead
@@ -2448,21 +2448,49 @@ let Predicates = [HasBMI2, NoTBM] in {
 }
 
 let Predicates = [HasBMI2] in {
-  def : Pat<(and GR32:$src, (add (shl 1, GR8:$lz), -1)),
-            (BZHI32rr GR32:$src,
-              (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+  multiclass _bmi_bzhi_pattern<dag regpattern, dag mempattern, RegisterClass RC,
+                               ValueType VT, Instruction DstInst,
+                               Instruction DstMemInst> {
+    def : Pat<regpattern,
+              (DstInst RC:$src,
+                (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+    def : Pat<mempattern,
+              (DstMemInst addr:$src,
+                (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+  }
 
-  def : Pat<(and (loadi32 addr:$src), (add (shl 1, GR8:$lz), -1)),
-            (BZHI32rm addr:$src,
-              (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+  multiclass bmi_bzhi_patterns<RegisterClass RC, int bitwidth, ValueType VT,
+                               Instruction DstInst, X86MemOperand x86memop,
+                               Instruction DstMemInst> {
+    // x & ((1 << y) - 1)
+    defm : _bmi_bzhi_pattern<(and RC:$src, (add (shl 1, GR8:$lz), -1)),
+                             (and (x86memop addr:$src),
+                                  (add (shl 1, GR8:$lz), -1)),
+                             RC, VT, DstInst, DstMemInst>;
 
-  def : Pat<(and GR64:$src, (add (shl 1, GR8:$lz), -1)),
-            (BZHI64rr GR64:$src,
-              (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+    // x & ~(-1 << y)
+    defm : _bmi_bzhi_pattern<(and RC:$src, (xor (shl -1, GR8:$lz), -1)),
+                             (and (x86memop addr:$src),
+                                  (xor (shl -1, GR8:$lz), -1)),
+                             RC, VT, DstInst, DstMemInst>;
 
-  def : Pat<(and (loadi64 addr:$src), (add (shl 1, GR8:$lz), -1)),
-            (BZHI64rm addr:$src,
-              (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+    // x & (-1 >> (bitwidth - y))
+    defm : _bmi_bzhi_pattern<(and RC:$src, (srl -1, (sub bitwidth, GR8:$lz))),
+                             (and (x86memop addr:$src),
+                                  (srl -1, (sub bitwidth, GR8:$lz))),
+                             RC, VT, DstInst, DstMemInst>;
+
+    // x << (bitwidth - y) >> (bitwidth - y)
+    defm : _bmi_bzhi_pattern<(srl (shl RC:$src, (sub bitwidth, GR8:$lz)),
+                                  (sub bitwidth, GR8:$lz)),
+                             (srl (shl (x86memop addr:$src),
+                                        (sub bitwidth, GR8:$lz)),
+                                  (sub bitwidth, GR8:$lz)),
+                             RC, VT, DstInst, DstMemInst>;
+  }
+
+  defm : bmi_bzhi_patterns<GR32, 32, i32, BZHI32rr, loadi32, BZHI32rm>;
+  defm : bmi_bzhi_patterns<GR64, 64, i64, BZHI64rr, loadi64, BZHI64rm>;
 
   // x & (-1 >> (32 - y))
   def : Pat<(and GR32:$src, (srl -1, (i8 (trunc (sub 32, GR32:$lz))))),

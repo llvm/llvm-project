@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as -o %T/comdat-main.lto.obj %s
 ; RUN: llvm-as -o %T/comdat1.lto.obj %S/Inputs/lto-comdat1.ll
 ; RUN: llvm-as -o %T/comdat2.lto.obj %S/Inputs/lto-comdat2.ll

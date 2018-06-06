@@ -35,16 +35,20 @@ using namespace llvm;
 
 namespace {
 
+cl::opt<bool> Quiet("debugify-quiet",
+                    cl::desc("Suppress verbose debugify output"));
+
+raw_ostream &dbg() { return Quiet ? nulls() : errs(); }
+
 bool isFunctionSkipped(Function &F) {
   return F.isDeclaration() || !F.hasExactDefinition();
 }
 
-/// Find a suitable insertion point for debug values intrinsics.
+/// Find the basic block's terminating instruction.
 ///
-/// These must be inserted before the terminator. Special care is needed to
-/// handle musttail and deopt calls, as these behave like (but are in fact not)
-/// terminators.
-Instruction *findDebugValueInsertionPoint(BasicBlock &BB) {
+/// Special care is needed to handle musttail and deopt calls, as these behave
+/// like (but are in fact not) terminators.
+Instruction *findTerminatingInstruction(BasicBlock &BB) {
   if (auto *I = BB.getTerminatingMustTailCall())
     return I;
   if (auto *I = BB.getTerminatingDeoptimizeCall())
@@ -57,7 +61,7 @@ bool applyDebugifyMetadata(Module &M,
                            StringRef Banner) {
   // Skip modules with debug info.
   if (M.getNamedMetadata("llvm.dbg.cu")) {
-    errs() << Banner << "Skipping module with debug info\n";
+    dbg() << Banner << "Skipping module with debug info\n";
     return false;
   }
 
@@ -104,28 +108,35 @@ bool applyDebugifyMetadata(Module &M,
       if (BB.isEHPad())
         continue;
 
-      Instruction *LastInst = findDebugValueInsertionPoint(BB);
+      // Find the terminating instruction, after which no debug values are
+      // attached.
+      Instruction *LastInst = findTerminatingInstruction(BB);
+      assert(LastInst && "Expected basic block with a terminator");
+
+      // Maintain an insertion point which can't be invalidated when updates
+      // are made.
+      BasicBlock::iterator InsertPt = BB.getFirstInsertionPt();
+      assert(InsertPt != BB.end() && "Expected to find an insertion point");
+      Instruction *InsertBefore = &*InsertPt;
 
       // Attach debug values.
-      for (auto It = BB.begin(), End = LastInst->getIterator(); It != End;
-           ++It) {
-        Instruction &I = *It;
-
+      for (Instruction *I = &*BB.begin(); I != LastInst; I = I->getNextNode()) {
         // Skip void-valued instructions.
-        if (I.getType()->isVoidTy())
+        if (I->getType()->isVoidTy())
           continue;
 
-        // Skip any just-inserted intrinsics.
-        if (isa<DbgValueInst>(&I))
-          break;
+        // Phis and EH pads must be grouped at the beginning of the block.
+        // Only advance the insertion point when we finish visiting these.
+        if (!isa<PHINode>(I) && !I->isEHPad())
+          InsertBefore = I->getNextNode();
 
         std::string Name = utostr(NextVar++);
-        const DILocation *Loc = I.getDebugLoc().get();
+        const DILocation *Loc = I->getDebugLoc().get();
         auto LocalVar = DIB.createAutoVariable(SP, Name, File, Loc->getLine(),
-                                               getCachedDIType(I.getType()),
+                                               getCachedDIType(I->getType()),
                                                /*AlwaysPreserve=*/true);
-        DIB.insertDbgValueIntrinsic(&I, LocalVar, DIB.createExpression(), Loc,
-                                    LastInst);
+        DIB.insertDbgValueIntrinsic(I, LocalVar, DIB.createExpression(), Loc,
+                                    InsertBefore);
       }
     }
     DIB.finalizeSubprogram(SP);
@@ -159,7 +170,7 @@ bool checkDebugifyMetadata(Module &M,
   // Skip modules without debugify metadata.
   NamedMDNode *NMD = M.getNamedMetadata("llvm.debugify");
   if (!NMD) {
-    errs() << Banner << "Skipping module without debugify metadata\n";
+    dbg() << Banner << "Skipping module without debugify metadata\n";
     return false;
   }
 
@@ -190,10 +201,10 @@ bool checkDebugifyMetadata(Module &M,
         continue;
       }
 
-      errs() << "ERROR: Instruction with empty DebugLoc in function ";
-      errs() << F.getName() << " --";
-      I.print(errs());
-      errs() << "\n";
+      dbg() << "ERROR: Instruction with empty DebugLoc in function ";
+      dbg() << F.getName() << " --";
+      I.print(dbg());
+      dbg() << "\n";
       HasErrors = true;
     }
 
@@ -212,20 +223,16 @@ bool checkDebugifyMetadata(Module &M,
 
   // Print the results.
   for (unsigned Idx : MissingLines.set_bits())
-    errs() << "WARNING: Missing line " << Idx + 1 << "\n";
+    dbg() << "WARNING: Missing line " << Idx + 1 << "\n";
 
   for (unsigned Idx : MissingVars.set_bits())
-    errs() << "ERROR: Missing variable " << Idx + 1 << "\n";
+    dbg() << "ERROR: Missing variable " << Idx + 1 << "\n";
   HasErrors |= MissingVars.count() > 0;
 
-  errs() << Banner;
+  dbg() << Banner;
   if (!NameOfWrappedPass.empty())
-    errs() << " [" << NameOfWrappedPass << "]";
-  errs() << ": " << (HasErrors ? "FAIL" : "PASS") << '\n';
-  if (HasErrors) {
-    errs() << "Module IR Dump\n";
-    M.print(errs(), nullptr, false);
-  }
+    dbg() << " [" << NameOfWrappedPass << "]";
+  dbg() << ": " << (HasErrors ? "FAIL" : "PASS") << '\n';
 
   // Strip the Debugify Metadata if required.
   if (Strip) {

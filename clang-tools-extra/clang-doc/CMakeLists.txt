@@ -8,9 +8,11 @@ add_clang_library(clangDoc
   BitcodeReader.cpp
   BitcodeWriter.cpp
   ClangDoc.cpp
+  Generators.cpp
   Mapper.cpp
   Representation.cpp
   Serialize.cpp
+  YAMLGenerator.cpp
 
   LINK_LIBS
   clangAnalysis

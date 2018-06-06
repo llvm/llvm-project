@@ -227,11 +227,15 @@ getCheckOptions(const ClangTidyOptions &Options,
 ///
 /// \param EnableCheckProfile If provided, it enables check profile collection
 /// in MatchFinder, and will contain the result of the profile.
+/// \param StoreCheckProfile If provided, and EnableCheckProfile is true,
+/// the profile will not be output to stderr, but will instead be stored
+/// as a JSON file in the specified directory.
 void runClangTidy(clang::tidy::ClangTidyContext &Context,
                   const tooling::CompilationDatabase &Compilations,
                   ArrayRef<std::string> InputFiles,
                   llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
-                  bool EnableCheckProfile = false);
+                  bool EnableCheckProfile = false,
+                  llvm::StringRef StoreCheckProfile = StringRef());
 
 // FIXME: This interface will need to be significantly extended to be useful.
 // FIXME: Implement confidence levels for displaying/fixing errors.

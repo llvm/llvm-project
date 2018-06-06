@@ -1,3 +1,4 @@
+// REQUIRES: x86
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=x86_64-pc-linux
 // RUN: llvm-mc %p/Inputs/copy-rel-corrupted.s -o %t2.o -filetype=obj -triple=x86_64-pc-linux
 // RUN: ld.lld %t2.o -o %t2.so -shared

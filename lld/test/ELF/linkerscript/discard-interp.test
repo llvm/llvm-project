@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux /dev/null -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %p/../Inputs/shared.s -o %t2.o
 # RUN: ld.lld -shared %t2.o -o %t2.so

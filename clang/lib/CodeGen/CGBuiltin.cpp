@@ -643,6 +643,52 @@ static RValue EmitBitTestIntrinsic(CodeGenFunction &CGF, unsigned BuiltinID,
       ShiftedByte, llvm::ConstantInt::get(CGF.Int8Ty, 1), "bittest.res"));
 }
 
+namespace {
+enum class MSVCSetJmpKind {
+  _setjmpex,
+  _setjmp3,
+  _setjmp
+};
+}
+
+/// MSVC handles setjmp a bit differently on different platforms. On every
+/// architecture except 32-bit x86, the frame address is passed. On x86, extra
+/// parameters can be passed as variadic arguments, but we always pass none.
+static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
+                               const CallExpr *E) {
+  llvm::Value *Arg1 = nullptr;
+  llvm::Type *Arg1Ty = nullptr;
+  StringRef Name;
+  bool IsVarArg = false;
+  if (SJKind == MSVCSetJmpKind::_setjmp3) {
+    Name = "_setjmp3";
+    Arg1Ty = CGF.Int32Ty;
+    Arg1 = llvm::ConstantInt::get(CGF.IntTy, 0);
+    IsVarArg = true;
+  } else {
+    Name = SJKind == MSVCSetJmpKind::_setjmp ? "_setjmp" : "_setjmpex";
+    Arg1Ty = CGF.Int8PtrTy;
+    Arg1 = CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(Intrinsic::frameaddress),
+                                  llvm::ConstantInt::get(CGF.Int32Ty, 0));
+  }
+
+  // Mark the call site and declaration with ReturnsTwice.
+  llvm::Type *ArgTypes[2] = {CGF.Int8PtrTy, Arg1Ty};
+  llvm::AttributeList ReturnsTwiceAttr = llvm::AttributeList::get(
+      CGF.getLLVMContext(), llvm::AttributeList::FunctionIndex,
+      llvm::Attribute::ReturnsTwice);
+  llvm::Constant *SetJmpFn = CGF.CGM.CreateRuntimeFunction(
+      llvm::FunctionType::get(CGF.IntTy, ArgTypes, IsVarArg), Name,
+      ReturnsTwiceAttr, /*Local=*/true);
+
+  llvm::Value *Buf = CGF.Builder.CreateBitOrPointerCast(
+      CGF.EmitScalarExpr(E->getArg(0)), CGF.Int8PtrTy);
+  llvm::Value *Args[] = {Buf, Arg1};
+  llvm::CallSite CS = CGF.EmitRuntimeCallOrInvoke(SetJmpFn, Args);
+  CS.setAttributes(ReturnsTwiceAttr);
+  return RValue::get(CS.getInstruction());
+}
+
 // Many of MSVC builtins are on both x64 and ARM; to avoid repeating code, we
 // handle them here.
 enum class CodeGenFunction::MSVCIntrin {
@@ -2957,59 +3003,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__abnormal_termination:
   case Builtin::BI_abnormal_termination:
     return RValue::get(EmitSEHAbnormalTermination());
-  case Builtin::BI_setjmpex: {
+  case Builtin::BI_setjmpex:
+    if (getTarget().getTriple().isOSMSVCRT())
+      return EmitMSVCRTSetJmp(*this, MSVCSetJmpKind::_setjmpex, E);
+    break;
+  case Builtin::BI_setjmp:
     if (getTarget().getTriple().isOSMSVCRT()) {
-      llvm::Type *ArgTypes[] = {Int8PtrTy, Int8PtrTy};
-      llvm::AttributeList ReturnsTwiceAttr = llvm::AttributeList::get(
-          getLLVMContext(), llvm::AttributeList::FunctionIndex,
-          llvm::Attribute::ReturnsTwice);
-      llvm::Constant *SetJmpEx = CGM.CreateRuntimeFunction(
-          llvm::FunctionType::get(IntTy, ArgTypes, /*isVarArg=*/false),
-          "_setjmpex", ReturnsTwiceAttr, /*Local=*/true);
-      llvm::Value *Buf = Builder.CreateBitOrPointerCast(
-          EmitScalarExpr(E->getArg(0)), Int8PtrTy);
-      llvm::Value *FrameAddr =
-          Builder.CreateCall(CGM.getIntrinsic(Intrinsic::frameaddress),
-                             ConstantInt::get(Int32Ty, 0));
-      llvm::Value *Args[] = {Buf, FrameAddr};
-      llvm::CallSite CS = EmitRuntimeCallOrInvoke(SetJmpEx, Args);
-      CS.setAttributes(ReturnsTwiceAttr);
-      return RValue::get(CS.getInstruction());
+      if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+        return EmitMSVCRTSetJmp(*this, MSVCSetJmpKind::_setjmp3, E);
+      else if (getTarget().getTriple().getArch() == llvm::Triple::aarch64)
+        return EmitMSVCRTSetJmp(*this, MSVCSetJmpKind::_setjmpex, E);
+      return EmitMSVCRTSetJmp(*this, MSVCSetJmpKind::_setjmp, E);
     }
     break;
-  }
-  case Builtin::BI_setjmp: {
-    if (getTarget().getTriple().isOSMSVCRT()) {
-      llvm::AttributeList ReturnsTwiceAttr = llvm::AttributeList::get(
-          getLLVMContext(), llvm::AttributeList::FunctionIndex,
-          llvm::Attribute::ReturnsTwice);
-      llvm::Value *Buf = Builder.CreateBitOrPointerCast(
-          EmitScalarExpr(E->getArg(0)), Int8PtrTy);
-      llvm::CallSite CS;
-      if (getTarget().getTriple().getArch() == llvm::Triple::x86) {
-        llvm::Type *ArgTypes[] = {Int8PtrTy, IntTy};
-        llvm::Constant *SetJmp3 = CGM.CreateRuntimeFunction(
-            llvm::FunctionType::get(IntTy, ArgTypes, /*isVarArg=*/true),
-            "_setjmp3", ReturnsTwiceAttr, /*Local=*/true);
-        llvm::Value *Count = ConstantInt::get(IntTy, 0);
-        llvm::Value *Args[] = {Buf, Count};
-        CS = EmitRuntimeCallOrInvoke(SetJmp3, Args);
-      } else {
-        llvm::Type *ArgTypes[] = {Int8PtrTy, Int8PtrTy};
-        llvm::Constant *SetJmp = CGM.CreateRuntimeFunction(
-            llvm::FunctionType::get(IntTy, ArgTypes, /*isVarArg=*/false),
-            "_setjmp", ReturnsTwiceAttr, /*Local=*/true);
-        llvm::Value *FrameAddr =
-            Builder.CreateCall(CGM.getIntrinsic(Intrinsic::frameaddress),
-                               ConstantInt::get(Int32Ty, 0));
-        llvm::Value *Args[] = {Buf, FrameAddr};
-        CS = EmitRuntimeCallOrInvoke(SetJmp, Args);
-      }
-      CS.setAttributes(ReturnsTwiceAttr);
-      return RValue::get(CS.getInstruction());
-    }
-    break;
-  }
 
   case Builtin::BI__GetExceptionInfo: {
     if (llvm::GlobalVariable *GV =
