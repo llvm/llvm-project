@@ -131,6 +131,8 @@ float SymbolQualitySignals::evaluate() const {
       Score *= 1.1;
       break;
     case Namespace:
+      Score *= 0.8;
+      break;
     case Macro:
       Score *= 0.2;
       break;
