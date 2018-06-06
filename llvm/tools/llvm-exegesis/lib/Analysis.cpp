@@ -319,9 +319,8 @@ bool Analysis::SchedClassCluster::measurementsMatch(
   std::vector<BenchmarkMeasure> SchedClassPoint(NumMeasurements);
   // Latency case.
   assert(!Clustering.getPoints().empty());
-  const InstructionBenchmarkKey::ModeE Mode =
-      Clustering.getPoints()[0].Key.Mode;
-  if (Mode == InstructionBenchmarkKey::Latency) {
+  const InstructionBenchmark::ModeE Mode = Clustering.getPoints()[0].Mode;
+  if (Mode == InstructionBenchmark::Latency) {
     if (NumMeasurements != 1) {
       llvm::errs()
           << "invalid number of measurements in latency mode: expected 1, got "
@@ -337,7 +336,7 @@ bool Analysis::SchedClassCluster::measurementsMatch(
           std::max<double>(SchedClassPoint[0].Value, WLE->Cycles);
     }
     ClusterCenterPoint[0].Value = Representative[0].avg();
-  } else if (Mode == InstructionBenchmarkKey::Uops) {
+  } else if (Mode == InstructionBenchmark::Uops) {
     for (int I = 0, E = Representative.size(); I < E; ++I) {
       // Find the pressure on ProcResIdx `Key`.
       uint16_t ProcResIdx = 0;

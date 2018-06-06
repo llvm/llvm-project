@@ -9,7 +9,7 @@
 
 #if NEED_SSE42
 int baz(__m256i a) {
-  return _mm256_extract_epi32(a, 3); // expected-error {{always_inline function '_mm256_extract_epi32' requires target feature 'sse4.2', but would be inlined into function 'baz' that is compiled without support for 'sse4.2'}}
+  return _mm256_extract_epi32(a, 3); // expected-error {{'__builtin_ia32_vec_ext_v8si' needs target feature avx}}
 }
 #endif
 

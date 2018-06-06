@@ -37,7 +37,7 @@ InstructionBenchmark BenchmarkRunner::run(unsigned Opcode,
   InstructionBenchmark InstrBenchmark;
 
   InstrBenchmark.Key.OpcodeName = State.getInstrInfo().getName(Opcode);
-  InstrBenchmark.Key.Mode = getMode();
+  InstrBenchmark.Mode = getMode();
   InstrBenchmark.CpuName = State.getCpuName();
   InstrBenchmark.LLVMTriple = State.getTriple();
   InstrBenchmark.NumRepetitions = NumRepetitions;

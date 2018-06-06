@@ -747,7 +747,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  4      6     1.00    *      *            btcq	$7, (%rax)
 # CHECK-NEXT:  4      6     1.00    *      *            btrq	$7, (%rax)
 # CHECK-NEXT:  4      6     1.00    *      *            btsq	$7, (%rax)
-# CHECK-NEXT:  1      1      -                    *     clc
+# CHECK-NEXT:  1      1     0.25                  *     clc
 # CHECK-NEXT:  1      1     0.25                        decb	%dil
 # CHECK-NEXT:  3      7     1.00    *      *            decb	(%rax)
 # CHECK-NEXT:  1      1     0.25                        decw	%di

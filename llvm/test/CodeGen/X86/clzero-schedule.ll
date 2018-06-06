@@ -12,7 +12,7 @@ define void @test_clzero(i8* %p) {
 ; ZNVER1-LABEL: test_clzero:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    leaq (%rdi), %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    clzero # sched: [100:?]
+; ZNVER1-NEXT:    clzero # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void @llvm.x86.clzero(i8* %p)
   ret void

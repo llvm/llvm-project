@@ -153,3 +153,5 @@ FUZZER_DEPRECATED_FLAG(use_equivalence_server)
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
 FUZZER_DEPRECATED_FLAG(use_clang_coverage)
 FUZZER_FLAG_INT(use_feature_frequency, 0, "Experimental/internal")
+
+FUZZER_FLAG_STRING(data_flow_trace, "Experimental: use the data flow trace")

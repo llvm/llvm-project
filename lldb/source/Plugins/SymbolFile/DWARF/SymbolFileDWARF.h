@@ -316,6 +316,8 @@ public:
   DIEInDeclContext(const lldb_private::CompilerDeclContext *parent_decl_ctx,
                    const DWARFDIE &die);
 
+  void Dump(lldb_private::Stream &s) override;
+
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
       DIEToTypePtr;
@@ -401,8 +403,6 @@ protected:
 
   lldb::TypeSP GetTypeForDIE(const DWARFDIE &die,
                              bool resolve_function_context = false);
-
-  void DumpIndexes();
 
   void SetDebugMapModule(const lldb::ModuleSP &module_sp) {
     m_debug_map_module_wp = module_sp;

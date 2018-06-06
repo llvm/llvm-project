@@ -368,7 +368,11 @@ int nested_inlined_unroll1() {
 int nested_inlined_no_unroll1() {
   int k;
   for (int i = 0; i < 9; i++) {
+#ifdef ANALYZER_CM_Z3
+    clang_analyzer_numTimesReached(); // expected-warning {{13}}
+#else
     clang_analyzer_numTimesReached(); // expected-warning {{15}}
+#endif
     k = simple_unknown_bound_loop();  // reevaluation without inlining, splits the state as well
   }
   int a = 22 / k; // no-warning

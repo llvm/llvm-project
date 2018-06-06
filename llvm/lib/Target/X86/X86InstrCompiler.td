@@ -2040,14 +2040,3 @@ let Predicates = [HasBMI, NoTBM] in {
                                       (MOV32ri64 mov64imm32:$src2),
                                       sub_32bit))>;
 } // HasBMI, NoTBM
-
-let Predicates = [HasTBM] in {
-  def : Pat<(X86bextr GR32:$src1, (i32 imm:$src2)),
-            (BEXTRI32ri GR32:$src1, imm:$src2)>;
-  def : Pat<(X86bextr (loadi32 addr:$src1), (i32 imm:$src2)),
-            (BEXTRI32mi addr:$src1, imm:$src2)>;
-  def : Pat<(X86bextr GR64:$src1, i64immSExt32:$src2),
-            (BEXTRI64ri GR64:$src1, i64immSExt32:$src2)>;
-  def : Pat<(X86bextr (loadi64 addr:$src1), i64immSExt32:$src2),
-            (BEXTRI64mi addr:$src1, i64immSExt32:$src2)>;
-}

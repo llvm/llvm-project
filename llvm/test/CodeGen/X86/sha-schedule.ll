@@ -188,8 +188,8 @@ define <4 x i32> @test_sha256msg2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) 
 ;
 ; ZNVER1-LABEL: test_sha256msg2:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    sha256msg2 %xmm1, %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    sha256msg2 (%rdi), %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    sha256msg2 %xmm1, %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    sha256msg2 (%rdi), %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <4 x i32>, <4 x i32>* %a2
   %2 = tail call <4 x i32> @llvm.x86.sha256msg2(<4 x i32> %a0, <4 x i32> %a1)

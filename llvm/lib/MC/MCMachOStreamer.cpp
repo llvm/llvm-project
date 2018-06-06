@@ -450,6 +450,7 @@ void MCMachOStreamer::EmitInstToData(const MCInst &Inst,
     Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
     DF->getFixups().push_back(Fixup);
   }
+  DF->setHasInstructions(STI);
   DF->getContents().append(Code.begin(), Code.end());
 }
 

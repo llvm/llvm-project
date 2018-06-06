@@ -50,7 +50,7 @@ define i16 @test_rdrand_16(i16* %random_val) {
 ;
 ; ZNVER1-LABEL: test_rdrand_16:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    rdrandw %ax # sched: [100:?]
+; ZNVER1-NEXT:    rdrandw %ax # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %call = call {i16, i32} @llvm.x86.rdrand.16()
   %randval = extractvalue {i16, i32} %call, 0
@@ -95,7 +95,7 @@ define i32 @test_rdrand_32(i32* %random_val) {
 ;
 ; ZNVER1-LABEL: test_rdrand_32:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    rdrandl %eax # sched: [100:?]
+; ZNVER1-NEXT:    rdrandl %eax # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %call = call {i32, i32} @llvm.x86.rdrand.32()
   %randval = extractvalue {i32, i32} %call, 0
@@ -140,7 +140,7 @@ define i64 @test_rdrand_64(i64* %random_val) {
 ;
 ; ZNVER1-LABEL: test_rdrand_64:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    rdrandq %rax # sched: [100:?]
+; ZNVER1-NEXT:    rdrandq %rax # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %call = call {i64, i32} @llvm.x86.rdrand.64()
   %randval = extractvalue {i64, i32} %call, 0

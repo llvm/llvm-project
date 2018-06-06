@@ -3651,12 +3651,12 @@ define void @test_maskmovdqu(<16 x i8> %a0, <16 x i8> %a1, i8* %a2) {
 ;
 ; ZNVER1-SSE-LABEL: test_maskmovdqu:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    maskmovdqu %xmm1, %xmm0 # sched: [100:?]
+; ZNVER1-SSE-NEXT:    maskmovdqu %xmm1, %xmm0 # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_maskmovdqu:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vmaskmovdqu %xmm1, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vmaskmovdqu %xmm1, %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void @llvm.x86.sse2.maskmov.dqu(<16 x i8> %a0, <16 x i8> %a1, i8* %a2)
   ret void

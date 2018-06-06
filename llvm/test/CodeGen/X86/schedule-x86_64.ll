@@ -2761,10 +2761,10 @@ define void @test_bt_btc_btr_bts_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; HASWELL-NEXT:    btcw %si, %di # sched: [1:0.50]
 ; HASWELL-NEXT:    btrw %si, %di # sched: [1:0.50]
 ; HASWELL-NEXT:    btsw %si, %di # sched: [1:0.50]
-; HASWELL-NEXT:    btw %si, (%rdx) # sched: [1:?]
-; HASWELL-NEXT:    btcw %si, (%rdx) # sched: [1:?]
-; HASWELL-NEXT:    btrw %si, (%rdx) # sched: [1:?]
-; HASWELL-NEXT:    btsw %si, (%rdx) # sched: [1:?]
+; HASWELL-NEXT:    btw %si, (%rdx) # sched: [1:2.50]
+; HASWELL-NEXT:    btcw %si, (%rdx) # sched: [1:2.75]
+; HASWELL-NEXT:    btrw %si, (%rdx) # sched: [1:2.75]
+; HASWELL-NEXT:    btsw %si, (%rdx) # sched: [1:2.75]
 ; HASWELL-NEXT:    btw $7, %di # sched: [1:0.50]
 ; HASWELL-NEXT:    btcw $7, %di # sched: [1:0.50]
 ; HASWELL-NEXT:    btrw $7, %di # sched: [1:0.50]
@@ -2984,10 +2984,10 @@ define void @test_bt_btc_btr_bts_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; HASWELL-NEXT:    btcl %esi, %edi # sched: [1:0.50]
 ; HASWELL-NEXT:    btrl %esi, %edi # sched: [1:0.50]
 ; HASWELL-NEXT:    btsl %esi, %edi # sched: [1:0.50]
-; HASWELL-NEXT:    btl %esi, (%rdx) # sched: [1:?]
-; HASWELL-NEXT:    btcl %esi, (%rdx) # sched: [1:?]
-; HASWELL-NEXT:    btrl %esi, (%rdx) # sched: [1:?]
-; HASWELL-NEXT:    btsl %esi, (%rdx) # sched: [1:?]
+; HASWELL-NEXT:    btl %esi, (%rdx) # sched: [1:2.50]
+; HASWELL-NEXT:    btcl %esi, (%rdx) # sched: [1:2.75]
+; HASWELL-NEXT:    btrl %esi, (%rdx) # sched: [1:2.75]
+; HASWELL-NEXT:    btsl %esi, (%rdx) # sched: [1:2.75]
 ; HASWELL-NEXT:    btl $7, %edi # sched: [1:0.50]
 ; HASWELL-NEXT:    btcl $7, %edi # sched: [1:0.50]
 ; HASWELL-NEXT:    btrl $7, %edi # sched: [1:0.50]
@@ -3207,10 +3207,10 @@ define void @test_bt_btc_btr_bts_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; HASWELL-NEXT:    btcq %rsi, %rdi # sched: [1:0.50]
 ; HASWELL-NEXT:    btrq %rsi, %rdi # sched: [1:0.50]
 ; HASWELL-NEXT:    btsq %rsi, %rdi # sched: [1:0.50]
-; HASWELL-NEXT:    btq %rsi, (%rdx) # sched: [1:?]
-; HASWELL-NEXT:    btcq %rsi, (%rdx) # sched: [1:?]
-; HASWELL-NEXT:    btrq %rsi, (%rdx) # sched: [1:?]
-; HASWELL-NEXT:    btsq %rsi, (%rdx) # sched: [1:?]
+; HASWELL-NEXT:    btq %rsi, (%rdx) # sched: [1:2.50]
+; HASWELL-NEXT:    btcq %rsi, (%rdx) # sched: [1:2.75]
+; HASWELL-NEXT:    btrq %rsi, (%rdx) # sched: [1:2.75]
+; HASWELL-NEXT:    btsq %rsi, (%rdx) # sched: [1:2.75]
 ; HASWELL-NEXT:    btq $7, %rdi # sched: [1:0.50]
 ; HASWELL-NEXT:    btcq $7, %rdi # sched: [1:0.50]
 ; HASWELL-NEXT:    btrq $7, %rdi # sched: [1:0.50]
@@ -3465,7 +3465,7 @@ define void @test_clc_cld_cmc() optsize {
 ; GENERIC-LABEL: test_clc_cld_cmc:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    clc # sched: [1:?]
+; GENERIC-NEXT:    clc # sched: [1:0.25]
 ; GENERIC-NEXT:    cld # sched: [1:0.33]
 ; GENERIC-NEXT:    cmc # sched: [1:0.33]
 ; GENERIC-NEXT:    #NO_APP
@@ -3492,7 +3492,7 @@ define void @test_clc_cld_cmc() optsize {
 ; SANDY-LABEL: test_clc_cld_cmc:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    clc # sched: [1:?]
+; SANDY-NEXT:    clc # sched: [1:0.25]
 ; SANDY-NEXT:    cld # sched: [1:0.33]
 ; SANDY-NEXT:    cmc # sched: [1:0.33]
 ; SANDY-NEXT:    #NO_APP
@@ -3501,7 +3501,7 @@ define void @test_clc_cld_cmc() optsize {
 ; HASWELL-LABEL: test_clc_cld_cmc:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    clc # sched: [1:?]
+; HASWELL-NEXT:    clc # sched: [1:0.25]
 ; HASWELL-NEXT:    cld # sched: [3:1.00]
 ; HASWELL-NEXT:    cmc # sched: [1:0.25]
 ; HASWELL-NEXT:    #NO_APP
@@ -3510,7 +3510,7 @@ define void @test_clc_cld_cmc() optsize {
 ; BROADWELL-LABEL: test_clc_cld_cmc:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    clc # sched: [1:?]
+; BROADWELL-NEXT:    clc # sched: [1:0.25]
 ; BROADWELL-NEXT:    cld # sched: [3:1.00]
 ; BROADWELL-NEXT:    cmc # sched: [1:0.25]
 ; BROADWELL-NEXT:    #NO_APP
@@ -3519,7 +3519,7 @@ define void @test_clc_cld_cmc() optsize {
 ; SKYLAKE-LABEL: test_clc_cld_cmc:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    clc # sched: [1:?]
+; SKYLAKE-NEXT:    clc # sched: [1:0.17]
 ; SKYLAKE-NEXT:    cld # sched: [3:1.00]
 ; SKYLAKE-NEXT:    cmc # sched: [1:0.25]
 ; SKYLAKE-NEXT:    #NO_APP
@@ -3528,7 +3528,7 @@ define void @test_clc_cld_cmc() optsize {
 ; SKX-LABEL: test_clc_cld_cmc:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    clc # sched: [1:?]
+; SKX-NEXT:    clc # sched: [1:0.17]
 ; SKX-NEXT:    cld # sched: [3:1.00]
 ; SKX-NEXT:    cmc # sched: [1:0.25]
 ; SKX-NEXT:    #NO_APP
@@ -4292,10 +4292,10 @@ define void @test_cmps() optsize {
 ; ZNVER1-LABEL: test_cmps:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    cmpsb %es:(%rdi), (%rsi) # sched: [100:?]
-; ZNVER1-NEXT:    cmpsw %es:(%rdi), (%rsi) # sched: [100:?]
-; ZNVER1-NEXT:    cmpsl %es:(%rdi), (%rsi) # sched: [100:?]
-; ZNVER1-NEXT:    cmpsq %es:(%rdi), (%rsi) # sched: [100:?]
+; ZNVER1-NEXT:    cmpsb %es:(%rdi), (%rsi) # sched: [100:0.25]
+; ZNVER1-NEXT:    cmpsw %es:(%rdi), (%rsi) # sched: [100:0.25]
+; ZNVER1-NEXT:    cmpsl %es:(%rdi), (%rsi) # sched: [100:0.25]
+; ZNVER1-NEXT:    cmpsq %es:(%rdi), (%rsi) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "cmpsb \0A\09 cmpsw \0A\09 cmpsl \0A\09 cmpsq", ""()
@@ -4711,7 +4711,7 @@ define void @test_cmpxchg8b_cmpxchg16b(i8 *%a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    cmpxchg8b (%rdi) # sched: [1:0.50]
-; ZNVER1-NEXT:    cmpxchg16b (%rdi) # sched: [100:?]
+; ZNVER1-NEXT:    cmpxchg16b (%rdi) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "cmpxchg8b $0 \0a\09 cmpxchg16b $0", "*m"(i8 *%a0) nounwind
@@ -4785,7 +4785,7 @@ define void @test_cpuid() optsize {
 ; ZNVER1-LABEL: test_cpuid:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    cpuid # sched: [100:?]
+; ZNVER1-NEXT:    cpuid # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "cpuid", ""() nounwind
@@ -5366,7 +5366,7 @@ define void @test_enter() optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    enter $7, $4095 # imm = 0xFFF
-; ZNVER1-NEXT:    # sched: [100:?]
+; ZNVER1-NEXT:    # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "enter $0, $1", "i,i"(i8 7, i16 4095) nounwind
@@ -6222,12 +6222,12 @@ define void @test_in() optsize {
 ; ZNVER1-LABEL: test_in:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    inb $7, %al # sched: [100:?]
-; ZNVER1-NEXT:    inw $7, %ax # sched: [100:?]
-; ZNVER1-NEXT:    inl $7, %eax # sched: [100:?]
-; ZNVER1-NEXT:    inb %dx, %al # sched: [100:?]
-; ZNVER1-NEXT:    inw %dx, %ax # sched: [100:?]
-; ZNVER1-NEXT:    inl %dx, %eax # sched: [100:?]
+; ZNVER1-NEXT:    inb $7, %al # sched: [100:0.25]
+; ZNVER1-NEXT:    inw $7, %ax # sched: [100:0.25]
+; ZNVER1-NEXT:    inl $7, %eax # sched: [100:0.25]
+; ZNVER1-NEXT:    inb %dx, %al # sched: [100:0.25]
+; ZNVER1-NEXT:    inw %dx, %ax # sched: [100:0.25]
+; ZNVER1-NEXT:    inl %dx, %eax # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "inb $0, %AL \0A\09 inw $0, %AX \0A\09 inl $0, %EAX \0A\09 inb %DX, %AL \0A\09 inw %DX, %AX \0A\09 inl %DX, %EAX", "i"(i8 7) nounwind
@@ -6652,9 +6652,9 @@ define void @test_ins() optsize {
 ; ZNVER1-LABEL: test_ins:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    insb %dx, %es:(%rdi) # sched: [100:?]
-; ZNVER1-NEXT:    insw %dx, %es:(%rdi) # sched: [100:?]
-; ZNVER1-NEXT:    insl %dx, %es:(%rdi) # sched: [100:?]
+; ZNVER1-NEXT:    insb %dx, %es:(%rdi) # sched: [100:0.25]
+; ZNVER1-NEXT:    insw %dx, %es:(%rdi) # sched: [100:0.25]
+; ZNVER1-NEXT:    insl %dx, %es:(%rdi) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "insb \0A\09 insw \0A\09 insl", ""()
@@ -6728,7 +6728,7 @@ define void @test_int() optsize {
 ; ZNVER1-LABEL: test_int:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    int $7 # sched: [100:?]
+; ZNVER1-NEXT:    int $7 # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "int $0", "i"(i8 7)
@@ -6811,8 +6811,8 @@ define void @test_invlpg_invlpga(i8 *%a0) optsize {
 ; ZNVER1-LABEL: test_invlpg_invlpga:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    invlpg (%rdi) # sched: [100:?]
-; ZNVER1-NEXT:    invlpga %rax, %ecx # sched: [100:?]
+; ZNVER1-NEXT:    invlpg (%rdi) # sched: [100:0.25]
+; ZNVER1-NEXT:    invlpga %rax, %ecx # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm sideeffect "invlpg $0 \0A\09 invlpga %rax, %ecx", "*m"(i8 *%a0) nounwind
@@ -7365,7 +7365,7 @@ define void @test_lahf_sahf() optsize {
 ; ZNVER1-LABEL: test_lahf_sahf:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    lahf # sched: [100:?]
+; ZNVER1-NEXT:    lahf # sched: [100:0.25]
 ; ZNVER1-NEXT:    sahf # sched: [2:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
@@ -7549,10 +7549,10 @@ define void @test_lods() optsize {
 ; ZNVER1-LABEL: test_lods:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    lodsb (%rsi), %al # sched: [100:?]
-; ZNVER1-NEXT:    lodsw (%rsi), %ax # sched: [100:?]
-; ZNVER1-NEXT:    lodsl (%rsi), %eax # sched: [100:?]
-; ZNVER1-NEXT:    lodsq (%rsi), %rax # sched: [100:?]
+; ZNVER1-NEXT:    lodsb (%rsi), %al # sched: [100:0.25]
+; ZNVER1-NEXT:    lodsw (%rsi), %ax # sched: [100:0.25]
+; ZNVER1-NEXT:    lodsl (%rsi), %eax # sched: [100:0.25]
+; ZNVER1-NEXT:    lodsq (%rsi), %rax # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "lodsb \0A\09 lodsw \0A\09 lodsl \0A\09 lodsq", ""()
@@ -7843,10 +7843,10 @@ define void @test_movs() optsize {
 ; ZNVER1-LABEL: test_movs:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    movsb (%rsi), %es:(%rdi) # sched: [100:?]
-; ZNVER1-NEXT:    movsw (%rsi), %es:(%rdi) # sched: [100:?]
-; ZNVER1-NEXT:    movsl (%rsi), %es:(%rdi) # sched: [100:?]
-; ZNVER1-NEXT:    movsq (%rsi), %es:(%rdi) # sched: [100:?]
+; ZNVER1-NEXT:    movsb (%rsi), %es:(%rdi) # sched: [100:0.25]
+; ZNVER1-NEXT:    movsw (%rsi), %es:(%rdi) # sched: [100:0.25]
+; ZNVER1-NEXT:    movsl (%rsi), %es:(%rdi) # sched: [100:0.25]
+; ZNVER1-NEXT:    movsq (%rsi), %es:(%rdi) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "movsb \0A\09 movsw \0A\09 movsl \0A\09 movsq", ""()
@@ -8285,13 +8285,13 @@ define void @test_nop(i16 %a0, i32 %a1, i64 %a2, i16 *%p0, i32 *%p1, i64 *%p2) o
 ; GENERIC-LABEL: test_nop:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    nop # sched: [1:?]
-; GENERIC-NEXT:    nopw %di # sched: [1:?]
-; GENERIC-NEXT:    nopw (%rcx) # sched: [1:?]
-; GENERIC-NEXT:    nopl %esi # sched: [1:?]
-; GENERIC-NEXT:    nopl (%r8) # sched: [1:?]
-; GENERIC-NEXT:    nopq %rdx # sched: [1:?]
-; GENERIC-NEXT:    nopq (%r9) # sched: [1:?]
+; GENERIC-NEXT:    nop # sched: [1:0.25]
+; GENERIC-NEXT:    nopw %di # sched: [1:0.25]
+; GENERIC-NEXT:    nopw (%rcx) # sched: [1:0.25]
+; GENERIC-NEXT:    nopl %esi # sched: [1:0.25]
+; GENERIC-NEXT:    nopl (%r8) # sched: [1:0.25]
+; GENERIC-NEXT:    nopq %rdx # sched: [1:0.25]
+; GENERIC-NEXT:    nopq (%r9) # sched: [1:0.25]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -8311,26 +8311,26 @@ define void @test_nop(i16 %a0, i32 %a1, i64 %a2, i16 *%p0, i32 *%p1, i64 *%p2) o
 ; SLM-LABEL: test_nop:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    nop # sched: [1:?]
-; SLM-NEXT:    nopw %di # sched: [1:?]
-; SLM-NEXT:    nopw (%rcx) # sched: [1:?]
-; SLM-NEXT:    nopl %esi # sched: [1:?]
-; SLM-NEXT:    nopl (%r8) # sched: [1:?]
-; SLM-NEXT:    nopq %rdx # sched: [1:?]
-; SLM-NEXT:    nopq (%r9) # sched: [1:?]
+; SLM-NEXT:    nop # sched: [1:0.50]
+; SLM-NEXT:    nopw %di # sched: [1:0.50]
+; SLM-NEXT:    nopw (%rcx) # sched: [1:0.50]
+; SLM-NEXT:    nopl %esi # sched: [1:0.50]
+; SLM-NEXT:    nopl (%r8) # sched: [1:0.50]
+; SLM-NEXT:    nopq %rdx # sched: [1:0.50]
+; SLM-NEXT:    nopq (%r9) # sched: [1:0.50]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_nop:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    nop # sched: [1:?]
-; SANDY-NEXT:    nopw %di # sched: [1:?]
-; SANDY-NEXT:    nopw (%rcx) # sched: [1:?]
-; SANDY-NEXT:    nopl %esi # sched: [1:?]
-; SANDY-NEXT:    nopl (%r8) # sched: [1:?]
-; SANDY-NEXT:    nopq %rdx # sched: [1:?]
-; SANDY-NEXT:    nopq (%r9) # sched: [1:?]
+; SANDY-NEXT:    nop # sched: [1:0.25]
+; SANDY-NEXT:    nopw %di # sched: [1:0.25]
+; SANDY-NEXT:    nopw (%rcx) # sched: [1:0.25]
+; SANDY-NEXT:    nopl %esi # sched: [1:0.25]
+; SANDY-NEXT:    nopl (%r8) # sched: [1:0.25]
+; SANDY-NEXT:    nopq %rdx # sched: [1:0.25]
+; SANDY-NEXT:    nopq (%r9) # sched: [1:0.25]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -8402,13 +8402,13 @@ define void @test_nop(i16 %a0, i32 %a1, i64 %a2, i16 *%p0, i32 *%p1, i64 *%p2) o
 ; ZNVER1-LABEL: test_nop:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    nop # sched: [1:?]
-; ZNVER1-NEXT:    nopw %di # sched: [1:?]
-; ZNVER1-NEXT:    nopw (%rcx) # sched: [1:?]
-; ZNVER1-NEXT:    nopl %esi # sched: [1:?]
-; ZNVER1-NEXT:    nopl (%r8) # sched: [1:?]
-; ZNVER1-NEXT:    nopq %rdx # sched: [1:?]
-; ZNVER1-NEXT:    nopq (%r9) # sched: [1:?]
+; ZNVER1-NEXT:    nop # sched: [1:0.25]
+; ZNVER1-NEXT:    nopw %di # sched: [1:0.25]
+; ZNVER1-NEXT:    nopw (%rcx) # sched: [1:0.25]
+; ZNVER1-NEXT:    nopl %esi # sched: [1:0.25]
+; ZNVER1-NEXT:    nopl (%r8) # sched: [1:0.25]
+; ZNVER1-NEXT:    nopq %rdx # sched: [1:0.25]
+; ZNVER1-NEXT:    nopq (%r9) # sched: [1:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "nop \0A\09 nopw $0 \0A\09 nopw $3 \0A\09 nopl $1 \0A\09 nopl $4 \0A\09 nopq $2 \0A\09 nopq $5", "r,r,r,*m,*m,*m"(i16 %a0, i32 %a1, i64 %a2, i16 *%p0, i32 *%p1, i64 *%p2) nounwind
@@ -9334,12 +9334,12 @@ define void @test_out() optsize {
 ; ZNVER1-LABEL: test_out:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    outb %al, $7 # sched: [100:?]
-; ZNVER1-NEXT:    outw %ax, $7 # sched: [100:?]
-; ZNVER1-NEXT:    outl %eax, $7 # sched: [100:?]
-; ZNVER1-NEXT:    outb %al, %dx # sched: [100:?]
-; ZNVER1-NEXT:    outw %ax, %dx # sched: [100:?]
-; ZNVER1-NEXT:    outl %eax, %dx # sched: [100:?]
+; ZNVER1-NEXT:    outb %al, $7 # sched: [100:0.25]
+; ZNVER1-NEXT:    outw %ax, $7 # sched: [100:0.25]
+; ZNVER1-NEXT:    outl %eax, $7 # sched: [100:0.25]
+; ZNVER1-NEXT:    outb %al, %dx # sched: [100:0.25]
+; ZNVER1-NEXT:    outw %ax, %dx # sched: [100:0.25]
+; ZNVER1-NEXT:    outl %eax, %dx # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "outb %AL, $0 \0A\09 outw %AX, $0 \0A\09 outl %EAX, $0 \0A\09 outb %AL, %DX \0A\09 outw %AX, %DX \0A\09 outl %EAX, %DX", "i"(i8 7) nounwind
@@ -9431,9 +9431,9 @@ define void @test_outs() optsize {
 ; ZNVER1-LABEL: test_outs:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    outsb (%rsi), %dx # sched: [100:?]
-; ZNVER1-NEXT:    outsw (%rsi), %dx # sched: [100:?]
-; ZNVER1-NEXT:    outsl (%rsi), %dx # sched: [100:?]
+; ZNVER1-NEXT:    outsb (%rsi), %dx # sched: [100:0.25]
+; ZNVER1-NEXT:    outsw (%rsi), %dx # sched: [100:0.25]
+; ZNVER1-NEXT:    outsl (%rsi), %dx # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "outsb \0A\09 outsw \0A\09 outsl", ""()
@@ -9458,7 +9458,7 @@ define void @test_pause() optsize {
 ; SLM-LABEL: test_pause:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    pause # sched: [1:?]
+; SLM-NEXT:    pause # sched: [1:0.50]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
@@ -9507,7 +9507,7 @@ define void @test_pause() optsize {
 ; ZNVER1-LABEL: test_pause:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    pause # sched: [100:?]
+; ZNVER1-NEXT:    pause # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "pause", ""()
@@ -9608,10 +9608,10 @@ define void @test_pop_push() optsize {
 ; ZNVER1-LABEL: test_pop_push:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    popq %fs # sched: [100:?]
-; ZNVER1-NEXT:    popq %gs # sched: [100:?]
-; ZNVER1-NEXT:    pushq %fs # sched: [100:?]
-; ZNVER1-NEXT:    pushq %gs # sched: [100:?]
+; ZNVER1-NEXT:    popq %fs # sched: [100:0.25]
+; ZNVER1-NEXT:    popq %gs # sched: [100:0.25]
+; ZNVER1-NEXT:    pushq %fs # sched: [100:0.25]
+; ZNVER1-NEXT:    pushq %gs # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "pop %FS \0A\09 pop %GS \0A\09 push %FS \0A\09 push %GS", ""()
@@ -10136,16 +10136,16 @@ define void @test_rcl_rcr_8(i8 %a0, i8 %a1, i8 *%a2) optsize {
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    rclb %dil # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrb %dil # sched: [1:0.25]
-; ZNVER1-NEXT:    rclb (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrb (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rclb (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrb (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    rclb $7, %dil # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrb $7, %dil # sched: [1:0.25]
-; ZNVER1-NEXT:    rclb $7, (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrb $7, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rclb $7, (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrb $7, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    rclb %cl, %dil # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrb %cl, %dil # sched: [1:0.25]
-; ZNVER1-NEXT:    rclb %cl, (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrb %cl, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rclb %cl, (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrb %cl, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "rclb $0 \0A\09 rcrb $0 \0A\09 rclb $2 \0A\09 rcrb $2 \0A\09 rclb $3, $0 \0A\09 rcrb $3, $0 \0A\09 rclb $3, $2 \0A\09 rcrb $3, $2 \0A\09 rclb %CL, $0 \0A\09 rcrb %CL, $0 \0A\09 rclb %CL, $2 \0A\09 rcrb %CL, $2", "r,r,*m,i"(i8 %a0, i8 %a1, i8 *%a2, i8 7)
@@ -10319,16 +10319,16 @@ define void @test_rcl_rcr_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    rclw %di # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrw %di # sched: [1:0.25]
-; ZNVER1-NEXT:    rclw (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrw (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rclw (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrw (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    rclw $7, %di # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrw $7, %di # sched: [1:0.25]
-; ZNVER1-NEXT:    rclw $7, (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrw $7, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rclw $7, (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrw $7, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    rclw %cl, %di # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrw %cl, %di # sched: [1:0.25]
-; ZNVER1-NEXT:    rclw %cl, (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrw %cl, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rclw %cl, (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrw %cl, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "rclw $0 \0A\09 rcrw $0 \0A\09 rclw $2 \0A\09 rcrw $2 \0A\09 rclw $3, $0 \0A\09 rcrw $3, $0 \0A\09 rclw $3, $2 \0A\09 rcrw $3, $2 \0A\09 rclw %CL, $0 \0A\09 rcrw %CL, $0 \0A\09 rclw %CL, $2 \0A\09 rcrw %CL, $2", "r,r,*m,i"(i16 %a0, i16 %a1, i16 *%a2, i8 7)
@@ -10502,16 +10502,16 @@ define void @test_rcl_rcr_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    rcll %edi # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrl %edi # sched: [1:0.25]
-; ZNVER1-NEXT:    rcll (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrl (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rcll (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrl (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    rcll $7, %edi # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrl $7, %edi # sched: [1:0.25]
-; ZNVER1-NEXT:    rcll $7, (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrl $7, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rcll $7, (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrl $7, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    rcll %cl, %edi # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrl %cl, %edi # sched: [1:0.25]
-; ZNVER1-NEXT:    rcll %cl, (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrl %cl, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rcll %cl, (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrl %cl, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "rcll $0 \0A\09 rcrl $0 \0A\09 rcll $2 \0A\09 rcrl $2 \0A\09 rcll $3, $0 \0A\09 rcrl $3, $0 \0A\09 rcll $3, $2 \0A\09 rcrl $3, $2 \0A\09 rcll %CL, $0 \0A\09 rcrl %CL, $0 \0A\09 rcll %CL, $2 \0A\09 rcrl %CL, $2", "r,r,*m,i"(i32 %a0, i32 %a1, i32 *%a2, i8 7)
@@ -10685,16 +10685,16 @@ define void @test_rcl_rcr_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    rclq %rdi # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrq %rdi # sched: [1:0.25]
-; ZNVER1-NEXT:    rclq (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrq (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rclq (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrq (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    rclq $7, %rdi # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrq $7, %rdi # sched: [1:0.25]
-; ZNVER1-NEXT:    rclq $7, (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrq $7, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rclq $7, (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrq $7, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    rclq %cl, %rdi # sched: [1:0.25]
 ; ZNVER1-NEXT:    rcrq %cl, %rdi # sched: [1:0.25]
-; ZNVER1-NEXT:    rclq %cl, (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    rcrq %cl, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    rclq %cl, (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    rcrq %cl, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "rclq $0 \0A\09 rcrq $0 \0A\09 rclq $2 \0A\09 rcrq $2 \0A\09 rclq $3, $0 \0A\09 rcrq $3, $0 \0A\09 rclq $3, $2 \0A\09 rcrq $3, $2 \0A\09 rclq %CL, $0 \0A\09 rcrq %CL, $0 \0A\09 rclq %CL, $2 \0A\09 rcrq %CL, $2", "r,r,*m,i"(i64 %a0, i64 %a1, i64 *%a2, i8 7)
@@ -10777,8 +10777,8 @@ define void @test_rdmsr_wrmsr() optsize {
 ; ZNVER1-LABEL: test_rdmsr_wrmsr:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    rdmsr # sched: [100:?]
-; ZNVER1-NEXT:    wrmsr # sched: [100:?]
+; ZNVER1-NEXT:    rdmsr # sched: [100:0.25]
+; ZNVER1-NEXT:    wrmsr # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "rdmsr \0A\09 wrmsr", ""()
@@ -10817,7 +10817,7 @@ define void @test_rdpmc() optsize {
 ; HASWELL-LABEL: test_rdpmc:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    rdpmc # sched: [1:?]
+; HASWELL-NEXT:    rdpmc # sched: [1:8.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -10852,7 +10852,7 @@ define void @test_rdpmc() optsize {
 ; ZNVER1-LABEL: test_rdpmc:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    rdpmc # sched: [100:?]
+; ZNVER1-NEXT:    rdpmc # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "rdpmc", ""()
@@ -10935,8 +10935,8 @@ define void @test_rdtsc_rdtscp() optsize {
 ; ZNVER1-LABEL: test_rdtsc_rdtscp:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    rdtsc # sched: [100:?]
-; ZNVER1-NEXT:    rdtscp # sched: [100:?]
+; ZNVER1-NEXT:    rdtsc # sched: [100:0.25]
+; ZNVER1-NEXT:    rdtscp # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "rdtsc \0A\09 rdtscp", ""()
@@ -13510,10 +13510,10 @@ define void @test_scas() optsize {
 ; ZNVER1-LABEL: test_scas:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    scasb %es:(%rdi), %al # sched: [100:?]
-; ZNVER1-NEXT:    scasw %es:(%rdi), %ax # sched: [100:?]
-; ZNVER1-NEXT:    scasl %es:(%rdi), %eax # sched: [100:?]
-; ZNVER1-NEXT:    scasq %es:(%rdi), %rax # sched: [100:?]
+; ZNVER1-NEXT:    scasb %es:(%rdi), %al # sched: [100:0.25]
+; ZNVER1-NEXT:    scasw %es:(%rdi), %ax # sched: [100:0.25]
+; ZNVER1-NEXT:    scasl %es:(%rdi), %eax # sched: [100:0.25]
+; ZNVER1-NEXT:    scasq %es:(%rdi), %rax # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "scasb \0A\09 scasw \0A\09 scasl \0A\09 scasq", ""()
@@ -14036,10 +14036,10 @@ define void @test_shld_shrd_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; ZNVER1-LABEL: test_shld_shrd_16:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    shldw %cl, %si, %di # sched: [100:?]
-; ZNVER1-NEXT:    shrdw %cl, %si, %di # sched: [100:?]
-; ZNVER1-NEXT:    shldw %cl, %si, (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    shrdw %cl, %si, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    shldw %cl, %si, %di # sched: [100:0.25]
+; ZNVER1-NEXT:    shrdw %cl, %si, %di # sched: [100:0.25]
+; ZNVER1-NEXT:    shldw %cl, %si, (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    shrdw %cl, %si, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    shldw $7, %si, %di # sched: [1:0.25]
 ; ZNVER1-NEXT:    shrdw $7, %si, %di # sched: [1:0.25]
 ; ZNVER1-NEXT:    shldw $7, %si, (%rdx) # sched: [5:0.50]
@@ -14179,10 +14179,10 @@ define void @test_shld_shrd_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; ZNVER1-LABEL: test_shld_shrd_32:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    shldl %cl, %esi, %edi # sched: [100:?]
-; ZNVER1-NEXT:    shrdl %cl, %esi, %edi # sched: [100:?]
-; ZNVER1-NEXT:    shldl %cl, %esi, (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    shldl %cl, %esi, %edi # sched: [100:0.25]
+; ZNVER1-NEXT:    shrdl %cl, %esi, %edi # sched: [100:0.25]
+; ZNVER1-NEXT:    shldl %cl, %esi, (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    shrdl %cl, %esi, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    shldl $7, %esi, %edi # sched: [1:0.25]
 ; ZNVER1-NEXT:    shrdl $7, %esi, %edi # sched: [1:0.25]
 ; ZNVER1-NEXT:    shldl $7, %esi, (%rdx) # sched: [5:0.50]
@@ -14322,10 +14322,10 @@ define void @test_shld_shrd_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; ZNVER1-LABEL: test_shld_shrd_64:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    shldq %cl, %rsi, %rdi # sched: [100:?]
-; ZNVER1-NEXT:    shrdq %cl, %rsi, %rdi # sched: [100:?]
-; ZNVER1-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [100:?]
-; ZNVER1-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    shldq %cl, %rsi, %rdi # sched: [100:0.25]
+; ZNVER1-NEXT:    shrdq %cl, %rsi, %rdi # sched: [100:0.25]
+; ZNVER1-NEXT:    shldq %cl, %rsi, (%rdx) # sched: [100:0.25]
+; ZNVER1-NEXT:    shrdq %cl, %rsi, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    shldq $7, %rsi, %rdi # sched: [1:0.25]
 ; ZNVER1-NEXT:    shrdq $7, %rsi, %rdi # sched: [1:0.25]
 ; ZNVER1-NEXT:    shldq $7, %rsi, (%rdx) # sched: [5:0.50]
@@ -14521,10 +14521,10 @@ define void @test_stos() optsize {
 ; ZNVER1-LABEL: test_stos:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    stosb %al, %es:(%rdi) # sched: [100:?]
-; ZNVER1-NEXT:    stosw %ax, %es:(%rdi) # sched: [100:?]
-; ZNVER1-NEXT:    stosl %eax, %es:(%rdi) # sched: [100:?]
-; ZNVER1-NEXT:    stosq %rax, %es:(%rdi) # sched: [100:?]
+; ZNVER1-NEXT:    stosb %al, %es:(%rdi) # sched: [100:0.25]
+; ZNVER1-NEXT:    stosw %ax, %es:(%rdi) # sched: [100:0.25]
+; ZNVER1-NEXT:    stosl %eax, %es:(%rdi) # sched: [100:0.25]
+; ZNVER1-NEXT:    stosq %rax, %es:(%rdi) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "stosb \0A\09 stosw \0A\09 stosl \0A\09 stosq", ""()
@@ -15793,7 +15793,7 @@ define void @test_ud2() optsize {
 ; ZNVER1-LABEL: test_ud2:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    ud2 # sched: [100:?]
+; ZNVER1-NEXT:    ud2 # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void asm sideeffect "ud2", ""()
@@ -15885,7 +15885,7 @@ define void @test_xadd_8(i8 %a0, i8 %a1, i8 *%a2) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    xaddb %dil, %sil # sched: [1:0.25]
-; ZNVER1-NEXT:    xaddb %dil, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    xaddb %dil, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "xaddb $0, $1 \0A\09 xaddb $0, $2", "r,r,*m"(i8 %a0, i8 %a1, i8 *%a2) nounwind
@@ -15968,7 +15968,7 @@ define void @test_xadd_16(i16 %a0, i16 %a1, i16 *%a2) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    xaddw %di, %si # sched: [1:0.25]
-; ZNVER1-NEXT:    xaddw %di, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    xaddw %di, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "xaddw $0, $1 \0A\09 xaddw $0, $2", "r,r,*m"(i16 %a0, i16 %a1, i16 *%a2) nounwind
@@ -16051,7 +16051,7 @@ define void @test_xadd_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    xaddl %edi, %esi # sched: [1:0.25]
-; ZNVER1-NEXT:    xaddl %edi, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    xaddl %edi, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "xaddl $0, $1 \0A\09 xaddl $0, $2", "r,r,*m"(i32 %a0, i32 %a1, i32 *%a2) nounwind
@@ -16134,7 +16134,7 @@ define void @test_xadd_64(i64 %a0, i64 %a1, i64 *%a2) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    xaddq %rdi, %rsi # sched: [1:0.25]
-; ZNVER1-NEXT:    xaddq %rdi, (%rdx) # sched: [100:?]
+; ZNVER1-NEXT:    xaddq %rdi, (%rdx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "xaddq $0, $1 \0A\09 xaddq $0, $2", "r,r,*m"(i64 %a0, i64 %a1, i64 *%a2) nounwind
@@ -16536,7 +16536,7 @@ define void @test_xlat() optsize {
 ; HASWELL-LABEL: test_xlat:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    xlatb # sched: [7:?]
+; HASWELL-NEXT:    xlatb # sched: [7:0.75]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -16571,7 +16571,7 @@ define void @test_xlat() optsize {
 ; ZNVER1-LABEL: test_xlat:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    xlatb # sched: [100:?]
+; ZNVER1-NEXT:    xlatb # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm "xlat", ""() nounwind

@@ -44,7 +44,8 @@ public:
   }
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) const override;
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
@@ -103,7 +104,8 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool mayNeedRelaxation(const MCInst &Inst) const override;
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override;
   unsigned getRelaxedOpcode(unsigned Op) const;
 
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
@@ -194,7 +196,8 @@ unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
   }
 }
 
-bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst) const {
+bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+                                        const MCSubtargetInfo &STI) const {
   return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
 }
 
@@ -316,7 +319,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                  const MCValue &Target,
                                  MutableArrayRef<char> Data, uint64_t Value,
-                                 bool IsResolved) const {
+                                 bool IsResolved,
+                                 const MCSubtargetInfo *STI) const {
   MCContext &Ctx = Asm.getContext();
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   if (!Value)

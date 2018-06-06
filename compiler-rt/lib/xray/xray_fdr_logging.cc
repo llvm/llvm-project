@@ -28,6 +28,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "xray/xray_interface.h"
 #include "xray/xray_records.h"
+#include "xray_recursion_guard.h"
 #include "xray_buffer_queue.h"
 #include "xray_defs.h"
 #include "xray_fdr_flags.h"
@@ -121,33 +122,6 @@ static ThreadLocalData &getThreadLocalData() {
   }();
   return TLD;
 }
-
-namespace {
-
-class RecursionGuard {
-  volatile bool &Running;
-  const bool Valid;
-
-public:
-  explicit RecursionGuard(volatile bool &R) : Running(R), Valid(!R) {
-    if (Valid)
-      Running = true;
-  }
-
-  RecursionGuard(const RecursionGuard &) = delete;
-  RecursionGuard(RecursionGuard &&) = delete;
-  RecursionGuard &operator=(const RecursionGuard &) = delete;
-  RecursionGuard &operator=(RecursionGuard &&) = delete;
-
-  explicit operator bool() const { return Valid; }
-
-  ~RecursionGuard() noexcept {
-    if (Valid)
-      Running = false;
-  }
-};
-
-} // namespace
 
 static void writeNewBufferPreamble(tid_t Tid,
                                    timespec TS) XRAY_NEVER_INSTRUMENT {
@@ -553,7 +527,7 @@ static void endBufferIfFull() XRAY_NEVER_INSTRUMENT {
   }
 }
 
-thread_local volatile bool Running = false;
+thread_local atomic_uint8_t Running{0};
 
 /// Here's where the meat of the processing happens. The writer captures
 /// function entry, exit and tail exit points with a time and will create
@@ -574,7 +548,7 @@ static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
   // handleArg0 to happen at any given time.
   RecursionGuard Guard{Running};
   if (!Guard) {
-    DCHECK(Running == true && "RecursionGuard is buggy!");
+    DCHECK(atomic_load_relaxed(&Running) && "RecursionGuard is buggy!");
     return;
   }
 

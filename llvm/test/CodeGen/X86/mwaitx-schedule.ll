@@ -22,7 +22,7 @@ define void @foo(i8* %P, i32 %E, i32 %H) nounwind {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    leaq (%rdi), %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl %esi, %ecx # sched: [1:0.25]
-; ZNVER1-NEXT:    monitorx # sched: [100:?]
+; ZNVER1-NEXT:    monitorx # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void @llvm.x86.monitorx(i8* %P, i32 %E, i32 %H)
   ret void
@@ -56,7 +56,7 @@ define void @bar(i32 %E, i32 %H, i32 %C) nounwind {
 ; ZNVER1-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl %esi, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl %edx, %ebx # sched: [1:0.25]
-; ZNVER1-NEXT:    mwaitx # sched: [100:?]
+; ZNVER1-NEXT:    mwaitx # sched: [100:0.25]
 ; ZNVER1-NEXT:    popq %rbx # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void @llvm.x86.mwaitx(i32 %E, i32 %H, i32 %C)

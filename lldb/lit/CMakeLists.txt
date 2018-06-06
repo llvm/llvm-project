@@ -46,6 +46,7 @@ endif(BUILD_SHARED_LIBS)
 
 # the value is not canonicalized within LLVM
 llvm_canonicalize_cmake_booleans(
+  LLDB_DISABLE_PYTHON
   LLVM_ENABLE_ZLIB)
 
 configure_lit_site_cfg(
