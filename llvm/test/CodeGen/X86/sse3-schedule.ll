@@ -330,14 +330,14 @@ define <2 x double> @test_haddpd(<2 x double> %a0, <2 x double> %a1, <2 x double
 ;
 ; ZNVER1-SSE-LABEL: test_haddpd:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    haddpd %xmm1, %xmm0 # sched: [100:?]
-; ZNVER1-SSE-NEXT:    haddpd (%rdi), %xmm0 # sched: [100:?]
+; ZNVER1-SSE-NEXT:    haddpd %xmm1, %xmm0 # sched: [100:0.25]
+; ZNVER1-SSE-NEXT:    haddpd (%rdi), %xmm0 # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_haddpd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    vhaddpd (%rdi), %xmm0, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vhaddpd (%rdi), %xmm0, %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x double> @llvm.x86.sse3.hadd.pd(<2 x double> %a0, <2 x double> %a1)
   %2 = load <2 x double>, <2 x double> *%a2, align 16
@@ -439,14 +439,14 @@ define <4 x float> @test_haddps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%
 ;
 ; ZNVER1-SSE-LABEL: test_haddps:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    haddps %xmm1, %xmm0 # sched: [100:?]
-; ZNVER1-SSE-NEXT:    haddps (%rdi), %xmm0 # sched: [100:?]
+; ZNVER1-SSE-NEXT:    haddps %xmm1, %xmm0 # sched: [100:0.25]
+; ZNVER1-SSE-NEXT:    haddps (%rdi), %xmm0 # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_haddps:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vhaddps %xmm1, %xmm0, %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    vhaddps (%rdi), %xmm0, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vhaddps %xmm1, %xmm0, %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vhaddps (%rdi), %xmm0, %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %a0, <4 x float> %a1)
   %2 = load <4 x float>, <4 x float> *%a2, align 16
@@ -548,14 +548,14 @@ define <2 x double> @test_hsubpd(<2 x double> %a0, <2 x double> %a1, <2 x double
 ;
 ; ZNVER1-SSE-LABEL: test_hsubpd:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    hsubpd %xmm1, %xmm0 # sched: [100:?]
-; ZNVER1-SSE-NEXT:    hsubpd (%rdi), %xmm0 # sched: [100:?]
+; ZNVER1-SSE-NEXT:    hsubpd %xmm1, %xmm0 # sched: [100:0.25]
+; ZNVER1-SSE-NEXT:    hsubpd (%rdi), %xmm0 # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_hsubpd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    vhsubpd (%rdi), %xmm0, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vhsubpd (%rdi), %xmm0, %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x double> @llvm.x86.sse3.hsub.pd(<2 x double> %a0, <2 x double> %a1)
   %2 = load <2 x double>, <2 x double> *%a2, align 16
@@ -657,14 +657,14 @@ define <4 x float> @test_hsubps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%
 ;
 ; ZNVER1-SSE-LABEL: test_hsubps:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    hsubps %xmm1, %xmm0 # sched: [100:?]
-; ZNVER1-SSE-NEXT:    hsubps (%rdi), %xmm0 # sched: [100:?]
+; ZNVER1-SSE-NEXT:    hsubps %xmm1, %xmm0 # sched: [100:0.25]
+; ZNVER1-SSE-NEXT:    hsubps (%rdi), %xmm0 # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_hsubps:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vhsubps %xmm1, %xmm0, %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    vhsubps (%rdi), %xmm0, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vhsubps %xmm1, %xmm0, %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vhsubps (%rdi), %xmm0, %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %a0, <4 x float> %a1)
   %2 = load <4 x float>, <4 x float> *%a2, align 16
@@ -875,14 +875,14 @@ define void @test_monitor(i8* %a0, i32 %a1, i32 %a2) {
 ; ZNVER1-SSE:       # %bb.0:
 ; ZNVER1-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    movl %esi, %ecx # sched: [1:0.25]
-; ZNVER1-SSE-NEXT:    monitor # sched: [100:?]
+; ZNVER1-SSE-NEXT:    monitor # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_monitor:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    leaq (%rdi), %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl %esi, %ecx # sched: [1:0.25]
-; ZNVER1-NEXT:    monitor # sched: [100:?]
+; ZNVER1-NEXT:    monitor # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void @llvm.x86.sse3.monitor(i8* %a0, i32 %a1, i32 %a2)
   ret void
@@ -1252,8 +1252,8 @@ define <4 x float> @test_movsldup(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; ZNVER1-SSE-LABEL: test_movsldup:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    movsldup {{.*#+}} xmm1 = xmm0[0,0,2,2] sched: [100:?]
-; ZNVER1-SSE-NEXT:    movsldup {{.*#+}} xmm0 = mem[0,0,2,2] sched: [100:?]
+; ZNVER1-SSE-NEXT:    movsldup {{.*#+}} xmm1 = xmm0[0,0,2,2] sched: [100:0.25]
+; ZNVER1-SSE-NEXT:    movsldup {{.*#+}} xmm0 = mem[0,0,2,2] sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
@@ -1380,14 +1380,14 @@ define void @test_mwait(i32 %a0, i32 %a1) {
 ; ZNVER1-SSE:       # %bb.0:
 ; ZNVER1-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    movl %esi, %eax # sched: [1:0.25]
-; ZNVER1-SSE-NEXT:    mwait # sched: [100:?]
+; ZNVER1-SSE-NEXT:    mwait # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_mwait:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl %esi, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    mwait # sched: [100:?]
+; ZNVER1-NEXT:    mwait # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void @llvm.x86.sse3.mwait(i32 %a0, i32 %a1)
   ret void

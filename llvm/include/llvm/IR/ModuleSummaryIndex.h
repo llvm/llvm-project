@@ -179,14 +179,14 @@ struct ValueInfo {
 
 inline bool operator==(const ValueInfo &A, const ValueInfo &B) {
   assert(A.getRef() && B.getRef() &&
-         "Need ValueInfo with non-null Ref to compare GUIDs");
+         "Need ValueInfo with non-null Ref for comparison");
   return A.getRef() == B.getRef();
 }
 
 inline bool operator!=(const ValueInfo &A, const ValueInfo &B) {
   assert(A.getRef() && B.getRef() &&
-         "Need ValueInfo with non-null Ref to compare GUIDs");
-  return A.getGUID() != B.getGUID();
+         "Need ValueInfo with non-null Ref for comparison");
+  return A.getRef() != B.getRef();
 }
 
 inline bool operator<(const ValueInfo &A, const ValueInfo &B) {

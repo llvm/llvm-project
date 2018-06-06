@@ -52,8 +52,8 @@ static llvm::Error makeError(llvm::Twine Msg) {
 
 LatencyBenchmarkRunner::~LatencyBenchmarkRunner() = default;
 
-InstructionBenchmarkKey::ModeE LatencyBenchmarkRunner::getMode() const {
-  return InstructionBenchmarkKey::Latency;
+InstructionBenchmark::ModeE LatencyBenchmarkRunner::getMode() const {
+  return InstructionBenchmark::Latency;
 }
 
 llvm::Expected<std::vector<llvm::MCInst>>

@@ -315,7 +315,8 @@ public:
   void EmitBundleUnlock() override;
 
   bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
-                          const MCExpr *Expr, SMLoc Loc) override;
+                          const MCExpr *Expr, SMLoc Loc,
+                          const MCSubtargetInfo &STI) override;
 
   /// If this file is backed by an assembly streamer, this dumps the specified
   /// string in the output .s file. This capability is indicated by the
@@ -1820,7 +1821,8 @@ void MCAsmStreamer::EmitBundleUnlock() {
 }
 
 bool MCAsmStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
-                                       const MCExpr *Expr, SMLoc) {
+                                       const MCExpr *Expr, SMLoc,
+                                       const MCSubtargetInfo &STI) {
   OS << "\t.reloc ";
   Offset.print(OS, MAI);
   OS << ", " << Name;

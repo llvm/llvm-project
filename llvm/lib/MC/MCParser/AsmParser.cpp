@@ -2949,7 +2949,9 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
                  "unexpected token in .reloc directive"))
       return true;
 
-  if (getStreamer().EmitRelocDirective(*Offset, Name, Expr, DirectiveLoc))
+  const MCTargetAsmParser &MCT = getTargetParser();
+  const MCSubtargetInfo &STI = MCT.getSTI();
+  if (getStreamer().EmitRelocDirective(*Offset, Name, Expr, DirectiveLoc, STI))
     return Error(NameLoc, "unknown relocation name");
 
   return false;

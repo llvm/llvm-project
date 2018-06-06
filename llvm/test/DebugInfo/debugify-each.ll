@@ -13,6 +13,9 @@
 ; Verify that debugify each can be safely used with piping
 ; RUN: opt -debugify-each -O1 < %s | opt -O2 -o /dev/null
 
+; Check that the quiet mode emits no messages.
+; RUN: opt -disable-output -debugify-quiet -debugify-each -O1 < %s 2>&1 | count 0
+
 ; Check that stripped textual IR compares equal before and after applying
 ; debugify.
 ; RUN: opt -O1 < %s -S -o - | \

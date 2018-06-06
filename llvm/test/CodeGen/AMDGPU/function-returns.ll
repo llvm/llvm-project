@@ -349,10 +349,9 @@ define <16 x i8> @v16i8_func_void() #0 {
 ; FIXME: Should pack
 ; GCN-LABEL: {{^}}v4i8_func_void:
 ; GCN: buffer_load_dword v0
+; GCN-DAG: v_lshrrev_b32_e32 v1, 8, v0
 ; GCN-DAG: v_lshrrev_b32_e32 v2, 16, v0
 ; GCN-DAG: v_lshrrev_b32_e32 v3, 24, v0
-; CI-DAG: v_bfe_u32 v1, v0, 8, 8
-; GFX89-DAG: v_lshrrev_b16_e32 v1, 8, v0
 ; GCN: s_setpc_b64
 define <4  x i8> @v4i8_func_void() #0 {
   %ptr = load volatile <4  x i8> addrspace(1)*, <4  x i8> addrspace(1)* addrspace(4)* undef

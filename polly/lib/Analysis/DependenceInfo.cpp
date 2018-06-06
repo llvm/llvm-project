@@ -736,7 +736,8 @@ bool Dependences::isValidSchedule(Scop &S,
   if (LegalityCheckDisabled)
     return true;
 
-  isl_union_map *Dependences = getDependences(TYPE_RAW | TYPE_WAW | TYPE_WAR);
+  isl_union_map *Dependences =
+      (getDependences(TYPE_RAW | TYPE_WAW | TYPE_WAR)).release();
   isl_space *Space = S.getParamSpace().release();
   isl_union_map *Schedule = isl_union_map_empty(Space);
 
@@ -874,28 +875,28 @@ void Dependences::releaseMemory() {
   ReductionDependences.clear();
 }
 
-__isl_give isl_union_map *Dependences::getDependences(int Kinds) const {
+isl::union_map Dependences::getDependences(int Kinds) const {
   assert(hasValidDependences() && "No valid dependences available");
-  isl_space *Space = isl_union_map_get_space(RAW);
-  isl_union_map *Deps = isl_union_map_empty(Space);
+  isl::space Space = isl::manage_copy(RAW).get_space();
+  isl::union_map Deps = Deps.empty(Space);
 
   if (Kinds & TYPE_RAW)
-    Deps = isl_union_map_union(Deps, isl_union_map_copy(RAW));
+    Deps = Deps.unite(isl::manage_copy(RAW));
 
   if (Kinds & TYPE_WAR)
-    Deps = isl_union_map_union(Deps, isl_union_map_copy(WAR));
+    Deps = Deps.unite(isl::manage_copy(WAR));
 
   if (Kinds & TYPE_WAW)
-    Deps = isl_union_map_union(Deps, isl_union_map_copy(WAW));
+    Deps = Deps.unite(isl::manage_copy(WAW));
 
   if (Kinds & TYPE_RED)
-    Deps = isl_union_map_union(Deps, isl_union_map_copy(RED));
+    Deps = Deps.unite(isl::manage_copy(RED));
 
   if (Kinds & TYPE_TC_RED)
-    Deps = isl_union_map_union(Deps, isl_union_map_copy(TC_RED));
+    Deps = Deps.unite(isl::manage_copy(TC_RED));
 
-  Deps = isl_union_map_coalesce(Deps);
-  Deps = isl_union_map_detect_equalities(Deps);
+  Deps = Deps.coalesce();
+  Deps = Deps.detect_equalities();
   return Deps;
 }
 

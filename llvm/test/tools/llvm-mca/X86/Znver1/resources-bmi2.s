@@ -66,14 +66,14 @@ shrx        %rax, (%rbx), %rcx
 # CHECK-NEXT:  1      8     2.00    *                   mulxl	(%rax), %ebx, %ecx
 # CHECK-NEXT:  1      3     1.00                        mulxq	%rax, %rbx, %rcx
 # CHECK-NEXT:  1      8     1.00    *                   mulxq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  1      100    -                          pdepl	%eax, %ebx, %ecx
-# CHECK-NEXT:  1      100    -      *                   pdepl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  1      100    -                          pdepq	%rax, %rbx, %rcx
-# CHECK-NEXT:  1      100    -      *                   pdepq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  1      100    -                          pextl	%eax, %ebx, %ecx
-# CHECK-NEXT:  1      100    -      *                   pextl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  1      100    -                          pextq	%rax, %rbx, %rcx
-# CHECK-NEXT:  1      100    -      *                   pextq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  1      100   0.25                        pdepl	%eax, %ebx, %ecx
+# CHECK-NEXT:  1      100   0.25    *                   pdepl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  1      100   0.25                        pdepq	%rax, %rbx, %rcx
+# CHECK-NEXT:  1      100   0.25    *                   pdepq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  1      100   0.25                        pextl	%eax, %ebx, %ecx
+# CHECK-NEXT:  1      100   0.25    *                   pextl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  1      100   0.25                        pextq	%rax, %rbx, %rcx
+# CHECK-NEXT:  1      100   0.25    *                   pextq	(%rax), %rbx, %rcx
 # CHECK-NEXT:  1      1     0.25                        rorxl	$1, %eax, %ecx
 # CHECK-NEXT:  2      5     0.50    *                   rorxl	$1, (%rax), %ecx
 # CHECK-NEXT:  1      1     0.25                        rorxq	$1, %rax, %rcx

@@ -1007,12 +1007,15 @@ private:
 
     SymbolQualitySignals Quality;
     SymbolRelevanceSignals Relevance;
+    Relevance.Query = SymbolRelevanceSignals::CodeComplete;
     if (auto FuzzyScore = Filter->match(C.Name))
       Relevance.NameMatch = *FuzzyScore;
     else
       return;
-    if (IndexResult)
+    if (IndexResult) {
       Quality.merge(*IndexResult);
+      Relevance.merge(*IndexResult);
+    }
     if (SemaResult) {
       Quality.merge(*SemaResult);
       Relevance.merge(*SemaResult);

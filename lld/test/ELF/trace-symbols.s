@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # Test -y symbol and -trace-symbol=symbol
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t

@@ -29,6 +29,7 @@
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "xray/xray_records.h"
+#include "xray_recursion_guard.h"
 #include "xray_basic_flags.h"
 #include "xray_basic_logging.h"
 #include "xray_defs.h"
@@ -70,7 +71,7 @@ static atomic_uint8_t BasicInitialized{0};
 
 BasicLoggingOptions GlobalOptions;
 
-thread_local volatile bool RecursionGuard = false;
+thread_local atomic_uint8_t Guard{0};
 
 static uint64_t thresholdTicks() XRAY_NEVER_INSTRUMENT {
   static uint64_t TicksPerSec = probeRequiredCPUFeatures()
@@ -165,10 +166,9 @@ void InMemoryRawLog(int32_t FuncId, XRayEntryType Type,
   // Use a simple recursion guard, to handle cases where we're already logging
   // and for one reason or another, this function gets called again in the same
   // thread.
-  if (RecursionGuard)
+  RecursionGuard G(Guard);
+  if (!G)
     return;
-  RecursionGuard = true;
-  auto ExitGuard = at_scope_exit([] { RecursionGuard = false; });
 
   uint8_t CPU = 0;
   uint64_t TSC = ReadTSC(CPU);
@@ -276,10 +276,9 @@ void InMemoryRawLogWithArg(int32_t FuncId, XRayEntryType Type, uint64_t Arg1,
   // Then we write the "we have an argument" record.
   InMemoryRawLog(FuncId, Type, ReadTSC);
 
-  if (RecursionGuard)
+  RecursionGuard G(Guard);
+  if (!G)
     return;
-  RecursionGuard = true;
-  auto ExitGuard = at_scope_exit([] { RecursionGuard = false; });
 
   // And from here on write the arg payload.
   XRayArgPayload R;

@@ -64,6 +64,7 @@
 #include "DWARFDeclContext.h"
 #include "DWARFFormValue.h"
 #include "DWARFUnit.h"
+#include "DebugNamesDWARFIndex.h"
 #include "LogChannelDWARF.h"
 #include "ManualDWARFIndex.h"
 #include "SymbolFileDWARFDebugMap.h"
@@ -111,11 +112,20 @@ namespace {
 
 PropertyDefinition g_properties[] = {
     {"comp-dir-symlink-paths", OptionValue::eTypeFileSpecList, true, 0, nullptr,
-     nullptr, "If the DW_AT_comp_dir matches any of these paths the symbolic "
-              "links will be resolved at DWARF parse time."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
+     nullptr,
+     "If the DW_AT_comp_dir matches any of these paths the symbolic "
+     "links will be resolved at DWARF parse time."},
+    {"ignore-file-indexes", OptionValue::eTypeBoolean, true, 0, nullptr,
+     nullptr,
+     "Ignore indexes present in the object files and always index DWARF "
+     "manually."},
+    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr},
+};
 
-enum { ePropertySymLinkPaths };
+enum {
+  ePropertySymLinkPaths,
+  ePropertyIgnoreIndexes,
+};
 
 class PluginProperties : public Properties {
 public:
@@ -134,6 +144,11 @@ public:
             nullptr, true, ePropertySymLinkPaths);
     assert(option_value);
     return option_value->GetCurrentValue();
+  }
+
+  bool IgnoreFileIndexes() const {
+    return m_collection_sp->GetPropertyAtIndexAsBoolean(
+        nullptr, ePropertyIgnoreIndexes, false);
   }
 };
 
@@ -432,6 +447,7 @@ TypeSystem *SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
 }
 
 void SymbolFileDWARF::InitializeObject() {
+  Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
   ModuleSP module_sp(m_obj_file->GetModule());
   if (module_sp) {
     const SectionList *section_list = module_sp->GetSectionList();
@@ -442,19 +458,38 @@ void SymbolFileDWARF::InitializeObject() {
       m_obj_file->ReadSectionData(section, m_dwarf_data);
   }
 
-  DWARFDataExtractor apple_names, apple_namespaces, apple_types, apple_objc;
-  LoadSectionData(eSectionTypeDWARFAppleNames, apple_names);
-  LoadSectionData(eSectionTypeDWARFAppleNamespaces, apple_namespaces);
-  LoadSectionData(eSectionTypeDWARFAppleTypes, apple_types);
-  LoadSectionData(eSectionTypeDWARFAppleObjC, apple_objc);
+  if (!GetGlobalPluginProperties()->IgnoreFileIndexes()) {
+    DWARFDataExtractor apple_names, apple_namespaces, apple_types, apple_objc;
+    LoadSectionData(eSectionTypeDWARFAppleNames, apple_names);
+    LoadSectionData(eSectionTypeDWARFAppleNamespaces, apple_namespaces);
+    LoadSectionData(eSectionTypeDWARFAppleTypes, apple_types);
+    LoadSectionData(eSectionTypeDWARFAppleObjC, apple_objc);
 
-  m_index = AppleDWARFIndex::Create(*GetObjectFile()->GetModule(), apple_names,
-                                    apple_namespaces, apple_types, apple_objc,
-                                    get_debug_str_data());
+    m_index = AppleDWARFIndex::Create(
+        *GetObjectFile()->GetModule(), apple_names, apple_namespaces,
+        apple_types, apple_objc, get_debug_str_data());
 
-  if (!m_index)
-    m_index = llvm::make_unique<ManualDWARFIndex>(*GetObjectFile()->GetModule(),
-                                                  DebugInfo());
+    if (m_index)
+      return;
+
+    DWARFDataExtractor debug_names;
+    LoadSectionData(eSectionTypeDWARFDebugNames, debug_names);
+    if (debug_names.GetByteSize() > 0) {
+      llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>> index_or =
+          DebugNamesDWARFIndex::Create(*GetObjectFile()->GetModule(),
+                                       debug_names, get_debug_str_data(),
+                                       DebugInfo());
+      if (index_or) {
+        m_index = std::move(*index_or);
+        return;
+      }
+      LLDB_LOG_ERROR(log, index_or.takeError(),
+                     "Unable to read .debug_names data: {0}");
+    }
+  }
+
+  m_index = llvm::make_unique<ManualDWARFIndex>(*GetObjectFile()->GetModule(),
+                                                DebugInfo());
 }
 
 bool SymbolFileDWARF::SupportedVersion(uint16_t version) {
@@ -3685,10 +3720,7 @@ ConstString SymbolFileDWARF::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t SymbolFileDWARF::GetPluginVersion() { return 1; }
 
-void SymbolFileDWARF::DumpIndexes() {
-  StreamFile s(stdout, false);
-  m_index->Dump(s);
-}
+void SymbolFileDWARF::Dump(lldb_private::Stream &s) { m_index->Dump(s); }
 
 SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
   if (m_debug_map_symfile == NULL && !m_debug_map_module_wp.expired()) {

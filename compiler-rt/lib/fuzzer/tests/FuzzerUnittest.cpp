@@ -28,6 +28,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   abort();
 }
 
+TEST(Fuzzer, Basename) {
+  EXPECT_EQ(Basename("foo/bar"), "bar");
+  EXPECT_EQ(Basename("bar"), "bar");
+  EXPECT_EQ(Basename("/bar"), "bar");
+  EXPECT_EQ(Basename("foo/x"), "x");
+  EXPECT_EQ(Basename("foo/"), "");
+}
+
 TEST(Fuzzer, CrossOver) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();

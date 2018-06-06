@@ -1096,6 +1096,30 @@ Value *InstCombiner::SimplifyAddWithRemainder(BinaryOperator &I) {
   return nullptr;
 }
 
+/// Fold
+///   (1 << NBits) - 1
+/// Into:
+///   ~(-(1 << NBits))
+/// Because a 'not' is better for bit-tracking analysis and other transforms
+/// than an 'add'. The new shl is always nsw, and is nuw if old `and` was.
+static Instruction *canonicalizeLowbitMask(BinaryOperator &I,
+                                           InstCombiner::BuilderTy &Builder) {
+  Value *NBits;
+  if (!match(&I, m_Add(m_OneUse(m_Shl(m_One(), m_Value(NBits))), m_AllOnes())))
+    return nullptr;
+
+  Constant *MinusOne = Constant::getAllOnesValue(NBits->getType());
+  Value *NotMask = Builder.CreateShl(MinusOne, NBits, "notmask");
+  // Be wary of constant folding.
+  if (auto *BOp = dyn_cast<BinaryOperator>(NotMask)) {
+    // Always NSW. But NUW propagates from `add`.
+    BOp->setHasNoSignedWrap();
+    BOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+  }
+
+  return BinaryOperator::CreateNot(NotMask, I.getName());
+}
+
 Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
@@ -1346,6 +1370,9 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     Changed = true;
     I.setHasNoUnsignedWrap(true);
   }
+
+  if (Instruction *V = canonicalizeLowbitMask(I, Builder))
+    return V;
 
   return Changed ? &I : nullptr;
 }

@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux /dev/null -o %t.o
 # RUN: ld.lld --script %s %t.o -o %t
 # RUN: llvm-readobj --program-headers -s %t | FileCheck %s

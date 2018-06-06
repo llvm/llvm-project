@@ -32,7 +32,8 @@ public:
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) const override;
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override {
@@ -42,7 +43,10 @@ public:
                         MCInst &Res) const override {
     llvm_unreachable("Not implemented");
   }
-  bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override {
+    return false;
+  }
 
   unsigned getMinimumNopSize() const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
@@ -102,7 +106,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 void AMDGPUAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                   const MCValue &Target,
                                   MutableArrayRef<char> Data, uint64_t Value,
-                                  bool IsResolved) const {
+                                  bool IsResolved,
+                                  const MCSubtargetInfo *STI) const {
   Value = adjustFixupValue(Fixup, Value, &Asm.getContext());
   if (!Value)
     return; // Doesn't change encoding.

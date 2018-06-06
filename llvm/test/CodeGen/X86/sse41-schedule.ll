@@ -603,14 +603,14 @@ define <2 x double> @test_dppd(<2 x double> %a0, <2 x double> %a1, <2 x double> 
 ;
 ; ZNVER1-SSE-LABEL: test_dppd:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    dppd $7, %xmm1, %xmm0 # sched: [100:?]
-; ZNVER1-SSE-NEXT:    dppd $7, (%rdi), %xmm0 # sched: [100:?]
+; ZNVER1-SSE-NEXT:    dppd $7, %xmm1, %xmm0 # sched: [100:0.25]
+; ZNVER1-SSE-NEXT:    dppd $7, (%rdi), %xmm0 # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_dppd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vdppd $7, %xmm1, %xmm0, %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    vdppd $7, (%rdi), %xmm0, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vdppd $7, %xmm1, %xmm0, %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vdppd $7, (%rdi), %xmm0, %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x double> @llvm.x86.sse41.dppd(<2 x double> %a0, <2 x double> %a1, i8 7)
   %2 = load <2 x double>, <2 x double> *%a2, align 16
@@ -706,14 +706,14 @@ define <4 x float> @test_dpps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2
 ;
 ; ZNVER1-SSE-LABEL: test_dpps:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    dpps $7, %xmm1, %xmm0 # sched: [100:?]
-; ZNVER1-SSE-NEXT:    dpps $7, (%rdi), %xmm0 # sched: [100:?]
+; ZNVER1-SSE-NEXT:    dpps $7, %xmm1, %xmm0 # sched: [100:0.25]
+; ZNVER1-SSE-NEXT:    dpps $7, (%rdi), %xmm0 # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_dpps:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vdpps $7, %xmm1, %xmm0, %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    vdpps $7, (%rdi), %xmm0, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vdpps $7, %xmm1, %xmm0, %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vdpps $7, (%rdi), %xmm0, %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.sse41.dpps(<4 x float> %a0, <4 x float> %a1, i8 7)
   %2 = load <4 x float>, <4 x float> *%a2, align 16
@@ -1101,14 +1101,14 @@ define <8 x i16> @test_mpsadbw(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; ZNVER1-SSE-LABEL: test_mpsadbw:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    mpsadbw $7, %xmm1, %xmm0 # sched: [100:?]
-; ZNVER1-SSE-NEXT:    mpsadbw $7, (%rdi), %xmm0 # sched: [100:?]
+; ZNVER1-SSE-NEXT:    mpsadbw $7, %xmm1, %xmm0 # sched: [100:0.25]
+; ZNVER1-SSE-NEXT:    mpsadbw $7, (%rdi), %xmm0 # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_mpsadbw:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vmpsadbw $7, %xmm1, %xmm0, %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    vmpsadbw $7, (%rdi), %xmm0, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vmpsadbw $7, %xmm1, %xmm0, %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vmpsadbw $7, (%rdi), %xmm0, %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8> %a0, <16 x i8> %a1, i8 7)
   %2 = bitcast <8 x i16> %1 to <16 x i8>

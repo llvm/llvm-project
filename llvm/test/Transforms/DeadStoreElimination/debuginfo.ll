@@ -7,17 +7,17 @@ declare noalias i8* @malloc(i32)
 declare void @test_f()
 
 define i32* @test_salvage() {
+; Check that all four original local variables have their values preserved.
 ; CHECK-LABEL: @test_salvage()
 ; CHECK-NEXT: malloc
-; CHECK-NEXT: bitcast
-; CHECK-NEXT: call void @test_f()
-; CHECK-NEXT: store i32 0, i32* %P
-
-; Check that all four original local variables have their values preserved.
 ; CHECK-NEXT: @llvm.dbg.value(metadata i8* %p, metadata ![[p:.*]], metadata !DIExpression())
+; CHECK-NEXT: bitcast
 ; CHECK-NEXT: @llvm.dbg.value(metadata i32* %P, metadata ![[P:.*]], metadata !DIExpression())
 ; CHECK-NEXT: @llvm.dbg.value(metadata i32* %P, metadata ![[DEAD:.*]], metadata !DIExpression(DW_OP_deref))
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32* %P, metadata ![[DEAD2:.*]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 1, DW_OP_stack_value))
+; CHECK-NEXT: call void @test_f()
+; CHECK-NEXT: store i32 0, i32* %P
+
   %p = tail call i8* @malloc(i32 4)
   %P = bitcast i8* %p to i32*
   %DEAD = load i32, i32* %P

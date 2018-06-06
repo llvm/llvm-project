@@ -77,6 +77,9 @@ def _parse_args():
 
   _configure_warnings(args)
 
+  if not args.llvm_mca_binary:
+    raise Error('--llvm-mca-binary value cannot be empty string')
+
   if os.path.basename(args.llvm_mca_binary) != 'llvm-mca':
     _warn('unexpected binary name: {}'.format(args.llvm_mca_binary))
 

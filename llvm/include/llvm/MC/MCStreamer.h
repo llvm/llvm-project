@@ -918,7 +918,8 @@ public:
   /// Returns true if the relocation could not be emitted because Name is not
   /// known.
   virtual bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
-                                  const MCExpr *Expr, SMLoc Loc) {
+                                  const MCExpr *Expr, SMLoc Loc,
+                                  const MCSubtargetInfo &STI) {
     return true;
   }
 

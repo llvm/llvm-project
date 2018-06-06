@@ -31,7 +31,9 @@ public:
   // Characters beyond MaxPat are ignored.
   FuzzyMatcher(llvm::StringRef Pattern);
 
-  // If Word matches the pattern, return a score in [0,1] (higher is better).
+  // If Word matches the pattern, return a score indicating the quality match.
+  // Scores usually fall in a [0,1] range, with 1 being a very good score.
+  // "Super" scores in (1,2] are possible if the pattern is the full word.
   // Characters beyond MaxWord are ignored.
   llvm::Optional<float> match(llvm::StringRef Word);
 

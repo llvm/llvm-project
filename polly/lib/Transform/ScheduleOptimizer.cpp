@@ -728,8 +728,8 @@ static bool containsOnlyMatrMultAcc(isl::map PartialSchedule,
 ///         and false, otherwise.
 static bool containsOnlyMatMulDep(isl::map Schedule, const Dependences *D,
                                   int &Pos) {
-  auto Dep = isl::manage(D->getDependences(Dependences::TYPE_RAW));
-  auto Red = isl::manage(D->getDependences(Dependences::TYPE_RED));
+  isl::union_map Dep = D->getDependences(Dependences::TYPE_RAW);
+  isl::union_map Red = D->getDependences(Dependences::TYPE_RED);
   if (Red)
     Dep = Dep.unite(Red);
   auto DomainSpace = Schedule.get_space().domain();
@@ -1518,8 +1518,8 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
   ScopsProcessed++;
   walkScheduleTreeForStatistics(S.getScheduleTree(), 0);
 
-  isl::union_map Validity = isl::manage(D.getDependences(ValidityKinds));
-  isl::union_map Proximity = isl::manage(D.getDependences(ProximityKinds));
+  isl::union_map Validity = D.getDependences(ValidityKinds);
+  isl::union_map Proximity = D.getDependences(ProximityKinds);
 
   // Simplify the dependences by removing the constraints introduced by the
   // domains. This can speed up the scheduling time significantly, as large

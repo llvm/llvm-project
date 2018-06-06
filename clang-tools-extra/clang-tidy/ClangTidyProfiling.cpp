@@ -9,56 +9,84 @@
 
 #include "ClangTidyProfiling.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
+#include <system_error>
+#include <utility>
 
 #define DEBUG_TYPE "clang-tidy-profiling"
 
 namespace clang {
 namespace tidy {
 
-void ClangTidyProfiling::preprocess() {
-  // Convert from a insertion-friendly map to sort-friendly vector.
-  Timers.clear();
-  Timers.reserve(Records.size());
-  for (const auto &P : Records) {
-    Timers.emplace_back(P.getValue(), P.getKey());
-    Total += P.getValue();
-  }
-  assert(Timers.size() == Records.size() && "Size mismatch after processing");
+ClangTidyProfiling::StorageParams::StorageParams(llvm::StringRef ProfilePrefix,
+                                                 llvm::StringRef SourceFile)
+    : Timestamp(std::chrono::system_clock::now()), SourceFilename(SourceFile) {
+  llvm::SmallString<32> TimestampStr;
+  llvm::raw_svector_ostream OS(TimestampStr);
+  llvm::format_provider<decltype(Timestamp)>::format(Timestamp, OS,
+                                                     "%Y%m%d%H%M%S%N");
 
-  // We want the measurements to be sorted by decreasing time spent.
-  llvm::sort(Timers.begin(), Timers.end());
+  llvm::SmallString<256> FinalPrefix(ProfilePrefix);
+  llvm::sys::path::append(FinalPrefix, TimestampStr);
+
+  // So the full output name is: /ProfilePrefix/timestamp-inputfilename.json
+  StoreFilename = llvm::Twine(FinalPrefix + "-" +
+                              llvm::sys::path::filename(SourceFile) + ".json")
+                      .str();
 }
 
-void ClangTidyProfiling::printProfileData(llvm::raw_ostream &OS) const {
-  std::string Line = "===" + std::string(73, '-') + "===\n";
-  OS << Line;
-
-  if (Total.getUserTime())
-    OS << "   ---User Time---";
-  if (Total.getSystemTime())
-    OS << "   --System Time--";
-  if (Total.getProcessTime())
-    OS << "   --User+System--";
-  OS << "   ---Wall Time---";
-  if (Total.getMemUsed())
-    OS << "  ---Mem---";
-  OS << "  --- Name ---\n";
-
-  // Loop through all of the timing data, printing it out.
-  for (auto I = Timers.rbegin(), E = Timers.rend(); I != E; ++I) {
-    I->first.print(Total, OS);
-    OS << I->second << '\n';
-  }
-
-  Total.print(Total, OS);
-  OS << "Total\n";
-  OS << Line << "\n";
+void ClangTidyProfiling::printUserFriendlyTable(llvm::raw_ostream &OS) {
+  TG->print(OS);
   OS.flush();
 }
 
+void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS) {
+  OS << "{\n";
+  OS << "\"file\": \"" << Storage->SourceFilename << "\",\n";
+  OS << "\"timestamp\": \"" << Storage->Timestamp << "\",\n";
+  OS << "\"profile\": {\n";
+  TG->printJSONValues(OS, "");
+  OS << "\n}\n";
+  OS << "}\n";
+  OS.flush();
+}
+
+void ClangTidyProfiling::storeProfileData() {
+  assert(Storage.hasValue() && "We should have a filename.");
+
+  llvm::SmallString<256> OutputDirectory(Storage->StoreFilename);
+  llvm::sys::path::remove_filename(OutputDirectory);
+  if (std::error_code EC = llvm::sys::fs::create_directories(OutputDirectory)) {
+    llvm::errs() << "Unable to create output directory '" << OutputDirectory
+                 << "': " << EC.message() << "\n";
+    return;
+  }
+
+  std::error_code EC;
+  llvm::raw_fd_ostream OS(Storage->StoreFilename, EC, llvm::sys::fs::F_None);
+  if (EC) {
+    llvm::errs() << "Error opening output file '" << Storage->StoreFilename
+                 << "': " << EC.message() << "\n";
+    return;
+  }
+
+  printAsJSON(OS);
+}
+
+ClangTidyProfiling::ClangTidyProfiling(llvm::Optional<StorageParams> Storage)
+    : Storage(std::move(Storage)) {}
+
 ClangTidyProfiling::~ClangTidyProfiling() {
-  preprocess();
-  printProfileData(llvm::errs());
+  TG.emplace("clang-tidy", "clang-tidy checks profiling", Records);
+
+  if (!Storage.hasValue())
+    printUserFriendlyTable(llvm::errs());
+  else
+    storeProfileData();
 }
 
 } // namespace tidy

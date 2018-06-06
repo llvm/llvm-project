@@ -239,7 +239,7 @@ public:
   getBufferForFile(const FileEntry *Entry, bool isVolatile = false,
                    bool ShouldCloseOpenFile = true);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  getBufferForFile(StringRef Filename);
+  getBufferForFile(StringRef Filename, bool isVolatile = false);
 
   /// Get the 'stat' information for the given \p Path.
   ///

@@ -169,7 +169,7 @@ static std::error_code
 createUniqueEntity(const Twine &Model, int &ResultFD,
                    SmallVectorImpl<char> &ResultPath, bool MakeAbsolute,
                    unsigned Mode, FSEntity Type,
-                   sys::fs::OpenFlags Flags = sys::fs::F_None) {
+                   sys::fs::OpenFlags Flags = sys::fs::F_RW) {
   SmallString<128> ModelStorage;
   Model.toVector(ModelStorage);
 
@@ -756,7 +756,13 @@ std::error_code getUniqueID(const Twine Path, UniqueID &Result) {
 
 std::error_code createUniqueFile(const Twine &Model, int &ResultFd,
                                  SmallVectorImpl<char> &ResultPath,
-                                 unsigned Mode, sys::fs::OpenFlags Flags) {
+                                 unsigned Mode) {
+  return createUniqueEntity(Model, ResultFd, ResultPath, false, Mode, FS_File);
+}
+
+static std::error_code createUniqueFile(const Twine &Model, int &ResultFd,
+                                        SmallVectorImpl<char> &ResultPath,
+                                        unsigned Mode, OpenFlags Flags) {
   return createUniqueEntity(Model, ResultFd, ResultPath, false, Mode, FS_File,
                             Flags);
 }
@@ -775,32 +781,28 @@ std::error_code createUniqueFile(const Twine &Model,
 
 static std::error_code
 createTemporaryFile(const Twine &Model, int &ResultFD,
-                    llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type,
-                    sys::fs::OpenFlags Flags) {
+                    llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type) {
   SmallString<128> Storage;
   StringRef P = Model.toNullTerminatedStringRef(Storage);
   assert(P.find_first_of(separators(Style::native)) == StringRef::npos &&
          "Model must be a simple filename.");
   // Use P.begin() so that createUniqueEntity doesn't need to recreate Storage.
   return createUniqueEntity(P.begin(), ResultFD, ResultPath, true,
-                            owner_read | owner_write, Type, Flags);
+                            owner_read | owner_write, Type);
 }
 
 static std::error_code
 createTemporaryFile(const Twine &Prefix, StringRef Suffix, int &ResultFD,
-                    llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type,
-                    sys::fs::OpenFlags Flags = sys::fs::F_None) {
+                    llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type) {
   const char *Middle = Suffix.empty() ? "-%%%%%%" : "-%%%%%%.";
   return createTemporaryFile(Prefix + Middle + Suffix, ResultFD, ResultPath,
-                             Type, Flags);
+                             Type);
 }
 
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
                                     int &ResultFD,
-                                    SmallVectorImpl<char> &ResultPath,
-                                    sys::fs::OpenFlags Flags) {
-  return createTemporaryFile(Prefix, Suffix, ResultFD, ResultPath, FS_File,
-                             Flags);
+                                    SmallVectorImpl<char> &ResultPath) {
+  return createTemporaryFile(Prefix, Suffix, ResultFD, ResultPath, FS_File);
 }
 
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
@@ -1177,8 +1179,8 @@ Error TempFile::keep() {
 Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode) {
   int FD;
   SmallString<128> ResultPath;
-  if (std::error_code EC = createUniqueFile(Model, FD, ResultPath, Mode,
-                                            sys::fs::F_RW | sys::fs::F_Delete))
+  if (std::error_code EC =
+          createUniqueFile(Model, FD, ResultPath, Mode, F_Delete | F_RW))
     return errorCodeToError(EC);
 
   TempFile Ret(ResultPath, FD);

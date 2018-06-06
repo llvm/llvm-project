@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffreestanding -triple i386-apple-darwin9 -O1 -target-cpu core2 -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding -triple i386-apple-darwin9 -O1 -target-cpu corei7 -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
 typedef short __v4hi __attribute__ ((__vector_size__ (8)));
 
 void test1() {

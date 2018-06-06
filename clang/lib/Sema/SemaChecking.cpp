@@ -2552,10 +2552,28 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
   default:
     return false;
+  case X86::BI__builtin_ia32_vec_ext_v2si:
+  case X86::BI__builtin_ia32_vec_ext_v2di:
+    i = 1; l = 0; u = 1;
+    break;
+  case X86::BI__builtin_ia32_vec_set_v2di:
+    i = 2; l = 0; u = 1;
+    break;
+  case X86::BI__builtin_ia32_vec_ext_v4hi:
+  case X86::BI__builtin_ia32_vec_ext_v4si:
+  case X86::BI__builtin_ia32_vec_ext_v4sf:
+  case X86::BI__builtin_ia32_vec_ext_v4di:
+    i = 1; l = 0; u = 3;
+    break;
   case X86::BI_mm_prefetch:
+  case X86::BI__builtin_ia32_vec_ext_v8hi:
+  case X86::BI__builtin_ia32_vec_ext_v8si:
     i = 1; l = 0; u = 7;
     break;
   case X86::BI__builtin_ia32_sha1rnds4:
+  case X86::BI__builtin_ia32_vec_set_v4hi:
+  case X86::BI__builtin_ia32_vec_set_v4si:
+  case X86::BI__builtin_ia32_vec_set_v4di:
     i = 2; l = 0; u = 3;
     break;
   case X86::BI__builtin_ia32_vpermil2pd:
@@ -2596,12 +2614,16 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vpcomw:
   case X86::BI__builtin_ia32_vpcomd:
   case X86::BI__builtin_ia32_vpcomq:
+  case X86::BI__builtin_ia32_vec_set_v8hi:
+  case X86::BI__builtin_ia32_vec_set_v8si:
     i = 2; l = 0; u = 7;
     break;
   case X86::BI__builtin_ia32_roundps:
   case X86::BI__builtin_ia32_roundpd:
   case X86::BI__builtin_ia32_roundps256:
   case X86::BI__builtin_ia32_roundpd256:
+  case X86::BI__builtin_ia32_vec_ext_v16qi:
+  case X86::BI__builtin_ia32_vec_ext_v16hi:
     i = 1; l = 0; u = 15;
     break;
   case X86::BI__builtin_ia32_roundss:
@@ -2614,7 +2636,12 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_rangeps512_mask:
   case X86::BI__builtin_ia32_getmantsd_round_mask:
   case X86::BI__builtin_ia32_getmantss_round_mask:
+  case X86::BI__builtin_ia32_vec_set_v16qi:
+  case X86::BI__builtin_ia32_vec_set_v16hi:
     i = 2; l = 0; u = 15;
+    break;
+  case X86::BI__builtin_ia32_vec_ext_v32qi:
+    i = 1; l = 0; u = 31;
     break;
   case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmpss:
@@ -2630,6 +2657,7 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_cmppd512_mask:
   case X86::BI__builtin_ia32_cmpsd_mask:
   case X86::BI__builtin_ia32_cmpss_mask:
+  case X86::BI__builtin_ia32_vec_set_v32qi:
     i = 2; l = 0; u = 31;
     break;
   case X86::BI__builtin_ia32_vcvtps2ph:

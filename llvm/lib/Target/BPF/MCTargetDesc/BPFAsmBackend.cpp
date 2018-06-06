@@ -27,7 +27,8 @@ public:
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) const override;
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
@@ -41,7 +42,10 @@ public:
 
   unsigned getNumFixupKinds() const override { return 1; }
 
-  bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override {
+    return false;
+  }
 
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override {}
@@ -64,7 +68,8 @@ bool BPFAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
 void BPFAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) const {
+                               bool IsResolved,
+                               const MCSubtargetInfo *STI) const {
   if (Fixup.getKind() == FK_SecRel_4 || Fixup.getKind() == FK_SecRel_8) {
     assert(Value == 0);
   } else if (Fixup.getKind() == FK_Data_4) {

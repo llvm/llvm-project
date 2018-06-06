@@ -7292,6 +7292,7 @@ ASTContext::getOverloadedTemplateName(UnresolvedSetIterator Begin,
   for (UnresolvedSetIterator I = Begin; I != End; ++I) {
     NamedDecl *D = *I;
     assert(isa<FunctionTemplateDecl>(D) ||
+           isa<UnresolvedUsingValueDecl>(D) ||
            (isa<UsingShadowDecl>(D) &&
             isa<FunctionTemplateDecl>(D->getUnderlyingDecl())));
     *Storage++ = D;

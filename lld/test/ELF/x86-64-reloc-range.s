@@ -1,3 +1,4 @@
+// REQUIRES: x86
 // RUN: llvm-mc %s -o %t.o -triple x86_64-pc-linux -filetype=obj
 // RUN: not ld.lld %t.o -o %t.so -shared 2>&1 | FileCheck %s
 

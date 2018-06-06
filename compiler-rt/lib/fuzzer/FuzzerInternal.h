@@ -12,6 +12,7 @@
 #ifndef LLVM_FUZZER_INTERNAL_H
 #define LLVM_FUZZER_INTERNAL_H
 
+#include "FuzzerDataFlowTrace.h"
 #include "FuzzerDefs.h"
 #include "FuzzerExtFunctions.h"
 #include "FuzzerInterface.h"
@@ -134,6 +135,7 @@ private:
   InputCorpus &Corpus;
   MutationDispatcher &MD;
   FuzzingOptions Options;
+  DataFlowTrace DFT;
 
   system_clock::time_point ProcessStartTime = system_clock::now();
   system_clock::time_point UnitStartTime, UnitStopTime;

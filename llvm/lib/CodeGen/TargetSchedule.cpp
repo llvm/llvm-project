@@ -322,7 +322,7 @@ computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
   return 0;
 }
 
-Optional<double>
+double
 TargetSchedModel::computeReciprocalThroughput(const MachineInstr *MI) const {
   if (hasInstrItineraries()) {
     unsigned SchedClass = MI->getDesc().getSchedClass();
@@ -332,10 +332,11 @@ TargetSchedModel::computeReciprocalThroughput(const MachineInstr *MI) const {
 
   if (hasInstrSchedModel())
     return MCSchedModel::getReciprocalThroughput(*STI, *resolveSchedClass(MI));
-  return Optional<double>();
+
+  return 0.0;
 }
 
-Optional<double>
+double
 TargetSchedModel::computeReciprocalThroughput(unsigned Opcode) const {
   unsigned SchedClass = TII->get(Opcode).getSchedClass();
   if (hasInstrItineraries())
@@ -346,10 +347,11 @@ TargetSchedModel::computeReciprocalThroughput(unsigned Opcode) const {
     if (SCDesc.isValid() && !SCDesc.isVariant())
       return MCSchedModel::getReciprocalThroughput(*STI, SCDesc);
   }
-  return Optional<double>();
+
+  return 0.0;
 }
 
-Optional<double>
+double
 TargetSchedModel::computeReciprocalThroughput(const MCInst &MI) const {
   if (hasInstrSchedModel())
     return SchedModel.getReciprocalThroughput(*STI, *TII, MI);

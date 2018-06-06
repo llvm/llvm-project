@@ -447,3 +447,15 @@ namespace DependentUnresolvedUsingTemplate {
     xb.h(); // expected-note {{instantiation of}}
   }
 }
+
+namespace PR37680 {
+  template <class a> struct b : a {
+    using a::add;
+    template<int> int add() { return this->template add(0); }
+  };
+  struct a {
+    template<typename T = void> int add(...);
+    void add(int);
+  };
+  int f(b<a> ba) { return ba.add<0>(); }
+}

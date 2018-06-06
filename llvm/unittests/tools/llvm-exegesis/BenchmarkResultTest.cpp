@@ -45,8 +45,8 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
 
   ToDisk.Key.OpcodeName = "name";
   ToDisk.Key.Instructions.push_back(llvm::MCInstBuilder(kInstrId));
-  ToDisk.Key.Mode = InstructionBenchmarkKey::Latency;
   ToDisk.Key.Config = "config";
+  ToDisk.Mode = InstructionBenchmark::Latency;
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";
   ToDisk.NumRepetitions = 1;
@@ -69,8 +69,8 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
     EXPECT_EQ(FromDisk.Key.OpcodeName, ToDisk.Key.OpcodeName);
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
-    EXPECT_EQ(FromDisk.Key.Mode, ToDisk.Key.Mode);
     EXPECT_EQ(FromDisk.Key.Config, ToDisk.Key.Config);
+    EXPECT_EQ(FromDisk.Mode, ToDisk.Mode);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
     EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
     EXPECT_EQ(FromDisk.NumRepetitions, ToDisk.NumRepetitions);
@@ -87,8 +87,8 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
     EXPECT_EQ(FromDisk.Key.OpcodeName, ToDisk.Key.OpcodeName);
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
-    EXPECT_EQ(FromDisk.Key.Mode, ToDisk.Key.Mode);
     EXPECT_EQ(FromDisk.Key.Config, ToDisk.Key.Config);
+    EXPECT_EQ(FromDisk.Mode, ToDisk.Mode);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
     EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
     EXPECT_EQ(FromDisk.NumRepetitions, ToDisk.NumRepetitions);

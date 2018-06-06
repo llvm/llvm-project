@@ -10,6 +10,7 @@
 #include "TestFS.h"
 #include "index/FileIndex.h"
 #include "index/MemIndex.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
@@ -49,7 +50,6 @@ std::unique_ptr<SymbolIndex> TestTU::index() const {
   return MemIndex::build(headerSymbols());
 }
 
-// Look up a symbol by qualified name, which must be unique.
 const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {
   const Symbol *Result = nullptr;
   for (const Symbol &S : Slab) {
@@ -90,6 +90,27 @@ const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
     Scope = &cast<DeclContext>(LookupDecl(*Scope, *NameIt));
   }
   return LookupDecl(*Scope, Components.back());
+}
+
+const NamedDecl &findAnyDecl(ParsedAST &AST, llvm::StringRef Name) {
+  struct Visitor : RecursiveASTVisitor<Visitor> {
+    llvm::StringRef Name;
+    llvm::SmallVector<const NamedDecl *, 1> Decls;
+    bool VisitNamedDecl(const NamedDecl *ND) {
+      if (auto *ID = ND->getIdentifier())
+        if (ID->getName() == Name)
+          Decls.push_back(ND);
+      return true;
+    }
+  } Visitor;
+  Visitor.Name = Name;
+  for (Decl *D : AST.getLocalTopLevelDecls())
+    Visitor.TraverseDecl(D);
+  if (Visitor.Decls.size() != 1) {
+    ADD_FAILURE() << Visitor.Decls.size() << " symbols named " << Name;
+    assert(Visitor.Decls.size() == 1);
+  }
+  return *Visitor.Decls.front();
 }
 
 } // namespace clangd

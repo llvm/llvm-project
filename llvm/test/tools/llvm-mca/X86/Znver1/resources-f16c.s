@@ -22,14 +22,14 @@ vcvtps2ph   $0, %ymm0, (%rax)
 # CHECK-NEXT: [6]: HasSideEffects
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      100    -                          vcvtph2ps	%xmm0, %xmm2
-# CHECK-NEXT:  1      100    -      *                   vcvtph2ps	(%rax), %xmm2
-# CHECK-NEXT:  1      100    -                          vcvtph2ps	%xmm0, %ymm2
-# CHECK-NEXT:  1      100    -      *                   vcvtph2ps	(%rax), %ymm2
-# CHECK-NEXT:  1      100    -                          vcvtps2ph	$0, %xmm0, %xmm2
-# CHECK-NEXT:  1      100    -             *            vcvtps2ph	$0, %xmm0, (%rax)
-# CHECK-NEXT:  1      100    -                          vcvtps2ph	$0, %ymm0, %xmm2
-# CHECK-NEXT:  1      100    -             *            vcvtps2ph	$0, %ymm0, (%rax)
+# CHECK-NEXT:  1      100   0.25                        vcvtph2ps	%xmm0, %xmm2
+# CHECK-NEXT:  1      100   0.25    *                   vcvtph2ps	(%rax), %xmm2
+# CHECK-NEXT:  1      100   0.25                        vcvtph2ps	%xmm0, %ymm2
+# CHECK-NEXT:  1      100   0.25    *                   vcvtph2ps	(%rax), %ymm2
+# CHECK-NEXT:  1      100   0.25                        vcvtps2ph	$0, %xmm0, %xmm2
+# CHECK-NEXT:  1      100   0.25           *            vcvtps2ph	$0, %xmm0, (%rax)
+# CHECK-NEXT:  1      100   0.25                        vcvtps2ph	$0, %ymm0, %xmm2
+# CHECK-NEXT:  1      100   0.25           *            vcvtps2ph	$0, %ymm0, (%rax)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ZnAGU0
