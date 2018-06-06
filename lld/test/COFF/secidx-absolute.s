@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-windows-msvc -o %t.obj
 # RUN: lld-link -entry:main -nodefaultlib %t.obj -out:%t.exe
 # RUN: llvm-readobj %t.exe -sections -section-data | FileCheck %s

@@ -935,8 +935,9 @@ void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Mov->addRegisterKilled(SrcReg, TRI);
 }
 
-bool ARMBaseInstrInfo::isCopyInstr(const MachineInstr &MI, MachineOperand &Src,
-                                   MachineOperand &Dest) const {
+bool ARMBaseInstrInfo::isCopyInstr(const MachineInstr &MI,
+                                   const MachineOperand *&Src,
+                                   const MachineOperand *&Dest) const {
   // VMOVRRD is also a copy instruction but it requires
   // special way of handling. It is more complex copy version
   // and since that we are not considering it. For recognition
@@ -948,8 +949,8 @@ bool ARMBaseInstrInfo::isCopyInstr(const MachineInstr &MI, MachineOperand &Src,
       (MI.getOpcode() == ARM::VORRq &&
        MI.getOperand(1).getReg() != MI.getOperand(2).getReg()))
     return false;
-  Dest = MI.getOperand(0);
-  Src = MI.getOperand(1);
+  Dest = &MI.getOperand(0);
+  Src = &MI.getOperand(1);
   return true;
 }
 

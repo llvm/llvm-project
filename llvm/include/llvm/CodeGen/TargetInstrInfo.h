@@ -849,8 +849,9 @@ public:
   /// If the specific machine instruction is a instruction that moves/copies
   /// value from one register to another register return true along with
   /// @Source machine operand and @Destination machine operand.
-  virtual bool isCopyInstr(const MachineInstr &MI, MachineOperand &Source,
-                           MachineOperand &Destination) const {
+  virtual bool isCopyInstr(const MachineInstr &MI,
+                           const MachineOperand *&SourceOpNum,
+                           const MachineOperand *&Destination) const {
     return false;
   }
 

@@ -10,10 +10,12 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYPROFILING_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYPROFILING_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -21,16 +23,33 @@ namespace clang {
 namespace tidy {
 
 class ClangTidyProfiling {
-  // Time is first to allow for sorting by it.
-  std::vector<std::pair<llvm::TimeRecord, llvm::StringRef>> Timers;
-  llvm::TimeRecord Total;
+public:
+  struct StorageParams {
+    llvm::sys::TimePoint<> Timestamp;
+    std::string SourceFilename;
+    std::string StoreFilename;
 
-  void preprocess();
+    StorageParams() = default;
 
-  void printProfileData(llvm::raw_ostream &OS) const;
+    StorageParams(llvm::StringRef ProfilePrefix, llvm::StringRef SourceFile);
+  };
+
+private:
+  llvm::Optional<llvm::TimerGroup> TG;
+
+  llvm::Optional<StorageParams> Storage;
+
+  void printUserFriendlyTable(llvm::raw_ostream &OS);
+  void printAsJSON(llvm::raw_ostream &OS);
+
+  void storeProfileData();
 
 public:
   llvm::StringMap<llvm::TimeRecord> Records;
+
+  ClangTidyProfiling() = default;
+
+  ClangTidyProfiling(llvm::Optional<StorageParams> Storage);
 
   ~ClangTidyProfiling();
 };

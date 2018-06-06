@@ -34,8 +34,6 @@ struct InstructionBenchmarkKey {
   // The LLVM opcode name.
   std::string OpcodeName; // FIXME: Deprecated, use Instructions below.
   std::vector<llvm::MCInst> Instructions;
-  enum ModeE { Unknown, Latency, Uops };
-  ModeE Mode;
   // An opaque configuration, that can be used to separate several benchmarks of
   // the same instruction under different configurations.
   std::string Config;
@@ -50,6 +48,8 @@ struct BenchmarkMeasure {
 // The result of an instruction benchmark.
 struct InstructionBenchmark {
   InstructionBenchmarkKey Key;
+  enum ModeE { Unknown, Latency, Uops };
+  ModeE Mode;
   std::string CpuName;
   std::string LLVMTriple;
   int NumRepetitions = 0;

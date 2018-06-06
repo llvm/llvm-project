@@ -201,7 +201,16 @@ protected:
       : MCEncodedFragmentWithContents<ContentsSize>(FType, HasInstructions,
                                                     Sec) {}
 
+  /// STI - The MCSubtargetInfo in effect when the instruction was encoded.
+  /// must be non-null for instructions.
+  const MCSubtargetInfo *STI = nullptr;
+
 public:
+
+  /// Retrieve the MCSubTargetInfo in effect when the instruction was encoded.
+  /// Guaranteed to be non-null if hasInstructions() == true
+  const MCSubtargetInfo *getSubtargetInfo() const { return STI; }
+
   using const_fixup_iterator = SmallVectorImpl<MCFixup>::const_iterator;
   using fixup_iterator = SmallVectorImpl<MCFixup>::iterator;
 
@@ -228,7 +237,12 @@ public:
   MCDataFragment(MCSection *Sec = nullptr)
       : MCEncodedFragmentWithFixups<32, 4>(FT_Data, false, Sec) {}
 
-  void setHasInstructions(bool V) { HasInstructions = V; }
+  /// Record that the fragment contains instructions with the MCSubtargetInfo in
+  /// effect when the instruction was encoded.
+  void setHasInstructions(const MCSubtargetInfo &STI) {
+    HasInstructions = true;
+    this->STI = &STI;
+  }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Data;
@@ -259,19 +273,14 @@ class MCRelaxableFragment : public MCEncodedFragmentWithFixups<8, 1> {
   /// Inst - The instruction this is a fragment for.
   MCInst Inst;
 
-  /// STI - The MCSubtargetInfo in effect when the instruction was encoded.
-  const MCSubtargetInfo &STI;
-
 public:
   MCRelaxableFragment(const MCInst &Inst, const MCSubtargetInfo &STI,
                       MCSection *Sec = nullptr)
       : MCEncodedFragmentWithFixups(FT_Relaxable, true, Sec),
-        Inst(Inst), STI(STI) {}
+        Inst(Inst) { this->STI = &STI; }
 
   const MCInst &getInst() const { return Inst; }
   void setInst(const MCInst &Value) { Inst = Value; }
-
-  const MCSubtargetInfo &getSubtargetInfo() { return STI; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Relaxable;

@@ -67,7 +67,7 @@ define void @f4(i32 %a1, i32 %a2) nounwind {
   ret void
 }
 
-; CHECK-DAG: .zerofill __DATA,__bss,[[SET]],16,3
+; CHECK-DAG: .zerofill __DATA,__bss,[[SET]],16,2
 ; CHECK-DAG: .zerofill __DATA,__bss,_m2,4,2
 ; CHECK-DAG: .zerofill __DATA,__bss,_n2,4,2
 ; CHECK-DAG: .zerofill __DATA,__bss,_n4,4,2

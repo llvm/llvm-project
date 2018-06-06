@@ -41,6 +41,7 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
   EXPECT_FALSE(Quality.Deprecated);
   EXPECT_EQ(Quality.SemaCCPriority, SymbolQualitySignals().SemaCCPriority);
   EXPECT_EQ(Quality.References, SymbolQualitySignals().References);
+  EXPECT_EQ(Quality.Category, SymbolQualitySignals::Variable);
 
   Symbol F = findSymbol(Symbols, "f");
   F.References = 24; // TestTU doesn't count references, so fake it.
@@ -49,12 +50,14 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
   EXPECT_FALSE(Quality.Deprecated); // FIXME: Include deprecated bit in index.
   EXPECT_EQ(Quality.SemaCCPriority, SymbolQualitySignals().SemaCCPriority);
   EXPECT_EQ(Quality.References, 24u);
+  EXPECT_EQ(Quality.Category, SymbolQualitySignals::Function);
 
   Quality = {};
   Quality.merge(CodeCompletionResult(&findDecl(AST, "f"), /*Priority=*/42));
   EXPECT_TRUE(Quality.Deprecated);
   EXPECT_EQ(Quality.SemaCCPriority, 42u);
   EXPECT_EQ(Quality.References, SymbolQualitySignals().References);
+  EXPECT_EQ(Quality.Category, SymbolQualitySignals::Function);
 }
 
 TEST(QualityTests, SymbolRelevanceSignalExtraction) {
@@ -123,6 +126,12 @@ TEST(QualityTests, SymbolQualitySignalsSanity) {
   HighPriority.SemaCCPriority = 20;
   EXPECT_GT(HighPriority.evaluate(), Default.evaluate());
   EXPECT_LT(LowPriority.evaluate(), Default.evaluate());
+
+  SymbolQualitySignals Variable, Macro;
+  Variable.Category = SymbolQualitySignals::Variable;
+  Macro.Category = SymbolQualitySignals::Macro;
+  EXPECT_GT(Variable.evaluate(), Default.evaluate());
+  EXPECT_LT(Macro.evaluate(), Default.evaluate());
 }
 
 TEST(QualityTests, SymbolRelevanceSignalsSanity) {

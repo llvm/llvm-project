@@ -92,9 +92,12 @@ public:
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be
   /// reported via \p Ctx.
+  /// The  \p STI is present only for fragments of type MCRelaxableFragment and
+  /// MCDataFragment with hasInstructions() == true.
   virtual void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                           const MCValue &Target, MutableArrayRef<char> Data,
-                          uint64_t Value, bool IsResolved) const = 0;
+                          uint64_t Value, bool IsResolved,
+                          const MCSubtargetInfo *STI) const = 0;
 
   /// Check whether the given target requires emitting differences of two
   /// symbols as a set of relocations.
@@ -108,7 +111,10 @@ public:
   /// Check whether the given instruction may need relaxation.
   ///
   /// \param Inst - The instruction to test.
-  virtual bool mayNeedRelaxation(const MCInst &Inst) const = 0;
+  /// \param STI - The MCSubtargetInfo in effect when the instruction was
+  /// encoded.
+  virtual bool mayNeedRelaxation(const MCInst &Inst,
+                                 const MCSubtargetInfo &STI) const = 0;
 
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.

@@ -395,17 +395,17 @@ def print_most_recent_reviews(phab, days, filter_reviewers):
         print(msg)
 
     newest_reviews = get_most_recent_reviews(days)
-    add_msg("These are the reviews that look interesting to be reviewed. " +
-            "The report below has 2 sections. The first " +
-            "section is organized per review; the second section is organized "
-            + "per potential reviewer.\n")
+    add_msg(u"These are the reviews that look interesting to be reviewed. " +
+            u"The report below has 2 sections. The first " +
+            u"section is organized per review; the second section is organized "
+            + u"per potential reviewer.\n")
     oldest_review = newest_reviews[-1] if len(newest_reviews) > 0 else None
     oldest_datetime = \
         datetime.fromtimestamp(oldest_review.dateModified) \
         if oldest_review else None
-    add_msg(("The report below is based on analyzing the reviews that got " +
-             "touched in the past {0} days (since {1}). " +
-             "The script found {2} such reviews.\n").format(
+    add_msg((u"The report below is based on analyzing the reviews that got " +
+             u"touched in the past {0} days (since {1}). " +
+             u"The script found {2} such reviews.\n").format(
                  days, oldest_datetime, len(newest_reviews)))
     reviewer2reviews_and_scores = {}
     for i, review in enumerate(newest_reviews):
@@ -413,13 +413,13 @@ def print_most_recent_reviews(phab, days, filter_reviewers):
         matched_reviewers = filter_reviewers(matched_reviewers)
         if len(matched_reviewers) == 0:
             continue
-        add_msg(("{0:>3}. https://reviews.llvm.org/D{1} by {2}\n     {3}\n" +
-                 "     Last updated on {4}").format(
+        add_msg((u"{0:>3}. https://reviews.llvm.org/D{1} by {2}\n     {3}\n" +
+                 u"     Last updated on {4}").format(
                      i, review.id,
                      get_real_name_from_author(review.author), review.title,
                      datetime.fromtimestamp(review.dateModified)))
         for reviewer, scores in matched_reviewers:
-            add_msg("    potential reviewer {0}, score {1}".format(
+            add_msg(u"    potential reviewer {0}, score {1}".format(
                 reviewer,
                 "(" + "/".join(["{0:.1f}%".format(s) for s in scores]) + ")"))
             if reviewer not in reviewer2reviews_and_scores:
@@ -430,10 +430,10 @@ def print_most_recent_reviews(phab, days, filter_reviewers):
     for reviewer in sorted(reviewer2reviews_and_scores.keys()):
         reviews_and_scores = reviewer2reviews_and_scores[reviewer]
         reviews_and_scores.sort(key=lambda rs: rs[1], reverse=True)
-        add_msg("\n\nSUMMARY FOR {0} (found {1} reviews):".format(
+        add_msg(u"\n\nSUMMARY FOR {0} (found {1} reviews):".format(
             reviewer, len(reviews_and_scores)))
         for review, scores in reviews_and_scores:
-            add_msg("[{0}] https://reviews.llvm.org/D{1} '{2}' by {3}".format(
+            add_msg(u"[{0}] https://reviews.llvm.org/D{1} '{2}' by {3}".format(
                 "/".join(["{0:.1f}%".format(s) for s in scores]), review.id,
                 review.title, get_real_name_from_author(review.author)))
     return "\n".join(msgs)
@@ -539,7 +539,7 @@ def find_reviewers_for_review(review):
     # Show progress, as this is a slow operation:
     sys.stdout.write('.')
     sys.stdout.flush()
-    logging.debug("matched_reviewers: {0}".format(matched_reviewers))
+    logging.debug(u"matched_reviewers: {0}".format(matched_reviewers))
     return matched_reviewers
 
 

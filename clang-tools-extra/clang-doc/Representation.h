@@ -73,6 +73,11 @@ struct Reference {
   Reference(SymbolID USR, StringRef Name, InfoType IT)
       : USR(USR), Name(Name), RefType(IT) {}
 
+  bool operator==(const Reference &Other) const {
+    return std::tie(USR, Name, RefType) ==
+           std::tie(Other.USR, Other.Name, Other.RefType);
+  }
+
   SymbolID USR = SymbolID(); // Unique identifer for referenced decl
   SmallString<16> Name;      // Name of type (possibly unresolved).
   InfoType RefType = InfoType::IT_default; // Indicates the type of this
@@ -87,6 +92,8 @@ struct TypeInfo {
       : Type(Type, Field, IT) {}
   TypeInfo(llvm::StringRef RefName) : Type(RefName) {}
 
+  bool operator==(const TypeInfo &Other) const { return Type == Other.Type; }
+
   Reference Type; // Referenced type in this info.
 };
 
@@ -98,6 +105,10 @@ struct FieldTypeInfo : public TypeInfo {
       : TypeInfo(Type, Field, IT), Name(Name) {}
   FieldTypeInfo(llvm::StringRef RefName, llvm::StringRef Name)
       : TypeInfo(RefName), Name(Name) {}
+
+  bool operator==(const FieldTypeInfo &Other) const {
+    return std::tie(Type, Name) == std::tie(Other.Type, Other.Name);
+  }
 
   SmallString<16> Name; // Name associated with this info.
 };
@@ -112,6 +123,11 @@ struct MemberTypeInfo : public FieldTypeInfo {
                  AccessSpecifier Access)
       : FieldTypeInfo(RefName, Name), Access(Access) {}
 
+  bool operator==(const MemberTypeInfo &Other) const {
+    return std::tie(Type, Name, Access) ==
+           std::tie(Other.Type, Other.Name, Other.Access);
+  }
+
   AccessSpecifier Access = AccessSpecifier::AS_none; // Access level associated
                                                      // with this info (public,
                                                      // protected, private,
@@ -122,6 +138,11 @@ struct Location {
   Location() = default;
   Location(int LineNumber, SmallString<16> Filename)
       : LineNumber(LineNumber), Filename(std::move(Filename)) {}
+
+  bool operator==(const Location &Other) const {
+    return std::tie(LineNumber, Filename) ==
+           std::tie(Other.LineNumber, Other.Filename);
+  }
 
   int LineNumber;           // Line number of this Location.
   SmallString<32> Filename; // File for this Location.
@@ -173,10 +194,9 @@ struct FunctionInfo : public SymbolInfo {
   bool IsMethod = false; // Indicates whether this function is a class method.
   Reference Parent;      // Reference to the parent class decl for this method.
   TypeInfo ReturnType;   // Info about the return type of this function.
-  llvm::SmallVector<FieldTypeInfo, 4> Params;        // List of parameters.
-  AccessSpecifier Access = AccessSpecifier::AS_none; // Access level for this
-                                                     // method (public, private,
-                                                     // protected, none).
+  llvm::SmallVector<FieldTypeInfo, 4> Params; // List of parameters.
+  // Access level for this method (public, private, protected, none).
+  AccessSpecifier Access = AccessSpecifier::AS_none;
 };
 
 // TODO: Expand to allow for documenting templating, inheritance access,

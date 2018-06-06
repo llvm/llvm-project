@@ -273,10 +273,10 @@ TEST_F(WorkspaceSymbolsTest, WithLimit) {
       #include "foo.h"
       )cpp");
   EXPECT_THAT(getSymbols("foo"),
-              ElementsAre(AllOf(Named("foo"), InContainer(""),
-                                WithKind(SymbolKind::Variable)),
-                          AllOf(Named("foo2"), InContainer(""),
-                                WithKind(SymbolKind::Variable))));
+              UnorderedElementsAre(AllOf(Named("foo"), InContainer(""),
+                                         WithKind(SymbolKind::Variable)),
+                                   AllOf(Named("foo2"), InContainer(""),
+                                         WithKind(SymbolKind::Variable))));
 
   Limit = 1;
   EXPECT_THAT(getSymbols("foo"),

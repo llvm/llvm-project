@@ -56,10 +56,6 @@ public:
     SymbolFilePDB::Initialize();
 
     m_pdb_test_exe = GetInputFilePath("test-pdb.exe");
-    m_function_level_linking_test_exe =
-        GetInputFilePath("test-pdb-function-level-linking.exe");
-    m_splitted_function_test_exe =
-        GetInputFilePath("test-pdb-splitted-function.exe");
     m_types_test_exe = GetInputFilePath("test-pdb-types.exe");
   }
 
@@ -77,8 +73,6 @@ public:
 
 protected:
   std::string m_pdb_test_exe;
-  std::string m_function_level_linking_test_exe;
-  std::string m_splitted_function_test_exe;
   std::string m_types_test_exe;
 
   bool FileSpecMatchesAsBaseOrFull(const FileSpec &left,
@@ -358,56 +352,6 @@ TEST_F(SymbolFilePDBTests, TestLineTablesMatchSpecific) {
 
   VerifyLineEntry(module, sc, source_file, *lt, 9, 0x401045);
   VerifyLineEntry(module, sc, header1, *lt, 9, 0x401090);
-}
-
-void TestLineTableConsistency(llvm::StringRef exe_path, llvm::StringRef source_name)
-{
-  // All line entries of compile unit's line table must be consistent
-  // even if compiled sources are not continuous in the binary file.
-  FileSpec fspec(exe_path, false);
-  ArchSpec aspec("i686-pc-windows");
-  lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
-  SymbolVendor *plugin = module->GetSymbolVendor();
-  SymbolFile *symfile = plugin->GetSymbolFile();
-  FileSpec source_file(source_name, false);
-  uint32_t scope = lldb::eSymbolContextCompUnit | lldb::eSymbolContextLineEntry;
-  SymbolContextList sc_list;
-  uint32_t count =
-      symfile->ResolveSymbolContext(source_file, 0, true, scope, sc_list);
-  EXPECT_EQ(1u, count);
-
-  SymbolContext sc;
-  EXPECT_TRUE(sc_list.GetContextAtIndex(0, sc));
-
-  LineTable *lt = sc.comp_unit->GetLineTable();
-  EXPECT_NE(nullptr, lt);
-
-  count = lt->GetSize();
-  EXPECT_LT(0u, count);
-
-  LineEntry le;
-  EXPECT_TRUE(lt->GetLineEntryAtIndex(0, le));
-  for (int i = 1; i < count; i++)
-  {
-    lldb::addr_t curr_end =
-        le.range.GetBaseAddress().GetFileAddress() + le.range.GetByteSize();
-
-    EXPECT_TRUE(lt->GetLineEntryAtIndex(i, le));
-
-    EXPECT_LE(curr_end, le.range.GetBaseAddress().GetFileAddress());
-  }
-}
-
-TEST_F(SymbolFilePDBTests, TestFunctionLevelLinking) {
-  TestLineTableConsistency(
-      m_function_level_linking_test_exe,
-      "test-pdb-function-level-linking.cpp");
-}
-
-TEST_F(SymbolFilePDBTests, TestSplittedFunction) {
-  TestLineTableConsistency(
-      m_splitted_function_test_exe,
-      "test-pdb-splitted-function.cpp");
 }
 
 TEST_F(SymbolFilePDBTests, TestSimpleClassTypes) {

@@ -461,6 +461,8 @@ let hasSideEffects = 0, isReMaterializable = 1, isPseudo = 1,
                  V6_veqw.Itinerary, TypeCVI_VA>;
   def PS_qfalse: InstHexagon<(outs HvxQR:$Qd), (ins), "", [], "",
                  V6_vgtw.Itinerary, TypeCVI_VA>;
+  def PS_vdd0:   InstHexagon<(outs HvxWR:$Vd), (ins), "", [], "",
+                 V6_vsubw_dv.Itinerary, TypeCVI_VA_DV>;
 }
 
 // Store predicate.

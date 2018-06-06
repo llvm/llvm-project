@@ -141,8 +141,8 @@ static llvm::Error makeError(llvm::Twine Msg) {
 
 UopsBenchmarkRunner::~UopsBenchmarkRunner() = default;
 
-InstructionBenchmarkKey::ModeE UopsBenchmarkRunner::getMode() const {
-  return InstructionBenchmarkKey::Uops;
+InstructionBenchmark::ModeE UopsBenchmarkRunner::getMode() const {
+  return InstructionBenchmark::Uops;
 }
 
 llvm::Expected<std::vector<llvm::MCInst>>

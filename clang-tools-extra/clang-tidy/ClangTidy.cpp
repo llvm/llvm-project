@@ -363,7 +363,8 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
 
   std::unique_ptr<ClangTidyProfiling> Profiling;
   if (Context.getEnableProfiling()) {
-    Profiling = llvm::make_unique<ClangTidyProfiling>();
+    Profiling = llvm::make_unique<ClangTidyProfiling>(
+        Context.getProfileStorageParams());
     FinderOptions.CheckProfiling.emplace(Profiling->Records);
   }
 
@@ -492,7 +493,7 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
                   const CompilationDatabase &Compilations,
                   ArrayRef<std::string> InputFiles,
                   llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
-                  bool EnableCheckProfile) {
+                  bool EnableCheckProfile, llvm::StringRef StoreCheckProfile) {
   ClangTool Tool(Compilations, InputFiles,
                  std::make_shared<PCHContainerOperations>(), BaseFS);
 
@@ -533,6 +534,7 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
   Tool.appendArgumentsAdjuster(PerFileExtraArgumentsInserter);
   Tool.appendArgumentsAdjuster(PluginArgumentsRemover);
   Context.setEnableProfiling(EnableCheckProfile);
+  Context.setProfileStoragePrefix(StoreCheckProfile);
 
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
 

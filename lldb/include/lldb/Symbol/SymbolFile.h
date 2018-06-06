@@ -200,6 +200,8 @@ public:
   //------------------------------------------------------------------
   virtual void SectionFileAddressesChanged() {}
 
+  virtual void Dump(Stream &s) {}
+
 protected:
   ObjectFile *m_obj_file; // The object file that symbols can be extracted from.
   uint32_t m_abilities;

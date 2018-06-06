@@ -1153,6 +1153,14 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MBB.erase(MI);
       return true;
     }
+    case Hexagon::PS_vdd0: {
+      unsigned Vd = MI.getOperand(0).getReg();
+      BuildMI(MBB, MI, DL, get(Hexagon::V6_vsubw_dv), Vd)
+        .addReg(Vd, RegState::Undef)
+        .addReg(Vd, RegState::Undef);
+      MBB.erase(MI);
+      return true;
+    }
     case Hexagon::PS_vmulw: {
       // Expand a 64-bit vector multiply into 2 32-bit scalar multiplies.
       unsigned DstReg = MI.getOperand(0).getReg();

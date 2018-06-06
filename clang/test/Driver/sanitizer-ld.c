@@ -646,6 +646,7 @@
 // RUN:     -target x86_64-scei-ps4 -fuse-ld=ld \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-PS4 %s
+// CHECK-UBSAN-PS4: --dependent-lib=libSceDbgUBSanitizer_stub_weak.a
 // CHECK-UBSAN-PS4: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-UBSAN-PS4: -lSceDbgUBSanitizer_stub_weak
 
@@ -653,6 +654,7 @@
 // RUN:     -target x86_64-scei-ps4 -fuse-ld=ld \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-PS4 %s
+// CHECK-ASAN-PS4: --dependent-lib=libSceDbgAddressSanitizer_stub_weak.a
 // CHECK-ASAN-PS4: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-ASAN-PS4: -lSceDbgAddressSanitizer_stub_weak
 
@@ -660,6 +662,9 @@
 // RUN:     -target x86_64-scei-ps4 -fuse-ld=ld \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-AUBSAN-PS4 %s
+// CHECK-AUBSAN-PS4-NOT: --dependent-lib=libSceDbgUBSanitizer_stub_weak.a
+// CHECK-AUBSAN-PS4: --dependent-lib=libSceDbgAddressSanitizer_stub_weak.a
+// CHECK-AUBSAN-PS4-NOT: --dependent-lib=libSceDbgUBSanitizer_stub_weak.a
 // CHECK-AUBSAN-PS4: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-AUBSAN-PS4: -lSceDbgAddressSanitizer_stub_weak
 

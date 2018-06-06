@@ -21,13 +21,13 @@ define void @f1(i32 %a1, i32 %a2, i32 %a3) {
 }
 
 ;CHECK:	.type	.L_MergedGlobals,@object // @_MergedGlobals
-;CHECK: .p2align	4
+;CHECK: .p2align	2
 ;CHECK: .L_MergedGlobals:
 ;CHECK: .size	.L_MergedGlobals, 4004
 
 ;CHECK-APPLE-IOS: .zerofill __DATA,__common,_y,4000,2
 
-;CHECK-APPLE-IOS: .p2align	4
+;CHECK-APPLE-IOS: .p2align	2
 ;CHECK-APPLE-IOS:  __MergedGlobals_x:
 ;CHECK-APPLE-IOS: .long 1
 ;CHECK-APPLE-IOS: .space	4000

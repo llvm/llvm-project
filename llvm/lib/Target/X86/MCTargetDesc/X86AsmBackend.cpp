@@ -101,7 +101,8 @@ public:
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) const override {
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override {
     unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
 
     assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
@@ -117,7 +118,8 @@ public:
       Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
   }
 
-  bool mayNeedRelaxation(const MCInst &Inst) const override;
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
@@ -264,7 +266,8 @@ static unsigned getRelaxedOpcode(const MCInst &Inst, bool is16BitMode) {
   return getRelaxedOpcodeBranch(Inst, is16BitMode);
 }
 
-bool X86AsmBackend::mayNeedRelaxation(const MCInst &Inst) const {
+bool X86AsmBackend::mayNeedRelaxation(const MCInst &Inst,
+                                      const MCSubtargetInfo &STI) const {
   // Branches can always be relaxed in either mode.
   if (getRelaxedOpcodeBranch(Inst, false) != Inst.getOpcode())
     return true;

@@ -7,9 +7,18 @@ declare float @llvm.sqrt.f32(float %x);
 define float @fast_recip_sqrt(float %x) {
 ; X64-LABEL: fast_recip_sqrt:
 ; X64:       # %bb.0:
-; X64-NEXT:    sqrtss %xmm0, %xmm1
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    divss %xmm1, %xmm0
+; X64-NEXT:    rsqrtss %xmm0, %xmm1
+; X64-NEXT:    xorps   %xmm2, %xmm2
+; X64-NEXT:    cmpeqss %xmm0, %xmm2
+; X64-NEXT:    mulss   %xmm1, %xmm0
+; X64-NEXT:    movss   {{.*}}(%rip), %xmm3
+; X64-NEXT:    mulss   %xmm0, %xmm3
+; X64-NEXT:    mulss   %xmm1, %xmm0
+; X64-NEXT:    addss   {{.*}}(%rip), %xmm0
+; X64-NEXT:    mulss   %xmm3, %xmm0
+; X64-NEXT:    andnps  %xmm0, %xmm2
+; X64-NEXT:    movss   {{.*}}(%rip), %xmm0
+; X64-NEXT:    divss   %xmm2, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: fast_recip_sqrt:
