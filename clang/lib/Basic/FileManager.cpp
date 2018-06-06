@@ -450,13 +450,13 @@ FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-FileManager::getBufferForFile(StringRef Filename) {
+FileManager::getBufferForFile(StringRef Filename, bool isVolatile) {
   if (FileSystemOpts.WorkingDir.empty())
-    return FS->getBufferForFile(Filename);
+    return FS->getBufferForFile(Filename, -1, true, isVolatile);
 
   SmallString<128> FilePath(Filename);
   FixupRelativePath(FilePath);
-  return FS->getBufferForFile(FilePath.c_str());
+  return FS->getBufferForFile(FilePath.c_str(), -1, true, isVolatile);
 }
 
 /// getStatValue - Get the 'stat' information for the specified path,

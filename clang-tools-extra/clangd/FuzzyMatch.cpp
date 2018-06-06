@@ -101,7 +101,13 @@ Optional<float> FuzzyMatcher::match(StringRef Word) {
                        Scores[PatN][WordN][Match].Score);
   if (isAwful(Best))
     return None;
-  return ScoreScale * std::min(PerfectBonus * PatN, std::max<int>(0, Best));
+  float Score =
+      ScoreScale * std::min(PerfectBonus * PatN, std::max<int>(0, Best));
+  // If the pattern is as long as the word, we have an exact string match,
+  // since every pattern character must match something.
+  if (WordN == PatN)
+    Score *= 2; // May not be perfect 2 if case differs in a significant way.
+  return Score;
 }
 
 // Segmentation of words and patterns.

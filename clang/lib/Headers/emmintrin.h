@@ -4304,12 +4304,9 @@ _mm_packus_epi16(__m128i __a, __m128i __b)
 ///    111: assign values from bits [127:112] of \a __a.
 /// \returns An integer, whose lower 16 bits are selected from the 128-bit
 ///    integer vector parameter and the remaining bits are assigned zeros.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_extract_epi16(__m128i __a, int __imm)
-{
-  __v8hi __b = (__v8hi)__a;
-  return (unsigned short)__b[__imm & 7];
-}
+#define _mm_extract_epi16(a, imm) \
+  (int)(unsigned short)__builtin_ia32_vec_ext_v8hi((__v8hi)(__m128i)(a), \
+                                                   (int)(imm))
 
 /// Constructs a 128-bit integer vector by first making a copy of the
 ///    128-bit integer vector parameter, and then inserting the lower 16 bits
@@ -4331,13 +4328,9 @@ _mm_extract_epi16(__m128i __a, int __imm)
 ///    An immediate value specifying the bit offset in the result at which the
 ///    lower 16 bits of \a __b are written.
 /// \returns A 128-bit integer vector containing the constructed values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_insert_epi16(__m128i __a, int __b, int __imm)
-{
-  __v8hi __c = (__v8hi)__a;
-  __c[__imm & 7] = __b;
-  return (__m128i)__c;
-}
+#define _mm_insert_epi16(a, b, imm) \
+  (__m128i)__builtin_ia32_vec_set_v8hi((__v8hi)(__m128i)(a), (int)(b), \
+                                       (int)(imm))
 
 /// Copies the values of the most significant bits from each 8-bit
 ///    element in a 128-bit integer vector of [16 x i8] to create a 16-bit mask

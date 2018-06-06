@@ -1,5 +1,6 @@
 set(LIBFUZZER_SOURCES
   FuzzerCrossOver.cpp
+  FuzzerDataFlowTrace.cpp
   FuzzerDriver.cpp
   FuzzerExtFunctionsDlsym.cpp
   FuzzerExtFunctionsDlsymWin.cpp

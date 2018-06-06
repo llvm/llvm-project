@@ -25,7 +25,7 @@ public:
   ~UopsBenchmarkRunner() override;
 
 private:
-  InstructionBenchmarkKey::ModeE getMode() const override;
+  InstructionBenchmark::ModeE getMode() const override;
 
   llvm::Expected<std::vector<llvm::MCInst>>
   createSnippet(RegisterAliasingTrackerCache &RATC, unsigned Opcode,

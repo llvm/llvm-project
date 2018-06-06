@@ -47,7 +47,8 @@ class WebAssemblyAsmBackend final : public MCAsmBackend {
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsPCRel) const override;
+                  uint64_t Value, bool IsPCRel,
+                  const MCSubtargetInfo *STI) const override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
@@ -59,7 +60,10 @@ class WebAssemblyAsmBackend final : public MCAsmBackend {
     return false;
   }
 
-  bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override {
+    return false;
+  }
 
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override {}
@@ -99,7 +103,8 @@ void WebAssemblyAsmBackend::applyFixup(const MCAssembler &Asm,
                                        const MCFixup &Fixup,
                                        const MCValue &Target,
                                        MutableArrayRef<char> Data,
-                                       uint64_t Value, bool IsPCRel) const {
+                                       uint64_t Value, bool IsPCRel,
+                                       const MCSubtargetInfo *STI) const {
   const MCFixupKindInfo &Info = getFixupKindInfo(Fixup.getKind());
   assert(Info.Flags == 0 && "WebAssembly does not use MCFixupKindInfo flags");
 

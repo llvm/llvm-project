@@ -805,12 +805,17 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
         continue;
       ArrayRef<MCFixup> Fixups;
       MutableArrayRef<char> Contents;
+      const MCSubtargetInfo *STI = nullptr;
       if (auto *FragWithFixups = dyn_cast<MCDataFragment>(&Frag)) {
         Fixups = FragWithFixups->getFixups();
         Contents = FragWithFixups->getContents();
+        STI = FragWithFixups->getSubtargetInfo();
+        assert(!FragWithFixups->hasInstructions() || STI != nullptr);
       } else if (auto *FragWithFixups = dyn_cast<MCRelaxableFragment>(&Frag)) {
         Fixups = FragWithFixups->getFixups();
         Contents = FragWithFixups->getContents();
+        STI = FragWithFixups->getSubtargetInfo();
+        assert(!FragWithFixups->hasInstructions() || STI != nullptr);
       } else if (auto *FragWithFixups = dyn_cast<MCCVDefRangeFragment>(&Frag)) {
         Fixups = FragWithFixups->getFixups();
         Contents = FragWithFixups->getContents();
@@ -823,7 +828,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
         std::tie(Target, FixedValue, IsResolved) =
             handleFixup(Layout, Frag, Fixup);
         getBackend().applyFixup(*this, Fixup, Target, Contents, FixedValue,
-                                IsResolved);
+                                IsResolved, STI);
       }
     }
   }
@@ -860,7 +865,7 @@ bool MCAssembler::fragmentNeedsRelaxation(const MCRelaxableFragment *F,
   // If this inst doesn't ever need relaxation, ignore it. This occurs when we
   // are intentionally pushing out inst fragments, or because we relaxed a
   // previous instruction to one that doesn't need relaxation.
-  if (!getBackend().mayNeedRelaxation(F->getInst()))
+  if (!getBackend().mayNeedRelaxation(F->getInst(), *F->getSubtargetInfo()))
     return false;
 
   for (const MCFixup &Fixup : F->getFixups())
@@ -885,7 +890,7 @@ bool MCAssembler::relaxInstruction(MCAsmLayout &Layout,
   // Relax the fragment.
 
   MCInst Relaxed;
-  getBackend().relaxInstruction(F.getInst(), F.getSubtargetInfo(), Relaxed);
+  getBackend().relaxInstruction(F.getInst(), *F.getSubtargetInfo(), Relaxed);
 
   // Encode the new instruction.
   //
@@ -894,7 +899,7 @@ bool MCAssembler::relaxInstruction(MCAsmLayout &Layout,
   SmallVector<MCFixup, 4> Fixups;
   SmallString<256> Code;
   raw_svector_ostream VecOS(Code);
-  getEmitter().encodeInstruction(Relaxed, VecOS, Fixups, F.getSubtargetInfo());
+  getEmitter().encodeInstruction(Relaxed, VecOS, Fixups, *F.getSubtargetInfo());
 
   // Update the fragment.
   F.setInst(Relaxed);

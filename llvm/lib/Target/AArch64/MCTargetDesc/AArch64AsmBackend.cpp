@@ -73,9 +73,11 @@ public:
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) const override;
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
 
-  bool mayNeedRelaxation(const MCInst &Inst) const override;
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override;
@@ -285,7 +287,8 @@ unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) con
 void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                    const MCValue &Target,
                                    MutableArrayRef<char> Data, uint64_t Value,
-                                   bool IsResolved) const {
+                                   bool IsResolved,
+                                   const MCSubtargetInfo *STI) const {
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
   if (!Value)
     return; // Doesn't change encoding.
@@ -321,7 +324,8 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   }
 }
 
-bool AArch64AsmBackend::mayNeedRelaxation(const MCInst &Inst) const {
+bool AArch64AsmBackend::mayNeedRelaxation(const MCInst &Inst,
+                                          const MCSubtargetInfo &STI) const {
   return false;
 }
 

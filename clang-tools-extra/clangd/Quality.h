@@ -50,6 +50,15 @@ struct SymbolQualitySignals {
   bool Deprecated = false;
   unsigned References = 0;
 
+  enum SymbolCategory {
+    Variable,
+    Macro,
+    Type,
+    Function,
+    Namespace,
+    Unknown,
+  } Category = Unknown;
+
   void merge(const CodeCompletionResult &SemaCCResult);
   void merge(const Symbol &IndexResult);
 
@@ -61,7 +70,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &,
 
 /// Attributes of a symbol-query pair that affect how much we like it.
 struct SymbolRelevanceSignals {
-  /// 0-1 fuzzy-match score for unqualified name. Must be explicitly assigned.
+  /// 0-1+ fuzzy-match score for unqualified name. Must be explicitly assigned.
   float NameMatch = 1;
   bool Forbidden = false; // Unavailable (e.g const) or inaccessible (private).
   /// Proximity between best declaration and the query. [0-1], 1 is closest.

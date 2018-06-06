@@ -1571,9 +1571,6 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(
         line_table->AppendLineEntryToSequence(
             sequence.get(), prev_addr + prev_length, prev_line, 0,
             prev_source_idx, false, false, false, false, true);
-
-        line_table->InsertSequence(sequence.release());
-        sequence.reset(line_table->CreateLineSequenceContainer());
       }
 
       if (ShouldAddLine(match_line, lno, length)) {

@@ -8,12 +8,14 @@
 #include <cstdlib>
 #include <cstdio>
 
+extern "C"
 __attribute__((noinline))
-static bool Func1(const uint8_t *Data, size_t Size) {
+bool Func1(const uint8_t *Data, size_t Size) {
   // assumes Size >= 5, doesn't check it.
   return Data[4] == 'M';
 }
 
+extern "C"
 __attribute__((noinline))
 bool Func2(const uint8_t *Data, size_t Size) {
   return Size >= 6 && Data[5] == 'E';

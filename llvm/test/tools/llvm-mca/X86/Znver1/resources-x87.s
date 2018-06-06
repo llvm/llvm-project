@@ -206,7 +206,7 @@ fyl2xp1
 # CHECK-NEXT: [6]: HasSideEffects
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      100    -                    *     f2xm1
+# CHECK-NEXT:  1      100   0.25                  *     f2xm1
 # CHECK-NEXT:  1      2     1.00                  *     fabs
 # CHECK-NEXT:  1      3     1.00                  *     fadd	%st(0), %st(1)
 # CHECK-NEXT:  1      3     1.00                  *     fadd	%st(2)
@@ -216,18 +216,18 @@ fyl2xp1
 # CHECK-NEXT:  1      3     1.00                  *     faddp	%st(2)
 # CHECK-NEXT:  1      10    1.00    *             *     fiadds	(%ecx)
 # CHECK-NEXT:  1      10    1.00    *             *     fiaddl	(%ecx)
-# CHECK-NEXT:  1      100    -                    *     fbld	(%ecx)
-# CHECK-NEXT:  1      100    -                    *     fbstp	(%eax)
+# CHECK-NEXT:  1      100   0.25                  *     fbld	(%ecx)
+# CHECK-NEXT:  1      100   0.25                  *     fbstp	(%eax)
 # CHECK-NEXT:  1      1     1.00                  *     fchs
-# CHECK-NEXT:  1      100    -                    *     fnclex
-# CHECK-NEXT:  1      100    -                    *     fcmovb	%st(1), %st(0)
-# CHECK-NEXT:  1      100    -                    *     fcmovbe	%st(1), %st(0)
-# CHECK-NEXT:  1      100    -                    *     fcmove	%st(1), %st(0)
-# CHECK-NEXT:  1      100    -                    *     fcmovnb	%st(1), %st(0)
-# CHECK-NEXT:  1      100    -                    *     fcmovnbe	%st(1), %st(0)
-# CHECK-NEXT:  1      100    -                    *     fcmovne	%st(1), %st(0)
-# CHECK-NEXT:  1      100    -                    *     fcmovnu	%st(1), %st(0)
-# CHECK-NEXT:  1      100    -                    *     fcmovu	%st(1), %st(0)
+# CHECK-NEXT:  1      100   0.25                  *     fnclex
+# CHECK-NEXT:  1      100   0.25                  *     fcmovb	%st(1), %st(0)
+# CHECK-NEXT:  1      100   0.25                  *     fcmovbe	%st(1), %st(0)
+# CHECK-NEXT:  1      100   0.25                  *     fcmove	%st(1), %st(0)
+# CHECK-NEXT:  1      100   0.25                  *     fcmovnb	%st(1), %st(0)
+# CHECK-NEXT:  1      100   0.25                  *     fcmovnbe	%st(1), %st(0)
+# CHECK-NEXT:  1      100   0.25                  *     fcmovne	%st(1), %st(0)
+# CHECK-NEXT:  1      100   0.25                  *     fcmovnu	%st(1), %st(0)
+# CHECK-NEXT:  1      100   0.25                  *     fcmovu	%st(1), %st(0)
 # CHECK-NEXT:  1      1     1.00                  *     fcom	%st(1)
 # CHECK-NEXT:  1      1     1.00                  *     fcom	%st(3)
 # CHECK-NEXT:  1      8     1.00                  *     fcoms	(%ecx)
@@ -239,7 +239,7 @@ fyl2xp1
 # CHECK-NEXT:  1      1     1.00                  *     fcompp
 # CHECK-NEXT:  1      9     0.50                  *     fcomi	%st(3)
 # CHECK-NEXT:  1      9     0.50                  *     fcompi	%st(3)
-# CHECK-NEXT:  1      100    -                    *     fcos
+# CHECK-NEXT:  1      100   0.25                  *     fcos
 # CHECK-NEXT:  1      11    1.00                  *     fdecstp
 # CHECK-NEXT:  1      15    1.00                  *     fdiv	%st(0), %st(1)
 # CHECK-NEXT:  1      15    1.00                  *     fdiv	%st(2)
@@ -266,7 +266,7 @@ fyl2xp1
 # CHECK-NEXT:  2      11    1.00    *             *     fildl	(%ecx)
 # CHECK-NEXT:  2      11    1.00    *             *     fildll	(%eax)
 # CHECK-NEXT:  1      11    1.00                  *     fincstp
-# CHECK-NEXT:  1      100    -                    *     fninit
+# CHECK-NEXT:  1      100   0.25                  *     fninit
 # CHECK-NEXT:  1      12    0.50           *      *     fists	(%edx)
 # CHECK-NEXT:  1      12    0.50           *      *     fistl	(%ecx)
 # CHECK-NEXT:  1      12    0.50           *      *     fistps	(%edx)
@@ -279,8 +279,8 @@ fyl2xp1
 # CHECK-NEXT:  1      8     0.50    *             *     flds	(%edx)
 # CHECK-NEXT:  1      8     0.50    *             *     fldl	(%ecx)
 # CHECK-NEXT:  2      1     0.50    *             *     fldt	(%eax)
-# CHECK-NEXT:  1      100    -      *             *     fldcw	(%eax)
-# CHECK-NEXT:  1      100    -                    *     fldenv	(%eax)
+# CHECK-NEXT:  1      100   0.25    *             *     fldcw	(%eax)
+# CHECK-NEXT:  1      100   0.25                  *     fldenv	(%eax)
 # CHECK-NEXT:  1      11    1.00                  *     fld1
 # CHECK-NEXT:  1      11    1.00                  *     fldl2e
 # CHECK-NEXT:  1      11    1.00                  *     fldl2t
@@ -297,16 +297,16 @@ fyl2xp1
 # CHECK-NEXT:  2      10    0.50    *             *     fimuls	(%ecx)
 # CHECK-NEXT:  2      10    0.50    *             *     fimull	(%eax)
 # CHECK-NEXT:  1      1     1.00                  *     fnop
-# CHECK-NEXT:  1      100    -                    *     fpatan
-# CHECK-NEXT:  1      100    -                    *     fprem
-# CHECK-NEXT:  1      100    -                    *     fprem1
-# CHECK-NEXT:  1      100    -                    *     fptan
-# CHECK-NEXT:  1      100    -                    *     frndint
-# CHECK-NEXT:  1      100    -                    *     frstor	(%eax)
-# CHECK-NEXT:  1      100    -                    *     fnsave	(%eax)
-# CHECK-NEXT:  1      100    -                    *     fscale
-# CHECK-NEXT:  1      100    -                    *     fsin
-# CHECK-NEXT:  1      100    -                    *     fsincos
+# CHECK-NEXT:  1      100   0.25                  *     fpatan
+# CHECK-NEXT:  1      100   0.25                  *     fprem
+# CHECK-NEXT:  1      100   0.25                  *     fprem1
+# CHECK-NEXT:  1      100   0.25                  *     fptan
+# CHECK-NEXT:  1      100   0.25                  *     frndint
+# CHECK-NEXT:  1      100   0.25                  *     frstor	(%eax)
+# CHECK-NEXT:  1      100   0.25                  *     fnsave	(%eax)
+# CHECK-NEXT:  1      100   0.25                  *     fscale
+# CHECK-NEXT:  1      100   0.25                  *     fsin
+# CHECK-NEXT:  1      100   0.25                  *     fsincos
 # CHECK-NEXT:  1      20    20.00                 *     fsqrt
 # CHECK-NEXT:  2      5     0.50                  *     fst	%st(0)
 # CHECK-NEXT:  1      1     0.50           *      *     fsts	(%edx)
@@ -315,12 +315,12 @@ fyl2xp1
 # CHECK-NEXT:  1      1     0.50           *      *     fstpl	(%edx)
 # CHECK-NEXT:  1      1     0.50           *      *     fstpl	(%ecx)
 # CHECK-NEXT:  1      5     0.50           *      *     fstpt	(%eax)
-# CHECK-NEXT:  1      100    -             *      *     fnstcw	(%eax)
-# CHECK-NEXT:  1      100    -                    *     fnstenv	(%eax)
-# CHECK-NEXT:  1      100    -                    *     fnstsw	(%eax)
-# CHECK-NEXT:  1      100    -                    *     frstor	(%eax)
+# CHECK-NEXT:  1      100   0.25           *      *     fnstcw	(%eax)
+# CHECK-NEXT:  1      100   0.25                  *     fnstenv	(%eax)
+# CHECK-NEXT:  1      100   0.25                  *     fnstsw	(%eax)
+# CHECK-NEXT:  1      100   0.25                  *     frstor	(%eax)
 # CHECK-NEXT:  1      1     1.00                  *     wait
-# CHECK-NEXT:  1      100    -                    *     fnsave	(%eax)
+# CHECK-NEXT:  1      100   0.25                  *     fnsave	(%eax)
 # CHECK-NEXT:  1      3     1.00                  *     fsub	%st(0), %st(1)
 # CHECK-NEXT:  1      3     1.00                  *     fsub	%st(2)
 # CHECK-NEXT:  1      10    1.00    *             *     fsubs	(%ecx)
@@ -349,11 +349,11 @@ fyl2xp1
 # CHECK-NEXT:  1      1     1.00                  *     fxam
 # CHECK-NEXT:  1      1     0.25                  *     fxch	%st(1)
 # CHECK-NEXT:  1      1     0.25                  *     fxch	%st(3)
-# CHECK-NEXT:  1      100    -      *      *      *     fxrstor	(%eax)
-# CHECK-NEXT:  1      100    -      *      *      *     fxsave	(%eax)
-# CHECK-NEXT:  1      100    -                    *     fxtract
-# CHECK-NEXT:  1      100    -                    *     fyl2x
-# CHECK-NEXT:  1      100    -                    *     fyl2xp1
+# CHECK-NEXT:  1      100   0.25    *      *      *     fxrstor	(%eax)
+# CHECK-NEXT:  1      100   0.25    *      *      *     fxsave	(%eax)
+# CHECK-NEXT:  1      100   0.25                  *     fxtract
+# CHECK-NEXT:  1      100   0.25                  *     fyl2x
+# CHECK-NEXT:  1      100   0.25                  *     fyl2xp1
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ZnAGU0

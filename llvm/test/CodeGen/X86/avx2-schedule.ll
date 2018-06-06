@@ -223,7 +223,7 @@ define <4 x i32> @test_extracti128(<8 x i32> %a0, <8 x i32> %a1, <4 x i32> *%a2)
 ; ZNVER1-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vextracti128 $1, %ymm0, %xmm0 # sched: [2:0.25]
 ; ZNVER1-NEXT:    vextracti128 $1, %ymm2, (%rdi) # sched: [1:0.50]
-; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
+; ZNVER1-NEXT:    vzeroupper # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = add <8 x i32> %a0, %a1
   %2 = sub <8 x i32> %a0, %a1
@@ -261,7 +261,7 @@ define <2 x double> @test_gatherdpd(<2 x double> %a0, i8* %a1, <4 x i32> %a2, <2
 ;
 ; ZNVER1-LABEL: test_gatherdpd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double> %a0, i8* %a1, <4 x i32> %a2, <2 x double> %a3, i8 2)
   ret <2 x double> %1
@@ -296,7 +296,7 @@ define <4 x double> @test_gatherdpd_ymm(<4 x double> %a0, i8* %a1, <4 x i32> %a2
 ;
 ; ZNVER1-LABEL: test_gatherdpd_ymm:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vgatherdpd %ymm2, (%rdi,%xmm1,8), %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vgatherdpd %ymm2, (%rdi,%xmm1,8), %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> %a0, i8* %a1, <4 x i32> %a2, <4 x double> %a3, i8 8)
   ret <4 x double> %1
@@ -331,7 +331,7 @@ define <4 x float> @test_gatherdps(<4 x float> %a0, i8* %a1, <4 x i32> %a2, <4 x
 ;
 ; ZNVER1-LABEL: test_gatherdps:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vgatherdps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vgatherdps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> %a0, i8* %a1, <4 x i32> %a2, <4 x float> %a3, i8 2)
   ret <4 x float> %1
@@ -366,7 +366,7 @@ define <8 x float> @test_gatherdps_ymm(<8 x float> %a0, i8* %a1, <8 x i32> %a2, 
 ;
 ; ZNVER1-LABEL: test_gatherdps_ymm:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vgatherdps %ymm2, (%rdi,%ymm1,4), %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vgatherdps %ymm2, (%rdi,%ymm1,4), %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> %a0, i8* %a1, <8 x i32> %a2, <8 x float> %a3, i8 4)
   ret <8 x float> %1
@@ -401,7 +401,7 @@ define <2 x double> @test_gatherqpd(<2 x double> %a0, i8* %a1, <2 x i64> %a2, <2
 ;
 ; ZNVER1-LABEL: test_gatherqpd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vgatherqpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vgatherqpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double> %a0, i8* %a1, <2 x i64> %a2, <2 x double> %a3, i8 2)
   ret <2 x double> %1
@@ -436,7 +436,7 @@ define <4 x double> @test_gatherqpd_ymm(<4 x double> %a0, i8* %a1, <4 x i64> %a2
 ;
 ; ZNVER1-LABEL: test_gatherqpd_ymm:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vgatherqpd %ymm2, (%rdi,%ymm1,8), %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vgatherqpd %ymm2, (%rdi,%ymm1,8), %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> %a0, i8* %a1, <4 x i64> %a2, <4 x double> %a3, i8 8)
   ret <4 x double> %1
@@ -471,7 +471,7 @@ define <4 x float> @test_gatherqps(<4 x float> %a0, i8* %a1, <2 x i64> %a2, <4 x
 ;
 ; ZNVER1-LABEL: test_gatherqps:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vgatherqps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vgatherqps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float> %a0, i8* %a1, <2 x i64> %a2, <4 x float> %a3, i8 2)
   ret <4 x float> %1
@@ -511,8 +511,8 @@ define <4 x float> @test_gatherqps_ymm(<4 x float> %a0, i8* %a1, <4 x i64> %a2, 
 ;
 ; ZNVER1-LABEL: test_gatherqps_ymm:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vgatherqps %xmm2, (%rdi,%ymm1,4), %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
+; ZNVER1-NEXT:    vgatherqps %xmm2, (%rdi,%ymm1,4), %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vzeroupper # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> %a0, i8* %a1, <4 x i64> %a2, <4 x float> %a3, i8 4)
   ret <4 x float> %1
@@ -638,8 +638,8 @@ define <16 x i16> @test_mpsadbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ;
 ; ZNVER1-LABEL: test_mpsadbw:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vmpsadbw $7, %ymm1, %ymm0, %ymm0 # sched: [100:?]
-; ZNVER1-NEXT:    vmpsadbw $7, (%rdi), %ymm0, %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vmpsadbw $7, %ymm1, %ymm0, %ymm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vmpsadbw $7, (%rdi), %ymm0, %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <16 x i16> @llvm.x86.avx2.mpsadbw(<32 x i8> %a0, <32 x i8> %a1, i8 7)
   %2 = bitcast <16 x i16> %1 to <32 x i8>
@@ -2777,7 +2777,7 @@ define <4 x i32> @test_pgatherdd(<4 x i32> %a0, i8* %a1, <4 x i32> %a2, <4 x i32
 ;
 ; ZNVER1-LABEL: test_pgatherdd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32> %a0, i8* %a1, <4 x i32> %a2, <4 x i32> %a3, i8 2)
   ret <4 x i32> %1
@@ -2812,7 +2812,7 @@ define <8 x i32> @test_pgatherdd_ymm(<8 x i32> %a0, i8* %a1, <8 x i32> %a2, <8 x
 ;
 ; ZNVER1-LABEL: test_pgatherdd_ymm:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32> %a0, i8* %a1, <8 x i32> %a2, <8 x i32> %a3, i8 2)
   ret <8 x i32> %1
@@ -2847,7 +2847,7 @@ define <2 x i64> @test_pgatherdq(<2 x i64> %a0, i8* %a1, <4 x i32> %a2, <2 x i64
 ;
 ; ZNVER1-LABEL: test_pgatherdq:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64> %a0, i8* %a1, <4 x i32> %a2, <2 x i64> %a3, i8 2)
   ret <2 x i64> %1
@@ -2882,7 +2882,7 @@ define <4 x i64> @test_pgatherdq_ymm(<4 x i64> %a0, i8* %a1, <4 x i32> %a2, <4 x
 ;
 ; ZNVER1-LABEL: test_pgatherdq_ymm:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm1,2), %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm1,2), %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> %a0, i8* %a1, <4 x i32> %a2, <4 x i64> %a3, i8 2)
   ret <4 x i64> %1
@@ -2917,7 +2917,7 @@ define <4 x i32> @test_pgatherqd(<4 x i32> %a0, i8* %a1, <2 x i64> %a2, <4 x i32
 ;
 ; ZNVER1-LABEL: test_pgatherqd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x i32> @llvm.x86.avx2.gather.q.d(<4 x i32> %a0, i8* %a1, <2 x i64> %a2, <4 x i32> %a3, i8 2)
   ret <4 x i32> %1
@@ -2957,8 +2957,8 @@ define <4 x i32> @test_pgatherqd_ymm(<4 x i32> %a0, i8* %a1, <4 x i64> %a2, <4 x
 ;
 ; ZNVER1-LABEL: test_pgatherqd_ymm:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpgatherqd %xmm2, (%rdi,%ymm1,2), %xmm0 # sched: [100:?]
-; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
+; ZNVER1-NEXT:    vpgatherqd %xmm2, (%rdi,%ymm1,2), %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vzeroupper # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> %a0, i8* %a1, <4 x i64> %a2, <4 x i32> %a3, i8 2)
   ret <4 x i32> %1
@@ -2993,7 +2993,7 @@ define <2 x i64> @test_pgatherqq(<2 x i64> %a0, i8 *%a1, <2 x i64> %a2, <2 x i64
 ;
 ; ZNVER1-LABEL: test_pgatherqq:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> %a0, i8* %a1, <2 x i64> %a2, <2 x i64> %a3, i8 2)
   ret <2 x i64> %1
@@ -3028,7 +3028,7 @@ define <4 x i64> @test_pgatherqq_ymm(<4 x i64> %a0, i8 *%a1, <4 x i64> %a2, <4 x
 ;
 ; ZNVER1-LABEL: test_pgatherqq_ymm:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> %a0, i8* %a1, <4 x i64> %a2, <4 x i64> %a3, i8 2)
   ret <4 x i64> %1
@@ -3068,8 +3068,8 @@ define <8 x i32> @test_phaddd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ;
 ; ZNVER1-LABEL: test_phaddd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vphaddd %ymm1, %ymm0, %ymm0 # sched: [100:?]
-; ZNVER1-NEXT:    vphaddd (%rdi), %ymm0, %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vphaddd %ymm1, %ymm0, %ymm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vphaddd (%rdi), %ymm0, %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x i32> @llvm.x86.avx2.phadd.d(<8 x i32> %a0, <8 x i32> %a1)
   %2 = load <8 x i32>, <8 x i32> *%a2, align 32
@@ -3111,8 +3111,8 @@ define <16 x i16> @test_phaddsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ;
 ; ZNVER1-LABEL: test_phaddsw:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vphaddsw %ymm1, %ymm0, %ymm0 # sched: [100:?]
-; ZNVER1-NEXT:    vphaddsw (%rdi), %ymm0, %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vphaddsw %ymm1, %ymm0, %ymm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vphaddsw (%rdi), %ymm0, %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <16 x i16> @llvm.x86.avx2.phadd.sw(<16 x i16> %a0, <16 x i16> %a1)
   %2 = load <16 x i16>, <16 x i16> *%a2, align 32
@@ -3154,8 +3154,8 @@ define <16 x i16> @test_phaddw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ;
 ; ZNVER1-LABEL: test_phaddw:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vphaddw %ymm1, %ymm0, %ymm0 # sched: [100:?]
-; ZNVER1-NEXT:    vphaddw (%rdi), %ymm0, %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vphaddw %ymm1, %ymm0, %ymm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vphaddw (%rdi), %ymm0, %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <16 x i16> @llvm.x86.avx2.phadd.w(<16 x i16> %a0, <16 x i16> %a1)
   %2 = load <16 x i16>, <16 x i16> *%a2, align 32
@@ -3197,8 +3197,8 @@ define <8 x i32> @test_phsubd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ;
 ; ZNVER1-LABEL: test_phsubd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vphsubd %ymm1, %ymm0, %ymm0 # sched: [100:?]
-; ZNVER1-NEXT:    vphsubd (%rdi), %ymm0, %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vphsubd %ymm1, %ymm0, %ymm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vphsubd (%rdi), %ymm0, %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x i32> @llvm.x86.avx2.phsub.d(<8 x i32> %a0, <8 x i32> %a1)
   %2 = load <8 x i32>, <8 x i32> *%a2, align 32
@@ -3240,8 +3240,8 @@ define <16 x i16> @test_phsubsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ;
 ; ZNVER1-LABEL: test_phsubsw:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vphsubsw %ymm1, %ymm0, %ymm0 # sched: [100:?]
-; ZNVER1-NEXT:    vphsubsw (%rdi), %ymm0, %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vphsubsw %ymm1, %ymm0, %ymm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vphsubsw (%rdi), %ymm0, %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <16 x i16> @llvm.x86.avx2.phsub.sw(<16 x i16> %a0, <16 x i16> %a1)
   %2 = load <16 x i16>, <16 x i16> *%a2, align 32
@@ -3283,8 +3283,8 @@ define <16 x i16> @test_phsubw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ;
 ; ZNVER1-LABEL: test_phsubw:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vphsubw %ymm1, %ymm0, %ymm0 # sched: [100:?]
-; ZNVER1-NEXT:    vphsubw (%rdi), %ymm0, %ymm0 # sched: [100:?]
+; ZNVER1-NEXT:    vphsubw %ymm1, %ymm0, %ymm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vphsubw (%rdi), %ymm0, %ymm0 # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <16 x i16> @llvm.x86.avx2.phsub.w(<16 x i16> %a0, <16 x i16> %a1)
   %2 = load <16 x i16>, <16 x i16> *%a2, align 32
@@ -3419,8 +3419,8 @@ define <4 x i32> @test_pmaskmovd(i8* %a0, <4 x i32> %a1, <4 x i32> %a2) {
 ;
 ; ZNVER1-LABEL: test_pmaskmovd:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2 # sched: [100:?]
-; ZNVER1-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi) # sched: [100:?]
+; ZNVER1-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2 # sched: [100:0.25]
+; ZNVER1-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi) # sched: [100:0.25]
 ; ZNVER1-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x i32> @llvm.x86.avx2.maskload.d(i8* %a0, <4 x i32> %a1)
@@ -3468,8 +3468,8 @@ define <8 x i32> @test_pmaskmovd_ymm(i8* %a0, <8 x i32> %a1, <8 x i32> %a2) {
 ;
 ; ZNVER1-LABEL: test_pmaskmovd_ymm:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpmaskmovd (%rdi), %ymm0, %ymm2 # sched: [100:?]
-; ZNVER1-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rdi) # sched: [100:?]
+; ZNVER1-NEXT:    vpmaskmovd (%rdi), %ymm0, %ymm2 # sched: [100:0.25]
+; ZNVER1-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rdi) # sched: [100:0.25]
 ; ZNVER1-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [2:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x i32> @llvm.x86.avx2.maskload.d.256(i8* %a0, <8 x i32> %a1)
@@ -3518,7 +3518,7 @@ define <2 x i64> @test_pmaskmovq(i8* %a0, <2 x i64> %a1, <2 x i64> %a2) {
 ; ZNVER1-LABEL: test_pmaskmovq:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpmaskmovq (%rdi), %xmm0, %xmm2 # sched: [8:1.00]
-; ZNVER1-NEXT:    vpmaskmovq %xmm1, %xmm0, (%rdi) # sched: [100:?]
+; ZNVER1-NEXT:    vpmaskmovq %xmm1, %xmm0, (%rdi) # sched: [100:0.25]
 ; ZNVER1-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x i64> @llvm.x86.avx2.maskload.q(i8* %a0, <2 x i64> %a1)
@@ -3567,7 +3567,7 @@ define <4 x i64> @test_pmaskmovq_ymm(i8* %a0, <4 x i64> %a1, <4 x i64> %a2) {
 ; ZNVER1-LABEL: test_pmaskmovq_ymm:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm2 # sched: [9:1.50]
-; ZNVER1-NEXT:    vpmaskmovq %ymm1, %ymm0, (%rdi) # sched: [100:?]
+; ZNVER1-NEXT:    vpmaskmovq %ymm1, %ymm0, (%rdi) # sched: [100:0.25]
 ; ZNVER1-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [2:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x i64> @llvm.x86.avx2.maskload.q.256(i8* %a0, <4 x i64> %a1)
@@ -4127,7 +4127,7 @@ define i32 @test_pmovmskb(<32 x i8> %a0) {
 ; ZNVER1-LABEL: test_pmovmskb:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vpmovmskb %ymm0, %eax # sched: [2:2.00]
-; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
+; ZNVER1-NEXT:    vzeroupper # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call i32 @llvm.x86.avx2.pmovmskb(<32 x i8> %a0)
   ret i32 %1

@@ -68,12 +68,12 @@ template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
 };
 
 template <>
-struct ScalarEnumerationTraits<exegesis::InstructionBenchmarkKey::ModeE> {
+struct ScalarEnumerationTraits<exegesis::InstructionBenchmark::ModeE> {
   static void enumeration(IO &Io,
-                          exegesis::InstructionBenchmarkKey::ModeE &Value) {
-    Io.enumCase(Value, "", exegesis::InstructionBenchmarkKey::Unknown);
-    Io.enumCase(Value, "latency", exegesis::InstructionBenchmarkKey::Latency);
-    Io.enumCase(Value, "uops", exegesis::InstructionBenchmarkKey::Uops);
+                          exegesis::InstructionBenchmark::ModeE &Value) {
+    Io.enumCase(Value, "", exegesis::InstructionBenchmark::Unknown);
+    Io.enumCase(Value, "latency", exegesis::InstructionBenchmark::Latency);
+    Io.enumCase(Value, "uops", exegesis::InstructionBenchmark::Uops);
   }
 };
 
@@ -81,13 +81,13 @@ template <> struct MappingTraits<exegesis::InstructionBenchmarkKey> {
   static void mapping(IO &Io, exegesis::InstructionBenchmarkKey &Obj) {
     Io.mapRequired("opcode_name", Obj.OpcodeName);
     Io.mapOptional("instructions", Obj.Instructions);
-    Io.mapRequired("mode", Obj.Mode);
     Io.mapOptional("config", Obj.Config);
   }
 };
 
 template <> struct MappingTraits<exegesis::InstructionBenchmark> {
   static void mapping(IO &Io, exegesis::InstructionBenchmark &Obj) {
+    Io.mapRequired("mode", Obj.Mode);
     Io.mapRequired("key", Obj.Key);
     Io.mapRequired("cpu_name", Obj.CpuName);
     Io.mapRequired("llvm_triple", Obj.LLVMTriple);

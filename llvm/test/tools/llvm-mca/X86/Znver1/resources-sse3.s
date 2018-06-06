@@ -43,21 +43,21 @@ movsldup  (%rax), %xmm2
 # CHECK-NEXT:  1      10    1.00    *                   addsubpd	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        addsubps	%xmm0, %xmm2
 # CHECK-NEXT:  1      10    1.00    *                   addsubps	(%rax), %xmm2
-# CHECK-NEXT:  1      100    -                          haddpd	%xmm0, %xmm2
-# CHECK-NEXT:  1      100    -      *                   haddpd	(%rax), %xmm2
-# CHECK-NEXT:  1      100    -                          haddps	%xmm0, %xmm2
-# CHECK-NEXT:  1      100    -      *                   haddps	(%rax), %xmm2
-# CHECK-NEXT:  1      100    -                          hsubpd	%xmm0, %xmm2
-# CHECK-NEXT:  1      100    -      *                   hsubpd	(%rax), %xmm2
-# CHECK-NEXT:  1      100    -                          hsubps	%xmm0, %xmm2
-# CHECK-NEXT:  1      100    -      *                   hsubps	(%rax), %xmm2
+# CHECK-NEXT:  1      100   0.25                        haddpd	%xmm0, %xmm2
+# CHECK-NEXT:  1      100   0.25    *                   haddpd	(%rax), %xmm2
+# CHECK-NEXT:  1      100   0.25                        haddps	%xmm0, %xmm2
+# CHECK-NEXT:  1      100   0.25    *                   haddps	(%rax), %xmm2
+# CHECK-NEXT:  1      100   0.25                        hsubpd	%xmm0, %xmm2
+# CHECK-NEXT:  1      100   0.25    *                   hsubpd	(%rax), %xmm2
+# CHECK-NEXT:  1      100   0.25                        hsubps	%xmm0, %xmm2
+# CHECK-NEXT:  1      100   0.25    *                   hsubps	(%rax), %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   lddqu	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        movddup	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   movddup	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        movshdup	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   movshdup	(%rax), %xmm2
-# CHECK-NEXT:  1      100    -                          movsldup	%xmm0, %xmm2
-# CHECK-NEXT:  1      100    -      *                   movsldup	(%rax), %xmm2
+# CHECK-NEXT:  1      100   0.25                        movsldup	%xmm0, %xmm2
+# CHECK-NEXT:  1      100   0.25    *                   movsldup	(%rax), %xmm2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ZnAGU0

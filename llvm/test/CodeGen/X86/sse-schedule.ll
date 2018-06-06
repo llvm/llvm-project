@@ -2031,13 +2031,13 @@ define void @test_ldmxcsr(i32 %a0) {
 ; ZNVER1-SSE-LABEL: test_ldmxcsr:
 ; ZNVER1-SSE:       # %bb.0:
 ; ZNVER1-SSE-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:0.50]
-; ZNVER1-SSE-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp) # sched: [100:?]
+; ZNVER1-SSE-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp) # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_ldmxcsr:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:0.50]
-; ZNVER1-NEXT:    vldmxcsr -{{[0-9]+}}(%rsp) # sched: [100:?]
+; ZNVER1-NEXT:    vldmxcsr -{{[0-9]+}}(%rsp) # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = alloca i32, align 4
   %2 = bitcast i32* %1 to i8*
@@ -5265,13 +5265,13 @@ define i32 @test_stmxcsr() {
 ;
 ; ZNVER1-SSE-LABEL: test_stmxcsr:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    stmxcsr -{{[0-9]+}}(%rsp) # sched: [100:?]
+; ZNVER1-SSE-NEXT:    stmxcsr -{{[0-9]+}}(%rsp) # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # sched: [8:0.50]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_stmxcsr:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # sched: [100:?]
+; ZNVER1-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # sched: [100:0.25]
 ; ZNVER1-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = alloca i32, align 4
@@ -6118,7 +6118,7 @@ define <4 x float> @test_fnop() nounwind {
 ; GENERIC-LABEL: test_fnop:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    nop # sched: [1:?]
+; GENERIC-NEXT:    nop # sched: [1:0.25]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    xorps %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6139,14 +6139,14 @@ define <4 x float> @test_fnop() nounwind {
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    xorps %xmm0, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    nop # sched: [1:?]
+; SLM-NEXT:    nop # sched: [1:0.50]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_fnop:
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    #APP
-; SANDY-SSE-NEXT:    nop # sched: [1:?]
+; SANDY-SSE-NEXT:    nop # sched: [1:0.25]
 ; SANDY-SSE-NEXT:    #NO_APP
 ; SANDY-SSE-NEXT:    xorps %xmm0, %xmm0 # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
@@ -6154,7 +6154,7 @@ define <4 x float> @test_fnop() nounwind {
 ; SANDY-LABEL: test_fnop:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    nop # sched: [1:?]
+; SANDY-NEXT:    nop # sched: [1:0.25]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
@@ -6225,7 +6225,7 @@ define <4 x float> @test_fnop() nounwind {
 ;
 ; BTVER2-SSE-LABEL: test_fnop:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    xorps %xmm0, %xmm0 # sched: [0:?]
+; BTVER2-SSE-NEXT:    xorps %xmm0, %xmm0 # sched: [0:0.50]
 ; BTVER2-SSE-NEXT:    #APP
 ; BTVER2-SSE-NEXT:    nop # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    #NO_APP
@@ -6233,7 +6233,7 @@ define <4 x float> @test_fnop() nounwind {
 ;
 ; BTVER2-LABEL: test_fnop:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [0:?]
+; BTVER2-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [0:0.50]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    nop # sched: [1:0.50]
 ; BTVER2-NEXT:    #NO_APP
@@ -6243,7 +6243,7 @@ define <4 x float> @test_fnop() nounwind {
 ; ZNVER1-SSE:       # %bb.0:
 ; ZNVER1-SSE-NEXT:    xorps %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    #APP
-; ZNVER1-SSE-NEXT:    nop # sched: [1:?]
+; ZNVER1-SSE-NEXT:    nop # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    #NO_APP
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
@@ -6251,7 +6251,7 @@ define <4 x float> @test_fnop() nounwind {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    nop # sched: [1:?]
+; ZNVER1-NEXT:    nop # sched: [1:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void asm sideeffect "nop", ""() nounwind

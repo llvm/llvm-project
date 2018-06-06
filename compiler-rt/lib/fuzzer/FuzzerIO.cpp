@@ -100,6 +100,14 @@ std::string DirPlusFile(const std::string &DirPath,
   return DirPath + GetSeparator() + FileName;
 }
 
+std::string Basename(const std::string &Path, char Separator) {
+  size_t Pos = Path.rfind(Separator);
+  if (Pos == std::string::npos)
+    return Path;
+  assert(Pos < Path.size());
+  return Path.substr(Pos + 1);
+}
+
 void DupAndCloseStderr() {
   int OutputFd = DuplicateFile(2);
   if (OutputFd > 0) {

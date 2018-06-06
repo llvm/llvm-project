@@ -355,6 +355,9 @@ protected:
     __vector_base()
         _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value);
     _LIBCPP_INLINE_VISIBILITY __vector_base(const allocator_type& __a);
+#ifndef _LIBCPP_CXX03_LANG
+    _LIBCPP_INLINE_VISIBILITY __vector_base(allocator_type&& __a) _NOEXCEPT;
+#endif
     ~__vector_base();
 
     _LIBCPP_INLINE_VISIBILITY
@@ -437,6 +440,15 @@ __vector_base<_Tp, _Allocator>::__vector_base(const allocator_type& __a)
       __end_cap_(nullptr, __a)
 {
 }
+
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp, class _Allocator>
+inline _LIBCPP_INLINE_VISIBILITY
+__vector_base<_Tp, _Allocator>::__vector_base(allocator_type&& __a) _NOEXCEPT
+    : __begin_(nullptr),
+      __end_(nullptr),
+      __end_cap_(nullptr, std::move(__a)) {}
+#endif
 
 template <class _Tp, class _Allocator>
 __vector_base<_Tp, _Allocator>::~__vector_base()
@@ -2863,17 +2875,15 @@ vector<bool, _Allocator>::operator=(const vector& __v)
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
-vector<bool, _Allocator>::vector(vector&& __v)
+inline _LIBCPP_INLINE_VISIBILITY vector<bool, _Allocator>::vector(vector&& __v)
 #if _LIBCPP_STD_VER > 14
-        _NOEXCEPT
+    _NOEXCEPT
 #else
-        _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
+    _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
 #endif
     : __begin_(__v.__begin_),
       __size_(__v.__size_),
-      __cap_alloc_(__v.__cap_alloc_)
-{
+      __cap_alloc_(std::move(__v.__cap_alloc_)) {
     __v.__begin_ = nullptr;
     __v.__size_ = 0;
     __v.__cap() = 0;

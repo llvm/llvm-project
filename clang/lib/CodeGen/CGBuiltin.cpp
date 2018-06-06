@@ -484,11 +484,48 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   return Builder.CreateCall(F, {Ptr, Min, NullIsUnknown});
 }
 
-static RValue EmitBitTestIntrinsic(CodeGenFunction &CGF, const CallExpr *E,
-                                   char TestAnd, char Size,
-                                   bool Locked = false) {
-  Value *BitBase = CGF.EmitScalarExpr(E->getArg(0));
-  Value *BitPos = CGF.EmitScalarExpr(E->getArg(1));
+// Get properties of an X86 BT* assembly instruction. The first returned value
+// is the action character code, which can be for complement, reset, or set. The
+// second is the size suffix which our assembler needs. The last is whether to
+// add the lock prefix.
+static std::tuple<char, char, bool>
+getBitTestActionSizeAndLocking(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  case Builtin::BI_bittest:
+    return std::make_tuple('\0', 'l', false);
+  case Builtin::BI_bittestandcomplement:
+    return std::make_tuple('c', 'l', false);
+  case Builtin::BI_bittestandreset:
+    return std::make_tuple('r', 'l', false);
+  case Builtin::BI_bittestandset:
+    return std::make_tuple('s', 'l', false);
+  case Builtin::BI_interlockedbittestandreset:
+    return std::make_tuple('r', 'l', /*Locked=*/true);
+  case Builtin::BI_interlockedbittestandset:
+    return std::make_tuple('s', 'l', /*Locked=*/true);
+
+  case Builtin::BI_bittest64:
+    return std::make_tuple('\0', 'q', false);
+  case Builtin::BI_bittestandcomplement64:
+    return std::make_tuple('c', 'q', false);
+  case Builtin::BI_bittestandreset64:
+    return std::make_tuple('r', 'q', false);
+  case Builtin::BI_bittestandset64:
+    return std::make_tuple('s', 'q', false);
+  case Builtin::BI_interlockedbittestandreset64:
+    return std::make_tuple('r', 'q', /*Locked=*/true);
+  case Builtin::BI_interlockedbittestandset64:
+    return std::make_tuple('s', 'q', /*Locked=*/true);
+  }
+  llvm_unreachable("expected only bittest builtins");
+}
+
+static RValue EmitX86BitTestIntrinsic(CodeGenFunction &CGF, unsigned BuiltinID,
+                                      const CallExpr *E, Value *BitBase,
+                                      Value *BitPos) {
+  char Action, Size;
+  bool Locked;
+  std::tie(Action, Size, Locked) = getBitTestActionSizeAndLocking(BuiltinID);
 
   // Build the assembly.
   SmallString<64> Asm;
@@ -496,12 +533,12 @@ static RValue EmitBitTestIntrinsic(CodeGenFunction &CGF, const CallExpr *E,
   if (Locked)
     AsmOS << "lock ";
   AsmOS << "bt";
-  if (TestAnd)
-    AsmOS << TestAnd;
+  if (Action)
+    AsmOS << Action;
   AsmOS << Size << " $2, ($1)\n\tsetc ${0:b}";
 
   // Build the constraints. FIXME: We should support immediates when possible.
-  std::string Constraints = "=r,r,r,~{cc},~{flags},~{memory},~{fpsr}";
+  std::string Constraints = "=r,r,r,~{cc},~{flags},~{fpsr}";
   llvm::IntegerType *IntType = llvm::IntegerType::get(
       CGF.getLLVMContext(),
       CGF.getContext().getTypeSize(E->getArg(1)->getType()));
@@ -513,6 +550,97 @@ static RValue EmitBitTestIntrinsic(CodeGenFunction &CGF, const CallExpr *E,
       llvm::InlineAsm::get(FTy, Asm, Constraints, /*SideEffects=*/true);
   CallSite CS = CGF.Builder.CreateCall(IA, {BitBase, BitPos});
   return RValue::get(CS.getInstruction());
+}
+
+/// Emit a _bittest* intrinsic. These intrinsics take a pointer to an array of
+/// bits and a bit position and read and optionally modify the bit at that
+/// position. The position index can be arbitrarily large, i.e. it can be larger
+/// than 31 or 63, so we need an indexed load in the general case.
+static RValue EmitBitTestIntrinsic(CodeGenFunction &CGF, unsigned BuiltinID,
+                                   const CallExpr *E) {
+  Value *BitBase = CGF.EmitScalarExpr(E->getArg(0));
+  Value *BitPos = CGF.EmitScalarExpr(E->getArg(1));
+
+  // X86 has special BT, BTC, BTR, and BTS instructions that handle the array
+  // indexing operation internally. Use them if possible.
+  llvm::Triple::ArchType Arch = CGF.getTarget().getTriple().getArch();
+  if (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64)
+    return EmitX86BitTestIntrinsic(CGF, BuiltinID, E, BitBase, BitPos);
+
+  // Otherwise, use generic code to load one byte and test the bit. Use all but
+  // the bottom three bits as the array index, and the bottom three bits to form
+  // a mask.
+  // Bit = BitBaseI8[BitPos >> 3] & (1 << (BitPos & 0x7)) != 0;
+  Value *ByteIndex = CGF.Builder.CreateAShr(
+      BitPos, llvm::ConstantInt::get(BitPos->getType(), 3), "bittest.byteidx");
+  Value *BitBaseI8 = CGF.Builder.CreatePointerCast(BitBase, CGF.Int8PtrTy);
+  Address ByteAddr(CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, BitBaseI8,
+                                                 ByteIndex, "bittest.byteaddr"),
+                   CharUnits::One());
+  Value *PosLow =
+      CGF.Builder.CreateAnd(CGF.Builder.CreateTrunc(BitPos, CGF.Int8Ty),
+                            llvm::ConstantInt::get(CGF.Int8Ty, 0x7));
+
+  // The updating instructions will need a mask.
+  Value *Mask = nullptr;
+  if (BuiltinID != Builtin::BI_bittest && BuiltinID != Builtin::BI_bittest64) {
+    Mask = CGF.Builder.CreateShl(llvm::ConstantInt::get(CGF.Int8Ty, 1), PosLow,
+                                 "bittest.mask");
+  }
+
+  // Emit a combined atomicrmw load/store operation for the interlocked
+  // intrinsics.
+  Value *OldByte = nullptr;
+  switch (BuiltinID) {
+  case Builtin::BI_interlockedbittestandreset:
+  case Builtin::BI_interlockedbittestandreset64:
+    OldByte = CGF.Builder.CreateAtomicRMW(
+        AtomicRMWInst::And, ByteAddr.getPointer(), CGF.Builder.CreateNot(Mask),
+        llvm::AtomicOrdering::SequentiallyConsistent);
+    break;
+  case Builtin::BI_interlockedbittestandset:
+  case Builtin::BI_interlockedbittestandset64:
+    OldByte = CGF.Builder.CreateAtomicRMW(
+        AtomicRMWInst::Or, ByteAddr.getPointer(), Mask,
+        llvm::AtomicOrdering::SequentiallyConsistent);
+    break;
+  default:
+    break;
+  }
+
+  // Emit a plain load for the non-interlocked intrinsics.
+  if (!OldByte) {
+    OldByte = CGF.Builder.CreateLoad(ByteAddr, "bittest.byte");
+    Value *NewByte = nullptr;
+    switch (BuiltinID) {
+    case Builtin::BI_bittest:
+    case Builtin::BI_bittest64:
+      // Don't store anything.
+      break;
+    case Builtin::BI_bittestandcomplement:
+    case Builtin::BI_bittestandcomplement64:
+      NewByte = CGF.Builder.CreateXor(OldByte, Mask);
+      break;
+    case Builtin::BI_bittestandreset:
+    case Builtin::BI_bittestandreset64:
+      NewByte = CGF.Builder.CreateAnd(OldByte, CGF.Builder.CreateNot(Mask));
+      break;
+    case Builtin::BI_bittestandset:
+    case Builtin::BI_bittestandset64:
+      NewByte = CGF.Builder.CreateOr(OldByte, Mask);
+      break;
+    default:
+      llvm_unreachable("non bittest family builtin");
+    }
+    if (NewByte)
+      CGF.Builder.CreateStore(NewByte, ByteAddr);
+  }
+
+  // However we loaded the old byte, either by plain load or atomicrmw, shift
+  // the bit into the low position and mask it to 0 or 1.
+  Value *ShiftedByte = CGF.Builder.CreateLShr(OldByte, PosLow, "bittest.shr");
+  return RValue::get(CGF.Builder.CreateAnd(
+      ShiftedByte, llvm::ConstantInt::get(CGF.Int8Ty, 1), "bittest.res"));
 }
 
 // Many of MSVC builtins are on both x64 and ARM; to avoid repeating code, we
@@ -2806,31 +2934,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI_InterlockedXor:
     return RValue::get(EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor, E));
 
-  case Builtin::BI_bittest:
-    return EmitBitTestIntrinsic(*this, E, '\0', 'l');
-  case Builtin::BI_bittestandcomplement:
-    return EmitBitTestIntrinsic(*this, E, 'c', 'l');
-  case Builtin::BI_bittestandreset:
-    return EmitBitTestIntrinsic(*this, E, 'r', 'l');
-  case Builtin::BI_bittestandset:
-    return EmitBitTestIntrinsic(*this, E, 's', 'l');
-  case Builtin::BI_interlockedbittestandreset:
-    return EmitBitTestIntrinsic(*this, E, 'r', 'l', /*Locked=*/true);
-  case Builtin::BI_interlockedbittestandset:
-    return EmitBitTestIntrinsic(*this, E, 's', 'l', /*Locked=*/true);
-
   case Builtin::BI_bittest64:
-    return EmitBitTestIntrinsic(*this, E, '\0', 'q');
+  case Builtin::BI_bittest:
   case Builtin::BI_bittestandcomplement64:
-    return EmitBitTestIntrinsic(*this, E, 'c', 'q');
+  case Builtin::BI_bittestandcomplement:
   case Builtin::BI_bittestandreset64:
-    return EmitBitTestIntrinsic(*this, E, 'r', 'q');
+  case Builtin::BI_bittestandreset:
   case Builtin::BI_bittestandset64:
-    return EmitBitTestIntrinsic(*this, E, 's', 'q');
+  case Builtin::BI_bittestandset:
+  case Builtin::BI_interlockedbittestandreset:
   case Builtin::BI_interlockedbittestandreset64:
-    return EmitBitTestIntrinsic(*this, E, 'r', 'q', /*Locked=*/true);
   case Builtin::BI_interlockedbittestandset64:
-    return EmitBitTestIntrinsic(*this, E, 's', 'q', /*Locked=*/true);
+  case Builtin::BI_interlockedbittestandset:
+    return EmitBitTestIntrinsic(*this, BuiltinID, E);
 
   case Builtin::BI__exception_code:
   case Builtin::BI_exception_code:
@@ -8778,8 +8894,29 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateBitCast(BuildVector(Ops),
                                  llvm::Type::getX86_MMXTy(getLLVMContext()));
   case X86::BI__builtin_ia32_vec_ext_v2si:
-    return Builder.CreateExtractElement(Ops[0],
-                                  llvm::ConstantInt::get(Ops[1]->getType(), 0));
+  case X86::BI__builtin_ia32_vec_ext_v16qi:
+  case X86::BI__builtin_ia32_vec_ext_v8hi:
+  case X86::BI__builtin_ia32_vec_ext_v4si:
+  case X86::BI__builtin_ia32_vec_ext_v4sf:
+  case X86::BI__builtin_ia32_vec_ext_v2di:
+  case X86::BI__builtin_ia32_vec_ext_v32qi:
+  case X86::BI__builtin_ia32_vec_ext_v16hi:
+  case X86::BI__builtin_ia32_vec_ext_v8si:
+  case X86::BI__builtin_ia32_vec_ext_v4di:
+    // These builtins exist so we can ensure the index is an ICE and in range.
+    // Otherwise we could just do this in the header file.
+    return Builder.CreateExtractElement(Ops[0], Ops[1]);
+  case X86::BI__builtin_ia32_vec_set_v16qi:
+  case X86::BI__builtin_ia32_vec_set_v8hi:
+  case X86::BI__builtin_ia32_vec_set_v4si:
+  case X86::BI__builtin_ia32_vec_set_v2di:
+  case X86::BI__builtin_ia32_vec_set_v32qi:
+  case X86::BI__builtin_ia32_vec_set_v16hi:
+  case X86::BI__builtin_ia32_vec_set_v8si:
+  case X86::BI__builtin_ia32_vec_set_v4di:
+    // These builtins exist so we can ensure the index is an ICE and in range.
+    // Otherwise we could just do this in the header file.
+    return Builder.CreateInsertElement(Ops[0], Ops[1], Ops[2]);
   case X86::BI_mm_setcsr:
   case X86::BI__builtin_ia32_ldmxcsr: {
     Address Tmp = CreateMemTemp(E->getArg(0)->getType());

@@ -73,7 +73,9 @@ public:
 
   /// Get a data fragment to write into, creating a new one if the current
   /// fragment is not a data fragment.
-  MCDataFragment *getOrCreateDataFragment();
+  /// Optionally a \p STI can be passed in so that a new fragment is created
+  /// if the Subtarget differs from the current fragment.
+  MCDataFragment *getOrCreateDataFragment(const MCSubtargetInfo* STI = nullptr);
   MCPaddingFragment *getOrCreatePaddingFragment();
 
 protected:
@@ -158,7 +160,8 @@ public:
   void EmitGPRel32Value(const MCExpr *Value) override;
   void EmitGPRel64Value(const MCExpr *Value) override;
   bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
-                          const MCExpr *Expr, SMLoc Loc) override;
+                          const MCExpr *Expr, SMLoc Loc,
+                          const MCSubtargetInfo &STI) override;
   using MCStreamer::emitFill;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;

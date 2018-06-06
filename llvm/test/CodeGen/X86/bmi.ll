@@ -404,8 +404,7 @@ define i32 @bextr32c(i32 %x, i16 zeroext %y) {
 ;
 ; X64-LABEL: bextr32c:
 ; X64:       # %bb.0:
-; X64-NEXT:    movswl %si, %eax
-; X64-NEXT:    bextrl %eax, %edi, %eax
+; X64-NEXT:    bextrl %esi, %edi, %eax
 ; X64-NEXT:    retq
   %tmp0 = sext i16 %y to i32
   %tmp1 = tail call i32 @llvm.x86.bmi.bextr.32(i32 %x, i32 %tmp0)

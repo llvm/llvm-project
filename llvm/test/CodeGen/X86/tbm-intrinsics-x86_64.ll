@@ -24,6 +24,16 @@ entry:
   ret i64 %0
 }
 
+define i64 @test_x86_tbm_bextri_u64_bigint(i64 %a) nounwind readnone {
+; CHECK-LABEL: test_x86_tbm_bextri_u64_bigint:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    bextrq $65535, %rdi, %rax # imm = 0xFFFF
+; CHECK-NEXT:    retq
+entry:
+  %0 = tail call i64 @llvm.x86.tbm.bextri.u64(i64 %a, i64 549755813887)
+  ret i64 %0
+}
+
 define i64 @test_x86_tbm_bextri_u64_z(i64 %a, i64 %b) nounwind readnone {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64_z:
 ; CHECK:       # %bb.0: # %entry
