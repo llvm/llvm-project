@@ -71,7 +71,7 @@ namespace pmr {
 #include <memory>
 #include <new>
 #include <stdexcept>
-#include <tuple>
+#include <__tuple>
 #include <type_traits>
 #include <utility>
 #include <cstddef>
@@ -96,7 +96,7 @@ size_t __aligned_allocation_size(size_t __s, size_t __a) _NOEXCEPT
 }
 
 // 8.5, memory.resource
-class _LIBCPP_TEMPLATE_VIS memory_resource
+class _LIBCPP_TYPE_VIS memory_resource
 {
     static const size_t __max_align = alignof(max_align_t);
 
