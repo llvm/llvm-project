@@ -15,6 +15,7 @@
 
 #include "MipsCallLowering.h"
 #include "MipsCCState.h"
+#include "MipsTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
 using namespace llvm;
@@ -44,10 +45,25 @@ public:
 private:
   virtual void assignValueToReg(unsigned ValVReg, unsigned PhysReg) override;
 
-  void markPhysRegUsed(unsigned PhysReg) {
+  virtual void markPhysRegUsed(unsigned PhysReg) {
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
 };
+
+class CallReturnHandler : public IncomingValueHandler {
+public:
+  CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                    MachineInstrBuilder &MIB)
+      : IncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
+
+private:
+  virtual void markPhysRegUsed(unsigned PhysReg) override {
+    MIB.addDef(PhysReg, RegState::Implicit);
+  }
+
+  MachineInstrBuilder &MIB;
+};
+
 } // end anonymous namespace
 
 void IncomingValueHandler::assignValueToReg(unsigned ValVReg,
@@ -194,6 +210,118 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   IncomingValueHandler Handler(MIRBuilder, MF.getRegInfo());
   if (!Handler.handle(ArgLocs, ArgInfos))
     return false;
+
+  return true;
+}
+
+bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
+                                 CallingConv::ID CallConv,
+                                 const MachineOperand &Callee,
+                                 const ArgInfo &OrigRet,
+                                 ArrayRef<ArgInfo> OrigArgs) const {
+
+  if (CallConv != CallingConv::C)
+    return false;
+
+  for (auto &Arg : OrigArgs) {
+    if (!isSupportedType(Arg.Ty))
+      return false;
+    if (Arg.Flags.isByVal() || Arg.Flags.isSRet())
+      return false;
+  }
+  if (OrigRet.Reg && !isSupportedType(OrigRet.Ty))
+    return false;
+
+  MachineFunction &MF = MIRBuilder.getMF();
+  const Function &F = MF.getFunction();
+  const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
+  const MipsTargetMachine &TM =
+      static_cast<const MipsTargetMachine &>(MF.getTarget());
+  const MipsABIInfo &ABI = TM.getABI();
+
+  MachineInstrBuilder CallSeqStart =
+      MIRBuilder.buildInstr(Mips::ADJCALLSTACKDOWN);
+
+  // FIXME: Add support for pic calling sequences, long call sequences for O32,
+  //       N32 and N64. First handle the case when Callee.isReg().
+  if (Callee.isReg())
+    return false;
+
+  MachineInstrBuilder MIB = MIRBuilder.buildInstrNoInsert(Mips::JAL);
+  MIB.addDef(Mips::SP, RegState::Implicit);
+  MIB.add(Callee);
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  MIB.addRegMask(TRI->getCallPreservedMask(MF, F.getCallingConv()));
+
+  TargetLowering::ArgListTy FuncOrigArgs;
+  FuncOrigArgs.reserve(OrigArgs.size());
+
+  SmallVector<ArgInfo, 8> ArgInfos;
+  SmallVector<unsigned, 8> OrigArgIndices;
+  unsigned i = 0;
+  for (auto &Arg : OrigArgs) {
+
+    TargetLowering::ArgListEntry Entry;
+    Entry.Ty = Arg.Ty;
+    FuncOrigArgs.push_back(Entry);
+
+    splitToValueTypes(Arg, i, ArgInfos, OrigArgIndices);
+    ++i;
+  }
+
+  SmallVector<ISD::OutputArg, 8> Outs;
+  subTargetRegTypeForCallingConv(
+      MIRBuilder, ArgInfos, OrigArgIndices,
+      [&](ISD::ArgFlagsTy flags, EVT vt, EVT argvt, bool used, unsigned origIdx,
+          unsigned partOffs) {
+        Outs.emplace_back(flags, vt, argvt, used, origIdx, partOffs);
+      });
+
+  SmallVector<CCValAssign, 8> ArgLocs;
+  MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
+                     F.getContext());
+
+  const char *Call = Callee.isSymbol() ? Callee.getSymbolName() : nullptr;
+  CCInfo.AnalyzeCallOperands(Outs, TLI.CCAssignFnForCall(), FuncOrigArgs, Call);
+
+  OutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), MIB);
+  if (!RetHandler.handle(ArgLocs, ArgInfos)) {
+    return false;
+  }
+
+  // TODO: Calculate stack offset.
+  CallSeqStart.addImm(ABI.GetCalleeAllocdArgSizeInBytes(CallConv)).addImm(0);
+  MIRBuilder.insertInstr(MIB);
+
+  if (OrigRet.Reg) {
+
+    ArgInfos.clear();
+    SmallVector<unsigned, 8> OrigRetIndices;
+
+    splitToValueTypes(OrigRet, 0, ArgInfos, OrigRetIndices);
+
+    SmallVector<ISD::InputArg, 8> Ins;
+    subTargetRegTypeForCallingConv(
+        MIRBuilder, ArgInfos, OrigRetIndices,
+        [&](ISD::ArgFlagsTy flags, EVT vt, EVT argvt, bool used,
+            unsigned origIdx, unsigned partOffs) {
+          Ins.emplace_back(flags, vt, argvt, used, origIdx, partOffs);
+        });
+
+    SmallVector<CCValAssign, 8> ArgLocs;
+    MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
+                       F.getContext());
+
+    CCInfo.AnalyzeCallResult(Ins, TLI.CCAssignFnForReturn(), OrigRet.Ty, Call);
+
+    CallReturnHandler Handler(MIRBuilder, MF.getRegInfo(), MIB);
+    if (!Handler.handle(ArgLocs, ArgInfos))
+      return false;
+  }
+
+  MIRBuilder.buildInstr(Mips::ADJCALLSTACKUP)
+      .addImm(ABI.GetCalleeAllocdArgSizeInBytes(CallConv))
+      .addImm(0);
 
   return true;
 }

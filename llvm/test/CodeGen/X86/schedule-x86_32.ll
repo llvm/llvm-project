@@ -88,7 +88,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    aaa # sched: [100:?]
+; ZNVER1-NEXT:    aaa # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   %1 = tail call i8 asm "aaa", "=r,r"(i8 %a0) nounwind
@@ -181,8 +181,8 @@ define void @test_aad(i16 %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    aad # sched: [100:?]
-; ZNVER1-NEXT:    aad $16 # sched: [100:?]
+; ZNVER1-NEXT:    aad # sched: [100:0.25]
+; ZNVER1-NEXT:    aad $16 # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm "aad \0A\09 aad $1", "r,i"(i16 %a0, i16 16) nounwind
@@ -275,8 +275,8 @@ define void @test_aam(i8 %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    aam # sched: [100:?]
-; ZNVER1-NEXT:    aam $16 # sched: [100:?]
+; ZNVER1-NEXT:    aam # sched: [100:0.25]
+; ZNVER1-NEXT:    aam $16 # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm "aam \0A\09 aam $1", "r,i"(i8 %a0, i8 16) nounwind
@@ -360,7 +360,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    aas # sched: [100:?]
+; ZNVER1-NEXT:    aas # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   %1 = tail call i8 asm "aas", "=r,r"(i8 %a0) nounwind
@@ -454,7 +454,7 @@ define void @test_arpl(i16 %a0, i16 *%a1) optsize {
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    arpl %ax, (%ecx) # sched: [100:?]
+; ZNVER1-NEXT:    arpl %ax, (%ecx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   call void asm sideeffect "arpl $0, $1", "r,*m"(i16 %a0, i16 *%a1)
@@ -540,8 +540,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    bound %ax, (%esi) # sched: [1:?]
-; HASWELL-NEXT:    bound %ecx, (%edx) # sched: [1:?]
+; HASWELL-NEXT:    bound %ax, (%esi) # sched: [1:3.75]
+; HASWELL-NEXT:    bound %ecx, (%edx) # sched: [1:3.75]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    popl %esi # sched: [6:0.50]
 ; HASWELL-NEXT:    .cfi_def_cfa_offset 4
@@ -625,8 +625,8 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [8:0.50]
 ; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    bound %ax, (%esi) # sched: [100:?]
-; ZNVER1-NEXT:    bound %ecx, (%edx) # sched: [100:?]
+; ZNVER1-NEXT:    bound %ax, (%esi) # sched: [100:0.25]
+; ZNVER1-NEXT:    bound %ecx, (%edx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    popl %esi # sched: [8:0.50]
 ; ZNVER1-NEXT:    .cfi_def_cfa_offset 4
@@ -714,7 +714,7 @@ define i8 @test_daa(i8 %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    daa # sched: [100:?]
+; ZNVER1-NEXT:    daa # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   %1 = tail call i8 asm "daa", "=r,r"(i8 %a0) nounwind
@@ -798,7 +798,7 @@ define i8 @test_das(i8 %a0) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    das # sched: [100:?]
+; ZNVER1-NEXT:    das # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   %1 = tail call i8 asm "das", "=r,r"(i8 %a0) nounwind
@@ -1251,7 +1251,7 @@ define void @test_into() optsize {
 ; HASWELL-LABEL: test_into:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    into # sched: [1:?]
+; HASWELL-NEXT:    into # sched: [1:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
@@ -1286,7 +1286,7 @@ define void @test_into() optsize {
 ; ZNVER1-LABEL: test_into:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    into # sched: [100:?]
+; ZNVER1-NEXT:    into # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   call void asm sideeffect "into", ""()
@@ -1624,17 +1624,17 @@ define void @test_pop_push() optsize {
 ; ZNVER1-LABEL: test_pop_push:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    popl %ds # sched: [100:?]
-; ZNVER1-NEXT:    popl %es # sched: [100:?]
-; ZNVER1-NEXT:    popl %ss # sched: [100:?]
-; ZNVER1-NEXT:    popl %fs # sched: [100:?]
-; ZNVER1-NEXT:    popl %gs # sched: [100:?]
-; ZNVER1-NEXT:    pushl %cs # sched: [100:?]
-; ZNVER1-NEXT:    pushl %ds # sched: [100:?]
-; ZNVER1-NEXT:    pushl %es # sched: [100:?]
-; ZNVER1-NEXT:    pushl %ss # sched: [100:?]
-; ZNVER1-NEXT:    pushl %fs # sched: [100:?]
-; ZNVER1-NEXT:    pushl %gs # sched: [100:?]
+; ZNVER1-NEXT:    popl %ds # sched: [100:0.25]
+; ZNVER1-NEXT:    popl %es # sched: [100:0.25]
+; ZNVER1-NEXT:    popl %ss # sched: [100:0.25]
+; ZNVER1-NEXT:    popl %fs # sched: [100:0.25]
+; ZNVER1-NEXT:    popl %gs # sched: [100:0.25]
+; ZNVER1-NEXT:    pushl %cs # sched: [100:0.25]
+; ZNVER1-NEXT:    pushl %ds # sched: [100:0.25]
+; ZNVER1-NEXT:    pushl %es # sched: [100:0.25]
+; ZNVER1-NEXT:    pushl %ss # sched: [100:0.25]
+; ZNVER1-NEXT:    pushl %fs # sched: [100:0.25]
+; ZNVER1-NEXT:    pushl %gs # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   call void asm sideeffect "pop %DS \0A\09 pop %ES \0A\09 pop %SS \0A\09 pop %FS \0A\09 pop %GS \0A\09 push %CS \0A\09 push %DS \0A\09 push %ES \0A\09 push %SS \0A\09 push %FS \0A\09 push %GS", ""()
@@ -1989,9 +1989,9 @@ define void @test_popa_popf_pusha_pushf() optsize {
 ; HASWELL-LABEL: test_popa_popf_pusha_pushf:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    popal # sched: [1:?]
+; HASWELL-NEXT:    popal # sched: [1:4.50]
 ; HASWELL-NEXT:    popfl # sched: [5:0.50]
-; HASWELL-NEXT:    pushal # sched: [1:?]
+; HASWELL-NEXT:    pushal # sched: [1:4.75]
 ; HASWELL-NEXT:    pushfl # sched: [1:1.00]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
@@ -2039,10 +2039,10 @@ define void @test_popa_popf_pusha_pushf() optsize {
 ; ZNVER1-LABEL: test_popa_popf_pusha_pushf:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    popal # sched: [100:?]
-; ZNVER1-NEXT:    popfl # sched: [100:?]
+; ZNVER1-NEXT:    popal # sched: [100:0.25]
+; ZNVER1-NEXT:    popfl # sched: [100:0.25]
 ; ZNVER1-NEXT:    pushal # sched: [8:0.50]
-; ZNVER1-NEXT:    pushfl # sched: [100:?]
+; ZNVER1-NEXT:    pushfl # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   call void asm sideeffect "popa \0A\09 popf \0A\09 pusha \0A\09 pushf", ""()

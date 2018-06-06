@@ -334,7 +334,7 @@ private:
   StringRef parseStringToComma();
 
   bool parseAssignment(StringRef Name, bool allow_redef,
-                       bool NoDeadStrip = false);
+                       bool NoDeadStrip = false, bool AllowExtendedExpr = false);
 
   unsigned getBinOpPrecedence(AsmToken::TokenKind K,
                               MCBinaryExpr::Opcode &Kind);
@@ -1113,13 +1113,17 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
-    if (Sym->isVariable() &&
-        isa<MCConstantExpr>(Sym->getVariableValue(/*SetUsed*/ false))) {
-      if (Variant)
-        return Error(EndLoc, "unexpected modifier on variable reference");
-
-      Res = Sym->getVariableValue(/*SetUsed*/ false);
-      return false;
+    if (Sym->isVariable()) {
+      auto V = Sym->getVariableValue(/*SetUsed*/ false);
+      bool DoInline = isa<MCConstantExpr>(V);
+      if (auto TV = dyn_cast<MCTargetExpr>(V))
+        DoInline = TV->inlineAssignedExpr();
+      if (DoInline) {
+        if (Variant)
+          return Error(EndLoc, "unexpected modifier on variable reference");
+        Res = Sym->getVariableValue(/*SetUsed*/ false);
+        return false;
+      }
     }
 
     // Otherwise create a symbol ref.
@@ -1814,7 +1818,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     // identifier '=' ... -> assignment statement
     Lex();
 
-    return parseAssignment(IDVal, true);
+    return parseAssignment(IDVal, true, /*NoDeadStrip*/ false, /*AllowExtendedExpr*/true);
 
   default: // Normal instruction or directive.
     break;
@@ -2750,11 +2754,11 @@ void AsmParser::handleMacroExit() {
 }
 
 bool AsmParser::parseAssignment(StringRef Name, bool allow_redef,
-                                bool NoDeadStrip) {
+                                bool NoDeadStrip, bool AllowExtendedExpr) {
   MCSymbol *Sym;
   const MCExpr *Value;
   if (MCParserUtils::parseAssignmentExpression(Name, allow_redef, *this, Sym,
-                                               Value))
+                                               Value, AllowExtendedExpr))
     return true;
 
   if (!Sym) {
@@ -2945,7 +2949,9 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
                  "unexpected token in .reloc directive"))
       return true;
 
-  if (getStreamer().EmitRelocDirective(*Offset, Name, Expr, DirectiveLoc))
+  const MCTargetAsmParser &MCT = getTargetParser();
+  const MCSubtargetInfo &STI = MCT.getSTI();
+  if (getStreamer().EmitRelocDirective(*Offset, Name, Expr, DirectiveLoc, STI))
     return Error(NameLoc, "unknown relocation name");
 
   return false;
@@ -5791,14 +5797,17 @@ static bool isSymbolUsedInExpression(const MCSymbol *Sym, const MCExpr *Value) {
 
 bool parseAssignmentExpression(StringRef Name, bool allow_redef,
                                MCAsmParser &Parser, MCSymbol *&Sym,
-                               const MCExpr *&Value) {
+                               const MCExpr *&Value, bool AllowExtendedExpr) {
 
   // FIXME: Use better location, we should use proper tokens.
   SMLoc EqualLoc = Parser.getTok().getLoc();
-
-  if (Parser.parseExpression(Value)) {
-    return Parser.TokError("missing expression");
-  }
+  SMLoc EndLoc;
+  if (AllowExtendedExpr) {
+    if (Parser.getTargetParser().parseAssignmentExpression(Value, EndLoc)) {
+      return Parser.TokError("missing expression");
+    }
+  } else if (Parser.parseExpression(Value, EndLoc))
+      return Parser.TokError("missing expression");
 
   // Note: we don't count b as used in "a = b". This is to allow
   // a = b

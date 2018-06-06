@@ -23240,10 +23240,11 @@ static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
   MVT VT = Amt.getSimpleValueType();
-  bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
+  if (!(VT == MVT::v8i16 || VT == MVT::v4i32 ||
+        (Subtarget.hasInt256() && VT == MVT::v16i16)))
+    return SDValue();
 
-  if (ConstantAmt && (VT == MVT::v8i16 || VT == MVT::v4i32 ||
-                      (Subtarget.hasInt256() && VT == MVT::v16i16))) {
+  if (ISD::isBuildVectorOfConstantSDNodes(Amt.getNode())) {
     SmallVector<SDValue, 8> Elts;
     MVT SVT = VT.getVectorElementType();
     unsigned SVTBits = SVT.getSizeInBits();
@@ -23269,12 +23270,29 @@ static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
     return DAG.getBuildVector(VT, dl, Elts);
   }
 
+  // If the target doesn't support variable shifts, use either FP conversion 
+  // or integer multiplication to avoid shifting each element individually.
   if (VT == MVT::v4i32) {
     Amt = DAG.getNode(ISD::SHL, dl, VT, Amt, DAG.getConstant(23, dl, VT));
     Amt = DAG.getNode(ISD::ADD, dl, VT, Amt,
                       DAG.getConstant(0x3f800000U, dl, VT));
     Amt = DAG.getBitcast(MVT::v4f32, Amt);
     return DAG.getNode(ISD::FP_TO_SINT, dl, VT, Amt);
+  }
+
+  // AVX2 can more effectively perform this as a zext/trunc to/from v8i32.
+  if (VT == MVT::v8i16 && !Subtarget.hasAVX2()) {
+    SDValue Z = getZeroVector(VT, Subtarget, DAG, dl);
+    SDValue Lo = DAG.getBitcast(MVT::v4i32, getUnpackl(DAG, dl, VT, Amt, Z));
+    SDValue Hi = DAG.getBitcast(MVT::v4i32, getUnpackh(DAG, dl, VT, Amt, Z));
+    Lo = convertShiftLeftToScale(Lo, dl, Subtarget, DAG);
+    Hi = convertShiftLeftToScale(Hi, dl, Subtarget, DAG);
+    if (Subtarget.hasSSE41())
+      return DAG.getNode(X86ISD::PACKUS, dl, VT, Lo, Hi);
+
+    return DAG.getVectorShuffle(VT, dl, DAG.getBitcast(VT, Lo),
+                                        DAG.getBitcast(VT, Hi),
+                                        {0, 2, 4, 6, 8, 10, 12, 14});
   }
 
   return SDValue();
@@ -28794,6 +28812,57 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     // The remainder is zero extended.
     Known.Zero.setBitsFrom(8);
     break;
+  }
+
+  // Handle target shuffles.
+  // TODO - use resolveTargetShuffleInputs once we can limit recursive depth.
+  if (isTargetShuffle(Opc)) {
+    bool IsUnary;
+    SmallVector<int, 64> Mask;
+    SmallVector<SDValue, 2> Ops;
+    if (getTargetShuffleMask(Op.getNode(), VT.getSimpleVT(), true, Ops, Mask,
+                             IsUnary)) {
+      unsigned NumOps = Ops.size();
+      unsigned NumElts = VT.getVectorNumElements();
+      if (Mask.size() == NumElts) {
+        SmallVector<APInt, 2> DemandedOps(NumOps, APInt(NumElts, 0));
+        Known.Zero.setAllBits(); Known.One.setAllBits();
+        for (unsigned i = 0; i != NumElts; ++i) {
+          if (!DemandedElts[i])
+            continue;
+          int M = Mask[i];
+          if (M == SM_SentinelUndef) {
+            // For UNDEF elements, we don't know anything about the common state
+            // of the shuffle result.
+            Known.resetAll();
+            break;
+          } else if (M == SM_SentinelZero) {
+            Known.One.clearAllBits();
+            continue;
+          }
+          assert(0 <= M && (unsigned)M < (NumOps * NumElts) &&
+                 "Shuffle index out of range");
+
+          unsigned OpIdx = (unsigned)M / NumElts;
+          unsigned EltIdx = (unsigned)M % NumElts;
+          if (Ops[OpIdx].getValueType() != VT) {
+            // TODO - handle target shuffle ops with different value types.
+            Known.resetAll();
+            break;
+          }
+          DemandedOps[OpIdx].setBit(EltIdx);
+        }
+        // Known bits are the values that are shared by every demanded element.
+        for (unsigned i = 0; i != NumOps && !Known.isUnknown(); ++i) {
+          if (!DemandedOps[i])
+            continue;
+          KnownBits Known2;
+          DAG.computeKnownBits(Ops[i], Known2, DemandedOps[i], Depth + 1);
+          Known.One &= Known2.One;
+          Known.Zero &= Known2.Zero;
+        }
+      }
+    }
   }
 }
 

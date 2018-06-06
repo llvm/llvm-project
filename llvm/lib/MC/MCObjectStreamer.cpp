@@ -146,12 +146,24 @@ MCFragment *MCObjectStreamer::getCurrentFragment() const {
   return nullptr;
 }
 
-MCDataFragment *MCObjectStreamer::getOrCreateDataFragment() {
-  MCDataFragment *F = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
+static bool CanReuseDataFragment(const MCDataFragment &F,
+                                 const MCAssembler &Assembler,
+                                 const MCSubtargetInfo *STI) {
+  if (!F.hasInstructions())
+    return true;
   // When bundling is enabled, we don't want to add data to a fragment that
   // already has instructions (see MCELFStreamer::EmitInstToData for details)
-  if (!F || (Assembler->isBundlingEnabled() && !Assembler->getRelaxAll() &&
-             F->hasInstructions())) {
+  if (Assembler.isBundlingEnabled())
+    return Assembler.getRelaxAll();
+  // If the subtarget is changed mid fragment we start a new fragment to record
+  // the new STI.
+  return !STI || F.getSubtargetInfo() == STI;
+}
+
+MCDataFragment *
+MCObjectStreamer::getOrCreateDataFragment(const MCSubtargetInfo *STI) {
+  MCDataFragment *F = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
+  if (!F || !CanReuseDataFragment(*F, *Assembler, STI)) {
     F = new MCDataFragment();
     insert(F);
   }
@@ -327,7 +339,7 @@ void MCObjectStreamer::EmitInstructionImpl(const MCInst &Inst,
 
   // If this instruction doesn't need relaxation, just emit it as data.
   MCAssembler &Assembler = getAssembler();
-  if (!Assembler.getBackend().mayNeedRelaxation(Inst)) {
+  if (!Assembler.getBackend().mayNeedRelaxation(Inst, STI)) {
     EmitInstToData(Inst, STI);
     return;
   }
@@ -341,7 +353,7 @@ void MCObjectStreamer::EmitInstructionImpl(const MCInst &Inst,
       (Assembler.isBundlingEnabled() && Sec->isBundleLocked())) {
     MCInst Relaxed;
     getAssembler().getBackend().relaxInstruction(Inst, STI, Relaxed);
-    while (getAssembler().getBackend().mayNeedRelaxation(Relaxed))
+    while (getAssembler().getBackend().mayNeedRelaxation(Relaxed, STI))
       getAssembler().getBackend().relaxInstruction(Relaxed, STI, Relaxed);
     EmitInstToData(Relaxed, STI);
     return;
@@ -606,7 +618,8 @@ void MCObjectStreamer::EmitGPRel64Value(const MCExpr *Value) {
 }
 
 bool MCObjectStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
-                                          const MCExpr *Expr, SMLoc Loc) {
+                                          const MCExpr *Expr, SMLoc Loc,
+                                          const MCSubtargetInfo &STI) {
   int64_t OffsetValue;
   if (!Offset.evaluateAsAbsolute(OffsetValue))
     llvm_unreachable("Offset is not absolute");
@@ -614,7 +627,7 @@ bool MCObjectStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
   if (OffsetValue < 0)
     llvm_unreachable("Offset is negative");
 
-  MCDataFragment *DF = getOrCreateDataFragment();
+  MCDataFragment *DF = getOrCreateDataFragment(&STI);
   flushPendingLabels(DF, DF->getContents().size());
 
   Optional<MCFixupKind> MaybeKind = Assembler->getBackend().getFixupKind(Name);

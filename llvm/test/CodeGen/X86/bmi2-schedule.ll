@@ -264,8 +264,8 @@ define i32 @test_pdep_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ;
 ; ZNVER1-LABEL: test_pdep_i32:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    pdepl (%rdx), %edi, %ecx # sched: [100:?]
-; ZNVER1-NEXT:    pdepl %esi, %edi, %eax # sched: [100:?]
+; ZNVER1-NEXT:    pdepl (%rdx), %edi, %ecx # sched: [100:0.25]
+; ZNVER1-NEXT:    pdepl %esi, %edi, %eax # sched: [100:0.25]
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i32, i32 *%a2
@@ -314,8 +314,8 @@ define i64 @test_pdep_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ;
 ; ZNVER1-LABEL: test_pdep_i64:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    pdepq (%rdx), %rdi, %rcx # sched: [100:?]
-; ZNVER1-NEXT:    pdepq %rsi, %rdi, %rax # sched: [100:?]
+; ZNVER1-NEXT:    pdepq (%rdx), %rdi, %rcx # sched: [100:0.25]
+; ZNVER1-NEXT:    pdepq %rsi, %rdi, %rax # sched: [100:0.25]
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i64, i64 *%a2
@@ -364,8 +364,8 @@ define i32 @test_pext_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ;
 ; ZNVER1-LABEL: test_pext_i32:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    pextl (%rdx), %edi, %ecx # sched: [100:?]
-; ZNVER1-NEXT:    pextl %esi, %edi, %eax # sched: [100:?]
+; ZNVER1-NEXT:    pextl (%rdx), %edi, %ecx # sched: [100:0.25]
+; ZNVER1-NEXT:    pextl %esi, %edi, %eax # sched: [100:0.25]
 ; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i32, i32 *%a2
@@ -414,8 +414,8 @@ define i64 @test_pext_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ;
 ; ZNVER1-LABEL: test_pext_i64:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    pextq (%rdx), %rdi, %rcx # sched: [100:?]
-; ZNVER1-NEXT:    pextq %rsi, %rdi, %rax # sched: [100:?]
+; ZNVER1-NEXT:    pextq (%rdx), %rdi, %rcx # sched: [100:0.25]
+; ZNVER1-NEXT:    pextq %rsi, %rdi, %rax # sched: [100:0.25]
 ; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i64, i64 *%a2

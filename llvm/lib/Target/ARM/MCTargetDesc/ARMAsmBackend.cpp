@@ -173,7 +173,8 @@ void ARMAsmBackend::handleAssemblerFlag(MCAssemblerFlag Flag) {
   }
 }
 
-unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op) const {
+unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op,
+                                         const MCSubtargetInfo &STI) const {
   bool HasThumb2 = STI.getFeatureBits()[ARM::FeatureThumb2];
   bool HasV8MBaselineOps = STI.getFeatureBits()[ARM::HasV8MBaselineOps];
 
@@ -195,8 +196,9 @@ unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op) const {
   }
 }
 
-bool ARMAsmBackend::mayNeedRelaxation(const MCInst &Inst) const {
-  if (getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode())
+bool ARMAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+                                      const MCSubtargetInfo &STI) const {
+  if (getRelaxedOpcode(Inst.getOpcode(), STI) != Inst.getOpcode())
     return true;
   return false;
 }
@@ -263,7 +265,7 @@ bool ARMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
 void ARMAsmBackend::relaxInstruction(const MCInst &Inst,
                                      const MCSubtargetInfo &STI,
                                      MCInst &Res) const {
-  unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode());
+  unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode(), STI);
 
   // Sanity check w/ diagnostic if we get here w/ a bogus instruction.
   if (RelaxedOp == Inst.getOpcode()) {
@@ -360,7 +362,8 @@ static uint32_t joinHalfWords(uint32_t FirstHalf, uint32_t SecondHalf,
 unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
                                          const MCFixup &Fixup,
                                          const MCValue &Target, uint64_t Value,
-                                         bool IsResolved, MCContext &Ctx) const {
+                                         bool IsResolved, MCContext &Ctx,
+                                         const MCSubtargetInfo* STI) const {
   unsigned Kind = Fixup.getKind();
 
   // MachO tries to make .o files that look vaguely pre-linked, so for MOVW/MOVT
@@ -389,7 +392,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case FK_SecRel_4:
     return Value;
   case ARM::fixup_arm_movt_hi16:
-    if (IsResolved || !STI.getTargetTriple().isOSBinFormatELF())
+    assert(STI != nullptr);
+    if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
       Value >>= 16;
     LLVM_FALLTHROUGH;
   case ARM::fixup_arm_movw_lo16: {
@@ -401,7 +405,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     return Value;
   }
   case ARM::fixup_t2_movt_hi16:
-    if (IsResolved || !STI.getTargetTriple().isOSBinFormatELF())
+    assert(STI != nullptr);
+    if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
       Value >>= 16;
     LLVM_FALLTHROUGH;
   case ARM::fixup_t2_movw_lo16: {
@@ -487,6 +492,11 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     return 0xffffff & ((Value - 8) >> 2);
   case ARM::fixup_t2_uncondbranch: {
     Value = Value - 4;
+    if (!isInt<25>(Value)) {
+      Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
+      return 0;
+    }
+
     Value >>= 1; // Low bit is not encoded.
 
     uint32_t out = 0;
@@ -506,6 +516,11 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
   case ARM::fixup_t2_condbranch: {
     Value = Value - 4;
+    if (!isInt<21>(Value)) {
+      Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
+      return 0;
+    }
+
     Value >>= 1; // Low bit is not encoded.
 
     uint64_t out = 0;
@@ -519,9 +534,9 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
   case ARM::fixup_arm_thumb_bl: {
     if (!isInt<25>(Value - 4) ||
-        (!STI.getFeatureBits()[ARM::FeatureThumb2] &&
-         !STI.getFeatureBits()[ARM::HasV8MBaselineOps] &&
-         !STI.getFeatureBits()[ARM::HasV6MOps] &&
+        (!STI->getFeatureBits()[ARM::FeatureThumb2] &&
+         !STI->getFeatureBits()[ARM::HasV8MBaselineOps] &&
+         !STI->getFeatureBits()[ARM::HasV6MOps] &&
          !isInt<23>(Value - 4))) {
       Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
       return 0;
@@ -593,7 +608,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case ARM::fixup_arm_thumb_cp:
     // On CPUs supporting Thumb2, this will be relaxed to an ldr.w, otherwise we
     // could have an error on our hands.
-    if (!STI.getFeatureBits()[ARM::FeatureThumb2] && IsResolved) {
+    assert(STI != nullptr);
+    if (!STI->getFeatureBits()[ARM::FeatureThumb2] && IsResolved) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
@@ -617,8 +633,9 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
   case ARM::fixup_arm_thumb_br:
     // Offset by 4 and don't encode the lower bit, which is always 0.
-    if (!STI.getFeatureBits()[ARM::FeatureThumb2] &&
-        !STI.getFeatureBits()[ARM::HasV8MBaselineOps]) {
+    assert(STI != nullptr);
+    if (!STI->getFeatureBits()[ARM::FeatureThumb2] &&
+        !STI->getFeatureBits()[ARM::HasV8MBaselineOps]) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
@@ -628,7 +645,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     return ((Value - 4) >> 1) & 0x7ff;
   case ARM::fixup_arm_thumb_bcc:
     // Offset by 4 and don't encode the lower bit, which is always 0.
-    if (!STI.getFeatureBits()[ARM::FeatureThumb2]) {
+    assert(STI != nullptr);
+    if (!STI->getFeatureBits()[ARM::FeatureThumb2]) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
@@ -884,10 +902,11 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
 void ARMAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) const {
+                               bool IsResolved,
+                               const MCSubtargetInfo* STI) const {
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
   MCContext &Ctx = Asm.getContext();
-  Value = adjustFixupValue(Asm, Fixup, Target, Value, IsResolved, Ctx);
+  Value = adjustFixupValue(Asm, Fixup, Target, Value, IsResolved, Ctx, STI);
   if (!Value)
     return; // Doesn't change encoding.
 

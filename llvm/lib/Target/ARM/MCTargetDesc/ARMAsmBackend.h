@@ -19,6 +19,9 @@
 namespace llvm {
 
 class ARMAsmBackend : public MCAsmBackend {
+  // The STI from the target triple the MCAsmBackend was instantiated with
+  // note that MCFragments may have a different local STI that should be
+  // used in preference.
   const MCSubtargetInfo &STI;
   bool isThumbMode;    // Currently emitting Thumb code.
 public:
@@ -31,6 +34,8 @@ public:
     return ARM::NumTargetFixupKinds;
   }
 
+  // FIXME: this should be calculated per fragment as the STI may be
+  // different.
   bool hasNOP() const { return STI.getFeatureBits()[ARM::HasV6T2Ops]; }
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
@@ -40,15 +45,18 @@ public:
 
   unsigned adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
                             const MCValue &Target, uint64_t Value,
-                            bool IsResolved, MCContext &Ctx) const;
+                            bool IsResolved, MCContext &Ctx,
+                            const MCSubtargetInfo *STI) const;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) const override;
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
 
-  unsigned getRelaxedOpcode(unsigned Op) const;
+  unsigned getRelaxedOpcode(unsigned Op, const MCSubtargetInfo &STI) const;
 
-  bool mayNeedRelaxation(const MCInst &Inst) const override;
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override;
 
   const char *reasonForFixupRelaxation(const MCFixup &Fixup,
                                        uint64_t Value) const;

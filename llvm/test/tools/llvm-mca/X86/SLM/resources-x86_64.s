@@ -822,13 +822,13 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      5     2.00    *      *            negl	(%rax)
 # CHECK-NEXT:  1      1     0.50                        negq	%rcx
 # CHECK-NEXT:  2      5     2.00    *      *            negq	(%r10)
-# CHECK-NEXT:  1      1      -                          nop
-# CHECK-NEXT:  1      1      -                          nopw	%di
-# CHECK-NEXT:  1      1      -                          nopw	(%rcx)
-# CHECK-NEXT:  1      1      -                          nopl	%esi
-# CHECK-NEXT:  1      1      -                          nopl	(%r8)
-# CHECK-NEXT:  1      1      -                          nopq	%rdx
-# CHECK-NEXT:  1      1      -                          nopq	(%r9)
+# CHECK-NEXT:  1      1     0.50                        nop
+# CHECK-NEXT:  1      1     0.50                        nopw	%di
+# CHECK-NEXT:  1      1     0.50                        nopw	(%rcx)
+# CHECK-NEXT:  1      1     0.50                        nopl	%esi
+# CHECK-NEXT:  1      1     0.50                        nopl	(%r8)
+# CHECK-NEXT:  1      1     0.50                        nopq	%rdx
+# CHECK-NEXT:  1      1     0.50                        nopq	(%r9)
 # CHECK-NEXT:  1      1     0.50                        notb	%dil
 # CHECK-NEXT:  2      5     2.00    *      *            notb	(%r8)
 # CHECK-NEXT:  1      1     0.50                        notw	%si

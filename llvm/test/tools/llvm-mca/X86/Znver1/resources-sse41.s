@@ -163,17 +163,17 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   blendvpd	%xmm0, (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        blendvps	%xmm0, %xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   blendvps	%xmm0, (%rax), %xmm2
-# CHECK-NEXT:  1      100    -                          dppd	$22, %xmm0, %xmm2
-# CHECK-NEXT:  1      100    -      *                   dppd	$22, (%rax), %xmm2
-# CHECK-NEXT:  1      100    -                          dpps	$22, %xmm0, %xmm2
-# CHECK-NEXT:  1      100    -      *                   dpps	$22, (%rax), %xmm2
+# CHECK-NEXT:  1      100   0.25                        dppd	$22, %xmm0, %xmm2
+# CHECK-NEXT:  1      100   0.25    *                   dppd	$22, (%rax), %xmm2
+# CHECK-NEXT:  1      100   0.25                        dpps	$22, %xmm0, %xmm2
+# CHECK-NEXT:  1      100   0.25    *                   dpps	$22, (%rax), %xmm2
 # CHECK-NEXT:  2      2     2.00                        extractps	$1, %xmm0, %ecx
 # CHECK-NEXT:  2      5     2.50           *            extractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      1     0.50                        insertps	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   insertps	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   movntdqa	(%rax), %xmm2
-# CHECK-NEXT:  1      100    -                          mpsadbw	$1, %xmm0, %xmm2
-# CHECK-NEXT:  1      100    -      *                   mpsadbw	$1, (%rax), %xmm2
+# CHECK-NEXT:  1      100   0.25                        mpsadbw	$1, %xmm0, %xmm2
+# CHECK-NEXT:  1      100   0.25    *                   mpsadbw	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.25                        packusdw	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   packusdw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pblendvb	%xmm0, %xmm0, %xmm2

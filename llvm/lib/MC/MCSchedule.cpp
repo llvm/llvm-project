@@ -85,7 +85,7 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
   llvm_unreachable("unsupported variant scheduling class");
 }
 
-Optional<double>
+double
 MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
                                       const MCSchedClassDesc &SCDesc) {
   Optional<double> Throughput;
@@ -99,18 +99,25 @@ MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
     double Temp = NumUnits * 1.0 / I->Cycles;
     Throughput = Throughput ? std::min(Throughput.getValue(), Temp) : Temp;
   }
-  return Throughput ? 1 / Throughput.getValue() : Throughput;
+  if (Throughput.hasValue())
+    return 1.0 / Throughput.getValue();
+
+  // If no throughput value was calculated, assume that we can execute at the
+  // maximum issue width scaled by number of micro-ops for the schedule class.
+  return ((double)SCDesc.NumMicroOps) / SM.IssueWidth;
 }
 
-Optional<double>
+double
 MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
                                       const MCInstrInfo &MCII,
                                       const MCInst &Inst) const {
-  Optional<double> Throughput;
   unsigned SchedClass = MCII.get(Inst.getOpcode()).getSchedClass();
   const MCSchedClassDesc *SCDesc = getSchedClassDesc(SchedClass);
+
+  // If there's no valid class, assume that the instruction executes/completes
+  // at the maximum issue width.
   if (!SCDesc->isValid())
-    return Throughput;
+    return 1.0 / IssueWidth;
 
   unsigned CPUID = getProcessorID();
   while (SCDesc->isVariant()) {
@@ -124,7 +131,7 @@ MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
   llvm_unreachable("unsupported variant scheduling class");
 }
 
-Optional<double>
+double
 MCSchedModel::getReciprocalThroughput(unsigned SchedClass,
                                       const InstrItineraryData &IID) {
   Optional<double> Throughput;
@@ -136,5 +143,10 @@ MCSchedModel::getReciprocalThroughput(unsigned SchedClass,
     double Temp = countPopulation(I->getUnits()) * 1.0 / I->getCycles();
     Throughput = Throughput ? std::min(Throughput.getValue(), Temp) : Temp;
   }
-  return Throughput ? 1 / Throughput.getValue() : Throughput;
+  if (Throughput.hasValue())
+    return 1.0 / Throughput.getValue();
+
+  // If there are no execution resources specified for this class, then assume
+  // that it can execute at the maximum default issue width.
+  return 1.0 / DefaultIssueWidth;
 }

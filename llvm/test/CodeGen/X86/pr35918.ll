@@ -59,8 +59,7 @@ define void @fetch_r16g16_snorm_unorm8(<4 x i8>*, i8*, i32, i32, { [2048 x i32],
 ; X64-SKYLAKE-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X64-SKYLAKE-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
 ; X64-SKYLAKE-NEXT:    vpsrld $7, %xmm0, %xmm0
-; X64-SKYLAKE-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
-; X64-SKYLAKE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2],zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; X64-SKYLAKE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4],zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
 ; X64-SKYLAKE-NEXT:    vmovd %xmm0, %eax
 ; X64-SKYLAKE-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
 ; X64-SKYLAKE-NEXT:    movl %eax, (%rdi)

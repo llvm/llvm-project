@@ -16,19 +16,24 @@
 #ifndef LLVM_TOOLS_LLVM_EXEGESIS_BENCHMARKRESULT_H
 #define LLVM_TOOLS_LLVM_EXEGESIS_BENCHMARKRESULT_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <limits>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace exegesis {
 
+struct BenchmarkResultContext; // Forward declaration.
+
 struct InstructionBenchmarkKey {
   // The LLVM opcode name.
-  std::string OpcodeName;
-  enum ModeE { Unknown, Latency, Uops };
-  ModeE Mode;
+  std::string OpcodeName; // FIXME: Deprecated, use Instructions below.
+  std::vector<llvm::MCInst> Instructions;
   // An opaque configuration, that can be used to separate several benchmarks of
   // the same instruction under different configurations.
   std::string Config;
@@ -43,6 +48,8 @@ struct BenchmarkMeasure {
 // The result of an instruction benchmark.
 struct InstructionBenchmark {
   InstructionBenchmarkKey Key;
+  enum ModeE { Unknown, Latency, Uops };
+  ModeE Mode;
   std::string CpuName;
   std::string LLVMTriple;
   int NumRepetitions = 0;
@@ -50,16 +57,23 @@ struct InstructionBenchmark {
   std::string Error;
   std::string Info;
 
-  static InstructionBenchmark readYamlOrDie(llvm::StringRef Filename);
-  static std::vector<InstructionBenchmark>
-
   // Read functions.
-  readYamlsOrDie(llvm::StringRef Filename);
-  void readYamlFrom(llvm::StringRef InputContent);
+  static InstructionBenchmark
+  readYamlOrDie(const BenchmarkResultContext &Context,
+                llvm::StringRef Filename);
+
+  static std::vector<InstructionBenchmark>
+  readYamlsOrDie(const BenchmarkResultContext &Context,
+                 llvm::StringRef Filename);
+
+  void readYamlFrom(const BenchmarkResultContext &Context,
+                    llvm::StringRef InputContent);
 
   // Write functions, non-const because of YAML traits.
-  void writeYamlTo(llvm::raw_ostream &S);
-  void writeYamlOrDie(const llvm::StringRef Filename);
+  void writeYamlTo(const BenchmarkResultContext &Context, llvm::raw_ostream &S);
+
+  void writeYamlOrDie(const BenchmarkResultContext &Context,
+                      const llvm::StringRef Filename);
 };
 
 //------------------------------------------------------------------------------
@@ -85,6 +99,38 @@ private:
   int NumValues = 0;
   double MaxValue = std::numeric_limits<double>::min();
   double MinValue = std::numeric_limits<double>::max();
+};
+
+// This context is used when de/serializing InstructionBenchmark to guarantee
+// that Registers and Instructions are human readable and preserved accross
+// different versions of LLVM.
+struct BenchmarkResultContext {
+  BenchmarkResultContext() = default;
+  BenchmarkResultContext(BenchmarkResultContext &&) = default;
+  BenchmarkResultContext &operator=(BenchmarkResultContext &&) = default;
+  BenchmarkResultContext(const BenchmarkResultContext &) = delete;
+  BenchmarkResultContext &operator=(const BenchmarkResultContext &) = delete;
+
+  // Populate Registers and Instruction mapping.
+  void addRegEntry(unsigned RegNo, llvm::StringRef Name);
+  void addInstrEntry(unsigned Opcode, llvm::StringRef Name);
+
+  // Register accessors.
+  llvm::StringRef getRegName(unsigned RegNo) const;
+  unsigned getRegNo(llvm::StringRef Name) const; // 0 is not found.
+
+  // Instruction accessors.
+  llvm::StringRef getInstrName(unsigned Opcode) const;
+  unsigned getInstrOpcode(llvm::StringRef Name) const; // 0 is not found.
+
+private:
+  // Ideally we would like to use MCRegisterInfo and MCInstrInfo but doing so
+  // would make testing harder, instead we create a mapping that we can easily
+  // populate.
+  std::unordered_map<unsigned, llvm::StringRef> InstrOpcodeToName;
+  std::unordered_map<unsigned, llvm::StringRef> RegNoToName;
+  llvm::StringMap<unsigned> InstrNameToOpcode;
+  llvm::StringMap<unsigned> RegNameToNo;
 };
 
 } // namespace exegesis

@@ -51,7 +51,7 @@ class HexagonAsmBackend : public MCAsmBackend {
     SmallVector<MCFixup, 4> Fixups;
     SmallString<256> Code;
     raw_svector_ostream VecOS(Code);
-    E.encodeInstruction(HMB, VecOS, Fixups, RF.getSubtargetInfo());
+    E.encodeInstruction(HMB, VecOS, Fixups, *RF.getSubtargetInfo());
 
     // Update the fragment.
     RF.setInst(HMB);
@@ -414,7 +414,8 @@ public:
   /// fixup kind as appropriate.
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t FixupValue, bool IsResolved) const override {
+                  uint64_t FixupValue, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override {
 
     // When FixupValue is 0 the relocation is external and there
     // is nothing for us to do.
@@ -561,7 +562,8 @@ public:
   /// relaxation.
   ///
   /// \param Inst - The instruction to test.
-  bool mayNeedRelaxation(MCInst const &Inst) const override {
+  bool mayNeedRelaxation(MCInst const &Inst,
+                         const MCSubtargetInfo &STI) const override {
     return true;
   }
 
@@ -736,7 +738,7 @@ public:
                 Inst.addOperand(MCOperand::createInst(Nop));
                 Size -= 4;
                 if (!HexagonMCChecker(
-                         Context, *MCII, RF.getSubtargetInfo(), Inst,
+                         Context, *MCII, *RF.getSubtargetInfo(), Inst,
                          *Context.getRegisterInfo(), false)
                          .check()) {
                   Inst.erase(Inst.end() - 1);
@@ -744,7 +746,7 @@ public:
                 }
               }
               bool Error = HexagonMCShuffle(Context, true, *MCII,
-                                            RF.getSubtargetInfo(), Inst);
+                                            *RF.getSubtargetInfo(), Inst);
               //assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm.getEmitter(), RF, Inst);

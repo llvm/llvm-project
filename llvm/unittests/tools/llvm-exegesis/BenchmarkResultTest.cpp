@@ -16,20 +16,37 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using ::testing::AllOf;
+using ::testing::Eq;
+using ::testing::get;
+using ::testing::Pointwise;
+using ::testing::Property;
+
 namespace exegesis {
 
 bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B) {
   return std::tie(A.Key, A.Value) == std::tie(B.Key, B.Value);
 }
 
+MATCHER(EqMCInst, "") {
+  return get<0>(arg).getOpcode() == get<1>(arg).getOpcode();
+}
+
 namespace {
 
+static constexpr const unsigned kInstrId = 5;
+static constexpr const char kInstrName[] = "Instruction5";
+
 TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
+  BenchmarkResultContext Ctx;
+  Ctx.addInstrEntry(kInstrId, kInstrName);
+
   InstructionBenchmark ToDisk;
 
   ToDisk.Key.OpcodeName = "name";
-  ToDisk.Key.Mode = InstructionBenchmarkKey::Latency;
+  ToDisk.Key.Instructions.push_back(llvm::MCInstBuilder(kInstrId));
   ToDisk.Key.Config = "config";
+  ToDisk.Mode = InstructionBenchmark::Latency;
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";
   ToDisk.NumRepetitions = 1;
@@ -43,16 +60,17 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   EC = llvm::sys::fs::createUniqueDirectory("BenchmarkResultTestDir", Filename);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(Filename, "data.yaml");
-
-  ToDisk.writeYamlOrDie(Filename);
+  ToDisk.writeYamlOrDie(Ctx, Filename);
 
   {
     // One-element version.
-    const auto FromDisk = InstructionBenchmark::readYamlOrDie(Filename);
+    const auto FromDisk = InstructionBenchmark::readYamlOrDie(Ctx, Filename);
 
     EXPECT_EQ(FromDisk.Key.OpcodeName, ToDisk.Key.OpcodeName);
-    EXPECT_EQ(FromDisk.Key.Mode, ToDisk.Key.Mode);
+    EXPECT_THAT(FromDisk.Key.Instructions,
+                Pointwise(EqMCInst(), ToDisk.Key.Instructions));
     EXPECT_EQ(FromDisk.Key.Config, ToDisk.Key.Config);
+    EXPECT_EQ(FromDisk.Mode, ToDisk.Mode);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
     EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
     EXPECT_EQ(FromDisk.NumRepetitions, ToDisk.NumRepetitions);
@@ -62,12 +80,15 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   }
   {
     // Vector version.
-    const auto FromDiskVector = InstructionBenchmark::readYamlsOrDie(Filename);
+    const auto FromDiskVector =
+        InstructionBenchmark::readYamlsOrDie(Ctx, Filename);
     ASSERT_EQ(FromDiskVector.size(), size_t{1});
     const auto FromDisk = FromDiskVector[0];
     EXPECT_EQ(FromDisk.Key.OpcodeName, ToDisk.Key.OpcodeName);
-    EXPECT_EQ(FromDisk.Key.Mode, ToDisk.Key.Mode);
+    EXPECT_THAT(FromDisk.Key.Instructions,
+                Pointwise(EqMCInst(), ToDisk.Key.Instructions));
     EXPECT_EQ(FromDisk.Key.Config, ToDisk.Key.Config);
+    EXPECT_EQ(FromDisk.Mode, ToDisk.Mode);
     EXPECT_EQ(FromDisk.CpuName, ToDisk.CpuName);
     EXPECT_EQ(FromDisk.LLVMTriple, ToDisk.LLVMTriple);
     EXPECT_EQ(FromDisk.NumRepetitions, ToDisk.NumRepetitions);
