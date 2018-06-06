@@ -84,18 +84,6 @@ class CommandParser:
 class InlineTest(TestBase):
     # Internal implementation
 
-    def getRerunArgs(self):
-        # The -N option says to NOT run a if it matches the option argument, so
-        # if we are using dSYM we say to NOT run dwarf (-N dwarf) and vice
-        # versa.
-        if self.using_dsym is None:
-            # The test was skipped altogether.
-            return ""
-        elif self.using_dsym:
-            return "-N dwarf " + self.mydir
-        else:
-            return "-N dsym " + self.mydir
-
     def BuildMakefile(self):
         makefilePath = self.getBuildArtifact("Makefile")
         if os.path.exists(makefilePath):
@@ -135,37 +123,10 @@ class InlineTest(TestBase):
         makefile.flush()
         makefile.close()
 
-    @add_test_categories(["dsym"])
-    def __test_with_dsym(self):
-        self.using_dsym = True
+    def _test(self):
         self.BuildMakefile()
         self.build()
         self.do_test()
-    __test_with_dsym.debug_info = "dsym"
-
-    @add_test_categories(["dwarf"])
-    def __test_with_dwarf(self):
-        self.using_dsym = False
-        self.BuildMakefile()
-        self.build()
-        self.do_test()
-    __test_with_dwarf.debug_info = "dwarf"
-
-    @add_test_categories(["dwo"])
-    def __test_with_dwo(self):
-        self.using_dsym = False
-        self.BuildMakefile()
-        self.build()
-        self.do_test()
-    __test_with_dwo.debug_info = "dwo"
-
-    @add_test_categories(["gmodules"])
-    def __test_with_gmodules(self):
-        self.using_dsym = False
-        self.BuildMakefile()
-        self.build()
-        self.do_test()
-    __test_with_gmodules.debug_info = "gmodules"
 
     def execute_user_command(self, __command):
         exec(__command, globals(), locals())
@@ -237,23 +198,15 @@ def MakeInlineTest(__file, __globals, decorators=None):
     InlineTest.mydir = TestBase.compute_mydir(__file)
 
     test_name, _ = os.path.splitext(file_basename)
-    # Build the test case
-    test = type(test_name, (InlineTest,), {'using_dsym': None})
-    test.name = test_name
 
-    test.test_with_dsym = ApplyDecoratorsToFunction(
-        test._InlineTest__test_with_dsym, decorators)
-    test.test_with_dwarf = ApplyDecoratorsToFunction(
-        test._InlineTest__test_with_dwarf, decorators)
-    test.test_with_dwo = ApplyDecoratorsToFunction(
-        test._InlineTest__test_with_dwo, decorators)
-    test.test_with_gmodules = ApplyDecoratorsToFunction(
-        test._InlineTest__test_with_gmodules, decorators)
+    test_func = ApplyDecoratorsToFunction(InlineTest._test, decorators)
+    # Build the test case
+    test_class = type(test_name, (InlineTest,), dict(test=test_func, name=test_name))
 
     # Add the test case to the globals, and hide InlineTest
-    __globals.update({test_name: test})
+    __globals.update({test_name: test_class})
 
     # Keep track of the original test filename so we report it
     # correctly in test results.
-    test.test_filename = __file
-    return test
+    test_class.test_filename = __file
+    return test_class

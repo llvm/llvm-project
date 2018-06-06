@@ -9,11 +9,19 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
+
+namespace {
+struct ClangHostTest : public testing::Test {
+  static void SetUpTestCase() { HostInfo::Initialize(); }
+  static void TearDownTestCase() { HostInfo::Terminate(); }
+};
+} // namespace
 
 #ifdef __APPLE__
 static std::string ComputeClangDir(std::string lldb_shlib_path,
@@ -24,7 +32,7 @@ static std::string ComputeClangDir(std::string lldb_shlib_path,
   return clang_dir.GetPath();
 }
 
-TEST(ClangHostTest, MacOSX) {
+TEST_F(ClangHostTest, MacOSX) {
   // This returns whatever the POSIX fallback returns.
   std::string posix = "/usr/lib/liblldb.dylib";
   EXPECT_FALSE(ComputeClangDir(posix).empty());

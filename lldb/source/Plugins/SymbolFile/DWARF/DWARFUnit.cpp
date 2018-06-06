@@ -104,11 +104,11 @@ DWARFUnit::ScopedExtractDIEs DWARFUnit::ExtractDIEsScoped() {
   {
     llvm::sys::ScopedReader lock(m_die_array_mutex);
     if (!m_die_array.empty())
-      return std::move(scoped); // Already parsed
+      return scoped; // Already parsed
   }
   llvm::sys::ScopedWriter lock(m_die_array_mutex);
   if (!m_die_array.empty())
-    return std::move(scoped); // Already parsed
+    return scoped; // Already parsed
 
   // Otherwise m_die_array would be already populated.
   lldbassert(!m_cancel_scopes);

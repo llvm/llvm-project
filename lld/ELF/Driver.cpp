@@ -382,6 +382,9 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   readConfigs(Args);
   initLLVM();
   createFiles(Args);
+  if (errorCount())
+    return;
+
   inferMachineType();
   setConfigs(Args);
   checkOptions(Args);
