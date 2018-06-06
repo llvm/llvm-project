@@ -75,6 +75,7 @@
 #include "swift/Serialization/SerializedModuleLoader.h"
 #include "swift/Strings.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangHost.h"
 #include "Plugins/ExpressionParser/Swift/SwiftDiagnostic.h"
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
 #include "lldb/Core/Debugger.h"
@@ -2464,9 +2465,10 @@ swift::ClangImporterOptions &SwiftASTContext::GetClangImporterOptions() {
     clang_importer_options.ModuleCachePath = path.str();
 
     FileSpec clang_dir_spec;
-    if (HostInfo::GetLLDBPath(ePathTypeClangDir, clang_dir_spec))
+    clang_dir_spec = GetClangResourceDir();
+    if (clang_dir_spec.Exists())
       clang_importer_options.OverrideResourceDir =
-          std::move(clang_dir_spec.GetPath());
+        std::move(clang_dir_spec.GetPath());
     clang_importer_options.DebuggerSupport = true;
   }
   return clang_importer_options;
