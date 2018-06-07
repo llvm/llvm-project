@@ -10166,6 +10166,16 @@ public:
   bool isEmptyCudaConstructor(SourceLocation Loc, CXXConstructorDecl *CD);
   bool isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *CD);
 
+  // \brief Checks that initializers of \p Var satisfy CUDA restrictions. In
+  // case of error emits appropriate diagnostic and invalidates \p Var.
+  //
+  // \details CUDA allows only empty constructors as initializers for global
+  // variables (see E.2.3.1, CUDA 7.5). The same restriction also applies to all
+  // __shared__ variables whether they are local or not (they all are implicitly
+  // static in CUDA). One exception is that CUDA allows constant initializers
+  // for __constant__ and __device__ variables.
+  void checkAllowedCUDAInitializer(VarDecl *VD);
+
   /// Check whether NewFD is a valid overload for CUDA. Emits
   /// diagnostics and invalidates NewFD if not.
   void checkCUDATargetOverload(FunctionDecl *NewFD,

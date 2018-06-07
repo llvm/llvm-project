@@ -296,6 +296,59 @@ define i8 @shifty_abs_too_many_uses(i8 %x) {
   ret i8 %abs
 }
 
+; There's another way to make abs() using shift, xor, and subtract.
+; PR36036 - https://bugs.llvm.org/show_bug.cgi?id=36036
+
+define i8 @shifty_sub(i8 %x) {
+; CHECK-LABEL: @shifty_sub(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i8 [[TMP2]], i8 [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sh = ashr i8 %x, 7
+  %xor = xor i8 %x, %sh
+  %r = sub i8 %xor, %sh
+  ret i8 %r
+}
+
+define i8 @shifty_sub_nsw_commute(i8 %x) {
+; CHECK-LABEL: @shifty_sub_nsw_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i8 0, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i8 [[TMP2]], i8 [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sh = ashr i8 %x, 7
+  %xor = xor i8 %sh, %x
+  %r = sub nsw i8 %xor, %sh
+  ret i8 %r
+}
+
+define <4 x i32> @shifty_sub_nuw_vec_commute(<4 x i32> %x) {
+; CHECK-LABEL: @shifty_sub_nuw_vec_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[X]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %sh = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
+  %xor = xor <4 x i32> %sh, %x
+  %r = sub nuw <4 x i32> %xor, %sh
+  ret <4 x i32> %r
+}
+
+define i12 @shifty_sub_nsw_nuw(i12 %x) {
+; CHECK-LABEL: @shifty_sub_nsw_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i12 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i12 [[X]], i12 0
+; CHECK-NEXT:    ret i12 [[R]]
+;
+  %sh = ashr i12 %x, 11
+  %xor = xor i12 %x, %sh
+  %r = sub nsw nuw i12 %xor, %sh
+  ret i12 %r
+}
+
 define i8 @negate_abs(i8 %x) {
 ; CHECK-LABEL: @negate_abs(
 ; CHECK-NEXT:    [[N:%.*]] = sub i8 0, [[X:%.*]]
@@ -334,3 +387,4 @@ define i1 @abs_must_be_positive(i32 %x) {
   %c2 = icmp sge i32 %sel, 0
   ret i1 %c2
 }
+

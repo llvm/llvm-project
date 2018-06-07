@@ -3617,6 +3617,20 @@ int I10 = F10();
 #endif
 // expected-error@second.h:* {{'FunctionDecl::F10' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
 // expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+
+#if defined(FIRST)
+struct S11 {
+  template <int> void foo();
+};
+#elif defined(SECOND)
+struct S11 {
+  template <int> void foo();
+};
+template <int> void S11::foo() {}
+#else
+S11 s11;
+#endif
+
 }  // namespace FunctionDecl
 
 namespace DeclTemplateArguments {

@@ -1,8 +1,23 @@
 # RUN: yaml2obj %s > %t
+# RUN: cp %t %t1
 # RUN: llvm-objcopy --discard-all %t %t2
-# RUN: llvm-objcopy -x %t %t3
+# Verify that llvm-objcopy has not modified the input.
+# RUN: cmp %t %t1
 # RUN: llvm-readobj -symbols %t2 | FileCheck %s
-# RUN: diff %t2 %t3
+
+# RUN: llvm-objcopy -x %t %t3
+# Verify that llvm-objcopy has not modified the input.
+# RUN: cmp %t %t1
+# RUN: cmp %t2 %t3
+
+# Verify that llvm-strip modifies the symbol table the same way.
+
+# RUN: cp %t %t4
+# RUN: llvm-strip --discard-all %t4
+# RUN: cmp %t2 %t4
+
+# RUN: llvm-strip -x %t
+# RUN: cmp %t2 %t
 
 !ELF
 FileHeader:

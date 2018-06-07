@@ -285,7 +285,7 @@ else() # if this is included from LLVM's CMake
                                         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                         ${${target}_extra_args}
                              PASSTHROUGH_PREFIXES CLANG_DEFAULT
-                             TOOLCHAIN_TOOLS clang lld llvm-ar llvm-ranlib
+                             TOOLCHAIN_TOOLS clang lld llvm-ar llvm-ranlib llvm-nm llvm-objcopy llvm-objdump llvm-strip
                              USE_TOOLCHAIN
                              ${EXTRA_ARGS})
   endfunction()
@@ -463,7 +463,7 @@ else() # if this is included from LLVM's CMake
                                         ${${name}_extra_args}
                              PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                   CLANG_DEFAULT
-                             TOOLCHAIN_TOOLS clang lld llvm-ar llvm-ranlib
+                             TOOLCHAIN_TOOLS clang lld llvm-ar llvm-ranlib llvm-nm llvm-objcopy llvm-objdump llvm-strip
                              EXTRA_TARGETS ${${name}_extra_targets}
                                            ${${name}_test_targets}
                              USE_TOOLCHAIN
