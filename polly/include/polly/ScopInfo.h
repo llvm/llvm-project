@@ -1888,6 +1888,10 @@ private:
   /// in a schedule tree is given in the isl manual.
   isl::schedule Schedule = nullptr;
 
+  /// Whether the schedule has been modified after derived from the CFG by
+  /// ScopBuilder.
+  bool ScheduleModified = false;
+
   /// The set of minimal/maximal accesses for each alias group.
   ///
   /// When building runtime alias checks we look at all memory instructions and
@@ -2996,6 +3000,10 @@ public:
   ///
   /// NewSchedule The new schedule (given as schedule tree).
   void setScheduleTree(isl::schedule NewSchedule);
+
+  /// Whether the schedule is the original schedule as derived from the CFG by
+  /// ScopBuilder.
+  bool isOriginalSchedule() const { return !ScheduleModified; }
 
   /// Intersects the domains of all statements in the SCoP.
   ///
