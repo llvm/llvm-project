@@ -94,6 +94,13 @@ cl::opt<bool>
 llvm::Relocations("r", cl::desc("Display the relocation entries in the file"));
 
 cl::opt<bool>
+llvm::DynamicRelocations("dynamic-reloc",
+  cl::desc("Display the dynamic relocation entries in the file"));
+static cl::alias
+DynamicRelocationsd("R", cl::desc("Alias for --dynamic-reloc"),
+             cl::aliasopt(DynamicRelocations));
+
+cl::opt<bool>
 llvm::SectionContents("s", cl::desc("Display the content of each section"));
 
 cl::opt<bool>
@@ -431,6 +438,10 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
     return errorToErrorCode(StrTabOrErr.takeError());
   StringRef StrTab = *StrTabOrErr;
   int64_t addend = 0;
+  // If there is no Symbol associated with the relocation, we set the undef
+  // boolean value to 'true'. This will prevent us from calling functions that
+  // requires the relocation to be associated with a symbol.
+  bool undef = false;
   switch (Sec->sh_type) {
   default:
     return object_error::parse_failed;
@@ -441,27 +452,31 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   case ELF::SHT_RELA: {
     const Elf_Rela *ERela = Obj->getRela(Rel);
     addend = ERela->r_addend;
+    undef = ERela->getSymbol(false) == 0;
     break;
   }
   }
-  symbol_iterator SI = RelRef.getSymbol();
-  const Elf_Sym *symb = Obj->getSymbol(SI->getRawDataRefImpl());
   StringRef Target;
-  if (symb->getType() == ELF::STT_SECTION) {
-    Expected<section_iterator> SymSI = SI->getSection();
-    if (!SymSI)
-      return errorToErrorCode(SymSI.takeError());
-    const Elf_Shdr *SymSec = Obj->getSection((*SymSI)->getRawDataRefImpl());
-    auto SecName = EF.getSectionName(SymSec);
-    if (!SecName)
-      return errorToErrorCode(SecName.takeError());
-    Target = *SecName;
-  } else {
-    Expected<StringRef> SymName = symb->getName(StrTab);
-    if (!SymName)
-      return errorToErrorCode(SymName.takeError());
-    Target = *SymName;
-  }
+  if (!undef) {
+    symbol_iterator SI = RelRef.getSymbol();
+    const Elf_Sym *symb = Obj->getSymbol(SI->getRawDataRefImpl());
+    if (symb->getType() == ELF::STT_SECTION) {
+      Expected<section_iterator> SymSI = SI->getSection();
+      if (!SymSI)
+        return errorToErrorCode(SymSI.takeError());
+      const Elf_Shdr *SymSec = Obj->getSection((*SymSI)->getRawDataRefImpl());
+      auto SecName = EF.getSectionName(SymSec);
+      if (!SecName)
+        return errorToErrorCode(SecName.takeError());
+      Target = *SecName;
+    } else {
+      Expected<StringRef> SymName = symb->getName(StrTab);
+      if (!SymName)
+        return errorToErrorCode(SymName.takeError());
+      Target = *SymName;
+    }
+  } else
+    Target = "*ABS*";
 
   // Default scheme is to print Target, as well as "+ <addend>" for nonzero
   // addend. Should be acceptable for all normal purposes.
@@ -1727,6 +1742,41 @@ void llvm::PrintRelocations(const ObjectFile *Obj) {
   }
 }
 
+void llvm::PrintDynamicRelocations(const ObjectFile *Obj) {
+
+  // For the moment, this option is for ELF only
+  if (!Obj->isELF())
+    return;
+
+  const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj);
+
+  if (!Elf || Elf->getEType() != ELF::ET_DYN) {
+    error("not a dynamic object");
+    return;
+  }
+
+  StringRef Fmt = Obj->getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
+
+  std::vector<SectionRef> DynRelSec = Obj->dynamic_relocation_sections();
+  if (DynRelSec.empty())
+    return;
+
+  outs() << "DYNAMIC RELOCATION RECORDS\n";
+  for (const SectionRef &Section : DynRelSec) {
+    if (Section.relocation_begin() == Section.relocation_end())
+      continue;
+    for (const RelocationRef &Reloc : Section.relocations()) {
+      uint64_t address = Reloc.getOffset();
+      SmallString<32> relocname;
+      SmallString<32> valuestr;
+      Reloc.getTypeName(relocname);
+      error(getRelocationValueString(Reloc, valuestr));
+      outs() << format(Fmt.data(), address) << " " << relocname << " "
+             << valuestr << "\n";
+    }
+  }
+}
+
 void llvm::PrintSectionHeaders(const ObjectFile *Obj) {
   outs() << "Sections:\n"
             "Idx Name          Size      Address          Type\n";
@@ -2069,6 +2119,8 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
     DisassembleObject(o, Relocations);
   if (Relocations && !Disassemble)
     PrintRelocations(o);
+  if (DynamicRelocations)
+    PrintDynamicRelocations(o);
   if (SectionHeaders)
     PrintSectionHeaders(o);
   if (SectionContents)
@@ -2186,6 +2238,7 @@ int main(int argc, char **argv) {
     Disassemble = true;
   if (!Disassemble
       && !Relocations
+      && !DynamicRelocations
       && !SectionHeaders
       && !SectionContents
       && !SymbolTable

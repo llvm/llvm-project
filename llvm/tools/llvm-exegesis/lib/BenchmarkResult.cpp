@@ -258,7 +258,8 @@ InstructionBenchmark::writeYaml(const BenchmarkResultContext &Context,
   } else {
     int ResultFD = 0;
     if (auto E = llvm::errorCodeToError(
-            openFileForWrite(Filename, ResultFD, llvm::sys::fs::F_Text))) {
+            openFileForWrite(Filename, ResultFD, llvm::sys::fs::CD_CreateAlways,
+                             llvm::sys::fs::F_Text))) {
       return E;
     }
     llvm::raw_fd_ostream Ostr(ResultFD, true /*shouldClose*/);

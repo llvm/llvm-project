@@ -60,7 +60,7 @@ TEST(LockFileManagerTest, LinkLockExists) {
   sys::path::append(TmpFileLock, "file.lock-000");
 
   int FD;
-  EC = sys::fs::openFileForWrite(StringRef(TmpFileLock), FD, sys::fs::F_None);
+  EC = sys::fs::openFileForWrite(StringRef(TmpFileLock), FD);
   ASSERT_FALSE(EC);
 
   int Ret = close(FD);

@@ -101,6 +101,8 @@ math/exp2.cl
 math/clc_exp10.cl
 math/exp10.cl
 math/fdim.cl
+math/clc_fma.cl
+math/fma.cl
 math/fmax.cl
 math/fmin.cl
 math/clc_fmod.cl

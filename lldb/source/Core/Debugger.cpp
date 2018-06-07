@@ -1241,8 +1241,8 @@ bool Debugger::EnableLog(llvm::StringRef channel,
       if (log_options & LLDB_LOG_OPTION_APPEND)
         flags |= llvm::sys::fs::F_Append;
       int FD;
-      if (std::error_code ec =
-              llvm::sys::fs::openFileForWrite(log_file, FD, flags)) {
+      if (std::error_code ec = llvm::sys::fs::openFileForWrite(
+              log_file, FD, llvm::sys::fs::CD_CreateAlways, flags)) {
         error_stream << "Unable to open log file: " << ec.message();
         return false;
       }

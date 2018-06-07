@@ -262,6 +262,10 @@ public:
     return getCommonSymbolSizeImpl(Symb);
   }
 
+  virtual std::vector<SectionRef> dynamic_relocation_sections() const {
+    return std::vector<SectionRef>();
+  }
+
   using symbol_iterator_range = iterator_range<symbol_iterator>;
   symbol_iterator_range symbols() const {
     return symbol_iterator_range(symbol_begin(), symbol_end());

@@ -75,8 +75,7 @@ int convertForTestingMain(int argc, const char *argv[]) {
     return 1;
 
   int FD;
-  if (auto Err =
-          sys::fs::openFileForWrite(OutputFilename, FD, sys::fs::F_None)) {
+  if (auto Err = sys::fs::openFileForWrite(OutputFilename, FD)) {
     errs() << "error: " << Err.message() << "\n";
     return 1;
   }

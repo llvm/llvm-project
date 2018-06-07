@@ -779,35 +779,53 @@ Status PlatformDarwinKernel::GetSharedModule(
   return error;
 }
 
+std::vector<lldb_private::FileSpec>
+PlatformDarwinKernel::SearchForExecutablesRecursively(const ConstString &dir) {
+  std::vector<FileSpec> executables;
+  std::error_code EC;
+  for (llvm::sys::fs::recursive_directory_iterator it(dir.GetStringRef(), EC),
+       end;
+       it != end && !EC; it.increment(EC)) {
+    auto status = it->status();
+    if (!status)
+      break;
+    if (llvm::sys::fs::is_regular_file(*status) &&
+        llvm::sys::fs::can_execute(it->path()))
+      executables.emplace_back(it->path(), false);
+  }
+  return executables;
+}
+
 Status PlatformDarwinKernel::ExamineKextForMatchingUUID(
     const FileSpec &kext_bundle_path, const lldb_private::UUID &uuid,
     const ArchSpec &arch, ModuleSP &exe_module_sp) {
-  Status error;
-  FileSpec exe_file = kext_bundle_path;
-  Host::ResolveExecutableInBundle(exe_file);
-  if (exe_file.Exists()) {
-    ModuleSpec exe_spec(exe_file);
-    exe_spec.GetUUID() = uuid;
-    if (!uuid.IsValid()) {
-      exe_spec.GetArchitecture() = arch;
-    }
-
-    // First try to create a ModuleSP with the file / arch and see if the UUID
-    // matches. If that fails (this exec file doesn't have the correct uuid),
-    // don't call GetSharedModule (which may call in to the DebugSymbols
-    // framework and therefore can be slow.)
-    ModuleSP module_sp(new Module(exe_spec));
-    if (module_sp && module_sp->GetObjectFile() &&
-        module_sp->MatchesModuleSpec(exe_spec)) {
-      error = ModuleList::GetSharedModule(exe_spec, exe_module_sp, NULL, NULL,
-                                          NULL);
-      if (exe_module_sp && exe_module_sp->GetObjectFile()) {
-        return error;
+  for (const auto &exe_file :
+       SearchForExecutablesRecursively(kext_bundle_path.GetDirectory())) {
+    if (exe_file.Exists()) {
+      ModuleSpec exe_spec(exe_file);
+      exe_spec.GetUUID() = uuid;
+      if (!uuid.IsValid()) {
+        exe_spec.GetArchitecture() = arch;
       }
+
+      // First try to create a ModuleSP with the file / arch and see if the UUID
+      // matches. If that fails (this exec file doesn't have the correct uuid),
+      // don't call GetSharedModule (which may call in to the DebugSymbols
+      // framework and therefore can be slow.)
+      ModuleSP module_sp(new Module(exe_spec));
+      if (module_sp && module_sp->GetObjectFile() &&
+          module_sp->MatchesModuleSpec(exe_spec)) {
+        Status error = ModuleList::GetSharedModule(exe_spec, exe_module_sp,
+                                                   NULL, NULL, NULL);
+        if (exe_module_sp && exe_module_sp->GetObjectFile()) {
+          return error;
+        }
+      }
+      exe_module_sp.reset();
     }
-    exe_module_sp.reset();
   }
-  return error;
+
+  return {};
 }
 
 bool PlatformDarwinKernel::GetSupportedArchitectureAtIndex(uint32_t idx,

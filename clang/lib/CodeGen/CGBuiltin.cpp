@@ -9262,6 +9262,68 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                        "vperm");
   }
 
+  case X86::BI__builtin_ia32_pslldqi128:
+  case X86::BI__builtin_ia32_pslldqi256:
+  case X86::BI__builtin_ia32_pslldqi512: {
+    // Shift value is in bits so divide by 8.
+    unsigned ShiftVal = cast<llvm::ConstantInt>(Ops[1])->getZExtValue() >> 3;
+    llvm::Type *ResultType = Ops[0]->getType();
+    // Builtin type is vXi64 so multiply by 8 to get bytes.
+    unsigned NumElts = ResultType->getVectorNumElements() * 8;
+
+    // If pslldq is shifting the vector more than 15 bytes, emit zero.
+    if (ShiftVal >= 16)
+      return llvm::Constant::getNullValue(ResultType);
+
+    uint32_t Indices[64];
+    // 256/512-bit pslldq operates on 128-bit lanes so we need to handle that
+    for (unsigned l = 0; l != NumElts; l += 16) {
+      for (unsigned i = 0; i != 16; ++i) {
+        unsigned Idx = NumElts + i - ShiftVal;
+        if (Idx < NumElts) Idx -= NumElts - 16; // end of lane, switch operand.
+        Indices[l + i] = Idx + l;
+      }
+    }
+
+    llvm::Type *VecTy = llvm::VectorType::get(Int8Ty, NumElts);
+    Value *Cast = Builder.CreateBitCast(Ops[0], VecTy, "cast");
+    Value *Zero = llvm::Constant::getNullValue(VecTy);
+    Value *SV = Builder.CreateShuffleVector(Zero, Cast,
+                                            makeArrayRef(Indices, NumElts),
+                                            "pslldq");
+    return Builder.CreateBitCast(SV, Ops[0]->getType(), "cast");
+  }
+  case X86::BI__builtin_ia32_psrldqi128:
+  case X86::BI__builtin_ia32_psrldqi256:
+  case X86::BI__builtin_ia32_psrldqi512: {
+    // Shift value is in bits so divide by 8.
+    unsigned ShiftVal = cast<llvm::ConstantInt>(Ops[1])->getZExtValue() >> 3;
+    llvm::Type *ResultType = Ops[0]->getType();
+    // Builtin type is vXi64 so multiply by 8 to get bytes.
+    unsigned NumElts = ResultType->getVectorNumElements() * 8;
+
+    // If psrldq is shifting the vector more than 15 bytes, emit zero.
+    if (ShiftVal >= 16)
+      return llvm::Constant::getNullValue(ResultType);
+
+    uint32_t Indices[64];
+    // 256/512-bit psrldq operates on 128-bit lanes so we need to handle that
+    for (unsigned l = 0; l != NumElts; l += 16) {
+      for (unsigned i = 0; i != 16; ++i) {
+        unsigned Idx = i + ShiftVal;
+        if (Idx >= 16) Idx += NumElts - 16; // end of lane, switch operand.
+        Indices[l + i] = Idx + l;
+      }
+    }
+
+    llvm::Type *VecTy = llvm::VectorType::get(Int8Ty, NumElts);
+    Value *Cast = Builder.CreateBitCast(Ops[0], VecTy, "cast");
+    Value *Zero = llvm::Constant::getNullValue(VecTy);
+    Value *SV = Builder.CreateShuffleVector(Cast, Zero,
+                                            makeArrayRef(Indices, NumElts),
+                                            "psrldq");
+    return Builder.CreateBitCast(SV, ResultType, "cast");
+  }
   case X86::BI__builtin_ia32_movnti:
   case X86::BI__builtin_ia32_movnti64:
   case X86::BI__builtin_ia32_movntsd:

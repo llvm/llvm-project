@@ -63,6 +63,7 @@ class NumberOfThreadsTestCase(TestBase):
             'Number of expected threads and actual threads do not match.')
 
     @skipIfDarwin # rdar://33462362
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37658")
     def test_unique_stacks(self):
         """Test backtrace unique with multiple threads executing the same stack."""
         self.build()

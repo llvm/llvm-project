@@ -1,23 +1,28 @@
 # RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases \
-# RUN:     | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv32 \
-# RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
 # RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases\
-# RUN:     | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv64 \
-# RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-objdump -d -riscv-no-aliases - \
-# RUN:     | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-objdump -d - \
-# RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -d -riscv-no-aliases - \
-# RUN:     | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -d - \
-# RUN:     | FileCheck -check-prefix=CHECK-ALIAS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
+
+# The following check prefixes are used in this test:
+# CHECK-INST.....Match the canonical instr (tests alias to instr. mapping)
+# CHECK-ALIAS....Match the alias (tests instr. to alias mapping)
+# CHECK-EXPAND...Match canonical instr. unconditionally (tests alias expansion)
 
 # TODO la
 # TODO lb lh lw
@@ -26,7 +31,7 @@
 # CHECK-INST: addi zero, zero, 0
 # CHECK-ALIAS: nop
 nop
-# TODO li
+
 # CHECK-INST: addi t6, zero, 0
 # CHECK-ALIAS: mv t6, zero
 mv x31, zero

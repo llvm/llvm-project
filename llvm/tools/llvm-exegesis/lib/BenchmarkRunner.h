@@ -35,6 +35,9 @@ struct BenchmarkConfiguration {
 
   // The sequence of instructions that are to be repeated.
   std::vector<llvm::MCInst> Snippet;
+
+  // Informations about how this configuration was built.
+  std::string Info;
 };
 
 // Common code for all benchmark modes.
@@ -56,8 +59,9 @@ public:
 
   virtual ~BenchmarkRunner();
 
-  InstructionBenchmark run(unsigned Opcode, const InstructionFilter &Filter,
-                           unsigned NumRepetitions);
+  llvm::Expected<std::vector<InstructionBenchmark>>
+  run(unsigned Opcode, const InstructionFilter &Filter,
+      unsigned NumRepetitions);
 
 protected:
   const LLVMState &State;
@@ -65,11 +69,14 @@ protected:
   const llvm::MCRegisterInfo &MCRegisterInfo;
 
 private:
+  InstructionBenchmark runOne(const BenchmarkConfiguration &Configuration,
+                              unsigned Opcode, unsigned NumRepetitions) const;
+
   virtual InstructionBenchmark::ModeE getMode() const = 0;
 
-  virtual llvm::Expected<BenchmarkConfiguration>
-  createConfiguration(RegisterAliasingTrackerCache &RATC, unsigned Opcode,
-                      llvm::raw_ostream &Debug) const = 0;
+  virtual llvm::Expected<std::vector<BenchmarkConfiguration>>
+  createConfigurations(RegisterAliasingTrackerCache &RATC,
+                       unsigned Opcode) const = 0;
 
   virtual std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF,

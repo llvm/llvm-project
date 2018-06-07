@@ -77,7 +77,7 @@ for.end:
 
 define void @sin_f64_intrinsic(double* nocapture %varray) {
 ; CHECK-LABEL: @sin_f64_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @llvm.sin.v4f64(<4 x double> [[TMP4:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <4 x double> @__svml_sin4(<4 x double> [[TMP4:%.*]])
 ; CHECK:    ret void
 ;
 entry:
@@ -100,7 +100,7 @@ for.end:
 
 define void @sin_f32_intrinsic(float* nocapture %varray) {
 ; CHECK-LABEL: @sin_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @llvm.sin.v4f32(<4 x float> [[TMP4:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <4 x float> @__svml_sinf4(<4 x float> [[TMP4:%.*]])
 ; CHECK:    ret void
 ;
 entry:
@@ -169,7 +169,7 @@ for.end:
 
 define void @cos_f64_intrinsic(double* nocapture %varray) {
 ; CHECK-LABEL: @cos_f64_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x double> @llvm.cos.v4f64(<4 x double> [[TMP4:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <4 x double> @__svml_cos4(<4 x double> [[TMP4:%.*]])
 ; CHECK:    ret void
 ;
 entry:
@@ -192,7 +192,7 @@ for.end:
 
 define void @cos_f32_intrinsic(float* nocapture %varray) {
 ; CHECK-LABEL: @cos_f32_intrinsic(
-; CHECK:    [[TMP5:%.*]] = call <4 x float> @llvm.cos.v4f32(<4 x float> [[TMP4:%.*]])
+; CHECK:    [[TMP5:%.*]] = call <4 x float> @__svml_cosf4(<4 x float> [[TMP4:%.*]])
 ; CHECK:    ret void
 ;
 entry:
