@@ -396,6 +396,14 @@ public:
     return UseScatter.apply_range(ReachDefTimepoints);
   }
 
+  /// Is @p InnerLoop nested inside @p OuterLoop?
+  static bool isInsideLoop(Loop *OuterLoop, Loop *InnerLoop) {
+    // If OuterLoop is nullptr, we cannot call its contains() method. In this
+    // case OuterLoop represents the 'top level' and therefore contains all
+    // loop.
+    return !OuterLoop || OuterLoop->contains(InnerLoop);
+  }
+
   /// Get a domain translation map from a (scalar) definition to the statement
   /// where the definition is being moved to.
   ///
@@ -422,6 +430,43 @@ public:
           getDomainFor(TargetStmt).get_space().map_from_set());
 
     isl::map &Result = DefToTargetCache[std::make_pair(TargetStmt, DefStmt)];
+
+    // This is a shortcut in case the schedule is still the original and
+    // TargetStmt is in the same or nested inside DefStmt's loop. With the
+    // additional assumption that operand trees do not cross DefStmt's loop
+    // header, then TargetStmt's instance shared coordinated are the same as
+    // DefStmt's coordinated. All TargetStmt instances with this prefix share
+    // the same DefStmt instance.
+    // Model:
+    //
+    //   for (int i < 0; i < N; i+=1) {
+    // DefStmt:
+    //    D = ...;
+    //    for (int j < 0; j < N; j+=1) {
+    // TargetStmt:
+    //      use(D);
+    //    }
+    //  }
+    //
+    // Here, the value used in TargetStmt is defined in the corresponding
+    // DefStmt, i.e.
+    //
+    //   { DefStmt[i] -> TargetStmt[i,j] }
+    //
+    // In practice, this should cover the majority of cases.
+    if (S->isOriginalSchedule() &&
+        isInsideLoop(DefStmt->getSurroundingLoop(),
+                     TargetStmt->getSurroundingLoop())) {
+      isl::set DefDomain = getDomainFor(DefStmt);
+      isl::set TargetDomain = getDomainFor(TargetStmt);
+      assert(DefDomain.dim(isl::dim::set) <= TargetDomain.dim(isl::dim::set));
+
+      Result = isl::map::from_domain_and_range(DefDomain, TargetDomain);
+      for (unsigned i = 0, DefDims = DefDomain.dim(isl::dim::set); i < DefDims;
+           i += 1)
+        Result = Result.equate(isl::dim::in, i, isl::dim::out, i);
+    }
+
     if (!Result) {
       // { DomainDef[] -> DomainTarget[] }
       Result = computeUseToDefFlowDependency(TargetStmt, DefStmt).reverse();

@@ -63,6 +63,8 @@ DYNAMIC_TAG_MARKER(ENCODING, 32) // Values from here to DT_LOOS follow the rules
 DYNAMIC_TAG(PREINIT_ARRAY, 32)   // Pointer to array of preinit functions.
 DYNAMIC_TAG(PREINIT_ARRAYSZ, 33) // Size of the DT_PREINIT_ARRAY array.
 
+DYNAMIC_TAG(SYMTAB_SHNDX, 34) // Address of the SHT_SYMTAB_SHNDX section.
+
 DYNAMIC_TAG_MARKER(LOOS, 0x60000000)   // Start of environment specific tags.
 DYNAMIC_TAG_MARKER(HIOS, 0x6FFFFFFF)   // End of environment specific tags.
 DYNAMIC_TAG_MARKER(LOPROC, 0x70000000) // Start of processor specific tags.

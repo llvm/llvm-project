@@ -37,7 +37,6 @@ struct InputInfo {
   bool Reduced = false;
   bool HasFocusFunction = false;
   Vector<uint32_t> UniqFeatureSet;
-  float FeatureFrequencyScore = 1.0;
 };
 
 class InputCorpus {
@@ -46,7 +45,6 @@ class InputCorpus {
   InputCorpus(const std::string &OutputCorpus) : OutputCorpus(OutputCorpus) {
     memset(InputSizesPerFeature, 0, sizeof(InputSizesPerFeature));
     memset(SmallestElementPerFeature, 0, sizeof(SmallestElementPerFeature));
-    memset(FeatureFrequency, 0, sizeof(FeatureFrequency));
   }
   ~InputCorpus() {
     for (auto II : Inputs)
@@ -222,20 +220,6 @@ class InputCorpus {
     return false;
   }
 
-  void UpdateFeatureFrequency(size_t Idx) {
-    FeatureFrequency[Idx % kFeatureSetSize]++;
-  }
-  float GetFeatureFrequency(size_t Idx) const {
-    return FeatureFrequency[Idx % kFeatureSetSize];
-  }
-  void UpdateFeatureFrequencyScore(InputInfo *II) {
-    const float kMin = 0.01, kMax = 100.;
-    II->FeatureFrequencyScore = kMin;
-    for (auto Idx : II->UniqFeatureSet)
-      II->FeatureFrequencyScore += 1. / (GetFeatureFrequency(Idx) + 1.);
-    II->FeatureFrequencyScore = Min(II->FeatureFrequencyScore, kMax);
-  }
-
   size_t NumFeatures() const { return NumAddedFeatures; }
   size_t NumFeatureUpdates() const { return NumUpdatedFeatures; }
 
@@ -273,15 +257,11 @@ private:
     std::iota(Intervals.begin(), Intervals.end(), 0);
     for (size_t i = 0; i < N; i++)
       Weights[i] = Inputs[i]->NumFeatures
-                       ? (i + 1) * Inputs[i]->FeatureFrequencyScore
-                       * (Inputs[i]->HasFocusFunction ? 1000 : 1)
+                       ? (i + 1) * (Inputs[i]->HasFocusFunction ? 1000 : 1)
                        : 0.;
     if (FeatureDebug) {
       for (size_t i = 0; i < N; i++)
         Printf("%zd ", Inputs[i]->NumFeatures);
-      Printf("NUM\n");
-      for (size_t i = 0; i < N; i++)
-        Printf("%f ", Inputs[i]->FeatureFrequencyScore);
       Printf("SCORE\n");
       for (size_t i = 0; i < N; i++)
         Printf("%f ", Weights[i]);
@@ -302,7 +282,6 @@ private:
   size_t NumUpdatedFeatures = 0;
   uint32_t InputSizesPerFeature[kFeatureSetSize];
   uint32_t SmallestElementPerFeature[kFeatureSetSize];
-  float FeatureFrequency[kFeatureSetSize];
 
   std::string OutputCorpus;
 };

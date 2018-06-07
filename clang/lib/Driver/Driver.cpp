@@ -2808,7 +2808,7 @@ public:
           C.MakeAction<OffloadUnbundlingJobAction>(HostAction);
       UnbundlingHostAction->registerDependentActionInfo(
           C.getSingleOffloadToolChain<Action::OFK_Host>(),
-          /*BoundArch=*/StringRef(), Action::OFK_Host);
+          /*BoundArch=*/"all", Action::OFK_Host);
       HostAction = UnbundlingHostAction;
     }
 
@@ -3880,9 +3880,18 @@ InputInfo Driver::BuildJobsForActionNoCache(
 
       // Get the unique string identifier for this dependence and cache the
       // result.
-      CachedResults[{A, GetTriplePlusArchString(
-                            UI.DependentToolChain, BoundArch,
-                            UI.DependentOffloadKind)}] = CurI;
+      StringRef Arch;
+      if (TargetDeviceOffloadKind == Action::OFK_HIP) {
+        if (UI.DependentOffloadKind == Action::OFK_Host)
+          Arch = "all";
+        else
+          Arch = UI.DependentBoundArch;
+      } else
+        Arch = BoundArch;
+
+      CachedResults[{A, GetTriplePlusArchString(UI.DependentToolChain, Arch,
+                                                UI.DependentOffloadKind)}] =
+          CurI;
     }
 
     // Now that we have all the results generated, select the one that should be

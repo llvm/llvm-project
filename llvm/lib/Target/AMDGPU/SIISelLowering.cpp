@@ -531,6 +531,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     // Legalization hack.
     setOperationAction(ISD::SELECT, MVT::v2i16, Custom);
     setOperationAction(ISD::SELECT, MVT::v2f16, Custom);
+
+    setOperationAction(ISD::FNEG, MVT::v2f16, Custom);
+    setOperationAction(ISD::FABS, MVT::v2f16, Custom);
   }
 
   for (MVT VT : { MVT::v4i16, MVT::v4f16, MVT::v2i8, MVT::v4i8, MVT::v8i8 }) {
@@ -3698,6 +3701,28 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     if (NewVT != SelectVT)
       NewSelect = DAG.getNode(ISD::TRUNCATE, SL, NewVT, NewSelect);
     Results.push_back(DAG.getNode(ISD::BITCAST, SL, VT, NewSelect));
+    return;
+  }
+  case ISD::FNEG: {
+    SDLoc SL(N);
+    assert(N->getValueType(0) == MVT::v2f16);
+    SDValue BC = DAG.getNode(ISD::BITCAST, SL, MVT::i32, N->getOperand(0));
+
+    SDValue Op = DAG.getNode(ISD::XOR, SL, MVT::i32,
+                             BC,
+                             DAG.getConstant(0x80008000, SL, MVT::i32));
+    Results.push_back(DAG.getNode(ISD::BITCAST, SL, MVT::v2f16, Op));
+    return;
+  }
+  case ISD::FABS: {
+    SDLoc SL(N);
+    assert(N->getValueType(0) == MVT::v2f16);
+    SDValue BC = DAG.getNode(ISD::BITCAST, SL, MVT::i32, N->getOperand(0));
+
+    SDValue Op = DAG.getNode(ISD::AND, SL, MVT::i32,
+                             BC,
+                             DAG.getConstant(0x7fff7fff, SL, MVT::i32));
+    Results.push_back(DAG.getNode(ISD::BITCAST, SL, MVT::v2f16, Op));
     return;
   }
   default:

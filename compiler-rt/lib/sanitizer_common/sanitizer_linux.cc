@@ -975,7 +975,7 @@ bool ThreadLister::IsAlive(int tid) {
   // proc_task_readdir. See task_state implementation in Linux.
   char path[80];
   internal_snprintf(path, sizeof(path), "/proc/%d/task/%d/status", pid_, tid);
-  if (!ReadFileToBuffer(path, &buffer_) || buffer_.empty())
+  if (!ReadFileToVector(path, &buffer_) || buffer_.empty())
     return false;
   buffer_.push_back(0);
   static const char kPrefix[] = "\nPPid:";
