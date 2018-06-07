@@ -56,11 +56,12 @@ InstructionBenchmark::ModeE LatencyBenchmarkRunner::getMode() const {
   return InstructionBenchmark::Latency;
 }
 
-llvm::Expected<std::vector<llvm::MCInst>>
-LatencyBenchmarkRunner::createSnippet(RegisterAliasingTrackerCache &RATC,
-                                      unsigned Opcode,
-                                      llvm::raw_ostream &Info) const {
-  std::vector<llvm::MCInst> Snippet;
+llvm::Expected<BenchmarkConfiguration>
+LatencyBenchmarkRunner::createConfiguration(RegisterAliasingTrackerCache &RATC,
+                                            unsigned Opcode,
+                                            llvm::raw_ostream &Info) const {
+  BenchmarkConfiguration Configuration;
+  std::vector<llvm::MCInst> &Snippet = Configuration.Snippet;
   const llvm::MCInstrDesc &MCInstrDesc = MCInstrInfo.get(Opcode);
   const Instruction ThisInstruction(MCInstrDesc, RATC);
 
@@ -77,7 +78,7 @@ LatencyBenchmarkRunner::createSnippet(RegisterAliasingTrackerCache &RATC,
       Info << "implicit Self cycles, picking random values.\n";
     }
     Snippet.push_back(randomizeUnsetVariablesAndBuild(ThisInstruction));
-    return Snippet;
+    return Configuration;
   }
 
   // Let's try to create a dependency through another opcode.
@@ -102,7 +103,7 @@ LatencyBenchmarkRunner::createSnippet(RegisterAliasingTrackerCache &RATC,
          << ".\n";
     Snippet.push_back(randomizeUnsetVariablesAndBuild(ThisInstruction));
     Snippet.push_back(randomizeUnsetVariablesAndBuild(OtherInstruction));
-    return Snippet;
+    return Configuration;
   }
 
   return makeError(

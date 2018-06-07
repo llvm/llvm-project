@@ -30,7 +30,7 @@ void TestGetTypeScopeAndBasenameHelper(const char *full_type,
     EXPECT_EQ(name, expected_name);
   }
 }
-};
+}
 
 TEST(Type, GetTypeScopeAndBasename) {
   TestGetTypeScopeAndBasenameHelper("int", false, "", "");

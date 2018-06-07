@@ -27,7 +27,8 @@ define double @long_to_double_rm(i64* %a) {
 ;
 ; AVX-LABEL: long_to_double_rm:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2sdq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    movq (%rdi), %rax
+; AVX-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = load i64, i64* %a
@@ -75,7 +76,8 @@ define float @long_to_float_rm(i64* %a) {
 ;
 ; AVX-LABEL: long_to_float_rm:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2ssq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    movq (%rdi), %rax
+; AVX-NEXT:    vcvtsi2ssq %rax, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %0 = load i64, i64* %a

@@ -26,6 +26,17 @@
 
 namespace exegesis {
 
+// A collection of instructions that are to be assembled, executed and measured.
+struct BenchmarkConfiguration {
+  // This code is run before the Snippet is iterated. Since it is part of the
+  // measurement it should be as short as possible. It is usually used to setup
+  // the content of the Registers.
+  std::vector<llvm::MCInst> SnippetSetup;
+
+  // The sequence of instructions that are to be repeated.
+  std::vector<llvm::MCInst> Snippet;
+};
+
 // Common code for all benchmark modes.
 class BenchmarkRunner {
 public:
@@ -56,9 +67,9 @@ protected:
 private:
   virtual InstructionBenchmark::ModeE getMode() const = 0;
 
-  virtual llvm::Expected<std::vector<llvm::MCInst>>
-  createSnippet(RegisterAliasingTrackerCache &RATC, unsigned Opcode,
-                llvm::raw_ostream &Debug) const = 0;
+  virtual llvm::Expected<BenchmarkConfiguration>
+  createConfiguration(RegisterAliasingTrackerCache &RATC, unsigned Opcode,
+                      llvm::raw_ostream &Debug) const = 0;
 
   virtual std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF,

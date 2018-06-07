@@ -2537,10 +2537,10 @@ static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
   MachineFunction &MF = DAG.getMachineFunction();
   const TargetRegisterClass *RC = &X86::GR32RegClass;
 
-  // Read a 32 bit value from the registers
+  // Read a 32 bit value from the registers.
   if (nullptr == InFlag) {
     // When no physical register is present,
-    // create an intermediate virtual register
+    // create an intermediate virtual register.
     Reg = MF.addLiveIn(VA.getLocReg(), RC);
     ArgValueLo = DAG.getCopyFromReg(Root, Dl, Reg, MVT::i32);
     Reg = MF.addLiveIn(NextVA.getLocReg(), RC);
@@ -2556,13 +2556,13 @@ static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
     *InFlag = ArgValueHi.getValue(2);
   }
 
-  // Convert the i32 type into v32i1 type
+  // Convert the i32 type into v32i1 type.
   Lo = DAG.getBitcast(MVT::v32i1, ArgValueLo);
 
-  // Convert the i32 type into v32i1 type
+  // Convert the i32 type into v32i1 type.
   Hi = DAG.getBitcast(MVT::v32i1, ArgValueHi);
 
-  // Concatenate the two values together
+  // Concatenate the two values together.
   return DAG.getNode(ISD::CONCAT_VECTORS, Dl, MVT::v64i1, Lo, Hi);
 }
 

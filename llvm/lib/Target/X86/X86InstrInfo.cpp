@@ -8479,6 +8479,19 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
   return nullptr;
 }
 
+static bool shouldPreventUndefRegUpdateMemFold(MachineFunction &MF, MachineInstr &MI) {
+  if (MF.getFunction().optForSize() || !hasUndefRegUpdate(MI.getOpcode()) ||
+      !MI.getOperand(1).isReg())
+    return false;
+ 
+  MachineRegisterInfo &RegInfo = MF.getRegInfo();
+  MachineInstr *VRegDef = RegInfo.getUniqueVRegDef(MI.getOperand(1).getReg());
+  if (VRegDef == nullptr)
+    return false;
+  return VRegDef->isImplicitDef();
+}
+
+
 MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, unsigned OpNum,
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
@@ -8497,10 +8510,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
        MI.getOpcode() == X86::PUSH64r))
     return nullptr;
 
-  // Avoid partial register update stalls unless optimizing for size.
-  // TODO: we should block undef reg update as well.
+  // Avoid partial and undef register update stalls unless optimizing for size.
   if (!MF.getFunction().optForSize() &&
-      hasPartialRegUpdate(MI.getOpcode(), Subtarget))
+      (hasPartialRegUpdate(MI.getOpcode(), Subtarget) ||
+       shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 
   unsigned NumOps = MI.getDesc().getNumOperands();
@@ -8674,11 +8687,10 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
   if (NoFusing)
     return nullptr;
 
-  // Unless optimizing for size, don't fold to avoid partial
-  // register update stalls
-  // TODO: we should block undef reg update as well.
+  // Avoid partial and undef register update stalls unless optimizing for size.
   if (!MF.getFunction().optForSize() &&
-      hasPartialRegUpdate(MI.getOpcode(), Subtarget))
+      (hasPartialRegUpdate(MI.getOpcode(), Subtarget) ||
+       shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 
   // Don't fold subreg spills, or reloads that use a high subreg.
@@ -8875,10 +8887,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // Check switch flag
   if (NoFusing) return nullptr;
 
-  // Avoid partial register update stalls unless optimizing for size.
-  // TODO: we should block undef reg update as well.
+  // Avoid partial and undef register update stalls unless optimizing for size.
   if (!MF.getFunction().optForSize() &&
-      hasPartialRegUpdate(MI.getOpcode(), Subtarget))
+      (hasPartialRegUpdate(MI.getOpcode(), Subtarget) ||
+       shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 
   // Determine the alignment of the load.
