@@ -12,6 +12,7 @@
 #ifndef LLVM_FUZZER_CORPUS
 #define LLVM_FUZZER_CORPUS
 
+#include "FuzzerDataFlowTrace.h"
 #include "FuzzerDefs.h"
 #include "FuzzerIO.h"
 #include "FuzzerRandom.h"
@@ -37,6 +38,7 @@ struct InputInfo {
   bool Reduced = false;
   bool HasFocusFunction = false;
   Vector<uint32_t> UniqFeatureSet;
+  Vector<bool> DataFlowTraceForFocusFunction;
 };
 
 class InputCorpus {
@@ -76,10 +78,17 @@ class InputCorpus {
     });
   }
 
+  size_t NumInputsWithDataFlowTrace() {
+    return std::count_if(Inputs.begin(), Inputs.end(), [](const InputInfo *II) {
+      return !II->DataFlowTraceForFocusFunction.empty();
+    });
+  }
+
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
   void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
-                   bool HasFocusFunction, const Vector<uint32_t> &FeatureSet) {
+                   bool HasFocusFunction, const Vector<uint32_t> &FeatureSet,
+                   const DataFlowTrace &DFT) {
     assert(!U.empty());
     if (FeatureDebug)
       Printf("ADD_TO_CORPUS %zd NF %zd\n", Inputs.size(), NumFeatures);
@@ -92,7 +101,11 @@ class InputCorpus {
     II.HasFocusFunction = HasFocusFunction;
     std::sort(II.UniqFeatureSet.begin(), II.UniqFeatureSet.end());
     ComputeSHA1(U.data(), U.size(), II.Sha1);
-    Hashes.insert(Sha1ToString(II.Sha1));
+    auto Sha1Str = Sha1ToString(II.Sha1);
+    Hashes.insert(Sha1Str);
+    if (HasFocusFunction)
+      if (auto V = DFT.Get(Sha1Str))
+        II.DataFlowTraceForFocusFunction = *V;
     UpdateCorpusDistribution();
     PrintCorpus();
     // ValidateFeatureSet();

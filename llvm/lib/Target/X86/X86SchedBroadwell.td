@@ -152,7 +152,7 @@ defm : BWWriteResPair<WriteBZHI, [BWPort15], 1>;
 defm : X86WriteRes<WriteLoad,    [BWPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteStore,   [BWPort237, BWPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteStoreNT, [BWPort237, BWPort4], 1, [1,1], 2>;
-defm : X86WriteRes<WriteMove,    [BWPort0156], 1, [1,1], 1>;
+defm : X86WriteRes<WriteMove,    [BWPort0156], 1, [1], 1>;
 
 // Idioms that clear a register, like xorps %xmm0, %xmm0.
 // These can often bypass execution ports completely.

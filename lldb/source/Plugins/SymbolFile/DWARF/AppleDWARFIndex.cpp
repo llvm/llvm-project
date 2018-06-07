@@ -13,7 +13,6 @@
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
@@ -56,19 +55,9 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
   return nullptr;
 }
 
-void AppleDWARFIndex::GetGlobalVariables(ConstString name, DIEArray &offsets) {
-  if (!m_apple_names_up)
-    return;
-
-  const char *name_cstr = name.GetCString();
-  llvm::StringRef basename;
-  llvm::StringRef context;
-
-  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
-                                                      basename))
-    basename = name_cstr;
-
-  m_apple_names_up->FindByName(basename, offsets);
+void AppleDWARFIndex::GetGlobalVariables(ConstString basename, DIEArray &offsets) {
+  if (m_apple_names_up)
+    m_apple_names_up->FindByName(basename.GetStringRef(), offsets);
 }
 
 void AppleDWARFIndex::GetGlobalVariables(const RegularExpression &regex,

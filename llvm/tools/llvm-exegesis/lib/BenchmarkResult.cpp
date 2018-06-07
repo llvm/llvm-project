@@ -15,6 +15,78 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
+static constexpr const char kIntegerFormat[] = "i_0x%" PRId64 "x";
+static constexpr const char kDoubleFormat[] = "f_%la";
+
+static void serialize(const exegesis::BenchmarkResultContext &Context,
+                      const llvm::MCOperand &MCOperand, llvm::raw_ostream &OS) {
+  if (MCOperand.isReg()) {
+    OS << Context.getRegName(MCOperand.getReg());
+  } else if (MCOperand.isImm()) {
+    OS << llvm::format(kIntegerFormat, MCOperand.getImm());
+  } else if (MCOperand.isFPImm()) {
+    OS << llvm::format(kDoubleFormat, MCOperand.getFPImm());
+  } else {
+    OS << "INVALID";
+  }
+}
+
+static void serialize(const exegesis::BenchmarkResultContext &Context,
+                      const llvm::MCInst &MCInst, llvm::raw_ostream &OS) {
+  OS << Context.getInstrName(MCInst.getOpcode());
+  for (const auto &Op : MCInst) {
+    OS << ' ';
+    serialize(Context, Op, OS);
+  }
+}
+
+static llvm::MCOperand
+deserialize(const exegesis::BenchmarkResultContext &Context,
+            llvm::StringRef String) {
+  assert(!String.empty());
+  int64_t IntValue = 0;
+  double DoubleValue = 0;
+  if (sscanf(String.data(), kIntegerFormat, &IntValue) == 1)
+    return llvm::MCOperand::createImm(IntValue);
+  if (sscanf(String.data(), kDoubleFormat, &DoubleValue) == 1)
+    return llvm::MCOperand::createFPImm(DoubleValue);
+  if (unsigned RegNo = Context.getRegNo(String)) // Returns 0 if invalid.
+    return llvm::MCOperand::createReg(RegNo);
+  return {};
+}
+
+static llvm::StringRef
+deserialize(const exegesis::BenchmarkResultContext &Context,
+            llvm::StringRef String, llvm::MCInst &Value) {
+  llvm::SmallVector<llvm::StringRef, 8> Pieces;
+  String.split(Pieces, " ");
+  if (Pieces.empty())
+    return "Invalid Instruction";
+  bool ProcessOpcode = true;
+  for (llvm::StringRef Piece : Pieces) {
+    if (ProcessOpcode) {
+      ProcessOpcode = false;
+      Value.setOpcode(Context.getInstrOpcode(Piece));
+      if (Value.getOpcode() == 0)
+        return "Unknown Opcode Name";
+    } else {
+      Value.addOperand(deserialize(Context, Piece));
+    }
+  }
+  return {};
+}
+
+// YAML IO requires a mutable pointer to Context but we guarantee to not
+// modify it.
+static void *getUntypedContext(const exegesis::BenchmarkResultContext &Ctx) {
+  return const_cast<exegesis::BenchmarkResultContext *>(&Ctx);
+}
+
+static const exegesis::BenchmarkResultContext &getTypedContext(void *Ctx) {
+  assert(Ctx);
+  return *static_cast<const exegesis::BenchmarkResultContext *>(Ctx);
+}
+
 // Defining YAML traits for IO.
 namespace llvm {
 namespace yaml {
@@ -28,22 +100,11 @@ template <> struct ScalarTraits<llvm::MCInst> {
 
   static void output(const llvm::MCInst &Value, void *Ctx,
                      llvm::raw_ostream &Out) {
-    assert(Ctx);
-    auto *Context = static_cast<const exegesis::BenchmarkResultContext *>(Ctx);
-    const StringRef Name = Context->getInstrName(Value.getOpcode());
-    assert(!Name.empty());
-    Out << Name;
+    serialize(getTypedContext(Ctx), Value, Out);
   }
 
   static StringRef input(StringRef Scalar, void *Ctx, llvm::MCInst &Value) {
-    assert(Ctx);
-    auto *Context = static_cast<const exegesis::BenchmarkResultContext *>(Ctx);
-    const unsigned Opcode = Context->getInstrOpcode(Scalar);
-    if (Opcode == 0) {
-      return "Unable to parse instruction";
-    }
-    Value.setOpcode(Opcode);
-    return StringRef();
+    return deserialize(getTypedContext(Ctx), Scalar, Value);
   }
 
   static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
@@ -149,61 +210,61 @@ unsigned BenchmarkResultContext::getInstrOpcode(llvm::StringRef Name) const {
 }
 
 template <typename ObjectOrList>
-static ObjectOrList readYamlOrDieCommon(const BenchmarkResultContext &Context,
-                                        llvm::StringRef Filename) {
-  std::unique_ptr<llvm::MemoryBuffer> MemBuffer = llvm::cantFail(
-      llvm::errorOrToExpected(llvm::MemoryBuffer::getFile(Filename)));
-  // YAML IO requires a mutable pointer to Context but we guarantee to not
-  // modify it.
-  llvm::yaml::Input Yin(*MemBuffer,
-                        const_cast<BenchmarkResultContext *>(&Context));
-  ObjectOrList Benchmark;
-  Yin >> Benchmark;
-  return Benchmark;
+static llvm::Expected<ObjectOrList>
+readYamlCommon(const BenchmarkResultContext &Context,
+               llvm::StringRef Filename) {
+  if (auto ExpectedMemoryBuffer =
+          llvm::errorOrToExpected(llvm::MemoryBuffer::getFile(Filename))) {
+    std::unique_ptr<llvm::MemoryBuffer> MemoryBuffer =
+        std::move(ExpectedMemoryBuffer.get());
+    llvm::yaml::Input Yin(*MemoryBuffer, getUntypedContext(Context));
+    ObjectOrList Benchmark;
+    Yin >> Benchmark;
+    return Benchmark;
+  } else {
+    return ExpectedMemoryBuffer.takeError();
+  }
 }
 
-InstructionBenchmark
-InstructionBenchmark::readYamlOrDie(const BenchmarkResultContext &Context,
-                                    llvm::StringRef Filename) {
-  return readYamlOrDieCommon<InstructionBenchmark>(Context, Filename);
+llvm::Expected<InstructionBenchmark>
+InstructionBenchmark::readYaml(const BenchmarkResultContext &Context,
+                               llvm::StringRef Filename) {
+  return readYamlCommon<InstructionBenchmark>(Context, Filename);
 }
 
-std::vector<InstructionBenchmark>
-InstructionBenchmark::readYamlsOrDie(const BenchmarkResultContext &Context,
-                                     llvm::StringRef Filename) {
-  return readYamlOrDieCommon<std::vector<InstructionBenchmark>>(Context,
-                                                                Filename);
+llvm::Expected<std::vector<InstructionBenchmark>>
+InstructionBenchmark::readYamls(const BenchmarkResultContext &Context,
+                                llvm::StringRef Filename) {
+  return readYamlCommon<std::vector<InstructionBenchmark>>(Context, Filename);
 }
 
 void InstructionBenchmark::writeYamlTo(const BenchmarkResultContext &Context,
-                                       llvm::raw_ostream &S) {
-  // YAML IO requires a mutable pointer to Context but we guarantee to not
-  // modify it.
-  llvm::yaml::Output Yout(S, const_cast<BenchmarkResultContext *>(&Context));
+                                       llvm::raw_ostream &OS) {
+  llvm::yaml::Output Yout(OS, getUntypedContext(Context));
   Yout << *this;
 }
 
 void InstructionBenchmark::readYamlFrom(const BenchmarkResultContext &Context,
                                         llvm::StringRef InputContent) {
-  // YAML IO requires a mutable pointer to Context but we guarantee to not
-  // modify it.
-  llvm::yaml::Input Yin(InputContent,
-                        const_cast<BenchmarkResultContext *>(&Context));
+  llvm::yaml::Input Yin(InputContent, getUntypedContext(Context));
   Yin >> *this;
 }
 
-// FIXME: Change the API to let the caller handle errors.
-void InstructionBenchmark::writeYamlOrDie(const BenchmarkResultContext &Context,
-                                          const llvm::StringRef Filename) {
+llvm::Error
+InstructionBenchmark::writeYaml(const BenchmarkResultContext &Context,
+                                const llvm::StringRef Filename) {
   if (Filename == "-") {
     writeYamlTo(Context, llvm::outs());
   } else {
     int ResultFD = 0;
-    llvm::cantFail(llvm::errorCodeToError(
-        openFileForWrite(Filename, ResultFD, llvm::sys::fs::F_Text)));
+    if (auto E = llvm::errorCodeToError(
+            openFileForWrite(Filename, ResultFD, llvm::sys::fs::F_Text))) {
+      return E;
+    }
     llvm::raw_fd_ostream Ostr(ResultFD, true /*shouldClose*/);
     writeYamlTo(Context, Ostr);
   }
+  return llvm::Error::success();
 }
 
 void BenchmarkMeasureStats::push(const BenchmarkMeasure &BM) {

@@ -1452,6 +1452,8 @@ template<typename Filter>
 static bool hasVisibleDeclarationImpl(Sema &S, const NamedDecl *D,
                                       llvm::SmallVectorImpl<Module *> *Modules,
                                       Filter F) {
+  bool HasFilteredRedecls = false;
+
   for (auto *Redecl : D->redecls()) {
     auto *R = cast<NamedDecl>(Redecl);
     if (!F(R))
@@ -1460,6 +1462,8 @@ static bool hasVisibleDeclarationImpl(Sema &S, const NamedDecl *D,
     if (S.isVisible(R))
       return true;
 
+    HasFilteredRedecls = true;
+
     if (Modules) {
       Modules->push_back(R->getOwningModule());
       const auto &Merged = S.Context.getModulesWithMergedDefinition(R);
@@ -1467,7 +1471,11 @@ static bool hasVisibleDeclarationImpl(Sema &S, const NamedDecl *D,
     }
   }
 
-  return false;
+  // Only return false if there is at least one redecl that is not filtered out.
+  if (HasFilteredRedecls)
+    return false;
+
+  return true;
 }
 
 bool Sema::hasVisibleExplicitSpecialization(
@@ -1497,8 +1505,6 @@ bool Sema::hasVisibleMemberSpecialization(
     //        class definition?
     return D->getLexicalDeclContext()->isFileContext();
   });
-
-  return false;
 }
 
 /// Determine whether a declaration is visible to name lookup.

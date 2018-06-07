@@ -48,6 +48,12 @@ using namespace llvm;
 
 namespace {
 
+static cl::opt<bool> WidenLoads(
+  "amdgpu-codegenprepare-widen-constant-loads",
+  cl::desc("Widen sub-dword constant address space loads in AMDGPUCodeGenPrepare"),
+  cl::ReallyHidden,
+  cl::init(true));
+
 class AMDGPUCodeGenPrepare : public FunctionPass,
                              public InstVisitor<AMDGPUCodeGenPrepare, bool> {
   const SISubtarget *ST = nullptr;
@@ -472,6 +478,9 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
 }
 
 bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
+  if (!WidenLoads)
+    return false;
+
   if ((I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS ||
        I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS_32BIT) &&
       canWidenScalarExtLoad(I)) {

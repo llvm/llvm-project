@@ -18,15 +18,24 @@
 ; SI: s_and_b32
 ; SI: s_or_b32
 
-; CI: v_sub_i32_e32
-; CI-DAG: v_sub_i32_e32
-; CI: v_bfe_i32
-; CI-DAG: v_bfe_i32
-; CI-DAG: v_add_i32_e32
-; CI-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 16
-; CI: v_add_i32_e32
-; CI: v_and_b32_e32 v{{[0-9]+}}, 0xffff,
-; CI: v_or_b32_e32
+; CI-NOT: {{buffer|flat}}_load
+; CI: s_load_dword s
+; CI-NOT: {{buffer|flat}}_load
+; CI: s_lshr_b32
+; CI: s_ashr_i32
+; CI: s_sext_i32_i16
+; CI: s_sub_i32
+; CI: s_sub_i32
+; CI: s_sext_i32_i16
+; CI: s_sext_i32_i16
+; CI: s_max_i32
+; CI: s_max_i32
+; CI: s_lshl_b32
+; CI: s_add_i32
+; CI: s_add_i32
+; CI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0xffff
+; CI: s_or_b32
+
 define amdgpu_kernel void @s_abs_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %val) #0 {
   %neg = sub <2 x i16> zeroinitializer, %val
   %cond = icmp sgt <2 x i16> %val, %neg

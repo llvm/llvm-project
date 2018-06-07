@@ -24,9 +24,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}class_f16_fabs:
-; GCN-DAG: buffer_load_ushort v[[SA_F16:[0-9]+]]
-; GCN-DAG: s_load_dword s[[SB_I32:[0-9]+]]
-; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], |v[[SA_F16]]|, s[[SB_I32]]
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
+; GCN: s_load_dword s[[SB_I32:[0-9]+]]
+; GCN: v_mov_b32_e32 [[V_B_I32:v[0-9]+]], s[[SB_I32]]
+; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], |s[[SA_F16]]|, [[V_B_I32]]
 ; VI:  v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
@@ -42,10 +43,11 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}class_f16_fneg
-; GCN: buffer_load_ushort v[[SA_F16:[0-9]+]]
+; GCN-LABEL: {{^}}class_f16_fneg:
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; GCN: s_load_dword s[[SB_I32:[0-9]+]]
-; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], -v[[SA_F16]], s[[SB_I32]]
+; GCN: v_mov_b32_e32 [[V_B_I32:v[0-9]+]], s[[SB_I32]]
+; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], -s[[SA_F16]], [[V_B_I32]]
 ; VI:  v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
@@ -61,10 +63,11 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}class_f16_fabs_fneg
-; GCN-DAG: buffer_load_ushort v[[SA_F16:[0-9]+]]
-; GCN-DAG: s_load_dword s[[SB_I32:[0-9]+]]
-; VI: v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], -|v[[SA_F16]]|, s[[SB_I32]]
+; GCN-LABEL: {{^}}class_f16_fabs_fneg:
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
+; GCN: s_load_dword s[[SB_I32:[0-9]+]]
+; GCN: v_mov_b32_e32 [[V_B_I32:v[0-9]+]], s[[SB_I32]]
+; VI: v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], -|s[[SA_F16]]|, [[V_B_I32]]
 ; VI: v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
@@ -82,8 +85,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}class_f16_1:
-; GCN: buffer_load_ushort v[[SA_F16:[0-9]+]]
-; VI: v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], v[[SA_F16]], 1{{$}}
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
+; VI: v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], s[[SA_F16]], 1{{$}}
 ; VI: v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
@@ -98,8 +101,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}class_f16_64
-; GCN: buffer_load_ushort v[[SA_F16:[0-9]+]]
-; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], v[[SA_F16]], 64{{$}}
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
+; VI:  v_cmp_class_f16_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], s[[SA_F16]], 64{{$}}
 ; VI:  v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
@@ -114,9 +117,9 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}class_f16_full_mask:
-; GCN: buffer_load_ushort v[[SA_F16:[0-9]+]]
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; VI:  v_mov_b32_e32 v[[MASK:[0-9]+]], 0x3ff{{$}}
-; VI:  v_cmp_class_f16_e32 vcc, v[[SA_F16]], v[[MASK]]
+; VI:  v_cmp_class_f16_e32 vcc, s[[SA_F16]], v[[MASK]]
 ; VI:  v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, vcc
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm
@@ -130,10 +133,10 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}class_f16_nine_bit_mask
-; GCN: buffer_load_ushort v[[SA_F16:[0-9]+]]
+; GCN-LABEL: {{^}}class_f16_nine_bit_mask:
+; GCN: s_load_dword s[[SA_F16:[0-9]+]]
 ; VI:  v_mov_b32_e32 v[[MASK:[0-9]+]], 0x1ff{{$}}
-; VI:  v_cmp_class_f16_e32 vcc, v[[SA_F16]], v[[MASK]]
+; VI:  v_cmp_class_f16_e32 vcc, s[[SA_F16]], v[[MASK]]
 ; VI:  v_cndmask_b32_e64 v[[VR_I32:[0-9]+]], 0, -1, vcc
 ; GCN: buffer_store_dword v[[VR_I32]]
 ; GCN: s_endpgm

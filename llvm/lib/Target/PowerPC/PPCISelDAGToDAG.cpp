@@ -438,7 +438,7 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
       // a significant limitation. We should consider inserting this in the
       // block where it is used and then commoning this sequence up if it
       // appears in multiple places.
-      // Note: on ISA 3.0 cores, we can use lnia (addpcis) insteand of
+      // Note: on ISA 3.0 cores, we can use lnia (addpcis) instead of
       // MovePCtoLR8.
       MF->getInfo<PPCFunctionInfo>()->setShrinkWrapDisabled(true);
       GlobalBaseReg = RegInfo->createVirtualRegister(&PPC::G8RC_and_G8RC_NOX0RegClass);
@@ -3402,7 +3402,7 @@ static bool allUsesExtend(SDValue Compare, SelectionDAG *CurDAG) {
 }
 
 /// Returns an equivalent of a SETCC node but with the result the same width as
-/// the inputs. This can nalso be used for SELECT_CC if either the true or false
+/// the inputs. This can also be used for SELECT_CC if either the true or false
 /// values is a power of two while the other is zero.
 SDValue IntegerCompareEliminator::getSETCCInGPR(SDValue Compare,
                                                 SetccInGPROpts ConvOpts) {

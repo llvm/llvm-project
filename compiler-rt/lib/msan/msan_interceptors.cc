@@ -1292,6 +1292,7 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
 #define SIGNAL_INTERCEPTOR_SIGNAL_IMPL(func, signo, handler) \
   {                                                          \
     handler = signal_impl(signo, handler);                   \
+    InterceptorScope interceptor_scope;                      \
     return REAL(func)(signo, handler);                       \
   }
 

@@ -23,6 +23,7 @@ struct Configuration {
   bool CompressRelocTargets;
   bool Demangle;
   bool DisableVerify;
+  bool ExportAll;
   bool ExportTable;
   bool GcSections;
   bool ImportMemory;
