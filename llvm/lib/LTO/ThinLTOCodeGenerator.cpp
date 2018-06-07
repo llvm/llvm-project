@@ -590,7 +590,7 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
  */
 std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
   std::unique_ptr<ModuleSummaryIndex> CombinedIndex =
-      llvm::make_unique<ModuleSummaryIndex>(/*IsPeformingAnalysis=*/false);
+      llvm::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
   uint64_t NextModuleId = 0;
   for (auto &ModuleBuffer : Modules) {
     if (Error Err = readModuleSummaryIndex(ModuleBuffer.getMemBuffer(),

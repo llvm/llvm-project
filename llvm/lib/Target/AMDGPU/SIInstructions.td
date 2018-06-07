@@ -634,6 +634,11 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (f32 (f16_to_fp (i32 (srl_oneuse (and_oneuse i32:$src0, 0x7fff0000), (i32 16))))),
+  (V_CVT_F32_F16_e64 SRCMODS.ABS, (i32 (V_LSHRREV_B32_e64 (i32 16), i32:$src0)), DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+def : GCNPat <
   (f32 (f16_to_fp (or_oneuse i32:$src0, 0x8000))),
   (V_CVT_F32_F16_e64 SRCMODS.NEG_ABS, $src0, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;

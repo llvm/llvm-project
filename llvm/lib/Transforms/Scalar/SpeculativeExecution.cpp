@@ -137,6 +137,7 @@ INITIALIZE_PASS_END(SpeculativeExecutionLegacyPass, "speculative-execution",
 void SpeculativeExecutionLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addPreserved<GlobalsAAWrapperPass>();
+  AU.setPreservesCFG();
 }
 
 bool SpeculativeExecutionLegacyPass::runOnFunction(Function &F) {
@@ -314,6 +315,7 @@ PreservedAnalyses SpeculativeExecutionPass::run(Function &F,
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<GlobalsAA>();
+  PA.preserveSet<CFGAnalyses>();
   return PA;
 }
 }  // namespace llvm

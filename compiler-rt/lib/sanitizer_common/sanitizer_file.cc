@@ -95,34 +95,40 @@ void ReportFile::SetReportPath(const char *path) {
 
 bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
                       uptr *read_len, uptr max_len, error_t *errno_p) {
-  uptr PageSize = GetPageSizeCached();
-  uptr kMinFileLen = PageSize;
   *buff = nullptr;
   *buff_size = 0;
   *read_len = 0;
+  if (!max_len)
+    return true;
+  uptr PageSize = GetPageSizeCached();
+  uptr kMinFileLen = Min(PageSize, max_len);
+
   // The files we usually open are not seekable, so try different buffer sizes.
-  for (uptr size = kMinFileLen; size <= max_len; size *= 2) {
+  for (uptr size = kMinFileLen;; size = Min(size * 2, max_len)) {
     UnmapOrDie(*buff, *buff_size);
     *buff = (char*)MmapOrDie(size, __func__);
     *buff_size = size;
     fd_t fd = OpenFile(file_name, RdOnly, errno_p);
-    if (fd == kInvalidFd)
+    if (fd == kInvalidFd) {
+      UnmapOrDie(*buff, *buff_size);
       return false;
+    }
     *read_len = 0;
     // Read up to one page at a time.
     bool reached_eof = false;
-    while (*read_len + PageSize <= size) {
+    while (*read_len < size) {
       uptr just_read;
-      if (!ReadFromFile(fd, *buff + *read_len, PageSize, &just_read, errno_p)) {
+      if (!ReadFromFile(fd, *buff + *read_len, size - *read_len, &just_read,
+                        errno_p)) {
         UnmapOrDie(*buff, *buff_size);
         CloseFile(fd);
         return false;
       }
-      if (just_read == 0) {
+      *read_len += just_read;
+      if (just_read == 0 || *read_len == max_len) {
         reached_eof = true;
         break;
       }
-      *read_len += just_read;
     }
     CloseFile(fd);
     if (reached_eof)  // We've read the whole file.
@@ -131,40 +137,34 @@ bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
   return true;
 }
 
-bool ReadFileToBuffer(const char *file_name,
+bool ReadFileToVector(const char *file_name,
                       InternalMmapVectorNoCtor<char> *buff, uptr max_len,
                       error_t *errno_p) {
-  uptr PageSize = GetPageSizeCached();
   buff->clear();
-  // The files we usually open are not seekable, so try different buffer sizes.
-  for (uptr size = Max(PageSize, buff->capacity()); size <= max_len;
-       size *= 2) {
-    buff->resize(size);
-    fd_t fd = OpenFile(file_name, RdOnly, errno_p);
-    if (fd == kInvalidFd)
+  if (!max_len)
+    return true;
+  uptr PageSize = GetPageSizeCached();
+  fd_t fd = OpenFile(file_name, RdOnly, errno_p);
+  if (fd == kInvalidFd)
+    return false;
+  uptr read_len = 0;
+  while (read_len < max_len) {
+    if (read_len >= buff->size())
+      buff->resize(Min(Max(PageSize, read_len * 2), max_len));
+    CHECK_LT(read_len, buff->size());
+    CHECK_LE(buff->size(), max_len);
+    uptr just_read;
+    if (!ReadFromFile(fd, buff->data() + read_len, buff->size() - read_len,
+                      &just_read, errno_p)) {
+      CloseFile(fd);
       return false;
-    uptr read_len = 0;
-    // Read up to one page at a time.
-    bool reached_eof = false;
-    while (read_len + PageSize <= buff->size()) {
-      uptr just_read;
-      if (!ReadFromFile(fd, buff->data() + read_len, PageSize, &just_read,
-                        errno_p)) {
-        CloseFile(fd);
-        return false;
-      }
-      if (!just_read) {
-        reached_eof = true;
-        break;
-      }
-      read_len += just_read;
     }
-    CloseFile(fd);
-    if (reached_eof) {  // We've read the whole file.
-      buff->resize(read_len);
+    read_len += just_read;
+    if (!just_read)
       break;
-    }
   }
+  CloseFile(fd);
+  buff->resize(read_len);
   return true;
 }
 

@@ -585,7 +585,10 @@ CopyConfig ParseStripOptions(ArrayRef<const char *> ArgsArr) {
 
   // Strip debug info only.
   Config.StripDebug = InputArgs.hasArg(STRIP_strip_debug);
-  if (!Config.StripDebug)
+  
+  Config.DiscardAll = InputArgs.hasArg(STRIP_discard_all);
+  
+  if (!Config.StripDebug && !Config.DiscardAll)
     Config.StripAll = true;
 
   for (auto Arg : InputArgs.filtered(STRIP_remove_section))
