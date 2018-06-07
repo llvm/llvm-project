@@ -1450,6 +1450,20 @@ class BitPermutationSelector {
     };
 
     for (auto &BG : BitGroups) {
+      // If this bit group has RLAmt of 0 and will not be merged with
+      // another bit group, we don't benefit from Repl32. We don't mark
+      // such group to give more freedom for later instruction selection.
+      if (BG.RLAmt == 0) {
+        auto PotentiallyMerged = [this](BitGroup & BG) {
+          for (auto &BG2 : BitGroups)
+            if (&BG != &BG2 && BG.V == BG2.V &&
+                (BG2.RLAmt == 0 || BG2.RLAmt == 32))
+              return true;
+          return false;
+        };
+        if (!PotentiallyMerged(BG))
+          continue;
+      }
       if (BG.StartIdx < 32 && BG.EndIdx < 32) {
         if (IsAllLow32(BG)) {
           if (BG.RLAmt >= 32) {

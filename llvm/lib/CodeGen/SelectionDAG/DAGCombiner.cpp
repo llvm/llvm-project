@@ -14918,7 +14918,10 @@ SDValue DAGCombiner::reduceBuildVecExtToExtBuildVec(SDNode *N) {
   assert(VecVT.getSizeInBits() == VT.getSizeInBits() &&
          "Invalid vector size");
   // Check if the new vector type is legal.
-  if (!isTypeLegal(VecVT)) return SDValue();
+  if (!isTypeLegal(VecVT) ||
+      (!TLI.isOperationLegal(ISD::BUILD_VECTOR, VecVT) &&
+       TLI.isOperationLegal(ISD::BUILD_VECTOR, VT)))
+    return SDValue();
 
   // Make the new BUILD_VECTOR.
   SDValue BV = DAG.getBuildVector(VecVT, DL, Ops);

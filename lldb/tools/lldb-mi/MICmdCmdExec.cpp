@@ -22,6 +22,7 @@
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBThread.h"
 #include "lldb/lldb-enumerations.h"
 
 // In-house headers:
@@ -378,12 +379,17 @@ bool CMICmdCmdExecNext::Execute() {
 
   CMICmnLLDBDebugSessionInfo &rSessionInfo(
       CMICmnLLDBDebugSessionInfo::Instance());
-  lldb::SBDebugger &rDebugger = rSessionInfo.GetDebugger();
-  CMIUtilString strCmd("thread step-over");
-  if (nThreadId != UINT64_MAX)
-    strCmd += CMIUtilString::Format(" %llu", nThreadId);
-  rDebugger.GetCommandInterpreter().HandleCommand(strCmd.c_str(), m_lldbResult,
-                                                  false);
+
+  if (nThreadId != UINT64_MAX) {
+    lldb::SBThread sbThread = rSessionInfo.GetProcess().GetThreadByIndexID(nThreadId);
+    if (!sbThread.IsValid()) {
+      SetError(CMIUtilString::Format(MIRSRC(IDS_CMD_ERR_THREAD_INVALID),
+                                     m_cmdData.strMiCmd.c_str(),
+                                     m_constStrArgThread.c_str()));
+      return MIstatus::failure;
+    }
+    sbThread.StepOver();
+  } else rSessionInfo.GetProcess().GetSelectedThread().StepOver();
 
   return MIstatus::success;
 }

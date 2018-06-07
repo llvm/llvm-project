@@ -2781,6 +2781,14 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_rndscaless_round_mask:
     i = 4; l = 0; u = 255;
     break;
+  case X86::BI__builtin_ia32_pslldqi128:
+  case X86::BI__builtin_ia32_pslldqi256:
+  case X86::BI__builtin_ia32_pslldqi512:
+  case X86::BI__builtin_ia32_psrldqi128:
+  case X86::BI__builtin_ia32_psrldqi256:
+  case X86::BI__builtin_ia32_psrldqi512:
+    i = 1; l = 0; u = 1023;
+    break;
   }
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);
 }

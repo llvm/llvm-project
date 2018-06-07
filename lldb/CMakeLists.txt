@@ -42,7 +42,6 @@ if(LLDB_BUILD_FRAMEWORK)
     ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR})
 endif()
 
-# add_subdirectory(include)
 add_subdirectory(docs)
 if (NOT LLDB_DISABLE_PYTHON)
   if(LLDB_USE_SYSTEM_SIX)

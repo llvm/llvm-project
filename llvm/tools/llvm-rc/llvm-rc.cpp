@@ -171,8 +171,8 @@ int main(int Argc, const char **Argv) {
           "No more than one output file should be provided (using /FO flag).");
 
     std::error_code EC;
-    auto FOut =
-        llvm::make_unique<raw_fd_ostream>(OutArgsInfo[0], EC, sys::fs::F_RW);
+    auto FOut = llvm::make_unique<raw_fd_ostream>(
+        OutArgsInfo[0], EC, sys::fs::FA_Read | sys::fs::FA_Write);
     if (EC)
       fatalError("Error opening output file '" + OutArgsInfo[0] +
                  "': " + EC.message());

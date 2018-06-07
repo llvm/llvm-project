@@ -1035,31 +1035,20 @@ ErrorOr<basic_file_status> directory_entry::status() const {
   return Status;
 }
 
-static std::error_code directoryRealPath(const Twine &Name,
-                                         SmallVectorImpl<char> &RealPath) {
-  SmallVector<wchar_t, 128> PathUTF16;
-
-  if (std::error_code EC = widenPath(Name, PathUTF16))
-    return EC;
-
-  HANDLE H =
-      ::CreateFileW(PathUTF16.begin(), GENERIC_READ,
-                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                    NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
-  if (H == INVALID_HANDLE_VALUE)
-    return mapWindowsError(GetLastError());
-  std::error_code EC = realPathFromHandle(H, RealPath);
-  ::CloseHandle(H);
-  return EC;
-}
-
 static std::error_code nativeFileToFd(Expected<HANDLE> H, int &ResultFD,
-                                      int OpenFlags) {
+                                      OpenFlags Flags) {
+  int CrtOpenFlags = 0;
+  if (Flags & OF_Append)
+    CrtOpenFlags |= _O_APPEND;
+
+  if (Flags & OF_Text)
+    CrtOpenFlags |= _O_TEXT;
+
   ResultFD = -1;
   if (!H)
     return errorToErrorCode(H.takeError());
 
-  ResultFD = ::_open_osfhandle(intptr_t(*H), OpenFlags);
+  ResultFD = ::_open_osfhandle(intptr_t(*H), CrtOpenFlags);
   if (ResultFD == -1) {
     ::CloseHandle(*H);
     return mapWindowsError(ERROR_INVALID_HANDLE);
@@ -1067,23 +1056,62 @@ static std::error_code nativeFileToFd(Expected<HANDLE> H, int &ResultFD,
   return std::error_code();
 }
 
-std::error_code openFileForRead(const Twine &Name, int &ResultFD,
-                                SmallVectorImpl<char> *RealPath) {
-  Expected<HANDLE> NativeFile = openNativeFileForRead(Name, RealPath);
-  return nativeFileToFd(std::move(NativeFile), ResultFD, 0);
+static DWORD nativeOpenFlags(OpenFlags Flags) {
+  DWORD Result = 0;
+  if (Flags & OF_Delete)
+    Result |= FILE_FLAG_DELETE_ON_CLOSE;
+
+  if (Result == 0)
+    Result = FILE_ATTRIBUTE_NORMAL;
+  return Result;
 }
 
-Expected<file_t> openNativeFileForRead(const Twine &Name,
-                                       SmallVectorImpl<char> *RealPath) {
-  SmallVector<wchar_t, 128> PathUTF16;
+static DWORD nativeDisposition(CreationDisposition Disp, OpenFlags Flags) {
+  // This is a compatibility hack.  Really we should respect the creation
+  // disposition, but a lot of old code relied on the implicit assumption that
+  // OF_Append implied it would open an existing file.  Since the disposition is
+  // now explicit and defaults to CD_CreateAlways, this assumption would cause
+  // any usage of OF_Append to append to a new file, even if the file already
+  // existed.  A better solution might have two new creation dispositions:
+  // CD_AppendAlways and CD_AppendNew.  This would also address the problem of
+  // OF_Append being used on a read-only descriptor, which doesn't make sense.
+  if (Flags & OF_Append)
+    return OPEN_ALWAYS;
 
+  switch (Disp) {
+  case CD_CreateAlways:
+    return CREATE_ALWAYS;
+  case CD_CreateNew:
+    return CREATE_NEW;
+  case CD_OpenAlways:
+    return OPEN_ALWAYS;
+  case CD_OpenExisting:
+    return OPEN_EXISTING;
+  }
+  llvm_unreachable("unreachable!");
+}
+
+static DWORD nativeAccess(FileAccess Access, OpenFlags Flags) {
+  DWORD Result = 0;
+  if (Access & FA_Read)
+    Result |= GENERIC_READ;
+  if (Access & FA_Write)
+    Result |= GENERIC_WRITE;
+  if (Flags & OF_Delete)
+    Result |= DELETE;
+  return Result;
+}
+
+static Expected<file_t> nativeOpenFile(const Twine &Name, DWORD Disp,
+                                       DWORD Access, DWORD Flags) {
+  SmallVector<wchar_t, 128> PathUTF16;
   if (std::error_code EC = widenPath(Name, PathUTF16))
     return errorCodeToError(EC);
 
   HANDLE H =
-      ::CreateFileW(PathUTF16.begin(), GENERIC_READ,
+      ::CreateFileW(PathUTF16.begin(), Access,
                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                    NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                    NULL, Disp, Flags, NULL);
   if (H == INVALID_HANDLE_VALUE) {
     DWORD LastError = ::GetLastError();
     std::error_code EC = mapWindowsError(LastError);
@@ -1096,74 +1124,84 @@ Expected<file_t> openNativeFileForRead(const Twine &Name,
       return errorCodeToError(make_error_code(errc::is_a_directory));
     return errorCodeToError(EC);
   }
+  return H;
+}
+
+static Expected<file_t> openFile(const Twine &Name, CreationDisposition Disp,
+                                 FileAccess Access, OpenFlags Flags) {
+  // Verify that we don't have both "append" and "excl".
+  assert((!(Disp == CD_CreateNew) || !(Flags & OF_Append)) &&
+         "Cannot specify both 'CreateNew' and 'Append' file creation flags!");
+
+  DWORD NativeFlags = nativeOpenFlags(Flags);
+  DWORD NativeDisp = nativeDisposition(Disp, Flags);
+  DWORD NativeAccess = nativeAccess(Access, Flags);
+
+  return nativeOpenFile(Name, NativeDisp, NativeAccess, NativeFlags);
+}
+
+static std::error_code directoryRealPath(const Twine &Name,
+                                         SmallVectorImpl<char> &RealPath) {
+  Expected<file_t> EF = nativeOpenFile(Name, OPEN_EXISTING, GENERIC_READ,
+                                       FILE_FLAG_BACKUP_SEMANTICS);
+  if (!EF)
+    return errorToErrorCode(EF.takeError());
+
+  std::error_code EC = realPathFromHandle(*EF, RealPath);
+  ::CloseHandle(*EF);
+  return EC;
+}
+
+std::error_code openFileForRead(const Twine &Name, int &ResultFD,
+                                OpenFlags Flags,
+                                SmallVectorImpl<char> *RealPath) {
+  Expected<HANDLE> NativeFile = openNativeFileForRead(Name, Flags, RealPath);
+  return nativeFileToFd(std::move(NativeFile), ResultFD, OF_None);
+}
+
+Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
+                                       SmallVectorImpl<char> *RealPath) {
+
+  Expected<file_t> Result = openFile(Name, CD_OpenExisting, FA_Read, Flags);
 
   // Fetch the real name of the file, if the user asked
-  if (RealPath)
-    realPathFromHandle(H, *RealPath);
+  if (Result && RealPath)
+    realPathFromHandle(*Result, *RealPath);
 
-  return H;
+  return std::move(Result);
 }
 
 std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
-                            sys::fs::OpenFlags Flags, unsigned Mode) {
-  int OpenFlags = 0;
-  if (Flags & F_Append)
-    OpenFlags |= _O_APPEND;
+                                 CreationDisposition Disp, OpenFlags Flags,
+                                 unsigned Mode) {
+  Expected<HANDLE> NativeFile = openNativeFileForWrite(Name, Disp, Flags, Mode);
+  if (!NativeFile)
+    return errorToErrorCode(NativeFile.takeError());
 
-  if (Flags & F_Text)
-    OpenFlags |= _O_TEXT;
-
-  Expected<HANDLE> NativeFile = openNativeFileForWrite(Name, Flags, Mode);
-  return nativeFileToFd(std::move(NativeFile), ResultFD, OpenFlags);
+  return nativeFileToFd(std::move(NativeFile), ResultFD, Flags);
 }
 
-Expected<file_t> openNativeFileForWrite(const Twine &Name, OpenFlags Flags,
-                                        unsigned Mode) {
-  // Verify that we don't have both "append" and "excl".
-  assert((!(Flags & sys::fs::F_Excl) || !(Flags & sys::fs::F_Append)) &&
-         "Cannot specify both 'excl' and 'append' file creation flags!");
+Expected<file_t> openNativeFileForWrite(const Twine &Name,
+                                        CreationDisposition Disp,
+                                        OpenFlags Flags, unsigned Mode) {
+  return openFile(Name, Disp, FA_Write, Flags);
+}
 
-  SmallVector<wchar_t, 128> PathUTF16;
+std::error_code openFileForReadWrite(const Twine &Name, int &ResultFD,
+                                     CreationDisposition Disp, OpenFlags Flags,
+                                     unsigned Mode) {
+  Expected<HANDLE> NativeFile =
+      openNativeFileForReadWrite(Name, Disp, Flags, Mode);
+  if (!NativeFile)
+    return errorToErrorCode(NativeFile.takeError());
 
-  if (std::error_code EC = widenPath(Name, PathUTF16))
-    return errorCodeToError(EC);
+  return nativeFileToFd(std::move(NativeFile), ResultFD, Flags);
+}
 
-  DWORD CreationDisposition;
-  if (Flags & F_Excl)
-    CreationDisposition = CREATE_NEW;
-  else if ((Flags & F_Append) || (Flags & F_NoTrunc))
-    CreationDisposition = OPEN_ALWAYS;
-  else
-    CreationDisposition = CREATE_ALWAYS;
-
-  DWORD Access = GENERIC_WRITE;
-  DWORD Attributes = FILE_ATTRIBUTE_NORMAL;
-  if (Flags & F_RW)
-    Access |= GENERIC_READ;
-  if (Flags & F_Delete) {
-    Access |= DELETE;
-    Attributes |= FILE_FLAG_DELETE_ON_CLOSE;
-  }
-
-  HANDLE H =
-      ::CreateFileW(PathUTF16.data(), Access,
-                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                    NULL, CreationDisposition, Attributes, NULL);
-
-  if (H == INVALID_HANDLE_VALUE) {
-    DWORD LastError = ::GetLastError();
-    std::error_code EC = mapWindowsError(LastError);
-    // Provide a better error message when trying to open directories.
-    // This only runs if we failed to open the file, so there is probably
-    // no performances issues.
-    if (LastError != ERROR_ACCESS_DENIED)
-      return errorCodeToError(EC);
-    if (is_directory(Name))
-      return errorCodeToError(make_error_code(errc::is_a_directory));
-    return errorCodeToError(EC);
-  }
-
-  return H;
+Expected<file_t> openNativeFileForReadWrite(const Twine &Name,
+                                            CreationDisposition Disp,
+                                            OpenFlags Flags, unsigned Mode) {
+  return openFile(Name, Disp, FA_Write | FA_Read, Flags);
 }
 
 void closeFile(file_t &F) {
@@ -1239,7 +1277,8 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
     return directoryRealPath(path, dest);
 
   int fd;
-  if (std::error_code EC = llvm::sys::fs::openFileForRead(path, fd, &dest))
+  if (std::error_code EC =
+          llvm::sys::fs::openFileForRead(path, fd, OF_None, &dest))
     return EC;
   ::close(fd);
   return std::error_code();

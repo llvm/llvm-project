@@ -835,7 +835,7 @@ ElfType ELFReader::getElfType() const {
 }
 
 std::unique_ptr<Object> ELFReader::create() const {
-  auto Obj = llvm::make_unique<Object>(Data);
+  auto Obj = llvm::make_unique<Object>();
   if (auto *o = dyn_cast<ELFObjectFile<ELF32LE>>(Bin.get())) {
     ELFBuilder<ELF32LE> Builder(*o, *Obj);
     Builder.build();

@@ -2585,13 +2585,26 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
       ParseScope FinallyScope(this,
                               Scope::DeclScope | Scope::CompoundStmtScope);
 
+      bool ShouldCapture =
+          getTargetInfo().getTriple().isWindowsMSVCEnvironment();
+      if (ShouldCapture)
+        Actions.ActOnCapturedRegionStart(Tok.getLocation(), getCurScope(),
+                                         CR_ObjCAtFinally, 1);
+
       StmtResult FinallyBody(true);
       if (Tok.is(tok::l_brace))
         FinallyBody = ParseCompoundStatementBody();
       else
         Diag(Tok, diag::err_expected) << tok::l_brace;
-      if (FinallyBody.isInvalid())
+
+      if (FinallyBody.isInvalid()) {
         FinallyBody = Actions.ActOnNullStmt(Tok.getLocation());
+        if (ShouldCapture)
+          Actions.ActOnCapturedRegionError();
+      } else if (ShouldCapture) {
+        FinallyBody = Actions.ActOnCapturedRegionEnd(FinallyBody.get());
+      }
+
       FinallyStmt = Actions.ActOnObjCAtFinallyStmt(AtCatchFinallyLoc,
                                                    FinallyBody.get());
       catch_or_finally_seen = true;
