@@ -100,6 +100,7 @@ class MiniDumpTestCase(TestBase):
             self.assertTrue(frame.GetModule().IsValid())
 
     @skipUnlessWindows # Minidump saving works only on windows
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_deeper_stack_in_mini_dump(self):
         """Test that we can examine a more interesting stack in a mini dump."""
         self.build()
@@ -136,6 +137,7 @@ class MiniDumpTestCase(TestBase):
                 os.unlink(core)
 
     @skipUnlessWindows # Minidump saving works only on windows
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_local_variables_in_mini_dump(self):
         """Test that we can examine local variables in a mini dump."""
         self.build()

@@ -27,9 +27,9 @@ public:
 private:
   InstructionBenchmark::ModeE getMode() const override;
 
-  llvm::Expected<BenchmarkConfiguration>
-  createConfiguration(RegisterAliasingTrackerCache &RATC, unsigned Opcode,
-                      llvm::raw_ostream &Info) const override;
+  llvm::Expected<std::vector<BenchmarkConfiguration>>
+  createConfigurations(RegisterAliasingTrackerCache &RATC,
+                       unsigned Opcode) const override;
 
   std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF,

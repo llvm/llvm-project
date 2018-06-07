@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SICIVI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,SICIVI,GFX89 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SIVI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,SIVI,GFX89 %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v2i16:
@@ -58,7 +58,8 @@ define amdgpu_kernel void @extract_vector_elt_v2i16_dynamic_vgpr(i16 addrspace(1
 }
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v3i16:
-; GCN: buffer_load_ushort
+; GCN: s_load_dword s
+; GCN: s_load_dword s
 ; GCN: buffer_store_short
 ; GCN: buffer_store_short
 define amdgpu_kernel void @extract_vector_elt_v3i16(i16 addrspace(1)* %out, <3 x i16> %foo) #0 {
@@ -71,10 +72,10 @@ define amdgpu_kernel void @extract_vector_elt_v3i16(i16 addrspace(1)* %out, <3 x
 }
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v4i16:
-; SICI: buffer_load_ushort
-; SICI: buffer_load_ushort
-; SICI: buffer_store_short
-; SICI: buffer_store_short
+; SI: s_load_dword s
+; SI: s_load_dword s
+; SI: buffer_store_short
+; SI: buffer_store_short
 
 ; VI: s_load_dword s
 ; VI: s_load_dword s
@@ -97,24 +98,19 @@ define amdgpu_kernel void @extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x
 }
 
 ; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v3i16:
-; SICI: buffer_load_ushort
-; SICI: buffer_load_ushort
-; SICI: buffer_load_ushort
+; GCN: s_load_dword s
+; GCN: s_load_dword s
+; GCN: s_load_dword s
+; GCN-NOT: {{buffer|flat|global}}
 
-; SICI: buffer_store_short
-; SICI: buffer_store_short
-; SICI: buffer_store_short
-
-; SICI: buffer_load_ushort
-; SICI: buffer_store_short
-
-; GFX9-DAG: global_load_short_d16_hi v
-; GFX9-DAG: global_load_short_d16 v
+; FIXME: Unnecessary repacking
+; GFX9: s_pack_ll_b32_b16
+; GFX9: s_pack_lh_b32_b16
 
 ; GCN-DAG: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 4
-; GFX89: v_lshrrev_b64 v{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}, v
 
-; SI: v_lshr_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}
+
+; GCN: s_lshr_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s
 
 ; GCN: {{buffer|global}}_store_short
 define amdgpu_kernel void @dynamic_extract_vector_elt_v3i16(i16 addrspace(1)* %out, <3 x i16> %foo, i32 %idx) #0 {

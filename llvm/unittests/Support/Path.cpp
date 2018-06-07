@@ -49,7 +49,21 @@ using namespace llvm::sys;
   } else {                                                                     \
   }
 
+#define ASSERT_ERROR(x)                                                        \
+  if (!x) {                                                                    \
+    SmallString<128> MessageStorage;                                           \
+    raw_svector_ostream Message(MessageStorage);                               \
+    Message << #x ": did not return a failure error code.\n";                  \
+    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
+  }
+
 namespace {
+
+struct FileDescriptorCloser {
+  explicit FileDescriptorCloser(int FD) : FD(FD) {}
+  ~FileDescriptorCloser() { ::close(FD); }
+  int FD;
+};
 
 TEST(is_separator, Works) {
   EXPECT_TRUE(path::is_separator('/'));
@@ -436,6 +450,7 @@ protected:
   /// Unique temporary directory in which all created filesystem entities must
   /// be placed. It is removed at the end of each test (must be empty).
   SmallString<128> TestDirectory;
+  SmallString<128> NonExistantFile;
 
   void SetUp() override {
     ASSERT_NO_ERROR(
@@ -443,6 +458,11 @@ protected:
     // We don't care about this specific file.
     errs() << "Test Directory: " << TestDirectory << '\n';
     errs().flush();
+    NonExistantFile = TestDirectory;
+
+    // Even though this value is hardcoded, is a 128-bit GUID, so we should be
+    // guaranteed that this file will never exist.
+    sys::path::append(NonExistantFile, "1B28B495C16344CB9822E588CD4C3EF0");
   }
 
   void TearDown() override { ASSERT_NO_ERROR(fs::remove(TestDirectory.str())); }
@@ -1219,8 +1239,8 @@ TEST_F(FileSystemTest, OpenFileForRead) {
   // Open the file for read
   int FileDescriptor2;
   SmallString<64> ResultPath;
-  ASSERT_NO_ERROR(
-      fs::openFileForRead(Twine(TempPath), FileDescriptor2, &ResultPath))
+  ASSERT_NO_ERROR(fs::openFileForRead(Twine(TempPath), FileDescriptor2,
+                                      fs::OF_None, &ResultPath))
 
   // If we succeeded, check that the paths are the same (modulo case):
   if (!ResultPath.empty()) {
@@ -1233,6 +1253,209 @@ TEST_F(FileSystemTest, OpenFileForRead) {
   }
 
   ::close(FileDescriptor);
+}
+
+static void createFileWithData(const Twine &Path, bool ShouldExistBefore,
+                               fs::CreationDisposition Disp, StringRef Data) {
+  int FD;
+  ASSERT_EQ(ShouldExistBefore, fs::exists(Path));
+  ASSERT_NO_ERROR(fs::openFileForWrite(Path, FD, Disp));
+  FileDescriptorCloser Closer(FD);
+  ASSERT_TRUE(fs::exists(Path));
+
+  ASSERT_EQ(Data.size(), (size_t)write(FD, Data.data(), Data.size()));
+}
+
+static void verifyFileContents(const Twine &Path, StringRef Contents) {
+  auto Buffer = MemoryBuffer::getFile(Path);
+  ASSERT_TRUE((bool)Buffer);
+  StringRef Data = Buffer.get()->getBuffer();
+  ASSERT_EQ(Data, Contents);
+}
+
+TEST_F(FileSystemTest, CreateNew) {
+  int FD;
+  Optional<FileDescriptorCloser> Closer;
+
+  // Succeeds if the file does not exist.
+  ASSERT_FALSE(fs::exists(NonExistantFile));
+  ASSERT_NO_ERROR(fs::openFileForWrite(NonExistantFile, FD, fs::CD_CreateNew));
+  ASSERT_TRUE(fs::exists(NonExistantFile));
+
+  FileRemover Cleanup(NonExistantFile);
+  Closer.emplace(FD);
+
+  // And creates a file of size 0.
+  sys::fs::file_status Status;
+  ASSERT_NO_ERROR(sys::fs::status(FD, Status));
+  EXPECT_EQ(0ULL, Status.getSize());
+
+  // Close this first, before trying to re-open the file.
+  Closer.reset();
+
+  // But fails if the file does exist.
+  ASSERT_ERROR(fs::openFileForWrite(NonExistantFile, FD, fs::CD_CreateNew));
+}
+
+TEST_F(FileSystemTest, CreateAlways) {
+  int FD;
+  Optional<FileDescriptorCloser> Closer;
+
+  // Succeeds if the file does not exist.
+  ASSERT_FALSE(fs::exists(NonExistantFile));
+  ASSERT_NO_ERROR(
+      fs::openFileForWrite(NonExistantFile, FD, fs::CD_CreateAlways));
+
+  Closer.emplace(FD);
+
+  ASSERT_TRUE(fs::exists(NonExistantFile));
+
+  FileRemover Cleanup(NonExistantFile);
+
+  // And creates a file of size 0.
+  uint64_t FileSize;
+  ASSERT_NO_ERROR(sys::fs::file_size(NonExistantFile, FileSize));
+  ASSERT_EQ(0ULL, FileSize);
+
+  // If we write some data to it re-create it with CreateAlways, it succeeds and
+  // truncates to 0 bytes.
+  ASSERT_EQ(4, write(FD, "Test", 4));
+
+  Closer.reset();
+
+  ASSERT_NO_ERROR(sys::fs::file_size(NonExistantFile, FileSize));
+  ASSERT_EQ(4ULL, FileSize);
+
+  ASSERT_NO_ERROR(
+      fs::openFileForWrite(NonExistantFile, FD, fs::CD_CreateAlways));
+  Closer.emplace(FD);
+  ASSERT_NO_ERROR(sys::fs::file_size(NonExistantFile, FileSize));
+  ASSERT_EQ(0ULL, FileSize);
+}
+
+TEST_F(FileSystemTest, OpenExisting) {
+  int FD;
+
+  // Fails if the file does not exist.
+  ASSERT_FALSE(fs::exists(NonExistantFile));
+  ASSERT_ERROR(fs::openFileForWrite(NonExistantFile, FD, fs::CD_OpenExisting));
+  ASSERT_FALSE(fs::exists(NonExistantFile));
+
+  // Make a dummy file now so that we can try again when the file does exist.
+  createFileWithData(NonExistantFile, false, fs::CD_CreateNew, "Fizz");
+  FileRemover Cleanup(NonExistantFile);
+  uint64_t FileSize;
+  ASSERT_NO_ERROR(sys::fs::file_size(NonExistantFile, FileSize));
+  ASSERT_EQ(4ULL, FileSize);
+
+  // If we re-create it with different data, it overwrites rather than
+  // appending.
+  createFileWithData(NonExistantFile, true, fs::CD_OpenExisting, "Buzz");
+  verifyFileContents(NonExistantFile, "Buzz");
+}
+
+TEST_F(FileSystemTest, OpenAlways) {
+  // Succeeds if the file does not exist.
+  createFileWithData(NonExistantFile, false, fs::CD_OpenAlways, "Fizz");
+  FileRemover Cleanup(NonExistantFile);
+  uint64_t FileSize;
+  ASSERT_NO_ERROR(sys::fs::file_size(NonExistantFile, FileSize));
+  ASSERT_EQ(4ULL, FileSize);
+
+  // Now re-open it and write again, verifying the contents get over-written.
+  createFileWithData(NonExistantFile, true, fs::CD_OpenAlways, "Bu");
+  verifyFileContents(NonExistantFile, "Buzz");
+}
+
+TEST_F(FileSystemTest, AppendSetsCorrectFileOffset) {
+  fs::CreationDisposition Disps[] = {fs::CD_CreateAlways, fs::CD_OpenAlways,
+                                     fs::CD_OpenExisting};
+
+  // Write some data and re-open it with every possible disposition (this is a
+  // hack that shouldn't work, but is left for compatibility.  F_Append
+  // overrides
+  // the specified disposition.
+  for (fs::CreationDisposition Disp : Disps) {
+    int FD;
+    Optional<FileDescriptorCloser> Closer;
+
+    createFileWithData(NonExistantFile, false, fs::CD_CreateNew, "Fizz");
+
+    FileRemover Cleanup(NonExistantFile);
+
+    uint64_t FileSize;
+    ASSERT_NO_ERROR(sys::fs::file_size(NonExistantFile, FileSize));
+    ASSERT_EQ(4ULL, FileSize);
+    ASSERT_NO_ERROR(
+        fs::openFileForWrite(NonExistantFile, FD, Disp, fs::OF_Append));
+    Closer.emplace(FD);
+    ASSERT_NO_ERROR(sys::fs::file_size(NonExistantFile, FileSize));
+    ASSERT_EQ(4ULL, FileSize);
+
+    ASSERT_EQ(4, write(FD, "Buzz", 4));
+    Closer.reset();
+
+    verifyFileContents(NonExistantFile, "FizzBuzz");
+  }
+}
+
+static void verifyRead(int FD, StringRef Data, bool ShouldSucceed) {
+  std::vector<char> Buffer;
+  Buffer.resize(Data.size());
+  int Result = ::read(FD, Buffer.data(), Buffer.size());
+  if (ShouldSucceed) {
+    ASSERT_EQ((size_t)Result, Data.size());
+    ASSERT_EQ(Data, StringRef(Buffer.data(), Buffer.size()));
+  } else {
+    ASSERT_EQ(-1, Result);
+    ASSERT_EQ(EBADF, errno);
+  }
+}
+
+static void verifyWrite(int FD, StringRef Data, bool ShouldSucceed) {
+  int Result = ::write(FD, Data.data(), Data.size());
+  if (ShouldSucceed)
+    ASSERT_EQ((size_t)Result, Data.size());
+  else {
+    ASSERT_EQ(-1, Result);
+    ASSERT_EQ(EBADF, errno);
+  }
+}
+
+TEST_F(FileSystemTest, ReadOnlyFileCantWrite) {
+  createFileWithData(NonExistantFile, false, fs::CD_CreateNew, "Fizz");
+  FileRemover Cleanup(NonExistantFile);
+
+  int FD;
+  ASSERT_NO_ERROR(fs::openFileForRead(NonExistantFile, FD));
+  FileDescriptorCloser Closer(FD);
+
+  verifyWrite(FD, "Buzz", false);
+  verifyRead(FD, "Fizz", true);
+}
+
+TEST_F(FileSystemTest, WriteOnlyFileCantRead) {
+  createFileWithData(NonExistantFile, false, fs::CD_CreateNew, "Fizz");
+  FileRemover Cleanup(NonExistantFile);
+
+  int FD;
+  ASSERT_NO_ERROR(
+      fs::openFileForWrite(NonExistantFile, FD, fs::CD_OpenExisting));
+  FileDescriptorCloser Closer(FD);
+  verifyRead(FD, "Fizz", false);
+  verifyWrite(FD, "Buzz", true);
+}
+
+TEST_F(FileSystemTest, ReadWriteFileCanReadOrWrite) {
+  createFileWithData(NonExistantFile, false, fs::CD_CreateNew, "Fizz");
+  FileRemover Cleanup(NonExistantFile);
+
+  int FD;
+  ASSERT_NO_ERROR(fs::openFileForReadWrite(NonExistantFile, FD,
+                                           fs::CD_OpenExisting, fs::OF_None));
+  FileDescriptorCloser Closer(FD);
+  verifyRead(FD, "Fizz", true);
+  verifyWrite(FD, "Buzz", true);
 }
 
 TEST_F(FileSystemTest, set_current_path) {

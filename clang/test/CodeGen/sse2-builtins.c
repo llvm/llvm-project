@@ -121,13 +121,13 @@ __m128i test_mm_avg_epu16(__m128i A, __m128i B) {
 
 __m128i test_mm_bslli_si128(__m128i A) {
   // CHECK-LABEL: test_mm_bslli_si128
-  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26>
+  // CHECK: shufflevector <16 x i8> zeroinitializer, <16 x i8> %{{.*}}, <16 x i32> <i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26>
   return _mm_bslli_si128(A, 5);
 }
 
 __m128i test_mm_bsrli_si128(__m128i A) {
   // CHECK-LABEL: test_mm_bsrli_si128
-  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20>
+  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> zeroinitializer, <16 x i32> <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20>
   return _mm_bsrli_si128(A, 5);
 }
 
@@ -1176,13 +1176,13 @@ __m128i test_mm_slli_epi64(__m128i A) {
 
 __m128i test_mm_slli_si128(__m128i A) {
   // CHECK-LABEL: test_mm_slli_si128
-  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26>
+  // CHECK: shufflevector <16 x i8> zeroinitializer, <16 x i8> %{{.*}}, <16 x i32> <i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26>
   return _mm_slli_si128(A, 5);
 }
 
 __m128i test_mm_slli_si128_2(__m128i A) {
   // CHECK-LABEL: test_mm_slli_si128_2
-  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: ret <2 x i64> zeroinitializer
   return _mm_slli_si128(A, 17);
 }
 
@@ -1264,13 +1264,13 @@ __m128i test_mm_srli_epi64(__m128i A) {
 
 __m128i test_mm_srli_si128(__m128i A) {
   // CHECK-LABEL: test_mm_srli_si128
-  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20>
+  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> zeroinitializer, <16 x i32> <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20>
   return _mm_srli_si128(A, 5);
 }
 
 __m128i test_mm_srli_si128_2(__m128i A) {
   // CHECK-LABEL: test_mm_srli_si128_2
-  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  // ret <2 x i64> zeroinitializer
   return _mm_srli_si128(A, 17);
 }
 

@@ -94,7 +94,6 @@ categorize(const index::SymbolInfo &D) {
 }
 
 void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
-  SemaCCPriority = SemaCCResult.Priority;
   if (SemaCCResult.Availability == CXAvailability_Deprecated)
     Deprecated = true;
 
@@ -116,11 +115,6 @@ float SymbolQualitySignals::evaluate() const {
   // question of whether 0 references means a bad symbol or missing data.
   if (References >= 3)
     Score *= std::log(References);
-
-  if (SemaCCPriority)
-    // Map onto a 0-2 interval, so we don't reward/penalize non-Sema results.
-    // Priority 80 is a really bad score.
-    Score *= 2 - std::min<float>(80, SemaCCPriority) / 40;
 
   if (Deprecated)
     Score *= 0.1f;
@@ -146,8 +140,6 @@ float SymbolQualitySignals::evaluate() const {
 
 raw_ostream &operator<<(raw_ostream &OS, const SymbolQualitySignals &S) {
   OS << formatv("=== Symbol quality: {0}\n", S.evaluate());
-  if (S.SemaCCPriority)
-    OS << formatv("\tSemaCCPriority: {0}\n", S.SemaCCPriority);
   OS << formatv("\tReferences: {0}\n", S.References);
   OS << formatv("\tDeprecated: {0}\n", S.Deprecated);
   OS << formatv("\tCategory: {0}\n", static_cast<int>(S.Category));

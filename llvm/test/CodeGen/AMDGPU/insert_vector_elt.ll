@@ -202,14 +202,21 @@ define amdgpu_kernel void @dynamic_insertelement_v3i16(<3 x i16> addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}dynamic_insertelement_v2i8:
-; VI: buffer_load_ushort [[LOAD:v[0-9]]]
-; VI: s_load_dword [[IDX:s[0-9]]]
+; VI: s_load_dword [[LOAD:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
+; VI-NEXT: s_load_dword [[IDX:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x30
+; VI-NOT: _load
+; VI: s_lshr_b32 [[ELT1:s[0-9]+]], [[LOAD]], 8
 ; VI: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 3
-; VI: v_lshlrev_b16_e64 [[SHL:v[0-9]+]], [[SCALED_IDX]], -1
-; VI: v_xor_b32_e32 [[NOT:v[0-9]+]], -1, [[SHL]]
-; VI: v_and_b32_e32 [[AND0:v[0-9]+]], 5, [[SHL]]
-; VI: v_and_b32_e32 [[AND1:v[0-9]+]], [[NOT]], [[LOAD]]
-; VI: v_or_b32_e32 [[OR:v[0-9]+]], [[AND0]], [[AND1]]
+; VI: v_lshlrev_b16_e64 [[ELT1_SHIFT:v[0-9]+]], 8, [[ELT1]]
+; VI: s_and_b32 [[ELT0:s[0-9]+]], [[LOAD]], 0xff{{$}}
+; VI: v_lshlrev_b16_e64 [[MASK:v[0-9]+]], [[SCALED_IDX]], -1
+
+; VI: v_xor_b32_e32 [[NOT:v[0-9]+]], -1, [[MASK]]
+; VI: v_or_b32_e32 [[BUILD_VECTOR:v[0-9]+]], [[ELT0]], [[ELT1_SHIFT]]
+
+; VI: v_and_b32_e32 [[AND1:v[0-9]+]], [[NOT]], [[BUILD_VECTOR]]
+; VI-DAG: v_and_b32_e32 [[INSERT:v[0-9]+]], 5, [[MASK]]
+; VI: v_or_b32_e32 [[OR:v[0-9]+]], [[INSERT]], [[BUILD_VECTOR]]
 ; VI: buffer_store_short [[OR]]
 define amdgpu_kernel void @dynamic_insertelement_v2i8(<2 x i8> addrspace(1)* %out, <2 x i8> %a, i32 %b) nounwind {
   %vecins = insertelement <2 x i8> %a, i8 5, i32 %b
@@ -217,17 +224,32 @@ define amdgpu_kernel void @dynamic_insertelement_v2i8(<2 x i8> addrspace(1)* %ou
   ret void
 }
 
+; FIXME: post legalize i16 and i32 shifts aren't merged because of
+; isTypeDesirableForOp in SimplifyDemandedBits
+
 ; GCN-LABEL: {{^}}dynamic_insertelement_v3i8:
-; VI: buffer_load_ubyte
-; VI: buffer_load_ushort
-; VI: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 3
-; VI: s_lshl_b32 s{{[0-9]+}}, 0xffff,
-; VI: s_not_b32
-; VI: v_lshlrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
-; VI: v_or_b32_e32
-; VI: v_and_b32
-; VI: v_bfi_b32
-; VI: v_lshrrev_b32
+; VI: s_load_dword [[LOAD:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
+; VI-NEXT: s_load_dword [[IDX:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x30
+; VI-NOT: _load
+
+; VI: s_lshr_b32 [[VEC_HI:s[0-9]+]], [[LOAD]], 8
+; VI: v_lshlrev_b16_e64 [[ELT2:v[0-9]+]], 8, [[VEC_HI]]
+; VI: s_and_b32 [[ELT0:s[0-9]+]], [[LOAD]], 0xff{{$}}
+; VI: v_or_b32_e32 [[BUILD_VEC:v[0-9]+]], [[VEC_HI]], [[ELT2]]
+; VI: s_and_b32 [[ELT2:s[0-9]+]], [[LOAD]], 0xff0000{{$}}
+
+; VI: s_mov_b32 [[MASK16:s[0-9]+]], 0xffff{{$}}
+; VI: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 3
+; VI: s_lshl_b32 [[SHIFTED_MASK:s[0-9]+]], [[MASK16]], [[SCALED_IDX]]
+
+; VI: v_mov_b32_e32 [[V_ELT2:v[0-9]+]], [[ELT2]]
+; VI: v_or_b32_sdwa [[SDWA:v[0-9]+]], [[BUILD_VEC]], [[V_ELT2]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI: s_not_b32 [[NOT_SHIFT_MASK:s[0-9]+]], [[SHIFTED_MASK]]
+; VI: v_and_b32_e32 [[AND_NOT_MASK:v[0-9]+]], [[NOT_SHIFT_MASK]], [[SDWA]]
+; VI: v_lshrrev_b32_e32 [[HI2:v[0-9]+]], 16, [[AND_NOT_MASK]]
+; VI: v_bfi_b32 [[BFI:v[0-9]+]], [[SCALED_IDX]], 5, [[SDWA]]
+; VI: buffer_store_short [[BFI]]
+; VI: buffer_store_byte [[HI2]]
 define amdgpu_kernel void @dynamic_insertelement_v3i8(<3 x i8> addrspace(1)* %out, <3 x i8> %a, i32 %b) nounwind {
   %vecins = insertelement <3 x i8> %a, i8 5, i32 %b
   store <3 x i8> %vecins, <3 x i8> addrspace(1)* %out, align 4
@@ -235,21 +257,37 @@ define amdgpu_kernel void @dynamic_insertelement_v3i8(<3 x i8> addrspace(1)* %ou
 }
 
 ; GCN-LABEL: {{^}}dynamic_insertelement_v4i8:
-; VI: s_load_dword [[VEC:s[0-9]+]]
-; VI: s_load_dword [[IDX:s[0-9]]]
+; VI: s_load_dword [[VEC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
+; VI-NEXT: s_load_dword [[IDX:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x30
+; VI-NOT: _load
+
+; VI: s_lshr_b32 [[ELT1:s[0-9]+]], [[VEC]], 8
+; VI: v_lshlrev_b16_e64 [[ELT2:v[0-9]+]], 8, [[ELT1]]
+; VI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0xff{{$}}
+
+
+; VI: s_lshr_b32 [[ELT3:s[0-9]+]], [[VEC]], 24
+; VI: s_lshr_b32 [[ELT2:s[0-9]+]], [[VEC]], 16
+; VI: v_lshlrev_b16_e64 v{{[0-9]+}}, 8, [[ELT3]]
+; VI: v_or_b32_e32
+; VI: v_or_b32_sdwa
 ; VI-DAG: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 3
-; VI-DAG: s_lshl_b32 [[MASK:s[0-9]+]], 0xffff, [[SCALED_IDX]]
-; VI-DAG: v_mov_b32_e32 [[V_VEC:v[0-9]+]], [[VEC]]
-; VI: v_bfi_b32 [[BFI:v[0-9]+]], [[MASK]], 5, [[V_VEC]]
+; VI: v_or_b32_sdwa
+; VI: s_lshl_b32
+; VI: v_bfi_b32
 define amdgpu_kernel void @dynamic_insertelement_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> %a, i32 %b) nounwind {
   %vecins = insertelement <4 x i8> %a, i8 5, i32 %b
   store <4 x i8> %vecins, <4 x i8> addrspace(1)* %out, align 4
   ret void
 }
 
-; GCN-LABEL: {{^}}dynamic_insertelement_v8i8:
-; VI: s_load_dwordx2 [[VEC:s\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
+; GCN-LABEL: {{^}}s_dynamic_insertelement_v8i8:
+; VI-NOT: {{buffer|flat|global}}
 ; VI: s_load_dword [[IDX:s[0-9]]]
+; VI-NOT: {{buffer|flat|global}}
+; VI: s_load_dwordx2 [[VEC:s\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, 0x0
+; VI-NOT: {{buffer|flat|global}}
+
 ; VI-DAG: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 3
 ; VI-DAG: s_mov_b32 s[[MASK_HI:[0-9]+]], 0
 ; VI-DAG: s_mov_b32 s[[MASK_LO:[0-9]+]], 0xffff
@@ -261,29 +299,22 @@ define amdgpu_kernel void @dynamic_insertelement_v4i8(<4 x i8> addrspace(1)* %ou
 ; VI: v_mov_b32_e32 v[[V_RESULT0:[0-9]+]], s[[RESULT0]]
 ; VI: v_mov_b32_e32 v[[V_RESULT1:[0-9]+]], s[[RESULT1]]
 ; VI: buffer_store_dwordx2 v{{\[}}[[V_RESULT0]]:[[V_RESULT1]]{{\]}}
-define amdgpu_kernel void @dynamic_insertelement_v8i8(<8 x i8> addrspace(1)* %out, <8 x i8> %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_dynamic_insertelement_v8i8(<8 x i8> addrspace(1)* %out, <8 x i8> addrspace(4)* %a.ptr, i32 %b) nounwind {
+  %a = load <8 x i8>, <8 x i8> addrspace(4)* %a.ptr, align 4
   %vecins = insertelement <8 x i8> %a, i8 5, i32 %b
   store <8 x i8> %vecins, <8 x i8> addrspace(1)* %out, align 8
   ret void
 }
 
 ; GCN-LABEL: {{^}}dynamic_insertelement_v16i8:
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
-; GCN: buffer_load_ubyte
+; GCN: s_load_dwordx2
+; GCN: s_load_dword s
+; GCN: s_load_dword s
+; GCN: s_load_dword s
+; GCN: s_load_dword s
+; GCN: s_load_dword s
+; GCN-NOT: _load_
+
 
 ; GCN: buffer_store_byte
 ; GCN: buffer_store_byte

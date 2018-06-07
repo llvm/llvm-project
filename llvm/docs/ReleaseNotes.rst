@@ -98,6 +98,9 @@ Non-comprehensive list of changes in this release
     git grep -l 'DEBUG' | xargs perl -pi -e 's/\bDEBUG\s?\(/LLVM_DEBUG(/g'
     git diff -U0 master | ../clang/tools/clang-format/clang-format-diff.py -i -p1 -style LLVM
 
+* Early support for UBsan, X-Ray instrumentation and libFuzzer (x86 and x86_64) for OpenBSD. Support for MSan
+  (x86_64), X-Ray instrumentation and libFuzzer (x86 and x86_64) for FreeBSD.
+
 * Note..
 
 .. NOTE

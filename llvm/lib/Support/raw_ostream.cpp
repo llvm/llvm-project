@@ -498,29 +498,56 @@ void format_object_base::home() {
 //===----------------------------------------------------------------------===//
 
 static int getFD(StringRef Filename, std::error_code &EC,
+                 sys::fs::CreationDisposition Disp, sys::fs::FileAccess Access,
                  sys::fs::OpenFlags Flags) {
+  assert((Access & sys::fs::FA_Write) &&
+         "Cannot make a raw_ostream from a read-only descriptor!");
+
   // Handle "-" as stdout. Note that when we do this, we consider ourself
   // the owner of stdout and may set the "binary" flag globally based on Flags.
   if (Filename == "-") {
     EC = std::error_code();
     // If user requested binary then put stdout into binary mode if
     // possible.
-    if (!(Flags & sys::fs::F_Text))
+    if (!(Flags & sys::fs::OF_Text))
       sys::ChangeStdoutToBinary();
     return STDOUT_FILENO;
   }
 
   int FD;
-  EC = sys::fs::openFileForWrite(Filename, FD, Flags);
+  if (Access & sys::fs::FA_Read)
+    EC = sys::fs::openFileForReadWrite(Filename, FD, Disp, Flags);
+  else
+    EC = sys::fs::openFileForWrite(Filename, FD, Disp, Flags);
   if (EC)
     return -1;
 
   return FD;
 }
 
+raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC)
+    : raw_fd_ostream(Filename, EC, sys::fs::CD_CreateAlways, sys::fs::FA_Write,
+                     sys::fs::OF_None) {}
+
+raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
+                               sys::fs::CreationDisposition Disp)
+    : raw_fd_ostream(Filename, EC, Disp, sys::fs::FA_Write, sys::fs::OF_None) {}
+
+raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
+                               sys::fs::FileAccess Access)
+    : raw_fd_ostream(Filename, EC, sys::fs::CD_CreateAlways, Access,
+                     sys::fs::OF_None) {}
+
 raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
                                sys::fs::OpenFlags Flags)
-    : raw_fd_ostream(getFD(Filename, EC, Flags), true) {}
+    : raw_fd_ostream(Filename, EC, sys::fs::CD_CreateAlways, sys::fs::FA_Write,
+                     Flags) {}
+
+raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
+                               sys::fs::CreationDisposition Disp,
+                               sys::fs::FileAccess Access,
+                               sys::fs::OpenFlags Flags)
+    : raw_fd_ostream(getFD(Filename, EC, Disp, Access, Flags), true) {}
 
 /// FD is the file descriptor that this writes to.  If ShouldClose is true, this
 /// closes the file when the stream is destroyed.

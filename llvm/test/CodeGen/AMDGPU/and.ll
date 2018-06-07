@@ -176,9 +176,13 @@ define amdgpu_kernel void @s_and_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
   ret void
 }
 
-; FIXME: Should use SGPRs
 ; FUNC-LABEL: {{^}}s_and_i1:
-; SI: v_and_b32
+; SI: s_load_dword [[LOAD:s[0-9]+]]
+; SI: s_lshr_b32 [[B_SHIFT:s[0-9]+]], [[LOAD]], 8
+; SI: s_and_b32 [[AND:s[0-9]+]], [[LOAD]], [[B_SHIFT]]
+; SI: s_and_b32 [[AND_TRUNC:s[0-9]+]], [[AND]], 1{{$}}
+; SI: v_mov_b32_e32 [[V_AND_TRUNC:v[0-9]+]], [[AND_TRUNC]]
+; SI: buffer_store_byte [[V_AND_TRUNC]]
 define amdgpu_kernel void @s_and_i1(i1 addrspace(1)* %out, i1 %a, i1 %b) {
   %and = and i1 %a, %b
   store i1 %and, i1 addrspace(1)* %out

@@ -36373,26 +36373,35 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
 }
 
 /// Truncate a group of v4i32 into v16i8/v8i16 using X86ISD::PACKUS.
-static SDValue
-combineVectorTruncationWithPACKUS(SDNode *N, SelectionDAG &DAG,
-                                  SmallVector<SDValue, 8> &Regs) {
-  assert(Regs.size() > 0 && (Regs[0].getValueType() == MVT::v4i32 ||
-                             Regs[0].getValueType() == MVT::v2i64));
+static SDValue combineVectorTruncationWithPACKUS(SDNode *N, const SDLoc &DL,
+                                                 SelectionDAG &DAG) {
+  SDValue In = N->getOperand(0);
+  EVT InVT = In.getValueType();
+  EVT InSVT = InVT.getVectorElementType();
   EVT OutVT = N->getValueType(0);
   EVT OutSVT = OutVT.getVectorElementType();
-  EVT InVT = Regs[0].getValueType();
-  EVT InSVT = InVT.getVectorElementType();
-  SDLoc DL(N);
 
-  // First, use mask to unset all bits that won't appear in the result.
-  assert((OutSVT == MVT::i8 || OutSVT == MVT::i16) &&
-         "OutSVT can only be either i8 or i16.");
+  // Split a long vector into vectors of legal type and mask to unset all bits
+  // that won't appear in the result to prevent saturation.
+  // TODO - we should be doing this at the maximum legal size but this is
+  // causing regressions where we're concatenating back to max width just to
+  // perform the AND and then extracting back again.....
+  unsigned NumSubRegs = InVT.getSizeInBits() / 128;
+  unsigned NumSubRegElts = 128 / InSVT.getSizeInBits();
+  EVT SubRegVT = EVT::getVectorVT(*DAG.getContext(), InSVT, NumSubRegElts);
+  SmallVector<SDValue, 8> SubVecs(NumSubRegs);
+
   APInt Mask =
       APInt::getLowBitsSet(InSVT.getSizeInBits(), OutSVT.getSizeInBits());
-  SDValue MaskVal = DAG.getConstant(Mask, DL, InVT);
-  for (auto &Reg : Regs)
-    Reg = DAG.getNode(ISD::AND, DL, InVT, MaskVal, Reg);
+  SDValue MaskVal = DAG.getConstant(Mask, DL, SubRegVT);
 
+  for (unsigned i = 0; i < NumSubRegs; i++) {
+    SDValue Sub = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubRegVT, In,
+                              DAG.getIntPtrConstant(i * NumSubRegElts, DL));
+    SubVecs[i] = DAG.getNode(ISD::AND, DL, SubRegVT, Sub, MaskVal);
+  }
+
+  // TODO - convert this to truncateVectorWithPACK.
   MVT UnpackedVT, PackedVT;
   if (OutSVT == MVT::i8) {
     UnpackedVT = MVT::v8i16;
@@ -36403,57 +36412,42 @@ combineVectorTruncationWithPACKUS(SDNode *N, SelectionDAG &DAG,
   }
 
   // In each iteration, truncate the type by a half size.
-  auto RegNum = Regs.size();
+  auto SubNum = SubVecs.size();
   for (unsigned j = 1, e = InSVT.getSizeInBits() / OutSVT.getSizeInBits();
-       j < e; j *= 2, RegNum /= 2) {
-    for (unsigned i = 0; i < RegNum; i++)
-      Regs[i] = DAG.getBitcast(UnpackedVT, Regs[i]);
-    for (unsigned i = 0; i < RegNum / 2; i++)
-      Regs[i] = DAG.getNode(X86ISD::PACKUS, DL, PackedVT, Regs[i * 2],
-                            Regs[i * 2 + 1]);
+       j < e; j *= 2, SubNum /= 2) {
+    for (unsigned i = 0; i < SubNum; i++)
+      SubVecs[i] = DAG.getBitcast(UnpackedVT, SubVecs[i]);
+    for (unsigned i = 0; i < SubNum / 2; i++)
+      SubVecs[i] = DAG.getNode(X86ISD::PACKUS, DL, PackedVT, SubVecs[i * 2],
+                               SubVecs[i * 2 + 1]);
   }
 
   // If the type of the result is v8i8, we need do one more X86ISD::PACKUS, and
   // then extract a subvector as the result since v8i8 is not a legal type.
   if (OutVT == MVT::v8i8) {
-    Regs[0] = DAG.getNode(X86ISD::PACKUS, DL, PackedVT, Regs[0], Regs[0]);
-    Regs[0] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, Regs[0],
-                          DAG.getIntPtrConstant(0, DL));
-    return Regs[0];
-  } else if (RegNum > 1) {
-    Regs.resize(RegNum);
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Regs);
-  } else
-    return Regs[0];
+    SubVecs[0] =
+        DAG.getNode(X86ISD::PACKUS, DL, PackedVT, SubVecs[0], SubVecs[0]);
+    SubVecs[0] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, SubVecs[0],
+                             DAG.getIntPtrConstant(0, DL));
+    return SubVecs[0];
+  } else if (SubNum > 1) {
+    SubVecs.resize(SubNum);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, SubVecs);
+  }
+
+  return SubVecs[0];
 }
 
 /// Truncate a group of v4i32 into v8i16 using X86ISD::PACKSS.
-static SDValue
-combineVectorTruncationWithPACKSS(SDNode *N, const X86Subtarget &Subtarget,
-                                  SelectionDAG &DAG,
-                                  SmallVector<SDValue, 8> &Regs) {
-  assert(Regs.size() > 0 && Regs[0].getValueType() == MVT::v4i32);
+static SDValue combineVectorTruncationWithPACKSS(SDNode *N, const SDLoc &DL,
+                                                 const X86Subtarget &Subtarget,
+                                                 SelectionDAG &DAG) {
+  SDValue In = N->getOperand(0);
+  EVT InVT = In.getValueType();
   EVT OutVT = N->getValueType(0);
-  SDLoc DL(N);
-
-  // Shift left by 16 bits, then arithmetic-shift right by 16 bits.
-  SDValue ShAmt = DAG.getConstant(16, DL, MVT::i32);
-  for (auto &Reg : Regs) {
-    Reg = getTargetVShiftNode(X86ISD::VSHLI, DL, MVT::v4i32, Reg, ShAmt,
-                              Subtarget, DAG);
-    Reg = getTargetVShiftNode(X86ISD::VSRAI, DL, MVT::v4i32, Reg, ShAmt,
-                              Subtarget, DAG);
-  }
-
-  for (unsigned i = 0, e = Regs.size() / 2; i < e; i++)
-    Regs[i] = DAG.getNode(X86ISD::PACKSS, DL, MVT::v8i16, Regs[i * 2],
-                          Regs[i * 2 + 1]);
-
-  if (Regs.size() > 2) {
-    Regs.resize(Regs.size() / 2);
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Regs);
-  } else
-    return Regs[0];
+  In = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, InVT, In,
+                   DAG.getValueType(OutVT));
+  return truncateVectorWithPACK(X86ISD::PACKSS, OutVT, In, DL, DAG, Subtarget);
 }
 
 /// This function transforms truncation from vXi32/vXi64 to vXi8/vXi16 into
@@ -36494,24 +36488,13 @@ static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDLoc DL(N);
-
-  // Split a long vector into vectors of legal type.
-  unsigned RegNum = InVT.getSizeInBits() / 128;
-  SmallVector<SDValue, 8> SubVec(RegNum);
-  unsigned NumSubRegElts = 128 / InSVT.getSizeInBits();
-  EVT SubRegVT = EVT::getVectorVT(*DAG.getContext(), InSVT, NumSubRegElts);
-
-  for (unsigned i = 0; i < RegNum; i++)
-    SubVec[i] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubRegVT, In,
-                            DAG.getIntPtrConstant(i * NumSubRegElts, DL));
-
   // SSE2 provides PACKUS for only 2 x v8i16 -> v16i8 and SSE4.1 provides PACKUS
   // for 2 x v4i32 -> v8i16. For SSSE3 and below, we need to use PACKSS to
   // truncate 2 x v4i32 to v8i16.
   if (Subtarget.hasSSE41() || OutSVT == MVT::i8)
-    return combineVectorTruncationWithPACKUS(N, DAG, SubVec);
+    return combineVectorTruncationWithPACKUS(N, DL, DAG);
   if (InSVT == MVT::i32)
-    return combineVectorTruncationWithPACKSS(N, Subtarget, DAG, SubVec);
+    return combineVectorTruncationWithPACKSS(N, DL, Subtarget, DAG);
 
   return SDValue();
 }
@@ -36539,7 +36522,7 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
   MVT InVT = In.getValueType().getSimpleVT();
   MVT InSVT = InVT.getScalarType();
 
-  // Check we have a truncation suited for PACKSS.
+  // Check we have a truncation suited for PACKSS/PACKUS.
   if (!VT.is128BitVector() && !VT.is256BitVector())
     return SDValue();
   if (SVT != MVT::i8 && SVT != MVT::i16 && SVT != MVT::i32)

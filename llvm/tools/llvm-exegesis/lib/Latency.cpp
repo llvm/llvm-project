@@ -45,40 +45,35 @@ static bool IsInfeasible(const Instruction &Instruction, std::string &Error) {
   return false;
 }
 
-static llvm::Error makeError(llvm::Twine Msg) {
-  return llvm::make_error<llvm::StringError>(Msg,
-                                             llvm::inconvertibleErrorCode());
-}
-
 LatencyBenchmarkRunner::~LatencyBenchmarkRunner() = default;
 
 InstructionBenchmark::ModeE LatencyBenchmarkRunner::getMode() const {
   return InstructionBenchmark::Latency;
 }
 
-llvm::Expected<BenchmarkConfiguration>
-LatencyBenchmarkRunner::createConfiguration(RegisterAliasingTrackerCache &RATC,
-                                            unsigned Opcode,
-                                            llvm::raw_ostream &Info) const {
-  BenchmarkConfiguration Configuration;
-  std::vector<llvm::MCInst> &Snippet = Configuration.Snippet;
+llvm::Expected<std::vector<BenchmarkConfiguration>>
+LatencyBenchmarkRunner::createConfigurations(RegisterAliasingTrackerCache &RATC,
+                                             unsigned Opcode) const {
   const llvm::MCInstrDesc &MCInstrDesc = MCInstrInfo.get(Opcode);
   const Instruction ThisInstruction(MCInstrDesc, RATC);
 
   std::string Error;
   if (IsInfeasible(ThisInstruction, Error))
-    return makeError(llvm::Twine("Infeasible : ").concat(Error));
+    return llvm::make_error<llvm::StringError>(
+        llvm::Twine("Infeasible : ").concat(Error),
+        llvm::inconvertibleErrorCode());
 
+  BenchmarkConfiguration Conf;
   const AliasingConfigurations SelfAliasing(ThisInstruction, ThisInstruction);
   if (!SelfAliasing.empty()) {
     if (!SelfAliasing.hasImplicitAliasing()) {
-      Info << "explicit self cycles, selecting one aliasing configuration.\n";
+      Conf.Info = "explicit self cycles, selecting one aliasing Conf.";
       setRandomAliasing(SelfAliasing);
     } else {
-      Info << "implicit Self cycles, picking random values.\n";
+      Conf.Info = "implicit Self cycles, picking random values.";
     }
-    Snippet.push_back(randomizeUnsetVariablesAndBuild(ThisInstruction));
-    return Configuration;
+    Conf.Snippet = {randomizeUnsetVariablesAndBuild(ThisInstruction)};
+    return std::vector<BenchmarkConfiguration>{Conf};
   }
 
   // Let's try to create a dependency through another opcode.
@@ -99,15 +94,18 @@ LatencyBenchmarkRunner::createConfiguration(RegisterAliasingTrackerCache &RATC,
       continue;
     setRandomAliasing(Forward);
     setRandomAliasing(Back);
-    Info << "creating cycle through " << MCInstrInfo.getName(OtherOpcode)
-         << ".\n";
-    Snippet.push_back(randomizeUnsetVariablesAndBuild(ThisInstruction));
-    Snippet.push_back(randomizeUnsetVariablesAndBuild(OtherInstruction));
-    return Configuration;
+    Conf.Info = llvm::Twine("creating cycle through ")
+                    .concat(MCInstrInfo.getName(OtherOpcode))
+                    .concat(".")
+                    .str();
+    Conf.Snippet.push_back(randomizeUnsetVariablesAndBuild(ThisInstruction));
+    Conf.Snippet.push_back(randomizeUnsetVariablesAndBuild(OtherInstruction));
+    return std::vector<BenchmarkConfiguration>{Conf};
   }
 
-  return makeError(
-      "Infeasible : Didn't find any scheme to make the instruction serial\n");
+  return llvm::make_error<llvm::StringError>(
+      "Infeasible : Didn't find any scheme to make the instruction serial",
+      llvm::inconvertibleErrorCode());
 }
 
 std::vector<BenchmarkMeasure>

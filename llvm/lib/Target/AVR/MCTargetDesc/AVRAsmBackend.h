@@ -42,7 +42,8 @@ public:
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsPCRel) const override;
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
@@ -50,7 +51,10 @@ public:
     return AVR::NumTargetFixupKinds;
   }
 
-  bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override {
+    return false;
+  }
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,

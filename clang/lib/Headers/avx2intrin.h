@@ -562,43 +562,10 @@ _mm256_sign_epi32(__m256i __a, __m256i __b)
 }
 
 #define _mm256_slli_si256(a, imm) \
-  (__m256i)__builtin_shufflevector(                                          \
-        (__v32qi)_mm256_setzero_si256(),                                     \
-        (__v32qi)(__m256i)(a),                                               \
-        ((char)(imm)&0xF0) ?  0 : ((char)(imm)>0x0 ? 16 : 32) - (char)(imm), \
-        ((char)(imm)&0xF0) ?  1 : ((char)(imm)>0x1 ? 17 : 33) - (char)(imm), \
-        ((char)(imm)&0xF0) ?  2 : ((char)(imm)>0x2 ? 18 : 34) - (char)(imm), \
-        ((char)(imm)&0xF0) ?  3 : ((char)(imm)>0x3 ? 19 : 35) - (char)(imm), \
-        ((char)(imm)&0xF0) ?  4 : ((char)(imm)>0x4 ? 20 : 36) - (char)(imm), \
-        ((char)(imm)&0xF0) ?  5 : ((char)(imm)>0x5 ? 21 : 37) - (char)(imm), \
-        ((char)(imm)&0xF0) ?  6 : ((char)(imm)>0x6 ? 22 : 38) - (char)(imm), \
-        ((char)(imm)&0xF0) ?  7 : ((char)(imm)>0x7 ? 23 : 39) - (char)(imm), \
-        ((char)(imm)&0xF0) ?  8 : ((char)(imm)>0x8 ? 24 : 40) - (char)(imm), \
-        ((char)(imm)&0xF0) ?  9 : ((char)(imm)>0x9 ? 25 : 41) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 10 : ((char)(imm)>0xA ? 26 : 42) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 11 : ((char)(imm)>0xB ? 27 : 43) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 12 : ((char)(imm)>0xC ? 28 : 44) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 13 : ((char)(imm)>0xD ? 29 : 45) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 14 : ((char)(imm)>0xE ? 30 : 46) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 15 : ((char)(imm)>0xF ? 31 : 47) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 16 : ((char)(imm)>0x0 ? 32 : 48) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 17 : ((char)(imm)>0x1 ? 33 : 49) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 18 : ((char)(imm)>0x2 ? 34 : 50) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 19 : ((char)(imm)>0x3 ? 35 : 51) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 20 : ((char)(imm)>0x4 ? 36 : 52) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 21 : ((char)(imm)>0x5 ? 37 : 53) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 22 : ((char)(imm)>0x6 ? 38 : 54) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 23 : ((char)(imm)>0x7 ? 39 : 55) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 24 : ((char)(imm)>0x8 ? 40 : 56) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 25 : ((char)(imm)>0x9 ? 41 : 57) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 26 : ((char)(imm)>0xA ? 42 : 58) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 27 : ((char)(imm)>0xB ? 43 : 59) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 28 : ((char)(imm)>0xC ? 44 : 60) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 29 : ((char)(imm)>0xD ? 45 : 61) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 30 : ((char)(imm)>0xE ? 46 : 62) - (char)(imm), \
-        ((char)(imm)&0xF0) ? 31 : ((char)(imm)>0xF ? 47 : 63) - (char)(imm))
+  (__m256i)__builtin_ia32_pslldqi256((__v4di)(__m256i)(a), (int)(imm) * 8)
 
-#define _mm256_bslli_epi128(a, count) _mm256_slli_si256((a), (count))
+#define _mm256_bslli_epi128(a, imm) \
+  (__m256i)__builtin_ia32_pslldqi256((__v4di)(__m256i)(a), (int)(imm) * 8)
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_slli_epi16(__m256i __a, int __count)
@@ -661,43 +628,10 @@ _mm256_sra_epi32(__m256i __a, __m128i __count)
 }
 
 #define _mm256_srli_si256(a, imm) \
-  (__m256i)__builtin_shufflevector(                                           \
-        (__v32qi)(__m256i)(a),                                               \
-        (__v32qi)_mm256_setzero_si256(),                                     \
-        ((char)(imm)&0xF0) ? 32 : (char)(imm) + ((char)(imm)>0xF ? 16 : 0),  \
-        ((char)(imm)&0xF0) ? 33 : (char)(imm) + ((char)(imm)>0xE ? 17 : 1),  \
-        ((char)(imm)&0xF0) ? 34 : (char)(imm) + ((char)(imm)>0xD ? 18 : 2),  \
-        ((char)(imm)&0xF0) ? 35 : (char)(imm) + ((char)(imm)>0xC ? 19 : 3),  \
-        ((char)(imm)&0xF0) ? 36 : (char)(imm) + ((char)(imm)>0xB ? 20 : 4),  \
-        ((char)(imm)&0xF0) ? 37 : (char)(imm) + ((char)(imm)>0xA ? 21 : 5),  \
-        ((char)(imm)&0xF0) ? 38 : (char)(imm) + ((char)(imm)>0x9 ? 22 : 6),  \
-        ((char)(imm)&0xF0) ? 39 : (char)(imm) + ((char)(imm)>0x8 ? 23 : 7),  \
-        ((char)(imm)&0xF0) ? 40 : (char)(imm) + ((char)(imm)>0x7 ? 24 : 8),  \
-        ((char)(imm)&0xF0) ? 41 : (char)(imm) + ((char)(imm)>0x6 ? 25 : 9),  \
-        ((char)(imm)&0xF0) ? 42 : (char)(imm) + ((char)(imm)>0x5 ? 26 : 10), \
-        ((char)(imm)&0xF0) ? 43 : (char)(imm) + ((char)(imm)>0x4 ? 27 : 11), \
-        ((char)(imm)&0xF0) ? 44 : (char)(imm) + ((char)(imm)>0x3 ? 28 : 12), \
-        ((char)(imm)&0xF0) ? 45 : (char)(imm) + ((char)(imm)>0x2 ? 29 : 13), \
-        ((char)(imm)&0xF0) ? 46 : (char)(imm) + ((char)(imm)>0x1 ? 30 : 14), \
-        ((char)(imm)&0xF0) ? 47 : (char)(imm) + ((char)(imm)>0x0 ? 31 : 15), \
-        ((char)(imm)&0xF0) ? 48 : (char)(imm) + ((char)(imm)>0xF ? 32 : 16), \
-        ((char)(imm)&0xF0) ? 49 : (char)(imm) + ((char)(imm)>0xE ? 33 : 17), \
-        ((char)(imm)&0xF0) ? 50 : (char)(imm) + ((char)(imm)>0xD ? 34 : 18), \
-        ((char)(imm)&0xF0) ? 51 : (char)(imm) + ((char)(imm)>0xC ? 35 : 19), \
-        ((char)(imm)&0xF0) ? 52 : (char)(imm) + ((char)(imm)>0xB ? 36 : 20), \
-        ((char)(imm)&0xF0) ? 53 : (char)(imm) + ((char)(imm)>0xA ? 37 : 21), \
-        ((char)(imm)&0xF0) ? 54 : (char)(imm) + ((char)(imm)>0x9 ? 38 : 22), \
-        ((char)(imm)&0xF0) ? 55 : (char)(imm) + ((char)(imm)>0x8 ? 39 : 23), \
-        ((char)(imm)&0xF0) ? 56 : (char)(imm) + ((char)(imm)>0x7 ? 40 : 24), \
-        ((char)(imm)&0xF0) ? 57 : (char)(imm) + ((char)(imm)>0x6 ? 41 : 25), \
-        ((char)(imm)&0xF0) ? 58 : (char)(imm) + ((char)(imm)>0x5 ? 42 : 26), \
-        ((char)(imm)&0xF0) ? 59 : (char)(imm) + ((char)(imm)>0x4 ? 43 : 27), \
-        ((char)(imm)&0xF0) ? 60 : (char)(imm) + ((char)(imm)>0x3 ? 44 : 28), \
-        ((char)(imm)&0xF0) ? 61 : (char)(imm) + ((char)(imm)>0x2 ? 45 : 29), \
-        ((char)(imm)&0xF0) ? 62 : (char)(imm) + ((char)(imm)>0x1 ? 46 : 30), \
-        ((char)(imm)&0xF0) ? 63 : (char)(imm) + ((char)(imm)>0x0 ? 47 : 31))
+  (__m256i)__builtin_ia32_psrldqi256((__m256i)(a), (int)(imm) * 8)
 
-#define _mm256_bsrli_epi128(a, count) _mm256_srli_si256((a), (count))
+#define _mm256_bsrli_epi128(a, imm) \
+  (__m256i)__builtin_ia32_psrldqi256((__m256i)(a), (int)(imm) * 8)
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_srli_epi16(__m256i __a, int __count)

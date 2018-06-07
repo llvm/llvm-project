@@ -1427,73 +1427,7 @@ _mm512_maskz_slli_epi16(__mmask32 __U, __m512i __A, int __B)
 }
 
 #define _mm512_bslli_epi128(a, imm) \
-  (__m512i)__builtin_shufflevector(                                          \
-       (__v64qi)_mm512_setzero_si512(),                                      \
-       (__v64qi)(__m512i)(a),                                                \
-       ((char)(imm)&0xF0) ?  0 : ((char)(imm)>0x0 ? 16 :  64) - (char)(imm), \
-       ((char)(imm)&0xF0) ?  1 : ((char)(imm)>0x1 ? 17 :  65) - (char)(imm), \
-       ((char)(imm)&0xF0) ?  2 : ((char)(imm)>0x2 ? 18 :  66) - (char)(imm), \
-       ((char)(imm)&0xF0) ?  3 : ((char)(imm)>0x3 ? 19 :  67) - (char)(imm), \
-       ((char)(imm)&0xF0) ?  4 : ((char)(imm)>0x4 ? 20 :  68) - (char)(imm), \
-       ((char)(imm)&0xF0) ?  5 : ((char)(imm)>0x5 ? 21 :  69) - (char)(imm), \
-       ((char)(imm)&0xF0) ?  6 : ((char)(imm)>0x6 ? 22 :  70) - (char)(imm), \
-       ((char)(imm)&0xF0) ?  7 : ((char)(imm)>0x7 ? 23 :  71) - (char)(imm), \
-       ((char)(imm)&0xF0) ?  8 : ((char)(imm)>0x8 ? 24 :  72) - (char)(imm), \
-       ((char)(imm)&0xF0) ?  9 : ((char)(imm)>0x9 ? 25 :  73) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 10 : ((char)(imm)>0xA ? 26 :  74) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 11 : ((char)(imm)>0xB ? 27 :  75) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 12 : ((char)(imm)>0xC ? 28 :  76) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 13 : ((char)(imm)>0xD ? 29 :  77) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 14 : ((char)(imm)>0xE ? 30 :  78) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 15 : ((char)(imm)>0xF ? 31 :  79) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 16 : ((char)(imm)>0x0 ? 32 :  80) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 17 : ((char)(imm)>0x1 ? 33 :  81) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 18 : ((char)(imm)>0x2 ? 34 :  82) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 19 : ((char)(imm)>0x3 ? 35 :  83) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 20 : ((char)(imm)>0x4 ? 36 :  84) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 21 : ((char)(imm)>0x5 ? 37 :  85) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 22 : ((char)(imm)>0x6 ? 38 :  86) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 23 : ((char)(imm)>0x7 ? 39 :  87) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 24 : ((char)(imm)>0x8 ? 40 :  88) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 25 : ((char)(imm)>0x9 ? 41 :  89) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 26 : ((char)(imm)>0xA ? 42 :  90) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 27 : ((char)(imm)>0xB ? 43 :  91) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 28 : ((char)(imm)>0xC ? 44 :  92) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 29 : ((char)(imm)>0xD ? 45 :  93) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 30 : ((char)(imm)>0xE ? 46 :  94) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 31 : ((char)(imm)>0xF ? 47 :  95) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 32 : ((char)(imm)>0x0 ? 48 :  96) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 33 : ((char)(imm)>0x1 ? 49 :  97) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 34 : ((char)(imm)>0x2 ? 50 :  98) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 35 : ((char)(imm)>0x3 ? 51 :  99) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 36 : ((char)(imm)>0x4 ? 52 : 100) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 37 : ((char)(imm)>0x5 ? 53 : 101) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 38 : ((char)(imm)>0x6 ? 54 : 102) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 39 : ((char)(imm)>0x7 ? 55 : 103) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 40 : ((char)(imm)>0x8 ? 56 : 104) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 41 : ((char)(imm)>0x9 ? 57 : 105) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 42 : ((char)(imm)>0xA ? 58 : 106) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 43 : ((char)(imm)>0xB ? 59 : 107) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 44 : ((char)(imm)>0xC ? 60 : 108) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 45 : ((char)(imm)>0xD ? 61 : 109) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 46 : ((char)(imm)>0xE ? 62 : 110) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 47 : ((char)(imm)>0xF ? 63 : 111) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 48 : ((char)(imm)>0x0 ? 64 : 112) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 49 : ((char)(imm)>0x1 ? 65 : 113) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 50 : ((char)(imm)>0x2 ? 66 : 114) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 51 : ((char)(imm)>0x3 ? 67 : 115) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 52 : ((char)(imm)>0x4 ? 68 : 116) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 53 : ((char)(imm)>0x5 ? 69 : 117) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 54 : ((char)(imm)>0x6 ? 70 : 118) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 55 : ((char)(imm)>0x7 ? 71 : 119) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 56 : ((char)(imm)>0x8 ? 72 : 120) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 57 : ((char)(imm)>0x9 ? 73 : 121) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 58 : ((char)(imm)>0xA ? 74 : 122) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 59 : ((char)(imm)>0xB ? 75 : 123) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 60 : ((char)(imm)>0xC ? 76 : 124) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 61 : ((char)(imm)>0xD ? 77 : 125) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 62 : ((char)(imm)>0xE ? 78 : 126) - (char)(imm), \
-       ((char)(imm)&0xF0) ? 63 : ((char)(imm)>0xF ? 79 : 127) - (char)(imm))
+  (__m512i)__builtin_ia32_pslldqi512((__v8di)(__m512i)(a), (int)(imm) * 8)
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_srlv_epi16(__m512i __A, __m512i __B)
@@ -1628,73 +1562,7 @@ _mm512_maskz_srli_epi16(__mmask32 __U, __m512i __A, int __B)
 }
 
 #define _mm512_bsrli_epi128(a, imm) \
-  (__m512i)__builtin_shufflevector(                     \
-      (__v64qi)(__m512i)(a),                      \
-      (__v64qi)_mm512_setzero_si512(),            \
-      ((char)(imm)&0xF0) ?  64 : (char)(imm) + ((char)(imm)>0xF ?  48 : 0),  \
-      ((char)(imm)&0xF0) ?  65 : (char)(imm) + ((char)(imm)>0xE ?  49 : 1),  \
-      ((char)(imm)&0xF0) ?  66 : (char)(imm) + ((char)(imm)>0xD ?  50 : 2),  \
-      ((char)(imm)&0xF0) ?  67 : (char)(imm) + ((char)(imm)>0xC ?  51 : 3),  \
-      ((char)(imm)&0xF0) ?  68 : (char)(imm) + ((char)(imm)>0xB ?  52 : 4),  \
-      ((char)(imm)&0xF0) ?  69 : (char)(imm) + ((char)(imm)>0xA ?  53 : 5),  \
-      ((char)(imm)&0xF0) ?  70 : (char)(imm) + ((char)(imm)>0x9 ?  54 : 6),  \
-      ((char)(imm)&0xF0) ?  71 : (char)(imm) + ((char)(imm)>0x8 ?  55 : 7),  \
-      ((char)(imm)&0xF0) ?  72 : (char)(imm) + ((char)(imm)>0x7 ?  56 : 8),  \
-      ((char)(imm)&0xF0) ?  73 : (char)(imm) + ((char)(imm)>0x6 ?  57 : 9),  \
-      ((char)(imm)&0xF0) ?  74 : (char)(imm) + ((char)(imm)>0x5 ?  58 : 10), \
-      ((char)(imm)&0xF0) ?  75 : (char)(imm) + ((char)(imm)>0x4 ?  59 : 11), \
-      ((char)(imm)&0xF0) ?  76 : (char)(imm) + ((char)(imm)>0x3 ?  60 : 12), \
-      ((char)(imm)&0xF0) ?  77 : (char)(imm) + ((char)(imm)>0x2 ?  61 : 13), \
-      ((char)(imm)&0xF0) ?  78 : (char)(imm) + ((char)(imm)>0x1 ?  62 : 14), \
-      ((char)(imm)&0xF0) ?  79 : (char)(imm) + ((char)(imm)>0x0 ?  63 : 15), \
-      ((char)(imm)&0xF0) ?  80 : (char)(imm) + ((char)(imm)>0xF ?  64 : 16), \
-      ((char)(imm)&0xF0) ?  81 : (char)(imm) + ((char)(imm)>0xE ?  65 : 17), \
-      ((char)(imm)&0xF0) ?  82 : (char)(imm) + ((char)(imm)>0xD ?  66 : 18), \
-      ((char)(imm)&0xF0) ?  83 : (char)(imm) + ((char)(imm)>0xC ?  67 : 19), \
-      ((char)(imm)&0xF0) ?  84 : (char)(imm) + ((char)(imm)>0xB ?  68 : 20), \
-      ((char)(imm)&0xF0) ?  85 : (char)(imm) + ((char)(imm)>0xA ?  69 : 21), \
-      ((char)(imm)&0xF0) ?  86 : (char)(imm) + ((char)(imm)>0x9 ?  70 : 22), \
-      ((char)(imm)&0xF0) ?  87 : (char)(imm) + ((char)(imm)>0x8 ?  71 : 23), \
-      ((char)(imm)&0xF0) ?  88 : (char)(imm) + ((char)(imm)>0x7 ?  72 : 24), \
-      ((char)(imm)&0xF0) ?  89 : (char)(imm) + ((char)(imm)>0x6 ?  73 : 25), \
-      ((char)(imm)&0xF0) ?  90 : (char)(imm) + ((char)(imm)>0x5 ?  74 : 26), \
-      ((char)(imm)&0xF0) ?  91 : (char)(imm) + ((char)(imm)>0x4 ?  75 : 27), \
-      ((char)(imm)&0xF0) ?  92 : (char)(imm) + ((char)(imm)>0x3 ?  76 : 28), \
-      ((char)(imm)&0xF0) ?  93 : (char)(imm) + ((char)(imm)>0x2 ?  77 : 29), \
-      ((char)(imm)&0xF0) ?  94 : (char)(imm) + ((char)(imm)>0x1 ?  78 : 30), \
-      ((char)(imm)&0xF0) ?  95 : (char)(imm) + ((char)(imm)>0x0 ?  79 : 31), \
-      ((char)(imm)&0xF0) ?  96 : (char)(imm) + ((char)(imm)>0xF ?  80 : 32), \
-      ((char)(imm)&0xF0) ?  97 : (char)(imm) + ((char)(imm)>0xE ?  81 : 33), \
-      ((char)(imm)&0xF0) ?  98 : (char)(imm) + ((char)(imm)>0xD ?  82 : 34), \
-      ((char)(imm)&0xF0) ?  99 : (char)(imm) + ((char)(imm)>0xC ?  83 : 35), \
-      ((char)(imm)&0xF0) ? 100 : (char)(imm) + ((char)(imm)>0xB ?  84 : 36), \
-      ((char)(imm)&0xF0) ? 101 : (char)(imm) + ((char)(imm)>0xA ?  85 : 37), \
-      ((char)(imm)&0xF0) ? 102 : (char)(imm) + ((char)(imm)>0x9 ?  86 : 38), \
-      ((char)(imm)&0xF0) ? 103 : (char)(imm) + ((char)(imm)>0x8 ?  87 : 39), \
-      ((char)(imm)&0xF0) ? 104 : (char)(imm) + ((char)(imm)>0x7 ?  88 : 40), \
-      ((char)(imm)&0xF0) ? 105 : (char)(imm) + ((char)(imm)>0x6 ?  89 : 41), \
-      ((char)(imm)&0xF0) ? 106 : (char)(imm) + ((char)(imm)>0x5 ?  90 : 42), \
-      ((char)(imm)&0xF0) ? 107 : (char)(imm) + ((char)(imm)>0x4 ?  91 : 43), \
-      ((char)(imm)&0xF0) ? 108 : (char)(imm) + ((char)(imm)>0x3 ?  92 : 44), \
-      ((char)(imm)&0xF0) ? 109 : (char)(imm) + ((char)(imm)>0x2 ?  93 : 45), \
-      ((char)(imm)&0xF0) ? 110 : (char)(imm) + ((char)(imm)>0x1 ?  94 : 46), \
-      ((char)(imm)&0xF0) ? 111 : (char)(imm) + ((char)(imm)>0x0 ?  95 : 47), \
-      ((char)(imm)&0xF0) ? 112 : (char)(imm) + ((char)(imm)>0xF ?  96 : 48), \
-      ((char)(imm)&0xF0) ? 113 : (char)(imm) + ((char)(imm)>0xE ?  97 : 49), \
-      ((char)(imm)&0xF0) ? 114 : (char)(imm) + ((char)(imm)>0xD ?  98 : 50), \
-      ((char)(imm)&0xF0) ? 115 : (char)(imm) + ((char)(imm)>0xC ?  99 : 51), \
-      ((char)(imm)&0xF0) ? 116 : (char)(imm) + ((char)(imm)>0xB ? 100 : 52), \
-      ((char)(imm)&0xF0) ? 117 : (char)(imm) + ((char)(imm)>0xA ? 101 : 53), \
-      ((char)(imm)&0xF0) ? 118 : (char)(imm) + ((char)(imm)>0x9 ? 102 : 54), \
-      ((char)(imm)&0xF0) ? 119 : (char)(imm) + ((char)(imm)>0x8 ? 103 : 55), \
-      ((char)(imm)&0xF0) ? 120 : (char)(imm) + ((char)(imm)>0x7 ? 104 : 56), \
-      ((char)(imm)&0xF0) ? 121 : (char)(imm) + ((char)(imm)>0x6 ? 105 : 57), \
-      ((char)(imm)&0xF0) ? 122 : (char)(imm) + ((char)(imm)>0x5 ? 106 : 58), \
-      ((char)(imm)&0xF0) ? 123 : (char)(imm) + ((char)(imm)>0x4 ? 107 : 59), \
-      ((char)(imm)&0xF0) ? 124 : (char)(imm) + ((char)(imm)>0x3 ? 108 : 60), \
-      ((char)(imm)&0xF0) ? 125 : (char)(imm) + ((char)(imm)>0x2 ? 109 : 61), \
-      ((char)(imm)&0xF0) ? 126 : (char)(imm) + ((char)(imm)>0x1 ? 110 : 62), \
-      ((char)(imm)&0xF0) ? 127 : (char)(imm) + ((char)(imm)>0x0 ? 111 : 63))
+  (__m512i)__builtin_ia32_psrldqi512((__v8di)(__m512i)(a), (int)(imm) * 8)
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_mov_epi16 (__m512i __W, __mmask32 __U, __m512i __A)

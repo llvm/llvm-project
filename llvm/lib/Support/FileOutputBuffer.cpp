@@ -82,9 +82,11 @@ public:
   size_t getBufferSize() const override { return Buffer.size(); }
 
   Error commit() override {
+    using namespace sys::fs;
     int FD;
     std::error_code EC;
-    if (auto EC = openFileForWrite(FinalPath, FD, fs::F_None, Mode))
+    if (auto EC =
+            openFileForWrite(FinalPath, FD, CD_CreateAlways, OF_None, Mode))
       return errorCodeToError(EC);
     raw_fd_ostream OS(FD, /*shouldClose=*/true, /*unbuffered=*/true);
     OS << StringRef((const char *)Buffer.base(), Buffer.size());

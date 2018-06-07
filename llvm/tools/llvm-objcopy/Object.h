@@ -584,7 +584,6 @@ private:
   using SecPtr = std::unique_ptr<SectionBase>;
   using SegPtr = std::unique_ptr<Segment>;
 
-  std::shared_ptr<MemoryBuffer> OwnedData;
   std::vector<SecPtr> Sections;
   std::vector<SegPtr> Segments;
 
@@ -616,10 +615,6 @@ public:
 
   StringTableSection *SectionNames = nullptr;
   SymbolTableSection *SymbolTable = nullptr;
-
-  explicit Object(std::shared_ptr<MemoryBuffer> Data)
-      : OwnedData(std::move(Data)) {}
-  virtual ~Object() = default;
 
   void sortSections();
   SectionTableRef sections() { return SectionTableRef(Sections); }

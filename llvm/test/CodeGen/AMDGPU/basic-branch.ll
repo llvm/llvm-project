@@ -1,7 +1,7 @@
-; RUN: llc -O0 -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCNNOOPT -check-prefix=GCN %s
-; RUN: llc -O0 -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-spill-sgpr-to-smem=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCNNOOPT -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCNOPT -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCNOPT -check-prefix=GCN %s
+; RUN: llc -O0 -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
+; RUN: llc -O0 -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-spill-sgpr-to-smem=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope  -check-prefix=GCNNOOPT -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCNOPT -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCNOPT -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_branch:
 ; GCNNOOPT: v_writelane_b32
@@ -28,10 +28,11 @@ end:
 }
 
 ; GCN-LABEL: {{^}}test_brcc_i1:
-; GCN: buffer_load_ubyte
-; GCN: v_and_b32_e32 v{{[0-9]+}}, 1,
-; GCN: v_cmp_eq_u32_e32 vcc,
-; GCN: s_cbranch_vccnz [[END:BB[0-9]+_[0-9]+]]
+; GCN: s_load_dword [[VAL:s[0-9]+]]
+; GCNNOOPT: s_and_b32 s{{[0-9]+}}, 1, [[VAL]]
+; GCNOPT: s_and_b32 s{{[0-9]+}}, [[VAL]], 1
+; GCN: s_cmp_eq_u32
+; GCN: s_cbranch_scc1 [[END:BB[0-9]+_[0-9]+]]
 
 ; GCN: buffer_store_dword
 

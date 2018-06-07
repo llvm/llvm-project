@@ -84,7 +84,7 @@ TEST(raw_pwrite_ostreamTest, TestFD) {
 #ifdef LLVM_ON_UNIX
 TEST(raw_pwrite_ostreamTest, TestDevNull) {
   int FD;
-  sys::fs::openFileForWrite("/dev/null", FD, sys::fs::F_None);
+  sys::fs::openFileForWrite("/dev/null", FD, sys::fs::CD_OpenExisting);
   raw_fd_ostream OS(FD, true);
   OS << "abcd";
   StringRef Test = "test";

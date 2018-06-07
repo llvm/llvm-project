@@ -3227,10 +3227,10 @@ define <8 x i16> @trunc_and_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 define <8 x i16> @trunc_and_v8i32_v8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; SSE-LABEL: trunc_and_v8i32_v8i16:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    pand %xmm3, %xmm1
 ; SSE-NEXT:    pslld $16, %xmm1
 ; SSE-NEXT:    psrad $16, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    pslld $16, %xmm0
 ; SSE-NEXT:    psrad $16, %xmm0
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
@@ -4029,10 +4029,10 @@ define <8 x i16> @trunc_xor_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 define <8 x i16> @trunc_xor_v8i32_v8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; SSE-LABEL: trunc_xor_v8i32_v8i16:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    pxor %xmm3, %xmm1
 ; SSE-NEXT:    pslld $16, %xmm1
 ; SSE-NEXT:    psrad $16, %xmm1
-; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    pslld $16, %xmm0
 ; SSE-NEXT:    psrad $16, %xmm0
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
@@ -4831,10 +4831,10 @@ define <8 x i16> @trunc_or_v8i64_v8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 define <8 x i16> @trunc_or_v8i32_v8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; SSE-LABEL: trunc_or_v8i32_v8i16:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    por %xmm3, %xmm1
 ; SSE-NEXT:    pslld $16, %xmm1
 ; SSE-NEXT:    psrad $16, %xmm1
-; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    pslld $16, %xmm0
 ; SSE-NEXT:    psrad $16, %xmm0
 ; SSE-NEXT:    packssdw %xmm1, %xmm0

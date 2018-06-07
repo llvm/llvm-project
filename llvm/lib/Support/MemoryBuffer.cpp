@@ -244,7 +244,7 @@ static ErrorOr<std::unique_ptr<MB>>
 getFileAux(const Twine &Filename, int64_t FileSize, uint64_t MapSize,
            uint64_t Offset, bool RequiresNullTerminator, bool IsVolatile) {
   int FD;
-  std::error_code EC = sys::fs::openFileForRead(Filename, FD);
+  std::error_code EC = sys::fs::openFileForRead(Filename, FD, sys::fs::OF_None);
 
   if (EC)
     return EC;
@@ -364,8 +364,8 @@ static ErrorOr<std::unique_ptr<WriteThroughMemoryBuffer>>
 getReadWriteFile(const Twine &Filename, uint64_t FileSize, uint64_t MapSize,
                  uint64_t Offset) {
   int FD;
-  std::error_code EC = sys::fs::openFileForWrite(
-      Filename, FD, sys::fs::F_RW | sys::fs::F_NoTrunc);
+  std::error_code EC = sys::fs::openFileForReadWrite(
+      Filename, FD, sys::fs::CD_OpenExisting, sys::fs::OF_None);
 
   if (EC)
     return EC;
@@ -518,7 +518,7 @@ ErrorOr<std::unique_ptr<MemoryBuffer>> MemoryBuffer::getSTDIN() {
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 MemoryBuffer::getFileAsStream(const Twine &Filename) {
   int FD;
-  std::error_code EC = sys::fs::openFileForRead(Filename, FD);
+  std::error_code EC = sys::fs::openFileForRead(Filename, FD, sys::fs::OF_None);
   if (EC)
     return EC;
   ErrorOr<std::unique_ptr<MemoryBuffer>> Ret =

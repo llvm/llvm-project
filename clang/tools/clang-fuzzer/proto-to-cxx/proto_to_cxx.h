@@ -17,6 +17,10 @@
 
 namespace clang_fuzzer {
 class Function;
+class LoopFunction;
+
 std::string FunctionToString(const Function &input);
 std::string ProtoToCxx(const uint8_t *data, size_t size);
+std::string LoopFunctionToString(const LoopFunction &input);
+std::string LoopProtoToCxx(const uint8_t *data, size_t size);
 }
