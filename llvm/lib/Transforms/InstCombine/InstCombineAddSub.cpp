@@ -1096,6 +1096,30 @@ Value *InstCombiner::SimplifyAddWithRemainder(BinaryOperator &I) {
   return nullptr;
 }
 
+/// Fold
+///   (1 << NBits) - 1
+/// Into:
+///   ~(-(1 << NBits))
+/// Because a 'not' is better for bit-tracking analysis and other transforms
+/// than an 'add'. The new shl is always nsw, and is nuw if old `and` was.
+static Instruction *canonicalizeLowbitMask(BinaryOperator &I,
+                                           InstCombiner::BuilderTy &Builder) {
+  Value *NBits;
+  if (!match(&I, m_Add(m_OneUse(m_Shl(m_One(), m_Value(NBits))), m_AllOnes())))
+    return nullptr;
+
+  Constant *MinusOne = Constant::getAllOnesValue(NBits->getType());
+  Value *NotMask = Builder.CreateShl(MinusOne, NBits, "notmask");
+  // Be wary of constant folding.
+  if (auto *BOp = dyn_cast<BinaryOperator>(NotMask)) {
+    // Always NSW. But NUW propagates from `add`.
+    BOp->setHasNoSignedWrap();
+    BOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+  }
+
+  return BinaryOperator::CreateNot(NotMask, I.getName());
+}
+
 Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   bool Changed = SimplifyAssociativeOrCommutative(I);
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
@@ -1346,6 +1370,9 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     Changed = true;
     I.setHasNoUnsignedWrap(true);
   }
+
+  if (Instruction *V = canonicalizeLowbitMask(I, Builder))
+    return V;
 
   return Changed ? &I : nullptr;
 }
@@ -1745,6 +1772,27 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
       match(Op1, m_Trunc(m_PtrToInt(m_Value(RHSOp)))))
     if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType()))
       return replaceInstUsesWith(I, Res);
+
+  // Canonicalize a shifty way to code absolute value to the common pattern.
+  // There are 2 potential commuted variants.
+  // We're relying on the fact that we only do this transform when the shift has
+  // exactly 2 uses and the xor has exactly 1 use (otherwise, we might increase
+  // instructions).
+  Value *A;
+  const APInt *ShAmt;
+  Type *Ty = I.getType();
+  if (match(Op1, m_AShr(m_Value(A), m_APInt(ShAmt))) &&
+      Op1->hasNUses(2) && *ShAmt == Ty->getScalarSizeInBits() - 1 &&
+      match(Op0, m_OneUse(m_c_Xor(m_Specific(A), m_Specific(Op1))))) {
+    // B = ashr i32 A, 31 ; smear the sign bit
+    // sub (xor A, B), B  ; flip bits if negative and subtract -1 (add 1)
+    // --> (A < 0) ? -A : A
+    Value *Cmp = Builder.CreateICmpSLT(A, ConstantInt::getNullValue(Ty));
+    // Copy the nuw/nsw flags from the sub to the negate.
+    Value *Neg = Builder.CreateNeg(A, "", I.hasNoUnsignedWrap(),
+                                   I.hasNoSignedWrap());
+    return SelectInst::Create(Cmp, Neg, A);
+  }
 
   bool Changed = false;
   if (!I.hasNoSignedWrap() && willNotOverflowSignedSub(Op0, Op1, I)) {

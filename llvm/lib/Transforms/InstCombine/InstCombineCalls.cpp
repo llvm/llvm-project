@@ -3704,7 +3704,11 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 // Fence instruction simplification
 Instruction *InstCombiner::visitFenceInst(FenceInst &FI) {
   // Remove identical consecutive fences.
-  if (auto *NFI = dyn_cast<FenceInst>(FI.getNextNode()))
+  Instruction *Next = FI.getNextNode();
+  while (Next != nullptr && isa<DbgInfoIntrinsic>(Next))
+    Next = Next->getNextNode();
+
+  if (auto *NFI = dyn_cast<FenceInst>(Next))
     if (FI.isIdenticalTo(NFI))
       return eraseInstFromFunction(FI);
   return nullptr;

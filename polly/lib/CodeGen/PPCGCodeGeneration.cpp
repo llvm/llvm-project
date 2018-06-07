@@ -1408,7 +1408,7 @@ const std::map<std::string, std::string> IntrinsicToLibdeviceFunc = {
 ///
 /// Return "" if we are not compiling for CUDA.
 std::string getCUDALibDeviceFuntion(Function *F) {
-  auto FnName = [&] () -> const std::string {
+  auto FnName = [&]() -> const std::string {
     auto It = IntrinsicToLibdeviceFunc.find(F->getName());
     if (It != IntrinsicToLibdeviceFunc.end())
       return It->second;

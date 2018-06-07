@@ -52,8 +52,8 @@ define i64 @bextr64b_load(i64* %x) {
 define i64 @bextr64c(i64 %x, i32 %y) {
 ; CHECK-LABEL: bextr64c:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movslq %esi, %rax
-; CHECK-NEXT:    bextrq %rax, %rdi, %rax
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    bextrq %rsi, %rdi, %rax
 ; CHECK-NEXT:    retq
   %tmp0 = sext i32 %y to i64
   %tmp1 = tail call i64 @llvm.x86.bmi.bextr.64(i64 %x, i64 %tmp0)

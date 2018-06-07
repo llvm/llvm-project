@@ -1773,7 +1773,7 @@ static int readOperands(struct InternalInstruction* insn) {
 
       // If sibIndex was set to SIB_INDEX_NONE, index offset is 4.
       if (insn->sibIndex == SIB_INDEX_NONE)
-        insn->sibIndex = (SIBIndex)4;
+        insn->sibIndex = (SIBIndex)(insn->sibIndexBase + 4);
 
       // If EVEX.v2 is set this is one of the 16-31 registers.
       if (insn->vectorExtensionType == TYPE_EVEX && insn->mode == MODE_64BIT &&

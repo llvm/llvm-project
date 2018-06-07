@@ -145,11 +145,12 @@ InstructionBenchmark::ModeE UopsBenchmarkRunner::getMode() const {
   return InstructionBenchmark::Uops;
 }
 
-llvm::Expected<std::vector<llvm::MCInst>>
-UopsBenchmarkRunner::createSnippet(RegisterAliasingTrackerCache &RATC,
-                                   unsigned Opcode,
-                                   llvm::raw_ostream &Info) const {
-  std::vector<llvm::MCInst> Snippet;
+llvm::Expected<BenchmarkConfiguration>
+UopsBenchmarkRunner::createConfiguration(RegisterAliasingTrackerCache &RATC,
+                                         unsigned Opcode,
+                                         llvm::raw_ostream &Info) const {
+  BenchmarkConfiguration Configuration;
+  std::vector<llvm::MCInst> &Snippet = Configuration.Snippet;
   const llvm::MCInstrDesc &MCInstrDesc = MCInstrInfo.get(Opcode);
   const Instruction Instruction(MCInstrDesc, RATC);
 
@@ -162,12 +163,12 @@ UopsBenchmarkRunner::createSnippet(RegisterAliasingTrackerCache &RATC,
   if (SelfAliasing.empty()) {
     Info << "instruction is parallel, repeating a random one.\n";
     Snippet.push_back(randomizeUnsetVariablesAndBuild(Instruction));
-    return Snippet;
+    return Configuration;
   }
   if (SelfAliasing.hasImplicitAliasing()) {
     Info << "instruction is serial, repeating a random one.\n";
     Snippet.push_back(randomizeUnsetVariablesAndBuild(Instruction));
-    return Snippet;
+    return Configuration;
   }
   const auto TiedVariables = getTiedVariables(Instruction);
   if (!TiedVariables.empty()) {
@@ -188,7 +189,7 @@ UopsBenchmarkRunner::createSnippet(RegisterAliasingTrackerCache &RATC,
       Var->AssignedValue = llvm::MCOperand::createReg(Reg);
       Snippet.push_back(randomizeUnsetVariablesAndBuild(Instruction));
     }
-    return Snippet;
+    return Configuration;
   }
   // No tied variables, we pick random values for defs.
   llvm::BitVector Defs(MCRegisterInfo.getNumRegs());
@@ -219,7 +220,7 @@ UopsBenchmarkRunner::createSnippet(RegisterAliasingTrackerCache &RATC,
   Info
       << "instruction has no tied variables picking Uses different from defs\n";
   Snippet.push_back(randomizeUnsetVariablesAndBuild(Instruction));
-  return Snippet;
+  return Configuration;
 }
 
 std::vector<BenchmarkMeasure>

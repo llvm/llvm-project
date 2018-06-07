@@ -1780,10 +1780,10 @@ bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
   }
 
   // In static codegen with small code model, we can get the address of a label
-  // into a register with 'movl'. TableGen has already made sure we're looking
-  // at a label of some kind.
-  assert(N->getOpcode() == X86ISD::Wrapper &&
-         "Unexpected node type for MOV32ri64");
+  // into a register with 'movl'
+  if (N->getOpcode() != X86ISD::Wrapper)
+    return false;
+
   N = N.getOperand(0);
 
   // At least GNU as does not accept 'movl' for TPOFF relocations.

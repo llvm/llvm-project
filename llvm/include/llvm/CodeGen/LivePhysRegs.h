@@ -185,6 +185,13 @@ void addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs);
 void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
                           MachineBasicBlock &MBB);
 
+/// Convenience function for recomputing live-in's for \p MBB.
+static inline void recomputeLiveIns(MachineBasicBlock &MBB) {
+  LivePhysRegs LPR;
+  MBB.clearLiveIns();
+  computeAndAddLiveIns(LPR, MBB);
+}
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_LIVEPHYSREGS_H

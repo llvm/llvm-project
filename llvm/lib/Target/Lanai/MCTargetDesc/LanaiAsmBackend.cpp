@@ -96,7 +96,7 @@ void LanaiAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                  const MCValue &Target,
                                  MutableArrayRef<char> Data, uint64_t Value,
                                  bool /*IsResolved*/,
-                                 const MCSubtargetInfo */*STI*/) const {
+                                 const MCSubtargetInfo * /*STI*/) const {
   MCFixupKind Kind = Fixup.getKind();
   Value = adjustFixupValue(static_cast<unsigned>(Kind), Value);
 

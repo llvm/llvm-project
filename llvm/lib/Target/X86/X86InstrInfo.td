@@ -410,8 +410,8 @@ def vx128xmem : X86VMemOperand<VR128X, "printi128mem", X86Mem128_RC128XOperand>;
 def vx256xmem : X86VMemOperand<VR128X, "printi256mem", X86Mem256_RC128XOperand>;
 def vy128xmem : X86VMemOperand<VR256X, "printi128mem", X86Mem128_RC256XOperand>;
 def vy256xmem : X86VMemOperand<VR256X, "printi256mem", X86Mem256_RC256XOperand>;
-def vy512mem  : X86VMemOperand<VR256X, "printi512mem", X86Mem512_RC256XOperand>;
-def vz256xmem : X86VMemOperand<VR512,  "printi256mem", X86Mem256_RC512Operand>;
+def vy512xmem : X86VMemOperand<VR256X, "printi512mem", X86Mem512_RC256XOperand>;
+def vz256mem  : X86VMemOperand<VR512,  "printi256mem", X86Mem256_RC512Operand>;
 def vz512mem  : X86VMemOperand<VR512,  "printi512mem", X86Mem512_RC512Operand>;
 
 // A version of i8mem for use on x86-64 and x32 that uses a NOREX GPR instead
@@ -2357,9 +2357,35 @@ let Predicates = [HasBMI] in {
             (BLSI64rr GR64:$src)>;
 }
 
-multiclass bmi_bextr_bzhi<bits<8> opc, string mnemonic, RegisterClass RC,
-                          X86MemOperand x86memop, Intrinsic Int,
-                          PatFrag ld_frag, X86FoldableSchedWrite Sched> {
+multiclass bmi_bextr<bits<8> opc, string mnemonic, RegisterClass RC,
+                     X86MemOperand x86memop, SDNode OpNode,
+                     PatFrag ld_frag, X86FoldableSchedWrite Sched> {
+  def rr : I<opc, MRMSrcReg4VOp3, (outs RC:$dst), (ins RC:$src1, RC:$src2),
+             !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+             [(set RC:$dst, (OpNode RC:$src1, RC:$src2)), (implicit EFLAGS)]>,
+             T8PS, VEX, Sched<[Sched]>;
+  def rm : I<opc, MRMSrcMem4VOp3, (outs RC:$dst), (ins x86memop:$src1, RC:$src2),
+             !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+             [(set RC:$dst, (OpNode (ld_frag addr:$src1), RC:$src2)),
+              (implicit EFLAGS)]>, T8PS, VEX,
+             Sched<[Sched.Folded,
+                    // x86memop:$src1
+                    ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+                    ReadDefault,
+                    // RC:$src2
+                    ReadAfterLd]>;
+}
+
+let Predicates = [HasBMI], Defs = [EFLAGS] in {
+  defm BEXTR32 : bmi_bextr<0xF7, "bextr{l}", GR32, i32mem,
+                           X86bextr, loadi32, WriteBEXTR>;
+  defm BEXTR64 : bmi_bextr<0xF7, "bextr{q}", GR64, i64mem,
+                           X86bextr, loadi64, WriteBEXTR>, VEX_W;
+}
+
+multiclass bmi_bzhi<bits<8> opc, string mnemonic, RegisterClass RC,
+                    X86MemOperand x86memop, Intrinsic Int,
+                    PatFrag ld_frag, X86FoldableSchedWrite Sched> {
   def rr : I<opc, MRMSrcReg4VOp3, (outs RC:$dst), (ins RC:$src1, RC:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set RC:$dst, (Int RC:$src1, RC:$src2)), (implicit EFLAGS)]>,
@@ -2376,18 +2402,11 @@ multiclass bmi_bextr_bzhi<bits<8> opc, string mnemonic, RegisterClass RC,
                     ReadAfterLd]>;
 }
 
-let Predicates = [HasBMI], Defs = [EFLAGS] in {
-  defm BEXTR32 : bmi_bextr_bzhi<0xF7, "bextr{l}", GR32, i32mem,
-                                int_x86_bmi_bextr_32, loadi32, WriteBEXTR>;
-  defm BEXTR64 : bmi_bextr_bzhi<0xF7, "bextr{q}", GR64, i64mem,
-                                int_x86_bmi_bextr_64, loadi64, WriteBEXTR>, VEX_W;
-}
-
 let Predicates = [HasBMI2], Defs = [EFLAGS] in {
-  defm BZHI32 : bmi_bextr_bzhi<0xF5, "bzhi{l}", GR32, i32mem,
-                               int_x86_bmi_bzhi_32, loadi32, WriteBZHI>;
-  defm BZHI64 : bmi_bextr_bzhi<0xF5, "bzhi{q}", GR64, i64mem,
-                               int_x86_bmi_bzhi_64, loadi64, WriteBZHI>, VEX_W;
+  defm BZHI32 : bmi_bzhi<0xF5, "bzhi{l}", GR32, i32mem,
+                         int_x86_bmi_bzhi_32, loadi32, WriteBZHI>;
+  defm BZHI64 : bmi_bzhi<0xF5, "bzhi{q}", GR64, i64mem,
+                         int_x86_bmi_bzhi_64, loadi64, WriteBZHI>, VEX_W;
 }
 
 def CountTrailingOnes : SDNodeXForm<imm, [{
@@ -2429,21 +2448,49 @@ let Predicates = [HasBMI2, NoTBM] in {
 }
 
 let Predicates = [HasBMI2] in {
-  def : Pat<(and GR32:$src, (add (shl 1, GR8:$lz), -1)),
-            (BZHI32rr GR32:$src,
-              (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+  multiclass _bmi_bzhi_pattern<dag regpattern, dag mempattern, RegisterClass RC,
+                               ValueType VT, Instruction DstInst,
+                               Instruction DstMemInst> {
+    def : Pat<regpattern,
+              (DstInst RC:$src,
+                (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+    def : Pat<mempattern,
+              (DstMemInst addr:$src,
+                (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+  }
 
-  def : Pat<(and (loadi32 addr:$src), (add (shl 1, GR8:$lz), -1)),
-            (BZHI32rm addr:$src,
-              (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+  multiclass bmi_bzhi_patterns<RegisterClass RC, int bitwidth, ValueType VT,
+                               Instruction DstInst, X86MemOperand x86memop,
+                               Instruction DstMemInst> {
+    // x & ((1 << y) - 1)
+    defm : _bmi_bzhi_pattern<(and RC:$src, (add (shl 1, GR8:$lz), -1)),
+                             (and (x86memop addr:$src),
+                                  (add (shl 1, GR8:$lz), -1)),
+                             RC, VT, DstInst, DstMemInst>;
 
-  def : Pat<(and GR64:$src, (add (shl 1, GR8:$lz), -1)),
-            (BZHI64rr GR64:$src,
-              (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+    // x & ~(-1 << y)
+    defm : _bmi_bzhi_pattern<(and RC:$src, (xor (shl -1, GR8:$lz), -1)),
+                             (and (x86memop addr:$src),
+                                  (xor (shl -1, GR8:$lz), -1)),
+                             RC, VT, DstInst, DstMemInst>;
 
-  def : Pat<(and (loadi64 addr:$src), (add (shl 1, GR8:$lz), -1)),
-            (BZHI64rm addr:$src,
-              (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$lz, sub_8bit))>;
+    // x & (-1 >> (bitwidth - y))
+    defm : _bmi_bzhi_pattern<(and RC:$src, (srl -1, (sub bitwidth, GR8:$lz))),
+                             (and (x86memop addr:$src),
+                                  (srl -1, (sub bitwidth, GR8:$lz))),
+                             RC, VT, DstInst, DstMemInst>;
+
+    // x << (bitwidth - y) >> (bitwidth - y)
+    defm : _bmi_bzhi_pattern<(srl (shl RC:$src, (sub bitwidth, GR8:$lz)),
+                                  (sub bitwidth, GR8:$lz)),
+                             (srl (shl (x86memop addr:$src),
+                                        (sub bitwidth, GR8:$lz)),
+                                  (sub bitwidth, GR8:$lz)),
+                             RC, VT, DstInst, DstMemInst>;
+  }
+
+  defm : bmi_bzhi_patterns<GR32, 32, i32, BZHI32rr, loadi32, BZHI32rm>;
+  defm : bmi_bzhi_patterns<GR64, 64, i64, BZHI64rr, loadi64, BZHI64rm>;
 
   // x & (-1 >> (32 - y))
   def : Pat<(and GR32:$src, (srl -1, (i8 (trunc (sub 32, GR32:$lz))))),
@@ -2507,31 +2554,30 @@ let Predicates = [HasBMI2] in {
 //
 let Predicates = [HasTBM], Defs = [EFLAGS] in {
 
-multiclass tbm_ternary_imm_intr<bits<8> opc, RegisterClass RC, string OpcodeStr,
-                                X86MemOperand x86memop, PatFrag ld_frag,
-                                Intrinsic Int, Operand immtype,
-                                SDPatternOperator immoperator,
-                                X86FoldableSchedWrite Sched> {
+multiclass tbm_ternary_imm<bits<8> opc, RegisterClass RC, string OpcodeStr,
+                           X86MemOperand x86memop, PatFrag ld_frag,
+                           SDNode OpNode, Operand immtype,
+                           SDPatternOperator immoperator,
+                           X86FoldableSchedWrite Sched> {
   def ri : Ii32<opc,  MRMSrcReg, (outs RC:$dst), (ins RC:$src1, immtype:$cntl),
                 !strconcat(OpcodeStr,
                            "\t{$cntl, $src1, $dst|$dst, $src1, $cntl}"),
-                [(set RC:$dst, (Int RC:$src1, immoperator:$cntl))]>,
+                [(set RC:$dst, (OpNode RC:$src1, immoperator:$cntl))]>,
                 XOP, XOPA, Sched<[Sched]>;
   def mi : Ii32<opc,  MRMSrcMem, (outs RC:$dst),
                 (ins x86memop:$src1, immtype:$cntl),
                 !strconcat(OpcodeStr,
                            "\t{$cntl, $src1, $dst|$dst, $src1, $cntl}"),
-                [(set RC:$dst, (Int (ld_frag addr:$src1), immoperator:$cntl))]>,
+                [(set RC:$dst, (OpNode (ld_frag addr:$src1), immoperator:$cntl))]>,
                 XOP, XOPA, Sched<[Sched.Folded]>;
 }
 
-defm BEXTRI32 : tbm_ternary_imm_intr<0x10, GR32, "bextr{l}", i32mem, loadi32,
-                                     int_x86_tbm_bextri_u32, i32imm, imm,
-                                     WriteBEXTR>;
+defm BEXTRI32 : tbm_ternary_imm<0x10, GR32, "bextr{l}", i32mem, loadi32,
+                                X86bextr, i32imm, imm, WriteBEXTR>;
 let ImmT = Imm32S in
-defm BEXTRI64 : tbm_ternary_imm_intr<0x10, GR64, "bextr{q}", i64mem, loadi64,
-                                     int_x86_tbm_bextri_u64, i64i32imm,
-                                     i64immSExt32, WriteBEXTR>, VEX_W;
+defm BEXTRI64 : tbm_ternary_imm<0x10, GR64, "bextr{q}", i64mem, loadi64,
+                                X86bextr, i64i32imm,
+                                i64immSExt32, WriteBEXTR>, VEX_W;
 
 multiclass tbm_binary_rm<bits<8> opc, Format FormReg, Format FormMem,
                          RegisterClass RC, string OpcodeStr,

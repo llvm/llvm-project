@@ -2537,10 +2537,10 @@ static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
   MachineFunction &MF = DAG.getMachineFunction();
   const TargetRegisterClass *RC = &X86::GR32RegClass;
 
-  // Read a 32 bit value from the registers
+  // Read a 32 bit value from the registers.
   if (nullptr == InFlag) {
     // When no physical register is present,
-    // create an intermediate virtual register
+    // create an intermediate virtual register.
     Reg = MF.addLiveIn(VA.getLocReg(), RC);
     ArgValueLo = DAG.getCopyFromReg(Root, Dl, Reg, MVT::i32);
     Reg = MF.addLiveIn(NextVA.getLocReg(), RC);
@@ -2556,13 +2556,13 @@ static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
     *InFlag = ArgValueHi.getValue(2);
   }
 
-  // Convert the i32 type into v32i1 type
+  // Convert the i32 type into v32i1 type.
   Lo = DAG.getBitcast(MVT::v32i1, ArgValueLo);
 
-  // Convert the i32 type into v32i1 type
+  // Convert the i32 type into v32i1 type.
   Hi = DAG.getBitcast(MVT::v32i1, ArgValueHi);
 
-  // Concatenate the two values together
+  // Concatenate the two values together.
   return DAG.getNode(ISD::CONCAT_VECTORS, Dl, MVT::v64i1, Lo, Hi);
 }
 
@@ -36834,6 +36834,39 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineBEXTR(SDNode *N, SelectionDAG &DAG,
+                            TargetLowering::DAGCombinerInfo &DCI,
+                            const X86Subtarget &Subtarget) {
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  unsigned NumBits = VT.getSizeInBits();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                        !DCI.isBeforeLegalizeOps());
+
+  // TODO - Constant Folding.
+  if (auto *Cst1 = dyn_cast<ConstantSDNode>(Op1)) {
+    // Reduce Cst1 to the bottom 16-bits.
+    // NOTE: SimplifyDemandedBits won't do this for constants.
+    const APInt &Val1 = Cst1->getAPIntValue();
+    APInt MaskedVal1 = Val1 & 0xFFFF;
+    if (MaskedVal1 != Val1)
+      return DAG.getNode(X86ISD::BEXTR, SDLoc(N), VT, Op0,
+                         DAG.getConstant(MaskedVal1, SDLoc(N), VT));
+  }
+
+  // Only bottom 16-bits of the control bits are required.
+  KnownBits Known;
+  APInt DemandedMask(APInt::getLowBitsSet(NumBits, 16));
+  if (TLI.SimplifyDemandedBits(Op1, DemandedMask, Known, TLO)) {
+    DCI.CommitTargetLoweringOpt(TLO);
+    return SDValue(N, 0);
+  }
+
+  return SDValue();
+}
 
 static bool isNullFPScalarOrVectorConst(SDValue V) {
   return isNullFPConstant(V) || ISD::isBuildVectorAllZeros(V.getNode());
@@ -39220,6 +39253,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::AND:            return combineAnd(N, DAG, DCI, Subtarget);
   case ISD::OR:             return combineOr(N, DAG, DCI, Subtarget);
   case ISD::XOR:            return combineXor(N, DAG, DCI, Subtarget);
+  case X86ISD::BEXTR:       return combineBEXTR(N, DAG, DCI, Subtarget);
   case ISD::LOAD:           return combineLoad(N, DAG, DCI, Subtarget);
   case ISD::MLOAD:          return combineMaskedLoad(N, DAG, DCI, Subtarget);
   case ISD::STORE:          return combineStore(N, DAG, Subtarget);

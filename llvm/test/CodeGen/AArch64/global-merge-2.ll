@@ -29,7 +29,7 @@ define void @g1(i32 %a1, i32 %a2) {
 
 ;CHECK:	.type	.L_MergedGlobals,@object // @_MergedGlobals
 ;CHECK:	.local	.L_MergedGlobals
-;CHECK:	.comm	.L_MergedGlobals,12,8
+;CHECK:	.comm	.L_MergedGlobals,12,4
 
 ;CHECK:	.globl	x
 ;CHECK: .set x, .L_MergedGlobals
@@ -41,7 +41,7 @@ define void @g1(i32 %a1, i32 %a2) {
 ;CHECK: .set z, .L_MergedGlobals+8
 ;CHECK: .size z, 4
 
-;CHECK-APPLE-IOS: .zerofill __DATA,__common,__MergedGlobals_x,12,3
+;CHECK-APPLE-IOS: .zerofill __DATA,__common,__MergedGlobals_x,12,2
 
 ;CHECK-APPLE-IOS: .globl	_x
 ;CHECK-APPLE-IOS: .set {{.*}}, __MergedGlobals_x

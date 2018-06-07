@@ -216,10 +216,13 @@ float SymbolRelevanceSignals::evaluate() const {
       break;
     case FileScope:
       Score *= 1.5;
+      break;
     case ClassScope:
       Score *= 2;
+      break;
     case FunctionScope:
       Score *= 4;
+      break;
     }
   }
 

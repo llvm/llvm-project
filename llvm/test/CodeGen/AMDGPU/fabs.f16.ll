@@ -28,16 +28,9 @@ define amdgpu_kernel void @s_fabs_f16(half addrspace(1)* %out, half %in) {
   ret void
 }
 
-; FIXME: Should be able to use single and
 ; GCN-LABEL: {{^}}s_fabs_v2f16:
-; CI: s_movk_i32 [[MASK:s[0-9]+]], 0x7fff
-; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]]
-; CI: v_lshlrev_b32_e32 v{{[0-9]+}}, 16,
-; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]]
-; CI: v_or_b32_e32
-
-; GFX89: s_load_dword [[VAL:s[0-9]+]]
-; GFX89: s_and_b32 s{{[0-9]+}}, [[VAL]], 0x7fff7fff
+; GCN: s_load_dword [[VAL:s[0-9]+]]
+; GCN: s_and_b32 s{{[0-9]+}}, [[VAL]], 0x7fff7fff
 define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   store <2 x half> %fabs, <2 x half> addrspace(1)* %out
@@ -45,18 +38,11 @@ define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half
 }
 
 ; GCN-LABEL: {{^}}s_fabs_v4f16:
-; CI: s_movk_i32 [[MASK:s[0-9]+]], 0x7fff
-; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]]
-; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]]
-; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]]
-; CI: v_and_b32_e32 v{{[0-9]+}}, [[MASK]]
-
-
-; GFX89: s_load_dword s
-; GFX89: s_load_dword s
-; GFX89: s_mov_b32 [[MASK:s[0-9]+]], 0x7fff7fff
-; GFX89: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
-; GFX89: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
+; GCN: s_load_dword s
+; GCN: s_load_dword s
+; GCN: s_mov_b32 [[MASK:s[0-9]+]], 0x7fff7fff
+; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
+; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
 
 ; GCN: {{flat|global}}_store_dwordx2
 define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
@@ -108,14 +94,19 @@ define amdgpu_kernel void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %i
   ret void
 }
 
-; GCN-LABEL: {{^}}v_fabs_fold_v2f16:
+; FIXME: Should do fabs after conversion to avoid converting multiple
+; times in this particular case.
+
+; GCN-LABEL: {{^}}v_fabs_fold_self_v2f16:
 ; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
 
+; CI: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
+; CI: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
 ; CI: v_cvt_f32_f16_e32
 ; CI: v_cvt_f32_f16_e32
-; CI: v_mul_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}}
+; CI: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; CI: v_cvt_f16_f32
-; CI: v_mul_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}}
+; CI: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; CI: v_cvt_f16_f32
 
 ; VI: v_mul_f16_sdwa v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
@@ -123,12 +114,40 @@ define amdgpu_kernel void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %i
 
 ; GFX9: v_and_b32_e32 [[FABS:v[0-9]+]], 0x7fff7fff, [[VAL]]
 ; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[FABS]], v{{[0-9]+$}}
-define amdgpu_kernel void @v_fabs_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
+define amdgpu_kernel void @v_fabs_fold_self_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
   %val = load <2 x half>, <2 x half> addrspace(1)* %gep
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
   %fmul = fmul <2 x half> %fabs, %val
+  store <2 x half> %fmul, <2 x half> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_fabs_fold_v2f16:
+; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
+
+; CI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+; CI: v_cvt_f32_f16_e32
+; CI: v_cvt_f32_f16_e32
+; CI: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
+; CI: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; CI: v_cvt_f16_f32
+; CI: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; CI: v_cvt_f16_f32
+
+; VI: v_mul_f16_sdwa v{{[0-9]+}}, |v{{[0-9]+}}|, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI: v_mul_f16_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, s{{[0-9]+}}
+
+; GFX9: v_and_b32_e32 [[FABS:v[0-9]+]], 0x7fff7fff, [[VAL]]
+; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[FABS]], s{{[0-9]+$}}
+define amdgpu_kernel void @v_fabs_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in, i32 %other.val) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
+  %val = load <2 x half>, <2 x half> addrspace(1)* %gep
+  %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
+  %other.val.cvt = bitcast i32 %other.val to <2 x half>
+  %fmul = fmul <2 x half> %fabs, %other.val.cvt
   store <2 x half> %fmul, <2 x half> addrspace(1)* %out
   ret void
 }

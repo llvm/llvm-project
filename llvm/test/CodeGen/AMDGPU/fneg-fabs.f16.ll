@@ -123,8 +123,10 @@ define amdgpu_kernel void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x h
 }
 
 ; GCN-LABEL: {{^}}fold_user_fneg_fabs_v2f16:
-; CI: v_cvt_f32_f16_e64 v{{[0-9]+}}, -|v{{[0-9]+}}|
-; CI: v_cvt_f32_f16_e64 v{{[0-9]+}}, -|v{{[0-9]+}}|
+; CI: s_load_dword s
+; CI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008000
+; CI: v_cvt_f32_f16_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; CI: v_cvt_f32_f16_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; CI: v_mul_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 ; CI: v_mul_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 

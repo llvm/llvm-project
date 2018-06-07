@@ -365,10 +365,10 @@ defm : JWriteResFpuPair<WriteFVarShuffle256, [JFPU01, JFPX],  1>; // NOTE: Doesn
 // Conversions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteCvtSS2I,      [JFPU1, JSTC, JFPA, JALU0], 7, [1,1], 2>;
+defm : JWriteResFpuPair<WriteCvtSS2I,      [JFPU1, JSTC, JFPA, JALU0], 7, [1,1,1,1], 2>;
 defm : JWriteResFpuPair<WriteCvtPS2I,      [JFPU1, JSTC], 3, [1,1], 1>;
 defm : JWriteResYMMPair<WriteCvtPS2IY,     [JFPU1, JSTC], 3, [2,2], 2>;
-defm : JWriteResFpuPair<WriteCvtSD2I,      [JFPU1, JSTC, JFPA, JALU0], 7, [1,1], 2>;
+defm : JWriteResFpuPair<WriteCvtSD2I,      [JFPU1, JSTC, JFPA, JALU0], 7, [1,1,1,1], 2>;
 defm : JWriteResFpuPair<WriteCvtPD2I,      [JFPU1, JSTC], 3, [1,1], 1>;
 defm : JWriteResYMMPair<WriteCvtPD2IY,     [JFPU1, JSTC, JFPX], 6, [2,2,4], 3>;
 
@@ -555,7 +555,7 @@ def JWriteZeroLatency : SchedWriteRes<[]> {
   let Latency = 0;
 }
 
-// Vector XOR instructions that use the same register for both source 
+// Certain vector instructions that use the same register for both source 
 // operands do not have a real dependency on the previous contents of the
 // register, and thus, do not have to wait before completing. They can be
 // optimized out at register renaming stage.
@@ -568,14 +568,42 @@ def JWriteFZeroIdiom : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
     SchedVar<MCSchedPredicate<TruePred>,           [WriteFLogic]>
 ]>;
+def : InstRW<[JWriteFZeroIdiom], (instrs XORPSrr, VXORPSrr, XORPDrr, VXORPDrr,
+                                         ANDNPSrr, VANDNPSrr,
+                                         ANDNPDrr, VANDNPDrr)>;
 
-def : InstRW<[JWriteFZeroIdiom], (instrs XORPSrr, VXORPSrr, XORPDrr, VXORPDrr)>;
+def JWriteVZeroIdiomLogic : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
+    SchedVar<MCSchedPredicate<TruePred>,           [WriteVecLogic]>
+]>;
+def : InstRW<[JWriteVZeroIdiomLogic], (instrs MMX_PXORirr, MMX_PANDNirr)>;
 
-def JWriteVZeroIdiom : SchedWriteVariant<[
+def JWriteVZeroIdiomLogicX : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
     SchedVar<MCSchedPredicate<TruePred>,           [WriteVecLogicX]>
 ]>;
+def : InstRW<[JWriteVZeroIdiomLogicX], (instrs PXORrr, VPXORrr,
+                                               PANDNrr, VPANDNrr)>;
 
-def : InstRW<[JWriteVZeroIdiom], (instrs PXORrr, VPXORrr)>;
+def JWriteVZeroIdiomALU : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
+    SchedVar<MCSchedPredicate<TruePred>,           [WriteVecALU]>
+]>;
+def : InstRW<[JWriteVZeroIdiomALU], (instrs MMX_PSUBBirr, MMX_PSUBDirr,
+                                            MMX_PSUBQirr, MMX_PSUBWirr,
+                                            MMX_PCMPGTBirr, MMX_PCMPGTDirr,
+                                            MMX_PCMPGTWirr)>;
 
+def JWriteVZeroIdiomALUX : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
+    SchedVar<MCSchedPredicate<TruePred>,           [WriteVecALUX]>
+]>;
+def : InstRW<[JWriteVZeroIdiomALUX], (instrs PSUBBrr, VPSUBBrr,
+                                             PSUBDrr, VPSUBDrr,
+                                             PSUBQrr, VPSUBQrr,
+                                             PSUBWrr, VPSUBWrr,
+                                             PCMPGTBrr, VPCMPGTBrr,
+                                             PCMPGTDrr, VPCMPGTDrr,
+                                             PCMPGTQrr, VPCMPGTQrr,
+                                             PCMPGTWrr, VPCMPGTWrr)>;
 } // SchedModel
