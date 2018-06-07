@@ -468,7 +468,7 @@ void ManualDWARFIndex::GetFunctions(const RegularExpression &regex,
 }
 
 void ManualDWARFIndex::Dump(Stream &s) {
-  s.Format("DWARF index for ({0}) '{1:F}':",
+  s.Format("Manual DWARF index for ({0}) '{1:F}':",
            m_module.GetArchitecture().GetArchitectureName(),
            m_module.GetObjectFile()->GetFileSpec());
   s.Printf("\nFunction basenames:\n");

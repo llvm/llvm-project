@@ -105,6 +105,9 @@ def allow_undefined_file_s: Separate<["-"], "allow-undefined-file">,
 defm export: Eq<"export">,
   HelpText<"Force a symbol to be exported">;
 
+def export_all: F<"export-all">,
+  HelpText<"Export all symbols (normally combined with --no-gc-sections)">;
+
 def export_table: F<"export-table">,
   HelpText<"Export function table to the environment">;
 

@@ -392,6 +392,8 @@ void SymbolVendor::Dump(Stream *s) {
       }
     }
     s->EOL();
+    if (m_sym_file_ap)
+      m_sym_file_ap->Dump(*s);
     s->IndentMore();
     m_type_list.Dump(s, show_context);
 

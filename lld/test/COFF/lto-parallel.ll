@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as -o %t.obj %s
 ; RUN: lld-link -opt:noicf /out:%t.exe /entry:foo /include:bar /opt:lldltopartitions=2 /subsystem:console /lldmap:%t.map %t.obj
 ; RUN: FileCheck %s < %t.map

@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -triple i686-windows-msvc %s -filetype=obj -o %t.obj
 # RUN: lld-link %t.obj -safeseh -out:%t.exe -entry:main
 # RUN: llvm-readobj -file-headers %t.exe | FileCheck %s

@@ -1,4 +1,4 @@
-# REQEUIRES: x86
+# REQUIRES: x86
 
 # RUN: yaml2obj < %p/Inputs/export.yaml > %t.archive.obj
 # RUN: llvm-ar rcs %t.archive.lib %t.archive.obj
