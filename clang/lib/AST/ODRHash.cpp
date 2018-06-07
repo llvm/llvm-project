@@ -427,7 +427,7 @@ public:
 
   void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
     Visit(D->getTemplatedDecl());
-    ID.AddInteger(D->getTemplatedDecl()->getODRHash());
+    AddDecl(D->getTemplatedDecl());
     Inherited::VisitFunctionTemplateDecl(D);
   }
 };

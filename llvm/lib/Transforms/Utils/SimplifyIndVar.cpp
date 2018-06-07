@@ -784,7 +784,7 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     for (unsigned N = 0; IVOperand; ++N) {
       assert(N <= Simplified.size() && "runaway iteration");
 
-      Value *NewOper = foldIVUser(UseOper.first, IVOperand);
+      Value *NewOper = foldIVUser(UseInst, IVOperand);
       if (!NewOper)
         break; // done folding
       IVOperand = dyn_cast<Instruction>(NewOper);
@@ -792,12 +792,12 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     if (!IVOperand)
       continue;
 
-    if (eliminateIVUser(UseOper.first, IVOperand)) {
+    if (eliminateIVUser(UseInst, IVOperand)) {
       pushIVUsers(IVOperand, L, Simplified, SimpleIVUsers);
       continue;
     }
 
-    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(UseOper.first)) {
+    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(UseInst)) {
       if ((isa<OverflowingBinaryOperator>(BO) &&
            strengthenOverflowingOperation(BO, IVOperand)) ||
           (isa<ShlOperator>(BO) && strengthenRightShift(BO, IVOperand))) {
@@ -807,13 +807,13 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
       }
     }
 
-    CastInst *Cast = dyn_cast<CastInst>(UseOper.first);
+    CastInst *Cast = dyn_cast<CastInst>(UseInst);
     if (V && Cast) {
       V->visitCast(Cast);
       continue;
     }
-    if (isSimpleIVUser(UseOper.first, L, SE)) {
-      pushIVUsers(UseOper.first, L, Simplified, SimpleIVUsers);
+    if (isSimpleIVUser(UseInst, L, SE)) {
+      pushIVUsers(UseInst, L, Simplified, SimpleIVUsers);
     }
   }
 }

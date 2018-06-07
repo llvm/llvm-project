@@ -334,7 +334,7 @@ void FormatTokenLexer::handleTemplateStrings() {
 
 void FormatTokenLexer::tryParsePythonComment() {
   FormatToken *HashToken = Tokens.back();
-  if (HashToken->isNot(tok::hash))
+  if (!HashToken->isOneOf(tok::hash, tok::hashhash))
     return;
   // Turn the remainder of this line into a comment.
   const char *CommentBegin =

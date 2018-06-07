@@ -88,6 +88,16 @@ static void temp_file_name(char *buf, size_t bufsize, const char *prefix) {
 #endif
 }
 
+static void Unlink(const char *path) {
+#if SANITIZER_WINDOWS
+  // No sanitizer needs to delete a file on Windows yet. If we ever do, we can
+  // add a portable wrapper and test it from here.
+  ::DeleteFileA(&path[0]);
+#else
+  internal_unlink(path);
+#endif
+}
+
 TEST(SanitizerCommon, FileOps) {
   const char *str1 = "qwerty";
   uptr len1 = internal_strlen(str1);
@@ -143,13 +153,7 @@ TEST(SanitizerCommon, FileOps) {
   EXPECT_EQ(0, internal_memcmp(buf, str2, len2));
   CloseFile(fd);
 
-#if SANITIZER_WINDOWS
-  // No sanitizer needs to delete a file on Windows yet. If we ever do, we can
-  // add a portable wrapper and test it from here.
-  ::DeleteFileA(&tmpfile[0]);
-#else
-  internal_unlink(tmpfile);
-#endif
+  Unlink(tmpfile);
 }
 
 class SanitizerCommonFileTest : public ::testing::TestWithParam<uptr> {
@@ -167,7 +171,7 @@ class SanitizerCommonFileTest : public ::testing::TestWithParam<uptr> {
       f.write(data_.data(), data_.size());
   }
 
-  void TearDown() override { internal_unlink(file_name_); }
+  void TearDown() override { Unlink(file_name_); }
 
  protected:
   char file_name_[256];

@@ -3,8 +3,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,GFX9 %s
 
 ; GCN-LABEL: {{^}}buffer_store_format_d16_x:
-; GCN: {{buffer|flat|global}}_load_ushort v[[LO:[0-9]+]]
-; GCN: buffer_store_format_d16_x v[[LO]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
+; GCN: s_load_dword s[[LO:[0-9]+]]
+; GCN: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[LO]]
+; GCN: buffer_store_format_d16_x v[[V_LO]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 define amdgpu_kernel void @buffer_store_format_d16_x(<4 x i32> %rsrc, half %data, i32 %index) {
 main_body:
   call void @llvm.amdgcn.buffer.store.format.f16(half %data, <4 x i32> %rsrc, i32 %index, i32 0, i1 0, i1 0)

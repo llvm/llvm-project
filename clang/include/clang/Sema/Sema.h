@@ -10174,7 +10174,7 @@ public:
   // __shared__ variables whether they are local or not (they all are implicitly
   // static in CUDA). One exception is that CUDA allows constant initializers
   // for __constant__ and __device__ variables.
-  void checkAllowedCUDAInitializer(VarDecl *Var);
+  void checkAllowedCUDAInitializer(VarDecl *VD);
 
   /// Check whether NewFD is a valid overload for CUDA. Emits
   /// diagnostics and invalidates NewFD if not.

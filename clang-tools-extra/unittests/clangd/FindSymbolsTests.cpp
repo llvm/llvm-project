@@ -264,6 +264,17 @@ TEST_F(WorkspaceSymbolsTest, Enums) {
   EXPECT_THAT(getSymbols("ns::Color4::White"), ElementsAre(Named("White")));
 }
 
+TEST_F(WorkspaceSymbolsTest, Ranking) {
+  addFile("foo.h", R"cpp(
+      namespace ns{}
+      function func();
+      )cpp");
+  addFile("foo.cpp", R"cpp(
+      #include "foo.h"
+      )cpp");
+  EXPECT_THAT(getSymbols("::"), ElementsAre(Named("func"), Named("ns")));
+}
+
 TEST_F(WorkspaceSymbolsTest, WithLimit) {
   addFile("foo.h", R"cpp(
       int foo;
@@ -272,6 +283,7 @@ TEST_F(WorkspaceSymbolsTest, WithLimit) {
   addFile("foo.cpp", R"cpp(
       #include "foo.h"
       )cpp");
+  // Foo is higher ranked because of exact name match.
   EXPECT_THAT(getSymbols("foo"),
               UnorderedElementsAre(AllOf(Named("foo"), InContainer(""),
                                          WithKind(SymbolKind::Variable)),
@@ -279,9 +291,7 @@ TEST_F(WorkspaceSymbolsTest, WithLimit) {
                                          WithKind(SymbolKind::Variable))));
 
   Limit = 1;
-  EXPECT_THAT(getSymbols("foo"),
-              ElementsAre(AnyOf((Named("foo"), InContainer("")),
-                                AllOf(Named("foo2"), InContainer("")))));
+  EXPECT_THAT(getSymbols("foo"), ElementsAre(Named("foo")));
 }
 
 } // namespace clangd

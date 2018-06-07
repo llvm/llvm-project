@@ -207,9 +207,6 @@ TEST(CompletionTest, Filter) {
   EXPECT_THAT(completions(Body + "int main() { S().FR^ }").items,
               AllOf(Has("FooBar"), Not(Has("FooBaz")), Not(Has("Qux"))));
 
-  EXPECT_THAT(completions(Body + "int main() { S().opr^ }").items,
-              Has("operator="));
-
   EXPECT_THAT(completions(Body + "int main() { aaa^ }").items,
               AllOf(Has("Abracadabra"), Has("Alakazam")));
 
@@ -250,9 +247,10 @@ void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
 
   // Class members. The only items that must be present in after-dot
   // completion.
-  EXPECT_THAT(
-      Results.items,
-      AllOf(Has(Opts.EnableSnippets ? "method()" : "method"), Has("field")));
+  EXPECT_THAT(Results.items,
+              AllOf(Has(Opts.EnableSnippets ? "method()" : "method"),
+                    Has("field"), Not(Has("ClassWithMembers")),
+                    Not(Has("operator=")), Not(Has("~ClassWithMembers"))));
   EXPECT_IFF(Opts.IncludeIneligibleResults, Results.items,
              Has("private_field"));
   // Global items.
@@ -377,6 +375,25 @@ TEST(CompletionTest, Qualifiers) {
   EXPECT_THAT(Results.items, HasSubsequence(Labeled("bar() const"),
                                             Labeled("Foo::foo() const")));
   EXPECT_THAT(Results.items, Not(Contains(Labeled("foo() const")))); // private
+}
+
+TEST(CompletionTest, InjectedTypename) {
+  // These are suppressed when accessed as a member...
+  EXPECT_THAT(completions("struct X{}; void foo(){ X().^ }").items,
+              Not(Has("X")));
+  EXPECT_THAT(completions("struct X{ void foo(){ this->^ } };").items,
+              Not(Has("X")));
+  // ...but accessible in other, more useful cases.
+  EXPECT_THAT(completions("struct X{ void foo(){ ^ } };").items, Has("X"));
+  EXPECT_THAT(completions("struct Y{}; struct X:Y{ void foo(){ ^ } };").items,
+              Has("Y"));
+  EXPECT_THAT(
+      completions(
+          "template<class> struct Y{}; struct X:Y<int>{ void foo(){ ^ } };")
+          .items,
+      Has("Y"));
+  // This case is marginal (`using X::X` is useful), we allow it for now.
+  EXPECT_THAT(completions("struct X{}; void foo(){ X::^ }").items, Has("X"));
 }
 
 TEST(CompletionTest, Snippets) {

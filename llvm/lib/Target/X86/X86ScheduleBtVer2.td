@@ -365,10 +365,10 @@ defm : JWriteResFpuPair<WriteFVarShuffle256, [JFPU01, JFPX],  1>; // NOTE: Doesn
 // Conversions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteCvtSS2I,      [JFPU1, JSTC, JFPA, JALU0], 7, [1,1], 2>;
+defm : JWriteResFpuPair<WriteCvtSS2I,      [JFPU1, JSTC, JFPA, JALU0], 7, [1,1,1,1], 2>;
 defm : JWriteResFpuPair<WriteCvtPS2I,      [JFPU1, JSTC], 3, [1,1], 1>;
 defm : JWriteResYMMPair<WriteCvtPS2IY,     [JFPU1, JSTC], 3, [2,2], 2>;
-defm : JWriteResFpuPair<WriteCvtSD2I,      [JFPU1, JSTC, JFPA, JALU0], 7, [1,1], 2>;
+defm : JWriteResFpuPair<WriteCvtSD2I,      [JFPU1, JSTC, JFPA, JALU0], 7, [1,1,1,1], 2>;
 defm : JWriteResFpuPair<WriteCvtPD2I,      [JFPU1, JSTC], 3, [1,1], 1>;
 defm : JWriteResYMMPair<WriteCvtPD2IY,     [JFPU1, JSTC, JFPX], 6, [2,2,4], 3>;
 

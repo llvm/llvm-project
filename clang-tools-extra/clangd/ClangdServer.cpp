@@ -302,7 +302,7 @@ void ClangdServer::findDefinitions(PathRef File, Position Pos,
                             llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::findDefinitions(InpAST->AST, Pos, this->FileIdx.get()));
+    CB(clangd::findDefinitions(InpAST->AST, Pos, Index));
   };
 
   WorkScheduler.runWithAST("Definitions", File, Bind(Action, std::move(CB)));

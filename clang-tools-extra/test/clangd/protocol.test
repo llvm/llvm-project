@@ -34,11 +34,11 @@ Content-Length: 146
 # CHECK-NEXT:  "result": {
 # CHECK-NEXT:    "isIncomplete": false,
 # CHECK-NEXT:    "items": [
-#      CHECK:        "filterText": "fake",
-# CHECK-NEXT:        "insertText": "fake",
+#      CHECK:        "filterText": "a",
+# CHECK-NEXT:        "insertText": "a",
 # CHECK-NEXT:        "insertTextFormat": 1,
-# CHECK-NEXT:        "kind": 7,
-# CHECK-NEXT:        "label": "fake",
+# CHECK-NEXT:        "kind": 5,
+# CHECK-NEXT:        "label": "a",
 # CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }
@@ -63,11 +63,11 @@ Content-Length: 146
 # CHECK-NEXT:  "result": {
 # CHECK-NEXT:    "isIncomplete": false,
 # CHECK-NEXT:    "items": [
-#      CHECK:        "filterText": "fake",
-# CHECK-NEXT:        "insertText": "fake",
+#      CHECK:        "filterText": "a",
+# CHECK-NEXT:        "insertText": "a",
 # CHECK-NEXT:        "insertTextFormat": 1,
-# CHECK-NEXT:        "kind": 7,
-# CHECK-NEXT:        "label": "fake",
+# CHECK-NEXT:        "kind": 5,
+# CHECK-NEXT:        "label": "a",
 # CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }
@@ -92,11 +92,11 @@ Content-Length: 146
 # CHECK-NEXT:  "result": {
 # CHECK-NEXT:    "isIncomplete": false,
 # CHECK-NEXT:    "items": [
-#      CHECK:        "filterText": "fake",
-# CHECK-NEXT:        "insertText": "fake",
+#      CHECK:        "filterText": "a",
+# CHECK-NEXT:        "insertText": "a",
 # CHECK-NEXT:        "insertTextFormat": 1,
-# CHECK-NEXT:        "kind": 7,
-# CHECK-NEXT:        "label": "fake",
+# CHECK-NEXT:        "kind": 5,
+# CHECK-NEXT:        "label": "a",
 # CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }

@@ -31,9 +31,25 @@
 
 #include "FuzzerDefs.h"
 
+#include <unordered_map>
+#include <vector>
+#include <string>
+
 namespace fuzzer {
-struct DataFlowTrace {
+class DataFlowTrace {
+ public:
   void Init(const std::string &DirPath, const std::string &FocusFunction);
+  void Clear() { Traces.clear(); }
+  const Vector<bool> *Get(const std::string &InputSha1) const {
+    auto It = Traces.find(InputSha1);
+    if (It != Traces.end())
+      return &It->second;
+    return nullptr;
+  }
+
+ private:
+  // Input's sha1 => DFT for the FocusFunction.
+  std::unordered_map<std::string, Vector<bool> > Traces;
 };
 }  // namespace fuzzer
 

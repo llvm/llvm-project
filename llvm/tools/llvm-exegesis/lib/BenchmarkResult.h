@@ -58,13 +58,11 @@ struct InstructionBenchmark {
   std::string Info;
 
   // Read functions.
-  static InstructionBenchmark
-  readYamlOrDie(const BenchmarkResultContext &Context,
-                llvm::StringRef Filename);
+  static llvm::Expected<InstructionBenchmark>
+  readYaml(const BenchmarkResultContext &Context, llvm::StringRef Filename);
 
-  static std::vector<InstructionBenchmark>
-  readYamlsOrDie(const BenchmarkResultContext &Context,
-                 llvm::StringRef Filename);
+  static llvm::Expected<std::vector<InstructionBenchmark>>
+  readYamls(const BenchmarkResultContext &Context, llvm::StringRef Filename);
 
   void readYamlFrom(const BenchmarkResultContext &Context,
                     llvm::StringRef InputContent);
@@ -72,8 +70,8 @@ struct InstructionBenchmark {
   // Write functions, non-const because of YAML traits.
   void writeYamlTo(const BenchmarkResultContext &Context, llvm::raw_ostream &S);
 
-  void writeYamlOrDie(const BenchmarkResultContext &Context,
-                      const llvm::StringRef Filename);
+  llvm::Error writeYaml(const BenchmarkResultContext &Context,
+                        const llvm::StringRef Filename);
 };
 
 //------------------------------------------------------------------------------

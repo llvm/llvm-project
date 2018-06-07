@@ -32,28 +32,30 @@ void ManualDWARFIndex::Index() {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "%p", static_cast<void *>(&debug_info));
 
-  const uint32_t num_compile_units = debug_info.GetNumCompileUnits();
-  if (num_compile_units == 0)
+  std::vector<DWARFUnit *> units_to_index;
+  units_to_index.reserve(debug_info.GetNumCompileUnits());
+  for (size_t U = 0; U < debug_info.GetNumCompileUnits(); ++U) {
+    DWARFUnit *unit = debug_info.GetCompileUnitAtIndex(U);
+    if (unit && m_units_to_avoid.count(unit->GetOffset()) == 0)
+      units_to_index.push_back(unit);
+  }
+  if (units_to_index.empty())
     return;
 
-  std::vector<IndexSet> sets(num_compile_units);
+  std::vector<IndexSet> sets(units_to_index.size());
 
   //----------------------------------------------------------------------
   // Keep memory down by clearing DIEs for any compile units if indexing
   // caused us to load the compile unit's DIEs.
   //----------------------------------------------------------------------
-  std::vector<llvm::Optional<DWARFUnit::ScopedExtractDIEs>>
-      clear_cu_dies(num_compile_units);
+  std::vector<llvm::Optional<DWARFUnit::ScopedExtractDIEs>> clear_cu_dies(
+      units_to_index.size());
   auto parser_fn = [&](size_t cu_idx) {
-    DWARFUnit *dwarf_cu = debug_info.GetCompileUnitAtIndex(cu_idx);
-    if (dwarf_cu)
-      IndexUnit(*dwarf_cu, sets[cu_idx]);
+    IndexUnit(*units_to_index[cu_idx], sets[cu_idx]);
   };
 
-  auto extract_fn = [&debug_info, &clear_cu_dies](size_t cu_idx) {
-    DWARFUnit *dwarf_cu = debug_info.GetCompileUnitAtIndex(cu_idx);
-    if (dwarf_cu)
-      clear_cu_dies[cu_idx] = dwarf_cu->ExtractDIEsScoped();
+  auto extract_fn = [&units_to_index, &clear_cu_dies](size_t cu_idx) {
+    clear_cu_dies[cu_idx] = units_to_index[cu_idx]->ExtractDIEsScoped();
   };
 
   // Create a task runner that extracts dies for each DWARF compile unit in a
@@ -66,12 +68,12 @@ void ManualDWARFIndex::Index() {
   // to wait until all compile units have been indexed in case a DIE in one
   // compile unit refers to another and the indexes accesses those DIEs.
   //----------------------------------------------------------------------
-  TaskMapOverInt(0, num_compile_units, extract_fn);
+  TaskMapOverInt(0, units_to_index.size(), extract_fn);
 
   // Now create a task runner that can index each DWARF compile unit in a
   // separate thread so we can index quickly.
 
-  TaskMapOverInt(0, num_compile_units, parser_fn);
+  TaskMapOverInt(0, units_to_index.size(), parser_fn);
 
   auto finalize_fn = [this, &sets](NameToDIE(IndexSet::*index)) {
     NameToDIE &result = m_set.*index;
@@ -345,12 +347,8 @@ void ManualDWARFIndex::IndexUnitImpl(
         // entries
         if (mangled_cstr && name != mangled_cstr &&
             ((mangled_cstr[0] == '_') || (::strcmp(name, mangled_cstr) != 0))) {
-          Mangled mangled(ConstString(mangled_cstr), true);
-          set.globals.Insert(mangled.GetMangledName(),
+          set.globals.Insert(ConstString(mangled_cstr),
                              DIERef(cu_offset, die.GetOffset()));
-          ConstString demangled = mangled.GetDemangledName(cu_language);
-          if (demangled)
-            set.globals.Insert(demangled, DIERef(cu_offset, die.GetOffset()));
         }
       }
       break;
@@ -361,9 +359,9 @@ void ManualDWARFIndex::IndexUnitImpl(
   }
 }
 
-void ManualDWARFIndex::GetGlobalVariables(ConstString name, DIEArray &offsets) {
+void ManualDWARFIndex::GetGlobalVariables(ConstString basename, DIEArray &offsets) {
   Index();
-  m_set.globals.Find(name, offsets);
+  m_set.globals.Find(basename, offsets);
 }
 
 void ManualDWARFIndex::GetGlobalVariables(const RegularExpression &regex,

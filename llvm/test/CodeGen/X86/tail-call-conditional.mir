@@ -48,7 +48,7 @@ body:             |
   ; CHECK-NEXT: $rdi = COPY $rsi
   ; CHECK-NEXT: $rsi = COPY $rax
   ; CHECK-NEXT: CMP64ri8 $rax, 9, implicit-def $eflags
-  ; CHECK-NEXT: TCRETURNdi64cc @f1, 0, 3, csr_64, implicit $rsp, implicit $eflags, implicit $ssp, implicit $rsp, implicit $rdi, implicit $rsi, implicit $rax, implicit-def $rax, implicit $hsi, implicit-def $hsi, implicit $sil, implicit-def $sil, implicit $si, implicit-def $si, implicit $esi, implicit-def $esi, implicit $rsi, implicit-def $rsi, implicit $hdi, implicit-def $hdi, implicit $dil, implicit-def $dil, implicit $di, implicit-def $di, implicit $edi, implicit-def $edi, implicit $rdi, implicit-def $rdi, implicit $hax, implicit-def $hax, implicit $ah, implicit-def $ah, implicit $al, implicit-def $al, implicit $ax, implicit-def $ax, implicit $eax, implicit-def $eax
+  ; CHECK-NEXT: TCRETURNdi64cc @f1, 0, 3, csr_64, implicit $rsp, implicit $eflags, implicit $ssp, implicit $rsp, implicit $rdi, implicit $rsi, implicit $rdi, implicit-def $rdi, implicit $hsi, implicit-def $hsi, implicit $sil, implicit-def $sil, implicit $si, implicit-def $si, implicit $esi, implicit-def $esi, implicit $rsi, implicit-def $rsi, implicit $hdi, implicit-def $hdi, implicit $dil, implicit-def $dil, implicit $di, implicit-def $di, implicit $edi, implicit-def $edi
 
   bb.1:
     successors: %bb.2, %bb.3
@@ -67,7 +67,7 @@ body:             |
     TCRETURNdi64 @f1, 0, csr_64, implicit $rsp, implicit $rdi, implicit $rsi
 
   ; CHECK: bb.2:
-  ; CHECK-NEXT: liveins: $rax, $rdi, $rsi
+  ; CHECK-NEXT: liveins: $rdi, $rsi
   ; CHECK-NEXT: {{^  $}}
   ; CHECK-NEXT: TCRETURNdi64 @f2, 0, csr_64, implicit $rsp, implicit $rdi, implicit $rsi
 

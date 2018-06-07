@@ -43,7 +43,8 @@ define double @int_to_double_rr(i32 %a) {
 ; AVX_X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX_X86-NEXT:    andl $-8, %esp
 ; AVX_X86-NEXT:    subl $8, %esp
-; AVX_X86-NEXT:    vcvtsi2sdl 8(%ebp), %xmm0, %xmm0
+; AVX_X86-NEXT:    movl 8(%ebp), %eax
+; AVX_X86-NEXT:    vcvtsi2sdl %eax, %xmm0, %xmm0
 ; AVX_X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX_X86-NEXT:    fldl (%esp)
 ; AVX_X86-NEXT:    movl %ebp, %esp
@@ -64,7 +65,8 @@ define double @int_to_double_rm(i32* %a) {
 ;
 ; AVX-LABEL: int_to_double_rm:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2sdl (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    movl (%rdi), %eax
+; AVX-NEXT:    vcvtsi2sdl %eax, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; SSE2_X86-LABEL: int_to_double_rm:
@@ -187,7 +189,8 @@ define float @int_to_float_rr(i32 %a) {
 ; AVX_X86:       # %bb.0: # %entry
 ; AVX_X86-NEXT:    pushl %eax
 ; AVX_X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX_X86-NEXT:    vcvtsi2ssl {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX_X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX_X86-NEXT:    vcvtsi2ssl %eax, %xmm0, %xmm0
 ; AVX_X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX_X86-NEXT:    flds (%esp)
 ; AVX_X86-NEXT:    popl %eax
@@ -207,7 +210,8 @@ define float @int_to_float_rm(i32* %a) {
 ;
 ; AVX-LABEL: int_to_float_rm:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2ssl (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    movl (%rdi), %eax
+; AVX-NEXT:    vcvtsi2ssl %eax, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; SSE2_X86-LABEL: int_to_float_rm:

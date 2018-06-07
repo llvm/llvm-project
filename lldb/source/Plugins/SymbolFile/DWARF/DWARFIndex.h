@@ -25,7 +25,11 @@ public:
 
   virtual void Preload() = 0;
 
-  virtual void GetGlobalVariables(ConstString name, DIEArray &offsets) = 0;
+  /// Finds global variables with the given base name. Any additional filtering
+  /// (e.g., to only retrieve variables from a given context) should be done by
+  /// the consumer.
+  virtual void GetGlobalVariables(ConstString basename, DIEArray &offsets) = 0;
+
   virtual void GetGlobalVariables(const RegularExpression &regex,
                                   DIEArray &offsets) = 0;
   virtual void GetGlobalVariables(const DWARFUnit &cu, DIEArray &offsets) = 0;
