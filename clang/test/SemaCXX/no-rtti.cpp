@@ -6,7 +6,7 @@ namespace std {
 
 void f()
 {
-  (void)typeid(int); // expected-error {{cannot use typeid with -fno-rtti}}
+  (void)typeid(int); // expected-error {{use of typeid requires -frtti}}
 }
 
 namespace {
@@ -20,7 +20,7 @@ struct B : public A {
 }
 
 bool isa_B(A *a) {
-  return dynamic_cast<B *>(a) != 0; // expected-error {{cannot use dynamic_cast with -fno-rtti}}
+  return dynamic_cast<B *>(a) != 0; // expected-error {{use of dynamic_cast requires -frtti}}
 }
 
 void* getMostDerived(A* a) {

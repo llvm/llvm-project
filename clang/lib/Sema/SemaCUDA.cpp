@@ -472,6 +472,59 @@ bool Sema::isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *DD) {
   return true;
 }
 
+void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
+  if (VD->isInvalidDecl() || !VD->hasInit() || !VD->hasGlobalStorage())
+    return;
+  const Expr *Init = VD->getInit();
+  if (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>() ||
+      VD->hasAttr<CUDASharedAttr>()) {
+    assert(!VD->isStaticLocal() || VD->hasAttr<CUDASharedAttr>());
+    bool AllowedInit = false;
+    if (const CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(Init))
+      AllowedInit =
+          isEmptyCudaConstructor(VD->getLocation(), CE->getConstructor());
+    // We'll allow constant initializers even if it's a non-empty
+    // constructor according to CUDA rules. This deviates from NVCC,
+    // but allows us to handle things like constexpr constructors.
+    if (!AllowedInit &&
+        (VD->hasAttr<CUDADeviceAttr>() || VD->hasAttr<CUDAConstantAttr>()))
+      AllowedInit = VD->getInit()->isConstantInitializer(
+          Context, VD->getType()->isReferenceType());
+
+    // Also make sure that destructor, if there is one, is empty.
+    if (AllowedInit)
+      if (CXXRecordDecl *RD = VD->getType()->getAsCXXRecordDecl())
+        AllowedInit =
+            isEmptyCudaDestructor(VD->getLocation(), RD->getDestructor());
+
+    if (!AllowedInit) {
+      Diag(VD->getLocation(), VD->hasAttr<CUDASharedAttr>()
+                                  ? diag::err_shared_var_init
+                                  : diag::err_dynamic_var_init)
+          << Init->getSourceRange();
+      VD->setInvalidDecl();
+    }
+  } else {
+    // This is a host-side global variable.  Check that the initializer is
+    // callable from the host side.
+    const FunctionDecl *InitFn = nullptr;
+    if (const CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(Init)) {
+      InitFn = CE->getConstructor();
+    } else if (const CallExpr *CE = dyn_cast<CallExpr>(Init)) {
+      InitFn = CE->getDirectCallee();
+    }
+    if (InitFn) {
+      CUDAFunctionTarget InitFnTarget = IdentifyCUDATarget(InitFn);
+      if (InitFnTarget != CFT_Host && InitFnTarget != CFT_HostDevice) {
+        Diag(VD->getLocation(), diag::err_ref_bad_target_global_initializer)
+            << InitFnTarget << InitFn;
+        Diag(InitFn->getLocation(), diag::note_previous_decl) << InitFn;
+        VD->setInvalidDecl();
+      }
+    }
+  }
+}
+
 // With -fcuda-host-device-constexpr, an unattributed constexpr function is
 // treated as implicitly __host__ __device__, unless:
 //  * it is a variadic function (device-side variadic functions are not

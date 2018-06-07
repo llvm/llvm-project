@@ -643,6 +643,52 @@ static RValue EmitBitTestIntrinsic(CodeGenFunction &CGF, unsigned BuiltinID,
       ShiftedByte, llvm::ConstantInt::get(CGF.Int8Ty, 1), "bittest.res"));
 }
 
+namespace {
+enum class MSVCSetJmpKind {
+  _setjmpex,
+  _setjmp3,
+  _setjmp
+};
+}
+
+/// MSVC handles setjmp a bit differently on different platforms. On every
+/// architecture except 32-bit x86, the frame address is passed. On x86, extra
+/// parameters can be passed as variadic arguments, but we always pass none.
+static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
+                               const CallExpr *E) {
+  llvm::Value *Arg1 = nullptr;
+  llvm::Type *Arg1Ty = nullptr;
+  StringRef Name;
+  bool IsVarArg = false;
+  if (SJKind == MSVCSetJmpKind::_setjmp3) {
+    Name = "_setjmp3";
+    Arg1Ty = CGF.Int32Ty;
+    Arg1 = llvm::ConstantInt::get(CGF.IntTy, 0);
+    IsVarArg = true;
+  } else {
+    Name = SJKind == MSVCSetJmpKind::_setjmp ? "_setjmp" : "_setjmpex";
+    Arg1Ty = CGF.Int8PtrTy;
+    Arg1 = CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(Intrinsic::frameaddress),
+                                  llvm::ConstantInt::get(CGF.Int32Ty, 0));
+  }
+
+  // Mark the call site and declaration with ReturnsTwice.
+  llvm::Type *ArgTypes[2] = {CGF.Int8PtrTy, Arg1Ty};
+  llvm::AttributeList ReturnsTwiceAttr = llvm::AttributeList::get(
+      CGF.getLLVMContext(), llvm::AttributeList::FunctionIndex,
+      llvm::Attribute::ReturnsTwice);
+  llvm::Constant *SetJmpFn = CGF.CGM.CreateRuntimeFunction(
+      llvm::FunctionType::get(CGF.IntTy, ArgTypes, IsVarArg), Name,
+      ReturnsTwiceAttr, /*Local=*/true);
+
+  llvm::Value *Buf = CGF.Builder.CreateBitOrPointerCast(
+      CGF.EmitScalarExpr(E->getArg(0)), CGF.Int8PtrTy);
+  llvm::Value *Args[] = {Buf, Arg1};
+  llvm::CallSite CS = CGF.EmitRuntimeCallOrInvoke(SetJmpFn, Args);
+  CS.setAttributes(ReturnsTwiceAttr);
+  return RValue::get(CS.getInstruction());
+}
+
 // Many of MSVC builtins are on both x64 and ARM; to avoid repeating code, we
 // handle them here.
 enum class CodeGenFunction::MSVCIntrin {
@@ -2957,59 +3003,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__abnormal_termination:
   case Builtin::BI_abnormal_termination:
     return RValue::get(EmitSEHAbnormalTermination());
-  case Builtin::BI_setjmpex: {
+  case Builtin::BI_setjmpex:
+    if (getTarget().getTriple().isOSMSVCRT())
+      return EmitMSVCRTSetJmp(*this, MSVCSetJmpKind::_setjmpex, E);
+    break;
+  case Builtin::BI_setjmp:
     if (getTarget().getTriple().isOSMSVCRT()) {
-      llvm::Type *ArgTypes[] = {Int8PtrTy, Int8PtrTy};
-      llvm::AttributeList ReturnsTwiceAttr = llvm::AttributeList::get(
-          getLLVMContext(), llvm::AttributeList::FunctionIndex,
-          llvm::Attribute::ReturnsTwice);
-      llvm::Constant *SetJmpEx = CGM.CreateRuntimeFunction(
-          llvm::FunctionType::get(IntTy, ArgTypes, /*isVarArg=*/false),
-          "_setjmpex", ReturnsTwiceAttr, /*Local=*/true);
-      llvm::Value *Buf = Builder.CreateBitOrPointerCast(
-          EmitScalarExpr(E->getArg(0)), Int8PtrTy);
-      llvm::Value *FrameAddr =
-          Builder.CreateCall(CGM.getIntrinsic(Intrinsic::frameaddress),
-                             ConstantInt::get(Int32Ty, 0));
-      llvm::Value *Args[] = {Buf, FrameAddr};
-      llvm::CallSite CS = EmitRuntimeCallOrInvoke(SetJmpEx, Args);
-      CS.setAttributes(ReturnsTwiceAttr);
-      return RValue::get(CS.getInstruction());
+      if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+        return EmitMSVCRTSetJmp(*this, MSVCSetJmpKind::_setjmp3, E);
+      else if (getTarget().getTriple().getArch() == llvm::Triple::aarch64)
+        return EmitMSVCRTSetJmp(*this, MSVCSetJmpKind::_setjmpex, E);
+      return EmitMSVCRTSetJmp(*this, MSVCSetJmpKind::_setjmp, E);
     }
     break;
-  }
-  case Builtin::BI_setjmp: {
-    if (getTarget().getTriple().isOSMSVCRT()) {
-      llvm::AttributeList ReturnsTwiceAttr = llvm::AttributeList::get(
-          getLLVMContext(), llvm::AttributeList::FunctionIndex,
-          llvm::Attribute::ReturnsTwice);
-      llvm::Value *Buf = Builder.CreateBitOrPointerCast(
-          EmitScalarExpr(E->getArg(0)), Int8PtrTy);
-      llvm::CallSite CS;
-      if (getTarget().getTriple().getArch() == llvm::Triple::x86) {
-        llvm::Type *ArgTypes[] = {Int8PtrTy, IntTy};
-        llvm::Constant *SetJmp3 = CGM.CreateRuntimeFunction(
-            llvm::FunctionType::get(IntTy, ArgTypes, /*isVarArg=*/true),
-            "_setjmp3", ReturnsTwiceAttr, /*Local=*/true);
-        llvm::Value *Count = ConstantInt::get(IntTy, 0);
-        llvm::Value *Args[] = {Buf, Count};
-        CS = EmitRuntimeCallOrInvoke(SetJmp3, Args);
-      } else {
-        llvm::Type *ArgTypes[] = {Int8PtrTy, Int8PtrTy};
-        llvm::Constant *SetJmp = CGM.CreateRuntimeFunction(
-            llvm::FunctionType::get(IntTy, ArgTypes, /*isVarArg=*/false),
-            "_setjmp", ReturnsTwiceAttr, /*Local=*/true);
-        llvm::Value *FrameAddr =
-            Builder.CreateCall(CGM.getIntrinsic(Intrinsic::frameaddress),
-                               ConstantInt::get(Int32Ty, 0));
-        llvm::Value *Args[] = {Buf, FrameAddr};
-        CS = EmitRuntimeCallOrInvoke(SetJmp, Args);
-      }
-      CS.setAttributes(ReturnsTwiceAttr);
-      return RValue::get(CS.getInstruction());
-    }
-    break;
-  }
 
   case Builtin::BI__GetExceptionInfo: {
     if (llvm::GlobalVariable *GV =
@@ -8549,78 +8555,109 @@ static Value *EmitX86MinMax(CodeGenFunction &CGF, ICmpInst::Predicate Pred,
 
 // Lowers X86 FMA intrinsics to IR.
 static Value *EmitX86FMAExpr(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
-                             unsigned BuiltinID) {
+                             unsigned BuiltinID, bool IsAddSub) {
 
-  bool IsAddSub = false;
-  bool IsScalar = false;
-
-  // 4 operands always means rounding mode without a mask here.
-  bool IsRound = Ops.size() == 4;
-
-  Intrinsic::ID ID;
+  bool Subtract = false;
+  Intrinsic::ID IID = Intrinsic::not_intrinsic;
   switch (BuiltinID) {
   default: break;
-  case clang::X86::BI__builtin_ia32_vfmaddss3: IsScalar = true; break;
-  case clang::X86::BI__builtin_ia32_vfmaddsd3: IsScalar = true; break;
-  case clang::X86::BI__builtin_ia32_vfmaddps512:
-    ID = llvm::Intrinsic::x86_avx512_vfmadd_ps_512; break;
-  case clang::X86::BI__builtin_ia32_vfmaddpd512:
-    ID = llvm::Intrinsic::x86_avx512_vfmadd_pd_512; break;
-  case clang::X86::BI__builtin_ia32_vfmaddsubps: IsAddSub = true; break;
-  case clang::X86::BI__builtin_ia32_vfmaddsubpd: IsAddSub = true; break;
-  case clang::X86::BI__builtin_ia32_vfmaddsubps256: IsAddSub = true; break;
-  case clang::X86::BI__builtin_ia32_vfmaddsubpd256: IsAddSub = true; break;
-  case clang::X86::BI__builtin_ia32_vfmaddsubps512: {
-    ID = llvm::Intrinsic::x86_avx512_vfmaddsub_ps_512;
-    IsAddSub = true;
+  case clang::X86::BI__builtin_ia32_vfmsubps512_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddps512_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddps512_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddps512_mask3:
+    IID = llvm::Intrinsic::x86_avx512_vfmadd_ps_512; break;
+  case clang::X86::BI__builtin_ia32_vfmsubpd512_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddpd512_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddpd512_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddpd512_mask3:
+    IID = llvm::Intrinsic::x86_avx512_vfmadd_pd_512; break;
+  case clang::X86::BI__builtin_ia32_vfmsubaddps512_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddsubps512_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubps512_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubps512_mask3:
+    IID = llvm::Intrinsic::x86_avx512_vfmaddsub_ps_512;
     break;
-  }
-  case clang::X86::BI__builtin_ia32_vfmaddsubpd512: {
-    ID = llvm::Intrinsic::x86_avx512_vfmaddsub_pd_512;
-    IsAddSub = true;
+  case clang::X86::BI__builtin_ia32_vfmsubaddpd512_mask3:
+    Subtract = true;
+    LLVM_FALLTHROUGH;
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd512_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd512_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd512_mask3:
+    IID = llvm::Intrinsic::x86_avx512_vfmaddsub_pd_512;
     break;
-  }
-  }
-
-  // Only handle in case of _MM_FROUND_CUR_DIRECTION/4 (no rounding).
-  if (IsRound) {
-    Function *Intr = CGF.CGM.getIntrinsic(ID);
-    if (cast<llvm::ConstantInt>(Ops[3])->getZExtValue() != (uint64_t)4)
-      return CGF.Builder.CreateCall(Intr, Ops);
   }
 
   Value *A = Ops[0];
   Value *B = Ops[1];
   Value *C = Ops[2];
 
-  if (IsScalar) {
-    A = CGF.Builder.CreateExtractElement(A, (uint64_t)0);
-    B = CGF.Builder.CreateExtractElement(B, (uint64_t)0);
-    C = CGF.Builder.CreateExtractElement(C, (uint64_t)0);
-  }
+  if (Subtract)
+    C = CGF.Builder.CreateFNeg(C);
 
-  llvm::Type *Ty = A->getType();
-  Function *FMA = CGF.CGM.getIntrinsic(Intrinsic::fma, Ty);
-  Value *Res = CGF.Builder.CreateCall(FMA, {A, B, C} );
+  Value *Res;
 
-  if (IsScalar)
-    return CGF.Builder.CreateInsertElement(Ops[0], Res, (uint64_t)0);
+  // Only handle in case of _MM_FROUND_CUR_DIRECTION/4 (no rounding).
+  if (IID != Intrinsic::not_intrinsic &&
+      cast<llvm::ConstantInt>(Ops.back())->getZExtValue() != (uint64_t)4) {
+    Function *Intr = CGF.CGM.getIntrinsic(IID);
+    Res = CGF.Builder.CreateCall(Intr, {A, B, C, Ops.back() });
+  } else {
+    llvm::Type *Ty = A->getType();
+    Function *FMA = CGF.CGM.getIntrinsic(Intrinsic::fma, Ty);
+    Res = CGF.Builder.CreateCall(FMA, {A, B, C} );
 
-  if (IsAddSub) {
-    // Negate even elts in C using a mask.
-    unsigned NumElts = Ty->getVectorNumElements();
-    SmallVector<Constant *, 16> NMask;
-    Constant *Zero = ConstantInt::get(CGF.Builder.getInt1Ty(), 0);
-    Constant *One = ConstantInt::get(CGF.Builder.getInt1Ty(), 1);
-    for (unsigned i = 0; i < NumElts; ++i) {
-      NMask.push_back(i % 2 == 0 ? One : Zero);
+    if (IsAddSub) {
+      // Negate even elts in C using a mask.
+      unsigned NumElts = Ty->getVectorNumElements();
+      SmallVector<Constant *, 16> NMask;
+      Constant *Zero = ConstantInt::get(CGF.Builder.getInt1Ty(), 0);
+      Constant *One = ConstantInt::get(CGF.Builder.getInt1Ty(), 1);
+      for (unsigned i = 0; i < NumElts; ++i) {
+        NMask.push_back(i % 2 == 0 ? One : Zero);
+      }
+      Value *NegMask = ConstantVector::get(NMask);
+
+      Value *NegC = CGF.Builder.CreateFNeg(C);
+      Value *FMSub = CGF.Builder.CreateCall(FMA, {A, B, NegC} );
+      Res = CGF.Builder.CreateSelect(NegMask, FMSub, Res);
     }
-    Value *NegMask = ConstantVector::get(NMask);
-
-    Value *NegC = CGF.Builder.CreateFNeg(C);
-    Value *FMSub = CGF.Builder.CreateCall(FMA, {A, B, NegC} );
-    Res = CGF.Builder.CreateSelect(NegMask, FMSub, Res);
   }
+
+  // Handle any required masking.
+  Value *MaskFalseVal = nullptr;
+  switch (BuiltinID) {
+  case clang::X86::BI__builtin_ia32_vfmaddps512_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddpd512_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubps512_mask:
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd512_mask:
+    MaskFalseVal = Ops[0];
+    break;
+  case clang::X86::BI__builtin_ia32_vfmaddps512_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddpd512_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubps512_maskz:
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd512_maskz:
+    MaskFalseVal = Constant::getNullValue(Ops[0]->getType());
+    break;
+  case clang::X86::BI__builtin_ia32_vfmsubps512_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddps512_mask3:
+  case clang::X86::BI__builtin_ia32_vfmsubpd512_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddpd512_mask3:
+  case clang::X86::BI__builtin_ia32_vfmsubaddps512_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddsubps512_mask3:
+  case clang::X86::BI__builtin_ia32_vfmsubaddpd512_mask3:
+  case clang::X86::BI__builtin_ia32_vfmaddsubpd512_mask3:
+    MaskFalseVal = Ops[2];
+    break;
+  }
+
+  if (MaskFalseVal)
+    return EmitX86Select(CGF, Ops[3], Res, MaskFalseVal);
 
   return Res;
 }
@@ -9040,20 +9077,40 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return EmitX86ConvertToMask(*this, Ops[0]);
 
   case X86::BI__builtin_ia32_vfmaddss3:
-  case X86::BI__builtin_ia32_vfmaddsd3:
+  case X86::BI__builtin_ia32_vfmaddsd3: {
+    Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
+    Value *B = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
+    Value *C = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
+    Function *FMA = CGM.getIntrinsic(Intrinsic::fma, A->getType());
+    Value *Res = Builder.CreateCall(FMA, {A, B, C} );
+    return Builder.CreateInsertElement(Ops[0], Res, (uint64_t)0);
+  }
   case X86::BI__builtin_ia32_vfmaddps:
   case X86::BI__builtin_ia32_vfmaddpd:
   case X86::BI__builtin_ia32_vfmaddps256:
   case X86::BI__builtin_ia32_vfmaddpd256:
-  case X86::BI__builtin_ia32_vfmaddps512:
-  case X86::BI__builtin_ia32_vfmaddpd512:
+  case X86::BI__builtin_ia32_vfmaddps512_mask:
+  case X86::BI__builtin_ia32_vfmaddps512_maskz:
+  case X86::BI__builtin_ia32_vfmaddps512_mask3:
+  case X86::BI__builtin_ia32_vfmsubps512_mask3:
+  case X86::BI__builtin_ia32_vfmaddpd512_mask:
+  case X86::BI__builtin_ia32_vfmaddpd512_maskz:
+  case X86::BI__builtin_ia32_vfmaddpd512_mask3:
+  case X86::BI__builtin_ia32_vfmsubpd512_mask3:
+    return EmitX86FMAExpr(*this, Ops, BuiltinID, /*IsAddSub*/false);
   case X86::BI__builtin_ia32_vfmaddsubps:
   case X86::BI__builtin_ia32_vfmaddsubpd:
   case X86::BI__builtin_ia32_vfmaddsubps256:
   case X86::BI__builtin_ia32_vfmaddsubpd256:
-  case X86::BI__builtin_ia32_vfmaddsubps512:
-  case X86::BI__builtin_ia32_vfmaddsubpd512:
-    return EmitX86FMAExpr(*this, Ops, BuiltinID);
+  case X86::BI__builtin_ia32_vfmaddsubps512_mask:
+  case X86::BI__builtin_ia32_vfmaddsubps512_maskz:
+  case X86::BI__builtin_ia32_vfmaddsubps512_mask3:
+  case X86::BI__builtin_ia32_vfmsubaddps512_mask3:
+  case X86::BI__builtin_ia32_vfmaddsubpd512_mask:
+  case X86::BI__builtin_ia32_vfmaddsubpd512_maskz:
+  case X86::BI__builtin_ia32_vfmaddsubpd512_mask3:
+  case X86::BI__builtin_ia32_vfmsubaddpd512_mask3:
+    return EmitX86FMAExpr(*this, Ops, BuiltinID, /*IsAddSub*/true);
 
   case X86::BI__builtin_ia32_movdqa32store128_mask:
   case X86::BI__builtin_ia32_movdqa64store128_mask:

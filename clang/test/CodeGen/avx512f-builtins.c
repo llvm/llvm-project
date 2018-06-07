@@ -461,7 +461,7 @@ __m512d test_mm512_maskz_fmadd_round_pd(__mmask8 __U, __m512d __A, __m512d __B, 
   // CHECK-LABEL: @test_mm512_maskz_fmadd_round_pd
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fmadd_round_pd(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512d test_mm512_fmsub_round_pd(__m512d __A, __m512d __B, __m512d __C) {
@@ -483,7 +483,7 @@ __m512d test_mm512_maskz_fmsub_round_pd(__mmask8 __U, __m512d __A, __m512d __B, 
   // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fmsub_round_pd(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512d test_mm512_fnmadd_round_pd(__m512d __A, __m512d __B, __m512d __C) {
@@ -505,7 +505,7 @@ __m512d test_mm512_maskz_fnmadd_round_pd(__mmask8 __U, __m512d __A, __m512d __B,
   // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fnmadd_round_pd(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512d test_mm512_fnmsub_round_pd(__m512d __A, __m512d __B, __m512d __C) {
@@ -521,7 +521,7 @@ __m512d test_mm512_maskz_fnmsub_round_pd(__mmask8 __U, __m512d __A, __m512d __B,
   // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>
   // CHECK: @llvm.x86.avx512.vfmadd.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fnmsub_round_pd(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512d test_mm512_fmadd_pd(__m512d __A, __m512d __B, __m512d __C) {
@@ -547,7 +547,7 @@ __m512d test_mm512_maskz_fmadd_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512
   // CHECK-LABEL: @test_mm512_maskz_fmadd_pd
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fmadd_pd(__U, __A, __B, __C);
 }
 __m512d test_mm512_fmsub_pd(__m512d __A, __m512d __B, __m512d __C) {
@@ -569,7 +569,7 @@ __m512d test_mm512_maskz_fmsub_pd(__mmask8 __U, __m512d __A, __m512d __B, __m512
   // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fmsub_pd(__U, __A, __B, __C);
 }
 __m512d test_mm512_fnmadd_pd(__m512d __A, __m512d __B, __m512d __C) {
@@ -591,7 +591,7 @@ __m512d test_mm512_maskz_fnmadd_pd(__mmask8 __U, __m512d __A, __m512d __B, __m51
   // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fnmadd_pd(__U, __A, __B, __C);
 }
 __m512d test_mm512_fnmsub_pd(__m512d __A, __m512d __B, __m512d __C) {
@@ -607,7 +607,7 @@ __m512d test_mm512_maskz_fnmsub_pd(__mmask8 __U, __m512d __A, __m512d __B, __m51
   // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fnmsub_pd(__U, __A, __B, __C);
 }
 __m512 test_mm512_fmadd_round_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -633,7 +633,7 @@ __m512 test_mm512_maskz_fmadd_round_ps(__mmask16 __U, __m512 __A, __m512 __B, __
   // CHECK-LABEL: @test_mm512_maskz_fmadd_round_ps
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fmadd_round_ps(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512 test_mm512_fmsub_round_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -655,7 +655,7 @@ __m512 test_mm512_maskz_fmsub_round_ps(__mmask16 __U, __m512 __A, __m512 __B, __
   // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fmsub_round_ps(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512 test_mm512_fnmadd_round_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -677,7 +677,7 @@ __m512 test_mm512_maskz_fnmadd_round_ps(__mmask16 __U, __m512 __A, __m512 __B, _
   // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fnmadd_round_ps(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512 test_mm512_fnmsub_round_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -693,7 +693,7 @@ __m512 test_mm512_maskz_fnmsub_round_ps(__mmask16 __U, __m512 __A, __m512 __B, _
   // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmadd.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fnmsub_round_ps(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512 test_mm512_fmadd_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -717,7 +717,7 @@ __m512 test_mm512_maskz_fmadd_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 _
   // CHECK-LABEL: @test_mm512_maskz_fmadd_ps
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fmadd_ps(__U, __A, __B, __C);
 }
 __m512 test_mm512_fmsub_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -739,7 +739,7 @@ __m512 test_mm512_maskz_fmsub_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 _
   // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fmsub_ps(__U, __A, __B, __C);
 }
 __m512 test_mm512_fnmadd_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -761,7 +761,7 @@ __m512 test_mm512_maskz_fnmadd_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 
   // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fnmadd_ps(__U, __A, __B, __C);
 }
 __m512 test_mm512_fnmsub_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -777,7 +777,7 @@ __m512 test_mm512_maskz_fnmsub_ps(__mmask16 __U, __m512 __A, __m512 __B, __m512 
   // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fnmsub_ps(__U, __A, __B, __C);
 }
 __m512d test_mm512_fmaddsub_round_pd(__m512d __A, __m512d __B, __m512d __C) {
@@ -803,7 +803,7 @@ __m512d test_mm512_maskz_fmaddsub_round_pd(__mmask8 __U, __m512d __A, __m512d __
   // CHECK-LABEL: @test_mm512_maskz_fmaddsub_round_pd
   // CHECK: @llvm.x86.avx512.vfmaddsub.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fmaddsub_round_pd(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512d test_mm512_fmsubadd_round_pd(__m512d __A, __m512d __B, __m512d __C) {
@@ -825,7 +825,7 @@ __m512d test_mm512_maskz_fmsubadd_round_pd(__mmask8 __U, __m512d __A, __m512d __
   // CHECK: fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmaddsub.pd.512
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fmsubadd_round_pd(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512d test_mm512_fmaddsub_pd(__m512d __A, __m512d __B, __m512d __C) {
@@ -863,7 +863,7 @@ __m512d test_mm512_maskz_fmaddsub_pd(__mmask8 __U, __m512d __A, __m512d __B, __m
   // check: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // check: select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fmaddsub_pd(__U, __A, __B, __C);
 }
 __m512d test_mm512_fmsubadd_pd(__m512d __A, __m512d __B, __m512d __C) {
@@ -891,7 +891,7 @@ __m512d test_mm512_maskz_fmsubadd_pd(__mmask8 __U, __m512d __A, __m512d __B, __m
   // CHECK: call <8 x double> @llvm.fma.v8f64(<8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}})
   // CHECK: select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> zeroinitializer
   return _mm512_maskz_fmsubadd_pd(__U, __A, __B, __C);
 }
 __m512 test_mm512_fmaddsub_round_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -917,7 +917,7 @@ __m512 test_mm512_maskz_fmaddsub_round_ps(__mmask16 __U, __m512 __A, __m512 __B,
   // CHECK-LABEL: @test_mm512_maskz_fmaddsub_round_ps
   // CHECK: @llvm.x86.avx512.vfmaddsub.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fmaddsub_round_ps(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512 test_mm512_fmsubadd_round_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -939,7 +939,7 @@ __m512 test_mm512_maskz_fmsubadd_round_ps(__mmask16 __U, __m512 __A, __m512 __B,
   // CHECK: fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
   // CHECK: @llvm.x86.avx512.vfmaddsub.ps.512
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fmsubadd_round_ps(__U, __A, __B, __C, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 __m512 test_mm512_fmaddsub_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -977,7 +977,7 @@ __m512 test_mm512_maskz_fmaddsub_ps(__mmask16 __U, __m512 __A, __m512 __B, __m51
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: select <16 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fmaddsub_ps(__U, __A, __B, __C);
 }
 __m512 test_mm512_fmsubadd_ps(__m512 __A, __m512 __B, __m512 __C) {
@@ -1005,7 +1005,7 @@ __m512 test_mm512_maskz_fmsubadd_ps(__mmask16 __U, __m512 __A, __m512 __B, __m51
   // CHECK: call <16 x float> @llvm.fma.v16f32(<16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}})
   // CHECK: select <16 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> zeroinitializer
   return _mm512_maskz_fmsubadd_ps(__U, __A, __B, __C);
 }
 __m512d test_mm512_mask3_fmsub_round_pd(__m512d __A, __m512d __B, __m512d __C, __mmask8 __U) {

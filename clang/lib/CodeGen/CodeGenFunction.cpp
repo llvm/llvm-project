@@ -2330,9 +2330,19 @@ void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
 
   } else if (TargetDecl->hasAttr<TargetAttr>()) {
     // Get the required features for the callee.
+
+    const TargetAttr *TD = TargetDecl->getAttr<TargetAttr>();
+    TargetAttr::ParsedTargetAttr ParsedAttr = CGM.filterFunctionTargetAttrs(TD);
+
     SmallVector<StringRef, 1> ReqFeatures;
     llvm::StringMap<bool> CalleeFeatureMap;
     CGM.getFunctionFeatureMap(CalleeFeatureMap, TargetDecl);
+
+    for (const auto &F : ParsedAttr.Features) {
+      if (F[0] == '+' && CalleeFeatureMap.lookup(F.substr(1)))
+        ReqFeatures.push_back(StringRef(F).substr(1));
+    }
+
     for (const auto &F : CalleeFeatureMap) {
       // Only positive features are "required".
       if (F.getValue())

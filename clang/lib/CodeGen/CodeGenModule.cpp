@@ -5033,22 +5033,28 @@ void CodeGenModule::AddVTableTypeMetadata(llvm::GlobalVariable *VTable,
   }
 }
 
+TargetAttr::ParsedTargetAttr CodeGenModule::filterFunctionTargetAttrs(const TargetAttr *TD) {
+  assert(TD != nullptr);
+  TargetAttr::ParsedTargetAttr ParsedAttr = TD->parse();
+
+  ParsedAttr.Features.erase(
+      llvm::remove_if(ParsedAttr.Features,
+                      [&](const std::string &Feat) {
+                        return !Target.isValidFeatureName(
+                            StringRef{Feat}.substr(1));
+                      }),
+      ParsedAttr.Features.end());
+  return ParsedAttr;
+}
+
+
 // Fills in the supplied string map with the set of target features for the
 // passed in function.
 void CodeGenModule::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                                           const FunctionDecl *FD) {
   StringRef TargetCPU = Target.getTargetOpts().CPU;
   if (const auto *TD = FD->getAttr<TargetAttr>()) {
-    // If we have a TargetAttr build up the feature map based on that.
-    TargetAttr::ParsedTargetAttr ParsedAttr = TD->parse();
-
-    ParsedAttr.Features.erase(
-        llvm::remove_if(ParsedAttr.Features,
-                        [&](const std::string &Feat) {
-                          return !Target.isValidFeatureName(
-                              StringRef{Feat}.substr(1));
-                        }),
-        ParsedAttr.Features.end());
+    TargetAttr::ParsedTargetAttr ParsedAttr = filterFunctionTargetAttrs(TD);
 
     // Make a copy of the features as passed on the command line into the
     // beginning of the additional features from the function to override.
