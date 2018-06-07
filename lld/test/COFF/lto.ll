@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as -o %T/main.lto.obj %s
 ; RUN: llvm-as -o %T/foo.lto.obj %S/Inputs/lto-dep.ll
 ; RUN: rm -f %T/foo.lto.lib

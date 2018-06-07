@@ -46,10 +46,14 @@ private:
 
 struct MatchesMatcher : public testing::MatcherInterface<StringRef> {
   ExpectedMatch Candidate;
-  MatchesMatcher(ExpectedMatch Candidate) : Candidate(std::move(Candidate)) {}
+  Optional<float> Score;
+  MatchesMatcher(ExpectedMatch Candidate, Optional<float> Score)
+      : Candidate(std::move(Candidate)), Score(Score) {}
 
   void DescribeTo(::std::ostream *OS) const override {
     raw_os_ostream(*OS) << "Matches " << Candidate;
+    if (Score)
+      *OS << " with score " << *Score;
   }
 
   bool MatchAndExplain(StringRef Pattern,
@@ -60,14 +64,15 @@ struct MatchesMatcher : public testing::MatcherInterface<StringRef> {
     FuzzyMatcher Matcher(Pattern);
     auto Result = Matcher.match(Candidate.Word);
     auto AnnotatedMatch = Matcher.dumpLast(*OS << "\n");
-    return Result && Candidate.accepts(AnnotatedMatch);
+    return Result && Candidate.accepts(AnnotatedMatch) &&
+           (!Score || testing::Value(*Result, testing::FloatEq(*Score)));
   }
 };
 
-// Accepts patterns that match a given word.
+// Accepts patterns that match a given word, optionally requiring a score.
 // Dumps the debug tables on match failure.
-testing::Matcher<StringRef> matches(StringRef M) {
-  return testing::MakeMatcher<StringRef>(new MatchesMatcher(M));
+testing::Matcher<StringRef> matches(StringRef M, Optional<float> Score = {}) {
+  return testing::MakeMatcher<StringRef>(new MatchesMatcher(M, Score));
 }
 
 TEST(FuzzyMatch, Matches) {
@@ -239,7 +244,7 @@ TEST(FuzzyMatch, Ranking) {
               ranks("[onMess]age", "[onmess]age", "[on]This[M]ega[Es]cape[s]"));
   EXPECT_THAT("CC", ranks("[C]amel[C]ase", "[c]amel[C]ase"));
   EXPECT_THAT("cC", ranks("[c]amel[C]ase", "[C]amel[C]ase"));
-  EXPECT_THAT("p", ranks("[p]arse", "[p]osix", "[p]afdsa", "[p]ath", "[p]"));
+  EXPECT_THAT("p", ranks("[p]", "[p]arse", "[p]osix", "[p]afdsa", "[p]ath"));
   EXPECT_THAT("pa", ranks("[pa]rse", "[pa]th", "[pa]fdsa"));
   EXPECT_THAT("log", ranks("[log]", "Scroll[Log]icalPosition"));
   EXPECT_THAT("e", ranks("[e]lse", "Abstract[E]lement"));
@@ -260,6 +265,15 @@ TEST(FuzzyMatch, Ranking) {
   EXPECT_THAT("close", ranks("workbench.quickOpen.[close]OnFocusOut",
                              "[c]ss.[l]int.imp[o]rt[S]tat[e]ment",
                              "[c]ss.co[lo]rDecorator[s].[e]nable"));
+}
+
+// Verify some bounds so we know scores fall in the right range.
+// Testing exact scores is fragile, so we prefer Ranking tests.
+TEST(FuzzyMatch, Scoring) {
+  EXPECT_THAT("abs", matches("[a]x[b]y[s]z", 0.f));
+  EXPECT_THAT("abs", matches("[abs]l", 1.f));
+  EXPECT_THAT("abs", matches("[abs]", 2.f));
+  EXPECT_THAT("Abs", matches("[abs]", 2.f));
 }
 
 } // namespace

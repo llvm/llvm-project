@@ -4521,10 +4521,12 @@ void Scop::setSchedule(isl::union_map NewSchedule) {
   auto S = isl::schedule::from_domain(getDomains());
   Schedule = S.insert_partial_schedule(
       isl::multi_union_pw_aff::from_union_map(NewSchedule));
+  ScheduleModified = true;
 }
 
 void Scop::setScheduleTree(isl::schedule NewSchedule) {
   Schedule = NewSchedule;
+  ScheduleModified = true;
 }
 
 bool Scop::restrictDomains(isl::union_set Domain) {

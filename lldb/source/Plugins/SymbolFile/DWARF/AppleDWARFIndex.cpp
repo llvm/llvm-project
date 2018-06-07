@@ -236,5 +236,13 @@ void AppleDWARFIndex::ReportInvalidDIEOffset(dw_offset_t offset,
 }
 
 void AppleDWARFIndex::Dump(Stream &s) {
-  // TODO: Implement dumping.
+  if (m_apple_names_up)
+    s.PutCString(".apple_names index present\n");
+  if (m_apple_namespaces_up)
+    s.PutCString(".apple_namespaces index present\n");
+  if (m_apple_types_up)
+    s.PutCString(".apple_types index present\n");
+  if (m_apple_objc_up)
+    s.PutCString(".apple_objc index present\n");
+  // TODO: Dump index contents
 }

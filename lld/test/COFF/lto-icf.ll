@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; Test that ICF works after LTO, i.e. both functions have the same address.
 ; Previously, when we didn't enable function sections, ICF didn't work.
 

@@ -528,7 +528,7 @@ static void replaceWithDefined(Symbol &Sym, SectionBase *Sec, uint64_t Value,
 template <class ELFT> static void addCopyRelSymbol(SharedSymbol &SS) {
   // Copy relocation against zero-sized symbol doesn't make sense.
   uint64_t SymSize = SS.getSize();
-  if (SymSize == 0)
+  if (SymSize == 0 || SS.Alignment == 0)
     fatal("cannot create a copy relocation for symbol " + toString(SS));
 
   // See if this symbol is in a read-only segment. If so, preserve the symbol's

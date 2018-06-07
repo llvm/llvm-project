@@ -216,19 +216,23 @@ static bool astScheduleDimIsParallel(__isl_keep isl_ast_build *Build,
     return false;
 
   isl_union_map *Schedule = isl_ast_build_get_schedule(Build);
-  isl_union_map *Deps = D->getDependences(
-      Dependences::TYPE_RAW | Dependences::TYPE_WAW | Dependences::TYPE_WAR);
+  isl_union_map *Deps =
+      D->getDependences(Dependences::TYPE_RAW | Dependences::TYPE_WAW |
+                        Dependences::TYPE_WAR)
+          .release();
 
   if (!D->isParallel(Schedule, Deps)) {
     isl_union_map *DepsAll =
         D->getDependences(Dependences::TYPE_RAW | Dependences::TYPE_WAW |
-                          Dependences::TYPE_WAR | Dependences::TYPE_TC_RED);
+                          Dependences::TYPE_WAR | Dependences::TYPE_TC_RED)
+            .release();
     D->isParallel(Schedule, DepsAll, &NodeInfo->MinimalDependenceDistance);
     isl_union_map_free(Schedule);
     return false;
   }
 
-  isl_union_map *RedDeps = D->getDependences(Dependences::TYPE_TC_RED);
+  isl_union_map *RedDeps =
+      D->getDependences(Dependences::TYPE_TC_RED).release();
   if (!D->isParallel(Schedule, RedDeps))
     NodeInfo->IsReductionParallel = true;
 

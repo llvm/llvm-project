@@ -1,0 +1,31 @@
+# Tests the data flow tracer.
+REQUIRES: linux
+
+# Build the tracer and the test.
+RUN: %no_fuzzer_cpp_compiler -c -fno-sanitize=all -fsanitize=dataflow  %S/../../lib/fuzzer/dataflow/DataFlow.cpp -o  %t-DataFlow.o
+RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,func,trace-cmp   %S/OnlySomeBytesTest.cpp     %t-DataFlow.o -o %t-DFT
+RUN: %cpp_compiler %S/OnlySomeBytesTest.cpp -o %t-Fuzz
+
+# Prepare the inputs.
+RUN: rm -rf %t/IN
+RUN: mkdir -p %t/IN
+RUN: echo -n 0123456789012345678901234567890123456789012345678901234567891234 > %t/IN/6
+RUN: cat  %t/IN/6 %t/IN/6 %t/IN/6 %t/IN/6 > %t/IN/8
+RUN: cat  %t/IN/8 %t/IN/8 %t/IN/8 %t/IN/8 > %t/IN/10
+RUN: cat  %t/IN/10 %t/IN/10 %t/IN/10 %t/IN/10 > %t/IN/12
+# %t/IN/12 is 4096 bytes-long.
+
+RUN: %t-Fuzz -focus_function=f0 -runs=0 %t/IN 2>&1 | FileCheck %s --check-prefix=NO_FOCUSED_INPUT
+NO_FOCUSED_INPUT: INFO: 0/2 inputs touch the focus function
+
+RUN: (echo -n ABC; cat %t/IN/12) > %t/IN/ABC
+RUN: %t-Fuzz -focus_function=f0 -runs=0 %t/IN 2>&1 | FileCheck %s --check-prefix=ONE_FOCUSED_INPUT
+ONE_FOCUSED_INPUT: INFO: 1/3 inputs touch the focus function
+
+RUN: rm -rf %t/DFT_DIR
+RUN: %libfuzzer_src/scripts/collect_data_flow.py %t-DFT %t/IN %t/DFT_DIR
+
+# Repat twice to make sure that the inputs with DFT are not removed from the corpus.
+RUN: %t-Fuzz -focus_function=f0 -data_flow_trace=%t/DFT_DIR -runs=100 %t/IN 2>&1 | FileCheck %s --check-prefix=HAVE_DFT
+RUN: %t-Fuzz -focus_function=f0 -data_flow_trace=%t/DFT_DIR -runs=100 %t/IN 2>&1 | FileCheck %s --check-prefix=HAVE_DFT
+HAVE_DFT: INFO: 1/{{.*}} inputs have the Data Flow Trace

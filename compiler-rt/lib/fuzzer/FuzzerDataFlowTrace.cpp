@@ -73,6 +73,7 @@ void DataFlowTrace::Init(const std::string &DirPath,
             ParseError("the trace should contain only 0 or 1");
           V[I] = Beg[I] == '1';
         }
+        Traces[Name] = V;
         // Print just a few small traces.
         if (NumTracesWithFocusFunction <= 3 && Len <= 16)
           Printf("%s => |%s|\n", Name.c_str(), L.c_str() + SpacePos + 1);

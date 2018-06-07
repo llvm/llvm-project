@@ -9,11 +9,15 @@
 #include "FindSymbols.h"
 
 #include "Logger.h"
+#include "FuzzyMatch.h"
 #include "SourceCode.h"
+#include "Quality.h"
 #include "index/Index.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+
+#define DEBUG_TYPE "FindSymbols"
 
 namespace clang {
 namespace clangd {
@@ -79,6 +83,15 @@ SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
   llvm_unreachable("invalid symbol kind");
 }
 
+using ScoredSymbolInfo = std::pair<float, SymbolInformation>;
+struct ScoredSymbolGreater {
+  bool operator()(const ScoredSymbolInfo &L, const ScoredSymbolInfo &R) {
+    if (L.first != R.first)
+      return L.first > R.first;
+    return L.second.name < R.second.name; // Earlier name is better.
+  }
+};
+
 } // namespace
 
 llvm::Expected<std::vector<SymbolInformation>>
@@ -101,7 +114,9 @@ getWorkspaceSymbols(StringRef Query, int Limit,
     Req.Scopes = {Names.first};
   if (Limit)
     Req.MaxCandidateCount = Limit;
-  Index->fuzzyFind(Req, [&Result](const Symbol &Sym) {
+  TopN<ScoredSymbolInfo, ScoredSymbolGreater> Top(Req.MaxCandidateCount);
+  FuzzyMatcher Filter(Req.Query);
+  Index->fuzzyFind(Req, [&Top, &Filter](const Symbol &Sym) {
     // Prefer the definition over e.g. a function declaration in a header
     auto &CD = Sym.Definition ? Sym.Definition : Sym.CanonicalDeclaration;
     auto Uri = URI::parse(CD.FileURI);
@@ -132,8 +147,30 @@ getWorkspaceSymbols(StringRef Query, int Limit,
     std::string Scope = Sym.Scope;
     StringRef ScopeRef = Scope;
     ScopeRef.consume_back("::");
-    Result.push_back({Sym.Name, SK, L, ScopeRef});
+    SymbolInformation Info = {Sym.Name, SK, L, ScopeRef};
+
+    SymbolQualitySignals Quality;
+    Quality.merge(Sym);
+    SymbolRelevanceSignals Relevance;
+    Relevance.Query = SymbolRelevanceSignals::Generic;
+    if (auto NameMatch = Filter.match(Sym.Name))
+      Relevance.NameMatch = *NameMatch;
+    else {
+      log(llvm::formatv("Workspace symbol: {0} didn't match query {1}",
+                        Sym.Name, Filter.pattern()));
+      return;
+    }
+    Relevance.merge(Sym);
+    auto Score =
+        evaluateSymbolAndRelevance(Quality.evaluate(), Relevance.evaluate());
+    LLVM_DEBUG(llvm::dbgs() << "FindSymbols: " << Sym.Scope << Sym.Name << " = "
+                            << Score << "\n"
+                            << Quality << Relevance << "\n");
+
+    Top.push({Score, std::move(Info)});
   });
+  for (auto &R : std::move(Top).items())
+    Result.push_back(std::move(R.second));
   return Result;
 }
 

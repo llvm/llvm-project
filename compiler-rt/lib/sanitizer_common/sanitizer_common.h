@@ -639,18 +639,22 @@ enum ModuleArch {
 
 // Opens the file 'file_name" and reads up to 'max_len' bytes.
 // The resulting buffer is mmaped and stored in '*buff'.
+// Returns true if file was successfully opened and read.
+bool ReadFileToVector(const char *file_name,
+                      InternalMmapVectorNoCtor<char> *buff,
+                      uptr max_len = 1 << 26, error_t *errno_p = nullptr);
+
+// Opens the file 'file_name" and reads up to 'max_len' bytes.
+// This function is less I/O efficient than ReadFileToVector as it may reread
+// file multiple times to avoid mmap during read attempts. It's used to read
+// procmap, so short reads with mmap in between can produce inconsistent result.
+// The resulting buffer is mmaped and stored in '*buff'.
 // The size of the mmaped region is stored in '*buff_size'.
 // The total number of read bytes is stored in '*read_len'.
 // Returns true if file was successfully opened and read.
 bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
                       uptr *read_len, uptr max_len = 1 << 26,
                       error_t *errno_p = nullptr);
-// Opens the file 'file_name" and reads up to 'max_len' bytes.
-// The resulting buffer is mmaped and stored in '*buff'.
-// Returns true if file was successfully opened and read.
-bool ReadFileToBuffer(const char *file_name,
-                      InternalMmapVectorNoCtor<char> *buff,
-                      uptr max_len = 1 << 26, error_t *errno_p = nullptr);
 
 // When adding a new architecture, don't forget to also update
 // script/asan_symbolize.py and sanitizer_symbolizer_libcdep.cc.
