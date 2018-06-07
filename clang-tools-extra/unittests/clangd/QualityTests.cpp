@@ -39,7 +39,6 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
   SymbolQualitySignals Quality;
   Quality.merge(findSymbol(Symbols, "x"));
   EXPECT_FALSE(Quality.Deprecated);
-  EXPECT_EQ(Quality.SemaCCPriority, SymbolQualitySignals().SemaCCPriority);
   EXPECT_EQ(Quality.References, SymbolQualitySignals().References);
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Variable);
 
@@ -48,14 +47,12 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
   Quality = {};
   Quality.merge(F);
   EXPECT_FALSE(Quality.Deprecated); // FIXME: Include deprecated bit in index.
-  EXPECT_EQ(Quality.SemaCCPriority, SymbolQualitySignals().SemaCCPriority);
   EXPECT_EQ(Quality.References, 24u);
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Function);
 
   Quality = {};
   Quality.merge(CodeCompletionResult(&findDecl(AST, "f"), /*Priority=*/42));
   EXPECT_TRUE(Quality.Deprecated);
-  EXPECT_EQ(Quality.SemaCCPriority, 42u);
   EXPECT_EQ(Quality.References, SymbolQualitySignals().References);
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Function);
 }
@@ -120,12 +117,6 @@ TEST(QualityTests, SymbolQualitySignalsSanity) {
   ManyReferences.References = 1000;
   EXPECT_GT(WithReferences.evaluate(), Default.evaluate());
   EXPECT_GT(ManyReferences.evaluate(), WithReferences.evaluate());
-
-  SymbolQualitySignals LowPriority, HighPriority;
-  LowPriority.SemaCCPriority = 60;
-  HighPriority.SemaCCPriority = 20;
-  EXPECT_GT(HighPriority.evaluate(), Default.evaluate());
-  EXPECT_LT(LowPriority.evaluate(), Default.evaluate());
 
   SymbolQualitySignals Variable, Macro;
   Variable.Category = SymbolQualitySignals::Variable;

@@ -44,9 +44,6 @@ struct Symbol;
 
 /// Attributes of a symbol that affect how much we like it.
 struct SymbolQualitySignals {
-  unsigned SemaCCPriority = 0; // 1-80, 1 is best. 0 means absent.
-                               // FIXME: this is actually a mix of symbol
-                               //        quality and relevance. Untangle this.
   bool Deprecated = false;
   unsigned References = 0;
 

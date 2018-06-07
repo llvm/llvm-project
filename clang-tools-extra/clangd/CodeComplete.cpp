@@ -467,6 +467,25 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   llvm_unreachable("unknown code completion context");
 }
 
+// Some member calls are blacklisted because they're so rarely useful.
+static bool isBlacklistedMember(const NamedDecl &D) {
+  // Destructor completion is rarely useful, and works inconsistently.
+  // (s.^ completes ~string, but s.~st^ is an error).
+  if (D.getKind() == Decl::CXXDestructor)
+    return true;
+  // Injected name may be useful for A::foo(), but who writes A::A::foo()?
+  if (auto *R = dyn_cast_or_null<RecordDecl>(&D))
+    if (R->isInjectedClassName())
+      return true;
+  // Explicit calls to operators are also rare.
+  auto NameKind = D.getDeclName().getNameKind();
+  if (NameKind == DeclarationName::CXXOperatorName ||
+      NameKind == DeclarationName::CXXLiteralOperatorName ||
+      NameKind == DeclarationName::CXXConversionFunctionName)
+    return true;
+  return false;
+}
+
 // The CompletionRecorder captures Sema code-complete output, including context.
 // It filters out ignored results (but doesn't apply fuzzy-filtering yet).
 // It doesn't do scoring or conversion to CompletionItem yet, as we want to
@@ -520,9 +539,9 @@ struct CompletionRecorder : public CodeCompleteConsumer {
           (Result.Availability == CXAvailability_NotAvailable ||
            Result.Availability == CXAvailability_NotAccessible))
         continue;
-      // Destructor completion is rarely useful, and works inconsistently.
-      // (s.^ completes ~string, but s.~st^ is an error).
-      if (dyn_cast_or_null<CXXDestructorDecl>(Result.Declaration))
+      if (Result.Declaration &&
+          !Context.getBaseType().isNull() // is this a member-access context?
+          && isBlacklistedMember(*Result.Declaration))
         continue;
       // We choose to never append '::' to completion results in clangd.
       Result.StartsNestedNameSpecifier = false;
