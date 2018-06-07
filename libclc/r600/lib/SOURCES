@@ -1,3 +1,5 @@
+math/fmax.cl
+math/fmin.cl
 synchronization/barrier_impl.ll
 workitem/get_global_offset.cl
 workitem/get_group_id.cl

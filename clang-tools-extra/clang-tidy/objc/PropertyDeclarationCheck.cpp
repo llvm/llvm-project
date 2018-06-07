@@ -34,7 +34,7 @@ enum NamingStyle {
   CategoryProperty = 2,
 };
 
-/// The acronyms are from
+/// The acronyms are aggregated from multiple sources including
 /// https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/CodingGuidelines/Articles/APIAbbreviations.html#//apple_ref/doc/uid/20001285-BCIHCGAE
 ///
 /// Keep this list sorted.
