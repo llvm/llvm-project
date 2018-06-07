@@ -471,8 +471,6 @@ ObjCRuntime ToolChain::getDefaultObjCRuntime(bool isNonFragile) const {
 
 llvm::ExceptionHandling
 ToolChain::GetExceptionModel(const llvm::opt::ArgList &Args) const {
-  if (Triple.isOSWindows() && Triple.getArch() != llvm::Triple::x86)
-    return llvm::ExceptionHandling::WinEH;
   return llvm::ExceptionHandling::None;
 }
 

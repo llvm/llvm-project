@@ -98,7 +98,8 @@ void SectionChunk::applyRelX64(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_AMD64_SECTION:  applySecIdx(Off, OS); break;
   case IMAGE_REL_AMD64_SECREL:   applySecRel(this, Off, OS, S); break;
   default:
-    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));
+    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
+          toString(File));
   }
 }
 
@@ -112,7 +113,8 @@ void SectionChunk::applyRelX86(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_I386_SECTION:  applySecIdx(Off, OS); break;
   case IMAGE_REL_I386_SECREL:   applySecRel(this, Off, OS, S); break;
   default:
-    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));
+    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
+          toString(File));
   }
 }
 
@@ -174,7 +176,8 @@ void SectionChunk::applyRelARM(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_ARM_SECTION:   applySecIdx(Off, OS); break;
   case IMAGE_REL_ARM_SECREL:    applySecRel(this, Off, OS, S); break;
   default:
-    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));
+    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
+          toString(File));
   }
 }
 
@@ -284,7 +287,8 @@ void SectionChunk::applyRelARM64(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_ARM64_SECREL_LOW12L:  applySecRelLdr(this, Off, OS, S); break;
   case IMAGE_REL_ARM64_SECTION:        applySecIdx(Off, OS); break;
   default:
-    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));
+    fatal("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
+          toString(File));
   }
 }
 

@@ -208,7 +208,7 @@ static void createEmptyIndex(StringRef ModulePath) {
   if (!OS)
     return;
 
-  ModuleSummaryIndex M(false);
+  ModuleSummaryIndex M(/*HaveGVs*/ false);
   M.setSkipModuleByDistributedBackend();
   WriteIndexToFile(M, *OS);
 
