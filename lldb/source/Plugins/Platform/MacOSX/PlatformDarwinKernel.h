@@ -127,6 +127,9 @@ protected:
                                       const lldb_private::FileSpec &file_spec,
                                       bool recurse);
 
+  static std::vector<lldb_private::FileSpec>
+  SearchForExecutablesRecursively(const lldb_private::ConstString &dir);
+
   static void AddKextToMap(PlatformDarwinKernel *thisp,
                            const lldb_private::FileSpec &file_spec);
 
