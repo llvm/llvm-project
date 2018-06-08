@@ -75,8 +75,12 @@ private:
     auto ConstStr = CGM.GetAddrOfConstantCString(Str, Name.c_str());
     llvm::GlobalVariable *GV =
         cast<llvm::GlobalVariable>(ConstStr.getPointer());
-    if (!SectionName.empty())
+    if (!SectionName.empty()) {
       GV->setSection(SectionName);
+      // Mark the address as used which make sure that this section isn't
+      // merged and we will really have it in the object file.
+      GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
+    }
     if (Alignment)
       GV->setAlignment(Alignment);
 

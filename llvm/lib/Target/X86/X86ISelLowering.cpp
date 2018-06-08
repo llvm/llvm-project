@@ -9404,15 +9404,6 @@ static bool matchVectorShuffleWithPACK(MVT VT, MVT &SrcVT, SDValue &V1,
   auto MatchPACK = [&](SDValue N1, SDValue N2) {
     SDValue VV1 = DAG.getBitcast(PackVT, N1);
     SDValue VV2 = DAG.getBitcast(PackVT, N2);
-    if ((N1.isUndef() || DAG.ComputeNumSignBits(VV1) > BitSize) &&
-        (N2.isUndef() || DAG.ComputeNumSignBits(VV2) > BitSize)) {
-      V1 = VV1;
-      V2 = VV2;
-      SrcVT = PackVT;
-      PackOpcode = X86ISD::PACKSS;
-      return true;
-    }
-
     if (Subtarget.hasSSE41() || PackSVT == MVT::i16) {
       APInt ZeroMask = APInt::getHighBitsSet(BitSize * 2, BitSize);
       if ((N1.isUndef() || DAG.MaskedValueIsZero(VV1, ZeroMask)) &&
@@ -9424,7 +9415,14 @@ static bool matchVectorShuffleWithPACK(MVT VT, MVT &SrcVT, SDValue &V1,
         return true;
       }
     }
-
+    if ((N1.isUndef() || DAG.ComputeNumSignBits(VV1) > BitSize) &&
+        (N2.isUndef() || DAG.ComputeNumSignBits(VV2) > BitSize)) {
+      V1 = VV1;
+      V2 = VV2;
+      SrcVT = PackVT;
+      PackOpcode = X86ISD::PACKSS;
+      return true;
+    }
     return false;
   };
 
@@ -16897,8 +16895,8 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   if (SrcVT.is128BitVector()) {
     InVT = EVT::getVectorVT(Ctx, InVT, 128 / InVT.getSizeInBits());
     OutVT = EVT::getVectorVT(Ctx, OutVT, 128 / OutVT.getSizeInBits());
-    SDValue Res = DAG.getNode(Opcode, DL, OutVT,
-                              DAG.getBitcast(InVT, In), DAG.getUNDEF(InVT));
+    In = DAG.getBitcast(InVT, In);
+    SDValue Res = DAG.getNode(Opcode, DL, OutVT, In, In);
     Res = extractSubVector(Res, 0, DAG, DL, 64);
     return DAG.getBitcast(DstVT, Res);
   }
@@ -17057,23 +17055,24 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  // Truncate with PACKSS if we are truncating a vector with sign-bits that
-  // extend all the way to the packed/truncated value.
-  unsigned NumPackedBits = std::min<unsigned>(VT.getScalarSizeInBits(), 16);
-  if ((InNumEltBits - NumPackedBits) < DAG.ComputeNumSignBits(In))
-    if (SDValue V =
-            truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget))
-      return V;
+  unsigned NumPackedSignBits = std::min<unsigned>(VT.getScalarSizeInBits(), 16);
+  unsigned NumPackedZeroBits = Subtarget.hasSSE41() ? NumPackedSignBits : 8;
 
   // Truncate with PACKUS if we are truncating a vector with leading zero bits
   // that extend all the way to the packed/truncated value.
   // Pre-SSE41 we can only use PACKUSWB.
   KnownBits Known;
   DAG.computeKnownBits(In, Known);
-  NumPackedBits = Subtarget.hasSSE41() ? NumPackedBits : 8;
-  if ((InNumEltBits - NumPackedBits) <= Known.countMinLeadingZeros())
+  if ((InNumEltBits - NumPackedZeroBits) <= Known.countMinLeadingZeros())
     if (SDValue V =
             truncateVectorWithPACK(X86ISD::PACKUS, VT, In, DL, DAG, Subtarget))
+      return V;
+
+  // Truncate with PACKSS if we are truncating a vector with sign-bits that
+  // extend all the way to the packed/truncated value.
+  if ((InNumEltBits - NumPackedSignBits) < DAG.ComputeNumSignBits(In))
+    if (SDValue V =
+            truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget))
       return V;
 
   if ((VT == MVT::v4i32) && (InVT == MVT::v4i64)) {
@@ -35282,9 +35281,6 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
   if (VT.isVector() && isPowerOf2_32(VT.getVectorNumElements()) &&
       (SVT == MVT::i8 || SVT == MVT::i16) &&
       (InSVT == MVT::i16 || InSVT == MVT::i32)) {
-    if (auto SSatVal = detectSSatPattern(In, VT))
-      return truncateVectorWithPACK(X86ISD::PACKSS, VT, SSatVal, DL, DAG,
-                                    Subtarget);
     if (auto USatVal = detectSSatPattern(In, VT, true)) {
       // vXi32 -> vXi8 must be performed as PACKUSWB(PACKSSDW,PACKSSDW).
       if (SVT == MVT::i8 && InSVT == MVT::i32) {
@@ -35299,6 +35295,9 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
         return truncateVectorWithPACK(X86ISD::PACKUS, VT, USatVal, DL, DAG,
                                       Subtarget);
     }
+    if (auto SSatVal = detectSSatPattern(In, VT))
+      return truncateVectorWithPACK(X86ISD::PACKSS, VT, SSatVal, DL, DAG,
+                                    Subtarget);
   }
   return SDValue();
 }
@@ -36530,21 +36529,22 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
   if (InSVT != MVT::i16 && InSVT != MVT::i32 && InSVT != MVT::i64)
     return SDValue();
 
-  // Use PACKSS if the input has sign-bits that extend all the way to the
-  // packed/truncated value. e.g. Comparison result, sext_in_reg, etc.
-  unsigned NumSignBits = DAG.ComputeNumSignBits(In);
-  unsigned NumPackedBits = std::min<unsigned>(SVT.getSizeInBits(), 16);
-  if (NumSignBits > (InSVT.getSizeInBits() - NumPackedBits))
-    return truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget);
+  unsigned NumPackedSignBits = std::min<unsigned>(SVT.getSizeInBits(), 16);
+  unsigned NumPackedZeroBits = Subtarget.hasSSE41() ? NumPackedSignBits : 8;
 
   // Use PACKUS if the input has zero-bits that extend all the way to the
   // packed/truncated value. e.g. masks, zext_in_reg, etc.
   KnownBits Known;
   DAG.computeKnownBits(In, Known);
   unsigned NumLeadingZeroBits = Known.countMinLeadingZeros();
-  NumPackedBits = Subtarget.hasSSE41() ? NumPackedBits : 8;
-  if (NumLeadingZeroBits >= (InSVT.getSizeInBits() - NumPackedBits))
+  if (NumLeadingZeroBits >= (InSVT.getSizeInBits() - NumPackedZeroBits))
     return truncateVectorWithPACK(X86ISD::PACKUS, VT, In, DL, DAG, Subtarget);
+
+  // Use PACKSS if the input has sign-bits that extend all the way to the
+  // packed/truncated value. e.g. Comparison result, sext_in_reg, etc.
+  unsigned NumSignBits = DAG.ComputeNumSignBits(In);
+  if (NumSignBits > (InSVT.getSizeInBits() - NumPackedSignBits))
+    return truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget);
 
   return SDValue();
 }

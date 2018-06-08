@@ -36,10 +36,13 @@ void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
   auto ZeroLiteral = integerLiteral(equals(0));
   auto StringClassMatcher = cxxRecordDecl(hasAnyName(SmallVector<StringRef, 4>(
       StringLikeClasses.begin(), StringLikeClasses.end())));
+  auto StringType = hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(StringClassMatcher)));
 
   auto StringFind = cxxMemberCallExpr(
       // .find()-call on a string...
-      callee(cxxMethodDecl(hasName("find"), ofClass(StringClassMatcher))),
+      callee(cxxMethodDecl(hasName("find"))),
+      on(hasType(StringType)),
       // ... with some search expression ...
       hasArgument(0, expr().bind("needle")),
       // ... and either "0" as second argument or the default argument (also 0).

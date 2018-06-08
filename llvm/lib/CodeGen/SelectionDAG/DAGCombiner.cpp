@@ -3997,7 +3997,23 @@ bool DAGCombiner::SearchForAndLoads(SDNode *N,
     // Allow one node which will masked along with any loads found.
     if (NodeToMask)
       return false;
+ 
+    // Also ensure that the node to be masked only produces one data result. 
     NodeToMask = Op.getNode();
+    if (NodeToMask->getNumValues() > 1) {
+      bool HasValue = false;
+      for (unsigned i = 0, e = NodeToMask->getNumValues(); i < e; ++i) {
+        MVT VT = SDValue(NodeToMask, i).getSimpleValueType();
+        if (VT != MVT::Glue && VT != MVT::Other) {
+          if (HasValue) {
+            NodeToMask = nullptr;
+            return false;
+          }
+          HasValue = true;
+        }
+      }
+      assert(HasValue && "Node to be masked has no data result?");
+    }
   }
   return true;
 }

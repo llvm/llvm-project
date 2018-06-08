@@ -8849,24 +8849,7 @@ _mm_maskz_load_sd (__mmask8 __U, const double* __A)
 }
 
 #define _mm512_shuffle_epi32(A, I) \
-  (__m512i)__builtin_shufflevector((__v16si)(__m512i)(A), \
-                                   (__v16si)_mm512_undefined_epi32(), \
-                                   0  + (((I) >> 0) & 0x3), \
-                                   0  + (((I) >> 2) & 0x3), \
-                                   0  + (((I) >> 4) & 0x3), \
-                                   0  + (((I) >> 6) & 0x3), \
-                                   4  + (((I) >> 0) & 0x3), \
-                                   4  + (((I) >> 2) & 0x3), \
-                                   4  + (((I) >> 4) & 0x3), \
-                                   4  + (((I) >> 6) & 0x3), \
-                                   8  + (((I) >> 0) & 0x3), \
-                                   8  + (((I) >> 2) & 0x3), \
-                                   8  + (((I) >> 4) & 0x3), \
-                                   8  + (((I) >> 6) & 0x3), \
-                                   12 + (((I) >> 0) & 0x3), \
-                                   12 + (((I) >> 2) & 0x3), \
-                                   12 + (((I) >> 4) & 0x3), \
-                                   12 + (((I) >> 6) & 0x3))
+  (__m512i)__builtin_ia32_pshufd512((__v16si)(__m512i)(A), (int)(I))
 
 #define _mm512_mask_shuffle_epi32(W, U, A, I) \
   (__m512i)__builtin_ia32_selectd_512((__mmask16)(U), \

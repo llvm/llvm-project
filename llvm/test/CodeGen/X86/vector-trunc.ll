@@ -974,10 +974,10 @@ define void @trunc16i32_16i8_lshr(<16 x i32> %a) {
 ; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    psrld $24, %xmm1
 ; SSE41-NEXT:    psrld $24, %xmm0
-; SSE41-NEXT:    packssdw %xmm1, %xmm0
+; SSE41-NEXT:    packusdw %xmm1, %xmm0
 ; SSE41-NEXT:    psrld $24, %xmm3
 ; SSE41-NEXT:    psrld $24, %xmm2
-; SSE41-NEXT:    packssdw %xmm3, %xmm2
+; SSE41-NEXT:    packusdw %xmm3, %xmm2
 ; SSE41-NEXT:    packuswb %xmm2, %xmm0
 ; SSE41-NEXT:    movdqu %xmm0, (%rax)
 ; SSE41-NEXT:    retq
@@ -987,11 +987,11 @@ define void @trunc16i32_16i8_lshr(<16 x i32> %a) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vpsrld $24, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrld $24, %xmm0, %xmm0
-; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vpsrld $24, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrld $24, %xmm1, %xmm1
-; AVX1-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX1-NEXT:    vzeroupper
