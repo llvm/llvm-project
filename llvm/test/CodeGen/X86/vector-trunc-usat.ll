@@ -1114,7 +1114,7 @@ define <8 x i8> @trunc_usat_v8i64_v8i8(<8 x i64> %a0) {
 ; SSE41-NEXT:    por %xmm7, %xmm0
 ; SSE41-NEXT:    movapd %xmm5, %xmm1
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm1
-; SSE41-NEXT:    packssdw %xmm4, %xmm1
+; SSE41-NEXT:    packusdw %xmm4, %xmm1
 ; SSE41-NEXT:    movdqa %xmm3, %xmm0
 ; SSE41-NEXT:    pxor %xmm6, %xmm0
 ; SSE41-NEXT:    movdqa %xmm9, %xmm4
@@ -1137,7 +1137,7 @@ define <8 x i8> @trunc_usat_v8i64_v8i8(<8 x i64> %a0) {
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    por %xmm6, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm5
-; SSE41-NEXT:    packssdw %xmm4, %xmm5
+; SSE41-NEXT:    packusdw %xmm4, %xmm5
 ; SSE41-NEXT:    packusdw %xmm5, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
@@ -1162,9 +1162,9 @@ define <8 x i8> @trunc_usat_v8i64_v8i8(<8 x i64> %a0) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; AVX1-NEXT:    vblendvpd %ymm3, %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1388,11 +1388,11 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64> %a0, <8 x i8> *%p1) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm2
 ; SSE41-NEXT:    andpd %xmm8, %xmm2
 ; SSE41-NEXT:    andpd %xmm8, %xmm1
-; SSE41-NEXT:    packuswb %xmm2, %xmm1
+; SSE41-NEXT:    packusdw %xmm2, %xmm1
 ; SSE41-NEXT:    andpd %xmm8, %xmm4
 ; SSE41-NEXT:    andpd %xmm8, %xmm6
-; SSE41-NEXT:    packuswb %xmm4, %xmm6
-; SSE41-NEXT:    packuswb %xmm1, %xmm6
+; SSE41-NEXT:    packusdw %xmm4, %xmm6
+; SSE41-NEXT:    packusdw %xmm1, %xmm6
 ; SSE41-NEXT:    packuswb %xmm6, %xmm6
 ; SSE41-NEXT:    movq %xmm6, (%rdi)
 ; SSE41-NEXT:    retq
@@ -1420,12 +1420,12 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64> %a0, <8 x i8> *%p1) {
 ; AVX1-NEXT:    vmovapd {{.*#+}} xmm3 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vandpd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vandpd %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vandpd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vandpd %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX1-NEXT:    vzeroupper
@@ -1443,11 +1443,11 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64> %a0, <8 x i8> *%p1) {
 ; AVX2-NEXT:    vpcmpgtq %ymm3, %ymm5, %ymm3
 ; AVX2-NEXT:    vblendvpd %ymm3, %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vpackusdw %xmm3, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
@@ -1732,7 +1732,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE41-NEXT:    por %xmm14, %xmm0
 ; SSE41-NEXT:    movapd %xmm9, %xmm13
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm13
-; SSE41-NEXT:    packssdw %xmm12, %xmm13
+; SSE41-NEXT:    packusdw %xmm12, %xmm13
 ; SSE41-NEXT:    movdqa %xmm3, %xmm0
 ; SSE41-NEXT:    pxor %xmm10, %xmm0
 ; SSE41-NEXT:    movdqa %xmm11, %xmm1
@@ -1757,7 +1757,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    movapd %xmm9, %xmm1
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
-; SSE41-NEXT:    packssdw %xmm12, %xmm1
+; SSE41-NEXT:    packusdw %xmm12, %xmm1
 ; SSE41-NEXT:    packusdw %xmm1, %xmm13
 ; SSE41-NEXT:    movdqa %xmm5, %xmm0
 ; SSE41-NEXT:    pxor %xmm10, %xmm0
@@ -1783,7 +1783,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE41-NEXT:    por %xmm5, %xmm0
 ; SSE41-NEXT:    movapd %xmm9, %xmm2
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
-; SSE41-NEXT:    packssdw %xmm1, %xmm2
+; SSE41-NEXT:    packusdw %xmm1, %xmm2
 ; SSE41-NEXT:    movdqa %xmm7, %xmm0
 ; SSE41-NEXT:    pxor %xmm10, %xmm0
 ; SSE41-NEXT:    movdqa %xmm11, %xmm1
@@ -1806,7 +1806,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    por %xmm4, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm6, %xmm9
-; SSE41-NEXT:    packssdw %xmm1, %xmm9
+; SSE41-NEXT:    packusdw %xmm1, %xmm9
 ; SSE41-NEXT:    packusdw %xmm9, %xmm2
 ; SSE41-NEXT:    packuswb %xmm2, %xmm13
 ; SSE41-NEXT:    movdqa %xmm13, %xmm0
@@ -1846,14 +1846,14 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm5, %ymm4
 ; AVX1-NEXT:    vblendvpd %ymm4, %ymm3, %ymm8, %ymm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; AVX1-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpackusdw %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vpackssdw %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpackusdw %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpackusdw %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpackusdw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vzeroupper

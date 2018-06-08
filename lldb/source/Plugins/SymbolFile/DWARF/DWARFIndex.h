@@ -11,6 +11,7 @@
 #define LLDB_DWARFINDEX_H
 
 #include "Plugins/SymbolFile/DWARF/DIERef.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/DWARFFormValue.h"
 
 class DWARFDebugInfo;
@@ -53,6 +54,15 @@ public:
 
 protected:
   Module &m_module;
+
+  /// Helper function implementing common logic for processing function dies. If
+  /// the function given by "ref" matches search criteria given by
+  /// "parent_decl_ctx" and "name_type_mask", it is inserted into the "dies"
+  /// vector.
+  void ProcessFunctionDIE(llvm::StringRef name, DIERef ref,
+                          DWARFDebugInfo &info,
+                          const CompilerDeclContext &parent_decl_ctx,
+                          uint32_t name_type_mask, std::vector<DWARFDIE> &dies);
 };
 } // namespace lldb_private
 

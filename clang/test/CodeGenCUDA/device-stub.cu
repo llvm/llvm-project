@@ -65,7 +65,7 @@ void use_pointers() {
 // ALL: private unnamed_addr constant{{.*}}kernelfunc{{.*}}\00"
 // * constant unnamed string with GPU binary
 // HIP: @[[FATBIN:__hip_fatbin]] = external constant i8, section ".hip_fatbin"
-// CUDA: @[[FATBIN:.*]] = private unnamed_addr constant{{.*GPU binary would be here.*}}\00",
+// CUDA: @[[FATBIN:.*]] = private constant{{.*GPU binary would be here.*}}\00",
 // CUDANORDC-SAME: section ".nv_fatbin", align 8
 // CUDARDC-SAME: section "__nv_relfatbin", align 8
 // * constant struct that wraps GPU binary
@@ -81,7 +81,7 @@ void use_pointers() {
 // * variable to save GPU binary handle after initialization
 // NORDC: @__[[PREFIX]]_gpubin_handle = internal global i8** null
 // * constant unnamed string with NVModuleID
-// RDC: [[MODULE_ID_GLOBAL:@.*]] = private unnamed_addr constant
+// RDC: [[MODULE_ID_GLOBAL:@.*]] = private constant
 // CUDARDC-SAME: c"[[MODULE_ID:.+]]\00", section "__nv_module_id", align 32
 // HIPRDC-SAME: c"[[MODULE_ID:.+]]\00", section "__hip_module_id", align 32
 // * Make sure our constructor was added to global ctor list.
@@ -141,7 +141,7 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // There should be no __[[PREFIX]]_register_globals if we have no
 // device-side globals, but we still need to register GPU binary.
 // Skip GPU binary string first.
-// CUDANOGLOBALS: @{{.*}} = private unnamed_addr constant{{.*}}
+// CUDANOGLOBALS: @{{.*}} = private constant{{.*}}
 // HIPNOGLOBALS: @{{.*}} = external constant{{.*}}
 // NOGLOBALS-NOT: define internal void @__{{.*}}_register_globals
 // NOGLOBALS: define internal void @__[[PREFIX:cuda|hip]]_module_ctor

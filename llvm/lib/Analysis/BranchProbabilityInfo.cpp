@@ -203,12 +203,10 @@ BranchProbabilityInfo::updatePostDominatedByColdCall(const BasicBlock *BB) {
 /// unreachable-terminated block as extremely unlikely.
 bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
   const TerminatorInst *TI = BB->getTerminator();
+  (void) TI;
   assert(TI->getNumSuccessors() > 1 && "expected more than one successor!");
-
-  // Return false here so that edge weights for InvokeInst could be decided
-  // in calcInvokeHeuristics().
-  if (isa<InvokeInst>(TI))
-    return false;
+  assert(!isa<InvokeInst>(TI) &&
+         "Invokes should have already been handled by calcInvokeHeuristics");
 
   SmallVector<unsigned, 4> UnreachableEdges;
   SmallVector<unsigned, 4> ReachableEdges;
@@ -351,12 +349,10 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
 /// Return false, otherwise.
 bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
   const TerminatorInst *TI = BB->getTerminator();
+  (void) TI;
   assert(TI->getNumSuccessors() > 1 && "expected more than one successor!");
-
-  // Return false here so that edge weights for InvokeInst could be decided
-  // in calcInvokeHeuristics().
-  if (isa<InvokeInst>(TI))
-    return false;
+  assert(!isa<InvokeInst>(TI) &&
+         "Invokes should have already been handled by calcInvokeHeuristics");
 
   // Determine which successors are post-dominated by a cold block.
   SmallVector<unsigned, 4> ColdEdges;
@@ -975,6 +971,8 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
       continue;
     if (calcMetadataWeights(BB))
       continue;
+    if (calcInvokeHeuristics(BB))
+      continue;
     if (calcUnreachableHeuristics(BB))
       continue;
     if (calcColdCallHeuristics(BB))
@@ -987,7 +985,6 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
       continue;
     if (calcFloatingPointHeuristics(BB))
       continue;
-    calcInvokeHeuristics(BB);
   }
 
   PostDominatedByUnreachable.clear();

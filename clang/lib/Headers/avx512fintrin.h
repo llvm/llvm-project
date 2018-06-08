@@ -8339,16 +8339,7 @@ _mm_mask3_fnmsub_sd (__m128d __W, __m128d __X, __m128d __Y, __mmask8 __U)
                                           (__mmask8)(U), (int)(R))
 
 #define _mm512_permutex_pd(X, C) \
-  (__m512d)__builtin_shufflevector((__v8df)(__m512d)(X), \
-                                   (__v8df)_mm512_undefined_pd(), \
-                                   0 + (((C) >> 0) & 0x3), \
-                                   0 + (((C) >> 2) & 0x3), \
-                                   0 + (((C) >> 4) & 0x3), \
-                                   0 + (((C) >> 6) & 0x3), \
-                                   4 + (((C) >> 0) & 0x3), \
-                                   4 + (((C) >> 2) & 0x3), \
-                                   4 + (((C) >> 4) & 0x3), \
-                                   4 + (((C) >> 6) & 0x3))
+  (__m512d)__builtin_ia32_permdf512((__v8df)(__m512d)(X), (int)(C))
 
 #define _mm512_mask_permutex_pd(W, U, X, C) \
   (__m512d)__builtin_ia32_selectpd_512((__mmask8)(U), \
@@ -8361,16 +8352,7 @@ _mm_mask3_fnmsub_sd (__m128d __W, __m128d __X, __m128d __Y, __mmask8 __U)
                                        (__v8df)_mm512_setzero_pd())
 
 #define _mm512_permutex_epi64(X, C) \
-  (__m512i)__builtin_shufflevector((__v8di)(__m512i)(X), \
-                                   (__v8di)_mm512_undefined_epi32(), \
-                                   0 + (((C) >> 0) & 0x3), \
-                                   0 + (((C) >> 2) & 0x3), \
-                                   0 + (((C) >> 4) & 0x3), \
-                                   0 + (((C) >> 6) & 0x3), \
-                                   4 + (((C) >> 0) & 0x3), \
-                                   4 + (((C) >> 2) & 0x3), \
-                                   4 + (((C) >> 4) & 0x3), \
-                                   4 + (((C) >> 6) & 0x3))
+  (__m512i)__builtin_ia32_permdi512((__v8di)(__m512i)(X), (int)(C))
 
 #define _mm512_mask_permutex_epi64(W, U, X, C) \
   (__m512i)__builtin_ia32_selectq_512((__mmask8)(U), \
@@ -8849,24 +8831,7 @@ _mm_maskz_load_sd (__mmask8 __U, const double* __A)
 }
 
 #define _mm512_shuffle_epi32(A, I) \
-  (__m512i)__builtin_shufflevector((__v16si)(__m512i)(A), \
-                                   (__v16si)_mm512_undefined_epi32(), \
-                                   0  + (((I) >> 0) & 0x3), \
-                                   0  + (((I) >> 2) & 0x3), \
-                                   0  + (((I) >> 4) & 0x3), \
-                                   0  + (((I) >> 6) & 0x3), \
-                                   4  + (((I) >> 0) & 0x3), \
-                                   4  + (((I) >> 2) & 0x3), \
-                                   4  + (((I) >> 4) & 0x3), \
-                                   4  + (((I) >> 6) & 0x3), \
-                                   8  + (((I) >> 0) & 0x3), \
-                                   8  + (((I) >> 2) & 0x3), \
-                                   8  + (((I) >> 4) & 0x3), \
-                                   8  + (((I) >> 6) & 0x3), \
-                                   12 + (((I) >> 0) & 0x3), \
-                                   12 + (((I) >> 2) & 0x3), \
-                                   12 + (((I) >> 4) & 0x3), \
-                                   12 + (((I) >> 6) & 0x3))
+  (__m512i)__builtin_ia32_pshufd512((__v16si)(__m512i)(A), (int)(I))
 
 #define _mm512_mask_shuffle_epi32(W, U, A, I) \
   (__m512i)__builtin_ia32_selectd_512((__mmask16)(U), \

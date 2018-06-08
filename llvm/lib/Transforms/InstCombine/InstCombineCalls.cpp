@@ -3521,8 +3521,15 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // happen when variable allocas are DCE'd.
     if (IntrinsicInst *SS = dyn_cast<IntrinsicInst>(II->getArgOperand(0))) {
       if (SS->getIntrinsicID() == Intrinsic::stacksave) {
-        if (&*++SS->getIterator() == II)
+        // Skip over debug info instructions.
+        // FIXME: This should be an utility in Instruction.h
+        auto It = SS->getIterator();
+        It++;
+        while (isa<DbgInfoIntrinsic>(*It))
+          It++;
+        if (&*It == II) {
           return eraseInstFromFunction(CI);
+        }
       }
     }
 

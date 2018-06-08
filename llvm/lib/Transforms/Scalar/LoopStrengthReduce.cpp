@@ -822,7 +822,7 @@ static bool isAddressUse(const TargetTransformInfo &TTI,
 
 /// Return the type of the memory being accessed.
 static MemAccessTy getAccessType(const TargetTransformInfo &TTI,
-                                 Instruction *Inst) {
+                                 Instruction *Inst, Value *OperandVal) {
   MemAccessTy AccessTy(Inst->getType(), MemAccessTy::UnknownAddressSpace);
   if (const StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
     AccessTy.MemTy = SI->getOperand(0)->getType();
@@ -836,7 +836,14 @@ static MemAccessTy getAccessType(const TargetTransformInfo &TTI,
   } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::prefetch:
+    case Intrinsic::memset:
       AccessTy.AddrSpace = II->getArgOperand(0)->getType()->getPointerAddressSpace();
+      AccessTy.MemTy = OperandVal->getType();
+      break;
+    case Intrinsic::memmove:
+    case Intrinsic::memcpy:
+      AccessTy.AddrSpace = OperandVal->getType()->getPointerAddressSpace();
+      AccessTy.MemTy = OperandVal->getType();
       break;
     default: {
       MemIntrinsicInfo IntrInfo;
@@ -2408,19 +2415,22 @@ LSRInstance::OptimizeLoopTermCond() {
                 C->getValue().isMinSignedValue())
               goto decline_post_inc;
             // Check for possible scaled-address reuse.
-            MemAccessTy AccessTy = getAccessType(TTI, UI->getUser());
-            int64_t Scale = C->getSExtValue();
-            if (TTI.isLegalAddressingMode(AccessTy.MemTy, /*BaseGV=*/nullptr,
-                                          /*BaseOffset=*/0,
-                                          /*HasBaseReg=*/false, Scale,
-                                          AccessTy.AddrSpace))
-              goto decline_post_inc;
-            Scale = -Scale;
-            if (TTI.isLegalAddressingMode(AccessTy.MemTy, /*BaseGV=*/nullptr,
-                                          /*BaseOffset=*/0,
-                                          /*HasBaseReg=*/false, Scale,
-                                          AccessTy.AddrSpace))
-              goto decline_post_inc;
+            if (isAddressUse(TTI, UI->getUser(), UI->getOperandValToReplace())) {
+              MemAccessTy AccessTy = getAccessType(
+                  TTI, UI->getUser(), UI->getOperandValToReplace());
+              int64_t Scale = C->getSExtValue();
+              if (TTI.isLegalAddressingMode(AccessTy.MemTy, /*BaseGV=*/nullptr,
+                                            /*BaseOffset=*/0,
+                                            /*HasBaseReg=*/false, Scale,
+                                            AccessTy.AddrSpace))
+                goto decline_post_inc;
+              Scale = -Scale;
+              if (TTI.isLegalAddressingMode(AccessTy.MemTy, /*BaseGV=*/nullptr,
+                                            /*BaseOffset=*/0,
+                                            /*HasBaseReg=*/false, Scale,
+                                            AccessTy.AddrSpace))
+                goto decline_post_inc;
+            }
           }
         }
 
@@ -3082,7 +3092,7 @@ static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
   if (IncConst->getAPInt().getMinSignedBits() > 64)
     return false;
 
-  MemAccessTy AccessTy = getAccessType(TTI, UserInst);
+  MemAccessTy AccessTy = getAccessType(TTI, UserInst, Operand);
   int64_t IncOffset = IncConst->getValue()->getSExtValue();
   if (!isAlwaysFoldable(TTI, LSRUse::Address, AccessTy, /*BaseGV=*/nullptr,
                         IncOffset, /*HaseBaseReg=*/false))
@@ -3210,7 +3220,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     MemAccessTy AccessTy;
     if (isAddressUse(TTI, UserInst, U.getOperandValToReplace())) {
       Kind = LSRUse::Address;
-      AccessTy = getAccessType(TTI, UserInst);
+      AccessTy = getAccessType(TTI, UserInst, U.getOperandValToReplace());
     }
 
     const SCEV *S = IU.getExpr(U);

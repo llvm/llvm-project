@@ -45,6 +45,8 @@ struct Symbol;
 /// Attributes of a symbol that affect how much we like it.
 struct SymbolQualitySignals {
   bool Deprecated = false;
+  bool ReservedName = false; // __foo, _Foo are usually implementation details.
+                             // FIXME: make these findable once user types _.
   unsigned References = 0;
 
   enum SymbolCategory {

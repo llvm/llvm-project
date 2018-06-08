@@ -7779,11 +7779,11 @@ std::pair<unsigned, const TargetRegisterClass *>
 SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                StringRef Constraint,
                                                MVT VT) const {
-  if (!isTypeLegal(VT))
-    return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
-
+  const TargetRegisterClass *RC = nullptr;
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
+    default:
+      return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
     case 's':
     case 'r':
       switch (VT.getSizeInBits()) {
@@ -7791,40 +7791,56 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, nullptr);
       case 32:
       case 16:
-        return std::make_pair(0U, &AMDGPU::SReg_32_XM0RegClass);
+        RC = &AMDGPU::SReg_32_XM0RegClass;
+        break;
       case 64:
-        return std::make_pair(0U, &AMDGPU::SGPR_64RegClass);
+        RC = &AMDGPU::SGPR_64RegClass;
+        break;
       case 128:
-        return std::make_pair(0U, &AMDGPU::SReg_128RegClass);
+        RC = &AMDGPU::SReg_128RegClass;
+        break;
       case 256:
-        return std::make_pair(0U, &AMDGPU::SReg_256RegClass);
+        RC = &AMDGPU::SReg_256RegClass;
+        break;
       case 512:
-        return std::make_pair(0U, &AMDGPU::SReg_512RegClass);
+        RC = &AMDGPU::SReg_512RegClass;
+        break;
       }
-
+      break;
     case 'v':
       switch (VT.getSizeInBits()) {
       default:
         return std::make_pair(0U, nullptr);
       case 32:
       case 16:
-        return std::make_pair(0U, &AMDGPU::VGPR_32RegClass);
+        RC = &AMDGPU::VGPR_32RegClass;
+        break;
       case 64:
-        return std::make_pair(0U, &AMDGPU::VReg_64RegClass);
+        RC = &AMDGPU::VReg_64RegClass;
+        break;
       case 96:
-        return std::make_pair(0U, &AMDGPU::VReg_96RegClass);
+        RC = &AMDGPU::VReg_96RegClass;
+        break;
       case 128:
-        return std::make_pair(0U, &AMDGPU::VReg_128RegClass);
+        RC = &AMDGPU::VReg_128RegClass;
+        break;
       case 256:
-        return std::make_pair(0U, &AMDGPU::VReg_256RegClass);
+        RC = &AMDGPU::VReg_256RegClass;
+        break;
       case 512:
-        return std::make_pair(0U, &AMDGPU::VReg_512RegClass);
+        RC = &AMDGPU::VReg_512RegClass;
+        break;
       }
+      break;
     }
+    // We actually support i128, i16 and f16 as inline parameters
+    // even if they are not reported as legal
+    if (RC && (isTypeLegal(VT) || VT.SimpleTy == MVT::i128 ||
+               VT.SimpleTy == MVT::i16 || VT.SimpleTy == MVT::f16))
+      return std::make_pair(0U, RC);
   }
 
   if (Constraint.size() > 1) {
-    const TargetRegisterClass *RC = nullptr;
     if (Constraint[1] == 'v') {
       RC = &AMDGPU::VGPR_32RegClass;
     } else if (Constraint[1] == 's') {

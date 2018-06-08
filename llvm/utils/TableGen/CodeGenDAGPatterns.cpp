@@ -3423,7 +3423,7 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
   assert(!DAGInsts.count(CGI.TheDef) && "Instruction already parsed!");
 
   // Parse the instruction.
-  TreePattern *I = new TreePattern(CGI.TheDef, Pat, true, *this);
+  auto I = llvm::make_unique<TreePattern>(CGI.TheDef, Pat, true, *this);
   // Inline pattern fragments into it.
   I->InlinePatternFragments();
 
@@ -3461,7 +3461,7 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
     }
 
     // Find inputs and outputs, and verify the structure of the uses/defs.
-    FindPatternInputsAndOutputs(I, Pat, InstInputs, InstResults,
+    FindPatternInputsAndOutputs(I.get(), Pat, InstInputs, InstResults,
                                 InstImpResults);
   }
 
@@ -3572,16 +3572,18 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
 
   // Create and insert the instruction.
   // FIXME: InstImpResults should not be part of DAGInstruction.
-  DAGInstruction TheInst(I, Results, Operands, InstImpResults);
-  DAGInsts.insert(std::make_pair(I->getRecord(), TheInst));
+  TreePattern *InstPattern = I.get();
+  DAGInstruction TheInst(std::move(I), Results, Operands, InstImpResults);
+  DAGInsts.emplace(InstPattern->getRecord(), std::move(TheInst));
 
   // Use a temporary tree pattern to infer all types and make sure that the
   // constructed result is correct.  This depends on the instruction already
   // being inserted into the DAGInsts map.
-  TreePattern Temp(I->getRecord(), ResultPattern, false, *this);
-  Temp.InferAllTypes(&I->getNamedNodesMap());
+  TreePattern Temp(InstPattern->getRecord(), ResultPattern, false, *this);
+  Temp.InferAllTypes(&InstPattern->getNamedNodesMap());
 
-  DAGInstruction &TheInsertedInst = DAGInsts.find(I->getRecord())->second;
+  DAGInstruction &TheInsertedInst =
+      DAGInsts.find(InstPattern->getRecord())->second;
   TheInsertedInst.setResultPattern(Temp.getOnlyTree());
 
   return TheInsertedInst;

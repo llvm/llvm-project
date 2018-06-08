@@ -555,7 +555,7 @@ def JWriteZeroLatency : SchedWriteRes<[]> {
   let Latency = 0;
 }
 
-// Certain vector instructions that use the same register for both source 
+// Certain instructions that use the same register for both source 
 // operands do not have a real dependency on the previous contents of the
 // register, and thus, do not have to wait before completing. They can be
 // optimized out at register renaming stage.
@@ -563,6 +563,13 @@ def JWriteZeroLatency : SchedWriteRes<[]> {
 // 15h Processors".
 // Reference: Agner's Fog "The microarchitecture of Intel, AMD and VIA CPUs",
 // Section 21.8 [Dependency-breaking instructions].
+
+def JWriteZeroIdiom : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
+    SchedVar<MCSchedPredicate<TruePred>,           [WriteALU]>
+]>;
+def : InstRW<[JWriteZeroIdiom], (instrs SUB32rr, SUB64rr,
+                                        XOR32rr, XOR64rr)>;
 
 def JWriteFZeroIdiom : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
