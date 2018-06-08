@@ -15,9 +15,10 @@
 //
 //===----------------------------------------------------------------------===//
 #include "xray_fdr_logging.h"
+#include <cassert>
 #include <errno.h>
 #include <limits>
-#include <pthread.h>
+#include <memory>
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <time.h>
@@ -28,11 +29,11 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "xray/xray_interface.h"
 #include "xray/xray_records.h"
-#include "xray_recursion_guard.h"
 #include "xray_buffer_queue.h"
 #include "xray_defs.h"
 #include "xray_fdr_flags.h"
 #include "xray_flags.h"
+#include "xray_recursion_guard.h"
 #include "xray_tsc.h"
 #include "xray_utils.h"
 
@@ -291,23 +292,19 @@ static void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
     break;
   case XRayEntryType::CUSTOM_EVENT: {
     // This is a bug in patching, so we'll report it once and move on.
-    static bool Once = [&] {
+    static atomic_uint8_t ErrorLatch{0};
+    if (!atomic_exchange(&ErrorLatch, 1, memory_order_acq_rel))
       Report("Internal error: patched an XRay custom event call as a function; "
              "func id = %d\n",
              FuncId);
-      return true;
-    }();
-    (void)Once;
     return;
   }
   case XRayEntryType::TYPED_EVENT: {
-    static bool Once = [&] {
+    static atomic_uint8_t ErrorLatch{0};
+    if (!atomic_exchange(&ErrorLatch, 1, memory_order_acq_rel))
       Report("Internal error: patched an XRay typed event call as a function; "
              "func id = %d\n",
              FuncId);
-      return true;
-    }();
-    (void)Once;
     return;
   }
   }
@@ -317,14 +314,8 @@ static void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
   incrementExtents(sizeof(FunctionRecord));
 }
 
-static uint64_t thresholdTicks() {
-  static uint64_t TicksPerSec = probeRequiredCPUFeatures()
-                                    ? getTSCFrequency()
-                                    : __xray::NanosecondsPerSecond;
-  static const uint64_t ThresholdTicks =
-      TicksPerSec * fdrFlags()->func_duration_threshold_us / 1000000;
-  return ThresholdTicks;
-}
+static atomic_uint64_t TicksPerSec{0};
+static atomic_uint64_t ThresholdTicks{0};
 
 // Re-point the thread local pointer into this thread's Buffer before the recent
 // "Function Entry" record and any "Tail Call Exit" records after that.
@@ -375,7 +366,7 @@ static void rewindRecentCall(uint64_t TSC, uint64_t &LastTSC,
            "Expected funcids to match when rewinding tail call.");
 
     // This tail call exceeded the threshold duration. It will not be erased.
-    if ((TSC - RewindingTSC) >= thresholdTicks()) {
+    if ((TSC - RewindingTSC) >= atomic_load_relaxed(&ThresholdTicks)) {
       TLD.NumTailCalls = 0;
       return;
     }
@@ -619,29 +610,26 @@ static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
   case XRayEntryType::EXIT:
     // Break out and write the exit record if we can't erase any functions.
     if (TLD.NumConsecutiveFnEnters == 0 ||
-        (TSC - TLD.LastFunctionEntryTSC) >= thresholdTicks())
+        (TSC - TLD.LastFunctionEntryTSC) >=
+            atomic_load_relaxed(&ThresholdTicks))
       break;
     rewindRecentCall(TSC, TLD.LastTSC, TLD.LastFunctionEntryTSC, FuncId);
     return; // without writing log.
   case XRayEntryType::CUSTOM_EVENT: {
     // This is a bug in patching, so we'll report it once and move on.
-    static bool Once = [&] {
+    static atomic_uint8_t ErrorLatch{0};
+    if (!atomic_exchange(&ErrorLatch, 1, memory_order_acq_rel))
       Report("Internal error: patched an XRay custom event call as a function; "
-             "func id = %d",
+             "func id = %d\n",
              FuncId);
-      return true;
-    }();
-    (void)Once;
     return;
   }
   case XRayEntryType::TYPED_EVENT: {
-    static bool Once = [&] {
+    static atomic_uint8_t ErrorLatch{0};
+    if (!atomic_exchange(&ErrorLatch, 1, memory_order_acq_rel))
       Report("Internal error: patched an XRay typed event call as a function; "
              "func id = %d\n",
              FuncId);
-      return true;
-    }();
-    (void)Once;
     return;
   }
   }
@@ -665,31 +653,31 @@ FDRLoggingOptions FDROptions;
 
 SpinMutex FDROptionsMutex;
 
-namespace {
-XRayFileHeader &fdrCommonHeaderInfo() {
-  static XRayFileHeader Header = [] {
-    XRayFileHeader H;
+static XRayFileHeader &fdrCommonHeaderInfo() {
+  static std::aligned_storage<sizeof(XRayFileHeader)>::type HStorage;
+  static pthread_once_t OnceInit = PTHREAD_ONCE_INIT;
+  static bool TSCSupported = true;
+  static uint64_t CycleFrequency = NanosecondsPerSecond;
+  pthread_once(&OnceInit, +[] {
+    XRayFileHeader &H = reinterpret_cast<XRayFileHeader &>(HStorage);
     // Version 2 of the log writes the extents of the buffer, instead of
     // relying on an end-of-buffer record.
     H.Version = 2;
     H.Type = FileTypes::FDR_LOG;
 
     // Test for required CPU features and cache the cycle frequency
-    static bool TSCSupported = probeRequiredCPUFeatures();
-    static uint64_t CycleFrequency =
-        TSCSupported ? getTSCFrequency() : __xray::NanosecondsPerSecond;
+    TSCSupported = probeRequiredCPUFeatures();
+    if (TSCSupported)
+      CycleFrequency = getTSCFrequency();
     H.CycleFrequency = CycleFrequency;
 
     // FIXME: Actually check whether we have 'constant_tsc' and
     // 'nonstop_tsc' before setting the values in the header.
     H.ConstantTSC = 1;
     H.NonstopTSC = 1;
-    return H;
-  }();
-  return Header;
+  });
+  return reinterpret_cast<XRayFileHeader &>(HStorage);
 }
-
-} // namespace
 
 // This is the iterator implementation, which knows how to handle FDR-mode
 // specific buffers. This is used as an implementation of the iterator function
@@ -723,7 +711,14 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
   // initialized the first time this function is called. We'll update one part
   // of this information with some relevant data (in particular the number of
   // buffers to expect).
-  static XRayFileHeader Header = fdrCommonHeaderInfo();
+  static std::aligned_storage<sizeof(XRayFileHeader)>::type HeaderStorage;
+  static pthread_once_t HeaderOnce = PTHREAD_ONCE_INIT;
+  pthread_once(&HeaderOnce, +[] {
+    reinterpret_cast<XRayFileHeader &>(HeaderStorage) = fdrCommonHeaderInfo();
+  });
+
+  // We use a convenience alias for code referring to Header from here on out.
+  auto &Header = reinterpret_cast<XRayFileHeader &>(HeaderStorage);
   if (B.Data == nullptr && B.Size == 0) {
     Header.FdrData = FdrAdditionalHeaderData{BQ->ConfiguredBufferSize()};
     return XRayBuffer{static_cast<void *>(&Header), sizeof(Header)};
@@ -732,7 +727,6 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
   static BufferQueue::const_iterator It{};
   static BufferQueue::const_iterator End{};
   if (B.Data == static_cast<void *>(&Header) && B.Size == sizeof(Header)) {
-
     // From this point on, we provide raw access to the raw buffer we're getting
     // from the BufferQueue. We're relying on the iterators from the current
     // Buffer queue.
@@ -787,8 +781,10 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
       Report("XRay FDR: Not flushing to file, 'no_file_flush=true'.\n");
 
     // Clean up the buffer queue, and do not bother writing out the files!
-    delete BQ;
+    BQ->~BufferQueue();
+    InternalFree(BQ);
     BQ = nullptr;
+
     atomic_store(&LogFlushStatus, XRayLogFlushStatus::XRAY_LOG_FLUSHED,
                  memory_order_release);
     return XRayLogFlushStatus::XRAY_LOG_FLUSHED;
@@ -881,7 +877,9 @@ static TSCAndCPU getTimestamp() XRAY_NEVER_INSTRUMENT {
   TSCAndCPU Result;
 
   // Test once for required CPU features
-  static bool TSCSupported = probeRequiredCPUFeatures();
+  static pthread_once_t OnceProbe = PTHREAD_ONCE_INIT;
+  static bool TSCSupported = true;
+  pthread_once(&OnceProbe, +[] { TSCSupported = probeRequiredCPUFeatures(); });
 
   if (TSCSupported) {
     Result.TSC = __xray::readTSC(Result.CPU);
@@ -920,13 +918,8 @@ void fdrLoggingHandleCustomEvent(void *Event,
   if (!Guard)
     return;
   if (EventSize > std::numeric_limits<int32_t>::max()) {
-    using Empty = struct {};
-    static Empty Once = [&] {
-      Report("Event size too large = %zu ; > max = %d\n", EventSize,
-             std::numeric_limits<int32_t>::max());
-      return Empty();
-    }();
-    (void)Once;
+    static pthread_once_t Once = PTHREAD_ONCE_INIT;
+    pthread_once(&Once, +[] { Report("Event size too large.\n"); });
   }
   int32_t ReducedEventSize = static_cast<int32_t>(EventSize);
   auto &TLD = getThreadLocalData();
@@ -970,13 +963,8 @@ void fdrLoggingHandleTypedEvent(
   if (!Guard)
     return;
   if (EventSize > std::numeric_limits<int32_t>::max()) {
-    using Empty = struct {};
-    static Empty Once = [&] {
-      Report("Event size too large = %zu ; > max = %d\n", EventSize,
-             std::numeric_limits<int32_t>::max());
-      return Empty();
-    }();
-    (void)Once;
+    static pthread_once_t Once = PTHREAD_ONCE_INIT;
+    pthread_once(&Once, +[] { Report("Event size too large.\n"); });
   }
   int32_t ReducedEventSize = static_cast<int32_t>(EventSize);
   auto &TLD = getThreadLocalData();
@@ -1093,23 +1081,33 @@ XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
   bool Success = false;
 
   if (BQ != nullptr) {
-    delete BQ;
+    BQ->~BufferQueue();
+    InternalFree(BQ);
     BQ = nullptr;
   }
 
-  if (BQ == nullptr)
-    BQ = new BufferQueue(BufferSize, BufferMax, Success);
+  if (BQ == nullptr) {
+    BQ = reinterpret_cast<BufferQueue *>(
+        InternalAlloc(sizeof(BufferQueue), nullptr, 64));
+    new (BQ) BufferQueue(BufferSize, BufferMax, Success);
+  }
 
   if (!Success) {
     Report("BufferQueue init failed.\n");
     if (BQ != nullptr) {
-      delete BQ;
+      BQ->~BufferQueue();
+      InternalFree(BQ);
       BQ = nullptr;
     }
     return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
   }
 
-  static bool UNUSED Once = [] {
+  static pthread_once_t OnceInit = PTHREAD_ONCE_INIT;
+  pthread_once(&OnceInit, +[] {
+    atomic_store(&TicksPerSec,
+                 probeRequiredCPUFeatures() ? getTSCFrequency()
+                                            : __xray::NanosecondsPerSecond,
+                 memory_order_release);
     pthread_key_create(&Key, +[](void *) {
       auto &TLD = getThreadLocalData();
       if (TLD.BQ == nullptr)
@@ -1119,9 +1117,12 @@ XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
         Report("At thread exit, failed to release buffer at %p; error=%s\n",
                TLD.Buffer.Data, BufferQueue::getErrorString(EC));
     });
-    return false;
-  }();
+  });
 
+  atomic_store(&ThresholdTicks,
+               atomic_load_relaxed(&TicksPerSec) *
+                   fdrFlags()->func_duration_threshold_us / 1000000,
+               memory_order_release);
   // Arg1 handler should go in first to avoid concurrent code accidentally
   // falling back to arg0 when it should have ran arg1.
   __xray_set_handler_arg1(fdrLoggingHandleArg1);

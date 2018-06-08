@@ -10,7 +10,9 @@ void test32(long *base, long idx) {
   sink = _bittestandset(base, idx);
   sink = _interlockedbittestandreset(base, idx);
   sink = _interlockedbittestandset(base, idx);
+  sink = _interlockedbittestandset(base, idx);
 }
+
 void test64(__int64 *base, __int64 idx) {
   sink = _bittest64(base, idx);
   sink = _bittestandcomplement64(base, idx);
@@ -19,6 +21,17 @@ void test64(__int64 *base, __int64 idx) {
   sink = _interlockedbittestandreset64(base, idx);
   sink = _interlockedbittestandset64(base, idx);
 }
+
+#if defined(_M_ARM) || defined(_M_ARM64)
+void test_arm(long *base, long idx) {
+  sink = _interlockedbittestandreset_acq(base, idx);
+  sink = _interlockedbittestandreset_rel(base, idx);
+  sink = _interlockedbittestandreset_nf(base, idx);
+  sink = _interlockedbittestandset_acq(base, idx);
+  sink = _interlockedbittestandset_rel(base, idx);
+  sink = _interlockedbittestandset_nf(base, idx);
+}
+#endif
 
 // X64-LABEL: define dso_local void @test32(i32* %base, i32 %idx)
 // X64: call i8 asm sideeffect "btl $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i32* %{{.*}}, i32 {{.*}})
@@ -110,15 +123,13 @@ void test64(__int64 *base, __int64 idx) {
 // ARM: %[[RES:[^ ]*]] = and i8 %[[BYTESHR]], 1
 // ARM: store volatile i8 %[[RES]], i8* @sink, align 1
 
-// ARM-LABEL: define dso_local {{.*}}void @test64(i64* %base, i64 %idx)
-// ARM: %[[IDXHI:[^ ]*]] = ashr i64 %{{.*}}, 3
-// ARM: %[[BASE:[^ ]*]] = bitcast i64* %{{.*}} to i8*
-// ARM: %[[BYTEADDR:[^ ]*]] = getelementptr inbounds i8, i8* %[[BASE]], i64 %[[IDXHI]]
-// ARM: %[[IDX8:[^ ]*]] = trunc i64 %{{.*}} to i8
-// ARM: %[[IDXLO:[^ ]*]] = and i8 %[[IDX8]], 7
-// ARM: %[[BYTE:[^ ]*]] = load i8, i8* %[[BYTEADDR]], align 1
-// ARM: %[[BYTESHR:[^ ]*]] = lshr i8 %[[BYTE]], %[[IDXLO]]
-// ARM: %[[RES:[^ ]*]] = and i8 %[[BYTESHR]], 1
-// ARM: store volatile i8 %[[RES]], i8* @sink, align 1
 
-// ... the rest is the same, but with i64 instead of i32.
+// Just look for the atomicrmw instructions.
+
+// ARM-LABEL: define dso_local {{.*}}void @test_arm(i32* %base, i32 %idx)
+// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} acquire
+// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} release
+// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} monotonic
+// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} acquire
+// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} release
+// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} monotonic

@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Value types - These values correspond to the register types defined in the
-// ValueTypes.h file.  If you update anything here, you must update it there as
-// well!
+// MachineValueTypes.h file.  If you update anything here, you must update it
+// there as well!
 //
 //===----------------------------------------------------------------------===//
 

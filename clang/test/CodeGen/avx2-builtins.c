@@ -141,7 +141,7 @@ __m128i test_mm_blend_epi32(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_blend_epi32
   // CHECK-NOT: @llvm.x86.avx2.pblendd.128
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
-  return _mm_blend_epi32(a, b, 0x35);
+  return _mm_blend_epi32(a, b, 0x05);
 }
 
 __m256i test_mm256_blend_epi32(__m256i a, __m256i b) {
@@ -386,21 +386,21 @@ __m256i test_mm256_cvtepu32_epi64(__m128i a) {
 
 __m128i test0_mm256_extracti128_si256_0(__m256i a) {
   // CHECK-LABEL: test0_mm256_extracti128_si256
-  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> zeroinitializer, <2 x i32> <i32 0, i32 1>
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
   return _mm256_extracti128_si256(a, 0);
 }
 
 __m128i test1_mm256_extracti128_si256_1(__m256i a) {
   // CHECK-LABEL: test1_mm256_extracti128_si256
-  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> zeroinitializer, <2 x i32> <i32 2, i32 3>
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
   return _mm256_extracti128_si256(a, 1);
 }
 
 // Immediate should be truncated to one bit.
 __m128i test2_mm256_extracti128_si256(__m256i a) {
   // CHECK-LABEL: test2_mm256_extracti128_si256
-  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> zeroinitializer, <2 x i32> <i32 0, i32 1>
-  return _mm256_extracti128_si256(a, 2);
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
+  return _mm256_extracti128_si256(a, 0);
 }
 
 __m256i test_mm256_hadd_epi16(__m256i a, __m256i b) {
@@ -657,14 +657,14 @@ __m128 test_mm256_mask_i64gather_ps(__m128 a, float const *b, __m256i c, __m128 
 
 __m256i test0_mm256_inserti128_si256(__m256i a, __m128i b) {
   // CHECK-LABEL: test0_mm256_inserti128_si256
-  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   return _mm256_inserti128_si256(a, b, 0);
 }
 
 __m256i test1_mm256_inserti128_si256(__m256i a, __m128i b) {
   // CHECK-LABEL: test1_mm256_inserti128_si256
-  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   return _mm256_inserti128_si256(a, b, 1);
 }
@@ -672,9 +672,9 @@ __m256i test1_mm256_inserti128_si256(__m256i a, __m128i b) {
 // Immediate should be truncated to one bit.
 __m256i test2_mm256_inserti128_si256(__m256i a, __m128i b) {
   // CHECK-LABEL: test2_mm256_inserti128_si256
-  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-  return _mm256_inserti128_si256(a, b, 2);
+  return _mm256_inserti128_si256(a, b, 0);
 }
 
 __m256i test_mm256_madd_epi16(__m256i a, __m256i b) {

@@ -7,12 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is the entry point to the lld driver. This is a thin wrapper which
-// dispatches to the given platform specific driver.
+// This file contains the main function of the lld executable. The main
+// function is a thin wrapper which dispatches to the platform specific
+// driver.
 //
-// If there is -flavor option, it is dispatched according to the arguments.
-// If the flavor parameter is not present, then it is dispatched according
-// to argv[0].
+// lld is a single executable that contains four different linkers for ELF,
+// COFF, WebAssembly and Mach-O. The main function dispatches according to
+// argv[0] (i.e. command name). The most common name for each target is shown
+// below:
+//
+//  - ld.lld:    ELF (Unix)
+//  - ld64:      Mach-O (macOS)
+//  - lld-link:  COFF (Windows)
+//  - ld-wasm:   WebAssembly
+//
+// lld can be invoked as "lld" along with "-flavor" option. This is for
+// backward compatibility and not recommended.
 //
 //===----------------------------------------------------------------------===//
 
