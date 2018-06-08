@@ -64,6 +64,7 @@ class StaticVariableTestCase(TestBase):
         compiler_version=["<", "3.9"],
         bugnumber='llvm.org/pr20550')
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test_with_python_api(self):
         """Test Python APIs on file and class static variables."""
         self.build()

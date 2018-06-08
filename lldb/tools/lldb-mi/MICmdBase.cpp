@@ -214,6 +214,23 @@ void CMICmdBase::SetError(const CMIUtilString &rErrMsg) {
 
 //++
 //------------------------------------------------------------------------------------
+// Details: Short cut function to enter error information into the command's
+//          metadata object and set the command's error status.
+// Type:    Method.
+// Args:    error - (R) Command result description.
+// Return:  None.
+// Throws:  None.
+//--
+void CMICmdBase::SetError(const lldb::SBError &error) {
+  const char *error_cstr = error.GetCString();
+  if (error_cstr)
+    SetError(error_cstr);
+  else
+    SetError("unknown error");
+}
+
+//++
+//------------------------------------------------------------------------------------
 // Details: Ask a command to provide its unique identifier.
 // Type:    Method.
 // Args:    A unique identifier for this command class.

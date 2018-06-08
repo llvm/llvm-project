@@ -2133,7 +2133,7 @@ private:
 
   /// The pointer part is the implicit the outlined function and the 
   /// int part is the captured region kind, 'CR_Default' etc.
-  llvm::PointerIntPair<CapturedDecl *, 1, CapturedRegionKind> CapDeclAndKind;
+  llvm::PointerIntPair<CapturedDecl *, 2, CapturedRegionKind> CapDeclAndKind;
 
   /// The record for captured variables, a RecordDecl or CXXRecordDecl.
   RecordDecl *TheRecordDecl = nullptr;

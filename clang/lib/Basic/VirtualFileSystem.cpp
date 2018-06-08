@@ -258,7 +258,8 @@ ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
   int FD;
   SmallString<256> RealName;
-  if (std::error_code EC = sys::fs::openFileForRead(Name, FD, &RealName))
+  if (std::error_code EC =
+          sys::fs::openFileForRead(Name, FD, sys::fs::OF_None, &RealName))
     return EC;
   return std::unique_ptr<File>(new RealFile(FD, Name.str(), RealName.str()));
 }
