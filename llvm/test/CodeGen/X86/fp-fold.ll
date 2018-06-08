@@ -29,14 +29,6 @@ define float @fadd_negzero(float %x) {
   ret float %r
 }
 
-define float @fadd_zero_nsz(float %x) {
-; ANY-LABEL: fadd_zero_nsz:
-; ANY:       # %bb.0:
-; ANY-NEXT:    retq
-  %r = fadd nsz float %x, 0.0
-  ret float %r
-}
-
 define float @fadd_negzero_nsz(float %x) {
 ; ANY-LABEL: fadd_negzero_nsz:
 ; ANY:       # %bb.0:
@@ -45,16 +37,28 @@ define float @fadd_negzero_nsz(float %x) {
   ret float %r
 }
 
+define float @fadd_zero_nsz(float %x) {
+; ANY-LABEL: fadd_zero_nsz:
+; ANY:       # %bb.0:
+; ANY-NEXT:    retq
+  %r = fadd nsz float %x, 0.0
+  ret float %r
+}
+
 define float @fsub_zero(float %x) {
-; STRICT-LABEL: fsub_zero:
-; STRICT:       # %bb.0:
-; STRICT-NEXT:    addss {{.*}}(%rip), %xmm0
-; STRICT-NEXT:    retq
-;
-; UNSAFE-LABEL: fsub_zero:
-; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    retq
+; ANY-LABEL: fsub_zero:
+; ANY:       # %bb.0:
+; ANY-NEXT:    retq
   %r = fsub float %x, 0.0
+  ret float %r
+}
+
+define float @fsub_self(float %x) {
+; ANY-LABEL: fsub_self:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorps %xmm0, %xmm0
+; ANY-NEXT:    retq
+  %r = fsub nnan float %x, %x 
   ret float %r
 }
 
@@ -72,11 +76,20 @@ define float @fsub_negzero(float %x) {
   ret float %r
 }
 
-define float @fsub_zero_nsz(float %x) {
-; ANY-LABEL: fsub_zero_nsz:
+define float @fsub_zero_nsz_1(float %x) {
+; ANY-LABEL: fsub_zero_nsz_1:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    retq
   %r = fsub nsz float %x, 0.0
+  ret float %r
+}
+
+define float @fsub_zero_nsz_2(float %x) {
+; ANY-LABEL: fsub_zero_nsz_2:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorps {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
+  %r = fsub nsz float 0.0, %x
   ret float %r
 }
 

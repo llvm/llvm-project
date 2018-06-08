@@ -105,8 +105,14 @@ public:
   // On PPC ELF V2 abi, the first entry in the .got is the .TOC.
   unsigned GotHeaderEntriesNum = 0;
 
-  // Set to 0 for variant 2
+  // For TLS variant 1, the TCB is a fixed size specified by the Target.
+  // For variant 2, the TCB is an unspecified size.
+  // Set to 0 for variant 2.
   unsigned TcbSize = 0;
+
+  // Set to the offset (in bytes) that the thread pointer is initialized to
+  // point to, relative to the start of the thread local storage.
+  unsigned TlsTpOffset = 0;
 
   bool NeedsThunks = false;
 

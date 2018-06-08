@@ -9433,6 +9433,24 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                        makeArrayRef(Indices, NumElts),
                                        "shufp");
   }
+  case X86::BI__builtin_ia32_permdi256:
+  case X86::BI__builtin_ia32_permdf256:
+  case X86::BI__builtin_ia32_permdi512:
+  case X86::BI__builtin_ia32_permdf512: {
+    unsigned Imm = cast<llvm::ConstantInt>(Ops[1])->getZExtValue();
+    llvm::Type *Ty = Ops[0]->getType();
+    unsigned NumElts = Ty->getVectorNumElements();
+
+    // These intrinsics operate on 256-bit lanes of four 64-bit elements.
+    uint32_t Indices[8];
+    for (unsigned l = 0; l != NumElts; l += 4)
+      for (unsigned i = 0; i != 4; ++i)
+        Indices[l + i] = l + ((Imm >> (2 * i)) & 0x3);
+
+    return Builder.CreateShuffleVector(Ops[0], UndefValue::get(Ty),
+                                       makeArrayRef(Indices, NumElts),
+                                       "perm");
+  }
   case X86::BI__builtin_ia32_palignr128:
   case X86::BI__builtin_ia32_palignr256:
   case X86::BI__builtin_ia32_palignr512: {

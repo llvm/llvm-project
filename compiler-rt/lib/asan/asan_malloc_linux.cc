@@ -158,7 +158,7 @@ INTERCEPTOR(void*, __libc_memalign, uptr boundary, uptr size) {
 #if SANITIZER_INTERCEPT_ALIGNED_ALLOC
 INTERCEPTOR(void*, aligned_alloc, uptr boundary, uptr size) {
   GET_STACK_TRACE_MALLOC;
-  return asan_memalign(boundary, size, &stack, FROM_MALLOC);
+  return asan_aligned_alloc(boundary, size, &stack);
 }
 #endif // SANITIZER_INTERCEPT_ALIGNED_ALLOC
 

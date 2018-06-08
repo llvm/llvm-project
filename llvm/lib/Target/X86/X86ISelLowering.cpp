@@ -901,6 +901,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     setOperationAction(ISD::ROTL,               MVT::v4i32, Custom);
+    setOperationAction(ISD::ROTL,               MVT::v8i16, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSSE3()) {
@@ -1032,7 +1033,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SRA, VT, Custom);
     }
 
-    setOperationAction(ISD::ROTL,              MVT::v8i32, Custom);
+    setOperationAction(ISD::ROTL,              MVT::v8i32,  Custom);
+    setOperationAction(ISD::ROTL,              MVT::v16i16, Custom);
 
     setOperationAction(ISD::SELECT,            MVT::v4f64, Custom);
     setOperationAction(ISD::SELECT,            MVT::v4i64, Custom);
@@ -23744,7 +23746,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   unsigned Opcode = Op.getOpcode();
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
 
-  if (Subtarget.hasAVX512()) {
+  if (Subtarget.hasAVX512() && 32 <= EltSizeInBits) {
     // Attempt to rotate by immediate.
     APInt UndefElts;
     SmallVector<APInt, 16> EltBits;
@@ -23791,8 +23793,9 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && !Subtarget.hasAVX2())
     return Lower256IntArith(Op, DAG);
 
-  assert((VT == MVT::v4i32 || (VT == MVT::v8i32 && Subtarget.hasAVX2())) &&
-         "Only v4i32/v8i32 vector rotates supported");
+  assert((VT == MVT::v4i32 || VT == MVT::v8i16 ||
+          ((VT == MVT::v8i32 || VT == MVT::v16i16) && Subtarget.hasAVX2())) &&
+         "Only v4i32/v8i16/v8i32/v16i16 vector rotates supported");
 
   // Rotate by an uniform constant - expand back to shifts.
   // TODO - legalizers should be able to handle this.
@@ -23821,9 +23824,14 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getNode(ISD::OR, DL, VT, SHL, SRL);
   }
 
-  // AVX2 - best to fallback to variable shifts.
+  bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
+  bool LegalVarShifts = SupportedVectorVarShift(VT, Subtarget, ISD::SHL) &&
+                        SupportedVectorVarShift(VT, Subtarget, ISD::SRL);
+
+  // Best to fallback for all supported variable shifts.
+  // AVX2 - best to fallback for non-constants as well.
   // TODO - legalizers should be able to handle this.
-  if (Subtarget.hasAVX2()) {
+  if (LegalVarShifts || (Subtarget.hasAVX2() && !ConstantAmt)) {
     SDValue AmtR = DAG.getConstant(EltSizeInBits, DL, VT);
     AmtR = DAG.getNode(ISD::SUB, DL, VT, AmtR, Amt);
     SDValue SHL = DAG.getNode(ISD::SHL, DL, VT, R, Amt);
@@ -23831,23 +23839,31 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getNode(ISD::OR, DL, VT, SHL, SRL);
   }
 
-  // As with shifts, convert the rotation amount to a multiplication factor,
-  // and make use of the PMULUDQ instruction to multiply 2 lanes of v4i32
+  // As with shifts, convert the rotation amount to a multiplication factor.
+  SDValue Scale = convertShiftLeftToScale(Amt, DL, Subtarget, DAG);
+  assert(Scale && "Failed to convert ROTL amount to scale");
+
+  // v8i16/v16i16: perform unsigned multiply hi/lo and OR the results.
+  if (EltSizeInBits == 16) {
+    SDValue Lo = DAG.getNode(ISD::MUL, DL, VT, R, Scale);
+    SDValue Hi = DAG.getNode(ISD::MULHU, DL, VT, R, Scale);
+    return DAG.getNode(ISD::OR, DL, VT, Lo, Hi);
+  }
+
+  // v4i32: make use of the PMULUDQ instruction to multiply 2 lanes of v4i32
   // to v2i64 results at a time. The upper 32-bits contain the wrapped bits
   // that can then be OR'd with the lower 32-bits.
-  Amt = convertShiftLeftToScale(Amt, DL, Subtarget, DAG);
-  assert(Amt && "Failed to convert ROTL amount to scale");
-
+  assert(VT == MVT::v4i32 && "Only v4i32 vector rotate expected");
   static const int OddMask[] = {1, -1, 3, -1};
   SDValue R13 = DAG.getVectorShuffle(VT, DL, R, R, OddMask);
-  SDValue Amt13 = DAG.getVectorShuffle(VT, DL, Amt, Amt, OddMask);
+  SDValue Scale13 = DAG.getVectorShuffle(VT, DL, Scale, Scale, OddMask);
 
   SDValue Res02 = DAG.getNode(X86ISD::PMULUDQ, DL, MVT::v2i64,
                               DAG.getBitcast(MVT::v2i64, R),
-                              DAG.getBitcast(MVT::v2i64, Amt));
+                              DAG.getBitcast(MVT::v2i64, Scale));
   SDValue Res13 = DAG.getNode(X86ISD::PMULUDQ, DL, MVT::v2i64,
                               DAG.getBitcast(MVT::v2i64, R13),
-                              DAG.getBitcast(MVT::v2i64, Amt13));
+                              DAG.getBitcast(MVT::v2i64, Scale13));
   Res02 = DAG.getBitcast(VT, Res02);
   Res13 = DAG.getBitcast(VT, Res13);
 
@@ -36371,8 +36387,9 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// Truncate a group of v4i32 into v16i8/v8i16 using X86ISD::PACKUS.
+/// Truncate using ISD::AND mask and X86ISD::PACKUS.
 static SDValue combineVectorTruncationWithPACKUS(SDNode *N, const SDLoc &DL,
+                                                 const X86Subtarget &Subtarget,
                                                  SelectionDAG &DAG) {
   SDValue In = N->getOperand(0);
   EVT InVT = In.getValueType();
@@ -36399,42 +36416,9 @@ static SDValue combineVectorTruncationWithPACKUS(SDNode *N, const SDLoc &DL,
                               DAG.getIntPtrConstant(i * NumSubRegElts, DL));
     SubVecs[i] = DAG.getNode(ISD::AND, DL, SubRegVT, Sub, MaskVal);
   }
+  In = DAG.getNode(ISD::CONCAT_VECTORS, DL, InVT, SubVecs);
 
-  // TODO - convert this to truncateVectorWithPACK.
-  MVT UnpackedVT, PackedVT;
-  if (OutSVT == MVT::i8) {
-    UnpackedVT = MVT::v8i16;
-    PackedVT = MVT::v16i8;
-  } else {
-    UnpackedVT = MVT::v4i32;
-    PackedVT = MVT::v8i16;
-  }
-
-  // In each iteration, truncate the type by a half size.
-  auto SubNum = SubVecs.size();
-  for (unsigned j = 1, e = InSVT.getSizeInBits() / OutSVT.getSizeInBits();
-       j < e; j *= 2, SubNum /= 2) {
-    for (unsigned i = 0; i < SubNum; i++)
-      SubVecs[i] = DAG.getBitcast(UnpackedVT, SubVecs[i]);
-    for (unsigned i = 0; i < SubNum / 2; i++)
-      SubVecs[i] = DAG.getNode(X86ISD::PACKUS, DL, PackedVT, SubVecs[i * 2],
-                               SubVecs[i * 2 + 1]);
-  }
-
-  // If the type of the result is v8i8, we need do one more X86ISD::PACKUS, and
-  // then extract a subvector as the result since v8i8 is not a legal type.
-  if (OutVT == MVT::v8i8) {
-    SubVecs[0] =
-        DAG.getNode(X86ISD::PACKUS, DL, PackedVT, SubVecs[0], SubVecs[0]);
-    SubVecs[0] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, SubVecs[0],
-                             DAG.getIntPtrConstant(0, DL));
-    return SubVecs[0];
-  } else if (SubNum > 1) {
-    SubVecs.resize(SubNum);
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, SubVecs);
-  }
-
-  return SubVecs[0];
+  return truncateVectorWithPACK(X86ISD::PACKUS, OutVT, In, DL, DAG, Subtarget);
 }
 
 /// Truncate a group of v4i32 into v8i16 using X86ISD::PACKSS.
@@ -36491,7 +36475,7 @@ static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
   // for 2 x v4i32 -> v8i16. For SSSE3 and below, we need to use PACKSS to
   // truncate 2 x v4i32 to v8i16.
   if (Subtarget.hasSSE41() || OutSVT == MVT::i8)
-    return combineVectorTruncationWithPACKUS(N, DL, DAG);
+    return combineVectorTruncationWithPACKUS(N, DL, Subtarget, DAG);
   if (InSVT == MVT::i32)
     return combineVectorTruncationWithPACKSS(N, DL, Subtarget, DAG);
 

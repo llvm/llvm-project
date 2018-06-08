@@ -31,7 +31,7 @@
 
 namespace llvm {
 
-ProcessInfo::ProcessInfo() : ProcessHandle(0), Pid(0), ReturnCode(0) {}
+ProcessInfo::ProcessInfo() : Process(0), Pid(0), ReturnCode(0) {}
 
 ErrorOr<std::string> sys::findProgramByName(StringRef Name,
                                             ArrayRef<StringRef> Paths) {
@@ -381,7 +381,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
   }
 
   PI.Pid = pi.dwProcessId;
-  PI.ProcessHandle = pi.hProcess;
+  PI.Process = pi.hProcess;
 
   // Make sure these get closed no matter what.
   ScopedCommonHandle hThread(pi.hThread);
@@ -418,7 +418,7 @@ namespace llvm {
 ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
                       bool WaitUntilChildTerminates, std::string *ErrMsg) {
   assert(PI.Pid && "invalid pid to wait on, process not started?");
-  assert(PI.ProcessHandle &&
+  assert((PI.Process && PI.Process != INVALID_HANDLE_VALUE) &&
          "invalid process handle to wait on, process not started?");
   DWORD milliSecondsToWait = 0;
   if (WaitUntilChildTerminates)
@@ -427,20 +427,20 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
     milliSecondsToWait = SecondsToWait * 1000;
 
   ProcessInfo WaitResult = PI;
-  DWORD WaitStatus = WaitForSingleObject(PI.ProcessHandle, milliSecondsToWait);
+  DWORD WaitStatus = WaitForSingleObject(PI.Process, milliSecondsToWait);
   if (WaitStatus == WAIT_TIMEOUT) {
     if (SecondsToWait) {
-      if (!TerminateProcess(PI.ProcessHandle, 1)) {
+      if (!TerminateProcess(PI.Process, 1)) {
         if (ErrMsg)
           MakeErrMsg(ErrMsg, "Failed to terminate timed-out program");
 
         // -2 indicates a crash or timeout as opposed to failure to execute.
         WaitResult.ReturnCode = -2;
-        CloseHandle(PI.ProcessHandle);
+        CloseHandle(PI.Process);
         return WaitResult;
       }
-      WaitForSingleObject(PI.ProcessHandle, INFINITE);
-      CloseHandle(PI.ProcessHandle);
+      WaitForSingleObject(PI.Process, INFINITE);
+      CloseHandle(PI.Process);
     } else {
       // Non-blocking wait.
       return ProcessInfo();
@@ -449,10 +449,10 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
 
   // Get its exit status.
   DWORD status;
-  BOOL rc = GetExitCodeProcess(PI.ProcessHandle, &status);
+  BOOL rc = GetExitCodeProcess(PI.Process, &status);
   DWORD err = GetLastError();
   if (err != ERROR_INVALID_HANDLE)
-    CloseHandle(PI.ProcessHandle);
+    CloseHandle(PI.Process);
 
   if (!rc) {
     SetLastError(err);

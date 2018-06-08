@@ -56,6 +56,7 @@
 
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "LoopVectorizationPlanner.h"
+#include "VPRecipeBuilder.h"
 #include "VPlanHCFGBuilder.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -6502,9 +6503,8 @@ void LoopVectorizationPlanner::buildVPlans(unsigned MinVF, unsigned MaxVF) {
   }
 }
 
-VPValue *LoopVectorizationPlanner::createEdgeMask(BasicBlock *Src,
-                                                  BasicBlock *Dst,
-                                                  VPlanPtr &Plan) {
+VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst,
+                                         VPlanPtr &Plan) {
   assert(is_contained(predecessors(Dst), Src) && "Invalid edge");
 
   // Look for cached value.
@@ -6534,8 +6534,7 @@ VPValue *LoopVectorizationPlanner::createEdgeMask(BasicBlock *Src,
   return EdgeMaskCache[Edge] = EdgeMask;
 }
 
-VPValue *LoopVectorizationPlanner::createBlockInMask(BasicBlock *BB,
-                                                     VPlanPtr &Plan) {
+VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
   assert(OrigLoop->contains(BB) && "Block is not a part of a loop");
 
   // Look for cached value.
@@ -6568,9 +6567,8 @@ VPValue *LoopVectorizationPlanner::createBlockInMask(BasicBlock *BB,
   return BlockMaskCache[BB] = BlockMask;
 }
 
-VPInterleaveRecipe *
-LoopVectorizationPlanner::tryToInterleaveMemory(Instruction *I,
-                                                VFRange &Range) {
+VPInterleaveRecipe *VPRecipeBuilder::tryToInterleaveMemory(Instruction *I,
+                                                           VFRange &Range) {
   const InterleaveGroup *IG = CM.getInterleavedAccessGroup(I);
   if (!IG)
     return nullptr;
@@ -6583,7 +6581,7 @@ LoopVectorizationPlanner::tryToInterleaveMemory(Instruction *I,
                   LoopVectorizationCostModel::CM_Interleave);
     };
   };
-  if (!getDecisionAndClampRange(isIGMember(I), Range))
+  if (!LoopVectorizationPlanner::getDecisionAndClampRange(isIGMember(I), Range))
     return nullptr;
 
   // I is a member of an InterleaveGroup for VF's in the (possibly trimmed)
@@ -6596,8 +6594,8 @@ LoopVectorizationPlanner::tryToInterleaveMemory(Instruction *I,
 }
 
 VPWidenMemoryInstructionRecipe *
-LoopVectorizationPlanner::tryToWidenMemory(Instruction *I, VFRange &Range,
-                                           VPlanPtr &Plan) {
+VPRecipeBuilder::tryToWidenMemory(Instruction *I, VFRange &Range,
+                                  VPlanPtr &Plan) {
   if (!isa<LoadInst>(I) && !isa<StoreInst>(I))
     return nullptr;
 
@@ -6616,7 +6614,7 @@ LoopVectorizationPlanner::tryToWidenMemory(Instruction *I, VFRange &Range,
     return Decision != LoopVectorizationCostModel::CM_Scalarize;
   };
 
-  if (!getDecisionAndClampRange(willWiden, Range))
+  if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
     return nullptr;
 
   VPValue *Mask = nullptr;
@@ -6627,8 +6625,7 @@ LoopVectorizationPlanner::tryToWidenMemory(Instruction *I, VFRange &Range,
 }
 
 VPWidenIntOrFpInductionRecipe *
-LoopVectorizationPlanner::tryToOptimizeInduction(Instruction *I,
-                                                 VFRange &Range) {
+VPRecipeBuilder::tryToOptimizeInduction(Instruction *I, VFRange &Range) {
   if (PHINode *Phi = dyn_cast<PHINode>(I)) {
     // Check if this is an integer or fp induction. If so, build the recipe that
     // produces its scalar and vector values.
@@ -6653,15 +6650,14 @@ LoopVectorizationPlanner::tryToOptimizeInduction(Instruction *I,
         [=](unsigned VF) -> bool { return CM.isOptimizableIVTruncate(K, VF); };
   };
 
-  if (isa<TruncInst>(I) &&
-      getDecisionAndClampRange(isOptimizableIVTruncate(I), Range))
+  if (isa<TruncInst>(I) && LoopVectorizationPlanner::getDecisionAndClampRange(
+                               isOptimizableIVTruncate(I), Range))
     return new VPWidenIntOrFpInductionRecipe(cast<PHINode>(I->getOperand(0)),
                                              cast<TruncInst>(I));
   return nullptr;
 }
 
-VPBlendRecipe *
-LoopVectorizationPlanner::tryToBlend(Instruction *I, VPlanPtr &Plan) {
+VPBlendRecipe *VPRecipeBuilder::tryToBlend(Instruction *I, VPlanPtr &Plan) {
   PHINode *Phi = dyn_cast<PHINode>(I);
   if (!Phi || Phi->getParent() == OrigLoop->getHeader())
     return nullptr;
@@ -6685,8 +6681,8 @@ LoopVectorizationPlanner::tryToBlend(Instruction *I, VPlanPtr &Plan) {
   return new VPBlendRecipe(Phi, Masks);
 }
 
-bool LoopVectorizationPlanner::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
-                                          VFRange &Range) {
+bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
+                                 VFRange &Range) {
   if (CM.isScalarWithPredication(I))
     return false;
 
@@ -6771,7 +6767,7 @@ bool LoopVectorizationPlanner::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
     return true;
   };
 
-  if (!getDecisionAndClampRange(willWiden, Range))
+  if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
     return false;
 
   // Success: widen this instruction. We optimize the common case where
@@ -6786,11 +6782,11 @@ bool LoopVectorizationPlanner::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
   return true;
 }
 
-VPBasicBlock *LoopVectorizationPlanner::handleReplication(
+VPBasicBlock *VPRecipeBuilder::handleReplication(
     Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
     DenseMap<Instruction *, VPReplicateRecipe *> &PredInst2Recipe,
     VPlanPtr &Plan) {
-  bool IsUniform = getDecisionAndClampRange(
+  bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](unsigned VF) { return CM.isUniformAfterVectorization(I, VF); },
       Range);
 
@@ -6823,10 +6819,9 @@ VPBasicBlock *LoopVectorizationPlanner::handleReplication(
   return RegSucc;
 }
 
-VPRegionBlock *
-LoopVectorizationPlanner::createReplicateRegion(Instruction *Instr,
-                                                VPRecipeBase *PredRecipe,
-                                                VPlanPtr &Plan) {
+VPRegionBlock *VPRecipeBuilder::createReplicateRegion(Instruction *Instr,
+                                                      VPRecipeBase *PredRecipe,
+                                                      VPlanPtr &Plan) {
   // Instructions marked for predication are replicated and placed under an
   // if-then construct to prevent side-effects.
 
@@ -6850,6 +6845,45 @@ LoopVectorizationPlanner::createReplicateRegion(Instruction *Instr,
   VPBlockUtils::connectBlocks(Pred, Exit);
 
   return Region;
+}
+
+bool VPRecipeBuilder::tryToCreateRecipe(Instruction *Instr, VFRange &Range,
+                                        VPlanPtr &Plan, VPBasicBlock *VPBB) {
+  VPRecipeBase *Recipe = nullptr;
+  // Check if Instr should belong to an interleave memory recipe, or already
+  // does. In the latter case Instr is irrelevant.
+  if ((Recipe = tryToInterleaveMemory(Instr, Range))) {
+    VPBB->appendRecipe(Recipe);
+    return true;
+  }
+
+  // Check if Instr is a memory operation that should be widened.
+  if ((Recipe = tryToWidenMemory(Instr, Range, Plan))) {
+    VPBB->appendRecipe(Recipe);
+    return true;
+  }
+
+  // Check if Instr should form some PHI recipe.
+  if ((Recipe = tryToOptimizeInduction(Instr, Range))) {
+    VPBB->appendRecipe(Recipe);
+    return true;
+  }
+  if ((Recipe = tryToBlend(Instr, Plan))) {
+    VPBB->appendRecipe(Recipe);
+    return true;
+  }
+  if (PHINode *Phi = dyn_cast<PHINode>(Instr)) {
+    VPBB->appendRecipe(new VPWidenPHIRecipe(Phi));
+    return true;
+  }
+
+  // Check if Instr is to be widened by a general VPWidenRecipe, after
+  // having first checked for specific widening recipes that deal with
+  // Interleave Groups, Inductions and Phi nodes.
+  if (tryToWiden(Instr, VPBB, Range))
+    return true;
+
+  return false;
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
@@ -6895,8 +6929,6 @@ LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   // scalar instead of vector value.
   DenseMap<Instruction *, VPReplicateRecipe *> PredInst2Recipe;
 
-  EdgeMaskCache.clear();
-  BlockMaskCache.clear();
   DenseMap<Instruction *, Instruction *> &SinkAfter = Legal->getSinkAfter();
   DenseMap<Instruction *, Instruction *> SinkAfterInverse;
 
@@ -6904,6 +6936,7 @@ LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   VPBasicBlock *VPBB = new VPBasicBlock("Pre-Entry");
   auto Plan = llvm::make_unique<VPlan>(VPBB);
 
+  VPRecipeBuilder RecipeBuilder(OrigLoop, TLI, TTI, Legal, CM, Builder);
   // Represent values that will have defs inside VPlan.
   for (Value *V : NeedDef)
     Plan->addVPValue(V);
@@ -6969,45 +7002,13 @@ LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
     // Introduce each ingredient into VPlan.
     for (Instruction *Instr : Ingredients) {
-      VPRecipeBase *Recipe = nullptr;
-
-      // Check if Instr should belong to an interleave memory recipe, or already
-      // does. In the latter case Instr is irrelevant.
-      if ((Recipe = tryToInterleaveMemory(Instr, Range))) {
-        VPBB->appendRecipe(Recipe);
-        continue;
-      }
-
-      // Check if Instr is a memory operation that should be widened.
-      if ((Recipe = tryToWidenMemory(Instr, Range, Plan))) {
-        VPBB->appendRecipe(Recipe);
-        continue;
-      }
-
-      // Check if Instr should form some PHI recipe.
-      if ((Recipe = tryToOptimizeInduction(Instr, Range))) {
-        VPBB->appendRecipe(Recipe);
-        continue;
-      }
-      if ((Recipe = tryToBlend(Instr, Plan))) {
-        VPBB->appendRecipe(Recipe);
-        continue;
-      }
-      if (PHINode *Phi = dyn_cast<PHINode>(Instr)) {
-        VPBB->appendRecipe(new VPWidenPHIRecipe(Phi));
-        continue;
-      }
-
-      // Check if Instr is to be widened by a general VPWidenRecipe, after
-      // having first checked for specific widening recipes that deal with
-      // Interleave Groups, Inductions and Phi nodes.
-      if (tryToWiden(Instr, VPBB, Range))
+      if (RecipeBuilder.tryToCreateRecipe(Instr, Range, Plan, VPBB))
         continue;
 
       // Otherwise, if all widening options failed, Instruction is to be
       // replicated. This may create a successor for VPBB.
-      VPBasicBlock *NextVPBB =
-        handleReplication(Instr, Range, VPBB, PredInst2Recipe, Plan);
+      VPBasicBlock *NextVPBB = RecipeBuilder.handleReplication(
+          Instr, Range, VPBB, PredInst2Recipe, Plan);
       if (NextVPBB != VPBB) {
         VPBB = NextVPBB;
         VPBB->setName(BB->hasName() ? BB->getName() + "." + Twine(VPBBsForBB++)

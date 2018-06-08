@@ -1227,7 +1227,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
 #define _mm256_permute2f128_pd(V1, V2, M) \
   (__m256d)__builtin_ia32_vperm2f128_pd256((__v4df)(__m256d)(V1), \
-                                           (__v4df)(__m256d)(V2), (M))
+                                           (__v4df)(__m256d)(V2), (int)(M))
 
 /// Permutes 128-bit data values stored in two 256-bit vectors of
 ///    [8 x float], as specified by the immediate integer operand.
@@ -1268,7 +1268,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
 #define _mm256_permute2f128_ps(V1, V2, M) \
   (__m256)__builtin_ia32_vperm2f128_ps256((__v8sf)(__m256)(V1), \
-                                          (__v8sf)(__m256)(V2), (M))
+                                          (__v8sf)(__m256)(V2), (int)(M))
 
 /// Permutes 128-bit data values stored in two 256-bit integer vectors,
 ///    as specified by the immediate integer operand.
@@ -1308,7 +1308,7 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// \returns A 256-bit integer vector containing the copied values.
 #define _mm256_permute2f128_si256(V1, V2, M) \
   (__m256i)__builtin_ia32_vperm2f128_si256((__v8si)(__m256i)(V1), \
-                                           (__v8si)(__m256i)(V2), (M))
+                                           (__v8si)(__m256i)(V2), (int)(M))
 
 /* Vector Blend */
 /// Merges 64-bit double-precision data values stored in either of the
