@@ -1,4 +1,4 @@
-//===-- hwasan.cc -----------------------------------------------------------===//
+//===-- hwasan.cc ---------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,8 +14,9 @@
 
 #include "hwasan.h"
 #include "hwasan_mapping.h"
-#include "hwasan_thread.h"
 #include "hwasan_poisoning.h"
+#include "hwasan_report.h"
+#include "hwasan_thread.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"

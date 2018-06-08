@@ -24,7 +24,7 @@ namespace __xray {
 void printToStdErr(const char *Buffer);
 
 // EINTR-safe write routine, provided a file descriptor and a character range.
-void retryingWriteAll(int Fd, char *Begin, char *End);
+void retryingWriteAll(int Fd, const char *Begin, const char *End);
 
 // Reads a long long value from a provided file.
 bool readValueFromFile(const char *Filename, long long *Value);
