@@ -27,6 +27,7 @@
 #include "lldb/Utility/Timer.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -2024,13 +2025,24 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
   // Remember how many variables are in the list before we search.
   const uint32_t original_size = variables.GetSize();
 
+  llvm::StringRef basename;
+  llvm::StringRef context;
+
+  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetCString(),
+                                                      context, basename))
+    basename = name.GetStringRef();
+
   DIEArray die_offsets;
-  m_index->GetGlobalVariables(name, die_offsets);
+  m_index->GetGlobalVariables(ConstString(basename), die_offsets);
   const size_t num_die_matches = die_offsets.size();
   if (num_die_matches) {
     SymbolContext sc;
     sc.module_sp = m_obj_file->GetModule();
     assert(sc.module_sp);
+
+    // Loop invariant: Variables up to this index have been checked for context
+    // matches.
+    uint32_t pruned_idx = original_size;
 
     bool done = false;
     for (size_t i = 0; i < num_die_matches && !done; ++i) {
@@ -2062,6 +2074,13 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
 
           ParseVariables(sc, die, LLDB_INVALID_ADDRESS, false, false,
                          &variables);
+          while (pruned_idx < variables.GetSize()) {
+            VariableSP var_sp = variables.GetVariableAtIndex(pruned_idx);
+            if (var_sp->GetName().GetStringRef().contains(name.GetStringRef()))
+              ++pruned_idx;
+            else
+              variables.RemoveVariableAtIndex(pruned_idx);
+          }
 
           if (variables.GetSize() - original_size >= max_matches)
             done = true;

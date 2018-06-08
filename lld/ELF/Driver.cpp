@@ -907,20 +907,35 @@ static void setConfigs(opt::InputArgList &Args) {
   ELFKind Kind = Config->EKind;
   uint16_t Machine = Config->EMachine;
 
-  // There is an ILP32 ABI for x86-64, although it's not very popular.
-  // It is called the x32 ABI.
-  bool IsX32 = (Kind == ELF32LEKind && Machine == EM_X86_64);
-
   Config->CopyRelocs = (Config->Relocatable || Config->EmitRelocs);
   Config->Is64 = (Kind == ELF64LEKind || Kind == ELF64BEKind);
   Config->IsLE = (Kind == ELF32LEKind || Kind == ELF64LEKind);
   Config->Endianness =
       Config->IsLE ? support::endianness::little : support::endianness::big;
   Config->IsMips64EL = (Kind == ELF64LEKind && Machine == EM_MIPS);
-  Config->IsRela =
-      (Config->Is64 || IsX32 || Machine == EM_PPC) && Machine != EM_MIPS;
   Config->Pic = Config->Pie || Config->Shared;
   Config->Wordsize = Config->Is64 ? 8 : 4;
+
+  // There is an ILP32 ABI for x86-64, although it's not very popular.
+  // It is called the x32 ABI.
+  bool IsX32 = (Kind == ELF32LEKind && Machine == EM_X86_64);
+
+  // ELF defines two different ways to store relocation addends as shown below:
+  //
+  //  Rel:  Addends are stored to the location where relocations are applied.
+  //  Rela: Addends are stored as part of relocation entry.
+  //
+  // In other words, Rela makes it easy to read addends at the price of extra
+  // 4 or 8 byte for each relocation entry. We don't know why ELF defined two
+  // different mechanisms in the first place, but this is how the spec is
+  // defined.
+  //
+  // You cannot choose which one, Rel or Rela, you want to use. Instead each
+  // ABI defines which one you need to use. The following expression expresses
+  // that.
+  Config->IsRela =
+      (Config->Is64 || IsX32 || Machine == EM_PPC) && Machine != EM_MIPS;
+
   // If the output uses REL relocations we must store the dynamic relocation
   // addends to the output sections. We also store addends for RELA relocations
   // if --apply-dynamic-relocs is used.
@@ -1152,6 +1167,12 @@ template <class ELFT> static bool shouldDemote(Symbol &Sym) {
   return Sym.isLazy() && Sym.IsUsedInRegularObj;
 }
 
+// Some files, such as .so or files between -{start,end}-lib may be removed
+// after their symbols are added to the symbol table. If that happens, we
+// need to remove symbols that refer files that no longer exist, so that
+// they won't appear in the symbol table of the output file.
+//
+// We remove symbols by demoting them to undefined symbol.
 template <class ELFT> static void demoteSymbols() {
   for (Symbol *Sym : Symtab->getSymbols()) {
     if (shouldDemote<ELFT>(*Sym)) {

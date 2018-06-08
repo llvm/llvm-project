@@ -20,6 +20,18 @@
 // RUN:   FileCheck --check-prefix=REGEX %s
 // RUN: lldb-test symbols --name=not_there --find=variable %t | \
 // RUN:   FileCheck --check-prefix=EMPTY %s
+//
+// RUN: clang %s -g -c -emit-llvm -o - --target=x86_64-pc-linux | \
+// RUN:   llc -accel-tables=Dwarf -filetype=obj -o %t.o
+// RUN: ld.lld %t.o -o %t
+// RUN: lldb-test symbols --name=foo --find=variable --context=context %t | \
+// RUN:   FileCheck --check-prefix=CONTEXT %s
+// RUN: lldb-test symbols --name=foo --find=variable %t | \
+// RUN:   FileCheck --check-prefix=NAME %s
+// RUN: lldb-test symbols --regex --name=foo --find=variable %t | \
+// RUN:   FileCheck --check-prefix=REGEX %s
+// RUN: lldb-test symbols --name=not_there --find=variable %t | \
+// RUN:   FileCheck --check-prefix=EMPTY %s
 
 // EMPTY: Found 0 variables:
 // NAME: Found 4 variables:

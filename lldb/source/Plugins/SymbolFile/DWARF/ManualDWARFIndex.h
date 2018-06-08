@@ -12,16 +12,19 @@
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/NameToDIE.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private {
 class ManualDWARFIndex : public DWARFIndex {
 public:
-  ManualDWARFIndex(Module &module, DWARFDebugInfo *debug_info)
-      : DWARFIndex(module), m_debug_info(debug_info) {}
+  ManualDWARFIndex(Module &module, DWARFDebugInfo *debug_info,
+                   llvm::DenseSet<dw_offset_t> units_to_avoid = {})
+      : DWARFIndex(module), m_debug_info(debug_info),
+        m_units_to_avoid(std::move(units_to_avoid)) {}
 
   void Preload() override { Index(); }
 
-  void GetGlobalVariables(ConstString name, DIEArray &offsets) override;
+  void GetGlobalVariables(ConstString basename, DIEArray &offsets) override;
   void GetGlobalVariables(const RegularExpression &regex,
                           DIEArray &offsets) override;
   void GetGlobalVariables(const DWARFUnit &cu, DIEArray &offsets) override;
@@ -62,6 +65,8 @@ private:
 
   /// Non-null value means we haven't built the index yet.
   DWARFDebugInfo *m_debug_info;
+  /// Which dwarf units should we skip while building the index.
+  llvm::DenseSet<dw_offset_t> m_units_to_avoid;
 
   IndexSet m_set;
 };

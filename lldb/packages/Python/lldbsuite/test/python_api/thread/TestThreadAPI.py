@@ -51,6 +51,7 @@ class ThreadAPITestCase(TestBase):
         self.step_out_of_malloc_into_function_b(self.exe_name)
 
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(oslist=["windows"], bugnumber='llvm.org/pr32343')
     def test_step_over_3_times(self):
         """Test Python SBThread.StepOver() API."""
         # We build a different executable than the default build() does.
