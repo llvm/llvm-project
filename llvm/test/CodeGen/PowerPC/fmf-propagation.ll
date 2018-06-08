@@ -39,7 +39,7 @@ define float @fmul_fadd_contract1(float %x, float %y, float %z) {
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fadd_contract2:'
-; FMFDEBUG:         fma {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
+; FMFDEBUG:         fma contract {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fadd_contract2:'
 
 define float @fmul_fadd_contract2(float %x, float %y, float %z) {
@@ -86,7 +86,7 @@ define float @fmul_fadd_reassoc1(float %x, float %y, float %z) {
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fadd_reassoc2:'
-; FMFDEBUG:         fma {{t[0-9]+}}, {{t[0-9]+}}
+; FMFDEBUG:         fma reassoc {{t[0-9]+}}, {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fadd_reassoc2:'
 
 define float @fmul_fadd_reassoc2(float %x, float %y, float %z) {
@@ -109,7 +109,7 @@ define float @fmul_fadd_reassoc2(float %x, float %y, float %z) {
 ; The fadd is now fully 'fast'. This implies that contraction is allowed.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fadd_fast1:'
-; FMFDEBUG:         fma {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
+; FMFDEBUG:         fma nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fadd_fast1:'
 
 define float @fmul_fadd_fast1(float %x, float %y, float %z) {
@@ -132,7 +132,7 @@ define float @fmul_fadd_fast1(float %x, float %y, float %z) {
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fadd_fast2:'
-; FMFDEBUG:         fma {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
+; FMFDEBUG:         fma nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}, {{t[0-9]+}}, {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fadd_fast2:'
 
 define float @fmul_fadd_fast2(float %x, float %y, float %z) {
@@ -192,6 +192,7 @@ define float @fmul_fma_reassoc1(float %x) {
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_reassoc2:'
+; FMFDEBUG:         fmul reassoc {{t[0-9]+}}
 ; FMFDEBUG:         fma reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_reassoc2:'
 
@@ -232,7 +233,7 @@ define float @fmul_fma_reassoc2(float %x) {
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast1:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast1:'
-; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
+; GLOBALDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast1:'
 
 define float @fmul_fma_fast1(float %x) {
@@ -264,11 +265,12 @@ define float @fmul_fma_fast1(float %x) {
 ; This shouldn't change anything - the intermediate fmul result is now also flagged.
 
 ; FMFDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast2:'
+; FMFDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
 ; FMFDEBUG:         fma nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
 ; FMFDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast2:'
 
 ; GLOBALDEBUG-LABEL: Optimized lowered selection DAG: %bb.0 'fmul_fma_fast2:'
-; GLOBALDEBUG:         fmul reassoc {{t[0-9]+}}
+; GLOBALDEBUG:         fmul nnan ninf nsz arcp contract afn reassoc {{t[0-9]+}}
 ; GLOBALDEBUG:       Type-legalized selection DAG: %bb.0 'fmul_fma_fast2:'
 
 define float @fmul_fma_fast2(float %x) {

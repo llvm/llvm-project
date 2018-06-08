@@ -20,6 +20,7 @@
 #include "hwasan_dynamic_shadow.h"
 #include "hwasan_interface_internal.h"
 #include "hwasan_mapping.h"
+#include "hwasan_report.h"
 #include "hwasan_thread.h"
 
 #include <elf.h>

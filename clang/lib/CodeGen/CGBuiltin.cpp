@@ -484,58 +484,99 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   return Builder.CreateCall(F, {Ptr, Min, NullIsUnknown});
 }
 
-// Get properties of an X86 BT* assembly instruction. The first returned value
-// is the action character code, which can be for complement, reset, or set. The
-// second is the size suffix which our assembler needs. The last is whether to
-// add the lock prefix.
-static std::tuple<char, char, bool>
-getBitTestActionSizeAndLocking(unsigned BuiltinID) {
-  switch (BuiltinID) {
-  case Builtin::BI_bittest:
-    return std::make_tuple('\0', 'l', false);
-  case Builtin::BI_bittestandcomplement:
-    return std::make_tuple('c', 'l', false);
-  case Builtin::BI_bittestandreset:
-    return std::make_tuple('r', 'l', false);
-  case Builtin::BI_bittestandset:
-    return std::make_tuple('s', 'l', false);
-  case Builtin::BI_interlockedbittestandreset:
-    return std::make_tuple('r', 'l', /*Locked=*/true);
-  case Builtin::BI_interlockedbittestandset:
-    return std::make_tuple('s', 'l', /*Locked=*/true);
+namespace {
+/// A struct to generically desribe a bit test intrinsic.
+struct BitTest {
+  enum ActionKind : uint8_t { TestOnly, Complement, Reset, Set };
+  enum InterlockingKind : uint8_t {
+    Unlocked,
+    Sequential,
+    Acquire,
+    Release,
+    NoFence
+  };
 
+  ActionKind Action;
+  InterlockingKind Interlocking;
+  bool Is64Bit;
+
+  static BitTest decodeBitTestBuiltin(unsigned BuiltinID);
+};
+} // namespace
+
+BitTest BitTest::decodeBitTestBuiltin(unsigned BuiltinID) {
+  switch (BuiltinID) {
+    // Main portable variants.
+  case Builtin::BI_bittest:
+    return {TestOnly, Unlocked, false};
+  case Builtin::BI_bittestandcomplement:
+    return {Complement, Unlocked, false};
+  case Builtin::BI_bittestandreset:
+    return {Reset, Unlocked, false};
+  case Builtin::BI_bittestandset:
+    return {Set, Unlocked, false};
+  case Builtin::BI_interlockedbittestandreset:
+    return {Reset, Sequential, false};
+  case Builtin::BI_interlockedbittestandset:
+    return {Set, Sequential, false};
+
+    // X86-specific 64-bit variants.
   case Builtin::BI_bittest64:
-    return std::make_tuple('\0', 'q', false);
+    return {TestOnly, Unlocked, true};
   case Builtin::BI_bittestandcomplement64:
-    return std::make_tuple('c', 'q', false);
+    return {Complement, Unlocked, true};
   case Builtin::BI_bittestandreset64:
-    return std::make_tuple('r', 'q', false);
+    return {Reset, Unlocked, true};
   case Builtin::BI_bittestandset64:
-    return std::make_tuple('s', 'q', false);
+    return {Set, Unlocked, true};
   case Builtin::BI_interlockedbittestandreset64:
-    return std::make_tuple('r', 'q', /*Locked=*/true);
+    return {Reset, Sequential, true};
   case Builtin::BI_interlockedbittestandset64:
-    return std::make_tuple('s', 'q', /*Locked=*/true);
+    return {Set, Sequential, true};
+
+    // ARM/AArch64-specific ordering variants.
+  case Builtin::BI_interlockedbittestandset_acq:
+    return {Set, Acquire, false};
+  case Builtin::BI_interlockedbittestandset_rel:
+    return {Set, Release, false};
+  case Builtin::BI_interlockedbittestandset_nf:
+    return {Set, NoFence, false};
+  case Builtin::BI_interlockedbittestandreset_acq:
+    return {Reset, Acquire, false};
+  case Builtin::BI_interlockedbittestandreset_rel:
+    return {Reset, Release, false};
+  case Builtin::BI_interlockedbittestandreset_nf:
+    return {Reset, NoFence, false};
   }
-  llvm_unreachable("expected only bittest builtins");
+  llvm_unreachable("expected only bittest intrinsics");
 }
 
-static RValue EmitX86BitTestIntrinsic(CodeGenFunction &CGF, unsigned BuiltinID,
-                                      const CallExpr *E, Value *BitBase,
-                                      Value *BitPos) {
-  char Action, Size;
-  bool Locked;
-  std::tie(Action, Size, Locked) = getBitTestActionSizeAndLocking(BuiltinID);
+static char bitActionToX86BTCode(BitTest::ActionKind A) {
+  switch (A) {
+  case BitTest::TestOnly:   return '\0';
+  case BitTest::Complement: return 'c';
+  case BitTest::Reset:      return 'r';
+  case BitTest::Set:        return 's';
+  }
+  llvm_unreachable("invalid action");
+}
+
+static llvm::Value *EmitX86BitTestIntrinsic(CodeGenFunction &CGF,
+                                            BitTest BT,
+                                            const CallExpr *E, Value *BitBase,
+                                            Value *BitPos) {
+  char Action = bitActionToX86BTCode(BT.Action);
+  char SizeSuffix = BT.Is64Bit ? 'q' : 'l';
 
   // Build the assembly.
   SmallString<64> Asm;
   raw_svector_ostream AsmOS(Asm);
-  if (Locked)
+  if (BT.Interlocking != BitTest::Unlocked)
     AsmOS << "lock ";
   AsmOS << "bt";
   if (Action)
     AsmOS << Action;
-  AsmOS << Size << " $2, ($1)\n\tsetc ${0:b}";
+  AsmOS << SizeSuffix << " $2, ($1)\n\tsetc ${0:b}";
 
   // Build the constraints. FIXME: We should support immediates when possible.
   std::string Constraints = "=r,r,r,~{cc},~{flags},~{fpsr}";
@@ -548,24 +589,38 @@ static RValue EmitX86BitTestIntrinsic(CodeGenFunction &CGF, unsigned BuiltinID,
 
   llvm::InlineAsm *IA =
       llvm::InlineAsm::get(FTy, Asm, Constraints, /*SideEffects=*/true);
-  CallSite CS = CGF.Builder.CreateCall(IA, {BitBase, BitPos});
-  return RValue::get(CS.getInstruction());
+  return CGF.Builder.CreateCall(IA, {BitBase, BitPos});
+}
+
+static llvm::AtomicOrdering
+getBitTestAtomicOrdering(BitTest::InterlockingKind I) {
+  switch (I) {
+  case BitTest::Unlocked:   return llvm::AtomicOrdering::NotAtomic;
+  case BitTest::Sequential: return llvm::AtomicOrdering::SequentiallyConsistent;
+  case BitTest::Acquire:    return llvm::AtomicOrdering::Acquire;
+  case BitTest::Release:    return llvm::AtomicOrdering::Release;
+  case BitTest::NoFence:    return llvm::AtomicOrdering::Monotonic;
+  }
+  llvm_unreachable("invalid interlocking");
 }
 
 /// Emit a _bittest* intrinsic. These intrinsics take a pointer to an array of
 /// bits and a bit position and read and optionally modify the bit at that
 /// position. The position index can be arbitrarily large, i.e. it can be larger
 /// than 31 or 63, so we need an indexed load in the general case.
-static RValue EmitBitTestIntrinsic(CodeGenFunction &CGF, unsigned BuiltinID,
-                                   const CallExpr *E) {
+static llvm::Value *EmitBitTestIntrinsic(CodeGenFunction &CGF,
+                                         unsigned BuiltinID,
+                                         const CallExpr *E) {
   Value *BitBase = CGF.EmitScalarExpr(E->getArg(0));
   Value *BitPos = CGF.EmitScalarExpr(E->getArg(1));
+
+  BitTest BT = BitTest::decodeBitTestBuiltin(BuiltinID);
 
   // X86 has special BT, BTC, BTR, and BTS instructions that handle the array
   // indexing operation internally. Use them if possible.
   llvm::Triple::ArchType Arch = CGF.getTarget().getTriple().getArch();
   if (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64)
-    return EmitX86BitTestIntrinsic(CGF, BuiltinID, E, BitBase, BitPos);
+    return EmitX86BitTestIntrinsic(CGF, BT, E, BitBase, BitPos);
 
   // Otherwise, use generic code to load one byte and test the bit. Use all but
   // the bottom three bits as the array index, and the bottom three bits to form
@@ -583,54 +638,42 @@ static RValue EmitBitTestIntrinsic(CodeGenFunction &CGF, unsigned BuiltinID,
 
   // The updating instructions will need a mask.
   Value *Mask = nullptr;
-  if (BuiltinID != Builtin::BI_bittest && BuiltinID != Builtin::BI_bittest64) {
+  if (BT.Action != BitTest::TestOnly) {
     Mask = CGF.Builder.CreateShl(llvm::ConstantInt::get(CGF.Int8Ty, 1), PosLow,
                                  "bittest.mask");
   }
 
-  // Emit a combined atomicrmw load/store operation for the interlocked
-  // intrinsics.
-  Value *OldByte = nullptr;
-  switch (BuiltinID) {
-  case Builtin::BI_interlockedbittestandreset:
-  case Builtin::BI_interlockedbittestandreset64:
-    OldByte = CGF.Builder.CreateAtomicRMW(
-        AtomicRMWInst::And, ByteAddr.getPointer(), CGF.Builder.CreateNot(Mask),
-        llvm::AtomicOrdering::SequentiallyConsistent);
-    break;
-  case Builtin::BI_interlockedbittestandset:
-  case Builtin::BI_interlockedbittestandset64:
-    OldByte = CGF.Builder.CreateAtomicRMW(
-        AtomicRMWInst::Or, ByteAddr.getPointer(), Mask,
-        llvm::AtomicOrdering::SequentiallyConsistent);
-    break;
-  default:
-    break;
-  }
+  // Check the action and ordering of the interlocked intrinsics.
+  llvm::AtomicOrdering Ordering = getBitTestAtomicOrdering(BT.Interlocking);
 
-  // Emit a plain load for the non-interlocked intrinsics.
-  if (!OldByte) {
+  Value *OldByte = nullptr;
+  if (Ordering != llvm::AtomicOrdering::NotAtomic) {
+    // Emit a combined atomicrmw load/store operation for the interlocked
+    // intrinsics.
+    llvm::AtomicRMWInst::BinOp RMWOp = llvm::AtomicRMWInst::Or;
+    if (BT.Action == BitTest::Reset) {
+      Mask = CGF.Builder.CreateNot(Mask);
+      RMWOp = llvm::AtomicRMWInst::And;
+    }
+    OldByte = CGF.Builder.CreateAtomicRMW(RMWOp, ByteAddr.getPointer(), Mask,
+                                          Ordering);
+  } else {
+    // Emit a plain load for the non-interlocked intrinsics.
     OldByte = CGF.Builder.CreateLoad(ByteAddr, "bittest.byte");
     Value *NewByte = nullptr;
-    switch (BuiltinID) {
-    case Builtin::BI_bittest:
-    case Builtin::BI_bittest64:
+    switch (BT.Action) {
+    case BitTest::TestOnly:
       // Don't store anything.
       break;
-    case Builtin::BI_bittestandcomplement:
-    case Builtin::BI_bittestandcomplement64:
+    case BitTest::Complement:
       NewByte = CGF.Builder.CreateXor(OldByte, Mask);
       break;
-    case Builtin::BI_bittestandreset:
-    case Builtin::BI_bittestandreset64:
+    case BitTest::Reset:
       NewByte = CGF.Builder.CreateAnd(OldByte, CGF.Builder.CreateNot(Mask));
       break;
-    case Builtin::BI_bittestandset:
-    case Builtin::BI_bittestandset64:
+    case BitTest::Set:
       NewByte = CGF.Builder.CreateOr(OldByte, Mask);
       break;
-    default:
-      llvm_unreachable("non bittest family builtin");
     }
     if (NewByte)
       CGF.Builder.CreateStore(NewByte, ByteAddr);
@@ -639,8 +682,8 @@ static RValue EmitBitTestIntrinsic(CodeGenFunction &CGF, unsigned BuiltinID,
   // However we loaded the old byte, either by plain load or atomicrmw, shift
   // the bit into the low position and mask it to 0 or 1.
   Value *ShiftedByte = CGF.Builder.CreateLShr(OldByte, PosLow, "bittest.shr");
-  return RValue::get(CGF.Builder.CreateAnd(
-      ShiftedByte, llvm::ConstantInt::get(CGF.Int8Ty, 1), "bittest.res"));
+  return CGF.Builder.CreateAnd(
+      ShiftedByte, llvm::ConstantInt::get(CGF.Int8Ty, 1), "bittest.res");
 }
 
 namespace {
@@ -2992,7 +3035,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI_interlockedbittestandreset64:
   case Builtin::BI_interlockedbittestandset64:
   case Builtin::BI_interlockedbittestandset:
-    return EmitBitTestIntrinsic(*this, BuiltinID, E);
+  case Builtin::BI_interlockedbittestandset_acq:
+  case Builtin::BI_interlockedbittestandset_rel:
+  case Builtin::BI_interlockedbittestandset_nf:
+  case Builtin::BI_interlockedbittestandreset_acq:
+  case Builtin::BI_interlockedbittestandreset_rel:
+  case Builtin::BI_interlockedbittestandreset_nf:
+    return RValue::get(EmitBitTestIntrinsic(*this, BuiltinID, E));
 
   case Builtin::BI__exception_code:
   case Builtin::BI_exception_code:
@@ -9186,6 +9235,123 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Ops[0] = Builder.CreateBitCast(Ops[0], PtrTy);
     return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
   }
+  case X86::BI__builtin_ia32_vextractf128_pd256:
+  case X86::BI__builtin_ia32_vextractf128_ps256:
+  case X86::BI__builtin_ia32_vextractf128_si256:
+  case X86::BI__builtin_ia32_extract128i256:
+  case X86::BI__builtin_ia32_extractf64x4:
+  case X86::BI__builtin_ia32_extractf32x4:
+  case X86::BI__builtin_ia32_extracti64x4:
+  case X86::BI__builtin_ia32_extracti32x4:
+  case X86::BI__builtin_ia32_extractf32x8:
+  case X86::BI__builtin_ia32_extracti32x8:
+  case X86::BI__builtin_ia32_extractf32x4_256:
+  case X86::BI__builtin_ia32_extracti32x4_256:
+  case X86::BI__builtin_ia32_extractf64x2_256:
+  case X86::BI__builtin_ia32_extracti64x2_256:
+  case X86::BI__builtin_ia32_extractf64x2_512:
+  case X86::BI__builtin_ia32_extracti64x2_512: {
+    llvm::Type *DstTy = ConvertType(E->getType());
+    unsigned NumElts = DstTy->getVectorNumElements();
+    unsigned Index = cast<ConstantInt>(Ops[1])->getZExtValue() * NumElts;
+
+    uint32_t Indices[16];
+    for (unsigned i = 0; i != NumElts; ++i)
+      Indices[i] = i + Index;
+
+    return Builder.CreateShuffleVector(Ops[0],
+                                       UndefValue::get(Ops[0]->getType()),
+                                       makeArrayRef(Indices, NumElts),
+                                       "extract");
+  }
+  case X86::BI__builtin_ia32_vinsertf128_pd256:
+  case X86::BI__builtin_ia32_vinsertf128_ps256:
+  case X86::BI__builtin_ia32_vinsertf128_si256:
+  case X86::BI__builtin_ia32_insert128i256:
+  case X86::BI__builtin_ia32_insertf64x4:
+  case X86::BI__builtin_ia32_insertf32x4:
+  case X86::BI__builtin_ia32_inserti64x4:
+  case X86::BI__builtin_ia32_inserti32x4:
+  case X86::BI__builtin_ia32_insertf32x8:
+  case X86::BI__builtin_ia32_inserti32x8:
+  case X86::BI__builtin_ia32_insertf32x4_256:
+  case X86::BI__builtin_ia32_inserti32x4_256:
+  case X86::BI__builtin_ia32_insertf64x2_256:
+  case X86::BI__builtin_ia32_inserti64x2_256:
+  case X86::BI__builtin_ia32_insertf64x2_512:
+  case X86::BI__builtin_ia32_inserti64x2_512: {
+    unsigned DstNumElts = Ops[0]->getType()->getVectorNumElements();
+    unsigned SrcNumElts = Ops[1]->getType()->getVectorNumElements();
+    unsigned Index = cast<ConstantInt>(Ops[2])->getZExtValue() * SrcNumElts;
+
+    uint32_t Indices[16];
+    for (unsigned i = 0; i != DstNumElts; ++i)
+      Indices[i] = (i >= SrcNumElts) ? SrcNumElts + (i % SrcNumElts) : i;
+
+    Value *Op1 = Builder.CreateShuffleVector(Ops[1],
+                                             UndefValue::get(Ops[1]->getType()),
+                                             makeArrayRef(Indices, DstNumElts),
+                                             "widen");
+
+    for (unsigned i = 0; i != DstNumElts; ++i) {
+      if (i >= Index && i < (Index + SrcNumElts))
+        Indices[i] = (i - Index) + DstNumElts;
+      else
+        Indices[i] = i;
+    }
+
+    return Builder.CreateShuffleVector(Ops[0], Op1,
+                                       makeArrayRef(Indices, DstNumElts),
+                                       "insert");
+  }
+  case X86::BI__builtin_ia32_pblendw128:
+  case X86::BI__builtin_ia32_blendpd:
+  case X86::BI__builtin_ia32_blendps:
+  case X86::BI__builtin_ia32_blendpd256:
+  case X86::BI__builtin_ia32_blendps256:
+  case X86::BI__builtin_ia32_pblendw256:
+  case X86::BI__builtin_ia32_pblendd128:
+  case X86::BI__builtin_ia32_pblendd256: {
+    unsigned NumElts = Ops[0]->getType()->getVectorNumElements();
+    unsigned Imm = cast<llvm::ConstantInt>(Ops[2])->getZExtValue();
+
+    uint32_t Indices[16];
+    // If there are more than 8 elements, the immediate is used twice so make
+    // sure we handle that.
+    for (unsigned i = 0; i != NumElts; ++i)
+      Indices[i] = ((Imm >> (i % 8)) & 0x1) ? NumElts + i : i;
+
+    return Builder.CreateShuffleVector(Ops[1], Ops[0],
+                                       makeArrayRef(Indices, NumElts),
+                                       "blend");
+  }
+  case X86::BI__builtin_ia32_vpermilpd:
+  case X86::BI__builtin_ia32_vpermilps:
+  case X86::BI__builtin_ia32_vpermilpd256:
+  case X86::BI__builtin_ia32_vpermilps256:
+  case X86::BI__builtin_ia32_vpermilpd512:
+  case X86::BI__builtin_ia32_vpermilps512: {
+    uint32_t Imm = cast<llvm::ConstantInt>(Ops[1])->getZExtValue();
+    llvm::Type *Ty = Ops[0]->getType();
+    unsigned NumElts = Ty->getVectorNumElements();
+    unsigned NumLanes = Ty->getPrimitiveSizeInBits() / 128;
+    unsigned NumLaneElts = NumElts / NumLanes;
+
+    // Splat the 8-bits of immediate 4 times to help the loop wrap around.
+    Imm = (Imm & 0xff) * 0x01010101;
+
+    uint32_t Indices[16];
+    for (unsigned l = 0; l != NumElts; l += NumLaneElts) {
+      for (unsigned i = 0; i != NumLaneElts; ++i) {
+        Indices[i + l] = (Imm % NumLaneElts) + l;
+        Imm /= NumLaneElts;
+      }
+    }
+
+    return Builder.CreateShuffleVector(Ops[0], UndefValue::get(Ty),
+                                       makeArrayRef(Indices, NumElts),
+                                       "permil");
+  }
   case X86::BI__builtin_ia32_palignr128:
   case X86::BI__builtin_ia32_palignr256:
   case X86::BI__builtin_ia32_palignr512: {
@@ -9221,6 +9387,55 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateShuffleVector(Ops[1], Ops[0],
                                        makeArrayRef(Indices, NumElts),
                                        "palignr");
+  }
+  case X86::BI__builtin_ia32_alignd128:
+  case X86::BI__builtin_ia32_alignd256:
+  case X86::BI__builtin_ia32_alignd512:
+  case X86::BI__builtin_ia32_alignq128:
+  case X86::BI__builtin_ia32_alignq256:
+  case X86::BI__builtin_ia32_alignq512: {
+    unsigned NumElts = Ops[0]->getType()->getVectorNumElements();
+    unsigned ShiftVal = cast<llvm::ConstantInt>(Ops[2])->getZExtValue();
+
+    // Mask the shift amount to width of two vectors.
+    ShiftVal &= (2 * NumElts) - 1;
+
+    uint32_t Indices[16];
+    for (unsigned i = 0; i != NumElts; ++i)
+      Indices[i] = i + ShiftVal;
+
+    return Builder.CreateShuffleVector(Ops[1], Ops[0],
+                                       makeArrayRef(Indices, NumElts),
+                                       "valign");
+  }
+  case X86::BI__builtin_ia32_shuf_f32x4_256:
+  case X86::BI__builtin_ia32_shuf_f64x2_256:
+  case X86::BI__builtin_ia32_shuf_i32x4_256:
+  case X86::BI__builtin_ia32_shuf_i64x2_256:
+  case X86::BI__builtin_ia32_shuf_f32x4:
+  case X86::BI__builtin_ia32_shuf_f64x2:
+  case X86::BI__builtin_ia32_shuf_i32x4:
+  case X86::BI__builtin_ia32_shuf_i64x2: {
+    unsigned Imm = cast<llvm::ConstantInt>(Ops[2])->getZExtValue();
+    llvm::Type *Ty = Ops[0]->getType();
+    unsigned NumElts = Ty->getVectorNumElements();
+    unsigned NumLanes = Ty->getPrimitiveSizeInBits() == 512 ? 4 : 2;
+    unsigned NumLaneElts = NumElts / NumLanes;
+
+    uint32_t Indices[16];
+    for (unsigned l = 0; l != NumElts; l += NumLaneElts) {
+      unsigned Index = (Imm % NumLanes) * NumLaneElts;
+      Imm /= NumLanes; // Discard the bits we just used.
+      if (l >= (NumElts / 2))
+        Index += NumElts; // Switch to other source.
+      for (unsigned i = 0; i != NumLaneElts; ++i) {
+        Indices[l + i] = Index + i;
+      }
+    }
+
+    return Builder.CreateShuffleVector(Ops[0], Ops[1],
+                                       makeArrayRef(Indices, NumElts),
+                                       "shuf");
   }
 
   case X86::BI__builtin_ia32_vperm2f128_pd256:

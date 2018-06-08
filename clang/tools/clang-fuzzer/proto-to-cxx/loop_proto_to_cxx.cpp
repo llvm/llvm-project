@@ -7,10 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements functions for converting between protobufs and C++. Extends
+// Implements functions for converting between protobufs and C++. Differs from
 // proto_to_cxx.cpp by wrapping all the generated C++ code in a single for
 // loop. Also coutputs a different function signature that includes a
-// size_t parameter for the loop to use.
+// size_t parameter for the loop to use. The C++ code generated is meant to
+// stress the LLVM loop vectorizer.
+//
+// Still a work in progress.
 //
 //===----------------------------------------------------------------------===//
 
@@ -33,19 +36,7 @@ std::ostream &operator<<(std::ostream &os, const StatementSeq &x);
 std::ostream &operator<<(std::ostream &os, const Const &x) {
   return os << "(" << x.val() << ")";
 }
-std::ostream &operator<<(std::ostream &os, const VarRef &x) {
-  if (x.is_loop_var()) {
-    return os << "a[loop_ctr]";
-  } else {
-    return os << "a[" << static_cast<uint32_t>(x.varnum()) << " % s]";
-  }
-}
-std::ostream &operator<<(std::ostream &os, const Lvalue &x) {
-  return os << x.varref();
-}
 std::ostream &operator<<(std::ostream &os, const Rvalue &x) {
-  if (x.has_varref())
-    return os << x.varref();
   if (x.has_cons())
     return os << x.cons();
   if (x.has_binop())
@@ -101,23 +92,18 @@ std::ostream &operator<<(std::ostream &os, const BinaryOp &x) {
   return os << x.right() << ")";
 }
 std::ostream &operator<<(std::ostream &os, const AssignmentStatement &x) {
-  return os << x.lvalue() << "=" << x.rvalue();
+  return os << "a[i]=" << x.rvalue();
 }
 std::ostream &operator<<(std::ostream &os, const IfElse &x) {
   return os << "if (" << x.cond() << "){\n"
             << x.if_body() << "} else { \n"
             << x.else_body() << "}\n";
 }
-std::ostream &operator<<(std::ostream &os, const While &x) {
-  return os << "while (" << x.cond() << "){\n" << x.body() << "}\n";
-}
 std::ostream &operator<<(std::ostream &os, const Statement &x) {
   if (x.has_assignment())
     return os << x.assignment() << ";\n";
   if (x.has_ifelse())
     return os << x.ifelse();
-  if (x.has_while_loop())
-    return os << x.while_loop();
   return os << "(void)0;\n";
 }
 std::ostream &operator<<(std::ostream &os, const StatementSeq &x) {
@@ -127,7 +113,7 @@ std::ostream &operator<<(std::ostream &os, const StatementSeq &x) {
 }
 std::ostream &operator<<(std::ostream &os, const LoopFunction &x) {
   return os << "void foo(int *a, size_t s) {\n"
-            << "for (int loop_ctr = 0; loop_ctr < s; loop_ctr++){\n"
+            << "for (int i=0; i<s; i++){\n"
             << x.statements() << "}\n}\n";
 }
 
@@ -141,7 +127,7 @@ std::string LoopFunctionToString(const LoopFunction &input) {
 std::string LoopProtoToCxx(const uint8_t *data, size_t size) {
   LoopFunction message;
   if (!message.ParsePartialFromArray(data, size))
-    return "#error invalid proto, may not be binary encoded\n";
+    return "#error invalid proto\n";
   return LoopFunctionToString(message);
 }
 

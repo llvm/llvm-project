@@ -1102,11 +1102,12 @@ static DWORD nativeAccess(FileAccess Access, OpenFlags Flags) {
   return Result;
 }
 
-static Expected<file_t> nativeOpenFile(const Twine &Name, DWORD Disp,
-                                       DWORD Access, DWORD Flags) {
+static std::error_code openNativeFileInternal(const Twine &Name,
+                                              file_t &ResultFile, DWORD Disp,
+                                              DWORD Access, DWORD Flags) {
   SmallVector<wchar_t, 128> PathUTF16;
   if (std::error_code EC = widenPath(Name, PathUTF16))
-    return errorCodeToError(EC);
+    return EC;
 
   HANDLE H =
       ::CreateFileW(PathUTF16.begin(), Access,
@@ -1119,16 +1120,18 @@ static Expected<file_t> nativeOpenFile(const Twine &Name, DWORD Disp,
     // This only runs if we failed to open the file, so there is probably
     // no performances issues.
     if (LastError != ERROR_ACCESS_DENIED)
-      return errorCodeToError(EC);
+      return EC;
     if (is_directory(Name))
-      return errorCodeToError(make_error_code(errc::is_a_directory));
-    return errorCodeToError(EC);
+      return make_error_code(errc::is_a_directory);
+    return EC;
   }
-  return H;
+  ResultFile = H;
+  return std::error_code();
 }
 
-static Expected<file_t> openFile(const Twine &Name, CreationDisposition Disp,
-                                 FileAccess Access, OpenFlags Flags) {
+Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
+                                FileAccess Access, OpenFlags Flags,
+                                unsigned Mode) {
   // Verify that we don't have both "append" and "excl".
   assert((!(Disp == CD_CreateNew) || !(Flags & OF_Append)) &&
          "Cannot specify both 'CreateNew' and 'Append' file creation flags!");
@@ -1137,18 +1140,34 @@ static Expected<file_t> openFile(const Twine &Name, CreationDisposition Disp,
   DWORD NativeDisp = nativeDisposition(Disp, Flags);
   DWORD NativeAccess = nativeAccess(Access, Flags);
 
-  return nativeOpenFile(Name, NativeDisp, NativeAccess, NativeFlags);
+  file_t Result;
+  std::error_code EC = openNativeFileInternal(Name, Result, NativeDisp,
+                                              NativeAccess, NativeFlags);
+  if (EC)
+    return errorCodeToError(EC);
+  return Result;
+}
+
+std::error_code openFile(const Twine &Name, int &ResultFD,
+                         CreationDisposition Disp, FileAccess Access,
+                         OpenFlags Flags, unsigned int Mode) {
+  Expected<file_t> Result = openNativeFile(Name, Disp, Access, Flags);
+  if (!Result)
+    return errorToErrorCode(Result.takeError());
+
+  return nativeFileToFd(*Result, ResultFD, Flags);
 }
 
 static std::error_code directoryRealPath(const Twine &Name,
                                          SmallVectorImpl<char> &RealPath) {
-  Expected<file_t> EF = nativeOpenFile(Name, OPEN_EXISTING, GENERIC_READ,
-                                       FILE_FLAG_BACKUP_SEMANTICS);
-  if (!EF)
-    return errorToErrorCode(EF.takeError());
+  file_t File;
+  std::error_code EC = openNativeFileInternal(
+      Name, File, OPEN_EXISTING, GENERIC_READ, FILE_FLAG_BACKUP_SEMANTICS);
+  if (EC)
+    return EC;
 
-  std::error_code EC = realPathFromHandle(*EF, RealPath);
-  ::CloseHandle(*EF);
+  EC = realPathFromHandle(File, RealPath);
+  ::CloseHandle(File);
   return EC;
 }
 
@@ -1161,47 +1180,14 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
 
 Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
                                        SmallVectorImpl<char> *RealPath) {
-
-  Expected<file_t> Result = openFile(Name, CD_OpenExisting, FA_Read, Flags);
+  Expected<file_t> Result =
+      openNativeFile(Name, CD_OpenExisting, FA_Read, Flags);
 
   // Fetch the real name of the file, if the user asked
   if (Result && RealPath)
     realPathFromHandle(*Result, *RealPath);
 
   return std::move(Result);
-}
-
-std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
-                                 CreationDisposition Disp, OpenFlags Flags,
-                                 unsigned Mode) {
-  Expected<HANDLE> NativeFile = openNativeFileForWrite(Name, Disp, Flags, Mode);
-  if (!NativeFile)
-    return errorToErrorCode(NativeFile.takeError());
-
-  return nativeFileToFd(std::move(NativeFile), ResultFD, Flags);
-}
-
-Expected<file_t> openNativeFileForWrite(const Twine &Name,
-                                        CreationDisposition Disp,
-                                        OpenFlags Flags, unsigned Mode) {
-  return openFile(Name, Disp, FA_Write, Flags);
-}
-
-std::error_code openFileForReadWrite(const Twine &Name, int &ResultFD,
-                                     CreationDisposition Disp, OpenFlags Flags,
-                                     unsigned Mode) {
-  Expected<HANDLE> NativeFile =
-      openNativeFileForReadWrite(Name, Disp, Flags, Mode);
-  if (!NativeFile)
-    return errorToErrorCode(NativeFile.takeError());
-
-  return nativeFileToFd(std::move(NativeFile), ResultFD, Flags);
-}
-
-Expected<file_t> openNativeFileForReadWrite(const Twine &Name,
-                                            CreationDisposition Disp,
-                                            OpenFlags Flags, unsigned Mode) {
-  return openFile(Name, Disp, FA_Write | FA_Read, Flags);
 }
 
 void closeFile(file_t &F) {
