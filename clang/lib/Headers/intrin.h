@@ -521,6 +521,23 @@ _InterlockedAnd64_rel(__int64 volatile *_Value, __int64 _Mask) {
 }
 #endif
 /*----------------------------------------------------------------------------*\
+|* Bit Counting and Testing
+\*----------------------------------------------------------------------------*/
+#if defined(__arm__) || defined(__aarch64__)
+unsigned char _interlockedbittestandset_acq(long volatile *_BitBase,
+                                            long _BitPos);
+unsigned char _interlockedbittestandset_nf(long volatile *_BitBase,
+                                           long _BitPos);
+unsigned char _interlockedbittestandset_rel(long volatile *_BitBase,
+                                            long _BitPos);
+unsigned char _interlockedbittestandreset_acq(long volatile *_BitBase,
+                                              long _BitPos);
+unsigned char _interlockedbittestandreset_nf(long volatile *_BitBase,
+                                             long _BitPos);
+unsigned char _interlockedbittestandreset_rel(long volatile *_BitBase,
+                                              long _BitPos);
+#endif
+/*----------------------------------------------------------------------------*\
 |* Interlocked Or
 \*----------------------------------------------------------------------------*/
 #if defined(__arm__) || defined(__aarch64__)

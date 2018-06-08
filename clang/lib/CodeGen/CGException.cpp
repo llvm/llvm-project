@@ -117,12 +117,12 @@ EHPersonality::GNU_Wasm_CPlusPlus = { "__gxx_wasm_personality_v0", nullptr };
 static const EHPersonality &getCPersonality(const TargetInfo &Target,
                                             const LangOptions &L) {
   const llvm::Triple &T = Target.getTriple();
+  if (T.isWindowsMSVCEnvironment())
+    return EHPersonality::MSVC_CxxFrameHandler3;
   if (L.SjLjExceptions)
     return EHPersonality::GNU_C_SJLJ;
   if (L.DWARFExceptions)
     return EHPersonality::GNU_C;
-  if (T.isWindowsMSVCEnvironment())
-    return EHPersonality::MSVC_CxxFrameHandler3;
   if (L.SEHExceptions)
     return EHPersonality::GNU_C_SEH;
   return EHPersonality::GNU_C;
@@ -131,14 +131,15 @@ static const EHPersonality &getCPersonality(const TargetInfo &Target,
 static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
                                                const LangOptions &L) {
   const llvm::Triple &T = Target.getTriple();
+  if (T.isWindowsMSVCEnvironment())
+    return EHPersonality::MSVC_CxxFrameHandler3;
+
   switch (L.ObjCRuntime.getKind()) {
   case ObjCRuntime::FragileMacOSX:
     return getCPersonality(Target, L);
   case ObjCRuntime::MacOSX:
   case ObjCRuntime::iOS:
   case ObjCRuntime::WatchOS:
-    if (T.isWindowsMSVCEnvironment())
-      return EHPersonality::MSVC_CxxFrameHandler3;
     return EHPersonality::NeXT_ObjC;
   case ObjCRuntime::GNUstep:
     if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
@@ -158,12 +159,12 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
 static const EHPersonality &getCXXPersonality(const TargetInfo &Target,
                                               const LangOptions &L) {
   const llvm::Triple &T = Target.getTriple();
+  if (T.isWindowsMSVCEnvironment())
+    return EHPersonality::MSVC_CxxFrameHandler3;
   if (L.SjLjExceptions)
     return EHPersonality::GNU_CPlusPlus_SJLJ;
   if (L.DWARFExceptions)
     return EHPersonality::GNU_CPlusPlus;
-  if (T.isWindowsMSVCEnvironment())
-    return EHPersonality::MSVC_CxxFrameHandler3;
   if (L.SEHExceptions)
     return EHPersonality::GNU_CPlusPlus_SEH;
   // Wasm EH is a non-MVP feature for now.
@@ -178,6 +179,9 @@ static const EHPersonality &getCXXPersonality(const TargetInfo &Target,
 /// and Objective-C exceptions are being caught.
 static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
                                                  const LangOptions &L) {
+  if (Target.getTriple().isWindowsMSVCEnvironment())
+    return EHPersonality::MSVC_CxxFrameHandler3;
+
   switch (L.ObjCRuntime.getKind()) {
   // In the fragile ABI, just use C++ exception handling and hope
   // they're not doing crazy exception mixing.

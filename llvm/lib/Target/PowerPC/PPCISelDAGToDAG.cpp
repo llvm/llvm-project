@@ -1292,7 +1292,7 @@ class BitPermutationSelector {
         Bits[i] = ValueBit(ValueBit::ConstZero);
 
       return std::make_pair(Interesting, &Bits);
-      }
+    }
     }
 
     for (unsigned i = 0; i < NumBits; ++i)

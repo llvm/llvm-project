@@ -103,7 +103,7 @@ __m256d test_mm256_insertf128_pd_0(__m256d a, __m128d b) {
 
 __m256i test_mm256_insertf128_si256_0(__m256i a, __m128i b) {
   // CHECK-LABEL: @test_mm256_insertf128_si256_0
-  // CHECK: shufflevector{{.*}}<i32 4, i32 5, i32 2, i32 3>
+  // CHECK: shufflevector{{.*}}<i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
   return _mm256_insertf128_si256(a, b, 0);
 }
 
@@ -121,7 +121,7 @@ __m256d test_mm256_insertf128_pd_1(__m256d a, __m128d b) {
 
 __m256i test_mm256_insertf128_si256_1(__m256i a, __m128i b) {
   // CHECK-LABEL: @test_mm256_insertf128_si256_1
-  // CHECK: shufflevector{{.*}}<i32 0, i32 1, i32 4, i32 5>
+  // CHECK: shufflevector{{.*}}<i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   return _mm256_insertf128_si256(a, b, 1);
 }
 
@@ -141,7 +141,7 @@ __m128d test_mm256_extractf128_pd_0(__m256d a) {
 
 __m128i test_mm256_extractf128_si256_0(__m256i a) {
   // CHECK-LABEL: @test_mm256_extractf128_si256_0
-  // CHECK: shufflevector{{.*}}<i32 0, i32 1>
+  // CHECK: shufflevector{{.*}}<i32 0, i32 1, i32 2, i32 3>
   return _mm256_extractf128_si256(a, 0);
 }
 
@@ -159,7 +159,7 @@ __m128d test_mm256_extractf128_pd_1(__m256d a) {
 
 __m128i test_mm256_extractf128_si256_1(__m256i a) {
   // CHECK-LABEL: @test_mm256_extractf128_si256_1
-  // CHECK: shufflevector{{.*}}<i32 2, i32 3>
+  // CHECK: shufflevector{{.*}}<i32 4, i32 5, i32 6, i32 7>
   return _mm256_extractf128_si256(a, 1);
 }
 

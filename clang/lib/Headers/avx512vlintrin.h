@@ -6465,16 +6465,8 @@ _mm256_maskz_srai_epi64(__mmask8 __U, __m256i __A, int __imm)
 
 
 #define _mm256_shuffle_f32x4(A, B, imm) \
-  (__m256)__builtin_shufflevector((__v8sf)(__m256)(A), \
-                                  (__v8sf)(__m256)(B), \
-                                   0 + ((((imm) >> 0) & 0x1) * 4), \
-                                   1 + ((((imm) >> 0) & 0x1) * 4), \
-                                   2 + ((((imm) >> 0) & 0x1) * 4), \
-                                   3 + ((((imm) >> 0) & 0x1) * 4), \
-                                   8 + ((((imm) >> 1) & 0x1) * 4), \
-                                   9 + ((((imm) >> 1) & 0x1) * 4), \
-                                   10 + ((((imm) >> 1) & 0x1) * 4), \
-                                   11 + ((((imm) >> 1) & 0x1) * 4))                                  
+  (__m256)__builtin_ia32_shuf_f32x4_256((__v8sf)(__m256)(A), \
+                                        (__v8sf)(__m256)(B), (int)(imm))
 
 #define _mm256_mask_shuffle_f32x4(W, U, A, B, imm) \
   (__m256)__builtin_ia32_selectps_256((__mmask8)(U), \
@@ -6487,12 +6479,8 @@ _mm256_maskz_srai_epi64(__mmask8 __U, __m256i __A, int __imm)
                                       (__v8sf)_mm256_setzero_ps())
 
 #define _mm256_shuffle_f64x2(A, B, imm) \
-  (__m256d)__builtin_shufflevector((__v4df)(__m256d)(A), \
-                                   (__v4df)(__m256d)(B), \
-                                   0 + ((((imm) >> 0) & 0x1) * 2), \
-                                   1 + ((((imm) >> 0) & 0x1) * 2), \
-                                   4 + ((((imm) >> 1) & 0x1) * 2), \
-                                   5 + ((((imm) >> 1) & 0x1) * 2))
+  (__m256d)__builtin_ia32_shuf_f64x2_256((__v4df)(__m256d)(A), \
+                                         (__v4df)(__m256d)(B), (int)(imm))
 
 #define _mm256_mask_shuffle_f64x2(W, U, A, B, imm) \
   (__m256d)__builtin_ia32_selectpd_256((__mmask8)(U), \
@@ -6505,12 +6493,8 @@ _mm256_maskz_srai_epi64(__mmask8 __U, __m256i __A, int __imm)
                                       (__v4df)_mm256_setzero_pd())
 
 #define _mm256_shuffle_i32x4(A, B, imm) \
-  (__m256i)__builtin_shufflevector((__v4di)(__m256i)(A), \
-                                   (__v4di)(__m256i)(B), \
-                                   0 + ((((imm) >> 0) & 0x1) * 2), \
-                                   1 + ((((imm) >> 0) & 0x1) * 2), \
-                                   4 + ((((imm) >> 1) & 0x1) * 2), \
-                                   5 + ((((imm) >> 1) & 0x1) * 2))
+  (__m256i)__builtin_ia32_shuf_i32x4_256((__v8si)(__m256i)(A), \
+                                         (__v8si)(__m256i)(B), (int)(imm))
 
 #define _mm256_mask_shuffle_i32x4(W, U, A, B, imm) \
   (__m256i)__builtin_ia32_selectd_256((__mmask8)(U), \
@@ -6523,12 +6507,8 @@ _mm256_maskz_srai_epi64(__mmask8 __U, __m256i __A, int __imm)
                                       (__v8si)_mm256_setzero_si256())
 
 #define _mm256_shuffle_i64x2(A, B, imm) \
-  (__m256i)__builtin_shufflevector((__v4di)(__m256i)(A), \
-                                   (__v4di)(__m256i)(B), \
-                                   0 + ((((imm) >> 0) & 0x1) * 2), \
-                                   1 + ((((imm) >> 0) & 0x1) * 2), \
-                                   4 + ((((imm) >> 1) & 0x1) * 2), \
-                                   5 + ((((imm) >> 1) & 0x1) * 2))
+  (__m256i)__builtin_ia32_shuf_i64x2_256((__v4di)(__m256i)(A), \
+                                         (__v4di)(__m256i)(B), (int)(imm))
 
 #define _mm256_mask_shuffle_i64x2(W, U, A, B, imm) \
   (__m256i)__builtin_ia32_selectq_256((__mmask8)(U), \
@@ -7719,12 +7699,7 @@ _mm256_mask_cvtepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
 }
 
 #define _mm256_extractf32x4_ps(A, imm) \
-  (__m128)__builtin_shufflevector((__v8sf)(__m256)(A),           \
-                                  (__v8sf)_mm256_undefined_ps(), \
-                                  ((imm) & 1) ? 4 : 0,           \
-                                  ((imm) & 1) ? 5 : 1,           \
-                                  ((imm) & 1) ? 6 : 2,           \
-                                  ((imm) & 1) ? 7 : 3)
+  (__m128)__builtin_ia32_extractf32x4_256((__v8sf)(__m256)(A), (int)(imm))
 
 #define _mm256_mask_extractf32x4_ps(W, U, A, imm) \
   (__m128)__builtin_ia32_selectps_128((__mmask8)(U), \
@@ -7737,12 +7712,7 @@ _mm256_mask_cvtepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
                                    (__v4sf)_mm_setzero_ps())
 
 #define _mm256_extracti32x4_epi32(A, imm) \
-  (__m128i)__builtin_shufflevector((__v8si)(__m256)(A),              \
-                                   (__v8si)_mm256_undefined_si256(), \
-                                   ((imm) & 1) ? 4 : 0,              \
-                                   ((imm) & 1) ? 5 : 1,              \
-                                   ((imm) & 1) ? 6 : 2,              \
-                                   ((imm) & 1) ? 7 : 3)
+  (__m128i)__builtin_ia32_extracti32x4_256((__v8si)(__m256i)(A), (int)(imm))
 
 #define _mm256_mask_extracti32x4_epi32(W, U, A, imm) \
   (__m128i)__builtin_ia32_selectd_128((__mmask8)(U), \
@@ -7755,16 +7725,8 @@ _mm256_mask_cvtepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
                                 (__v4si)_mm_setzero_si128())
 
 #define _mm256_insertf32x4(A, B, imm) \
-  (__m256)__builtin_shufflevector((__v8sf)(__m256)(A), \
-                                  (__v8sf)_mm256_castps128_ps256((__m128)(B)), \
-                                  ((imm) & 0x1) ?  0 :  8, \
-                                  ((imm) & 0x1) ?  1 :  9, \
-                                  ((imm) & 0x1) ?  2 : 10, \
-                                  ((imm) & 0x1) ?  3 : 11, \
-                                  ((imm) & 0x1) ?  8 :  4, \
-                                  ((imm) & 0x1) ?  9 :  5, \
-                                  ((imm) & 0x1) ? 10 :  6, \
-                                  ((imm) & 0x1) ? 11 :  7)
+  (__m256)__builtin_ia32_insertf32x4_256((__v8sf)(__m256)(A), \
+                                         (__v4sf)(__m128)(B), (int)(imm))
 
 #define _mm256_mask_insertf32x4(W, U, A, B, imm) \
   (__m256)__builtin_ia32_selectps_256((__mmask8)(U), \
@@ -7777,16 +7739,8 @@ _mm256_mask_cvtepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
                                   (__v8sf)_mm256_setzero_ps())
 
 #define _mm256_inserti32x4(A, B, imm) \
-  (__m256i)__builtin_shufflevector((__v8si)(__m256i)(A), \
-                                 (__v8si)_mm256_castsi128_si256((__m128i)(B)), \
-                                 ((imm) & 0x1) ?  0 :  8, \
-                                 ((imm) & 0x1) ?  1 :  9, \
-                                 ((imm) & 0x1) ?  2 : 10, \
-                                 ((imm) & 0x1) ?  3 : 11, \
-                                 ((imm) & 0x1) ?  8 :  4, \
-                                 ((imm) & 0x1) ?  9 :  5, \
-                                 ((imm) & 0x1) ? 10 :  6, \
-                                 ((imm) & 0x1) ? 11 :  7)
+  (__m256i)__builtin_ia32_inserti32x4_256((__v8si)(__m256i)(A), \
+                                          (__v4si)(__m128i)(B), (int)(imm))
 
 #define _mm256_mask_inserti32x4(W, U, A, B, imm) \
   (__m256i)__builtin_ia32_selectd_256((__mmask8)(U), \
@@ -8082,12 +8036,8 @@ _mm256_maskz_permutexvar_epi32(__mmask8 __M, __m256i __X, __m256i __Y)
 }
 
 #define _mm_alignr_epi32(A, B, imm) \
-  (__m128i)__builtin_shufflevector((__v4si)(__m128i)(B), \
-                                   (__v4si)(__m128i)(A), \
-                                   ((int)(imm) & 0x3) + 0, \
-                                   ((int)(imm) & 0x3) + 1, \
-                                   ((int)(imm) & 0x3) + 2, \
-                                   ((int)(imm) & 0x3) + 3)
+  (__m128i)__builtin_ia32_alignd128((__v4si)(__m128i)(A), \
+                                    (__v4si)(__m128i)(B), (int)(imm))
 
 #define _mm_mask_alignr_epi32(W, U, A, B, imm) \
   (__m128i)__builtin_ia32_selectd_128((__mmask8)(U), \
@@ -8100,16 +8050,8 @@ _mm256_maskz_permutexvar_epi32(__mmask8 __M, __m256i __X, __m256i __Y)
                                     (__v4si)_mm_setzero_si128())
 
 #define _mm256_alignr_epi32(A, B, imm) \
-  (__m256i)__builtin_shufflevector((__v8si)(__m256i)(B), \
-                                   (__v8si)(__m256i)(A), \
-                                   ((int)(imm) & 0x7) + 0, \
-                                   ((int)(imm) & 0x7) + 1, \
-                                   ((int)(imm) & 0x7) + 2, \
-                                   ((int)(imm) & 0x7) + 3, \
-                                   ((int)(imm) & 0x7) + 4, \
-                                   ((int)(imm) & 0x7) + 5, \
-                                   ((int)(imm) & 0x7) + 6, \
-                                   ((int)(imm) & 0x7) + 7)
+  (__m256i)__builtin_ia32_alignd256((__v8si)(__m256i)(A), \
+                                    (__v8si)(__m256i)(B), (int)(imm))
 
 #define _mm256_mask_alignr_epi32(W, U, A, B, imm) \
   (__m256i)__builtin_ia32_selectd_256((__mmask8)(U), \
@@ -8122,10 +8064,8 @@ _mm256_maskz_permutexvar_epi32(__mmask8 __M, __m256i __X, __m256i __Y)
                                  (__v8si)_mm256_setzero_si256())
 
 #define _mm_alignr_epi64(A, B, imm) \
-  (__m128i)__builtin_shufflevector((__v2di)(__m128i)(B), \
-                                   (__v2di)(__m128i)(A), \
-                                   ((int)(imm) & 0x1) + 0, \
-                                   ((int)(imm) & 0x1) + 1)
+  (__m128i)__builtin_ia32_alignq128((__v2di)(__m128i)(A), \
+                                    (__v2di)(__m128i)(B), (int)(imm))
 
 #define _mm_mask_alignr_epi64(W, U, A, B, imm) \
   (__m128i)__builtin_ia32_selectq_128((__mmask8)(U), \
@@ -8138,12 +8078,8 @@ _mm256_maskz_permutexvar_epi32(__mmask8 __M, __m256i __X, __m256i __Y)
                                     (__v2di)_mm_setzero_si128())
 
 #define _mm256_alignr_epi64(A, B, imm) \
-  (__m256i)__builtin_shufflevector((__v4di)(__m256i)(B), \
-                                   (__v4di)(__m256i)(A), \
-                                   ((int)(imm) & 0x3) + 0, \
-                                   ((int)(imm) & 0x3) + 1, \
-                                   ((int)(imm) & 0x3) + 2, \
-                                   ((int)(imm) & 0x3) + 3)
+  (__m256i)__builtin_ia32_alignq256((__v4di)(__m256i)(A), \
+                                    (__v4di)(__m256i)(B), (int)(imm))
 
 #define _mm256_mask_alignr_epi64(W, U, A, B, imm) \
   (__m256i)__builtin_ia32_selectq_256((__mmask8)(U), \

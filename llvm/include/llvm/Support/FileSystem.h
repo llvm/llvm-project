@@ -849,6 +849,46 @@ inline FileAccess &operator|=(FileAccess &A, FileAccess B) {
   return A;
 }
 
+/// @brief Opens a file with the specified creation disposition, access mode,
+/// and flags and returns a file descriptor.
+///
+/// The caller is responsible for closing the file descriptor once they are
+/// finished with it.
+///
+/// @param Name The path of the file to open, relative or absolute.
+/// @param ResultFD If the file could be opened successfully, its descriptor
+///                 is stored in this location. Otherwise, this is set to -1.
+/// @param Disp Value specifying the existing-file behavior.
+/// @param Access Value specifying whether to open the file in read, write, or
+///               read-write mode.
+/// @param Flags Additional flags.
+/// @param Mode The access permissions of the file, represented in octal.
+/// @returns errc::success if \a Name has been opened, otherwise a
+///          platform-specific error_code.
+std::error_code openFile(const Twine &Name, int &ResultFD,
+                         CreationDisposition Disp, FileAccess Access,
+                         OpenFlags Flags, unsigned Mode = 0666);
+
+/// @brief Opens a file with the specified creation disposition, access mode,
+/// and flags and returns a platform-specific file object.
+///
+/// The caller is responsible for closing the file object once they are
+/// finished with it.
+///
+/// @param Name The path of the file to open, relative or absolute.
+/// @param ResultFD If the file could be opened successfully, its descriptor
+///                 is stored in this location. Otherwise, this is set to -1.
+/// @param Disp Value specifying the existing-file behavior.
+/// @param Access Value specifying whether to open the file in read, write, or
+///               read-write mode.
+/// @param Flags Additional flags.
+/// @param Mode The access permissions of the file, represented in octal.
+/// @returns errc::success if \a Name has been opened, otherwise a
+///          platform-specific error_code.
+Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
+                                FileAccess Access, OpenFlags Flags,
+                                unsigned Mode = 0666);
+
 /// @brief Opens the file with the given name in a write-only or read-write
 /// mode, returning its open file descriptor. If the file does not exist, it
 /// is created.
@@ -864,10 +904,12 @@ inline FileAccess &operator|=(FileAccess &A, FileAccess B) {
 /// @param Mode The access permissions of the file, represented in octal.
 /// @returns errc::success if \a Name has been opened, otherwise a
 ///          platform-specific error_code.
-std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
-                                 CreationDisposition Disp = CD_CreateAlways,
-                                 OpenFlags Flags = OF_None,
-                                 unsigned Mode = 0666);
+inline std::error_code
+openFileForWrite(const Twine &Name, int &ResultFD,
+                 CreationDisposition Disp = CD_CreateAlways,
+                 OpenFlags Flags = OF_None, unsigned Mode = 0666) {
+  return openFile(Name, ResultFD, Disp, FA_Write, Flags, Mode);
+}
 
 /// @brief Opens the file with the given name in a write-only or read-write
 /// mode, returning its open file descriptor. If the file does not exist, it
@@ -882,9 +924,12 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
 /// @param Mode The access permissions of the file, represented in octal.
 /// @returns a platform-specific file descriptor if \a Name has been opened,
 ///          otherwise an error object.
-Expected<file_t> openNativeFileForWrite(const Twine &Name,
-                                        CreationDisposition Disp,
-                                        OpenFlags Flags, unsigned Mode = 0666);
+inline Expected<file_t> openNativeFileForWrite(const Twine &Name,
+                                               CreationDisposition Disp,
+                                               OpenFlags Flags,
+                                               unsigned Mode = 0666) {
+  return openNativeFile(Name, Disp, FA_Write, Flags, Mode);
+}
 
 /// @brief Opens the file with the given name in a write-only or read-write
 /// mode, returning its open file descriptor. If the file does not exist, it
@@ -901,27 +946,32 @@ Expected<file_t> openNativeFileForWrite(const Twine &Name,
 /// @param Mode The access permissions of the file, represented in octal.
 /// @returns errc::success if \a Name has been opened, otherwise a
 ///          platform-specific error_code.
-std::error_code openFileForReadWrite(const Twine &Name, int &ResultFD,
-                                     CreationDisposition Disp, OpenFlags Flags,
-                                     unsigned Mode = 0666);
-
-/// @brief Opens the file with the given name in a write-only or read-write
-/// mode, returning its open file descriptor. If the file does not exist, it
-/// is created.
-///
-/// The caller is responsible for closing the freeing the file once they are
-/// finished with it.
-///
-/// @param Name The path of the file to open, relative or absolute.
-/// @param Flags Additional flags used to determine whether the file should be
-///              opened in, for example, read-write or in write-only mode.
-/// @param Mode The access permissions of the file, represented in octal.
-/// @returns a platform-specific file descriptor if \a Name has been opened,
-///          otherwise an error object.
-Expected<file_t> openNativeFileForReadWrite(const Twine &Name,
+inline std::error_code openFileForReadWrite(const Twine &Name, int &ResultFD,
                                             CreationDisposition Disp,
                                             OpenFlags Flags,
-                                            unsigned Mode = 0666);
+                                            unsigned Mode = 0666) {
+  return openFile(Name, ResultFD, Disp, FA_Write | FA_Read, Flags, Mode);
+}
+
+/// @brief Opens the file with the given name in a write-only or read-write
+/// mode, returning its open file descriptor. If the file does not exist, it
+/// is created.
+///
+/// The caller is responsible for closing the freeing the file once they are
+/// finished with it.
+///
+/// @param Name The path of the file to open, relative or absolute.
+/// @param Flags Additional flags used to determine whether the file should be
+///              opened in, for example, read-write or in write-only mode.
+/// @param Mode The access permissions of the file, represented in octal.
+/// @returns a platform-specific file descriptor if \a Name has been opened,
+///          otherwise an error object.
+inline Expected<file_t> openNativeFileForReadWrite(const Twine &Name,
+                                                   CreationDisposition Disp,
+                                                   OpenFlags Flags,
+                                                   unsigned Mode = 0666) {
+  return openNativeFile(Name, Disp, FA_Write | FA_Read, Flags, Mode);
+}
 
 /// @brief Opens the file with the given name in a read-only mode, returning
 /// its open file descriptor.

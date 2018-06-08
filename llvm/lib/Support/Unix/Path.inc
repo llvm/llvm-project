@@ -759,9 +759,9 @@ static int nativeOpenFlags(CreationDisposition Disp, OpenFlags Flags,
   return Result;
 }
 
-static std::error_code openFile(const Twine &Name, int &ResultFD,
-                                CreationDisposition Disp, FileAccess Access,
-                                OpenFlags Flags, unsigned Mode) {
+std::error_code openFile(const Twine &Name, int &ResultFD,
+                         CreationDisposition Disp, FileAccess Access,
+                         OpenFlags Flags, unsigned Mode) {
   int OpenFlags = nativeOpenFlags(Disp, Flags, Access);
 
   SmallString<128> Storage;
@@ -775,6 +775,17 @@ static std::error_code openFile(const Twine &Name, int &ResultFD,
   assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
 #endif
   return std::error_code();
+}
+
+Expected<int> openNativeFile(const Twine &Name, CreationDisposition Disp,
+                             FileAccess Access, OpenFlags Flags,
+                             unsigned Mode) {
+
+  int FD;
+  std::error_code EC = openFile(Name, FD, Disp, Access, Flags, Mode);
+  if (EC)
+    return errorCodeToError(EC);
+  return FD;
 }
 
 std::error_code openFileForRead(const Twine &Name, int &ResultFD,
@@ -819,38 +830,6 @@ Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
                                        SmallVectorImpl<char> *RealPath) {
   file_t ResultFD;
   std::error_code EC = openFileForRead(Name, ResultFD, Flags, RealPath);
-  if (EC)
-    return errorCodeToError(EC);
-  return ResultFD;
-}
-
-std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
-                                 CreationDisposition Disp, OpenFlags Flags,
-                                 unsigned Mode) {
-  return openFile(Name, ResultFD, Disp, FA_Write, Flags, Mode);
-}
-
-Expected<file_t> openNativeFileForWrite(const Twine &Name,
-                                        CreationDisposition Disp,
-                                        OpenFlags Flags, unsigned Mode) {
-  file_t ResultFD;
-  std::error_code EC = openFileForWrite(Name, ResultFD, Disp, Flags, Mode);
-  if (EC)
-    return errorCodeToError(EC);
-  return ResultFD;
-}
-
-std::error_code openFileForReadWrite(const Twine &Name, int &ResultFD,
-                                     CreationDisposition Disp, OpenFlags Flags,
-                                     unsigned Mode) {
-  return openFile(Name, ResultFD, Disp, FA_Read | FA_Write, Flags, Mode);
-}
-
-Expected<file_t> openNativeFileForReadWrite(const Twine &Name,
-                                            CreationDisposition Disp,
-                                            OpenFlags Flags, unsigned Mode) {
-  file_t ResultFD;
-  std::error_code EC = openFileForReadWrite(Name, ResultFD, Disp, Flags, Mode);
   if (EC)
     return errorCodeToError(EC);
   return ResultFD;

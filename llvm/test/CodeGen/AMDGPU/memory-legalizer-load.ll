@@ -9,7 +9,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @system_unordered(
     i32* %in, i32* %out) {
@@ -23,7 +23,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @system_monotonic(
     i32* %in, i32* %out) {
@@ -65,7 +65,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @singlethread_unordered(
     i32* %in, i32* %out) {
@@ -79,7 +79,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @singlethread_monotonic(
     i32* %in, i32* %out) {
@@ -93,7 +93,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @singlethread_acquire(
     i32* %in, i32* %out) {
@@ -107,7 +107,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @singlethread_seq_cst(
     i32* %in, i32* %out) {
@@ -121,7 +121,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @agent_unordered(
     i32* %in, i32* %out) {
@@ -135,7 +135,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @agent_monotonic(
     i32* %in, i32* %out) {
@@ -175,9 +175,9 @@ entry:
 
 ; GCN-LABEL: {{^}}workgroup_unordered:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
+; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @workgroup_unordered(
     i32* %in, i32* %out) {
@@ -191,7 +191,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GFX89:     flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @workgroup_monotonic(
     i32* %in, i32* %out) {
@@ -233,7 +233,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @wavefront_unordered(
     i32* %in, i32* %out) {
@@ -247,7 +247,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @wavefront_monotonic(
     i32* %in, i32* %out) {
@@ -261,7 +261,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @wavefront_acquire(
     i32* %in, i32* %out) {
@@ -275,7 +275,7 @@ entry:
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
 ; GCN:       flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 ; GCN-NOT:   s_waitcnt vmcnt(0){{$}}
-; GCN-NOT:   buffer_wbinvl1_vol
+; GFX89-NOT: buffer_wbinvl1_vol
 ; GCN:       flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @wavefront_seq_cst(
     i32* %in, i32* %out) {

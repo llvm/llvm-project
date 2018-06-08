@@ -108,12 +108,21 @@ define i8 @shl_127 (i8 %x) {
   ret i8 %ret
 }
 
+define i8 @bad_shl (i8 %x) {
+; CHECK-LABEL: @bad_shl(
+; CHECK-NEXT:    [[RET:%.*]] = shl i8 -1, [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %ret = shl i8 -1, %x ; need nuw
+  ret i8 %ret
+}
+
 define i8 @bad_nsw (i8 %x) {
 ; CHECK-LABEL: @bad_nsw(
 ; CHECK-NEXT:    [[RET:%.*]] = shl nsw i8 -1, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %ret = shl nsw i8 -1, %x
+  %ret = shl nsw i8 -1, %x ; need nuw
   ret i8 %ret
 }
 

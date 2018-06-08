@@ -1,4 +1,4 @@
-//===-- hwasan_allocator.cc --------------------------- ---------------------===//
+//===-- hwasan_allocator.cc ------------------------- ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,6 +15,7 @@
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
+#include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -127,9 +128,12 @@ static void *HwasanAllocate(StackTrace *stack, uptr size, uptr alignment,
   size = RoundUpTo(size, kShadowAlignment);
 
   if (size > kMaxAllowedMallocSize) {
-    Report("WARNING: HWAddressSanitizer failed to allocate %p bytes\n",
-           (void *)size);
-    return ReturnNullOrDieOnFailure::OnBadRequest();
+    if (AllocatorMayReturnNull()) {
+      Report("WARNING: HWAddressSanitizer failed to allocate 0x%zx bytes\n",
+             size);
+      return nullptr;
+    }
+    ReportAllocationSizeTooBig(size, kMaxAllowedMallocSize, stack);
   }
   HwasanThread *t = GetCurrentThread();
   void *allocated;
@@ -141,8 +145,12 @@ static void *HwasanAllocate(StackTrace *stack, uptr size, uptr alignment,
     AllocatorCache *cache = &fallback_allocator_cache;
     allocated = allocator.Allocate(cache, size, alignment);
   }
-  if (UNLIKELY(!allocated))
-    return ReturnNullOrDieOnFailure::OnOOM();
+  if (UNLIKELY(!allocated)) {
+    SetAllocatorOutOfMemory();
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportOutOfMemory(size, stack);
+  }
   Metadata *meta =
       reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
   meta->state = CHUNK_ALLOCATED;
@@ -224,6 +232,15 @@ void *HwasanReallocate(StackTrace *stack, void *user_old_p, uptr new_size,
   return new_p;
 }
 
+void *HwasanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
+  if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportCallocOverflow(nmemb, size, stack);
+  }
+  return HwasanAllocate(stack, nmemb * size, sizeof(u64), true);
+}
+
 HwasanChunkView FindHeapChunkByAddress(uptr address) {
   void *block = allocator.GetBlockBegin(reinterpret_cast<void*>(address));
   if (!block)
@@ -247,9 +264,7 @@ void *hwasan_malloc(uptr size, StackTrace *stack) {
 }
 
 void *hwasan_calloc(uptr nmemb, uptr size, StackTrace *stack) {
-  if (UNLIKELY(CheckForCallocOverflow(size, nmemb)))
-    return SetErrnoOnNull(ReturnNullOrDieOnFailure::OnBadRequest());
-  return SetErrnoOnNull(HwasanAllocate(stack, nmemb * size, sizeof(u64), true));
+  return SetErrnoOnNull(HwasanCalloc(stack, nmemb, size));
 }
 
 void *hwasan_realloc(void *ptr, uptr size, StackTrace *stack) {
@@ -263,14 +278,17 @@ void *hwasan_realloc(void *ptr, uptr size, StackTrace *stack) {
 }
 
 void *hwasan_valloc(uptr size, StackTrace *stack) {
-  return SetErrnoOnNull(HwasanAllocate(stack, size, GetPageSizeCached(), false));
+  return SetErrnoOnNull(
+      HwasanAllocate(stack, size, GetPageSizeCached(), false));
 }
 
 void *hwasan_pvalloc(uptr size, StackTrace *stack) {
   uptr PageSize = GetPageSizeCached();
   if (UNLIKELY(CheckForPvallocOverflow(size, PageSize))) {
     errno = errno_ENOMEM;
-    return ReturnNullOrDieOnFailure::OnBadRequest();
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportPvallocOverflow(size, stack);
   }
   // pvalloc(0) should allocate one page.
   size = size ? RoundUpTo(size, PageSize) : PageSize;
@@ -280,7 +298,9 @@ void *hwasan_pvalloc(uptr size, StackTrace *stack) {
 void *hwasan_aligned_alloc(uptr alignment, uptr size, StackTrace *stack) {
   if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(alignment, size))) {
     errno = errno_EINVAL;
-    return ReturnNullOrDieOnFailure::OnBadRequest();
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportInvalidAlignedAllocAlignment(size, alignment, stack);
   }
   return SetErrnoOnNull(HwasanAllocate(stack, size, alignment, false));
 }
@@ -288,7 +308,9 @@ void *hwasan_aligned_alloc(uptr alignment, uptr size, StackTrace *stack) {
 void *hwasan_memalign(uptr alignment, uptr size, StackTrace *stack) {
   if (UNLIKELY(!IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;
-    return ReturnNullOrDieOnFailure::OnBadRequest();
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportInvalidAllocationAlignment(alignment, stack);
   }
   return SetErrnoOnNull(HwasanAllocate(stack, size, alignment, false));
 }
@@ -296,18 +318,20 @@ void *hwasan_memalign(uptr alignment, uptr size, StackTrace *stack) {
 int hwasan_posix_memalign(void **memptr, uptr alignment, uptr size,
                         StackTrace *stack) {
   if (UNLIKELY(!CheckPosixMemalignAlignment(alignment))) {
-    ReturnNullOrDieOnFailure::OnBadRequest();
-    return errno_EINVAL;
+    if (AllocatorMayReturnNull())
+      return errno_EINVAL;
+    ReportInvalidPosixMemalignAlignment(alignment, stack);
   }
   void *ptr = HwasanAllocate(stack, size, alignment, false);
   if (UNLIKELY(!ptr))
+    // OOM error is already taken care of by HwasanAllocate.
     return errno_ENOMEM;
   CHECK(IsAligned((uptr)ptr, alignment));
   *memptr = ptr;
   return 0;
 }
 
-} // namespace __hwasan
+}  // namespace __hwasan
 
 using namespace __hwasan;
 

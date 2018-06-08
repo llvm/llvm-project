@@ -25,32 +25,14 @@
 // RUN: %clang_cc1 -triple i686-unknown-linux-gnu -fexceptions -fseh-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=objfw -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-OBJFW-SEH
 // RUN: %clang_cc1 -triple i686-unknown-linux-gnu -fexceptions -fsjlj-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=objfw -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-OBJFW-SJLJ
 
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx-fragile -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MACOSX-FRAGILE
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fdwarf-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx-fragile -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MACOSX-FRAGILE-DWARF
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fseh-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx-fragile -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MACOSX-FRAGILE-SEH
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fsjlj-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx-fragile -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MACOSX-FRAGILE-SJLJ
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fdwarf-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS-DWARF
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fseh-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fsjlj-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS-SJLJ
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=ios -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fdwarf-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=ios -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS-DWARF
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fseh-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=ios -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fsjlj-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=ios -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS-SJLJ
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=watchos -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fdwarf-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=watchos -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS-DWARF
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fseh-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=watchos -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fsjlj-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=watchos -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-NS-SJLJ
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=gnustep-1.7 -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNUSTEP-1_7
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=gnustep -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GNUSTEP
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=gcc -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GCC
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fdwarf-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=gcc -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GCC
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fseh-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=gcc -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GCC-SEH
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fsjlj-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=gcc -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-GCC-SJLJ
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=objfw -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-OBJFW
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fdwarf-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=objfw -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-OBJFW
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fseh-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=objfw -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-OBJFW-SEH
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fsjlj-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=objfw -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-OBJFW-SJLJ
+// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx-fragile -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MSVC
+// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MSVC
+// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=ios -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MSVC
+// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=watchos -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MSVC
+// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=gnustep-1.7 -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MSVC
+// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=gnustep -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MSVC
+// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=gcc -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MSVC
+// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=objfw -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-WIN-MSVC
 
 // RUN: %clang_cc1 -triple i686-unknown-windows-gnu -fexceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx-fragile -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-MACOSX-FRAGILE
 // RUN: %clang_cc1 -triple i686-unknown-windows-gnu -fexceptions -fdwarf-exceptions -fobjc-exceptions -fcxx-exceptions -fobjc-runtime=macosx-fragile -S -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-MACOSX-FRAGILE
@@ -98,13 +80,7 @@ void g(void);
 // CHECK-OBJFW-SEH: personality i8* bitcast (i32 (...)* @__gnu_objc_personality_seh0 to i8*)
 // CHECK-OBJFW-SJLJ: personality i8* bitcast (i32 (...)* @__gnu_objc_personality_sj0 to i8*)
 
-// CHECK-WIN-MACOSX-FRAGILE: personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*)
-// CHECK-WIN-MACOSX-FRAGILE-DWARF: personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
-// CHECK-WIN-MACOSX-FRAGILE-SEH: personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*)
-// CHECK-WIN-MACOSX-FRAGILE-SJLJ: personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*)
-// CHECK-WIN-NS: personality i8* bitcast (i32 (...)* @__CxxFrameHandler3  to i8*)
-// CHECK-WIN-NS-DWARF: personality i8* bitcast (i32 (...)* @__gxx_personality_v0  to i8*)
-// CHECK-WIN-NS-SJLJ: personality i8* bitcast (i32 (...)* @__gxx_personality_sj0  to i8*)
+// CHECK-WIN-MSVC: personality i8* bitcast (i32 (...)* @__CxxFrameHandler3  to i8*)
 
 void f(void) {
   @try {
