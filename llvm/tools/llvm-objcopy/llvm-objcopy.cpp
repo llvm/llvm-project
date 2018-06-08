@@ -583,12 +583,12 @@ CopyConfig ParseStripOptions(ArrayRef<const char *> ArgsArr) {
   Config.OutputFilename =
       InputArgs.getLastArgValue(STRIP_output, Positional[0]);
 
-  // Strip debug info only.
   Config.StripDebug = InputArgs.hasArg(STRIP_strip_debug);
   
   Config.DiscardAll = InputArgs.hasArg(STRIP_discard_all);
-  
-  if (!Config.StripDebug && !Config.DiscardAll)
+  Config.StripUnneeded = InputArgs.hasArg(STRIP_strip_unneeded);
+
+  if (!Config.StripDebug && !Config.StripUnneeded && !Config.DiscardAll)
     Config.StripAll = true;
 
   for (auto Arg : InputArgs.filtered(STRIP_remove_section))

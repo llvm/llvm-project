@@ -1,14 +1,14 @@
 ; RUN: not llc -mtriple=amdgcn-amd- -mcpu=gfx803 -verify-machineinstrs < %s 2>&1 | FileCheck %s
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s 2>&1 | FileCheck %s
 
-; CHECK: error: <unknown>:0:0: in function invalid_fence void (): Unsupported synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_fence void (): Unsupported atomic synchronization scope
 define amdgpu_kernel void @invalid_fence() {
 entry:
   fence syncscope("invalid") seq_cst
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_load void (i32*, i32*): Unsupported synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_load void (i32*, i32*): Unsupported non-inclusive atomic synchronization scope
 define amdgpu_kernel void @invalid_load(
     i32* %in, i32* %out) {
 entry:
@@ -17,7 +17,7 @@ entry:
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_store void (i32, i32*): Unsupported synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_store void (i32, i32*): Unsupported non-inclusive atomic synchronization scope
 define amdgpu_kernel void @invalid_store(
     i32 %in, i32* %out) {
 entry:
@@ -25,7 +25,7 @@ entry:
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_cmpxchg void (i32*, i32, i32): Unsupported synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_cmpxchg void (i32*, i32, i32): Unsupported non-inclusive atomic synchronization scope
 define amdgpu_kernel void @invalid_cmpxchg(
     i32* %out, i32 %in, i32 %old) {
 entry:
@@ -34,7 +34,7 @@ entry:
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_rmw void (i32*, i32): Unsupported synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_rmw void (i32*, i32): Unsupported non-inclusive atomic synchronization scope
 define amdgpu_kernel void @invalid_rmw(
     i32* %out, i32 %in) {
 entry:

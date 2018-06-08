@@ -511,6 +511,11 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
           !isKnownNonZero(ReplVal, DL, 0, AC, LI, &DT))
         addAssumeNonNull(AC, LI);
 
+      // If the replacement value is the load, this must occur in unreachable
+      // code.
+      if (ReplVal == LI)
+        ReplVal = UndefValue::get(LI->getType());
+
       LI->replaceAllUsesWith(ReplVal);
     }
 

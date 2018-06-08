@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s abseil-string-find-startswith %t
+// RUN: %check_clang_tidy %s abseil-string-find-startswith %t -- \
+// RUN:   -config="{CheckOptions: [{key: 'abseil-string-find-startswith.StringLikeClasses', value: '::std::basic_string;::basic_string'}]}" \
+// RUN:   -- -std=c++11
 
 namespace std {
 template <typename T> class allocator {};
@@ -15,14 +17,23 @@ struct basic_string {
 };
 typedef basic_string<char> string;
 typedef basic_string<wchar_t> wstring;
+
+struct cxx_string {
+  int find(const char *s, int pos = 0);
+};
 } // namespace std
+
+struct basic_string : public std::cxx_string {
+  basic_string();
+};
+typedef basic_string global_string;
 
 std::string foo(std::string);
 std::string bar();
 
 #define A_MACRO(x, y) ((x) == (y))
 
-void tests(std::string s) {
+void tests(std::string s, global_string s2) {
   s.find("a") == 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StartsWith instead of find() == 0 [abseil-string-find-startswith]
   // CHECK-FIXES: {{^[[:space:]]*}}absl::StartsWith(s, "a");{{$}}
@@ -46,6 +57,10 @@ void tests(std::string s) {
   0 != s.find("a");
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StartsWith
   // CHECK-FIXES: {{^[[:space:]]*}}!absl::StartsWith(s, "a");{{$}}
+
+  s2.find("a") == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use absl::StartsWith
+  // CHECK-FIXES: {{^[[:space:]]*}}absl::StartsWith(s2, "a");{{$}}
 
   // expressions that don't trigger the check are here.
   A_MACRO(s.find("a"), 0);

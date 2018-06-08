@@ -722,21 +722,80 @@ static bool hasProcSelfFD() {
 }
 #endif
 
-std::error_code openFileForRead(const Twine &Name, int &ResultFD,
-                                SmallVectorImpl<char> *RealPath) {
+static int nativeOpenFlags(CreationDisposition Disp, OpenFlags Flags,
+                           FileAccess Access) {
+  int Result = 0;
+  if (Access == FA_Read)
+    Result |= O_RDONLY;
+  else if (Access == FA_Write)
+    Result |= O_WRONLY;
+  else if (Access == (FA_Read | FA_Write))
+    Result |= O_RDWR;
+
+  // This is for compatibility with old code that assumed F_Append implied
+  // would open an existing file.  See Windows/Path.inc for a longer comment.
+  if (Flags & F_Append)
+    Disp = CD_OpenAlways;
+
+  if (Disp == CD_CreateNew) {
+    Result |= O_CREAT; // Create if it doesn't exist.
+    Result |= O_EXCL;  // Fail if it does.
+  } else if (Disp == CD_CreateAlways) {
+    Result |= O_CREAT; // Create if it doesn't exist.
+    Result |= O_TRUNC; // Truncate if it does.
+  } else if (Disp == CD_OpenAlways) {
+    Result |= O_CREAT; // Create if it doesn't exist.
+  } else if (Disp == CD_OpenExisting) {
+    // Nothing special, just don't add O_CREAT and we get these semantics.
+  }
+
+  if (Flags & F_Append)
+    Result |= O_APPEND;
+
+#ifdef O_CLOEXEC
+  Result |= O_CLOEXEC;
+#endif
+
+  return Result;
+}
+
+std::error_code openFile(const Twine &Name, int &ResultFD,
+                         CreationDisposition Disp, FileAccess Access,
+                         OpenFlags Flags, unsigned Mode) {
+  int OpenFlags = nativeOpenFlags(Disp, Flags, Access);
+
   SmallString<128> Storage;
   StringRef P = Name.toNullTerminatedStringRef(Storage);
-  int OpenFlags = O_RDONLY;
-#ifdef O_CLOEXEC
-  OpenFlags |= O_CLOEXEC;
-#endif
-  if ((ResultFD = sys::RetryAfterSignal(-1, open, P.begin(), OpenFlags)) < 0)
+  if ((ResultFD = sys::RetryAfterSignal(-1, open, P.begin(), OpenFlags, Mode)) <
+      0)
     return std::error_code(errno, std::generic_category());
 #ifndef O_CLOEXEC
   int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
   (void)r;
   assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
 #endif
+  return std::error_code();
+}
+
+Expected<int> openNativeFile(const Twine &Name, CreationDisposition Disp,
+                             FileAccess Access, OpenFlags Flags,
+                             unsigned Mode) {
+
+  int FD;
+  std::error_code EC = openFile(Name, FD, Disp, Access, Flags, Mode);
+  if (EC)
+    return errorCodeToError(EC);
+  return FD;
+}
+
+std::error_code openFileForRead(const Twine &Name, int &ResultFD,
+                                OpenFlags Flags,
+                                SmallVectorImpl<char> *RealPath) {
+  std::error_code EC =
+      openFile(Name, ResultFD, CD_OpenExisting, FA_Read, Flags, 0666);
+  if (EC)
+    return EC;
+
   // Attempt to get the real name of the file, if the user asked
   if(!RealPath)
     return std::error_code();
@@ -756,6 +815,9 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
     if (CharCount > 0)
       RealPath->append(Buffer, Buffer + CharCount);
   } else {
+    SmallString<128> Storage;
+    StringRef P = Name.toNullTerminatedStringRef(Storage);
+
     // Use ::realpath to get the real path name
     if (::realpath(P.begin(), Buffer) != nullptr)
       RealPath->append(Buffer, Buffer + strlen(Buffer));
@@ -764,56 +826,10 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
   return std::error_code();
 }
 
-Expected<file_t> openNativeFileForRead(const Twine &Name,
+Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
                                        SmallVectorImpl<char> *RealPath) {
   file_t ResultFD;
-  std::error_code EC = openFileForRead(Name, ResultFD, RealPath);
-  if (EC)
-    return errorCodeToError(EC);
-  return ResultFD;
-}
-
-std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
-                            sys::fs::OpenFlags Flags, unsigned Mode) {
-  // Verify that we don't have both "append" and "excl".
-  assert((!(Flags & sys::fs::F_Excl) || !(Flags & sys::fs::F_Append)) &&
-         "Cannot specify both 'excl' and 'append' file creation flags!");
-
-  int OpenFlags = O_CREAT;
-
-#ifdef O_CLOEXEC
-  OpenFlags |= O_CLOEXEC;
-#endif
-
-  if (Flags & F_RW)
-    OpenFlags |= O_RDWR;
-  else
-    OpenFlags |= O_WRONLY;
-
-  if (Flags & F_Append)
-    OpenFlags |= O_APPEND;
-  else if (!(Flags & F_NoTrunc))
-    OpenFlags |= O_TRUNC;
-
-  if (Flags & F_Excl)
-    OpenFlags |= O_EXCL;
-
-  SmallString<128> Storage;
-  StringRef P = Name.toNullTerminatedStringRef(Storage);
-  if ((ResultFD = sys::RetryAfterSignal(-1, open, P.begin(), OpenFlags, Mode)) < 0)
-    return std::error_code(errno, std::generic_category());
-#ifndef O_CLOEXEC
-  int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
-  (void)r;
-  assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
-#endif
-  return std::error_code();
-}
-
-Expected<file_t> openNativeFileForWrite(const Twine &Name, OpenFlags Flags,
-                                        unsigned Mode) {
-  file_t ResultFD;
-  std::error_code EC = openFileForWrite(Name, ResultFD, Flags, Mode);
+  std::error_code EC = openFileForRead(Name, ResultFD, Flags, RealPath);
   if (EC)
     return errorCodeToError(EC);
   return ResultFD;

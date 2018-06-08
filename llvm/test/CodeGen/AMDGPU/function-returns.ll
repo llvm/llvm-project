@@ -121,6 +121,15 @@ define double @f64_func_void() #0 {
   ret double %val
 }
 
+; GCN-LABEL: {{^}}v2f64_func_void:
+; GCN: buffer_load_dwordx4 v[0:3], off
+; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define <2 x double> @v2f64_func_void() #0 {
+  %val = load <2 x double>, <2 x double> addrspace(1)* undef
+  ret <2 x double> %val
+}
+
 ; GCN-LABEL: {{^}}v2i32_func_void:
 ; GCN: buffer_load_dwordx2 v[0:1], off
 ; GCN-NEXT: s_waitcnt vmcnt(0)
@@ -298,6 +307,15 @@ define <3 x i16> @v3i16_func_void() #0 {
 define <4 x i16> @v4i16_func_void() #0 {
   %val = load <4 x i16>, <4 x i16> addrspace(1)* undef
   ret <4 x i16> %val
+}
+
+; GCN-LABEL: {{^}}v4f16_func_void:
+; GFX9: buffer_load_dwordx2 v[0:1], off
+; GFX9-NEXT: s_waitcnt vmcnt(0)
+; GFX9-NEXT: s_setpc_b64
+define <4 x half> @v4f16_func_void() #0 {
+  %val = load <4 x half>, <4 x half> addrspace(1)* undef
+  ret <4 x half> %val
 }
 
 ; FIXME: Should not scalarize
