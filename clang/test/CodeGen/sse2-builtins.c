@@ -1116,7 +1116,7 @@ __m128i test_mm_setzero_si128() {
 
 __m128i test_mm_shuffle_epi32(__m128i A) {
   // CHECK-LABEL: test_mm_shuffle_epi32
-  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> zeroinitializer
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> zeroinitializer
   return _mm_shuffle_epi32(A, 0);
 }
 
@@ -1128,13 +1128,13 @@ __m128d test_mm_shuffle_pd(__m128d A, __m128d B) {
 
 __m128i test_mm_shufflehi_epi16(__m128i A) {
   // CHECK-LABEL: test_mm_shufflehi_epi16
-  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4>
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4>
   return _mm_shufflehi_epi16(A, 0);
 }
 
 __m128i test_mm_shufflelo_epi16(__m128i A) {
   // CHECK-LABEL: test_mm_shufflelo_epi16
-  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
   return _mm_shufflelo_epi16(A, 0);
 }
 

@@ -38,9 +38,9 @@ public:
   void GetFunctions(ConstString name, DWARFDebugInfo &info,
                     const CompilerDeclContext &parent_decl_ctx,
                     uint32_t name_type_mask,
-                    std::vector<DWARFDIE> &dies) override {}
+                    std::vector<DWARFDIE> &dies) override;
   void GetFunctions(const RegularExpression &regex,
-                    DIEArray &offsets) override {}
+                    DIEArray &offsets) override;
 
   void ReportInvalidDIEOffset(dw_offset_t offset,
                               llvm::StringRef name) override {}
@@ -64,9 +64,11 @@ private:
   std::unique_ptr<DebugNames> m_debug_names_up;
   ManualDWARFIndex m_fallback;
 
-  void Append(const DebugNames::Entry &entry, DIEArray &offsets);
-  void MaybeLogLookupError(llvm::Error error, const DebugNames::NameIndex &ni,
-                           llvm::StringRef name);
+  static DIERef ToDIERef(const DebugNames::Entry &entry);
+  static void Append(const DebugNames::Entry &entry, DIEArray &offsets);
+  static void MaybeLogLookupError(llvm::Error error,
+                                  const DebugNames::NameIndex &ni,
+                                  llvm::StringRef name);
 
   static llvm::DenseSet<dw_offset_t> GetUnits(const DebugNames &debug_names);
 };

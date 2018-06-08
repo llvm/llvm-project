@@ -299,6 +299,10 @@ public:
                           SIMemOp Op,
                           bool IsCrossAddrSpaceOrdering,
                           Position Pos) const = 0;
+
+  /// Virtual destructor to allow derivations to be deleted.
+  virtual ~SICacheControl() = default;
+
 };
 
 class SIGfx6CacheControl : public SICacheControl {

@@ -181,6 +181,17 @@ TEST(StringRefTest, Split) {
             Str.rsplit('l'));
   EXPECT_EQ(std::make_pair(StringRef("hell"), StringRef("")),
             Str.rsplit('o'));
+
+  EXPECT_EQ(std::make_pair(StringRef("he"), StringRef("o")),
+		    Str.rsplit("ll"));
+  EXPECT_EQ(std::make_pair(StringRef(""), StringRef("ello")),
+		    Str.rsplit("h"));
+  EXPECT_EQ(std::make_pair(StringRef("hell"), StringRef("")),
+	      Str.rsplit("o"));
+  EXPECT_EQ(std::make_pair(StringRef("hello"), StringRef("")),
+		    Str.rsplit("::"));
+  EXPECT_EQ(std::make_pair(StringRef("hel"), StringRef("o")),
+		    Str.rsplit("l"));
 }
 
 TEST(StringRefTest, Split2) {

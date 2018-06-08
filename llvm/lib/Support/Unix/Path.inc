@@ -753,7 +753,8 @@ static int nativeOpenFlags(CreationDisposition Disp, OpenFlags Flags,
     Result |= O_APPEND;
 
 #ifdef O_CLOEXEC
-  Result |= O_CLOEXEC;
+  if (!(Flags & OF_ChildInherit))
+    Result |= O_CLOEXEC;
 #endif
 
   return Result;
@@ -770,9 +771,11 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
       0)
     return std::error_code(errno, std::generic_category());
 #ifndef O_CLOEXEC
-  int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
-  (void)r;
-  assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
+  if (!(Flags & OF_ChildInherit)) {
+    int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
+    (void)r;
+    assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
+  }
 #endif
   return std::error_code();
 }

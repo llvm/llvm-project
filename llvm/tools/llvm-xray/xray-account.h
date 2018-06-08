@@ -29,12 +29,11 @@ namespace xray {
 class LatencyAccountant {
 public:
   typedef std::map<int32_t, std::vector<uint64_t>> FunctionLatencyMap;
-  typedef std::map<llvm::sys::ProcessInfo::ProcessId,
-                   std::pair<uint64_t, uint64_t>>
+  typedef std::map<llvm::sys::procid_t, std::pair<uint64_t, uint64_t>>
       PerThreadMinMaxTSCMap;
   typedef std::map<uint8_t, std::pair<uint64_t, uint64_t>> PerCPUMinMaxTSCMap;
   typedef std::vector<std::pair<int32_t, uint64_t>> FunctionStack;
-  typedef std::map<llvm::sys::ProcessInfo::ProcessId, FunctionStack>
+  typedef std::map<llvm::sys::procid_t, FunctionStack>
       PerThreadFunctionStackMap;
 
 private:
@@ -79,8 +78,7 @@ public:
   ///
   bool accountRecord(const XRayRecord &Record);
 
-  const FunctionStack *
-  getThreadFunctionStack(llvm::sys::ProcessInfo::ProcessId TId) const {
+  const FunctionStack *getThreadFunctionStack(llvm::sys::procid_t TId) const {
     auto I = PerThreadFunctionStack.find(TId);
     if (I == PerThreadFunctionStack.end())
       return nullptr;

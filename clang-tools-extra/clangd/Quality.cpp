@@ -9,6 +9,7 @@
 #include "Quality.h"
 #include "index/Index.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
@@ -19,6 +20,11 @@
 namespace clang {
 namespace clangd {
 using namespace llvm;
+static bool IsReserved(StringRef Name) {
+  // FIXME: Should we exclude _Bool and others recognized by the standard?
+  return Name.size() >= 2 && Name[0] == '_' &&
+         (isUppercase(Name[1]) || Name[1] == '_');
+}
 
 static bool hasDeclInMainFile(const Decl &D) {
   auto &SourceMgr = D.getASTContext().getSourceManager();
@@ -101,11 +107,18 @@ void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
     Category = categorize(*SemaCCResult.Declaration);
   else if (SemaCCResult.Kind == CodeCompletionResult::RK_Macro)
     Category = Macro;
+
+  if (SemaCCResult.Declaration) {
+    if (auto *ID = SemaCCResult.Declaration->getIdentifier())
+      ReservedName = ReservedName || IsReserved(ID->getName());
+  } else if (SemaCCResult.Kind == CodeCompletionResult::RK_Macro)
+    ReservedName = ReservedName || IsReserved(SemaCCResult.Macro->getName());
 }
 
 void SymbolQualitySignals::merge(const Symbol &IndexResult) {
   References = std::max(IndexResult.References, References);
   Category = categorize(IndexResult.SymInfo);
+  ReservedName = ReservedName || IsReserved(IndexResult.Name);
 }
 
 float SymbolQualitySignals::evaluate() const {
@@ -117,6 +130,8 @@ float SymbolQualitySignals::evaluate() const {
     Score *= std::log(References);
 
   if (Deprecated)
+    Score *= 0.1f;
+  if (ReservedName)
     Score *= 0.1f;
 
   switch (Category) {
@@ -142,6 +157,7 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolQualitySignals &S) {
   OS << formatv("=== Symbol quality: {0}\n", S.evaluate());
   OS << formatv("\tReferences: {0}\n", S.References);
   OS << formatv("\tDeprecated: {0}\n", S.Deprecated);
+  OS << formatv("\tReserved name: {0}\n", S.ReservedName);
   OS << formatv("\tCategory: {0}\n", static_cast<int>(S.Category));
   return OS;
 }

@@ -7,8 +7,7 @@
 
 define i8 @add_nuw (i8 %x) {
 ; CHECK-LABEL: @add_nuw(
-; CHECK-NEXT:    [[RET:%.*]] = add nuw i8 [[X:%.*]], -1
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %ret = add nuw i8 %x, -1
   ; nuw here means that %x can only be 0
@@ -17,8 +16,7 @@ define i8 @add_nuw (i8 %x) {
 
 define i8 @add_nuw_nsw (i8 %x) {
 ; CHECK-LABEL: @add_nuw_nsw(
-; CHECK-NEXT:    [[RET:%.*]] = add nuw nsw i8 [[X:%.*]], -1
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %ret = add nuw nsw i8 %x, -1
   ; nuw here means that %x can only be 0
@@ -27,8 +25,7 @@ define i8 @add_nuw_nsw (i8 %x) {
 
 define i8 @add_nuw_commute (i8 %x) {
 ; CHECK-LABEL: @add_nuw_commute(
-; CHECK-NEXT:    [[RET:%.*]] = add nuw i8 -1, [[X:%.*]]
-; CHECK-NEXT:    ret i8 [[RET]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %ret = add nuw i8 -1, %x ; swapped
   ; nuw here means that %x can only be 0
@@ -60,8 +57,7 @@ define i8 @knownbits_allones(i8 %x, i8 %y) {
 
 define <2 x i8> @add_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @add_vec(
-; CHECK-NEXT:    [[RET:%.*]] = add nuw <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    ret <2 x i8> [[RET]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
   %ret = add nuw <2 x i8> %x, <i8 -1, i8 -1>
   ret <2 x i8> %ret
@@ -69,8 +65,7 @@ define <2 x i8> @add_vec(<2 x i8> %x) {
 
 define <3 x i8> @add_vec_undef(<3 x i8> %x) {
 ; CHECK-LABEL: @add_vec_undef(
-; CHECK-NEXT:    [[RET:%.*]] = add nuw <3 x i8> [[X:%.*]], <i8 -1, i8 undef, i8 -1>
-; CHECK-NEXT:    ret <3 x i8> [[RET]]
+; CHECK-NEXT:    ret <3 x i8> <i8 -1, i8 undef, i8 -1>
 ;
   %ret = add nuw <3 x i8> %x, <i8 -1, i8 undef, i8 -1>
   ret <3 x i8> %ret

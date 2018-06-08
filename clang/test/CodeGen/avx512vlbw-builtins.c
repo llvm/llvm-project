@@ -3013,56 +3013,56 @@ __mmask16 test_mm256_movepi16_mask(__m256i __A) {
 
 __m128i test_mm_mask_shufflehi_epi16(__m128i __W, __mmask32 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_shufflehi_epi16
-  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4>
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4>
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_mask_shufflehi_epi16(__W, __U, __A, 5); 
 }
 
 __m128i test_mm_maskz_shufflehi_epi16(__mmask32 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_maskz_shufflehi_epi16
-  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4>
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4>
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_maskz_shufflehi_epi16(__U, __A, 5); 
 }
 
 __m128i test_mm_mask_shufflelo_epi16(__m128i __W, __mmask32 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_shufflelo_epi16
-  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> undef, <8 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_mask_shufflelo_epi16(__W, __U, __A, 5); 
 }
 
 __m128i test_mm_maskz_shufflelo_epi16(__mmask32 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_maskz_shufflelo_epi16
-  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> undef, <8 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_maskz_shufflelo_epi16(__U, __A, 5); 
 }
 
 __m256i test_mm256_mask_shufflehi_epi16(__m256i __W, __mmask32 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_mask_shufflehi_epi16
-  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4, i32 8, i32 9, i32 10, i32 11, i32 13, i32 13, i32 12, i32 12>
+  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4, i32 8, i32 9, i32 10, i32 11, i32 13, i32 13, i32 12, i32 12>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_mask_shufflehi_epi16(__W, __U, __A, 5); 
 }
 
 __m256i test_mm256_maskz_shufflehi_epi16(__mmask32 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_maskz_shufflehi_epi16
-  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4, i32 8, i32 9, i32 10, i32 11, i32 13, i32 13, i32 12, i32 12>
+  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4, i32 8, i32 9, i32 10, i32 11, i32 13, i32 13, i32 12, i32 12>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_shufflehi_epi16(__U, __A, 5); 
 }
 
 __m256i test_mm256_mask_shufflelo_epi16(__m256i __W, __mmask32 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_mask_shufflelo_epi16
-  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> %{{.*}}, <16 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7, i32 9, i32 9, i32 8, i32 8, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> undef, <16 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7, i32 9, i32 9, i32 8, i32 8, i32 12, i32 13, i32 14, i32 15>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_mask_shufflelo_epi16(__W, __U, __A, 5); 
 }
 
 __m256i test_mm256_maskz_shufflelo_epi16(__mmask32 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_maskz_shufflelo_epi16
-  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> %{{.*}}, <16 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7, i32 9, i32 9, i32 8, i32 8, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> undef, <16 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7, i32 9, i32 9, i32 8, i32 8, i32 12, i32 13, i32 14, i32 15>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_shufflelo_epi16(__U, __A, 5); 
 }

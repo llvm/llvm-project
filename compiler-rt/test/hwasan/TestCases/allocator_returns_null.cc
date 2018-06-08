@@ -37,6 +37,9 @@
 
 // REQUIRES: stable-runtime
 
+// TODO(alekseyshl): Fix it.
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>

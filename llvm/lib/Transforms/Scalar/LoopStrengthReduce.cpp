@@ -2415,20 +2415,22 @@ LSRInstance::OptimizeLoopTermCond() {
                 C->getValue().isMinSignedValue())
               goto decline_post_inc;
             // Check for possible scaled-address reuse.
-            MemAccessTy AccessTy =
-                getAccessType(TTI, UI->getUser(), UI->getOperandValToReplace());
-            int64_t Scale = C->getSExtValue();
-            if (TTI.isLegalAddressingMode(AccessTy.MemTy, /*BaseGV=*/nullptr,
-                                          /*BaseOffset=*/0,
-                                          /*HasBaseReg=*/false, Scale,
-                                          AccessTy.AddrSpace))
-              goto decline_post_inc;
-            Scale = -Scale;
-            if (TTI.isLegalAddressingMode(AccessTy.MemTy, /*BaseGV=*/nullptr,
-                                          /*BaseOffset=*/0,
-                                          /*HasBaseReg=*/false, Scale,
-                                          AccessTy.AddrSpace))
-              goto decline_post_inc;
+            if (isAddressUse(TTI, UI->getUser(), UI->getOperandValToReplace())) {
+              MemAccessTy AccessTy = getAccessType(
+                  TTI, UI->getUser(), UI->getOperandValToReplace());
+              int64_t Scale = C->getSExtValue();
+              if (TTI.isLegalAddressingMode(AccessTy.MemTy, /*BaseGV=*/nullptr,
+                                            /*BaseOffset=*/0,
+                                            /*HasBaseReg=*/false, Scale,
+                                            AccessTy.AddrSpace))
+                goto decline_post_inc;
+              Scale = -Scale;
+              if (TTI.isLegalAddressingMode(AccessTy.MemTy, /*BaseGV=*/nullptr,
+                                            /*BaseOffset=*/0,
+                                            /*HasBaseReg=*/false, Scale,
+                                            AccessTy.AddrSpace))
+                goto decline_post_inc;
+            }
           }
         }
 

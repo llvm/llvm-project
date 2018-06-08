@@ -350,6 +350,12 @@ def FENCE : RVInstI<0b000, OPC_MISC_MEM, (outs),
   let imm12 = {0b0000,pred,succ};
 }
 
+def FENCE_TSO : RVInstI<0b000, OPC_MISC_MEM, (outs), (ins), "fence.tso", ""> {
+  let rs1 = 0;
+  let rd = 0;
+  let imm12 = {0b1000,0b0011,0b0011};
+}
+
 def FENCE_I : RVInstI<0b001, OPC_MISC_MEM, (outs), (ins), "fence.i", ""> {
   let rs1 = 0;
   let rd = 0;

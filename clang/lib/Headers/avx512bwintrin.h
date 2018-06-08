@@ -1287,28 +1287,7 @@ _mm512_maskz_cvtepu8_epi16(__mmask32 __U, __m256i __A)
 
 
 #define _mm512_shufflehi_epi16(A, imm) \
-  (__m512i)__builtin_shufflevector((__v32hi)(__m512i)(A), \
-                                   (__v32hi)_mm512_undefined_epi32(), \
-                                   0, 1, 2, 3, \
-                                   4  + (((imm) >> 0) & 0x3), \
-                                   4  + (((imm) >> 2) & 0x3), \
-                                   4  + (((imm) >> 4) & 0x3), \
-                                   4  + (((imm) >> 6) & 0x3), \
-                                   8, 9, 10, 11, \
-                                   12 + (((imm) >> 0) & 0x3), \
-                                   12 + (((imm) >> 2) & 0x3), \
-                                   12 + (((imm) >> 4) & 0x3), \
-                                   12 + (((imm) >> 6) & 0x3), \
-                                   16, 17, 18, 19, \
-                                   20 + (((imm) >> 0) & 0x3), \
-                                   20 + (((imm) >> 2) & 0x3), \
-                                   20 + (((imm) >> 4) & 0x3), \
-                                   20 + (((imm) >> 6) & 0x3), \
-                                   24, 25, 26, 27, \
-                                   28 + (((imm) >> 0) & 0x3), \
-                                   28 + (((imm) >> 2) & 0x3), \
-                                   28 + (((imm) >> 4) & 0x3), \
-                                   28 + (((imm) >> 6) & 0x3))
+  (__m512i)__builtin_ia32_pshufhw512((__v32hi)(__m512i)(A), (int)(imm))
 
 #define _mm512_mask_shufflehi_epi16(W, U, A, imm) \
   (__m512i)__builtin_ia32_selectw_512((__mmask32)(U), \
@@ -1323,28 +1302,7 @@ _mm512_maskz_cvtepu8_epi16(__mmask32 __U, __m256i __A)
                                       (__v32hi)_mm512_setzero_si512())
 
 #define _mm512_shufflelo_epi16(A, imm) \
-  (__m512i)__builtin_shufflevector((__v32hi)(__m512i)(A), \
-                                   (__v32hi)_mm512_undefined_epi32(), \
-                                   0 + (((imm) >> 0) & 0x3), \
-                                   0 + (((imm) >> 2) & 0x3), \
-                                   0 + (((imm) >> 4) & 0x3), \
-                                   0 + (((imm) >> 6) & 0x3), \
-                                   4, 5, 6, 7, \
-                                   8 + (((imm) >> 0) & 0x3), \
-                                   8 + (((imm) >> 2) & 0x3), \
-                                   8 + (((imm) >> 4) & 0x3), \
-                                   8 + (((imm) >> 6) & 0x3), \
-                                   12, 13, 14, 15, \
-                                   16 + (((imm) >> 0) & 0x3), \
-                                   16 + (((imm) >> 2) & 0x3), \
-                                   16 + (((imm) >> 4) & 0x3), \
-                                   16 + (((imm) >> 6) & 0x3), \
-                                   20, 21, 22, 23, \
-                                   24 + (((imm) >> 0) & 0x3), \
-                                   24 + (((imm) >> 2) & 0x3), \
-                                   24 + (((imm) >> 4) & 0x3), \
-                                   24 + (((imm) >> 6) & 0x3), \
-                                   28, 29, 30, 31)
+  (__m512i)__builtin_ia32_pshuflw512((__v32hi)(__m512i)(A), (int)(imm))
 
 
 #define _mm512_mask_shufflelo_epi16(W, U, A, imm) \

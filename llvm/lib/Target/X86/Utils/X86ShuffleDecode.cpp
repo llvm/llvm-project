@@ -152,13 +152,12 @@ void DecodePSHUFMask(unsigned NumElts, unsigned ScalarBits, unsigned Imm,
   if (NumLanes == 0) NumLanes = 1;  // Handle MMX
   unsigned NumLaneElts = NumElts / NumLanes;
 
-  unsigned NewImm = Imm;
+  uint32_t SplatImm = (Imm & 0xff) * 0x01010101;
   for (unsigned l = 0; l != NumElts; l += NumLaneElts) {
     for (unsigned i = 0; i != NumLaneElts; ++i) {
-      ShuffleMask.push_back(NewImm % NumLaneElts + l);
-      NewImm /= NumLaneElts;
+      ShuffleMask.push_back(SplatImm % NumLaneElts + l);
+      SplatImm /= NumLaneElts;
     }
-    if (NumLaneElts == 4) NewImm = Imm; // reload imm
   }
 }
 
@@ -281,16 +280,15 @@ void decodeVSHUF64x2FamilyMask(unsigned NumElts, unsigned ScalarSize,
                                SmallVectorImpl<int> &ShuffleMask) {
   unsigned NumElementsInLane = 128 / ScalarSize;
   unsigned NumLanes = NumElts / NumElementsInLane;
-  unsigned ControlBitsMask = NumLanes - 1;
-  unsigned NumControlBits  = NumLanes / 2;
 
-  for (unsigned l = 0; l != NumLanes; ++l) {
-    unsigned LaneMask = (Imm >> (l * NumControlBits)) & ControlBitsMask;
+  for (unsigned l = 0; l != NumElts; l += NumElementsInLane) {
+    unsigned Index = (Imm % NumLanes) * NumElementsInLane;
+    Imm /= NumLanes; // Discard the bits we just used.
     // We actually need the other source.
-    if (l >= NumLanes / 2)
-      LaneMask += NumLanes;
+    if (l >= (NumElts / 2))
+      Index += NumElts;
     for (unsigned i = 0; i != NumElementsInLane; ++i)
-      ShuffleMask.push_back(LaneMask * NumElementsInLane + i);
+      ShuffleMask.push_back(Index + i);
   }
 }
 

@@ -1015,6 +1015,15 @@ private:
     return std::move(Top).items();
   }
 
+  Optional<float> fuzzyScore(const CompletionCandidate &C) {
+    // Macros can be very spammy, so we only support prefix completion.
+    // We won't end up with underfull index results, as macros are sema-only.
+    if (C.SemaResult && C.SemaResult->Kind == CodeCompletionResult::RK_Macro &&
+        !C.Name.startswith_lower(Filter->pattern()))
+      return None;
+    return Filter->match(C.Name);
+  }
+
   // Scores a candidate and adds it to the TopN structure.
   void addCandidate(TopN<ScoredCandidate, ScoredCandidateGreater> &Candidates,
                     const CodeCompletionResult *SemaResult,
@@ -1027,7 +1036,7 @@ private:
     SymbolQualitySignals Quality;
     SymbolRelevanceSignals Relevance;
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
-    if (auto FuzzyScore = Filter->match(C.Name))
+    if (auto FuzzyScore = fuzzyScore(C))
       Relevance.NameMatch = *FuzzyScore;
     else
       return;

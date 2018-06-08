@@ -488,44 +488,13 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b)
 }
 
 #define _mm256_shuffle_epi32(a, imm) \
-  (__m256i)__builtin_shufflevector((__v8si)(__m256i)(a), \
-                                   (__v8si)_mm256_undefined_si256(), \
-                                   0 + (((imm) >> 0) & 0x3), \
-                                   0 + (((imm) >> 2) & 0x3), \
-                                   0 + (((imm) >> 4) & 0x3), \
-                                   0 + (((imm) >> 6) & 0x3), \
-                                   4 + (((imm) >> 0) & 0x3), \
-                                   4 + (((imm) >> 2) & 0x3), \
-                                   4 + (((imm) >> 4) & 0x3), \
-                                   4 + (((imm) >> 6) & 0x3))
+  (__m256i)__builtin_ia32_pshufd256((__v8si)(__m256i)(a), (int)(imm))
 
 #define _mm256_shufflehi_epi16(a, imm) \
-  (__m256i)__builtin_shufflevector((__v16hi)(__m256i)(a), \
-                                   (__v16hi)_mm256_undefined_si256(), \
-                                   0, 1, 2, 3, \
-                                   4  + (((imm) >> 0) & 0x3), \
-                                   4  + (((imm) >> 2) & 0x3), \
-                                   4  + (((imm) >> 4) & 0x3), \
-                                   4  + (((imm) >> 6) & 0x3), \
-                                   8, 9, 10, 11, \
-                                   12 + (((imm) >> 0) & 0x3), \
-                                   12 + (((imm) >> 2) & 0x3), \
-                                   12 + (((imm) >> 4) & 0x3), \
-                                   12 + (((imm) >> 6) & 0x3))
+  (__m256i)__builtin_ia32_pshufhw256((__v16hi)(__m256i)(a), (int)(imm))
 
 #define _mm256_shufflelo_epi16(a, imm) \
-  (__m256i)__builtin_shufflevector((__v16hi)(__m256i)(a), \
-                                   (__v16hi)_mm256_undefined_si256(), \
-                                   0 + (((imm) >> 0) & 0x3), \
-                                   0 + (((imm) >> 2) & 0x3), \
-                                   0 + (((imm) >> 4) & 0x3), \
-                                   0 + (((imm) >> 6) & 0x3), \
-                                   4, 5, 6, 7, \
-                                   8 + (((imm) >> 0) & 0x3), \
-                                   8 + (((imm) >> 2) & 0x3), \
-                                   8 + (((imm) >> 4) & 0x3), \
-                                   8 + (((imm) >> 6) & 0x3), \
-                                   12, 13, 14, 15)
+  (__m256i)__builtin_ia32_pshuflw256((__v16hi)(__m256i)(a), (int)(imm))
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_sign_epi8(__m256i __a, __m256i __b)
@@ -881,18 +850,11 @@ _mm256_permutevar8x32_ps(__m256 __a, __m256i __b)
   (__m256i)__builtin_ia32_permti256((__m256i)(V1), (__m256i)(V2), (M))
 
 #define _mm256_extracti128_si256(V, M) \
-  (__m128i)__builtin_shufflevector((__v4di)(__m256i)(V), \
-                                   (__v4di)_mm256_undefined_si256(), \
-                                   (((M) & 1) ? 2 : 0), \
-                                   (((M) & 1) ? 3 : 1) )
+  (__m128i)__builtin_ia32_extract128i256((__v4di)(__m256i)(V), (int)(M))
 
 #define _mm256_inserti128_si256(V1, V2, M) \
-  (__m256i)__builtin_shufflevector((__v4di)(__m256i)(V1), \
-                                   (__v4di)_mm256_castsi128_si256((__m128i)(V2)), \
-                                   (((M) & 1) ? 0 : 4), \
-                                   (((M) & 1) ? 1 : 5), \
-                                   (((M) & 1) ? 4 : 2), \
-                                   (((M) & 1) ? 5 : 3) )
+  (__m256i)__builtin_ia32_insert128i256((__v4di)(__m256i)(V1), \
+                                        (__v2di)(__m128i)(V2), (int)(M))
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_maskload_epi32(int const *__X, __m256i __M)

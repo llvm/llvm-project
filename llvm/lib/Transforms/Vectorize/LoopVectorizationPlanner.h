@@ -345,8 +345,18 @@ private:
   /// Build a VPlan according to the information gathered by Legal. \return a
   /// VPlan for vectorization factors \p Range.Start and up to \p Range.End
   /// exclusive, possibly decreasing \p Range.End.
-  VPlanPtr buildVPlan(VFRange &Range,
-                                    const SmallPtrSetImpl<Value *> &NeedDef);
+  VPlanPtr buildVPlan(VFRange &Range);
+
+  /// Build a VPlan using VPRecipes according to the information gather by
+  /// Legal. This method is only used for the legacy inner loop vectorizer.
+  VPlanPtr
+  buildVPlanWithVPRecipes(VFRange &Range, SmallPtrSetImpl<Value *> &NeedDef,
+                          SmallPtrSetImpl<Instruction *> &DeadInstructions);
+
+  /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
+  /// according to the information gathered by Legal when it checked if it is
+  /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
+  void buildVPlansWithVPRecipes(unsigned MinVF, unsigned MaxVF);
 };
 
 } // namespace llvm

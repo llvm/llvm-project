@@ -1104,15 +1104,21 @@ static DWORD nativeAccess(FileAccess Access, OpenFlags Flags) {
 
 static std::error_code openNativeFileInternal(const Twine &Name,
                                               file_t &ResultFile, DWORD Disp,
-                                              DWORD Access, DWORD Flags) {
+                                              DWORD Access, DWORD Flags,
+                                              bool Inherit = false) {
   SmallVector<wchar_t, 128> PathUTF16;
   if (std::error_code EC = widenPath(Name, PathUTF16))
     return EC;
 
+  SECURITY_ATTRIBUTES SA;
+  SA.nLength = sizeof(SA);
+  SA.lpSecurityDescriptor = nullptr;
+  SA.bInheritHandle = Inherit;
+
   HANDLE H =
       ::CreateFileW(PathUTF16.begin(), Access,
-                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                    NULL, Disp, Flags, NULL);
+                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, &SA,
+                    Disp, Flags, NULL);
   if (H == INVALID_HANDLE_VALUE) {
     DWORD LastError = ::GetLastError();
     std::error_code EC = mapWindowsError(LastError);
@@ -1140,9 +1146,13 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
   DWORD NativeDisp = nativeDisposition(Disp, Flags);
   DWORD NativeAccess = nativeAccess(Access, Flags);
 
+  bool Inherit = false;
+  if (Flags & OF_ChildInherit)
+    Inherit = true;
+
   file_t Result;
-  std::error_code EC = openNativeFileInternal(Name, Result, NativeDisp,
-                                              NativeAccess, NativeFlags);
+  std::error_code EC = openNativeFileInternal(
+      Name, Result, NativeDisp, NativeAccess, NativeFlags, Inherit);
   if (EC)
     return errorCodeToError(EC);
   return Result;
