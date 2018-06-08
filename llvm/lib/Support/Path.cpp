@@ -169,7 +169,7 @@ static std::error_code
 createUniqueEntity(const Twine &Model, int &ResultFD,
                    SmallVectorImpl<char> &ResultPath, bool MakeAbsolute,
                    unsigned Mode, FSEntity Type,
-                   sys::fs::OpenFlags Flags = sys::fs::F_RW) {
+                   sys::fs::OpenFlags Flags = sys::fs::OF_None) {
   SmallString<128> ModelStorage;
   Model.toVector(ModelStorage);
 
@@ -201,8 +201,8 @@ retry_random_path:
   switch (Type) {
   case FS_File: {
     if (std::error_code EC =
-            sys::fs::openFileForWrite(Twine(ResultPath.begin()), ResultFD,
-                                      Flags | sys::fs::F_Excl, Mode)) {
+            sys::fs::openFileForReadWrite(Twine(ResultPath.begin()), ResultFD,
+                                          sys::fs::CD_CreateNew, Flags, Mode)) {
       if (EC == errc::file_exists)
         goto retry_random_path;
       return EC;
@@ -929,9 +929,10 @@ std::error_code create_directories(const Twine &Path, bool IgnoreExisting,
 
 std::error_code copy_file(const Twine &From, const Twine &To) {
   int ReadFD, WriteFD;
-  if (std::error_code EC = openFileForRead(From, ReadFD))
+  if (std::error_code EC = openFileForRead(From, ReadFD, OF_None))
     return EC;
-  if (std::error_code EC = openFileForWrite(To, WriteFD, F_None)) {
+  if (std::error_code EC =
+          openFileForWrite(To, WriteFD, CD_CreateAlways, OF_None)) {
     close(ReadFD);
     return EC;
   }
@@ -983,7 +984,7 @@ ErrorOr<MD5::MD5Result> md5_contents(int FD) {
 
 ErrorOr<MD5::MD5Result> md5_contents(const Twine &Path) {
   int FD;
-  if (auto EC = openFileForRead(Path, FD))
+  if (auto EC = openFileForRead(Path, FD, OF_None))
     return EC;
 
   auto Result = md5_contents(FD);
@@ -1180,7 +1181,7 @@ Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode) {
   int FD;
   SmallString<128> ResultPath;
   if (std::error_code EC =
-          createUniqueFile(Model, FD, ResultPath, Mode, F_Delete | F_RW))
+          createUniqueFile(Model, FD, ResultPath, Mode, OF_Delete))
     return errorCodeToError(EC);
 
   TempFile Ret(ResultPath, FD);

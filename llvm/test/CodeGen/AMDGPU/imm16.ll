@@ -124,8 +124,8 @@ define amdgpu_kernel void @store_literal_imm_f16(half addrspace(1)* %out) {
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_0.0_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], 0, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], 0{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_0.0_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, 0.0
@@ -134,8 +134,8 @@ define amdgpu_kernel void @add_inline_imm_0.0_f16(half addrspace(1)* %out, half 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_0.5_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], 0.5, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], 0.5{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_0.5_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, 0.5
@@ -144,8 +144,8 @@ define amdgpu_kernel void @add_inline_imm_0.5_f16(half addrspace(1)* %out, half 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_0.5_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], -0.5, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], -0.5{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_neg_0.5_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, -0.5
@@ -154,8 +154,8 @@ define amdgpu_kernel void @add_inline_imm_neg_0.5_f16(half addrspace(1)* %out, h
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_1.0_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], 1.0, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], 1.0{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_1.0_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, 1.0
@@ -164,8 +164,8 @@ define amdgpu_kernel void @add_inline_imm_1.0_f16(half addrspace(1)* %out, half 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_1.0_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], -1.0, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], -1.0{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_neg_1.0_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, -1.0
@@ -174,8 +174,8 @@ define amdgpu_kernel void @add_inline_imm_neg_1.0_f16(half addrspace(1)* %out, h
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_2.0_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], 2.0, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], 2.0{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_2.0_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, 2.0
@@ -184,8 +184,8 @@ define amdgpu_kernel void @add_inline_imm_2.0_f16(half addrspace(1)* %out, half 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_2.0_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], -2.0, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], -2.0{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_neg_2.0_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, -2.0
@@ -194,8 +194,8 @@ define amdgpu_kernel void @add_inline_imm_neg_2.0_f16(half addrspace(1)* %out, h
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_4.0_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], 4.0, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], 4.0{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_4.0_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, 4.0
@@ -204,8 +204,8 @@ define amdgpu_kernel void @add_inline_imm_4.0_f16(half addrspace(1)* %out, half 
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_4.0_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], -4.0, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], -4.0{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_neg_4.0_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, -4.0
@@ -236,8 +236,8 @@ define amdgpu_kernel void @commute_add_literal_f16(half addrspace(1)* %out, half
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_1_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], 1, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], 1{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_1_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, 0xH0001
@@ -246,8 +246,8 @@ define amdgpu_kernel void @add_inline_imm_1_f16(half addrspace(1)* %out, half %x
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_2_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], 2, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], 2{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_2_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, 0xH0002
@@ -256,8 +256,8 @@ define amdgpu_kernel void @add_inline_imm_2_f16(half addrspace(1)* %out, half %x
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_16_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], 16, [[VAL]]{{$}}
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], 16{{$}}
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_16_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, 0xH0010
@@ -268,9 +268,9 @@ define amdgpu_kernel void @add_inline_imm_16_f16(half addrspace(1)* %out, half %
 ; GCN-LABEL: {{^}}add_inline_imm_neg_1_f16:
 ; VI: v_add_u32_e32 [[REG:v[0-9]+]], vcc, -1
 ; VI: buffer_store_short [[REG]]
-define amdgpu_kernel void @add_inline_imm_neg_1_f16(half addrspace(1)* %out, half %x) {
-  %xbc = bitcast half %x to i16
-  %y = add i16 %xbc, -1
+define amdgpu_kernel void @add_inline_imm_neg_1_f16(half addrspace(1)* %out, i16 addrspace(1)* %in) {
+  %x = load i16, i16 addrspace(1)* %in
+  %y = add i16 %x, -1
   %ybc = bitcast i16 %y to half
   store half %ybc, half addrspace(1)* %out
   ret void
@@ -279,9 +279,9 @@ define amdgpu_kernel void @add_inline_imm_neg_1_f16(half addrspace(1)* %out, hal
 ; GCN-LABEL: {{^}}add_inline_imm_neg_2_f16:
 ; VI: v_add_u32_e32 [[REG:v[0-9]+]], vcc, 0xfffe
 ; VI: buffer_store_short [[REG]]
-define amdgpu_kernel void @add_inline_imm_neg_2_f16(half addrspace(1)* %out, half %x) {
-  %xbc = bitcast half %x to i16
-  %y = add i16 %xbc, -2
+define amdgpu_kernel void @add_inline_imm_neg_2_f16(half addrspace(1)* %out, i16 addrspace(1)* %in) {
+  %x = load i16, i16 addrspace(1)* %in
+  %y = add i16 %x, -2
   %ybc = bitcast i16 %y to half
   store half %ybc, half addrspace(1)* %out
   ret void
@@ -290,17 +290,17 @@ define amdgpu_kernel void @add_inline_imm_neg_2_f16(half addrspace(1)* %out, hal
 ; GCN-LABEL: {{^}}add_inline_imm_neg_16_f16:
 ; VI: v_add_u32_e32 [[REG:v[0-9]+]], vcc, 0xfff0
 ; VI: buffer_store_short [[REG]]
-define amdgpu_kernel void @add_inline_imm_neg_16_f16(half addrspace(1)* %out, half %x) {
-  %xbc = bitcast half %x to i16
-  %y = add i16 %xbc, -16
+define amdgpu_kernel void @add_inline_imm_neg_16_f16(half addrspace(1)* %out, i16 addrspace(1)* %in) {
+  %x = load i16, i16 addrspace(1)* %in
+  %y = add i16 %x, -16
   %ybc = bitcast i16 %y to half
   store half %ybc, half addrspace(1)* %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_63_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], 63, [[VAL]]
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], 63
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_63_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, 0xH003F
@@ -309,8 +309,8 @@ define amdgpu_kernel void @add_inline_imm_63_f16(half addrspace(1)* %out, half %
 }
 
 ; GCN-LABEL: {{^}}add_inline_imm_64_f16:
-; VI: buffer_load_ushort [[VAL:v[0-9]+]]
-; VI: v_add_f16_e32 [[REG:v[0-9]+]], 64, [[VAL]]
+; VI: s_load_dword [[VAL:s[0-9]+]]
+; VI: v_add_f16_e64 [[REG:v[0-9]+]], [[VAL]], 64
 ; VI: buffer_store_short [[REG]]
 define amdgpu_kernel void @add_inline_imm_64_f16(half addrspace(1)* %out, half %x) {
   %y = fadd half %x, 0xH0040

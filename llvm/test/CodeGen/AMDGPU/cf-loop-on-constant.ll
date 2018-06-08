@@ -105,8 +105,9 @@ for.body:
 ; GCN: s_cbranch_vccnz [[LOOPBB]]
 ; GCN-NEXT: ; %bb.2
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @loop_arg_0(float addrspace(3)* %ptr, i32 %n, i1 %cond) nounwind {
+define amdgpu_kernel void @loop_arg_0(float addrspace(3)* %ptr, i32 %n) nounwind {
 entry:
+  %cond = load volatile i1, i1 addrspace(3)* null
   br label %for.body
 
 for.exit:

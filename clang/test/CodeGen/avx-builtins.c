@@ -59,7 +59,7 @@ __m256 test_mm256_andnot_ps(__m256 A, __m256 B) {
 __m256d test_mm256_blend_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_blend_pd
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
-  return _mm256_blend_pd(A, B, 0x35);
+  return _mm256_blend_pd(A, B, 0x05);
 }
 
 __m256 test_mm256_blend_ps(__m256 A, __m256 B) {

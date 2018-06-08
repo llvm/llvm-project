@@ -1226,6 +1226,13 @@ static Value *SimplifyShlInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
   Value *X;
   if (match(Op0, m_Exact(m_Shr(m_Value(X), m_Specific(Op1)))))
     return X;
+
+  // shl nuw i8 C, %x  ->  C  iff C has sign bit set.
+  if (isNUW && match(Op0, m_Negative()))
+    return Op0;
+  // NOTE: could use computeKnownBits() / LazyValueInfo,
+  // but the cost-benefit analysis suggests it isn't worth it.
+
   return nullptr;
 }
 

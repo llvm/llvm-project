@@ -18,7 +18,7 @@
 #include <cinttypes>
 #include <cstdint>
 #include <fcntl.h>
-#include <fdio/spawn.h>
+#include <lib/fdio/spawn.h>
 #include <string>
 #include <sys/select.h>
 #include <thread>

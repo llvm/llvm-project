@@ -663,10 +663,10 @@ define amdgpu_kernel void @sext_in_reg_v2i1_to_v2i16(<2 x i16> addrspace(1)* %ou
 
 ; FUNC-LABEL: {{^}}sext_in_reg_v3i1_to_v3i16:
 ; GFX9: v_pk_add_u16
-; GFX9: v_pk_lshlrev_b16 v{{[0-9]+}}, 15, v{{[0-9]+}}
-; GFX9: v_pk_ashrrev_i16 v{{[0-9]+}}, 15, v{{[0-9]+}}
 ; GFX9: v_pk_add_u16
 ; GFX9: v_pk_lshlrev_b16 v{{[0-9]+}}, 15, v{{[0-9]+}}
+; GFX9: v_pk_lshlrev_b16 v{{[0-9]+}}, 15, v{{[0-9]+}}
+; GFX9: v_pk_ashrrev_i16 v{{[0-9]+}}, 15, v{{[0-9]+}}
 ; GFX9: v_pk_ashrrev_i16 v{{[0-9]+}}, 15, v{{[0-9]+}}
 define amdgpu_kernel void @sext_in_reg_v3i1_to_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %a, <3 x i16> %b) #0 {
   %c = add <3 x i16> %a, %b ; add to prevent folding into extload
@@ -702,11 +702,10 @@ define amdgpu_kernel void @sext_in_reg_v2i8_to_v2i16(<2 x i16> addrspace(1)* %ou
 
 ; FUNC-LABEL: {{^}}sext_in_reg_v3i8_to_v3i16:
 ; GFX9: v_pk_add_u16
-; GFX9: v_pk_lshlrev_b16 v{{[0-9]+}}, 8, v{{[0-9]+}}
-; GFX9: v_pk_ashrrev_i16 v{{[0-9]+}}, 8, v{{[0-9]+}}
-
 ; GFX9: v_pk_add_u16
 ; GFX9: v_pk_lshlrev_b16 v{{[0-9]+}}, 8, v{{[0-9]+}}
+; GFX9: v_pk_lshlrev_b16 v{{[0-9]+}}, 8, v{{[0-9]+}}
+; GFX9: v_pk_ashrrev_i16 v{{[0-9]+}}, 8, v{{[0-9]+}}
 ; GFX9: v_pk_ashrrev_i16 v{{[0-9]+}}, 8, v{{[0-9]+}}
 define amdgpu_kernel void @sext_in_reg_v3i8_to_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %a, <3 x i16> %b) #0 {
   %c = add <3 x i16> %a, %b ; add to prevent folding into extload

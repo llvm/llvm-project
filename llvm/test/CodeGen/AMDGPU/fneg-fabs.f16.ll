@@ -3,12 +3,12 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX89 -check-prefix=GFX9 -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}fneg_fabs_fadd_f16:
-; CI: v_cvt_f32_f16_e32
-; CI: v_cvt_f32_f16_e64 [[CVT_ABS_X:v[0-9]+]], |v{{[0-9]+}}|
+; CI-DAG: v_cvt_f32_f16_e32
+; CI-DAG: v_cvt_f32_f16_e64 [[CVT_ABS_X:v[0-9]+]], |s{{[0-9]+}}|
 ; CI: v_sub_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[CVT_ABS_X]]
 
 ; GFX89-NOT: _and
-; GFX89: v_sub_f16_e64 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|
+; GFX89: v_sub_f16_e64 {{v[0-9]+}}, {{s[0-9]+}}, |{{v[0-9]+}}|
 define amdgpu_kernel void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, half %y) {
   %fabs = call half @llvm.fabs.f16(half %x)
   %fsub = fsub half -0.0, %fabs
@@ -19,12 +19,12 @@ define amdgpu_kernel void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, 
 
 ; GCN-LABEL: {{^}}fneg_fabs_fmul_f16:
 ; CI-DAG: v_cvt_f32_f16_e32
-; CI-DAG: v_cvt_f32_f16_e64 [[CVT_NEG_ABS_X:v[0-9]+]], -|{{v[0-9]+}}|
+; CI-DAG: v_cvt_f32_f16_e64 [[CVT_NEG_ABS_X:v[0-9]+]], -|{{s[0-9]+}}|
 ; CI: v_mul_f32_e32 {{v[0-9]+}},  {{v[0-9]+}}, [[CVT_NEG_ABS_X]]
 ; CI: v_cvt_f16_f32_e32
 
 ; GFX89-NOT: _and
-; GFX89: v_mul_f16_e64 [[MUL:v[0-9]+]], {{v[0-9]+}}, -|{{v[0-9]+}}|
+; GFX89: v_mul_f16_e64 [[MUL:v[0-9]+]], {{s[0-9]+}}, -|{{v[0-9]+}}|
 ; GFX89-NOT: [[MUL]]
 ; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[MUL]]
 define amdgpu_kernel void @fneg_fabs_fmul_f16(half addrspace(1)* %out, half %x, half %y) {
@@ -40,7 +40,7 @@ define amdgpu_kernel void @fneg_fabs_fmul_f16(half addrspace(1)* %out, half %x, 
 ; unless isFabsFree returns true
 
 ; GCN-LABEL: {{^}}fneg_fabs_free_f16:
-; GCN: v_or_b32_e32 v{{[0-9]+}}, 0x8000, v{{[0-9]+}}
+; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000
 define amdgpu_kernel void @fneg_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
   %bc = bitcast i16 %in to half
   %fabs = call half @llvm.fabs.f16(half %bc)
@@ -50,7 +50,7 @@ define amdgpu_kernel void @fneg_fabs_free_f16(half addrspace(1)* %out, i16 %in) 
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_f16:
-; GCN: v_or_b32_e32 v{{[0-9]+}}, 0x8000, v{{[0-9]+}}
+; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000
 define amdgpu_kernel void @fneg_fabs_f16(half addrspace(1)* %out, half %in) {
   %fabs = call half @llvm.fabs.f16(half %in)
   %fsub = fsub half -0.0, %fabs
@@ -88,11 +88,7 @@ define amdgpu_kernel void @s_fneg_fabs_v2f16_non_bc_src(<2 x half> addrspace(1)*
 ; Combine turns this into integer op when bitcast source (from load)
 
 ; GCN-LABEL: {{^}}s_fneg_fabs_v2f16_bc_src:
-
-; FIXME: Random commute
-; CI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008000
-; VI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008000
-; GFX9: s_or_b32 s{{[0-9]+}}, 0x80008000, s{{[0-9]+}}
+; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008000
 define amdgpu_kernel void @s_fneg_fabs_v2f16_bc_src(<2 x half> addrspace(1)* %out, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg.fabs = fsub <2 x half> <half -0.0, half -0.0>, %fabs
@@ -101,19 +97,9 @@ define amdgpu_kernel void @s_fneg_fabs_v2f16_bc_src(<2 x half> addrspace(1)* %ou
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_v4f16:
-
-; FIXME: Random commute
 ; GCN: s_mov_b32 [[MASK:s[0-9]+]], 0x80008000
-
-; CI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
-; CI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
-
-; VI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
-; VI: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
-
-; GFX9: s_or_b32 s{{[0-9]+}}, [[MASK]], s{{[0-9]+}}
-; GFX9: s_or_b32 s{{[0-9]+}}, [[MASK]], s{{[0-9]+}}
-
+; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
+; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
 ; GCN: {{flat|global}}_store_dwordx2
 define amdgpu_kernel void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
@@ -145,8 +131,11 @@ define amdgpu_kernel void @fold_user_fneg_fabs_v2f16(<2 x half> addrspace(1)* %o
 
 ; GCN-LABEL: {{^}}s_fneg_multi_use_fabs_v2f16:
 ; GFX9: s_and_b32 [[ABS:s[0-9]+]], s{{[0-9]+}}, 0x7fff7fff
-; GFX9: v_mov_b32_e32 [[VABS:v[0-9]+]], [[ABS]]
-; GFX9: v_xor_b32_e32 [[NEG:v[0-9]+]], 0x80008000, [[VABS]]
+; GFX9: v_mov_b32_e32 [[V_ABS:v[0-9]+]], [[ABS]]
+; GFX9: s_xor_b32 [[NEG:s[0-9]+]], [[ABS]], 0x80008000
+; GFX9-DAG: v_mov_b32_e32 [[V_NEG:v[0-9]+]], [[NEG]]
+; GFX9-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[V_ABS]]
+; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[V_NEG]]
 define amdgpu_kernel void @s_fneg_multi_use_fabs_v2f16(<2 x half> addrspace(1)* %out0, <2 x half> addrspace(1)* %out1, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %fabs

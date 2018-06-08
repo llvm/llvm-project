@@ -16,6 +16,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -23,7 +24,10 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
+
+#include <limits>
 
 using namespace llvm;
 
@@ -47,7 +51,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
                                       unsigned Kind) override;
 
   bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
-                                  int Lower, int Upper, Twine Msg);
+                                  int64_t Lower, int64_t Upper, Twine Msg);
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -60,6 +64,20 @@ class RISCVAsmParser : public MCTargetAsmParser {
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   bool ParseDirective(AsmToken DirectiveID) override;
+
+  // Helper to actually emit an instruction to the MCStreamer. Also, when
+  // possible, compression of the instruction is performed.
+  void emitToStreamer(MCStreamer &S, const MCInst &Inst);
+
+  // Helper to emit a combination of LUI, ADDI(W), and SLLI instructions that
+  // synthesize the desired immedate value into the destination register.
+  void emitLoadImm(unsigned DestReg, int64_t Value, MCStreamer &Out);
+
+  /// Helper for processing MC instructions that have been successfully matched
+  /// by MatchAndEmitInstruction. Modifications to the emitted instructions,
+  /// like the expansion of pseudo instructions (e.g., "li"), can be performed
+  /// in this method.
+  bool processInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
 
 // Auto-generated instruction matching functions
 #define GET_ASSEMBLER_HEADER
@@ -245,6 +263,18 @@ public:
     StringRef Str = SVal->getSymbol().getName();
 
     return RISCVFPRndMode::stringToRoundingMode(Str) != RISCVFPRndMode::Invalid;
+  }
+
+  bool isImmXLen() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(Imm, VK);
+    // Given only Imm, ensuring that the actually specified constant is either
+    // a signed or unsigned 64-bit number is unfortunately impossible.
+    bool IsInRange = isRV64() ? true : isInt<32>(Imm) || isUInt<32>(Imm);
+    return IsConstantImm && IsInRange && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isUImmLog2XLen() const {
@@ -620,7 +650,7 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 }
 
 bool RISCVAsmParser::generateImmOutOfRangeError(
-    OperandVector &Operands, uint64_t ErrorInfo, int Lower, int Upper,
+    OperandVector &Operands, uint64_t ErrorInfo, int64_t Lower, int64_t Upper,
     Twine Msg = "immediate must be an integer in the range") {
   SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
   return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
@@ -636,14 +666,8 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   default:
     break;
-  case Match_Success: {
-    MCInst CInst;
-    bool Res = compressInst(CInst, Inst, getSTI(), Out.getContext());
-    CInst.setLoc(IDLoc);
-    Inst.setLoc(IDLoc);
-    Out.EmitInstruction((Res ? CInst : Inst), getSTI());
-    return false;
-  }
+  case Match_Success:
+    return processInstruction(Inst, IDLoc, Out);
   case Match_MissingFeature:
     return Error(IDLoc, "instruction use requires an option to be enabled");
   case Match_MnemonicFail:
@@ -660,6 +684,14 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
     return Error(ErrorLoc, "invalid operand for instruction");
   }
+  case Match_InvalidImmXLen:
+    if (isRV64()) {
+      SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+      return Error(ErrorLoc, "operand must be a constant 64-bit integer");
+    }
+    return generateImmOutOfRangeError(Operands, ErrorInfo,
+                                      std::numeric_limits<int32_t>::min(),
+                                      std::numeric_limits<uint32_t>::max());
   case Match_InvalidUImmLog2XLen:
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
@@ -1064,6 +1096,111 @@ bool RISCVAsmParser::parseDirectiveOption() {
   Warning(Parser.getTok().getLoc(),
           "unknown option, expected 'rvc' or 'norvc'");
   Parser.eatToEndOfStatement();
+  return false;
+}
+
+void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
+  MCInst CInst;
+  bool Res = compressInst(CInst, Inst, getSTI(), S.getContext());
+  CInst.setLoc(Inst.getLoc());
+  S.EmitInstruction((Res ? CInst : Inst), getSTI());
+}
+
+void RISCVAsmParser::emitLoadImm(unsigned DestReg, int64_t Value,
+                                 MCStreamer &Out) {
+  if (isInt<32>(Value)) {
+    // Emits the MC instructions for loading a 32-bit constant into a register.
+    //
+    // Depending on the active bits in the immediate Value v, the following
+    // instruction sequences are emitted:
+    //
+    // v == 0                        : ADDI(W)
+    // v[0,12) != 0 && v[12,32) == 0 : ADDI(W)
+    // v[0,12) == 0 && v[12,32) != 0 : LUI
+    // v[0,32) != 0                  : LUI+ADDI(W)
+    //
+    int64_t Hi20 = ((Value + 0x800) >> 12) & 0xFFFFF;
+    int64_t Lo12 = SignExtend64<12>(Value);
+    unsigned SrcReg = RISCV::X0;
+
+    if (Hi20) {
+      emitToStreamer(Out,
+                     MCInstBuilder(RISCV::LUI).addReg(DestReg).addImm(Hi20));
+      SrcReg = DestReg;
+    }
+
+    if (Lo12 || Hi20 == 0) {
+      unsigned AddiOpcode =
+          STI->hasFeature(RISCV::Feature64Bit) ? RISCV::ADDIW : RISCV::ADDI;
+      emitToStreamer(Out, MCInstBuilder(AddiOpcode)
+                              .addReg(DestReg)
+                              .addReg(SrcReg)
+                              .addImm(Lo12));
+    }
+    return;
+  }
+  assert(STI->hasFeature(RISCV::Feature64Bit) &&
+         "Target must be 64-bit to support a >32-bit constant");
+
+  // In the worst case, for a full 64-bit constant, a sequence of 8 instructions
+  // (i.e., LUI+ADDIW+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be emmitted. Note
+  // that the first two instructions (LUI+ADDIW) can contribute up to 32 bits
+  // while the following ADDI instructions contribute up to 12 bits each.
+  //
+  // On the first glance, implementing this seems to be possible by simply
+  // emitting the most significant 32 bits (LUI+ADDIW) followed by as many left
+  // shift (SLLI) and immediate additions (ADDI) as needed. However, due to the
+  // fact that ADDI performs a sign extended addition, doing it like that would
+  // only be possible when at most 11 bits of the ADDI instructions are used.
+  // Using all 12 bits of the ADDI instructions, like done by GAS, actually
+  // requires that the constant is processed starting with the least significant
+  // bit.
+  //
+  // In the following, constants are processed from LSB to MSB but instruction
+  // emission is performed from MSB to LSB by recursively calling
+  // emitLoadImm. In each recursion, first the lowest 12 bits are removed
+  // from the constant and the optimal shift amount, which can be greater than
+  // 12 bits if the constant is sparse, is determined. Then, the shifted
+  // remaining constant is processed recursively and gets emitted as soon as it
+  // fits into 32 bits. The emission of the shifts and additions is subsequently
+  // performed when the recursion returns.
+  //
+  int64_t Lo12 = SignExtend64<12>(Value);
+  int64_t Hi52 = (Value + 0x800) >> 12;
+  int ShiftAmount = 12 + findFirstSet((uint64_t)Hi52);
+  Hi52 = SignExtend64(Hi52 >> (ShiftAmount - 12), 64 - ShiftAmount);
+
+  emitLoadImm(DestReg, Hi52, Out);
+
+  emitToStreamer(Out, MCInstBuilder(RISCV::SLLI)
+                          .addReg(DestReg)
+                          .addReg(DestReg)
+                          .addImm(ShiftAmount));
+
+  if (Lo12)
+    emitToStreamer(Out, MCInstBuilder(RISCV::ADDI)
+                            .addReg(DestReg)
+                            .addReg(DestReg)
+                            .addImm(Lo12));
+}
+
+bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
+                                        MCStreamer &Out) {
+  Inst.setLoc(IDLoc);
+
+  if (Inst.getOpcode() == RISCV::PseudoLI) {
+    auto Reg = Inst.getOperand(0).getReg();
+    int64_t Imm = Inst.getOperand(1).getImm();
+    // On RV32 the immediate here can either be a signed or an unsigned
+    // 32-bit number. Sign extension has to be performed to ensure that Imm
+    // represents the expected signed 64-bit number.
+    if (!isRV64())
+      Imm = SignExtend64<32>(Imm);
+    emitLoadImm(Reg, Imm, Out);
+    return false;
+  }
+
+  emitToStreamer(Out, Inst);
   return false;
 }
 

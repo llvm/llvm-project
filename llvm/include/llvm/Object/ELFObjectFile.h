@@ -15,6 +15,7 @@
 #define LLVM_OBJECT_ELFOBJECTFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -83,6 +84,8 @@ public:
   SubtargetFeatures getRISCVFeatures() const;
 
   void setARMSubArch(Triple &TheTriple) const override;
+
+  virtual uint16_t getEType() const = 0;
 };
 
 class ELFSectionRef : public SectionRef {
@@ -200,6 +203,7 @@ ELFObjectFileBase::symbols() const {
 
 template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
   uint16_t getEMachine() const override;
+  uint16_t getEType() const override;
   uint64_t getSymbolSize(DataRefImpl Sym) const override;
 
 public:
@@ -256,6 +260,7 @@ protected:
   bool isSectionVirtual(DataRefImpl Sec) const override;
   relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
   relocation_iterator section_rel_end(DataRefImpl Sec) const override;
+  std::vector<SectionRef> dynamic_relocation_sections() const override;
   section_iterator getRelocatedSection(DataRefImpl Sec) const override;
 
   void moveRelocationNext(DataRefImpl &Rel) const override;
@@ -507,6 +512,10 @@ uint16_t ELFObjectFile<ELFT>::getEMachine() const {
   return EF.getHeader()->e_machine;
 }
 
+template <class ELFT> uint16_t ELFObjectFile<ELFT>::getEType() const {
+  return EF.getHeader()->e_type;
+}
+
 template <class ELFT>
 uint64_t ELFObjectFile<ELFT>::getSymbolSize(DataRefImpl Sym) const {
   return getSymbol(Sym)->st_size;
@@ -712,6 +721,35 @@ bool ELFObjectFile<ELFT>::isSectionBSS(DataRefImpl Sec) const {
 }
 
 template <class ELFT>
+std::vector<SectionRef>
+ELFObjectFile<ELFT>::dynamic_relocation_sections() const {
+  std::vector<SectionRef> Res;
+  std::vector<uintptr_t> Offsets;
+
+  auto SectionsOrErr = EF.sections();
+  if (!SectionsOrErr)
+    return Res;
+
+  for (const Elf_Shdr &Sec : *SectionsOrErr) {
+    if (Sec.sh_type != ELF::SHT_DYNAMIC)
+      continue;
+    Elf_Dyn *Dynamic =
+        reinterpret_cast<Elf_Dyn *>((uintptr_t)base() + Sec.sh_offset);
+    for (; Dynamic->d_tag != ELF::DT_NULL; Dynamic++) {
+      if (Dynamic->d_tag == ELF::DT_REL || Dynamic->d_tag == ELF::DT_RELA ||
+          Dynamic->d_tag == ELF::DT_JMPREL) {
+        Offsets.push_back(Dynamic->d_un.d_val);
+      }
+    }
+  }
+  for (const Elf_Shdr &Sec : *SectionsOrErr) {
+    if (is_contained(Offsets, Sec.sh_offset))
+      Res.emplace_back(toDRI(&Sec), this);
+  }
+  return Res;
+}
+
+template <class ELFT>
 bool ELFObjectFile<ELFT>::isSectionVirtual(DataRefImpl Sec) const {
   return getSection(Sec)->sh_type == ELF::SHT_NOBITS;
 }
@@ -792,8 +830,6 @@ ELFObjectFile<ELFT>::getRelocationSymbol(DataRefImpl Rel) const {
 
 template <class ELFT>
 uint64_t ELFObjectFile<ELFT>::getRelocationOffset(DataRefImpl Rel) const {
-  assert(EF.getHeader()->e_type == ELF::ET_REL &&
-         "Only relocatable object files have relocation offsets");
   const Elf_Shdr *sec = getRelSection(Rel);
   if (sec->sh_type == ELF::SHT_REL)
     return getRel(Rel)->r_offset;

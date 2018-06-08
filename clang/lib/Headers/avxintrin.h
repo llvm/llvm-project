@@ -1355,12 +1355,8 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    operand \a V2 is copied to the same position in the destination.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
 #define _mm256_blend_pd(V1, V2, M) \
-  (__m256d)__builtin_shufflevector((__v4df)(__m256d)(V1), \
-                                   (__v4df)(__m256d)(V2), \
-                                   (((M) & 0x01) ? 4 : 0), \
-                                   (((M) & 0x02) ? 5 : 1), \
-                                   (((M) & 0x04) ? 6 : 2), \
-                                   (((M) & 0x08) ? 7 : 3))
+  (__m256d)__builtin_ia32_blendpd256((__v4df)(__m256d)(V1), \
+                                     (__v4df)(__m256d)(V2), (int)(M))
 
 /// Merges 32-bit single-precision data values stored in either of the
 ///    two 256-bit vectors of [8 x float], as specified by the immediate
@@ -1387,16 +1383,8 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 ///    operand \a V2 is copied to the same position in the destination.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
 #define _mm256_blend_ps(V1, V2, M) \
-  (__m256)__builtin_shufflevector((__v8sf)(__m256)(V1), \
-                                  (__v8sf)(__m256)(V2), \
-                                  (((M) & 0x01) ?  8 : 0), \
-                                  (((M) & 0x02) ?  9 : 1), \
-                                  (((M) & 0x04) ? 10 : 2), \
-                                  (((M) & 0x08) ? 11 : 3), \
-                                  (((M) & 0x10) ? 12 : 4), \
-                                  (((M) & 0x20) ? 13 : 5), \
-                                  (((M) & 0x40) ? 14 : 6), \
-                                  (((M) & 0x80) ? 15 : 7))
+  (__m256)__builtin_ia32_blendps256((__v8sf)(__m256)(V1), \
+                                    (__v8sf)(__m256)(V2), (int)(M))
 
 /// Merges 64-bit double-precision data values stored in either of the
 ///    two 256-bit vectors of [4 x double], as specified by the 256-bit vector

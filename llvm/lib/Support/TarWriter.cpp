@@ -159,8 +159,10 @@ static void writeUstarHeader(raw_fd_ostream &OS, StringRef Prefix,
 // Creates a TarWriter instance and returns it.
 Expected<std::unique_ptr<TarWriter>> TarWriter::create(StringRef OutputPath,
                                                        StringRef BaseDir) {
+  using namespace sys::fs;
   int FD;
-  if (std::error_code EC = openFileForWrite(OutputPath, FD, sys::fs::F_None))
+  if (std::error_code EC =
+          openFileForWrite(OutputPath, FD, CD_CreateAlways, OF_None))
     return make_error<StringError>("cannot open " + OutputPath, EC);
   return std::unique_ptr<TarWriter>(new TarWriter(FD, BaseDir));
 }

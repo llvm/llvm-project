@@ -26,6 +26,20 @@
 
 namespace exegesis {
 
+// A collection of instructions that are to be assembled, executed and measured.
+struct BenchmarkConfiguration {
+  // This code is run before the Snippet is iterated. Since it is part of the
+  // measurement it should be as short as possible. It is usually used to setup
+  // the content of the Registers.
+  std::vector<llvm::MCInst> SnippetSetup;
+
+  // The sequence of instructions that are to be repeated.
+  std::vector<llvm::MCInst> Snippet;
+
+  // Informations about how this configuration was built.
+  std::string Info;
+};
+
 // Common code for all benchmark modes.
 class BenchmarkRunner {
 public:
@@ -45,8 +59,9 @@ public:
 
   virtual ~BenchmarkRunner();
 
-  InstructionBenchmark run(unsigned Opcode, const InstructionFilter &Filter,
-                           unsigned NumRepetitions);
+  llvm::Expected<std::vector<InstructionBenchmark>>
+  run(unsigned Opcode, const InstructionFilter &Filter,
+      unsigned NumRepetitions);
 
 protected:
   const LLVMState &State;
@@ -54,11 +69,14 @@ protected:
   const llvm::MCRegisterInfo &MCRegisterInfo;
 
 private:
+  InstructionBenchmark runOne(const BenchmarkConfiguration &Configuration,
+                              unsigned Opcode, unsigned NumRepetitions) const;
+
   virtual InstructionBenchmark::ModeE getMode() const = 0;
 
-  virtual llvm::Expected<std::vector<llvm::MCInst>>
-  createSnippet(RegisterAliasingTrackerCache &RATC, unsigned Opcode,
-                llvm::raw_ostream &Debug) const = 0;
+  virtual llvm::Expected<std::vector<BenchmarkConfiguration>>
+  createConfigurations(RegisterAliasingTrackerCache &RATC,
+                       unsigned Opcode) const = 0;
 
   virtual std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF,

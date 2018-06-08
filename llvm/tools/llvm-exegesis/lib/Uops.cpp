@@ -134,50 +134,43 @@ static void remove(llvm::BitVector &a, const llvm::BitVector &b) {
     a.reset(I);
 }
 
-static llvm::Error makeError(llvm::Twine Msg) {
-  return llvm::make_error<llvm::StringError>(Msg,
-                                             llvm::inconvertibleErrorCode());
-}
-
 UopsBenchmarkRunner::~UopsBenchmarkRunner() = default;
 
 InstructionBenchmark::ModeE UopsBenchmarkRunner::getMode() const {
   return InstructionBenchmark::Uops;
 }
 
-llvm::Expected<std::vector<llvm::MCInst>>
-UopsBenchmarkRunner::createSnippet(RegisterAliasingTrackerCache &RATC,
-                                   unsigned Opcode,
-                                   llvm::raw_ostream &Info) const {
-  std::vector<llvm::MCInst> Snippet;
+llvm::Expected<std::vector<BenchmarkConfiguration>>
+UopsBenchmarkRunner::createConfigurations(RegisterAliasingTrackerCache &RATC,
+                                          unsigned Opcode) const {
   const llvm::MCInstrDesc &MCInstrDesc = MCInstrInfo.get(Opcode);
   const Instruction Instruction(MCInstrDesc, RATC);
 
   std::string Error;
-  if (isInfeasible(Instruction, Error)) {
-    llvm::report_fatal_error(llvm::Twine("Infeasible : ").concat(Error));
-  }
+  if (isInfeasible(Instruction, Error))
+    return llvm::make_error<llvm::StringError>(
+        llvm::Twine("Infeasible : ").concat(Error),
+        llvm::inconvertibleErrorCode());
 
+  BenchmarkConfiguration Conf;
   const AliasingConfigurations SelfAliasing(Instruction, Instruction);
   if (SelfAliasing.empty()) {
-    Info << "instruction is parallel, repeating a random one.\n";
-    Snippet.push_back(randomizeUnsetVariablesAndBuild(Instruction));
-    return Snippet;
+    Conf.Info = "instruction is parallel, repeating a random one.";
+    Conf.Snippet = {randomizeUnsetVariablesAndBuild(Instruction)};
+    return std::vector<BenchmarkConfiguration>{Conf};
   }
   if (SelfAliasing.hasImplicitAliasing()) {
-    Info << "instruction is serial, repeating a random one.\n";
-    Snippet.push_back(randomizeUnsetVariablesAndBuild(Instruction));
-    return Snippet;
+    Conf.Info = "instruction is serial, repeating a random one.";
+    Conf.Snippet = {randomizeUnsetVariablesAndBuild(Instruction)};
+    return std::vector<BenchmarkConfiguration>{Conf};
   }
   const auto TiedVariables = getTiedVariables(Instruction);
   if (!TiedVariables.empty()) {
-    if (TiedVariables.size() > 1) {
-      Info << "Not yet implemented, don't know how to handle several tied "
-              "variables\n";
-      return makeError("Infeasible : don't know how to handle several tied "
-                       "variables");
-    }
-    Info << "instruction has tied variables using static renaming.\n";
+    if (TiedVariables.size() > 1)
+      return llvm::make_error<llvm::StringError>(
+          "Infeasible : don't know how to handle several tied variables",
+          llvm::inconvertibleErrorCode());
+    Conf.Info = "instruction has tied variables using static renaming.";
     Variable *Var = TiedVariables.front();
     assert(Var);
     assert(!Var->TiedOperands.empty());
@@ -186,9 +179,9 @@ UopsBenchmarkRunner::createSnippet(RegisterAliasingTrackerCache &RATC,
     for (const llvm::MCPhysReg Reg : Operand.Tracker->sourceBits().set_bits()) {
       clearVariableAssignments(Instruction);
       Var->AssignedValue = llvm::MCOperand::createReg(Reg);
-      Snippet.push_back(randomizeUnsetVariablesAndBuild(Instruction));
+      Conf.Snippet.push_back(randomizeUnsetVariablesAndBuild(Instruction));
     }
-    return Snippet;
+    return std::vector<BenchmarkConfiguration>{Conf};
   }
   // No tied variables, we pick random values for defs.
   llvm::BitVector Defs(MCRegisterInfo.getNumRegs());
@@ -216,10 +209,10 @@ UopsBenchmarkRunner::createSnippet(RegisterAliasingTrackerCache &RATC,
       Op.Var->AssignedValue = llvm::MCOperand::createReg(RandomReg);
     }
   }
-  Info
-      << "instruction has no tied variables picking Uses different from defs\n";
-  Snippet.push_back(randomizeUnsetVariablesAndBuild(Instruction));
-  return Snippet;
+  Conf.Info =
+      "instruction has no tied variables picking Uses different from defs";
+  Conf.Snippet = {randomizeUnsetVariablesAndBuild(Instruction)};
+  return std::vector<BenchmarkConfiguration>{Conf};
 }
 
 std::vector<BenchmarkMeasure>

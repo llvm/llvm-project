@@ -1461,6 +1461,14 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
         {"sinf", "__svml_sinf8", 8},
         {"sinf", "__svml_sinf16", 16},
 
+        {"llvm.sin.f64", "__svml_sin2", 2},
+        {"llvm.sin.f64", "__svml_sin4", 4},
+        {"llvm.sin.f64", "__svml_sin8", 8},
+
+        {"llvm.sin.f32", "__svml_sinf4", 4},
+        {"llvm.sin.f32", "__svml_sinf8", 8},
+        {"llvm.sin.f32", "__svml_sinf16", 16},
+
         {"cos", "__svml_cos2", 2},
         {"cos", "__svml_cos4", 4},
         {"cos", "__svml_cos8", 8},
@@ -1468,6 +1476,14 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
         {"cosf", "__svml_cosf4", 4},
         {"cosf", "__svml_cosf8", 8},
         {"cosf", "__svml_cosf16", 16},
+
+        {"llvm.cos.f64", "__svml_cos2", 2},
+        {"llvm.cos.f64", "__svml_cos4", 4},
+        {"llvm.cos.f64", "__svml_cos8", 8},
+
+        {"llvm.cos.f32", "__svml_cosf4", 4},
+        {"llvm.cos.f32", "__svml_cosf8", 8},
+        {"llvm.cos.f32", "__svml_cosf16", 16},
 
         {"pow", "__svml_pow2", 2},
         {"pow", "__svml_pow4", 4},

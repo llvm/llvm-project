@@ -404,7 +404,7 @@ def Pseudo_SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16],
   let CopyCost = -1;
 }
 
-def Pseudo_SReg_128 : RegisterClass<"AMDGPU", [v4i32, v2i64], 32,
+def Pseudo_SReg_128 : RegisterClass<"AMDGPU", [v4i32, v2i64, v2f64], 32,
   (add PRIVATE_RSRC_REG)> {
   let isAllocatable = 0;
   let CopyCost = -1;
@@ -467,7 +467,7 @@ def TTMP_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add TTMP_128R
   let isAllocatable = 0;
 }
 
-def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32,
+def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64, v2f64], 32,
   (add SGPR_128, TTMP_128)> {
   let AllocationPriority = 10;
 }

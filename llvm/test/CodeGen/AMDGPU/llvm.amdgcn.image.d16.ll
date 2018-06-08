@@ -50,8 +50,9 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}image_store_f16
-; GCN: {{flat|global}}_load_ushort v[[LO:[0-9]+]],
-; GCN: image_store v[[LO]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0x1 unorm d16
+; GCN: s_load_dword s[[LO:[0-9]+]],
+; GCN: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[LO]]
+; GCN: image_store v[[V_LO]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0x1 unorm d16
 define amdgpu_kernel void @image_store_f16(half %data, <4 x i32> %coords, <8 x i32> inreg %rsrc) {
 main_body:
   call void @llvm.amdgcn.image.store.f16.v4i32.v8i32(half %data, <4 x i32> %coords, <8 x i32> %rsrc, i32 1, i1 false, i1 false, i1 false, i1 false)

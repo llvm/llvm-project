@@ -10,6 +10,7 @@ import time
 import re
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
@@ -22,6 +23,7 @@ class TestFrameGuessLanguage(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37658")
     def test_guess_language(self):
         """Test GuessLanguage for C and C++."""
         self.build()

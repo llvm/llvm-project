@@ -889,7 +889,8 @@ public:
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, const SDNodeFlags Flags = SDNodeFlags());
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
-                  SDValue N2, SDValue N3);
+                  SDValue N2, SDValue N3,
+                  const SDNodeFlags Flags = SDNodeFlags());
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDValue N3, SDValue N4);
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
