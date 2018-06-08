@@ -10,7 +10,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 ; CHECK-LABEL: @lsr_crash_preserve_addrspace_unknown_type(
 ; CHECK: %tmp4 = bitcast %0 addrspace(3)* %tmp to double addrspace(3)*
 ; CHECK: %scevgep5 = getelementptr double, double addrspace(3)* %tmp4, i32 1
-; CHEC: load double, double addrspace(3)* %scevgep5
+; CHECK: load double, double addrspace(3)* %scevgep5
 
 ; CHECK: %scevgep = getelementptr i32, i32 addrspace(3)* %tmp1, i32 4
 ; CHECK:%tmp14 = load i32, i32 addrspace(3)* %scevgep
@@ -49,6 +49,47 @@ bb17:                                             ; preds = %bb12, %bb8
   %tmp18 = getelementptr inbounds %0, %0 addrspace(3)* %tmp, i64 2
   br label %bb1
 }
+
+; CHECK-LABEL: @lsr_crash_preserve_addrspace_unknown_type2(
+; CHECK: %scevgep3 = getelementptr i8, i8 addrspace(5)* %array, i32 %j
+; CHECK: %scevgep2 = getelementptr i8, i8 addrspace(5)* %array, i32 %j
+; CHECK: %n8 = load i8, i8 addrspace(5)* %scevgep2, align 4
+; CHECK: call void @llvm.memcpy.p5i8.p3i8.i64(i8 addrspace(5)* %scevgep3, i8 addrspace(3)* %scevgep4, i64 42, i1 false)
+; CHECK: call void @llvm.memmove.p5i8.p3i8.i64(i8 addrspace(5)* %scevgep3, i8 addrspace(3)* %scevgep4, i64 42, i1 false)
+; CHECK: call void @llvm.memset.p5i8.i64(i8 addrspace(5)* %scevgep3, i8 42, i64 42, i1 false)
+define void @lsr_crash_preserve_addrspace_unknown_type2(i8 addrspace(5)* %array, i8 addrspace(3)* %array2) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.inc
+  %j = phi i32 [ %add, %for.inc ], [ 0, %entry ]
+  %idx = getelementptr inbounds i8, i8 addrspace(5)* %array, i32 %j
+  %idx1 = getelementptr inbounds i8, i8 addrspace(3)* %array2, i32 %j
+  %t = getelementptr inbounds i8, i8 addrspace(5)* %array, i32 %j
+  %n8 = load i8, i8 addrspace(5)* %t, align 4
+  %n7 = getelementptr inbounds i8, i8 addrspace(5)* %t, i32 42
+  %n9 = load i8, i8 addrspace(5)* %n7, align 4
+  %cmp = icmp sgt i32 %j, 42
+  %add = add nuw nsw i32 %j, 1
+  br i1 %cmp, label %if.then17, label %for.inc
+
+if.then17:                                        ; preds = %for.body
+  call void @llvm.memcpy.p5i8.p5i8.i64(i8 addrspace(5)* %idx, i8 addrspace(3)* %idx1, i64 42, i1 false)
+  call void @llvm.memmove.p5i8.p5i8.i64(i8 addrspace(5)* %idx, i8 addrspace(3)* %idx1, i64 42, i1 false)
+  call void @llvm.memset.p5i8.i64(i8 addrspace(5)* %idx, i8 42, i64 42, i1 false)
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.then17
+  %exitcond = icmp eq i1 %cmp, 1
+  br i1 %exitcond, label %end, label %for.body
+
+end:                                              ; preds = %for.inc
+  ret void
+}
+
+declare void @llvm.memcpy.p5i8.p5i8.i64(i8 addrspace(5)*, i8 addrspace(3)*, i64, i1)
+declare void @llvm.memmove.p5i8.p5i8.i64(i8 addrspace(5)*, i8 addrspace(3)*, i64, i1)
+declare void @llvm.memset.p5i8.i64(i8 addrspace(5)*, i8, i64, i1)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

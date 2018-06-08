@@ -919,13 +919,13 @@ __m256i test_mm256_permute2x128_si256(__m256i a, __m256i b) {
 
 __m256i test_mm256_permute4x64_epi64(__m256i a) {
   // CHECK-LABEL: test_mm256_permute4x64_epi64
-  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> zeroinitializer, <4 x i32> <i32 3, i32 0, i32 2, i32 0>
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <4 x i32> <i32 3, i32 0, i32 2, i32 0>
   return _mm256_permute4x64_epi64(a, 35);
 }
 
 __m256d test_mm256_permute4x64_pd(__m256d a) {
   // CHECK-LABEL: test_mm256_permute4x64_pd
-  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> zeroinitializer, <4 x i32> <i32 1, i32 2, i32 1, i32 0>
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> undef, <4 x i32> <i32 1, i32 2, i32 1, i32 0>
   return _mm256_permute4x64_pd(a, 25);
 }
 
@@ -955,19 +955,19 @@ __m256i test_mm256_shuffle_epi8(__m256i a, __m256i b) {
 
 __m256i test_mm256_shuffle_epi32(__m256i a) {
   // CHECK-LABEL: test_mm256_shuffle_epi32
-  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 3, i32 3, i32 0, i32 0, i32 7, i32 7, i32 4, i32 4>
+  // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> undef, <8 x i32> <i32 3, i32 3, i32 0, i32 0, i32 7, i32 7, i32 4, i32 4>
   return _mm256_shuffle_epi32(a, 15);
 }
 
 __m256i test_mm256_shufflehi_epi16(__m256i a) {
   // CHECK-LABEL: test_mm256_shufflehi_epi16
-  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 6, i32 6, i32 5, i32 8, i32 9, i32 10, i32 11, i32 15, i32 14, i32 14, i32 13>
+  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 6, i32 6, i32 5, i32 8, i32 9, i32 10, i32 11, i32 15, i32 14, i32 14, i32 13>
   return _mm256_shufflehi_epi16(a, 107);
 }
 
 __m256i test_mm256_shufflelo_epi16(__m256i a) {
   // CHECK-LABEL: test_mm256_shufflelo_epi16
-  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> %{{.*}}, <16 x i32> <i32 3, i32 0, i32 1, i32 1, i32 4, i32 5, i32 6, i32 7, i32 11, i32 8, i32 9, i32 9, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> undef, <16 x i32> <i32 3, i32 0, i32 1, i32 1, i32 4, i32 5, i32 6, i32 7, i32 11, i32 8, i32 9, i32 9, i32 12, i32 13, i32 14, i32 15>
   return _mm256_shufflelo_epi16(a, 83);
 }
 

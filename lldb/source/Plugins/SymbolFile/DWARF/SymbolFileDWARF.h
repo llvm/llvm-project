@@ -385,9 +385,6 @@ protected:
   bool ClassOrStructIsVirtual(const DWARFDIE &die);
 
   // Given a die_offset, figure out the symbol context representing that die.
-  bool ResolveFunction(const DIERef &die_ref, bool include_inlines,
-                       lldb_private::SymbolContextList &sc_list);
-
   bool ResolveFunction(const DWARFDIE &die, bool include_inlines,
                        lldb_private::SymbolContextList &sc_list);
 

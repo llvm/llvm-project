@@ -193,6 +193,7 @@ int main() { ClassWithMembers().^ }
 
 TEST(CompletionTest, Filter) {
   std::string Body = R"cpp(
+    #define FooBarMacro
     int Abracadabra;
     int Alakazam;
     struct S {
@@ -202,7 +203,8 @@ TEST(CompletionTest, Filter) {
     };
   )cpp";
   EXPECT_THAT(completions(Body + "int main() { S().Foba^ }").items,
-              AllOf(Has("FooBar"), Has("FooBaz"), Not(Has("Qux"))));
+              AllOf(Has("FooBar"), Has("FooBaz"), Not(Has("FooBarMacro")),
+                    Not(Has("Qux"))));
 
   EXPECT_THAT(completions(Body + "int main() { S().FR^ }").items,
               AllOf(Has("FooBar"), Not(Has("FooBaz")), Not(Has("Qux"))));

@@ -717,7 +717,11 @@ enum OpenFlags : unsigned {
   F_Append = 2, // For compatibility
 
   /// Delete the file on close. Only makes a difference on windows.
-  OF_Delete = 4
+  OF_Delete = 4,
+
+  /// When a child process is launched, this file should remain open in the
+  /// child process.
+  OF_ChildInherit = 8,
 };
 
 /// Create a uniquely named file.
@@ -876,8 +880,6 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
 /// finished with it.
 ///
 /// @param Name The path of the file to open, relative or absolute.
-/// @param ResultFD If the file could be opened successfully, its descriptor
-///                 is stored in this location. Otherwise, this is set to -1.
 /// @param Disp Value specifying the existing-file behavior.
 /// @param Access Value specifying whether to open the file in read, write, or
 ///               read-write mode.

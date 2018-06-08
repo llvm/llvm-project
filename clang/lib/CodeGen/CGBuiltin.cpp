@@ -9325,6 +9325,57 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                        makeArrayRef(Indices, NumElts),
                                        "blend");
   }
+  case X86::BI__builtin_ia32_pshuflw:
+  case X86::BI__builtin_ia32_pshuflw256:
+  case X86::BI__builtin_ia32_pshuflw512: {
+    uint32_t Imm = cast<llvm::ConstantInt>(Ops[1])->getZExtValue();
+    llvm::Type *Ty = Ops[0]->getType();
+    unsigned NumElts = Ty->getVectorNumElements();
+
+    // Splat the 8-bits of immediate 4 times to help the loop wrap around.
+    Imm = (Imm & 0xff) * 0x01010101;
+
+    uint32_t Indices[32];
+    for (unsigned l = 0; l != NumElts; l += 8) {
+      for (unsigned i = 0; i != 4; ++i) {
+        Indices[l + i] = l + (Imm & 3);
+        Imm >>= 2;
+      }
+      for (unsigned i = 4; i != 8; ++i)
+        Indices[l + i] = l + i;
+    }
+
+    return Builder.CreateShuffleVector(Ops[0], UndefValue::get(Ty),
+                                       makeArrayRef(Indices, NumElts),
+                                       "pshuflw");
+  }
+  case X86::BI__builtin_ia32_pshufhw:
+  case X86::BI__builtin_ia32_pshufhw256:
+  case X86::BI__builtin_ia32_pshufhw512: {
+    uint32_t Imm = cast<llvm::ConstantInt>(Ops[1])->getZExtValue();
+    llvm::Type *Ty = Ops[0]->getType();
+    unsigned NumElts = Ty->getVectorNumElements();
+
+    // Splat the 8-bits of immediate 4 times to help the loop wrap around.
+    Imm = (Imm & 0xff) * 0x01010101;
+
+    uint32_t Indices[32];
+    for (unsigned l = 0; l != NumElts; l += 8) {
+      for (unsigned i = 0; i != 4; ++i)
+        Indices[l + i] = l + i;
+      for (unsigned i = 4; i != 8; ++i) {
+        Indices[l + i] = l + 4 + (Imm & 3);
+        Imm >>= 2;
+      }
+    }
+
+    return Builder.CreateShuffleVector(Ops[0], UndefValue::get(Ty),
+                                       makeArrayRef(Indices, NumElts),
+                                       "pshufhw");
+  }
+  case X86::BI__builtin_ia32_pshufd:
+  case X86::BI__builtin_ia32_pshufd256:
+  case X86::BI__builtin_ia32_pshufd512:
   case X86::BI__builtin_ia32_vpermilpd:
   case X86::BI__builtin_ia32_vpermilps:
   case X86::BI__builtin_ia32_vpermilpd256:
@@ -9351,6 +9402,54 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateShuffleVector(Ops[0], UndefValue::get(Ty),
                                        makeArrayRef(Indices, NumElts),
                                        "permil");
+  }
+  case X86::BI__builtin_ia32_shufpd:
+  case X86::BI__builtin_ia32_shufpd256:
+  case X86::BI__builtin_ia32_shufpd512:
+  case X86::BI__builtin_ia32_shufps:
+  case X86::BI__builtin_ia32_shufps256:
+  case X86::BI__builtin_ia32_shufps512: {
+    uint32_t Imm = cast<llvm::ConstantInt>(Ops[2])->getZExtValue();
+    llvm::Type *Ty = Ops[0]->getType();
+    unsigned NumElts = Ty->getVectorNumElements();
+    unsigned NumLanes = Ty->getPrimitiveSizeInBits() / 128;
+    unsigned NumLaneElts = NumElts / NumLanes;
+
+    // Splat the 8-bits of immediate 4 times to help the loop wrap around.
+    Imm = (Imm & 0xff) * 0x01010101;
+
+    uint32_t Indices[16];
+    for (unsigned l = 0; l != NumElts; l += NumLaneElts) {
+      for (unsigned i = 0; i != NumLaneElts; ++i) {
+        unsigned Index = Imm % NumLaneElts;
+        Imm /= NumLaneElts;
+        if (i >= (NumLaneElts / 2))
+          Index += NumElts;
+        Indices[l + i] = l + Index;
+      }
+    }
+
+    return Builder.CreateShuffleVector(Ops[0], Ops[1],
+                                       makeArrayRef(Indices, NumElts),
+                                       "shufp");
+  }
+  case X86::BI__builtin_ia32_permdi256:
+  case X86::BI__builtin_ia32_permdf256:
+  case X86::BI__builtin_ia32_permdi512:
+  case X86::BI__builtin_ia32_permdf512: {
+    unsigned Imm = cast<llvm::ConstantInt>(Ops[1])->getZExtValue();
+    llvm::Type *Ty = Ops[0]->getType();
+    unsigned NumElts = Ty->getVectorNumElements();
+
+    // These intrinsics operate on 256-bit lanes of four 64-bit elements.
+    uint32_t Indices[8];
+    for (unsigned l = 0; l != NumElts; l += 4)
+      for (unsigned i = 0; i != 4; ++i)
+        Indices[l + i] = l + ((Imm >> (2 * i)) & 0x3);
+
+    return Builder.CreateShuffleVector(Ops[0], UndefValue::get(Ty),
+                                       makeArrayRef(Indices, NumElts),
+                                       "perm");
   }
   case X86::BI__builtin_ia32_palignr128:
   case X86::BI__builtin_ia32_palignr256:

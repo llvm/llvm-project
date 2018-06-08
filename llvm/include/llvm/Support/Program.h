@@ -32,29 +32,26 @@ namespace sys {
   const char EnvPathSeparator = ';';
 #endif
 
-/// This struct encapsulates information about a process.
-struct ProcessInfo {
-#if defined(LLVM_ON_UNIX)
-  typedef pid_t ProcessId;
-#elif defined(_WIN32)
-  typedef unsigned long ProcessId; // Must match the type of DWORD on Windows.
-  typedef void * HANDLE; // Must match the type of HANDLE on Windows.
-  /// The handle to the process (available on Windows only).
-  HANDLE ProcessHandle;
+#if defined(_WIN32)
+  typedef unsigned long procid_t; // Must match the type of DWORD on Windows.
+  typedef void *process_t;        // Must match the type of HANDLE on Windows.
 #else
-#error "ProcessInfo is not defined for this platform!"
+  typedef pid_t procid_t;
+  typedef procid_t process_t;
 #endif
 
-  enum : ProcessId { InvalidPid = 0 };
+  /// This struct encapsulates information about a process.
+  struct ProcessInfo {
+    enum : procid_t { InvalidPid = 0 };
 
-  /// The process identifier.
-  ProcessId Pid;
+    procid_t Pid;      /// The process identifier.
+    process_t Process; /// Platform-dependent process object.
 
-  /// The return code, set after execution.
-  int ReturnCode;
+    /// The return code, set after execution.
+    int ReturnCode;
 
-  ProcessInfo();
-};
+    ProcessInfo();
+  };
 
   /// Find the first executable file \p Name in \p Paths.
   ///
