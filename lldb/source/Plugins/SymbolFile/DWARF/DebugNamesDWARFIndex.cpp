@@ -144,6 +144,29 @@ void DebugNamesDWARFIndex::GetFunctions(
   }
 }
 
+void DebugNamesDWARFIndex::GetFunctions(const RegularExpression &regex,
+                                        DIEArray &offsets) {
+  m_fallback.GetFunctions(regex, offsets);
+
+  for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
+    for (DebugNames::NameTableEntry nte: ni) {
+      if (!regex.Execute(nte.getString()))
+        continue;
+
+      uint32_t entry_offset = nte.getEntryOffset();
+      llvm::Expected<DebugNames::Entry> entry_or = ni.getEntry(&entry_offset);
+      for (; entry_or; entry_or = ni.getEntry(&entry_offset)) {
+        Tag tag = entry_or->tag();
+        if (tag != DW_TAG_subprogram && tag != DW_TAG_inlined_subroutine)
+          continue;
+
+        Append(*entry_or, offsets);
+      }
+      MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
+    }
+  }
+}
+
 void DebugNamesDWARFIndex::Dump(Stream &s) {
   m_fallback.Dump(s);
 

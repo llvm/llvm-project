@@ -866,7 +866,6 @@ SBError Driver::ParseArgs(int argc, const char *argv[], FILE *out_fh,
   } else {
     // Skip any options we consumed with getopt_long_only
     argc -= optind;
-    // argv += optind; // Commented out to keep static analyzer happy
 
     if (argc > 0)
       ::fprintf(out_fh,

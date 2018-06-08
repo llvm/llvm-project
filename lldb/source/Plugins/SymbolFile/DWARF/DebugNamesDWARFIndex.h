@@ -40,7 +40,7 @@ public:
                     uint32_t name_type_mask,
                     std::vector<DWARFDIE> &dies) override;
   void GetFunctions(const RegularExpression &regex,
-                    DIEArray &offsets) override {}
+                    DIEArray &offsets) override;
 
   void ReportInvalidDIEOffset(dw_offset_t offset,
                               llvm::StringRef name) override {}
