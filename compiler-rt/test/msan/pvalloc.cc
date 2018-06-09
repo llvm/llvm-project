@@ -1,4 +1,4 @@
-// RUN: %clangxx_msan -O0 %s -o %t
+// RUN: %clangxx_msan -fsanitize-memory-track-origins -O0 -g %s -o %t
 // RUN: MSAN_OPTIONS=allocator_may_return_null=0 not %run %t m1 2>&1 | FileCheck %s
 // RUN: MSAN_OPTIONS=allocator_may_return_null=1     %run %t m1 2>&1
 // RUN: MSAN_OPTIONS=allocator_may_return_null=0 not %run %t psm1 2>&1 | FileCheck %s
@@ -41,4 +41,6 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// CHECK: MemorySanitizer's allocator is terminating the process
+// CHECK: {{ERROR: MemorySanitizer: pvalloc parameters overflow: size .* rounded up to system page size .* cannot be represented in type size_t}}
+// CHECK: {{#0 0x.* in .*pvalloc}}
+// CHECK: SUMMARY: MemorySanitizer: pvalloc-overflow

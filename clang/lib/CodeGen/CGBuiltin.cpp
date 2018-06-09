@@ -9239,18 +9239,18 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vextractf128_ps256:
   case X86::BI__builtin_ia32_vextractf128_si256:
   case X86::BI__builtin_ia32_extract128i256:
-  case X86::BI__builtin_ia32_extractf64x4:
-  case X86::BI__builtin_ia32_extractf32x4:
-  case X86::BI__builtin_ia32_extracti64x4:
-  case X86::BI__builtin_ia32_extracti32x4:
-  case X86::BI__builtin_ia32_extractf32x8:
-  case X86::BI__builtin_ia32_extracti32x8:
-  case X86::BI__builtin_ia32_extractf32x4_256:
-  case X86::BI__builtin_ia32_extracti32x4_256:
-  case X86::BI__builtin_ia32_extractf64x2_256:
-  case X86::BI__builtin_ia32_extracti64x2_256:
-  case X86::BI__builtin_ia32_extractf64x2_512:
-  case X86::BI__builtin_ia32_extracti64x2_512: {
+  case X86::BI__builtin_ia32_extractf64x4_mask:
+  case X86::BI__builtin_ia32_extractf32x4_mask:
+  case X86::BI__builtin_ia32_extracti64x4_mask:
+  case X86::BI__builtin_ia32_extracti32x4_mask:
+  case X86::BI__builtin_ia32_extractf32x8_mask:
+  case X86::BI__builtin_ia32_extracti32x8_mask:
+  case X86::BI__builtin_ia32_extractf32x4_256_mask:
+  case X86::BI__builtin_ia32_extracti32x4_256_mask:
+  case X86::BI__builtin_ia32_extractf64x2_256_mask:
+  case X86::BI__builtin_ia32_extracti64x2_256_mask:
+  case X86::BI__builtin_ia32_extractf64x2_512_mask:
+  case X86::BI__builtin_ia32_extracti64x2_512_mask: {
     llvm::Type *DstTy = ConvertType(E->getType());
     unsigned NumElts = DstTy->getVectorNumElements();
     unsigned Index = cast<ConstantInt>(Ops[1])->getZExtValue() * NumElts;
@@ -9259,10 +9259,15 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     for (unsigned i = 0; i != NumElts; ++i)
       Indices[i] = i + Index;
 
-    return Builder.CreateShuffleVector(Ops[0],
-                                       UndefValue::get(Ops[0]->getType()),
-                                       makeArrayRef(Indices, NumElts),
-                                       "extract");
+    Value *Res = Builder.CreateShuffleVector(Ops[0],
+                                             UndefValue::get(Ops[0]->getType()),
+                                             makeArrayRef(Indices, NumElts),
+                                             "extract");
+
+    if (Ops.size() == 4)
+      Res = EmitX86Select(*this, Ops[3], Res, Ops[2]);
+
+    return Res;
   }
   case X86::BI__builtin_ia32_vinsertf128_pd256:
   case X86::BI__builtin_ia32_vinsertf128_ps256:
@@ -9303,6 +9308,35 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateShuffleVector(Ops[0], Op1,
                                        makeArrayRef(Indices, DstNumElts),
                                        "insert");
+  }
+  case X86::BI__builtin_ia32_pmovqd512_mask:
+  case X86::BI__builtin_ia32_pmovwb512_mask: {
+    Value *Res = Builder.CreateTrunc(Ops[0], Ops[1]->getType());
+    return EmitX86Select(*this, Ops[2], Res, Ops[1]);
+  }
+  case X86::BI__builtin_ia32_pmovdb512_mask:
+  case X86::BI__builtin_ia32_pmovdw512_mask:
+  case X86::BI__builtin_ia32_pmovqw512_mask: {
+    if (const auto *C = dyn_cast<Constant>(Ops[2]))
+      if (C->isAllOnesValue())
+        return Builder.CreateTrunc(Ops[0], Ops[1]->getType());
+
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    default: llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_pmovdb512_mask:
+      IID = Intrinsic::x86_avx512_mask_pmov_db_512;
+      break;
+    case X86::BI__builtin_ia32_pmovdw512_mask:
+      IID = Intrinsic::x86_avx512_mask_pmov_dw_512;
+      break;
+    case X86::BI__builtin_ia32_pmovqw512_mask:
+      IID = Intrinsic::x86_avx512_mask_pmov_qw_512;
+      break;
+    }
+
+    Function *Intr = CGM.getIntrinsic(IID);
+    return Builder.CreateCall(Intr, Ops);
   }
   case X86::BI__builtin_ia32_pblendw128:
   case X86::BI__builtin_ia32_blendpd:

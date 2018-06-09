@@ -7699,30 +7699,40 @@ _mm256_mask_cvtepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
 }
 
 #define _mm256_extractf32x4_ps(A, imm) \
-  (__m128)__builtin_ia32_extractf32x4_256((__v8sf)(__m256)(A), (int)(imm))
+  (__m128)__builtin_ia32_extractf32x4_256_mask((__v8sf)(__m256)(A), \
+                                               (int)(imm), \
+                                               (__v4sf)_mm_undefined_ps(), \
+                                               (__mmask8)-1)
 
 #define _mm256_mask_extractf32x4_ps(W, U, A, imm) \
-  (__m128)__builtin_ia32_selectps_128((__mmask8)(U), \
-                                   (__v4sf)_mm256_extractf32x4_ps((A), (imm)), \
-                                   (__v4sf)(__m128)(W))
+  (__m128)__builtin_ia32_extractf32x4_256_mask((__v8sf)(__m256)(A), \
+                                               (int)(imm), \
+                                               (__v4sf)(__m128)(W), \
+                                               (__mmask8)(U))
 
 #define _mm256_maskz_extractf32x4_ps(U, A, imm) \
-  (__m128)__builtin_ia32_selectps_128((__mmask8)(U), \
-                                   (__v4sf)_mm256_extractf32x4_ps((A), (imm)), \
-                                   (__v4sf)_mm_setzero_ps())
+  (__m128)__builtin_ia32_extractf32x4_256_mask((__v8sf)(__m256)(A), \
+                                               (int)(imm), \
+                                               (__v4sf)_mm_setzero_ps(), \
+                                               (__mmask8)(U))
 
 #define _mm256_extracti32x4_epi32(A, imm) \
-  (__m128i)__builtin_ia32_extracti32x4_256((__v8si)(__m256i)(A), (int)(imm))
+  (__m128i)__builtin_ia32_extracti32x4_256_mask((__v8si)(__m256i)(A), \
+                                                (int)(imm), \
+                                                (__v4si)_mm_undefined_si128(), \
+                                                (__mmask8)-1)
 
 #define _mm256_mask_extracti32x4_epi32(W, U, A, imm) \
-  (__m128i)__builtin_ia32_selectd_128((__mmask8)(U), \
-                                (__v4si)_mm256_extracti32x4_epi32((A), (imm)), \
-                                (__v4si)(__m128i)(W))
+  (__m128i)__builtin_ia32_extracti32x4_256_mask((__v8si)(__m256i)(A), \
+                                                (int)(imm), \
+                                                (__v4si)(__m128i)(W), \
+                                                (__mmask8)(U))
 
 #define _mm256_maskz_extracti32x4_epi32(U, A, imm) \
-  (__m128i)__builtin_ia32_selectd_128((__mmask8)(U), \
-                                (__v4si)_mm256_extracti32x4_epi32((A), (imm)), \
-                                (__v4si)_mm_setzero_si128())
+  (__m128i)__builtin_ia32_extracti32x4_256_mask((__v8si)(__m256i)(A), \
+                                                (int)(imm), \
+                                                (__v4si)_mm_setzero_si128(), \
+                                                (__mmask8)(U))
 
 #define _mm256_insertf32x4(A, B, imm) \
   (__m256)__builtin_ia32_insertf32x4_256((__v8sf)(__m256)(A), \
