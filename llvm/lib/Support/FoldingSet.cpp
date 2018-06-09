@@ -214,11 +214,8 @@ static void **GetBucketFor(unsigned Hash, void **Buckets, unsigned NumBuckets) {
 
 /// AllocateBuckets - Allocated initialized bucket memory.
 static void **AllocateBuckets(unsigned NumBuckets) {
-  void **Buckets = static_cast<void**>(calloc(NumBuckets+1, sizeof(void*)));
-
-  if (Buckets == nullptr)
-    report_bad_alloc_error("Allocation of Buckets failed.");
-  
+  void **Buckets = static_cast<void**>(safe_calloc(NumBuckets + 1,
+                                                   sizeof(void*)));
   // Set the very last bucket to be a non-null "pointer".
   Buckets[NumBuckets] = reinterpret_cast<void*>(-1);
   return Buckets;

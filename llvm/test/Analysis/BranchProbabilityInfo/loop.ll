@@ -489,3 +489,35 @@ for.inc:
   br label %for.cond
 ; CHECK: edge for.inc -> for.cond probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 }
+
+; The loop heuristic should not overwrite the invoke heuristic. The unwind destination
+; of an invoke should be considered VERY rare even in a loop.
+define void @test12(i32 %a) personality i8 0 {
+entry:
+  br label %loop
+; CHECK: edge entry -> loop probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+
+loop:
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %invoke.cont ]
+  invoke i32 @InvokeCall()
+          to label %invoke.cont unwind label %lpad
+; CHECK: edge loop -> invoke.cont probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge loop -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
+
+invoke.cont:
+  %inc = add nsw i32 %i.0, 1
+  %cmp = icmp slt i32 %inc, %a
+  br i1 %cmp, label %loop, label %exit
+; CHECK: edge invoke.cont -> loop probability is 0x7c000000 / 0x80000000 = 96.88% [HOT edge]
+; CHECK: edge invoke.cont -> exit probability is 0x04000000 / 0x80000000 = 3.12%
+
+lpad:
+  %ll = landingpad { i8*, i32 }
+          cleanup
+  br label %exit
+
+exit:
+  ret void
+}
+
+declare i32 @InvokeCall()

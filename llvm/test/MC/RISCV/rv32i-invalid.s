@@ -146,3 +146,6 @@ fadd.s ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction use requires an o
 
 # Using floating point registers when integer registers are expected
 addi a2, ft0, 24 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+
+# fence.tso accepts no operands
+fence.tso rw, rw # CHECK: :[[@LINE]]:11: error: invalid operand for instruction

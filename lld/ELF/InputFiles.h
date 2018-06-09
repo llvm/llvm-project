@@ -229,7 +229,6 @@ private:
   // parse it only once for each object file we link.
   std::unique_ptr<llvm::DWARFContext> Dwarf;
   std::vector<const llvm::DWARFDebugLine::LineTable *> LineTables;
-  std::unique_ptr<llvm::DWARFDebugLine> DwarfLine;
   struct VarLoc {
     const llvm::DWARFDebugLine::LineTable *LT;
     unsigned File;

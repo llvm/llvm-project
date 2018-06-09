@@ -18,6 +18,24 @@ false:
   ret i32 2
 }
 
+; CHECK-LABEL: single_bit_multi_use:
+; CHECK: lsls r0, r0, #23
+; T2-NEXT: mov
+; T2-NEXT: it
+; T1-NEXT: bmi
+define i32 @single_bit_multi_use(i32 %p, i32* %z) {
+  store i32 %p, i32* %z
+  %a = and i32 %p, 256
+  %b = icmp eq i32 %a, 0
+  br i1 %b, label %true, label %false
+
+true:
+  ret i32 1
+
+false:
+  ret i32 2
+}
+
 ; CHECK-LABEL: multi_bit_lsb_ubfx:
 ; CHECK: lsls r0, r0, #24
 ; T2-NEXT: mov

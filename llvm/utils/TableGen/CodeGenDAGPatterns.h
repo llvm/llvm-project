@@ -907,21 +907,21 @@ struct DAGDefaultOperand {
 };
 
 class DAGInstruction {
-  TreePattern *Pattern;
+  std::unique_ptr<TreePattern> Pattern;
   std::vector<Record*> Results;
   std::vector<Record*> Operands;
   std::vector<Record*> ImpResults;
   TreePatternNodePtr ResultPattern;
 
 public:
-  DAGInstruction(TreePattern *TP,
+  DAGInstruction(std::unique_ptr<TreePattern> &&TP,
                  const std::vector<Record*> &results,
                  const std::vector<Record*> &operands,
                  const std::vector<Record*> &impresults)
-    : Pattern(TP), Results(results), Operands(operands),
+    : Pattern(std::move(TP)), Results(results), Operands(operands),
       ImpResults(impresults), ResultPattern(nullptr) {}
 
-  TreePattern *getPattern() const { return Pattern; }
+  TreePattern *getPattern() const { return Pattern.get(); }
   unsigned getNumResults() const { return Results.size(); }
   unsigned getNumOperands() const { return Operands.size(); }
   unsigned getNumImpResults() const { return ImpResults.size(); }

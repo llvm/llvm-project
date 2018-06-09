@@ -39,7 +39,7 @@ define i32 @shl_add_nsw(i32 %NBits) {
 
 define i32 @shl_add_nuw(i32 %NBits) {
 ; CHECK-LABEL: @shl_add_nuw(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 -1
 ;
   %setbit = shl i32 1, %NBits
   %ret = add nuw i32 %setbit, -1
@@ -48,7 +48,7 @@ define i32 @shl_add_nuw(i32 %NBits) {
 
 define i32 @shl_add_nsw_nuw(i32 %NBits) {
 ; CHECK-LABEL: @shl_add_nsw_nuw(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 -1
 ;
   %setbit = shl i32 1, %NBits
   %ret = add nuw nsw i32 %setbit, -1
@@ -81,7 +81,7 @@ define i32 @shl_nsw_add_nsw(i32 %NBits) {
 
 define i32 @shl_nsw_add_nuw(i32 %NBits) {
 ; CHECK-LABEL: @shl_nsw_add_nuw(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 -1
 ;
   %setbit = shl nsw i32 1, %NBits
   %ret = add nuw i32 %setbit, -1
@@ -90,7 +90,7 @@ define i32 @shl_nsw_add_nuw(i32 %NBits) {
 
 define i32 @shl_nsw_add_nsw_nuw(i32 %NBits) {
 ; CHECK-LABEL: @shl_nsw_add_nsw_nuw(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 -1
 ;
   %setbit = shl nsw i32 1, %NBits
   %ret = add nuw nsw i32 %setbit, -1
@@ -123,7 +123,7 @@ define i32 @shl_nuw_add_nsw(i32 %NBits) {
 
 define i32 @shl_nuw_add_nuw(i32 %NBits) {
 ; CHECK-LABEL: @shl_nuw_add_nuw(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 -1
 ;
   %setbit = shl nuw i32 1, %NBits
   %ret = add nuw i32 %setbit, -1
@@ -132,7 +132,7 @@ define i32 @shl_nuw_add_nuw(i32 %NBits) {
 
 define i32 @shl_nuw_add_nsw_nuw(i32 %NBits) {
 ; CHECK-LABEL: @shl_nuw_add_nsw_nuw(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 -1
 ;
   %setbit = shl nuw i32 1, %NBits
   %ret = add nuw nsw i32 %setbit, -1
@@ -165,7 +165,7 @@ define i32 @shl_nsw_nuw_add_nsw(i32 %NBits) {
 
 define i32 @shl_nsw_nuw_add_nuw(i32 %NBits) {
 ; CHECK-LABEL: @shl_nsw_nuw_add_nuw(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 -1
 ;
   %setbit = shl nuw nsw i32 1, %NBits
   %ret = add nuw i32 %setbit, -1
@@ -174,7 +174,7 @@ define i32 @shl_nsw_nuw_add_nuw(i32 %NBits) {
 
 define i32 @shl_nsw_nuw_add_nsw_nuw(i32 %NBits) {
 ; CHECK-LABEL: @shl_nsw_nuw_add_nsw_nuw(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 -1
 ;
   %setbit = shl nuw nsw i32 1, %NBits
   %ret = add nuw nsw i32 %setbit, -1

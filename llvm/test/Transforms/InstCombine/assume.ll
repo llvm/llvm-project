@@ -195,7 +195,7 @@ declare void @escape(i32* %a)
 
 define i1 @nonnull1(i32** %a) {
 ; CHECK-LABEL: @nonnull1(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** %a, align 8, !nonnull !0
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** %a, align 8, !nonnull !6
 ; CHECK-NEXT:    tail call void @escape(i32* nonnull [[LOAD]])
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -291,6 +291,50 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
   tail call void @llvm.assume(i1 %cmp2)
   ret i32 %and1
 }
+
+; FIXME:
+; PR37726 - https://bugs.llvm.org/show_bug.cgi?id=37726
+; There's a loophole in eliminating a redundant assumption when
+; we have conflicting assumptions. Verify that debuginfo doesn't 
+; get in the way of the fold.
+ 
+define void @debug_interference(i8 %x) {
+; CHECK-LABEL: @debug_interference(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
+; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
+; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
+; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
+; CHECK-NEXT:    ret void
+;
+  %cmp1 = icmp eq i8 %x, 0
+  %cmp2 = icmp ne i8 %x, 0
+  tail call void @llvm.assume(i1 %cmp1)
+  tail call void @llvm.dbg.value(metadata i32 5, metadata !1, metadata !DIExpression()), !dbg !9
+  tail call void @llvm.assume(i1 %cmp1)
+  tail call void @llvm.dbg.value(metadata i32 5, metadata !1, metadata !DIExpression()), !dbg !9
+  tail call void @llvm.assume(i1 %cmp2)
+  tail call void @llvm.dbg.value(metadata i32 5, metadata !1, metadata !DIExpression()), !dbg !9
+  tail call void @llvm.assume(i1 %cmp2)
+  ret void
+}
+
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!5, !6, !7, !8}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !3, producer: "Me", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: null, retainedTypes: null, imports: null)
+!1 = !DILocalVariable(name: "", arg: 1, scope: !2, file: null, line: 1, type: null)
+!2 = distinct !DISubprogram(name: "debug", linkageName: "debug", scope: null, file: null, line: 0, type: null, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
+!3 = !DIFile(filename: "consecutive-fences.ll", directory: "")
+!5 = !{i32 2, !"Dwarf Version", i32 4}
+!6 = !{i32 2, !"Debug Info Version", i32 3}
+!7 = !{i32 1, !"wchar_size", i32 4}
+!8 = !{i32 7, !"PIC Level", i32 2}
+!9 = !DILocation(line: 0, column: 0, scope: !2)
 
 
 attributes #0 = { nounwind uwtable }
