@@ -45,6 +45,10 @@ struct DIERef {
 
   bool operator<(const DIERef &ref) { return die_offset < ref.die_offset; }
 
+  explicit operator bool() const {
+    return cu_offset != DW_INVALID_OFFSET || die_offset != DW_INVALID_OFFSET;
+  }
+
   dw_offset_t cu_offset = DW_INVALID_OFFSET;
   dw_offset_t die_offset = DW_INVALID_OFFSET;
 };

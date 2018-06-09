@@ -23,12 +23,18 @@
 
 class DynamicRegisterInfo {
 public:
-  DynamicRegisterInfo();
+  DynamicRegisterInfo() = default;
 
   DynamicRegisterInfo(const lldb_private::StructuredData::Dictionary &dict,
                       const lldb_private::ArchSpec &arch);
 
-  virtual ~DynamicRegisterInfo();
+  virtual ~DynamicRegisterInfo() = default;
+
+  DynamicRegisterInfo(DynamicRegisterInfo &) = delete;
+  void operator=(DynamicRegisterInfo &) = delete;
+
+  DynamicRegisterInfo(DynamicRegisterInfo &&info);
+  DynamicRegisterInfo &operator=(DynamicRegisterInfo &&info);
 
   size_t SetRegisterInfo(const lldb_private::StructuredData::Dictionary &dict,
                          const lldb_private::ArchSpec &arch);
@@ -75,8 +81,10 @@ protected:
   typedef std::vector<uint8_t> dwarf_opcode;
   typedef std::map<uint32_t, dwarf_opcode> dynamic_reg_size_map;
 
-  lldb_private::RegisterInfo *
-  GetRegisterInfo(const lldb_private::ConstString &reg_name);
+  const lldb_private::RegisterInfo *
+  GetRegisterInfo(const lldb_private::ConstString &reg_name) const;
+
+  void MoveFrom(DynamicRegisterInfo &&info);
 
   reg_collection m_regs;
   set_collection m_sets;
@@ -85,9 +93,8 @@ protected:
   reg_to_regs_map m_value_regs_map;
   reg_to_regs_map m_invalidate_regs_map;
   dynamic_reg_size_map m_dynamic_reg_size_map;
-  size_t m_reg_data_byte_size; // The number of bytes required to store all
-                               // registers
-  bool m_finalized;
+  size_t m_reg_data_byte_size = 0u; // The number of bytes required to store
+                                    // all registers
+  bool m_finalized = false;
 };
-
 #endif // lldb_DynamicRegisterInfo_h_

@@ -44,69 +44,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-CompletionItemKind toCompletionItemKind(CXCursorKind CursorKind) {
-  switch (CursorKind) {
-  case CXCursor_MacroInstantiation:
-  case CXCursor_MacroDefinition:
-    return CompletionItemKind::Text;
-  case CXCursor_CXXMethod:
-  case CXCursor_Destructor:
-    return CompletionItemKind::Method;
-  case CXCursor_FunctionDecl:
-  case CXCursor_FunctionTemplate:
-    return CompletionItemKind::Function;
-  case CXCursor_Constructor:
-    return CompletionItemKind::Constructor;
-  case CXCursor_FieldDecl:
-    return CompletionItemKind::Field;
-  case CXCursor_VarDecl:
-  case CXCursor_ParmDecl:
-    return CompletionItemKind::Variable;
-  // FIXME(ioeric): use LSP struct instead of class when it is suppoted in the
-  // protocol.
-  case CXCursor_StructDecl:
-  case CXCursor_ClassDecl:
-  case CXCursor_UnionDecl:
-  case CXCursor_ClassTemplate:
-  case CXCursor_ClassTemplatePartialSpecialization:
-    return CompletionItemKind::Class;
-  case CXCursor_Namespace:
-  case CXCursor_NamespaceAlias:
-  case CXCursor_NamespaceRef:
-    return CompletionItemKind::Module;
-  case CXCursor_EnumConstantDecl:
-    return CompletionItemKind::Value;
-  case CXCursor_EnumDecl:
-    return CompletionItemKind::Enum;
-  // FIXME(ioeric): figure out whether reference is the right type for aliases.
-  case CXCursor_TypeAliasDecl:
-  case CXCursor_TypeAliasTemplateDecl:
-  case CXCursor_TypedefDecl:
-  case CXCursor_MemberRef:
-  case CXCursor_TypeRef:
-    return CompletionItemKind::Reference;
-  default:
-    return CompletionItemKind::Missing;
-  }
-}
-
-CompletionItemKind
-toCompletionItemKind(CodeCompletionResult::ResultKind ResKind,
-                     CXCursorKind CursorKind) {
-  switch (ResKind) {
-  case CodeCompletionResult::RK_Declaration:
-    return toCompletionItemKind(CursorKind);
-  case CodeCompletionResult::RK_Keyword:
-    return CompletionItemKind::Keyword;
-  case CodeCompletionResult::RK_Macro:
-    return CompletionItemKind::Text; // unfortunately, there's no 'Macro'
-                                     // completion items in LSP.
-  case CodeCompletionResult::RK_Pattern:
-    return CompletionItemKind::Snippet;
-  }
-  llvm_unreachable("Unhandled CodeCompletionResult::ResultKind.");
-}
-
 CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
   using SK = index::SymbolKind;
   switch (Kind) {
@@ -158,6 +95,25 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
     return CompletionItemKind::Constructor;
   }
   llvm_unreachable("Unhandled clang::index::SymbolKind.");
+}
+
+CompletionItemKind
+toCompletionItemKind(CodeCompletionResult::ResultKind ResKind,
+                     const NamedDecl *Decl) {
+  if (Decl)
+    return toCompletionItemKind(index::getSymbolInfo(Decl).Kind);
+  switch (ResKind) {
+  case CodeCompletionResult::RK_Declaration:
+    llvm_unreachable("RK_Declaration without Decl");
+  case CodeCompletionResult::RK_Keyword:
+    return CompletionItemKind::Keyword;
+  case CodeCompletionResult::RK_Macro:
+    return CompletionItemKind::Text; // unfortunately, there's no 'Macro'
+                                     // completion items in LSP.
+  case CodeCompletionResult::RK_Pattern:
+    return CompletionItemKind::Snippet;
+  }
+  llvm_unreachable("Unhandled CodeCompletionResult::ResultKind.");
 }
 
 /// Get the optional chunk as a string. This function is possibly recursive.
@@ -238,7 +194,7 @@ struct CompletionCandidate {
     CompletionItem I;
     bool ShouldInsertInclude = true;
     if (SemaResult) {
-      I.kind = toCompletionItemKind(SemaResult->Kind, SemaResult->CursorKind);
+      I.kind = toCompletionItemKind(SemaResult->Kind, SemaResult->Declaration);
       getLabelAndInsertText(*SemaCCS, &I.label, &I.insertText,
                             Opts.EnableSnippets);
       I.filterText = getFilterText(*SemaCCS);
@@ -1015,6 +971,15 @@ private:
     return std::move(Top).items();
   }
 
+  Optional<float> fuzzyScore(const CompletionCandidate &C) {
+    // Macros can be very spammy, so we only support prefix completion.
+    // We won't end up with underfull index results, as macros are sema-only.
+    if (C.SemaResult && C.SemaResult->Kind == CodeCompletionResult::RK_Macro &&
+        !C.Name.startswith_lower(Filter->pattern()))
+      return None;
+    return Filter->match(C.Name);
+  }
+
   // Scores a candidate and adds it to the TopN structure.
   void addCandidate(TopN<ScoredCandidate, ScoredCandidateGreater> &Candidates,
                     const CodeCompletionResult *SemaResult,
@@ -1027,7 +992,7 @@ private:
     SymbolQualitySignals Quality;
     SymbolRelevanceSignals Relevance;
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
-    if (auto FuzzyScore = Filter->match(C.Name))
+    if (auto FuzzyScore = fuzzyScore(C))
       Relevance.NameMatch = *FuzzyScore;
     else
       return;

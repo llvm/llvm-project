@@ -17,6 +17,7 @@
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include <sstream>
+#include <stdio.h>
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   clang::clangd::JSONOutput Out(llvm::nulls(), llvm::nulls(), nullptr);
@@ -26,8 +27,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
 
   // Initialize and run ClangdLSPServer.
   clang::clangd::ClangdLSPServer LSPServer(Out, CCOpts, llvm::None, Opts);
-
-  std::istringstream In(std::string(reinterpret_cast<char *>(data), size));
-  LSPServer.run(In);
+  // fmemopen isn't portable, but I think we only run the fuzzer on Linux.
+  LSPServer.run(fmemopen(data, size, "r"));
   return 0;
 }

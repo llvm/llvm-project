@@ -2155,13 +2155,6 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
   return variables.GetSize() - original_size;
 }
 
-bool SymbolFileDWARF::ResolveFunction(const DIERef &die_ref,
-                                      bool include_inlines,
-                                      SymbolContextList &sc_list) {
-  DWARFDIE die = DebugInfo()->GetDIE(die_ref);
-  return ResolveFunction(die, include_inlines, sc_list);
-}
-
 bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
                                       bool include_inlines,
                                       SymbolContextList &sc_list) {
@@ -2335,8 +2328,16 @@ uint32_t SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
   DIEArray offsets;
   m_index->GetFunctions(regex, offsets);
 
-  for (DIERef ref : offsets)
-    ResolveFunction(ref, include_inlines, sc_list);
+  llvm::DenseSet<const DWARFDebugInfoEntry *> resolved_dies;
+  for (DIERef ref : offsets) {
+    DWARFDIE die = info->GetDIE(ref);
+    if (!die) {
+      m_index->ReportInvalidDIEOffset(ref.die_offset, regex.GetText());
+      continue;
+    }
+    if (resolved_dies.insert(die.GetDIE()).second)
+      ResolveFunction(die, include_inlines, sc_list);
+  }
 
   // Return the number of variable that were appended to the list
   return sc_list.GetSize() - original_size;
