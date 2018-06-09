@@ -1833,6 +1833,9 @@ private:
   const SCEV *getOrCreateMulExpr(SmallVectorImpl<const SCEV *> &Ops,
                                  SCEV::NoWrapFlags Flags);
 
+  /// Return x if \p Val is f(x) where f is a 1-1 function.
+  const SCEV *stripInjectiveFunctions(const SCEV *Val) const;
+
   /// Find all of the loops transitively used in \p S, and fill \p LoopsUsed.
   /// A loop is considered "used" by an expression if it contains
   /// an add rec on said loop.

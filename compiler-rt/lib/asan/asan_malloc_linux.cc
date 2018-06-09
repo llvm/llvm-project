@@ -24,6 +24,7 @@
 #include "asan_allocator.h"
 #include "asan_interceptors.h"
 #include "asan_internal.h"
+#include "asan_malloc_local.h"
 #include "asan_stack.h"
 
 // ---------------------- Replacement functions ---------------- {{{1
@@ -67,11 +68,18 @@ static int PosixMemalignFromLocalPool(void **memptr, uptr alignment,
   return 0;
 }
 
-// On RTEMS, we use the local pool to handle memory allocation before
-// the ASan run-time has been initialized.
-static INLINE bool EarlyMalloc() {
-  return SANITIZER_RTEMS && (!asan_inited || asan_init_is_running);
+#if SANITIZER_RTEMS
+void* MemalignFromLocalPool(uptr alignment, uptr size) {
+  void *ptr = nullptr;
+  alignment = Max(alignment, kWordSize);
+  PosixMemalignFromLocalPool(&ptr, alignment, size);
+  return ptr;
 }
+
+bool IsFromLocalPool(const void *ptr) {
+  return IsInDlsymAllocPool(ptr);
+}
+#endif
 
 static INLINE bool MaybeInDlsym() {
   // Fuchsia doesn't use dlsym-based interceptors.
@@ -158,7 +166,7 @@ INTERCEPTOR(void*, __libc_memalign, uptr boundary, uptr size) {
 #if SANITIZER_INTERCEPT_ALIGNED_ALLOC
 INTERCEPTOR(void*, aligned_alloc, uptr boundary, uptr size) {
   GET_STACK_TRACE_MALLOC;
-  return asan_memalign(boundary, size, &stack, FROM_MALLOC);
+  return asan_aligned_alloc(boundary, size, &stack);
 }
 #endif // SANITIZER_INTERCEPT_ALIGNED_ALLOC
 
