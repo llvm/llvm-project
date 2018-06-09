@@ -157,6 +157,16 @@ int lsan_posix_memalign(void **memptr, uptr alignment, uptr size,
   return 0;
 }
 
+void *lsan_aligned_alloc(uptr alignment, uptr size, const StackTrace &stack) {
+  if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(alignment, size))) {
+    errno = errno_EINVAL;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportInvalidAlignedAllocAlignment(size, alignment, &stack);
+  }
+  return SetErrnoOnNull(Allocate(stack, size, alignment, kAlwaysClearMemory));
+}
+
 void *lsan_memalign(uptr alignment, uptr size, const StackTrace &stack) {
   if (UNLIKELY(!IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;

@@ -62,6 +62,8 @@ void ReportCallocOverflow(uptr count, uptr size, BufferedStackTrace *stack);
 void ReportPvallocOverflow(uptr size, BufferedStackTrace *stack);
 void ReportInvalidAllocationAlignment(uptr alignment,
                                       BufferedStackTrace *stack);
+void ReportInvalidAlignedAllocAlignment(uptr size, uptr alignment,
+                                        BufferedStackTrace *stack);
 void ReportInvalidPosixMemalignAlignment(uptr alignment,
                                          BufferedStackTrace *stack);
 void ReportAllocationSizeTooBig(uptr user_size, uptr total_size, uptr max_size,

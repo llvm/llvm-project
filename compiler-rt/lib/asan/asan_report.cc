@@ -278,6 +278,14 @@ void ReportInvalidAllocationAlignment(uptr alignment,
   in_report.ReportError(error);
 }
 
+void ReportInvalidAlignedAllocAlignment(uptr size, uptr alignment,
+                                        BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report(/*fatal*/ true);
+  ErrorInvalidAlignedAllocAlignment error(GetCurrentTidOrInvalid(), stack,
+                                          size, alignment);
+  in_report.ReportError(error);
+}
+
 void ReportInvalidPosixMemalignAlignment(uptr alignment,
                                          BufferedStackTrace *stack) {
   ScopedInErrorReport in_report(/*fatal*/ true);
