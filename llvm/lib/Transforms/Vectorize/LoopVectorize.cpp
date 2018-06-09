@@ -958,7 +958,7 @@ public:
     : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI) {}
 
   ~InterleavedAccessInfo() {
-    SmallSet<InterleaveGroup *, 4> DelSet;
+    SmallPtrSet<InterleaveGroup *, 4> DelSet;
     // Avoid releasing a pointer twice.
     for (auto &I : InterleaveGroupMap)
       DelSet.insert(I.second);
@@ -5345,7 +5345,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
   for (auto &Interval : EndPoint)
     TransposeEnds[Interval.second].push_back(Interval.first);
 
-  SmallSet<Instruction *, 8> OpenIntervals;
+  SmallPtrSet<Instruction *, 8> OpenIntervals;
 
   // Get the size of the widest register.
   unsigned MaxSafeDepDist = -1U;

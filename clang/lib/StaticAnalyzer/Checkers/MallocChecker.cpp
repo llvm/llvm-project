@@ -30,6 +30,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "AllocationState.h"
 #include <climits>
 #include <utility>
 
@@ -45,7 +46,8 @@ enum AllocationFamily {
   AF_CXXNew,
   AF_CXXNewArray,
   AF_IfNameIndex,
-  AF_Alloca
+  AF_Alloca,
+  AF_InternalBuffer
 };
 
 class RefState {
@@ -1467,6 +1469,7 @@ void MallocChecker::printExpectedAllocName(raw_ostream &os, CheckerContext &C,
     case AF_CXXNew: os << "'new'"; return;
     case AF_CXXNewArray: os << "'new[]'"; return;
     case AF_IfNameIndex: os << "'if_nameindex()'"; return;
+    case AF_InternalBuffer: os << "container-specific allocator"; return;
     case AF_Alloca:
     case AF_None: llvm_unreachable("not a deallocation expression");
   }
@@ -1479,6 +1482,7 @@ void MallocChecker::printExpectedDeallocName(raw_ostream &os,
     case AF_CXXNew: os << "'delete'"; return;
     case AF_CXXNewArray: os << "'delete[]'"; return;
     case AF_IfNameIndex: os << "'if_freenameindex()'"; return;
+    case AF_InternalBuffer: os << "container-specific deallocator"; return;
     case AF_Alloca:
     case AF_None: llvm_unreachable("suspicious argument");
   }
@@ -1653,7 +1657,9 @@ MallocChecker::getCheckIfTracked(AllocationFamily Family,
     return Optional<MallocChecker::CheckKind>();
   }
   case AF_CXXNew:
-  case AF_CXXNewArray: {
+  case AF_CXXNewArray:
+  // FIXME: Add new CheckKind for AF_InternalBuffer.
+  case AF_InternalBuffer: {
     if (IsALeakCheck) {
       if (ChecksEnabled[CK_NewDeleteLeaksChecker])
         return CK_NewDeleteLeaksChecker;
@@ -2990,6 +2996,20 @@ void MallocChecker::printState(raw_ostream &Out, ProgramStateRef State,
     }
   }
 }
+
+namespace clang {
+namespace ento {
+namespace allocation_state {
+
+ProgramStateRef
+markReleased(ProgramStateRef State, SymbolRef Sym, const Expr *Origin) {
+  AllocationFamily Family = AF_InternalBuffer;
+  return State->set<RegionState>(Sym, RefState::getReleased(Family, Origin));
+}
+
+} // end namespace allocation_state
+} // end namespace ento
+} // end namespace clang
 
 void ento::registerNewDeleteLeaksChecker(CheckerManager &mgr) {
   registerCStringCheckerBasic(mgr);

@@ -5357,7 +5357,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   Optional<BaseIndexOffset> Base;
   SDValue Chain;
 
-  SmallSet<LoadSDNode *, 8> Loads;
+  SmallPtrSet<LoadSDNode *, 8> Loads;
   Optional<ByteProvider> FirstByteProvider;
   int64_t FirstOffset = INT64_MAX;
 

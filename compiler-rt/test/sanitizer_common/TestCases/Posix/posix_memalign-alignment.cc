@@ -1,4 +1,4 @@
-// RUN: %clangxx -O0 %s -o %t
+// RUN: %clangxx %collect_stack_traces -O0 %s -o %t
 // RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t 17 2>&1 | FileCheck %s
 // RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t 0 2>&1 | FileCheck %s
 // RUN: %env_tool_opts=allocator_may_return_null=1 %run %t 17 2>&1 | FileCheck %s --check-prefix=CHECK-NULL
@@ -6,7 +6,7 @@
 
 // REQUIRES: stable-runtime
 
-// UNSUPPORTED: msan, tsan, ubsan
+// UNSUPPORTED: tsan, ubsan
 
 #include <assert.h>
 #include <stdio.h>
