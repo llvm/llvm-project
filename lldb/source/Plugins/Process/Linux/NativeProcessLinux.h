@@ -184,20 +184,6 @@ private:
 
   Status SetupSoftwareSingleStepping(NativeThreadLinux &thread);
 
-#if 0
-        static ::ProcessMessage::CrashReason
-        GetCrashReasonForSIGSEGV(const siginfo_t *info);
-
-        static ::ProcessMessage::CrashReason
-        GetCrashReasonForSIGILL(const siginfo_t *info);
-
-        static ::ProcessMessage::CrashReason
-        GetCrashReasonForSIGFPE(const siginfo_t *info);
-
-        static ::ProcessMessage::CrashReason
-        GetCrashReasonForSIGBUS(const siginfo_t *info);
-#endif
-
   bool HasThreadNoLock(lldb::tid_t thread_id);
 
   bool StopTrackingThread(lldb::tid_t thread_id);

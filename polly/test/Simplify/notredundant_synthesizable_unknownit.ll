@@ -20,11 +20,11 @@ for:
 
 
     ; This loop has some unusual properties:
-    ; * It has a known iteration count (8), therefore SCoP-compatible.
+    ; * It has a known iteration count (1), therefore SCoP-compatible.
     ; * %i.trunc is synthesizable within the loop ({1,+,1}<%while.body>).
     ; * %i.trunc is not synthesizable outside of the loop, because its value is
     ;   unknown when exiting.
-    ;   (should be 8, but ScalarEvolution currently seems unable to derive that)
+    ;   (should be 1, but ScalarEvolution currently seems unable to derive that)
     ;
     ; ScalarEvolution currently seems to not able to handle the %zero.
     ; If it becomes more intelligent, there might be other such loop constructs.
@@ -32,7 +32,7 @@ for:
       %i = phi i64 [%zero, %for], [%i.inc, %inner.for]
       %i.inc = add nuw nsw i64 %i, 1
       %i.trunc = trunc i64 %i.inc to i32
-      %i.and = and i32 %i.trunc, 7
+      %i.and = and i32 %i.trunc, 6
       %inner.cond = icmp eq i32 %i.and, 0
       br i1 %inner.cond, label %body, label %inner.for
 

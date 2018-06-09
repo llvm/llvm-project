@@ -2459,7 +2459,7 @@ void ARMDAGToDAGISel::SelectCMPZ(SDNode *N, bool &SwitchEQNEToPLMI) {
   SDValue X = And.getOperand(0);
   auto C = dyn_cast<ConstantSDNode>(And.getOperand(1));
 
-  if (!C || !X->hasOneUse())
+  if (!C)
     return;
   auto Range = getContiguousRangeOfSetBits(C->getAPIntValue());
   if (!Range)

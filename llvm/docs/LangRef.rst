@@ -3275,13 +3275,15 @@ The following is the syntax for constant expressions:
     integer constant. TYPE must be a scalar or vector integer type. CST
     must be of scalar or vector floating-point type. Both CST and TYPE
     must be scalars, or vectors of the same number of elements. If the
-    value won't fit in the integer type, the results are undefined.
+    value won't fit in the integer type, the result is a
+    :ref:`poison value <poisonvalues>`.
 ``fptosi (CST to TYPE)``
     Convert a floating-point constant to the corresponding signed
     integer constant. TYPE must be a scalar or vector integer type. CST
     must be of scalar or vector floating-point type. Both CST and TYPE
     must be scalars, or vectors of the same number of elements. If the
-    value won't fit in the integer type, the results are undefined.
+    value won't fit in the integer type, the result is a
+    :ref:`poison value <poisonvalues>`.
 ``uitofp (CST to TYPE)``
     Convert an unsigned integer constant to the corresponding 
     floating-point constant. TYPE must be a scalar or vector floating-point
@@ -7595,7 +7597,8 @@ Semantics:
 
 The result is a scalar of the same type as the element type of ``val``.
 Its value is the value at position ``idx`` of ``val``. If ``idx``
-exceeds the length of ``val``, the results are undefined.
+exceeds the length of ``val``, the result is a
+:ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -7636,8 +7639,8 @@ Semantics:
 
 The result is a vector of the same type as ``val``. Its element values
 are those of ``val`` except at position ``idx``, where it gets the value
-``elt``. If ``idx`` exceeds the length of ``val``, the results are
-undefined.
+``elt``. If ``idx`` exceeds the length of ``val``, the result
+is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -8764,8 +8767,8 @@ Semantics:
 
 The '``fptoui``' instruction converts its :ref:`floating-point
 <t_floating>` operand into the nearest (rounding towards zero)
-unsigned integer value. If the value cannot fit in ``ty2``, the results
-are undefined.
+unsigned integer value. If the value cannot fit in ``ty2``, the result
+is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -8806,8 +8809,8 @@ Semantics:
 
 The '``fptosi``' instruction converts its :ref:`floating-point
 <t_floating>` operand into the nearest (rounding towards zero)
-signed integer value. If the value cannot fit in ``ty2``, the results
-are undefined.
+signed integer value. If the value cannot fit in ``ty2``, the result
+is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
