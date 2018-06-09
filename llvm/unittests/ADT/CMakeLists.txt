@@ -51,6 +51,7 @@ add_llvm_unittest(ADTTests
   SetVectorTest.cpp
   SimpleIListTest.cpp
   SmallPtrSetTest.cpp
+  SmallSetTest.cpp
   SmallStringTest.cpp
   SmallVectorTest.cpp
   SparseBitVectorTest.cpp

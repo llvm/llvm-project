@@ -216,6 +216,28 @@ void ErrorInvalidAllocationAlignment::Print() {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
+void ErrorInvalidAlignedAllocAlignment::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  char tname[128];
+#if SANITIZER_POSIX
+  Report("ERROR: AddressSanitizer: invalid alignment requested in "
+         "aligned_alloc: %zd, alignment must be a power of two and the "
+         "requested size 0x%zx must be a multiple of alignment "
+         "(thread T%d%s)\n", alignment, size, tid,
+         ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
+#else
+  Report("ERROR: AddressSanitizer: invalid alignment requested in "
+         "aligned_alloc: %zd, the requested size 0x%zx must be a multiple of "
+         "alignment (thread T%d%s)\n", alignment, size, tid,
+         ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
+#endif
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
 void ErrorInvalidPosixMemalignAlignment::Print() {
   Decorator d;
   Printf("%s", d.Warning());

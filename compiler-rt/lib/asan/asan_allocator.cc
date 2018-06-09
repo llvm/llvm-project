@@ -925,6 +925,17 @@ void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack,
       instance.Allocate(size, alignment, stack, alloc_type, true));
 }
 
+void *asan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace *stack) {
+  if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(alignment, size))) {
+    errno = errno_EINVAL;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportInvalidAlignedAllocAlignment(size, alignment, stack);
+  }
+  return SetErrnoOnNull(
+      instance.Allocate(size, alignment, stack, FROM_MALLOC, true));
+}
+
 int asan_posix_memalign(void **memptr, uptr alignment, uptr size,
                         BufferedStackTrace *stack) {
   if (UNLIKELY(!CheckPosixMemalignAlignment(alignment))) {

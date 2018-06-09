@@ -30,7 +30,7 @@
 // RUN: MSAN_OPTIONS=allocator_may_return_null=0 not %run %t new 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nCRASH
 // RUN: MSAN_OPTIONS=allocator_may_return_null=1 not %run %t new 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-nCRASH
+// RUN:   | FileCheck %s --check-prefix=CHECK-nCRASH-OOM
 // RUN: MSAN_OPTIONS=allocator_may_return_null=0 not %run %t new-nothrow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nnCRASH
 // RUN: MSAN_OPTIONS=allocator_may_return_null=1     %run %t new-nothrow 2>&1 \
@@ -98,19 +98,21 @@ int main(int argc, char **argv) {
 }
 
 // CHECK-mCRASH: malloc:
-// CHECK-mCRASH: MemorySanitizer's allocator is terminating the process
+// CHECK-mCRASH: SUMMARY: MemorySanitizer: allocation-size-too-big
 // CHECK-cCRASH: calloc:
-// CHECK-cCRASH: MemorySanitizer's allocator is terminating the process
+// CHECK-cCRASH: SUMMARY: MemorySanitizer: allocation-size-too-big
 // CHECK-coCRASH: calloc-overflow:
-// CHECK-coCRASH: MemorySanitizer's allocator is terminating the process
+// CHECK-coCRASH: SUMMARY: MemorySanitizer: calloc-overflow
 // CHECK-rCRASH: realloc:
-// CHECK-rCRASH: MemorySanitizer's allocator is terminating the process
+// CHECK-rCRASH: SUMMARY: MemorySanitizer: allocation-size-too-big
 // CHECK-mrCRASH: realloc-after-malloc:
-// CHECK-mrCRASH: MemorySanitizer's allocator is terminating the process
+// CHECK-mrCRASH: SUMMARY: MemorySanitizer: allocation-size-too-big
 // CHECK-nCRASH: new:
-// CHECK-nCRASH: MemorySanitizer's allocator is terminating the process
+// CHECK-nCRASH: SUMMARY: MemorySanitizer: allocation-size-too-big
+// CHECK-nCRASH-OOM: new:
+// CHECK-nCRASH-OOM: SUMMARY: MemorySanitizer: out-of-memory
 // CHECK-nnCRASH: new-nothrow:
-// CHECK-nnCRASH: MemorySanitizer's allocator is terminating the process
+// CHECK-nnCRASH: SUMMARY: MemorySanitizer: allocation-size-too-big
 
 // CHECK-mNULL: malloc:
 // CHECK-mNULL: errno: 12

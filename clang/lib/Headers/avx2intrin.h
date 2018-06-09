@@ -825,12 +825,7 @@ _mm256_permutevar8x32_epi32(__m256i __a, __m256i __b)
 }
 
 #define _mm256_permute4x64_pd(V, M) \
-  (__m256d)__builtin_shufflevector((__v4df)(__m256d)(V), \
-                                   (__v4df)_mm256_undefined_pd(), \
-                                   ((M) >> 0) & 0x3, \
-                                   ((M) >> 2) & 0x3, \
-                                   ((M) >> 4) & 0x3, \
-                                   ((M) >> 6) & 0x3)
+  (__m256d)__builtin_ia32_permdf256((__v4df)(__m256d)(V), (int)(M))
 
 static __inline__ __m256 __DEFAULT_FN_ATTRS
 _mm256_permutevar8x32_ps(__m256 __a, __m256i __b)
@@ -839,15 +834,10 @@ _mm256_permutevar8x32_ps(__m256 __a, __m256i __b)
 }
 
 #define _mm256_permute4x64_epi64(V, M) \
-  (__m256i)__builtin_shufflevector((__v4di)(__m256i)(V), \
-                                   (__v4di)_mm256_undefined_si256(), \
-                                   ((M) >> 0) & 0x3, \
-                                   ((M) >> 2) & 0x3, \
-                                   ((M) >> 4) & 0x3, \
-                                   ((M) >> 6) & 0x3)
+  (__m256i)__builtin_ia32_permdi256((__v4di)(__m256i)(V), (int)(M))
 
 #define _mm256_permute2x128_si256(V1, V2, M) \
-  (__m256i)__builtin_ia32_permti256((__m256i)(V1), (__m256i)(V2), (M))
+  (__m256i)__builtin_ia32_permti256((__m256i)(V1), (__m256i)(V2), (int)(M))
 
 #define _mm256_extracti128_si256(V, M) \
   (__m128i)__builtin_ia32_extract128i256((__v4di)(__m256i)(V), (int)(M))
