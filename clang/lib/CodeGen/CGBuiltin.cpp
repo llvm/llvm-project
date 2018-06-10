@@ -8496,6 +8496,40 @@ static Value *EmitX86MaskedLoad(CodeGenFunction &CGF,
   return CGF.Builder.CreateMaskedLoad(Ptr, Align, MaskVec, Ops[1]);
 }
 
+static Value *EmitX86ExpandLoad(CodeGenFunction &CGF,
+                                ArrayRef<Value *> Ops) {
+  llvm::Type *ResultTy = Ops[1]->getType();
+  llvm::Type *PtrTy = ResultTy->getVectorElementType();
+
+  // Cast the pointer to element type.
+  Value *Ptr = CGF.Builder.CreateBitCast(Ops[0],
+                                         llvm::PointerType::getUnqual(PtrTy));
+
+  Value *MaskVec = getMaskVecValue(CGF, Ops[2],
+                                   ResultTy->getVectorNumElements());
+
+  llvm::Function *F = CGF.CGM.getIntrinsic(Intrinsic::masked_expandload,
+                                           ResultTy);
+  return CGF.Builder.CreateCall(F, { Ptr, MaskVec, Ops[1] });
+}
+
+static Value *EmitX86CompressStore(CodeGenFunction &CGF,
+                                   ArrayRef<Value *> Ops) {
+  llvm::Type *ResultTy = Ops[1]->getType();
+  llvm::Type *PtrTy = ResultTy->getVectorElementType();
+
+  // Cast the pointer to element type.
+  Value *Ptr = CGF.Builder.CreateBitCast(Ops[0],
+                                         llvm::PointerType::getUnqual(PtrTy));
+
+  Value *MaskVec = getMaskVecValue(CGF, Ops[2],
+                                   ResultTy->getVectorNumElements());
+
+  llvm::Function *F = CGF.CGM.getIntrinsic(Intrinsic::masked_compressstore,
+                                           ResultTy);
+  return CGF.Builder.CreateCall(F, { Ops[1], Ptr, MaskVec });
+}
+
 static Value *EmitX86MaskLogic(CodeGenFunction &CGF, Instruction::BinaryOps Opc,
                               unsigned NumElts, ArrayRef<Value *> Ops,
                               bool InvertLHS = false) {
@@ -9218,6 +9252,46 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       getContext().getTypeAlignInChars(E->getArg(1)->getType()).getQuantity();
     return EmitX86MaskedLoad(*this, Ops, Align);
   }
+
+  case X86::BI__builtin_ia32_expandloaddf128_mask:
+  case X86::BI__builtin_ia32_expandloaddf256_mask:
+  case X86::BI__builtin_ia32_expandloaddf512_mask:
+  case X86::BI__builtin_ia32_expandloadsf128_mask:
+  case X86::BI__builtin_ia32_expandloadsf256_mask:
+  case X86::BI__builtin_ia32_expandloadsf512_mask:
+  case X86::BI__builtin_ia32_expandloaddi128_mask:
+  case X86::BI__builtin_ia32_expandloaddi256_mask:
+  case X86::BI__builtin_ia32_expandloaddi512_mask:
+  case X86::BI__builtin_ia32_expandloadsi128_mask:
+  case X86::BI__builtin_ia32_expandloadsi256_mask:
+  case X86::BI__builtin_ia32_expandloadsi512_mask:
+  case X86::BI__builtin_ia32_expandloadhi128_mask:
+  case X86::BI__builtin_ia32_expandloadhi256_mask:
+  case X86::BI__builtin_ia32_expandloadhi512_mask:
+  case X86::BI__builtin_ia32_expandloadqi128_mask:
+  case X86::BI__builtin_ia32_expandloadqi256_mask:
+  case X86::BI__builtin_ia32_expandloadqi512_mask:
+    return EmitX86ExpandLoad(*this, Ops);
+
+  case X86::BI__builtin_ia32_compressstoredf128_mask:
+  case X86::BI__builtin_ia32_compressstoredf256_mask:
+  case X86::BI__builtin_ia32_compressstoredf512_mask:
+  case X86::BI__builtin_ia32_compressstoresf128_mask:
+  case X86::BI__builtin_ia32_compressstoresf256_mask:
+  case X86::BI__builtin_ia32_compressstoresf512_mask:
+  case X86::BI__builtin_ia32_compressstoredi128_mask:
+  case X86::BI__builtin_ia32_compressstoredi256_mask:
+  case X86::BI__builtin_ia32_compressstoredi512_mask:
+  case X86::BI__builtin_ia32_compressstoresi128_mask:
+  case X86::BI__builtin_ia32_compressstoresi256_mask:
+  case X86::BI__builtin_ia32_compressstoresi512_mask:
+  case X86::BI__builtin_ia32_compressstorehi128_mask:
+  case X86::BI__builtin_ia32_compressstorehi256_mask:
+  case X86::BI__builtin_ia32_compressstorehi512_mask:
+  case X86::BI__builtin_ia32_compressstoreqi128_mask:
+  case X86::BI__builtin_ia32_compressstoreqi256_mask:
+  case X86::BI__builtin_ia32_compressstoreqi512_mask:
+    return EmitX86CompressStore(*this, Ops);
 
   case X86::BI__builtin_ia32_storehps:
   case X86::BI__builtin_ia32_storelps: {

@@ -4613,28 +4613,22 @@ let TargetPrefix = "x86" in {
         Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
                    llvm_i8_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_compress_store_ps_512 :
-                            GCCBuiltin<"__builtin_ia32_compressstoresf512_mask">,
+  def int_x86_avx512_mask_compress_store_ps_512 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v16f32_ty,
                    llvm_i16_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_pd_512 :
-                            GCCBuiltin<"__builtin_ia32_compressstoredf512_mask">,
+  def int_x86_avx512_mask_compress_store_pd_512 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v8f64_ty,
                    llvm_i8_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_ps_256 :
-                            GCCBuiltin<"__builtin_ia32_compressstoresf256_mask">,
+  def int_x86_avx512_mask_compress_store_ps_256 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v8f32_ty,
                    llvm_i8_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_pd_256 :
-                            GCCBuiltin<"__builtin_ia32_compressstoredf256_mask">,
+  def int_x86_avx512_mask_compress_store_pd_256 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v4f64_ty,
                    llvm_i8_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_ps_128 :
-                            GCCBuiltin<"__builtin_ia32_compressstoresf128_mask">,
+  def int_x86_avx512_mask_compress_store_ps_128 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v4f32_ty,
                    llvm_i8_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_pd_128 :
-                            GCCBuiltin<"__builtin_ia32_compressstoredf128_mask">,
+  def int_x86_avx512_mask_compress_store_pd_128 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v2f64_ty,
                    llvm_i8_ty], [IntrArgMemOnly]>;
 
@@ -4663,28 +4657,22 @@ let TargetPrefix = "x86" in {
         Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty,
                    llvm_i8_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_compress_store_d_512 :
-                            GCCBuiltin<"__builtin_ia32_compressstoresi512_mask">,
+  def int_x86_avx512_mask_compress_store_d_512 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v16i32_ty,
                    llvm_i16_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_q_512 :
-                            GCCBuiltin<"__builtin_ia32_compressstoredi512_mask">,
+  def int_x86_avx512_mask_compress_store_q_512 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v8i64_ty,
                    llvm_i8_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_d_256 :
-                            GCCBuiltin<"__builtin_ia32_compressstoresi256_mask">,
+  def int_x86_avx512_mask_compress_store_d_256 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v8i32_ty,
                    llvm_i8_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_q_256 :
-                            GCCBuiltin<"__builtin_ia32_compressstoredi256_mask">,
+  def int_x86_avx512_mask_compress_store_q_256 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v4i64_ty,
                    llvm_i8_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_d_128 :
-                            GCCBuiltin<"__builtin_ia32_compressstoresi128_mask">,
+  def int_x86_avx512_mask_compress_store_d_128 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v4i32_ty,
                    llvm_i8_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_q_128 :
-                            GCCBuiltin<"__builtin_ia32_compressstoredi128_mask">,
+  def int_x86_avx512_mask_compress_store_q_128 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v2i64_ty,
                    llvm_i8_ty], [IntrArgMemOnly]>;
 
@@ -4713,28 +4701,22 @@ let TargetPrefix = "x86" in {
         Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty, llvm_v8i16_ty,
                    llvm_i8_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_compress_store_b_512 :
-                            GCCBuiltin<"__builtin_ia32_compressstoreqi512_mask">,
+  def int_x86_avx512_mask_compress_store_b_512 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v64i8_ty,
                    llvm_i64_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_w_512 :
-                            GCCBuiltin<"__builtin_ia32_compressstorehi512_mask">,
+  def int_x86_avx512_mask_compress_store_w_512 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v32i16_ty,
                    llvm_i32_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_b_256 :
-                            GCCBuiltin<"__builtin_ia32_compressstoreqi256_mask">,
+  def int_x86_avx512_mask_compress_store_b_256 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v32i8_ty,
                    llvm_i32_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_w_256 :
-                            GCCBuiltin<"__builtin_ia32_compressstorehi256_mask">,
+  def int_x86_avx512_mask_compress_store_w_256 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v16i16_ty,
                    llvm_i16_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_b_128 :
-                            GCCBuiltin<"__builtin_ia32_compressstoreqi128_mask">,
+  def int_x86_avx512_mask_compress_store_b_128 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v16i8_ty,
                    llvm_i16_ty], [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_compress_store_w_128 :
-                            GCCBuiltin<"__builtin_ia32_compressstorehi128_mask">,
+  def int_x86_avx512_mask_compress_store_w_128 : // FIXME: remove
         Intrinsic<[], [llvm_ptr_ty, llvm_v8i16_ty,
                    llvm_i8_ty], [IntrArgMemOnly]>;
 
@@ -4764,28 +4746,22 @@ let TargetPrefix = "x86" in {
         Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
                    llvm_i8_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_expand_load_ps_512 :
-                            GCCBuiltin<"__builtin_ia32_expandloadsf512_mask">,
+  def int_x86_avx512_mask_expand_load_ps_512 : // FIXME: remove
         Intrinsic<[llvm_v16f32_ty], [llvm_ptr_ty, llvm_v16f32_ty,
                    llvm_i16_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_pd_512 :
-                            GCCBuiltin<"__builtin_ia32_expandloaddf512_mask">,
+  def int_x86_avx512_mask_expand_load_pd_512 : // FIXME: remove
         Intrinsic<[llvm_v8f64_ty], [llvm_ptr_ty, llvm_v8f64_ty,
                    llvm_i8_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_ps_256 :
-                            GCCBuiltin<"__builtin_ia32_expandloadsf256_mask">,
+  def int_x86_avx512_mask_expand_load_ps_256 : // FIXME: remove
         Intrinsic<[llvm_v8f32_ty], [llvm_ptr_ty, llvm_v8f32_ty,
                    llvm_i8_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_pd_256 :
-                            GCCBuiltin<"__builtin_ia32_expandloaddf256_mask">,
+  def int_x86_avx512_mask_expand_load_pd_256 : // FIXME: remove
         Intrinsic<[llvm_v4f64_ty], [llvm_ptr_ty, llvm_v4f64_ty,
                    llvm_i8_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_ps_128 :
-                            GCCBuiltin<"__builtin_ia32_expandloadsf128_mask">,
+  def int_x86_avx512_mask_expand_load_ps_128 : // FIXME: remove
         Intrinsic<[llvm_v4f32_ty], [llvm_ptr_ty, llvm_v4f32_ty,
                    llvm_i8_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_pd_128 :
-                            GCCBuiltin<"__builtin_ia32_expandloaddf128_mask">,
+  def int_x86_avx512_mask_expand_load_pd_128 : // FIXME: remove
         Intrinsic<[llvm_v2f64_ty], [llvm_ptr_ty, llvm_v2f64_ty,
                    llvm_i8_ty], [IntrReadMem, IntrArgMemOnly]>;
 
@@ -4814,28 +4790,22 @@ let TargetPrefix = "x86" in {
         Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty,
                    llvm_i8_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_expand_load_d_512 :
-                            GCCBuiltin<"__builtin_ia32_expandloadsi512_mask">,
+  def int_x86_avx512_mask_expand_load_d_512 : // FIXME: remove
         Intrinsic<[llvm_v16i32_ty], [llvm_ptr_ty, llvm_v16i32_ty,
                    llvm_i16_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_q_512 :
-                            GCCBuiltin<"__builtin_ia32_expandloaddi512_mask">,
+  def int_x86_avx512_mask_expand_load_q_512 : // FIXME: remove
         Intrinsic<[llvm_v8i64_ty], [llvm_ptr_ty, llvm_v8i64_ty,
                    llvm_i8_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_d_256 :
-                            GCCBuiltin<"__builtin_ia32_expandloadsi256_mask">,
+  def int_x86_avx512_mask_expand_load_d_256 : // FIXME: remove
         Intrinsic<[llvm_v8i32_ty], [llvm_ptr_ty, llvm_v8i32_ty,
                    llvm_i8_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_q_256 :
-                            GCCBuiltin<"__builtin_ia32_expandloaddi256_mask">,
+  def int_x86_avx512_mask_expand_load_q_256 : // FIXME: remove
         Intrinsic<[llvm_v4i64_ty], [llvm_ptr_ty, llvm_v4i64_ty,
                    llvm_i8_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_d_128 :
-                            GCCBuiltin<"__builtin_ia32_expandloadsi128_mask">,
+  def int_x86_avx512_mask_expand_load_d_128 : // FIXME: remove
         Intrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_v4i32_ty,
                    llvm_i8_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_q_128 :
-                            GCCBuiltin<"__builtin_ia32_expandloaddi128_mask">,
+  def int_x86_avx512_mask_expand_load_q_128 : // FIXME: remove
         Intrinsic<[llvm_v2i64_ty], [llvm_ptr_ty, llvm_v2i64_ty,
                    llvm_i8_ty], [IntrReadMem, IntrArgMemOnly]>;
 
@@ -4864,28 +4834,22 @@ let TargetPrefix = "x86" in {
         Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty, llvm_v8i16_ty,
                    llvm_i8_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_expand_load_b_512 :
-                            GCCBuiltin<"__builtin_ia32_expandloadqi512_mask">,
+  def int_x86_avx512_mask_expand_load_b_512 : // FIXME: remove
         Intrinsic<[llvm_v64i8_ty], [llvm_ptr_ty, llvm_v64i8_ty,
                    llvm_i64_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_w_512 :
-                            GCCBuiltin<"__builtin_ia32_expandloadhi512_mask">,
+  def int_x86_avx512_mask_expand_load_w_512 : // FIXME: remove
         Intrinsic<[llvm_v32i16_ty], [llvm_ptr_ty, llvm_v32i16_ty,
                    llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_b_256 :
-                            GCCBuiltin<"__builtin_ia32_expandloadqi256_mask">,
+  def int_x86_avx512_mask_expand_load_b_256 : // FIXME: remove
         Intrinsic<[llvm_v32i8_ty], [llvm_ptr_ty, llvm_v32i8_ty,
                    llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_w_256 :
-                            GCCBuiltin<"__builtin_ia32_expandloadhi256_mask">,
+  def int_x86_avx512_mask_expand_load_w_256 : // FIXME: remove
         Intrinsic<[llvm_v16i16_ty], [llvm_ptr_ty, llvm_v16i16_ty,
                    llvm_i16_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_b_128 :
-                            GCCBuiltin<"__builtin_ia32_expandloadqi128_mask">,
+  def int_x86_avx512_mask_expand_load_b_128 : // FIXME: remove
         Intrinsic<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_v16i8_ty,
                    llvm_i16_ty], [IntrReadMem, IntrArgMemOnly]>;
-  def int_x86_avx512_mask_expand_load_w_128 :
-                            GCCBuiltin<"__builtin_ia32_expandloadhi128_mask">,
+  def int_x86_avx512_mask_expand_load_w_128 : // FIXME: remove
         Intrinsic<[llvm_v8i16_ty], [llvm_ptr_ty, llvm_v8i16_ty,
                    llvm_i8_ty], [IntrReadMem, IntrArgMemOnly]>;
 }
