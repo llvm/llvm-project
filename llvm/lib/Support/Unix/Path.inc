@@ -521,7 +521,7 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
 }
 
 static std::error_code fillStatus(int StatRet, const struct stat &Status,
-                             file_status &Result) {
+                                  file_status &Result) {
   if (StatRet != 0) {
     std::error_code ec(errno, std::generic_category());
     if (ec == errc::no_such_file_or_directory)

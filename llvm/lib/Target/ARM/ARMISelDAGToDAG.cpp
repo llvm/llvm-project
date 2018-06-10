@@ -1903,9 +1903,7 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
   case MVT::v4f32:
   case MVT::v4i32: OpcodeIndex = 2; break;
   case MVT::v2f64:
-  case MVT::v2i64: OpcodeIndex = 3;
-    assert(NumVecs == 1 && "v2i64 type only supported for VST1");
-    break;
+  case MVT::v2i64: OpcodeIndex = 3; break;
   }
 
   std::vector<EVT> ResTys;
@@ -3559,6 +3557,51 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       static const uint16_t QOpcodes[] = { ARM::VST1q8, ARM::VST1q16,
                                            ARM::VST1q32, ARM::VST1q64 };
       SelectVST(N, false, 1, DOpcodes, QOpcodes, nullptr);
+      return;
+    }
+
+    case Intrinsic::arm_neon_vst1x2: {
+      static const uint16_t DOpcodes[] = { ARM::VST1q8, ARM::VST1q16,
+                                           ARM::VST1q32, ARM::VST1q64 };
+      static const uint16_t QOpcodes[] = { ARM::VST1d8QPseudo,
+                                           ARM::VST1d16QPseudo,
+                                           ARM::VST1d32QPseudo,
+                                           ARM::VST1d64QPseudo };
+      SelectVST(N, false, 2, DOpcodes, QOpcodes, nullptr);
+      return;
+    }
+
+    case Intrinsic::arm_neon_vst1x3: {
+      static const uint16_t DOpcodes[] = { ARM::VST1d8TPseudo,
+                                           ARM::VST1d16TPseudo,
+                                           ARM::VST1d32TPseudo,
+                                           ARM::VST1d64TPseudo };
+      static const uint16_t QOpcodes0[] = { ARM::VST1q8LowTPseudo_UPD,
+                                            ARM::VST1q16LowTPseudo_UPD,
+                                            ARM::VST1q32LowTPseudo_UPD,
+                                            ARM::VST1q64LowTPseudo_UPD };
+      static const uint16_t QOpcodes1[] = { ARM::VST1q8HighTPseudo,
+                                            ARM::VST1q16HighTPseudo,
+                                            ARM::VST1q32HighTPseudo,
+                                            ARM::VST1q64HighTPseudo };
+      SelectVST(N, false, 3, DOpcodes, QOpcodes0, QOpcodes1);
+      return;
+    }
+
+    case Intrinsic::arm_neon_vst1x4: {
+      static const uint16_t DOpcodes[] = { ARM::VST1d8QPseudo,
+                                           ARM::VST1d16QPseudo,
+                                           ARM::VST1d32QPseudo,
+                                           ARM::VST1d64QPseudo };
+      static const uint16_t QOpcodes0[] = { ARM::VST1q8LowQPseudo_UPD,
+                                            ARM::VST1q16LowQPseudo_UPD,
+                                            ARM::VST1q32LowQPseudo_UPD,
+                                            ARM::VST1q64LowQPseudo_UPD };
+      static const uint16_t QOpcodes1[] = { ARM::VST1q8HighQPseudo,
+                                            ARM::VST1q16HighQPseudo,
+                                            ARM::VST1q32HighQPseudo,
+                                            ARM::VST1q64HighQPseudo };
+      SelectVST(N, false, 4, DOpcodes, QOpcodes0, QOpcodes1);
       return;
     }
 
