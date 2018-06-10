@@ -26,7 +26,8 @@ using namespace ento;
 
 namespace {
 
-class DanglingInternalBufferChecker : public Checker<check::PostCall> {
+class DanglingInternalBufferChecker : public Checker<check::DeadSymbols,
+                                                     check::PostCall> {
   CallDescription CStrFn;
 
 public:
@@ -36,6 +37,9 @@ public:
   /// corresponding string object region in the ProgramState. Mark the symbol
   /// released if the string object is destroyed.
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
+
+  /// Clean up the ProgramState map.
+  void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 };
 
 } // end anonymous namespace
@@ -76,10 +80,27 @@ void DanglingInternalBufferChecker::checkPostCall(const CallEvent &Call,
       // FIXME: What if Origin is null?
       const Expr *Origin = Call.getOriginExpr();
       State = allocation_state::markReleased(State, *StrBufferPtr, Origin);
+      State = State->remove<RawPtrMap>(TypedR);
       C.addTransition(State);
       return;
     }
   }
+}
+
+void DanglingInternalBufferChecker::checkDeadSymbols(SymbolReaper &SymReaper,
+                                                     CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  RawPtrMapTy RPM = State->get<RawPtrMap>();
+  for (const auto Entry : RPM) {
+    if (!SymReaper.isLive(Entry.second))
+      State = State->remove<RawPtrMap>(Entry.first);
+    if (!SymReaper.isLiveRegion(Entry.first)) {
+      // Due to incomplete destructor support, some dead regions might still
+      // remain in the program state map. Clean them up.
+      State = State->remove<RawPtrMap>(Entry.first);
+    }
+  }
+  C.addTransition(State);
 }
 
 void ento::registerDanglingInternalBufferChecker(CheckerManager &Mgr) {
