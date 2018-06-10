@@ -12773,6 +12773,9 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::arm_neon_vld3lane:
     case Intrinsic::arm_neon_vld4lane:
     case Intrinsic::arm_neon_vst1:
+    case Intrinsic::arm_neon_vst1x2:
+    case Intrinsic::arm_neon_vst1x3:
+    case Intrinsic::arm_neon_vst1x4:
     case Intrinsic::arm_neon_vst2:
     case Intrinsic::arm_neon_vst3:
     case Intrinsic::arm_neon_vst4:
@@ -14114,6 +14117,27 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Value *AlignArg = I.getArgOperand(I.getNumArgOperands() - 1);
     Info.align = cast<ConstantInt>(AlignArg)->getZExtValue();
+    // volatile stores with NEON intrinsics not supported
+    Info.flags = MachineMemOperand::MOStore;
+    return true;
+  }
+  case Intrinsic::arm_neon_vst1x2:
+  case Intrinsic::arm_neon_vst1x3:
+  case Intrinsic::arm_neon_vst1x4: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    // Conservatively set memVT to the entire set of vectors stored.
+    auto &DL = I.getCalledFunction()->getParent()->getDataLayout();
+    unsigned NumElts = 0;
+    for (unsigned ArgI = 1, ArgE = I.getNumArgOperands(); ArgI < ArgE; ++ArgI) {
+      Type *ArgTy = I.getArgOperand(ArgI)->getType();
+      if (!ArgTy->isVectorTy())
+        break;
+      NumElts += DL.getTypeSizeInBits(ArgTy) / 64;
+    }
+    Info.memVT = EVT::getVectorVT(I.getType()->getContext(), MVT::i64, NumElts);
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = 0;
     // volatile stores with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOStore;
     return true;

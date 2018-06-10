@@ -93,8 +93,6 @@ public:
   /* dtor */ ~CMICmdCmdExecContinue() override;
 
   // Attributes:
-private:
-  lldb::SBCommandReturnObject m_lldbResult;
 };
 
 //++

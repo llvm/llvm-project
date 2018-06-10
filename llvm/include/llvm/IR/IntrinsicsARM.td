@@ -671,6 +671,20 @@ def int_arm_neon_vst4 : Intrinsic<[],
                                    LLVMMatchType<1>, llvm_i32_ty],
                                   [IntrArgMemOnly]>;
 
+def int_arm_neon_vst1x2 : Intrinsic<[],
+                                    [llvm_anyptr_ty, llvm_anyvector_ty,
+                                     LLVMMatchType<1>],
+                                    [IntrArgMemOnly, NoCapture<0>]>;
+def int_arm_neon_vst1x3 : Intrinsic<[],
+                                    [llvm_anyptr_ty, llvm_anyvector_ty,
+                                     LLVMMatchType<1>, LLVMMatchType<1>],
+                                    [IntrArgMemOnly, NoCapture<0>]>;
+def int_arm_neon_vst1x4 : Intrinsic<[],
+                                    [llvm_anyptr_ty, llvm_anyvector_ty,
+                                     LLVMMatchType<1>, LLVMMatchType<1>,
+                                     LLVMMatchType<1>],
+                                    [IntrArgMemOnly, NoCapture<0>]>;
+
 // Vector store N-element structure from one lane.
 // Source operands are: the address, the N vectors, the lane number, and
 // the alignment.

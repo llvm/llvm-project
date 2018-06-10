@@ -79,7 +79,7 @@ unsigned Process::getPageSize() {
 #elif defined(HAVE_SYSCONF)
   static long page_size = ::sysconf(_SC_PAGE_SIZE);
 #else
-#warning Cannot get the page size on this machine
+#error Cannot get the page size on this machine
 #endif
   return static_cast<unsigned>(page_size);
 }

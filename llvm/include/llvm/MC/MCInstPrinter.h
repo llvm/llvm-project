@@ -15,7 +15,6 @@
 
 namespace llvm {
 
-template <typename T> class ArrayRef;
 class MCAsmInfo;
 class MCInst;
 class MCInstrInfo;
@@ -42,7 +41,7 @@ class MCInstPrinter {
 protected:
   /// A stream that comments can be emitted to if desired.  Each comment
   /// must end with a newline.  This will be null if verbose assembly emission
-  /// is disable.
+  /// is disabled.
   raw_ostream *CommentStream = nullptr;
   const MCAsmInfo &MAI;
   const MCInstrInfo &MII;
