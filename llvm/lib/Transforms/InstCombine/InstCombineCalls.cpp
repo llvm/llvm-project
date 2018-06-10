@@ -1034,36 +1034,6 @@ static Value *simplifyX86vpcom(const IntrinsicInst &II,
   return nullptr;
 }
 
-// Emit a select instruction and appropriate bitcasts to help simplify
-// masked intrinsics.
-static Value *emitX86MaskSelect(Value *Mask, Value *Op0, Value *Op1,
-                                InstCombiner::BuilderTy &Builder) {
-  unsigned VWidth = Op0->getType()->getVectorNumElements();
-
-  // If the mask is all ones we don't need the select. But we need to check
-  // only the bit thats will be used in case VWidth is less than 8.
-  if (auto *C = dyn_cast<ConstantInt>(Mask))
-    if (C->getValue().zextOrTrunc(VWidth).isAllOnesValue())
-      return Op0;
-
-  auto *MaskTy = VectorType::get(Builder.getInt1Ty(),
-                         cast<IntegerType>(Mask->getType())->getBitWidth());
-  Mask = Builder.CreateBitCast(Mask, MaskTy);
-
-  // If we have less than 8 elements, then the starting mask was an i8 and
-  // we need to extract down to the right number of elements.
-  if (VWidth < 8) {
-    uint32_t Indices[4];
-    for (unsigned i = 0; i != VWidth; ++i)
-      Indices[i] = i;
-    Mask = Builder.CreateShuffleVector(Mask, Mask,
-                                       makeArrayRef(Indices, VWidth),
-                                       "extract");
-  }
-
-  return Builder.CreateSelect(Mask, Op0, Op1);
-}
-
 static Value *simplifyMinnumMaxnum(const IntrinsicInst &II) {
   Value *Arg0 = II.getArgOperand(0);
   Value *Arg1 = II.getArgOperand(1);
@@ -2341,17 +2311,17 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
 
-  case Intrinsic::x86_avx512_mask_add_ps_512:
-  case Intrinsic::x86_avx512_mask_div_ps_512:
-  case Intrinsic::x86_avx512_mask_mul_ps_512:
-  case Intrinsic::x86_avx512_mask_sub_ps_512:
-  case Intrinsic::x86_avx512_mask_add_pd_512:
-  case Intrinsic::x86_avx512_mask_div_pd_512:
-  case Intrinsic::x86_avx512_mask_mul_pd_512:
-  case Intrinsic::x86_avx512_mask_sub_pd_512:
+  case Intrinsic::x86_avx512_add_ps_512:
+  case Intrinsic::x86_avx512_div_ps_512:
+  case Intrinsic::x86_avx512_mul_ps_512:
+  case Intrinsic::x86_avx512_sub_ps_512:
+  case Intrinsic::x86_avx512_add_pd_512:
+  case Intrinsic::x86_avx512_div_pd_512:
+  case Intrinsic::x86_avx512_mul_pd_512:
+  case Intrinsic::x86_avx512_sub_pd_512:
     // If the rounding mode is CUR_DIRECTION(4) we can turn these into regular
     // IR operations.
-    if (auto *R = dyn_cast<ConstantInt>(II->getArgOperand(4))) {
+    if (auto *R = dyn_cast<ConstantInt>(II->getArgOperand(2))) {
       if (R->getValue() == 4) {
         Value *Arg0 = II->getArgOperand(0);
         Value *Arg1 = II->getArgOperand(1);
@@ -2359,27 +2329,24 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         Value *V;
         switch (II->getIntrinsicID()) {
         default: llvm_unreachable("Case stmts out of sync!");
-        case Intrinsic::x86_avx512_mask_add_ps_512:
-        case Intrinsic::x86_avx512_mask_add_pd_512:
+        case Intrinsic::x86_avx512_add_ps_512:
+        case Intrinsic::x86_avx512_add_pd_512:
           V = Builder.CreateFAdd(Arg0, Arg1);
           break;
-        case Intrinsic::x86_avx512_mask_sub_ps_512:
-        case Intrinsic::x86_avx512_mask_sub_pd_512:
+        case Intrinsic::x86_avx512_sub_ps_512:
+        case Intrinsic::x86_avx512_sub_pd_512:
           V = Builder.CreateFSub(Arg0, Arg1);
           break;
-        case Intrinsic::x86_avx512_mask_mul_ps_512:
-        case Intrinsic::x86_avx512_mask_mul_pd_512:
+        case Intrinsic::x86_avx512_mul_ps_512:
+        case Intrinsic::x86_avx512_mul_pd_512:
           V = Builder.CreateFMul(Arg0, Arg1);
           break;
-        case Intrinsic::x86_avx512_mask_div_ps_512:
-        case Intrinsic::x86_avx512_mask_div_pd_512:
+        case Intrinsic::x86_avx512_div_ps_512:
+        case Intrinsic::x86_avx512_div_pd_512:
           V = Builder.CreateFDiv(Arg0, Arg1);
           break;
         }
 
-        // Create a select for the masking.
-        V = emitX86MaskSelect(II->getArgOperand(3), V, II->getArgOperand(2),
-                              Builder);
         return replaceInstUsesWith(*II, V);
       }
     }

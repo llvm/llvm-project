@@ -284,12 +284,34 @@ static const NEONLdStTableEntry NEONLdStTable[] = {
 { ARM::VST1LNq8Pseudo,      ARM::VST1LNd8,     false, false, false, EvenDblSpc, 1, 8 ,true},
 { ARM::VST1LNq8Pseudo_UPD,  ARM::VST1LNd8_UPD, false, true, true,  EvenDblSpc, 1, 8 ,true},
 
+{ ARM::VST1d16QPseudo,      ARM::VST1d16Q,     false, false, false, SingleSpc,  4, 4 ,false},
+{ ARM::VST1d16TPseudo,      ARM::VST1d16T,     false, false, false, SingleSpc,  3, 4 ,false},
+{ ARM::VST1d32QPseudo,      ARM::VST1d32Q,     false, false, false, SingleSpc,  4, 2 ,false},
+{ ARM::VST1d32TPseudo,      ARM::VST1d32T,     false, false, false, SingleSpc,  3, 2 ,false},
 { ARM::VST1d64QPseudo,      ARM::VST1d64Q,     false, false, false, SingleSpc,  4, 1 ,false},
 { ARM::VST1d64QPseudoWB_fixed,  ARM::VST1d64Qwb_fixed, false, true, false,  SingleSpc,  4, 1 ,false},
 { ARM::VST1d64QPseudoWB_register, ARM::VST1d64Qwb_register, false, true, true,  SingleSpc,  4, 1 ,false},
 { ARM::VST1d64TPseudo,      ARM::VST1d64T,     false, false, false, SingleSpc,  3, 1 ,false},
 { ARM::VST1d64TPseudoWB_fixed,  ARM::VST1d64Twb_fixed, false, true, false,  SingleSpc,  3, 1 ,false},
 { ARM::VST1d64TPseudoWB_register,  ARM::VST1d64Twb_register, false, true, true,  SingleSpc,  3, 1 ,false},
+{ ARM::VST1d8QPseudo,       ARM::VST1d8Q,      false, false, false, SingleSpc,  4, 8 ,false},
+{ ARM::VST1d8TPseudo,       ARM::VST1d8T,      false, false, false, SingleSpc,  3, 8 ,false},
+{ ARM::VST1q16HighQPseudo,  ARM::VST1d16Q,      false, false, false, SingleHighQSpc,   4, 4 ,false},
+{ ARM::VST1q16HighTPseudo,  ARM::VST1d16T,      false, false, false, SingleHighTSpc,   3, 4 ,false},
+{ ARM::VST1q16LowQPseudo_UPD,   ARM::VST1d16Qwb_fixed,  false, true, true, SingleLowSpc,   4, 4 ,false},
+{ ARM::VST1q16LowTPseudo_UPD,   ARM::VST1d16Twb_fixed,  false, true, true, SingleLowSpc,   3, 4 ,false},
+{ ARM::VST1q32HighQPseudo,  ARM::VST1d32Q,      false, false, false, SingleHighQSpc,   4, 2 ,false},
+{ ARM::VST1q32HighTPseudo,  ARM::VST1d32T,      false, false, false, SingleHighTSpc,   3, 2 ,false},
+{ ARM::VST1q32LowQPseudo_UPD,   ARM::VST1d32Qwb_fixed,  false, true, true, SingleLowSpc,   4, 2 ,false},
+{ ARM::VST1q32LowTPseudo_UPD,   ARM::VST1d32Twb_fixed,  false, true, true, SingleLowSpc,   3, 2 ,false},
+{ ARM::VST1q64HighQPseudo,  ARM::VST1d64Q,      false, false, false, SingleHighQSpc,   4, 1 ,false},
+{ ARM::VST1q64HighTPseudo,  ARM::VST1d64T,      false, false, false, SingleHighTSpc,   3, 1 ,false},
+{ ARM::VST1q64LowQPseudo_UPD,   ARM::VST1d64Qwb_fixed,  false, true, true, SingleLowSpc,   4, 1 ,false},
+{ ARM::VST1q64LowTPseudo_UPD,   ARM::VST1d64Twb_fixed,  false, true, true, SingleLowSpc,   3, 1 ,false},
+{ ARM::VST1q8HighQPseudo,   ARM::VST1d8Q,      false, false, false, SingleHighQSpc,   4, 8 ,false},
+{ ARM::VST1q8HighTPseudo,   ARM::VST1d8T,      false, false, false, SingleHighTSpc,   3, 8 ,false},
+{ ARM::VST1q8LowQPseudo_UPD,   ARM::VST1d8Qwb_fixed,  false, true, true, SingleLowSpc,   4, 8 ,false},
+{ ARM::VST1q8LowTPseudo_UPD,   ARM::VST1d8Twb_fixed,  false, true, true, SingleLowSpc,   3, 8 ,false},
 
 { ARM::VST2LNd16Pseudo,     ARM::VST2LNd16,     false, false, false, SingleSpc, 2, 4 ,true},
 { ARM::VST2LNd16Pseudo_UPD, ARM::VST2LNd16_UPD, false, true, true,  SingleSpc, 2, 4 ,true},
@@ -465,7 +487,7 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
     // and register forms. Some real instructions, however, do not rely on
     // am6offset and have separate definitions for such forms. When this is the
     // case, fixed forms do not take any offset nodes, so here we skip them for
-    // such intructions. Once all real and pseudo writing-back instructions are
+    // such instructions. Once all real and pseudo writing-back instructions are
     // rewritten without use of am6offset nodes, this code will go away.
     const MachineOperand &AM6Offset = MI.getOperand(OpIdx++);
     if (TableEntry->RealOpc == ARM::VLD1d8Qwb_fixed ||
@@ -477,7 +499,7 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
         TableEntry->RealOpc == ARM::VLD1d32Twb_fixed ||
         TableEntry->RealOpc == ARM::VLD1d64Twb_fixed) {
       assert(AM6Offset.getReg() == 0 &&
-             "A fixed writing-back pseudo intruction provides an offset "
+             "A fixed writing-back pseudo instruction provides an offset "
              "register!");
     } else {
       MIB.add(AM6Offset);
@@ -534,9 +556,31 @@ void ARMExpandPseudo::ExpandVST(MachineBasicBlock::iterator &MBBI) {
   // Copy the addrmode6 operands.
   MIB.add(MI.getOperand(OpIdx++));
   MIB.add(MI.getOperand(OpIdx++));
-  // Copy the am6offset operand.
-  if (TableEntry->hasWritebackOperand)
-    MIB.add(MI.getOperand(OpIdx++));
+
+  if (TableEntry->hasWritebackOperand) {
+    // TODO: The writing-back pseudo instructions we translate here are all
+    // defined to take am6offset nodes that are capable to represent both fixed
+    // and register forms. Some real instructions, however, do not rely on
+    // am6offset and have separate definitions for such forms. When this is the
+    // case, fixed forms do not take any offset nodes, so here we skip them for
+    // such instructions. Once all real and pseudo writing-back instructions are
+    // rewritten without use of am6offset nodes, this code will go away.
+    const MachineOperand &AM6Offset = MI.getOperand(OpIdx++);
+    if (TableEntry->RealOpc == ARM::VST1d8Qwb_fixed ||
+        TableEntry->RealOpc == ARM::VST1d16Qwb_fixed ||
+        TableEntry->RealOpc == ARM::VST1d32Qwb_fixed ||
+        TableEntry->RealOpc == ARM::VST1d64Qwb_fixed ||
+        TableEntry->RealOpc == ARM::VST1d8Twb_fixed ||
+        TableEntry->RealOpc == ARM::VST1d16Twb_fixed ||
+        TableEntry->RealOpc == ARM::VST1d32Twb_fixed ||
+        TableEntry->RealOpc == ARM::VST1d64Twb_fixed) {
+      assert(AM6Offset.getReg() == 0 &&
+             "A fixed writing-back pseudo instruction provides an offset "
+             "register!");
+    } else {
+      MIB.add(AM6Offset);
+    }
+  }
 
   bool SrcIsKill = MI.getOperand(OpIdx).isKill();
   bool SrcIsUndef = MI.getOperand(OpIdx).isUndef();
@@ -1645,6 +1689,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case ARM::VST3d8Pseudo:
     case ARM::VST3d16Pseudo:
     case ARM::VST3d32Pseudo:
+    case ARM::VST1d8TPseudo:
+    case ARM::VST1d16TPseudo:
+    case ARM::VST1d32TPseudo:
     case ARM::VST1d64TPseudo:
     case ARM::VST3d8Pseudo_UPD:
     case ARM::VST3d16Pseudo_UPD:
@@ -1663,12 +1710,31 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case ARM::VST4d8Pseudo:
     case ARM::VST4d16Pseudo:
     case ARM::VST4d32Pseudo:
+    case ARM::VST1d8QPseudo:
+    case ARM::VST1d16QPseudo:
+    case ARM::VST1d32QPseudo:
     case ARM::VST1d64QPseudo:
     case ARM::VST4d8Pseudo_UPD:
     case ARM::VST4d16Pseudo_UPD:
     case ARM::VST4d32Pseudo_UPD:
     case ARM::VST1d64QPseudoWB_fixed:
     case ARM::VST1d64QPseudoWB_register:
+    case ARM::VST1q8HighQPseudo:
+    case ARM::VST1q8LowQPseudo_UPD:
+    case ARM::VST1q8HighTPseudo:
+    case ARM::VST1q8LowTPseudo_UPD:
+    case ARM::VST1q16HighQPseudo:
+    case ARM::VST1q16LowQPseudo_UPD:
+    case ARM::VST1q16HighTPseudo:
+    case ARM::VST1q16LowTPseudo_UPD:
+    case ARM::VST1q32HighQPseudo:
+    case ARM::VST1q32LowQPseudo_UPD:
+    case ARM::VST1q32HighTPseudo:
+    case ARM::VST1q32LowTPseudo_UPD:
+    case ARM::VST1q64HighQPseudo:
+    case ARM::VST1q64LowQPseudo_UPD:
+    case ARM::VST1q64HighTPseudo:
+    case ARM::VST1q64LowTPseudo_UPD:
     case ARM::VST4q8Pseudo_UPD:
     case ARM::VST4q16Pseudo_UPD:
     case ARM::VST4q32Pseudo_UPD:
