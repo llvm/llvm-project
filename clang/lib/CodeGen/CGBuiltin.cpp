@@ -4181,7 +4181,13 @@ static const NeonIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP0(vshrn_n_v),
   NEONMAP0(vshrq_n_v),
   NEONMAP1(vst1_v, arm_neon_vst1, 0),
+  NEONMAP1(vst1_x2_v, arm_neon_vst1x2, 0),
+  NEONMAP1(vst1_x3_v, arm_neon_vst1x3, 0),
+  NEONMAP1(vst1_x4_v, arm_neon_vst1x4, 0),
   NEONMAP1(vst1q_v, arm_neon_vst1, 0),
+  NEONMAP1(vst1q_x2_v, arm_neon_vst1x2, 0),
+  NEONMAP1(vst1q_x3_v, arm_neon_vst1x3, 0),
+  NEONMAP1(vst1q_x4_v, arm_neon_vst1x4, 0),
   NEONMAP1(vst2_lane_v, arm_neon_vst2lane, 0),
   NEONMAP1(vst2_v, arm_neon_vst2, 0),
   NEONMAP1(vst2q_lane_v, arm_neon_vst2lane, 0),
@@ -4341,6 +4347,12 @@ static const NeonIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP0(vshr_n_v),
   NEONMAP0(vshrn_n_v),
   NEONMAP0(vshrq_n_v),
+  NEONMAP1(vst1_x2_v, aarch64_neon_st1x2, 0),
+  NEONMAP1(vst1_x3_v, aarch64_neon_st1x3, 0),
+  NEONMAP1(vst1_x4_v, aarch64_neon_st1x4, 0),
+  NEONMAP1(vst1q_x2_v, aarch64_neon_st1x2, 0),
+  NEONMAP1(vst1q_x3_v, aarch64_neon_st1x3, 0),
+  NEONMAP1(vst1q_x4_v, aarch64_neon_st1x4, 0),
   NEONMAP0(vsubhn_v),
   NEONMAP0(vtst_v),
   NEONMAP0(vtstq_v),
@@ -5115,6 +5127,23 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     llvm::Type *Tys[] = {Int8PtrTy, Ty};
     Ops.push_back(getAlignmentValue32(PtrOp0));
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "");
+  }
+  case NEON::BI__builtin_neon_vst1_x2_v:
+  case NEON::BI__builtin_neon_vst1q_x2_v:
+  case NEON::BI__builtin_neon_vst1_x3_v:
+  case NEON::BI__builtin_neon_vst1q_x3_v:
+  case NEON::BI__builtin_neon_vst1_x4_v:
+  case NEON::BI__builtin_neon_vst1q_x4_v: {
+    llvm::Type *PTy = llvm::PointerType::getUnqual(VTy->getVectorElementType());
+    // TODO: Currently in AArch32 mode the pointer operand comes first, whereas
+    // in AArch64 it comes last. We may want to stick to one or another.
+    if (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_be) {
+      llvm::Type *Tys[2] = { VTy, PTy };
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());
+      return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Tys), Ops, "");
+    }
+    llvm::Type *Tys[2] = { PTy, VTy };
+    return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Tys), Ops, "");
   }
   case NEON::BI__builtin_neon_vsubhn_v: {
     llvm::VectorType *SrcTy =
@@ -8075,34 +8104,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Value *tmp = EmitNeonCall(F, TmpOps, "vrshr_n", 1, true);
     Ops[0] = Builder.CreateBitCast(Ops[0], VTy);
     return Builder.CreateAdd(Ops[0], tmp);
-  }
-    // FIXME: Sharing loads & stores with 32-bit is complicated by the absence
-    // of an Align parameter here.
-  case NEON::BI__builtin_neon_vst1_x2_v:
-  case NEON::BI__builtin_neon_vst1q_x2_v:
-  case NEON::BI__builtin_neon_vst1_x3_v:
-  case NEON::BI__builtin_neon_vst1q_x3_v:
-  case NEON::BI__builtin_neon_vst1_x4_v:
-  case NEON::BI__builtin_neon_vst1q_x4_v: {
-    llvm::Type *PTy = llvm::PointerType::getUnqual(VTy->getVectorElementType());
-    llvm::Type *Tys[2] = { VTy, PTy };
-    unsigned Int;
-    switch (BuiltinID) {
-    case NEON::BI__builtin_neon_vst1_x2_v:
-    case NEON::BI__builtin_neon_vst1q_x2_v:
-      Int = Intrinsic::aarch64_neon_st1x2;
-      break;
-    case NEON::BI__builtin_neon_vst1_x3_v:
-    case NEON::BI__builtin_neon_vst1q_x3_v:
-      Int = Intrinsic::aarch64_neon_st1x3;
-      break;
-    case NEON::BI__builtin_neon_vst1_x4_v:
-    case NEON::BI__builtin_neon_vst1q_x4_v:
-      Int = Intrinsic::aarch64_neon_st1x4;
-      break;
-    }
-    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());
-    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "");
   }
   case NEON::BI__builtin_neon_vld1_v:
   case NEON::BI__builtin_neon_vld1q_v: {

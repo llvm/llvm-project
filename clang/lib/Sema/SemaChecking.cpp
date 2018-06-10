@@ -2359,6 +2359,14 @@ bool Sema::CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
     ArgNum = 1;
     HasRC = true;
     break;
+  case X86::BI__builtin_ia32_addpd512:
+  case X86::BI__builtin_ia32_addps512:
+  case X86::BI__builtin_ia32_divpd512:
+  case X86::BI__builtin_ia32_divps512:
+  case X86::BI__builtin_ia32_mulpd512:
+  case X86::BI__builtin_ia32_mulps512:
+  case X86::BI__builtin_ia32_subpd512:
+  case X86::BI__builtin_ia32_subps512:
   case X86::BI__builtin_ia32_cvtsi2sd64:
   case X86::BI__builtin_ia32_cvtsi2ss32:
   case X86::BI__builtin_ia32_cvtsi2ss64:
@@ -2384,14 +2392,6 @@ bool Sema::CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
     ArgNum = 3;
     HasRC = true;
     break;
-  case X86::BI__builtin_ia32_addpd512_mask:
-  case X86::BI__builtin_ia32_addps512_mask:
-  case X86::BI__builtin_ia32_divpd512_mask:
-  case X86::BI__builtin_ia32_divps512_mask:
-  case X86::BI__builtin_ia32_mulpd512_mask:
-  case X86::BI__builtin_ia32_mulps512_mask:
-  case X86::BI__builtin_ia32_subpd512_mask:
-  case X86::BI__builtin_ia32_subps512_mask:
   case X86::BI__builtin_ia32_addss_round_mask:
   case X86::BI__builtin_ia32_addsd_round_mask:
   case X86::BI__builtin_ia32_divss_round_mask:

@@ -300,6 +300,11 @@ def VirtualCallChecker : Checker<"VirtualCall">,
 
 let ParentPackage = CplusplusAlpha in {
 
+def DanglingInternalBufferChecker : Checker<"DanglingInternalBuffer">,
+  HelpText<"Check for internal raw pointers of C++ standard library containers "
+           "used after deallocation">,
+  DescFile<"DanglingInternalBufferChecker.cpp">;
+
 def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
   HelpText<"Reports destructions of polymorphic objects with a non-virtual "
            "destructor in their base class">,
