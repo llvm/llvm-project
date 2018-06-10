@@ -133,6 +133,11 @@ namespace sys {
   /// Return true if the given arguments fit within system-specific
   /// argument length limits.
   bool commandLineFitsWithinSystemLimits(StringRef Program,
+                                         ArrayRef<StringRef> Args);
+
+  /// Return true if the given arguments fit within system-specific
+  /// argument length limits.
+  bool commandLineFitsWithinSystemLimits(StringRef Program,
                                          ArrayRef<const char *> Args);
 
   /// File encoding options when writing contents that a non-UTF8 tool will
@@ -189,6 +194,14 @@ namespace sys {
       ///< string is non-empty upon return an error occurred while invoking the
       ///< program.
       );
+
+#if defined(_WIN32)
+  /// Given a list of command line arguments, quote and escape them as necessary
+  /// to build a single flat command line appropriate for calling CreateProcess
+  /// on
+  /// Windows.
+  std::string flattenWindowsCommandLine(ArrayRef<StringRef> Args);
+#endif
   }
 }
 
