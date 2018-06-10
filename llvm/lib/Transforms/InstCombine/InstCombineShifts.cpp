@@ -600,11 +600,11 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
   if (Instruction *V = commonShiftTransforms(I))
     return V;
 
+  Type *Ty = I.getType();
   const APInt *ShAmtAPInt;
   if (match(Op1, m_APInt(ShAmtAPInt))) {
     unsigned ShAmt = ShAmtAPInt->getZExtValue();
     unsigned BitWidth = I.getType()->getScalarSizeInBits();
-    Type *Ty = I.getType();
 
     // shl (zext X), ShAmt --> zext (shl X, ShAmt)
     // This is only valid if X would have zeros shifted out.
@@ -668,6 +668,15 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
       I.setHasNoSignedWrap();
       return &I;
     }
+  }
+
+  // Transform  (x >> y) << y  to  x & (-1 << y)
+  // Valid for any type of right-shift.
+  Value *X;
+  if (match(Op0, m_OneUse(m_Shr(m_Value(X), m_Specific(Op1))))) {
+    Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
+    Value *Mask = Builder.CreateShl(AllOnes, Op1);
+    return BinaryOperator::CreateAnd(Mask, X);
   }
 
   Constant *C1;

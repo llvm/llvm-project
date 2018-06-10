@@ -162,24 +162,55 @@ bool SetEnv(const char *name, const char *value) {
 static uptr g_tls_size;
 
 #ifdef __i386__
+# ifndef __GLIBC_PREREQ
+#  define CHECK_GET_TLS_STATIC_INFO_VERSION 1
+# else
+#  define CHECK_GET_TLS_STATIC_INFO_VERSION (!__GLIBC_PREREQ(2, 27))
+# endif
+#else
+# define CHECK_GET_TLS_STATIC_INFO_VERSION 0
+#endif
+
+#if CHECK_GET_TLS_STATIC_INFO_VERSION
 # define DL_INTERNAL_FUNCTION __attribute__((regparm(3), stdcall))
 #else
 # define DL_INTERNAL_FUNCTION
 #endif
 
+namespace {
+struct GetTlsStaticInfoCall {
+  typedef void (*get_tls_func)(size_t*, size_t*);
+};
+struct GetTlsStaticInfoRegparmCall {
+  typedef void (*get_tls_func)(size_t*, size_t*) DL_INTERNAL_FUNCTION;
+};
+
+template <typename T>
+void CallGetTls(void* ptr, size_t* size, size_t* align) {
+  typename T::get_tls_func get_tls;
+  CHECK_EQ(sizeof(get_tls), sizeof(ptr));
+  internal_memcpy(&get_tls, &ptr, sizeof(ptr));
+  CHECK_NE(get_tls, 0);
+  get_tls(size, align);
+}
+}  // namespace
+
 void InitTlsSize() {
   // all current supported platforms have 16 bytes stack alignment
   const size_t kStackAlign = 16;
-  typedef void (*get_tls_func)(size_t*, size_t*) DL_INTERNAL_FUNCTION;
-  get_tls_func get_tls;
   void *get_tls_static_info_ptr = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
-  CHECK_EQ(sizeof(get_tls), sizeof(get_tls_static_info_ptr));
-  internal_memcpy(&get_tls, &get_tls_static_info_ptr,
-                  sizeof(get_tls_static_info_ptr));
-  CHECK_NE(get_tls, 0);
   size_t tls_size = 0;
   size_t tls_align = 0;
-  get_tls(&tls_size, &tls_align);
+  // On i?86, _dl_get_tls_static_info used to be internal_function, i.e.
+  // __attribute__((regparm(3), stdcall)) before glibc 2.27 and is normal
+  // function in 2.27 and later.
+  if (CHECK_GET_TLS_STATIC_INFO_VERSION &&
+      !dlvsym(RTLD_NEXT, "glob", "GLIBC_2.27"))
+    CallGetTls<GetTlsStaticInfoRegparmCall>(get_tls_static_info_ptr,
+                                            &tls_size, &tls_align);
+  else
+    CallGetTls<GetTlsStaticInfoCall>(get_tls_static_info_ptr,
+                                     &tls_size, &tls_align);
   if (tls_align < kStackAlign)
     tls_align = kStackAlign;
   g_tls_size = RoundUpTo(tls_size, tls_align);
