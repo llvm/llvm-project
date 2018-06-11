@@ -302,6 +302,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "avx512.mask.store.ss" || // Added in 7.0
       Name.startswith("avx512.mask.loadu.") || // Added in 3.9
       Name.startswith("avx512.mask.load.") || // Added in 3.9
+      Name.startswith("avx512.mask.expand.load.") || // Added in 7.0
+      Name.startswith("avx512.mask.compress.store.") || // Added in 7.0
       Name == "sse42.crc32.64.8" || // Added in 3.4
       Name.startswith("avx.vbroadcast.s") || // Added in 3.5
       Name.startswith("avx512.vbroadcast.s") || // Added in 7.0
@@ -1659,6 +1661,36 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = UpgradeMaskedLoad(Builder, CI->getArgOperand(0),
                               CI->getArgOperand(1),CI->getArgOperand(2),
                               /*Aligned*/true);
+    } else if (IsX86 && Name.startswith("avx512.mask.expand.load.")) {
+      Type *ResultTy = CI->getType();
+      Type *PtrTy = ResultTy->getVectorElementType();
+
+      // Cast the pointer to element type.
+      Value *Ptr = Builder.CreateBitCast(CI->getOperand(0),
+                                         llvm::PointerType::getUnqual(PtrTy));
+
+      Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
+                                     ResultTy->getVectorNumElements());
+
+      Function *ELd = Intrinsic::getDeclaration(F->getParent(),
+                                                Intrinsic::masked_expandload,
+                                                ResultTy);
+      Rep = Builder.CreateCall(ELd, { Ptr, MaskVec, CI->getOperand(1) });
+    } else if (IsX86 && Name.startswith("avx512.mask.compress.store.")) {
+      Type *ResultTy = CI->getArgOperand(1)->getType();
+      Type *PtrTy = ResultTy->getVectorElementType();
+
+      // Cast the pointer to element type.
+      Value *Ptr = Builder.CreateBitCast(CI->getOperand(0),
+                                         llvm::PointerType::getUnqual(PtrTy));
+
+      Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
+                                     ResultTy->getVectorNumElements());
+
+      Function *CSt = Intrinsic::getDeclaration(F->getParent(),
+                                                Intrinsic::masked_compressstore,
+                                                ResultTy);
+      Rep = Builder.CreateCall(CSt, { CI->getArgOperand(1), Ptr, MaskVec });
     } else if (IsX86 && Name.startswith("xop.vpcom")) {
       Intrinsic::ID intID;
       if (Name.endswith("ub"))

@@ -2004,7 +2004,28 @@ ClassInfo CodeViewDebug::collectClassInfo(const DICompositeType *Ty) {
   return Info;
 }
 
+static bool shouldAlwaysEmitCompleteClassType(const DICompositeType *Ty) {
+  // This routine is used by lowerTypeClass and lowerTypeUnion to determine
+  // if a complete type should be emitted instead of a forward reference.
+  return Ty->getName().empty() && Ty->getIdentifier().empty() &&
+      !Ty->isForwardDecl();
+}
+
 TypeIndex CodeViewDebug::lowerTypeClass(const DICompositeType *Ty) {
+  // Emit the complete type for unnamed structs.  C++ classes with methods
+  // which have a circular reference back to the class type are expected to
+  // be named by the front-end and should not be "unnamed".  C unnamed
+  // structs should not have circular references.
+  if (shouldAlwaysEmitCompleteClassType(Ty)) {
+    // If this unnamed complete type is already in the process of being defined
+    // then the description of the type is malformed and cannot be emitted
+    // into CodeView correctly so report a fatal error.
+    auto I = CompleteTypeIndices.find(Ty);
+    if (I != CompleteTypeIndices.end() && I->second == TypeIndex())
+      report_fatal_error("cannot debug circular reference to unnamed type");
+    return getCompleteTypeIndex(Ty);
+  }
+
   // First, construct the forward decl.  Don't look into Ty to compute the
   // forward decl options, since it might not be available in all TUs.
   TypeRecordKind Kind = getRecordKind(Ty);
@@ -2049,6 +2070,10 @@ TypeIndex CodeViewDebug::lowerCompleteTypeClass(const DICompositeType *Ty) {
 }
 
 TypeIndex CodeViewDebug::lowerTypeUnion(const DICompositeType *Ty) {
+  // Emit the complete type for unnamed unions.
+  if (shouldAlwaysEmitCompleteClassType(Ty))
+    return getCompleteTypeIndex(Ty);
+
   ClassOptions CO =
       ClassOptions::ForwardReference | getCommonClassOptions(Ty);
   std::string FullName = getFullyQualifiedName(Ty);
@@ -2278,9 +2303,7 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
     return getTypeIndex(Ty);
   }
 
-  // Check if we've already translated the complete record type.  Lowering a
-  // complete type should never trigger lowering another complete type, so we
-  // can reuse the hash table lookup result.
+  // Check if we've already translated the complete record type.
   const auto *CTy = cast<DICompositeType>(Ty);
   auto InsertResult = CompleteTypeIndices.insert({CTy, TypeIndex()});
   if (!InsertResult.second)
@@ -2291,13 +2314,16 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
   // Make sure the forward declaration is emitted first. It's unclear if this
   // is necessary, but MSVC does it, and we should follow suit until we can show
   // otherwise.
-  TypeIndex FwdDeclTI = getTypeIndex(CTy);
+  // We only emit a forward declaration for named types.
+  if (!CTy->getName().empty() || !CTy->getIdentifier().empty()) {
+    TypeIndex FwdDeclTI = getTypeIndex(CTy);
 
-  // Just use the forward decl if we don't have complete type info. This might
-  // happen if the frontend is using modules and expects the complete definition
-  // to be emitted elsewhere.
-  if (CTy->isForwardDecl())
-    return FwdDeclTI;
+    // Just use the forward decl if we don't have complete type info. This
+    // might happen if the frontend is using modules and expects the complete
+    // definition to be emitted elsewhere.
+    if (CTy->isForwardDecl())
+      return FwdDeclTI;
+  }
 
   TypeIndex TI;
   switch (CTy->getTag()) {
@@ -2312,7 +2338,11 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
     llvm_unreachable("not a record");
   }
 
-  InsertResult.first->second = TI;
+  // Update the type index associated with this CompositeType.  This cannot
+  // use the 'InsertResult' iterator above because it is potentially
+  // invalidated by map insertions which can occur while lowering the class
+  // type above.
+  CompleteTypeIndices[CTy] = TI;
   return TI;
 }
 
