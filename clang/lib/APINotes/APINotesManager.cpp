@@ -15,6 +15,7 @@
 #include "clang/APINotes/APINotesOptions.h"
 #include "clang/APINotes/APINotesReader.h"
 #include "clang/APINotes/APINotesYAMLCompiler.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
@@ -163,7 +164,7 @@ const FileEntry *APINotesManager::findAPINotesFile(const DirectoryEntry *directo
   // Look for a binary API notes file.
   llvm::sys::path::append(path, 
     llvm::Twine(basename) + basenameSuffix + "." + BINARY_APINOTES_EXTENSION);
-  if (const FileEntry *binaryFile = fileMgr.getFile(path))
+  if (const FileEntry *binaryFile = fileMgr.getFile(path, /*Open*/true))
     return binaryFile;
 
   // Go back to the original path.
@@ -172,7 +173,7 @@ const FileEntry *APINotesManager::findAPINotesFile(const DirectoryEntry *directo
   // Look for the source API notes file.
   llvm::sys::path::append(path, 
     llvm::Twine(basename) + basenameSuffix + "." + SOURCE_APINOTES_EXTENSION);
-  return fileMgr.getFile(path);
+  return fileMgr.getFile(path, /*Open*/true);
 }
 
 const DirectoryEntry *APINotesManager::loadFrameworkAPINotes(
@@ -225,6 +226,25 @@ const DirectoryEntry *APINotesManager::loadFrameworkAPINotes(
   return HeaderDir;
 }
 
+static void checkPrivateAPINotesName(DiagnosticsEngine &diags,
+                                     const FileEntry *file,
+                                     const Module *module) {
+  if (file->tryGetRealPathName().empty())
+    return;
+
+  StringRef realFilename =
+      llvm::sys::path::filename(file->tryGetRealPathName());
+  StringRef realStem = llvm::sys::path::stem(realFilename);
+  if (realStem.endswith("_private"))
+    return;
+
+  unsigned diagID = diag::warn_apinotes_private_case;
+  if (module->IsSystem)
+    diagID = diag::warn_apinotes_private_case_system;
+
+  diags.Report(SourceLocation(), diagID) << module->Name << realFilename;
+}
+
 bool APINotesManager::loadCurrentModuleAPINotes(
                    const Module *module,
                    bool lookInModule,
@@ -245,6 +265,9 @@ bool APINotesManager::loadCurrentModuleAPINotes(
       if (auto file = findAPINotesFile(dir, moduleName, wantPublic)) {
         foundAny = true;
 
+        if (!wantPublic)
+          checkPrivateAPINotesName(SourceMgr.getDiagnostics(), file, module);
+
         // Try to load the API notes file.
         CurrentModuleReaders[numReaders] = loadAPINotes(file).release();
         if (CurrentModuleReaders[numReaders])
@@ -258,7 +281,7 @@ bool APINotesManager::loadCurrentModuleAPINotes(
       //
       // Public modules:
       // - Headers/Foo.apinotes
-      // - PrivateHeaders/Foo_Private.apinotes
+      // - PrivateHeaders/Foo_private.apinotes
       // Private modules:
       // - PrivateHeaders/Bar.apinotes (except that 'Bar' probably already has
       //   the word "Private" in it in practice)
@@ -283,7 +306,7 @@ bool APINotesManager::loadCurrentModuleAPINotes(
     } else {
       // Public modules:
       // - Foo.apinotes
-      // - Foo_Private.apinotes
+      // - Foo_private.apinotes
       // Private modules:
       // - Bar.apinotes (except that 'Bar' probably already has the word
       //   "Private" in it in practice)
