@@ -152,7 +152,6 @@ public:
 
   // Attributes:
 private:
-  lldb::SBCommandReturnObject m_lldbResult;
   const CMIUtilString m_constStrArgNumber; // Not specified in MI spec but
                                            // Eclipse gives this option
 };

@@ -178,12 +178,21 @@ public:
   bool updateAllocSize() override;
   void finalizeContents() override;
   bool empty() const override;
-  void addEntry(Symbol &Sym, int64_t Addend, RelExpr Expr);
-  bool addDynTlsEntry(Symbol &Sym);
-  bool addTlsIndex();
-  uint64_t getPageEntryOffset(const Symbol &B, int64_t Addend) const;
-  uint64_t getSymEntryOffset(const Symbol &B, int64_t Addend) const;
-  uint64_t getGlobalDynOffset(const Symbol &B) const;
+
+  // Join separate GOTs built for each input file to generate
+  // primary and optional multiple secondary GOTs.
+  template <class ELFT> void build();
+
+  void addEntry(InputFile &File, Symbol &Sym, int64_t Addend, RelExpr Expr);
+  void addDynTlsEntry(InputFile &File, Symbol &Sym);
+  void addTlsIndex(InputFile &File);
+
+  uint64_t getPageEntryOffset(const InputFile *F, const Symbol &S,
+                              int64_t Addend) const;
+  uint64_t getSymEntryOffset(const InputFile *F, const Symbol &S,
+                             int64_t Addend) const;
+  uint64_t getGlobalDynOffset(const InputFile *F, const Symbol &S) const;
+  uint64_t getTlsIndexOffset(const InputFile *F) const;
 
   // Returns the symbol which corresponds to the first entry of the global part
   // of GOT on MIPS platform. It is required to fill up MIPS-specific dynamic
@@ -195,13 +204,8 @@ public:
   // the number of reserved entries.
   unsigned getLocalEntriesNum() const;
 
-  // Returns offset of TLS part of the MIPS GOT table. This part goes
-  // after 'local' and 'global' entries.
-  uint64_t getTlsOffset() const;
-
-  uint32_t getTlsIndexOff() const { return TlsIndexOff; }
-
-  uint64_t getGp() const;
+  // Return _gp value for primary GOT (nullptr) or particular input file.
+  uint64_t getGp(const InputFile *F = nullptr) const;
 
 private:
   // MIPS GOT consists of three parts: local, global and tls. Each part
@@ -240,32 +244,110 @@ private:
   //   addressing, but MIPS ABI requires that these entries be present in GOT.
   // TLS entries:
   //   Entries created by TLS relocations.
+  //
+  // If the sum of local, global and tls entries is less than 64K only single
+  // got is enough. Otherwise, multi-got is created. Series of primary and
+  // multiple secondary GOTs have the following layout:
+  // - Primary GOT
+  //     Header
+  //     Local entries
+  //     Global entries
+  //     Relocation only entries
+  //     TLS entries
+  //
+  // - Secondary GOT
+  //     Local entries
+  //     Global entries
+  //     TLS entries
+  // ...
+  //
+  // All GOT entries required by relocations from a single input file entirely
+  // belong to either primary or one of secondary GOTs. To reference GOT entries
+  // each GOT has its own _gp value points to the "middle" of the GOT.
+  // In the code this value loaded to the register which is used for GOT access.
+  //
+  // MIPS 32 function's prologue:
+  //   lui     v0,0x0
+  //   0: R_MIPS_HI16  _gp_disp
+  //   addiu   v0,v0,0
+  //   4: R_MIPS_LO16  _gp_disp
+  //
+  // MIPS 64:
+  //   lui     at,0x0
+  //   14: R_MIPS_GPREL16  main
+  //
+  // Dynamic linker does not know anything about secondary GOTs and cannot
+  // use a regular MIPS mechanism for GOT entries initialization. So we have
+  // to use an approach accepted by other architectures and create dynamic
+  // relocations R_MIPS_REL32 to initialize global entries (and local in case
+  // of PIC code) in secondary GOTs. But ironically MIPS dynamic linker
+  // requires GOT entries and correspondingly ordered dynamic symbol table
+  // entries to deal with dynamic relocations. To handle this problem
+  // relocation-only section in the primary GOT contains entries for all
+  // symbols referenced in global parts of secondary GOTs. Although the sum
+  // of local and normal global entries of the primary got should be less
+  // than 64K, the size of the primary got (including relocation-only entries
+  // can be greater than 64K, because parts of the primary got that overflow
+  // the 64K limit are used only by the dynamic linker at dynamic link-time
+  // and not by 16-bit gp-relative addressing at run-time.
+  //
+  // For complete multi-GOT description see the following link
+  // https://dmz-portal.mips.com/wiki/MIPS_Multi_GOT
 
   // Number of "Header" entries.
   static const unsigned HeaderEntriesNum = 2;
-  // Number of allocated "Page" entries.
-  uint32_t PageEntriesNum = 0;
-  // Map output sections referenced by MIPS GOT relocations
-  // to the first index of "Page" entries allocated for this section.
-  llvm::SmallMapVector<const OutputSection *, size_t, 16> PageIndexMap;
 
-  typedef std::pair<const Symbol *, uint64_t> GotEntry;
-  typedef std::vector<GotEntry> GotEntries;
-  // Map from Symbol-Addend pair to the GOT index.
-  llvm::DenseMap<GotEntry, size_t> EntryIndexMap;
-  // Local entries (16-bit access).
-  GotEntries LocalEntries;
-  // Local entries (32-bit access).
-  GotEntries LocalEntries32;
-
-  // Normal and reloc-only global entries.
-  GotEntries GlobalEntries;
-
-  // TLS entries.
-  std::vector<const Symbol *> TlsEntries;
-
-  uint32_t TlsIndexOff = -1;
   uint64_t Size = 0;
+
+  size_t LocalEntriesNum = 0;
+
+  // Symbol and addend.
+  typedef std::pair<Symbol *, int64_t> GotEntry;
+
+  struct FileGot {
+    InputFile *File = nullptr;
+    size_t StartIndex = 0;
+
+    struct PageBlock {
+      size_t FirstIndex = 0;
+      size_t Count = 0;
+    };
+
+    // Map output sections referenced by MIPS GOT relocations
+    // to the description (index/count) "page" entries allocated
+    // for this section.
+    llvm::SmallMapVector<const OutputSection *, PageBlock, 16> PagesMap;
+    // Maps from Symbol+Addend pair or just Symbol to the GOT entry index.
+    llvm::MapVector<GotEntry, size_t> Local16;
+    llvm::MapVector<GotEntry, size_t> Local32;
+    llvm::MapVector<Symbol *, size_t> Global;
+    llvm::MapVector<Symbol *, size_t> Relocs;
+    llvm::MapVector<Symbol *, size_t> Tls;
+    // Set of symbols referenced by dynamic TLS relocations.
+    llvm::MapVector<Symbol *, size_t> DynTlsSymbols;
+
+    // Total number of all entries.
+    size_t getEntriesNum() const;
+    // Number of "page" entries.
+    size_t getPageEntriesNum() const;
+    // Number of entries require 16-bit index to access.
+    size_t getIndexedEntriesNum() const;
+
+    bool isOverflow() const;
+  };
+
+  // Container of GOT created for each input file.
+  // After building a final series of GOTs this container
+  // holds primary and secondary GOT's.
+  std::vector<FileGot> Gots;
+
+  // Return (and create if necessary) `FileGot`.
+  FileGot &getGot(InputFile &F);
+
+  // Try to merge two GOTs. In case of success the `Dst` contains
+  // result of merging and the function returns true. In case of
+  // ovwerflow the `Dst` is unchanged and the function returns false.
+  bool tryMergeGots(FileGot & Dst, FileGot & Src, bool IsPrimary);
 };
 
 class GotPltSection final : public SyntheticSection {
@@ -318,7 +400,15 @@ public:
   DynamicReloc(RelType Type, const InputSectionBase *InputSec,
                uint64_t OffsetInSec, bool UseSymVA, Symbol *Sym, int64_t Addend)
       : Type(Type), Sym(Sym), InputSec(InputSec), OffsetInSec(OffsetInSec),
-        UseSymVA(UseSymVA), Addend(Addend) {}
+        UseSymVA(UseSymVA), Addend(Addend), OutputSec(nullptr) {}
+  // This constructor records dynamic relocation settings used by MIPS
+  // multi-GOT implementation. It's to relocate addresses of 64kb pages
+  // lie inside the output section.
+  DynamicReloc(RelType Type, const InputSectionBase *InputSec,
+               uint64_t OffsetInSec, const OutputSection *OutputSec,
+               int64_t Addend)
+      : Type(Type), Sym(nullptr), InputSec(InputSec), OffsetInSec(OffsetInSec),
+        UseSymVA(false), Addend(Addend), OutputSec(OutputSec) {}
 
   uint64_t getOffset() const;
   uint32_t getSymIndex() const;
@@ -341,6 +431,7 @@ private:
   // plus the original addend as the final relocation addend.
   bool UseSymVA;
   int64_t Addend;
+  const OutputSection *OutputSec;
 };
 
 template <class ELFT> class DynamicSection final : public SyntheticSection {

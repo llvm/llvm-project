@@ -120,6 +120,9 @@ public:
   static bool IsInGroup;
   static uint32_t NextGroupId;
 
+  // Index of MIPS GOT built for this file.
+  llvm::Optional<size_t> MipsGotIndex;
+
 protected:
   InputFile(Kind K, MemoryBufferRef M);
   std::vector<InputSectionBase *> Sections;

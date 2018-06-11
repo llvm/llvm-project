@@ -487,14 +487,26 @@ bool CMICmdCmdExecStep::Execute() {
 
   CMICmnLLDBDebugSessionInfo &rSessionInfo(
       CMICmnLLDBDebugSessionInfo::Instance());
-  lldb::SBDebugger &rDebugger = rSessionInfo.GetDebugger();
-  CMIUtilString strCmd("thread step-in");
-  if (nThreadId != UINT64_MAX)
-    strCmd += CMIUtilString::Format(" %llu", nThreadId);
-  rDebugger.GetCommandInterpreter().HandleCommand(strCmd.c_str(), m_lldbResult,
-                                                  false);
 
-  return MIstatus::success;
+  lldb::SBError error;
+  if (nThreadId != UINT64_MAX) {
+    lldb::SBThread sbThread =
+        rSessionInfo.GetProcess().GetThreadByIndexID(nThreadId);
+    if (!sbThread.IsValid()) {
+      SetError(CMIUtilString::Format(MIRSRC(IDS_CMD_ERR_THREAD_INVALID),
+                                     m_cmdData.strMiCmd.c_str(),
+                                     m_constStrArgThread.c_str()));
+      return MIstatus::failure;
+    }
+    sbThread.StepInto(nullptr, LLDB_INVALID_LINE_NUMBER, error);
+  } else rSessionInfo.GetProcess().GetSelectedThread().StepInto(
+             nullptr, LLDB_INVALID_LINE_NUMBER, error);
+
+  if (error.Success())
+    return MIstatus::success;
+
+  SetError(error.GetCString());
+  return MIstatus::failure;
 }
 
 //++
@@ -509,21 +521,8 @@ bool CMICmdCmdExecStep::Execute() {
 // Throws:  None.
 //--
 bool CMICmdCmdExecStep::Acknowledge() {
-  if (m_lldbResult.GetErrorSize() > 0) {
-    const char *pLldbErr = m_lldbResult.GetError();
-    MIunused(pLldbErr);
-    const CMICmnMIValueConst miValueConst(m_lldbResult.GetError());
-    const CMICmnMIValueResult miValueResult("message", miValueConst);
-    const CMICmnMIResultRecord miRecordResult(
-        m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Error,
-        miValueResult);
-    m_miResultRecord = miRecordResult;
-  } else {
-    const CMICmnMIResultRecord miRecordResult(
-        m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Running);
-    m_miResultRecord = miRecordResult;
-  }
-
+  m_miResultRecord = CMICmnMIResultRecord(
+      m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Running);
   return MIstatus::success;
 }
 
