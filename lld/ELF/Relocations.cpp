@@ -85,27 +85,16 @@ static std::string getLocation(InputSectionBase &S, const Symbol &Sym,
 // pollute other `handleTlsRelocation` by MIPS `ifs` statements.
 // Mips has a custom MipsGotSection that handles the writing of GOT entries
 // without dynamic relocations.
-template <class ELFT>
 static unsigned handleMipsTlsRelocation(RelType Type, Symbol &Sym,
                                         InputSectionBase &C, uint64_t Offset,
                                         int64_t Addend, RelExpr Expr) {
   if (Expr == R_MIPS_TLSLD) {
-    if (InX::MipsGot->addTlsIndex() && Config->Pic)
-      InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, InX::MipsGot,
-                             InX::MipsGot->getTlsIndexOff(), nullptr);
+    InX::MipsGot->addTlsIndex(*C.File);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
     return 1;
   }
-
   if (Expr == R_MIPS_TLSGD) {
-    if (InX::MipsGot->addDynTlsEntry(Sym) && Sym.IsPreemptible) {
-      uint64_t Off = InX::MipsGot->getGlobalDynOffset(Sym);
-      InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, InX::MipsGot, Off,
-                             &Sym);
-      if (Sym.IsPreemptible)
-        InX::RelaDyn->addReloc(Target->TlsOffsetRel, InX::MipsGot,
-                               Off + Config->Wordsize, &Sym);
-    }
+    InX::MipsGot->addDynTlsEntry(*C.File, Sym);
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
     return 1;
   }
@@ -184,7 +173,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   if (Config->EMachine == EM_ARM)
     return handleARMTlsRelocation<ELFT>(Type, Sym, C, Offset, Addend, Expr);
   if (Config->EMachine == EM_MIPS)
-    return handleMipsTlsRelocation<ELFT>(Type, Sym, C, Offset, Addend, Expr);
+    return handleMipsTlsRelocation(Type, Sym, C, Offset, Addend, Expr);
 
   if (isRelExprOneOf<R_TLSDESC, R_TLSDESC_PAGE, R_TLSDESC_CALL>(Expr) &&
       Config->Shared) {
@@ -476,7 +465,6 @@ static void replaceWithDefined(Symbol &Sym, SectionBase *Sec, uint64_t Value,
   Sym.PltIndex = Old.PltIndex;
   Sym.GotIndex = Old.GotIndex;
   Sym.VerdefIndex = Old.VerdefIndex;
-  Sym.IsInGlobalMipsGot = Old.IsInGlobalMipsGot;
   Sym.IsPreemptible = true;
   Sym.ExportDynamic = true;
   Sym.IsUsedInRegularObj = true;
@@ -816,7 +804,7 @@ static void processRelocAux(InputSectionBase &Sec, RelExpr Expr, RelType Type,
       // a dynamic relocation.
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf p.4-19
       if (Config->EMachine == EM_MIPS)
-        InX::MipsGot->addEntry(Sym, Addend, Expr);
+        InX::MipsGot->addEntry(*Sec.File, Sym, Addend, Expr);
       return;
     }
   }
@@ -1002,10 +990,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
       // See "Global Offset Table" in Chapter 5 in the following document
       // for detailed description:
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-      InX::MipsGot->addEntry(Sym, Addend, Expr);
-      if (Sym.isTls() && Sym.IsPreemptible)
-        InX::RelaDyn->addReloc(Target->TlsGotRel, InX::MipsGot,
-                               Sym.getGotOffset(), &Sym);
+      InX::MipsGot->addEntry(*Sec.File, Sym, Addend, Expr);
     } else if (!Sym.isInGot()) {
       addGotEntry<ELFT>(Sym);
     }
