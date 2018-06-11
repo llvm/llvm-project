@@ -1507,7 +1507,7 @@ isl_stat isl_cell_foreach_simplex(__isl_take isl_cell *cell,
 	isl_stat (*fn)(__isl_take isl_cell *simplex, void *user), void *user)
 {
 	int d, total;
-	int r;
+	isl_stat r;
 	isl_ctx *ctx;
 	isl_vec *v = NULL;
 	int *simplex_ids = NULL;

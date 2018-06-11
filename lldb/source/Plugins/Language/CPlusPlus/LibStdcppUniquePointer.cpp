@@ -67,6 +67,8 @@ ValueObjectSP LibStdcppUniquePtrSyntheticFrontEnd::GetTuple() {
 
   ValueObjectSP obj_child_sp =
       valobj_sp->GetChildMemberWithName(ConstString("_M_t"), true);
+  if (!obj_child_sp)
+      return nullptr;
 
   ValueObjectSP obj_subchild_sp =
       obj_child_sp->GetChildMemberWithName(ConstString("_M_t"), true);

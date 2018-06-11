@@ -148,7 +148,7 @@ void benchmarkMain() {
   std::vector<InstructionBenchmark> Results = ExitOnErr(Runner->run(
       GetOpcodeOrDie(State.getInstrInfo()), Filter, NumRepetitions));
   for (InstructionBenchmark &Result : Results)
-    Result.writeYaml(Context, BenchmarkFile);
+    ExitOnErr(Result.writeYaml(Context, BenchmarkFile));
 
   exegesis::pfm::pfmTerminate();
 }

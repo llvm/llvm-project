@@ -82,4 +82,30 @@ bb:
   ret void
 }
 
+; GCN-LABEL: {{^}}test_indirect_through_phi:
+; MemoryBound: 0
+; WaveLimiterHint : 0
+define amdgpu_kernel void @test_indirect_through_phi(float addrspace(1)* %arg) {
+bb:
+  %load = load float, float addrspace(1)* %arg, align 8
+  %load.f = bitcast float %load to i32
+  %n = tail call i32 @llvm.amdgcn.workitem.id.x()
+  br label %bb1
+
+bb1:                                              ; preds = %bb1, %bb
+  %phi = phi i32 [ %load.f, %bb ], [ %and2, %bb1 ]
+  %ind = phi i32 [ 0, %bb ], [ %inc2, %bb1 ]
+  %and1 = and i32 %phi, %n
+  %gep = getelementptr inbounds float, float addrspace(1)* %arg, i32 %and1
+  store float %load, float addrspace(1)* %gep, align 4
+  %inc1 = add nsw i32 %phi, 1310720
+  %and2 = and i32 %inc1, %n
+  %inc2 = add nuw nsw i32 %ind, 1
+  %cmp = icmp eq i32 %inc2, 1024
+  br i1 %cmp, label %bb2, label %bb1
+
+bb2:                                              ; preds = %bb1
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()

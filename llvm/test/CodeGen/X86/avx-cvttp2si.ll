@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=avx              | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=avx512f,avx512vl | FileCheck %s --check-prefixes=AVX,AVX512
 
-; PR37551 - https://bugs.llvm.org/show_bug.cgi?id=37751
+; PR37751 - https://bugs.llvm.org/show_bug.cgi?id=37751
 ; We can't combine into 'round' instructions because the behavior is different for out-of-range values.
 
 declare <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float>)

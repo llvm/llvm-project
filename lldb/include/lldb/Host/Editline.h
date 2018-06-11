@@ -33,7 +33,9 @@
 #define liblldb_Editline_h_
 #if defined(__cplusplus)
 
+#if LLDB_EDITLINE_USE_WCHAR
 #include <codecvt>
+#endif
 #include <locale>
 #include <sstream>
 #include <vector>

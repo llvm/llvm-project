@@ -28,6 +28,11 @@
 #include <isl_val_private.h>
 #include <isl_config.h>
 
+#undef BASE
+#define BASE pw_qpolynomial
+
+#include <isl_list_templ.c>
+
 static unsigned pos(__isl_keep isl_space *dim, enum isl_dim_type type)
 {
 	switch (type) {
@@ -2958,12 +2963,8 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_from_qpolynomial(
 #include <isl_pw_templ.c>
 #include <isl_pw_eval.c>
 
-#undef UNION
-#define UNION isl_union_pw_qpolynomial
-#undef PART
-#define PART isl_pw_qpolynomial
-#undef PARTS
-#define PARTS pw_qpolynomial
+#undef BASE
+#define BASE pw_qpolynomial
 
 #include <isl_union_single.c>
 #include <isl_union_eval.c>

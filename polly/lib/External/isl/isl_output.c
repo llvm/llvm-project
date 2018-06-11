@@ -2586,8 +2586,11 @@ error:
 	return NULL;
 }
 
+/* Print the (potentially rational) affine expression "aff" to "p",
+ * with the variable names taken from "space".
+ */
 static __isl_give isl_printer *print_aff_body(__isl_take isl_printer *p,
-	__isl_keep isl_aff *aff)
+	__isl_keep isl_space *space, __isl_keep isl_aff *aff)
 {
 	unsigned total;
 
@@ -2596,7 +2599,7 @@ static __isl_give isl_printer *print_aff_body(__isl_take isl_printer *p,
 
 	total = isl_local_space_dim(aff->ls, isl_dim_all);
 	p = isl_printer_print_str(p, "(");
-	p = print_affine_of_len(aff->ls->dim, aff->ls->div, p,
+	p = print_affine_of_len(space, aff->ls->div, p,
 				aff->v->el + 1, 1 + total);
 	if (isl_int_is_one(aff->v->el[0]))
 		p = isl_printer_print_str(p, ")");
@@ -2620,7 +2623,7 @@ static __isl_give isl_printer *print_aff(__isl_take isl_printer *p,
 		p = isl_printer_print_str(p, " -> ");
 	}
 	p = isl_printer_print_str(p, "[");
-	p = print_aff_body(p, aff);
+	p = print_aff_body(p, aff->ls->dim, aff);
 	p = isl_printer_print_str(p, "]");
 
 	return p;
@@ -2931,10 +2934,15 @@ static __isl_give isl_printer *print_dim_ma(__isl_take isl_printer *p,
 {
 	isl_multi_aff *ma = data->user;
 
-	if (data->type == isl_dim_out)
-		p = print_aff_body(p, ma->u.p[pos]);
-	else
+	if (data->type == isl_dim_out) {
+		isl_space *space;
+
+		space = isl_multi_aff_get_domain_space(ma);
+		p = print_aff_body(p, space, ma->u.p[pos]);
+		isl_space_free(space);
+	} else {
 		p = print_name(data->space, p, data->type, pos, data->latex);
+	}
 
 	return p;
 }
@@ -3159,6 +3167,7 @@ static __isl_give isl_printer *print_dim_mpa(__isl_take isl_printer *p,
 {
 	int i;
 	int need_parens;
+	isl_space *space;
 	isl_multi_pw_aff *mpa = data->user;
 	isl_pw_aff *pa;
 
@@ -3172,16 +3181,15 @@ static __isl_give isl_printer *print_dim_mpa(__isl_take isl_printer *p,
 	need_parens = pa->n != 1 || !isl_set_plain_is_universe(pa->p[0].set);
 	if (need_parens)
 		p = isl_printer_print_str(p, "(");
+	space = isl_multi_pw_aff_get_domain_space(mpa);
 	for (i = 0; i < pa->n; ++i) {
-		isl_space *space;
 
 		if (i)
 			p = isl_printer_print_str(p, "; ");
-		p = print_aff_body(p, pa->p[i].aff);
-		space = isl_aff_get_domain_space(pa->p[i].aff);
+		p = print_aff_body(p, space, pa->p[i].aff);
 		p = print_disjuncts(pa->p[i].set, space, p, 0);
-		isl_space_free(space);
 	}
+	isl_space_free(space);
 	if (need_parens)
 		p = isl_printer_print_str(p, ")");
 
