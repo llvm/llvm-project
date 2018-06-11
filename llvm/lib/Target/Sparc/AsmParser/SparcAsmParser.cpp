@@ -885,9 +885,17 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
 
       const MCExpr *Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
                                                   getContext());
-      if (isCall && getContext().getObjectFileInfo()->isPositionIndependent())
-        Res = SparcMCExpr::create(SparcMCExpr::VK_Sparc_WPLT30, Res,
-                                  getContext());
+      SparcMCExpr::VariantKind Kind = SparcMCExpr::VK_Sparc_13;
+
+      if (getContext().getObjectFileInfo()->isPositionIndependent()) {
+        if (isCall)
+          Kind = SparcMCExpr::VK_Sparc_WPLT30;
+        else
+          Kind = SparcMCExpr::VK_Sparc_GOT13;
+      }
+
+      Res = SparcMCExpr::create(Kind, Res, getContext());
+
       Op = SparcOperand::CreateImm(Res, S, E);
     }
     break;

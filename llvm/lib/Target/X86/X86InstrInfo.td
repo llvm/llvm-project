@@ -1949,25 +1949,25 @@ multiclass ATOMIC_SWAP<bits<8> opc8, bits<8> opc, string mnemonic, string frag> 
   }
 }
 
-defm XCHG    : ATOMIC_SWAP<0x86, 0x87, "xchg", "atomic_swap">;
+defm XCHG    : ATOMIC_SWAP<0x86, 0x87, "xchg", "atomic_swap">, NotMemoryFoldable;
 
 // Swap between registers.
 let SchedRW = [WriteALU] in {
 let Constraints = "$src1 = $dst1, $src2 = $dst2", hasSideEffects = 0 in {
 def XCHG8rr : I<0x86, MRMSrcReg, (outs GR8:$dst1, GR8:$dst2),
                 (ins GR8:$src1, GR8:$src2),
-                "xchg{b}\t{$src2, $src1|$src1, $src2}", []>;
+                "xchg{b}\t{$src2, $src1|$src1, $src2}", []>, NotMemoryFoldable;
 def XCHG16rr : I<0x87, MRMSrcReg, (outs GR16:$dst1, GR16:$dst2),
                  (ins GR16:$src1, GR16:$src2),
                  "xchg{w}\t{$src2, $src1|$src1, $src2}", []>,
-                 OpSize16;
+                 OpSize16, NotMemoryFoldable;
 def XCHG32rr : I<0x87, MRMSrcReg, (outs GR32:$dst1, GR32:$dst2),
                  (ins GR32:$src1, GR32:$src2),
                  "xchg{l}\t{$src2, $src1|$src1, $src2}", []>,
-                 OpSize32;
+                 OpSize32, NotMemoryFoldable;
 def XCHG64rr : RI<0x87, MRMSrcReg, (outs GR64:$dst1, GR64:$dst2),
                   (ins GR64:$src1 ,GR64:$src2),
-                  "xchg{q}\t{$src2, $src1|$src1, $src2}", []>;
+                  "xchg{q}\t{$src2, $src1|$src1, $src2}", []>, NotMemoryFoldable;
 }
 
 // Swap between EAX and other registers.

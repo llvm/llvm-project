@@ -54,6 +54,10 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case Sparc::fixup_sparc_hi22:
     return (Value >> 10) & 0x3fffff;
 
+  case Sparc::fixup_sparc_got13:
+  case Sparc::fixup_sparc_13:
+    return Value & 0x1fff;
+
   case Sparc::fixup_sparc_pc10:
   case Sparc::fixup_sparc_got10:
   case Sparc::fixup_sparc_tls_gd_lo10:
@@ -120,6 +124,7 @@ namespace {
         { "fixup_sparc_br19",      13,     19,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br16_2",    10,      2,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br16_14",   18,     14,  MCFixupKindInfo::FKF_IsPCRel },
+        { "fixup_sparc_13",        19,     13,  0 },
         { "fixup_sparc_hi22",      10,     22,  0 },
         { "fixup_sparc_lo10",      22,     10,  0 },
         { "fixup_sparc_h44",       10,     22,  0 },
@@ -131,6 +136,7 @@ namespace {
         { "fixup_sparc_pc10",      22,     10,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_got22",     10,     22,  0 },
         { "fixup_sparc_got10",     22,     10,  0 },
+        { "fixup_sparc_got13",     19,     13,  0 },
         { "fixup_sparc_wplt30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_tls_gd_hi22",   10, 22,  0 },
         { "fixup_sparc_tls_gd_lo10",   22, 10,  0 },
@@ -159,6 +165,7 @@ namespace {
         { "fixup_sparc_br19",       0,     19,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br16_2",    20,      2,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br16_14",    0,     14,  MCFixupKindInfo::FKF_IsPCRel },
+        { "fixup_sparc_13",         0,     13,  0 },
         { "fixup_sparc_hi22",       0,     22,  0 },
         { "fixup_sparc_lo10",       0,     10,  0 },
         { "fixup_sparc_h44",        0,     22,  0 },
@@ -170,6 +177,7 @@ namespace {
         { "fixup_sparc_pc10",       0,     10,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_got22",      0,     22,  0 },
         { "fixup_sparc_got10",      0,     10,  0 },
+        { "fixup_sparc_got13",      0,     13,  0 },
         { "fixup_sparc_wplt30",      0,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_tls_gd_hi22",    0, 22,  0 },
         { "fixup_sparc_tls_gd_lo10",    0, 10,  0 },

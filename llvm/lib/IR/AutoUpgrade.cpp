@@ -262,6 +262,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.maskz.vpdpwssd.") || // Added in 7.0
       Name.startswith("avx512.mask.vpdpwssds.") || // Added in 7.0
       Name.startswith("avx512.maskz.vpdpwssds.") || // Added in 7.0
+      Name.startswith("avx512.mask.dbpsadbw.") || // Added in 7.0
       Name.startswith("avx512.mask.add.p") || // Added in 7.0
       Name.startswith("avx512.mask.sub.p") || // Added in 7.0
       Name.startswith("avx512.mask.mul.p") || // Added in 7.0
@@ -302,6 +303,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "avx512.mask.store.ss" || // Added in 7.0
       Name.startswith("avx512.mask.loadu.") || // Added in 3.9
       Name.startswith("avx512.mask.load.") || // Added in 3.9
+      Name.startswith("avx512.mask.expand.load.") || // Added in 7.0
+      Name.startswith("avx512.mask.compress.store.") || // Added in 7.0
       Name == "sse42.crc32.64.8" || // Added in 3.4
       Name.startswith("avx.vbroadcast.s") || // Added in 3.5
       Name.startswith("avx512.vbroadcast.s") || // Added in 7.0
@@ -1246,6 +1249,15 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_permvar_qi_512;
     else
       llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("dbpsadbw.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_avx512_dbpsadbw_128;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx512_dbpsadbw_256;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_dbpsadbw_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
   } else
     return false;
 
@@ -1659,6 +1671,36 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = UpgradeMaskedLoad(Builder, CI->getArgOperand(0),
                               CI->getArgOperand(1),CI->getArgOperand(2),
                               /*Aligned*/true);
+    } else if (IsX86 && Name.startswith("avx512.mask.expand.load.")) {
+      Type *ResultTy = CI->getType();
+      Type *PtrTy = ResultTy->getVectorElementType();
+
+      // Cast the pointer to element type.
+      Value *Ptr = Builder.CreateBitCast(CI->getOperand(0),
+                                         llvm::PointerType::getUnqual(PtrTy));
+
+      Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
+                                     ResultTy->getVectorNumElements());
+
+      Function *ELd = Intrinsic::getDeclaration(F->getParent(),
+                                                Intrinsic::masked_expandload,
+                                                ResultTy);
+      Rep = Builder.CreateCall(ELd, { Ptr, MaskVec, CI->getOperand(1) });
+    } else if (IsX86 && Name.startswith("avx512.mask.compress.store.")) {
+      Type *ResultTy = CI->getArgOperand(1)->getType();
+      Type *PtrTy = ResultTy->getVectorElementType();
+
+      // Cast the pointer to element type.
+      Value *Ptr = Builder.CreateBitCast(CI->getOperand(0),
+                                         llvm::PointerType::getUnqual(PtrTy));
+
+      Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
+                                     ResultTy->getVectorNumElements());
+
+      Function *CSt = Intrinsic::getDeclaration(F->getParent(),
+                                                Intrinsic::masked_compressstore,
+                                                ResultTy);
+      Rep = Builder.CreateCall(CSt, { CI->getArgOperand(1), Ptr, MaskVec });
     } else if (IsX86 && Name.startswith("xop.vpcom")) {
       Intrinsic::ID intID;
       if (Name.endswith("ub"))
