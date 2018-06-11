@@ -3572,21 +3572,22 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
 
   // Create and insert the instruction.
   // FIXME: InstImpResults should not be part of DAGInstruction.
-  TreePattern *InstPattern = I.get();
-  DAGInstruction TheInst(std::move(I), Results, Operands, InstImpResults);
-  DAGInsts.emplace(InstPattern->getRecord(), std::move(TheInst));
+  Record *R = I->getRecord();
+  DAGInstruction &TheInst =
+      DAGInsts.emplace(std::piecewise_construct, std::forward_as_tuple(R),
+                       std::forward_as_tuple(std::move(I), Results, Operands,
+                                             InstImpResults)).first->second;
 
   // Use a temporary tree pattern to infer all types and make sure that the
   // constructed result is correct.  This depends on the instruction already
   // being inserted into the DAGInsts map.
-  TreePattern Temp(InstPattern->getRecord(), ResultPattern, false, *this);
-  Temp.InferAllTypes(&InstPattern->getNamedNodesMap());
+  TreePattern Temp(TheInst.getPattern()->getRecord(), ResultPattern, false,
+                   *this);
+  Temp.InferAllTypes(&TheInst.getPattern()->getNamedNodesMap());
 
-  DAGInstruction &TheInsertedInst =
-      DAGInsts.find(InstPattern->getRecord())->second;
-  TheInsertedInst.setResultPattern(Temp.getOnlyTree());
+  TheInst.setResultPattern(Temp.getOnlyTree());
 
-  return TheInsertedInst;
+  return TheInst;
 }
 
 /// ParseInstructions - Parse all of the instructions, inlining and resolving

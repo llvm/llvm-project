@@ -7802,3 +7802,399 @@ define <16 x float> @test_mm512_div_round_ps_current(<16 x float> %a0, <16 x flo
   ret <16 x float> %res
 }
 declare <16 x float> @llvm.x86.avx512.mask.div.ps.512(<16 x float>, <16 x float>, <16 x float>, i16, i32)
+
+define void @test_mask_compress_store_pd_512(i8* %addr, <8 x double> %data, i8 %mask) {
+; X86-LABEL: test_mask_compress_store_pd_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx ## encoding: [0x0f,0xb6,0x4c,0x24,0x08]
+; X86-NEXT:    kmovw %ecx, %k1 ## encoding: [0xc5,0xf8,0x92,0xc9]
+; X86-NEXT:    vcompresspd %zmm0, (%eax) {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x8a,0x00]
+; X86-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_compress_store_pd_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vcompresspd %zmm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x8a,0x07]
+; X64-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  call void @llvm.x86.avx512.mask.compress.store.pd.512(i8* %addr, <8 x double> %data, i8 %mask)
+  ret void
+}
+
+declare void @llvm.x86.avx512.mask.compress.store.pd.512(i8* %addr, <8 x double> %data, i8 %mask)
+
+define void @test_compress_store_pd_512(i8* %addr, <8 x double> %data) {
+; X86-LABEL: test_compress_store_pd_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X86-NEXT:    vcompresspd %zmm0, (%eax) {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x8a,0x00]
+; X86-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_compress_store_pd_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X64-NEXT:    vcompresspd %zmm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x8a,0x07]
+; X64-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  call void @llvm.x86.avx512.mask.compress.store.pd.512(i8* %addr, <8 x double> %data, i8 -1)
+  ret void
+}
+
+define void @test_mask_compress_store_ps_512(i8* %addr, <16 x float> %data, i16 %mask) {
+; X86-LABEL: test_mask_compress_store_ps_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vcompressps %zmm0, (%eax) {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x8a,0x00]
+; X86-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_compress_store_ps_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vcompressps %zmm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x8a,0x07]
+; X64-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  call void @llvm.x86.avx512.mask.compress.store.ps.512(i8* %addr, <16 x float> %data, i16 %mask)
+  ret void
+}
+
+declare void @llvm.x86.avx512.mask.compress.store.ps.512(i8* %addr, <16 x float> %data, i16 %mask)
+
+define void @test_compress_store_ps_512(i8* %addr, <16 x float> %data) {
+; X86-LABEL: test_compress_store_ps_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X86-NEXT:    vcompressps %zmm0, (%eax) {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x8a,0x00]
+; X86-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_compress_store_ps_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X64-NEXT:    vcompressps %zmm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x8a,0x07]
+; X64-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  call void @llvm.x86.avx512.mask.compress.store.ps.512(i8* %addr, <16 x float> %data, i16 -1)
+  ret void
+}
+
+define void @test_mask_compress_store_q_512(i8* %addr, <8 x i64> %data, i8 %mask) {
+; X86-LABEL: test_mask_compress_store_q_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx ## encoding: [0x0f,0xb6,0x4c,0x24,0x08]
+; X86-NEXT:    kmovw %ecx, %k1 ## encoding: [0xc5,0xf8,0x92,0xc9]
+; X86-NEXT:    vpcompressq %zmm0, (%eax) {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x8b,0x00]
+; X86-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_compress_store_q_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vpcompressq %zmm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x8b,0x07]
+; X64-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  call void @llvm.x86.avx512.mask.compress.store.q.512(i8* %addr, <8 x i64> %data, i8 %mask)
+  ret void
+}
+
+declare void @llvm.x86.avx512.mask.compress.store.q.512(i8* %addr, <8 x i64> %data, i8 %mask)
+
+define void @test_compress_store_q_512(i8* %addr, <8 x i64> %data) {
+; X86-LABEL: test_compress_store_q_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X86-NEXT:    vpcompressq %zmm0, (%eax) {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x8b,0x00]
+; X86-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_compress_store_q_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X64-NEXT:    vpcompressq %zmm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x8b,0x07]
+; X64-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  call void @llvm.x86.avx512.mask.compress.store.q.512(i8* %addr, <8 x i64> %data, i8 -1)
+  ret void
+}
+
+define void @test_mask_compress_store_d_512(i8* %addr, <16 x i32> %data, i16 %mask) {
+; X86-LABEL: test_mask_compress_store_d_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpcompressd %zmm0, (%eax) {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x8b,0x00]
+; X86-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_compress_store_d_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vpcompressd %zmm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x8b,0x07]
+; X64-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  call void @llvm.x86.avx512.mask.compress.store.d.512(i8* %addr, <16 x i32> %data, i16 %mask)
+  ret void
+}
+
+declare void @llvm.x86.avx512.mask.compress.store.d.512(i8* %addr, <16 x i32> %data, i16 %mask)
+
+define void @test_compress_store_d_512(i8* %addr, <16 x i32> %data) {
+; X86-LABEL: test_compress_store_d_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X86-NEXT:    vpcompressd %zmm0, (%eax) {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x8b,0x00]
+; X86-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_compress_store_d_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X64-NEXT:    vpcompressd %zmm0, (%rdi) {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x8b,0x07]
+; X64-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  call void @llvm.x86.avx512.mask.compress.store.d.512(i8* %addr, <16 x i32> %data, i16 -1)
+  ret void
+}
+
+define <8 x double> @test_mask_expand_load_pd_512(i8* %addr, <8 x double> %data, i8 %mask) {
+; X86-LABEL: test_mask_expand_load_pd_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx ## encoding: [0x0f,0xb6,0x4c,0x24,0x08]
+; X86-NEXT:    kmovw %ecx, %k1 ## encoding: [0xc5,0xf8,0x92,0xc9]
+; X86-NEXT:    vexpandpd (%eax), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x88,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_expand_load_pd_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x88,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x double> @llvm.x86.avx512.mask.expand.load.pd.512(i8* %addr, <8 x double> %data, i8 %mask)
+  ret <8 x double> %res
+}
+
+define <8 x double> @test_maskz_expand_load_pd_512(i8* %addr, i8 %mask) {
+; X86-LABEL: test_maskz_expand_load_pd_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx ## encoding: [0x0f,0xb6,0x4c,0x24,0x08]
+; X86-NEXT:    kmovw %ecx, %k1 ## encoding: [0xc5,0xf8,0x92,0xc9]
+; X86-NEXT:    vexpandpd (%eax), %zmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xfd,0xc9,0x88,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_maskz_expand_load_pd_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xfd,0xc9,0x88,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x double> @llvm.x86.avx512.mask.expand.load.pd.512(i8* %addr, <8 x double> zeroinitializer, i8 %mask)
+  ret <8 x double> %res
+}
+
+declare <8 x double> @llvm.x86.avx512.mask.expand.load.pd.512(i8* %addr, <8 x double> %data, i8 %mask)
+
+define <8 x double> @test_expand_load_pd_512(i8* %addr, <8 x double> %data) {
+; X86-LABEL: test_expand_load_pd_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X86-NEXT:    vexpandpd (%eax), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x88,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_expand_load_pd_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X64-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x88,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x double> @llvm.x86.avx512.mask.expand.load.pd.512(i8* %addr, <8 x double> %data, i8 -1)
+  ret <8 x double> %res
+}
+
+; Make sure we don't crash if you pass 0 to the mask.
+define <8 x double> @test_zero_mask_expand_load_pd_512(i8* %addr, <8 x double> %data, i8 %mask) {
+; X86-LABEL: test_zero_mask_expand_load_pd_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kxorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x47,0xc8]
+; X86-NEXT:    vexpandpd (%eax), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x88,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_zero_mask_expand_load_pd_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kxorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x47,0xc8]
+; X64-NEXT:    vexpandpd (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x88,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x double> @llvm.x86.avx512.mask.expand.load.pd.512(i8* %addr, <8 x double> %data, i8 0)
+  ret <8 x double> %res
+}
+
+define <16 x float> @test_mask_expand_load_ps_512(i8* %addr, <16 x float> %data, i16 %mask) {
+; X86-LABEL: test_mask_expand_load_ps_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vexpandps (%eax), %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x88,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_expand_load_ps_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vexpandps (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x88,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.avx512.mask.expand.load.ps.512(i8* %addr, <16 x float> %data, i16 %mask)
+  ret <16 x float> %res
+}
+
+define <16 x float> @test_maskz_expand_load_ps_512(i8* %addr, i16 %mask) {
+; X86-LABEL: test_maskz_expand_load_ps_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vexpandps (%eax), %zmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xc9,0x88,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_maskz_expand_load_ps_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xc9,0x88,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.avx512.mask.expand.load.ps.512(i8* %addr, <16 x float> zeroinitializer, i16 %mask)
+  ret <16 x float> %res
+}
+
+declare <16 x float> @llvm.x86.avx512.mask.expand.load.ps.512(i8* %addr, <16 x float> %data, i16 %mask)
+
+define <16 x float> @test_expand_load_ps_512(i8* %addr, <16 x float> %data) {
+; X86-LABEL: test_expand_load_ps_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X86-NEXT:    vexpandps (%eax), %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x88,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_expand_load_ps_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X64-NEXT:    vexpandps (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x88,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.avx512.mask.expand.load.ps.512(i8* %addr, <16 x float> %data, i16 -1)
+  ret <16 x float> %res
+}
+
+define <8 x i64> @test_mask_expand_load_q_512(i8* %addr, <8 x i64> %data, i8 %mask) {
+; X86-LABEL: test_mask_expand_load_q_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx ## encoding: [0x0f,0xb6,0x4c,0x24,0x08]
+; X86-NEXT:    kmovw %ecx, %k1 ## encoding: [0xc5,0xf8,0x92,0xc9]
+; X86-NEXT:    vpexpandq (%eax), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x89,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_expand_load_q_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x89,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x i64> @llvm.x86.avx512.mask.expand.load.q.512(i8* %addr, <8 x i64> %data, i8 %mask)
+  ret <8 x i64> %res
+}
+
+define <8 x i64> @test_maskz_expand_load_q_512(i8* %addr, i8 %mask) {
+; X86-LABEL: test_maskz_expand_load_q_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx ## encoding: [0x0f,0xb6,0x4c,0x24,0x08]
+; X86-NEXT:    kmovw %ecx, %k1 ## encoding: [0xc5,0xf8,0x92,0xc9]
+; X86-NEXT:    vpexpandq (%eax), %zmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xfd,0xc9,0x89,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_maskz_expand_load_q_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z} ## encoding: [0x62,0xf2,0xfd,0xc9,0x89,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x i64> @llvm.x86.avx512.mask.expand.load.q.512(i8* %addr, <8 x i64> zeroinitializer, i8 %mask)
+  ret <8 x i64> %res
+}
+
+declare <8 x i64> @llvm.x86.avx512.mask.expand.load.q.512(i8* %addr, <8 x i64> %data, i8 %mask)
+
+define <8 x i64> @test_expand_load_q_512(i8* %addr, <8 x i64> %data) {
+; X86-LABEL: test_expand_load_q_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X86-NEXT:    vpexpandq (%eax), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x89,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_expand_load_q_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X64-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x89,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x i64> @llvm.x86.avx512.mask.expand.load.q.512(i8* %addr, <8 x i64> %data, i8 -1)
+  ret <8 x i64> %res
+}
+
+define <16 x i32> @test_mask_expand_load_d_512(i8* %addr, <16 x i32> %data, i16 %mask) {
+; X86-LABEL: test_mask_expand_load_d_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpexpandd (%eax), %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x89,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_expand_load_d_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x89,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.avx512.mask.expand.load.d.512(i8* %addr, <16 x i32> %data, i16 %mask)
+  ret <16 x i32> %res
+}
+
+define <16 x i32> @test_maskz_expand_load_d_512(i8* %addr, i16 %mask) {
+; X86-LABEL: test_maskz_expand_load_d_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpexpandd (%eax), %zmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xc9,0x89,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_maskz_expand_load_d_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
+; X64-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xc9,0x89,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.avx512.mask.expand.load.d.512(i8* %addr, <16 x i32> zeroinitializer, i16 %mask)
+  ret <16 x i32> %res
+}
+
+declare <16 x i32> @llvm.x86.avx512.mask.expand.load.d.512(i8* %addr, <16 x i32> %data, i16 %mask)
+
+define <16 x i32> @test_expand_load_d_512(i8* %addr, <16 x i32> %data) {
+; X86-LABEL: test_expand_load_d_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X86-NEXT:    vpexpandd (%eax), %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x89,0x00]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_expand_load_d_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kxnorw %k0, %k0, %k1 ## encoding: [0xc5,0xfc,0x46,0xc8]
+; X64-NEXT:    vpexpandd (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x89,0x07]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.avx512.mask.expand.load.d.512(i8* %addr, <16 x i32> %data, i16 -1)
+  ret <16 x i32> %res
+}

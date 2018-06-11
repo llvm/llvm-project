@@ -5205,7 +5205,7 @@ multiclass SS41I_extract16<bits<8> opc, string OpcodeStr> {
                    (ins VR128:$src1, u8imm:$src2),
                    !strconcat(OpcodeStr,
                    "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-                   Sched<[WriteVecExtract]>, FoldGenData<NAME#ri>;
+                   Sched<[WriteVecExtract]>, FoldGenData<NAME#rr>;
 
   let hasSideEffects = 0, mayStore = 1 in
   def mr : SS4AIi8<opc, MRMDestMem, (outs),

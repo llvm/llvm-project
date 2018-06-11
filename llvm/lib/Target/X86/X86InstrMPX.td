@@ -42,9 +42,9 @@ multiclass mpx_bound_check<bits<8> opc, string OpcodeStr> {
               OpcodeStr#"\t{$src2, $src1|$src1, $src2}", []>,
               Requires<[HasMPX, In64BitMode]>;
 }
-defm BNDCL : mpx_bound_check<0x1A, "bndcl">, XS;
-defm BNDCU : mpx_bound_check<0x1A, "bndcu">, XD;
-defm BNDCN : mpx_bound_check<0x1B, "bndcn">, XD;
+defm BNDCL : mpx_bound_check<0x1A, "bndcl">, XS, NotMemoryFoldable;
+defm BNDCU : mpx_bound_check<0x1A, "bndcu">, XD, NotMemoryFoldable;
+defm BNDCN : mpx_bound_check<0x1B, "bndcn">, XD, NotMemoryFoldable;
 
 def BNDMOVrr   : I<0x1A, MRMSrcReg, (outs BNDR:$dst), (ins BNDR:$src),
                   "bndmov\t{$src, $dst|$dst, $src}", []>, PD,
