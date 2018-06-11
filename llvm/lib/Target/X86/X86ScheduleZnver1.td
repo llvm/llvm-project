@@ -243,11 +243,11 @@ defm : ZnWriteResFpuPair<WriteCvtI2PDY,  [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteFDiv,      [ZnFPU3], 15>;
 defm : ZnWriteResFpuPair<WriteFDivX,     [ZnFPU3], 15>;
 //defm : ZnWriteResFpuPair<WriteFDivY,     [ZnFPU3], 15>;
-defm : ZnWriteResFpuPair<WriteFDivZ,     [ZnFPU3], 15>;
+defm : X86WriteResPairUnsupported<WriteFDivZ>;
 defm : ZnWriteResFpuPair<WriteFDiv64,    [ZnFPU3], 15>;
 defm : ZnWriteResFpuPair<WriteFDiv64X,   [ZnFPU3], 15>;
 //defm : ZnWriteResFpuPair<WriteFDiv64Y,   [ZnFPU3], 15>;
-defm : ZnWriteResFpuPair<WriteFDiv64Z,   [ZnFPU3], 15>;
+defm : X86WriteResPairUnsupported<WriteFDiv64Z>;
 defm : ZnWriteResFpuPair<WriteFSign,     [ZnFPU3],  2>;
 defm : ZnWriteResFpuPair<WriteFRnd,      [ZnFPU3],  4, [1], 1, 7, 1>; // FIXME: Should folds require 1 extra uops?
 defm : ZnWriteResFpuPair<WriteFRndY,     [ZnFPU3],  4, [1], 1, 7, 1>; // FIXME: Should folds require 1 extra uops?
@@ -277,11 +277,11 @@ defm : ZnWriteResFpuPair<WriteFRsqrtX,   [ZnFPU01], 5, [1], 1, 7, 1>;
 defm : ZnWriteResFpuPair<WriteFSqrt,     [ZnFPU3], 20, [20]>;
 defm : ZnWriteResFpuPair<WriteFSqrtX,    [ZnFPU3], 20, [20]>;
 defm : ZnWriteResFpuPair<WriteFSqrtY,    [ZnFPU3], 28, [28], 1, 7, 1>;
-defm : ZnWriteResFpuPair<WriteFSqrtZ,    [ZnFPU3], 28, [28], 1, 7, 1>;
+defm : X86WriteResPairUnsupported<WriteFSqrtZ>;
 defm : ZnWriteResFpuPair<WriteFSqrt64,   [ZnFPU3], 20, [20]>;
 defm : ZnWriteResFpuPair<WriteFSqrt64X,  [ZnFPU3], 20, [20]>;
 defm : ZnWriteResFpuPair<WriteFSqrt64Y,  [ZnFPU3], 40, [40], 1, 7, 1>;
-defm : ZnWriteResFpuPair<WriteFSqrt64Z,  [ZnFPU3], 40, [40], 1, 7, 1>;
+defm : X86WriteResPairUnsupported<WriteFSqrt64Z>;
 defm : ZnWriteResFpuPair<WriteFSqrt80,   [ZnFPU3], 20, [20]>;
 
 // Vector integer operations which uses FPU units

@@ -212,22 +212,22 @@ defm : BWWriteResPair<WriteFMul64Y, [BWPort01], 3, [1], 1, 6>; // Floating point
 //defm : BWWriteResPair<WriteFDiv,     [BWPort0,BWFPDivider], 11, [1,3], 1, 5>; // Floating point division.
 defm : BWWriteResPair<WriteFDivX,    [BWPort0,BWFPDivider], 11, [1,5], 1, 5>; // Floating point division (XMM).
 defm : BWWriteResPair<WriteFDivY,    [BWPort0,BWPort015,BWFPDivider], 17, [2,1,10], 3, 6>; // Floating point division (YMM).
-defm : BWWriteResPair<WriteFDivZ,    [BWPort0,BWPort015,BWFPDivider], 17, [2,1,10], 3, 6>; // Floating point division (ZMM).
+defm : X86WriteResPairUnsupported<WriteFDivZ>;
 //defm : BWWriteResPair<WriteFDiv64,   [BWPort0,BWFPDivider], 14, [1,8], 1, 5>; // Floating point division.
 defm : BWWriteResPair<WriteFDiv64X,  [BWPort0,BWFPDivider], 14, [1,8], 1, 5>; // Floating point division (XMM).
 defm : BWWriteResPair<WriteFDiv64Y,  [BWPort0,BWPort015,BWFPDivider], 23, [2,1,16], 3, 6>; // Floating point division (YMM).
-defm : BWWriteResPair<WriteFDiv64Z,  [BWPort0,BWPort015,BWFPDivider], 23, [2,1,16], 3, 6>; // Floating point division (ZMM).
+defm : X86WriteResPairUnsupported<WriteFDiv64Z>;
 
 defm : X86WriteRes<WriteFSqrt,       [BWPort0,BWFPDivider], 11, [1,4], 1>; // Floating point square root.
 defm : X86WriteRes<WriteFSqrtLd,     [BWPort0,BWPort23,BWFPDivider], 16, [1,1,7], 2>;
 defm : BWWriteResPair<WriteFSqrtX,   [BWPort0,BWFPDivider], 11, [1,7], 1, 5>; // Floating point square root (XMM).
 defm : BWWriteResPair<WriteFSqrtY,   [BWPort0,BWPort015,BWFPDivider], 21, [2,1,14], 3, 6>; // Floating point square root (YMM).
-defm : BWWriteResPair<WriteFSqrtZ,   [BWPort0,BWPort015,BWFPDivider], 21, [2,1,14], 3, 6>; // Floating point square root (ZMM).
+defm : X86WriteResPairUnsupported<WriteFSqrtZ>;
 defm : X86WriteRes<WriteFSqrt64,     [BWPort0,BWFPDivider], 16, [1,8], 1>; // Floating point double square root.
 defm : X86WriteRes<WriteFSqrt64Ld,   [BWPort0,BWPort23,BWFPDivider], 21, [1,1,14], 2>;
 defm : BWWriteResPair<WriteFSqrt64X, [BWPort0,BWFPDivider], 16, [1,14],1, 5>; // Floating point double square root (XMM).
 defm : BWWriteResPair<WriteFSqrt64Y, [BWPort0,BWPort015,BWFPDivider], 29, [2,1,28], 3, 6>; // Floating point double square root (YMM).
-defm : BWWriteResPair<WriteFSqrt64Z, [BWPort0,BWPort015,BWFPDivider], 29, [2,1,28], 3, 6>; // Floating point double square root (ZMM).
+defm : X86WriteResPairUnsupported<WriteFSqrt64Z>;
 defm : BWWriteResPair<WriteFSqrt80,  [BWPort0,BWFPDivider], 23, [1,9]>; // Floating point long double square root.
 
 defm : BWWriteResPair<WriteFRcp,   [BWPort0],  5, [1], 1, 5>; // Floating point reciprocal estimate.
@@ -1688,4 +1688,3 @@ def: InstRW<[BWWriteResGroup202], (instrs FSTENVm)>;
 def: InstRW<[WriteZero], (instrs CLC)>;
 
 } // SchedModel
-

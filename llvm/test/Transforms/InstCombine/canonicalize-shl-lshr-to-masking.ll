@@ -55,6 +55,17 @@ define i32 @positive_biggerLshr(i32 %x) {
   ret i32 %ret
 }
 
+define i32 @positive_biggerLshr_lshrexact(i32 %x) {
+; CHECK-LABEL: @positive_biggerLshr_lshrexact(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[RET:%.*]] = and i32 [[TMP1]], 4194303
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %tmp0 = shl i32 %x, 5
+  %ret = lshr exact i32 %tmp0, 10
+  ret i32 %ret
+}
+
 ; ============================================================================ ;
 ; NUW on the first shift
 ; ============================================================================ ;
@@ -255,6 +266,79 @@ define <3 x i32> @positive_biggerLshr_vec_undef2(<3 x i32> %x) {
   %tmp0 = shl <3 x i32> %x, <i32 5, i32 undef, i32 5>
   %ret = lshr <3 x i32> %tmp0, <i32 10, i32 undef, i32 10>
   ret <3 x i32> %ret
+}
+
+; ============================================================================ ;
+; Positive multi-use tests with constant
+; ============================================================================ ;
+
+define i32 @positive_sameconst_multiuse(i32 %x) {
+; CHECK-LABEL: @positive_sameconst_multiuse(
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[X:%.*]], 5
+; CHECK-NEXT:    call void @use32(i32 [[TMP0]])
+; CHECK-NEXT:    [[RET:%.*]] = and i32 [[X]], 134217727
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %tmp0 = shl i32 %x, 5
+  call void @use32(i32 %tmp0)
+  %ret = lshr i32 %tmp0, 5
+  ret i32 %ret
+}
+
+define i32 @positive_biggerShl_shlnuw_multiuse(i32 %x) {
+; CHECK-LABEL: @positive_biggerShl_shlnuw_multiuse(
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i32 [[X:%.*]], 10
+; CHECK-NEXT:    call void @use32(i32 [[TMP0]])
+; CHECK-NEXT:    [[RET:%.*]] = shl nuw i32 [[X]], 5
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %tmp0 = shl nuw i32 %x, 10
+  call void @use32(i32 %tmp0)
+  %ret = lshr i32 %tmp0, 5
+  ret i32 %ret
+}
+
+define i32 @positive_biggerLshr_shlnuw_multiuse(i32 %x) {
+; CHECK-LABEL: @positive_biggerLshr_shlnuw_multiuse(
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i32 [[X:%.*]], 5
+; CHECK-NEXT:    call void @use32(i32 [[TMP0]])
+; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[X]], 5
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %tmp0 = shl nuw i32 %x, 5
+  call void @use32(i32 %tmp0)
+  %ret = lshr i32 %tmp0, 10
+  ret i32 %ret
+}
+
+; NOTE: creates one extra instruction, but this seems intentional.
+define i32 @positive_biggerShl_multiuse_extrainstr(i32 %x) {
+; CHECK-LABEL: @positive_biggerShl_multiuse_extrainstr(
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[X:%.*]], 10
+; CHECK-NEXT:    call void @use32(i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 5
+; CHECK-NEXT:    [[RET:%.*]] = and i32 [[TMP1]], 134217696
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %tmp0 = shl i32 %x, 10
+  call void @use32(i32 %tmp0)
+  %ret = lshr i32 %tmp0, 5
+  ret i32 %ret
+}
+
+; NOTE: creates one extra instruction, but this seems intentional.
+define i32 @positive_biggerLshr_multiuse_extrainstr(i32 %x) {
+; CHECK-LABEL: @positive_biggerLshr_multiuse_extrainstr(
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[X:%.*]], 5
+; CHECK-NEXT:    call void @use32(i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X]], 5
+; CHECK-NEXT:    [[RET:%.*]] = and i32 [[TMP1]], 4194303
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %tmp0 = shl i32 %x, 5
+  call void @use32(i32 %tmp0)
+  %ret = lshr i32 %tmp0, 10
+  ret i32 %ret
 }
 
 ; ============================================================================ ;

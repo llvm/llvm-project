@@ -16,9 +16,9 @@
 #ifndef LLVM_CLANG_BASIC_ALIGNED_ALLOCATION_H
 #define LLVM_CLANG_BASIC_ALIGNED_ALLOCATION_H
 
-#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/VersionTuple.h"
 
 namespace clang {
 

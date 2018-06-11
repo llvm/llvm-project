@@ -194,6 +194,7 @@ struct Configuration {
   uint16_t EMachine = llvm::ELF::EM_NONE;
   llvm::Optional<uint64_t> ImageBase;
   uint64_t MaxPageSize;
+  uint64_t MipsGotSize;
   uint64_t ZStackSize;
   unsigned LTOPartitions;
   unsigned LTOO;

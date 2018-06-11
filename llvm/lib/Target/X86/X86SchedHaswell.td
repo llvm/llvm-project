@@ -10,6 +10,11 @@
 // This file defines the machine model for Haswell to support instruction
 // scheduling and other instruction cost heuristics.
 //
+// Note that we define some instructions here that are not supported by haswell,
+// but we still have to define them because KNL uses the HSW model.
+// They are currently tagged with a comment `Unsupported = 1`.
+// FIXME: Use Unsupported = 1 once KNL has its own model.
+//
 //===----------------------------------------------------------------------===//
 
 def HaswellModel : SchedMachineModel {
@@ -203,11 +208,11 @@ defm : HWWriteResPair<WriteFMul64Y, [HWPort01],  5, [1], 1, 7>;
 defm : HWWriteResPair<WriteFDiv,    [HWPort0,HWFPDivider], 13, [1,7], 1, 5>;
 defm : HWWriteResPair<WriteFDivX,   [HWPort0,HWFPDivider], 13, [1,7], 1, 6>;
 defm : HWWriteResPair<WriteFDivY,   [HWPort0,HWPort15,HWFPDivider], 21, [2,1,14], 3, 7>;
-defm : HWWriteResPair<WriteFDivZ,   [HWPort0,HWPort15,HWFPDivider], 21, [2,1,14], 3, 7>;
+defm : HWWriteResPair<WriteFDivZ,   [HWPort0,HWPort15,HWFPDivider], 21, [2,1,14], 3, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFDiv64,  [HWPort0,HWFPDivider], 20, [1,14], 1, 5>;
 defm : HWWriteResPair<WriteFDiv64X, [HWPort0,HWFPDivider], 20, [1,14], 1, 6>;
 defm : HWWriteResPair<WriteFDiv64Y, [HWPort0,HWPort15,HWFPDivider], 35, [2,1,28], 3, 7>;
-defm : HWWriteResPair<WriteFDiv64Z, [HWPort0,HWPort15,HWFPDivider], 35, [2,1,28], 3, 7>;
+defm : HWWriteResPair<WriteFDiv64Z, [HWPort0,HWPort15,HWFPDivider], 35, [2,1,28], 3, 7>; // Unsupported = 1
 
 defm : HWWriteResPair<WriteFRcp,   [HWPort0],  5, [1], 1, 5>;
 defm : HWWriteResPair<WriteFRcpX,  [HWPort0],  5, [1], 1, 6>;
@@ -220,11 +225,11 @@ defm : HWWriteResPair<WriteFRsqrtY,[HWPort0,HWPort015], 11, [2,1], 3, 7>;
 defm : HWWriteResPair<WriteFSqrt,    [HWPort0,HWFPDivider], 11, [1,7], 1, 5>;
 defm : HWWriteResPair<WriteFSqrtX,   [HWPort0,HWFPDivider], 11, [1,7], 1, 6>;
 defm : HWWriteResPair<WriteFSqrtY,   [HWPort0,HWPort15,HWFPDivider], 21, [2,1,14], 3, 7>;
-defm : HWWriteResPair<WriteFSqrtZ,   [HWPort0,HWPort15,HWFPDivider], 21, [2,1,14], 3, 7>;
+defm : HWWriteResPair<WriteFSqrtZ,   [HWPort0,HWPort15,HWFPDivider], 21, [2,1,14], 3, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFSqrt64,  [HWPort0,HWFPDivider], 16, [1,14], 1, 5>;
 defm : HWWriteResPair<WriteFSqrt64X, [HWPort0,HWFPDivider], 16, [1,14], 1, 6>;
 defm : HWWriteResPair<WriteFSqrt64Y, [HWPort0,HWPort15,HWFPDivider], 35, [2,1,28], 3, 7>;
-defm : HWWriteResPair<WriteFSqrt64Z, [HWPort0,HWPort15,HWFPDivider], 35, [2,1,28], 3, 7>;
+defm : HWWriteResPair<WriteFSqrt64Z, [HWPort0,HWPort15,HWFPDivider], 35, [2,1,28], 3, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFSqrt80,  [HWPort0,HWFPDivider], 23, [1,17]>;
 
 defm : HWWriteResPair<WriteFMA,   [HWPort01], 5, [1], 1, 5>;

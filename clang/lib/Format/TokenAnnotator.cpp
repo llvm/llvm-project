@@ -2924,6 +2924,74 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Right.is(TT_ProtoExtensionLSquare))
     return true;
 
+  // In text proto instances if a submessage contains at least 2 entries and at
+  // least one of them is a submessage, like A { ... B { ... } ... },
+  // put all of the entries of A on separate lines by forcing the selector of
+  // the submessage B to be put on a newline.
+  //
+  // Example: these can stay on one line:
+  // a { scalar_1: 1 scalar_2: 2 }
+  // a { b { key: value } }
+  //
+  // and these entries need to be on a new line even if putting them all in one
+  // line is under the column limit:
+  // a {
+  //   scalar: 1
+  //   b { key: value }
+  // }
+  //
+  // We enforce this by breaking before a submessage field that has previous
+  // siblings, *and* breaking before a field that follows a submessage field.
+  //
+  // Be careful to exclude the case  [proto.ext] { ... } since the `]` is
+  // the TT_SelectorName there, but we don't want to break inside the brackets.
+  // We ensure elsewhere that extensions are always on their own line.
+  if ((Style.Language == FormatStyle::LK_Proto ||
+       Style.Language == FormatStyle::LK_TextProto) &&
+      Right.is(TT_SelectorName) && !Right.is(tok::r_square) && Right.Next) {
+    // Look for the scope opener after selector in cases like:
+    // selector { ...
+    // selector: { ...
+    FormatToken *LBrace =
+        Right.Next->is(tok::colon) ? Right.Next->Next : Right.Next;
+    if (LBrace &&
+        // The scope opener is one of {, [, <:
+        // selector { ... }
+        // selector [ ... ]
+        // selector < ... >
+        //
+        // In case of selector { ... }, the l_brace is TT_DictLiteral.
+        // In case of an empty selector {}, the l_brace is not TT_DictLiteral,
+        // so we check for immediately following r_brace.
+        ((LBrace->is(tok::l_brace) &&
+          (LBrace->is(TT_DictLiteral) ||
+           (LBrace->Next && LBrace->Next->is(tok::r_brace)))) ||
+         LBrace->is(TT_ArrayInitializerLSquare) || LBrace->is(tok::less))) {
+      // If Left.ParameterCount is 0, then this submessage entry is not the
+      // first in its parent submessage, and we want to break before this entry.
+      // If Left.ParameterCount is greater than 0, then its parent submessage
+      // might contain 1 or more entries and we want to break before this entry
+      // if it contains at least 2 entries. We deal with this case later by
+      // detecting and breaking before the next entry in the parent submessage.
+      if (Left.ParameterCount == 0)
+        return true;
+      // However, if this submessage is the first entry in its parent
+      // submessage, Left.ParameterCount might be 1 in some cases.
+      // We deal with this case later by detecting an entry
+      // following a closing paren of this submessage.
+    }
+    
+    // If this is an entry immediately following a submessage, it will be
+    // preceded by a closing paren of that submessage, like in:
+    //     left---.  .---right
+    //            v  v
+    // sub: { ... } key: value
+    // If there was a comment between `}` an `key` above, then `key` would be
+    // put on a new line anyways.
+    if (Left.isOneOf(tok::r_brace, tok::greater, tok::r_square))
+      return true;
+  }
+
   return false;
 }
 

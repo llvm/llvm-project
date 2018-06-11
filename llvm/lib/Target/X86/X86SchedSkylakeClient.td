@@ -208,20 +208,20 @@ defm : SKLWriteResPair<WriteFMul64Y,  [SKLPort01],  4, [1], 1, 7>; // Floating p
 defm : SKLWriteResPair<WriteFDiv,     [SKLPort0,SKLFPDivider], 11, [1,3], 1, 5>; // Floating point division.
 //defm : SKLWriteResPair<WriteFDivX,    [SKLPort0,SKLFPDivider], 11, [1,3], 1, 6>; // Floating point division (XMM).
 defm : SKLWriteResPair<WriteFDivY,    [SKLPort0,SKLFPDivider], 11, [1,5], 1, 7>; // Floating point division (YMM).
-defm : SKLWriteResPair<WriteFDivZ,    [SKLPort0,SKLFPDivider], 11, [1,5], 1, 7>; // Floating point division (ZMM).
+defm : X86WriteResPairUnsupported<WriteFDivZ>;
 //defm : SKLWriteResPair<WriteFDiv64,   [SKLPort0,SKLFPDivider], 14, [1,3], 1, 5>; // Floating point double division.
 //defm : SKLWriteResPair<WriteFDiv64X,  [SKLPort0,SKLFPDivider], 14, [1,3], 1, 6>; // Floating point double division (XMM).
 //defm : SKLWriteResPair<WriteFDiv64Y,  [SKLPort0,SKLFPDivider], 14, [1,5], 1, 7>; // Floating point double division (YMM).
-defm : SKLWriteResPair<WriteFDiv64Z,  [SKLPort0,SKLFPDivider], 14, [1,5], 1, 7>; // Floating point double division (ZMM).
+defm : X86WriteResPairUnsupported<WriteFDiv64Z>;
 
 defm : SKLWriteResPair<WriteFSqrt,    [SKLPort0,SKLFPDivider], 12, [1,3], 1, 5>; // Floating point square root.
 defm : SKLWriteResPair<WriteFSqrtX,   [SKLPort0,SKLFPDivider], 12, [1,3], 1, 6>; // Floating point square root (XMM).
 defm : SKLWriteResPair<WriteFSqrtY,   [SKLPort0,SKLFPDivider], 12, [1,6], 1, 7>; // Floating point square root (YMM).
-defm : SKLWriteResPair<WriteFSqrtZ,   [SKLPort0,SKLFPDivider], 12, [1,6], 1, 7>; // Floating point square root (ZMM).
+defm : X86WriteResPairUnsupported<WriteFSqrtZ>;
 defm : SKLWriteResPair<WriteFSqrt64,  [SKLPort0,SKLFPDivider], 18, [1,6], 1, 5>; // Floating point double square root.
 defm : SKLWriteResPair<WriteFSqrt64X, [SKLPort0,SKLFPDivider], 18, [1,6], 1, 6>; // Floating point double square root (XMM).
 defm : SKLWriteResPair<WriteFSqrt64Y, [SKLPort0,SKLFPDivider], 18, [1,12],1, 7>; // Floating point double square root (YMM).
-defm : SKLWriteResPair<WriteFSqrt64Z, [SKLPort0,SKLFPDivider], 18, [1,12],1, 7>; // Floating point double square root (ZMM).
+defm : X86WriteResPairUnsupported<WriteFSqrt64Z>;
 defm : SKLWriteResPair<WriteFSqrt80,  [SKLPort0,SKLFPDivider], 21, [1,7]>; // Floating point long double square root.
 
 defm : SKLWriteResPair<WriteFRcp,   [SKLPort0], 4, [1], 1, 5>; // Floating point reciprocal estimate.

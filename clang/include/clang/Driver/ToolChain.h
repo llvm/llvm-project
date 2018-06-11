@@ -12,7 +12,6 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Sanitizers.h"
-#include "clang/Basic/VersionTuple.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
 #include "clang/Driver/Types.h"
@@ -22,6 +21,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <memory>

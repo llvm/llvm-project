@@ -884,11 +884,13 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
         // associate typedef mangled in if they have one.
         Name += "<unnamed-type-";
         Name += TND->getName();
-      } else if (auto *ED = dyn_cast<EnumDecl>(TD)) {
-        auto EnumeratorI = ED->enumerator_begin();
-        assert(EnumeratorI != ED->enumerator_end());
+      } else if (isa<EnumDecl>(TD) &&
+                 cast<EnumDecl>(TD)->enumerator_begin() !=
+                     cast<EnumDecl>(TD)->enumerator_end()) {
+        // Anonymous non-empty enums mangle in the first enumerator.
+        auto *ED = cast<EnumDecl>(TD);
         Name += "<unnamed-enum-";
-        Name += EnumeratorI->getName();
+        Name += ED->enumerator_begin()->getName();
       } else {
         // Otherwise, number the types using a $S prefix.
         Name += "<unnamed-type-$S";

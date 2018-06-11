@@ -7331,6 +7331,36 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
       AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::XOR, DL, VT, Add, Shift);
     }
+
+    // If this select has a condition (setcc) with narrower operands than the
+    // select, try to widen the compare to match the select width.
+    // TODO: This should be extended to handle any constant.
+    // TODO: This could be extended to handle non-loading patterns, but that
+    //       requires thorough testing to avoid regressions.
+    if (isNullConstantOrNullSplatConstant(RHS)) {
+      EVT NarrowVT = LHS.getValueType();
+      EVT WideVT = N1.getValueType().changeVectorElementTypeToInteger();
+      EVT SetCCVT = getSetCCResultType(LHS.getValueType());
+      unsigned SetCCWidth = SetCCVT.getScalarSizeInBits();
+      unsigned WideWidth = WideVT.getScalarSizeInBits();
+      bool IsSigned = isSignedIntSetCC(CC);
+      auto LoadExtOpcode = IsSigned ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
+      if (LHS.getOpcode() == ISD::LOAD && LHS.hasOneUse() &&
+          SetCCWidth != 1 && SetCCWidth < WideWidth &&
+          TLI.isLoadExtLegalOrCustom(LoadExtOpcode, WideVT, NarrowVT) &&
+          TLI.isOperationLegalOrCustom(ISD::SETCC, WideVT)) {
+        // Both compare operands can be widened for free. The LHS can use an
+        // extended load, and the RHS is a constant:
+        //   vselect (ext (setcc load(X), C)), N1, N2 -->
+        //   vselect (setcc extload(X), C'), N1, N2
+        auto ExtOpcode = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+        SDValue WideLHS = DAG.getNode(ExtOpcode, DL, WideVT, LHS);
+        SDValue WideRHS = DAG.getNode(ExtOpcode, DL, WideVT, RHS);
+        EVT WideSetCCVT = getSetCCResultType(WideVT);
+        SDValue WideSetCC = DAG.getSetCC(DL, WideSetCCVT, WideLHS, WideRHS, CC);
+        return DAG.getSelect(DL, N1.getValueType(), WideSetCC, N1, N2);
+      }
+    }
   }
 
   if (SimplifySelectOps(N, N1, N2))
