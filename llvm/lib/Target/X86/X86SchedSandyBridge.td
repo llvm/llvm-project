@@ -10,6 +10,10 @@
 // This file defines the machine model for Sandy Bridge to support instruction
 // scheduling and other instruction cost heuristics.
 //
+// Note that we define some instructions here that are not supported by SNB,
+// but we still have to define them because SNB is the default subtarget for
+// X86. These instructions are tagged with a comment `Unsupported = 1`.
+//
 //===----------------------------------------------------------------------===//
 
 def SandyBridgeModel : SchedMachineModel {
@@ -195,11 +199,11 @@ defm : SBWriteResPair<WriteFMul64Y, [SBPort0],  5, [1], 1, 7>;
 defm : SBWriteResPair<WriteFDiv,    [SBPort0,SBFPDivider], 14, [1,14], 1, 6>;
 defm : SBWriteResPair<WriteFDivX,   [SBPort0,SBFPDivider], 14, [1,14], 1, 6>;
 defm : SBWriteResPair<WriteFDivY,   [SBPort0,SBPort05,SBFPDivider], 29, [2,1,28], 3, 7>;
-defm : SBWriteResPair<WriteFDivZ,   [SBPort0,SBPort05,SBFPDivider], 29, [2,1,28], 3, 7>;
+defm : SBWriteResPair<WriteFDivZ,   [SBPort0,SBPort05,SBFPDivider], 29, [2,1,28], 3, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFDiv64,  [SBPort0,SBFPDivider], 22, [1,22], 1, 6>;
 defm : SBWriteResPair<WriteFDiv64X, [SBPort0,SBFPDivider], 22, [1,22], 1, 6>;
 defm : SBWriteResPair<WriteFDiv64Y, [SBPort0,SBPort05,SBFPDivider], 45, [2,1,44], 3, 7>;
-defm : SBWriteResPair<WriteFDiv64Z, [SBPort0,SBPort05,SBFPDivider], 45, [2,1,44], 3, 7>;
+defm : SBWriteResPair<WriteFDiv64Z, [SBPort0,SBPort05,SBFPDivider], 45, [2,1,44], 3, 7>; // Unsupported = 1
 
 defm : SBWriteResPair<WriteFRcp,   [SBPort0],  5, [1], 1, 6>;
 defm : SBWriteResPair<WriteFRcpX,  [SBPort0],  5, [1], 1, 6>;
@@ -212,11 +216,11 @@ defm : SBWriteResPair<WriteFRsqrtY,[SBPort0,SBPort05],  7, [2,1], 3, 7>;
 defm : SBWriteResPair<WriteFSqrt,    [SBPort0,SBFPDivider], 14, [1,14], 1, 6>;
 defm : SBWriteResPair<WriteFSqrtX,   [SBPort0,SBFPDivider], 14, [1,14], 1, 6>;
 defm : SBWriteResPair<WriteFSqrtY,   [SBPort0,SBPort05,SBFPDivider], 29, [2,1,28], 3, 7>;
-defm : SBWriteResPair<WriteFSqrtZ,   [SBPort0,SBPort05,SBFPDivider], 29, [2,1,28], 3, 7>;
+defm : SBWriteResPair<WriteFSqrtZ,   [SBPort0,SBPort05,SBFPDivider], 29, [2,1,28], 3, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFSqrt64,  [SBPort0,SBFPDivider], 21, [1,21], 1, 6>;
 defm : SBWriteResPair<WriteFSqrt64X, [SBPort0,SBFPDivider], 21, [1,21], 1, 6>;
 defm : SBWriteResPair<WriteFSqrt64Y, [SBPort0,SBPort05,SBFPDivider], 45, [2,1,44], 3, 7>;
-defm : SBWriteResPair<WriteFSqrt64Z, [SBPort0,SBPort05,SBFPDivider], 45, [2,1,44], 3, 7>;
+defm : SBWriteResPair<WriteFSqrt64Z, [SBPort0,SBPort05,SBFPDivider], 45, [2,1,44], 3, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFSqrt80,  [SBPort0,SBFPDivider], 24, [1,24], 1, 6>;
 
 defm : SBWriteResPair<WriteDPPD,   [SBPort0,SBPort1,SBPort5],  9, [1,1,1], 3, 6>;

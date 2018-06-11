@@ -2714,40 +2714,32 @@ _mm256_mask_permutexvar_epi16 (__m256i __W, __mmask16 __M, __m256i __A,
                               (__v32qi)_mm256_setzero_si256())
 
 #define _mm_dbsad_epu8(A, B, imm) \
-  (__m128i)__builtin_ia32_dbpsadbw128_mask((__v16qi)(__m128i)(A), \
-                                           (__v16qi)(__m128i)(B), (int)(imm), \
-                                           (__v8hi)_mm_setzero_si128(), \
-                                           (__mmask8)-1)
+  (__m128i)__builtin_ia32_dbpsadbw128((__v16qi)(__m128i)(A), \
+                                      (__v16qi)(__m128i)(B), (int)(imm))
 
 #define _mm_mask_dbsad_epu8(W, U, A, B, imm) \
-  (__m128i)__builtin_ia32_dbpsadbw128_mask((__v16qi)(__m128i)(A), \
-                                           (__v16qi)(__m128i)(B), (int)(imm), \
-                                           (__v8hi)(__m128i)(W), \
-                                           (__mmask8)(U))
+  (__m128i)__builtin_ia32_selectw_128((__mmask8)(U), \
+                                      (__v8hi)_mm_dbsad_epu8((A), (B), (imm)), \
+                                      (__v8hi)(__m128i)(W))
 
 #define _mm_maskz_dbsad_epu8(U, A, B, imm) \
-  (__m128i)__builtin_ia32_dbpsadbw128_mask((__v16qi)(__m128i)(A), \
-                                           (__v16qi)(__m128i)(B), (int)(imm), \
-                                           (__v8hi)_mm_setzero_si128(), \
-                                           (__mmask8)(U))
+  (__m128i)__builtin_ia32_selectw_128((__mmask8)(U), \
+                                      (__v8hi)_mm_dbsad_epu8((A), (B), (imm)), \
+                                      (__v8hi)_mm_setzero_si128())
 
 #define _mm256_dbsad_epu8(A, B, imm) \
-  (__m256i)__builtin_ia32_dbpsadbw256_mask((__v32qi)(__m256i)(A), \
-                                           (__v32qi)(__m256i)(B), (int)(imm), \
-                                           (__v16hi)_mm256_setzero_si256(), \
-                                           (__mmask16)-1)
+  (__m256i)__builtin_ia32_dbpsadbw256((__v32qi)(__m256i)(A), \
+                                      (__v32qi)(__m256i)(B), (int)(imm))
 
 #define _mm256_mask_dbsad_epu8(W, U, A, B, imm) \
-  (__m256i)__builtin_ia32_dbpsadbw256_mask((__v32qi)(__m256i)(A), \
-                                           (__v32qi)(__m256i)(B), (int)(imm), \
-                                           (__v16hi)(__m256i)(W), \
-                                           (__mmask16)(U))
+  (__m256i)__builtin_ia32_selectw_256((__mmask16)(U), \
+                                  (__v16hi)_mm256_dbsad_epu8((A), (B), (imm)), \
+                                  (__v16hi)(__m256i)(W))
 
 #define _mm256_maskz_dbsad_epu8(U, A, B, imm) \
-  (__m256i)__builtin_ia32_dbpsadbw256_mask((__v32qi)(__m256i)(A), \
-                                           (__v32qi)(__m256i)(B), (int)(imm), \
-                                           (__v16hi)_mm256_setzero_si256(), \
-                                           (__mmask16)(U))
+  (__m256i)__builtin_ia32_selectw_256((__mmask16)(U), \
+                                  (__v16hi)_mm256_dbsad_epu8((A), (B), (imm)), \
+                                  (__v16hi)_mm256_setzero_si256())
 
 #undef __DEFAULT_FN_ATTRS
 

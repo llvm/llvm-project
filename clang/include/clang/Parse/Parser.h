@@ -45,7 +45,6 @@ namespace clang {
   class ColonProtectionRAIIObject;
   class InMessageExpressionRAIIObject;
   class PoisonSEHIdentifiersRAIIObject;
-  class VersionTuple;
   class OMPClause;
   class ObjCTypeParamList;
   class ObjCTypeParameter;

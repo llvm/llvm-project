@@ -11,14 +11,14 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CUDA_H
 
 #include "clang/Basic/Cuda.h"
-#include "clang/Basic/VersionTuple.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
-#include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/VersionTuple.h"
 #include <set>
 #include <vector>
 

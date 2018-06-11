@@ -16,8 +16,6 @@
 #include <algorithm>
 #include <mutex>
 
-// Other libraries and framework includes
-#include "clang/Basic/VersionTuple.h"
 // Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
@@ -42,6 +40,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/VersionTuple.h"
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h> // for TARGET_OS_TV, TARGET_OS_WATCH
@@ -1612,19 +1611,19 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     case SDKType::iPhoneOS:
       minimum_version_option.PutCString("-mios-version-min=");
       minimum_version_option.PutCString(
-          clang::VersionTuple(versions[0], versions[1], versions[2])
+          llvm::VersionTuple(versions[0], versions[1], versions[2])
               .getAsString());
       break;
     case SDKType::iPhoneSimulator:
       minimum_version_option.PutCString("-mios-simulator-version-min=");
       minimum_version_option.PutCString(
-          clang::VersionTuple(versions[0], versions[1], versions[2])
+          llvm::VersionTuple(versions[0], versions[1], versions[2])
               .getAsString());
       break;
     case SDKType::MacOSX:
       minimum_version_option.PutCString("-mmacosx-version-min=");
       minimum_version_option.PutCString(
-          clang::VersionTuple(versions[0], versions[1], versions[2])
+          llvm::VersionTuple(versions[0], versions[1], versions[2])
               .getAsString());
     }
     options.push_back(minimum_version_option.GetString());

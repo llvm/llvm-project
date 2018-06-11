@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=19.00 | FileCheck %s --check-prefix=CHECK --check-prefix=MSVC2015
 // RUN: %clang_cc1 -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=18.00 | FileCheck %s --check-prefix=CHECK --check-prefix=MSVC2013
+// RUN: %clang_cc1 -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -gcodeview -debug-info-kind=limited | FileCheck %s --check-prefix=DBG
 
 namespace FTypeWithQuals {
 template <typename T>
@@ -350,3 +351,10 @@ enum { enumerator };
 void f(decltype(enumerator)) {}
 // CHECK-DAG: define internal void @"?f@@YAXW4<unnamed-enum-enumerator>@@@Z"(
 void use_f() { f(enumerator); }
+
+namespace pr37723 {
+struct s { enum {}; enum {}; };
+// DBG-DAG: DW_TAG_enumeration_type{{.*}}identifier: ".?AW4<unnamed-type-$S2>@s@pr37723@@"
+// DBG-DAG: DW_TAG_enumeration_type{{.*}}identifier: ".?AW4<unnamed-type-$S3>@s@pr37723@@"
+s x;
+}

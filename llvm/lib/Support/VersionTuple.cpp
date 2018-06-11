@@ -11,10 +11,10 @@
 // the form major[.minor[.subminor]].
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Basic/VersionTuple.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace clang;
+using namespace llvm;
 
 std::string VersionTuple::getAsString() const {
   std::string Result;
@@ -25,8 +25,7 @@ std::string VersionTuple::getAsString() const {
   return Result;
 }
 
-raw_ostream& clang::operator<<(raw_ostream &Out, 
-                                     const VersionTuple &V) {
+raw_ostream &llvm::operator<<(raw_ostream &Out, const VersionTuple &V) {
   Out << V.getMajor();
   if (Optional<unsigned> Minor = V.getMinor())
     Out << '.' << *Minor;
@@ -39,18 +38,21 @@ raw_ostream& clang::operator<<(raw_ostream &Out,
 
 static bool parseInt(StringRef &input, unsigned &value) {
   assert(value == 0);
-  if (input.empty()) return true;
+  if (input.empty())
+    return true;
 
   char next = input[0];
   input = input.substr(1);
-  if (next < '0' || next > '9') return true;
-  value = (unsigned) (next - '0');
+  if (next < '0' || next > '9')
+    return true;
+  value = (unsigned)(next - '0');
 
   while (!input.empty()) {
     next = input[0];
-    if (next < '0' || next > '9') return false;
+    if (next < '0' || next > '9')
+      return false;
     input = input.substr(1);
-    value = value * 10 + (unsigned) (next - '0');
+    value = value * 10 + (unsigned)(next - '0');
   }
 
   return false;
@@ -60,7 +62,8 @@ bool VersionTuple::tryParse(StringRef input) {
   unsigned major = 0, minor = 0, micro = 0, build = 0;
 
   // Parse the major version, [0-9]+
-  if (parseInt(input, major)) return true;
+  if (parseInt(input, major))
+    return true;
 
   if (input.empty()) {
     *this = VersionTuple(major);
@@ -68,9 +71,11 @@ bool VersionTuple::tryParse(StringRef input) {
   }
 
   // If we're not done, parse the minor version, \.[0-9]+
-  if (input[0] != '.') return true;
+  if (input[0] != '.')
+    return true;
   input = input.substr(1);
-  if (parseInt(input, minor)) return true;
+  if (parseInt(input, minor))
+    return true;
 
   if (input.empty()) {
     *this = VersionTuple(major, minor);
@@ -78,9 +83,11 @@ bool VersionTuple::tryParse(StringRef input) {
   }
 
   // If we're not done, parse the micro version, \.[0-9]+
-  if (input[0] != '.') return true;
+  if (input[0] != '.')
+    return true;
   input = input.substr(1);
-  if (parseInt(input, micro)) return true;
+  if (parseInt(input, micro))
+    return true;
 
   if (input.empty()) {
     *this = VersionTuple(major, minor, micro);
@@ -88,12 +95,15 @@ bool VersionTuple::tryParse(StringRef input) {
   }
 
   // If we're not done, parse the micro version, \.[0-9]+
-  if (input[0] != '.') return true;
+  if (input[0] != '.')
+    return true;
   input = input.substr(1);
-  if (parseInt(input, build)) return true;
+  if (parseInt(input, build))
+    return true;
 
   // If we have characters left over, it's an error.
-  if (!input.empty()) return true;
+  if (!input.empty())
+    return true;
 
   *this = VersionTuple(major, minor, micro, build);
   return false;

@@ -61,6 +61,7 @@ add_llvm_unittest(SupportTests
   TrailingObjectsTest.cpp
   TrigramIndexTest.cpp
   UnicodeTest.cpp
+  VersionTupleTest.cpp
   YAMLIOTest.cpp
   YAMLParserTest.cpp
   formatted_raw_ostream_test.cpp

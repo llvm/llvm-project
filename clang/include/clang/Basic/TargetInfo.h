@@ -20,7 +20,6 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
@@ -30,6 +29,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/VersionTuple.h"
 #include <cassert>
 #include <string>
 #include <vector>

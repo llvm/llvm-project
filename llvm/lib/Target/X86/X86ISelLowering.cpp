@@ -20315,8 +20315,15 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                          Op.getOperand(1), Op.getOperand(2));
     }
     case INTR_TYPE_3OP:
-      return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Op.getOperand(1),
-        Op.getOperand(2), Op.getOperand(3));
+    case INTR_TYPE_3OP_IMM8: {
+      SDValue Src3 = Op.getOperand(3);
+
+      if (IntrData->Type == INTR_TYPE_3OP_IMM8)
+        Src3 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Src3);
+
+      return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
+                         Op.getOperand(1), Op.getOperand(2), Src3);
+    }
     case INTR_TYPE_4OP:
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Op.getOperand(1),
         Op.getOperand(2), Op.getOperand(3), Op.getOperand(4));

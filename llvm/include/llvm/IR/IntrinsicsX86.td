@@ -4226,23 +4226,20 @@ let TargetPrefix = "x86" in {
               Intrinsic<[llvm_v32i16_ty], [llvm_v64i8_ty,
                          llvm_v64i8_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_dbpsadbw_128 :
-         GCCBuiltin<"__builtin_ia32_dbpsadbw128_mask">,
+  def int_x86_avx512_dbpsadbw_128 :
+         GCCBuiltin<"__builtin_ia32_dbpsadbw128">,
           Intrinsic<[llvm_v8i16_ty],
-          [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty, llvm_v8i16_ty,
-           llvm_i8_ty], [IntrNoMem]>;
+                    [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_dbpsadbw_256 :
-         GCCBuiltin<"__builtin_ia32_dbpsadbw256_mask">,
+  def int_x86_avx512_dbpsadbw_256 :
+         GCCBuiltin<"__builtin_ia32_dbpsadbw256">,
           Intrinsic<[llvm_v16i16_ty],
-          [llvm_v32i8_ty, llvm_v32i8_ty, llvm_i32_ty, llvm_v16i16_ty,
-           llvm_i16_ty], [IntrNoMem]>;
+                    [llvm_v32i8_ty, llvm_v32i8_ty, llvm_i32_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_dbpsadbw_512 :
-         GCCBuiltin<"__builtin_ia32_dbpsadbw512_mask">,
+  def int_x86_avx512_dbpsadbw_512 :
+         GCCBuiltin<"__builtin_ia32_dbpsadbw512">,
           Intrinsic<[llvm_v32i16_ty],
-          [llvm_v64i8_ty, llvm_v64i8_ty, llvm_i32_ty, llvm_v32i16_ty,
-           llvm_i32_ty], [IntrNoMem]>;
+                    [llvm_v64i8_ty, llvm_v64i8_ty, llvm_i32_ty], [IntrNoMem]>;
 }
 
 // Gather and Scatter ops
