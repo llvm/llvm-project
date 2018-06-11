@@ -23,7 +23,7 @@ define <4 x i32> @test_sha1msg1(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; CANNONLAKE-LABEL: test_sha1msg1:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha1msg1 %xmm1, %xmm0 # sched: [4:0.33]
+; CANNONLAKE-NEXT:    sha1msg1 %xmm1, %xmm0 # sched: [4:0.50]
 ; CANNONLAKE-NEXT:    sha1msg1 (%rdi), %xmm0 # sched: [10:0.50]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -54,7 +54,7 @@ define <4 x i32> @test_sha1msg2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; CANNONLAKE-LABEL: test_sha1msg2:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha1msg2 %xmm1, %xmm0 # sched: [4:0.33]
+; CANNONLAKE-NEXT:    sha1msg2 %xmm1, %xmm0 # sched: [4:0.50]
 ; CANNONLAKE-NEXT:    sha1msg2 (%rdi), %xmm0 # sched: [10:0.50]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -85,7 +85,7 @@ define <4 x i32> @test_sha1nexte(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; CANNONLAKE-LABEL: test_sha1nexte:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha1nexte %xmm1, %xmm0 # sched: [4:0.33]
+; CANNONLAKE-NEXT:    sha1nexte %xmm1, %xmm0 # sched: [4:0.50]
 ; CANNONLAKE-NEXT:    sha1nexte (%rdi), %xmm0 # sched: [10:0.50]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -116,7 +116,7 @@ define <4 x i32> @test_sha1rnds4(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; CANNONLAKE-LABEL: test_sha1rnds4:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha1rnds4 $3, %xmm1, %xmm0 # sched: [4:0.33]
+; CANNONLAKE-NEXT:    sha1rnds4 $3, %xmm1, %xmm0 # sched: [4:0.50]
 ; CANNONLAKE-NEXT:    sha1rnds4 $3, (%rdi), %xmm0 # sched: [10:0.50]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -151,7 +151,7 @@ define <4 x i32> @test_sha256msg1(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) 
 ;
 ; CANNONLAKE-LABEL: test_sha256msg1:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha256msg1 %xmm1, %xmm0 # sched: [4:0.33]
+; CANNONLAKE-NEXT:    sha256msg1 %xmm1, %xmm0 # sched: [4:0.50]
 ; CANNONLAKE-NEXT:    sha256msg1 (%rdi), %xmm0 # sched: [10:0.50]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -182,7 +182,7 @@ define <4 x i32> @test_sha256msg2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) 
 ;
 ; CANNONLAKE-LABEL: test_sha256msg2:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha256msg2 %xmm1, %xmm0 # sched: [4:0.33]
+; CANNONLAKE-NEXT:    sha256msg2 %xmm1, %xmm0 # sched: [4:0.50]
 ; CANNONLAKE-NEXT:    sha256msg2 (%rdi), %xmm0 # sched: [10:0.50]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -221,7 +221,7 @@ define <4 x i32> @test_sha256rnds2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, 
 ; CANNONLAKE:       # %bb.0:
 ; CANNONLAKE-NEXT:    vmovaps %xmm0, %xmm3 # sched: [1:0.33]
 ; CANNONLAKE-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.33]
-; CANNONLAKE-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # sched: [4:0.33]
+; CANNONLAKE-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # sched: [4:0.50]
 ; CANNONLAKE-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3 # sched: [10:0.50]
 ; CANNONLAKE-NEXT:    vmovaps %xmm3, %xmm0 # sched: [1:0.33]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]

@@ -152,9 +152,9 @@ define <2 x double> @test_cvtpi2pd(x86_mmx %a0, x86_mmx* %a1) optsize {
 ;
 ; SKX-LABEL: test_cvtpi2pd:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    cvtpi2pd %mm0, %xmm0 # sched: [5:1.00]
-; SKX-NEXT:    cvtpi2pd (%rdi), %xmm1 # sched: [10:1.00]
-; SKX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    cvtpi2pd %mm0, %xmm0 # sched: [4:0.50]
+; SKX-NEXT:    cvtpi2pd (%rdi), %xmm1 # sched: [9:0.50]
+; SKX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cvtpi2pd:
@@ -232,7 +232,7 @@ define <4 x float> @test_cvtpi2ps(x86_mmx %a0, x86_mmx* %a1, <4 x float> %a2, <4
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    cvtpi2ps %mm0, %xmm0 # sched: [6:2.00]
 ; SKX-NEXT:    cvtpi2ps (%rdi), %xmm1 # sched: [9:1.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cvtpi2ps:

@@ -8376,13 +8376,13 @@ define void @test_nop(i16 %a0, i32 %a1, i64 %a2, i16 *%p0, i32 *%p1, i64 *%p2) o
 ; SKX-LABEL: test_nop:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    nop # sched: [1:0.25]
-; SKX-NEXT:    nopw %di # sched: [1:0.25]
-; SKX-NEXT:    nopw (%rcx) # sched: [1:0.25]
-; SKX-NEXT:    nopl %esi # sched: [1:0.25]
-; SKX-NEXT:    nopl (%r8) # sched: [1:0.25]
-; SKX-NEXT:    nopq %rdx # sched: [1:0.25]
-; SKX-NEXT:    nopq (%r9) # sched: [1:0.25]
+; SKX-NEXT:    nop # sched: [1:0.17]
+; SKX-NEXT:    nopw %di # sched: [1:0.17]
+; SKX-NEXT:    nopw (%rcx) # sched: [1:0.17]
+; SKX-NEXT:    nopl %esi # sched: [1:0.17]
+; SKX-NEXT:    nopl (%r8) # sched: [1:0.17]
+; SKX-NEXT:    nopq %rdx # sched: [1:0.17]
+; SKX-NEXT:    nopq (%r9) # sched: [1:0.17]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;

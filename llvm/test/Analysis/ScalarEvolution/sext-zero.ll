@@ -1,9 +1,9 @@
 ; RUN: opt < %s -analyze -scalar-evolution | FileCheck %s
 
 ; CHECK:  %tmp9 = shl i64 %tmp8, 33
-; CHECK-NEXT:  -->  {{.*}} Exits: (-8589934592 + (8589934592 * (zext i32 %arg2 to i64)))
+; CHECK-NEXT:  -->  {{.*}} Exits: (-8589934592 + (8589934592 * (zext i32 %arg2 to i64))<nuw>)
 ; CHECK-NEXT:  %tmp10 = ashr exact i64 %tmp9, 0
-; CHECK-NEXT:  -->  {{.*}} Exits: (-8589934592 + (8589934592 * (zext i32 %arg2 to i64)))
+; CHECK-NEXT:  -->  {{.*}} Exits: (-8589934592 + (8589934592 * (zext i32 %arg2 to i64))<nuw>)
 
 define void @foo(i32* nocapture %arg, i32 %arg1, i32 %arg2) {
 bb:

@@ -99,6 +99,7 @@ void lsan_free(void *p);
 void *lsan_realloc(void *p, uptr size, const StackTrace &stack);
 void *lsan_calloc(uptr nmemb, uptr size, const StackTrace &stack);
 void *lsan_valloc(uptr size, const StackTrace &stack);
+void *lsan_pvalloc(uptr size, const StackTrace &stack);
 uptr lsan_mz_size(const void *p);
 
 }  // namespace __lsan

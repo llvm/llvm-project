@@ -98,3 +98,31 @@ define void @test7(i32 %A) {
 ; CHECK-NEXT: -->  0
   ret void
 }
+
+define i64 @test8(i64 %a) {
+; CHECK-LABEL: @test8
+  %t0 = udiv i64 %a, 56
+  %t1 = udiv i64 %t0, 56
+; CHECK: %t1
+; CHECK-NEXT: -->  (%a /u 3136)
+  ret i64 %t1
+}
+
+define i64 @test9(i64 %a) {
+; CHECK-LABEL: @test9
+  %t0 = udiv i64 %a, 100000000000000
+  %t1 = udiv i64 %t0, 100000000000000
+; CHECK: %t1
+; CHECK-NEXT: -->  0
+  ret i64 %t1
+}
+
+define i64 @test10(i64 %a, i64 %b) {
+; CHECK-LABEL: @test10
+  %t0 = udiv i64 %a, 100000000000000
+  %t1 = udiv i64 %t0, 100000000000000
+  %t2 = mul i64 %b, %t1
+; CHECK: %t2
+; CHECK-NEXT: -->  0
+  ret i64 %t2
+}

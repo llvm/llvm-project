@@ -2,7 +2,11 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NONE %s
 // RUN: %clang_cc1 -Qn -emit-llvm -debug-info-kind=limited -o - %s \
 // RUN:   | FileCheck --check-prefix=CHECK-QN %s
+// RUN: %clang_cc1 -fno-ident -emit-llvm -debug-info-kind=limited -o - %s \
+// RUN:   | FileCheck --check-prefix=CHECK-QN %s
 // RUN: %clang_cc1 -Qy -emit-llvm -debug-info-kind=limited -o - %s \
+// RUN:   | FileCheck --check-prefix=CHECK-QY %s
+// RUN: %clang_cc1 -fident -emit-llvm -debug-info-kind=limited -o - %s \
 // RUN:   | FileCheck --check-prefix=CHECK-QY %s
 
 // CHECK-NONE: @main

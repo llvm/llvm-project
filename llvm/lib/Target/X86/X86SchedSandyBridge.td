@@ -176,25 +176,31 @@ defm : X86WriteRes<WriteEMMS,          [SBPort015], 31, [31], 31>;
 defm : SBWriteResPair<WriteFAdd,    [SBPort1],  3, [1], 1, 6>;
 defm : SBWriteResPair<WriteFAddX,   [SBPort1],  3, [1], 1, 6>;
 defm : SBWriteResPair<WriteFAddY,   [SBPort1],  3, [1], 1, 7>;
+defm : SBWriteResPair<WriteFAddZ,   [SBPort1],  3, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFAdd64,  [SBPort1],  3, [1], 1, 6>;
 defm : SBWriteResPair<WriteFAdd64X, [SBPort1],  3, [1], 1, 6>;
 defm : SBWriteResPair<WriteFAdd64Y, [SBPort1],  3, [1], 1, 7>;
+defm : SBWriteResPair<WriteFAdd64Z, [SBPort1],  3, [1], 1, 7>; // Unsupported = 1
 
 defm : SBWriteResPair<WriteFCmp,    [SBPort1],  3, [1], 1, 6>;
 defm : SBWriteResPair<WriteFCmpX,   [SBPort1],  3, [1], 1, 6>;
 defm : SBWriteResPair<WriteFCmpY,   [SBPort1],  3, [1], 1, 7>;
+defm : SBWriteResPair<WriteFCmpZ,   [SBPort1],  3, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFCmp64,  [SBPort1],  3, [1], 1, 6>;
 defm : SBWriteResPair<WriteFCmp64X, [SBPort1],  3, [1], 1, 6>;
 defm : SBWriteResPair<WriteFCmp64Y, [SBPort1],  3, [1], 1, 7>;
+defm : SBWriteResPair<WriteFCmp64Z, [SBPort1],  3, [1], 1, 7>; // Unsupported = 1
 
 defm : SBWriteResPair<WriteFCom,    [SBPort1],  3>;
 
 defm : SBWriteResPair<WriteFMul,    [SBPort0],  5, [1], 1, 6>;
 defm : SBWriteResPair<WriteFMulX,   [SBPort0],  5, [1], 1, 6>;
 defm : SBWriteResPair<WriteFMulY,   [SBPort0],  5, [1], 1, 7>;
+defm : SBWriteResPair<WriteFMulZ,   [SBPort0],  5, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFMul64,  [SBPort0],  5, [1], 1, 6>;
 defm : SBWriteResPair<WriteFMul64X, [SBPort0],  5, [1], 1, 6>;
 defm : SBWriteResPair<WriteFMul64Y, [SBPort0],  5, [1], 1, 7>;
+defm : SBWriteResPair<WriteFMul64Z, [SBPort0],  5, [1], 1, 7>; // Unsupported = 1
 
 defm : SBWriteResPair<WriteFDiv,    [SBPort0,SBFPDivider], 14, [1,14], 1, 6>;
 defm : SBWriteResPair<WriteFDivX,   [SBPort0,SBFPDivider], 14, [1,14], 1, 6>;
@@ -208,10 +214,12 @@ defm : SBWriteResPair<WriteFDiv64Z, [SBPort0,SBPort05,SBFPDivider], 45, [2,1,44]
 defm : SBWriteResPair<WriteFRcp,   [SBPort0],  5, [1], 1, 6>;
 defm : SBWriteResPair<WriteFRcpX,  [SBPort0],  5, [1], 1, 6>;
 defm : SBWriteResPair<WriteFRcpY,  [SBPort0,SBPort05],  7, [2,1], 3, 7>;
+defm : SBWriteResPair<WriteFRcpZ,  [SBPort0,SBPort05],  7, [2,1], 3, 7>; // Unsupported = 1
 
 defm : SBWriteResPair<WriteFRsqrt, [SBPort0],  5, [1], 1, 6>;
 defm : SBWriteResPair<WriteFRsqrtX,[SBPort0],  5, [1], 1, 6>;
 defm : SBWriteResPair<WriteFRsqrtY,[SBPort0,SBPort05],  7, [2,1], 3, 7>;
+defm : SBWriteResPair<WriteFRsqrtZ,[SBPort0,SBPort05],  7, [2,1], 3, 7>; // Unsupported = 1
 
 defm : SBWriteResPair<WriteFSqrt,    [SBPort0,SBFPDivider], 14, [1,14], 1, 6>;
 defm : SBWriteResPair<WriteFSqrtX,   [SBPort0,SBFPDivider], 14, [1,14], 1, 6>;
@@ -226,58 +234,78 @@ defm : SBWriteResPair<WriteFSqrt80,  [SBPort0,SBFPDivider], 24, [1,24], 1, 6>;
 defm : SBWriteResPair<WriteDPPD,   [SBPort0,SBPort1,SBPort5],  9, [1,1,1], 3, 6>;
 defm : SBWriteResPair<WriteDPPS,   [SBPort0,SBPort1,SBPort5], 12, [1,2,1], 4, 6>;
 defm : SBWriteResPair<WriteDPPSY,  [SBPort0,SBPort1,SBPort5], 12, [1,2,1], 4, 7>;
+defm : SBWriteResPair<WriteDPPSZ,  [SBPort0,SBPort1,SBPort5], 12, [1,2,1], 4, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFSign,    [SBPort5], 1>;
 defm : SBWriteResPair<WriteFRnd,     [SBPort1], 3, [1], 1, 6>;
 defm : SBWriteResPair<WriteFRndY,    [SBPort1], 3, [1], 1, 7>;
+defm : SBWriteResPair<WriteFRndZ,    [SBPort1], 3, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFLogic,   [SBPort5], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteFLogicY,  [SBPort5], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteFLogicZ,  [SBPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFTest,    [SBPort0], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteFTestY,   [SBPort0], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteFTestZ,   [SBPort0], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFShuffle, [SBPort5], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteFShuffleY,[SBPort5], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteFShuffleZ,[SBPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFVarShuffle, [SBPort5], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteFVarShuffleY,[SBPort5], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteFVarShuffleZ,[SBPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFBlend,    [SBPort05], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteFBlendY,   [SBPort05], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteFBlendZ,   [SBPort05], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFVarBlend, [SBPort05], 2, [2], 2, 6>;
 defm : SBWriteResPair<WriteFVarBlendY,[SBPort05], 2, [2], 2, 7>;
+defm : SBWriteResPair<WriteFVarBlendZ,[SBPort05], 2, [2], 2, 7>; // Unsupported = 1
 
 // Conversion between integer and float.
 defm : SBWriteResPair<WriteCvtSS2I,   [SBPort0,SBPort1], 5, [1,1], 2>;
 defm : SBWriteResPair<WriteCvtPS2I,           [SBPort1], 3, [1], 1, 6>;
 defm : SBWriteResPair<WriteCvtPS2IY,          [SBPort1], 3, [1], 1, 7>;
+defm : SBWriteResPair<WriteCvtPS2IZ,          [SBPort1], 3, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteCvtSD2I,   [SBPort0,SBPort1], 5, [1,1], 2>;
 defm : SBWriteResPair<WriteCvtPD2I,   [SBPort1,SBPort5], 4, [1,1], 2, 6>;
 defm : X86WriteRes<WriteCvtPD2IY,     [SBPort1,SBPort5], 4, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPD2IZ,     [SBPort1,SBPort5], 4, [1,1], 2>; // Unsupported = 1
 defm : X86WriteRes<WriteCvtPD2IYLd,   [SBPort1,SBPort5,SBPort23], 11, [1,1,1], 3>;
+defm : X86WriteRes<WriteCvtPD2IZLd,   [SBPort1,SBPort5,SBPort23], 11, [1,1,1], 3>; // Unsupported = 1
 
 defm : X86WriteRes<WriteCvtI2SS,      [SBPort1,SBPort5],  5, [1,2], 3>;
 defm : X86WriteRes<WriteCvtI2SSLd,    [SBPort1,SBPort5,SBPort23], 10, [1,1,1], 3>;
 defm : SBWriteResPair<WriteCvtI2PS,           [SBPort1],  3, [1], 1, 6>;
 defm : SBWriteResPair<WriteCvtI2PSY,          [SBPort1],  3, [1], 1, 7>;
+defm : SBWriteResPair<WriteCvtI2PSZ,          [SBPort1],  3, [1], 1, 7>; // Unsupported = 1
 defm : X86WriteRes<WriteCvtI2SD,      [SBPort1,SBPort5],  4, [1,1], 2>;
 defm : X86WriteRes<WriteCvtI2PD,      [SBPort1,SBPort5],  4, [1,1], 2>;
 defm : X86WriteRes<WriteCvtI2PDY,     [SBPort1,SBPort5],  4, [1,1], 2>;
+defm : X86WriteRes<WriteCvtI2PDZ,     [SBPort1,SBPort5],  4, [1,1], 2>; // Unsupported = 1
 defm : X86WriteRes<WriteCvtI2SDLd,   [SBPort1,SBPort23],  9, [1,1], 2>;
 defm : X86WriteRes<WriteCvtI2PDLd,   [SBPort1,SBPort5,SBPort23], 10, [1,1,1], 3>;
 defm : X86WriteRes<WriteCvtI2PDYLd,  [SBPort1,SBPort5,SBPort23], 10, [1,1,1], 3>;
+defm : X86WriteRes<WriteCvtI2PDZLd,  [SBPort1,SBPort5,SBPort23], 10, [1,1,1], 3>; // Unsupported = 1
 
 defm : SBWriteResPair<WriteCvtSS2SD,  [SBPort0], 1, [1], 1, 6>;
 defm : X86WriteRes<WriteCvtPS2PD,     [SBPort0,SBPort5], 2, [1,1], 2>;
 defm : X86WriteRes<WriteCvtPS2PDY,    [SBPort0,SBPort5], 2, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPS2PDZ,    [SBPort0,SBPort5], 2, [1,1], 2>; // Unsupported = 1
 defm : X86WriteRes<WriteCvtPS2PDLd,  [SBPort0,SBPort23], 7, [1,1], 2>;
 defm : X86WriteRes<WriteCvtPS2PDYLd, [SBPort0,SBPort23], 7, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPS2PDZLd, [SBPort0,SBPort23], 7, [1,1], 2>; // Unsupported = 1
 defm : SBWriteResPair<WriteCvtSD2SS,  [SBPort1,SBPort5], 4, [1,1], 2, 6>;
 defm : SBWriteResPair<WriteCvtPD2PS,  [SBPort1,SBPort5], 4, [1,1], 2, 6>;
 defm : SBWriteResPair<WriteCvtPD2PSY, [SBPort1,SBPort5], 4, [1,1], 2, 7>;
+defm : SBWriteResPair<WriteCvtPD2PSZ, [SBPort1,SBPort5], 4, [1,1], 2, 7>; // Unsupported = 1
 
 defm : SBWriteResPair<WriteCvtPH2PS,  [SBPort1], 3>;
 defm : SBWriteResPair<WriteCvtPH2PSY, [SBPort1], 3>;
+defm : SBWriteResPair<WriteCvtPH2PSZ, [SBPort1], 3>; // Unsupported = 1
 
 defm : X86WriteRes<WriteCvtPS2PH,    [SBPort1], 3, [1], 1>;
 defm : X86WriteRes<WriteCvtPS2PHY,   [SBPort1], 3, [1], 1>;
+defm : X86WriteRes<WriteCvtPS2PHZ,   [SBPort1], 3, [1], 1>; // Unsupported = 1
 defm : X86WriteRes<WriteCvtPS2PHSt,  [SBPort1, SBPort23, SBPort4], 4, [1,1,1], 1>;
 defm : X86WriteRes<WriteCvtPS2PHYSt, [SBPort1, SBPort23, SBPort4], 4, [1,1,1], 1>;
+defm : X86WriteRes<WriteCvtPS2PHZSt, [SBPort1, SBPort23, SBPort4], 4, [1,1,1], 1>; // Unsupported = 1
 
 // Vector integer operations.
 defm : X86WriteRes<WriteVecLoad,         [SBPort23], 5, [1], 1>;
@@ -303,42 +331,56 @@ defm : X86WriteRes<WriteVecMoveFromGpr,  [SBPort5], 1, [1], 1>;
 defm : SBWriteResPair<WriteVecLogic, [SBPort015], 1, [1], 1, 5>;
 defm : SBWriteResPair<WriteVecLogicX,[SBPort015], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteVecLogicY,[SBPort015], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteVecLogicZ,[SBPort015], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteVecTest,  [SBPort0,SBPort5], 2, [1,1], 2, 6>;
 defm : SBWriteResPair<WriteVecTestY, [SBPort0,SBPort5], 2, [1,1], 2, 7>;
+defm : SBWriteResPair<WriteVecTestZ, [SBPort0,SBPort5], 2, [1,1], 2, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteVecALU,   [SBPort1],  3, [1], 1, 5>;
 defm : SBWriteResPair<WriteVecALUX,  [SBPort15], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteVecALUY,  [SBPort15], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteVecALUZ,  [SBPort15], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteVecIMul,  [SBPort0], 5, [1], 1, 5>;
 defm : SBWriteResPair<WriteVecIMulX, [SBPort0], 5, [1], 1, 6>;
 defm : SBWriteResPair<WriteVecIMulY, [SBPort0], 5, [1], 1, 7>;
+defm : SBWriteResPair<WriteVecIMulZ, [SBPort0], 5, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WritePMULLD,   [SBPort0], 5, [1], 1, 6>;
 defm : SBWriteResPair<WritePMULLDY,  [SBPort0], 5, [1], 1, 7>; // TODO this is probably wrong for 256/512-bit for the "generic" model
+defm : SBWriteResPair<WritePMULLDZ,  [SBPort0], 5, [1], 1, 7>;  // Unsupported = 1
 defm : SBWriteResPair<WriteShuffle,  [SBPort5], 1, [1], 1, 5>;
 defm : SBWriteResPair<WriteShuffleX, [SBPort15], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteShuffleY, [SBPort5], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteShuffleZ, [SBPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteVarShuffle,  [SBPort15], 1, [1], 1, 5>;
 defm : SBWriteResPair<WriteVarShuffleX, [SBPort15], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteVarShuffleY, [SBPort15], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteVarShuffleZ, [SBPort15], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteBlend,   [SBPort15], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteBlendY,  [SBPort15], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteBlendZ,  [SBPort15], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteVarBlend, [SBPort15], 2, [2], 2, 6>;
 defm : SBWriteResPair<WriteVarBlendY,[SBPort15], 2, [2], 2, 7>;
+defm : SBWriteResPair<WriteVarBlendZ,[SBPort15], 2, [2], 2, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteMPSAD,  [SBPort0, SBPort15], 7, [1,2], 3, 6>;
 defm : SBWriteResPair<WriteMPSADY, [SBPort0, SBPort15], 7, [1,2], 3, 7>;
+defm : SBWriteResPair<WriteMPSADZ, [SBPort0, SBPort15], 7, [1,2], 3, 7>; // Unsupported = 1
 defm : SBWriteResPair<WritePSADBW,  [SBPort0], 5, [1], 1, 5>;
 defm : SBWriteResPair<WritePSADBWX, [SBPort0], 5, [1], 1, 6>;
 defm : SBWriteResPair<WritePSADBWY, [SBPort0], 5, [1], 1, 7>;
+defm : SBWriteResPair<WritePSADBWZ, [SBPort0], 5, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WritePHMINPOS,  [SBPort0], 5, [1], 1, 6>;
 
 // Vector integer shifts.
 defm : SBWriteResPair<WriteVecShift,     [SBPort5], 1, [1], 1, 5>;
 defm : SBWriteResPair<WriteVecShiftX,    [SBPort0,SBPort15], 2, [1,1], 2, 6>;
 defm : SBWriteResPair<WriteVecShiftY,    [SBPort0,SBPort15], 4, [1,1], 2, 7>;
+defm : SBWriteResPair<WriteVecShiftZ,    [SBPort0,SBPort15], 4, [1,1], 2, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteVecShiftImm,  [SBPort5], 1, [1], 1, 5>;
 defm : SBWriteResPair<WriteVecShiftImmX, [SBPort0], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteVecShiftImmY, [SBPort0], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteVecShiftImmZ, [SBPort0], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteVarVecShift,  [SBPort0], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteVarVecShiftY, [SBPort0], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteVarVecShiftZ, [SBPort0], 1, [1], 1, 7>; // Unsupported = 1
 
 // Vector insert/extract operations.
 def : WriteRes<WriteVecInsert, [SBPort5,SBPort15]> {
@@ -365,9 +407,11 @@ def : WriteRes<WriteVecExtractSt, [SBPort4,SBPort23,SBPort15]> {
 
 defm : SBWriteResPair<WriteFHAdd,  [SBPort1,SBPort5], 5, [1,2], 3, 6>;
 defm : SBWriteResPair<WriteFHAddY, [SBPort1,SBPort5], 5, [1,2], 3, 7>;
+defm : SBWriteResPair<WriteFHAddZ, [SBPort1,SBPort5], 5, [1,2], 3, 7>; // Unsupported = 1
 defm : SBWriteResPair<WritePHAdd,  [SBPort15], 3, [3], 3, 5>;
 defm : SBWriteResPair<WritePHAddX, [SBPort15], 3, [3], 3, 6>;
 defm : SBWriteResPair<WritePHAddY, [SBPort15], 3, [3], 3, 7>;
+defm : SBWriteResPair<WritePHAddZ, [SBPort15], 3, [3], 3, 7>; // Unsupported = 1
 
 ////////////////////////////////////////////////////////////////////////////////
 // String instructions.
@@ -484,6 +528,7 @@ defm : SBWriteResPair<WriteVarShuffle256, [SBPort5], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteFMA,  [SBPort01],  5>;
 defm : SBWriteResPair<WriteFMAX, [SBPort01],  5>;
 defm : SBWriteResPair<WriteFMAY, [SBPort01],  5>;
+defm : SBWriteResPair<WriteFMAZ, [SBPort01],  5>;  // Unsupported = 1
 
 // Remaining SNB instrs.
 

@@ -76,7 +76,7 @@ define <4 x double> @test_broadcastsd_ymm(<2 x double> %a0) {
 ; SKX-LABEL: test_broadcastsd_ymm:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vbroadcastsd %xmm0, %ymm0 # sched: [3:1.00]
-; SKX-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_broadcastsd_ymm:
@@ -117,7 +117,7 @@ define <4 x float> @test_broadcastss(<4 x float> %a0) {
 ; SKX-LABEL: test_broadcastss:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vbroadcastss %xmm0, %xmm0 # sched: [1:1.00]
-; SKX-NEXT:    vaddps %xmm0, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm0, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_broadcastss:
@@ -158,7 +158,7 @@ define <8 x float> @test_broadcastss_ymm(<4 x float> %a0) {
 ; SKX-LABEL: test_broadcastss_ymm:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vbroadcastss %xmm0, %ymm0 # sched: [3:1.00]
-; SKX-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_broadcastss_ymm:
@@ -2634,7 +2634,7 @@ define <4 x double> @test_permpd(<4 x double> %a0, <4 x double> *%a1) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,2,2,3] sched: [3:1.00]
 ; SKX-NEXT:    vpermpd {{.*#+}} ymm1 = mem[0,2,2,3] sched: [10:1.00]
-; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_permpd:
@@ -2683,7 +2683,7 @@ define <8 x float> @test_permps(<8 x i32> %a0, <8 x float> %a1, <8 x float> *%a2
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpermps %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
 ; SKX-NEXT:    vpermps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
-; SKX-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_permps:
@@ -3320,7 +3320,7 @@ define <16 x i16> @test_pmaddubsw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) 
 ;
 ; SKX-LABEL: test_pmaddubsw:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpmaddubsw (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -3364,7 +3364,7 @@ define <8 x i32> @test_pmaddwd(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ;
 ; SKX-LABEL: test_pmaddwd:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpmaddwd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4761,7 +4761,7 @@ define <4 x i64> @test_pmuldq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ;
 ; SKX-LABEL: test_pmuldq:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpmuldq (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4805,7 +4805,7 @@ define <16 x i16> @test_pmulhrsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2
 ;
 ; SKX-LABEL: test_pmulhrsw:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmulhrsw %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vpmulhrsw %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpmulhrsw (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4848,7 +4848,7 @@ define <16 x i16> @test_pmulhuw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ;
 ; SKX-LABEL: test_pmulhuw:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmulhuw %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vpmulhuw %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpmulhuw (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4891,7 +4891,7 @@ define <16 x i16> @test_pmulhw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ;
 ; SKX-LABEL: test_pmulhw:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmulhw %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vpmulhw %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpmulhw (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4934,8 +4934,8 @@ define <8 x i32> @test_pmulld(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ;
 ; SKX-LABEL: test_pmulld:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmulld %ymm1, %ymm0, %ymm0 # sched: [10:0.67]
-; SKX-NEXT:    vpmulld (%rdi), %ymm0, %ymm0 # sched: [17:0.67]
+; SKX-NEXT:    vpmulld %ymm1, %ymm0, %ymm0 # sched: [10:1.00]
+; SKX-NEXT:    vpmulld (%rdi), %ymm0, %ymm0 # sched: [17:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_pmulld:
@@ -4976,7 +4976,7 @@ define <16 x i16> @test_pmullw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ;
 ; SKX-LABEL: test_pmullw:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmullw %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vpmullw %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpmullw (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -5018,7 +5018,7 @@ define <4 x i64> @test_pmuludq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ;
 ; SKX-LABEL: test_pmuludq:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0 # sched: [4:0.33]
+; SKX-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpmuludq (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;

@@ -51,9 +51,12 @@ private:
                        std::unique_ptr<llvm::DWARFDebugNames> debug_names_up,
                        DWARFDataExtractor debug_names_data,
                        DWARFDataExtractor debug_str_data,
-                       DWARFDebugInfo *debug_info)
-      : DWARFIndex(module), m_debug_names_up(std::move(debug_names_up)),
-        m_fallback(module, debug_info, GetUnits(*m_debug_names_up)) {}
+                       DWARFDebugInfo &debug_info)
+      : DWARFIndex(module), m_debug_info(debug_info),
+        m_debug_names_up(std::move(debug_names_up)),
+        m_fallback(module, &debug_info, GetUnits(*m_debug_names_up)) {}
+
+  DWARFDebugInfo &m_debug_info;
 
   // LLVM DWARFDebugNames will hold a non-owning reference to this data, so keep
   // track of the ownership here.
@@ -64,8 +67,9 @@ private:
   std::unique_ptr<DebugNames> m_debug_names_up;
   ManualDWARFIndex m_fallback;
 
-  static DIERef ToDIERef(const DebugNames::Entry &entry);
-  static void Append(const DebugNames::Entry &entry, DIEArray &offsets);
+  DIERef ToDIERef(const DebugNames::Entry &entry);
+  void Append(const DebugNames::Entry &entry, DIEArray &offsets);
+
   static void MaybeLogLookupError(llvm::Error error,
                                   const DebugNames::NameIndex &ni,
                                   llvm::StringRef name);

@@ -9,12 +9,6 @@
 // RUN: FileCheck --check-prefix=CHECKSH %s -input-file %t/crash-report-*.sh
 // REQUIRES: crash-recovery
 
-// because of the glob (*.m, *.sh)
-// REQUIRES: shell
-
-// FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
-// XFAIL: mingw32
-
 @import simple;
 const int x = MODULE_MACRO;
 
@@ -34,4 +28,4 @@ const int x = MODULE_MACRO;
 // CHECKSH: "-D" "FOO=BAR"
 // CHECKSH-NOT: "-fmodules-cache-path="
 // CHECKSH: "crash-report-modules-{{[^ ]*}}.m"
-// CHECKSH: "-ivfsoverlay" "crash-report-modules-{{[^ ]*}}.cache/vfs/vfs.yaml"
+// CHECKSH: "-ivfsoverlay" "crash-report-modules-{{[^ ]*}}.cache{{(/|\\\\)}}vfs{{(/|\\\\)}}vfs.yaml"

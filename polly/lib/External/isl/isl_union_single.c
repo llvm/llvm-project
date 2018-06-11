@@ -29,7 +29,7 @@ struct UNION {
 
 /* Return the number of base expressions in "u".
  */
-int FN(FN(UNION,n),PARTS)(__isl_keep UNION *u)
+int FN(FN(UNION,n),BASE)(__isl_keep UNION *u)
 {
 	return u ? u->table.n : 0;
 }
@@ -51,7 +51,7 @@ static isl_stat FN(UNION,call_on_copy)(void **entry, void *user)
 	return data->fn(part, data->user);
 }
 
-isl_stat FN(FN(UNION,foreach),PARTS)(__isl_keep UNION *u,
+isl_stat FN(FN(UNION,foreach),BASE)(__isl_keep UNION *u,
 	isl_stat (*fn)(__isl_take PART *part, void *user), void *user)
 {
 	S(UNION,foreach_data) data = { fn, user };

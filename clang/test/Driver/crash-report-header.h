@@ -5,9 +5,6 @@
 // RUN: cat %t/crash-report-header-*.sh | FileCheck --check-prefix=CHECKSH "%s"
 // REQUIRES: crash-recovery
 
-// because of the glob (*.h, *.sh)
-// REQUIRES: shell
-
 #pragma clang __debug parser_crash
 // CHECK: Preprocessed source(s) and associated run script(s) are located at:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.h
