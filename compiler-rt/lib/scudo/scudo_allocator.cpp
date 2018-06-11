@@ -388,9 +388,11 @@ struct ScudoAllocator {
     if (PrimaryAllocator::CanAllocate(AlignedSize, MinAlignment)) {
       BackendSize = AlignedSize;
       ClassId = SizeClassMap::ClassID(BackendSize);
-      ScudoTSD *TSD = getTSDAndLock();
+      bool UnlockRequired;
+      ScudoTSD *TSD = getTSDAndLock(&UnlockRequired);
       BackendPtr = BackendAllocator.allocatePrimary(&TSD->Cache, ClassId);
-      TSD->unlock();
+      if (UnlockRequired)
+        TSD->unlock();
     } else {
       BackendSize = NeededSize;
       ClassId = 0;
@@ -447,10 +449,12 @@ struct ScudoAllocator {
       Chunk::eraseHeader(Ptr);
       void *BackendPtr = Chunk::getBackendPtr(Ptr, Header);
       if (Header->ClassId) {
-        ScudoTSD *TSD = getTSDAndLock();
+        bool UnlockRequired;
+        ScudoTSD *TSD = getTSDAndLock(&UnlockRequired);
         getBackendAllocator().deallocatePrimary(&TSD->Cache, BackendPtr,
                                                 Header->ClassId);
-        TSD->unlock();
+        if (UnlockRequired)
+          TSD->unlock();
       } else {
         getBackendAllocator().deallocateSecondary(BackendPtr);
       }
@@ -464,11 +468,13 @@ struct ScudoAllocator {
       UnpackedHeader NewHeader = *Header;
       NewHeader.State = ChunkQuarantine;
       Chunk::compareExchangeHeader(Ptr, &NewHeader, Header);
-      ScudoTSD *TSD = getTSDAndLock();
+      bool UnlockRequired;
+      ScudoTSD *TSD = getTSDAndLock(&UnlockRequired);
       AllocatorQuarantine.Put(getQuarantineCache(TSD),
                               QuarantineCallback(&TSD->Cache), Ptr,
                               EstimatedSize);
-      TSD->unlock();
+      if (UnlockRequired)
+        TSD->unlock();
     }
   }
 
@@ -612,8 +618,7 @@ void initScudo() {
   Instance.init();
 }
 
-void ScudoTSD::init(bool Shared) {
-  UnlockRequired = Shared;
+void ScudoTSD::init() {
   getBackendAllocator().initCache(&Cache);
   memset(QuarantineCachePlaceHolder, 0, sizeof(QuarantineCachePlaceHolder));
 }
