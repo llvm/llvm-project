@@ -45,6 +45,7 @@ constexpr llvm::StringLiteral DefaultSpecialAcronyms[] = {
     "AR",
     "ARGB",
     "ASCII",
+    "AV",
     "BGRA",
     "CA",
     "CF",
@@ -153,7 +154,7 @@ std::string validPropertyNameRegex(llvm::ArrayRef<std::string> EscapedAcronyms,
   std::string StartMatcher = UsedInMatcher ? "::" : "^";
   std::string AcronymsMatcher = AcronymsGroupRegex(EscapedAcronyms);
   return StartMatcher + "(" + AcronymsMatcher + "[A-Z]?)?[a-z]+[a-z0-9]*(" +
-         AcronymsMatcher + "|([A-Z][a-z0-9]+))*$";
+         AcronymsMatcher + "|([A-Z][a-z0-9]+)|A|I)*$";
 }
 
 bool hasCategoryPropertyPrefix(llvm::StringRef PropertyName) {

@@ -52,6 +52,7 @@
 #include "Thunks.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -432,14 +433,14 @@ template <class ELFT> static bool isReadOnly(SharedSymbol &SS) {
 //
 // If two or more symbols are at the same offset, and at least one of
 // them are copied by a copy relocation, all of them need to be copied.
-// Otherwise, they would refer different places at runtime.
+// Otherwise, they would refer to different places at runtime.
 template <class ELFT>
-static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol &SS) {
+static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &SS) {
   typedef typename ELFT::Sym Elf_Sym;
 
   SharedFile<ELFT> &File = SS.getFile<ELFT>();
 
-  std::vector<SharedSymbol *> Ret;
+  SmallSet<SharedSymbol *, 4> Ret;
   for (const Elf_Sym &S : File.getGlobalELFSyms()) {
     if (S.st_shndx == SHN_UNDEF || S.st_shndx == SHN_ABS ||
         S.st_value != SS.Value)
@@ -447,7 +448,7 @@ static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol &SS) {
     StringRef Name = check(S.getName(File.getStringTable()));
     Symbol *Sym = Symtab->find(Name);
     if (auto *Alias = dyn_cast_or_null<SharedSymbol>(Sym))
-      Ret.push_back(Alias);
+      Ret.insert(Alias);
   }
   return Ret;
 }
