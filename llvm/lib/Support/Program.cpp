@@ -63,6 +63,15 @@ ProcessInfo sys::ExecuteNoWait(StringRef Program, const char **Args,
   return PI;
 }
 
+bool sys::commandLineFitsWithinSystemLimits(StringRef Program,
+                                            ArrayRef<const char *> Args) {
+  SmallVector<StringRef, 8> StringRefArgs;
+  StringRefArgs.reserve(Args.size());
+  for (const char *A : Args)
+    StringRefArgs.emplace_back(A);
+  return commandLineFitsWithinSystemLimits(Program, StringRefArgs);
+}
+
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
 #include "Unix/Program.inc"

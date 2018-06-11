@@ -27,6 +27,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   CloneChecker.cpp
   ConversionChecker.cpp
   CXXSelfAssignmentChecker.cpp
+  DanglingInternalBufferChecker.cpp
   DeadStoresChecker.cpp
   DebugCheckers.cpp
   DeleteWithNonVirtualDtorChecker.cpp

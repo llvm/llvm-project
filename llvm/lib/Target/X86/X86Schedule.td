@@ -49,6 +49,20 @@ multiclass X86SchedWritePair {
   }
 }
 
+// Helpers to mark SchedWrites as unsupported.
+multiclass X86WriteResUnsupported<SchedWrite SchedRW> {
+  let Unsupported = 1 in {
+    def : WriteRes<SchedRW, []>;
+  }
+}
+multiclass X86WriteResPairUnsupported<X86FoldableSchedWrite SchedRW> {
+  let Unsupported = 1 in {
+    def : WriteRes<SchedRW, []>;
+    def : WriteRes<SchedRW.Folded, []>;
+  }
+}
+
+
 // Multiclass that wraps X86FoldableSchedWrite for each vector width.
 class X86SchedWriteWidths<X86FoldableSchedWrite sScl,
                           X86FoldableSchedWrite s128,
@@ -598,4 +612,3 @@ def GenericModel : GenericX86Model;
 def GenericPostRAModel : GenericX86Model {
   let PostRAScheduler = 1;
 }
-
