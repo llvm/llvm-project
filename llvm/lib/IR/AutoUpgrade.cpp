@@ -262,6 +262,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.maskz.vpdpwssd.") || // Added in 7.0
       Name.startswith("avx512.mask.vpdpwssds.") || // Added in 7.0
       Name.startswith("avx512.maskz.vpdpwssds.") || // Added in 7.0
+      Name.startswith("avx512.mask.dbpsadbw.") || // Added in 7.0
       Name.startswith("avx512.mask.add.p") || // Added in 7.0
       Name.startswith("avx512.mask.sub.p") || // Added in 7.0
       Name.startswith("avx512.mask.mul.p") || // Added in 7.0
@@ -1246,6 +1247,15 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_permvar_qi_256;
     else if (VecWidth == 512 && EltWidth == 8)
       IID = Intrinsic::x86_avx512_permvar_qi_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("dbpsadbw.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_avx512_dbpsadbw_128;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx512_dbpsadbw_256;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_dbpsadbw_512;
     else
       llvm_unreachable("Unexpected intrinsic");
   } else

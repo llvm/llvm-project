@@ -1819,22 +1819,18 @@ _mm512_mask_permutexvar_epi16 (__m512i __W, __mmask32 __M, __m512i __A,
                               (__v64qi)(__m512i)_mm512_setzero_si512())
 
 #define _mm512_dbsad_epu8(A, B, imm) \
-  (__m512i)__builtin_ia32_dbpsadbw512_mask((__v64qi)(__m512i)(A), \
-                                           (__v64qi)(__m512i)(B), (int)(imm), \
-                                           (__v32hi)_mm512_undefined_epi32(), \
-                                           (__mmask32)-1)
+  (__m512i)__builtin_ia32_dbpsadbw512((__v64qi)(__m512i)(A), \
+                                      (__v64qi)(__m512i)(B), (int)(imm))
 
 #define _mm512_mask_dbsad_epu8(W, U, A, B, imm) \
-  (__m512i)__builtin_ia32_dbpsadbw512_mask((__v64qi)(__m512i)(A), \
-                                           (__v64qi)(__m512i)(B), (int)(imm), \
-                                           (__v32hi)(__m512i)(W), \
-                                           (__mmask32)(U))
+  (__m512i)__builtin_ia32_selectw_512((__mmask32)(U), \
+                                  (__v32hi)_mm512_dbsad_epu8((A), (B), (imm)), \
+                                  (__v32hi)(__m512i)(W))
 
 #define _mm512_maskz_dbsad_epu8(U, A, B, imm) \
-  (__m512i)__builtin_ia32_dbpsadbw512_mask((__v64qi)(__m512i)(A), \
-                                           (__v64qi)(__m512i)(B), (int)(imm), \
-                                           (__v32hi)_mm512_setzero_si512(), \
-                                           (__mmask32)(U))
+  (__m512i)__builtin_ia32_selectw_512((__mmask32)(U), \
+                                  (__v32hi)_mm512_dbsad_epu8((A), (B), (imm)), \
+                                  (__v32hi)_mm512_setzero_si512())
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_sad_epu8 (__m512i __A, __m512i __B)

@@ -8,19 +8,20 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines the clang::VersionTuple class, which represents a version in
+/// Defines the llvm::VersionTuple class, which represents a version in
 /// the form major[.minor[.subminor]].
 ///
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_BASIC_VERSIONTUPLE_H
-#define LLVM_CLANG_BASIC_VERSIONTUPLE_H
+#ifndef LLVM_SUPPORT_VERSIONTUPLE_H
+#define LLVM_SUPPORT_VERSIONTUPLE_H
 
-#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <tuple>
 
-namespace clang {
+namespace llvm {
 
 /// Represents a version number in the form major[.minor[.subminor[.build]]].
 class VersionTuple {
@@ -86,17 +87,17 @@ public:
       return None;
     return Build;
   }
-  
+
   /// Determine if two version numbers are equivalent. If not
   /// provided, minor and subminor version numbers are considered to be zero.
-  friend bool operator==(const VersionTuple& X, const VersionTuple &Y) {
+  friend bool operator==(const VersionTuple &X, const VersionTuple &Y) {
     return X.Major == Y.Major && X.Minor == Y.Minor &&
            X.Subminor == Y.Subminor && X.Build == Y.Build;
   }
 
   /// Determine if two version numbers are not equivalent.
   ///
-  /// If not provided, minor and subminor version numbers are considered to be 
+  /// If not provided, minor and subminor version numbers are considered to be
   /// zero.
   friend bool operator!=(const VersionTuple &X, const VersionTuple &Y) {
     return !(X == Y);
@@ -120,7 +121,7 @@ public:
   }
 
   /// Determine whether one version number precedes or is
-  /// equivalent to another. 
+  /// equivalent to another.
   ///
   /// If not provided, minor and subminor version numbers are considered to be
   /// zero.
@@ -147,7 +148,7 @@ public:
 };
 
 /// Print a version number.
-raw_ostream& operator<<(raw_ostream &Out, const VersionTuple &V);
+raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
 
-} // end namespace clang
-#endif // LLVM_CLANG_BASIC_VERSIONTUPLE_H
+} // end namespace llvm
+#endif // LLVM_SUPPORT_VERSIONTUPLE_H

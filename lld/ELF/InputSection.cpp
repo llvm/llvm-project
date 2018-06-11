@@ -477,8 +477,8 @@ static uint64_t getARMStaticBase(const Symbol &Sym) {
   return OS->PtLoad->FirstSec->Addr;
 }
 
-static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
-                                 const Symbol &Sym, RelExpr Expr) {
+static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
+                                 uint64_t P, const Symbol &Sym, RelExpr Expr) {
   switch (Expr) {
   case R_INVALID:
     return 0;
@@ -516,9 +516,9 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
   case R_TLSDESC_CALL:
     llvm_unreachable("cannot relocate hint relocs");
   case R_MIPS_GOTREL:
-    return Sym.getVA(A) - InX::MipsGot->getGp();
+    return Sym.getVA(A) - InX::MipsGot->getGp(File);
   case R_MIPS_GOT_GP:
-    return InX::MipsGot->getGp() + A;
+    return InX::MipsGot->getGp(File) + A;
   case R_MIPS_GOT_GP_PC: {
     // R_MIPS_LO16 expression has R_MIPS_GOT_GP_PC type iif the target
     // is _gp_disp symbol. In that case we should use the following
@@ -527,7 +527,7 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
     // microMIPS variants of these relocations use slightly different
     // expressions: AHL + GP - P + 3 for %lo() and AHL + GP - P - 1 for %hi()
     // to correctly handle less-sugnificant bit of the microMIPS symbol.
-    uint64_t V = InX::MipsGot->getGp() + A - P;
+    uint64_t V = InX::MipsGot->getGp(File) + A - P;
     if (Type == R_MIPS_LO16 || Type == R_MICROMIPS_LO16)
       V += 4;
     if (Type == R_MICROMIPS_LO16 || Type == R_MICROMIPS_HI16)
@@ -538,21 +538,23 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
     // If relocation against MIPS local symbol requires GOT entry, this entry
     // should be initialized by 'page address'. This address is high 16-bits
     // of sum the symbol's value and the addend.
-    return InX::MipsGot->getVA() + InX::MipsGot->getPageEntryOffset(Sym, A) -
-           InX::MipsGot->getGp();
+    return InX::MipsGot->getVA() +
+           InX::MipsGot->getPageEntryOffset(File, Sym, A) -
+           InX::MipsGot->getGp(File);
   case R_MIPS_GOT_OFF:
   case R_MIPS_GOT_OFF32:
     // In case of MIPS if a GOT relocation has non-zero addend this addend
     // should be applied to the GOT entry content not to the GOT entry offset.
     // That is why we use separate expression type.
-    return InX::MipsGot->getVA() + InX::MipsGot->getSymEntryOffset(Sym, A) -
-           InX::MipsGot->getGp();
+    return InX::MipsGot->getVA() +
+           InX::MipsGot->getSymEntryOffset(File, Sym, A) -
+           InX::MipsGot->getGp(File);
   case R_MIPS_TLSGD:
-    return InX::MipsGot->getVA() + InX::MipsGot->getTlsOffset() +
-           InX::MipsGot->getGlobalDynOffset(Sym) - InX::MipsGot->getGp();
+    return InX::MipsGot->getVA() + InX::MipsGot->getGlobalDynOffset(File, Sym) -
+           InX::MipsGot->getGp(File);
   case R_MIPS_TLSLD:
-    return InX::MipsGot->getVA() + InX::MipsGot->getTlsOffset() +
-           InX::MipsGot->getTlsIndexOff() - InX::MipsGot->getGp();
+    return InX::MipsGot->getVA() + InX::MipsGot->getTlsIndexOffset(File) -
+           InX::MipsGot->getGp(File);
   case R_PAGE_PC:
   case R_PLT_PAGE_PC: {
     uint64_t Dest;
@@ -751,7 +753,8 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
     uint64_t AddrLoc = getOutputSection()->Addr + Offset;
     RelExpr Expr = Rel.Expr;
     uint64_t TargetVA = SignExtend64(
-        getRelocTargetVA(Type, Rel.Addend, AddrLoc, *Rel.Sym, Expr), Bits);
+        getRelocTargetVA(File, Type, Rel.Addend, AddrLoc, *Rel.Sym, Expr),
+        Bits);
 
     switch (Expr) {
     case R_RELAX_GOT_PC:
