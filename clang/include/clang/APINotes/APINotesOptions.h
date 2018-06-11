@@ -14,9 +14,9 @@
 #ifndef LLVM_CLANG_APINOTES_APINOTESOPTIONS_H
 #define LLVM_CLANG_APINOTES_APINOTESOPTIONS_H
 
-#include "clang/Basic/VersionTuple.h"
 #include <string>
 #include <vector>
+#include "llvm/Support/VersionTuple.h"
 
 namespace clang {
 
@@ -25,7 +25,7 @@ namespace clang {
 class APINotesOptions {
 public:
   /// The Swift version which should be used for API notes.
-  VersionTuple SwiftVersion;
+  llvm::VersionTuple SwiftVersion;
 
   /// The set of search paths where we API notes can be found for
   /// particular modules.
