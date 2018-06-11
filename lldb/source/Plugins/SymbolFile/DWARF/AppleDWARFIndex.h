@@ -33,7 +33,7 @@ public:
 
   void Preload() override {}
 
-  void GetGlobalVariables(ConstString name, DIEArray &offsets) override;
+  void GetGlobalVariables(ConstString basename, DIEArray &offsets) override;
   void GetGlobalVariables(const RegularExpression &regex,
                           DIEArray &offsets) override;
   void GetGlobalVariables(const DWARFUnit &cu, DIEArray &offsets) override;

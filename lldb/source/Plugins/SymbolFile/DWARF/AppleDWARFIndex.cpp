@@ -13,8 +13,6 @@
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
 
@@ -56,19 +54,9 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
   return nullptr;
 }
 
-void AppleDWARFIndex::GetGlobalVariables(ConstString name, DIEArray &offsets) {
-  if (!m_apple_names_up)
-    return;
-
-  const char *name_cstr = name.GetCString();
-  llvm::StringRef basename;
-  llvm::StringRef context;
-
-  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
-                                                      basename))
-    basename = name_cstr;
-
-  m_apple_names_up->FindByName(basename, offsets);
+void AppleDWARFIndex::GetGlobalVariables(ConstString basename, DIEArray &offsets) {
+  if (m_apple_names_up)
+    m_apple_names_up->FindByName(basename.GetStringRef(), offsets);
 }
 
 void AppleDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
@@ -146,74 +134,15 @@ void AppleDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
     m_apple_namespaces_up->FindByName(name.GetStringRef(), offsets);
 }
 
-static bool KeepFunctionDIE(DWARFDIE die, uint32_t name_type_mask) {
-  bool looking_for_methods = name_type_mask & eFunctionNameTypeMethod;
-  bool looking_for_functions = name_type_mask & eFunctionNameTypeBase;
-  if (looking_for_methods && looking_for_functions)
-    return true;
-  return looking_for_methods == die.IsMethod();
-}
-
 void AppleDWARFIndex::GetFunctions(ConstString name, DWARFDebugInfo &info,
                                    const CompilerDeclContext &parent_decl_ctx,
                                    uint32_t name_type_mask,
                                    std::vector<DWARFDIE> &dies) {
-  if (name_type_mask & eFunctionNameTypeFull) {
-    // If they asked for the full name, match what they typed.  At some
-    // point we may want to canonicalize this (strip double spaces, etc.
-    // For now, we just add all the dies that we find by exact match.
-    DIEArray offsets;
-    m_apple_names_up->FindByName(name.GetStringRef(), offsets);
-    for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = info.GetDIE(die_ref);
-      if (!die) {
-        ReportInvalidDIEOffset(die_ref.die_offset, name.GetStringRef());
-        continue;
-      }
-      if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die))
-        dies.push_back(die);
-    }
-  }
-  if (name_type_mask & eFunctionNameTypeSelector &&
-      !parent_decl_ctx.IsValid()) {
-    DIEArray offsets;
-    m_apple_names_up->FindByName(name.GetStringRef(), offsets);
-
-    // Now make sure these are actually ObjC methods.  In this case we can
-    // simply look up the name, and if it is an ObjC method name, we're
-    // good.
-    for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = info.GetDIE(die_ref);
-      if (!die) {
-        ReportInvalidDIEOffset(die_ref.die_offset, name.GetStringRef());
-        continue;
-      }
-      const char *die_name = die.GetName();
-      if (ObjCLanguage::IsPossibleObjCMethodName(die_name))
-        dies.push_back(die);
-    }
-  }
-  if (((name_type_mask & eFunctionNameTypeMethod) &&
-       !parent_decl_ctx.IsValid()) ||
-      name_type_mask & eFunctionNameTypeBase) {
-    // The apple_names table stores just the "base name" of C++ methods in
-    // the table.  So we have to extract the base name, look that up, and
-    // if there is any other information in the name we were passed in we
-    // have to post-filter based on that.
-
-    DIEArray offsets;
-    m_apple_names_up->FindByName(name.GetStringRef(), offsets);
-
-    for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = info.GetDIE(die_ref);
-      if (!die) {
-        ReportInvalidDIEOffset(die_ref.die_offset, name.GetStringRef());
-        continue;
-      }
-      if (SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die) &&
-          KeepFunctionDIE(die, name_type_mask))
-        dies.push_back(die);
-    }
+  DIEArray offsets;
+  m_apple_names_up->FindByName(name.GetStringRef(), offsets);
+  for (const DIERef &die_ref : offsets) {
+    ProcessFunctionDIE(name.GetStringRef(), die_ref, info, parent_decl_ctx,
+                       name_type_mask, dies);
   }
 }
 
@@ -236,5 +165,13 @@ void AppleDWARFIndex::ReportInvalidDIEOffset(dw_offset_t offset,
 }
 
 void AppleDWARFIndex::Dump(Stream &s) {
-  // TODO: Implement dumping.
+  if (m_apple_names_up)
+    s.PutCString(".apple_names index present\n");
+  if (m_apple_namespaces_up)
+    s.PutCString(".apple_namespaces index present\n");
+  if (m_apple_types_up)
+    s.PutCString(".apple_types index present\n");
+  if (m_apple_objc_up)
+    s.PutCString(".apple_objc index present\n");
+  // TODO: Dump index contents
 }

@@ -257,6 +257,7 @@ public:
 
   virtual bool SymbolContextShouldBeExcluded(const SymbolContext &sc,
                                              uint32_t actual_line);
+  virtual void Dump(Stream &s) {}
 
 protected:
   class SourceRange {

@@ -126,7 +126,6 @@ std::string InputFile::getSrcMsg(const Symbol &Sym, InputSectionBase &Sec,
 template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
   Dwarf = llvm::make_unique<DWARFContext>(make_unique<LLDDwarfObj<ELFT>>(this));
   const DWARFObject &Obj = Dwarf->getDWARFObj();
-  DwarfLine.reset(new DWARFDebugLine);
   DWARFDataExtractor LineData(Obj, Obj.getLineSection(), Config->IsLE,
                               Config->Wordsize);
 
@@ -900,16 +899,12 @@ std::vector<const typename ELFT::Verdef *> SharedFile<ELFT>::parseVerdefs() {
 template <class ELFT>
 uint32_t SharedFile<ELFT>::getAlignment(ArrayRef<Elf_Shdr> Sections,
                                         const Elf_Sym &Sym) {
-  uint64_t Ret = 1;
+  uint64_t Ret = UINT64_MAX;
   if (Sym.st_value)
     Ret = 1ULL << countTrailingZeros((uint64_t)Sym.st_value);
   if (0 < Sym.st_shndx && Sym.st_shndx < Sections.size())
     Ret = std::min<uint64_t>(Ret, Sections[Sym.st_shndx].sh_addralign);
-
-  if (Ret > UINT32_MAX)
-    error(toString(this) + ": alignment too large: " +
-          CHECK(Sym.getName(this->StringTable), this));
-  return Ret;
+  return (Ret > UINT32_MAX) ? 0 : Ret;
 }
 
 // Fully parse the shared object file. This must be called after parseSoName().

@@ -187,9 +187,9 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Test that an invalid --thread is handled
         self.runCmd("-exec-next --thread 0")
-        self.expect("\^error,message=\"error: Thread index 0 is out of range")
+        self.expect("\^error,msg=\"Command 'exec-next'. Thread ID invalid")
         self.runCmd("-exec-next --thread 10")
-        self.expect("\^error,message=\"error: Thread index 10 is out of range")
+        self.expect("\^error,msg=\"Command 'exec-next'. Thread ID invalid")
 
         # Test that an invalid --frame is handled
         # FIXME: no error is returned
@@ -330,9 +330,9 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Test that an invalid --thread is handled
         self.runCmd("-exec-step --thread 0")
-        self.expect("\^error,message=\"error: Thread index 0 is out of range")
+        self.expect("\^error,msg=\"Command 'exec-step'. Thread ID invalid")
         self.runCmd("-exec-step --thread 10")
-        self.expect("\^error,message=\"error: Thread index 10 is out of range")
+        self.expect("\^error,msg=\"Command 'exec-step'. Thread ID invalid")
 
         # Test that an invalid --frame is handled
         # FIXME: no error is returned

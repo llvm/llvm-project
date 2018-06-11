@@ -319,6 +319,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
+  Config->ExportAll = Args.hasArg(OPT_export_all);
   Config->ExportTable = Args.hasArg(OPT_export_table);
   errorHandler().FatalWarnings =
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
@@ -389,10 +390,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
-    // Can't export the SP right now because it's mutable, and mutable
-    // globals aren't yet supported in the official binary format.
-    // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN if/when the
-    // "mutable global" proposal is accepted.
     llvm::wasm::WasmGlobal Global;
     Global.Type = {WASM_TYPE_I32, true};
     Global.InitExpr.Value.Int32 = 0;
@@ -407,6 +404,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     WasmSym::CallCtors = Symtab->addSyntheticFunction(
         "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
+    // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN when the mutable global
+    // spec proposal is implemented in all major browsers.
+    // See: https://github.com/WebAssembly/mutable-global
     WasmSym::StackPointer = Symtab->addSyntheticGlobal(
         "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, StackPointer);
     WasmSym::HeapBase = Symtab->addSyntheticDataSymbol("__heap_base", 0);

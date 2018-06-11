@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc %s -triple x86_64-windows-msvc -filetype=obj -o %t.obj
 # RUN: lld-link %t.obj -dll -noentry -out:%t.dll -merge:.xdata=.xdata 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=WARN

@@ -83,6 +83,7 @@ class TemplateArgsTestCase(TestBase):
             expr_result.GetType().GetName() == "int",
             'expr_result.GetType().GetName() == "int"')
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_template_template_args(self):
         frame = self.prepareProcess()
 

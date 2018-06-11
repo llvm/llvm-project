@@ -192,16 +192,14 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                               ->GetValueForKey("DBGSourcePathRemapping")
                               ->GetAsDictionary()) {
 
-                        // In an early version of DBGSourcePathRemapping, the
-                        // DBGSourcePath values were incorrect.  If we have a
-                        // newer style DBGSourcePathRemapping, there will be a
-                        // DBGVersion key in the plist with version 2 or
-                        // higher.
+                        // If DBGVersion 1 or DBGVersion missing, ignore DBGSourcePathRemapping.
+                        // If DBGVersion 2, strip last two components of path remappings from
+                        //                  entries to fix an issue with a specific set of
+                        //                  DBGSourcePathRemapping entries that lldb worked
+                        //                  with.
+                        // If DBGVersion 3, trust & use the source path remappings as-is.
                         //
-                        // If this is an old style DBGSourcePathRemapping,
-                        // ignore the value half of the key-value remappings
-                        // and use reuse the original gloal DBGSourcePath
-                        // string.
+
                         bool new_style_source_remapping_dictionary = false;
                         bool do_truncate_remapping_names = false;
                         std::string original_DBGSourcePath_value =

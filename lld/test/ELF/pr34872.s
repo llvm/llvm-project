@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t.o
 # RUN: llvm-mc %p/Inputs/undefined-error.s -filetype=obj \
 # RUN:    -triple=x86_64-pc-linux -o %t2.o

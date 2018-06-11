@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -triple i686-windows-msvc %s -filetype=obj -o %t.obj
 # RUN: lld-link %t.obj -safeseh -out:%t.exe -opt:noref -entry:main
 # RUN: llvm-readobj -coff-basereloc -coff-load-config -file-headers %t.exe | FileCheck %s --check-prefix=CHECK-NOGC

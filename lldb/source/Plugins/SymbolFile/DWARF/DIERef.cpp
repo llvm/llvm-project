@@ -14,11 +14,6 @@
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDebugMap.h"
 
-DIERef::DIERef()
-    : cu_offset(DW_INVALID_OFFSET), die_offset(DW_INVALID_OFFSET) {}
-
-DIERef::DIERef(dw_offset_t c, dw_offset_t d) : cu_offset(c), die_offset(d) {}
-
 DIERef::DIERef(lldb::user_id_t uid, SymbolFileDWARF *dwarf)
     : cu_offset(DW_INVALID_OFFSET), die_offset(uid & 0xffffffff) {
   SymbolFileDWARFDebugMap *debug_map = dwarf->GetDebugMapSymfile();

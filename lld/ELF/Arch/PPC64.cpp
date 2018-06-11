@@ -79,6 +79,8 @@ PPC64::PPC64() {
   GotPltHeaderEntriesNum = 2;
   PltHeaderSize = 60;
   NeedsThunks = true;
+  TcbSize = 8;
+  TlsTpOffset = 0x7000;
 
   TlsModuleIndexRel = R_PPC64_DTPMOD64;
   TlsOffsetRel = R_PPC64_DTPREL64;
@@ -187,6 +189,17 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   case R_PPC64_GOT_TPREL16_DS:
   case R_PPC64_GOT_TPREL16_HI:
     return R_GOT_OFF;
+  case R_PPC64_TPREL16:
+  case R_PPC64_TPREL16_HA:
+  case R_PPC64_TPREL16_LO:
+  case R_PPC64_TPREL16_HI:
+  case R_PPC64_TPREL16_DS:
+  case R_PPC64_TPREL16_LO_DS:
+  case R_PPC64_TPREL16_HIGHER:
+  case R_PPC64_TPREL16_HIGHERA:
+  case R_PPC64_TPREL16_HIGHEST:
+  case R_PPC64_TPREL16_HIGHESTA:
+    return R_TLS;
   case R_PPC64_TLSGD:
   case R_PPC64_TLSLD:
   case R_PPC64_TLS:
@@ -277,38 +290,48 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   }
   case R_PPC64_ADDR16:
+  case R_PPC64_TPREL16:
     checkInt(Loc, Val, 16, Type);
     write16(Loc, Val);
     break;
   case R_PPC64_ADDR16_DS:
+  case R_PPC64_TPREL16_DS:
     checkInt(Loc, Val, 16, Type);
     write16(Loc, (read16(Loc) & 3) | (Val & ~3));
     break;
   case R_PPC64_ADDR16_HA:
   case R_PPC64_REL16_HA:
+  case R_PPC64_TPREL16_HA:
     write16(Loc, applyPPCHa(Val));
     break;
   case R_PPC64_ADDR16_HI:
   case R_PPC64_REL16_HI:
+  case R_PPC64_TPREL16_HI:
     write16(Loc, applyPPCHi(Val));
     break;
   case R_PPC64_ADDR16_HIGHER:
+  case R_PPC64_TPREL16_HIGHER:
     write16(Loc, applyPPCHigher(Val));
     break;
   case R_PPC64_ADDR16_HIGHERA:
+  case R_PPC64_TPREL16_HIGHERA:
     write16(Loc, applyPPCHighera(Val));
     break;
   case R_PPC64_ADDR16_HIGHEST:
+  case R_PPC64_TPREL16_HIGHEST:
     write16(Loc, applyPPCHighest(Val));
     break;
   case R_PPC64_ADDR16_HIGHESTA:
+  case R_PPC64_TPREL16_HIGHESTA:
     write16(Loc, applyPPCHighesta(Val));
     break;
   case R_PPC64_ADDR16_LO:
   case R_PPC64_REL16_LO:
+  case R_PPC64_TPREL16_LO:
     write16(Loc, applyPPCLo(Val));
     break;
   case R_PPC64_ADDR16_LO_DS:
+  case R_PPC64_TPREL16_LO_DS:
     write16(Loc, (read16(Loc) & 3) | (applyPPCLo(Val) & ~3));
     break;
   case R_PPC64_ADDR32:

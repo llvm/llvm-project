@@ -340,8 +340,13 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
     std::string DBGBuildSourcePath;
     std::string DBGSourcePath;
 
-    // If DBGVersion value 2 or higher, look for DBGSourcePathRemapping
-    // dictionary and append the key-value pairs to our remappings.
+    // If DBGVersion 1 or DBGVersion missing, ignore DBGSourcePathRemapping.
+    // If DBGVersion 2, strip last two components of path remappings from
+    //                  entries to fix an issue with a specific set of
+    //                  DBGSourcePathRemapping entries that lldb worked
+    //                  with.
+    // If DBGVersion 3, trust & use the source path remappings as-is.
+    //
     cf_dict = (CFDictionaryRef)CFDictionaryGetValue(
         (CFDictionaryRef)uuid_dict, CFSTR("DBGSourcePathRemapping"));
     if (cf_dict && CFGetTypeID(cf_dict) == CFDictionaryGetTypeID()) {

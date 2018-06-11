@@ -1,3 +1,4 @@
+// REQUIRES: x86
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=x86_64-pc-linux
 // RUN: ld.lld --eh-frame-hdr %t.o -o %t.so -shared
 // We would fail to parse multiple cies in the same file.

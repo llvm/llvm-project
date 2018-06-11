@@ -742,7 +742,9 @@ void Writer::calculateExports() {
   for (Symbol *Sym : Symtab->getSymbols()) {
     if (!Sym->isDefined())
       continue;
-    if (Sym->isHidden() || Sym->isLocal())
+    if (Sym->isHidden() && !Config->ExportAll)
+      continue;
+    if (Sym->isLocal())
       continue;
     if (!Sym->isLive())
       continue;
@@ -752,6 +754,14 @@ void Writer::calculateExports() {
     if (auto *F = dyn_cast<DefinedFunction>(Sym)) {
       Export = {Name, WASM_EXTERNAL_FUNCTION, F->getFunctionIndex()};
     } else if (auto *G = dyn_cast<DefinedGlobal>(Sym)) {
+      // TODO(sbc): Remove this check once to mutable global proposal is
+      // implement in all major browsers.
+      // See: https://github.com/WebAssembly/mutable-global
+      if (G->getGlobalType()->Mutable) {
+        // Only the __stack_pointer should ever be create as mutable.
+        assert(G == WasmSym::StackPointer);
+        continue;
+      }
       Export = {Name, WASM_EXTERNAL_GLOBAL, G->getGlobalIndex()};
     } else {
       auto *D = cast<DefinedData>(Sym);

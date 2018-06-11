@@ -22,6 +22,7 @@
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBThread.h"
 #include "lldb/lldb-enumerations.h"
 
 // In-house headers:
@@ -232,15 +233,10 @@ CMICmdCmdExecContinue::~CMICmdCmdExecContinue() {}
 // Throws:  None.
 //--
 bool CMICmdCmdExecContinue::Execute() {
-  const char *pCmd = "continue";
-  CMICmnLLDBDebugSessionInfo &rSessionInfo(
-      CMICmnLLDBDebugSessionInfo::Instance());
-  const lldb::ReturnStatus rtn =
-      rSessionInfo.GetDebugger().GetCommandInterpreter().HandleCommand(
-          pCmd, m_lldbResult);
-  MIunused(rtn);
-
-  if (m_lldbResult.GetErrorSize() == 0) {
+  lldb::SBError error =
+      CMICmnLLDBDebugSessionInfo::Instance().GetProcess().Continue();
+ 
+  if (error.Success()) {
     // CODETAG_DEBUG_SESSION_RUNNING_PROG_RECEIVED_SIGINT_PAUSE_PROGRAM
     if (!CMIDriver::Instance().SetDriverStateRunningDebugging()) {
       const CMIUtilString &rErrMsg(CMIDriver::Instance().GetErrorDescription());
@@ -249,18 +245,11 @@ bool CMICmdCmdExecContinue::Execute() {
                                      rErrMsg.c_str()));
       return MIstatus::failure;
     }
-  } else {
-    // ToDo: Re-evaluate if this is required when application near finished as
-    // this is parsing LLDB error message
-    // which seems a hack and is code brittle
-    const char *pLldbErr = m_lldbResult.GetError();
-    const CMIUtilString strLldbMsg(CMIUtilString(pLldbErr).StripCREndOfLine());
-    if (strLldbMsg == "error: Process must be launched.") {
-      CMIDriver::Instance().SetExitApplicationFlag(true);
-    }
+    return MIstatus::success;
   }
 
-  return MIstatus::success;
+  SetError(error.GetCString());
+  return MIstatus::failure;
 }
 
 //++
@@ -275,19 +264,9 @@ bool CMICmdCmdExecContinue::Execute() {
 // Throws:  None.
 //--
 bool CMICmdCmdExecContinue::Acknowledge() {
-  if (m_lldbResult.GetErrorSize() > 0) {
-    const CMICmnMIValueConst miValueConst(m_lldbResult.GetError());
-    const CMICmnMIValueResult miValueResult("message", miValueConst);
-    const CMICmnMIResultRecord miRecordResult(
-        m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Error,
-        miValueResult);
-    m_miResultRecord = miRecordResult;
-  } else {
-    const CMICmnMIResultRecord miRecordResult(
-        m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Running);
-    m_miResultRecord = miRecordResult;
-  }
-
+  const CMICmnMIResultRecord miRecordResult(
+      m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Running);
+  m_miResultRecord = miRecordResult;
   return MIstatus::success;
 }
 
@@ -378,12 +357,17 @@ bool CMICmdCmdExecNext::Execute() {
 
   CMICmnLLDBDebugSessionInfo &rSessionInfo(
       CMICmnLLDBDebugSessionInfo::Instance());
-  lldb::SBDebugger &rDebugger = rSessionInfo.GetDebugger();
-  CMIUtilString strCmd("thread step-over");
-  if (nThreadId != UINT64_MAX)
-    strCmd += CMIUtilString::Format(" %llu", nThreadId);
-  rDebugger.GetCommandInterpreter().HandleCommand(strCmd.c_str(), m_lldbResult,
-                                                  false);
+
+  if (nThreadId != UINT64_MAX) {
+    lldb::SBThread sbThread = rSessionInfo.GetProcess().GetThreadByIndexID(nThreadId);
+    if (!sbThread.IsValid()) {
+      SetError(CMIUtilString::Format(MIRSRC(IDS_CMD_ERR_THREAD_INVALID),
+                                     m_cmdData.strMiCmd.c_str(),
+                                     m_constStrArgThread.c_str()));
+      return MIstatus::failure;
+    }
+    sbThread.StepOver();
+  } else rSessionInfo.GetProcess().GetSelectedThread().StepOver();
 
   return MIstatus::success;
 }
@@ -503,14 +487,26 @@ bool CMICmdCmdExecStep::Execute() {
 
   CMICmnLLDBDebugSessionInfo &rSessionInfo(
       CMICmnLLDBDebugSessionInfo::Instance());
-  lldb::SBDebugger &rDebugger = rSessionInfo.GetDebugger();
-  CMIUtilString strCmd("thread step-in");
-  if (nThreadId != UINT64_MAX)
-    strCmd += CMIUtilString::Format(" %llu", nThreadId);
-  rDebugger.GetCommandInterpreter().HandleCommand(strCmd.c_str(), m_lldbResult,
-                                                  false);
 
-  return MIstatus::success;
+  lldb::SBError error;
+  if (nThreadId != UINT64_MAX) {
+    lldb::SBThread sbThread =
+        rSessionInfo.GetProcess().GetThreadByIndexID(nThreadId);
+    if (!sbThread.IsValid()) {
+      SetError(CMIUtilString::Format(MIRSRC(IDS_CMD_ERR_THREAD_INVALID),
+                                     m_cmdData.strMiCmd.c_str(),
+                                     m_constStrArgThread.c_str()));
+      return MIstatus::failure;
+    }
+    sbThread.StepInto(nullptr, LLDB_INVALID_LINE_NUMBER, error);
+  } else rSessionInfo.GetProcess().GetSelectedThread().StepInto(
+             nullptr, LLDB_INVALID_LINE_NUMBER, error);
+
+  if (error.Success())
+    return MIstatus::success;
+
+  SetError(error.GetCString());
+  return MIstatus::failure;
 }
 
 //++
@@ -525,21 +521,8 @@ bool CMICmdCmdExecStep::Execute() {
 // Throws:  None.
 //--
 bool CMICmdCmdExecStep::Acknowledge() {
-  if (m_lldbResult.GetErrorSize() > 0) {
-    const char *pLldbErr = m_lldbResult.GetError();
-    MIunused(pLldbErr);
-    const CMICmnMIValueConst miValueConst(m_lldbResult.GetError());
-    const CMICmnMIValueResult miValueResult("message", miValueConst);
-    const CMICmnMIResultRecord miRecordResult(
-        m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Error,
-        miValueResult);
-    m_miResultRecord = miRecordResult;
-  } else {
-    const CMICmnMIResultRecord miRecordResult(
-        m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Running);
-    m_miResultRecord = miRecordResult;
-  }
-
+  m_miResultRecord = CMICmnMIResultRecord(
+      m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Running);
   return MIstatus::success;
 }
 

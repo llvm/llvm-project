@@ -184,10 +184,10 @@ am__libisl_la_SOURCES_DIST = mp_get_memory_functions.c isl_int_gmp.h \
 	isl_ast_build_expr.h isl_ast_codegen.c isl_ast_graft.c \
 	isl_ast_graft_private.h isl_basis_reduction.h \
 	basis_reduction_tab.c isl_bernstein.c isl_bernstein.h \
-	isl_blk.c isl_blk.h isl_bound.c isl_bound.h isl_coalesce.c \
-	isl_constraint.c isl_constraint_private.h isl_convex_hull.c \
-	isl_ctx.c isl_ctx_private.h isl_deprecated.c isl_dim_map.h \
-	isl_dim_map.c isl_equalities.c isl_equalities.h \
+	isl_blk.c isl_blk.h isl_bound.c isl_bound.h isl_box.c \
+	isl_coalesce.c isl_constraint.c isl_constraint_private.h \
+	isl_convex_hull.c isl_ctx.c isl_ctx_private.h isl_deprecated.c \
+	isl_dim_map.h isl_dim_map.c isl_equalities.c isl_equalities.h \
 	isl_factorization.c isl_factorization.h isl_farkas.c isl_ffs.c \
 	isl_flow.c isl_fold.c isl_hash.c isl_hash_private.h \
 	isl_id_to_ast_expr.c isl_id_to_id.c isl_id_to_pw_aff.c \
@@ -232,9 +232,9 @@ am__dirstamp = $(am__leading_dot)dirstamp
 am_libisl_la_OBJECTS = $(am__objects_4) isl_aff.lo isl_affine_hull.lo \
 	isl_arg.lo isl_ast.lo isl_ast_build.lo isl_ast_build_expr.lo \
 	isl_ast_codegen.lo isl_ast_graft.lo basis_reduction_tab.lo \
-	isl_bernstein.lo isl_blk.lo isl_bound.lo isl_coalesce.lo \
-	isl_constraint.lo isl_convex_hull.lo isl_ctx.lo \
-	isl_deprecated.lo isl_dim_map.lo isl_equalities.lo \
+	isl_bernstein.lo isl_blk.lo isl_bound.lo isl_box.lo \
+	isl_coalesce.lo isl_constraint.lo isl_convex_hull.lo \
+	isl_ctx.lo isl_deprecated.lo isl_dim_map.lo isl_equalities.lo \
 	isl_factorization.lo isl_farkas.lo isl_ffs.lo isl_flow.lo \
 	isl_fold.lo isl_hash.lo isl_id_to_ast_expr.lo isl_id_to_id.lo \
 	isl_id_to_pw_aff.lo isl_ilp.lo isl_input.lo isl_local.lo \
@@ -416,23 +416,24 @@ DATA = $(pkgconfig_DATA)
 am__pkginclude_HEADERS_DIST = include/isl/val_gmp.h include/isl/aff.h \
 	include/isl/aff_type.h include/isl/arg.h include/isl/ast.h \
 	include/isl/ast_type.h include/isl/ast_build.h \
-	include/isl/constraint.h include/isl/ctx.h include/isl/flow.h \
-	include/isl/id.h include/isl/id_type.h \
-	include/isl/id_to_ast_expr.h include/isl/id_to_id.h \
-	include/isl/id_to_pw_aff.h include/isl/ilp.h \
-	include/isl/hash.h include/isl/hmap.h include/isl/hmap_templ.c \
-	include/isl/list.h include/isl/local_space.h include/isl/lp.h \
-	include/isl/mat.h include/isl/map.h \
-	include/isl/map_to_basic_set.h include/isl/map_type.h \
-	include/isl/maybe.h include/isl/maybe_ast_expr.h \
-	include/isl/maybe_basic_set.h include/isl/maybe_id.h \
-	include/isl/maybe_pw_aff.h include/isl/maybe_templ.h \
-	include/isl/multi.h include/isl/obj.h include/isl/options.h \
-	include/isl/point.h include/isl/polynomial.h \
-	include/isl/polynomial_type.h include/isl/printer.h \
-	include/isl/printer_type.h include/isl/schedule.h \
-	include/isl/schedule_node.h include/isl/schedule_type.h \
-	include/isl/set.h include/isl/set_type.h include/isl/space.h \
+	include/isl/constraint.h include/isl/ctx.h \
+	include/isl/fixed_box.h include/isl/flow.h include/isl/id.h \
+	include/isl/id_type.h include/isl/id_to_ast_expr.h \
+	include/isl/id_to_id.h include/isl/id_to_pw_aff.h \
+	include/isl/ilp.h include/isl/hash.h include/isl/hmap.h \
+	include/isl/hmap_templ.c include/isl/list.h \
+	include/isl/local_space.h include/isl/lp.h include/isl/mat.h \
+	include/isl/map.h include/isl/map_to_basic_set.h \
+	include/isl/map_type.h include/isl/maybe.h \
+	include/isl/maybe_ast_expr.h include/isl/maybe_basic_set.h \
+	include/isl/maybe_id.h include/isl/maybe_pw_aff.h \
+	include/isl/maybe_templ.h include/isl/multi.h \
+	include/isl/obj.h include/isl/options.h include/isl/point.h \
+	include/isl/polynomial.h include/isl/polynomial_type.h \
+	include/isl/printer.h include/isl/printer_type.h \
+	include/isl/schedule.h include/isl/schedule_node.h \
+	include/isl/schedule_type.h include/isl/set.h \
+	include/isl/set_type.h include/isl/space.h \
 	include/isl/space_type.h include/isl/stream.h \
 	include/isl/stride_info.h include/isl/union_map.h \
 	include/isl/union_map_type.h include/isl/union_set.h \
@@ -888,6 +889,7 @@ libisl_la_SOURCES = \
 	isl_blk.h \
 	isl_bound.c \
 	isl_bound.h \
+	isl_box.c \
 	isl_coalesce.c \
 	isl_constraint.c \
 	isl_constraint_private.h \
@@ -1075,6 +1077,7 @@ pkginclude_HEADERS = \
 	include/isl/ast_build.h \
 	include/isl/constraint.h \
 	include/isl/ctx.h \
+	include/isl/fixed_box.h \
 	include/isl/flow.h \
 	include/isl/id.h \
 	include/isl/id_type.h \
@@ -1426,6 +1429,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_bernstein.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_blk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_bound.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_box.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_coalesce.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_constraint.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_convex_hull.Plo@am__quote@

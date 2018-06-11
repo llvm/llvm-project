@@ -14,6 +14,7 @@
 
 // C++ Includes
 #include <cassert>
+#include <string>
 #include <vector>
 
 // Other libraries and framework includes
