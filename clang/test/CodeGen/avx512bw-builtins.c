@@ -1934,19 +1934,21 @@ __m512i test_mm512_maskz_alignr_epi8(__mmask64 __U, __m512i __A,__m512i __B){
 
 __m512i test_mm512_mm_dbsad_epu8(__m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mm_dbsad_epu8
-  // CHECK: @llvm.x86.avx512.mask.dbpsadbw.512
+  // CHECK: @llvm.x86.avx512.dbpsadbw.512
   return _mm512_dbsad_epu8(__A, __B, 170); 
 }
 
 __m512i test_mm512_mm_mask_dbsad_epu8(__m512i __W, __mmask32 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mm_mask_dbsad_epu8
-  // CHECK: @llvm.x86.avx512.mask.dbpsadbw.512
+  // CHECK: @llvm.x86.avx512.dbpsadbw.512
+  //CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
   return _mm512_mask_dbsad_epu8(__W, __U, __A, __B, 170); 
 }
 
 __m512i test_mm512_mm_maskz_dbsad_epu8(__mmask32 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mm_maskz_dbsad_epu8
-  // CHECK: @llvm.x86.avx512.mask.dbpsadbw.512
+  // CHECK: @llvm.x86.avx512.dbpsadbw.512
+  //CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
   return _mm512_maskz_dbsad_epu8(__U, __A, __B, 170); 
 }
 
