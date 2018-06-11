@@ -994,18 +994,6 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**BreakBeforeInheritanceComma** (``bool``)
-  If ``true``, in the class inheritance expression clang-format will
-  break before ``:`` and ``,`` if there is multiple inheritance.
-
-  .. code-block:: c++
-
-     true:                                  false:
-     class MyClass                  vs.     class MyClass : public X, public Y {
-         : public X                         };
-         , public Y {
-     };
-
 **BreakBeforeTernaryOperators** (``bool``)
   If ``true``, ternary operators will be placed after line breaks.
 
@@ -1047,6 +1035,42 @@ the configuration (without a prefix: ``Auto``).
 
   * ``BCIS_AfterColon`` (in configuration: ``AfterColon``)
     Break constructor initializers after the colon and commas.
+
+    .. code-block:: c++
+
+    Constructor() :
+        initializer1(),
+        initializer2()
+
+
+
+**BreakInheritanceList** (``BreakInheritanceListStyle``)
+  The inheritance list style to use.
+
+  Possible values:
+
+  * ``BILS_BeforeColon`` (in configuration: ``BeforeColon``)
+    Break inheritance list before the colon and after the commas.
+
+    .. code-block:: c++
+
+    class Foo
+        : Base1,
+          Base2
+    {};
+
+  * ``BILS_BeforeComma`` (in configuration: ``BeforeComma``)
+    Break inheritance list before the colon and commas, and align
+    the commas with the colon.
+
+    .. code-block:: c++
+
+    Constructor()
+        : initializer1()
+        , initializer2()
+
+  * ``BILS_AfterColon`` (in configuration: ``AfterColon``)
+    Break inheritance list after the colon and commas.
 
     .. code-block:: c++
 
@@ -1122,7 +1146,7 @@ the configuration (without a prefix: ``Auto``).
 
 **ConstructorInitializerIndentWidth** (``unsigned``)
   The number of characters to use for indentation of constructor
-  initializer lists.
+  initializer lists as well as inheritance lists.
 
 **ContinuationIndentWidth** (``unsigned``)
   Indent width for line continuations.

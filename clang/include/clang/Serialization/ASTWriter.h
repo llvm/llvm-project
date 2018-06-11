@@ -93,7 +93,6 @@ class SwitchCase;
 class TemplateParameterList;
 class Token;
 class TypeSourceInfo;
-class VersionTuple;
 
 /// Writes an AST file containing the contents of a translation unit.
 ///

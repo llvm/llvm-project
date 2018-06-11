@@ -1540,6 +1540,15 @@ TEST_F(FormatTestJS, ClassDeclarations) {
                "}");
 }
 
+TEST_F(FormatTestJS, StrictPropInitWrap) {
+  const FormatStyle &Style = getGoogleJSStyleWithColumns(22);
+  verifyFormat("class X {\n"
+               "  strictPropInitField!:\n"
+               "      string;\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTestJS, InterfaceDeclarations) {
   verifyFormat("interface I {\n"
                "  x: string;\n"
