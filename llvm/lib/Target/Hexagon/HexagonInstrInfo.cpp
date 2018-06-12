@@ -3048,10 +3048,29 @@ bool HexagonInstrInfo::predCanBeUsedAsDotNew(const MachineInstr &MI,
       return false;
   }
 
-  // Hexagon Programmer's Reference says that decbin, memw_locked, and
-  // memd_locked cannot be used as .new as well,
-  // but we don't seem to have these instructions defined.
-  return MI.getOpcode() != Hexagon::A4_tlbmatch;
+  // Instruction that produce late predicate cannot be used as sources of
+  // dot-new.
+  switch (MI.getOpcode()) {
+    case Hexagon::A4_addp_c:
+    case Hexagon::A4_subp_c:
+    case Hexagon::A4_tlbmatch:
+    case Hexagon::A5_ACS:
+    case Hexagon::F2_sfinvsqrta:
+    case Hexagon::F2_sfrecipa:
+    case Hexagon::J2_endloop0:
+    case Hexagon::J2_endloop01:
+    case Hexagon::J2_ploop1si:
+    case Hexagon::J2_ploop1sr:
+    case Hexagon::J2_ploop2si:
+    case Hexagon::J2_ploop2sr:
+    case Hexagon::J2_ploop3si:
+    case Hexagon::J2_ploop3sr:
+    case Hexagon::S2_cabacdecbin:
+    case Hexagon::S2_storew_locked:
+    case Hexagon::S4_stored_locked:
+      return false;
+  }
+  return true;
 }
 
 bool HexagonInstrInfo::PredOpcodeHasJMP_c(unsigned Opcode) const {

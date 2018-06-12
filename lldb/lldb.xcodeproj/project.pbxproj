@@ -965,6 +965,7 @@
 		AF0EBBEC185941360059E52F /* SBQueue.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0EBBEA185941360059E52F /* SBQueue.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		AF0EBBED185941360059E52F /* SBQueueItem.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0EBBEB185941360059E52F /* SBQueueItem.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		AF0F6E501739A76D009180FE /* RegisterContextKDP_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0F6E4E1739A76D009180FE /* RegisterContextKDP_arm64.cpp */; };
+		AF116BEF20CF234B0071093F /* DebugNamesDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF116BED20CF234B0071093F /* DebugNamesDWARFIndex.cpp */; };
 		AF1729D6182C907200E0AB97 /* HistoryThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF1729D4182C907200E0AB97 /* HistoryThread.cpp */; };
 		AF1729D7182C907200E0AB97 /* HistoryUnwind.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF1729D5182C907200E0AB97 /* HistoryUnwind.cpp */; };
 		AF1D88691B575E8D003CB899 /* ValueObjectConstResultCast.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF94726E1B575E430063D65C /* ValueObjectConstResultCast.cpp */; };
@@ -3076,6 +3077,8 @@
 		AF0EBBEF1859419F0059E52F /* SBQueueItem.i */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBQueueItem.i; sourceTree = "<group>"; };
 		AF0F6E4E1739A76D009180FE /* RegisterContextKDP_arm64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextKDP_arm64.cpp; sourceTree = "<group>"; };
 		AF0F6E4F1739A76D009180FE /* RegisterContextKDP_arm64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RegisterContextKDP_arm64.h; sourceTree = "<group>"; };
+		AF116BED20CF234B0071093F /* DebugNamesDWARFIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DebugNamesDWARFIndex.cpp; sourceTree = "<group>"; };
+		AF116BEE20CF234B0071093F /* DebugNamesDWARFIndex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DebugNamesDWARFIndex.h; sourceTree = "<group>"; };
 		AF1729D4182C907200E0AB97 /* HistoryThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HistoryThread.cpp; path = Utility/HistoryThread.cpp; sourceTree = "<group>"; };
 		AF1729D5182C907200E0AB97 /* HistoryUnwind.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HistoryUnwind.cpp; path = Utility/HistoryUnwind.cpp; sourceTree = "<group>"; };
 		AF1F7B05189C904B0087DB9C /* AppleGetPendingItemsHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleGetPendingItemsHandler.cpp; sourceTree = "<group>"; };
@@ -3939,6 +3942,8 @@
 				6D95DBFD1B9DC057000E318A /* DIERef.cpp */,
 				6D95DBFE1B9DC057000E318A /* HashedNameToDIE.cpp */,
 				6D95DBFF1B9DC057000E318A /* SymbolFileDWARFDwo.cpp */,
+				AF116BED20CF234B0071093F /* DebugNamesDWARFIndex.cpp */,
+				AF116BEE20CF234B0071093F /* DebugNamesDWARFIndex.h */,
 				260C89B310F57C5600BB2B04 /* DWARFAbbreviationDeclaration.cpp */,
 				260C89B410F57C5600BB2B04 /* DWARFAbbreviationDeclaration.h */,
 				269DDD451B8FD01A00D0DBD8 /* DWARFASTParser.h */,
@@ -7694,6 +7699,7 @@
 				8C2D6A53197A1EAF006989C9 /* MemoryHistory.cpp in Sources */,
 				6D95DC021B9DC057000E318A /* SymbolFileDWARFDwo.cpp in Sources */,
 				942612F71B95000000EF842E /* LanguageCategory.cpp in Sources */,
+				AF116BEF20CF234B0071093F /* DebugNamesDWARFIndex.cpp in Sources */,
 				2689005E13353E0E00698AC0 /* ClangASTSource.cpp in Sources */,
 				2689005F13353E0E00698AC0 /* ClangFunctionCaller.cpp in Sources */,
 				2689006013353E0E00698AC0 /* ClangExpressionDeclMap.cpp in Sources */,

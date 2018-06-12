@@ -9,6 +9,7 @@
 
 #include "Plugins/SymbolFile/DWARF/DebugNamesDWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 
@@ -26,13 +27,17 @@ llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
 DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
                              DWARFDataExtractor debug_str,
                              DWARFDebugInfo *debug_info) {
+  if (!debug_info) {
+    return llvm::make_error<llvm::StringError>("debug info null",
+                                               llvm::inconvertibleErrorCode());
+  }
   auto index_up =
       llvm::make_unique<DebugNames>(ToLLVM(debug_names), ToLLVM(debug_str));
   if (llvm::Error E = index_up->extract())
     return std::move(E);
 
   return std::unique_ptr<DebugNamesDWARFIndex>(new DebugNamesDWARFIndex(
-      module, std::move(index_up), debug_names, debug_str, debug_info));
+      module, std::move(index_up), debug_names, debug_str, *debug_info));
 }
 
 llvm::DenseSet<dw_offset_t>
@@ -47,9 +52,22 @@ DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
 
 DIERef DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   llvm::Optional<uint64_t> cu_offset = entry.getCUOffset();
-  llvm::Optional<uint64_t> die_offset = entry.getDIESectionOffset();
-  if (cu_offset && die_offset)
-    return DIERef(*cu_offset, *die_offset);
+  if (!cu_offset)
+    return DIERef();
+
+  DWARFUnit *cu = m_debug_info.GetCompileUnit(*cu_offset);
+  if (!cu)
+    return DIERef();
+
+  // This initializes the DWO symbol file. It's not possible for
+  // GetDwoSymbolFile to call this automatically because of mutual recursion
+  // between this and DWARFDebugInfoEntry::GetAttributeValue.
+  cu->ExtractUnitDIEIfNeeded();
+  uint64_t die_bias = cu->GetDwoSymbolFile() ? 0 : *cu_offset;
+
+  if (llvm::Optional<uint64_t> die_offset = entry.getDIEUnitOffset())
+    return DIERef(*cu_offset, die_bias + *die_offset);
+
   return DIERef();
 }
 

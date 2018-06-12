@@ -893,16 +893,35 @@ struct FormatStyle {
   /// \endcode
   std::string CommentPragmas;
 
-  /// If ``true``, in the class inheritance expression clang-format will
-  /// break before ``:`` and ``,`` if there is multiple inheritance.
-  /// \code
-  ///    true:                                  false:
-  ///    class MyClass                  vs.     class MyClass : public X, public Y {
-  ///        : public X                         };
-  ///        , public Y {
-  ///    };
-  /// \endcode
-  bool BreakBeforeInheritanceComma;
+  /// Different ways to break inheritance list.
+  enum BreakInheritanceListStyle {
+    /// Break inheritance list before the colon and after the commas.
+    /// \code
+    /// class Foo
+    ///     : Base1,
+    ///       Base2
+    /// {};
+    /// \endcode
+    BILS_BeforeColon,
+    /// Break inheritance list before the colon and commas, and align
+    /// the commas with the colon.
+    /// \code
+    /// Constructor()
+    ///     : initializer1()
+    ///     , initializer2()
+    /// \endcode
+    BILS_BeforeComma,
+    /// Break inheritance list after the colon and commas.
+    /// \code
+    /// Constructor() :
+    ///     initializer1(),
+    ///     initializer2()
+    /// \endcode
+    BILS_AfterColon
+  };
+
+  /// The inheritance list style to use.
+  BreakInheritanceListStyle BreakInheritanceList;
 
   /// If ``true``, consecutive namespace declarations will be on the same
   /// line. If ``false``, each namespace is declared on a new line.
@@ -946,7 +965,7 @@ struct FormatStyle {
   bool ConstructorInitializerAllOnOneLineOrOnePerLine;
 
   /// The number of characters to use for indentation of constructor
-  /// initializer lists.
+  /// initializer lists as well as inheritance lists.
   unsigned ConstructorInitializerIndentWidth;
 
   /// Indent width for line continuations.
@@ -1673,7 +1692,7 @@ struct FormatStyle {
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakStringLiterals == R.BreakStringLiterals &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
-           BreakBeforeInheritanceComma == R.BreakBeforeInheritanceComma &&
+           BreakInheritanceList == R.BreakInheritanceList &&
            ConstructorInitializerAllOnOneLineOrOnePerLine ==
                R.ConstructorInitializerAllOnOneLineOrOnePerLine &&
            ConstructorInitializerIndentWidth ==

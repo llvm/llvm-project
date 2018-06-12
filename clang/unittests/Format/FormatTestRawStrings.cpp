@@ -199,12 +199,6 @@ TEST_F(FormatTestRawStrings, ReformatsShortRawStringsOnSingleLine) {
       format(
           R"test(P p = TP(R"pb(item_1:1 item_2:2)pb");)test",
           getRawStringPbStyleWithColumns(40)));
-  expect_eq(
-      R"test(P p = TP(R"pb(item_1 < 1 > item_2: { 2 })pb");)test",
-      format(
-          R"test(P p = TP(R"pb(item_1<1> item_2:{2})pb");)test",
-          getRawStringPbStyleWithColumns(40)));
-
   // Merge two short lines into one.
   expect_eq(R"test(
 std::string s = R"pb(
@@ -218,6 +212,18 @@ std::string s = R"pb(
 )pb";
 )test",
                    getRawStringPbStyleWithColumns(40)));
+}
+
+TEST_F(FormatTestRawStrings, BreaksShortRawStringsWhenNeeded) {
+  // The raw string contains multiple submessage entries, so break for
+  // readability.
+  expect_eq(R"test(
+P p = TP(R"pb(item_1 < 1 >
+              item_2: { 2 })pb");)test",
+      format(
+          R"test(
+P p = TP(R"pb(item_1<1> item_2:{2})pb");)test",
+          getRawStringPbStyleWithColumns(40)));
 }
 
 TEST_F(FormatTestRawStrings, BreaksRawStringsExceedingColumnLimit) {

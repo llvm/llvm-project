@@ -11,7 +11,7 @@
 ///  This file describes a subset of C++ as a protobuf. It is used to
 ///  more easily find interesting inputs for fuzzing Clang. This subset
 ///  differs from the one defined in cxx_proto.proto by eliminating while
-///  loops and Lvalues. The goal is that the C++ code generated will be
+///  loops and conditionals. The goal is that the C++ code generated will be
 ///  more likely to stress the LLVM loop vectorizer.
 ///
 //===----------------------------------------------------------------------===//
@@ -20,6 +20,16 @@ syntax = "proto2";
 
 message Const {
   required int32 val = 1;
+}
+
+message VarRef {
+  // Add an enum for each array in function signature
+  enum Arr {
+    ARR_A = 0;
+    ARR_B = 1;
+    ARR_C = 2;
+  };
+  required Arr arr = 1;
 }
 
 message BinaryOp {
@@ -48,10 +58,12 @@ message Rvalue {
   oneof rvalue_oneof {
     Const cons = 1;
     BinaryOp binop = 2;
+    VarRef varref = 3;
   }
 }
 
 message AssignmentStatement {
+  required VarRef varref = 1;
   required Rvalue rvalue = 2;
 }
 
@@ -62,10 +74,7 @@ message IfElse {
 }
 
 message Statement {
-  oneof stmt_oneof {
-    AssignmentStatement assignment = 1;
-    IfElse              ifelse     = 2;
-  }
+  required AssignmentStatement assignment = 1;
 }
 
 message StatementSeq {

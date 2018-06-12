@@ -583,6 +583,10 @@ if (CLANG_ENABLE_BOOTSTRAP)
     endif()
   endif()
 
+  if(CLANG_BOOTSTRAP_EXTRA_DEPS)
+    add_dependencies(clang-bootstrap-deps ${CLANG_BOOTSTRAP_EXTRA_DEPS})
+  endif()
+
   add_custom_target(${NEXT_CLANG_STAGE}-clear
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-cleared
     )

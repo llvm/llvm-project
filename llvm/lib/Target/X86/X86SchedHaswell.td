@@ -185,25 +185,31 @@ defm : X86WriteRes<WriteEMMS,          [HWPort01,HWPort15,HWPort015,HWPort0156],
 defm : HWWriteResPair<WriteFAdd,    [HWPort1],  3, [1], 1, 5>;
 defm : HWWriteResPair<WriteFAddX,   [HWPort1],  3, [1], 1, 6>;
 defm : HWWriteResPair<WriteFAddY,   [HWPort1],  3, [1], 1, 7>;
+defm : HWWriteResPair<WriteFAddZ,   [HWPort1],  3, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFAdd64,  [HWPort1],  3, [1], 1, 5>;
 defm : HWWriteResPair<WriteFAdd64X, [HWPort1],  3, [1], 1, 6>;
 defm : HWWriteResPair<WriteFAdd64Y, [HWPort1],  3, [1], 1, 7>;
+defm : HWWriteResPair<WriteFAdd64Z, [HWPort1],  3, [1], 1, 7>; // Unsupported = 1
 
 defm : HWWriteResPair<WriteFCmp,    [HWPort1],  3, [1], 1, 5>;
 defm : HWWriteResPair<WriteFCmpX,   [HWPort1],  3, [1], 1, 6>;
 defm : HWWriteResPair<WriteFCmpY,   [HWPort1],  3, [1], 1, 7>;
+defm : HWWriteResPair<WriteFCmpZ,   [HWPort1],  3, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFCmp64,  [HWPort1],  3, [1], 1, 5>;
 defm : HWWriteResPair<WriteFCmp64X, [HWPort1],  3, [1], 1, 6>;
 defm : HWWriteResPair<WriteFCmp64Y, [HWPort1],  3, [1], 1, 7>;
+defm : HWWriteResPair<WriteFCmp64Z, [HWPort1],  3, [1], 1, 7>; // Unsupported = 1
 
 defm : HWWriteResPair<WriteFCom,    [HWPort1],  3>;
 
 defm : HWWriteResPair<WriteFMul,    [HWPort01],  5, [1], 1, 5>;
 defm : HWWriteResPair<WriteFMulX,   [HWPort01],  5, [1], 1, 6>;
 defm : HWWriteResPair<WriteFMulY,   [HWPort01],  5, [1], 1, 7>;
+defm : HWWriteResPair<WriteFMulZ,   [HWPort01],  5, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFMul64,  [HWPort01],  5, [1], 1, 5>;
 defm : HWWriteResPair<WriteFMul64X, [HWPort01],  5, [1], 1, 6>;
 defm : HWWriteResPair<WriteFMul64Y, [HWPort01],  5, [1], 1, 7>;
+defm : HWWriteResPair<WriteFMul64Z, [HWPort01],  5, [1], 1, 7>; // Unsupported = 1
 
 defm : HWWriteResPair<WriteFDiv,    [HWPort0,HWFPDivider], 13, [1,7], 1, 5>;
 defm : HWWriteResPair<WriteFDivX,   [HWPort0,HWFPDivider], 13, [1,7], 1, 6>;
@@ -217,10 +223,12 @@ defm : HWWriteResPair<WriteFDiv64Z, [HWPort0,HWPort15,HWFPDivider], 35, [2,1,28]
 defm : HWWriteResPair<WriteFRcp,   [HWPort0],  5, [1], 1, 5>;
 defm : HWWriteResPair<WriteFRcpX,  [HWPort0],  5, [1], 1, 6>;
 defm : HWWriteResPair<WriteFRcpY,  [HWPort0,HWPort015], 11, [2,1], 3, 7>;
+defm : HWWriteResPair<WriteFRcpZ,  [HWPort0,HWPort015], 11, [2,1], 3, 7>; // Unsupported = 1
 
 defm : HWWriteResPair<WriteFRsqrt, [HWPort0],  5, [1], 1, 5>;
 defm : HWWriteResPair<WriteFRsqrtX,[HWPort0],  5, [1], 1, 6>;
 defm : HWWriteResPair<WriteFRsqrtY,[HWPort0,HWPort015], 11, [2,1], 3, 7>;
+defm : HWWriteResPair<WriteFRsqrtZ,[HWPort0,HWPort015], 11, [2,1], 3, 7>; // Unsupported = 1
 
 defm : HWWriteResPair<WriteFSqrt,    [HWPort0,HWFPDivider], 11, [1,7], 1, 5>;
 defm : HWWriteResPair<WriteFSqrtX,   [HWPort0,HWFPDivider], 11, [1,7], 1, 6>;
@@ -235,60 +243,80 @@ defm : HWWriteResPair<WriteFSqrt80,  [HWPort0,HWFPDivider], 23, [1,17]>;
 defm : HWWriteResPair<WriteFMA,   [HWPort01], 5, [1], 1, 5>;
 defm : HWWriteResPair<WriteFMAX,  [HWPort01], 5, [1], 1, 6>;
 defm : HWWriteResPair<WriteFMAY,  [HWPort01], 5, [1], 1, 7>;
+defm : HWWriteResPair<WriteFMAZ,  [HWPort01], 5, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteDPPD,  [HWPort0,HWPort1,HWPort5],  9, [1,1,1], 3, 6>;
 defm : HWWriteResPair<WriteDPPS,  [HWPort0,HWPort1,HWPort5], 14, [2,1,1], 4, 6>;
 defm : HWWriteResPair<WriteDPPSY, [HWPort0,HWPort1,HWPort5], 14, [2,1,1], 4, 7>;
+defm : HWWriteResPair<WriteDPPSZ, [HWPort0,HWPort1,HWPort5], 14, [2,1,1], 4, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFSign,  [HWPort0], 1>;
 defm : X86WriteRes<WriteFRnd,            [HWPort23],  6, [1],   1>;
 defm : X86WriteRes<WriteFRndY,           [HWPort23],  6, [1],   1>;
+defm : X86WriteRes<WriteFRndZ,           [HWPort23],  6, [1],   1>; // Unsupported = 1
 defm : X86WriteRes<WriteFRndLd,  [HWPort1,HWPort23], 12, [2,1], 3>;
 defm : X86WriteRes<WriteFRndYLd, [HWPort1,HWPort23], 13, [2,1], 3>;
+defm : X86WriteRes<WriteFRndZLd, [HWPort1,HWPort23], 13, [2,1], 3>; // Unsupported = 1
 defm : HWWriteResPair<WriteFLogic,  [HWPort5], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteFLogicY, [HWPort5], 1, [1], 1, 7>;
+defm : HWWriteResPair<WriteFLogicZ, [HWPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFTest,   [HWPort0], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteFTestY,  [HWPort0], 1, [1], 1, 7>;
+defm : HWWriteResPair<WriteFTestZ,  [HWPort0], 1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFShuffle,  [HWPort5], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteFShuffleY, [HWPort5], 1, [1], 1, 7>;
+defm : HWWriteResPair<WriteFShuffleZ, [HWPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFVarShuffle,  [HWPort5], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteFVarShuffleY, [HWPort5], 1, [1], 1, 7>;
+defm : HWWriteResPair<WriteFVarShuffleZ, [HWPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFBlend,  [HWPort015], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteFBlendY, [HWPort015], 1, [1], 1, 7>;
+defm : HWWriteResPair<WriteFBlendZ, [HWPort015], 1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFShuffle256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteFVarShuffle256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteFVarBlend,  [HWPort5], 2, [2], 2, 6>;
 defm : HWWriteResPair<WriteFVarBlendY, [HWPort5], 2, [2], 2, 7>;
+defm : HWWriteResPair<WriteFVarBlendZ, [HWPort5], 2, [2], 2, 7>; // Unsupported = 1
 
 // Conversion between integer and float.
 defm : HWWriteResPair<WriteCvtSD2I,   [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPD2I,   [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPD2IY,  [HWPort1], 3>;
+defm : HWWriteResPair<WriteCvtPD2IZ,  [HWPort1], 3>; // Unsupported = 1
 defm : HWWriteResPair<WriteCvtSS2I,   [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPS2I,   [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPS2IY,  [HWPort1], 3>;
+defm : HWWriteResPair<WriteCvtPS2IZ,  [HWPort1], 3>; // Unsupported = 1
 
 defm : HWWriteResPair<WriteCvtI2SD,   [HWPort1], 4>;
 defm : HWWriteResPair<WriteCvtI2PD,   [HWPort1], 4>;
 defm : HWWriteResPair<WriteCvtI2PDY,  [HWPort1], 4>;
+defm : HWWriteResPair<WriteCvtI2PDZ,  [HWPort1], 4>; // Unsupported = 1
 defm : HWWriteResPair<WriteCvtI2SS,   [HWPort1], 4>;
 defm : HWWriteResPair<WriteCvtI2PS,   [HWPort1], 4>;
 defm : HWWriteResPair<WriteCvtI2PSY,  [HWPort1], 4>;
+defm : HWWriteResPair<WriteCvtI2PSZ,  [HWPort1], 4>; // Unsupported = 1
 
 defm : HWWriteResPair<WriteCvtSS2SD,  [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPS2PD,  [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPS2PDY, [HWPort1], 3>;
+defm : HWWriteResPair<WriteCvtPS2PDZ, [HWPort1], 3>; // Unsupported = 1
 defm : HWWriteResPair<WriteCvtSD2SS,  [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPD2PS,  [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPD2PSY, [HWPort1], 3>;
+defm : HWWriteResPair<WriteCvtPD2PSZ, [HWPort1], 3>; // Unsupported = 1
 
 defm : X86WriteRes<WriteCvtPH2PS,     [HWPort0,HWPort5], 2, [1,1], 2>;
 defm : X86WriteRes<WriteCvtPH2PSY,    [HWPort0,HWPort5], 2, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSZ,    [HWPort0,HWPort5], 2, [1,1], 2>; // Unsupported = 1
 defm : X86WriteRes<WriteCvtPH2PSLd,  [HWPort0,HWPort23], 6, [1,1], 2>;
 defm : X86WriteRes<WriteCvtPH2PSYLd, [HWPort0,HWPort23], 7, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSZLd, [HWPort0,HWPort23], 7, [1,1], 2>; // Unsupported = 1
 
 defm : X86WriteRes<WriteCvtPS2PH,    [HWPort1,HWPort5], 4, [1,1], 2>;
 defm : X86WriteRes<WriteCvtPS2PHY,   [HWPort1,HWPort5], 6, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPS2PHZ,   [HWPort1,HWPort5], 6, [1,1], 2>; // Unsupported = 1
 defm : X86WriteRes<WriteCvtPS2PHSt,  [HWPort1,HWPort4,HWPort5,HWPort237], 5, [1,1,1,1], 4>;
 defm : X86WriteRes<WriteCvtPS2PHYSt, [HWPort1,HWPort4,HWPort5,HWPort237], 7, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteCvtPS2PHZSt, [HWPort1,HWPort4,HWPort5,HWPort237], 7, [1,1,1,1], 4>; // Unsupported = 1
 
 // Vector integer operations.
 defm : X86WriteRes<WriteVecLoad,         [HWPort23], 5, [1], 1>;
@@ -314,46 +342,61 @@ defm : X86WriteRes<WriteVecMoveFromGpr,  [HWPort5], 1, [1], 1>;
 defm : HWWriteResPair<WriteVecLogic, [HWPort015], 1, [1], 1, 5>;
 defm : HWWriteResPair<WriteVecLogicX,[HWPort015], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteVecLogicY,[HWPort015], 1, [1], 1, 7>;
+defm : HWWriteResPair<WriteVecLogicZ,[HWPort015], 1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteVecTest,  [HWPort0,HWPort5], 2, [1,1], 2, 6>;
 defm : HWWriteResPair<WriteVecTestY, [HWPort0,HWPort5], 4, [1,1], 2, 7>;
+defm : HWWriteResPair<WriteVecTestZ, [HWPort0,HWPort5], 4, [1,1], 2, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteVecALU,   [HWPort15],  1, [1], 1, 5>;
 defm : HWWriteResPair<WriteVecALUX,  [HWPort15],  1, [1], 1, 6>;
 defm : HWWriteResPair<WriteVecALUY,  [HWPort15],  1, [1], 1, 7>;
+defm : HWWriteResPair<WriteVecALUZ,  [HWPort15],  1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteVecIMul,  [HWPort0],  5, [1], 1, 5>;
 defm : HWWriteResPair<WriteVecIMulX, [HWPort0],  5, [1], 1, 6>;
 defm : HWWriteResPair<WriteVecIMulY, [HWPort0],  5, [1], 1, 7>;
+defm : HWWriteResPair<WriteVecIMulZ, [HWPort0],  5, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WritePMULLD,   [HWPort0], 10, [2], 2, 6>;
 defm : HWWriteResPair<WritePMULLDY,  [HWPort0], 10, [2], 2, 7>;
+defm : HWWriteResPair<WritePMULLDZ,  [HWPort0], 10, [2], 2, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteShuffle,  [HWPort5],  1, [1], 1, 5>;
 defm : HWWriteResPair<WriteShuffleX, [HWPort5],  1, [1], 1, 6>;
 defm : HWWriteResPair<WriteShuffleY, [HWPort5],  1, [1], 1, 7>;
+defm : HWWriteResPair<WriteShuffleZ, [HWPort5],  1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteVarShuffle, [HWPort5], 1, [1], 1, 5>;
 defm : HWWriteResPair<WriteVarShuffleX,[HWPort5], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteVarShuffleY,[HWPort5], 1, [1], 1, 7>;
+defm : HWWriteResPair<WriteVarShuffleZ,[HWPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteBlend,  [HWPort5], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteBlendY, [HWPort5], 1, [1], 1, 7>;
+defm : HWWriteResPair<WriteBlendZ, [HWPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteShuffle256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteVarShuffle256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteVarBlend,  [HWPort5], 2, [2], 2, 6>;
 defm : HWWriteResPair<WriteVarBlendY, [HWPort5], 2, [2], 2, 7>;
+defm : HWWriteResPair<WriteVarBlendZ, [HWPort5], 2, [2], 2, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteMPSAD,  [HWPort0, HWPort5], 7, [1, 2], 3, 6>;
 defm : HWWriteResPair<WriteMPSADY, [HWPort0, HWPort5], 7, [1, 2], 3, 7>;
+defm : HWWriteResPair<WriteMPSADZ, [HWPort0, HWPort5], 7, [1, 2], 3, 7>; // Unsupported = 1
 defm : HWWriteResPair<WritePSADBW,  [HWPort0], 5, [1], 1, 5>;
 defm : HWWriteResPair<WritePSADBWX, [HWPort0], 5, [1], 1, 6>;
 defm : HWWriteResPair<WritePSADBWY, [HWPort0], 5, [1], 1, 7>;
+defm : HWWriteResPair<WritePSADBWZ, [HWPort0], 5, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WritePHMINPOS, [HWPort0],  5, [1], 1, 6>;
 
 // Vector integer shifts.
 defm : HWWriteResPair<WriteVecShift,     [HWPort0], 1, [1], 1, 5>;
 defm : HWWriteResPair<WriteVecShiftX,    [HWPort0,HWPort5],  2, [1,1], 2, 6>;
 defm : X86WriteRes<WriteVecShiftY,       [HWPort0,HWPort5],  4, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftZ,       [HWPort0,HWPort5],  4, [1,1], 2>; // Unsupported = 1
 defm : X86WriteRes<WriteVecShiftYLd,     [HWPort0,HWPort23], 8, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftZLd,     [HWPort0,HWPort23], 8, [1,1], 2>; // Unsupported = 1
 
 defm : HWWriteResPair<WriteVecShiftImm,  [HWPort0], 1, [1], 1, 5>;
 defm : HWWriteResPair<WriteVecShiftImmX, [HWPort0], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteVecShiftImmY, [HWPort0], 1, [1], 1, 7>;
+defm : HWWriteResPair<WriteVecShiftImmZ, [HWPort0], 1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteVarVecShift,  [HWPort0, HWPort5], 3, [2,1], 3, 6>;
 defm : HWWriteResPair<WriteVarVecShiftY, [HWPort0, HWPort5], 3, [2,1], 3, 7>;
+defm : HWWriteResPair<WriteVarVecShiftZ, [HWPort0, HWPort5], 3, [2,1], 3, 7>; // Unsupported = 1
 
 // Vector insert/extract operations.
 def : WriteRes<WriteVecInsert, [HWPort5]> {

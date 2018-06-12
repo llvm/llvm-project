@@ -148,7 +148,7 @@ void benchmarkMain() {
   std::vector<InstructionBenchmark> Results = ExitOnErr(Runner->run(
       GetOpcodeOrDie(State.getInstrInfo()), Filter, NumRepetitions));
   for (InstructionBenchmark &Result : Results)
-    Result.writeYaml(Context, BenchmarkFile);
+    ExitOnErr(Result.writeYaml(Context, BenchmarkFile));
 
   exegesis::pfm::pfmTerminate();
 }
@@ -200,7 +200,7 @@ static void analysisMain() {
     llvm::errs() << "unknown target '" << Points[0].LLVMTriple << "'\n";
     return;
   }
-  const auto Clustering = llvm::cantFail(InstructionBenchmarkClustering::create(
+  const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
       Points, AnalysisNumPoints, AnalysisEpsilon));
 
   const Analysis Analyzer(*TheTarget, Clustering);
@@ -216,6 +216,12 @@ static void analysisMain() {
 
 int main(int Argc, char **Argv) {
   llvm::cl::ParseCommandLineOptions(Argc, Argv, "");
+
+  exegesis::ExitOnErr.setExitCodeMapper([](const llvm::Error &Err) {
+    if (Err.isA<llvm::StringError>())
+      return EXIT_SUCCESS;
+    return EXIT_FAILURE;
+  });
 
   if (BenchmarkMode == BenchmarkModeE::Analysis) {
     exegesis::analysisMain();

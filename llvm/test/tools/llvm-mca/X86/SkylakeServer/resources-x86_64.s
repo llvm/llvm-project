@@ -822,13 +822,13 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  3      7     1.00    *      *            negl	(%rax)
 # CHECK-NEXT:  1      1     0.25                        negq	%rcx
 # CHECK-NEXT:  3      7     1.00    *      *            negq	(%r10)
-# CHECK-NEXT:  1      1     0.25                        nop
-# CHECK-NEXT:  1      1     0.25                        nopw	%di
-# CHECK-NEXT:  1      1     0.25                        nopw	(%rcx)
-# CHECK-NEXT:  1      1     0.25                        nopl	%esi
-# CHECK-NEXT:  1      1     0.25                        nopl	(%r8)
-# CHECK-NEXT:  1      1     0.25                        nopq	%rdx
-# CHECK-NEXT:  1      1     0.25                        nopq	(%r9)
+# CHECK-NEXT:  1      1     0.17                        nop
+# CHECK-NEXT:  1      1     0.17                        nopw	%di
+# CHECK-NEXT:  1      1     0.17                        nopw	(%rcx)
+# CHECK-NEXT:  1      1     0.17                        nopl	%esi
+# CHECK-NEXT:  1      1     0.17                        nopl	(%r8)
+# CHECK-NEXT:  1      1     0.17                        nopq	%rdx
+# CHECK-NEXT:  1      1     0.17                        nopq	(%r9)
 # CHECK-NEXT:  1      1     0.25                        notb	%dil
 # CHECK-NEXT:  3      7     1.00    *      *            notb	(%r8)
 # CHECK-NEXT:  1      1     0.25                        notw	%si
@@ -1164,7 +1164,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT: 60.00   -     431.50 225.50 202.00 202.00 167.00 186.00 416.00 69.00
+# CHECK-NEXT: 60.00   -     429.75 223.75 202.00 202.00 167.00 184.25 414.25 69.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -1381,13 +1381,13 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     0.25   0.25   0.83   0.83   1.00   0.25   0.25   0.33   negl	(%rax)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     negq	%rcx
 # CHECK-NEXT:  -      -     0.25   0.25   0.83   0.83   1.00   0.25   0.25   0.33   negq	(%r10)
-# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     nop
-# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     nopw	%di
-# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     nopw	(%rcx)
-# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     nopl	%esi
-# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     nopl	(%r8)
-# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     nopq	%rdx
-# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     nopq	(%r9)
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     nop
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     nopw	%di
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     nopw	(%rcx)
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     nopl	%esi
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     nopl	(%r8)
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     nopq	%rdx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     nopq	(%r9)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     notb	%dil
 # CHECK-NEXT:  -      -     0.25   0.25   0.83   0.83   1.00   0.25   0.25   0.33   notb	(%r8)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     notw	%si

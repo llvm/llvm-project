@@ -22,6 +22,7 @@
 @property(assign, nonatomic) int shouldUseCFPreferences;
 @property(assign, nonatomic) int enableGLAcceleration;
 @property(assign, nonatomic) int ID;
+@property(assign, nonatomic) int hasADog;
 @end
 
 @interface Foo (Bar)

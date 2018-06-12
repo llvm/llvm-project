@@ -182,77 +182,94 @@ defm : X86WriteRes<WriteFMoveX,        [SKXPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveY,        [SKXPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteEMMS,          [SKXPort05,SKXPort0156], 10, [9,1], 10>;
 
-defm : SKXWriteResPair<WriteFAdd,     [SKXPort015],  4, [1], 1, 5>; // Floating point add/sub.
-defm : SKXWriteResPair<WriteFAddX,    [SKXPort015],  4, [1], 1, 6>; // Floating point add/sub (XMM).
-defm : SKXWriteResPair<WriteFAddY,    [SKXPort015],  4, [1], 1, 7>; // Floating point add/sub (YMM/ZMM).
-defm : SKXWriteResPair<WriteFAdd64,   [SKXPort015],  4, [1], 1, 5>; // Floating point double add/sub.
-defm : SKXWriteResPair<WriteFAdd64X,  [SKXPort015],  4, [1], 1, 6>; // Floating point double add/sub (XMM).
-defm : SKXWriteResPair<WriteFAdd64Y,  [SKXPort015],  4, [1], 1, 7>; // Floating point double add/sub (YMM/ZMM).
+defm : SKXWriteResPair<WriteFAdd,      [SKXPort01],  4, [1], 1, 5>; // Floating point add/sub.
+defm : SKXWriteResPair<WriteFAddX,     [SKXPort01],  4, [1], 1, 6>;
+defm : SKXWriteResPair<WriteFAddY,     [SKXPort01],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFAddZ,     [SKXPort05],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFAdd64,    [SKXPort01],  4, [1], 1, 5>; // Floating point double add/sub.
+defm : SKXWriteResPair<WriteFAdd64X,   [SKXPort01],  4, [1], 1, 6>;
+defm : SKXWriteResPair<WriteFAdd64Y,   [SKXPort01],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFAdd64Z,   [SKXPort05],  4, [1], 1, 7>;
 
-defm : SKXWriteResPair<WriteFCmp,     [SKXPort015],  4, [1], 1, 5>; // Floating point compare.
-defm : SKXWriteResPair<WriteFCmpX,    [SKXPort015],  4, [1], 1, 6>; // Floating point compare (XMM).
-defm : SKXWriteResPair<WriteFCmpY,    [SKXPort015],  4, [1], 1, 7>; // Floating point compare (YMM/ZMM).
-defm : SKXWriteResPair<WriteFCmp64,   [SKXPort015],  4, [1], 1, 5>; // Floating point double compare.
-defm : SKXWriteResPair<WriteFCmp64X,  [SKXPort015],  4, [1], 1, 6>; // Floating point double compare (XMM).
-defm : SKXWriteResPair<WriteFCmp64Y,  [SKXPort015],  4, [1], 1, 7>; // Floating point double compare (YMM/ZMM).
+defm : SKXWriteResPair<WriteFCmp,      [SKXPort01],  4, [1], 1, 5>; // Floating point compare.
+defm : SKXWriteResPair<WriteFCmpX,     [SKXPort01],  4, [1], 1, 6>;
+defm : SKXWriteResPair<WriteFCmpY,     [SKXPort01],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFCmpZ,     [SKXPort05],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFCmp64,    [SKXPort01],  4, [1], 1, 5>; // Floating point double compare.
+defm : SKXWriteResPair<WriteFCmp64X,   [SKXPort01],  4, [1], 1, 6>;
+defm : SKXWriteResPair<WriteFCmp64Y,   [SKXPort01],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFCmp64Z,   [SKXPort05],  4, [1], 1, 7>;
 
 defm : SKXWriteResPair<WriteFCom,       [SKXPort0],  2>; // Floating point compare to flags.
 
-defm : SKXWriteResPair<WriteFMul,     [SKXPort015],  4, [1], 1, 5>; // Floating point multiplication.
-defm : SKXWriteResPair<WriteFMulX,    [SKXPort015],  4, [1], 1, 6>; // Floating point multiplication (XMM).
-defm : SKXWriteResPair<WriteFMulY,    [SKXPort015],  4, [1], 1, 7>; // Floating point multiplication (YMM/ZMM).
-defm : SKXWriteResPair<WriteFMul64,   [SKXPort015],  4, [1], 1, 5>; // Floating point double multiplication.
-defm : SKXWriteResPair<WriteFMul64X,  [SKXPort015],  4, [1], 1, 6>; // Floating point double multiplication (XMM).
-defm : SKXWriteResPair<WriteFMul64Y,  [SKXPort015],  4, [1], 1, 7>; // Floating point double multiplication (YMM/ZMM).
+defm : SKXWriteResPair<WriteFMul,      [SKXPort01],  4, [1], 1, 5>; // Floating point multiplication.
+defm : SKXWriteResPair<WriteFMulX,     [SKXPort01],  4, [1], 1, 6>;
+defm : SKXWriteResPair<WriteFMulY,     [SKXPort01],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFMulZ,     [SKXPort05],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFMul64,    [SKXPort01],  4, [1], 1, 5>; // Floating point double multiplication.
+defm : SKXWriteResPair<WriteFMul64X,   [SKXPort01],  4, [1], 1, 6>;
+defm : SKXWriteResPair<WriteFMul64Y,   [SKXPort01],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFMul64Z,   [SKXPort05],  4, [1], 1, 7>;
 
 defm : SKXWriteResPair<WriteFDiv,     [SKXPort0,SKXFPDivider], 11, [1,3], 1, 5>; // 10-14 cycles. // Floating point division.
-//defm : SKXWriteResPair<WriteFDivX,    [SKXPort0,SKXFPDivider], 11, [1,3], 1, 6>; // 10-14 cycles. // Floating point division (XMM).
-defm : SKXWriteResPair<WriteFDivY,    [SKXPort0,SKXFPDivider], 11, [1,5], 1, 7>; // 10-14 cycles. // Floating point division (YMM).
-defm : SKXWriteResPair<WriteFDivZ,    [SKXPort0,SKXPort5,SKXFPDivider], 18, [2,1,10], 3, 7>; // 10-14 cycles. // Floating point division (ZMM).
+//defm : SKXWriteResPair<WriteFDivX,    [SKXPort0,SKXFPDivider], 11, [1,3], 1, 6>; // 10-14 cycles.
+defm : SKXWriteResPair<WriteFDivY,    [SKXPort0,SKXFPDivider], 11, [1,5], 1, 7>; // 10-14 cycles.
+defm : SKXWriteResPair<WriteFDivZ,    [SKXPort0,SKXPort5,SKXFPDivider], 18, [2,1,10], 3, 7>; // 10-14 cycles.
 //defm : SKXWriteResPair<WriteFDiv64,   [SKXPort0,SKXFPDivider], 14, [1,3], 1, 5>; // 10-14 cycles. // Floating point division.
-//defm : SKXWriteResPair<WriteFDiv64X,  [SKXPort0,SKXFPDivider], 14, [1,3], 1, 6>; // 10-14 cycles. // Floating point division (XMM).
-//defm : SKXWriteResPair<WriteFDiv64Y,  [SKXPort0,SKXFPDivider], 14, [1,5], 1, 7>; // 10-14 cycles. // Floating point division (YMM).
-defm : SKXWriteResPair<WriteFDiv64Z,  [SKXPort0,SKXPort5,SKXFPDivider], 23, [2,1,16], 3, 7>; // 10-14 cycles. // Floating point division (ZMM).
+//defm : SKXWriteResPair<WriteFDiv64X,  [SKXPort0,SKXFPDivider], 14, [1,3], 1, 6>; // 10-14 cycles.
+//defm : SKXWriteResPair<WriteFDiv64Y,  [SKXPort0,SKXFPDivider], 14, [1,5], 1, 7>; // 10-14 cycles.
+defm : SKXWriteResPair<WriteFDiv64Z,  [SKXPort0,SKXPort5,SKXFPDivider], 23, [2,1,16], 3, 7>; // 10-14 cycles.
 
 defm : SKXWriteResPair<WriteFSqrt,    [SKXPort0,SKXFPDivider], 12, [1,3], 1, 5>; // Floating point square root.
-defm : SKXWriteResPair<WriteFSqrtX,   [SKXPort0,SKXFPDivider], 12, [1,3], 1, 6>; // Floating point square root (XMM).
-defm : SKXWriteResPair<WriteFSqrtY,   [SKXPort0,SKXFPDivider], 12, [1,6], 1, 7>; // Floating point square root (YMM).
-defm : SKXWriteResPair<WriteFSqrtZ,   [SKXPort0,SKXPort5,SKXFPDivider], 20, [2,1,12], 3, 7>; // Floating point square root (ZMM).
+defm : SKXWriteResPair<WriteFSqrtX,   [SKXPort0,SKXFPDivider], 12, [1,3], 1, 6>;
+defm : SKXWriteResPair<WriteFSqrtY,   [SKXPort0,SKXFPDivider], 12, [1,6], 1, 7>;
+defm : SKXWriteResPair<WriteFSqrtZ,   [SKXPort0,SKXPort5,SKXFPDivider], 20, [2,1,12], 3, 7>;
 defm : SKXWriteResPair<WriteFSqrt64,  [SKXPort0,SKXFPDivider], 18, [1,6], 1, 5>; // Floating point double square root.
-defm : SKXWriteResPair<WriteFSqrt64X, [SKXPort0,SKXFPDivider], 18, [1,6], 1, 6>; // Floating point double square root (XMM).
-defm : SKXWriteResPair<WriteFSqrt64Y, [SKXPort0,SKXFPDivider], 18, [1,12],1, 7>; // Floating point double square root (YMM).
-defm : SKXWriteResPair<WriteFSqrt64Z, [SKXPort0,SKXPort5,SKXFPDivider], 32, [2,1,24], 3, 7>; // Floating point double square root (ZMM).
+defm : SKXWriteResPair<WriteFSqrt64X, [SKXPort0,SKXFPDivider], 18, [1,6], 1, 6>;
+defm : SKXWriteResPair<WriteFSqrt64Y, [SKXPort0,SKXFPDivider], 18, [1,12],1, 7>;
+defm : SKXWriteResPair<WriteFSqrt64Z, [SKXPort0,SKXPort5,SKXFPDivider], 32, [2,1,24], 3, 7>;
 defm : SKXWriteResPair<WriteFSqrt80,  [SKXPort0,SKXFPDivider], 21, [1,7]>; // Floating point long double square root.
 
 defm : SKXWriteResPair<WriteFRcp,   [SKXPort0],  4, [1], 1, 5>; // Floating point reciprocal estimate.
-defm : SKXWriteResPair<WriteFRcpX,  [SKXPort0],  4, [1], 1, 6>; // Floating point reciprocal estimate (XMM).
-defm : SKXWriteResPair<WriteFRcpY,  [SKXPort0],  4, [1], 1, 7>; // Floating point reciprocal estimate (YMM/ZMM).
+defm : SKXWriteResPair<WriteFRcpX,  [SKXPort0],  4, [1], 1, 6>;
+defm : SKXWriteResPair<WriteFRcpY,  [SKXPort0],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFRcpZ,  [SKXPort0,SKXPort5],  4, [2,1], 3, 7>;
 
 defm : SKXWriteResPair<WriteFRsqrt, [SKXPort0],  4, [1], 1, 5>; // Floating point reciprocal square root estimate.
-defm : SKXWriteResPair<WriteFRsqrtX,[SKXPort0],  4, [1], 1, 6>; // Floating point reciprocal square root estimate (XMM).
-defm : SKXWriteResPair<WriteFRsqrtY,[SKXPort0],  4, [1], 1, 7>; // Floating point reciprocal square root estimate (YMM/ZMM).
+defm : SKXWriteResPair<WriteFRsqrtX,[SKXPort0],  4, [1], 1, 6>;
+defm : SKXWriteResPair<WriteFRsqrtY,[SKXPort0],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFRsqrtZ,[SKXPort0,SKXPort5],  9, [2,1], 3, 7>;
 
-defm : SKXWriteResPair<WriteFMA,  [SKXPort015],  4, [1], 1, 5>; // Fused Multiply Add.
-defm : SKXWriteResPair<WriteFMAX, [SKXPort015],  4, [1], 1, 6>; // Fused Multiply Add (XMM).
-defm : SKXWriteResPair<WriteFMAY, [SKXPort015],  4, [1], 1, 7>; // Fused Multiply Add (YMM/ZMM).
+defm : SKXWriteResPair<WriteFMA,  [SKXPort01],  4, [1], 1, 5>; // Fused Multiply Add.
+defm : SKXWriteResPair<WriteFMAX, [SKXPort01],  4, [1], 1, 6>;
+defm : SKXWriteResPair<WriteFMAY, [SKXPort01],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFMAZ, [SKXPort05],  4, [1], 1, 7>;
 defm : SKXWriteResPair<WriteDPPD, [SKXPort5,SKXPort015],  9, [1,2], 3, 6>; // Floating point double dot product.
-defm : SKXWriteResPair<WriteDPPS, [SKXPort5,SKXPort015], 13, [1,3], 4, 6>; // Floating point single dot product.
-defm : SKXWriteResPair<WriteDPPSY,[SKXPort5,SKXPort015], 13, [1,3], 4, 7>; // Floating point single dot product (YMM).
+defm : SKXWriteResPair<WriteDPPS, [SKXPort5,SKXPort015], 13, [1,3], 4, 6>;
+defm : SKXWriteResPair<WriteDPPSY,[SKXPort5,SKXPort015], 13, [1,3], 4, 7>;
+defm : SKXWriteResPair<WriteDPPSZ,[SKXPort5,SKXPort015], 13, [1,3], 4, 7>;
 defm : SKXWriteResPair<WriteFSign,  [SKXPort0],  1>; // Floating point fabs/fchs.
-defm : SKXWriteResPair<WriteFRnd,   [SKXPort015], 8, [2], 2, 6>; // Floating point rounding.
-defm : SKXWriteResPair<WriteFRndY,  [SKXPort015], 8, [2], 2, 7>; // Floating point rounding (YMM/ZMM).
+defm : SKXWriteResPair<WriteFRnd,   [SKXPort01], 8, [2], 2, 6>; // Floating point rounding.
+defm : SKXWriteResPair<WriteFRndY,  [SKXPort01], 8, [2], 2, 7>;
+defm : SKXWriteResPair<WriteFRndZ,  [SKXPort05], 8, [2], 2, 7>;
 defm : SKXWriteResPair<WriteFLogic, [SKXPort015], 1, [1], 1, 6>; // Floating point and/or/xor logicals.
-defm : SKXWriteResPair<WriteFLogicY, [SKXPort015], 1, [1], 1, 7>; // Floating point and/or/xor logicals (YMM/ZMM).
+defm : SKXWriteResPair<WriteFLogicY, [SKXPort015], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFLogicZ, [SKXPort05], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteFTest,  [SKXPort0], 2, [1], 1, 6>; // Floating point TEST instructions.
-defm : SKXWriteResPair<WriteFTestY, [SKXPort0], 2, [1], 1, 7>; // Floating point TEST instructions (YMM/ZMM).
+defm : SKXWriteResPair<WriteFTestY, [SKXPort0], 2, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFTestZ, [SKXPort0], 2, [1], 1, 7>;
 defm : SKXWriteResPair<WriteFShuffle,  [SKXPort5], 1, [1], 1, 6>; // Floating point vector shuffles.
-defm : SKXWriteResPair<WriteFShuffleY, [SKXPort5], 1, [1], 1, 7>; // Floating point vector shuffles (YMM/ZMM).
+defm : SKXWriteResPair<WriteFShuffleY, [SKXPort5], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFShuffleZ, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteFVarShuffle,  [SKXPort5], 1, [1], 1, 6>; // Floating point vector variable shuffles.
-defm : SKXWriteResPair<WriteFVarShuffleY, [SKXPort5], 1, [1], 1, 7>; // Floating point vector variable shuffles.
+defm : SKXWriteResPair<WriteFVarShuffleY, [SKXPort5], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFVarShuffleZ, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteFBlend, [SKXPort015], 1, [1], 1, 6>; // Floating point vector blends.
-defm : SKXWriteResPair<WriteFBlendY,[SKXPort015], 1, [1], 1, 7>; // Floating point vector blends.
+defm : SKXWriteResPair<WriteFBlendY,[SKXPort015], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WriteFBlendZ,[SKXPort015], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteFVarBlend, [SKXPort015], 2, [2], 2, 6>; // Fp vector variable blends.
-defm : SKXWriteResPair<WriteFVarBlendY,[SKXPort015], 2, [2], 2, 7>; // Fp vector variable blends.
+defm : SKXWriteResPair<WriteFVarBlendY,[SKXPort015], 2, [2], 2, 7>;
+defm : SKXWriteResPair<WriteFVarBlendZ,[SKXPort015], 2, [2], 2, 7>;
 
 // FMA Scheduling helper class.
 // class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
@@ -279,47 +296,62 @@ defm : X86WriteRes<WriteVecMoveToGpr,    [SKXPort0], 2, [1], 1>;
 defm : X86WriteRes<WriteVecMoveFromGpr,  [SKXPort5], 1, [1], 1>;
 
 defm : SKXWriteResPair<WriteVecALU,   [SKXPort05], 1, [1], 1, 5>; // Vector integer ALU op, no logicals.
-defm : SKXWriteResPair<WriteVecALUX,  [SKXPort01], 1, [1], 1, 6>; // Vector integer ALU op, no logicals (XMM).
-defm : SKXWriteResPair<WriteVecALUY,  [SKXPort01], 1, [1], 1, 7>; // Vector integer ALU op, no logicals (YMM/ZMM).
+defm : SKXWriteResPair<WriteVecALUX,  [SKXPort01], 1, [1], 1, 6>;
+defm : SKXWriteResPair<WriteVecALUY,  [SKXPort01], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WriteVecALUZ,  [SKXPort0], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVecLogic, [SKXPort05],  1, [1], 1, 5>; // Vector integer and/or/xor.
-defm : SKXWriteResPair<WriteVecLogicX,[SKXPort015], 1, [1], 1, 6>; // Vector integer and/or/xor (XMM).
-defm : SKXWriteResPair<WriteVecLogicY,[SKXPort015], 1, [1], 1, 7>; // Vector integer and/or/xor (YMM/ZMM).
+defm : SKXWriteResPair<WriteVecLogicX,[SKXPort015], 1, [1], 1, 6>;
+defm : SKXWriteResPair<WriteVecLogicY,[SKXPort015], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WriteVecLogicZ,[SKXPort05], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVecTest,  [SKXPort0,SKXPort5], 3, [1,1], 2, 6>; // Vector integer TEST instructions.
-defm : SKXWriteResPair<WriteVecTestY, [SKXPort0,SKXPort5], 3, [1,1], 2, 7>; // Vector integer TEST instructions (YMM/ZMM).
+defm : SKXWriteResPair<WriteVecTestY, [SKXPort0,SKXPort5], 3, [1,1], 2, 7>;
+defm : SKXWriteResPair<WriteVecTestZ, [SKXPort0,SKXPort5], 3, [1,1], 2, 7>;
 defm : SKXWriteResPair<WriteVecIMul,  [SKXPort0],    4, [1], 1, 5>; // Vector integer multiply.
-defm : SKXWriteResPair<WriteVecIMulX, [SKXPort015],  4, [1], 1, 6>; // Vector integer multiply (XMM).
-defm : SKXWriteResPair<WriteVecIMulY, [SKXPort015],  4, [1], 1, 7>; // Vector integer multiply (YMM/ZMM).
-defm : SKXWriteResPair<WritePMULLD,   [SKXPort015], 10, [2], 2, 6>; // Vector PMULLD.
-defm : SKXWriteResPair<WritePMULLDY,  [SKXPort015], 10, [2], 2, 7>; // Vector PMULLD (YMM/ZMM).
+defm : SKXWriteResPair<WriteVecIMulX, [SKXPort01],  4, [1], 1, 6>;
+defm : SKXWriteResPair<WriteVecIMulY, [SKXPort01],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WriteVecIMulZ, [SKXPort05],  4, [1], 1, 7>;
+defm : SKXWriteResPair<WritePMULLD,   [SKXPort01], 10, [2], 2, 6>; // Vector PMULLD.
+defm : SKXWriteResPair<WritePMULLDY,  [SKXPort01], 10, [2], 2, 7>;
+defm : SKXWriteResPair<WritePMULLDZ,  [SKXPort05], 10, [2], 2, 7>;
 defm : SKXWriteResPair<WriteShuffle,  [SKXPort5], 1, [1], 1, 5>; // Vector shuffles.
-defm : SKXWriteResPair<WriteShuffleX, [SKXPort5], 1, [1], 1, 6>; // Vector shuffles (XMM).
-defm : SKXWriteResPair<WriteShuffleY, [SKXPort5], 1, [1], 1, 7>; // Vector shuffles (YMM/ZMM).
+defm : SKXWriteResPair<WriteShuffleX, [SKXPort5], 1, [1], 1, 6>;
+defm : SKXWriteResPair<WriteShuffleY, [SKXPort5], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WriteShuffleZ, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort5], 1, [1], 1, 5>; // Vector variable shuffles.
-defm : SKXWriteResPair<WriteVarShuffleX, [SKXPort5], 1, [1], 1, 6>; // Vector variable shuffles (XMM).
-defm : SKXWriteResPair<WriteVarShuffleY, [SKXPort5], 1, [1], 1, 7>; // Vector variable shuffles (YMM/ZMM).
+defm : SKXWriteResPair<WriteVarShuffleX, [SKXPort5], 1, [1], 1, 6>;
+defm : SKXWriteResPair<WriteVarShuffleY, [SKXPort5], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WriteVarShuffleZ, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteBlend, [SKXPort5], 1, [1], 1, 6>; // Vector blends.
-defm : SKXWriteResPair<WriteBlendY,[SKXPort5], 1, [1], 1, 7>; // Vector blends (YMM/ZMM).
+defm : SKXWriteResPair<WriteBlendY,[SKXPort5], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WriteBlendZ,[SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVarBlend, [SKXPort015], 2, [2], 2, 6>; // Vector variable blends.
-defm : SKXWriteResPair<WriteVarBlendY,[SKXPort015], 2, [2], 2, 6>; // Vector variable blends (YMM/ZMM).
+defm : SKXWriteResPair<WriteVarBlendY,[SKXPort015], 2, [2], 2, 6>;
+defm : SKXWriteResPair<WriteVarBlendZ,[SKXPort05],  2, [1], 1, 6>;
 defm : SKXWriteResPair<WriteMPSAD,   [SKXPort5], 4, [2], 2, 6>; // Vector MPSAD.
-defm : SKXWriteResPair<WriteMPSADY,  [SKXPort5], 4, [2], 2, 7>; // Vector MPSAD.
+defm : SKXWriteResPair<WriteMPSADY,  [SKXPort5], 4, [2], 2, 7>;
+defm : SKXWriteResPair<WriteMPSADZ,  [SKXPort5], 4, [2], 2, 7>;
 defm : SKXWriteResPair<WritePSADBW,  [SKXPort5], 3, [1], 1, 5>; // Vector PSADBW.
-defm : SKXWriteResPair<WritePSADBWX, [SKXPort5], 3, [1], 1, 6>; // Vector PSADBW.
-defm : SKXWriteResPair<WritePSADBWY, [SKXPort5], 3, [1], 1, 7>; // Vector PSADBW.
-defm : SKXWriteResPair<WritePHMINPOS, [SKXPort015], 4, [1], 1, 6>; // Vector PHMINPOS.
+defm : SKXWriteResPair<WritePSADBWX, [SKXPort5], 3, [1], 1, 6>;
+defm : SKXWriteResPair<WritePSADBWY, [SKXPort5], 3, [1], 1, 7>;
+defm : SKXWriteResPair<WritePSADBWZ, [SKXPort5], 3, [1], 1, 7>;
+defm : SKXWriteResPair<WritePHMINPOS, [SKXPort0], 4, [1], 1, 6>; // Vector PHMINPOS.
 
 // Vector integer shifts.
 defm : SKXWriteResPair<WriteVecShift, [SKXPort0], 1, [1], 1, 5>;
 defm : X86WriteRes<WriteVecShiftX,    [SKXPort5,SKXPort01],  2, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftY,    [SKXPort5,SKXPort01],  4, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftZ,    [SKXPort5,SKXPort0],   4, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftXLd,  [SKXPort01,SKXPort23], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftYLd,  [SKXPort01,SKXPort23], 8, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftZLd,  [SKXPort0,SKXPort23],  8, [1,1], 2>;
 
 defm : SKXWriteResPair<WriteVecShiftImm,  [SKXPort0],  1, [1], 1, 5>;
-defm : SKXWriteResPair<WriteVecShiftImmX, [SKXPort01], 1, [1], 1, 6>; // Vector integer immediate shifts (XMM).
-defm : SKXWriteResPair<WriteVecShiftImmY, [SKXPort01], 1, [1], 1, 7>; // Vector integer immediate shifts (YMM/ZMM).
+defm : SKXWriteResPair<WriteVecShiftImmX, [SKXPort01], 1, [1], 1, 6>; // Vector integer immediate shifts.
+defm : SKXWriteResPair<WriteVecShiftImmY, [SKXPort01], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WriteVecShiftImmZ, [SKXPort0], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVarVecShift,  [SKXPort01], 1, [1], 1, 6>; // Variable vector shifts.
-defm : SKXWriteResPair<WriteVarVecShiftY, [SKXPort01], 1, [1], 1, 7>; // Variable vector shifts (YMM/ZMM).
+defm : SKXWriteResPair<WriteVarVecShiftY, [SKXPort01], 1, [1], 1, 7>;
+defm : SKXWriteResPair<WriteVarVecShiftZ, [SKXPort0], 1, [1], 1, 7>;
 
 // Vector insert/extract operations.
 def : WriteRes<WriteVecInsert, [SKXPort5]> {
@@ -343,36 +375,46 @@ def : WriteRes<WriteVecExtractSt, [SKXPort4,SKXPort5,SKXPort237]> {
 }
 
 // Conversion between integer and float.
-defm : SKXWriteResPair<WriteCvtSS2I,   [SKXPort0,SKXPort015], 6, [1,1], 2>;
-defm : SKXWriteResPair<WriteCvtPS2I,   [SKXPort1], 3>;
-defm : SKXWriteResPair<WriteCvtPS2IY,  [SKXPort1], 3>;
-defm : SKXWriteResPair<WriteCvtSD2I,   [SKXPort0,SKXPort015], 6, [1,1], 2>;
-defm : SKXWriteResPair<WriteCvtPD2I,   [SKXPort1], 3>;
-defm : SKXWriteResPair<WriteCvtPD2IY,  [SKXPort1], 3>;
+defm : SKXWriteResPair<WriteCvtSS2I,   [SKXPort01], 6, [2], 2>; // Needs more work: DD vs DQ.
+defm : SKXWriteResPair<WriteCvtPS2I,   [SKXPort01], 3>;
+defm : SKXWriteResPair<WriteCvtPS2IY,  [SKXPort01], 3>;
+defm : SKXWriteResPair<WriteCvtPS2IZ,  [SKXPort05], 3>;
+defm : SKXWriteResPair<WriteCvtSD2I,   [SKXPort01], 6, [2], 2>;
+defm : SKXWriteResPair<WriteCvtPD2I,   [SKXPort01], 3>;
+defm : SKXWriteResPair<WriteCvtPD2IY,  [SKXPort01], 3>;
+defm : SKXWriteResPair<WriteCvtPD2IZ,  [SKXPort05], 3>;
 
 defm : SKXWriteResPair<WriteCvtI2SS,   [SKXPort1], 4>;
-defm : SKXWriteResPair<WriteCvtI2PS,   [SKXPort1], 4>;
-defm : SKXWriteResPair<WriteCvtI2PSY,  [SKXPort1], 4>;
+defm : SKXWriteResPair<WriteCvtI2PS,   [SKXPort01], 4>;
+defm : SKXWriteResPair<WriteCvtI2PSY,  [SKXPort01], 4>;
+defm : SKXWriteResPair<WriteCvtI2PSZ,  [SKXPort05], 4>;  // Needs more work: DD vs DQ.
 defm : SKXWriteResPair<WriteCvtI2SD,   [SKXPort1], 4>;
-defm : SKXWriteResPair<WriteCvtI2PD,   [SKXPort0,SKXPort5], 5, [1,1], 2>;
-defm : SKXWriteResPair<WriteCvtI2PDY,  [SKXPort1], 4>;
+defm : SKXWriteResPair<WriteCvtI2PD,   [SKXPort01], 4>;
+defm : SKXWriteResPair<WriteCvtI2PDY,  [SKXPort01], 4>;
+defm : SKXWriteResPair<WriteCvtI2PDZ,  [SKXPort05], 4>;
 
 defm : SKXWriteResPair<WriteCvtSS2SD,  [SKXPort1], 3>;
 defm : SKXWriteResPair<WriteCvtPS2PD,  [SKXPort1], 3>;
-defm : SKXWriteResPair<WriteCvtPS2PDY, [SKXPort1], 3>;
+defm : SKXWriteResPair<WriteCvtPS2PDY, [SKXPort5,SKXPort01], 3, [1,1], 2>;
+defm : SKXWriteResPair<WriteCvtPS2PDZ, [SKXPort05], 3, [2], 2>;
 defm : SKXWriteResPair<WriteCvtSD2SS,  [SKXPort1], 3>;
 defm : SKXWriteResPair<WriteCvtPD2PS,  [SKXPort1], 3>;
-defm : SKXWriteResPair<WriteCvtPD2PSY, [SKXPort1], 3>;
+defm : SKXWriteResPair<WriteCvtPD2PSY, [SKXPort5,SKXPort01], 3, [1,1], 2>;
+defm : SKXWriteResPair<WriteCvtPD2PSZ, [SKXPort05], 3, [2], 2>;
 
-defm : X86WriteRes<WriteCvtPH2PS,     [SKXPort5,SKXPort015],  5, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSY,    [SKXPort5,SKXPort015],  7, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSLd,  [SKXPort23,SKXPort015],  9, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPH2PSYLd, [SKXPort23,SKXPort015], 10, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PS,     [SKXPort5,SKXPort01],  5, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSY,    [SKXPort5,SKXPort01],  7, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSZ,    [SKXPort5,SKXPort0],   7, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSLd,  [SKXPort23,SKXPort01],  9, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSYLd, [SKXPort23,SKXPort01], 10, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPH2PSZLd, [SKXPort23,SKXPort05], 10, [1,1], 2>;
 
-defm : X86WriteRes<WriteCvtPS2PH,                        [SKXPort5,SKXPort015], 5, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPS2PHY,                       [SKXPort5,SKXPort015], 7, [1,1], 2>;
-defm : X86WriteRes<WriteCvtPS2PHSt,  [SKXPort4,SKXPort5,SKXPort237,SKXPort015], 6, [1,1,1,1], 4>;
-defm : X86WriteRes<WriteCvtPS2PHYSt, [SKXPort4,SKXPort5,SKXPort237,SKXPort015], 8, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteCvtPS2PH,    [SKXPort5,SKXPort01], 5, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPS2PHY,   [SKXPort5,SKXPort01], 7, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPS2PHZ,   [SKXPort5,SKXPort05], 7, [1,1], 2>;
+defm : X86WriteRes<WriteCvtPS2PHSt,  [SKXPort4,SKXPort5,SKXPort237,SKXPort01], 6, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteCvtPS2PHYSt, [SKXPort4,SKXPort5,SKXPort237,SKXPort01], 8, [1,1,1,1], 4>;
+defm : X86WriteRes<WriteCvtPS2PHZSt, [SKXPort4,SKXPort5,SKXPort237,SKXPort05], 8, [1,1,1,1], 4>;
 
 // Strings instructions.
 
@@ -589,15 +631,15 @@ def SKXWriteResGroup9 : SchedWriteRes<[SKXPort015]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDMPD(Z|Z128|Z256)rr",
-                                            "VBLENDMPS(Z|Z128|Z256)rr",
+def: InstRW<[SKXWriteResGroup9], (instregex "VBLENDMPD(Z128|Z256)rr",
+                                            "VBLENDMPS(Z128|Z256)rr",
                                             "VPADD(B|D|Q|W)(Y|Z|Z128|Z256)rr",
                                             "(V?)PADD(B|D|Q|W)rr",
                                             "VPBLENDD(Y?)rri",
-                                            "VPBLENDMB(Z|Z128|Z256)rr",
-                                            "VPBLENDMD(Z|Z128|Z256)rr",
-                                            "VPBLENDMQ(Z|Z128|Z256)rr",
-                                            "VPBLENDMW(Z|Z128|Z256)rr",
+                                            "VPBLENDMB(Z128|Z256)rr",
+                                            "VPBLENDMD(Z128|Z256)rr",
+                                            "VPBLENDMQ(Z128|Z256)rr",
+                                            "VPBLENDMW(Z128|Z256)rr",
                                             "VPSUB(B|D|Q|W)(Y|Z|Z128|Z256)rr",
                                             "(V?)PSUB(B|D|Q|W)rr",
                                             "VPTERNLOGD(Z|Z128|Z256)rri",
@@ -611,8 +653,7 @@ def SKXWriteResGroup10 : SchedWriteRes<[SKXPort0156]> {
 def: InstRW<[SKXWriteResGroup10], (instrs CBW, CWDE, CDQE,
                                           CMC, STC)>;
 def: InstRW<[SKXWriteResGroup10], (instrs LAHF, SAHF)>; // TODO: This doesn't match Agner's data
-def: InstRW<[SKXWriteResGroup10], (instregex "NOOP",
-                                             "SGDT64m",
+def: InstRW<[SKXWriteResGroup10], (instregex "SGDT64m",
                                              "SIDT64m",
                                              "SMSW16m",
                                              "STRm",
@@ -739,8 +780,7 @@ def SKXWriteResGroup30 : SchedWriteRes<[SKXPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup30], (instregex "KADD(B|D|Q|W)rr",
-                                             "KMOV(B|D|Q|W)rk",
+def: InstRW<[SKXWriteResGroup30], (instregex "KMOV(B|D|Q|W)rk",
                                              "KORTEST(B|D|Q|W)rr",
                                              "KTEST(B|D|Q|W)rr")>;
 
@@ -768,6 +808,7 @@ def SKXWriteResGroup32 : SchedWriteRes<[SKXPort5]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[SKXWriteResGroup32], (instregex "(ADD|SUB|SUBR)_(FPrST0|FST0r|FrST0)",
+                                             "KADD(B|D|Q|W)rr",
                                              "KSHIFTL(B|D|Q|W)ri",
                                              "KSHIFTR(B|D|Q|W)ri",
                                              "KUNPCKBWrr",
@@ -907,26 +948,44 @@ def SKXWriteResGroup49 : SchedWriteRes<[SKXPort0]> {
 }
 def: InstRW<[SKXWriteResGroup49], (instregex "MUL_(FPrST0|FST0r|FrST0)")>;
 
-def SKXWriteResGroup50 : SchedWriteRes<[SKXPort015]> {
+def SKXWriteResGroup50 : SchedWriteRes<[SKXPort01]> {
   let Latency = 4;
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup50], (instregex "VCVTDQ2PS(Y|Z|Z128|Z256)rr",
+def: InstRW<[SKXWriteResGroup50], (instregex "VCVTDQ2PS(Y|Z128|Z256)rr",
                                              "(V?)CVTDQ2PSrr",
-                                             "VCVTPD2QQ(Z|Z128|Z256)rr",
-                                             "VCVTPD2UQQ(Z|Z128|Z256)rr",
-                                             "VCVTPS2DQ(Y|Z|Z128|Z256)rr",
+                                             "VCVTPD2QQ(Z128|Z256)rr",
+                                             "VCVTPD2UQQ(Z128|Z256)rr",
+                                             "VCVTPS2DQ(Y|Z128|Z256)rr",
                                              "(V?)CVTPS2DQrr",
-                                             "VCVTPS2UDQ(Z|Z128|Z256)rr",
-                                             "VCVTQQ2PD(Z|Z128|Z256)rr",
-                                             "VCVTTPD2QQ(Z|Z128|Z256)rr",
-                                             "VCVTTPD2UQQ(Z|Z128|Z256)rr",
-                                             "VCVTTPS2DQ(Y|Z|Z128|Z256)rr",
+                                             "VCVTPS2UDQ(Z128|Z256)rr",
+                                             "VCVTQQ2PD(Z128|Z256)rr",
+                                             "VCVTTPD2QQ(Z128|Z256)rr",
+                                             "VCVTTPD2UQQ(Z128|Z256)rr",
+                                             "VCVTTPS2DQ(Z128|Z256)rr",
                                              "(V?)CVTTPS2DQrr",
-                                             "VCVTTPS2UDQ(Z|Z128|Z256)rr",
-                                             "VCVTUDQ2PS(Z|Z128|Z256)rr",
-                                             "VCVTUQQ2PD(Z|Z128|Z256)rr")>;
+                                             "VCVTTPS2UDQ(Z128|Z256)rr",
+                                             "VCVTUDQ2PS(Z128|Z256)rr",
+                                             "VCVTUQQ2PD(Z128|Z256)rr")>;
+
+def SKXWriteResGroup50z : SchedWriteRes<[SKXPort05]> {
+  let Latency = 4;
+  let NumMicroOps = 1;
+  let ResourceCycles = [1];
+}
+def: InstRW<[SKXWriteResGroup50z], (instrs VCVTDQ2PSZrr,
+                                           VCVTPD2QQZrr,
+                                           VCVTPD2UQQZrr,
+                                           VCVTPS2DQZrr,
+                                           VCVTPS2UDQZrr,
+                                           VCVTQQ2PDZrr,
+                                           VCVTTPD2QQZrr,
+                                           VCVTTPD2UQQZrr,
+                                           VCVTTPS2DQZrr,
+                                           VCVTTPS2UDQZrr,
+                                           VCVTUDQ2PSZrr,
+                                           VCVTUQQ2PDZrr)>;
 
 def SKXWriteResGroup51 : SchedWriteRes<[SKXPort5]> {
   let Latency = 4;
@@ -1010,13 +1069,6 @@ def: InstRW<[SKXWriteResGroup58], (instregex "MOVSX(16|32|64)rm16",
                                              "MOVZX(16|32|64)rm8",
                                              "(V?)MOVDDUPrm")>;  // TODO: Should this be SKXWriteResGroup71?
 
-def SKXWriteResGroup59 : SchedWriteRes<[SKXPort015]> {
-  let Latency = 5;
-  let NumMicroOps = 2;
-  let ResourceCycles = [2];
-}
-def: InstRW<[SKXWriteResGroup59], (instregex "VCVTSD2SSZrr")>;
-
 def SKXWriteResGroup61 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let Latency = 5;
   let NumMicroOps = 2;
@@ -1035,7 +1087,7 @@ def: InstRW<[SKXWriteResGroup61], (instregex "MMX_CVT(T?)PD2PIirr",
                                              "VCVTPS2QQZ128rr",
                                              "VCVTPS2UQQZ128rr",
                                              "VCVTQQ2PSZ128rr",
-                                             "(V?)CVTSD2SSrr",
+                                             "(V?)CVTSD2SS(Z?)rr",
                                              "(V?)CVTSI(64)?2SDrr",
                                              "VCVTSI2SSZrr",
                                              "(V?)CVTSI2SSrr",
@@ -1136,7 +1188,7 @@ def: InstRW<[SKXWriteResGroup71], (instregex "VBROADCASTSSrm",
                                              "VPBROADCASTDrm",
                                              "VPBROADCASTQrm")>;
 
-def SKXWriteResGroup72 : SchedWriteRes<[SKXPort0]> {
+def SKXWriteResGroup72 : SchedWriteRes<[SKXPort5]> {
   let Latency = 6;
   let NumMicroOps = 2;
   let ResourceCycles = [2];
@@ -1286,7 +1338,7 @@ def: InstRW<[SKXWriteResGroup89], (instregex "LD_F(32|64|80)m",
                                              "VPBROADCASTDYrm",
                                              "VPBROADCASTQYrm")>;
 
-def SKXWriteResGroup90 : SchedWriteRes<[SKXPort0,SKXPort5]> {
+def SKXWriteResGroup90 : SchedWriteRes<[SKXPort01,SKXPort5]> {
   let Latency = 7;
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
@@ -1318,21 +1370,40 @@ def SKXWriteResGroup93 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup93], (instregex "VCVTDQ2PD(Z|Z256)rr",
-                                             "VCVTPD2DQ(Y|Z|Z256)rr",
-                                             "VCVTPD2PS(Y|Z|Z256)rr",
-                                             "VCVTPD2UDQ(Z|Z256)rr",
-                                             "VCVTPS2PD(Y|Z|Z256)rr",
-                                             "VCVTPS2QQ(Z|Z256)rr",
-                                             "VCVTPS2UQQ(Z|Z256)rr",
-                                             "VCVTQQ2PS(Z|Z256)rr",
-                                             "VCVTTPD2DQ(Y|Z|Z256)rr",
-                                             "VCVTTPD2UDQ(Z|Z256)rr",
-                                             "VCVTTPS2QQ(Z|Z256)rr",
-                                             "VCVTTPS2UQQ(Z|Z256)rr",
-                                             "VCVTUDQ2PD(Z|Z256)rr",
-                                             "VCVTUQQ2PS(Z|Z256)rr")>;
+def: InstRW<[SKXWriteResGroup93], (instregex "VCVTDQ2PDZ256rr",
+                                             "VCVTPD2DQ(Y|Z256)rr",
+                                             "VCVTPD2PS(Y|Z256)rr",
+                                             "VCVTPD2UDQZ256rr",
+                                             "VCVTPS2PD(Y|Z256)rr",
+                                             "VCVTPS2QQZ256rr",
+                                             "VCVTPS2UQQZ256rr",
+                                             "VCVTQQ2PSZ256rr",
+                                             "VCVTTPD2DQ(Y|Z256)rr",
+                                             "VCVTTPD2UDQZ256rr",
+                                             "VCVTTPS2QQZ256rr",
+                                             "VCVTTPS2UQQZ256rr",
+                                             "VCVTUDQ2PDZ256rr",
+                                             "VCVTUQQ2PSZ256rr")>;
 
+def SKXWriteResGroup93z : SchedWriteRes<[SKXPort5,SKXPort05]> {
+  let Latency = 7;
+  let NumMicroOps = 2;
+  let ResourceCycles = [1,1];
+}
+def: InstRW<[SKXWriteResGroup93z], (instrs VCVTDQ2PDZrr,
+                                           VCVTPD2DQZrr,
+                                           VCVTPD2PSZrr,
+                                           VCVTPD2UDQZrr,
+                                           VCVTPS2PDZrr,
+                                           VCVTPS2QQZrr,
+                                           VCVTPS2UQQZrr,
+                                           VCVTQQ2PSZrr,
+                                           VCVTTPD2DQZrr,
+                                           VCVTTPD2UDQZrr,
+                                           VCVTTPS2QQZrr,
+                                           VCVTTPS2UQQZrr,
+                                           VCVTUDQ2PDZrr,
+                                           VCVTUQQ2PSZrr)>;
 
 def SKXWriteResGroup95 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let Latency = 7;
@@ -1405,8 +1476,8 @@ def SKXWriteResGroup100 : SchedWriteRes<[SKXPort0,SKXPort5,SKXPort015]> {
   let ResourceCycles = [1,1,1];
 }
 def: InstRW<[SKXWriteResGroup100], (instregex "VCVTSS2USI64Zrr",
-                                              "VCVTTSS2SI(64)?Zrr",
-                                              "(V?)CVTTSS2SI(64)?rr",
+                                              "(V?)CVTSS2SI64(Z?)rr",
+                                              "(V?)CVTTSS2SI64(Z?)rr",
                                               "VCVTTSS2USI64Zrr")>;
 
 def SKXWriteResGroup101 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort05]> {
@@ -1751,16 +1822,6 @@ def SKXWriteResGroup137 : SchedWriteRes<[SKXPort23,SKXPort015]> {
 def: InstRW<[SKXWriteResGroup137], (instregex "MMX_CVT(T?)PS2PIirm",
                                               "(V?)CVTPS2PDrm")>;
 
-def SKXWriteResGroup138 : SchedWriteRes<[SKXPort0,SKXPort015]> {
-  let Latency = 9;
-  let NumMicroOps = 3;
-  let ResourceCycles = [2,1];
-}
-def: InstRW<[SKXWriteResGroup138], (instregex "VRCP14PDZr(b?)",
-                                              "VRCP14PSZr(b?)",
-                                              "VRSQRT14PDZr(b?)",
-                                              "VRSQRT14PSZr(b?)")>;
-
 def SKXWriteResGroup142 : SchedWriteRes<[SKXPort1,SKXPort5,SKXPort23]> {
   let Latency = 9;
   let NumMicroOps = 3;
@@ -2009,12 +2070,19 @@ def SKXWriteResGroup171 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
 }
 def: InstRW<[SKXWriteResGroup171], (instrs LOOPE, LOOPNE)>;
 
-def SKXWriteResGroup174 : SchedWriteRes<[SKXPort015]> {
+def SKXWriteResGroup174 : SchedWriteRes<[SKXPort01]> {
   let Latency = 12;
   let NumMicroOps = 3;
   let ResourceCycles = [3];
 }
-def: InstRW<[SKXWriteResGroup174], (instregex "VPMULLQ(Z|Z128|Z256)rr")>;
+def: InstRW<[SKXWriteResGroup174], (instregex "VPMULLQ(Z128|Z256)rr")>;
+
+def SKXWriteResGroup174z : SchedWriteRes<[SKXPort05]> {
+  let Latency = 12;
+  let NumMicroOps = 3;
+  let ResourceCycles = [3];
+}
+def: InstRW<[SKXWriteResGroup174z], (instregex "VPMULLQZrr")>;
 
 def SKXWriteResGroup175 : SchedWriteRes<[SKXPort5,SKXPort23]> {
   let Latency = 12;
@@ -2142,16 +2210,6 @@ def SKXWriteResGroup195 : SchedWriteRes<[SKXPort1,SKXPort23,SKXPort237,SKXPort06
   let ResourceCycles = [1,1,1,5,1,1];
 }
 def: InstRW<[SKXWriteResGroup195], (instregex "RCL(8|16|32|64)mCL")>;
-
-def SKXWriteResGroup198 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort015]> {
-  let Latency = 16;
-  let NumMicroOps = 4;
-  let ResourceCycles = [2,1,1];
-}
-def: InstRW<[SKXWriteResGroup198], (instregex "VRCP14PDZm(b?)",
-                                              "VRCP14PSZm(b?)",
-                                              "VRSQRT14PDZm(b?)",
-                                              "VRSQRT14PSZm(b?)")>;
 
 def SKXWriteResGroup199 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort06,SKXPort15,SKXPort0156]> {
   let Latency = 16;

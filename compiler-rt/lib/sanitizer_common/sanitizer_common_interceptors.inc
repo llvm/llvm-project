@@ -1189,6 +1189,50 @@ INTERCEPTOR(SSIZE_T, pwritev64, int fd, __sanitizer_iovec *iov, int iovcnt,
 #define INIT_PWRITEV64
 #endif
 
+#if SANITIZER_INTERCEPT_FGETS
+INTERCEPTOR(char *, fgets, char *s, SIZE_T size, void *file) {
+  // libc file streams can call user-supplied functions, see fopencookie.
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, fgets, s, size, file);
+  // FIXME: under ASan the call below may write to freed memory and corrupt
+  // its metadata. See
+  // https://github.com/google/sanitizers/issues/321.
+  char *res = REAL(fgets)(s, size, file);
+  if (res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, s, REAL(strlen)(s) + 1);
+  return res;
+}
+#define INIT_FGETS COMMON_INTERCEPT_FUNCTION(fgets)
+#else
+#define INIT_FGETS
+#endif
+
+#if SANITIZER_INTERCEPT_FPUTS
+INTERCEPTOR(int, fputs, char *s, void *file) {
+  // libc file streams can call user-supplied functions, see fopencookie.
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, fputs, s, file);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, s, REAL(strlen)(s) + 1);
+  return REAL(fputs)(s, file);
+}
+#define INIT_FPUTS COMMON_INTERCEPT_FUNCTION(fputs)
+#else
+#define INIT_FPUTS
+#endif
+
+#if SANITIZER_INTERCEPT_PUTS
+INTERCEPTOR(int, puts, char *s) {
+  // libc file streams can call user-supplied functions, see fopencookie.
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, puts, s);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, s, REAL(strlen)(s) + 1);
+  return REAL(puts)(s);
+}
+#define INIT_PUTS COMMON_INTERCEPT_FUNCTION(puts)
+#else
+#define INIT_PUTS
+#endif
+
 #if SANITIZER_INTERCEPT_PRCTL
 INTERCEPTOR(int, prctl, int option, unsigned long arg2,
             unsigned long arg3,                        // NOLINT
@@ -7236,6 +7280,9 @@ static void InitializeCommonInterceptors() {
   INIT_WRITEV;
   INIT_PWRITEV;
   INIT_PWRITEV64;
+  INIT_FGETS;
+  INIT_FPUTS;
+  INIT_PUTS;
   INIT_PRCTL;
   INIT_LOCALTIME_AND_FRIENDS;
   INIT_STRPTIME;

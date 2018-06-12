@@ -92,6 +92,7 @@ __isl_give isl_aff *isl_aff_domain_factor_domain(__isl_take isl_aff *aff);
 
 int isl_aff_plain_cmp(__isl_keep isl_aff *aff1, __isl_keep isl_aff *aff2);
 
+__isl_give isl_aff *isl_aff_remove_unused_divs(__isl_take isl_aff *aff);
 __isl_give isl_aff *isl_aff_normalize(__isl_take isl_aff *aff);
 
 __isl_give isl_aff *isl_aff_expand_divs( __isl_take isl_aff *aff,
@@ -139,6 +140,11 @@ __isl_give isl_multi_aff *isl_multi_aff_from_basic_set_equalities(
 
 __isl_give isl_multi_aff *isl_multi_aff_from_aff_mat(
 	__isl_take isl_space *space, __isl_take isl_mat *mat);
+
+#undef EL
+#define EL isl_pw_multi_aff
+
+#include <isl_list_templ.h>
 
 __isl_give isl_pw_multi_aff *isl_pw_multi_aff_reset_domain_space(
 	__isl_take isl_pw_multi_aff *pwmaff, __isl_take isl_space *space);

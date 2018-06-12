@@ -23,12 +23,11 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <set>
 #include <system_error>
 
 namespace llvm {
 namespace sampleprof {
-
-enum SampleProfileFormat { SPF_None = 0, SPF_Text, SPF_Binary, SPF_GCC };
 
 /// Sample-based profile writer. Base class.
 class SampleProfileWriter {
@@ -105,26 +104,43 @@ private:
 class SampleProfileWriterBinary : public SampleProfileWriter {
 public:
   std::error_code write(const FunctionSamples &S) override;
-
-protected:
   SampleProfileWriterBinary(std::unique_ptr<raw_ostream> &OS)
       : SampleProfileWriter(OS) {}
 
-  std::error_code
-  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
+protected:
+  virtual std::error_code writeNameTable() = 0;
+  virtual std::error_code writeMagicIdent() = 0;
+  std::error_code writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
   std::error_code writeSummary();
   std::error_code writeNameIdx(StringRef FName);
   std::error_code writeBody(const FunctionSamples &S);
+  inline void stablizeNameTable(std::set<StringRef> &V);
+
+  MapVector<StringRef, uint32_t> NameTable;
 
 private:
   void addName(StringRef FName);
   void addNames(const FunctionSamples &S);
 
-  MapVector<StringRef, uint32_t> NameTable;
-
   friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
   SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
                               SampleProfileFormat Format);
+};
+
+class SampleProfileWriterRawBinary : public SampleProfileWriterBinary {
+  using SampleProfileWriterBinary::SampleProfileWriterBinary;
+
+protected:
+  virtual std::error_code writeNameTable() override;
+  virtual std::error_code writeMagicIdent() override;
+};
+
+class SampleProfileWriterCompactBinary : public SampleProfileWriterBinary {
+  using SampleProfileWriterBinary::SampleProfileWriterBinary;
+
+protected:
+  virtual std::error_code writeNameTable() override;
+  virtual std::error_code writeMagicIdent() override;
 };
 
 } // end namespace sampleprof
