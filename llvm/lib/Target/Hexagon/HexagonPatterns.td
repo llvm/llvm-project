@@ -300,6 +300,7 @@ def Add: pf2<add>;    def And: pf2<and>;    def Sra: pf2<sra>;
 def Sub: pf2<sub>;    def Or:  pf2<or>;     def Srl: pf2<srl>;
 def Mul: pf2<mul>;    def Xor: pf2<xor>;    def Shl: pf2<shl>;
 
+def Rol: pf2<rotl>;
 
 // --(1) Immediate -------------------------------------------------------
 //
@@ -988,6 +989,10 @@ def: OpR_RR_pat<S2_asr_r_p, Sra, i64, I64, I32>;
 def: OpR_RR_pat<S2_lsr_r_p, Srl, i64, I64, I32>;
 def: OpR_RR_pat<S2_asl_r_p, Shl, i64, I64, I32>;
 
+let Predicates = [HasV60T] in {
+  def: OpR_RI_pat<S6_rol_i_r, Rol, i32, I32, u5_0ImmPred>;
+  def: OpR_RI_pat<S6_rol_i_p, Rol, i64, I64, u6_0ImmPred>;
+}
 
 def: Pat<(sra (add (sra I32:$Rs, u5_0ImmPred:$u5), 1), (i32 1)),
          (S2_asr_i_r_rnd I32:$Rs, imm:$u5)>;
@@ -1033,6 +1038,20 @@ let AddedComplexity = 100 in {
   def: AccRRI_pat<S2_asl_i_p_and,   And, Su<Shl>, I64, u6_0ImmPred>;
   def: AccRRI_pat<S2_asl_i_p_or,    Or,  Su<Shl>, I64, u6_0ImmPred>;
   def: AccRRI_pat<S2_asl_i_p_xacc,  Xor, Su<Shl>, I64, u6_0ImmPred>;
+
+  let Predicates = [HasV60T] in {
+    def: AccRRI_pat<S6_rol_i_r_acc,   Add, Su<Rol>, I32, u5_0ImmPred>;
+    def: AccRRI_pat<S6_rol_i_r_nac,   Sub, Su<Rol>, I32, u5_0ImmPred>;
+    def: AccRRI_pat<S6_rol_i_r_and,   And, Su<Rol>, I32, u5_0ImmPred>;
+    def: AccRRI_pat<S6_rol_i_r_or,    Or,  Su<Rol>, I32, u5_0ImmPred>;
+    def: AccRRI_pat<S6_rol_i_r_xacc,  Xor, Su<Rol>, I32, u5_0ImmPred>;
+
+    def: AccRRI_pat<S6_rol_i_p_acc,   Add, Su<Rol>, I64, u6_0ImmPred>;
+    def: AccRRI_pat<S6_rol_i_p_nac,   Sub, Su<Rol>, I64, u6_0ImmPred>;
+    def: AccRRI_pat<S6_rol_i_p_and,   And, Su<Rol>, I64, u6_0ImmPred>;
+    def: AccRRI_pat<S6_rol_i_p_or,    Or,  Su<Rol>, I64, u6_0ImmPred>;
+    def: AccRRI_pat<S6_rol_i_p_xacc,  Xor, Su<Rol>, I64, u6_0ImmPred>;
+  }
 }
 
 let AddedComplexity = 100 in {

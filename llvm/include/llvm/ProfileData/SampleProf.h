@@ -78,11 +78,29 @@ struct is_error_code_enum<llvm::sampleprof_error> : std::true_type {};
 namespace llvm {
 namespace sampleprof {
 
-static inline uint64_t SPMagic() {
+enum SampleProfileFormat {
+  SPF_None = 0,
+  SPF_Text = 0x1,
+  SPF_Compact_Binary = 0x2,
+  SPF_GCC = 0x3,
+  SPF_Binary = 0xff
+};
+
+static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
   return uint64_t('S') << (64 - 8) | uint64_t('P') << (64 - 16) |
          uint64_t('R') << (64 - 24) | uint64_t('O') << (64 - 32) |
          uint64_t('F') << (64 - 40) | uint64_t('4') << (64 - 48) |
-         uint64_t('2') << (64 - 56) | uint64_t(0xff);
+         uint64_t('2') << (64 - 56) | uint64_t(Format);
+}
+
+// Get the proper representation of a string in the input Format.
+static inline StringRef getRepInFormat(StringRef Name,
+                                       SampleProfileFormat Format,
+                                       std::string &GUIDBuf) {
+  if (Name.empty())
+    return Name;
+  GUIDBuf = std::to_string(Function::getGUID(Name));
+  return (Format == SPF_Compact_Binary) ? StringRef(GUIDBuf) : Name;
 }
 
 static inline uint64_t SPVersion() { return 103; }
@@ -359,7 +377,7 @@ public:
   /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
   /// to \p S.
   void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S, const Module *M,
-                            uint64_t Threshold) const {
+                            uint64_t Threshold, bool isCompact) const {
     if (TotalSamples <= Threshold)
       return;
     S.insert(Function::getGUID(Name));
@@ -370,11 +388,12 @@ public:
         if (TS.getValue() > Threshold) {
           Function *Callee = M->getFunction(TS.getKey());
           if (!Callee || !Callee->getSubprogram())
-            S.insert(Function::getGUID(TS.getKey()));
+            S.insert(isCompact ? std::stol(TS.getKey().data())
+                               : Function::getGUID(TS.getKey()));
         }
     for (const auto &CS : CallsiteSamples)
       for (const auto &NameFS : CS.second)
-        NameFS.second.findInlinedFunctions(S, M, Threshold);
+        NameFS.second.findInlinedFunctions(S, M, Threshold, isCompact);
   }
 
   /// Set the name of the function.

@@ -13,7 +13,7 @@
 #include "gtest/gtest.h"
 
 #include "xray_profile_collector.h"
-#include "xray_profiler_flags.h"
+#include "xray_profiling_flags.h"
 #include <cstdint>
 #include <thread>
 #include <utility>
@@ -25,7 +25,7 @@ namespace {
 static constexpr auto kHeaderSize = 16u;
 
 void ValidateBlock(XRayBuffer B) {
-  profilerFlags()->setDefaults();
+  profilingFlags()->setDefaults();
   ASSERT_NE(static_cast<const void *>(B.Data), nullptr);
   ASSERT_NE(B.Size, 0u);
   ASSERT_GE(B.Size, kHeaderSize);
@@ -84,7 +84,7 @@ std::tuple<Profile, const char *> ParseProfile(const char *P) {
 }
 
 TEST(profileCollectorServiceTest, PostSerializeCollect) {
-  profilerFlags()->setDefaults();
+  profilingFlags()->setDefaults();
   // The most basic use-case (the one we actually only care about) is the one
   // where we ensure that we can post FunctionCallTrie instances, which are then
   // destroyed but serialized properly.
@@ -157,7 +157,7 @@ void threadProcessing() {
 }
 
 TEST(profileCollectorServiceTest, PostSerializeCollectMultipleThread) {
-  profilerFlags()->setDefaults();
+  profilingFlags()->setDefaults();
   std::thread t1(threadProcessing);
   std::thread t2(threadProcessing);
 

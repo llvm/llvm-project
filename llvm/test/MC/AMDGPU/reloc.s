@@ -13,6 +13,7 @@
 // CHECK: }
 // CHECK: .rel.data {
 // CHECK: R_AMDGPU_ABS64 temp 0x0
+// CHECK: R_AMDGPU_REL64 temp 0x0
 // CHECK: }
 // CHECK: ]
 
@@ -36,12 +37,15 @@ kernel:
 .section nonalloc, "w", @progbits
   .long var, common_var
 
-
 // 8 byte relocations
 	.type	ptr,@object
 	.data
 	.globl	ptr
+	.globl	foo
 	.p2align	3
 ptr:
 	.quad	temp
 	.size	ptr, 8
+foo:
+	.quad	temp@rel64
+	.size	foo, 8

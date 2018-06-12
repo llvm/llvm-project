@@ -638,6 +638,8 @@ SampleProfileLoader::findCalleeFunctionSamples(const Instruction &Inst) const {
   if (FS == nullptr)
     return nullptr;
 
+  std::string CalleeGUID;
+  CalleeName = getRepInFormat(CalleeName, Reader->getFormat(), CalleeGUID);
   return FS->findFunctionSamplesAt(LineLocation(FunctionSamples::getOffset(DIL),
                                                 DIL->getBaseDiscriminator()),
                                    CalleeName);
@@ -753,6 +755,7 @@ bool SampleProfileLoader::inlineHotFunctions(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
   DenseSet<Instruction *> PromotedInsns;
   bool Changed = false;
+  bool isCompact = (Reader->getFormat() == SPF_Compact_Binary);
   while (true) {
     bool LocalChanged = false;
     SmallVector<Instruction *, 10> CIS;
@@ -784,7 +787,8 @@ bool SampleProfileLoader::inlineHotFunctions(
         for (const auto *FS : findIndirectCallFunctionSamples(*I, Sum)) {
           if (IsThinLTOPreLink) {
             FS->findInlinedFunctions(InlinedGUIDs, F.getParent(),
-                                     PSI->getOrCompHotCountThreshold());
+                                     PSI->getOrCompHotCountThreshold(),
+                                     isCompact);
             continue;
           }
           auto CalleeFunctionName = FS->getName();
@@ -793,7 +797,9 @@ bool SampleProfileLoader::inlineHotFunctions(
           // clone the caller first, and inline the cloned caller if it is
           // recursive. As llvm does not inline recursive calls, we will
           // simply ignore it instead of handling it explicitly.
-          if (CalleeFunctionName == F.getName())
+          std::string FGUID;
+          auto Fname = getRepInFormat(F.getName(), Reader->getFormat(), FGUID);
+          if (CalleeFunctionName == Fname)
             continue;
 
           const char *Reason = "Callee function not available";
@@ -823,7 +829,8 @@ bool SampleProfileLoader::inlineHotFunctions(
           LocalChanged = true;
       } else if (IsThinLTOPreLink) {
         findCalleeFunctionSamples(*I)->findInlinedFunctions(
-            InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold());
+            InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold(),
+            isCompact);
       }
     }
     if (LocalChanged) {

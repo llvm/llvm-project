@@ -748,15 +748,6 @@ INTERCEPTOR(int, socketpair, int domain, int type, int protocol, int sv[2]) {
   return res;
 }
 
-INTERCEPTOR(char *, fgets, char *s, int size, void *stream) {
-  ENSURE_MSAN_INITED();
-  InterceptorScope interceptor_scope;
-  char *res = REAL(fgets)(s, size, stream);
-  if (res)
-    __msan_unpoison(s, REAL(strlen)(s) + 1);
-  return res;
-}
-
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
 INTERCEPTOR(char *, fgets_unlocked, char *s, int size, void *stream) {
   ENSURE_MSAN_INITED();
@@ -1609,7 +1600,6 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(pipe);
   INTERCEPT_FUNCTION(pipe2);
   INTERCEPT_FUNCTION(socketpair);
-  INTERCEPT_FUNCTION(fgets);
   MSAN_MAYBE_INTERCEPT_FGETS_UNLOCKED;
   INTERCEPT_FUNCTION(getrlimit);
   MSAN_MAYBE_INTERCEPT_GETRLIMIT64;

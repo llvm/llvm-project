@@ -459,7 +459,7 @@ SUnit* R600SchedStrategy::pickOther(int QID) {
   }
   if (!AQ.empty()) {
     SU = AQ.back();
-    AQ.resize(AQ.size() - 1);
+    AQ.pop_back();
   }
   return SU;
 }

@@ -6,33 +6,33 @@
 //
 // RUN: %clangxx -O0 %s -o %t
 // RUN: not %run %t malloc 2>&1 | FileCheck %s --check-prefix=CHECK-mCRASH
-// RUN: %tool_options=allocator_may_return_null=0 not %run %t malloc 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t malloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-mCRASH
-// RUN: %tool_options=allocator_may_return_null=1     %run %t malloc 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=1     %run %t malloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
-// RUN: %tool_options=allocator_may_return_null=0 not %run %t calloc 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t calloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-cCRASH
-// RUN: %tool_options=allocator_may_return_null=1     %run %t calloc 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=1     %run %t calloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
-// RUN: %tool_options=allocator_may_return_null=0 not %run %t calloc-overflow 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t calloc-overflow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-coCRASH
-// RUN: %tool_options=allocator_may_return_null=1     %run %t calloc-overflow 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=1     %run %t calloc-overflow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
-// RUN: %tool_options=allocator_may_return_null=0 not %run %t realloc 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t realloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-rCRASH
-// RUN: %tool_options=allocator_may_return_null=1     %run %t realloc 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=1     %run %t realloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
-// RUN: %tool_options=allocator_may_return_null=0 not %run %t realloc-after-malloc 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t realloc-after-malloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-mrCRASH
-// RUN: %tool_options=allocator_may_return_null=1     %run %t realloc-after-malloc 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=1     %run %t realloc-after-malloc 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
-// RUN: %tool_options=allocator_may_return_null=0 not %run %t new 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t new 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nCRASH
-// RUN: %tool_options=allocator_may_return_null=1 not %run %t new 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=1 not %run %t new 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nCRASH-OOM
-// RUN: %tool_options=allocator_may_return_null=0 not %run %t new-nothrow 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t new-nothrow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nnCRASH
-// RUN: %tool_options=allocator_may_return_null=1     %run %t new-nothrow 2>&1 \
+// RUN: %env_tool_opts=allocator_may_return_null=1     %run %t new-nothrow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
 
 // TODO(alekseyshl): win32 is disabled due to failing errno tests, fix it there.

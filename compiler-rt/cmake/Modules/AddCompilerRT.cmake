@@ -532,6 +532,9 @@ macro(add_custom_libcxx name prefix)
   string(REPLACE ";" " " FLAGS_STRING "${LIBCXX_CFLAGS}")
   set(LIBCXX_C_FLAGS "${CMAKE_C_FLAGS} ${FLAGS_STRING}")
   set(LIBCXX_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS_STRING}")
+  string(REPLACE "-Wno-maybe-uninitialized" "" LIBCXX_C_FLAGS "${LIBCXX_C_FLAGS}")
+  string(REPLACE "-Wno-maybe-uninitialized" "" LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS}")
+
 
   string(REPLACE "-Wl,-z,defs" "" LIBCXX_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
   string(REPLACE "-Wl,-z,defs" "" LIBCXX_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")

@@ -28,7 +28,7 @@ public:
   void GetGlobalVariables(ConstString basename, DIEArray &offsets) override;
   void GetGlobalVariables(const RegularExpression &regex,
                           DIEArray &offsets) override;
-  void GetGlobalVariables(const DWARFUnit &cu, DIEArray &offsets) override {}
+  void GetGlobalVariables(const DWARFUnit &cu, DIEArray &offsets) override;
   void GetObjCMethods(ConstString class_name, DIEArray &offsets) override {}
   void GetCompleteObjCClass(ConstString class_name, bool must_be_implementation,
                             DIEArray &offsets) override {}
