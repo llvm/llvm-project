@@ -1321,3 +1321,84 @@ std::string StackHintGeneratorForSymbol::getMessageForArg(const Expr *ArgE,
 
   return os.str();
 }
+
+LLVM_DUMP_METHOD void PathPieces::dump() const {
+  unsigned index = 0;
+  for (PathPieces::const_iterator I = begin(), E = end(); I != E; ++I) {
+    llvm::errs() << "[" << index++ << "]  ";
+    (*I)->dump();
+    llvm::errs() << "\n";
+  }
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticCallPiece::dump() const {
+  llvm::errs() << "CALL\n--------------\n";
+
+  if (const Stmt *SLoc = getLocation().getStmtOrNull())
+    SLoc->dump();
+  else if (const auto *ND = dyn_cast_or_null<NamedDecl>(getCallee()))
+    llvm::errs() << *ND << "\n";
+  else
+    getLocation().dump();
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticEventPiece::dump() const {
+  llvm::errs() << "EVENT\n--------------\n";
+  llvm::errs() << getString() << "\n";
+  llvm::errs() << " ---- at ----\n";
+  getLocation().dump();
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticControlFlowPiece::dump() const {
+  llvm::errs() << "CONTROL\n--------------\n";
+  getStartLocation().dump();
+  llvm::errs() << " ---- to ----\n";
+  getEndLocation().dump();
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticMacroPiece::dump() const {
+  llvm::errs() << "MACRO\n--------------\n";
+  // FIXME: Print which macro is being invoked.
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticNotePiece::dump() const {
+  llvm::errs() << "NOTE\n--------------\n";
+  llvm::errs() << getString() << "\n";
+  llvm::errs() << " ---- at ----\n";
+  getLocation().dump();
+}
+
+LLVM_DUMP_METHOD void PathDiagnosticLocation::dump() const {
+  if (!isValid()) {
+    llvm::errs() << "<INVALID>\n";
+    return;
+  }
+
+  switch (K) {
+  case RangeK:
+    // FIXME: actually print the range.
+    llvm::errs() << "<range>\n";
+    break;
+  case SingleLocK:
+    asLocation().dump();
+    llvm::errs() << "\n";
+    break;
+  case StmtK:
+    if (S)
+      S->dump();
+    else
+      llvm::errs() << "<NULL STMT>\n";
+    break;
+  case DeclK:
+    if (const auto *ND = dyn_cast_or_null<NamedDecl>(D))
+      llvm::errs() << *ND << "\n";
+    else if (isa<BlockDecl>(D))
+      // FIXME: Make this nicer.
+      llvm::errs() << "<block>\n";
+    else if (D)
+      llvm::errs() << "<unknown decl>\n";
+    else
+      llvm::errs() << "<NULL DECL>\n";
+    break;
+  }
+}

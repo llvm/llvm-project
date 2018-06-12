@@ -131,6 +131,9 @@ protected:
   // ReserveX18 - X18 is not available as a general purpose register.
   bool ReserveX18;
 
+  // ReserveX20 - X20 is not available as a general purpose register.
+  bool ReserveX20 = false;
+
   bool IsLittle;
 
   /// TargetTriple - What processor and OS we're targeting.
@@ -216,6 +219,7 @@ public:
   }
 
   bool isX18Reserved() const { return ReserveX18; }
+  bool isX20Reserved() const { return ReserveX20; }
   bool hasFPARMv8() const { return HasFPARMv8; }
   bool hasNEON() const { return HasNEON; }
   bool hasCrypto() const { return HasCrypto; }

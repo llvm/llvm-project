@@ -105,8 +105,6 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
     return llvm::make_unique<X86FuchsiaTargetObjectFile>();
   if (TT.isOSBinFormatELF())
     return llvm::make_unique<X86ELFTargetObjectFile>();
-  if (TT.isKnownWindowsMSVCEnvironment() || TT.isWindowsCoreCLREnvironment())
-    return llvm::make_unique<X86WindowsTargetObjectFile>();
   if (TT.isOSBinFormatCOFF())
     return llvm::make_unique<TargetLoweringObjectFileCOFF>();
   llvm_unreachable("unknown subtarget type");

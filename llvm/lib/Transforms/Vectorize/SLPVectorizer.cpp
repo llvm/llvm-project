@@ -313,7 +313,7 @@ isShuffle(ArrayRef<Value *> VL) {
   if ((CommonShuffleMode == FirstAlternate ||
        CommonShuffleMode == SecondAlternate) &&
       Vec2)
-    return TargetTransformInfo::SK_Alternate;
+    return TargetTransformInfo::SK_Select;
   // If Vec2 was never used, we have a permutation of a single vector, otherwise
   // we have permutation of 2 vectors.
   return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
@@ -2461,8 +2461,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       Instruction *I1 = cast<Instruction>(VL[1]);
       VecCost +=
           TTI->getArithmeticInstrCost(I1->getOpcode(), VecTy, Op1VK, Op2VK);
-      VecCost +=
-          TTI->getShuffleCost(TargetTransformInfo::SK_Alternate, VecTy, 0);
+      VecCost += TTI->getShuffleCost(TargetTransformInfo::SK_Select, VecTy, 0);
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
     default:

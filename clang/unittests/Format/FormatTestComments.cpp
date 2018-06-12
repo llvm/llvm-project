@@ -3090,6 +3090,21 @@ TEST_F(FormatTestComments, BreaksBeforeTrailingUnbreakableSequence) {
                getLLVMStyleWithColumns(23));
 }
 
+TEST_F(FormatTestComments, ReflowBackslashCrash) {
+// clang-format off
+  EXPECT_EQ(
+"// How to run:\n"
+"// bbbbb run \\\n"
+"// rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr\n"
+"// \\ <log_file> -- --output_directory=\"<output_directory>\"",
+  format(
+"// How to run:\n"
+"// bbbbb run \\\n"
+"// rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr \\\n"
+"// <log_file> -- --output_directory=\"<output_directory>\""));
+// clang-format on
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

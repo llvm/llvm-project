@@ -474,6 +474,11 @@ macro(add_custom_libcxx name prefix)
   endif()
 
   cmake_parse_arguments(LIBCXX "USE_TOOLCHAIN" "" "DEPS;CFLAGS;CMAKE_ARGS" ${ARGN})
+  foreach(flag ${LIBCXX_CFLAGS})
+    set(flagstr "${flagstr} ${flag}")
+  endforeach()
+  set(LIBCXX_C_FLAGS ${flagstr})
+  set(LIBCXX_CXX_FLAGS ${flagstr})
 
   if(LIBCXX_USE_TOOLCHAIN)
     set(compiler_args -DCMAKE_C_COMPILER=${COMPILER_RT_TEST_COMPILER}
@@ -509,43 +514,8 @@ macro(add_custom_libcxx name prefix)
   add_custom_target(${name}-clobber
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp)
 
-  set(PASSTHROUGH_VARIABLES
-    CMAKE_C_COMPILER_TARGET
-    CMAKE_CXX_COMPILER_TARGET
-    CMAKE_INSTALL_PREFIX
-    CMAKE_MAKE_PROGRAM
-    CMAKE_LINKER
-    CMAKE_AR
-    CMAKE_RANLIB
-    CMAKE_NM
-    CMAKE_OBJCOPY
-    CMAKE_OBJDUMP
-    CMAKE_STRIP
-    CMAKE_SYSROOT
-    CMAKE_SYSTEM_NAME)
-  foreach(variable ${PASSTHROUGH_VARIABLES})
-    if(${variable})
-      list(APPEND CMAKE_PASSTHROUGH_VARIABLES -D${variable}=${${variable}})
-    endif()
-  endforeach()
-
-  string(REPLACE ";" " " FLAGS_STRING "${LIBCXX_CFLAGS}")
-  set(LIBCXX_C_FLAGS "${CMAKE_C_FLAGS} ${FLAGS_STRING}")
-  set(LIBCXX_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS_STRING}")
-  string(REPLACE "-Wno-maybe-uninitialized" "" LIBCXX_C_FLAGS "${LIBCXX_C_FLAGS}")
-  string(REPLACE "-Wno-maybe-uninitialized" "" LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS}")
-
-
-  string(REPLACE "-Wl,-z,defs" "" LIBCXX_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
-  string(REPLACE "-Wl,-z,defs" "" LIBCXX_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
-  string(REPLACE "-Wl,-z,defs" "" LIBCXX_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
-
-  # The libc++ sources are fundamentally non-modular. They need special
-  # versions of the headers in order to provide C++03 and legacy ABI definitions.
-  # NOTE: The public headers can be used with modules in all other contexts
-  if (LLVM_ENABLE_MODULES)
-    set(LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS} -Wno-unused-command-line-argument")
-    set(LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS} -fno-modules")
+  if(CMAKE_SYSROOT)
+    set(sysroot_arg -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
   endif()
 
   ExternalProject_Add(${name}
@@ -554,14 +524,13 @@ macro(add_custom_libcxx name prefix)
     SOURCE_DIR ${COMPILER_RT_LIBCXX_PATH}
     STAMP_DIR ${STAMP_DIR}
     BINARY_DIR ${BINARY_DIR}
-    CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
+    CMAKE_ARGS -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                ${compiler_args}
+               ${sysroot_arg}
                -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
-               -DCMAKE_SHARED_LINKER_FLAGS=${LIBCXX_SHARED_LINKER_FLAGS}
-               -DCMAKE_MODULE_LINKER_FLAGS=${LIBCXX_MODULE_LINKER_FLAGS}
-               -DCMAKE_EXE_LINKER_FLAGS=${LIBCXX_EXE_LINKER_FLAGS}
                -DCMAKE_BUILD_TYPE=Release
+               -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
                -DLLVM_BINARY_DIR=${prefix}
                -DLLVM_LIBRARY_OUTPUT_INTDIR=${prefix}/lib

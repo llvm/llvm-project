@@ -32370,6 +32370,80 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+/// If this is a *dynamic* select (non-constant condition) and we can match
+/// this node with one of the variable blend instructions, restructure the
+/// condition so that blends can use the high (sign) bit of each element.
+static SDValue combineVSelectToShrunkBlend(SDNode *N, SelectionDAG &DAG,
+                                           TargetLowering::DAGCombinerInfo &DCI,
+                                           const X86Subtarget &Subtarget) {
+  SDValue Cond = N->getOperand(0);
+  if (N->getOpcode() != ISD::VSELECT || !DCI.isBeforeLegalizeOps() ||
+      DCI.isBeforeLegalize() ||
+      ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()))
+    return SDValue();
+
+  // Don't optimize vector selects that map to mask-registers.
+  unsigned BitWidth = Cond.getScalarValueSizeInBits();
+  if (BitWidth == 1)
+    return SDValue();
+
+  // We can only handle the cases where VSELECT is directly legal on the
+  // subtarget. We custom lower VSELECT nodes with constant conditions and
+  // this makes it hard to see whether a dynamic VSELECT will correctly
+  // lower, so we both check the operation's status and explicitly handle the
+  // cases where a *dynamic* blend will fail even though a constant-condition
+  // blend could be custom lowered.
+  // FIXME: We should find a better way to handle this class of problems.
+  // Potentially, we should combine constant-condition vselect nodes
+  // pre-legalization into shuffles and not mark as many types as custom
+  // lowered.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = N->getValueType(0);
+  if (!TLI.isOperationLegalOrCustom(ISD::VSELECT, VT))
+    return SDValue();
+  // FIXME: We don't support i16-element blends currently. We could and
+  // should support them by making *all* the bits in the condition be set
+  // rather than just the high bit and using an i8-element blend.
+  if (VT.getVectorElementType() == MVT::i16)
+    return SDValue();
+  // Dynamic blending was only available from SSE4.1 onward.
+  if (VT.is128BitVector() && !Subtarget.hasSSE41())
+    return SDValue();
+  // Byte blends are only available in AVX2
+  if (VT == MVT::v32i8 && !Subtarget.hasAVX2())
+    return SDValue();
+  // There are no 512-bit blend instructions that use sign bits.
+  if (VT.is512BitVector())
+    return SDValue();
+
+  // TODO: Add other opcodes eventually lowered into BLEND.
+  for (SDNode::use_iterator UI = Cond->use_begin(), UE = Cond->use_end();
+       UI != UE; ++UI)
+    if (UI->getOpcode() != ISD::VSELECT || UI.getOperandNo() != 0)
+      return SDValue();
+
+  assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
+  APInt DemandedMask(APInt::getSignMask(BitWidth));
+  KnownBits Known;
+  TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                        !DCI.isBeforeLegalizeOps());
+  if (!TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO, 0, true))
+    return SDValue();
+
+  // If we changed the computation somewhere in the DAG, this change will
+  // affect all users of Cond. Update all the nodes so that we do not use
+  // the generic VSELECT anymore. Otherwise, we may perform wrong
+  // optimizations as we messed with the actual expectation for the vector
+  // boolean values.
+  for (SDNode *U : Cond->uses()) {
+    SDValue SB = DAG.getNode(X86ISD::SHRUNKBLEND, SDLoc(U), U->getValueType(0),
+                             Cond, U->getOperand(1), U->getOperand(2));
+    DAG.ReplaceAllUsesOfValueWith(SDValue(U, 0), SB);
+  }
+  DCI.CommitTargetLoweringOpt(TLO);
+  return SDValue(N, 0);
+}
+
 /// Do target-specific dag combines on SELECT and VSELECT nodes.
 static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
@@ -32698,80 +32772,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineVSelectWithAllOnesOrZeros(N, DAG, DCI, Subtarget))
     return V;
 
-  // If this is a *dynamic* select (non-constant condition) and we can match
-  // this node with one of the variable blend instructions, restructure the
-  // condition so that blends can use the high (sign) bit of each element and
-  // use SimplifyDemandedBits to simplify the condition operand.
-  if (N->getOpcode() == ISD::VSELECT && DCI.isBeforeLegalizeOps() &&
-      !DCI.isBeforeLegalize() &&
-      !ISD::isBuildVectorOfConstantSDNodes(Cond.getNode())) {
-    unsigned BitWidth = Cond.getScalarValueSizeInBits();
-
-    // Don't optimize vector selects that map to mask-registers.
-    if (BitWidth == 1)
-      return SDValue();
-
-    // We can only handle the cases where VSELECT is directly legal on the
-    // subtarget. We custom lower VSELECT nodes with constant conditions and
-    // this makes it hard to see whether a dynamic VSELECT will correctly
-    // lower, so we both check the operation's status and explicitly handle the
-    // cases where a *dynamic* blend will fail even though a constant-condition
-    // blend could be custom lowered.
-    // FIXME: We should find a better way to handle this class of problems.
-    // Potentially, we should combine constant-condition vselect nodes
-    // pre-legalization into shuffles and not mark as many types as custom
-    // lowered.
-    if (!TLI.isOperationLegalOrCustom(ISD::VSELECT, VT))
-      return SDValue();
-    // FIXME: We don't support i16-element blends currently. We could and
-    // should support them by making *all* the bits in the condition be set
-    // rather than just the high bit and using an i8-element blend.
-    if (VT.getVectorElementType() == MVT::i16)
-      return SDValue();
-    // Dynamic blending was only available from SSE4.1 onward.
-    if (VT.is128BitVector() && !Subtarget.hasSSE41())
-      return SDValue();
-    // Byte blends are only available in AVX2
-    if (VT == MVT::v32i8 && !Subtarget.hasAVX2())
-      return SDValue();
-    // There are no 512-bit blend instructions that use sign bits.
-    if (VT.is512BitVector())
-      return SDValue();
-
-    bool CanShrinkCond = true;
-    for (SDNode::use_iterator UI = Cond->use_begin(), UE = Cond->use_end();
-         UI != UE; ++UI) {
-      // TODO: Add other opcodes eventually lowered into BLEND.
-      if (UI->getOpcode() != ISD::VSELECT || UI.getOperandNo() != 0) {
-        CanShrinkCond = false;
-        break;
-      }
-    }
-
-    if (CanShrinkCond) {
-      assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
-      APInt DemandedMask(APInt::getSignMask(BitWidth));
-      KnownBits Known;
-      TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                            !DCI.isBeforeLegalizeOps());
-      if (TLI.SimplifyDemandedBits(Cond, DemandedMask, Known, TLO, 0,
-                                   /*AssumeSingleUse*/true)) {
-        // If we changed the computation somewhere in the DAG, this change will
-        // affect all users of Cond. Update all the nodes so that we do not use
-        // the generic VSELECT anymore. Otherwise, we may perform wrong
-        // optimizations as we messed with the actual expectation for the vector
-        // boolean values.
-        for (SDNode *U : Cond->uses()) {
-          SDValue SB = DAG.getNode(X86ISD::SHRUNKBLEND, SDLoc(U),
-                                   U->getValueType(0), Cond, U->getOperand(1),
-                                   U->getOperand(2));
-          DAG.ReplaceAllUsesOfValueWith(SDValue(U, 0), SB);
-        }
-        DCI.CommitTargetLoweringOpt(TLO);
-        return SDValue(N, 0);
-      }
-    }
-  }
+  if (SDValue V = combineVSelectToShrunkBlend(N, DAG, DCI, Subtarget))
+    return V;
 
   // Custom action for SELECT MMX
   if (VT == MVT::x86mmx) {

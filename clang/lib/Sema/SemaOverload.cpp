@@ -223,6 +223,7 @@ bool StandardConversionSequence::isPointerConversionToBool() const {
   // a pointer.
   if (getToType(1)->isBooleanType() &&
       (getFromType()->isPointerType() ||
+       getFromType()->isMemberPointerType() ||
        getFromType()->isObjCObjectPointerType() ||
        getFromType()->isBlockPointerType() ||
        getFromType()->isNullPtrType() ||

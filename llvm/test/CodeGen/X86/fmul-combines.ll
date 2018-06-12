@@ -92,7 +92,6 @@ define <4 x float> @fmul_v4f32_two_consts_no_splat_reassoc(<4 x float> %x) {
 ; CHECK-LABEL: fmul_v4f32_two_consts_no_splat_reassoc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mulps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    mulps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %y = fmul <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 4.0>
   %z = fmul reassoc <4 x float> %y, <float 5.0, float 6.0, float 7.0, float 8.0>
@@ -104,7 +103,6 @@ define <4 x float> @fmul_v4f32_two_consts_no_splat_reassoc(<4 x float> %x) {
 define <4 x float> @fmul_v4f32_two_consts_no_splat_reassoc_2(<4 x float> %x) {
 ; CHECK-LABEL: fmul_v4f32_two_consts_no_splat_reassoc_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addps %xmm0, %xmm0
 ; CHECK-NEXT:    mulps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %y = fadd <4 x float> %x, %x

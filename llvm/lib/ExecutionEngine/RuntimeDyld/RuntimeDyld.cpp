@@ -1017,6 +1017,9 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
       if (!NewResolverResults)
         return NewResolverResults.takeError();
 
+      assert(NewResolverResults->size() == NewSymbols.size() &&
+             "Should have errored on unresolved symbols");
+
       for (auto &RRKV : *NewResolverResults) {
         assert(!ResolvedSymbols.count(RRKV.first) && "Redundant resolution?");
         ExternalSymbolMap.insert(RRKV);

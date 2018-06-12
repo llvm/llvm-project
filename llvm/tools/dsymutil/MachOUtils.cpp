@@ -33,7 +33,7 @@ std::string getArchName(StringRef Arch) {
   return Arch;
 }
 
-static bool runLipo(StringRef SDKPath, SmallVectorImpl<const char *> &Args) {
+static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {
   auto Path = sys::findProgramByName("lipo", makeArrayRef(SDKPath));
   if (!Path)
     Path = sys::findProgramByName("lipo");
@@ -44,8 +44,7 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<const char *> &Args) {
   }
 
   std::string ErrMsg;
-  int result =
-      sys::ExecuteAndWait(*Path, Args.data(), nullptr, {}, 0, 0, &ErrMsg);
+  int result = sys::ExecuteAndWait(*Path, Args, None, {}, 0, 0, &ErrMsg);
   if (result) {
     WithColor::error() << "lipo: " << ErrMsg << "\n";
     return false;
@@ -73,29 +72,29 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFilename> &ArchFiles,
     return true;
   }
 
-  SmallVector<const char *, 8> Args;
+  SmallVector<StringRef, 8> Args;
   Args.push_back("lipo");
   Args.push_back("-create");
 
   for (auto &Thin : ArchFiles)
-    Args.push_back(Thin.Path.c_str());
+    Args.push_back(Thin.Path);
 
   // Align segments to match dsymutil-classic alignment
   for (auto &Thin : ArchFiles) {
     Thin.Arch = getArchName(Thin.Arch);
     Args.push_back("-segalign");
-    Args.push_back(Thin.Arch.c_str());
+    Args.push_back(Thin.Arch);
     Args.push_back("20");
   }
 
   Args.push_back("-output");
   Args.push_back(OutputFileName.data());
-  Args.push_back(nullptr);
 
   if (Options.Verbose) {
     outs() << "Running lipo\n";
     for (auto Arg : Args)
-      outs() << ' ' << ((Arg == nullptr) ? "\n" : Arg);
+      outs() << ' ' << Arg;
+    outs() << "\n";
   }
 
   return Options.NoOutput ? true : runLipo(SDKPath, Args);

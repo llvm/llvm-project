@@ -536,23 +536,22 @@ public:
     // close it and use the name to pass down to clang.
     OS.close();
     SmallString<128> TargetName = getTriple(TargetNames[HostInputIndex]);
-    const char *ClangArgs[] = {"clang",
-                               "-r",
-                               "-target",
-                               TargetName.c_str(),
-                               "-o",
-                               OutputFileNames.front().c_str(),
-                               InputFileNames[HostInputIndex].c_str(),
-                               BitcodeFileName.c_str(),
-                               "-nostdlib",
-                               nullptr};
+    std::vector<StringRef> ClangArgs = {"clang",
+                                        "-r",
+                                        "-target",
+                                        TargetName.c_str(),
+                                        "-o",
+                                        OutputFileNames.front().c_str(),
+                                        InputFileNames[HostInputIndex].c_str(),
+                                        BitcodeFileName.c_str(),
+                                        "-nostdlib"};
 
     // If the user asked for the commands to be printed out, we do that instead
     // of executing it.
     if (PrintExternalCommands) {
       errs() << "\"" << ClangBinary.get() << "\"";
-      for (unsigned I = 1; ClangArgs[I]; ++I)
-        errs() << " \"" << ClangArgs[I] << "\"";
+      for (StringRef Arg : ClangArgs)
+        errs() << " \"" << Arg << "\"";
       errs() << "\n";
     } else {
       // Write the bitcode contents to the temporary file.

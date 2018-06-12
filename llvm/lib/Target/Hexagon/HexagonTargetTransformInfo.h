@@ -46,6 +46,11 @@ class HexagonTTIImpl : public BasicTTIImplBase<HexagonTTIImpl> {
   bool useHVX() const;
   bool isTypeForHVX(Type *VecTy) const;
 
+  // Returns the number of vector elements of Ty, if Ty is a vector type,
+  // or 1 if Ty is a scalar type. It is incorrect to call this function
+  // with any other type.
+  unsigned getTypeNumElements(Type *Ty) const;
+
 public:
   explicit HexagonTTIImpl(const HexagonTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getParent()->getDataLayout()),

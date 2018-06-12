@@ -33,7 +33,7 @@ public:
   void GetCompleteObjCClass(ConstString class_name, bool must_be_implementation,
                             DIEArray &offsets) override {}
   void GetTypes(ConstString name, DIEArray &offsets) override;
-  void GetTypes(const DWARFDeclContext &context, DIEArray &offsets) override {}
+  void GetTypes(const DWARFDeclContext &context, DIEArray &offsets) override;
   void GetNamespaces(ConstString name, DIEArray &offsets) override;
   void GetFunctions(ConstString name, DWARFDebugInfo &info,
                     const CompilerDeclContext &parent_decl_ctx,
