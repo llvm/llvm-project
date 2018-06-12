@@ -203,6 +203,11 @@ SBStructuredData SBTarget::GetStatistics() {
 }
 
 SBProcess SBTarget::LoadCore(const char *core_file) {
+  lldb::SBError error; // Ignored
+  return LoadCore(core_file, error);
+}
+
+SBProcess SBTarget::LoadCore(const char *core_file, lldb::SBError &error) {
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -210,9 +215,14 @@ SBProcess SBTarget::LoadCore(const char *core_file) {
     ProcessSP process_sp(target_sp->CreateProcess(
         target_sp->GetDebugger().GetListener(), "", &filespec));
     if (process_sp) {
-      process_sp->LoadCore();
-      sb_process.SetSP(process_sp);
+      error.SetError(process_sp->LoadCore());
+      if (error.Success())
+        sb_process.SetSP(process_sp);
+    } else {
+      error.SetErrorString("Failed to create the process");
     }
+  } else {
+    error.SetErrorString("SBTarget is invalid");
   }
   return sb_process;
 }

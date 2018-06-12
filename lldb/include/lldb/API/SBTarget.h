@@ -165,6 +165,7 @@ public:
                          bool stop_at_entry, lldb::SBError &error);
 
   SBProcess LoadCore(const char *core_file);
+  SBProcess LoadCore(const char *core_file, lldb::SBError &error);
 
   //------------------------------------------------------------------
   /// Launch a new process with sensible defaults.
@@ -718,9 +719,9 @@ public:
   // Finds all breakpoints by name, returning the list in bkpt_list.  Returns
   // false if the name is not a valid breakpoint name, true otherwise.
   bool FindBreakpointsByName(const char *name, SBBreakpointList &bkpt_list);
-  
+
   void GetBreakpointNames(SBStringList &names);
-  
+
   void DeleteBreakpointName(const char *name);
 
   bool EnableAllBreakpoints();

@@ -1,4 +1,4 @@
-//===-- xray_flags.inc ------------------------------------------*- C++ -*-===//
+//===-- xray_profiling_flags.inc --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -24,3 +24,6 @@ XRAY_FLAG(int, grace_period_ms, 100,
           "Profile collection will wait this much time in milliseconds before "
           "resetting the global state. This gives a chance to threads to "
           "notice that the profiler has been finalized and clean up.")
+XRAY_FLAG(bool, no_flush, false,
+          "Set to true if we want the profiling implementation to not write "
+          "out files.")
