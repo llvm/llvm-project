@@ -78,8 +78,8 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
   endforeach()
 
   include_directories("${LIBCXX_BINARY_INCLUDE_DIR}")
-  add_custom_target(cxx-abi-headers ALL DEPENDS ${abilib_headers})
-  set(LIBCXX_ABI_HEADERS_TARGET cxx-abi-headers)
+  add_custom_target(cxx_abi_headers ALL DEPENDS ${abilib_headers})
+  set(LIBCXX_CXX_ABI_HEADER_TARGET "cxx_abi_headers")
 endmacro()
 
 

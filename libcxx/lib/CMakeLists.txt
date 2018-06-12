@@ -189,8 +189,8 @@ split_list(LIBCXX_LINK_FLAGS)
 
 # Add an object library that contains the compiled source files.
 add_library(cxx_objects OBJECT ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-if(LIBCXX_CXX_ABI_LIBRARY_HEADERS)
-  add_dependencies(cxx_objects ${LIBCXX_CXX_ABI_LIBRARY_HEADERS})
+if(LIBCXX_CXX_ABI_HEADER_TARGET)
+  add_dependencies(cxx_objects ${LIBCXX_CXX_ABI_HEADER_TARGET})
 endif()
 if(WIN32 AND NOT MINGW)
   target_compile_definitions(cxx_objects
@@ -286,8 +286,7 @@ if (LIBCXX_ENABLE_STATIC)
 endif()
 
 # Add a meta-target for both libraries.
-add_custom_target(cxx DEPENDS ${LIBCXX_TARGETS})
-add_dependencies(cxx cxx-headers ${LIBCXX_ABI_HEADERS_TARGET})
+add_custom_target(cxx DEPENDS cxx_headers ${LIBCXX_TARGETS})
 
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   file(GLOB LIBCXX_EXPERIMENTAL_SOURCES ../src/experimental/*.cpp)
