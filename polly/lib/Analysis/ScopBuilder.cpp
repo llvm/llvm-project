@@ -1537,8 +1537,9 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
 
   // The ScopStmts now have enough information to initialize themselves.
   for (ScopStmt &Stmt : *scop) {
-    buildDomain(Stmt);
     collectSurroundingLoops(Stmt);
+
+    buildDomain(Stmt);
     buildAccessRelations(Stmt);
 
     if (DetectReductions)
