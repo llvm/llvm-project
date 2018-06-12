@@ -15,40 +15,48 @@
 // XFAIL: availability=macosx10.9
 // XFAIL: availability=macosx10.10
 // XFAIL: availability=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.13
 
 // test uncaught_exceptions
 
 #include <exception>
 #include <cassert>
 
-struct A
-{
-    ~A()
-    {
-        assert(std::uncaught_exceptions() > 0);
+struct Uncaught {
+    Uncaught(int depth) : d_(depth) {}
+    ~Uncaught() { assert(std::uncaught_exceptions() == d_); }
+    int d_;
+    };
+
+struct Outer {
+    Outer(int depth) : d_(depth) {}
+    ~Outer() {
+    try {
+        assert(std::uncaught_exceptions() == d_);
+        Uncaught u(d_+1);
+        throw 2;
     }
+    catch (int) {}
+    }
+    int d_;
 };
 
-struct B
-{
-    B()
+int main () {
+    assert(std::uncaught_exceptions() == 0);
     {
-        // http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#475
-        assert(std::uncaught_exceptions() == 0);
+    Outer o(0);
     }
-};
-
-int main()
-{
-    try
+    
+    assert(std::uncaught_exceptions() == 0);
     {
-        A a;
+    try {
+        Outer o(1);
+        throw 1;
+        }
+    catch (int) {
         assert(std::uncaught_exceptions() == 0);
-        throw B();
-    }
-    catch (...)
-    {
-        assert(std::uncaught_exception() == 0);
+        }   
     }
     assert(std::uncaught_exceptions() == 0);
 }
