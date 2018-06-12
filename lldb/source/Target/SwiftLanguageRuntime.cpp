@@ -1962,41 +1962,23 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
         llvm::dyn_cast_or_null<SwiftASTContext>(var_type.GetTypeSystem());
 
     CompilerType protocol_type(promise_sp->FulfillTypePromise());
+    // Error has a special, NSError-compatible layout.
     if (swift_ast_ctx->IsErrorType(protocol_type)) {
       if (swift_ast_ctx) {
         Status error;
-        // the offset
-        size_t ptr_size = m_process->GetAddressByteSize();
-        size_t metadata_offset = ptr_size + 4 + (ptr_size == 8 ? 4 : 0);
-        metadata_offset += ptr_size + ptr_size + ptr_size;
         lldb::addr_t archetype_ptr_value = in_value.GetValueAsUnsigned(0);
-        lldb::addr_t base_errortype_ptr =
+        lldb::addr_t metadata_ptr =
             m_process->ReadPointerFromMemory(archetype_ptr_value, error);
-        lldb::addr_t static_metadata_ptrptr =
-            base_errortype_ptr + metadata_offset;
-        lldb::addr_t static_metadata_ptr =
-            m_process->ReadPointerFromMemory(static_metadata_ptrptr, error);
         MetadataPromiseSP promise_sp(
-            GetMetadataPromise(static_metadata_ptr, swift_ast_ctx));
-        if (promise_sp) {
-          lldb::addr_t load_addr = static_metadata_ptrptr + 2 * ptr_size;
-          if (promise_sp->FulfillKindPromise() &&
-              promise_sp->FulfillKindPromise().getValue() ==
-                  swift::MetadataKind::Class) {
-            load_addr = m_process->ReadPointerFromMemory(load_addr, error);
-            lldb::addr_t dynamic_metadata_location =
-                m_process->ReadPointerFromMemory(load_addr, error);
-            promise_sp =
-                GetMetadataPromise(dynamic_metadata_location, swift_ast_ctx);
+            GetMetadataPromise(metadata_ptr, swift_ast_ctx));
+        if (!promise_sp)
+          return false;
+        CompilerType dynamic_type(promise_sp->FulfillTypePromise());
+        if (dynamic_type.IsValid()) {
+          class_type_or_name.SetCompilerType(dynamic_type);
+          address.SetLoadAddress(archetype_ptr_value, &m_process->GetTarget());
+          return true;
           }
-          CompilerType clang_type(promise_sp->FulfillTypePromise());
-          if (clang_type.IsValid() && load_addr != 0 &&
-              load_addr != LLDB_INVALID_ADDRESS) {
-            class_type_or_name.SetCompilerType(clang_type);
-            address.SetLoadAddress(load_addr, &m_process->GetTarget());
-            return true;
-          }
-        }
       }
     } else {
       Status error;
