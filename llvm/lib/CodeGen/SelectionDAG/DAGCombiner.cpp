@@ -568,6 +568,16 @@ namespace {
     /// single-use) and if missed an empty SDValue is returned.
     SDValue distributeTruncateThroughAnd(SDNode *N);
 
+    /// Helper function to determine whether the target supports operation
+    /// given by \p Opcode for type \p VT, that is, whether the operation
+    /// is legal or custom before legalizing operations, and whether is
+    /// legal (but not custom) after legalization.
+    bool hasOperation(unsigned Opcode, EVT VT) {
+      if (LegalOperations)
+        return TLI.isOperationLegal(Opcode, VT);
+      return TLI.isOperationLegalOrCustom(Opcode, VT);
+    }
+
   public:
     /// Runs the dag combiner on all nodes in the work list
     void Run(CombineLevel AtLevel);
@@ -5050,8 +5060,8 @@ SDNode *DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
   if (!TLI.isTypeLegal(VT)) return nullptr;
 
   // The target must have at least one rotate flavor.
-  bool HasROTL = TLI.isOperationLegalOrCustom(ISD::ROTL, VT);
-  bool HasROTR = TLI.isOperationLegalOrCustom(ISD::ROTR, VT);
+  bool HasROTL = hasOperation(ISD::ROTL, VT);
+  bool HasROTR = hasOperation(ISD::ROTR, VT);
   if (!HasROTL && !HasROTR) return nullptr;
 
   // Check for truncated rotate.
@@ -15968,13 +15978,22 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode* N) {
       // Only do this if we won't split any elements.
       if (ExtractSize % EltSize == 0) {
         unsigned NumElems = ExtractSize / EltSize;
-        EVT ExtractVT = EVT::getVectorVT(*DAG.getContext(),
-                                         InVT.getVectorElementType(), NumElems);
+        EVT EltVT = InVT.getVectorElementType();
+        EVT ExtractVT = NumElems == 1 ? EltVT :
+          EVT::getVectorVT(*DAG.getContext(), EltVT, NumElems);
         if ((Level < AfterLegalizeDAG ||
-             TLI.isOperationLegal(ISD::BUILD_VECTOR, ExtractVT)) &&
+             (NumElems == 1 ||
+              TLI.isOperationLegal(ISD::BUILD_VECTOR, ExtractVT))) &&
             (!LegalTypes || TLI.isTypeLegal(ExtractVT))) {
           unsigned IdxVal = (Idx->getZExtValue() * NVT.getScalarSizeInBits()) /
                             EltSize;
+          if (NumElems == 1) {
+            SDValue Src = V->getOperand(IdxVal);
+            if (EltVT != Src.getValueType())
+              Src = DAG.getNode(ISD::TRUNCATE, SDLoc(N), InVT, Src);
+
+            return DAG.getBitcast(NVT, Src);
+          }
 
           // Extract the pieces from the original build_vector.
           SDValue BuildVec = DAG.getBuildVector(ExtractVT, SDLoc(N),

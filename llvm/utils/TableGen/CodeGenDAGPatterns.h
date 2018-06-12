@@ -1193,7 +1193,7 @@ private:
 
   void AddPatternToMatch(TreePattern *Pattern, PatternToMatch &&PTM);
   void FindPatternInputsAndOutputs(
-      TreePattern *I, TreePatternNodePtr Pat,
+      TreePattern &I, TreePatternNodePtr Pat,
       std::map<std::string, TreePatternNodePtr> &InstInputs,
       std::map<std::string, TreePatternNodePtr> &InstResults,
       std::vector<Record *> &InstImpResults);

@@ -1499,10 +1499,10 @@ bool Sema::CheckNeonBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
   default:
     return false;
-#define GET_NEON_IMMEDIATE_CHECK
-#include "clang/Basic/arm_neon.inc"
-#include "clang/Basic/arm_fp16.inc"
-#undef GET_NEON_IMMEDIATE_CHECK
+  #define GET_NEON_IMMEDIATE_CHECK
+  #include "clang/Basic/arm_neon.inc"
+  #include "clang/Basic/arm_fp16.inc"
+  #undef GET_NEON_IMMEDIATE_CHECK
   }
 
   return SemaBuiltinConstantArgRange(TheCall, i, l, u + l);
@@ -2911,7 +2911,7 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_psrldqi128:
   case X86::BI__builtin_ia32_psrldqi256:
   case X86::BI__builtin_ia32_psrldqi512:
-    i = 1; l = 0; u = 1023;
+    i = 1; l = 0; u = 2047;
     break;
   }
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);

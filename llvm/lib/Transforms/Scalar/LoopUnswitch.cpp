@@ -28,7 +28,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -1042,7 +1042,7 @@ bool LoopUnswitch::TryTrivialLoopUnswitch(bool &Changed) {
   // until it finds the trivial condition candidate (condition that is not a
   // constant). Since unswitching generates branches with constant conditions,
   // this scenario could be very common in practice.
-  SmallSet<BasicBlock*, 8> Visited;
+  SmallPtrSet<BasicBlock*, 8> Visited;
 
   while (true) {
     // If we exit loop or reach a previous visited block, then

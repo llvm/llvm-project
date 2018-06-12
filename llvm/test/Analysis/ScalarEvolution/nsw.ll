@@ -25,7 +25,7 @@ bb:		; preds = %bb1, %bb.nph
 	%tmp6 = sext i32 %i.01 to i64		; <i64> [#uses=1]
 	%tmp7 = getelementptr double, double* %p, i64 %tmp6		; <double*> [#uses=1]
 ; CHECK: %tmp7
-; CHECK-NEXT:   -->  {%p,+,8}<%bb>
+; CHECK-NEXT:   -->  {%p,+,8}<nw><%bb>
 	store double %tmp5, double* %tmp7, align 8
 	%tmp8 = add nsw i32 %i.01, 1		; <i32> [#uses=2]
 ; CHECK: %tmp8
@@ -126,7 +126,7 @@ exit:
 }
 
 ; CHECK-LABEL: PR12375
-; CHECK: -->  {(4 + %arg)<nsw>,+,4}<nuw><%bb1>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((-1 + (-1 * %arg) + ((4 + %arg)<nsw> umax (8 + %arg)<nsw>)) /u 4)) + %arg)
+; CHECK: -->  {(4 + %arg)<nsw>,+,4}<nuw><%bb1>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((-1 + (-1 * %arg) + ((4 + %arg)<nsw> umax (8 + %arg)<nsw>)) /u 4))<nuw> + %arg)
 define i32 @PR12375(i32* readnone %arg) {
 bb:
   %tmp = getelementptr inbounds i32, i32* %arg, i64 2
@@ -145,7 +145,7 @@ bb7:                                              ; preds = %bb1
 }
 
 ; CHECK-LABEL: PR12376
-; CHECK: -->  {(4 + %arg)<nsw>,+,4}<nuw><%bb2>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((-1 + (-1 * %arg) + ((4 + %arg)<nsw> umax %arg1)) /u 4)) + %arg)
+; CHECK: -->  {(4 + %arg)<nsw>,+,4}<nuw><%bb2>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((-1 + (-1 * %arg) + ((4 + %arg)<nsw> umax %arg1)) /u 4))<nuw> + %arg)
 define void @PR12376(i32* nocapture %arg, i32* nocapture %arg1)  {
 bb:
   br label %bb2

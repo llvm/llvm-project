@@ -2888,7 +2888,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       !Style.ConstructorInitializerAllOnOneLineOrOnePerLine)
     return true;
   // Break only if we have multiple inheritance.
-  if (Style.BreakBeforeInheritanceComma && Right.is(TT_InheritanceComma))
+  if (Style.BreakInheritanceList == FormatStyle::BILS_BeforeComma &&
+      Right.is(TT_InheritanceComma))
     return true;
   if (Right.is(tok::string_literal) && Right.TokenText.startswith("R\""))
     // Multiline raw string literals are special wrt. line breaks. The author
@@ -2980,7 +2981,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       // We deal with this case later by detecting an entry
       // following a closing paren of this submessage.
     }
-    
+
     // If this is an entry immediately following a submessage, it will be
     // preceded by a closing paren of that submessage, like in:
     //     left---.  .---right
@@ -3026,6 +3027,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return false;
     if (Left.is(TT_JsTypeColon))
       return true;
+    // Don't wrap between ":" and "!" of a strict prop init ("field!: type;").
+    if (Left.is(tok::exclaim) && Right.is(tok::colon))
+      return false;
     if (Right.is(Keywords.kw_is))
       return false;
     if (Left.is(Keywords.kw_in))
@@ -3085,8 +3089,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return Style.BreakBeforeTernaryOperators;
   if (Left.is(TT_ConditionalExpr) || Left.is(tok::question))
     return !Style.BreakBeforeTernaryOperators;
+  if (Left.is(TT_InheritanceColon))
+    return Style.BreakInheritanceList == FormatStyle::BILS_AfterColon;
   if (Right.is(TT_InheritanceColon))
-    return true;
+    return Style.BreakInheritanceList != FormatStyle::BILS_AfterColon;
   if (Right.is(TT_ObjCMethodExpr) && !Right.is(tok::r_square) &&
       Left.isNot(TT_SelectorName))
     return true;
@@ -3174,9 +3180,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Right.is(TT_CtorInitializerComma) &&
       Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma)
     return true;
-  if (Left.is(TT_InheritanceComma) && Style.BreakBeforeInheritanceComma)
+  if (Left.is(TT_InheritanceComma) &&
+      Style.BreakInheritanceList == FormatStyle::BILS_BeforeComma)
     return false;
-  if (Right.is(TT_InheritanceComma) && Style.BreakBeforeInheritanceComma)
+  if (Right.is(TT_InheritanceComma) &&
+      Style.BreakInheritanceList == FormatStyle::BILS_BeforeComma)
     return true;
   if ((Left.is(tok::greater) && Right.is(tok::greater)) ||
       (Left.is(tok::less) && Right.is(tok::less)))

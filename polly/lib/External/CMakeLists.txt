@@ -189,6 +189,7 @@ if (POLLY_BUNDLED_ISL)
     isl/isl_bernstein.c
     isl/isl_blk.c
     isl/isl_bound.c
+    isl/isl_box.c
     isl/isl_coalesce.c
     isl/isl_constraint.c
     isl/isl_convex_hull.c

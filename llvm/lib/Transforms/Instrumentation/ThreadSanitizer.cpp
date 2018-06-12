@@ -19,7 +19,7 @@
 // The rest is handled by the run-time library.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -339,7 +339,7 @@ bool ThreadSanitizer::addrPointsToConstantData(Value *Addr) {
 void ThreadSanitizer::chooseInstructionsToInstrument(
     SmallVectorImpl<Instruction *> &Local, SmallVectorImpl<Instruction *> &All,
     const DataLayout &DL) {
-  SmallSet<Value*, 8> WriteTargets;
+  SmallPtrSet<Value*, 8> WriteTargets;
   // Iterate from the end.
   for (Instruction *I : reverse(Local)) {
     if (StoreInst *Store = dyn_cast<StoreInst>(I)) {

@@ -198,12 +198,6 @@ bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
       continue;
     }
 
-    if (auto Phi = dyn_cast<PHINode>(V)) {
-      for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
-        WorkSet.insert(Phi->getIncomingValue(I));
-      continue;
-    }
-
     LLVM_DEBUG(dbgs() << "    dropped\n");
   }
 

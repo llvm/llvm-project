@@ -271,6 +271,9 @@ struct FuzzyFindRequest {
   size_t MaxCandidateCount = UINT_MAX;
   /// If set to true, only symbols for completion support will be considered.
   bool RestrictForCodeCompletion = false;
+  /// Contextually relevant files (e.g. the file we're code-completing in).
+  /// Paths should be absolute.
+  std::vector<std::string> ProximityPaths;
 };
 
 struct LookupRequest {

@@ -9430,7 +9430,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     for (unsigned i = 0; i != NumElts; ++i)
       Indices[i] = ((Imm >> (i % 8)) & 0x1) ? NumElts + i : i;
 
-    return Builder.CreateShuffleVector(Ops[1], Ops[0],
+    return Builder.CreateShuffleVector(Ops[0], Ops[1],
                                        makeArrayRef(Indices, NumElts),
                                        "blend");
   }

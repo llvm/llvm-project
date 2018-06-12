@@ -882,9 +882,10 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Expand pseudo instructions which load, store or copy accumulators.
   // Add an emergency spill slot if a pseudo was expanded.
   if (ExpandPseudo(MF).expand()) {
-    // The spill slot should be half the size of the accumulator. If target is
-    // mips64, it should be 64-bit, otherwise it should be 32-bt.
-    const TargetRegisterClass &RC = STI.hasMips64() ?
+    // The spill slot should be half the size of the accumulator. If target have
+    // general-purpose registers 64 bits wide, it should be 64-bit, otherwise
+    // it should be 32-bit.
+    const TargetRegisterClass &RC = STI.isGP64bit() ?
       Mips::GPR64RegClass : Mips::GPR32RegClass;
     int FI = MF.getFrameInfo().CreateStackObject(TRI->getSpillSize(RC),
                                                  TRI->getSpillAlignment(RC),

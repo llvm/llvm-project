@@ -1,4 +1,4 @@
-// RUN: %clang_xray -g -o %t %s
+// RUN: %clang_xray -g -fxray-modes=xray-basic,xray-fdr,xray-profiling -o %t %s
 // RUN: rm xray-log.c-test.* || true
 // RUN: XRAY_OPTIONS=patch_premain=true:verbosity=1:xray_mode=xray-basic %t \
 // RUN:     2>&1 | FileCheck %s

@@ -153,7 +153,7 @@ define float @f32_one_step(float %x) #1 {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [9:0.50]
-; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast float 1.0, %x
   ret float %div
@@ -271,10 +271,10 @@ define float @f32_two_step(float %x) #2 {
 ; SKX-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [5:0.50]
 ; SKX-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:0.33]
-; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2 sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1 sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2 sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2 sched: [4:0.50]
+; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1 sched: [4:0.50]
+; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2 sched: [4:0.50]
+; SKX-NEXT:    vfmadd132ss {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3 sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast float 1.0, %x
   ret float %div
@@ -418,7 +418,7 @@ define <4 x float> @v4f32_one_step(<4 x float> %x) #1 {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpps %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) + mem sched: [10:0.50]
-; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm1 sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %x
   ret <4 x float> %div
@@ -536,10 +536,10 @@ define <4 x float> @v4f32_two_step(<4 x float> %x) #2 {
 ; SKX-NEXT:    vrcpps %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1] sched: [6:0.50]
 ; SKX-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:0.33]
-; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2 sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1 sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2 sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm3 = -(xmm0 * xmm3) + xmm2 sched: [4:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm3 = (xmm3 * xmm1) + xmm1 sched: [4:0.50]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm3 * xmm0) + xmm2 sched: [4:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * xmm3) + xmm3 sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %x
   ret <4 x float> %div
@@ -693,7 +693,7 @@ define <8 x float> @v8f32_one_step(<8 x float> %x) #1 {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpps %ymm0, %ymm1 # sched: [4:1.00]
 ; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
-; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm1) + ymm1 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm1) + ymm1 sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %x
   ret <8 x float> %div
@@ -824,10 +824,10 @@ define <8 x float> @v8f32_two_step(<8 x float> %x) #2 {
 ; SKX-NEXT:    vrcpps %ymm0, %ymm1 # sched: [4:1.00]
 ; SKX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
 ; SKX-NEXT:    vmovaps %ymm1, %ymm3 # sched: [1:0.33]
-; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm3 = -(ymm0 * ymm3) + ymm2 sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm3 = (ymm3 * ymm1) + ymm1 sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm3 * ymm0) + ymm2 sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm3) + ymm3 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm3 = -(ymm0 * ymm3) + ymm2 sched: [4:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm3 = (ymm3 * ymm1) + ymm1 sched: [4:0.50]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm3 * ymm0) + ymm2 sched: [4:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * ymm3) + ymm3 sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %x
   ret <8 x float> %div
@@ -1031,9 +1031,9 @@ define <16 x float> @v16f32_one_step(<16 x float> %x) #1 {
 ;
 ; SKX-LABEL: v16f32_one_step:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vrcp14ps %zmm0, %zmm1 # sched: [9:2.00]
+; SKX-NEXT:    vrcp14ps %zmm0, %zmm1 # sched: [4:2.00]
 ; SKX-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) + mem sched: [11:0.50]
-; SKX-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * zmm1) + zmm1 sched: [4:0.33]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * zmm1) + zmm1 sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <16 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %x
   ret <16 x float> %div
@@ -1235,13 +1235,13 @@ define <16 x float> @v16f32_two_step(<16 x float> %x) #2 {
 ;
 ; SKX-LABEL: v16f32_two_step:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vrcp14ps %zmm0, %zmm1 # sched: [9:2.00]
+; SKX-NEXT:    vrcp14ps %zmm0, %zmm1 # sched: [4:2.00]
 ; SKX-NEXT:    vbroadcastss {{.*#+}} zmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] sched: [8:0.50]
 ; SKX-NEXT:    vmovaps %zmm1, %zmm3 # sched: [1:0.33]
-; SKX-NEXT:    vfnmadd213ps {{.*#+}} zmm3 = -(zmm0 * zmm3) + zmm2 sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps {{.*#+}} zmm3 = (zmm3 * zmm1) + zmm1 sched: [4:0.33]
-; SKX-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm3 * zmm0) + zmm2 sched: [4:0.33]
-; SKX-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * zmm3) + zmm3 sched: [4:0.33]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} zmm3 = -(zmm0 * zmm3) + zmm2 sched: [4:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} zmm3 = (zmm3 * zmm1) + zmm1 sched: [4:0.50]
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm3 * zmm0) + zmm2 sched: [4:0.50]
+; SKX-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * zmm3) + zmm3 sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %div = fdiv fast <16 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %x
   ret <16 x float> %div

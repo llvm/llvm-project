@@ -25,7 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -179,7 +179,7 @@ public:
     // forward and backward dependences qualify.  Disqualify loads that have
     // other unknown dependences.
 
-    SmallSet<Instruction *, 4> LoadsWithUnknownDepedence;
+    SmallPtrSet<Instruction *, 4> LoadsWithUnknownDepedence;
 
     for (const auto &Dep : *Deps) {
       Instruction *Source = Dep.getSource(LAI);
@@ -302,7 +302,7 @@ public:
   /// We need a check if one is a pointer for a candidate load and the other is
   /// a pointer for a possibly intervening store.
   bool needsChecking(unsigned PtrIdx1, unsigned PtrIdx2,
-                     const SmallSet<Value *, 4> &PtrsWrittenOnFwdingPath,
+                     const SmallPtrSet<Value *, 4> &PtrsWrittenOnFwdingPath,
                      const std::set<Value *> &CandLoadPtrs) {
     Value *Ptr1 =
         LAI.getRuntimePointerChecking()->getPointerInfo(PtrIdx1).PointerValue;
@@ -316,7 +316,7 @@ public:
   /// forwarding store to a load.
   ///
   /// These pointers need to be alias-checked against the forwarding candidates.
-  SmallSet<Value *, 4> findPointersWrittenOnForwardingPath(
+  SmallPtrSet<Value *, 4> findPointersWrittenOnForwardingPath(
       const SmallVectorImpl<StoreToLoadForwardingCandidate> &Candidates) {
     // From FirstStore to LastLoad neither of the elimination candidate loads
     // should overlap with any of the stores.
@@ -354,7 +354,7 @@ public:
     // We're looking for stores after the first forwarding store until the end
     // of the loop, then from the beginning of the loop until the last
     // forwarded-to load.  Collect the pointer for the stores.
-    SmallSet<Value *, 4> PtrsWrittenOnFwdingPath;
+    SmallPtrSet<Value *, 4> PtrsWrittenOnFwdingPath;
 
     auto InsertStorePtr = [&](Instruction *I) {
       if (auto *S = dyn_cast<StoreInst>(I))
@@ -374,11 +374,11 @@ public:
   SmallVector<RuntimePointerChecking::PointerCheck, 4> collectMemchecks(
       const SmallVectorImpl<StoreToLoadForwardingCandidate> &Candidates) {
 
-    SmallSet<Value *, 4> PtrsWrittenOnFwdingPath =
+    SmallPtrSet<Value *, 4> PtrsWrittenOnFwdingPath =
         findPointersWrittenOnForwardingPath(Candidates);
 
     // Collect the pointers of the candidate loads.
-    // FIXME: SmallSet does not work with std::inserter.
+    // FIXME: SmallPtrSet does not work with std::inserter.
     std::set<Value *> CandLoadPtrs;
     transform(Candidates,
                    std::inserter(CandLoadPtrs, CandLoadPtrs.begin()),

@@ -198,6 +198,19 @@ void *lsan_valloc(uptr size, const StackTrace &stack) {
       Allocate(stack, size, GetPageSizeCached(), kAlwaysClearMemory));
 }
 
+void *lsan_pvalloc(uptr size, const StackTrace &stack) {
+  uptr PageSize = GetPageSizeCached();
+  if (UNLIKELY(CheckForPvallocOverflow(size, PageSize))) {
+    errno = errno_ENOMEM;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportPvallocOverflow(size, &stack);
+  }
+  // pvalloc(0) should allocate one page.
+  size = size ? RoundUpTo(size, PageSize) : PageSize;
+  return SetErrnoOnNull(Allocate(stack, size, PageSize, kAlwaysClearMemory));
+}
+
 uptr lsan_mz_size(const void *p) {
   return GetMallocUsableSize(p);
 }

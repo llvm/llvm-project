@@ -7646,7 +7646,7 @@ public:
                             llvm::Function *BlockInvokeFunc,
                             llvm::Value *BlockLiteral) const override;
   bool shouldEmitStaticExternCAliases() const override;
-  void setCUDAKernelCallingConvention(llvm::Function *F) const override;
+  void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
 };
 }
 
@@ -7783,8 +7783,9 @@ bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
 }
 
 void AMDGPUTargetCodeGenInfo::setCUDAKernelCallingConvention(
-    llvm::Function *F) const {
-  F->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+    const FunctionType *&FT) const {
+  FT = getABIInfo().getContext().adjustFunctionType(
+      FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
 }
 
 //===----------------------------------------------------------------------===//

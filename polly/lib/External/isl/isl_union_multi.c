@@ -93,7 +93,7 @@ static isl_stat FN(UNION,count_part)(__isl_keep S(UNION,group) *group,
 
 /* Return the number of base expressions in "u".
  */
-int FN(FN(UNION,n),PARTS)(__isl_keep UNION *u)
+int FN(FN(UNION,n),BASE)(__isl_keep UNION *u)
 {
 	int n;
 
@@ -209,7 +209,7 @@ static isl_stat FN(UNION,group_call_on_copy)(__isl_keep S(UNION,group) *group,
 				      &FN(UNION,call_on_copy), user);
 }
 
-isl_stat FN(FN(UNION,foreach),PARTS)(__isl_keep UNION *u,
+isl_stat FN(FN(UNION,foreach),BASE)(__isl_keep UNION *u,
 	isl_stat (*fn)(__isl_take PART *part, void *user), void *user)
 {
 	S(UNION,foreach_data) data = { fn, user };

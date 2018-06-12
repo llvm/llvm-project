@@ -2162,8 +2162,7 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
   OS << "#endif\n\n";
 }
 
-void
-NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
+void NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
                                         SmallVectorImpl<Intrinsic *> &Defs) {
   OS << "#ifdef GET_NEON_IMMEDIATE_CHECK\n";
 
@@ -2188,11 +2187,15 @@ NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
     Record *R = Def->getRecord();
     if (R->getValueAsBit("isVCVT_N")) {
       // VCVT between floating- and fixed-point values takes an immediate
-      // in the range [1, 32) for f32 or [1, 64) for f64.
+      // in the range [1, 32) for f32 or [1, 64) for f64 or [1, 16) for f16.
       LowerBound = "1";
-      if (Def->getBaseType().getElementSizeInBits() == 32)
+	  if (Def->getBaseType().getElementSizeInBits() == 16 ||
+		  Def->getName().find('h') != std::string::npos)
+		// VCVTh operating on FP16 intrinsics in range [1, 16)
+		UpperBound = "15";
+	  else if (Def->getBaseType().getElementSizeInBits() == 32)
         UpperBound = "31";
-      else
+	  else
         UpperBound = "63";
     } else if (R->getValueAsBit("isScalarShift")) {
       // Right shifts have an 'r' in the name, left shifts do not. Convert

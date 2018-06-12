@@ -59,6 +59,24 @@ class MiniDumpNewTestCase(TestBase):
             self.dbg.SetOutputFileHandle(None, False)
             self.dbg.SetErrorFileHandle(None, False)
 
+    def test_loadcore_error_status(self):
+        """Test the SBTarget.LoadCore(core, error) overload."""
+        self.dbg.CreateTarget(None)
+        self.target = self.dbg.GetSelectedTarget()
+        error = lldb.SBError()
+        self.process = self.target.LoadCore("linux-x86_64.dmp", error)
+        self.assertTrue(self.process, PROCESS_IS_VALID)
+        self.assertTrue(error.Success())
+
+    def test_loadcore_error_status_failure(self):
+        """Test the SBTarget.LoadCore(core, error) overload."""
+        self.dbg.CreateTarget(None)
+        self.target = self.dbg.GetSelectedTarget()
+        error = lldb.SBError()
+        self.process = self.target.LoadCore("non-existent.dmp", error)
+        self.assertFalse(self.process, PROCESS_IS_VALID)
+        self.assertTrue(error.Fail())
+
     def test_process_info_in_minidump(self):
         """Test that lldb can read the process information from the Minidump."""
         # target create -c linux-x86_64.dmp
