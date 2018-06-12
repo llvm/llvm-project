@@ -101,13 +101,12 @@ add_lldb_library(liblldb SHARED
     Support
   )
 
-if (LLVM_ENABLE_WERROR)
-  if (MSVC)
-    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
-  else()
-    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
-  endif()
+if (MSVC)
+  set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
+else()
+  set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
 endif()
+
 set_source_files_properties(${LLDB_WRAP_PYTHON} PROPERTIES GENERATED 1)
 if (CLANG_CL)
   set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING
