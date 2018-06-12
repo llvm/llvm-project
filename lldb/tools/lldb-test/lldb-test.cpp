@@ -161,7 +161,7 @@ static Error findVariables(lldb_private::Module &Module);
 static Error dumpModule(lldb_private::Module &Module);
 static Error verify(lldb_private::Module &Module);
 
-static Expected<Error (&)(lldb_private::Module &)> getAction();
+static Expected<Error (*)(lldb_private::Module &)> getAction();
 static int dumpSymbols(Debugger &Dbg);
 }
 
@@ -494,7 +494,7 @@ Error opts::symbols::verify(lldb_private::Module &Module) {
   return Error::success();
 }
 
-Expected<Error (&)(lldb_private::Module &)> opts::symbols::getAction() {
+Expected<Error (*)(lldb_private::Module &)> opts::symbols::getAction() {
   if (Verify) {
     if (Find != FindType::None)
       return make_string_error(
