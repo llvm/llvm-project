@@ -287,7 +287,7 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS ${LIBCXX_TARGETS})
-add_dependencies(cxx cxx-headers)
+add_dependencies(cxx cxx-headers ${LIBCXX_ABI_HEADERS_TARGET})
 
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   file(GLOB LIBCXX_EXPERIMENTAL_SOURCES ../src/experimental/*.cpp)
