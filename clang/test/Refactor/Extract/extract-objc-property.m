@@ -16,14 +16,14 @@
   self.item;
 // property-end: -1:12
 // property-name-end: -2:12
-// CHECK: "static HasProperty * extracted(HasProperty *object) {\nreturn object.item;\n}\n\n"
+// CHECK: "static HasProperty *extracted(HasProperty *object) {\nreturn object.item;\n}\n\n"
 
 // implicit-name-begin: +2:8
 // implicit-begin: +1:3
   self.implicitProp;
 // implicit-end: -1:20
 // implicit-name-end: -2:20
-// CHECK: "static HasProperty * extracted(HasProperty *object) {\nreturn object.implicitProp;\n}\n\n"
+// CHECK: "static HasProperty *extracted(HasProperty *object) {\nreturn object.implicitProp;\n}\n\n"
 }
 
 // RUN: clang-refactor-test perform -action extract -selected=property -selected=implicit %s -fobjc-arc | FileCheck %s

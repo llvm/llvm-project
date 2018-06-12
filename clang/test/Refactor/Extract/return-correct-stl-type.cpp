@@ -28,7 +28,7 @@ typedef BasicString<Traits> String;
 
 void returnCharTypeNotUselessValueType() {
 // CHECK1: "static char extracted(const std::String &x) {\nreturn x.value();\n}\n\n" [[@LINE-1]]:1
-// CHECK1: "static const char * extracted(const std::String &x) {\nreturn x.data();\n}\n\n" [[@LINE-2]]:1
+// CHECK1: "static const char *extracted(const std::String &x) {\nreturn x.data();\n}\n\n" [[@LINE-2]]:1
   std::String x;
 // return-char-begin: +1:9
   (void)x.value();
