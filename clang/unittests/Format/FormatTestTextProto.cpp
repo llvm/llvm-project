@@ -485,8 +485,15 @@ TEST_F(FormatTestTextProto, FormatsRepeatedListInitializers) {
   verifyFormat("keys: []");
   verifyFormat("keys: [ 1 ]");
   verifyFormat("keys: [ 'ala', 'bala' ]");
-  verifyFormat("keys:\n"
-               "    [ 'ala', 'bala', 'porto', 'kala', 'too', 'long', 'ng' ]");
+  verifyFormat("keys: [\n"
+               "  'ala',\n"
+               "  'bala',\n"
+               "  'porto',\n"
+               "  'kala',\n"
+               "  'too',\n"
+               "  'long',\n"
+               "  'ng'\n"
+               "]");
   verifyFormat("key: item\n"
                "keys: [\n"
                "  'ala',\n"
@@ -668,6 +675,29 @@ TEST_F(FormatTestTextProto, BreaksEntriesOfSubmessagesContainingSubmessages) {
                "  # comment\n"
                "  sub: {}\n"
                "}");
+}
+
+TEST_F(FormatTestTextProto, PreventBreaksBetweenKeyAndSubmessages) {
+  verifyFormat("submessage: {\n"
+               "  key: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n"
+               "}");
+  verifyFormat("submessage {\n"
+               "  key: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n"
+               "}");
+  verifyFormat("submessage: <\n"
+               "  key: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n"
+               ">");
+  verifyFormat("submessage <\n"
+               "  key: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n"
+               ">");
+  verifyFormat("repeatedd: [\n"
+               "  'eyaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n"
+               "]");
+  // "{" is going over the column limit.
+  verifyFormat(
+      "submessageeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: {\n"
+      "  key: 'aaaaa'\n"
+      "}");
 }
 
 } // end namespace tooling

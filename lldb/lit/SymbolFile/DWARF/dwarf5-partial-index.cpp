@@ -3,10 +3,8 @@
 
 // REQUIRES: lld
 
-// RUN: clang %s -g -c -emit-llvm -o - --target=x86_64-pc-linux -DONE | \
-// RUN:   llc -accel-tables=Dwarf -filetype=obj -o %t-1.o
-// RUN: clang %s -g -c -emit-llvm -o - --target=x86_64-pc-linux -DTWO | \
-// RUN:   llc -accel-tables=Disable -filetype=obj -o %t-2.o
+// RUN: clang %s -g -c -o %t-1.o --target=x86_64-pc-linux -DONE -mllvm -accel-tables=Dwarf
+// RUN: clang %s -g -c -o %t-2.o --target=x86_64-pc-linux -DTWO -mllvm -accel-tables=Dwarf
 // RUN: ld.lld %t-1.o %t-2.o -o %t
 // RUN: lldb-test symbols --find=variable --name=foo  %t | FileCheck %s
 

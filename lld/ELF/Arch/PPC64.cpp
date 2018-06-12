@@ -211,6 +211,7 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   case R_PPC64_DTPREL16_HIGHESTA:
   case R_PPC64_DTPREL16_LO:
   case R_PPC64_DTPREL16_LO_DS:
+  case R_PPC64_DTPREL64:
     return R_ABS;
   case R_PPC64_TLSGD:
   case R_PPC64_TLSLD:
@@ -310,6 +311,8 @@ static std::pair<RelType, uint64_t> toAddr16Rel(RelType Type, uint64_t Val) {
     return {R_PPC64_ADDR16_LO, DTPBiasedVal};
   case R_PPC64_DTPREL16_LO_DS:
     return {R_PPC64_ADDR16_LO_DS, DTPBiasedVal};
+  case R_PPC64_DTPREL64:
+    return {R_PPC64_ADDR64, DTPBiasedVal};
 
   default:
     return {Type, Val};

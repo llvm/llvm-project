@@ -95,6 +95,9 @@ test_not_adjusted:
         mtlr 0
         blr
 
+        .section        .debug_addr,"",@progbits
+        .quad   i@dtprel+32768
+
         .type   i,@object
         .section        .tdata,"awT",@progbits
         .space 1024
@@ -123,6 +126,8 @@ k:
 // InputRelocs: R_PPC64_DTPREL16_HIGHER   {{[0-9a-f]+}} k + 0
 // InputRelocs: R_PPC64_DTPREL16_HI       {{[0-9a-f]+}} k + 0
 // InputRelocs: R_PPC64_DTPREL16_LO       {{[0-9a-f]+}} k + 0
+// InputRelocs: Relocation section '.rela.debug_addr'
+// InputRelocs: R_PPC64_DTPREL64          {{[0-9a-f]+}} i + 8000
 
 // Expect a single dynamic relocation in the '.rela.dyn section for the module id.
 // OutputRelocs:      Relocation section '.rela.dyn' at offset 0x{{[0-9a-f]+}} contains 1 entries:

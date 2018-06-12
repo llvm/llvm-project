@@ -253,13 +253,6 @@ public:
   void markInvalid(const void *Tag, const void *Data) {
     Invalidations.insert(std::make_pair(Tag, Data));
   }
-
-  /// Reverses the effects of a previous invalidation.
-  ///
-  /// \sa markInvalid
-  void removeInvalidation(const void *Tag, const void *Data) {
-    Invalidations.erase(std::make_pair(Tag, Data));
-  }
   
   /// Return the canonical declaration, be it a method or class, where
   /// this issue semantically occurred.

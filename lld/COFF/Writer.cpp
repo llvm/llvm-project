@@ -614,7 +614,10 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
   default: {
     // Don't write symbols that won't be written to the output to the symbol
     // table.
-    OutputSection *OS = Def->getChunk()->getOutputSection();
+    Chunk *C = Def->getChunk();
+    if (!C)
+      return None;
+    OutputSection *OS = C->getOutputSection();
     if (!OS)
       return None;
 
