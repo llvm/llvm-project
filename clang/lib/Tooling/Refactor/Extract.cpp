@@ -1855,20 +1855,22 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
       OS << "static ";
     else if (!isMethodExtraction())
       OS << (isInHeader(FunctionExtractionLoc, SM) ? "inline " : "static ");
-    ReturnType.print(OS, PP);
-    OS << ' ';
+    std::string QualifiedName;
+    llvm::raw_string_ostream NameOS(QualifiedName);
     if (isMethodExtraction() && IsDefinition)
-      printEnclosingMethodScope(FunctionLikeParentDecl, OS, PP);
-    unsigned NameOffset = OS.str().size();
-    OS << ExtractedName << '(';
+      printEnclosingMethodScope(FunctionLikeParentDecl, NameOS, PP);
+    NameOS << ExtractedName;
+    NameOS << '(';
     bool IsFirst = true;
     for (const auto &Var : CapturedVariables) {
       if (!IsFirst)
-        OS << ", ";
+        NameOS << ", ";
       IsFirst = false;
-      Var.ParameterType.print(OS, PP, /*PlaceHolder=*/Var.getName());
+      Var.ParameterType.print(NameOS, PP, /*PlaceHolder=*/Var.getName());
     }
-    OS << ')';
+    NameOS << ')';
+    ReturnType.print(OS, PP, NameOS.str());
+    unsigned NameOffset = OS.str().find(ExtractedName);
     if (isMethodExtraction() && isEnclosingMethodConst(FunctionLikeParentDecl))
       OS << " const";
     return RefactoringReplacement::AssociatedSymbolLocation(
@@ -1926,7 +1928,18 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
   auto Semicolons = computeSemicolonExtractionPolicy(
       ExtractedStmtRange ? *(ExtractedStmtRange->Last) : S, ExtractedTokenRange,
       SM, LangOpts);
+  bool ShouldCopyBlock = false;
+  if (IsExpr && !LangOpts.ObjCAutoRefCount &&
+      ReturnType->isBlockPointerType()) {
+    // We can't return local blocks directly without ARC; they should be copied.
+    // FIXME: This is overly pessimistic, as we only need the copy for local
+    // blocks.
+    ExtractedOS << "[(";
+    ShouldCopyBlock = true;
+  }
   ExtractedOS << SourceRewriter.getRewrittenText(ExtractedTokenRange);
+  if (ShouldCopyBlock)
+    ExtractedOS << ") copy]";
   if (Semicolons.IsNeededInExtractedFunction)
     ExtractedOS << ';';
   if (CanUseReturnForVariablesUsedAfterwards)
