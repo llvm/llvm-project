@@ -163,16 +163,10 @@ define <4 x float> @float_to_int_to_float_mem_v4f32(<4 x float>* %p) {
 ; SSE-NEXT:    roundps $11, (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: float_to_int_to_float_mem_v4f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vroundps $11, (%rdi), %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: float_to_int_to_float_mem_v4f32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-NEXT:    vroundps $11, %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: float_to_int_to_float_mem_v4f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vroundps $11, (%rdi), %xmm0
+; AVX-NEXT:    retq
   %x = load <4 x float>, <4 x float>* %p, align 16
   %fptosi = tail call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> %x)
   %sitofp = sitofp <4 x i32> %fptosi to <4 x float>

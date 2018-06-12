@@ -9404,13 +9404,13 @@ multiclass compress_by_elt_width<bits<8> opc, string OpcodeStr,
 
 // FIXME: Is there a better scheduler class for VPCOMPRESS?
 defm VPCOMPRESSD : compress_by_elt_width <0x8B, "vpcompressd", WriteVarShuffle256,
-                                          avx512vl_i32_info>, EVEX;
+                                          avx512vl_i32_info>, EVEX, NotMemoryFoldable;
 defm VPCOMPRESSQ : compress_by_elt_width <0x8B, "vpcompressq", WriteVarShuffle256,
-                                          avx512vl_i64_info>, EVEX, VEX_W;
+                                          avx512vl_i64_info>, EVEX, VEX_W, NotMemoryFoldable;
 defm VCOMPRESSPS : compress_by_elt_width <0x8A, "vcompressps", WriteVarShuffle256,
-                                          avx512vl_f32_info>, EVEX;
+                                          avx512vl_f32_info>, EVEX, NotMemoryFoldable;
 defm VCOMPRESSPD : compress_by_elt_width <0x8A, "vcompresspd", WriteVarShuffle256,
-                                          avx512vl_f64_info>, EVEX, VEX_W;
+                                          avx512vl_f64_info>, EVEX, VEX_W, NotMemoryFoldable;
 
 // expand
 multiclass expand_by_vec_width<bits<8> opc, X86VectorVTInfo _,
@@ -9777,6 +9777,17 @@ def : Pat<(v16f32 (frint VR512:$src)),
 def : Pat<(v16f32 (ftrunc VR512:$src)),
           (VRNDSCALEPSZrri VR512:$src, (i32 0xB))>;
 
+def : Pat<(v16f32 (ffloor (loadv16f32 addr:$src))),
+          (VRNDSCALEPSZrmi addr:$src, (i32 0x9))>;
+def : Pat<(v16f32 (fnearbyint (loadv16f32 addr:$src))),
+          (VRNDSCALEPSZrmi addr:$src, (i32 0xC))>;
+def : Pat<(v16f32 (fceil (loadv16f32 addr:$src))),
+          (VRNDSCALEPSZrmi addr:$src, (i32 0xA))>;
+def : Pat<(v16f32 (frint (loadv16f32 addr:$src))),
+          (VRNDSCALEPSZrmi addr:$src, (i32 0x4))>;
+def : Pat<(v16f32 (ftrunc (loadv16f32 addr:$src))),
+          (VRNDSCALEPSZrmi addr:$src, (i32 0xB))>;
+
 def : Pat<(v8f64 (ffloor VR512:$src)),
           (VRNDSCALEPDZrri VR512:$src, (i32 0x9))>;
 def : Pat<(v8f64 (fnearbyint VR512:$src)),
@@ -9787,6 +9798,17 @@ def : Pat<(v8f64 (frint VR512:$src)),
           (VRNDSCALEPDZrri VR512:$src, (i32 0x4))>;
 def : Pat<(v8f64 (ftrunc VR512:$src)),
           (VRNDSCALEPDZrri VR512:$src, (i32 0xB))>;
+
+def : Pat<(v8f64 (ffloor (loadv8f64 addr:$src))),
+          (VRNDSCALEPDZrmi addr:$src, (i32 0x9))>;
+def : Pat<(v8f64 (fnearbyint (loadv8f64 addr:$src))),
+          (VRNDSCALEPDZrmi addr:$src, (i32 0xC))>;
+def : Pat<(v8f64 (fceil (loadv8f64 addr:$src))),
+          (VRNDSCALEPDZrmi addr:$src, (i32 0xA))>;
+def : Pat<(v8f64 (frint (loadv8f64 addr:$src))),
+          (VRNDSCALEPDZrmi addr:$src, (i32 0x4))>;
+def : Pat<(v8f64 (ftrunc (loadv8f64 addr:$src))),
+          (VRNDSCALEPDZrmi addr:$src, (i32 0xB))>;
 }
 
 let Predicates = [HasVLX] in {
@@ -9801,6 +9823,17 @@ def : Pat<(v4f32 (frint VR128X:$src)),
 def : Pat<(v4f32 (ftrunc VR128X:$src)),
           (VRNDSCALEPSZ128rri VR128X:$src, (i32 0xB))>;
 
+def : Pat<(v4f32 (ffloor (loadv4f32 addr:$src))),
+          (VRNDSCALEPSZ128rmi addr:$src, (i32 0x9))>;
+def : Pat<(v4f32 (fnearbyint (loadv4f32 addr:$src))),
+          (VRNDSCALEPSZ128rmi addr:$src, (i32 0xC))>;
+def : Pat<(v4f32 (fceil (loadv4f32 addr:$src))),
+          (VRNDSCALEPSZ128rmi addr:$src, (i32 0xA))>;
+def : Pat<(v4f32 (frint (loadv4f32 addr:$src))),
+          (VRNDSCALEPSZ128rmi addr:$src, (i32 0x4))>;
+def : Pat<(v4f32 (ftrunc (loadv4f32 addr:$src))),
+          (VRNDSCALEPSZ128rmi addr:$src, (i32 0xB))>;
+
 def : Pat<(v2f64 (ffloor VR128X:$src)),
           (VRNDSCALEPDZ128rri VR128X:$src, (i32 0x9))>;
 def : Pat<(v2f64 (fnearbyint VR128X:$src)),
@@ -9811,6 +9844,17 @@ def : Pat<(v2f64 (frint VR128X:$src)),
           (VRNDSCALEPDZ128rri VR128X:$src, (i32 0x4))>;
 def : Pat<(v2f64 (ftrunc VR128X:$src)),
           (VRNDSCALEPDZ128rri VR128X:$src, (i32 0xB))>;
+
+def : Pat<(v2f64 (ffloor (loadv2f64 addr:$src))),
+          (VRNDSCALEPDZ128rmi addr:$src, (i32 0x9))>;
+def : Pat<(v2f64 (fnearbyint (loadv2f64 addr:$src))),
+          (VRNDSCALEPDZ128rmi addr:$src, (i32 0xC))>;
+def : Pat<(v2f64 (fceil (loadv2f64 addr:$src))),
+          (VRNDSCALEPDZ128rmi addr:$src, (i32 0xA))>;
+def : Pat<(v2f64 (frint (loadv2f64 addr:$src))),
+          (VRNDSCALEPDZ128rmi addr:$src, (i32 0x4))>;
+def : Pat<(v2f64 (ftrunc (loadv2f64 addr:$src))),
+          (VRNDSCALEPDZ128rmi addr:$src, (i32 0xB))>;
 
 def : Pat<(v8f32 (ffloor VR256X:$src)),
           (VRNDSCALEPSZ256rri VR256X:$src, (i32 0x9))>;
@@ -9823,6 +9867,17 @@ def : Pat<(v8f32 (frint VR256X:$src)),
 def : Pat<(v8f32 (ftrunc VR256X:$src)),
           (VRNDSCALEPSZ256rri VR256X:$src, (i32 0xB))>;
 
+def : Pat<(v8f32 (ffloor (loadv8f32 addr:$src))),
+          (VRNDSCALEPSZ256rmi addr:$src, (i32 0x9))>;
+def : Pat<(v8f32 (fnearbyint (loadv8f32 addr:$src))),
+          (VRNDSCALEPSZ256rmi addr:$src, (i32 0xC))>;
+def : Pat<(v8f32 (fceil (loadv8f32 addr:$src))),
+          (VRNDSCALEPSZ256rmi addr:$src, (i32 0xA))>;
+def : Pat<(v8f32 (frint (loadv8f32 addr:$src))),
+          (VRNDSCALEPSZ256rmi addr:$src, (i32 0x4))>;
+def : Pat<(v8f32 (ftrunc (loadv8f32 addr:$src))),
+          (VRNDSCALEPSZ256rmi addr:$src, (i32 0xB))>;
+
 def : Pat<(v4f64 (ffloor VR256X:$src)),
           (VRNDSCALEPDZ256rri VR256X:$src, (i32 0x9))>;
 def : Pat<(v4f64 (fnearbyint VR256X:$src)),
@@ -9833,6 +9888,17 @@ def : Pat<(v4f64 (frint VR256X:$src)),
           (VRNDSCALEPDZ256rri VR256X:$src, (i32 0x4))>;
 def : Pat<(v4f64 (ftrunc VR256X:$src)),
           (VRNDSCALEPDZ256rri VR256X:$src, (i32 0xB))>;
+
+def : Pat<(v4f64 (ffloor (loadv4f64 addr:$src))),
+          (VRNDSCALEPDZ256rmi addr:$src, (i32 0x9))>;
+def : Pat<(v4f64 (fnearbyint (loadv4f64 addr:$src))),
+          (VRNDSCALEPDZ256rmi addr:$src, (i32 0xC))>;
+def : Pat<(v4f64 (fceil (loadv4f64 addr:$src))),
+          (VRNDSCALEPDZ256rmi addr:$src, (i32 0xA))>;
+def : Pat<(v4f64 (frint (loadv4f64 addr:$src))),
+          (VRNDSCALEPDZ256rmi addr:$src, (i32 0x4))>;
+def : Pat<(v4f64 (ftrunc (loadv4f64 addr:$src))),
+          (VRNDSCALEPDZ256rmi addr:$src, (i32 0xB))>;
 }
 
 multiclass avx512_shuff_packed_128_common<bits<8> opc, string OpcodeStr,
