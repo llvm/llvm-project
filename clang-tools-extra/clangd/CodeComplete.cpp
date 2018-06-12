@@ -928,6 +928,7 @@ private:
     Req.RestrictForCodeCompletion = true;
     Req.Scopes = getQueryScopes(Recorder->CCContext,
                                 Recorder->CCSema->getSourceManager());
+    Req.ProximityPaths.push_back(FileName);
     log(llvm::formatv("Code complete: fuzzyFind(\"{0}\", scopes=[{1}])",
                       Req.Query,
                       llvm::join(Req.Scopes.begin(), Req.Scopes.end(), ",")));
