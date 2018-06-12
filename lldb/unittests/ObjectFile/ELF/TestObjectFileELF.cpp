@@ -61,11 +61,12 @@ TEST_F(ObjectFileELFTest, SectionsResolveConsistently) {
       "sections-resolve-consistently-%%%%%%", "obj", obj));
 
   llvm::FileRemover remover(obj);
-  const char *args[] = {YAML2OBJ, yaml.c_str(), nullptr};
+  llvm::StringRef args[] = {YAML2OBJ, yaml};
   llvm::StringRef obj_ref = obj;
   const llvm::Optional<llvm::StringRef> redirects[] = {llvm::None, obj_ref,
                                                        llvm::None};
-  ASSERT_EQ(0, llvm::sys::ExecuteAndWait(YAML2OBJ, args, nullptr, redirects));
+  ASSERT_EQ(0,
+            llvm::sys::ExecuteAndWait(YAML2OBJ, args, llvm::None, redirects));
   uint64_t size;
   ASSERT_NO_ERROR(llvm::sys::fs::file_size(obj, size));
   ASSERT_GT(size, 0u);

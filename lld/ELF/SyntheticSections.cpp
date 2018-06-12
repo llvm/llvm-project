@@ -922,9 +922,17 @@ template <class ELFT> void MipsGotSection::build() {
           continue;
         InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, this, Offset, S);
       } else {
-        if (!P.first->IsPreemptible)
+        // When building a shared library we still need a dynamic relocation
+        // for the module index. Therefore only checking for
+        // S->IsPreemptible is not sufficient (this happens e.g. for
+        // thread-locals that have been marked as local through a linker script)
+        if (!S->IsPreemptible && !Config->Pic)
           continue;
         InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, this, Offset, S);
+        // However, we can skip writing the TLS offset reloc for non-preemptible
+        // symbols since it is known even in shared libraries
+        if (!S->IsPreemptible)
+          continue;
         Offset += Config->Wordsize;
         InX::RelaDyn->addReloc(Target->TlsOffsetRel, this, Offset, S);
       }
@@ -1030,7 +1038,11 @@ void MipsGotSection::writeTo(uint8_t *Buf) {
       if (P.first == nullptr && !Config->Pic)
         Write(P.second, nullptr, 1);
       else if (P.first && !P.first->IsPreemptible) {
-        Write(P.second, nullptr, 1);
+        // If we are emitting PIC code with relocations we mustn't write
+        // anything to the GOT here. When using Elf_Rel relocations the value
+        // one will be treated as an addend and will cause crashes at runtime
+        if (!Config->Pic)
+          Write(P.second, nullptr, 1);
         Write(P.second + 1, P.first, -0x8000);
       }
     }
