@@ -133,7 +133,7 @@ int main(int Argc, const char **Argv) {
   case WinLink:
     return !coff::link(Args, canExitEarly());
   case Darwin:
-    return !mach_o::link(Args);
+    return !mach_o::link(Args, canExitEarly());
   case Wasm:
     return !wasm::link(Args, canExitEarly());
   default:
