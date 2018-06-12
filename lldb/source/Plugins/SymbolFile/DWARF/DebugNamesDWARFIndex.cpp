@@ -123,6 +123,28 @@ void DebugNamesDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
   }
 }
 
+void DebugNamesDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
+                                              DIEArray &offsets) {
+  m_fallback.GetGlobalVariables(cu, offsets);
+
+  uint64_t cu_offset = cu.GetOffset();
+  for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
+    for (DebugNames::NameTableEntry nte: ni) {
+      uint32_t entry_offset = nte.getEntryOffset();
+      llvm::Expected<DebugNames::Entry> entry_or = ni.getEntry(&entry_offset);
+      for (; entry_or; entry_or = ni.getEntry(&entry_offset)) {
+        if (entry_or->tag() != DW_TAG_variable)
+          continue;
+        if (entry_or->getCUOffset() != cu_offset)
+          continue;
+
+        Append(*entry_or, offsets);
+      }
+      MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
+    }
+  }
+}
+
 void DebugNamesDWARFIndex::GetTypes(ConstString name, DIEArray &offsets) {
   m_fallback.GetTypes(name, offsets);
 
