@@ -32,6 +32,8 @@ test:
         addi 3, 3, i@got@tlsld@l
         bl __tls_get_addr(i@tlsld)
         nop
+        addis 3, 3, i@dtprel@ha
+        lwa 3, i@dtprel@l(3)
         ld 0, 16(1)
         mtlr 0
         blr
@@ -71,13 +73,17 @@ k:
         .quad   66
         .size   k, 8
 
-// Verify that the input contains all the R_PPC64_GOT_TLSLD16* relocations.
+// Verify that the input contains all the R_PPC64_GOT_TLSLD16* relocations, as
+// well as the DTPREL relocations used in a typical medium code model
+// local-dynamic variable access.
 // InputRelocs: Relocation section '.rela.text'
-// InputRelocs:     R_PPC64_GOT_TLSLD16_HA 0000000000000000 i + 0
-// InputRelocs:     R_PPC64_GOT_TLSLD16_LO 0000000000000000 i + 0
-// InputRelocs:     R_PPC64_TLSLD          0000000000000000 i + 0
-// InputRelocs:     R_PPC64_GOT_TLSLD16_HI 0000000000000000 j + 0
-// InputRelocs:     R_PPC64_GOT_TLSLD16    0000000000000008 k + 0
+// InputRelocs:     R_PPC64_GOT_TLSLD16_HA {{[0-9a-f]+}} i + 0
+// InputRelocs:     R_PPC64_GOT_TLSLD16_LO {{[0-9a-f]+}} i + 0
+// InputRelocs:     R_PPC64_TLSLD          {{[0-9a-f]+}} i + 0
+// InputRelocs:     R_PPC64_DTPREL16_HA    {{[0-9a-f]+}} i + 0
+// InputRelocs:     R_PPC64_DTPREL16_LO_DS {{[0-9a-f]+}} i + 0
+// InputRelocs:     R_PPC64_GOT_TLSLD16_HI {{[0-9a-f]+}} j + 0
+// InputRelocs:     R_PPC64_GOT_TLSLD16    {{[0-9a-f]+}} k + 0
 
 // The local dynamic version of tls needs to use the same mechanism to look up
 // a variables address as general-dynamic. ie a call to __tls_get_addr with the
@@ -99,9 +105,19 @@ k:
 
 // #ha(i@got@tlsld) --> (0x20108 - 0x28100 + 0x8000) >> 16 = 0
 // #lo(i@got@tlsld) --> (0x20108 - 0x28100) = -7ff8 = -32760
+// When calculating offset relative to the dynamic thread pointer we have to
+// adjust by 0x8000 since each DTV pointer points 0x8000 bytes past the start of
+// its TLS block.
+// #ha(i@dtprel) --> (0x0 -0x8000 + 0x8000) >> 16 = 0
+// #lo(i@dtprel) --> (0x0 -0x8000) = -0x8000 = -32768
 // Dis:     test:
 // Dis:        addis 3, 2, 0
 // Dis-NEXT:   addi 3, 3, -32760
+// Dis-NEXT:   bl .+67108804
+// Dis-NEXT:   ld 2, 24(1)
+// Dis-NEXT:   addis 3, 3, 0
+// Dis-NEXT:   lwa 3, -32768(3)
+
 
 // #hi(j@got@tlsld) --> (0x20108 - 0x28100 ) > 16 = -1
 // Dis: test_hi:

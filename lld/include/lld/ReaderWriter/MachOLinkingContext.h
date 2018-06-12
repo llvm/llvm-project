@@ -89,7 +89,7 @@ public:
                  bool exportDynamicSymbols);
 
   void addPasses(PassManager &pm) override;
-  bool validateImpl(raw_ostream &diagnostics) override;
+  bool validateImpl() override;
   std::string demangle(StringRef symbolName) const override;
 
   void createImplicitFiles(std::vector<std::unique_ptr<File>> &) override;
