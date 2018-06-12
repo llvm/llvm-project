@@ -227,18 +227,24 @@ UopsBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
                                         .PfmCounters.IssueCounters[ProcResIdx];
     if (!PfmCounters)
       continue;
-    // FIXME: Sum results when there are several counters for a single ProcRes
+    // We sum counts when there are several counters for a single ProcRes
     // (e.g. P23 on SandyBridge).
-    pfm::PerfEvent UopPerfEvent(PfmCounters);
-    if (!UopPerfEvent.valid())
-      llvm::report_fatal_error(
-          llvm::Twine("invalid perf event ").concat(PfmCounters));
-    pfm::Counter Counter(UopPerfEvent);
-    Counter.start();
-    Function();
-    Counter.stop();
+    int64_t CounterValue = 0;
+    llvm::SmallVector<llvm::StringRef, 2> CounterNames;
+    llvm::StringRef(PfmCounters).split(CounterNames, ',');
+    for (const auto& CounterName : CounterNames) {
+      pfm::PerfEvent UopPerfEvent(CounterName);
+      if (!UopPerfEvent.valid())
+        llvm::report_fatal_error(
+            llvm::Twine("invalid perf event ").concat(PfmCounters));
+      pfm::Counter Counter(UopPerfEvent);
+      Counter.start();
+      Function();
+      Counter.stop();
+      CounterValue += Counter.read();
+    }
     Result.push_back({llvm::itostr(ProcResIdx),
-                      static_cast<double>(Counter.read()) / NumRepetitions,
+                      static_cast<double>(CounterValue) / NumRepetitions,
                       SchedModel.getProcResource(ProcResIdx)->Name});
   }
   return Result;

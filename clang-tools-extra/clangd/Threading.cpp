@@ -1,4 +1,5 @@
 #include "Threading.h"
+#include "Trace.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
@@ -23,9 +24,14 @@ void Notification::wait() const {
 Semaphore::Semaphore(std::size_t MaxLocks) : FreeSlots(MaxLocks) {}
 
 void Semaphore::lock() {
-  std::unique_lock<std::mutex> Lock(Mutex);
-  SlotsChanged.wait(Lock, [&]() { return FreeSlots > 0; });
-  --FreeSlots;
+  trace::Span Span("WaitForFreeSemaphoreSlot");
+  // trace::Span can also acquire locks in ctor and dtor, we make sure it
+  // happens when Semaphore's own lock is not held.
+  {
+    std::unique_lock<std::mutex> Lock(Mutex);
+    SlotsChanged.wait(Lock, [&]() { return FreeSlots > 0; });
+    --FreeSlots;
+  }
 }
 
 void Semaphore::unlock() {

@@ -159,6 +159,7 @@ namespace HexagonISD {
     SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerROTL(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerANY_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSIGN_EXTEND(SDValue Op, SelectionDAG &DAG) const;

@@ -33,8 +33,8 @@ set(XRAY_IMPL_FILES
   ../../xray_powerpc64.cc
   ../../xray_profile_collector.cc
   ../../xray_profile_collector.h
-  ../../xray_profiler_flags.cc
-  ../../xray_profiler_flags.h
+  ../../xray_profiling_flags.cc
+  ../../xray_profiling_flags.h
   ../../xray_recursion_guard.h
   ../../xray_segmented_array.h
   ../../xray_trampoline_powerpc64.cc
@@ -106,7 +106,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     add_xray_lib("RTXRay.test.osx"
       $<TARGET_OBJECTS:RTXray.osx>
       $<TARGET_OBJECTS:RTXrayFDR.osx>
-      $<TARGET_OBJECTS:RTXrayPROFILER.osx>
+      $<TARGET_OBJECTS:RTXrayPROFILING.osx>
       $<TARGET_OBJECTS:RTSanitizerCommon.osx>
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>)
   else()
@@ -114,7 +114,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     add_xray_lib("RTXRay.test.${arch}"
       $<TARGET_OBJECTS:RTXray.${arch}>
       $<TARGET_OBJECTS:RTXrayFDR.${arch}>
-      $<TARGET_OBJECTS:RTXrayPROFILER.${arch}>
+      $<TARGET_OBJECTS:RTXrayPROFILING.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>)
   endforeach()

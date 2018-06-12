@@ -88,13 +88,13 @@ define <2 x double> @test_addsubpd(<2 x double> %a0, <2 x double> %a1, <2 x doub
 ;
 ; SKX-SSE-LABEL: test_addsubpd:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    addsubpd %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addsubpd %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    addsubpd (%rdi), %xmm0 # sched: [10:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_addsubpd:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vaddsubpd %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddsubpd %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vaddsubpd (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -197,13 +197,13 @@ define <4 x float> @test_addsubps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ;
 ; SKX-SSE-LABEL: test_addsubps:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    addsubps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addsubps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    addsubps (%rdi), %xmm0 # sched: [10:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_addsubps:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vaddsubps (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -972,14 +972,14 @@ define <2 x double> @test_movddup(<2 x double> %a0, <2 x double> *%a1) {
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movddup {{.*#+}} xmm1 = xmm0[0,0] sched: [1:1.00]
 ; SKX-SSE-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0] sched: [5:0.50]
-; SKX-SSE-NEXT:    subpd %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    subpd %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movddup:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0] sched: [1:1.00]
 ; SKX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0] sched: [5:0.50]
-; SKX-NEXT:    vsubpd %xmm0, %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vsubpd %xmm0, %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_movddup:
@@ -1099,14 +1099,14 @@ define <4 x float> @test_movshdup(<4 x float> %a0, <4 x float> *%a1) {
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3] sched: [1:1.00]
 ; SKX-SSE-NEXT:    movshdup {{.*#+}} xmm0 = mem[1,1,3,3] sched: [6:0.50]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movshdup:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3] sched: [1:1.00]
 ; SKX-NEXT:    vmovshdup {{.*#+}} xmm1 = mem[1,1,3,3] sched: [6:0.50]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_movshdup:
@@ -1226,14 +1226,14 @@ define <4 x float> @test_movsldup(<4 x float> %a0, <4 x float> *%a1) {
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movsldup {{.*#+}} xmm1 = xmm0[0,0,2,2] sched: [1:1.00]
 ; SKX-SSE-NEXT:    movsldup {{.*#+}} xmm0 = mem[0,0,2,2] sched: [6:0.50]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movsldup:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2] sched: [1:1.00]
 ; SKX-NEXT:    vmovsldup {{.*#+}} xmm1 = mem[0,0,2,2] sched: [6:0.50]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_movsldup:

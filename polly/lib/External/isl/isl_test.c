@@ -7171,6 +7171,62 @@ static int test_output_set(isl_ctx *ctx)
 	return 0;
 }
 
+/* Check that an isl_multi_aff is printed using a consistent space.
+ */
+static isl_stat test_output_ma(isl_ctx *ctx)
+{
+	char *str;
+	isl_bool equal;
+	isl_aff *aff;
+	isl_multi_aff *ma, *ma2;
+
+	ma = isl_multi_aff_read_from_str(ctx, "{ [a, b] -> [a + b] }");
+	aff = isl_aff_read_from_str(ctx, "{ [c, d] -> [c + d] }");
+	ma = isl_multi_aff_set_aff(ma, 0, aff);
+	str = isl_multi_aff_to_str(ma);
+	ma2 = isl_multi_aff_read_from_str(ctx, str);
+	free(str);
+	equal = isl_multi_aff_plain_is_equal(ma, ma2);
+	isl_multi_aff_free(ma2);
+	isl_multi_aff_free(ma);
+
+	if (equal < 0)
+		return isl_stat_error;
+	if (!equal)
+		isl_die(ctx, isl_error_unknown, "bad conversion",
+			return isl_stat_error);
+
+	return isl_stat_ok;
+}
+
+/* Check that an isl_multi_pw_aff is printed using a consistent space.
+ */
+static isl_stat test_output_mpa(isl_ctx *ctx)
+{
+	char *str;
+	isl_bool equal;
+	isl_pw_aff *pa;
+	isl_multi_pw_aff *mpa, *mpa2;
+
+	mpa = isl_multi_pw_aff_read_from_str(ctx, "{ [a, b] -> [a + b] }");
+	pa = isl_pw_aff_read_from_str(ctx, "{ [c, d] -> [c + d] }");
+	mpa = isl_multi_pw_aff_set_pw_aff(mpa, 0, pa);
+	str = isl_multi_pw_aff_to_str(mpa);
+	mpa2 = isl_multi_pw_aff_read_from_str(ctx, str);
+	free(str);
+	equal = isl_multi_pw_aff_plain_is_equal(mpa, mpa2);
+	isl_multi_pw_aff_free(mpa2);
+	isl_multi_pw_aff_free(mpa);
+
+	if (equal < 0)
+		return isl_stat_error;
+	if (!equal)
+		isl_die(ctx, isl_error_unknown, "bad conversion",
+			return isl_stat_error);
+
+	return isl_stat_ok;
+}
+
 int test_output(isl_ctx *ctx)
 {
 	char *s;
@@ -7180,6 +7236,10 @@ int test_output(isl_ctx *ctx)
 	int equal;
 
 	if (test_output_set(ctx) < 0)
+		return -1;
+	if (test_output_ma(ctx) < 0)
+		return -1;
+	if (test_output_mpa(ctx) < 0)
 		return -1;
 
 	str = "[x] -> { [1] : x % 4 <= 2; [2] : x = 3 }";

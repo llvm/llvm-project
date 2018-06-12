@@ -165,13 +165,7 @@ INTERCEPTOR(int, mallopt, int cmd, int value) {
 INTERCEPTOR(void*, pvalloc, uptr size) {
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;
-  uptr PageSize = GetPageSizeCached();
-  size = RoundUpTo(size, PageSize);
-  if (size == 0) {
-    // pvalloc(0) should allocate one page.
-    size = PageSize;
-  }
-  return Allocate(stack, size, GetPageSizeCached(), kAlwaysClearMemory);
+  return lsan_pvalloc(size, stack);
 }
 #define LSAN_MAYBE_INTERCEPT_PVALLOC INTERCEPT_FUNCTION(pvalloc)
 #else

@@ -90,13 +90,13 @@ define <4 x float> @test_addps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKX-SSE-LABEL: test_addps:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    addps (%rdi), %xmm0 # sched: [10:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_addps:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vaddps (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -198,13 +198,13 @@ define float @test_addss(float %a0, float %a1, float *%a2) {
 ;
 ; SKX-SSE-LABEL: test_addss:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    addss %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addss %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    addss (%rdi), %xmm0 # sched: [9:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_addss:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vaddss (%rdi), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -551,14 +551,14 @@ define <4 x float> @test_cmpps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKX-SSE-LABEL: test_cmpps:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    cmpeqps %xmm0, %xmm1 # sched: [4:0.33]
+; SKX-SSE-NEXT:    cmpeqps %xmm0, %xmm1 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    cmpeqps (%rdi), %xmm0 # sched: [10:0.50]
 ; SKX-SSE-NEXT:    orps %xmm1, %xmm0 # sched: [1:0.33]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cmpps:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm1 # sched: [4:0.33]
+; SKX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm1 # sched: [4:0.50]
 ; SKX-NEXT:    vcmpeqps (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    vorps %xmm0, %xmm1, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -669,13 +669,13 @@ define float @test_cmpss(float %a0, float %a1, float *%a2) {
 ;
 ; SKX-SSE-LABEL: test_cmpss:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    cmpeqss %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    cmpeqss %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    cmpeqss (%rdi), %xmm0 # sched: [9:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cmpss:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vcmpeqss (%rdi), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1041,14 +1041,14 @@ define float @test_cvtsi2ss(i32 %a0, i32 *%a1) {
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    cvtsi2ssl %edi, %xmm1 # sched: [5:1.00]
 ; SKX-SSE-NEXT:    cvtsi2ssl (%rsi), %xmm0 # sched: [9:1.00]
-; SKX-SSE-NEXT:    addss %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addss %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtsi2ss:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvtsi2ssl %edi, %xmm0, %xmm0 # sched: [5:1.00]
 ; SKX-NEXT:    vcvtsi2ssl (%rsi), %xmm1, %xmm1 # sched: [9:1.00]
-; SKX-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_cvtsi2ss:
@@ -1167,14 +1167,14 @@ define float @test_cvtsi2ssq(i64 %a0, i64 *%a1) {
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    cvtsi2ssq %rdi, %xmm1 # sched: [6:2.00]
 ; SKX-SSE-NEXT:    cvtsi2ssq (%rsi), %xmm0 # sched: [9:1.00]
-; SKX-SSE-NEXT:    addss %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addss %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtsi2ssq:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0 # sched: [6:2.00]
 ; SKX-NEXT:    vcvtsi2ssq (%rsi), %xmm1, %xmm1 # sched: [9:1.00]
-; SKX-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_cvtsi2ssq:
@@ -1420,14 +1420,14 @@ define i64 @test_cvtss2siq(float %a0, float *%a1) {
 ;
 ; SKX-SSE-LABEL: test_cvtss2siq:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    cvtss2si %xmm0, %rcx # sched: [6:1.00]
+; SKX-SSE-NEXT:    cvtss2si %xmm0, %rcx # sched: [7:1.00]
 ; SKX-SSE-NEXT:    cvtss2si (%rdi), %rax # sched: [11:1.00]
 ; SKX-SSE-NEXT:    addq %rcx, %rax # sched: [1:0.25]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvtss2siq:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vcvtss2si %xmm0, %rcx # sched: [6:1.00]
+; SKX-NEXT:    vcvtss2si %xmm0, %rcx # sched: [7:1.00]
 ; SKX-NEXT:    vcvtss2si (%rdi), %rax # sched: [11:1.00]
 ; SKX-NEXT:    addq %rcx, %rax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -1549,14 +1549,14 @@ define i32 @test_cvttss2si(float %a0, float *%a1) {
 ;
 ; SKX-SSE-LABEL: test_cvttss2si:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    cvttss2si %xmm0, %ecx # sched: [7:1.00]
+; SKX-SSE-NEXT:    cvttss2si %xmm0, %ecx # sched: [6:1.00]
 ; SKX-SSE-NEXT:    cvttss2si (%rdi), %eax # sched: [11:1.00]
 ; SKX-SSE-NEXT:    addl %ecx, %eax # sched: [1:0.25]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cvttss2si:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vcvttss2si %xmm0, %ecx # sched: [7:1.00]
+; SKX-NEXT:    vcvttss2si %xmm0, %ecx # sched: [6:1.00]
 ; SKX-NEXT:    vcvttss2si (%rdi), %eax # sched: [11:1.00]
 ; SKX-NEXT:    addl %ecx, %eax # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -2116,13 +2116,13 @@ define <4 x float> @test_maxps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKX-SSE-LABEL: test_maxps:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    maxps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    maxps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    maxps (%rdi), %xmm0 # sched: [10:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maxps:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmaxps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vmaxps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vmaxps (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2225,13 +2225,13 @@ define <4 x float> @test_maxss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKX-SSE-LABEL: test_maxss:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    maxss %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    maxss %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    maxss (%rdi), %xmm0 # sched: [9:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maxss:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vmaxss (%rdi), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2334,13 +2334,13 @@ define <4 x float> @test_minps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKX-SSE-LABEL: test_minps:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    minps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    minps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    minps (%rdi), %xmm0 # sched: [10:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_minps:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vminps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vminps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vminps (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2443,13 +2443,13 @@ define <4 x float> @test_minss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKX-SSE-LABEL: test_minss:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    minss %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    minss %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    minss (%rdi), %xmm0 # sched: [9:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_minss:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vminss %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vminss %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vminss (%rdi), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2564,14 +2564,14 @@ define void @test_movaps(<4 x float> *%a0, <4 x float> *%a1) {
 ; SKX-SSE-LABEL: test_movaps:
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movaps (%rdi), %xmm0 # sched: [6:0.50]
-; SKX-SSE-NEXT:    addps %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    movaps %xmm0, (%rsi) # sched: [1:1.00]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movaps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps (%rdi), %xmm0 # sched: [6:0.50]
-; SKX-NEXT:    vaddps %xmm0, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm0, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vmovaps %xmm0, (%rsi) # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2795,7 +2795,7 @@ define void @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) {
 ; SKX-SSE-LABEL: test_movhps:
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
-; SKX-SSE-NEXT:    addps %xmm0, %xmm1 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm0, %xmm1 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1] sched: [1:1.00]
 ; SKX-SSE-NEXT:    movlps %xmm1, (%rdi) # sched: [1:1.00]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
@@ -2803,7 +2803,7 @@ define void @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) {
 ; SKX-LABEL: test_movhps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpextrq $1, %xmm0, (%rdi) # sched: [2:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2918,13 +2918,13 @@ define <4 x float> @test_movlhps(<4 x float> %a0, <4 x float> %a1) {
 ; SKX-SSE-LABEL: test_movlhps:
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movlhps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0] sched: [1:1.00]
-; SKX-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_movlhps:
@@ -3036,14 +3036,14 @@ define void @test_movlps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) {
 ; SKX-SSE-LABEL: test_movlps:
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
-; SKX-SSE-NEXT:    addps %xmm0, %xmm1 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm0, %xmm1 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    movlps %xmm1, (%rdi) # sched: [1:1.00]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movlps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vmovlps %xmm0, (%rdi) # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -3352,14 +3352,14 @@ define void @test_movss_mem(float* %a0, float* %a1) {
 ; SKX-SSE-LABEL: test_movss_mem:
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [5:0.50]
-; SKX-SSE-NEXT:    addss %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addss %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    movss %xmm0, (%rsi) # sched: [1:1.00]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movss_mem:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [5:0.50]
-; SKX-NEXT:    vaddss %xmm0, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddss %xmm0, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vmovss %xmm0, (%rsi) # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -3572,14 +3572,14 @@ define void @test_movups(<4 x float> *%a0, <4 x float> *%a1) {
 ; SKX-SSE-LABEL: test_movups:
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movups (%rdi), %xmm0 # sched: [6:0.50]
-; SKX-SSE-NEXT:    addps %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    movups %xmm0, (%rsi) # sched: [1:1.00]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movups:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups (%rdi), %xmm0 # sched: [6:0.50]
-; SKX-NEXT:    vaddps %xmm0, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm0, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vmovups %xmm0, (%rsi) # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -3685,13 +3685,13 @@ define <4 x float> @test_mulps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKX-SSE-LABEL: test_mulps:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    mulps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    mulps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    mulps (%rdi), %xmm0 # sched: [10:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_mulps:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmulps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vmulps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vmulps (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -3793,13 +3793,13 @@ define float @test_mulss(float %a0, float %a1, float *%a2) {
 ;
 ; SKX-SSE-LABEL: test_mulss:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    mulss %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    mulss %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    mulss (%rdi), %xmm0 # sched: [9:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_mulss:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmulss %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vmulss %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vmulss (%rdi), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4206,14 +4206,14 @@ define <4 x float> @test_rcpps(<4 x float> %a0, <4 x float> *%a1) {
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    rcpps %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-SSE-NEXT:    rcpps (%rdi), %xmm0 # sched: [10:1.00]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_rcpps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpps %xmm0, %xmm0 # sched: [4:1.00]
 ; SKX-NEXT:    vrcpps (%rdi), %xmm1 # sched: [10:1.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_rcpps:
@@ -4347,7 +4347,7 @@ define <4 x float> @test_rcpss(float %a0, float *%a1) {
 ; SKX-SSE-NEXT:    rcpss %xmm0, %xmm0 # sched: [4:1.00]
 ; SKX-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [5:0.50]
 ; SKX-SSE-NEXT:    rcpss %xmm1, %xmm1 # sched: [4:1.00]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_rcpss:
@@ -4355,7 +4355,7 @@ define <4 x float> @test_rcpss(float %a0, float *%a1) {
 ; SKX-NEXT:    vrcpss %xmm0, %xmm0, %xmm0 # sched: [4:1.00]
 ; SKX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [5:0.50]
 ; SKX-NEXT:    vrcpss %xmm1, %xmm1, %xmm1 # sched: [4:1.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_rcpss:
@@ -4483,14 +4483,14 @@ define <4 x float> @test_rsqrtps(<4 x float> %a0, <4 x float> *%a1) {
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    rsqrtps %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-SSE-NEXT:    rsqrtps (%rdi), %xmm0 # sched: [10:1.00]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_rsqrtps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrsqrtps %xmm0, %xmm0 # sched: [4:1.00]
 ; SKX-NEXT:    vrsqrtps (%rdi), %xmm1 # sched: [10:1.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_rsqrtps:
@@ -4624,7 +4624,7 @@ define <4 x float> @test_rsqrtss(float %a0, float *%a1) {
 ; SKX-SSE-NEXT:    rsqrtss %xmm0, %xmm0 # sched: [4:1.00]
 ; SKX-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [5:0.50]
 ; SKX-SSE-NEXT:    rsqrtss %xmm1, %xmm1 # sched: [4:1.00]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_rsqrtss:
@@ -4632,7 +4632,7 @@ define <4 x float> @test_rsqrtss(float %a0, float *%a1) {
 ; SKX-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm0 # sched: [4:1.00]
 ; SKX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [5:0.50]
 ; SKX-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm1 # sched: [4:1.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_rsqrtss:
@@ -4854,14 +4854,14 @@ define <4 x float> @test_shufps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[0,0] sched: [1:1.00]
 ; SKX-SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],mem[0,0] sched: [7:1.00]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_shufps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[0,0] sched: [1:1.00]
 ; SKX-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,3],mem[0,0] sched: [7:1.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_shufps:
@@ -4981,14 +4981,14 @@ define <4 x float> @test_sqrtps(<4 x float> %a0, <4 x float> *%a1) {
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    sqrtps %xmm0, %xmm1 # sched: [12:3.00]
 ; SKX-SSE-NEXT:    sqrtps (%rdi), %xmm0 # sched: [18:3.00]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_sqrtps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vsqrtps %xmm0, %xmm0 # sched: [12:3.00]
 ; SKX-NEXT:    vsqrtps (%rdi), %xmm1 # sched: [18:3.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_sqrtps:
@@ -5122,7 +5122,7 @@ define <4 x float> @test_sqrtss(<4 x float> %a0, <4 x float> *%a1) {
 ; SKX-SSE-NEXT:    sqrtss %xmm0, %xmm0 # sched: [12:3.00]
 ; SKX-SSE-NEXT:    movaps (%rdi), %xmm1 # sched: [6:0.50]
 ; SKX-SSE-NEXT:    sqrtss %xmm1, %xmm1 # sched: [12:3.00]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_sqrtss:
@@ -5130,7 +5130,7 @@ define <4 x float> @test_sqrtss(<4 x float> %a0, <4 x float> *%a1) {
 ; SKX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0 # sched: [12:3.00]
 ; SKX-NEXT:    vmovaps (%rdi), %xmm1 # sched: [6:0.50]
 ; SKX-NEXT:    vsqrtss %xmm1, %xmm1, %xmm1 # sched: [12:3.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_sqrtss:
@@ -5351,13 +5351,13 @@ define <4 x float> @test_subps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; SKX-SSE-LABEL: test_subps:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    subps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    subps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    subps (%rdi), %xmm0 # sched: [10:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_subps:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vsubps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vsubps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vsubps (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -5459,13 +5459,13 @@ define float @test_subss(float %a0, float %a1, float *%a2) {
 ;
 ; SKX-SSE-LABEL: test_subss:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    subss %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    subss %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    subss (%rdi), %xmm0 # sched: [9:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_subss:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vsubss %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vsubss %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vsubss (%rdi), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -5826,14 +5826,14 @@ define <4 x float> @test_unpckhps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    unpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:1.00]
 ; SKX-SSE-NEXT:    unpckhps {{.*#+}} xmm1 = xmm1[2],mem[2],xmm1[3],mem[3] sched: [7:1.00]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_unpckhps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3] sched: [1:1.00]
 ; SKX-NEXT:    vunpckhps {{.*#+}} xmm1 = xmm1[2],mem[2],xmm1[3],mem[3] sched: [7:1.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_unpckhps:
@@ -5952,14 +5952,14 @@ define <4 x float> @test_unpcklps(<4 x float> %a0, <4 x float> %a1, <4 x float> 
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:1.00]
 ; SKX-SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1] sched: [7:1.00]
-; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_unpcklps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1] sched: [1:1.00]
 ; SKX-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1] sched: [7:1.00]
-; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_unpcklps:
@@ -6210,7 +6210,7 @@ define <4 x float> @test_fnop() nounwind {
 ; SKX-SSE-LABEL: test_fnop:
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    #APP
-; SKX-SSE-NEXT:    nop # sched: [1:0.25]
+; SKX-SSE-NEXT:    nop # sched: [1:0.17]
 ; SKX-SSE-NEXT:    #NO_APP
 ; SKX-SSE-NEXT:    xorps %xmm0, %xmm0 # sched: [1:0.33]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
@@ -6218,7 +6218,7 @@ define <4 x float> @test_fnop() nounwind {
 ; SKX-LABEL: test_fnop:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    nop # sched: [1:0.25]
+; SKX-NEXT:    nop # sched: [1:0.17]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]

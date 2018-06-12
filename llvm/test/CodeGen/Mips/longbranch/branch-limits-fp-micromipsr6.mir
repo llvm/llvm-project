@@ -92,8 +92,8 @@ body:             |
   ; PIC:   successors: %bb.2(0x80000000)
   ; PIC:   $sp = ADDiu $sp, -8
   ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi %bb.4, %bb.2
-  ; PIC:   $at = LONG_BRANCH_ADDiu $at, %bb.4, %bb.2
+  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   BALC_MMR6 %bb.2, implicit-def $ra
   ; PIC: bb.2.entry:
   ; PIC:   successors: %bb.4(0x80000000)
@@ -184,8 +184,8 @@ body:             |
   ; PIC:   successors: %bb.2(0x80000000)
   ; PIC:   $sp = ADDiu $sp, -8
   ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi %bb.4, %bb.2
-  ; PIC:   $at = LONG_BRANCH_ADDiu $at, %bb.4, %bb.2
+  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   BALC_MMR6 %bb.2, implicit-def $ra
   ; PIC: bb.2.entry:
   ; PIC:   successors: %bb.4(0x80000000)

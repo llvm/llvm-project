@@ -1,6 +1,6 @@
 // REQUIRES: lld
 
-// RUN: clang %s -g -c -o %t.o --target=x86_64-pc-linux
+// RUN: clang %s -g -c -o %t.o --target=x86_64-pc-linux -mllvm -accel-tables=Disable
 // RUN: ld.lld %t.o -o %t
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=method %t | \
 // RUN:   FileCheck %s

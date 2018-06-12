@@ -171,6 +171,8 @@ lwl $4, 16($5)              # CHECK: lwl $4, 16($5)         # encoding: [0x60,0x
 lwr $4, 16($5)              # CHECK: lwr $4, 16($5)         # encoding: [0x60,0x85,0x10,0x10]
 swl $4, 16($5)              # CHECK: swl $4, 16($5)         # encoding: [0x60,0x85,0x80,0x10]
 swr $4, 16($5)              # CHECK: swr $4, 16($5)         # encoding: [0x60,0x85,0x90,0x10]
+mov.s $f0, $f2              # CHECK: mov.s $f0, $f2         # encoding: [0x54,0x02,0x00,0x7b]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FMOV_S_MM
 mov.d $f0, $f2              # CHECK: mov.d $f0, $f2         # encoding: [0x54,0x02,0x20,0x7b]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FMOV_D32_MM
 movz $9, $6, $7             # CHECK: movz $9, $6, $7        # encoding: [0x00,0xe6,0x48,0x58]
@@ -183,6 +185,10 @@ mfhi   $6                   # CHECK: mfhi   $6              # encoding: [0x00,0x
 # FIXME: MTLO should also have its 16 bit implementation selected in micromips
 mtlo   $6                   # CHECK: mtlo   $6              # encoding: [0x00,0x06,0x3d,0x7c]
 mflo   $6                   # CHECK: mflo   $6              # encoding: [0x00,0x06,0x1d,0x7c]
+mfc1  $3, $f4               # CHECK: mfc1  $3, $f4          # encoding: [0x54,0x64,0x20,0x3b]
+                            # CHECK-NEXT:                   # <MCInst #{{.*}} MFC1_MM
+mtc1  $2, $f4               # CHECK: mtc1  $2, $f4          # encoding: [0x54,0x44,0x28,0x3b]
+                            # CHECK-NEXT:                   # <MCInst #{{.*}} MTC1_MM
 mfhc1 $4, $f0               # CHECK: mfhc1 $4, $f0          # encoding: [0x54,0x80,0x30,0x3b]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} MFHC1_D32_MM
 mthc1 $4, $f0               # CHECK: mthc1 $4, $f0          # encoding: [0x54,0x80,0x38,0x3b]
@@ -282,13 +288,17 @@ syscall 396                 # CHECK: syscall 396            # encoding: [0x01,0x
 # ldc1 $f7, 300($10)        # -CHECK: ldc1 $f7, 300($10)    # encoding: [0xbc,0xea,0x01,0x2c]
 ldc1 $f8, 300($10)          # CHECK: ldc1 $f8, 300($10)     # encoding: [0xbd,0x0a,0x01,0x2c]
 lwc1 $f2, 4($6)             # CHECK: lwc1 $f2, 4($6)        # encoding: [0x9c,0x46,0x00,0x04]
+                            # CHECK-NEXT:                   # <MCInst #{{.*}} LWC1_MM
 sdc1 $f2, 4($6)             # CHECK: sdc1 $f2, 4($6)        # encoding: [0xb8,0x46,0x00,0x04]
 # FIXME: sdc1 should accept uneven registers
 # sdc1 $f7, 64($10)         # -CHECK: sdc1 $f7, 64($10)     # encoding: [0xb8,0xea,0x00,0x40]
 swc1 $f2, 4($6)             # CHECK: swc1 $f2, 4($6)        # encoding: [0x98,0x46,0x00,0x04]
+                            # CHECK-NEXT:                   # <MCInst #{{.*}} SWC1_MM
 cfc1 $1, $2                 # CHECK: cfc1 $1, $2            # encoding: [0x54,0x22,0x10,0x3b]
+                            # CHECK:                        # <MCInst #{{.*}} CFC1_MM
 cfc2 $3, $4                 # CHECK: cfc2 $3, $4            # encoding: [0x00,0x64,0xcd,0x3c]
 ctc1 $5, $6                 # CHECK: ctc1 $5, $6            # encoding: [0x54,0xa6,0x18,0x3b]
+                            # CHECK:                        # <MCInst #{{.*}} CTC1_MM
 ctc2 $7, $8                 # CHECK: ctc2 $7, $8            # encoding: [0x00,0xe8,0xdd,0x3c]
 recip.s $f2, $f4            # CHECK: recip.s $f2, $f4       # encoding: [0x54,0x44,0x12,0x3b]
 recip.d $f2, $f4            # CHECK: recip.d $f2, $f4       # encoding: [0x54,0x44,0x52,0x3b]
@@ -350,4 +360,19 @@ sync 1                      # CHECK: sync 1                     # encoding: [0x0
                             # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} SYNC_MM
 synci 64($5)                # CHECK: synci 64($5)               # encoding: [0x42,0x05,0x00,0x40]
                             # CHECK-NEXT:                       # <MCInst #{{[0-9]+}} SYNCI_MM
-
+add.s  $f4, $f6, $f8        # CHECK:      add.s $f4, $f6, $f8   # encoding: [0x55,0x06,0x20,0x30]
+                            # CHECK-NEXT:                       # <MCInst {{.*}} FADD_S_MM
+sub.s  $f4, $f6, $f8        # CHECK:       sub.s $f4, $f6, $f8  # encoding: [0x55,0x06,0x20,0x70]
+                            # CHECK-NEXT:                       # <MCInst {{.*}} FSUB_S_MM
+mul.s  $f4, $f6, $f8        # CHECK:       mul.s $f4, $f6, $f8  # encoding: [0x55,0x06,0x20,0xb0]
+                            # CHECK-NEXT:                       # <MCInst {{.*}} FMUL_S_MM
+div.s  $f4, $f6, $f8        # CHECK:       div.s $f4, $f6, $f8  # encoding: [0x55,0x06,0x20,0xf0]
+                            # CHECK-NEXT:                       # <MCInst {{.*}} FDIV_S_MM
+add.d  $f4, $f6, $f8        # CHECK:       add.d $f4, $f6, $f8  # encoding: [0x55,0x06,0x21,0x30]
+                            # CHECK-NEXT:                       # <MCInst {{.*}} FADD_D32_MM
+sub.d  $f4, $f6, $f8        # CHECK:       sub.d $f4, $f6, $f8  # encoding: [0x55,0x06,0x21,0x70]
+                            # CHECK-NEXT:                       # <MCInst {{.*}} FSUB_D32_MM
+mul.d  $f4, $f6, $f8        # CHECK:       mul.d $f4, $f6, $f8  # encoding: [0x55,0x06,0x21,0xb0]
+                            # CHECK-NEXT:                       # <MCInst {{.*}} FMUL_D32_MM
+div.d  $f4, $f6, $f8        # CHECK:       div.d $f4, $f6, $f8  # encoding: [0x55,0x06,0x21,0xf0]
+                            # CHECK-NEXT:                       # <MCInst {{.*}} FDIV_D32_MM

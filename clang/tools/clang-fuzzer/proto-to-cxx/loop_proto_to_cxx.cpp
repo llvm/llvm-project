@@ -36,11 +36,23 @@ std::ostream &operator<<(std::ostream &os, const StatementSeq &x);
 std::ostream &operator<<(std::ostream &os, const Const &x) {
   return os << "(" << x.val() << ")";
 }
+std::ostream &operator<<(std::ostream &os, const VarRef &x) {
+  switch (x.arr()) {
+    case VarRef::ARR_A:
+      return os << "a[i]";
+    case VarRef::ARR_B:
+      return os << "b[i]";
+    case VarRef::ARR_C:
+      return os << "c[i]";
+  }
+}
 std::ostream &operator<<(std::ostream &os, const Rvalue &x) {
   if (x.has_cons())
     return os << x.cons();
   if (x.has_binop())
     return os << x.binop();
+  if (x.has_varref())
+    return os << x.varref();
   return os << "1";
 }
 std::ostream &operator<<(std::ostream &os, const BinaryOp &x) {
@@ -92,7 +104,7 @@ std::ostream &operator<<(std::ostream &os, const BinaryOp &x) {
   return os << x.right() << ")";
 }
 std::ostream &operator<<(std::ostream &os, const AssignmentStatement &x) {
-  return os << "a[i]=" << x.rvalue();
+  return os << x.varref() << "=" << x.rvalue() << ";\n";
 }
 std::ostream &operator<<(std::ostream &os, const IfElse &x) {
   return os << "if (" << x.cond() << "){\n"
@@ -100,11 +112,7 @@ std::ostream &operator<<(std::ostream &os, const IfElse &x) {
             << x.else_body() << "}\n";
 }
 std::ostream &operator<<(std::ostream &os, const Statement &x) {
-  if (x.has_assignment())
-    return os << x.assignment() << ";\n";
-  if (x.has_ifelse())
-    return os << x.ifelse();
-  return os << "(void)0;\n";
+  return os << x.assignment();
 }
 std::ostream &operator<<(std::ostream &os, const StatementSeq &x) {
   for (auto &st : x.statements())
@@ -112,7 +120,7 @@ std::ostream &operator<<(std::ostream &os, const StatementSeq &x) {
   return os;
 }
 std::ostream &operator<<(std::ostream &os, const LoopFunction &x) {
-  return os << "void foo(int *a, size_t s) {\n"
+  return os << "void foo(int *a, int *b, int *__restrict__ c, size_t s) {\n"
             << "for (int i=0; i<s; i++){\n"
             << x.statements() << "}\n}\n";
 }

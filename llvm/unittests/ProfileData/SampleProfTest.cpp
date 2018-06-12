@@ -77,9 +77,11 @@ struct SampleProfTest : ::testing::Test {
     BarSamples.addTotalSamples(20301);
     BarSamples.addHeadSamples(1437);
     BarSamples.addBodySamples(1, 0, 1437);
-    BarSamples.addCalledTargetSamples(1, 0, "_M_construct<char *>", 1000);
-    BarSamples.addCalledTargetSamples(
-        1, 0, "string_view<std::allocator<char> >", 437);
+    // Test how reader/writer handles unmangled names.
+    StringRef MconstructName("_M_construct<char *>");
+    StringRef StringviewName("string_view<std::allocator<char> >");
+    BarSamples.addCalledTargetSamples(1, 0, MconstructName, 1000);
+    BarSamples.addCalledTargetSamples(1, 0, StringviewName, 437);
 
     StringMap<FunctionSamples> Profiles;
     Profiles[FooName] = std::move(FooSamples);
@@ -100,18 +102,29 @@ struct SampleProfTest : ::testing::Test {
     StringMap<FunctionSamples> &ReadProfiles = Reader->getProfiles();
     ASSERT_EQ(2u, ReadProfiles.size());
 
-    FunctionSamples &ReadFooSamples = ReadProfiles[FooName];
+    std::string FooGUID;
+    StringRef FooRep = getRepInFormat(FooName, Format, FooGUID);
+    FunctionSamples &ReadFooSamples = ReadProfiles[FooRep];
     ASSERT_EQ(7711u, ReadFooSamples.getTotalSamples());
     ASSERT_EQ(610u, ReadFooSamples.getHeadSamples());
 
-    FunctionSamples &ReadBarSamples = ReadProfiles[BarName];
+    std::string BarGUID;
+    StringRef BarRep = getRepInFormat(BarName, Format, BarGUID);
+    FunctionSamples &ReadBarSamples = ReadProfiles[BarRep];
     ASSERT_EQ(20301u, ReadBarSamples.getTotalSamples());
     ASSERT_EQ(1437u, ReadBarSamples.getHeadSamples());
     ErrorOr<SampleRecord::CallTargetMap> CTMap =
         ReadBarSamples.findCallTargetMapAt(1, 0);
     ASSERT_FALSE(CTMap.getError());
-    ASSERT_EQ(1000u, CTMap.get()["_M_construct<char *>"]);
-    ASSERT_EQ(437u, CTMap.get()["string_view<std::allocator<char> >"]);
+
+    std::string MconstructGUID;
+    StringRef MconstructRep =
+        getRepInFormat(MconstructName, Format, MconstructGUID);
+    std::string StringviewGUID;
+    StringRef StringviewRep =
+        getRepInFormat(StringviewName, Format, StringviewGUID);
+    ASSERT_EQ(1000u, CTMap.get()[MconstructRep]);
+    ASSERT_EQ(437u, CTMap.get()[StringviewRep]);
 
     auto VerifySummary = [](ProfileSummary &Summary) mutable {
       ASSERT_EQ(ProfileSummary::PSK_Sample, Summary.getKind());
@@ -166,8 +179,12 @@ TEST_F(SampleProfTest, roundtrip_text_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Text);
 }
 
-TEST_F(SampleProfTest, roundtrip_binary_profile) {
+TEST_F(SampleProfTest, roundtrip_raw_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Binary);
+}
+
+TEST_F(SampleProfTest, roundtrip_compact_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Compact_Binary);
 }
 
 TEST_F(SampleProfTest, sample_overflow_saturation) {

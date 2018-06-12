@@ -985,6 +985,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_llvm_install_targets(install-llvm-headers
+                             DEPENDS llvm-headers
                              COMPONENT llvm-headers)
   endif()
 endif()

@@ -3067,7 +3067,7 @@ void CodeGenDAGPatterns::ParseDefaultOperands() {
 
 /// HandleUse - Given "Pat" a leaf in the pattern, check to see if it is an
 /// instruction input.  Return true if this is a real use.
-static bool HandleUse(TreePattern *I, TreePatternNodePtr Pat,
+static bool HandleUse(TreePattern &I, TreePatternNodePtr Pat,
                       std::map<std::string, TreePatternNodePtr> &InstInputs) {
   // No name -> not interesting.
   if (Pat->getName().empty()) {
@@ -3075,7 +3075,7 @@ static bool HandleUse(TreePattern *I, TreePatternNodePtr Pat,
       DefInit *DI = dyn_cast<DefInit>(Pat->getLeafValue());
       if (DI && (DI->getDef()->isSubClassOf("RegisterClass") ||
                  DI->getDef()->isSubClassOf("RegisterOperand")))
-        I->error("Input " + DI->getDef()->getName() + " must be named!");
+        I.error("Input " + DI->getDef()->getName() + " must be named!");
     }
     return false;
   }
@@ -3083,7 +3083,8 @@ static bool HandleUse(TreePattern *I, TreePatternNodePtr Pat,
   Record *Rec;
   if (Pat->isLeaf()) {
     DefInit *DI = dyn_cast<DefInit>(Pat->getLeafValue());
-    if (!DI) I->error("Input $" + Pat->getName() + " must be an identifier!");
+    if (!DI)
+      I.error("Input $" + Pat->getName() + " must be an identifier!");
     Rec = DI->getDef();
   } else {
     Rec = Pat->getOperator();
@@ -3108,9 +3109,9 @@ static bool HandleUse(TreePattern *I, TreePatternNodePtr Pat,
 
   // Ensure that the inputs agree if we've already seen this input.
   if (Rec != SlotRec)
-    I->error("All $" + Pat->getName() + " inputs must agree with each other");
+    I.error("All $" + Pat->getName() + " inputs must agree with each other");
   if (Slot->getExtTypes() != Pat->getExtTypes())
-    I->error("All $" + Pat->getName() + " inputs must agree with each other");
+    I.error("All $" + Pat->getName() + " inputs must agree with each other");
   return true;
 }
 
@@ -3118,14 +3119,14 @@ static bool HandleUse(TreePattern *I, TreePatternNodePtr Pat,
 /// part of "I", the instruction), computing the set of inputs and outputs of
 /// the pattern.  Report errors if we see anything naughty.
 void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
-    TreePattern *I, TreePatternNodePtr Pat,
+    TreePattern &I, TreePatternNodePtr Pat,
     std::map<std::string, TreePatternNodePtr> &InstInputs,
     std::map<std::string, TreePatternNodePtr> &InstResults,
     std::vector<Record *> &InstImpResults) {
   if (Pat->isLeaf()) {
     bool isUse = HandleUse(I, Pat, InstInputs);
     if (!isUse && Pat->getTransformFn())
-      I->error("Cannot specify a transform function for a non-input value!");
+      I.error("Cannot specify a transform function for a non-input value!");
     return;
   }
 
@@ -3133,11 +3134,11 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
     for (unsigned i = 0, e = Pat->getNumChildren(); i != e; ++i) {
       TreePatternNode *Dest = Pat->getChild(i);
       if (!Dest->isLeaf())
-        I->error("implicitly defined value should be a register!");
+        I.error("implicitly defined value should be a register!");
 
       DefInit *Val = dyn_cast<DefInit>(Dest->getLeafValue());
       if (!Val || !Val->getDef()->isSubClassOf("Register"))
-        I->error("implicitly defined value should be a register!");
+        I.error("implicitly defined value should be a register!");
       InstImpResults.push_back(Val->getDef());
     }
     return;
@@ -3148,7 +3149,7 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
     // and recurse.
     for (unsigned i = 0, e = Pat->getNumChildren(); i != e; ++i) {
       if (Pat->getChild(i)->getNumTypes() == 0)
-        I->error("Cannot have void nodes inside of patterns!");
+        I.error("Cannot have void nodes inside of patterns!");
       FindPatternInputsAndOutputs(I, Pat->getChildShared(i), InstInputs,
                                   InstResults, InstImpResults);
     }
@@ -3158,27 +3159,27 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
     bool isUse = HandleUse(I, Pat, InstInputs);
 
     if (!isUse && Pat->getTransformFn())
-      I->error("Cannot specify a transform function for a non-input value!");
+      I.error("Cannot specify a transform function for a non-input value!");
     return;
   }
 
   // Otherwise, this is a set, validate and collect instruction results.
   if (Pat->getNumChildren() == 0)
-    I->error("set requires operands!");
+    I.error("set requires operands!");
 
   if (Pat->getTransformFn())
-    I->error("Cannot specify a transform function on a set node!");
+    I.error("Cannot specify a transform function on a set node!");
 
   // Check the set destinations.
   unsigned NumDests = Pat->getNumChildren()-1;
   for (unsigned i = 0; i != NumDests; ++i) {
     TreePatternNodePtr Dest = Pat->getChildShared(i);
     if (!Dest->isLeaf())
-      I->error("set destination should be a register!");
+      I.error("set destination should be a register!");
 
     DefInit *Val = dyn_cast<DefInit>(Dest->getLeafValue());
     if (!Val) {
-      I->error("set destination should be a register!");
+      I.error("set destination should be a register!");
       continue;
     }
 
@@ -3187,14 +3188,14 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
         Val->getDef()->isSubClassOf("RegisterOperand") ||
         Val->getDef()->isSubClassOf("PointerLikeRegClass")) {
       if (Dest->getName().empty())
-        I->error("set destination must have a name!");
+        I.error("set destination must have a name!");
       if (InstResults.count(Dest->getName()))
-        I->error("cannot set '" + Dest->getName() +"' multiple times");
+        I.error("cannot set '" + Dest->getName() + "' multiple times");
       InstResults[Dest->getName()] = Dest;
     } else if (Val->getDef()->isSubClassOf("Register")) {
       InstImpResults.push_back(Val->getDef());
     } else {
-      I->error("set destination should be a register!");
+      I.error("set destination should be a register!");
     }
   }
 
@@ -3461,7 +3462,7 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
     }
 
     // Find inputs and outputs, and verify the structure of the uses/defs.
-    FindPatternInputsAndOutputs(I.get(), Pat, InstInputs, InstResults,
+    FindPatternInputsAndOutputs(*I, Pat, InstInputs, InstResults,
                                 InstImpResults);
   }
 
@@ -4005,7 +4006,7 @@ void CodeGenDAGPatterns::ParsePatterns() {
     std::map<std::string, TreePatternNodePtr> InstResults;
     std::vector<Record*> InstImpResults;
     for (unsigned j = 0, ee = Pattern.getNumTrees(); j != ee; ++j)
-      FindPatternInputsAndOutputs(&Pattern, Pattern.getTree(j), InstInputs,
+      FindPatternInputsAndOutputs(Pattern, Pattern.getTree(j), InstInputs,
                                   InstResults, InstImpResults);
 
     // Promote the xform function to be an explicit node if set.

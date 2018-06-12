@@ -3671,8 +3671,6 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   MaybeHandleStaticInExternC(D, Fn);
 
-  if (D->hasAttr<CUDAGlobalAttr>())
-    getTargetCodeGenInfo().setCUDAKernelCallingConvention(Fn);
 
   maybeSetTrivialComdat(*D, *Fn);
 
@@ -4114,15 +4112,13 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
   StringRef GlobalVariableName;
   llvm::GlobalValue::LinkageTypes LT;
 
-  // Mangle the string literal if the ABI allows for it.  However, we cannot
-  // do this if  we are compiling with ASan or -fwritable-strings because they
-  // rely on strings having normal linkage.
-  if (!LangOpts.WritableStrings &&
-      !LangOpts.Sanitize.has(SanitizerKind::Address) &&
-      getCXXABI().getMangleContext().shouldMangleStringLiteral(S)) {
+  // Mangle the string literal if that's how the ABI merges duplicate strings.
+  // Don't do it if they are writable, since we don't want writes in one TU to
+  // affect strings in another.
+  if (getCXXABI().getMangleContext().shouldMangleStringLiteral(S) &&
+      !LangOpts.WritableStrings) {
     llvm::raw_svector_ostream Out(MangledNameBuffer);
     getCXXABI().getMangleContext().mangleStringLiteral(S, Out);
-
     LT = llvm::GlobalValue::LinkOnceODRLinkage;
     GlobalVariableName = MangledNameBuffer;
   } else {

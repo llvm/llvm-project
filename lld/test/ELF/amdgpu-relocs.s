@@ -77,6 +77,15 @@ ptr:
 ptr2:
   .quad temp2
 
+# R_AMDGPU_REL64:
+.type foo, @object
+.rodata
+  .globl foo
+  .p2align 3
+foo:
+  .quad temp2@rel64
+  .size foo, 8
+
 # The relocation for local_var{0, 1, 2} and var should be resolved by the
 # linker.
 # CHECK: Relocations [
@@ -100,6 +109,9 @@ ptr2:
 # CHECK-NEXT: R_AMDGPU_ABS64 weakref_alias_var2 0x0
 # CHECK-NEXT: }
 # CHECK-NEXT: ]
+
+# OBJDUMP: Contents of section .rodata:
+# OBJDUMP: 28fbffff ffffffff
 
 # OBJDUMP: Contents of section nonalloc:
 # OBJDUMP-NEXT: 0000 00000000 04480000 00000000 08440000

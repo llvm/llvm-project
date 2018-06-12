@@ -18,7 +18,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -925,7 +924,7 @@ FunctionComparator::FunctionHash FunctionComparator::functionHash(Function &F) {
   H.add(F.arg_size());
 
   SmallVector<const BasicBlock *, 8> BBs;
-  SmallSet<const BasicBlock *, 16> VisitedBBs;
+  SmallPtrSet<const BasicBlock *, 16> VisitedBBs;
 
   // Walk the blocks in the same order as FunctionComparator::cmpBasicBlocks(),
   // accumulating the hash of the function "structure." (BB and opcode sequence)

@@ -493,5 +493,136 @@ TEST_F(FormatTestProto, AcceptsOperatorAsKeyInOptions) {
                "};");
 }
 
+TEST_F(FormatTestProto, BreaksEntriesOfSubmessagesContainingSubmessages) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
+  Style.ColumnLimit = 60;
+  // The column limit allows for the keys submessage to be put on 1 line, but we
+  // break it since it contains a submessage an another entry.
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    item: 'aaaaaaaaaaaaaaaa'\n"
+               "    sub <>\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    item: 'aaaaaaaaaaaaaaaa'\n"
+               "    sub {}\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    sub {}\n"
+               "    sub: <>\n"
+               "    sub: []\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    item: 'aaaaaaaaaaa'\n"
+               "    sub { msg: 1 }\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    item: 'aaaaaaaaaaa'\n"
+               "    sub: { msg: 1 }\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    item: 'aaaaaaaaaaa'\n"
+               "    sub < msg: 1 >\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    item: 'aaaaaaaaaaa'\n"
+               "    sub: [ msg: 1 ]\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: <\n"
+               "    item: 'aaaaaaaaaaa'\n"
+               "    sub: [ 1, 2 ]\n"
+               "  >\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    sub {}\n"
+               "    item: 'aaaaaaaaaaaaaaaa'\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    sub: []\n"
+               "    item: 'aaaaaaaaaaaaaaaa'\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    sub <>\n"
+               "    item: 'aaaaaaaaaaaaaaaa'\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    sub { key: value }\n"
+               "    item: 'aaaaaaaaaaaaaaaa'\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    sub: [ 1, 2 ]\n"
+               "    item: 'aaaaaaaaaaaaaaaa'\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    sub < sub_2: {} >\n"
+               "    item: 'aaaaaaaaaaaaaaaa'\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    item: data\n"
+               "    sub: [ 1, 2 ]\n"
+               "    item: 'aaaaaaaaaaaaaaaa'\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  key: valueeeeeeee\n"
+               "  keys: {\n"
+               "    item: data\n"
+               "    sub < sub_2: {} >\n"
+               "    item: 'aaaaaaaaaaaaaaaa'\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  sub: {\n"
+               "    key: valueeeeeeee\n"
+               "    keys: {\n"
+               "      sub: [ 1, 2 ]\n"
+               "      item: 'aaaaaaaaaaaaaaaa'\n"
+               "    }\n"
+               "  }\n"
+               "}");
+}
+
 } // end namespace tooling
 } // end namespace clang

@@ -20,6 +20,11 @@
 #include <isl_vec_private.h>
 #include <isl_config.h>
 
+#undef BASE
+#define BASE pw_qpolynomial_fold
+
+#include <isl_list_templ.c>
+
 enum isl_fold isl_fold_type_negate(enum isl_fold type)
 {
 	switch (type) {
@@ -686,12 +691,8 @@ __isl_give isl_qpolynomial_fold *isl_qpolynomial_fold_gist_params(
 #include <isl_pw_templ.c>
 #include <isl_pw_eval.c>
 
-#undef UNION
-#define UNION isl_union_pw_qpolynomial_fold
-#undef PART
-#define PART isl_pw_qpolynomial_fold
-#undef PARTS
-#define PARTS pw_qpolynomial_fold
+#undef BASE
+#define BASE pw_qpolynomial_fold
 
 #define NO_SUB
 

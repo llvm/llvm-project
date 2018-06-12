@@ -1249,13 +1249,13 @@ define <8 x i16> @test_pmaddubsw(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; SKX-SSE-LABEL: test_pmaddubsw:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    pmaddubsw %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    pmaddubsw %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    pmaddubsw (%rdi), %xmm0 # sched: [10:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmaddubsw:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1359,13 +1359,13 @@ define <8 x i16> @test_pmulhrsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SKX-SSE-LABEL: test_pmulhrsw:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    pmulhrsw %xmm1, %xmm0 # sched: [4:0.33]
+; SKX-SSE-NEXT:    pmulhrsw %xmm1, %xmm0 # sched: [4:0.50]
 ; SKX-SSE-NEXT:    pmulhrsw (%rdi), %xmm0 # sched: [10:0.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmulhrsw:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmulhrsw %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vpmulhrsw %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpmulhrsw (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;

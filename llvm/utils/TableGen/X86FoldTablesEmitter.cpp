@@ -335,6 +335,7 @@ public:
             MemRec->getValueAsDef("OpPrefix") ||
         RegRec->getValueAsDef("OpMap") != MemRec->getValueAsDef("OpMap") ||
         RegRec->getValueAsDef("OpSize") != MemRec->getValueAsDef("OpSize") ||
+        RegRec->getValueAsDef("AdSize") != MemRec->getValueAsDef("AdSize") ||
         RegRec->getValueAsBit("hasVEX_4V") !=
             MemRec->getValueAsBit("hasVEX_4V") ||
         RegRec->getValueAsBit("hasEVEX_K") !=
@@ -516,8 +517,10 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
 
   // Instructions which have the WriteRMW value (Read-Modify-Write) should be
   // added to Table2Addr.
-  if (hasDefInList(MemRec, "SchedRW", "WriteRMW") && MemOutSize != RegOutSize &&
-      MemInSize == RegInSize) {
+  if ((hasDefInList(MemRec, "SchedRW", "WriteRMW") ||
+       hasDefInList(MemRec, "SchedRW", "WriteADCRMW") ||
+       hasDefInList(MemRec, "SchedRW", "WriteALURMW")) &&
+       MemOutSize != RegOutSize && MemInSize == RegInSize) {
     addEntryWithFlags(Table2Addr, RegInstr, MemInstr, S, 0);
     return;
   }
@@ -559,7 +562,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
     //   MOVAPSmr => (outs), (ins f128mem:$dst, VR128:$src)
     Record *RegOpRec = RegInstr->Operands[RegOutSize - 1].Rec;
     Record *MemOpRec = MemInstr->Operands[RegOutSize - 1].Rec;
-    if (isRegisterOperand(RegOpRec) && isMemoryOperand(MemOpRec))
+    if (isRegisterOperand(RegOpRec) && isMemoryOperand(MemOpRec) &&
+        getRegOperandSize(RegOpRec) == getMemOperandSize(MemOpRec))
       addEntryWithFlags(Table0, RegInstr, MemInstr, S, 0);
   }
 

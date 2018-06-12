@@ -15,7 +15,7 @@
 #ifndef XRAY_FUNCTION_CALL_TRIE_H
 #define XRAY_FUNCTION_CALL_TRIE_H
 
-#include "xray_profiler_flags.h"
+#include "xray_profiling_flags.h"
 #include "xray_segmented_array.h"
 #include <utility>
 #include <memory>  // For placement new.
@@ -223,26 +223,26 @@ public:
     auto NodeAllocator = reinterpret_cast<Allocators::NodeAllocatorType *>(
         InternalAlloc(sizeof(Allocators::NodeAllocatorType)));
     new (NodeAllocator) Allocators::NodeAllocatorType(
-        profilerFlags()->per_thread_allocator_max, 0);
+        profilingFlags()->per_thread_allocator_max, 0);
     A.NodeAllocator = NodeAllocator;
 
     auto RootAllocator = reinterpret_cast<Allocators::RootAllocatorType *>(
         InternalAlloc(sizeof(Allocators::RootAllocatorType)));
     new (RootAllocator) Allocators::RootAllocatorType(
-        profilerFlags()->per_thread_allocator_max, 0);
+        profilingFlags()->per_thread_allocator_max, 0);
     A.RootAllocator = RootAllocator;
 
     auto ShadowStackAllocator =
         reinterpret_cast<Allocators::ShadowStackAllocatorType *>(
             InternalAlloc(sizeof(Allocators::ShadowStackAllocatorType)));
     new (ShadowStackAllocator) Allocators::ShadowStackAllocatorType(
-        profilerFlags()->per_thread_allocator_max, 0);
+        profilingFlags()->per_thread_allocator_max, 0);
     A.ShadowStackAllocator = ShadowStackAllocator;
 
     auto NodeIdPairAllocator = reinterpret_cast<NodeIdPairAllocatorType *>(
         InternalAlloc(sizeof(NodeIdPairAllocatorType)));
     new (NodeIdPairAllocator)
-        NodeIdPairAllocatorType(profilerFlags()->per_thread_allocator_max, 0);
+        NodeIdPairAllocatorType(profilingFlags()->per_thread_allocator_max, 0);
     A.NodeIdPairAllocator = NodeIdPairAllocator;
     return A;
   }
@@ -360,7 +360,7 @@ public:
       using Stack = Array<NodeAndParent>;
 
       typename Stack::AllocatorType StackAllocator(
-          profilerFlags()->stack_allocator_max, 0);
+          profilingFlags()->stack_allocator_max, 0);
       Stack DFSStack(StackAllocator);
 
       // TODO: Figure out what to do if we fail to allocate any more stack
@@ -398,7 +398,7 @@ public:
     };
     using Stack = Array<NodeAndTarget>;
     typename Stack::AllocatorType StackAllocator(
-        profilerFlags()->stack_allocator_max, 0);
+        profilingFlags()->stack_allocator_max, 0);
     Stack DFSStack(StackAllocator);
 
     for (const auto Root : getRoots()) {

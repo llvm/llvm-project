@@ -27,13 +27,13 @@ TEST(FunctionCallTrieTest, Construction) {
 TEST(FunctionCallTrieTest, ConstructWithTLSAllocators) {
   // FIXME: Support passing in configuration for allocators in the allocator
   // constructors.
-  profilerFlags()->setDefaults();
+  profilingFlags()->setDefaults();
   FunctionCallTrie::Allocators Allocators = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(Allocators);
 }
 
 TEST(FunctionCallTrieTest, EnterAndExitFunction) {
-  profilerFlags()->setDefaults();
+  profilingFlags()->setDefaults();
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
 
@@ -71,7 +71,7 @@ TEST(FunctionCallTrieTest, MissingFunctionExit) {
 }
 
 TEST(FunctionCallTrieTest, MultipleRoots) {
-  profilerFlags()->setDefaults();
+  profilingFlags()->setDefaults();
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
 
@@ -114,7 +114,7 @@ TEST(FunctionCallTrieTest, MultipleRoots) {
 // accounting local time to `f2` from d = (t3 - t2), then local time to `f1`
 // as d' = (t3 - t1) - d, and then local time to `f0` as d'' = (t3 - t0) - d'.
 TEST(FunctionCallTrieTest, MissingIntermediaryExit) {
-  profilerFlags()->setDefaults();
+  profilingFlags()->setDefaults();
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
 
@@ -156,7 +156,7 @@ TEST(FunctionCallTrieTest, MissingIntermediaryExit) {
 // TODO: Test that we can handle cross-CPU migrations, where TSCs are not
 // guaranteed to be synchronised.
 TEST(FunctionCallTrieTest, DeepCopy) {
-  profilerFlags()->setDefaults();
+  profilingFlags()->setDefaults();
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
 
@@ -197,7 +197,7 @@ TEST(FunctionCallTrieTest, DeepCopy) {
 }
 
 TEST(FunctionCallTrieTest, MergeInto) {
-  profilerFlags()->setDefaults();
+  profilingFlags()->setDefaults();
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie T0(A);
   FunctionCallTrie T1(A);

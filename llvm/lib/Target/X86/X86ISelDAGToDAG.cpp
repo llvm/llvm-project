@@ -2708,7 +2708,6 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
 
 void X86DAGToDAGISel::Select(SDNode *Node) {
   MVT NVT = Node->getSimpleValueType(0);
-  unsigned Opc, MOpc;
   unsigned Opcode = Node->getOpcode();
   SDLoc dl(Node);
 
@@ -2853,7 +2852,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
-    Opc = (Opcode == X86ISD::SMUL8 ? X86::IMUL8r : X86::MUL8r);
+    unsigned Opc = (Opcode == X86ISD::SMUL8 ? X86::IMUL8r : X86::MUL8r);
 
     SDValue InFlag = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, X86::AL,
                                           N0, SDValue()).getValue(1);
@@ -2870,7 +2869,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
-    unsigned LoReg;
+    unsigned LoReg, Opc;
     switch (NVT.SimpleTy) {
     default: llvm_unreachable("Unsupported VT!");
     // MVT::i8 is handled by X86ISD::UMUL8.
@@ -2895,6 +2894,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
+    unsigned Opc, MOpc;
     bool isSigned = Opcode == ISD::SMUL_LOHI;
     bool hasBMI2 = Subtarget->hasBMI2();
     if (!isSigned) {
@@ -3021,6 +3021,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
+    unsigned Opc, MOpc;
     bool isSigned = (Opcode == ISD::SDIVREM ||
                      Opcode == X86ISD::SDIVREM8_SEXT_HREG);
     if (!isSigned) {
