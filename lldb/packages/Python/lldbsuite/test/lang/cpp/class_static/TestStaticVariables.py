@@ -44,6 +44,40 @@ class StaticVariableTestCase(TestBase):
         self.expect(
             'target variable A::g_points',
             VARIABLES_DISPLAYED_CORRECTLY,
+            patterns=['\(PointType \[[1-9]*\]\) A::g_points = {'])
+        self.expect('target variable g_points', VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['(PointType [2]) g_points'])
+
+        # On Mac OS X, gcc 4.2 emits the wrong debug info for A::g_points.
+        # A::g_points is an array of two elements.
+        if self.platformIsDarwin() or self.getPlatform() == "linux":
+            self.expect(
+                "target variable A::g_points[1].x",
+                VARIABLES_DISPLAYED_CORRECTLY,
+                startstr="(int) A::g_points[1].x = 11")
+
+    @expectedFailureAll(
+        compiler=["gcc"],
+        bugnumber="Compiler emits incomplete debug info")
+    @expectedFailureAll(
+        compiler=["clang"],
+        compiler_version=["<", "3.9"],
+        bugnumber='llvm.org/pr20550')
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
+    def test_with_run_command_complete(self):
+        """
+        Test that file and class static variables display correctly with
+        complete debug information.
+        """
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        # Global variables are no longer displayed with the "frame variable"
+        # command.
+        self.expect(
+            'target variable A::g_points',
+            VARIABLES_DISPLAYED_CORRECTLY,
             patterns=[
                 '\(PointType \[[1-9]*\]\) A::g_points = {', '(x = 1, y = 2)',
                 '(x = 11, y = 22)'
@@ -66,14 +100,6 @@ class StaticVariableTestCase(TestBase):
                 '(PointType [2]) g_points', '(x = 1, y = 2)',
                 '(x = 11, y = 22)', '(x = 3, y = 4)', '(x = 33, y = 44)'
             ])
-
-        # On Mac OS X, gcc 4.2 emits the wrong debug info for A::g_points.
-        # A::g_points is an array of two elements.
-        if self.platformIsDarwin() or self.getPlatform() == "linux":
-            self.expect(
-                "target variable A::g_points[1].x",
-                VARIABLES_DISPLAYED_CORRECTLY,
-                startstr="(int) A::g_points[1].x = 11")
 
     @expectedFailureAll(
         compiler=["gcc"],
