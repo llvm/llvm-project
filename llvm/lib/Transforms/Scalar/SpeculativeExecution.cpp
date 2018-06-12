@@ -62,7 +62,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/SpeculativeExecution.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instructions.h"
@@ -252,7 +252,7 @@ static unsigned ComputeSpeculationCost(const Instruction *I,
 
 bool SpeculativeExecutionPass::considerHoistingFromTo(
     BasicBlock &FromBlock, BasicBlock &ToBlock) {
-  SmallSet<const Instruction *, 8> NotHoisted;
+  SmallPtrSet<const Instruction *, 8> NotHoisted;
   const auto AllPrecedingUsesFromBlockHoisted = [&NotHoisted](User *U) {
     for (Value* V : U->operand_values()) {
       if (Instruction *I = dyn_cast<Instruction>(V)) {

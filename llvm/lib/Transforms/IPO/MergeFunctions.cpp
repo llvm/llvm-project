@@ -90,7 +90,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Argument.h"
@@ -874,7 +874,7 @@ void MergeFunctions::remove(Function *F) {
 void MergeFunctions::removeUsers(Value *V) {
   std::vector<Value *> Worklist;
   Worklist.push_back(V);
-  SmallSet<Value*, 8> Visited;
+  SmallPtrSet<Value*, 8> Visited;
   Visited.insert(V);
   while (!Worklist.empty()) {
     Value *V = Worklist.back();

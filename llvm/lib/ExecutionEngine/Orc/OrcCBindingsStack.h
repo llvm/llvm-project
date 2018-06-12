@@ -153,9 +153,10 @@ private:
 
       for (auto &S : Symbols) {
         if (auto Sym = findSymbol(*S)) {
-          if (auto Addr = Sym.getAddress())
+          if (auto Addr = Sym.getAddress()) {
             Query->resolve(S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));
-          else {
+            Query->notifySymbolReady();
+          } else {
             Stack.ES.failQuery(*Query, Addr.takeError());
             return orc::SymbolNameSet();
           }
@@ -168,6 +169,9 @@ private:
 
       if (Query->isFullyResolved())
         Query->handleFullyResolved();
+
+      if (Query->isFullyReady())
+        Query->handleFullyReady();
 
       return UnresolvedSymbols;
     }

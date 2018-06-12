@@ -446,7 +446,7 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
       // operands to lowered instructions.
 
       BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_LUi), Mips::AT)
-          .addMBB(TgtMBB)
+          .addMBB(TgtMBB, MipsII::MO_ABS_HI)
           .addMBB(BalTgtMBB);
 
       MachineInstrBuilder BalInstr =
@@ -454,7 +454,7 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
       MachineInstrBuilder ADDiuInstr =
           BuildMI(*MFp, DL, TII->get(Mips::LONG_BRANCH_ADDiu), Mips::AT)
               .addReg(Mips::AT)
-              .addMBB(TgtMBB)
+              .addMBB(TgtMBB, MipsII::MO_ABS_LO)
               .addMBB(BalTgtMBB);
       if (STI->hasMips32r6()) {
         LongBrMBB->insert(Pos, ADDiuInstr);

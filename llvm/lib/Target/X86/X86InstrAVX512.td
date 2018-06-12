@@ -8635,8 +8635,7 @@ multiclass avx512_trunc_common<bits<8> opc, string OpcodeStr, SDNode OpNode,
                       (DestInfo.VT (OpNode (SrcInfo.VT SrcInfo.RC:$src1)))>,
                       EVEX, T8XS, Sched<[sched]>;
 
-  let mayStore = 1, mayLoad = 1, hasSideEffects = 0,
-      ExeDomain = DestInfo.ExeDomain in {
+  let mayStore = 1, hasSideEffects = 0, ExeDomain = DestInfo.ExeDomain in {
     def mr : AVX512XS8I<opc, MRMDestMem, (outs),
                (ins x86memop:$dst, SrcInfo.RC:$src),
                OpcodeStr # "\t{$src, $dst|$dst, $src}", []>,

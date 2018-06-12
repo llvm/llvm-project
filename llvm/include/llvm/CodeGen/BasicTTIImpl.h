@@ -554,7 +554,7 @@ public:
   unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                           Type *SubTp) {
     switch (Kind) {
-    case TTI::SK_Alternate:
+    case TTI::SK_Select:
     case TTI::SK_Transpose:
     case TTI::SK_PermuteSingleSrc:
     case TTI::SK_PermuteTwoSrc:

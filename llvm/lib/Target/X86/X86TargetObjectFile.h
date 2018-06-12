@@ -71,19 +71,6 @@ namespace llvm {
     void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
   };
 
-  /// This implementation is used for Windows targets on x86 and x86-64.
-  class X86WindowsTargetObjectFile : public TargetLoweringObjectFileCOFF {
-    const MCExpr *
-    lowerRelativeReference(const GlobalValue *LHS, const GlobalValue *RHS,
-                           const TargetMachine &TM) const override;
-
-    /// Given a mergeable constant with the specified size and relocation
-    /// information, return a section that it should be placed in.
-    MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                     const Constant *C,
-                                     unsigned &Align) const override;
-  };
-
 } // end namespace llvm
 
 #endif

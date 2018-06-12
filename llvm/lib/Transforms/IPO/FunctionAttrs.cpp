@@ -18,7 +18,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -406,7 +405,7 @@ static Attribute::AttrKind
 determinePointerReadAttrs(Argument *A,
                           const SmallPtrSet<Argument *, 8> &SCCNodes) {
   SmallVector<Use *, 32> Worklist;
-  SmallSet<Use *, 32> Visited;
+  SmallPtrSet<Use *, 32> Visited;
 
   // inalloca arguments are always clobbered by the call.
   if (A->hasInAllocaAttr())

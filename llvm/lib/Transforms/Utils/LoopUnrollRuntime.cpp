@@ -21,7 +21,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -765,7 +765,7 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   // values from the cloned region. Also update the dominator info for
   // OtherExits and their immediate successors, since we have new edges into
   // OtherExits.
-  SmallSet<BasicBlock*, 8> ImmediateSuccessorsOfExitBlocks;
+  SmallPtrSet<BasicBlock*, 8> ImmediateSuccessorsOfExitBlocks;
   for (auto *BB : OtherExits) {
    for (auto &II : *BB) {
 

@@ -508,6 +508,33 @@ TEST(CoreAPIsTest, DefineMaterializingSymbol) {
   EXPECT_TRUE(BarResolved) << "Bar should have been resolved";
 }
 
+TEST(CoreAPIsTest, FallbackDefinitionGeneratorTest) {
+  constexpr JITTargetAddress FakeFooAddr = 0xdeadbeef;
+  constexpr JITTargetAddress FakeBarAddr = 0xcafef00d;
+
+  ExecutionSession ES;
+  auto Foo = ES.getSymbolStringPool().intern("foo");
+  auto Bar = ES.getSymbolStringPool().intern("bar");
+
+  auto FooSym = JITEvaluatedSymbol(FakeFooAddr, JITSymbolFlags::Exported);
+  auto BarSym = JITEvaluatedSymbol(FakeBarAddr, JITSymbolFlags::Exported);
+
+  auto &V = ES.createVSO("V");
+
+  cantFail(V.define(absoluteSymbols({{Foo, FooSym}})));
+
+  V.setFallbackDefinitionGenerator([&](VSO &W, const SymbolNameSet &Names) {
+    cantFail(W.define(absoluteSymbols({{Bar, BarSym}})));
+    return SymbolNameSet({Bar});
+  });
+
+  auto Result = cantFail(lookup({&V}, {Foo, Bar}));
+
+  EXPECT_EQ(Result.count(Bar), 1U) << "Expected to find fallback def for 'bar'";
+  EXPECT_EQ(Result[Bar].getAddress(), FakeBarAddr)
+      << "Expected address of fallback def for 'bar' to be " << FakeBarAddr;
+}
+
 TEST(CoreAPIsTest, FailResolution) {
   ExecutionSession ES;
   auto Foo = ES.getSymbolStringPool().intern("foo");

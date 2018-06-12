@@ -39,6 +39,16 @@ inline char hexdigit(unsigned X, bool LowerCase = false) {
   return X < 10 ? '0' + X : HexChar + X - 10;
 }
 
+/// Given an array of c-style strings terminated by a null pointer, construct
+/// a vector of StringRefs representing the same strings without the terminating
+/// null string.
+inline std::vector<StringRef> toStringRefArray(const char *const *Strings) {
+  std::vector<StringRef> Result;
+  while (*Strings)
+    Result.push_back(*Strings++);
+  return Result;
+}
+
 /// Construct a string ref from a boolean.
 inline StringRef toStringRef(bool B) { return StringRef(B ? "true" : "false"); }
 

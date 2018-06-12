@@ -54,4 +54,30 @@ define i64 @f5(i64 %a0) #0 {
   ret i64 %v2
 }
 
-attributes #0 = { nounwind readnone "target-cpu"="hexagonv60" }
+; CHECK-LABEL: f6:
+; CHECK: r[[R60:[0-9]+]] = abs(r0)
+; CHECK: r[[R61:[0-9]+]] = asr(r0,#31)
+; CHECK: r0 = addasl(r[[R61]],r[[R60]],#1)
+define i32 @f6(i32 %a0) #0 {
+  %v0 = ashr i32 %a0, 31
+  %v1 = add i32 %a0, %v0
+  %v2 = xor i32 %v0, %v1
+  %v3 = mul i32 %v2, 2
+  %v4 = add i32 %v0, %v3
+  ret i32 %v4
+}
+
+; CHECK-LABEL: f7:
+; CHECK: r[[R70:[0-9]+]] = abs(r0)
+; CHECK: r[[R71:[0-9]+]] = asr(r0,#31)
+; CHECK: r0 = addasl(r[[R71]],r[[R70]],#1)
+define i32 @f7(i32 %a0) #0 {
+  %v0 = ashr i32 %a0, 31
+  %v1 = add i32 %v0, %a0
+  %v2 = xor i32 %v0, %v1
+  %v3 = shl i32 %v2, 1
+  %v4 = add i32 %v0, %v3
+  ret i32 %v4
+}
+
+attributes #0 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="-packets" }

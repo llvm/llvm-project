@@ -23,6 +23,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #if HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -164,14 +165,36 @@ static void SetMemoryLimits(unsigned size) {
 
 }
 
-static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
-                    const char **Envp, ArrayRef<Optional<StringRef>> Redirects,
+static std::vector<const char *>
+toNullTerminatedCStringArray(ArrayRef<StringRef> Strings, StringSaver &Saver) {
+  std::vector<const char *> Result;
+  for (StringRef S : Strings)
+    Result.push_back(Saver.save(S).data());
+  Result.push_back(nullptr);
+  return Result;
+}
+
+static bool Execute(ProcessInfo &PI, StringRef Program,
+                    ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
+                    ArrayRef<Optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg) {
   if (!llvm::sys::fs::exists(Program)) {
     if (ErrMsg)
       *ErrMsg = std::string("Executable \"") + Program.str() +
                 std::string("\" doesn't exist!");
     return false;
+  }
+
+  BumpPtrAllocator Allocator;
+  StringSaver Saver(Allocator);
+  std::vector<const char *> ArgVector, EnvVector;
+  const char **Argv = nullptr;
+  const char **Envp = nullptr;
+  ArgVector = toNullTerminatedCStringArray(Args, Saver);
+  Argv = ArgVector.data();
+  if (Env) {
+    EnvVector = toNullTerminatedCStringArray(*Env, Saver);
+    Envp = EnvVector.data();
   }
 
   // If this OS has posix_spawn and there is no memory limit being implied, use
@@ -227,7 +250,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
     // positive.
     pid_t PID = 0;
     int Err = posix_spawn(&PID, Program.str().c_str(), FileActions,
-                          /*attrp*/nullptr, const_cast<char **>(Args),
+                          /*attrp*/ nullptr, const_cast<char **>(Argv),
                           const_cast<char **>(Envp));
 
     if (FileActions)
@@ -280,12 +303,10 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
       // Execute!
       std::string PathStr = Program;
       if (Envp != nullptr)
-        execve(PathStr.c_str(),
-               const_cast<char **>(Args),
+        execve(PathStr.c_str(), const_cast<char **>(Argv),
                const_cast<char **>(Envp));
       else
-        execv(PathStr.c_str(),
-              const_cast<char **>(Args));
+        execv(PathStr.c_str(), const_cast<char **>(Argv));
       // If the execve() failed, we should exit. Follow Unix protocol and
       // return 127 if the executable was not found, and 126 otherwise.
       // Use _exit rather than exit so that atexit functions and static
