@@ -2304,6 +2304,7 @@ static void print_completion_result(CXTranslationUnit translation_unit,
   CXString BriefComment;
   CXString Annotation;
   const char *BriefCommentCString;
+  unsigned i;
   
   fprintf(file, "%s:", clang_getCString(ks));
   clang_disposeString(ks);
@@ -2365,7 +2366,6 @@ static void print_completion_result(CXTranslationUnit translation_unit,
   }
   clang_disposeString(BriefComment);
 
-  unsigned i;
   for (i = 0; i < clang_getCompletionNumFixIts(completion_results, index);
        ++i) {
     CXSourceRange correction_range;

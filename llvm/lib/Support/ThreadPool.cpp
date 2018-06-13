@@ -32,7 +32,7 @@ ThreadPool::ThreadPool(unsigned ThreadCount)
   for (unsigned ThreadID = 0; ThreadID < ThreadCount; ++ThreadID) {
     Threads.emplace_back([&] {
       while (true) {
-        PackagedTaskTy Task;
+        std::unique_ptr<TaskBase> Task;
         {
           std::unique_lock<std::mutex> LockGuard(QueueLock);
           // Wait for tasks to be pushed in the queue
@@ -54,7 +54,7 @@ ThreadPool::ThreadPool(unsigned ThreadCount)
           Tasks.pop();
         }
         // Run the task we just grabbed
-        Task();
+        Task->execute();
 
         {
           // Adjust `ActiveThreads`, in case someone waits on ThreadPool::wait()
@@ -77,23 +77,6 @@ void ThreadPool::wait() {
   // race.
   CompletionCondition.wait(LockGuard,
                            [&] { return !ActiveThreads && Tasks.empty(); });
-}
-
-std::shared_future<void> ThreadPool::asyncImpl(TaskTy Task) {
-  /// Wrap the Task in a packaged_task to return a future object.
-  PackagedTaskTy PackagedTask(std::move(Task));
-  auto Future = PackagedTask.get_future();
-  {
-    // Lock the queue and push the new task
-    std::unique_lock<std::mutex> LockGuard(QueueLock);
-
-    // Don't allow enqueueing after disabling the pool
-    assert(EnableFlag && "Queuing a thread during ThreadPool destruction");
-
-    Tasks.push(std::move(PackagedTask));
-  }
-  QueueCondition.notify_one();
-  return Future.share();
 }
 
 // The destructor joins all threads, waiting for completion.

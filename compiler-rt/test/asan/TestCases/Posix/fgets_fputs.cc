@@ -3,7 +3,7 @@
 // RUN: not %run %t 1 %t-testdata 2>&1 | FileCheck %s --check-prefix=CHECK-FGETS
 // RUN: not %run %t 2 2>&1 | FileCheck %s --check-prefix=CHECK-FPUTS
 // RUN: not %run %t 3 2>&1 | FileCheck %s --check-prefix=CHECK-PUTS
-// XFAIL: android, darwin
+// XFAIL: android
 
 #include <assert.h>
 #include <stdio.h>

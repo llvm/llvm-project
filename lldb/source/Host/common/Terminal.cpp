@@ -9,6 +9,7 @@
 
 #include "lldb/Host/Terminal.h"
 
+#include "lldb/Host/Config.h"
 #include "lldb/Host/PosixApi.h"
 #include "llvm/ADT/STLExtras.h"
 

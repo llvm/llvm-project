@@ -8111,3 +8111,69 @@ void SITargetLowering::computeKnownBitsForFrameIndex(const SDValue Op,
   // calculation won't overflow, so assume the sign bit is never set.
   Known.Zero.setHighBits(AssumeFrameIndexHighZeroBits);
 }
+
+bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode * N,
+  FunctionLoweringInfo * FLI, DivergenceAnalysis * DA) const
+{
+  switch (N->getOpcode()) {
+    case ISD::Register:
+    case ISD::CopyFromReg:
+    {
+      const RegisterSDNode *R = nullptr;
+      if (N->getOpcode() == ISD::Register) {
+        R = dyn_cast<RegisterSDNode>(N);
+      }
+      else {
+        R = dyn_cast<RegisterSDNode>(N->getOperand(1));
+      }
+      if (R)
+      {
+        const MachineFunction * MF = FLI->MF;
+        const SISubtarget &ST = MF->getSubtarget<SISubtarget>();
+        const MachineRegisterInfo &MRI = MF->getRegInfo();
+        const SIRegisterInfo &TRI = ST.getInstrInfo()->getRegisterInfo();
+        unsigned Reg = R->getReg();
+        if (TRI.isPhysicalRegister(Reg))
+          return TRI.isVGPR(MRI, Reg);
+
+        if (MRI.isLiveIn(Reg)) {
+          // workitem.id.x workitem.id.y workitem.id.z
+          // Any VGPR formal argument is also considered divergent
+          if (TRI.isVGPR(MRI, Reg))
+              return true;
+          // Formal arguments of non-entry functions
+          // are conservatively considered divergent
+          else if (!AMDGPU::isEntryFunctionCC(FLI->Fn->getCallingConv()))
+            return true;
+        }
+        return !DA || DA->isDivergent(FLI->getValueFromVirtualReg(Reg));
+      }
+    }
+    break;
+    case ISD::LOAD: {
+      const LoadSDNode *L = dyn_cast<LoadSDNode>(N);
+      if (L->getMemOperand()->getAddrSpace() ==
+          Subtarget->getAMDGPUAS().PRIVATE_ADDRESS)
+        return true;
+    } break;
+    case ISD::CALLSEQ_END:
+    return true;
+    break;
+    case ISD::INTRINSIC_WO_CHAIN:
+    {
+
+    }
+      return AMDGPU::isIntrinsicSourceOfDivergence(
+      cast<ConstantSDNode>(N->getOperand(0))->getZExtValue());
+    case ISD::INTRINSIC_W_CHAIN:
+      return AMDGPU::isIntrinsicSourceOfDivergence(
+      cast<ConstantSDNode>(N->getOperand(1))->getZExtValue());
+    // In some cases intrinsics that are a source of divergence have been
+    // lowered to AMDGPUISD so we also need to check those too.
+    case AMDGPUISD::INTERP_MOV:
+    case AMDGPUISD::INTERP_P1:
+    case AMDGPUISD::INTERP_P2:
+      return true;
+  }
+  return false;
+}

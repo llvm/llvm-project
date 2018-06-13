@@ -13,6 +13,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
@@ -820,5 +821,23 @@ TEST(CommandLineTest, PositionalEatArgsError) {
   EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), &OS)); OS.flush();
   EXPECT_TRUE(Errs.empty());
 }
+
+#ifdef _WIN32
+TEST(CommandLineTest, GetCommandLineArguments) {
+  int argc = __argc;
+  char **argv = __argv;
+
+  // GetCommandLineArguments is called in InitLLVM.
+  llvm::InitLLVM X(argc, argv);
+
+  EXPECT_EQ(llvm::sys::path::is_absolute(argv[0]),
+            llvm::sys::path::is_absolute(__argv[0]));
+
+  EXPECT_TRUE(llvm::sys::path::filename(argv[0])
+              .equals_lower("supporttests.exe"))
+      << "Filename of test executable is "
+      << llvm::sys::path::filename(argv[0]);
+}
+#endif
 
 }  // anonymous namespace

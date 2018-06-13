@@ -1269,6 +1269,12 @@ are listed below.
    devirtualization and virtual constant propagation, for classes with
    :doc:`hidden LTO visibility <LTOVisibility>`. Requires ``-flto``.
 
+.. option:: -fforce-emit-vtables
+
+   In order to improve devirtualization, forces emitting of vtables even in
+   modules where it isn't necessary. It causes more inline virtual functions
+   to be emitted.
+
 .. option:: -fno-assume-sane-operator-new
 
    Don't assume that the C++'s new operator is sane.

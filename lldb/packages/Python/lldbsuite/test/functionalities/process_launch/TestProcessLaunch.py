@@ -85,7 +85,34 @@ class ProcessLaunchTestCase(TestBase):
     # not working?
     @not_remote_testsuite_ready
     @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr20265")
-    def test_set_working_dir(self):
+    def test_set_working_dir_nonexisting(self):
+        """Test that '-w dir' fails to set the working dir when running the inferior with a dir which doesn't exist."""
+        d = {'CXX_SOURCES': 'print_cwd.cpp'}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(d)
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe)
+
+        mywd = 'my_working_dir'
+        out_file_name = "my_working_dir_test.out"
+        err_file_name = "my_working_dir_test.err"
+
+        my_working_dir_path = self.getBuildArtifact(mywd)
+        out_file_path = os.path.join(my_working_dir_path, out_file_name)
+        err_file_path = os.path.join(my_working_dir_path, err_file_name)
+
+        # Check that we get an error when we have a nonexisting path
+        invalid_dir_path = mywd + 'z'
+        launch_command = "process launch -w %s -o %s -e %s" % (
+            invalid_dir_path, out_file_path, err_file_path)
+
+        self.expect(
+            launch_command, error=True, patterns=[
+                "error:.* No such file or directory: %s" %
+                invalid_dir_path])
+
+    @not_remote_testsuite_ready
+    def test_set_working_dir_existing(self):
         """Test that '-w dir' sets the working dir when running the inferior."""
         d = {'CXX_SOURCES': 'print_cwd.cpp'}
         self.build(dictionary=d)
@@ -109,16 +136,6 @@ class ProcessLaunchTestCase(TestBase):
         except OSError:
             pass
 
-        # Check that we get an error when we have a nonexisting path
-        launch_command = "process launch -w %s -o %s -e %s" % (
-            my_working_dir_path + 'z', out_file_path, err_file_path)
-
-        self.expect(
-            launch_command, error=True, patterns=[
-                "error:.* No such file or directory: %sz" %
-                my_working_dir_path])
-
-        # Really launch the process
         launch_command = "process launch -w %s -o %s -e %s" % (
             my_working_dir_path, out_file_path, err_file_path)
 

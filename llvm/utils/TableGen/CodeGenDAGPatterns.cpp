@@ -4010,7 +4010,7 @@ void CodeGenDAGPatterns::ParsePatterns() {
                                   InstResults, InstImpResults);
 
     // Promote the xform function to be an explicit node if set.
-    TreePatternNodePtr DstPattern = Result.getOnlyTree();
+    const TreePatternNodePtr &DstPattern = Result.getOnlyTree();
     std::vector<TreePatternNodePtr> ResultNodeOperands;
     for (unsigned ii = 0, ee = DstPattern->getNumChildren(); ii != ee; ++ii) {
       TreePatternNodePtr OpNode = DstPattern->getChildShared(ii);
@@ -4023,16 +4023,18 @@ void CodeGenDAGPatterns::ParsePatterns() {
       }
       ResultNodeOperands.push_back(OpNode);
     }
-    DstPattern = Result.getOnlyTree();
-    if (!DstPattern->isLeaf())
-      DstPattern = std::make_shared<TreePatternNode>(DstPattern->getOperator(),
-                                                     ResultNodeOperands,
-                                                     DstPattern->getNumTypes());
+
+    TreePatternNodePtr DstShared =
+        DstPattern->isLeaf()
+            ? DstPattern
+            : std::make_shared<TreePatternNode>(DstPattern->getOperator(),
+                                                ResultNodeOperands,
+                                                DstPattern->getNumTypes());
 
     for (unsigned i = 0, e = Result.getOnlyTree()->getNumTypes(); i != e; ++i)
-      DstPattern->setType(i, Result.getOnlyTree()->getExtType(i));
+      DstShared->setType(i, Result.getOnlyTree()->getExtType(i));
 
-    TreePattern Temp(Result.getRecord(), DstPattern, false, *this);
+    TreePattern Temp(Result.getRecord(), DstShared, false, *this);
     Temp.InferAllTypes();
 
     // A pattern may end up with an "impossible" type, i.e. a situation

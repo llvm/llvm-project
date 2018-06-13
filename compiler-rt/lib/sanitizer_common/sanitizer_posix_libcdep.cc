@@ -69,16 +69,20 @@ void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
             SANITIZER_MADVISE_DONTNEED);
 }
 
-void NoHugePagesInRegion(uptr addr, uptr size) {
+bool NoHugePagesInRegion(uptr addr, uptr size) {
 #ifdef MADV_NOHUGEPAGE  // May not be defined on old systems.
-  madvise((void *)addr, size, MADV_NOHUGEPAGE);
+  return madvise((void *)addr, size, MADV_NOHUGEPAGE) == 0;
+#else
+  return true;
 #endif  // MADV_NOHUGEPAGE
 }
 
-void DontDumpShadowMemory(uptr addr, uptr length) {
+bool DontDumpShadowMemory(uptr addr, uptr length) {
 #ifdef MADV_DONTDUMP
-  madvise((void *)addr, length, MADV_DONTDUMP);
-#endif
+  return madvise((void *)addr, length, MADV_DONTDUMP) == 0;
+#else
+  return true;
+#endif  // MADV_DONTDUMP
 }
 
 static rlim_t getlim(int res) {

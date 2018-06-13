@@ -16,6 +16,7 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_LATENCY_H
 
 #include "BenchmarkRunner.h"
+#include "MCInstrDescView.h"
 
 namespace exegesis {
 
@@ -24,12 +25,24 @@ public:
   using BenchmarkRunner::BenchmarkRunner;
   ~LatencyBenchmarkRunner() override;
 
+  llvm::Expected<BenchmarkConfiguration>
+  generateConfiguration(unsigned Opcode) const;
+
 private:
+  llvm::Error isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const;
+
+  llvm::Expected<BenchmarkConfiguration> generateSelfAliasingConfiguration(
+      const Instruction &Instr,
+      const AliasingConfigurations &SelfAliasing) const;
+
+  llvm::Expected<BenchmarkConfiguration> generateTwoInstructionConfiguration(
+      const Instruction &Instr,
+      const AliasingConfigurations &SelfAliasing) const;
+
   InstructionBenchmark::ModeE getMode() const override;
 
   llvm::Expected<std::vector<BenchmarkConfiguration>>
-  createConfigurations(RegisterAliasingTrackerCache &RATC,
-                       unsigned OpcodeIndex) const override;
+  createConfigurations(unsigned OpcodeIndex) const override;
 
   std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF,

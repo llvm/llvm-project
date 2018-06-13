@@ -26,6 +26,13 @@
 
 namespace exegesis {
 
+// A class representing failures that happened during Benchmark, they are used
+// to report informations to the user.
+class BenchmarkFailure : public llvm::StringError {
+public:
+  BenchmarkFailure(const llvm::Twine &S);
+};
+
 // A collection of instructions that are to be assembled, executed and measured.
 struct BenchmarkConfiguration {
   // This code is run before the Snippet is iterated. Since it is part of the
@@ -67,6 +74,7 @@ protected:
   const LLVMState &State;
   const llvm::MCInstrInfo &MCInstrInfo;
   const llvm::MCRegisterInfo &MCRegisterInfo;
+  const RegisterAliasingTrackerCache RATC;
 
 private:
   InstructionBenchmark runOne(const BenchmarkConfiguration &Configuration,
@@ -75,8 +83,7 @@ private:
   virtual InstructionBenchmark::ModeE getMode() const = 0;
 
   virtual llvm::Expected<std::vector<BenchmarkConfiguration>>
-  createConfigurations(RegisterAliasingTrackerCache &RATC,
-                       unsigned Opcode) const = 0;
+  createConfigurations(unsigned Opcode) const = 0;
 
   virtual std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF,
@@ -84,8 +91,6 @@ private:
 
   llvm::Expected<std::string>
   writeObjectFile(llvm::ArrayRef<llvm::MCInst> Code) const;
-
-  RegisterAliasingTrackerCache RATC;
 };
 
 } // namespace exegesis

@@ -32,11 +32,14 @@ namespace exegesis {
 
 struct Operand; // forward declaration.
 
-// A variable represents the value of an Operand or a set of Operands if they ar
-// tied together.
+// A variable represents the value associated to an Operand or a set of Operands
+// if they are tied together.
 struct Variable {
   llvm::SmallVector<const Operand *, 2> TiedOperands;
   llvm::MCOperand AssignedValue;
+  // The index of this Variable in Instruction.Variables and its associated
+  // Value in InstructionInstance.VariableValues.
+  unsigned Index = -1;
 };
 
 // MCOperandInfo can only represents Explicit operands. This object gives a
@@ -46,33 +49,48 @@ struct Variable {
 // - Tracker: is set for Register Operands and is used to keep track of possible
 // registers and the registers reachable from them (aliasing registers).
 // - Info: a shortcut for MCInstrDesc::operands()[Index].
-// - TiedTo: a pointer to the Operand holding the value or nullptr.
+// - TiedToIndex: the index of the Operand holding the value or -1.
 // - ImplicitReg: a pointer to the register value when Operand is Implicit,
 // nullptr otherwise.
-// - Variable: The value associated with this Operand. It is only set for
-// explicit operands that are not TiedTo.
+// - VariableIndex: the index of the Variable holding the value for this Operand
+// or -1 if this operand is implicit.
 struct Operand {
-  uint8_t Index = 0;
+  unsigned Index = 0;
   bool IsDef = false;
   bool IsExplicit = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const llvm::MCOperandInfo *Info = nullptr;        // Set for Explicit Op.
-  const Operand *TiedTo = nullptr;                  // Set for Reg/Explicit Op.
+  int TiedToIndex = -1;                             // Set for Reg/Explicit Op.
   const llvm::MCPhysReg *ImplicitReg = nullptr;     // Set for Implicit Op.
-  mutable llvm::Optional<Variable> Var;             // Set for Explicit Op.
+  int VariableIndex = -1;                           // Set for Reg/Explicit Op.
 };
 
 // A view over an MCInstrDesc offering a convenient interface to compute
-// Register aliasing and assign values to Operands.
+// Register aliasing.
 struct Instruction {
   Instruction(const llvm::MCInstrDesc &MCInstrDesc,
-              RegisterAliasingTrackerCache &ATC);
+              const RegisterAliasingTrackerCache &ATC);
 
   const llvm::MCInstrDesc &Description;
   llvm::SmallVector<Operand, 8> Operands;
-  llvm::SmallVector<Variable *, 8> Variables;
+  llvm::SmallVector<Variable, 4> Variables;
   llvm::BitVector DefRegisters; // The union of the aliased def registers.
   llvm::BitVector UseRegisters; // The union of the aliased use registers.
+};
+
+// An instance of an Instruction holding values for each of its Variables.
+struct InstructionInstance {
+  InstructionInstance(const Instruction &Instr);
+
+  llvm::MCOperand &getValueFor(const Variable &Var);
+  llvm::MCOperand &getValueFor(const Operand &Op);
+
+  // Assigns a Random Value to all Variables that are still Invalid and returns
+  // the instance as an llvm::MCInst.
+  llvm::MCInst randomizeUnsetVariablesAndBuild();
+
+  const Instruction &Instr;
+  llvm::SmallVector<llvm::MCOperand, 4> VariableValues;
 };
 
 // Represents the assignment of a Register to an Operand.
@@ -126,17 +144,10 @@ std::mt19937 &randomGenerator();
 // Precondition: Vector must have at least one bit set.
 size_t randomBit(const llvm::BitVector &Vector);
 
-// Picks a random configuration, then select a random def and a random use from
-// it and set the target Variables to the selected values.
-// FIXME: This function mutates some nested variables in a const object, please
-// fix ASAP.
-void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations);
-
-// Set all Instruction's Variables AssignedValue to Invalid.
-void clearVariableAssignments(const Instruction &Instruction);
-
-// Assigns a Random Value to all Instruction's Variables that are still Invalid.
-llvm::MCInst randomizeUnsetVariablesAndBuild(const Instruction &Instruction);
+// Picks a random configuration, then selects a random def and a random use from
+// it and finally set the selected values in the provided InstructionInstances.
+void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
+                       InstructionInstance &DefII, InstructionInstance &UseII);
 
 // Writes MCInst to OS.
 // This is not assembly but the internal LLVM's name for instructions and

@@ -96,6 +96,12 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
       wexecutable.c_str(), &wcommandLine[0], NULL, NULL, TRUE, flags, env_block,
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
       &startupinfo, &pi);
+
+  if (!result) {
+    // Call GetLastError before we make any other system calls.
+    error.SetError(::GetLastError(), eErrorTypeWin32);
+  }
+
   if (result) {
     // Do not call CloseHandle on pi.hProcess, since we want to pass that back
     // through the HostProcess.
@@ -110,7 +116,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     ::CloseHandle(stderr_handle);
 
   if (!result)
-    error.SetError(::GetLastError(), eErrorTypeWin32);
+    return HostProcess();
+
   return HostProcess(pi.hProcess);
 }
 

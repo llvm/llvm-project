@@ -1129,12 +1129,13 @@ Error TempFile::keep(const Twine &Name) {
   // Always try to close and rename.
 #ifdef _WIN32
   // If we cant't cancel the delete don't rename.
-  std::error_code RenameEC = cancelDeleteOnClose(FD);
+  auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+  std::error_code RenameEC = setDeleteDisposition(H, false);
   if (!RenameEC)
     RenameEC = rename_fd(FD, Name);
   // If we can't rename, discard the temporary file.
   if (RenameEC)
-    removeFD(FD);
+    setDeleteDisposition(H, true);
 #else
   std::error_code RenameEC = fs::rename(TmpName, Name);
   // If we can't rename, discard the temporary file.
@@ -1160,7 +1161,8 @@ Error TempFile::keep() {
   Done = true;
 
 #ifdef _WIN32
-  if (std::error_code EC = cancelDeleteOnClose(FD))
+  auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+  if (std::error_code EC = setDeleteDisposition(H, false))
     return errorCodeToError(EC);
 #else
   sys::DontRemoveFileOnSignal(TmpName);
