@@ -881,12 +881,10 @@ public:
     SPAN_ATTACH(Tracer, "merged_results", NBoth);
     SPAN_ATTACH(Tracer, "returned_results", Output.items.size());
     SPAN_ATTACH(Tracer, "incomplete", Output.isIncomplete);
-    log(llvm::formatv(
-        "Code complete ({0}): {1} results from Sema, {2} from Index, "
-        "{3} matched, {4} returned{5}.",
-        getCompletionKindString(Recorder->CCContext.getKind()), NSema, NIndex,
-        NBoth, Output.items.size(),
-        Output.isIncomplete ? " (incomplete)" : ""));
+    log(llvm::formatv("Code complete: {0} results from Sema, {1} from Index, "
+                      "{2} matched, {3} returned{4}.",
+                      NSema, NIndex, NBoth, Output.items.size(),
+                      Output.isIncomplete ? " (incomplete)" : ""));
     assert(!Opts.Limit || Output.items.size() <= Opts.Limit);
     // We don't assert that isIncomplete means we hit a limit.
     // Indexes may choose to impose their own limits even if we don't have one.
