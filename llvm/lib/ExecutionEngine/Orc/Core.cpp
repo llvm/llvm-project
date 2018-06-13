@@ -977,7 +977,7 @@ Expected<SymbolMap> blockingLookup(ExecutionSessionBase &ES,
     ErrorAsOutParameter _(&ResolutionError);
     if (R) {
       if (MR)
-        MR->addDependencies(Result->Dependencies);
+        MR->addDependencies(R->Dependencies);
       Result = std::move(R->Symbols);
     } else
       ResolutionError = R.takeError();

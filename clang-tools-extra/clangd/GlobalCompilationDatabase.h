@@ -85,6 +85,34 @@ private:
   /// is located.
   llvm::Optional<Path> CompileCommandsDir;
 };
+
+/// A wrapper around GlobalCompilationDatabase that caches the compile commands.
+/// Note that only results of getCompileCommand are cached.
+class CachingCompilationDb : public GlobalCompilationDatabase {
+public:
+  explicit CachingCompilationDb(const GlobalCompilationDatabase &InnerCDB);
+
+  /// Gets compile command for \p File from cache or CDB if it's not in the
+  /// cache.
+  llvm::Optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const override;
+
+  /// Forwards to the inner CDB. Results of this function are not cached.
+  tooling::CompileCommand getFallbackCommand(PathRef File) const override;
+
+  /// Removes an entry for \p File if it's present in the cache.
+  void invalidate(PathRef File);
+
+  /// Removes all cached compile commands.
+  void clear();
+
+private:
+  const GlobalCompilationDatabase &InnerCDB;
+  mutable std::mutex Mut;
+  mutable llvm::StringMap<llvm::Optional<tooling::CompileCommand>>
+      Cached; /* GUARDED_BY(Mut) */
+};
+
 } // namespace clangd
 } // namespace clang
 

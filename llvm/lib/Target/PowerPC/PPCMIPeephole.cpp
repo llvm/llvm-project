@@ -190,18 +190,18 @@ getKnownLeadingZeroCount(MachineInstr *MI, const PPCInstrInfo *TII) {
 }
 
 // This function maintains a map for the pairs <TOC Save Instr, Keep>
-// Each time a new TOC save is encountered, it checks if any of the exisiting
-// ones are dominated by the new one. If so, it marks the exisiting one as
+// Each time a new TOC save is encountered, it checks if any of the existing
+// ones are dominated by the new one. If so, it marks the existing one as
 // redundant by setting it's entry in the map as false. It then adds the new
 // instruction to the map with either true or false depending on if any
-// exisiting instructions dominated the new one.
+// existing instructions dominated the new one.
 void PPCMIPeephole::UpdateTOCSaves(
   std::map<MachineInstr *, bool> &TOCSaves, MachineInstr *MI) {
   assert(TII->isTOCSaveMI(*MI) && "Expecting a TOC save instruction here");
   bool Keep = true;
   for (auto It = TOCSaves.begin(); It != TOCSaves.end(); It++ ) {
     MachineInstr *CurrInst = It->first;
-    // If new instruction dominates an exisiting one, mark exisiting one as
+    // If new instruction dominates an existing one, mark existing one as
     // redundant.
     if (It->second && MDT->dominates(MI, CurrInst))
       It->second = false;
@@ -276,7 +276,7 @@ bool PPCMIPeephole::simplifyCode(void) {
             !MF->getSubtarget<PPCSubtarget>().isELFv2ABI())
           break;
         // When encountering a TOC save instruction, call UpdateTOCSaves
-        // to add it to the TOCSaves map and mark any exisiting TOC saves
+        // to add it to the TOCSaves map and mark any existing TOC saves
         // it dominates as redundant.
         if (TII->isTOCSaveMI(MI))
           UpdateTOCSaves(TOCSaves, &MI);
@@ -847,7 +847,7 @@ static unsigned getPredicateToIncImm(MachineInstr *BI, MachineInstr *CMPI) {
   return 0;
 }
 
-// This takes a Phi node and returns a register value for the spefied BB.
+// This takes a Phi node and returns a register value for the specified BB.
 static unsigned getIncomingRegForBlock(MachineInstr *Phi,
                                        MachineBasicBlock *MBB) {
   for (unsigned I = 2, E = Phi->getNumOperands() + 1; I != E; I += 2) {
@@ -1190,7 +1190,7 @@ bool PPCMIPeephole::eliminateRedundantCompare(void) {
         }
       }
 
-      // We cannnot merge two compares if the immediates are not same.
+      // We cannot merge two compares if the immediates are not same.
       if (NewImm2 != NewImm1)
         continue;
     }

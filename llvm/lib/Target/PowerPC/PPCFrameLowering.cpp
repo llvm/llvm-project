@@ -1615,7 +1615,7 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   // Make sure we don't explicitly spill r31, because, for example, we have
-  // some inline asm which explicity clobbers it, when we otherwise have a
+  // some inline asm which explicitly clobbers it, when we otherwise have a
   // frame pointer and are using r31's spill slot for the prologue/epilogue
   // code. Same goes for the base pointer and the PIC base register.
   if (needsFP(MF))
@@ -1864,7 +1864,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   }
 
   if (HasVRSaveArea) {
-    // Insert alignment padding, we need 16-byte alignment. Note: for postive
+    // Insert alignment padding, we need 16-byte alignment. Note: for positive
     // number the alignment formula is : y = (x + (n-1)) & (~(n-1)). But since
     // we are using negative number here (the stack grows downward). We should
     // use formula : y = x & (~(n-1)). Where x is the size before aligning, n

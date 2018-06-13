@@ -119,5 +119,38 @@ DirectoryBasedGlobalCompilationDatabase::getCDBForFile(PathRef File) const {
   return nullptr;
 }
 
+CachingCompilationDb::CachingCompilationDb(
+    const GlobalCompilationDatabase &InnerCDB)
+    : InnerCDB(InnerCDB) {}
+
+llvm::Optional<tooling::CompileCommand>
+CachingCompilationDb::getCompileCommand(PathRef File) const {
+  std::unique_lock<std::mutex> Lock(Mut);
+  auto It = Cached.find(File);
+  if (It != Cached.end())
+    return It->second;
+
+  Lock.unlock();
+  llvm::Optional<tooling::CompileCommand> Command =
+      InnerCDB.getCompileCommand(File);
+  Lock.lock();
+  return Cached.try_emplace(File, std::move(Command)).first->getValue();
+}
+
+tooling::CompileCommand
+CachingCompilationDb::getFallbackCommand(PathRef File) const {
+  return InnerCDB.getFallbackCommand(File);
+}
+
+void CachingCompilationDb::invalidate(PathRef File) {
+  std::unique_lock<std::mutex> Lock(Mut);
+  Cached.erase(File);
+}
+
+void CachingCompilationDb::clear() {
+  std::unique_lock<std::mutex> Lock(Mut);
+  Cached.clear();
+}
+
 } // namespace clangd
 } // namespace clang

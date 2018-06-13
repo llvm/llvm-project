@@ -4119,6 +4119,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(MAD_I24)
   NODE_NAME_CASE(MAD_I64_I32)
   NODE_NAME_CASE(MAD_U64_U32)
+  NODE_NAME_CASE(PERM)
   NODE_NAME_CASE(TEXTURE_FETCH)
   NODE_NAME_CASE(EXPORT)
   NODE_NAME_CASE(EXPORT_DONE)
@@ -4372,6 +4373,34 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
       Known.One.setHighBits(32 - MaxValBits);
     else
       Known.Zero.setHighBits(32 - MaxValBits);
+    break;
+  }
+  case AMDGPUISD::PERM: {
+    ConstantSDNode *CMask = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    if (!CMask)
+      return;
+
+    KnownBits LHSKnown, RHSKnown;
+    DAG.computeKnownBits(Op.getOperand(0), LHSKnown, Depth + 1);
+    DAG.computeKnownBits(Op.getOperand(1), RHSKnown, Depth + 1);
+    unsigned Sel = CMask->getZExtValue();
+
+    for (unsigned I = 0; I < 32; I += 8) {
+      unsigned ByteMask = 0xff << I;
+      unsigned SelBits = Sel & 0xff;
+      if (SelBits < 4) {
+        Known.One |= RHSKnown.One & ByteMask;
+        Known.Zero |= RHSKnown.Zero & ByteMask;
+      } else if (SelBits < 7) {
+        Known.One |= LHSKnown.One & ByteMask;
+        Known.Zero |= LHSKnown.Zero & ByteMask;
+      } else if (SelBits == 0x0c) {
+        Known.Zero |= ByteMask;
+      } else if (SelBits > 0x0c) {
+        Known.One |= ByteMask;
+      }
+      Sel >>= 8;
+    }
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {

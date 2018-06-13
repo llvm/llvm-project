@@ -1283,7 +1283,7 @@ void PPCLinuxAsmPrinter::EmitFunctionEntryLabel() {
   if (Subtarget->isELFv2ABI()) {
     // In the Large code model, we allow arbitrary displacements between
     // the text section and its associated TOC section.  We place the
-    // full 8-byte offset to the TOC in memory immediatedly preceding
+    // full 8-byte offset to the TOC in memory immediately preceding
     // the function global entry point.
     if (TM.getCodeModel() == CodeModel::Large
         && !MF->getRegInfo().use_empty(PPC::X2)) {
