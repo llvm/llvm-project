@@ -45,7 +45,10 @@ class TestSwiftRewriteClangPaths(TestBase):
         return lst[0]
         
     def dotest(self, remap):
-        self.build()
+        self.build(clean=True)
+        log = self.getBuildArtifact("types.log")
+        self.runCmd('log enable lldb types -f "%s"' % log)
+
         # To ensure the module is rebuilt remove the cache to avoid caching.
         mod_cache = self.getBuildArtifact("my-clang-modules-cache")
         if os.path.isdir(mod_cache):
@@ -87,12 +90,16 @@ class TestSwiftRewriteClangPaths(TestBase):
             self.expect("fr var foo", comment, substrs=["x", "23"])
             self.expect("fr var bar", comment, substrs=["y", "42"])
             self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
+
+        errs = 0
+        logfile = open(log, "r")
+        for line in logfile:
+            if "error: missing required module 'CFoo'" in line:
+                errs += 1
+        if remap:
+            self.assertTrue(errs == 0, "expected no module import error")
         else:
-            threads = lldbutil.get_threads_stopped_at_breakpoint(
-                process, foo_breakpoint)
-            frame = threads[0].GetFrameAtIndex(0)
-            value = frame.EvaluateExpression("foo")
-            self.assertFalse(value.GetError().Success())
+            self.assertTrue(errs > 0, "expected module import error")
         
 if __name__ == '__main__':
     import atexit
