@@ -442,7 +442,10 @@ public:
   }
 
   const char *getCompilationDir();
-  Optional<uint64_t> getDWOId() const { return getHeader().getDWOId(); }
+  Optional<uint64_t> getDWOId() {
+    extractDIEsIfNeeded(/*CUDieOnly*/ true);
+    return getHeader().getDWOId();
+  }
   void setDWOId(uint64_t NewID) { Header.setDWOId(NewID); }
 
   /// Return a vector of address ranges resulting from a (possibly encoded)

@@ -75,15 +75,15 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_SCALAR_ARITHMETIC) && defined(__aarc
   def SCALAR_FCVTPUH  : SInst<"vcvtp_u16", "bs", "Sh">;
   def SCALAR_FCVTPUH1 : SInst<"vcvtp_u32", "Us", "Sh">;
   def SCALAR_FCVTPUH2 : SInst<"vcvtp_u64", "Os", "Sh">;
-
-  def SCALAR_SCVTFSHO : SInst<"vcvth_n_f16", "Ysi", "silUsUiUl">;
-  def SCALAR_FCVTZSHO : SInst<"vcvt_n_s16", "$si", "Sh">;
-  def SCALAR_FCVTZSH1O: SInst<"vcvt_n_s32", "Isi", "Sh">;
-  def SCALAR_FCVTZSH2O: SInst<"vcvt_n_s64", "Lsi", "Sh">;
-  def SCALAR_FCVTZUHO : SInst<"vcvt_n_u16", "bsi", "Sh">;
-  def SCALAR_FCVTZUH1O: SInst<"vcvt_n_u32", "Usi", "Sh">;
-  def SCALAR_FCVTZUH2O: SInst<"vcvt_n_u64", "Osi", "Sh">;
-
+  let isVCVT_N = 1 in {
+    def SCALAR_SCVTFSHO : SInst<"vcvth_n_f16", "Ysi", "silUsUiUl">;
+    def SCALAR_FCVTZSHO : SInst<"vcvt_n_s16", "$si", "Sh">;
+    def SCALAR_FCVTZSH1O: SInst<"vcvt_n_s32", "Isi", "Sh">;
+    def SCALAR_FCVTZSH2O: SInst<"vcvt_n_s64", "Lsi", "Sh">;
+    def SCALAR_FCVTZUHO : SInst<"vcvt_n_u16", "bsi", "Sh">;
+    def SCALAR_FCVTZUH1O: SInst<"vcvt_n_u32", "Usi", "Sh">;
+    def SCALAR_FCVTZUH2O: SInst<"vcvt_n_u64", "Osi", "Sh">;
+  }
   // Comparison
   def SCALAR_CMEQRH   : SInst<"vceq", "bss", "Sh">;
   def SCALAR_CMEQZH   : SInst<"vceqz", "bs", "Sh">;

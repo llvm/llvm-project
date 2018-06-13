@@ -322,6 +322,11 @@ public:
     return Operands[i];
   }
 
+  /// Returns the total number of definitions.
+  unsigned getNumDefs() const {
+    return getNumExplicitDefs() + MCID->getNumImplicitDefs();
+  }
+
   /// Return true if operand \p OpIdx is a subregister index.
   bool isOperandSubregIdx(unsigned OpIdx) const {
     assert(getOperand(OpIdx).getType() == MachineOperand::MO_Immediate &&
@@ -339,6 +344,9 @@ public:
 
   /// Returns the number of non-implicit operands.
   unsigned getNumExplicitOperands() const;
+
+  /// Returns the number of non-implicit definitions.
+  unsigned getNumExplicitDefs() const;
 
   /// iterator/begin/end - Iterate over all operands of a machine instruction.
   using mop_iterator = MachineOperand *;
@@ -374,31 +382,29 @@ public:
   /// Implicit definition are not included!
   iterator_range<mop_iterator> defs() {
     return make_range(operands_begin(),
-                      operands_begin() + getDesc().getNumDefs());
+                      operands_begin() + getNumExplicitDefs());
   }
   /// \copydoc defs()
   iterator_range<const_mop_iterator> defs() const {
     return make_range(operands_begin(),
-                      operands_begin() + getDesc().getNumDefs());
+                      operands_begin() + getNumExplicitDefs());
   }
   /// Returns a range that includes all operands that are register uses.
   /// This may include unrelated operands which are not register uses.
   iterator_range<mop_iterator> uses() {
-    return make_range(operands_begin() + getDesc().getNumDefs(),
-                      operands_end());
+    return make_range(operands_begin() + getNumExplicitDefs(), operands_end());
   }
   /// \copydoc uses()
   iterator_range<const_mop_iterator> uses() const {
-    return make_range(operands_begin() + getDesc().getNumDefs(),
-                      operands_end());
+    return make_range(operands_begin() + getNumExplicitDefs(), operands_end());
   }
   iterator_range<mop_iterator> explicit_uses() {
-    return make_range(operands_begin() + getDesc().getNumDefs(),
-                      operands_begin() + getNumExplicitOperands() );
+    return make_range(operands_begin() + getNumExplicitDefs(),
+                      operands_begin() + getNumExplicitOperands());
   }
   iterator_range<const_mop_iterator> explicit_uses() const {
-    return make_range(operands_begin() + getDesc().getNumDefs(),
-                      operands_begin() + getNumExplicitOperands() );
+    return make_range(operands_begin() + getNumExplicitDefs(),
+                      operands_begin() + getNumExplicitOperands());
   }
 
   /// Returns the number of the operand iterator \p I points to.

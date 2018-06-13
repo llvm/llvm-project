@@ -16,7 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2509,7 +2509,7 @@ bool AddressSanitizer::runOnFunction(Function &F) {
 
   // We want to instrument every address only once per basic block (unless there
   // are calls between uses).
-  SmallSet<Value *, 16> TempsToInstrument;
+  SmallPtrSet<Value *, 16> TempsToInstrument;
   SmallVector<Instruction *, 16> ToInstrument;
   SmallVector<Instruction *, 8> NoReturnCalls;
   SmallVector<BasicBlock *, 16> AllBlocks;

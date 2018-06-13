@@ -56,12 +56,6 @@ public:
     /// in this Accelerator Entry.
     virtual Optional<uint64_t> getCUOffset() const = 0;
 
-    /// Returns the Section Offset of the Debug Info Entry associated with this
-    /// Accelerator Entry or None if the DIE offset is not recorded in this
-    /// Accelerator Entry. The returned offset is relative to the start of the
-    /// Section containing the DIE.
-    virtual Optional<uint64_t> getDIESectionOffset() const = 0;
-
     /// Returns the Tag of the Debug Info Entry associated with this
     /// Accelerator Entry or None if the Tag is not recorded in this
     /// Accelerator Entry.
@@ -130,7 +124,13 @@ public:
 
   public:
     Optional<uint64_t> getCUOffset() const override;
-    Optional<uint64_t> getDIESectionOffset() const override;
+
+    /// Returns the Section Offset of the Debug Info Entry associated with this
+    /// Accelerator Entry or None if the DIE offset is not recorded in this
+    /// Accelerator Entry. The returned offset is relative to the start of the
+    /// Section containing the DIE.
+    Optional<uint64_t> getDIESectionOffset() const;
+
     Optional<dwarf::Tag> getTag() const override;
 
     /// Returns the value of the Atom in this Accelerator Entry, if the Entry
@@ -286,7 +286,6 @@ public:
 
   public:
     Optional<uint64_t> getCUOffset() const override;
-    Optional<uint64_t> getDIESectionOffset() const override;
     Optional<dwarf::Tag> getTag() const override { return tag(); }
 
     /// Returns the Index into the Compilation Unit list of the owning Name

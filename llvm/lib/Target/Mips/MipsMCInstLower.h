@@ -44,8 +44,8 @@ private:
   MCOperand createSub(MachineBasicBlock *BB1, MachineBasicBlock *BB2,
                       MipsMCExpr::MipsExprKind Kind) const;
   void lowerLongBranchLUi(const MachineInstr *MI, MCInst &OutMI) const;
-  void lowerLongBranchADDiu(const MachineInstr *MI, MCInst &OutMI, int Opcode,
-                            MipsMCExpr::MipsExprKind Kind) const;
+  void lowerLongBranchADDiu(const MachineInstr *MI, MCInst &OutMI,
+                            int Opcode) const;
   bool lowerLongBranch(const MachineInstr *MI, MCInst &OutMI) const;
 };
 

@@ -2296,6 +2296,10 @@ AARCH64
 
 Reserve the x18 register (AArch64 only)
 
+.. option:: -ffixed-x20
+
+Reserve the x20 register (AArch64 only)
+
 .. option:: -mfix-cortex-a53-835769, -mno-fix-cortex-a53-835769
 
 Workaround Cortex-A53 erratum 835769 (AArch64 only)

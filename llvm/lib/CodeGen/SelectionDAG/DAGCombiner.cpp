@@ -568,6 +568,16 @@ namespace {
     /// single-use) and if missed an empty SDValue is returned.
     SDValue distributeTruncateThroughAnd(SDNode *N);
 
+    /// Helper function to determine whether the target supports operation
+    /// given by \p Opcode for type \p VT, that is, whether the operation
+    /// is legal or custom before legalizing operations, and whether is
+    /// legal (but not custom) after legalization.
+    bool hasOperation(unsigned Opcode, EVT VT) {
+      if (LegalOperations)
+        return TLI.isOperationLegal(Opcode, VT);
+      return TLI.isOperationLegalOrCustom(Opcode, VT);
+    }
+
   public:
     /// Runs the dag combiner on all nodes in the work list
     void Run(CombineLevel AtLevel);
@@ -2544,6 +2554,20 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return N0;
   if (N1.isUndef())
     return N1;
+
+  // fold Y = sra (X, size(X)-1); sub (xor (X, Y), Y) -> (abs X)
+  if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
+    if (N0.getOpcode() == ISD::XOR && N1.getOpcode() == ISD::SRA) {
+      SDValue X0 = N0.getOperand(0), X1 = N0.getOperand(1);
+      SDValue S0 = N1.getOperand(0);
+      if ((X0 == S0 && X1 == N1) || (X0 == N1 && X1 == S0)) {
+        unsigned OpSizeInBits = VT.getScalarSizeInBits();
+        if (ConstantSDNode *C = isConstOrConstSplat(N1.getOperand(1)))
+          if (C->getAPIntValue() == (OpSizeInBits - 1))
+            return DAG.getNode(ISD::ABS, SDLoc(N), VT, S0);
+      }
+    }
+  }
 
   // If the relocation model supports it, consider symbol offsets.
   if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N0))
@@ -5050,8 +5074,8 @@ SDNode *DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
   if (!TLI.isTypeLegal(VT)) return nullptr;
 
   // The target must have at least one rotate flavor.
-  bool HasROTL = TLI.isOperationLegalOrCustom(ISD::ROTL, VT);
-  bool HasROTR = TLI.isOperationLegalOrCustom(ISD::ROTR, VT);
+  bool HasROTL = hasOperation(ISD::ROTL, VT);
+  bool HasROTR = hasOperation(ISD::ROTR, VT);
   if (!HasROTL && !HasROTR) return nullptr;
 
   // Check for truncated rotate.
@@ -5650,13 +5674,19 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   }
 
   // fold Y = sra (X, size(X)-1); xor (add (X, Y), Y) -> (abs X)
-  unsigned OpSizeInBits = VT.getScalarSizeInBits();
-  if (N0.getOpcode() == ISD::ADD && N0.getOperand(1) == N1 &&
-      N1.getOpcode() == ISD::SRA && N1.getOperand(0) == N0.getOperand(0) &&
-      TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
-    if (ConstantSDNode *C = isConstOrConstSplat(N1.getOperand(1)))
-      if (C->getAPIntValue() == (OpSizeInBits - 1))
-        return DAG.getNode(ISD::ABS, SDLoc(N), VT, N0.getOperand(0));
+  if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
+    SDValue A = N0.getOpcode() == ISD::ADD ? N0 : N1;
+    SDValue S = N0.getOpcode() == ISD::SRA ? N0 : N1;
+    if (A.getOpcode() == ISD::ADD && S.getOpcode() == ISD::SRA) {
+      SDValue A0 = A.getOperand(0), A1 = A.getOperand(1);
+      SDValue S0 = S.getOperand(0);
+      if ((A0 == S && A1 == S0) || (A1 == S && A0 == S0)) {
+        unsigned OpSizeInBits = VT.getScalarSizeInBits();
+        if (ConstantSDNode *C = isConstOrConstSplat(S.getOperand(1)))
+          if (C->getAPIntValue() == (OpSizeInBits - 1))
+            return DAG.getNode(ISD::ABS, SDLoc(N), VT, S0);
+      }
+    }
   }
 
   // fold (xor x, x) -> 0
@@ -10532,12 +10562,15 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
-  if (Options.UnsafeFPMath) {
+  if (Options.UnsafeFPMath || 
+      (Flags.hasNoNaNs() && Flags.hasNoSignedZeros())) {
     // fold (fmul A, 0) -> 0
     if (N1CFP && N1CFP->isZero())
       return N1;
+  } 
 
-    // fmul (fmul X, C1), X2 -> fmul X, C1 * C2
+  if (Options.UnsafeFPMath || Flags.hasAllowReassociation()) {
+    // fmul (fmul X, C1), C2 -> fmul X, C1 * C2
     if (N0.getOpcode() == ISD::FMUL) {
       // Fold scalars or any vector constants (not just splats).
       // This fold is done in general by InstCombine, but extra fmul insts

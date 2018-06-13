@@ -6135,6 +6135,71 @@ static bool isBoolSGPR(SDValue V) {
   return false;
 }
 
+// If a constant has all zeroes or all ones within each byte return it.
+// Otherwise return 0.
+static uint32_t getConstantPermuteMask(uint32_t C) {
+  // 0xff for any zero byte in the mask
+  uint32_t ZeroByteMask = 0;
+  if (!(C & 0x000000ff)) ZeroByteMask |= 0x000000ff;
+  if (!(C & 0x0000ff00)) ZeroByteMask |= 0x0000ff00;
+  if (!(C & 0x00ff0000)) ZeroByteMask |= 0x00ff0000;
+  if (!(C & 0xff000000)) ZeroByteMask |= 0xff000000;
+  uint32_t NonZeroByteMask = ~ZeroByteMask; // 0xff for any non-zero byte
+  if ((NonZeroByteMask & C) != NonZeroByteMask)
+    return 0; // Partial bytes selected.
+  return C;
+}
+
+// Check if a node selects whole bytes from its operand 0 starting at a byte
+// boundary while masking the rest. Returns select mask as in the v_perm_b32
+// or -1 if not succeeded.
+// Note byte select encoding:
+// value 0-3 selects corresponding source byte;
+// value 0xc selects zero;
+// value 0xff selects 0xff.
+static uint32_t getPermuteMask(SelectionDAG &DAG, SDValue V) {
+  assert(V.getValueSizeInBits() == 32);
+
+  if (V.getNumOperands() != 2)
+    return ~0;
+
+  ConstantSDNode *N1 = dyn_cast<ConstantSDNode>(V.getOperand(1));
+  if (!N1)
+    return ~0;
+
+  uint32_t C = N1->getZExtValue();
+
+  switch (V.getOpcode()) {
+  default:
+    break;
+  case ISD::AND:
+    if (uint32_t ConstMask = getConstantPermuteMask(C)) {
+      return (0x03020100 & ConstMask) | (0x0c0c0c0c & ~ConstMask);
+    }
+    break;
+
+  case ISD::OR:
+    if (uint32_t ConstMask = getConstantPermuteMask(C)) {
+      return (0x03020100 & ~ConstMask) | ConstMask;
+    }
+    break;
+
+  case ISD::SHL:
+    if (C % 8)
+      return ~0;
+
+    return uint32_t((0x030201000c0c0c0cull << C) >> 32);
+
+  case ISD::SRL:
+    if (C % 8)
+      return ~0;
+
+    return uint32_t(0x0c0c0c0c03020100ull >> C);
+  }
+
+  return ~0;
+}
+
 SDValue SITargetLowering::performAndCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   if (DCI.isBeforeLegalize())
@@ -6180,6 +6245,20 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
           return Shl;
         }
       }
+    }
+
+    // and (perm x, y, c1), c2 -> perm x, y, permute_mask(c1, c2)
+    if (LHS.hasOneUse() && LHS.getOpcode() == AMDGPUISD::PERM &&
+        isa<ConstantSDNode>(LHS.getOperand(2))) {
+      uint32_t Sel = getConstantPermuteMask(Mask);
+      if (!Sel)
+        return SDValue();
+
+      // Select 0xc for all zero bytes
+      Sel = (LHS.getConstantOperandVal(2) & Sel) | (~Sel & 0x0c0c0c0c);
+      SDLoc DL(N);
+      return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, LHS.getOperand(0),
+                         LHS.getOperand(1), DAG.getConstant(Sel, DL, MVT::i32));
     }
   }
 
@@ -6233,6 +6312,54 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
                            LHS, DAG.getConstant(0, SDLoc(N), MVT::i32));
   }
 
+  // and (op x, c1), (op y, c2) -> perm x, y, permute_mask(c1, c2)
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+  if (VT == MVT::i32 && LHS.hasOneUse() && RHS.hasOneUse() &&
+      N->isDivergent() && TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32) != -1) {
+    uint32_t LHSMask = getPermuteMask(DAG, LHS);
+    uint32_t RHSMask = getPermuteMask(DAG, RHS);
+    if (LHSMask != ~0u && RHSMask != ~0u) {
+      // Canonicalize the expression in an attempt to have fewer unique masks
+      // and therefore fewer registers used to hold the masks.
+      if (LHSMask > RHSMask) {
+        std::swap(LHSMask, RHSMask);
+        std::swap(LHS, RHS);
+      }
+
+      // Select 0xc for each lane used from source operand. Zero has 0xc mask
+      // set, 0xff have 0xff in the mask, actual lanes are in the 0-3 range.
+      uint32_t LHSUsedLanes = ~(LHSMask & 0x0c0c0c0c) & 0x0c0c0c0c;
+      uint32_t RHSUsedLanes = ~(RHSMask & 0x0c0c0c0c) & 0x0c0c0c0c;
+
+      // Check of we need to combine values from two sources within a byte.
+      if (!(LHSUsedLanes & RHSUsedLanes) &&
+          // If we select high and lower word keep it for SDWA.
+          // TODO: teach SDWA to work with v_perm_b32 and remove the check.
+          !(LHSUsedLanes == 0x0c0c0000 && RHSUsedLanes == 0x00000c0c)) {
+        // Each byte in each mask is either selector mask 0-3, or has higher
+        // bits set in either of masks, which can be 0xff for 0xff or 0x0c for
+        // zero. If 0x0c is in either mask it shall always be 0x0c. Otherwise
+        // mask which is not 0xff wins. By anding both masks we have a correct
+        // result except that 0x0c shall be corrected to give 0x0c only.
+        uint32_t Mask = LHSMask & RHSMask;
+        for (unsigned I = 0; I < 32; I += 8) {
+          uint32_t ByteSel = 0xff << I;
+          if ((LHSMask & ByteSel) == 0x0c || (RHSMask & ByteSel) == 0x0c)
+            Mask &= (0x0c << I) & 0xffffffff;
+        }
+
+        // Add 4 to each active LHS lane. It will not affect any existing 0xff
+        // or 0x0c.
+        uint32_t Sel = Mask | (LHSUsedLanes & 0x04040404);
+        SDLoc DL(N);
+
+        return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32,
+                           LHS.getOperand(0), RHS.getOperand(0),
+                           DAG.getConstant(Sel, DL, MVT::i32));
+      }
+    }
+  }
+
   return SDValue();
 }
 
@@ -6266,6 +6393,60 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     }
 
     return SDValue();
+  }
+
+  // or (perm x, y, c1), c2 -> perm x, y, permute_mask(c1, c2)
+  if (isa<ConstantSDNode>(RHS) && LHS.hasOneUse() &&
+      LHS.getOpcode() == AMDGPUISD::PERM &&
+      isa<ConstantSDNode>(LHS.getOperand(2))) {
+    uint32_t Sel = getConstantPermuteMask(N->getConstantOperandVal(1));
+    if (!Sel)
+      return SDValue();
+
+    Sel |= LHS.getConstantOperandVal(2);
+    SDLoc DL(N);
+    return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, LHS.getOperand(0),
+                       LHS.getOperand(1), DAG.getConstant(Sel, DL, MVT::i32));
+  }
+
+  // or (op x, c1), (op y, c2) -> perm x, y, permute_mask(c1, c2)
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+  if (VT == MVT::i32 && LHS.hasOneUse() && RHS.hasOneUse() &&
+      N->isDivergent() && TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32) != -1) {
+    uint32_t LHSMask = getPermuteMask(DAG, LHS);
+    uint32_t RHSMask = getPermuteMask(DAG, RHS);
+    if (LHSMask != ~0u && RHSMask != ~0u) {
+      // Canonicalize the expression in an attempt to have fewer unique masks
+      // and therefore fewer registers used to hold the masks.
+      if (LHSMask > RHSMask) {
+        std::swap(LHSMask, RHSMask);
+        std::swap(LHS, RHS);
+      }
+
+      // Select 0xc for each lane used from source operand. Zero has 0xc mask
+      // set, 0xff have 0xff in the mask, actual lanes are in the 0-3 range.
+      uint32_t LHSUsedLanes = ~(LHSMask & 0x0c0c0c0c) & 0x0c0c0c0c;
+      uint32_t RHSUsedLanes = ~(RHSMask & 0x0c0c0c0c) & 0x0c0c0c0c;
+
+      // Check of we need to combine values from two sources within a byte.
+      if (!(LHSUsedLanes & RHSUsedLanes) &&
+          // If we select high and lower word keep it for SDWA.
+          // TODO: teach SDWA to work with v_perm_b32 and remove the check.
+          !(LHSUsedLanes == 0x0c0c0000 && RHSUsedLanes == 0x00000c0c)) {
+        // Kill zero bytes selected by other mask. Zero value is 0xc.
+        LHSMask &= ~RHSUsedLanes;
+        RHSMask &= ~LHSUsedLanes;
+        // Add 4 to each active LHS lane
+        LHSMask |= LHSUsedLanes & 0x04040404;
+        // Combine masks
+        uint32_t Sel = LHSMask | RHSMask;
+        SDLoc DL(N);
+
+        return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32,
+                           LHS.getOperand(0), RHS.getOperand(0),
+                           DAG.getConstant(Sel, DL, MVT::i32));
+      }
+    }
   }
 
   if (VT != MVT::i64)

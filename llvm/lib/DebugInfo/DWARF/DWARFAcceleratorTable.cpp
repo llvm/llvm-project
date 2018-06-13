@@ -556,14 +556,6 @@ Optional<uint64_t> DWARFDebugNames::Entry::getCUOffset() const {
   return NameIdx->getCUOffset(*Index);
 }
 
-Optional<uint64_t> DWARFDebugNames::Entry::getDIESectionOffset() const {
-  Optional<uint64_t> CUOff = getCUOffset();
-  Optional<uint64_t> DIEOff = getDIEUnitOffset();
-  if (CUOff && DIEOff)
-    return *CUOff + *DIEOff;
-  return None;
-}
-
 void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {
   W.printHex("Abbrev", Abbr->Code);
   W.startLine() << formatv("Tag: {0}\n", Abbr->Tag);

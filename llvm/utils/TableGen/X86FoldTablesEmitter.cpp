@@ -251,16 +251,6 @@ getMemOperandSize(const Record *MemRec, const bool IntrinsicSensitive = false) {
   llvm_unreachable("Memory operand's size not known!");
 }
 
-// Returns true if the record's list of defs includes the given def.
-static inline bool hasDefInList(const Record *Rec, const StringRef List,
-                                const StringRef Def) {
-  if (!Rec->isValueUnset(List)) {
-    return any_of(*(Rec->getValueAsListInit(List)),
-                  [Def](const Init *I) { return I->getAsString() == Def; });
-  }
-  return false;
-}
-
 // Return true if the instruction defined as a register flavor.
 static inline bool hasRegisterFormat(const Record *Inst) {
   const BitsInit *FormBits = Inst->getValueAsBitsInit("FormBits");
@@ -515,12 +505,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
   unsigned MemInSize = MemRec->getValueAsDag("InOperandList")->getNumArgs();
   unsigned RegInSize = RegRec->getValueAsDag("InOperandList")->getNumArgs();
 
-  // Instructions which have the WriteRMW value (Read-Modify-Write) should be
-  // added to Table2Addr.
-  if ((hasDefInList(MemRec, "SchedRW", "WriteRMW") ||
-       hasDefInList(MemRec, "SchedRW", "WriteADCRMW") ||
-       hasDefInList(MemRec, "SchedRW", "WriteALURMW")) &&
-       MemOutSize != RegOutSize && MemInSize == RegInSize) {
+  // Instructions which Read-Modify-Write should be added to Table2Addr.
+  if (MemOutSize != RegOutSize && MemInSize == RegInSize) {
     addEntryWithFlags(Table2Addr, RegInstr, MemInstr, S, 0);
     return;
   }

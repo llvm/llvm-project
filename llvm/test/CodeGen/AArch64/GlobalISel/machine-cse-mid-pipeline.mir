@@ -179,3 +179,102 @@ body:             |
     $w0 = COPY %4
     RET_ReallyLR implicit $w0
 ...
+---
+name:            variadic_defs_unmerge_vector
+legalized:       true
+regBankSelected: false
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: variadic_defs_unmerge_vector
+  ; CHECK:      [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+  ; CHECK-NEXT: [[UV0:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+  ; CHECK-NEXT: [[ANYEXT0:%[0-9]+]]:_(s32) = G_ANYEXT [[UV0]](s16)
+  ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+  ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+  ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
+  ; CHECK-NEXT: [[ADD0:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT0]], [[ANYEXT1]]
+  ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT2]], [[ANYEXT3]]
+  ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD0]], [[ADD1]]
+  ; CHECK-NEXT: $w0 = COPY [[ADD2]](s32)
+  ; CHECK-NEXT: RET_ReallyLR implicit $w0
+  bb.0:
+    %0 :_(<4 x s16>) = COPY $d0
+    %1 :_(s16), %2 :_(s16), %3 :_(s16), %4 :_(s16) = G_UNMERGE_VALUES %0(<4 x s16>)
+    %5 :_(s16), %6 :_(s16), %7 :_(s16), %8 :_(s16) = G_UNMERGE_VALUES %0(<4 x s16>)
+    %9 :_(s16), %10:_(s16), %11:_(s16), %12:_(s16) = G_UNMERGE_VALUES %0(<4 x s16>)
+    %13:_(s16), %14:_(s16), %15:_(s16), %16:_(s16) = G_UNMERGE_VALUES %0(<4 x s16>)
+    %17:_(s32) = G_ANYEXT %1 (s16)
+    %18:_(s32) = G_ANYEXT %6 (s16)
+    %19:_(s32) = G_ANYEXT %11(s16)
+    %20:_(s32) = G_ANYEXT %16(s16)
+    %21:_(s32) = G_ADD %17, %18
+    %22:_(s32) = G_ADD %19, %20
+    %23:_(s32) = G_ADD %21, %22
+    $w0 = COPY %23(s32)
+    RET_ReallyLR implicit $w0
+...
+---
+name:            variadic_defs_unmerge_scalar
+legalized:       true
+regBankSelected: false
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: variadic_defs_unmerge_scalar
+  ; CHECK:      [[COPY:%[0-9]+]]:_(s64) = COPY $d0
+  ; CHECK-NEXT: [[UV0:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](s64)
+  ; CHECK-NEXT: [[ANYEXT0:%[0-9]+]]:_(s32) = G_ANYEXT [[UV0]](s16)
+  ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+  ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+  ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
+  ; CHECK-NEXT: [[ADD0:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT0]], [[ANYEXT1]]
+  ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT2]], [[ANYEXT3]]
+  ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD0]], [[ADD1]]
+  ; CHECK-NEXT: $w0 = COPY [[ADD2]](s32)
+  ; CHECK-NEXT: RET_ReallyLR implicit $w0
+  bb.0:
+    %0 :_(s64) = COPY $d0
+    %1 :_(s16), %2 :_(s16), %3 :_(s16), %4 :_(s16) = G_UNMERGE_VALUES %0(s64)
+    %5 :_(s16), %6 :_(s16), %7 :_(s16), %8 :_(s16) = G_UNMERGE_VALUES %0(s64)
+    %9 :_(s16), %10:_(s16), %11:_(s16), %12:_(s16) = G_UNMERGE_VALUES %0(s64)
+    %13:_(s16), %14:_(s16), %15:_(s16), %16:_(s16) = G_UNMERGE_VALUES %0(s64)
+    %17:_(s32) = G_ANYEXT %1 (s16)
+    %18:_(s32) = G_ANYEXT %6 (s16)
+    %19:_(s32) = G_ANYEXT %11(s16)
+    %20:_(s32) = G_ANYEXT %16(s16)
+    %21:_(s32) = G_ADD %17, %18
+    %22:_(s32) = G_ADD %19, %20
+    %23:_(s32) = G_ADD %21, %22
+    $w0 = COPY %23(s32)
+    RET_ReallyLR implicit $w0
+...
+---
+name:            variadic_defs_unmerge_scalar_asym
+legalized:       true
+regBankSelected: false
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: variadic_defs_unmerge_scalar_asym
+  ; CHECK:      [[COPY:%[0-9]+]]:_(s64) = COPY $d0
+  ; CHECK-NEXT: [[UV0:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](s64)
+  ; CHECK-NEXT: [[UV01:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+  ; CHECK-NEXT: [[ANYEXT0:%[0-9]+]]:_(s32) = G_ANYEXT [[UV0]](s16)
+  ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+  ; CHECK-NEXT: [[ADD0:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT0]], [[ANYEXT1]]
+  ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UV01]], [[UV23]]
+  ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD0]], [[ADD1]]
+  ; CHECK-NEXT: $w0 = COPY [[ADD2]](s32)
+  ; CHECK-NEXT: RET_ReallyLR implicit $w0
+  bb.0:
+    %0 :_(s64) = COPY $d0
+    %1 :_(s16), %2 :_(s16), %3 :_(s16), %4 :_(s16) = G_UNMERGE_VALUES %0(s64)
+    %9 :_(s32), %10:_(s32) = G_UNMERGE_VALUES %0(s64)
+    %5 :_(s16), %6 :_(s16), %7 :_(s16), %8 :_(s16) = G_UNMERGE_VALUES %0(s64)
+    %11:_(s32), %12:_(s32) = G_UNMERGE_VALUES %0(s64)
+    %17:_(s32) = G_ANYEXT %1 (s16)
+    %18:_(s32) = G_ANYEXT %6 (s16)
+    %21:_(s32) = G_ADD %17, %18
+    %22:_(s32) = G_ADD %9,  %12
+    %23:_(s32) = G_ADD %21, %22
+    $w0 = COPY %23(s32)
+    RET_ReallyLR implicit $w0
+...

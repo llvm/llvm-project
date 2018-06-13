@@ -31,9 +31,10 @@ endfunction()
 #                                  ARCHS <architectures>
 #                                  SOURCES <source files>
 #                                  CFLAGS <compile flags>
-#                                  DEFS <compile definitions>)
+#                                  DEFS <compile definitions>
+#                                  DEPS <dependencies>)
 function(add_compiler_rt_object_libraries name)
-  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS" ${ARGN})
+  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS" ${ARGN})
   set(libnames)
   if(APPLE)
     foreach(os ${LIB_OS})
@@ -56,6 +57,9 @@ function(add_compiler_rt_object_libraries name)
 
   foreach(libname ${libnames})
     add_library(${libname} OBJECT ${LIB_SOURCES})
+    if(LIB_DEPS)
+      add_dependencies(${libname} ${LIB_DEPS})
+    endif()
 
     # Strip out -msse3 if this isn't macOS.
     set(target_flags ${LIB_CFLAGS})
@@ -530,23 +534,8 @@ macro(add_custom_libcxx name prefix)
   endforeach()
 
   string(REPLACE ";" " " FLAGS_STRING "${LIBCXX_CFLAGS}")
-  set(LIBCXX_C_FLAGS "${CMAKE_C_FLAGS} ${FLAGS_STRING}")
-  set(LIBCXX_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS_STRING}")
-  string(REPLACE "-Wno-maybe-uninitialized" "" LIBCXX_C_FLAGS "${LIBCXX_C_FLAGS}")
-  string(REPLACE "-Wno-maybe-uninitialized" "" LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS}")
-
-
-  string(REPLACE "-Wl,-z,defs" "" LIBCXX_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
-  string(REPLACE "-Wl,-z,defs" "" LIBCXX_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
-  string(REPLACE "-Wl,-z,defs" "" LIBCXX_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
-
-  # The libc++ sources are fundamentally non-modular. They need special
-  # versions of the headers in order to provide C++03 and legacy ABI definitions.
-  # NOTE: The public headers can be used with modules in all other contexts
-  if (LLVM_ENABLE_MODULES)
-    set(LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS} -Wno-unused-command-line-argument")
-    set(LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS} -fno-modules")
-  endif()
+  set(LIBCXX_C_FLAGS "${FLAGS_STRING}")
+  set(LIBCXX_CXX_FLAGS "${FLAGS_STRING}")
 
   ExternalProject_Add(${name}
     DEPENDS ${name}-clobber ${LIBCXX_DEPS}
@@ -558,9 +547,6 @@ macro(add_custom_libcxx name prefix)
                ${compiler_args}
                -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
-               -DCMAKE_SHARED_LINKER_FLAGS=${LIBCXX_SHARED_LINKER_FLAGS}
-               -DCMAKE_MODULE_LINKER_FLAGS=${LIBCXX_MODULE_LINKER_FLAGS}
-               -DCMAKE_EXE_LINKER_FLAGS=${LIBCXX_EXE_LINKER_FLAGS}
                -DCMAKE_BUILD_TYPE=Release
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
                -DLLVM_BINARY_DIR=${prefix}

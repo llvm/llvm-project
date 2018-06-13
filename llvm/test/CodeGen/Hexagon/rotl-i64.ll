@@ -1,5 +1,5 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
-; CHECK: asl
+; CHECK: rol
 
 ; Function Attrs: nounwind
 define fastcc void @f0() #0 {
@@ -24,7 +24,7 @@ b3:                                               ; preds = %b3, %b2
   br label %b3
 }
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "target-cpu"="hexagonv60" }
 
 !0 = !{!1, !1, i64 0}
 !1 = !{!"long long", !2}

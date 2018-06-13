@@ -21,6 +21,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TarWriter.h"
 #include <memory>
 #include <set>
@@ -94,7 +95,11 @@ private:
 
   // Library search path. The first element is always "" (current directory).
   std::vector<StringRef> SearchPaths;
-  std::set<std::string> VisitedFiles;
+
+  // We don't want to add the same file more than once.
+  // Files are uniquified by their filesystem and file number.
+  std::set<llvm::sys::fs::UniqueID> VisitedFiles;
+
   std::set<std::string> VisitedLibs;
 
   Symbol *addUndefined(StringRef Sym);

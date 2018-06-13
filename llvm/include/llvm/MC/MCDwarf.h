@@ -234,8 +234,8 @@ struct MCDwarfLineTableHeader {
 
 private:
   void emitV2FileDirTables(MCStreamer *MCOS) const;
-  void emitV5FileDirTables(MCStreamer *MCOS,
-                           Optional<MCDwarfLineStr> &LineStr) const;
+  void emitV5FileDirTables(MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr,
+                           StringRef CtxCompilationDir) const;
 };
 
 class MCDwarfDwoLineTable {

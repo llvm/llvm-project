@@ -550,8 +550,7 @@ bool MachineCSE::ProcessBlock(MachineBasicBlock *MBB) {
 
     // Check if it's profitable to perform this CSE.
     bool DoCSE = true;
-    unsigned NumDefs = MI->getDesc().getNumDefs() +
-                       MI->getDesc().getNumImplicitDefs();
+    unsigned NumDefs = MI->getNumDefs();
 
     for (unsigned i = 0, e = MI->getNumOperands(); NumDefs && i != e; ++i) {
       MachineOperand &MO = MI->getOperand(i);

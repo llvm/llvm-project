@@ -2,12 +2,12 @@
 
 #include <stdio.h>
 
-int main(void) {
+int main(int argc, char **argv) {
   FILE *fp;
   char buf[2];
   char *s;
 
-  fp = fopen("/etc/passwd", "r");
+  fp = fopen(argv[0], "r");
   if (!fp)
     return 1;
 

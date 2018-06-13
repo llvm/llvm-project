@@ -309,31 +309,60 @@ static void filterByName(const StringSet<> &Names,
 
 }
 
-template <typename AccelTable>
-static void getDIEOffset(const AccelTable &Accel, StringRef Name,
-                         SmallVectorImpl<uint64_t> &Offsets) {
-  for (const auto &Entry : Accel.equal_range(Name))
-    if (llvm::Optional<uint64_t> Off = Entry.getDIESectionOffset())
-      Offsets.push_back(*Off);
+static void getDies(DWARFContext &DICtx, const AppleAcceleratorTable &Accel,
+                    StringRef Name, SmallVectorImpl<DWARFDie> &Dies) {
+  for (const auto &Entry : Accel.equal_range(Name)) {
+    if (llvm::Optional<uint64_t> Off = Entry.getDIESectionOffset()) {
+      if (DWARFDie Die = DICtx.getDIEForOffset(*Off))
+        Dies.push_back(Die);
+    }
+  }
+}
+
+static DWARFDie toDie(const DWARFDebugNames::Entry &Entry,
+                      DWARFContext &DICtx) {
+  llvm::Optional<uint64_t> CUOff = Entry.getCUOffset();
+  llvm::Optional<uint64_t> Off = Entry.getDIEUnitOffset();
+  if (!CUOff || !Off)
+    return DWARFDie();
+
+  DWARFCompileUnit *CU = DICtx.getCompileUnitForOffset(*CUOff);
+  if (!CU)
+    return DWARFDie();
+
+  if (llvm::Optional<uint64_t> DWOId = CU->getDWOId()) {
+    // This is a skeleton unit. Look up the DIE in the DWO unit.
+    CU = DICtx.getDWOCompileUnitForHash(*DWOId);
+    if (!CU)
+      return DWARFDie();
+  }
+
+  return CU->getDIEForOffset(CU->getOffset() + *Off);
+}
+
+static void getDies(DWARFContext &DICtx, const DWARFDebugNames &Accel,
+                    StringRef Name, SmallVectorImpl<DWARFDie> &Dies) {
+  for (const auto &Entry : Accel.equal_range(Name)) {
+    if (DWARFDie Die = toDie(Entry, DICtx))
+      Dies.push_back(Die);
+  }
 }
 
 /// Print only DIEs that have a certain name.
 static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
                               raw_ostream &OS) {
-  SmallVector<uint64_t, 4> Offsets;
+  SmallVector<DWARFDie, 4> Dies;
   for (const auto &Name : Names) {
-    getDIEOffset(DICtx.getAppleNames(), Name, Offsets);
-    getDIEOffset(DICtx.getAppleTypes(), Name, Offsets);
-    getDIEOffset(DICtx.getAppleNamespaces(), Name, Offsets);
-    getDIEOffset(DICtx.getDebugNames(), Name, Offsets);
+    getDies(DICtx, DICtx.getAppleNames(), Name, Dies);
+    getDies(DICtx, DICtx.getAppleTypes(), Name, Dies);
+    getDies(DICtx, DICtx.getAppleNamespaces(), Name, Dies);
+    getDies(DICtx, DICtx.getDebugNames(), Name, Dies);
   }
-  llvm::sort(Offsets.begin(), Offsets.end());
-  Offsets.erase(std::unique(Offsets.begin(), Offsets.end()), Offsets.end());
+  llvm::sort(Dies.begin(), Dies.end());
+  Dies.erase(std::unique(Dies.begin(), Dies.end()), Dies.end());
 
-  for (uint64_t Off: Offsets) {
-    DWARFDie Die = DICtx.getDIEForOffset(Off);
+  for (DWARFDie Die : Dies)
     Die.dump(OS, 0, getDumpOpts());
-  }
 }
 
 /// Handle the --lookup option and dump the DIEs and line info for the given

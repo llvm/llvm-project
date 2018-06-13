@@ -14,6 +14,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDGPUMetadata.h"
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
 
 namespace llvm {
 #include "AMDGPUPTNote.h"
@@ -62,6 +63,10 @@ public:
 
   /// \returns True on success, false on failure.
   virtual bool EmitPALMetadata(const AMDGPU::PALMD::Metadata &PALMetadata) = 0;
+
+  virtual void EmitAmdhsaKernelDescriptor(
+      StringRef KernelName,
+      const amdhsa::kernel_descriptor_t &KernelDescriptor) = 0;
 };
 
 class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {
@@ -87,6 +92,10 @@ public:
 
   /// \returns True on success, false on failure.
   bool EmitPALMetadata(const AMDGPU::PALMD::Metadata &PALMetadata) override;
+
+  void EmitAmdhsaKernelDescriptor(
+      StringRef KernelName,
+      const amdhsa::kernel_descriptor_t &KernelDescriptor) override;
 };
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
@@ -119,6 +128,10 @@ public:
 
   /// \returns True on success, false on failure.
   bool EmitPALMetadata(const AMDGPU::PALMD::Metadata &PALMetadata) override;
+
+  void EmitAmdhsaKernelDescriptor(
+      StringRef KernelName,
+      const amdhsa::kernel_descriptor_t &KernelDescriptor) override;
 };
 
 }

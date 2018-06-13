@@ -96,11 +96,12 @@ void DWARFCallFrameInfoTest::TestBasic(DWARFCallFrameInfo::Type type,
       "basic-call-frame-info-%%%%%%", "obj", obj));
   llvm::FileRemover obj_remover(obj);
 
-  const char *args[] = {YAML2OBJ, yaml.c_str(), nullptr};
+  llvm::StringRef args[] = {YAML2OBJ, yaml};
   llvm::StringRef obj_ref = obj;
   const llvm::Optional<llvm::StringRef> redirects[] = {llvm::None, obj_ref,
                                                        llvm::None};
-  ASSERT_EQ(0, llvm::sys::ExecuteAndWait(YAML2OBJ, args, nullptr, redirects));
+  ASSERT_EQ(0,
+            llvm::sys::ExecuteAndWait(YAML2OBJ, args, llvm::None, redirects));
 
   uint64_t size;
   ASSERT_NO_ERROR(llvm::sys::fs::file_size(obj, size));
