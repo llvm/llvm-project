@@ -427,7 +427,7 @@ class EntityVariable : public Materializer::Entity {
 public:
   EntityVariable(lldb::VariableSP &variable_sp)
       : Entity(), m_variable_sp(variable_sp), m_is_reference(false),
-        m_is_archetype(false), m_temporary_allocation(LLDB_INVALID_ADDRESS),
+        m_is_generic(false), m_temporary_allocation(LLDB_INVALID_ADDRESS),
         m_temporary_allocation_size(0) {
     // Hard-coding to maximum size of a pointer since all variables are
     // materialized by reference
@@ -435,7 +435,7 @@ public:
     m_alignment = 8;
     m_is_reference =
         m_variable_sp->GetType()->GetForwardCompilerType().IsReferenceType();
-    m_is_archetype = SwiftASTContext::IsArchetypeType(
+    m_is_generic = SwiftASTContext::IsGenericType(
         m_variable_sp->GetType()->GetForwardCompilerType());
   }
 
@@ -474,11 +474,11 @@ public:
       return;
     }
 
-    // In the case where the value is of Swift archetype type, we need to unbox
+    // In the case where the value is of Swift generic type, we need to unbox
     // it
     CompilerType valobj_type = valobj_sp->GetCompilerType();
 
-    if (m_is_archetype) {
+    if (m_is_generic) {
       valobj_sp = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
       valobj_type = valobj_sp->GetCompilerType(); // update the type to refer to
                                                   // the dynamic type
@@ -512,9 +512,9 @@ public:
     } else {
       AddressType address_type = eAddressTypeInvalid;
       const bool is_dynamic_class_type =
-          m_is_archetype &&
+          m_is_generic &&
           (valobj_type.GetTypeClass() == lldb::eTypeClassClass);
-      const bool scalar_is_load_address = m_is_archetype; // this is the only
+      const bool scalar_is_load_address = m_is_generic; // this is the only
                                                           // time we're dealing
                                                           // with dynamic values
 
@@ -573,8 +573,11 @@ public:
           return;
         }
 
-        size_t bit_align =
-            m_variable_sp->GetType()->GetLayoutCompilerType().GetTypeBitAlign();
+        // FIXME: It would be better to map the type into the context when the
+        //        variable is created. 
+        auto layout_type = m_variable_sp->GetType()->GetLayoutCompilerType();
+        size_t bit_align = layout_type.GetTypeSystem()->MapIntoContext(
+            frame_sp, layout_type.GetOpaqueQualType()).GetTypeBitAlign();
         size_t byte_align = (bit_align + 7) / 8;
 
         if (!byte_align)
@@ -655,13 +658,13 @@ public:
         return;
       }
 
-      // In the case where the value is of Swift archetype type, resolve its
+      // In the case where the value is of Swift generic type, resolve its
       // dynamic type, because we may
       // need to unbox the target.
 
       CompilerType valobj_type = valobj_sp->GetCompilerType();
 
-      if (SwiftASTContext::IsArchetypeType(valobj_type)) {
+      if (SwiftASTContext::IsGenericType(valobj_type)) {
         valobj_sp = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
       }
 
@@ -800,7 +803,7 @@ public:
 private:
   lldb::VariableSP m_variable_sp;
   bool m_is_reference;
-  bool m_is_archetype;
+  bool m_is_generic;
   lldb::addr_t m_temporary_allocation;
   size_t m_temporary_allocation_size;
   lldb::DataBufferSP m_original_data;

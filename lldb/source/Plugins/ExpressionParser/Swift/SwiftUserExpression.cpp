@@ -75,6 +75,17 @@ void SwiftUserExpression::DidFinishExecuting() {
   }
 }
 
+static CompilerType GetConcreteType(ExecutionContext &exe_ctx,
+                                    StackFrame *frame, CompilerType type) {
+  auto *swift_type = (swift::TypeBase *)(type.GetOpaqueQualType());
+  StreamString type_name;
+  if (SwiftLanguageRuntime::GetAbstractTypeName(type_name, swift_type)) {
+    auto *runtime = exe_ctx.GetProcessRef().GetSwiftLanguageRuntime();
+    return runtime->GetConcreteType(frame, ConstString(type_name.GetString()));
+  }
+  return type;
+}
+
 void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
@@ -288,23 +299,16 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                 self_type.GetGenericArgumentType(ai);
             ConstString template_arg_name = template_arg_type.GetTypeName();
 
-            if (log)
+            if (log) {
               log->Printf("    [SUE::SC] Argument name: %s",
                           template_arg_name.AsCString());
 
-            CompilerType concrete_type =
-                exe_ctx.GetProcessRef()
-                    .GetSwiftLanguageRuntime()
-                    ->GetConcreteType(frame, template_arg_name);
-
-            const char *printable_name;
-            if (concrete_type.IsValid())
+              const char *printable_name;
+              CompilerType concrete_type =
+                  GetConcreteType(exe_ctx, frame, template_arg_type);
               printable_name = concrete_type.GetTypeName().AsCString();
-            else
-              printable_name = template_arg_type.GetTypeName().AsCString();
-
-            if (log)
               log->Printf("    [SUE::SC] Argument type: %s", printable_name);
+            }
           }
 
           if (log && self_unbound_type.GetNumTemplateArguments())
@@ -321,10 +325,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                           template_arg_name.AsCString());
 
             CompilerType concrete_type =
-                exe_ctx.GetProcessRef()
-                    .GetSwiftLanguageRuntime()
-                    ->GetConcreteType(frame, template_arg_name);
-
+                GetConcreteType(exe_ctx, frame, template_arg_type);
             if (log)
               log->Printf("    [SUE::SC] Argument type: %s",
                           concrete_type.GetTypeName().AsCString());
