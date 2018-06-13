@@ -57,20 +57,20 @@
 #define double_swizzle(X,Y) AS_DOUBLE(ulong_swizzle(AS_ULONG(X),Y))
 #define half_swizzle(X,Y) AS_HALF((ushort)uint_swizzle((uint)AS_USHORT(X),Y))
 
-// DPP
-#define uint_dpp(X,C,R,B,F) __llvm_amdgcn_mov_dpp_i32(X,C,R,B,F)
-#define ulong_dpp(X,C,R,B,F) ({ \
+// DPP16
+#define uint_dpp(ID,X,C,R,B,W) __llvm_amdgcn_update_dpp_i32(ID,X,C,R,B,W)
+#define ulong_dpp(ID,X,C,R,B,W) ({ \
     uint2 __x = AS_UINT2(X); \
     uint2 __r; \
-    __r.lo = uint_dpp(__x.lo, C, R, B, F); \
-    __r.hi = uint_dpp(__x.hi, C, R, B, F); \
+    __r.lo = uint_dpp((uint)ID, __x.lo, C, R, B, W); \
+    __r.hi = uint_dpp((uint)(ID >> 32), __x.hi, C, R, B, W); \
     AS_ULONG(__r); \
 })
-#define int_dpp(X,C,R,B,F) AS_INT(uint_dpp(AS_UINT(X),C,R,B,F))
-#define long_dpp(X,C,R,B,F) AS_LONG(ulong_dpp(AS_ULONG(X),C,R,B,F))
-#define float_dpp(X,C,R,B,F) AS_FLOAT(uint_dpp(AS_UINT(X),C,R,B,F))
-#define double_dpp(X,C,R,B,F) AS_DOUBLE(ulong_dpp(AS_ULONG(X),C,R,B,F))
-#define half_dpp(X,C,R,B,F) AS_HALF((ushort)uint_dpp((uint)AS_USHORT(X),C,R,B,F))
+#define int_dpp(ID,X,C,R,B,W) (int)uint_dpp((uint)ID,X,C,R,B,W)
+#define long_dpp(ID,X,C,R,B,W) (long)ulong_dpp((ulong)ID,(ulong)X,C,R,B,W)
+#define float_dpp(ID,X,C,R,B,W) AS_FLOAT(uint_dpp(AS_UINT(ID),AS_UINT(X),C,R,B,W))
+#define double_dpp(ID,X,C,R,B,W) AS_DOUBLE(ulong_dpp(AS_ULONG(ID),AS_ULONG(X),C,R,B,W))
+#define half_dpp(ID,X,C,R,B,W) AS_HALF((ushort)uint_dpp((uint)AS_USHORT(ID),(uint)AS_USHORT(X),C,R,B,W))
 
 // readlane
 #define uint_readlane(X,L) __llvm_amdgcn_readlane(X,L)
@@ -151,7 +151,7 @@ GENMAX(ulong)
 #define ulong_or(X,Y) OR(X,Y)
 #define long_or(X,Y) OR(X,Y)
 
-#define AND(X,Y) (X | Y)
+#define AND(X,Y) (X & Y)
 #define uint_and(X,Y) AND(X,Y)
 #define int_and(X,Y) AND(X,Y)
 #define ulong_and(X,Y) AND(X,Y)
@@ -166,7 +166,7 @@ GENMAX(ulong)
 
 // Reduce with operation OP over full wave using swizzle
 // Input in x, r is result
-#define RED_SWIZZLE_FULL(T,OP) \
+#define RED_GFX7_FULL(T,OP) \
     T v; \
  \
     v = T##_swizzle(x, SWIZZLE_QUAD_PERM(0x1,0x0,0x3,0x2)); \
@@ -188,125 +188,91 @@ GENMAX(ulong)
 
 // Reduce with operation OP over partial wave using swizzle
 // Input in x, r is result
-#define RED_SWIZZLE_PART(T,OP,ID) \
-    uint e; \
-    T v, t; \
- \
-    t = T##_swizzle(x,    SWIZZLE_QUAD_PERM(0x1,0x0,0x3,0x2)); \
-    e = uint_swizzle(~0u, SWIZZLE_QUAD_PERM(0x1,0x0,0x3,0x2)); \
-    v = T##_sel(e, t, ID); \
-    r = T##_##OP(x, v); \
- \
-    t = T##_swizzle(r,    SWIZZLE_QUAD_PERM(0x2,0x3,0x0,0x1)); \
-    e = uint_swizzle(~0u, SWIZZLE_QUAD_PERM(0x2,0x3,0x0,0x1)); \
-    v = T##_sel(e, t, ID); \
-    r = T##_##OP(r, v); \
- \
-    t = T##_swizzle(r,    SWIZZLE_32_LIMITED(0x1f,0x00,0x04)); \
-    e = uint_swizzle(~0u, SWIZZLE_32_LIMITED(0x1f,0x00,0x04)); \
-    v = T##_sel(e, t, ID); \
-    r = T##_##OP(r, v); \
- \
-    t = T##_swizzle(r,    SWIZZLE_32_LIMITED(0x1f,0x00,0x08)); \
-    e = uint_swizzle(~0u, SWIZZLE_32_LIMITED(0x1f,0x00,0x08)); \
-    v = T##_sel(e, t, ID); \
-    r = T##_##OP(r, v); \
- \
-    t = T##_swizzle(r,    SWIZZLE_32_LIMITED(0x1f,0x00,0x10)); \
-    e = uint_swizzle(~0u, SWIZZLE_32_LIMITED(0x1f,0x00,0x10)); \
-    v = T##_sel(e, t, ID); \
-    r = T##_##OP(r, v); \
- \
-    t = T##_readlane(r, 32); \
-    v = (__builtin_amdgcn_read_exec_hi() & 1) ? t : ID; \
-    r = T##_##OP(T##_readlane(r, 0), v)
-
-
-// Reduce with operation OP over full wave using DPP
-// Input in x, r is result
-#define RED_DPP_FULL(T,OP) \
-    T v; \
- \
-    v = T##_dpp(x, DPP_QUAD_PERM(0x1,0x0,0x3,0x2), 0xf, 0xf, true); \
-    r = T##_##OP(x, v); \
- \
-    v = T##_dpp(r, DPP_QUAD_PERM(0x2,0x3,0x0,0x1), 0xf, 0xf, true); \
-    r = T##_##OP(r, v); \
- \
-    v = T##_dpp(r, DPP_ROW_SR(4), 0xf, 0xa, true); \
-    r = T##_##OP(r, v); \
- \
-    v = T##_dpp(r, DPP_ROW_SR(8), 0xf, 0x8, true); \
-    r = T##_##OP(r, v); \
- \
-    v = T##_dpp(r, DPP_ROW_BCAST15, 0xe, 0x8, true); \
-    r = T##_##OP(r, v); \
- \
-    v = T##_dpp(r, DPP_ROW_BCAST31, 0x8, 0x8, true); \
-    r = T##_##OP(r, v); \
- \
-    r = T##_readlane(r, 63)
-
-// Reduce with operation OP over partial wave using DPP
-// Input in x, r is result
-#define RED_DPP_PART(T,OP,ID) \
+#define RED_GFX7_PART(T,OP,ID) \
     if (ID == (T)0) { \
         T v; \
  \
-        v = T##_dpp(x, DPP_QUAD_PERM(0x1,0x0,0x3,0x2), 0xf, 0xf, true); \
+        v = T##_swizzle(x,    SWIZZLE_QUAD_PERM(0x1,0x0,0x3,0x2)); \
         r = T##_##OP(x, v); \
  \
-        v = T##_dpp(r, DPP_QUAD_PERM(0x2,0x3,0x0,0x1), 0xf, 0xf, true); \
+        v = T##_swizzle(r,    SWIZZLE_QUAD_PERM(0x2,0x3,0x0,0x1)); \
         r = T##_##OP(r, v); \
  \
-        v = T##_dpp(r, DPP_ROW_SL(4), 0xf, 0x5, true); \
+        v = T##_swizzle(r,    SWIZZLE_32_LIMITED(0x1f,0x00,0x04)); \
         r = T##_##OP(r, v); \
  \
-        v = T##_dpp(r, DPP_ROW_SL(8), 0xf, 0x1, true); \
+        v = T##_swizzle(r,    SWIZZLE_32_LIMITED(0x1f,0x00,0x08)); \
         r = T##_##OP(r, v); \
  \
-        v = T##_dpp(r, DPP_WF_SL1, 0xf, 0x8, true); \
-        v = T##_dpp(v, DPP_ROW_MIRROR, 0xf, 0x1, true); \
+        v = T##_swizzle(r,    SWIZZLE_32_LIMITED(0x1f,0x00,0x10)); \
         r = T##_##OP(r, v); \
+ \
+        v = T##_readlane(r, 32); \
+        v = (__builtin_amdgcn_read_exec_hi() & 1) ? v : ID; \
+        r = T##_##OP(T##_readlane(r, 0), v); \
     } else { \
-        T t, v; \
         uint e; \
+        T v, t; \
  \
-        t = T##_dpp(x,    DPP_QUAD_PERM(0x1,0x0,0x3,0x2), 0xf, 0xf, true); \
-        e = uint_dpp(~0u, DPP_QUAD_PERM(0x1,0x0,0x3,0x2), 0xf, 0xf, true); \
+        t = T##_swizzle(x,    SWIZZLE_QUAD_PERM(0x1,0x0,0x3,0x2)); \
+        e = uint_swizzle(~0u, SWIZZLE_QUAD_PERM(0x1,0x0,0x3,0x2)); \
         v = T##_sel(e, t, ID); \
         r = T##_##OP(x, v); \
  \
-        t = T##_dpp(r,    DPP_QUAD_PERM(0x2,0x3,0x0,0x1), 0xf, 0xf, true); \
-        e = uint_dpp(~0u, DPP_QUAD_PERM(0x2,0x3,0x0,0x1), 0xf, 0xf, true); \
+        t = T##_swizzle(r,    SWIZZLE_QUAD_PERM(0x2,0x3,0x0,0x1)); \
+        e = uint_swizzle(~0u, SWIZZLE_QUAD_PERM(0x2,0x3,0x0,0x1)); \
         v = T##_sel(e, t, ID); \
         r = T##_##OP(r, v); \
  \
-        t = T##_dpp(r,    DPP_ROW_SL(4), 0xf, 0x5, true); \
-        e = uint_dpp(~0u, DPP_ROW_SL(4), 0xf, 0x5, true); \
+        t = T##_swizzle(r,    SWIZZLE_32_LIMITED(0x1f,0x00,0x04)); \
+        e = uint_swizzle(~0u, SWIZZLE_32_LIMITED(0x1f,0x00,0x04)); \
         v = T##_sel(e, t, ID); \
         r = T##_##OP(r, v); \
  \
-        t = T##_dpp(r,    DPP_ROW_SL(8), 0xf, 0x1, true); \
-        e = uint_dpp(~0u, DPP_ROW_SL(8), 0xf, 0x1, true); \
+        t = T##_swizzle(r,    SWIZZLE_32_LIMITED(0x1f,0x00,0x08)); \
+        e = uint_swizzle(~0u, SWIZZLE_32_LIMITED(0x1f,0x00,0x08)); \
         v = T##_sel(e, t, ID); \
         r = T##_##OP(r, v); \
  \
-        t = T##_dpp(r,    DPP_WF_SL1, 0xf, 0x8, true); \
-        e = uint_dpp(~0u, DPP_WF_SL1, 0xf, 0x8, true); \
-        t = T##_dpp(t,  DPP_ROW_MIRROR, 0xf, 0x1, true); \
-        e = uint_dpp(e, DPP_ROW_MIRROR, 0xf, 0x1, true); \
+        t = T##_swizzle(r,    SWIZZLE_32_LIMITED(0x1f,0x00,0x10)); \
+        e = uint_swizzle(~0u, SWIZZLE_32_LIMITED(0x1f,0x00,0x10)); \
         v = T##_sel(e, t, ID); \
         r = T##_##OP(r, v); \
-    } \
  \
-    T t32 = T##_readlane(r, 32); \
-    T v32 = (__builtin_amdgcn_read_exec_hi() & 1) ? t32 : ID; \
-    r = T##_##OP(T##_readlane(r, 0), v32)
+        t = T##_readlane(r, 32); \
+        v = (__builtin_amdgcn_read_exec_hi() & 1) ? t : ID; \
+        r = T##_##OP(T##_readlane(r, 0), v); \
+    }
+
+
+// Reduce with operation OP using DPP
+// Input in x, r is result
+#define RED_GFX89(T,OP,ID) \
+    T v; \
+ \
+    v = T##_dpp(ID, x, DPP_ROW_SL(1), 0xf, 0xf, ID == (T)0); \
+    r = T##_##OP(x, v); \
+ \
+    v = T##_dpp(ID, r, DPP_ROW_SL(2), 0xf, 0xf, ID == (T)0); \
+    r = T##_##OP(r, v); \
+ \
+    v = T##_dpp(ID, r, DPP_ROW_SL(4), 0xf, 0xf, ID == (T)0); \
+    r = T##_##OP(r, v); \
+ \
+    v = T##_dpp(ID, r, DPP_ROW_SL(8), 0xf, 0xf, ID == (T)0); \
+    r = T##_##OP(r, v); \
+ \
+    v = T##_dpp(ID, r, DPP_WF_SL1, 0xf, 0xf, ID == (T)0); \
+    v = T##_dpp(ID, v, DPP_ROW_MIRROR, 0xf, 0xf, ID == (T)0); \
+    r = T##_##OP(r, v); \
+ \
+    v = T##_readlane(r, 32); \
+    v = (__builtin_amdgcn_read_exec_hi() & 1) ? v : ID; \
+    r = T##_##OP(T##_readlane(r, 0), v);
 
 // Inclusive scan with operation OP using swizzle
 // Input is x, l is lane, output is s
-#define ISCAN_SWIZZLE(T,OP,ID) \
+#define ISCAN_GFX7(T,OP,ID) \
     T v; \
  \
     v = T##_swizzle(x, SWIZZLE_32_LIMITED(0x1e,0x00,0x00)); \
@@ -330,62 +296,32 @@ GENMAX(ulong)
     s = T##_##OP(s, v); \
  \
     v = T##_readlane(s, 31); \
-    v = (l & 32) ? v : ID; \
+    v = l > 31 ? v : ID; \
     s = T##_##OP(s, v)
 
 
 // Inclusive scan with operation OP using DPP
 // Input is x, l is lane, output is s
-#define ISCAN_DPP(T,OP,ID) \
-    if (ID == (T)0) { \
-        T v; \
+#define ISCAN_GFX89(T,OP,ID) \
+    T v; \
  \
-        v = T##_dpp(x, DPP_ROW_SR(1), 0xf, 0xf, true); \
-        s = T##_##OP(x, v); \
+    v = T##_dpp(ID, x, DPP_ROW_SR(1), 0xf, 0xf, ID == (T)0); \
+    s = T##_##OP(x, v); \
  \
-        v = T##_dpp(s, DPP_ROW_SR(2), 0xf, 0xf, true); \
-        s = T##_##OP(s, v); \
+    v = T##_dpp(ID, s, DPP_ROW_SR(2), 0xf, 0xf, ID == (T)0); \
+    s = T##_##OP(s, v); \
  \
-        v = T##_dpp(s, DPP_ROW_SR(4), 0xf, 0xf, true); \
-        s = T##_##OP(s, v); \
+    v = T##_dpp(ID, s, DPP_ROW_SR(4), 0xf, 0xf, ID == (T)0); \
+    s = T##_##OP(s, v); \
  \
-        v = T##_dpp(s, DPP_ROW_SR(8), 0xf, 0xf, true); \
-        s = T##_##OP(s, v); \
+    v = T##_dpp(ID, s, DPP_ROW_SR(8), 0xf, 0xf, ID == (T)0); \
+    s = T##_##OP(s, v); \
  \
-        v = T##_dpp(s, DPP_ROW_BCAST15, 0xf, 0xf, true); \
-        v = (l & 0x10) ? v : ID; \
-        s = T##_##OP(s, v); \
+    v = T##_dpp(ID, s, DPP_ROW_BCAST15, 0xa, 0xf, false); \
+    s = T##_##OP(s, v); \
  \
-        v = T##_dpp(s, DPP_ROW_BCAST31, 0xf, 0xf, true); \
-        v = (l & 0x20) ? v : ID; \
-        s = T##_##OP(s, v); \
-    } else { \
-        T v; \
- \
-        v = T##_dpp(x, DPP_ROW_SR(1), 0xf, 0xf, true); \
-        v = (l & 0xf) >= 1 ? v : ID; \
-        s = T##_##OP(x, v); \
- \
-        v = T##_dpp(s, DPP_ROW_SR(2), 0xf, 0xf, true); \
-        v = (l & 0xf) >= 2 ? v : ID; \
-        s = T##_##OP(s, v); \
- \
-        v = T##_dpp(s, DPP_ROW_SR(4), 0xf, 0xf, true); \
-        v = (l & 0xf) >= 4 ? v : ID; \
-        s = T##_##OP(s, v); \
- \
-        v = T##_dpp(s, DPP_ROW_SR(8), 0xf, 0xf, true); \
-        v = (l & 0xf) >= 8 ? v : ID; \
-        s = T##_##OP(s, v); \
- \
-        v = T##_dpp(s, DPP_ROW_BCAST15, 0xf, 0xf, true); \
-        v = (l & 0x10) ? v : ID; \
-        s = T##_##OP(s, v); \
- \
-        v = T##_dpp(s, DPP_ROW_BCAST31, 0xf, 0xf, true); \
-        v = (l & 0x20) ? v : ID; \
-        s = T##_##OP(s, v); \
-    }
+    v = T##_dpp(ID, s, DPP_ROW_BCAST31, 0xc, 0xf, false); \
+    s = T##_##OP(s, v); \
 
 // Shift right 1 on entire wavefront using swizzle
 // input is s, l is lane, output is s
@@ -411,11 +347,8 @@ GENMAX(ulong)
 
 // Shift right 1 on entire wavefront using DPP
 // input is s, l is lane, output is s
-#define SR1_DPP(T,ID) \
-    s = T##_dpp(s, DPP_WF_SR1, 0xf, 0xf, true); \
-    if (ID != (T)0) {\
-        s = l == 0 ? ID : s; \
-    }
+#define SR1_GFX89(T,ID) \
+    s = T##_dpp(ID, s, DPP_WF_SR1, 0xf, 0xf, ID == (T)0); \
 
 IATTR static bool
 fullwave(void)
@@ -429,18 +362,14 @@ IATTR T \
 C(__ockl_wfred_,C(OP,T##_suf))(T x) \
 { \
     T r; \
-    if (fullwave()) { \
-        if (__oclc_ISA_version() < 800) { \
-            RED_SWIZZLE_FULL(T,OP); \
-        } else { \
-            RED_DPP_FULL(T,OP); \
-        } \
+    if (__oclc_ISA_version() < 800) { \
+         if (fullwave()) { \
+             RED_GFX7_FULL(T,OP); \
+         } else { \
+              RED_GFX7_PART(T,OP,ID); \
+         } \
     } else { \
-        if (__oclc_ISA_version() < 800) { \
-            RED_SWIZZLE_PART(T,OP,ID); \
-        } else { \
-            RED_DPP_PART(T,OP,ID); \
-        } \
+        RED_GFX89(T,OP,ID); \
     } \
     return r; \
 }
@@ -450,19 +379,19 @@ IATTR T \
 C(__ockl_wfscan_,C(OP,T##_suf))(T x, bool inclusive) \
 { \
     T s; \
-    uint l = __ockl_activelane_u32(); \
+    uint l = __ockl_lane_u32(); \
  \
     if (__oclc_ISA_version() < 800) { \
-        ISCAN_SWIZZLE(T,OP,ID); \
+        ISCAN_GFX7(T,OP,ID); \
     } else { \
-        ISCAN_DPP(T,OP,ID); \
+        ISCAN_GFX89(T,OP,ID); \
     } \
  \
     if (!inclusive) { \
         if (__oclc_ISA_version() < 800) { \
             SR1_SWIZZLE(T,ID); \
         } else { \
-            SR1_DPP(T,ID); \
+            SR1_GFX89(T,ID); \
         } \
     } \
  \

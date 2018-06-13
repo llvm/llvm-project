@@ -9,8 +9,6 @@
 
 #define CATTR __attribute__((overloadable, always_inline, const))
 
-// XXX assumes wavefront size is 64
-
 CATTR uint
 get_sub_group_size(void)
 {
@@ -49,6 +47,6 @@ get_sub_group_id(void)
 CATTR uint
 get_sub_group_local_id(void)
 {
-    return __ockl_activelane_u32();
+    return __ockl_lane_u32();
 }
 
