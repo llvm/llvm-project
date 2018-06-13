@@ -339,6 +339,8 @@ def AMDGPUumed3 : SDNode<"AMDGPUISD::UMED3", AMDGPUDTIntTernaryOp,
 
 def AMDGPUfmed3 : SDNode<"AMDGPUISD::FMED3", SDTFPTernaryOp, []>;
 
+def AMDGPUperm : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
+
 def AMDGPUinit_exec : SDNode<"AMDGPUISD::INIT_EXEC",
                       SDTypeProfile<0, 1, [SDTCisInt<0>]>,
                       [SDNPHasChain, SDNPInGlue]>;

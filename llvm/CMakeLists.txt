@@ -640,7 +640,6 @@ set(LLVMBUILDCMAKEFRAG
   "${LLVM_BINARY_DIR}/LLVMBuild.cmake")
 
 # Create the list of optional components that are enabled
-set(LLVM_USE_INTEL_JITEVENTS " ")
 if (LLVM_USE_INTEL_JITEVENTS)
   set(LLVMOPTIONALCOMPONENTS IntelJITEvents)
 endif (LLVM_USE_INTEL_JITEVENTS)

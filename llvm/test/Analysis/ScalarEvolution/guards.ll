@@ -10,6 +10,8 @@ target datalayout = "n8:16:32:64"
 
 declare void @llvm.experimental.guard(i1, ...)
 
+declare void @use(i64 %x)
+
 define void @test_1(i1* %cond_buf, i32* %len_buf) {
 ; CHECK-LABEL: @test_1(
 entry:
@@ -60,6 +62,7 @@ loop:
   %iv.inc = add i32 %iv, 1
 
   %iv.sext = sext i32 %iv to i64
+  call void @use(i64 %iv.sext)
 
   %iv.inc.cmp = icmp slt i32 %iv.inc, %len
   call void(i1, ...) @llvm.experimental.guard(i1 %iv.inc.cmp) [ "deopt"() ]

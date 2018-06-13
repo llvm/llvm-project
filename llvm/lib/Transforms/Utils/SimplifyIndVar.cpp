@@ -26,6 +26,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -771,6 +772,15 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     std::pair<Instruction*, Instruction*> UseOper =
       SimpleIVUsers.pop_back_val();
     Instruction *UseInst = UseOper.first;
+
+    // If a user of the IndVar is trivially dead, we prefer just to mark it dead
+    // rather than try to do some complex analysis or transformation (such as
+    // widening) basing on it.
+    // TODO: Propagate TLI and pass it here to handle more cases.
+    if (isInstructionTriviallyDead(UseInst, /* TLI */ nullptr)) {
+      DeadInsts.emplace_back(UseInst);
+      continue;
+    }
 
     // Bypass back edges to avoid extra work.
     if (UseInst == CurrIV) continue;

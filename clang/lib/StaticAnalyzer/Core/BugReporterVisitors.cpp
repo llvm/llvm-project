@@ -286,7 +286,7 @@ public:
     }
 
     ArrayRef<ParmVarDecl *> parameters = getCallParameters(Call);
-    for (unsigned I = 0, E = Call->getNumArgs(); I != E; ++I) {
+    for (unsigned I = 0; I < Call->getNumArgs() && I < parameters.size(); ++I) {
       const ParmVarDecl *PVD = parameters[I];
       SVal S = Call->getArgSVal(I);
       unsigned IndirectionLevel = 1;

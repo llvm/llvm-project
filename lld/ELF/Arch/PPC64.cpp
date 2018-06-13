@@ -58,13 +58,13 @@ public:
 // #higher(value), #highera(value), #highest(value), and #highesta(value)
 // macros defined in section 4.5.1. Relocation Types of the PPC-elf64abi
 // document.
-static uint16_t applyPPCLo(uint64_t V) { return V; }
-static uint16_t applyPPCHi(uint64_t V) { return V >> 16; }
-static uint16_t applyPPCHa(uint64_t V) { return (V + 0x8000) >> 16; }
-static uint16_t applyPPCHigher(uint64_t V) { return V >> 32; }
-static uint16_t applyPPCHighera(uint64_t V) { return (V + 0x8000) >> 32; }
-static uint16_t applyPPCHighest(uint64_t V) { return V >> 48; }
-static uint16_t applyPPCHighesta(uint64_t V) { return (V + 0x8000) >> 48; }
+static uint16_t lo(uint64_t V) { return V; }
+static uint16_t hi(uint64_t V) { return V >> 16; }
+static uint16_t ha(uint64_t V) { return (V + 0x8000) >> 16; }
+static uint16_t higher(uint64_t V) { return V >> 32; }
+static uint16_t highera(uint64_t V) { return (V + 0x8000) >> 32; }
+static uint16_t highest(uint64_t V) { return V >> 48; }
+static uint16_t highesta(uint64_t V) { return (V + 0x8000) >> 48; }
 
 PPC64::PPC64() {
   GotRel = R_PPC64_GLOB_DAT;
@@ -345,37 +345,37 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_PPC64_ADDR16_HA:
   case R_PPC64_REL16_HA:
   case R_PPC64_TPREL16_HA:
-    write16(Loc, applyPPCHa(Val));
+    write16(Loc, ha(Val));
     break;
   case R_PPC64_ADDR16_HI:
   case R_PPC64_REL16_HI:
   case R_PPC64_TPREL16_HI:
-    write16(Loc, applyPPCHi(Val));
+    write16(Loc, hi(Val));
     break;
   case R_PPC64_ADDR16_HIGHER:
   case R_PPC64_TPREL16_HIGHER:
-    write16(Loc, applyPPCHigher(Val));
+    write16(Loc, higher(Val));
     break;
   case R_PPC64_ADDR16_HIGHERA:
   case R_PPC64_TPREL16_HIGHERA:
-    write16(Loc, applyPPCHighera(Val));
+    write16(Loc, highera(Val));
     break;
   case R_PPC64_ADDR16_HIGHEST:
   case R_PPC64_TPREL16_HIGHEST:
-    write16(Loc, applyPPCHighest(Val));
+    write16(Loc, highest(Val));
     break;
   case R_PPC64_ADDR16_HIGHESTA:
   case R_PPC64_TPREL16_HIGHESTA:
-    write16(Loc, applyPPCHighesta(Val));
+    write16(Loc, highesta(Val));
     break;
   case R_PPC64_ADDR16_LO:
   case R_PPC64_REL16_LO:
   case R_PPC64_TPREL16_LO:
-    write16(Loc, applyPPCLo(Val));
+    write16(Loc, lo(Val));
     break;
   case R_PPC64_ADDR16_LO_DS:
   case R_PPC64_TPREL16_LO_DS:
-    write16(Loc, (read16(Loc) & 3) | (applyPPCLo(Val) & ~3));
+    write16(Loc, (read16(Loc) & 3) | (lo(Val) & ~3));
     break;
   case R_PPC64_ADDR32:
   case R_PPC64_REL32:

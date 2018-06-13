@@ -16,6 +16,7 @@
 #ifndef LLVM_SUPPORT_AMDHSAKERNELDESCRIPTOR_H
 #define LLVM_SUPPORT_AMDHSAKERNELDESCRIPTOR_H
 
+#include <cstddef>
 #include <cstdint>
 
 // Gets offset of specified member in specified type.

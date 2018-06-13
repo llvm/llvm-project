@@ -293,6 +293,8 @@ for.end:                                          ; preds = %if.end, %entry
   ret void
 }
 
+declare void @use(i1 %x)
+
 ; check that we handle conditions with loop invariant operands which
 ; *aren't* in the header - this is a very rare and fragile case where
 ; we have a "loop" which is known to run exactly one iteration but
@@ -320,6 +322,7 @@ latch:
   br i1 true, label %exit, label %loop
 
 exit:
+  call void @use(i1 %cmp)
   ret void
 }
 
