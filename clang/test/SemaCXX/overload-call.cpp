@@ -667,3 +667,24 @@ namespace ProduceNotesAfterSFINAEFailure {
   void f(void*, A); // expected-note {{candidate function not viable}}
   void g() { f(1, 2); } // expected-error {{no matching function}}
 }
+
+namespace PR19808 {
+  struct B {
+    int i;
+    void bar();
+  };
+  struct D : public B{};
+
+  void f(bool);
+  void f(int D::*);
+  void f(void (D::*)());
+
+  void Usage() {
+    int B::*pmem;
+    void (B::*pmf)();
+
+    // These should not be ambiguous.
+    f(pmem);
+    f(pmf);
+  }
+}

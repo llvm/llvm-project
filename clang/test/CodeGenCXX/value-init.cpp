@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++98 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX98
+// RUN: %clang_cc1 -std=c++17 %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX17
 
 struct A {
   virtual ~A();
@@ -114,13 +115,15 @@ void f() {
 
   // CHECK: call void @llvm.memset.p0i8.i64
   // CHECK-NOT: call void @llvm.memset.p0i8.i64
-  // CHECK: call void @_ZN6PR98015Test2C1Ev
+  // CHECK-CXX98: call void @_ZN6PR98015Test2C1Ev
+  // CHECK-CXX17: call void @_ZN6PR98014TestC1Ev
   // CHECK-NOT: call void @_ZN6PR98015Test2C1Ev
   Test2 empty2[3] = {};
 
   // CHECK: call void @llvm.memset.p0i8.i64
   // CHECK-NOT: call void @llvm.memset.p0i8.i64
-  // CHECK: call void @_ZN6PR98015Test3C1Ev
+  // CHECK-CXX98: call void @_ZN6PR98015Test3C1Ev
+  // CHECK-CXX17: call void @_ZN6PR98014TestC2Ev
   // CHECK-NOT: call void @llvm.memset.p0i8.i64
   // CHECK-NOT: call void @_ZN6PR98015Test3C1Ev
   Test3 empty3[3] = {};
@@ -222,7 +225,7 @@ namespace test6 {
   // CHECK:      [[CUR:%.*]] = phi [20 x [[A]]]* [ [[BEGIN]], {{%.*}} ], [ [[NEXT:%.*]], {{%.*}} ]
 
   // Inner loop.
-  // CHECK-NEXT: [[IBEGIN:%.*]] = getelementptr inbounds [20 x [[A]]], [20 x [[A]]]* [[CUR]], i32 0, i32 0
+  // CHECK-NEXT: [[IBEGIN:%.*]] = getelementptr inbounds [20 x [[A]]], [20 x [[A]]]* [[CUR]], i{{32|64}} 0, i{{32|64}} 0
   // CHECK-NEXT: [[IEND:%.*]] = getelementptr inbounds [[A]], [[A]]* [[IBEGIN]], i64 20
   // CHECK-NEXT: br label
   // CHECK:      [[ICUR:%.*]] = phi [[A]]* [ [[IBEGIN]], {{%.*}} ], [ [[INEXT:%.*]], {{%.*}} ]
@@ -327,3 +330,12 @@ int explicitly_defaulted() {
 // CHECK: call void @llvm.memset.p0i8.i64
 // CHECK-NEXT: call void @_ZN8zeroinit2X2IiEC2Ev
 // CHECK-NEXT: ret void
+
+#if __cplusplus >= 201103L
+namespace transparent_init_list {
+  struct optional_assign_base {};
+  struct optional_data_dtor_base { char dummy_[24]; };
+  struct optional : optional_data_dtor_base, optional_assign_base {};
+  optional f(optional a) { return {optional(a)}; }
+}
+#endif

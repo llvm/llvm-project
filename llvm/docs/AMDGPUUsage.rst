@@ -686,7 +686,7 @@ Symbols include the following:
      *link-name*           ``STT_OBJECT`` - ``.data``   Global variable
                                           - ``.rodata``
                                           - ``.bss``
-     *link-name*\ ``@kd``  ``STT_OBJECT`` - ``.rodata`` Kernel descriptor
+     *link-name*\ ``.kd``  ``STT_OBJECT`` - ``.rodata`` Kernel descriptor
      *link-name*           ``STT_FUNC``   - ``.text``   Kernel entry point
      ===================== ============== ============= ==================
 
@@ -1578,7 +1578,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      ======= ======= =============================== ============================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ============================
-     31:0    4 bytes GroupSegmentFixedSize           The amount of fixed local
+     31:0    4 bytes GROUP_SEGMENT_FIXED_SIZE        The amount of fixed local
                                                      address space memory
                                                      required for a work-group
                                                      in bytes. This does not
@@ -1587,7 +1587,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      space memory that may be
                                                      added when the kernel is
                                                      dispatched.
-     63:32   4 bytes PrivateSegmentFixedSize         The amount of fixed
+     63:32   4 bytes PRIVATE_SEGMENT_FIXED_SIZE      The amount of fixed
                                                      private address space
                                                      memory required for a
                                                      work-item in bytes. If
@@ -1596,7 +1596,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      be added to this value for
                                                      the call stack.
      127:64  8 bytes                                 Reserved, must be 0.
-     191:128 8 bytes KernelCodeEntryByteOffset       Byte offset (possibly
+     191:128 8 bytes KERNEL_CODE_ENTRY_BYTE_OFFSET   Byte offset (possibly
                                                      negative) from base
                                                      address of kernel
                                                      descriptor to kernel's
@@ -1605,22 +1605,22 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      aligned.
      383:192 24                                      Reserved, must be 0.
              bytes
-     415:384 4 bytes ComputePgmRsrc1                 Compute Shader (CS)
+     415:384 4 bytes COMPUTE_PGM_RSRC1               Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
                                                      ``COMPUTE_PGM_RSRC1``
                                                      configuration
                                                      register. See
                                                      :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
-     447:416 4 bytes ComputePgmRsrc2                 Compute Shader (CS)
+     447:416 4 bytes COMPUTE_PGM_RSRC2               Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
                                                      ``COMPUTE_PGM_RSRC2``
                                                      configuration
                                                      register. See
                                                      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
-     448     1 bit   EnableSGPRPrivateSegmentBuffer  Enable the setup of the
-                                                     SGPR user data registers
+     448     1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     Enable the setup of the
+                     _BUFFER                         SGPR user data registers
                                                      (see
                                                      :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
 
@@ -1631,18 +1631,19 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      ``compute_pgm_rsrc2.user_sgpr.user_sgpr_count``.
                                                      Any requests beyond 16
                                                      will be ignored.
-     449     1 bit   EnableSGPRDispatchPtr           *see above*
-     450     1 bit   EnableSGPRQueuePtr              *see above*
-     451     1 bit   EnableSGPRKernargSegmentPtr     *see above*
-     452     1 bit   EnableSGPRDispatchID            *see above*
-     453     1 bit   EnableSGPRFlatScratchInit       *see above*
-     454     1 bit   EnableSGPRPrivateSegmentSize    *see above*
-     455     1 bit   EnableSGPRGridWorkgroupCountX   Not implemented in CP and
-                                                     should always be 0.
-     456     1 bit   EnableSGPRGridWorkgroupCountY   Not implemented in CP and
-                                                     should always be 0.
-     457     1 bit   EnableSGPRGridWorkgroupCountZ   Not implemented in CP and
-                                                     should always be 0.
+     449     1 bit   ENABLE_SGPR_DISPATCH_PTR        *see above*
+     450     1 bit   ENABLE_SGPR_QUEUE_PTR           *see above*
+     451     1 bit   ENABLE_SGPR_KERNARG_SEGMENT_PTR *see above*
+     452     1 bit   ENABLE_SGPR_DISPATCH_ID         *see above*
+     453     1 bit   ENABLE_SGPR_FLAT_SCRATCH_INIT   *see above*
+     454     1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     *see above*
+                     _SIZE
+     455     1 bit   ENABLE_SGPR_GRID_WORKGROUP      Not implemented in CP and
+                     _COUNT_X                        should always be 0.
+     456     1 bit   ENABLE_SGPR_GRID_WORKGROUP      Not implemented in CP and
+                     _COUNT_Y                        should always be 0.
+     457     1 bit   ENABLE_SGPR_GRID_WORKGROUP      Not implemented in CP and
+                     _COUNT_Z                        should always be 0.
      463:458 6 bits                                  Reserved, must be 0.
      511:464 6                                       Reserved, must be 0.
              bytes
@@ -1996,10 +1997,10 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      ====================================== ===== ==============================
      Enumeration Name                       Value Description
      ====================================== ===== ==============================
-     AMDGPU_FLOAT_ROUND_MODE_NEAR_EVEN      0     Round Ties To Even
-     AMDGPU_FLOAT_ROUND_MODE_PLUS_INFINITY  1     Round Toward +infinity
-     AMDGPU_FLOAT_ROUND_MODE_MINUS_INFINITY 2     Round Toward -infinity
-     AMDGPU_FLOAT_ROUND_MODE_ZERO           3     Round Toward 0
+     FLOAT_ROUND_MODE_NEAR_EVEN             0     Round Ties To Even
+     FLOAT_ROUND_MODE_PLUS_INFINITY         1     Round Toward +infinity
+     FLOAT_ROUND_MODE_MINUS_INFINITY        2     Round Toward -infinity
+     FLOAT_ROUND_MODE_ZERO                  3     Round Toward 0
      ====================================== ===== ==============================
 
 ..
@@ -2010,11 +2011,11 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      ====================================== ===== ==============================
      Enumeration Name                       Value Description
      ====================================== ===== ==============================
-     AMDGPU_FLOAT_DENORM_MODE_FLUSH_SRC_DST 0     Flush Source and Destination
+     FLOAT_DENORM_MODE_FLUSH_SRC_DST        0     Flush Source and Destination
                                                   Denorms
-     AMDGPU_FLOAT_DENORM_MODE_FLUSH_DST     1     Flush Output Denorms
-     AMDGPU_FLOAT_DENORM_MODE_FLUSH_SRC     2     Flush Source Denorms
-     AMDGPU_FLOAT_DENORM_MODE_FLUSH_NONE    3     No Flush
+     FLOAT_DENORM_MODE_FLUSH_DST            1     Flush Output Denorms
+     FLOAT_DENORM_MODE_FLUSH_SRC            2     Flush Source Denorms
+     FLOAT_DENORM_MODE_FLUSH_NONE           3     No Flush
      ====================================== ===== ==============================
 
 ..
@@ -2025,13 +2026,13 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      ======================================== ===== ============================
      Enumeration Name                         Value Description
      ======================================== ===== ============================
-     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_X         0     Set work-item X dimension
+     SYSTEM_VGPR_WORKITEM_ID_X                0     Set work-item X dimension
                                                     ID.
-     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_X_Y       1     Set work-item X and Y
+     SYSTEM_VGPR_WORKITEM_ID_X_Y              1     Set work-item X and Y
                                                     dimensions ID.
-     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_X_Y_Z     2     Set work-item X, Y and Z
+     SYSTEM_VGPR_WORKITEM_ID_X_Y_Z            2     Set work-item X, Y and Z
                                                     dimensions ID.
-     AMDGPU_SYSTEM_VGPR_WORKITEM_ID_UNDEFINED 3     Undefined.
+     SYSTEM_VGPR_WORKITEM_ID_UNDEFINED        3     Undefined.
      ======================================== ===== ============================
 
 .. _amdgpu-amdhsa-initial-kernel-execution-state:

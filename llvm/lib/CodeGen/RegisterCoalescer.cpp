@@ -2085,9 +2085,24 @@ class JoinVals {
   LaneBitmask computeWriteLanes(const MachineInstr *DefMI, bool &Redef) const;
 
   /// Find the ultimate value that VNI was copied from.
-  std::pair<const VNInfo*,unsigned> followCopyChain(const VNInfo *VNI) const;
+  std::tuple<const VNInfo*,unsigned, bool>
+  followCopyChain(const VNInfo *VNI, unsigned OtherReg) const;
 
-  bool valuesIdentical(VNInfo *Val0, VNInfo *Val1, const JoinVals &Other) const;
+  /// Determine whether Val0 for Reg and Val1 for Other.Reg are identical.
+  /// The first element of the returned pair is true if they are, false
+  /// otherwise. The second element is true if one value is defined
+  /// directly via the other, e.g.:
+  ///   %reg0 = ...
+  ///   %regx = COPY %reg0  ;; reg1 defined via reg0
+  ///   %reg1 = COPY %regx  ;; val0 == val1
+  ///   -> { true, true }
+  /// vs
+  ///   %reg0 = COPY %regy
+  ///   %regx = COPY %regy
+  ///   $reg1 = COPY %regx  ;; val0 == val1
+  ///   -> { true, false }
+  std::pair<bool,bool> valuesIdentical(VNInfo *Val0, VNInfo *Val1,
+                                       const JoinVals &Other) const;
 
   /// Analyze ValNo in this live range, and set all fields of Vals[ValNo].
   /// Return a conflict resolution when possible, but leave the hard cases as
@@ -2203,19 +2218,22 @@ LaneBitmask JoinVals::computeWriteLanes(const MachineInstr *DefMI, bool &Redef)
   return L;
 }
 
-std::pair<const VNInfo*, unsigned> JoinVals::followCopyChain(
-    const VNInfo *VNI) const {
+std::tuple<const VNInfo*, unsigned, bool> JoinVals::followCopyChain(
+    const VNInfo *VNI, unsigned OtherReg) const {
   unsigned Reg = this->Reg;
+  bool UsedOtherReg = false;
 
   while (!VNI->isPHIDef()) {
     SlotIndex Def = VNI->def;
     MachineInstr *MI = Indexes->getInstructionFromIndex(Def);
     assert(MI && "No defining instruction");
     if (!MI->isFullCopy())
-      return std::make_pair(VNI, Reg);
+      return std::make_tuple(VNI, Reg, UsedOtherReg);
     unsigned SrcReg = MI->getOperand(1).getReg();
+    if (SrcReg == OtherReg)
+      UsedOtherReg = true;
     if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
-      return std::make_pair(VNI, Reg);
+      return std::make_tuple(VNI, Reg, UsedOtherReg);
 
     const LiveInterval &LI = LIS->getInterval(SrcReg);
     const VNInfo *ValueIn;
@@ -2241,26 +2259,28 @@ std::pair<const VNInfo*, unsigned> JoinVals::followCopyChain(
     VNI = ValueIn;
     Reg = SrcReg;
   }
-  return std::make_pair(VNI, Reg);
+  return std::make_tuple(VNI, Reg, UsedOtherReg);
 }
 
-bool JoinVals::valuesIdentical(VNInfo *Value0, VNInfo *Value1,
-                               const JoinVals &Other) const {
+std::pair<bool,bool> JoinVals::valuesIdentical(VNInfo *Value0, VNInfo *Value1,
+                                               const JoinVals &Other) const {
   const VNInfo *Orig0;
   unsigned Reg0;
-  std::tie(Orig0, Reg0) = followCopyChain(Value0);
-  if (Orig0 == Value1)
-    return true;
+  bool Other0;
+  std::tie(Orig0, Reg0, Other0) = followCopyChain(Value0, Other.Reg);
+  if (Orig0 == Value1 && Reg0 == Other.Reg)
+    return std::make_pair(true, Other0);
 
   const VNInfo *Orig1;
   unsigned Reg1;
-  std::tie(Orig1, Reg1) = Other.followCopyChain(Value1);
+  bool Other1;
+  std::tie(Orig1, Reg1, Other1) = Other.followCopyChain(Value1, Reg);
 
   // The values are equal if they are defined at the same place and use the
   // same register. Note that we cannot compare VNInfos directly as some of
   // them might be from a copy created in mergeSubRangeInto()  while the other
   // is from the original LiveInterval.
-  return Orig0->def == Orig1->def && Reg0 == Reg1;
+  return std::make_pair(Orig0->def == Orig1->def && Reg0 == Reg1, Other1);
 }
 
 JoinVals::ConflictResolution
@@ -2430,9 +2450,22 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   //   %other = COPY %ext
   //   %this  = COPY %ext <-- Erase this copy
   //
-  if (DefMI->isFullCopy() && !CP.isPartial()
-      && valuesIdentical(VNI, V.OtherVNI, Other))
-    return CR_Erase;
+  // One case to be careful about is a case where the travesal of the
+  // COPY chain for one register encounters a use of the other register,
+  // e.g.
+  //   10  %other = COPY ...
+  //   20  %x = COPY %other
+  //   30  %this = COPY %x  ;; assume that liveness of %this extends to the
+  //                        ;; end of the block (then back to the entry phi)
+  // Coalescing %this and %other can force a gap in the live range between
+  // 20r and 30r, and if the COPY at 30 is erased, its liveness will no longer
+  // extend to the end of the block (an IMPLICIT_DEF may incorrectly be added
+  // later on to create a definition that is live on exit).
+  if (DefMI->isFullCopy() && !CP.isPartial()) {
+    std::pair<bool,bool> P = valuesIdentical(VNI, V.OtherVNI, Other);
+    if (P.first)
+      return P.second ? CR_Merge : CR_Erase;
+  }
 
   // If the lanes written by this instruction were all undef in OtherVNI, it is
   // still safe to join the live ranges. This can't be done with a simple value
@@ -2957,7 +2990,8 @@ void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
   LRange.join(RRange, LHSVals.getAssignments(), RHSVals.getAssignments(),
               NewVNInfo);
 
-  LLVM_DEBUG(dbgs() << "\t\tjoined lanes: " << LRange << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tjoined lanes: " << PrintLaneMask(LaneMask) << ' '
+                    << LRange << "\n");
   if (EndPoints.empty())
     return;
 

@@ -743,6 +743,26 @@ defm : StPat<truncstorei8, SB, GPR>;
 defm : StPat<truncstorei16, SH, GPR>;
 defm : StPat<store, SW, GPR>;
 
+/// Fences
+
+// Refer to Table A.6 in the version 2.3 draft of the RISC-V Instruction Set
+// Manual: Volume I.
+
+// fence acquire -> fence r, rw
+def : Pat<(atomic_fence (i32 4), (imm)), (FENCE 0b10, 0b11)>;
+// fence release -> fence rw, w
+def : Pat<(atomic_fence (i32 5), (imm)), (FENCE 0b11, 0b1)>;
+// fence acq_rel -> fence.tso
+def : Pat<(atomic_fence (i32 6), (imm)), (FENCE_TSO)>;
+// fence seq_cst -> fence rw, rw
+def : Pat<(atomic_fence (i32 7), (imm)), (FENCE 0b11, 0b11)>;
+
+// Lowering for atomic load and store is defined in RISCVInstrInfoA.td.
+// Although these are lowered to fence+load/store instructions defined in the
+// base RV32I/RV64I ISA, this lowering is only used when the A extension is
+// present. This is necessary as it isn't valid to mix __atomic_* libcalls
+// with inline atomic operations for the same object.
+
 /// Other pseudo-instructions
 
 // Pessimistically assume the stack pointer will be clobbered

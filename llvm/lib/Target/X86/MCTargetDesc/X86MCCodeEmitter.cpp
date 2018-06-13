@@ -350,8 +350,14 @@ EmitImmediate(const MCOperand &DispOp, SMLoc Loc, unsigned Size,
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_movq_load) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex) ||
-      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel))
+      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel)) {
     ImmOffset -= 4;
+    // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
+    // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
+    // this needs to be a GOTPC32 relocation.
+    if (StartsWithGlobalOffsetTable(Expr) != GOT_None)
+      FixupKind = MCFixupKind(X86::reloc_global_offset_table);
+  }
   if (FixupKind == FK_PCRel_2)
     ImmOffset -= 2;
   if (FixupKind == FK_PCRel_1)

@@ -1194,22 +1194,6 @@ let Predicates = [HasV5T] in {
                      (i32 (LoReg $Rs)))>;
 }
 
-let AddedComplexity = 50 in
-multiclass Abs_pat<InstHexagon MI, PatFrag RsPred, int Sh> {
-  // Let y = x >> 31 (for 32-bit), i.e. the sign bit repeated.
-  // abs(x) = (x + y) ^ y
-  def: Pat<(xor (add (sra RsPred:$Rs, (i32 Sh)), RsPred:$Rs),
-                (sra RsPred:$Rs, (i32 Sh))),
-           (MI RsPred:$Rs)>;
-  // abs(x) = (x ^ y) - y
-  def: Pat<(sub (xor RsPred:$Rs, (sra RsPred:$Rs, (i32 Sh))),
-                (sra RsPred:$Rs, (i32 Sh))),
-           (MI RsPred:$Rs)>;
-}
-
-defm: Abs_pat<A2_abs,  I32, 31>;
-defm: Abs_pat<A2_absp, I64, 63>;
-
 def: Pat<(add I32:$Rs, anyimm:$s16),   (A2_addi   I32:$Rs,  imm:$s16)>;
 def: Pat<(or  I32:$Rs, anyimm:$s10),   (A2_orir   I32:$Rs,  imm:$s10)>;
 def: Pat<(and I32:$Rs, anyimm:$s10),   (A2_andir  I32:$Rs,  imm:$s10)>;

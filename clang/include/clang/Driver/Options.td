@@ -2004,6 +2004,8 @@ def mno_fix_cortex_a53_835769 : Flag<["-"], "mno-fix-cortex-a53-835769">,
   HelpText<"Don't workaround Cortex-A53 erratum 835769 (AArch64 only)">;
 def ffixed_x18 : Flag<["-"], "ffixed-x18">, Group<m_aarch64_Features_Group>,
   HelpText<"Reserve the x18 register (AArch64 only)">;
+def ffixed_x20 : Flag<["-"], "ffixed-x20">, Group<m_aarch64_Features_Group>,
+  HelpText<"Reserve the x20 register (AArch64 only)">;
 
 def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
 def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;

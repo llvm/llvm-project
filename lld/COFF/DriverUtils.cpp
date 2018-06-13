@@ -61,12 +61,7 @@ public:
     StringRef Exe = Saver.save(*ExeOrErr);
     Args.insert(Args.begin(), Exe);
 
-    std::vector<const char *> Vec;
-    for (StringRef S : Args)
-      Vec.push_back(S.data());
-    Vec.push_back(nullptr);
-
-    if (sys::ExecuteAndWait(Args[0], Vec.data()) != 0)
+    if (sys::ExecuteAndWait(Args[0], Args) != 0)
       fatal("ExecuteAndWait failed: " +
             llvm::join(Args.begin(), Args.end(), " "));
   }

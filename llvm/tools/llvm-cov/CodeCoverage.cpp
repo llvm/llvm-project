@@ -478,14 +478,13 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   OutputTOF.os().close();
 
   // Invoke the demangler.
-  std::vector<const char *> ArgsV;
-  for (const std::string &Arg : ViewOpts.DemanglerOpts)
-    ArgsV.push_back(Arg.c_str());
-  ArgsV.push_back(nullptr);
+  std::vector<StringRef> ArgsV;
+  for (StringRef Arg : ViewOpts.DemanglerOpts)
+    ArgsV.push_back(Arg);
   Optional<StringRef> Redirects[] = {InputPath.str(), OutputPath.str(), {""}};
   std::string ErrMsg;
-  int RC = sys::ExecuteAndWait(ViewOpts.DemanglerOpts[0], ArgsV.data(),
-                               /*env=*/nullptr, Redirects, /*secondsToWait=*/0,
+  int RC = sys::ExecuteAndWait(ViewOpts.DemanglerOpts[0], ArgsV,
+                               /*env=*/None, Redirects, /*secondsToWait=*/0,
                                /*memoryLimit=*/0, &ErrMsg);
   if (RC) {
     error(ErrMsg, ViewOpts.DemanglerOpts[0]);

@@ -335,8 +335,7 @@ define signext i128 @and_i128(i128 signext %a, i128 signext %b) {
 ;
 ; MM32R3-LABEL: and_i128:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    lw $3, 20($sp)
-; MM32R3-NEXT:    lw $2, 16($sp)
+; MM32R3-NEXT:    lwp $2, 16($sp)
 ; MM32R3-NEXT:    and16 $2, $4
 ; MM32R3-NEXT:    and16 $3, $5
 ; MM32R3-NEXT:    lw $4, 24($sp)

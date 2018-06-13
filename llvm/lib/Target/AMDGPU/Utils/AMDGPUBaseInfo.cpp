@@ -248,8 +248,8 @@ void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream) {
   Stream.flush();
 }
 
-bool hasCodeObjectV3(const FeatureBitset &Features) {
-  return Features.test(FeatureCodeObjectV3);
+bool hasCodeObjectV3(const MCSubtargetInfo *STI) {
+  return STI->getFeatureBits().test(FeatureCodeObjectV3);
 }
 
 unsigned getWavefrontSize(const FeatureBitset &Features) {

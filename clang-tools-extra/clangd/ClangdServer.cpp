@@ -23,6 +23,7 @@
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -83,9 +84,9 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            FileSystemProvider &FSProvider,
                            DiagnosticsConsumer &DiagConsumer,
                            const Options &Opts)
-    : CompileArgs(CDB, Opts.ResourceDir ? Opts.ResourceDir->str()
-                                        : getStandardResourceDir()),
-      DiagConsumer(DiagConsumer), FSProvider(FSProvider),
+    : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
+      ResourceDir(Opts.ResourceDir ? Opts.ResourceDir->str()
+                                   : getStandardResourceDir()),
       FileIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
@@ -120,13 +121,10 @@ void ClangdServer::setRootPath(PathRef RootPath) {
 }
 
 void ClangdServer::addDocument(PathRef File, StringRef Contents,
-                               WantDiagnostics WantDiags, bool SkipCache) {
-  if (SkipCache)
-    CompileArgs.invalidate(File);
-
+                               WantDiagnostics WantDiags) {
   DocVersion Version = ++InternalVersion[File];
-  ParseInputs Inputs = {CompileArgs.getCompileCommand(File),
-                        FSProvider.getFileSystem(), Contents.str()};
+  ParseInputs Inputs = {getCompileCommand(File), FSProvider.getFileSystem(),
+                        Contents.str()};
 
   Path FileStr = File.str();
   WorkScheduler.update(File, std::move(Inputs), WantDiags,
@@ -137,7 +135,6 @@ void ClangdServer::addDocument(PathRef File, StringRef Contents,
 
 void ClangdServer::removeDocument(PathRef File) {
   ++InternalVersion[File];
-  CompileArgs.invalidate(File);
   WorkScheduler.remove(File);
 }
 
@@ -428,6 +425,17 @@ void ClangdServer::consumeDiagnostics(PathRef File, DocVersion Version,
   LastReportedDiagsVersion = Version;
 
   DiagConsumer.onDiagnosticsReady(File, std::move(Diags));
+}
+
+tooling::CompileCommand ClangdServer::getCompileCommand(PathRef File) {
+  llvm::Optional<tooling::CompileCommand> C = CDB.getCompileCommand(File);
+  if (!C) // FIXME: Suppress diagnostics? Let the user know?
+    C = CDB.getFallbackCommand(File);
+
+  // Inject the resource dir.
+  // FIXME: Don't overwrite it if it's already there.
+  C->CommandLine.push_back("-resource-dir=" + ResourceDir);
+  return std::move(*C);
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

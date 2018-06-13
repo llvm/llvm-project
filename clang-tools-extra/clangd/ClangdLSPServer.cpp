@@ -129,11 +129,13 @@ void ClangdLSPServer::onShutdown(ShutdownParams &Params) {
 void ClangdLSPServer::onExit(ExitParams &Params) { IsDone = true; }
 
 void ClangdLSPServer::onDocumentDidOpen(DidOpenTextDocumentParams &Params) {
-  if (Params.metadata && !Params.metadata->extraFlags.empty())
-    CDB.setExtraFlagsForFile(Params.textDocument.uri.file(),
-                             std::move(Params.metadata->extraFlags));
-
   PathRef File = Params.textDocument.uri.file();
+  if (Params.metadata && !Params.metadata->extraFlags.empty()) {
+    NonCachedCDB.setExtraFlagsForFile(File,
+                                      std::move(Params.metadata->extraFlags));
+    CDB.invalidate(File);
+  }
+
   std::string &Contents = Params.textDocument.text;
 
   DraftMgr.addDraft(File, Contents);
@@ -155,6 +157,7 @@ void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams &Params) {
     // fail rather than giving wrong results.
     DraftMgr.removeDraft(File);
     Server.removeDocument(File);
+    CDB.invalidate(File);
     log(llvm::toString(Contents.takeError()));
     return;
   }
@@ -383,7 +386,10 @@ void ClangdLSPServer::onChangeConfiguration(
 
   // Compilation database change.
   if (Settings.compilationDatabasePath.hasValue()) {
-    CDB.setCompileCommandsDir(Settings.compilationDatabasePath.getValue());
+    NonCachedCDB.setCompileCommandsDir(
+        Settings.compilationDatabasePath.getValue());
+    CDB.clear();
+
     reparseOpenedFiles();
   }
 }
@@ -392,8 +398,8 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out,
                                  const clangd::CodeCompleteOptions &CCOpts,
                                  llvm::Optional<Path> CompileCommandsDir,
                                  const ClangdServer::Options &Opts)
-    : Out(Out), CDB(std::move(CompileCommandsDir)), CCOpts(CCOpts),
-      SupportedSymbolKinds(defaultSymbolKinds()),
+    : Out(Out), NonCachedCDB(std::move(CompileCommandsDir)), CDB(NonCachedCDB),
+      CCOpts(CCOpts), SupportedSymbolKinds(defaultSymbolKinds()),
       Server(CDB, FSProvider, /*DiagConsumer=*/*this, Opts) {}
 
 bool ClangdLSPServer::run(std::FILE *In, JSONStreamStyle InputStyle) {
@@ -471,6 +477,5 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
 void ClangdLSPServer::reparseOpenedFiles() {
   for (const Path &FilePath : DraftMgr.getActiveFiles())
     Server.addDocument(FilePath, *DraftMgr.getDraft(FilePath),
-                       WantDiagnostics::Auto,
-                       /*SkipCache=*/true);
+                       WantDiagnostics::Auto);
 }

@@ -176,8 +176,7 @@ define signext i128 @or_i128(i128 signext %a, i128 signext %b) {
 ;
 ; MM32-LABEL: or_i128:
 ; MM32:       # %bb.0: # %entry
-; MM32-NEXT:    lw $3, 20($sp)
-; MM32-NEXT:    lw $2, 16($sp)
+; MM32-NEXT:    lwp $2, 16($sp)
 ; MM32-NEXT:    or16 $2, $4
 ; MM32-NEXT:    or16 $3, $5
 ; MM32-NEXT:    lw $4, 24($sp)

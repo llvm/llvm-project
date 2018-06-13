@@ -14,7 +14,6 @@ add_clang_library(clangDaemon
   ClangdUnit.cpp
   CodeComplete.cpp
   CodeCompletionStrings.cpp
-  CompileArgsCache.cpp
   Compiler.cpp
   Context.cpp
   Diagnostics.cpp

@@ -55,6 +55,7 @@ extern "C" void LLVMInitializeMipsTarget() {
   initializeGlobalISel(*PR);
   initializeMipsDelaySlotFillerPass(*PR);
   initializeMipsBranchExpansionPass(*PR);
+  initializeMicroMipsSizeReducePass(*PR);
 }
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,
@@ -288,7 +289,7 @@ MipsTargetMachine::getTargetTransformInfo(const Function &F) {
 // machine code is emitted. return true if -print-machineinstrs should
 // print out the code after the passes.
 void MipsPassConfig::addPreEmitPass() {
-  addPass(createMicroMipsSizeReductionPass());
+  addPass(createMicroMipsSizeReducePass());
 
   // The delay slot filler pass can potientially create forbidden slot hazards
   // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.

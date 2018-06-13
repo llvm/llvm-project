@@ -20,6 +20,7 @@
 #include "MCTargetDesc/AMDGPUHSAMetadataStreamer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -148,6 +149,13 @@ private:
                                   uint64_t CodeSize,
                                   const AMDGPUMachineFunction* MFI);
 
+  uint16_t getAmdhsaKernelCodeProperties(
+      const MachineFunction &MF) const;
+
+  amdhsa::kernel_descriptor_t getAmdhsaKernelDescriptor(
+      const MachineFunction &MF,
+      const SIProgramInfo &PI) const;
+
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,
                             std::unique_ptr<MCStreamer> Streamer);
@@ -179,6 +187,8 @@ public:
   void EmitInstruction(const MachineInstr *MI) override;
 
   void EmitFunctionBodyStart() override;
+
+  void EmitFunctionBodyEnd() override;
 
   void EmitFunctionEntryLabel() override;
 

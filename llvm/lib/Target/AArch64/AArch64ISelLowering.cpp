@@ -4930,9 +4930,13 @@ unsigned AArch64TargetLowering::getRegisterByName(const char* RegName, EVT VT,
                        .Case("sp", AArch64::SP)
                        .Case("x18", AArch64::X18)
                        .Case("w18", AArch64::W18)
+                       .Case("x20", AArch64::X20)
+                       .Case("w20", AArch64::W20)
                        .Default(0);
-  if ((Reg == AArch64::X18 || Reg == AArch64::W18) &&
-      !Subtarget->isX18Reserved())
+  if (((Reg == AArch64::X18 || Reg == AArch64::W18) &&
+      !Subtarget->isX18Reserved()) ||
+      ((Reg == AArch64::X20 || Reg == AArch64::W20) &&
+      !Subtarget->isX20Reserved()))
     Reg = 0;
   if (Reg)
     return Reg;

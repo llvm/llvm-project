@@ -26,6 +26,7 @@ namespace llvm {
   class MipsSubtarget;
   class MipsTargetMachine;
   class InstructionSelector;
+  class PassRegistry;
 
   ModulePass *createMipsOs16Pass();
   ModulePass *createMips16HardFloatPass();
@@ -35,7 +36,7 @@ namespace llvm {
   FunctionPass *createMipsDelaySlotFillerPass();
   FunctionPass *createMipsBranchExpansion();
   FunctionPass *createMipsConstantIslandPass();
-  FunctionPass *createMicroMipsSizeReductionPass();
+  FunctionPass *createMicroMipsSizeReducePass();
 
   InstructionSelector *createMipsInstructionSelector(const MipsTargetMachine &,
                                                      MipsSubtarget &,
@@ -43,6 +44,7 @@ namespace llvm {
 
   void initializeMipsDelaySlotFillerPass(PassRegistry &);
   void initializeMipsBranchExpansionPass(PassRegistry &);
+  void initializeMicroMipsSizeReducePass(PassRegistry &);
 } // end namespace llvm;
 
 #endif

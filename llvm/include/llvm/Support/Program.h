@@ -89,12 +89,13 @@ namespace sys {
   int ExecuteAndWait(
       StringRef Program, ///< Path of the program to be executed. It is
       ///< presumed this is the result of the findProgramByName method.
-      const char **Args, ///< A vector of strings that are passed to the
+      ArrayRef<StringRef> Args, ///< An array of strings that are passed to the
       ///< program.  The first element should be the name of the program.
-      ///< The list *must* be terminated by a null char* entry.
-      const char **Env = nullptr, ///< An optional vector of strings to use for
-      ///< the program's environment. If not provided, the current program's
-      ///< environment will be used.
+      ///< The array should **not** be terminated by an empty StringRef.
+      Optional<ArrayRef<StringRef>> Env = None, ///< An optional vector of
+      ///< strings to use for the program's environment. If not provided, the
+      ///< current program's environment will be used.  If specified, the
+      ///< vector should **not** be terminated by an empty StringRef.
       ArrayRef<Optional<StringRef>> Redirects = {}, ///<
       ///< An array of optional paths. Should have a size of zero or three.
       ///< If the array is empty, no redirections are performed.
@@ -123,8 +124,8 @@ namespace sys {
   /// \note On Microsoft Windows systems, users will need to either call
   /// \see Wait until the process finished execution or win32 CloseHandle() API
   /// on ProcessInfo.ProcessHandle to avoid memory leaks.
-  ProcessInfo ExecuteNoWait(StringRef Program, const char **Args,
-                            const char **Env = nullptr,
+  ProcessInfo ExecuteNoWait(StringRef Program, ArrayRef<StringRef> Args,
+                            Optional<ArrayRef<StringRef>> Env,
                             ArrayRef<Optional<StringRef>> Redirects = {},
                             unsigned MemoryLimit = 0,
                             std::string *ErrMsg = nullptr,

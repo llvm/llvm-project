@@ -9,6 +9,7 @@
 
 #include "Plugins/SymbolFile/DWARF/DebugNamesDWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
@@ -151,6 +152,17 @@ void DebugNamesDWARFIndex::GetTypes(ConstString name, DIEArray &offsets) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
     if (isType(entry.tag()))
+      Append(entry, offsets);
+  }
+}
+
+void DebugNamesDWARFIndex::GetTypes(const DWARFDeclContext &context,
+                                    DIEArray &offsets) {
+  m_fallback.GetTypes(context, offsets);
+
+  for (const DebugNames::Entry &entry :
+       m_debug_names_up->equal_range(context[0].name)) {
+    if (entry.tag() == context[0].tag)
       Append(entry, offsets);
   }
 }

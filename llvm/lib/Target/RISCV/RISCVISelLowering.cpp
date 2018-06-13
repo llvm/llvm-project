@@ -137,6 +137,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BlockAddress, XLenVT, Custom);
   setOperationAction(ISD::ConstantPool, XLenVT, Custom);
 
+  if (Subtarget.hasStdExtA())
+    setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
+  else
+    setMaxAtomicSizeInBitsSupported(0);
+
   setBooleanContents(ZeroOrOneBooleanContent);
 
   // Function alignments (log2).
@@ -1549,4 +1554,22 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   }
 
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+}
+
+Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilder<> &Builder,
+                                                   Instruction *Inst,
+                                                   AtomicOrdering Ord) const {
+  if (isa<LoadInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
+    return Builder.CreateFence(Ord);
+  if (isa<StoreInst>(Inst) && isReleaseOrStronger(Ord))
+    return Builder.CreateFence(AtomicOrdering::Release);
+  return nullptr;
+}
+
+Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilder<> &Builder,
+                                                    Instruction *Inst,
+                                                    AtomicOrdering Ord) const {
+  if (isa<LoadInst>(Inst) && isAcquireOrStronger(Ord))
+    return Builder.CreateFence(AtomicOrdering::Acquire);
+  return nullptr;
 }

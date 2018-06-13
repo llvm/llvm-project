@@ -93,74 +93,74 @@ __m512 _mm512_mask_prefetch_i32gather_ps_2(__m512i index, __mmask16 mask, int co
   return __builtin_ia32_gatherpfdps(mask, index, addr, 1, 1); // expected-error {{argument should be a value from 2 to 3}}
 }
 
-__m512i test_mm512_mask_shldi_epi64(__m512i __S, __mmask8 __U, __m512i __A, __m512i __B) {
-  return __builtin_ia32_vpshldq512_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m512i test_mm512_shldi_epi64(__m512i __A, __m512i __B) {
+  return __builtin_ia32_vpshldq512(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m512i test_mm512_mask_shldi_epi32(__m512i __S, __mmask16 __U, __m512i __A, __m512i __B) {
-  return __builtin_ia32_vpshldd512_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m512i test_mm512_shldi_epi32(__m512i __A, __m512i __B) {
+  return __builtin_ia32_vpshldd512(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m512i test_mm512_mask_shldi_epi16(__m512i __S, __mmask32 __U, __m512i __A, __m512i __B) {
-  return __builtin_ia32_vpshldw512_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m512i test_mm512_shldi_epi16(__m512i __A, __m512i __B) {
+  return __builtin_ia32_vpshldw512(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m512i test_mm512_mask_shrdi_epi64(__m512i __S, __mmask8 __U, __m512i __A, __m512i __B) {
-  return __builtin_ia32_vpshrdq512_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m512i test_mm512_shrdi_epi64(__m512i __A, __m512i __B) {
+  return __builtin_ia32_vpshrdq512(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m512i test_mm512_mask_shrdi_epi32(__m512i __S, __mmask16 __U, __m512i __A, __m512i __B) {
-  return __builtin_ia32_vpshrdd512_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m512i test_mm512_shrdi_epi32(__m512i __A, __m512i __B) {
+  return __builtin_ia32_vpshrdd512(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m512i test_mm512_mask_shrdi_epi16(__m512i __S, __mmask32 __U, __m512i __A, __m512i __B) {
-  return __builtin_ia32_vpshrdw512_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m512i test_mm512_shrdi_epi16(__m512i __A, __m512i __B) {
+  return __builtin_ia32_vpshrdw512(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m256i test_mm256_mask_shldi_epi64(__m256i __S, __mmask8 __U, __m256i __A, __m256i __B) {
-  return __builtin_ia32_vpshldq256_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m256i test_mm256_shldi_epi64(__m256i __A, __m256i __B) {
+  return __builtin_ia32_vpshldq256(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m128i test_mm128_mask_shldi_epi64(__m128i __S, __mmask8 __U, __m128i __A, __m128i __B) {
-  return __builtin_ia32_vpshldq128_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m128i test_mm128_shldi_epi64( __m128i __A, __m128i __B) {
+  return __builtin_ia32_vpshldq128(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m256i test_mm256_mask_shldi_epi32(__m256i __S, __mmask8 __U, __m256i __A, __m256i __B) {
-  return __builtin_ia32_vpshldd256_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m256i test_mm256_shldi_epi32(__m256i __A, __m256i __B) {
+  return __builtin_ia32_vpshldd256(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m128i test_mm128_mask_shldi_epi32(__m128i __S, __mmask8 __U, __m128i __A, __m128i __B) {
-  return __builtin_ia32_vpshldd128_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m128i test_mm128_shldi_epi32(__m128i __A, __m128i __B) {
+  return __builtin_ia32_vpshldd128(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m256i test_mm256_mask_shldi_epi16(__m256i __S, __mmask16 __U, __m256i __A, __m256i __B) {
-  return __builtin_ia32_vpshldw256_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m256i test_mm256_shldi_epi16( __m256i __A, __m256i __B) {
+  return __builtin_ia32_vpshldw256(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m128i test_mm128_mask_shldi_epi16(__m128i __S, __mmask8 __U, __m128i __A, __m128i __B) {
-  return __builtin_ia32_vpshldw128_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m128i test_mm128_shldi_epi16(__m128i __A, __m128i __B) {
+  return __builtin_ia32_vpshldw128(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m256i test_mm256_mask_shrdi_epi64(__m256i __S, __mmask8 __U, __m256i __A, __m256i __B) {
-  return __builtin_ia32_vpshrdq256_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m256i test_mm256_shrdi_epi64(__m256i __A, __m256i __B) {
+  return __builtin_ia32_vpshrdq256(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m128i test_mm128_mask_shrdi_epi64(__m128i __S, __mmask8 __U, __m128i __A, __m128i __B) {
-  return __builtin_ia32_vpshrdq128_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m128i test_mm128_shrdi_epi64(__m128i __A, __m128i __B) {
+  return __builtin_ia32_vpshrdq128(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m256i test_mm256_mask_shrdi_epi32(__m256i __S, __mmask8 __U, __m256i __A, __m256i __B) {
-  return __builtin_ia32_vpshrdd256_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m256i test_mm256_shrdi_epi32(__m256i __A, __m256i __B) {
+  return __builtin_ia32_vpshrdd256(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m128i test_mm128_mask_shrdi_epi32(__m128i __S, __mmask8 __U, __m128i __A, __m128i __B) {
-  return __builtin_ia32_vpshrdd128_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m128i test_mm128_shrdi_epi32(__m128i __A, __m128i __B) {
+  return __builtin_ia32_vpshrdd128(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m256i test_mm256_mask_shrdi_epi16(__m256i __S, __mmask16 __U, __m256i __A, __m256i __B) {
-  return __builtin_ia32_vpshrdw256_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m256i test_mm256_shrdi_epi16(__m256i __A, __m256i __B) {
+  return __builtin_ia32_vpshrdw256(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }
 
-__m128i test_mm128_mask_shrdi_epi16(__m128i __S, __mmask8 __U, __m128i __A, __m128i __B) {
-  return __builtin_ia32_vpshrdw128_mask(__A, __B, 1024, __S, __U); // expected-error {{argument should be a value from 0 to 255}}
+__m128i test_mm128_shrdi_epi16(__m128i __A, __m128i __B) {
+  return __builtin_ia32_vpshrdw128(__A, __B, 1024); // expected-error {{argument should be a value from 0 to 255}}
 }

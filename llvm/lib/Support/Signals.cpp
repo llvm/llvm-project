@@ -154,17 +154,18 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
     }
   }
 
-  Optional<StringRef> Redirects[] = {InputFile.str(), OutputFile.str(), llvm::None};
-  const char *Args[] = {"llvm-symbolizer", "--functions=linkage", "--inlining",
+  Optional<StringRef> Redirects[] = {StringRef(InputFile),
+                                     StringRef(OutputFile), llvm::None};
+  StringRef Args[] = {"llvm-symbolizer", "--functions=linkage", "--inlining",
 #ifdef _WIN32
-                        // Pass --relative-address on Windows so that we don't
-                        // have to add ImageBase from PE file.
-                        // FIXME: Make this the default for llvm-symbolizer.
-                        "--relative-address",
+                      // Pass --relative-address on Windows so that we don't
+                      // have to add ImageBase from PE file.
+                      // FIXME: Make this the default for llvm-symbolizer.
+                      "--relative-address",
 #endif
-                        "--demangle", nullptr};
+                      "--demangle"};
   int RunResult =
-      sys::ExecuteAndWait(LLVMSymbolizerPath, Args, nullptr, Redirects);
+      sys::ExecuteAndWait(LLVMSymbolizerPath, Args, None, Redirects);
   if (RunResult != 0)
     return false;
 

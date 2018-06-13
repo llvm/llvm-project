@@ -5392,22 +5392,18 @@ defm VABDLs   : N3VLIntExt_QHS<0,1,0b0111,0, IIC_VSUBi4Q,
 defm VABDLu   : N3VLIntExt_QHS<1,1,0b0111,0, IIC_VSUBi4Q,
                                "vabdl", "u", int_arm_neon_vabdu, zext, 1>;
 
+def : Pat<(v8i16 (abs (sub (zext (v8i8 DPR:$opA)), (zext (v8i8 DPR:$opB))))),
+          (VABDLuv8i16 DPR:$opA, DPR:$opB)>;
+def : Pat<(v4i32 (abs (sub (zext (v4i16 DPR:$opA)), (zext (v4i16 DPR:$opB))))),
+          (VABDLuv4i32 DPR:$opA, DPR:$opB)>;
+
+// ISD::ABS is not legal for v2i64, so VABDL needs to be matched from the
+// shift/xor pattern for ABS.
+
 def abd_shr :
     PatFrag<(ops node:$in1, node:$in2, node:$shift),
             (NEONvshrs (sub (zext node:$in1),
                             (zext node:$in2)), (i32 $shift))>;
-
-def : Pat<(xor (v4i32 (bitconvert (v8i16 (abd_shr (v8i8 DPR:$opA), (v8i8 DPR:$opB), 15)))),
-               (v4i32 (bitconvert (v8i16 (add (sub (zext (v8i8 DPR:$opA)),
-                                                   (zext (v8i8 DPR:$opB))),
-                                              (v8i16 (abd_shr (v8i8 DPR:$opA), (v8i8 DPR:$opB), 15))))))),
-          (VABDLuv8i16 DPR:$opA, DPR:$opB)>;
-
-def : Pat<(xor (v4i32 (abd_shr (v4i16 DPR:$opA), (v4i16 DPR:$opB), 31)),
-               (v4i32 (add (sub (zext (v4i16 DPR:$opA)),
-                                (zext (v4i16 DPR:$opB))),
-                           (abd_shr (v4i16 DPR:$opA), (v4i16 DPR:$opB), 31)))),
-          (VABDLuv4i32 DPR:$opA, DPR:$opB)>;
 
 def : Pat<(xor (v4i32 (bitconvert (v2i64 (abd_shr (v2i32 DPR:$opA), (v2i32 DPR:$opB), 63)))),
                (v4i32 (bitconvert (v2i64 (add (sub (zext (v2i32 DPR:$opA)),

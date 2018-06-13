@@ -12,7 +12,6 @@
 
 #include "ClangdUnit.h"
 #include "CodeComplete.h"
-#include "CompileArgsCache.h"
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
@@ -122,8 +121,7 @@ public:
   /// When \p SkipCache is true, compile commands will always be requested from
   /// compilation database even if they were cached in previous invocations.
   void addDocument(PathRef File, StringRef Contents,
-                   WantDiagnostics WD = WantDiagnostics::Auto,
-                   bool SkipCache = false);
+                   WantDiagnostics WD = WantDiagnostics::Auto);
 
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it.
@@ -216,13 +214,16 @@ private:
   void consumeDiagnostics(PathRef File, DocVersion Version,
                           std::vector<Diag> Diags);
 
-  CompileArgsCache CompileArgs;
+  tooling::CompileCommand getCompileCommand(PathRef File);
+
+  GlobalCompilationDatabase &CDB;
   DiagnosticsConsumer &DiagConsumer;
   FileSystemProvider &FSProvider;
 
   /// Used to synchronize diagnostic responses for added and removed files.
   llvm::StringMap<DocVersion> InternalVersion;
 
+  Path ResourceDir;
   // The index used to look up symbols. This could be:
   //   - null (all index functionality is optional)
   //   - the dynamic index owned by ClangdServer (FileIdx)

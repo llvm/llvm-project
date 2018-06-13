@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 48
+#define CINDEX_VERSION_MINOR 49
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -1327,7 +1327,7 @@ enum CXTranslationUnit_Flags {
   CXTranslationUnit_SingleFileParse = 0x400,
 
   /**
-   * \brief Used in combination with CXTranslationUnit_SkipFunctionBodies to
+   * Used in combination with CXTranslationUnit_SkipFunctionBodies to
    * constrain the skipping of function bodies to the preamble.
    *
    * The function bodies of the main file are not skipped.
@@ -4749,6 +4749,20 @@ typedef struct {
 } CXToken;
 
 /**
+ * Get the raw lexical token starting with the given location.
+ *
+ * \param TU the translation unit whose text is being tokenized.
+ *
+ * \param Location the source location with which the token starts.
+ *
+ * \returns The token starting with the given location or NULL if no such token
+ * exist. The returned pointer must be freed with clang_disposeTokens before the
+ * translation unit is destroyed.
+ */
+CINDEX_LINKAGE CXToken *clang_getToken(CXTranslationUnit TU,
+                                       CXSourceLocation Location);
+
+/**
  * Determine the kind of the given token.
  */
 CINDEX_LINKAGE CXTokenKind clang_getTokenKind(CXToken);
@@ -5244,6 +5258,70 @@ typedef struct {
 } CXCodeCompleteResults;
 
 /**
+ * Retrieve the number of fix-its for the given completion index.
+ *
+ * Calling this makes sense only if CXCodeComplete_IncludeCompletionsWithFixIts
+ * option was set.
+ *
+ * \param results The structure keeping all completion results
+ *
+ * \param completion_index The index of the completion
+ *
+ * \return The number of fix-its which must be applied before the completion at
+ * completion_index can be applied
+ */
+CINDEX_LINKAGE unsigned
+clang_getCompletionNumFixIts(CXCodeCompleteResults *results,
+                             unsigned completion_index);
+
+/**
+ * Fix-its that *must* be applied before inserting the text for the
+ * corresponding completion.
+ *
+ * By default, clang_codeCompleteAt() only returns completions with empty
+ * fix-its. Extra completions with non-empty fix-its should be explicitly
+ * requested by setting CXCodeComplete_IncludeCompletionsWithFixIts.
+ *
+ * For the clients to be able to compute position of the cursor after applying
+ * fix-its, the following conditions are guaranteed to hold for
+ * replacement_range of the stored fix-its:
+ *  - Ranges in the fix-its are guaranteed to never contain the completion
+ *  point (or identifier under completion point, if any) inside them, except
+ *  at the start or at the end of the range.
+ *  - If a fix-it range starts or ends with completion point (or starts or
+ *  ends after the identifier under completion point), it will contain at
+ *  least one character. It allows to unambiguously recompute completion
+ *  point after applying the fix-it.
+ *
+ * The intuition is that provided fix-its change code around the identifier we
+ * complete, but are not allowed to touch the identifier itself or the
+ * completion point. One example of completions with corrections are the ones
+ * replacing '.' with '->' and vice versa:
+ *
+ * std::unique_ptr<std::vector<int>> vec_ptr;
+ * In 'vec_ptr.^', one of the completions is 'push_back', it requires
+ * replacing '.' with '->'.
+ * In 'vec_ptr->^', one of the completions is 'release', it requires
+ * replacing '->' with '.'.
+ *
+ * \param results The structure keeping all completion results
+ *
+ * \param completion_index The index of the completion
+ *
+ * \param fixit_index The index of the fix-it for the completion at
+ * completion_index
+ *
+ * \param replacement_range The fix-it range that must be replaced before the
+ * completion at completion_index can be applied
+ *
+ * \returns The fix-it string that must replace the code at replacement_range
+ * before the completion at completion_index can be applied
+ */
+CINDEX_LINKAGE CXString clang_getCompletionFixIt(
+    CXCodeCompleteResults *results, unsigned completion_index,
+    unsigned fixit_index, CXSourceRange *replacement_range);
+
+/**
  * Flags that can be passed to \c clang_codeCompleteAt() to
  * modify its behavior.
  *
@@ -5274,7 +5352,13 @@ enum CXCodeComplete_Flags {
    * defined in the preamble. There's no guarantee any particular entity is
    * omitted. This may be useful if the headers are indexed externally.
    */
-  CXCodeComplete_SkipPreamble = 0x08
+  CXCodeComplete_SkipPreamble = 0x08,
+
+  /**
+   * Whether to include completions with small
+   * fix-its, e.g. change '.' to '->' on member access, etc.
+   */
+  CXCodeComplete_IncludeCompletionsWithFixIts = 0x10
 };
 
 /**

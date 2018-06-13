@@ -20,11 +20,11 @@ using namespace __scudo;
 
 extern "C" {
 INTERCEPTOR_ATTRIBUTE void free(void *ptr) {
-  scudoFree(ptr, FromMalloc);
+  scudoDeallocate(ptr, 0, 0, FromMalloc);
 }
 
 INTERCEPTOR_ATTRIBUTE void *malloc(SIZE_T size) {
-  return scudoMalloc(size, FromMalloc);
+  return scudoAllocate(size, 0, FromMalloc);
 }
 
 INTERCEPTOR_ATTRIBUTE void *realloc(void *ptr, SIZE_T size) {
@@ -50,7 +50,7 @@ INTERCEPTOR_ATTRIBUTE void cfree(void *ptr) ALIAS("free");
 
 #if SANITIZER_INTERCEPT_MEMALIGN
 INTERCEPTOR_ATTRIBUTE void *memalign(SIZE_T alignment, SIZE_T size) {
-  return scudoMemalign(alignment, size);
+  return scudoAllocate(size, alignment, FromMemalign);
 }
 
 INTERCEPTOR_ATTRIBUTE

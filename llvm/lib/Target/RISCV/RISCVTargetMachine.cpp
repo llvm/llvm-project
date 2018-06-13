@@ -75,6 +75,7 @@ public:
     return getTM<RISCVTargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
   void addPreEmitPass() override;
 };
@@ -82,6 +83,11 @@ public:
 
 TargetPassConfig *RISCVTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new RISCVPassConfig(*this, PM);
+}
+
+void RISCVPassConfig::addIRPasses() {
+  addPass(createAtomicExpandPass());
+  TargetPassConfig::addIRPasses();
 }
 
 bool RISCVPassConfig::addInstSelector() {

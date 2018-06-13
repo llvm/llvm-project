@@ -149,15 +149,9 @@ static HANDLE RedirectIO(Optional<StringRef> Path, int fd,
 
 }
 
-static SmallVector<StringRef, 8> buildArgVector(const char **Args) {
-  SmallVector<StringRef, 8> Result;
-  for (unsigned I = 0; Args[I]; ++I)
-    Result.push_back(StringRef(Args[I]));
-  return Result;
-}
-
-static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
-                    const char **Envp, ArrayRef<Optional<StringRef>> Redirects,
+static bool Execute(ProcessInfo &PI, StringRef Program,
+                    ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
+                    ArrayRef<Optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg) {
   if (!sys::fs::can_execute(Program)) {
     if (ErrMsg)
@@ -176,19 +170,18 @@ static bool Execute(ProcessInfo &PI, StringRef Program, const char **Args,
   // Windows wants a command line, not an array of args, to pass to the new
   // process.  We have to concatenate them all, while quoting the args that
   // have embedded spaces (or are empty).
-  auto ArgVector = buildArgVector(Args);
-  std::string Command = flattenWindowsCommandLine(ArgVector);
+  std::string Command = flattenWindowsCommandLine(Args);
 
   // The pointer to the environment block for the new process.
   std::vector<wchar_t> EnvBlock;
 
-  if (Envp) {
+  if (Env) {
     // An environment block consists of a null-terminated block of
     // null-terminated strings. Convert the array of environment variables to
     // an environment block by concatenating them.
-    for (unsigned i = 0; Envp[i]; ++i) {
+    for (const auto E : *Env) {
       SmallVector<wchar_t, MAX_PATH> EnvString;
-      if (std::error_code ec = windows::UTF8ToUTF16(Envp[i], EnvString)) {
+      if (std::error_code ec = windows::UTF8ToUTF16(E, EnvString)) {
         SetLastError(ec.value());
         MakeErrMsg(ErrMsg, "Unable to convert environment variable to UTF-16");
         return false;

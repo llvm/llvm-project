@@ -163,6 +163,16 @@ public:
 
   void emitLinkerFlagsForUsed(raw_ostream &OS,
                               const GlobalValue *GV) const override;
+
+  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
+                                       const GlobalValue *RHS,
+                                       const TargetMachine &TM) const override;
+
+  /// Given a mergeable constant with the specified size and relocation
+  /// information, return a section that it should be placed in.
+  MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
+                                   const Constant *C,
+                                   unsigned &Align) const override;
 };
 
 class TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {
