@@ -187,10 +187,12 @@ Optional<CompoundStatementRange> getExtractedStatements(const CompoundStmt *CS,
   assert(Begin && End);
   CompoundStatementRange Result;
   Result.First = findSelectedStmt(CS->body(), Begin);
-  assert(Result.First != CS->body_end());
+  if (Result.First == CS->body_end())
+    return None;
   Result.Last = findSelectedStmt(
       CompoundStmt::body_const_range(Result.First, CS->body_end()), End);
-  assert(Result.Last != CS->body_end());
+  if (Result.Last == CS->body_end())
+    return None;
   return Result;
 }
 
