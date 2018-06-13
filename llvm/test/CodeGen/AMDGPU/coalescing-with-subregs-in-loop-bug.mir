@@ -1,0 +1,215 @@
+# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx803 -run-pass=simple-register-coalescing,rename-independent-subregs %s -o - | FileCheck -check-prefix=GCN %s
+
+# This test is for a bug where the following happens:
+#
+# Inside the loop, %29.sub2 is used in a V_LSHLREV whose result is then used
+# in an LDS read. %29 is a 128 bit value that is linked by copies to
+# %45 (from phi elimination), %28 (the value in the loop pre-header),
+# %31 (defined and subreg-modified in the loop, and used after the loop)
+# and %30:
+#
+#     %45:vreg_128 = COPY killed %28
+# bb.39:
+#     %29:vreg_128 = COPY killed %45
+#     %39:vgpr_32 = V_LSHLREV_B32_e32 2, %29.sub2, implicit $exec
+#     %31:vreg_128 = COPY killed %29
+#     %31.sub1:vreg_128 = COPY %34
+#     %30:vreg_128 = COPY %31
+#     %45:vreg_128 = COPY killed %30
+#     S_CBRANCH_EXECNZ %bb.39, implicit $exec
+#     S_BRANCH %bb.40
+# bb.40:
+#     undef %8615.sub0:vreg_128 = COPY killed %31.sub0
+#
+# So this coalesces together into a single 128 bit value whose sub1 is modified
+# in the loop, but the sub2 used in the V_LSHLREV is not modified in the loop.
+#
+# The bug is that the coalesced value has a L00000004 subrange (for sub2) that
+# says that it is not live up to the end of the loop block. The symptom is that
+# Rename Independent Subregs separates sub2 into its own register, and it is
+# not live round the loop, so that pass adds an IMPLICIT_DEF for it just before
+# the loop backedge.
+
+# GCN: bb.1 (%ir-block.6):
+# GCN: V_LSHLREV_B32_e32 2, [[val:%[0-9][0-9]*]].sub2
+# GCN-NOT: [[val]]:vreg_128 = IMPLICIT_DEF
+
+--- |
+  target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
+  target triple = "amdgcn--amdpal"
+
+  define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg, i32 inreg, i32 inreg, <3 x i32> inreg, i32 inreg, <3 x i32>) local_unnamed_addr #0 {
+  .entry:
+    br label %6
+
+  ; <label>:6:                                      ; preds = %6, %.entry
+    %7 = bitcast i32 addrspace(3)* undef to <2 x i32> addrspace(3)*
+    %8 = bitcast i32 addrspace(3)* undef to <2 x i32> addrspace(3)*
+    %9 = bitcast i32 addrspace(3)* undef to <2 x i32> addrspace(3)*
+    %10 = bitcast i32 addrspace(3)* undef to <2 x i32> addrspace(3)*
+    %11 = bitcast i32 addrspace(3)* undef to <2 x i32> addrspace(3)*
+    %12 = bitcast i32 addrspace(3)* undef to <2 x i32> addrspace(3)*
+    br i1 undef, label %13, label %6
+
+  ; <label>:13:                                     ; preds = %6
+    ret void
+  }
+
+  attributes #0 = { "target-cpu"="gfx803" }
+
+...
+---
+name:            _amdgpu_cs_main
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_64, preferred-register: '' }
+  - { id: 1, class: sreg_64, preferred-register: '' }
+  - { id: 2, class: sreg_64, preferred-register: '' }
+  - { id: 3, class: sgpr_32, preferred-register: '' }
+  - { id: 4, class: sgpr_32, preferred-register: '' }
+  - { id: 5, class: sgpr_32, preferred-register: '' }
+  - { id: 6, class: sgpr_32, preferred-register: '' }
+  - { id: 7, class: sreg_32_xm0, preferred-register: '' }
+  - { id: 8, class: sgpr_32, preferred-register: '' }
+  - { id: 9, class: sreg_32_xm0, preferred-register: '' }
+  - { id: 10, class: sreg_32_xm0, preferred-register: '' }
+  - { id: 11, class: sreg_32_xm0, preferred-register: '' }
+  - { id: 12, class: vreg_64, preferred-register: '' }
+  - { id: 13, class: vreg_64, preferred-register: '' }
+  - { id: 14, class: vreg_64, preferred-register: '' }
+  - { id: 15, class: vreg_64, preferred-register: '' }
+  - { id: 16, class: vreg_64, preferred-register: '' }
+  - { id: 17, class: vreg_64, preferred-register: '' }
+  - { id: 18, class: sreg_64, preferred-register: '$vcc' }
+  - { id: 19, class: vreg_128, preferred-register: '' }
+  - { id: 20, class: vreg_128, preferred-register: '' }
+  - { id: 21, class: vreg_128, preferred-register: '' }
+  - { id: 22, class: vreg_128, preferred-register: '' }
+  - { id: 23, class: vreg_128, preferred-register: '' }
+  - { id: 24, class: vreg_128, preferred-register: '' }
+  - { id: 25, class: vreg_128, preferred-register: '' }
+  - { id: 26, class: vreg_128, preferred-register: '' }
+  - { id: 27, class: vreg_128, preferred-register: '' }
+  - { id: 28, class: vreg_128, preferred-register: '' }
+  - { id: 29, class: vreg_128, preferred-register: '' }
+  - { id: 30, class: vreg_128, preferred-register: '' }
+  - { id: 31, class: vreg_128, preferred-register: '' }
+  - { id: 32, class: vreg_128, preferred-register: '' }
+  - { id: 33, class: vgpr_32, preferred-register: '' }
+  - { id: 34, class: sreg_32, preferred-register: '' }
+  - { id: 35, class: vreg_128, preferred-register: '' }
+  - { id: 36, class: vreg_128, preferred-register: '' }
+  - { id: 37, class: vreg_128, preferred-register: '' }
+  - { id: 38, class: vgpr_32, preferred-register: '' }
+  - { id: 39, class: vgpr_32, preferred-register: '' }
+  - { id: 40, class: vgpr_32, preferred-register: '' }
+  - { id: 41, class: vgpr_32, preferred-register: '' }
+  - { id: 42, class: vreg_128, preferred-register: '' }
+  - { id: 43, class: sreg_64, preferred-register: '' }
+  - { id: 44, class: vreg_128, preferred-register: '' }
+  - { id: 45, class: vreg_128, preferred-register: '' }
+liveins:
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0..entry:
+    successors: %bb.1(0x80000000)
+
+    %3:sgpr_32 = S_MOV_B32 0
+    undef %19.sub1:vreg_128 = COPY undef %3
+    dead %4:sgpr_32 = S_MOV_B32 1
+    %20:vreg_128 = COPY killed %19
+    %20.sub1:vreg_128 = COPY undef %4
+    dead %5:sgpr_32 = S_MOV_B32 2
+    %21:vreg_128 = COPY killed %20
+    %21.sub1:vreg_128 = COPY undef %5
+    dead %6:sgpr_32 = S_MOV_B32 3
+    %22:vreg_128 = COPY killed %21
+    %22.sub1:vreg_128 = COPY undef %6
+    dead %7:sreg_32_xm0 = S_MOV_B32 4
+    %23:vreg_128 = COPY killed %22
+    %23.sub1:vreg_128 = COPY undef %7
+    dead %8:sgpr_32 = S_MOV_B32 5
+    %24:vreg_128 = COPY killed %23
+    %24.sub1:vreg_128 = COPY undef %8
+    dead %9:sreg_32_xm0 = S_MOV_B32 6
+    %25:vreg_128 = COPY killed %24
+    %25.sub1:vreg_128 = COPY undef %9
+    dead %10:sreg_32_xm0 = S_MOV_B32 7
+    %26:vreg_128 = COPY killed %25
+    %26.sub1:vreg_128 = COPY undef %10
+    %11:sreg_32_xm0 = S_MOV_B32 255
+    %27:vreg_128 = COPY killed %26
+    %27.sub1:vreg_128 = COPY %11
+    %28:vreg_128 = COPY killed %27
+    %28.sub2:vreg_128 = COPY killed %11
+    %2:sreg_64 = S_MOV_B64 0
+    %34:sreg_32 = S_MOV_B32 7
+    %37:vreg_128 = COPY undef %42:vreg_128
+    %43:sreg_64 = COPY killed %2
+    %44:vreg_128 = COPY killed %37
+    %45:vreg_128 = COPY killed %28
+
+  bb.1 (%ir-block.6):
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+
+    %29:vreg_128 = COPY killed %45
+    %36:vreg_128 = COPY killed %44
+    %0:sreg_64 = COPY killed %43
+    %39:vgpr_32 = V_LSHLREV_B32_e32 2, %29.sub2, implicit $exec
+    %41:vgpr_32 = V_ADD_I32_e32 1152, %39, implicit-def dead $vcc, implicit $exec
+    $m0 = S_MOV_B32 -1
+    %12:vreg_64 = DS_READ2_B32 killed %41, 0, 1, 0, implicit $m0, implicit $exec :: (load 8 from %ir.7, align 4, addrspace 3)
+    %13:vreg_64 = DS_READ2_B32 %39, -112, -111, 0, implicit $m0, implicit $exec :: (load 8 from %ir.8, align 4, addrspace 3)
+    %14:vreg_64 = DS_READ2_B32 %39, 0, 1, 0, implicit $m0, implicit $exec :: (load 8 from %ir.9, align 4, addrspace 3)
+    %40:vgpr_32 = V_ADD_I32_e32 1160, %39, implicit-def dead $vcc, implicit $exec
+    %15:vreg_64 = DS_READ2_B32 killed %40, 0, 1, 0, implicit $m0, implicit $exec :: (load 8 from %ir.10, align 4, addrspace 3)
+    %16:vreg_64 = DS_READ2_B32 %39, -110, -109, 0, implicit $m0, implicit $exec :: (load 8 from %ir.11, align 4, addrspace 3)
+    %17:vreg_64 = DS_READ2_B32 %39, 2, 3, 0, implicit $m0, implicit $exec :: (load 8 from %ir.12, align 4, addrspace 3)
+    undef %35.sub1:vreg_128 = COPY undef %34
+    %31:vreg_128 = COPY killed %29
+    %31.sub1:vreg_128 = COPY %34
+    %38:vgpr_32 = V_ADD_I32_e32 1, %36.sub0, implicit-def dead $vcc, implicit $exec
+    %18:sreg_64 = V_CMP_LT_I32_e64 5, %38, implicit $exec
+    %1:sreg_64 = S_OR_B64 killed %18, killed %0, implicit-def $scc
+    %30:vreg_128 = COPY %31
+    %43:sreg_64 = COPY %1
+    %44:vreg_128 = COPY %35
+    %45:vreg_128 = COPY killed %30
+    $exec = S_ANDN2_B64_term $exec, %1
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2 (%ir-block.13):
+    $exec = S_OR_B64 $exec, killed %1, implicit-def $scc
+    %33:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    undef %32.sub0:vreg_128 = COPY killed %31.sub0
+    %32.sub2:vreg_128 = COPY %33
+    S_ENDPGM
+
+...

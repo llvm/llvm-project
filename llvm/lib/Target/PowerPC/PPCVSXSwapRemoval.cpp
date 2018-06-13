@@ -878,6 +878,12 @@ void PPCVSXSwapRemoval::handleSpecialSwappables(int EntryIdx) {
     MI->getOperand(1).setReg(Reg2);
     MI->getOperand(2).setReg(Reg1);
 
+    // We also need to swap kill flag associated with the register.
+    bool IsKill1 = MI->getOperand(1).isKill();
+    bool IsKill2 = MI->getOperand(2).isKill();
+    MI->getOperand(1).setIsKill(IsKill2);
+    MI->getOperand(2).setIsKill(IsKill1);
+
     LLVM_DEBUG(dbgs() << "  Into: ");
     LLVM_DEBUG(MI->dump());
     break;

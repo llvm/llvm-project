@@ -783,30 +783,33 @@ public:
   /// The availability of this result.
   CXAvailabilityKind Availability = CXAvailability_Available;
 
-  /// FixIts that *must* be applied before inserting the text for the
-  /// corresponding completion item.
+  /// Fix-its that *must* be applied before inserting the text for the
+  /// corresponding completion.
   ///
-  /// Completion items with non-empty fixits will not be returned by default,
-  /// they should be explicitly requested by setting
-  /// CompletionOptions::IncludeFixIts. For the editors to be able to
-  /// compute position of the cursor for the completion item itself, the
-  /// following conditions are guaranteed to hold for RemoveRange of the stored
-  /// fixits:
-  ///  - Ranges in the fixits are guaranteed to never contain the completion
+  /// By default, CodeCompletionBuilder only returns completions with empty
+  /// fix-its. Extra completions with non-empty fix-its should be explicitly
+  /// requested by setting CompletionOptions::IncludeFixIts.
+  ///
+  /// For the clients to be able to compute position of the cursor after
+  /// applying fix-its, the following conditions are guaranteed to hold for
+  /// RemoveRange of the stored fix-its:
+  ///  - Ranges in the fix-its are guaranteed to never contain the completion
   ///  point (or identifier under completion point, if any) inside them, except
   ///  at the start or at the end of the range.
-  ///  - If a fixit range starts or ends with completion point (or starts or
+  ///  - If a fix-it range starts or ends with completion point (or starts or
   ///  ends after the identifier under completion point), it will contain at
   ///  least one character. It allows to unambiguously recompute completion
-  ///  point after applying the fixit.
-  /// The intuition is that provided fixits change code around the identifier we
-  /// complete, but are not allowed to touch the identifier itself or the
-  /// completion point. One example of completion items with corrections are the
-  /// ones replacing '.' with '->' and vice versa:
+  ///  point after applying the fix-it.
+  ///
+  /// The intuition is that provided fix-its change code around the identifier
+  /// we complete, but are not allowed to touch the identifier itself or the
+  /// completion point. One example of completions with corrections are the ones
+  /// replacing '.' with '->' and vice versa:
+  ///
   /// std::unique_ptr<std::vector<int>> vec_ptr;
-  /// In 'vec_ptr.^', one of completion items is 'push_back', it requires
+  /// In 'vec_ptr.^', one of the completions is 'push_back', it requires
   /// replacing '.' with '->'.
-  /// In 'vec_ptr->^', one of completion items is 'release', it requires
+  /// In 'vec_ptr->^', one of the completions is 'release', it requires
   /// replacing '->' with '.'.
   std::vector<FixItHint> FixIts;
 

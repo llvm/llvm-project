@@ -200,7 +200,7 @@ will need about 1-3 GB of space.  A full build of LLVM and Clang will need aroun
 is so large because of all the debugging information and the fact that the
 libraries are statically linked into multiple tools).
 
-If you you are space-constrained, you can build only selected tools or only
+If you are space-constrained, you can build only selected tools or only
 selected targets.  The Release build requires considerably less space.
 
 The LLVM suite *may* compile on other platforms, but it is not guaranteed to do

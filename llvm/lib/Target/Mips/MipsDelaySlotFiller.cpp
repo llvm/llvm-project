@@ -728,6 +728,10 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
         (Opcode == Mips::JR || Opcode == Mips::PseudoIndirectBranch ||
          Opcode == Mips::PseudoReturn || Opcode == Mips::TAILCALL))
       continue;
+     // Instructions LWP/SWP should not be in a delay slot as that
+     // results in unpredictable behaviour
+     if (InMicroMipsMode && (Opcode == Mips::LWP_MM || Opcode == Mips::SWP_MM))
+       continue;
 
     Filler = CurrI;
     return true;

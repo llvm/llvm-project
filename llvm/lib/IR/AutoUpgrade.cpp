@@ -263,6 +263,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.vpdpwssds.") || // Added in 7.0
       Name.startswith("avx512.maskz.vpdpwssds.") || // Added in 7.0
       Name.startswith("avx512.mask.dbpsadbw.") || // Added in 7.0
+      Name.startswith("avx512.mask.vpshld.") || // Added in 7.0
+      Name.startswith("avx512.mask.vpshrd.") || // Added in 7.0
       Name.startswith("avx512.mask.add.p") || // Added in 7.0
       Name.startswith("avx512.mask.sub.p") || // Added in 7.0
       Name.startswith("avx512.mask.mul.p") || // Added in 7.0
@@ -1256,6 +1258,48 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_dbpsadbw_256;
     else if (VecWidth == 512)
       IID = Intrinsic::x86_avx512_dbpsadbw_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("vpshld.")) {
+    if (VecWidth == 128 && Name[7] == 'q')
+      IID = Intrinsic::x86_avx512_vpshld_q_128;
+    else if (VecWidth == 128 && Name[7] == 'd')
+      IID = Intrinsic::x86_avx512_vpshld_d_128;
+    else if (VecWidth == 128 && Name[7] == 'w')
+      IID = Intrinsic::x86_avx512_vpshld_w_128;
+    else if (VecWidth == 256 && Name[7] == 'q')
+      IID = Intrinsic::x86_avx512_vpshld_q_256;
+    else if (VecWidth == 256 && Name[7] == 'd')
+      IID = Intrinsic::x86_avx512_vpshld_d_256;
+    else if (VecWidth == 256 && Name[7] == 'w')
+      IID = Intrinsic::x86_avx512_vpshld_w_256;
+    else if (VecWidth == 512 && Name[7] == 'q')
+      IID = Intrinsic::x86_avx512_vpshld_q_512;
+    else if (VecWidth == 512 && Name[7] == 'd')
+      IID = Intrinsic::x86_avx512_vpshld_d_512;
+    else if (VecWidth == 512 && Name[7] == 'w')
+      IID = Intrinsic::x86_avx512_vpshld_w_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("vpshrd.")) {
+    if (VecWidth == 128 && Name[7] == 'q')
+      IID = Intrinsic::x86_avx512_vpshrd_q_128;
+    else if (VecWidth == 128 && Name[7] == 'd')
+      IID = Intrinsic::x86_avx512_vpshrd_d_128;
+    else if (VecWidth == 128 && Name[7] == 'w')
+      IID = Intrinsic::x86_avx512_vpshrd_w_128;
+    else if (VecWidth == 256 && Name[7] == 'q')
+      IID = Intrinsic::x86_avx512_vpshrd_q_256;
+    else if (VecWidth == 256 && Name[7] == 'd')
+      IID = Intrinsic::x86_avx512_vpshrd_d_256;
+    else if (VecWidth == 256 && Name[7] == 'w')
+      IID = Intrinsic::x86_avx512_vpshrd_w_256;
+    else if (VecWidth == 512 && Name[7] == 'q')
+      IID = Intrinsic::x86_avx512_vpshrd_q_512;
+    else if (VecWidth == 512 && Name[7] == 'd')
+      IID = Intrinsic::x86_avx512_vpshrd_d_512;
+    else if (VecWidth == 512 && Name[7] == 'w')
+      IID = Intrinsic::x86_avx512_vpshrd_w_512;
     else
       llvm_unreachable("Unexpected intrinsic");
   } else

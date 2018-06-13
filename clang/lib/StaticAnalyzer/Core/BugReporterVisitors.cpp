@@ -184,7 +184,7 @@ BugReporterVisitor::getEndPath(BugReporterContext &BRC,
 void
 BugReporterVisitor::finalizeVisitor(BugReporterContext &BRC,
                                     const ExplodedNode *EndPathNode,
-                                    BugReport &BR) {};
+                                    BugReport &BR) {}
 
 std::unique_ptr<PathDiagnosticPiece> BugReporterVisitor::getDefaultEndPath(
     BugReporterContext &BRC, const ExplodedNode *EndPathNode, BugReport &BR) {

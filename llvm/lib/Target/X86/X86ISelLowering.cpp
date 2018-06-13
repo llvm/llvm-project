@@ -20488,16 +20488,12 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                               Src2, Src3),
                                   Mask, PassThru, Subtarget, DAG);
     }
-    case INTR_TYPE_3OP_IMM8_MASK:
     case INTR_TYPE_3OP_MASK: {
       SDValue Src1 = Op.getOperand(1);
       SDValue Src2 = Op.getOperand(2);
       SDValue Src3 = Op.getOperand(3);
       SDValue PassThru = Op.getOperand(4);
       SDValue Mask = Op.getOperand(5);
-
-      if (IntrData->Type == INTR_TYPE_3OP_IMM8_MASK)
-        Src3 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Src3);
 
       // We specify 2 possible opcodes for intrinsics with rounding modes.
       // First, we check if the intrinsic may have non-default rounding mode,
@@ -32377,14 +32373,14 @@ static SDValue combineVSelectToShrunkBlend(SDNode *N, SelectionDAG &DAG,
                                            TargetLowering::DAGCombinerInfo &DCI,
                                            const X86Subtarget &Subtarget) {
   SDValue Cond = N->getOperand(0);
-  if (N->getOpcode() != ISD::VSELECT || !DCI.isBeforeLegalizeOps() ||
-      DCI.isBeforeLegalize() ||
+  if (N->getOpcode() != ISD::VSELECT ||
       ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()))
     return SDValue();
 
-  // Don't optimize vector selects that map to mask-registers.
+  // Don't optimize before the condition has been transformed to a legal type
+  // and don't ever optimize vector selects that map to AVX512 mask-registers.
   unsigned BitWidth = Cond.getScalarValueSizeInBits();
-  if (BitWidth == 1)
+  if (BitWidth < 8 || BitWidth > 64)
     return SDValue();
 
   // We can only handle the cases where VSELECT is directly legal on the
@@ -32422,7 +32418,6 @@ static SDValue combineVSelectToShrunkBlend(SDNode *N, SelectionDAG &DAG,
     if (UI->getOpcode() != ISD::VSELECT || UI.getOperandNo() != 0)
       return SDValue();
 
-  assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
   APInt DemandedMask(APInt::getSignMask(BitWidth));
   KnownBits Known;
   TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),

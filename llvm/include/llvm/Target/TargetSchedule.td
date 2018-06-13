@@ -281,10 +281,9 @@ class ProcWriteResources<list<ProcResourceKind> resources> {
 // ProcResources indicates the set of resources consumed by the write.
 // Optionally, ResourceCycles indicates the number of cycles the
 // resource is consumed. Each ResourceCycles item is paired with the
-// ProcResource item at the same position in its list. Since
-// ResourceCycles are rarely specialized, the list may be
-// incomplete. By default, resources are consumed for a single cycle,
-// regardless of latency, which models a fully pipelined processing
+// ProcResource item at the same position in its list. ResourceCycles
+// can be `[]`: in that case, all resources are consumed for a single
+// cycle, regardless of latency, which models a fully pipelined processing
 // unit. A value of 0 for ResourceCycles means that the resource must
 // be available but is not consumed, which is only relevant for
 // unbuffered resources.

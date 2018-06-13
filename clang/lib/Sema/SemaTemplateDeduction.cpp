@@ -3803,10 +3803,16 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
       return Result;
   }
 
+  // Capture the context in which the function call is made. This is the context
+  // that is needed when the accessibility of template arguments is checked.
+  DeclContext *CallingCtx = CurContext;
+
   return FinishTemplateArgumentDeduction(
       FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
-      &OriginalCallArgs, PartialOverloading,
-      [&]() { return CheckNonDependent(ParamTypesForArgChecking); });
+      &OriginalCallArgs, PartialOverloading, [&, CallingCtx]() {
+        ContextRAII SavedContext(*this, CallingCtx);
+        return CheckNonDependent(ParamTypesForArgChecking);
+      });
 }
 
 QualType Sema::adjustCCAndNoReturn(QualType ArgFunctionType,
