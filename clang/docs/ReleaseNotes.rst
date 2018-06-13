@@ -112,6 +112,12 @@ New Compiler Flags
   'no-strict' option, Clang attempts to match the overflowing behavior of the
   target's native float-to-int conversion instructions.
 
+- :option: `-fforce-emit-vtables` and `-fno-force-emit-vtables`.
+
+   In order to improve devirtualization, forces emitting of vtables even in
+   modules where it isn't necessary. It causes more inline virtual functions
+   to be emitted.
+
 - ...
 
 Deprecated Compiler Flags

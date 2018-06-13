@@ -3472,6 +3472,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_strict_vtable_pointers,
                    false))
     CmdArgs.push_back("-fstrict-vtable-pointers");
+  if (Args.hasFlag(options::OPT_fforce_emit_vtables,
+                   options::OPT_fno_force_emit_vtables,
+                   false))
+    CmdArgs.push_back("-fforce-emit-vtables");
   if (!Args.hasFlag(options::OPT_foptimize_sibling_calls,
                     options::OPT_fno_optimize_sibling_calls))
     CmdArgs.push_back("-mdisable-tail-calls");

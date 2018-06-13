@@ -477,7 +477,7 @@ void ManualDWARFIndex::Dump(Stream &s) {
   m_set.function_methods.Dump(&s);
   s.Printf("\nFunction selectors:\n");
   m_set.function_selectors.Dump(&s);
-  s.Printf("\nObjective C class selectors:\n");
+  s.Printf("\nObjective-C class selectors:\n");
   m_set.objc_class_selectors.Dump(&s);
   s.Printf("\nGlobals and statics:\n");
   m_set.globals.Dump(&s);

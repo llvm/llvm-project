@@ -3,6 +3,18 @@ macro(add_host_subdirectory group)
   source_group(${group} FILES ${ARGN})
 endmacro()
 
+# Removes all module flags from the current CMAKE_CXX_FLAGS. Used for
+# the Objective-C++ code in lldb which we don't want to build with modules.
+# Reasons for this are that modules with Objective-C++ would require that
+# all LLVM/Clang modules are Objective-C++ compatible (which they are likely
+# not) and we would have rebuild a second set of modules just for the few
+# Objective-C++ files in lldb (which slows down the build process).
+macro(remove_module_flags)
+  string(REGEX REPLACE "-fmodules-cache-path=[^ ]+" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "-fmodules" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "-fcxx-modules" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endmacro()
+
 add_host_subdirectory(common
   common/File.cpp
   common/FileCache.cpp
@@ -92,10 +104,9 @@ else()
 
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     include_directories(SYSTEM ${LIBXML2_INCLUDE_DIR})
-    add_host_subdirectory(macosx
-      macosx/Host.mm
-      macosx/HostInfoMacOSX.mm
-      macosx/HostThreadMacOSX.mm
+    add_subdirectory(macosx/objcxx)
+    set(LLDBObjCLibs lldbHostMacOSXObjCXX)
+    add_host_subdirectory(maqcosx
       macosx/Symbols.cpp
       macosx/cfcpp/CFCBundle.cpp
       macosx/cfcpp/CFCData.cpp
@@ -177,7 +188,7 @@ endif()
 
 add_lldb_library(lldbHost
   ${HOST_SOURCES}
-  
+
   LINK_LIBS
     lldbCore
     lldbSymbol
@@ -185,7 +196,8 @@ add_lldb_library(lldbHost
     lldbUtility
     ${LLDB_PLUGINS}
     ${EXTRA_LIBS}
-  
+    ${LLDBObjCLibs}
+
   LINK_COMPONENTS
     Object
     Support

@@ -30,6 +30,16 @@ TEST(FileSpecTest, FileAndDirectoryComponents) {
   EXPECT_EQ(nullptr, fs_posix_root.GetDirectory().GetCString());
   EXPECT_STREQ("/", fs_posix_root.GetFilename().GetCString());
 
+  FileSpec fs_net_drive("//net", false, FileSpec::Style::posix);
+  EXPECT_STREQ("//net", fs_net_drive.GetCString());
+  EXPECT_EQ(nullptr, fs_net_drive.GetDirectory().GetCString());
+  EXPECT_STREQ("//net", fs_net_drive.GetFilename().GetCString());
+
+  FileSpec fs_net_root("//net/", false, FileSpec::Style::posix);
+  EXPECT_STREQ("//net/", fs_net_root.GetCString());
+  EXPECT_STREQ("//net", fs_net_root.GetDirectory().GetCString());
+  EXPECT_STREQ("/", fs_net_root.GetFilename().GetCString());
+
   FileSpec fs_windows_drive("F:", false, FileSpec::Style::windows);
   EXPECT_STREQ("F:", fs_windows_drive.GetCString());
   EXPECT_EQ(nullptr, fs_windows_drive.GetDirectory().GetCString());
@@ -281,7 +291,6 @@ TEST(FileSpecTest, IsRelative) {
     "/a/b",
     "/a/b/",
     "//",
-    "//a",
     "//a/",
     "//a/b",
     "//a/b/",

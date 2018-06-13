@@ -404,56 +404,6 @@ static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
   return std::error_code();
 }
 
-static std::error_code removeFD(int FD) {
-  HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
-  return setDeleteDisposition(Handle, true);
-}
-
-/// In order to handle temporary files we want the following properties
-///
-/// * The temporary file is deleted on crashes
-/// * We can use (read, rename, etc) the temporary file.
-/// * We can cancel the delete to keep the file.
-///
-/// Using FILE_DISPOSITION_INFO with DeleteFile=true will create a file that is
-/// deleted on close, but it has a few problems:
-///
-/// * The file cannot be used. An attempt to open or rename the file will fail.
-///   This makes the temporary file almost useless, as it cannot be part of
-///   any other CreateFileW call in the current or in another process.
-/// * It is not atomic. A crash just after CreateFileW or just after canceling
-///   the delete will leave the file on disk.
-///
-/// Using FILE_FLAG_DELETE_ON_CLOSE solves the first issues and the first part
-/// of the second one, but there is no way to cancel it in place. What works is
-/// to create a second handle to prevent the deletion, close the first one and
-/// then clear DeleteFile with SetFileInformationByHandle. This requires
-/// changing the handle and file descriptor the caller uses.
-static std::error_code cancelDeleteOnClose(int &FD) {
-  HANDLE Handle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
-  SmallVector<wchar_t, MAX_PATH> Name;
-  if (std::error_code EC = realPathFromHandle(Handle, Name))
-    return EC;
-  HANDLE NewHandle =
-      ::CreateFileW(Name.data(), GENERIC_READ | GENERIC_WRITE | DELETE,
-                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                    NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if (NewHandle == INVALID_HANDLE_VALUE)
-    return mapWindowsError(::GetLastError());
-  if (close(FD))
-    return mapWindowsError(::GetLastError());
-
-  if (std::error_code EC = setDeleteDisposition(NewHandle, false))
-    return EC;
-
-  FD = ::_open_osfhandle(intptr_t(NewHandle), 0);
-  if (FD == -1) {
-    ::CloseHandle(NewHandle);
-    return mapWindowsError(ERROR_INVALID_HANDLE);
-  }
-  return std::error_code();
-}
-
 static std::error_code rename_internal(HANDLE FromHandle, const Twine &To,
                                        bool ReplaceIfExists) {
   SmallVector<wchar_t, 0> ToWide;
@@ -826,10 +776,9 @@ std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time) {
 
 std::error_code mapped_file_region::init(int FD, uint64_t Offset,
                                          mapmode Mode) {
-  this->FD = FD;
   this->Mode = Mode;
-  HANDLE FileHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
-  if (FileHandle == INVALID_HANDLE_VALUE)
+  HANDLE OrigFileHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
+  if (OrigFileHandle == INVALID_HANDLE_VALUE)
     return make_error_code(errc::bad_file_descriptor);
 
   DWORD flprotect;
@@ -840,7 +789,7 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
   }
 
   HANDLE FileMappingHandle =
-      ::CreateFileMappingW(FileHandle, 0, flprotect,
+      ::CreateFileMappingW(OrigFileHandle, 0, flprotect,
                            Hi_32(Size),
                            Lo_32(Size),
                            0);
@@ -878,9 +827,20 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
     Size = mbi.RegionSize;
   }
 
-  // Close all the handles except for the view. It will keep the other handles
-  // alive.
+  // Close the file mapping handle, as it's kept alive by the file mapping. But
+  // neither the file mapping nor the file mapping handle keep the file handle
+  // alive, so we need to keep a reference to the file in case all other handles
+  // are closed and the file is deleted, which may cause invalid data to be read
+  // from the file.
   ::CloseHandle(FileMappingHandle);
+  if (!::DuplicateHandle(::GetCurrentProcess(), OrigFileHandle,
+                         ::GetCurrentProcess(), &FileHandle, 0, 0,
+                         DUPLICATE_SAME_ACCESS)) {
+    std::error_code ec = mapWindowsError(GetLastError());
+    ::UnmapViewOfFile(Mapping);
+    return ec;
+  }
+
   return std::error_code();
 }
 
@@ -902,10 +862,10 @@ mapped_file_region::~mapped_file_region() {
       // flushed and subsequent process's attempts to read a file can return
       // invalid data.  Calling FlushFileBuffers on the write handle is
       // sufficient to ensure that this bug is not triggered.
-      HANDLE FileHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
-      if (FileHandle != INVALID_HANDLE_VALUE)
-        ::FlushFileBuffers(FileHandle);
+      ::FlushFileBuffers(FileHandle);
     }
+
+    ::CloseHandle(FileHandle);
   }
 }
 
@@ -1056,16 +1016,6 @@ static std::error_code nativeFileToFd(Expected<HANDLE> H, int &ResultFD,
   return std::error_code();
 }
 
-static DWORD nativeOpenFlags(OpenFlags Flags) {
-  DWORD Result = 0;
-  if (Flags & OF_Delete)
-    Result |= FILE_FLAG_DELETE_ON_CLOSE;
-
-  if (Result == 0)
-    Result = FILE_ATTRIBUTE_NORMAL;
-  return Result;
-}
-
 static DWORD nativeDisposition(CreationDisposition Disp, OpenFlags Flags) {
   // This is a compatibility hack.  Really we should respect the creation
   // disposition, but a lot of old code relied on the implicit assumption that
@@ -1142,7 +1092,6 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
   assert((!(Disp == CD_CreateNew) || !(Flags & OF_Append)) &&
          "Cannot specify both 'CreateNew' and 'Append' file creation flags!");
 
-  DWORD NativeFlags = nativeOpenFlags(Flags);
   DWORD NativeDisp = nativeDisposition(Disp, Flags);
   DWORD NativeAccess = nativeAccess(Access, Flags);
 
@@ -1152,9 +1101,15 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
 
   file_t Result;
   std::error_code EC = openNativeFileInternal(
-      Name, Result, NativeDisp, NativeAccess, NativeFlags, Inherit);
+      Name, Result, NativeDisp, NativeAccess, FILE_ATTRIBUTE_NORMAL, Inherit);
   if (EC)
     return errorCodeToError(EC);
+  if (Flags & OF_Delete) {
+    if ((EC = setDeleteDisposition(Result, true))) {
+      ::CloseHandle(Result);
+      return errorCodeToError(EC);
+    }
+  }
   return Result;
 }
 

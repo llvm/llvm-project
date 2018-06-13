@@ -1934,6 +1934,12 @@ Set the default symbol visibility for all global declarations
 
 Enables whole-program vtable optimization. Requires -flto
 
+.. option:: -fforce-emit-vtables, -fno-force-emit-vtables
+
+In order to improve devirtualization, forces emitting of vtables even in
+modules where it isn't necessary. It causes more inline virtual functions
+to be emitted.
+
 .. option:: -fwrapv, -fno-wrapv
 
 Treat signed integer overflow as two's complement

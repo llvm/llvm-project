@@ -431,8 +431,8 @@ void PlatformDarwinKernel::AddSDKSubdirsToSearchPaths(const std::string &dir) {
 FileSpec::EnumerateDirectoryResult
 PlatformDarwinKernel::FindKDKandSDKDirectoriesInDirectory(
     void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
-  static ConstString g_sdk_suffix = ConstString("sdk");
-  static ConstString g_kdk_suffix = ConstString("kdk");
+  static ConstString g_sdk_suffix = ConstString(".sdk");
+  static ConstString g_kdk_suffix = ConstString(".kdk");
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
   if (ft == llvm::sys::fs::file_type::directory_file &&
@@ -492,8 +492,8 @@ FileSpec::EnumerateDirectoryResult
 PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
     void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec,
     bool recurse) {
-  static ConstString g_kext_suffix = ConstString("kext");
-  static ConstString g_dsym_suffix = ConstString("dSYM");
+  static ConstString g_kext_suffix = ConstString(".kext");
+  static ConstString g_dsym_suffix = ConstString(".dSYM");
   static ConstString g_bundle_suffix = ConstString("Bundle");
   ConstString file_spec_extension = file_spec.GetFileNameExtension();
 

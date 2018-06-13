@@ -32,6 +32,9 @@ class LLVMState {
 public:
   LLVMState();
 
+  LLVMState(const std::string &Triple,
+            const std::string &CpuName); // For tests.
+
   llvm::StringRef getTriple() const { return TheTriple; }
   llvm::StringRef getCpuName() const { return CpuName; }
   llvm::StringRef getFeatures() const { return Features; }

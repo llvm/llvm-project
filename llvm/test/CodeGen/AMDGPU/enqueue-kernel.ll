@@ -1,9 +1,9 @@
 ; RUN: opt -data-layout=A5 -amdgpu-lower-enqueued-block -S < %s | FileCheck %s
 
-; CHECK: @__test_block_invoke_kernel.runtime_handle = addrspace(1) global i8 addrspace(1)* null
-; CHECK: @__test_block_invoke_2_kernel.runtime_handle = addrspace(1) global i8 addrspace(1)* null
-; CHECK: @__amdgpu_enqueued_kernel.runtime_handle = addrspace(1) global i8 addrspace(1)* null
-; CHECK: @__amdgpu_enqueued_kernel.1.runtime_handle = addrspace(1) global i8 addrspace(1)* null
+; CHECK: @__test_block_invoke_kernel.runtime_handle = addrspace(1) global [2 x i64] zeroinitializer
+; CHECK: @__test_block_invoke_2_kernel.runtime_handle = addrspace(1) global [2 x i64] zeroinitializer
+; CHECK: @__amdgpu_enqueued_kernel.runtime_handle = addrspace(1) global [2 x i64] zeroinitializer
+; CHECK: @__amdgpu_enqueued_kernel.1.runtime_handle = addrspace(1) global [2 x i64] zeroinitializer
 
 %struct.ndrange_t = type { i32 }
 %opencl.queue_t = type opaque
@@ -84,7 +84,7 @@ entry:
 ; CHECK-LABEL: define amdgpu_kernel void @inlined_caller
 ; CHECK-SAME: #[[AT_CALLER]]
 ; CHECK-NOT: @__test_block_invoke_kernel
-; CHECK: load i64, i64 addrspace(1)* bitcast (i8 addrspace(1)* addrspace(1)* @__test_block_invoke_kernel.runtime_handle to i64 addrspace(1)*)
+; CHECK: load i64, i64 addrspace(1)* getelementptr inbounds ([2 x i64], [2 x i64] addrspace(1)* @__test_block_invoke_kernel.runtime_handle, i32 0, i32 0)
 define amdgpu_kernel void @inlined_caller(i8 addrspace(1)* %a, i8 %b, i64 addrspace(1)* %c, i64 %d) local_unnamed_addr
   !kernel_arg_addr_space !3 !kernel_arg_access_qual !4 !kernel_arg_type !5 !kernel_arg_base_type !5 !kernel_arg_type_qual !6 {
 entry:

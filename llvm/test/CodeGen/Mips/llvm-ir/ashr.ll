@@ -791,8 +791,7 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MMR3:       # %bb.0: # %entry
 ; MMR3-NEXT:    addiusp -48
 ; MMR3-NEXT:    .cfi_def_cfa_offset 48
-; MMR3-NEXT:    sw $17, 44($sp) # 4-byte Folded Spill
-; MMR3-NEXT:    sw $16, 40($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    swp $16, 40($sp)
 ; MMR3-NEXT:    .cfi_offset 17, -4
 ; MMR3-NEXT:    .cfi_offset 16, -8
 ; MMR3-NEXT:    move $8, $7
@@ -870,8 +869,7 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MMR3-NEXT:    movn $2, $11, $10
 ; MMR3-NEXT:    move $3, $8
 ; MMR3-NEXT:    move $4, $1
-; MMR3-NEXT:    lw $16, 40($sp) # 4-byte Folded Reload
-; MMR3-NEXT:    lw $17, 44($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    lwp $16, 40($sp)
 ; MMR3-NEXT:    addiusp 48
 ; MMR3-NEXT:    jrc $ra
 ;

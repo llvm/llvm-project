@@ -120,8 +120,8 @@ void ReleaseMemoryPagesToOS(uptr beg, uptr end);
 void IncreaseTotalMmap(uptr size);
 void DecreaseTotalMmap(uptr size);
 uptr GetRSS();
-void NoHugePagesInRegion(uptr addr, uptr length);
-void DontDumpShadowMemory(uptr addr, uptr length);
+bool NoHugePagesInRegion(uptr addr, uptr length);
+bool DontDumpShadowMemory(uptr addr, uptr length);
 // Check if the built VMA size matches the runtime one.
 void CheckVMASize();
 void RunMallocHooks(const void *ptr, uptr size);

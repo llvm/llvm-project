@@ -652,10 +652,17 @@ static bool isSingleSourceVectorMask(ArrayRef<int> Mask) {
 }
 
 static bool isZeroEltBroadcastVectorMask(ArrayRef<int> Mask) {
-  for (unsigned i = 0; i < Mask.size(); ++i)
-    if (Mask[i] > 0)
-      return false;
-  return true;
+  bool BroadcastLHS = true;
+  bool BroadcastRHS = true;
+  unsigned MaskSize = Mask.size();
+
+  for (unsigned i = 0; i < MaskSize && (BroadcastLHS || BroadcastRHS); ++i) {
+    if (Mask[i] < 0)
+      continue;
+    BroadcastLHS &= (Mask[i] == 0);
+    BroadcastRHS &= (Mask[i] == (int)MaskSize);
+  }
+  return BroadcastLHS || BroadcastRHS;
 }
 
 static bool isIdentityVectorMask(ArrayRef<int> Mask) {

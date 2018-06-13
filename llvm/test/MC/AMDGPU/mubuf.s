@@ -779,6 +779,18 @@ buffer_store_lds_dword s[4:7], s8 offset:4 lds glc slc
 // NOSICI: error: not a valid operand.
 // VI: buffer_store_lds_dword s[4:7], s8 offset:4 lds glc slc ; encoding: [0x04,0x40,0xf7,0xe0,0x00,0x00,0x01,0x08]
 
+buffer_load_dwordx2 v[1:2], off, s[4:7], s1 lds
+// NOSICI: error: instruction not supported on this GPU
+// VI:   buffer_load_dwordx2 v[1:2], off, s[4:7], s1 lds ; encoding: [0x00,0x00,0x55,0xe0,0x00,0x01,0x01,0x01]
+
+buffer_load_dwordx3 v[0:2], off, s[4:7], s0 offset:4095 lds
+// NOSICI: error: instruction not supported on this GPU
+// VI:   buffer_load_dwordx3 v[0:2], off, s[4:7], s0 offset:4095 lds ; encoding: [0xff,0x0f,0x59,0xe0,0x00,0x00,0x01,0x00]
+
+buffer_load_dwordx4 v[1:4], off, s[4:7], s1 lds
+// NOSICI: error: instruction not supported on this GPU
+// VI:   buffer_load_dwordx4 v[1:4], off, s[4:7], s1 lds ; encoding: [0x00,0x00,0x5d,0xe0,0x00,0x01,0x01,0x01]
+
 //===----------------------------------------------------------------------===//
 // Errors handling
 //===----------------------------------------------------------------------===//
