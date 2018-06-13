@@ -769,6 +769,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider,
       "NSNumber summary provider", ConstString("NSCFNumber"), appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSNumberSummaryProvider,
+                "NSDecimalNumber summary provider",
+                ConstString("NSDecimalNumber"), appkit_flags);
 
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSURLSummaryProvider,
