@@ -475,14 +475,16 @@ public:
       return;
     }
 
-    // In the case where the value is of Swift generic type, we need to unbox
-    // it
+    // In the case where the value is of Swift generic type, unbox it.
     CompilerType valobj_type = valobj_sp->GetCompilerType();
 
     if (m_is_generic) {
-      valobj_sp = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
-      valobj_type = valobj_sp->GetCompilerType(); // update the type to refer to
-                                                  // the dynamic type
+      auto dyn_obj = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
+      if (dyn_obj) {
+        // Update the type to refer to the dynamic type.
+        valobj_sp = dyn_obj;
+        valobj_type = valobj_sp->GetCompilerType();
+      }
     }
 
     if (m_is_reference) {
