@@ -31,7 +31,7 @@
 #include <sys/syslimits.h>
 #include <sys/types.h>
 
-// Objective C/C++ includes
+// Objective-C/C++ includes
 #include <CoreFoundation/CoreFoundation.h>
 #include <Foundation/Foundation.h>
 #include <mach-o/dyld.h>

@@ -283,7 +283,7 @@ static OptionDefinition g_breakpoint_set_options[] = {
   { LLDB_OPT_SET_9,                false, "source-regexp-function", 'X', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion,     eArgTypeFunctionName,        "When used with '-p' limits the source regex to source contained in the named "
   "functions.  Can be repeated multiple times." },
   { LLDB_OPT_SET_4,                true,  "fullname",               'F', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion,     eArgTypeFullName,            "Set the breakpoint by fully qualified function names. For C++ this means "
-  "namespaces and all arguments, and for Objective C this means a full function "
+  "namespaces and all arguments, and for Objective-C this means a full function "
   "prototype with class and selector.  Can be repeated multiple times to make "
   "one breakpoint for multiple names." },
   { LLDB_OPT_SET_5,                true,  "selector",               'S', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeSelector,            "Set the breakpoint by ObjC selector name. Can be repeated multiple times to "

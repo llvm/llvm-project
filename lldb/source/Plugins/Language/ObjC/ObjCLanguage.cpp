@@ -107,7 +107,7 @@ bool ObjCLanguage::MethodName::SetName(llvm::StringRef name, bool strict) {
 
   if (valid_prefix) {
     int name_len = name.size();
-    // Objective C methods must have at least:
+    // Objective-C methods must have at least:
     //      "-[" or "+[" prefix
     //      One character for a class name
     //      One character for the space between the class name

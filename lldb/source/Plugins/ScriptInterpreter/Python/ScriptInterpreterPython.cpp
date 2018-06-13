@@ -2590,9 +2590,9 @@ bool ScriptInterpreterPython::LoadScriptingModule(
       // strip .py or .pyc extension
       ConstString extension = target_file.GetFileNameExtension();
       if (extension) {
-        if (::strcmp(extension.GetCString(), "py") == 0)
+        if (llvm::StringRef(extension.GetCString()) == ".py")
           basename.resize(basename.length() - 3);
-        else if (::strcmp(extension.GetCString(), "pyc") == 0)
+        else if (llvm::StringRef(extension.GetCString()) == ".pyc")
           basename.resize(basename.length() - 4);
       }
     } else {

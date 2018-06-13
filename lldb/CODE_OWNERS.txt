@@ -17,7 +17,7 @@ D: Build scripts, Test suite, Platform, gdb-remote, Anything not covered by this
 N: Jim Ingham
 E: jingham@apple.com
 D: Overall LLDB architecture, Thread plans, Expression parser, ValueObject, Breakpoints, ABI
-D: Watchpoints, Trampolines, Target, Command Interpreter, C++ / Objective C Language runtime
+D: Watchpoints, Trampolines, Target, Command Interpreter, C++ / Objective-C Language runtime
 D: Expression evaluator, IR interpreter, Clang integration
 D: Data Formatters
 
