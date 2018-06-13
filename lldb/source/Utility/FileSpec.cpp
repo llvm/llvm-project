@@ -585,17 +585,12 @@ void FileSpec::GetPath(llvm::SmallVectorImpl<char> &path,
 }
 
 ConstString FileSpec::GetFileNameExtension() const {
-  llvm::SmallString<64> current_path;
-  current_path.append(m_filename.GetStringRef().begin(),
-                      m_filename.GetStringRef().end());
-  return ConstString(llvm::sys::path::extension(current_path, m_style));
+  return ConstString(
+      llvm::sys::path::extension(m_filename.GetStringRef(), m_style));
 }
 
 ConstString FileSpec::GetFileNameStrippingExtension() const {
-  llvm::SmallString<64> current_path;
-  current_path.append(m_filename.GetStringRef().begin(),
-                      m_filename.GetStringRef().end());
-  return ConstString(llvm::sys::path::stem(current_path, m_style));
+  return ConstString(llvm::sys::path::stem(m_filename.GetStringRef(), m_style));
 }
 
 //------------------------------------------------------------------
