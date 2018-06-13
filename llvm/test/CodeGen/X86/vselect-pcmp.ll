@@ -9,20 +9,11 @@
 
 ; Test 128-bit vectors for all legal element types.
 
-; FIXME: Why didn't AVX-512 optimize too?
-
 define <16 x i8> @signbit_sel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %mask) {
-; AVX12-LABEL: signbit_sel_v16i8:
-; AVX12:       # %bb.0:
-; AVX12-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; AVX12-NEXT:    retq
-;
-; AVX512-LABEL: signbit_sel_v16i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2
-; AVX512-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: signbit_sel_v16i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
   %tr = icmp slt <16 x i8> %mask, zeroinitializer
   %z = select <16 x i1> %tr, <16 x i8> %x, <16 x i8> %y
   ret <16 x i8> %z
@@ -180,8 +171,6 @@ define <32 x i8> @signbit_sel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %mask)
 ;
 ; AVX512-LABEL: signbit_sel_v32i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512-NEXT:    vpcmpgtb %ymm2, %ymm3, %ymm2
 ; AVX512-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %tr = icmp slt <32 x i8> %mask, zeroinitializer

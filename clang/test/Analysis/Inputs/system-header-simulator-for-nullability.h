@@ -32,6 +32,7 @@ NSObject<NSObject>
 @interface NSString : NSObject<NSCopying>
 - (BOOL)isEqualToString : (NSString *)aString;
 - (NSString *)stringByAppendingString:(NSString *)aString;
+- (nullable NSString *)nullableStringByAppendingString:(NSString *)aString;
 + (NSString * _Nonnull) generateString;
 + (NSString *) generateImplicitlyNonnullString;
 + (NSString * _Nullable) generatePossiblyNullString;

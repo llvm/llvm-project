@@ -16,6 +16,7 @@
 #include "CIndexDiagnostic.h"
 #include "CLog.h"
 #include "CXCursor.h"
+#include "CXSourceLocation.h"
 #include "CXString.h"
 #include "CXTranslationUnit.h"
 #include "clang/AST/Decl.h"
@@ -302,9 +303,52 @@ struct AllocatedCXCodeCompleteResults : public CXCodeCompleteResults {
   /// A string containing the Objective-C selector entered thus far for a
   /// message send.
   std::string Selector;
+
+  /// Vector of fix-its for each completion result that *must* be applied
+  /// before that result for the corresponding completion item.
+  std::vector<std::vector<FixItHint>> FixItsVector;
 };
 
 } // end anonymous namespace
+
+unsigned clang_getCompletionNumFixIts(CXCodeCompleteResults *results,
+                                      unsigned completion_index) {
+  AllocatedCXCodeCompleteResults *allocated_results = (AllocatedCXCodeCompleteResults *)results;
+
+  if (!allocated_results || allocated_results->FixItsVector.size() <= completion_index)
+    return 0;
+
+  return static_cast<unsigned>(allocated_results->FixItsVector[completion_index].size());
+}
+
+CXString clang_getCompletionFixIt(CXCodeCompleteResults *results,
+                                  unsigned completion_index,
+                                  unsigned fixit_index,
+                                  CXSourceRange *replacement_range) {
+  AllocatedCXCodeCompleteResults *allocated_results = (AllocatedCXCodeCompleteResults *)results;
+
+  if (!allocated_results || allocated_results->FixItsVector.size() <= completion_index) {
+    if (replacement_range)
+      *replacement_range = clang_getNullRange();
+    return cxstring::createNull();
+  }
+
+  ArrayRef<FixItHint> FixIts = allocated_results->FixItsVector[completion_index];
+  if (FixIts.size() <= fixit_index) {
+    if (replacement_range)
+      *replacement_range = clang_getNullRange();
+    return cxstring::createNull();
+  }
+
+  const FixItHint &FixIt = FixIts[fixit_index];
+  if (replacement_range) {
+    *replacement_range = cxloc::translateSourceRange(
+        *allocated_results->SourceMgr, allocated_results->LangOpts,
+        FixIt.RemoveRange);
+  }
+
+  return cxstring::createRef(FixIt.CodeToInsert.c_str());
+}
 
 /// Tracks the number of code-completion result objects that are 
 /// currently active.
@@ -531,8 +575,10 @@ namespace {
                                     CodeCompletionResult *Results,
                                     unsigned NumResults) override {
       StoredResults.reserve(StoredResults.size() + NumResults);
+      if (includeFixIts())
+        AllocatedResults.FixItsVector.reserve(NumResults);
       for (unsigned I = 0; I != NumResults; ++I) {
-        CodeCompletionString *StoredCompletion        
+        CodeCompletionString *StoredCompletion
           = Results[I].CreateCodeCompletionString(S, Context, getAllocator(),
                                                   getCodeCompletionTUInfo(),
                                                   includeBriefComments());
@@ -541,8 +587,10 @@ namespace {
         R.CursorKind = Results[I].CursorKind;
         R.CompletionString = StoredCompletion;
         StoredResults.push_back(R);
+        if (includeFixIts())
+          AllocatedResults.FixItsVector.emplace_back(std::move(Results[I].FixIts));
       }
-      
+
       enum CodeCompletionContext::Kind contextKind = Context.getKind();
       
       AllocatedResults.ContextKind = contextKind;
@@ -644,13 +692,13 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
                           unsigned options) {
   bool IncludeBriefComments = options & CXCodeComplete_IncludeBriefComments;
   bool SkipPreamble = options & CXCodeComplete_SkipPreamble;
+  bool IncludeFixIts = options & CXCodeComplete_IncludeCompletionsWithFixIts;
 
 #ifdef UDP_CODE_COMPLETION_LOGGER
 #ifdef UDP_CODE_COMPLETION_LOGGER_PORT
   const llvm::TimeRecord &StartTime =  llvm::TimeRecord::getCurrentTime();
 #endif
 #endif
-
   bool EnableLogging = getenv("LIBCLANG_CODE_COMPLETION_LOGGING") != nullptr;
 
   if (cxtu::isNotUsableTU(TU)) {
@@ -691,6 +739,7 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
   CodeCompleteOptions Opts;
   Opts.IncludeBriefComments = IncludeBriefComments;
   Opts.LoadExternal = !SkipPreamble;
+  Opts.IncludeFixIts = IncludeFixIts;
   CaptureCompletionResults Capture(Opts, *Results, &TU);
 
   // Perform completion.
@@ -964,7 +1013,7 @@ namespace {
         = (CodeCompletionString *)XR.CompletionString;
       CodeCompletionString *Y
         = (CodeCompletionString *)YR.CompletionString;
-      
+
       SmallString<256> XBuffer;
       StringRef XText = GetTypedName(X, XBuffer);
       SmallString<256> YBuffer;

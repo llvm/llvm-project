@@ -3101,10 +3101,39 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       !Right.isOneOf(TT_CtorInitializerColon, TT_InlineASMColon))
     return false;
   if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
-    if ((Style.Language == FormatStyle::LK_Proto ||
-         Style.Language == FormatStyle::LK_TextProto) &&
-        !Style.AlwaysBreakBeforeMultilineStrings && Right.isStringLiteral())
-      return false;
+    if (Style.Language == FormatStyle::LK_Proto ||
+        Style.Language == FormatStyle::LK_TextProto) {
+      if (!Style.AlwaysBreakBeforeMultilineStrings && Right.isStringLiteral())
+        return false;
+      // Prevent cases like:
+      //
+      // submessage:
+      //     { key: valueeeeeeeeeeee }
+      //
+      // when the snippet does not fit into one line.
+      // Prefer:
+      //
+      // submessage: {
+      //   key: valueeeeeeeeeeee
+      // }
+      //
+      // instead, even if it is longer by one line.
+      //
+      // Note that this allows allows the "{" to go over the column limit
+      // when the column limit is just between ":" and "{", but that does
+      // not happen too often and alternative formattings in this case are
+      // not much better.
+      //
+      // The code covers the cases:
+      //
+      // submessage: { ... }
+      // submessage: < ... >
+      // repeated: [ ... ]
+      if (((Right.is(tok::l_brace) || Right.is(tok::less)) &&
+           Right.is(TT_DictLiteral)) ||
+          Right.is(TT_ArrayInitializerLSquare))
+        return false;
+    }
     return true;
   }
   if (Right.is(tok::r_square) && Right.MatchingParen &&

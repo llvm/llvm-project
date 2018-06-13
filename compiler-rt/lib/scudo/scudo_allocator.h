@@ -115,12 +115,10 @@ typedef ScudoCombinedAllocator<PrimaryAllocator, AllocatorCache,
 
 void initScudo();
 
-void *scudoMalloc(uptr Size, AllocType Type);
-void scudoFree(void *Ptr, AllocType Type);
-void scudoSizedFree(void *Ptr, uptr Size, AllocType Type);
+void *scudoAllocate(uptr Size, uptr Alignment, AllocType Type);
+void scudoDeallocate(void *Ptr, uptr Size, uptr Alignment, AllocType Type);
 void *scudoRealloc(void *Ptr, uptr Size);
 void *scudoCalloc(uptr NMemB, uptr Size);
-void *scudoMemalign(uptr Alignment, uptr Size);
 void *scudoValloc(uptr Size);
 void *scudoPvalloc(uptr Size);
 int scudoPosixMemalign(void **MemPtr, uptr Alignment, uptr Size);

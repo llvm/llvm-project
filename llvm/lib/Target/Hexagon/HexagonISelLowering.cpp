@@ -1327,6 +1327,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setMinimumJumpTableEntries(std::numeric_limits<int>::max());
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
 
+  setOperationAction(ISD::ABS, MVT::i32, Legal);
+  setOperationAction(ISD::ABS, MVT::i64, Legal);
+
   // Hexagon has A4_addp_c and A4_subp_c that take and generate a carry bit,
   // but they only operate on i64.
   for (MVT VT : MVT::integer_valuetypes()) {

@@ -198,6 +198,9 @@ void aarch64::getAArch64TargetFeatures(const Driver &D, const ArgList &Args,
   if (Args.hasArg(options::OPT_ffixed_x18))
     Features.push_back("+reserve-x18");
 
+  if (Args.hasArg(options::OPT_ffixed_x20))
+    Features.push_back("+reserve-x20");
+
   if (Args.hasArg(options::OPT_mno_neg_immediates))
     Features.push_back("+no-neg-immediates");
 }

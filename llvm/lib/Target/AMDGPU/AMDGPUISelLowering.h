@@ -402,6 +402,7 @@ enum NodeType : unsigned {
   MAD_I64_I32,
   MUL_LOHI_I24,
   MUL_LOHI_U24,
+  PERM,
   TEXTURE_FETCH,
   EXPORT, // exp on SI+
   EXPORT_DONE, // exp on SI+ with done bit set

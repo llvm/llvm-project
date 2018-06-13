@@ -196,6 +196,12 @@ bool AMDGPUTargetAsmStreamer::EmitPALMetadata(
   return true;
 }
 
+void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
+    StringRef KernelName,
+    const amdhsa::kernel_descriptor_t &KernelDescriptor) {
+  // FIXME: not supported yet.
+}
+
 //===----------------------------------------------------------------------===//
 // AMDGPUTargetELFStreamer
 //===----------------------------------------------------------------------===//
@@ -361,4 +367,45 @@ bool AMDGPUTargetELFStreamer::EmitPALMetadata(
     }
   );
   return true;
+}
+
+void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
+    StringRef KernelName,
+    const amdhsa::kernel_descriptor_t &KernelDescriptor) {
+  auto &Streamer = getStreamer();
+  auto &Context = Streamer.getContext();
+
+  MCSymbolELF *KernelDescriptorSymbol = cast<MCSymbolELF>(
+      Context.getOrCreateSymbol(Twine(KernelName) + Twine(".kd")));
+  KernelDescriptorSymbol->setBinding(ELF::STB_GLOBAL);
+  KernelDescriptorSymbol->setType(ELF::STT_OBJECT);
+  KernelDescriptorSymbol->setSize(
+      MCConstantExpr::create(sizeof(KernelDescriptor), Context));
+
+  MCSymbolELF *KernelCodeSymbol = cast<MCSymbolELF>(
+      Context.getOrCreateSymbol(Twine(KernelName)));
+  KernelCodeSymbol->setBinding(ELF::STB_LOCAL);
+
+  Streamer.EmitLabel(KernelDescriptorSymbol);
+  Streamer.EmitBytes(StringRef(
+      (const char*)&(KernelDescriptor),
+      offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset)));
+  // FIXME: Remove the use of VK_AMDGPU_REL64 in the expression below. The
+  // expression being created is:
+  //   (start of kernel code) - (start of kernel descriptor)
+  // It implies R_AMDGPU_REL64, but ends up being R_AMDGPU_ABS64.
+  Streamer.EmitValue(MCBinaryExpr::createSub(
+      MCSymbolRefExpr::create(
+          KernelCodeSymbol, MCSymbolRefExpr::VK_AMDGPU_REL64, Context),
+      MCSymbolRefExpr::create(
+          KernelDescriptorSymbol, MCSymbolRefExpr::VK_None, Context),
+      Context),
+      sizeof(KernelDescriptor.kernel_code_entry_byte_offset));
+  Streamer.EmitBytes(StringRef(
+      (const char*)&(KernelDescriptor) +
+          offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset) +
+          sizeof(KernelDescriptor.kernel_code_entry_byte_offset),
+      sizeof(KernelDescriptor) -
+          offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset) -
+          sizeof(KernelDescriptor.kernel_code_entry_byte_offset)));
 }

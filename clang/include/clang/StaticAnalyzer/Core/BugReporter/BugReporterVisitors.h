@@ -73,12 +73,17 @@ public:
   VisitNode(const ExplodedNode *Succ, const ExplodedNode *Pred,
             BugReporterContext &BRC, BugReport &BR) = 0;
 
+  /// Last function called on the visitor, no further calls to VisitNode
+  /// would follow.
+  virtual void finalizeVisitor(BugReporterContext &BRC,
+                               const ExplodedNode *EndPathNode,
+                               BugReport &BR);
+
   /// Provide custom definition for the final diagnostic piece on the
   /// path - the piece, which is displayed before the path is expanded.
   ///
-  /// If returns NULL the default implementation will be used.
-  /// Also note that at most one visitor of a BugReport should generate a
-  /// non-NULL end of path diagnostic piece.
+  /// NOTE that this function can be implemented on at most one used visitor,
+  /// and otherwise it crahes at runtime.
   virtual std::unique_ptr<PathDiagnosticPiece>
   getEndPath(BugReporterContext &BRC, const ExplodedNode *N, BugReport &BR);
 
@@ -268,9 +273,8 @@ public:
     return nullptr;
   }
 
-  std::unique_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
-                                                  const ExplodedNode *N,
-                                                  BugReport &BR) override;
+  void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *N,
+                       BugReport &BR) override;
 };
 
 /// When a region containing undefined value or '0' value is passed 

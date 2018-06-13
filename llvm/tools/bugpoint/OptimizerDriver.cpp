@@ -194,20 +194,20 @@ bool BugDriver::runPasses(Module &Program,
   }
 
   // setup the child process' arguments
-  SmallVector<const char *, 8> Args;
+  SmallVector<StringRef, 8> Args;
   if (UseValgrind) {
     Args.push_back("valgrind");
     Args.push_back("--error-exitcode=1");
     Args.push_back("-q");
-    Args.push_back(tool.c_str());
+    Args.push_back(tool);
   } else
-    Args.push_back(tool.c_str());
+    Args.push_back(tool);
 
   for (unsigned i = 0, e = OptArgs.size(); i != e; ++i)
-    Args.push_back(OptArgs[i].c_str());
+    Args.push_back(OptArgs[i]);
   Args.push_back("-disable-symbolication");
   Args.push_back("-o");
-  Args.push_back(OutputFilename.c_str());
+  Args.push_back(OutputFilename);
   std::vector<std::string> pass_args;
   for (unsigned i = 0, e = PluginLoader::getNumPlugins(); i != e; ++i) {
     pass_args.push_back(std::string("-load"));
@@ -224,7 +224,6 @@ bool BugDriver::runPasses(Module &Program,
   Args.push_back(Temp->TmpName.c_str());
   for (unsigned i = 0; i < NumExtraArgs; ++i)
     Args.push_back(*ExtraArgs);
-  Args.push_back(nullptr);
 
   LLVM_DEBUG(errs() << "\nAbout to run:\t";
              for (unsigned i = 0, e = Args.size() - 1; i != e; ++i) errs()
@@ -239,8 +238,8 @@ bool BugDriver::runPasses(Module &Program,
   }
 
   std::string ErrMsg;
-  int result = sys::ExecuteAndWait(Prog, Args.data(), nullptr, Redirects,
-                                   Timeout, MemoryLimit, &ErrMsg);
+  int result = sys::ExecuteAndWait(Prog, Args, None, Redirects, Timeout,
+                                   MemoryLimit, &ErrMsg);
 
   // If we are supposed to delete the bitcode file or if the passes crashed,
   // remove it now.  This may fail if the file was never created, but that's ok.

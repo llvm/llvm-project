@@ -624,5 +624,34 @@ TEST_F(FormatTestProto, BreaksEntriesOfSubmessagesContainingSubmessages) {
                "}");
 }
 
+TEST_F(FormatTestProto, PreventBreaksBetweenKeyAndSubmessages) {
+  verifyFormat("option (MyProto.options) = {\n"
+               "  submessage: {\n"
+               "    key: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  submessage {\n"
+               "    key: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n"
+               "  }\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  submessage: <\n"
+               "    key: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n"
+               "  >\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  submessage <\n"
+               "    key: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n"
+               "  >\n"
+               "}");
+  verifyFormat("option (MyProto.options) = {\n"
+               "  repeatedd: [\n"
+               "    'eyaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n"
+               "  ]\n"
+               "}");
+}
+
+
 } // end namespace tooling
 } // end namespace clang

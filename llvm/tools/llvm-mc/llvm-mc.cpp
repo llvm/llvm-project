@@ -389,7 +389,7 @@ int main(int argc, char **argv) {
   }
   if (!MainFileName.empty())
     Ctx.setMainFileName(MainFileName);
-  if (DwarfVersion >= 5) {
+  if (GenDwarfForAssembly && DwarfVersion >= 5) {
     // DWARF v5 needs the root file as well as the compilation directory.
     // If we find a '.file 0' directive that will supersede these values.
     MD5 Hash;

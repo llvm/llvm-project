@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,deadcode.DeadStores,osx.cocoa.RetainCount,unix.Malloc,unix.MismatchedDeallocator -analyzer-eagerly-assume -analyzer-config path-diagnostics-alternate=true -analyzer-output=plist -o %t -w %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,deadcode.DeadStores,osx.cocoa.RetainCount,unix.Malloc,unix.MismatchedDeallocator -analyzer-eagerly-assume -analyzer-output=plist -o %t -w %s
 // RUN: FileCheck --input-file %t %s
 
 //===----------------------------------------------------------------------===//

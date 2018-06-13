@@ -105,6 +105,11 @@ RelExpr X86_64<ELFT>::getRelExpr(RelType Type, const Symbol &S,
   case R_X86_64_REX_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
+  case R_X86_64_GOTOFF64:
+    return R_GOTREL;
+  case R_X86_64_GOTPC32:
+  case R_X86_64_GOTPC64:
+    return R_GOTONLY_PC_FROM_END;
   case R_X86_64_NONE:
     return R_NONE;
   default:
@@ -300,6 +305,7 @@ void X86_64<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_X86_64_32S:
   case R_X86_64_TPOFF32:
   case R_X86_64_GOT32:
+  case R_X86_64_GOTPC32:
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
@@ -319,6 +325,8 @@ void X86_64<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_X86_64_PC64:
   case R_X86_64_SIZE64:
   case R_X86_64_GOT64:
+  case R_X86_64_GOTOFF64:
+  case R_X86_64_GOTPC64:
     write64le(Loc, Val);
     break;
   default:

@@ -317,13 +317,11 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
                      std::string *ErrMsg, bool *ExecutionFailed) const {
   SmallVector<const char*, 128> Argv;
 
-  const char **Envp;
-  if (Environment.empty()) {
-    Envp = nullptr;
-  } else {
+  Optional<ArrayRef<StringRef>> Env;
+  if (!Environment.empty()) {
     assert(Environment.back() == nullptr &&
            "Environment vector should be null-terminated by now");
-    Envp = const_cast<const char **>(Environment.data());
+    Env = llvm::toStringRefArray(Environment.data());
   }
 
   if (ResponseFile == nullptr) {
@@ -331,8 +329,9 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
     Argv.append(Arguments.begin(), Arguments.end());
     Argv.push_back(nullptr);
 
+    auto Args = llvm::toStringRefArray(Argv.data());
     return llvm::sys::ExecuteAndWait(
-        Executable, Argv.data(), Envp, Redirects, /*secondsToWait*/ 0,
+        Executable, Args, Env, Redirects, /*secondsToWait*/ 0,
         /*memoryLimit*/ 0, ErrMsg, ExecutionFailed);
   }
 
@@ -357,7 +356,8 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
     return -1;
   }
 
-  return llvm::sys::ExecuteAndWait(Executable, Argv.data(), Envp, Redirects,
+  auto Args = llvm::toStringRefArray(Argv.data());
+  return llvm::sys::ExecuteAndWait(Executable, Args, Env, Redirects,
                                    /*secondsToWait*/ 0,
                                    /*memoryLimit*/ 0, ErrMsg, ExecutionFailed);
 }

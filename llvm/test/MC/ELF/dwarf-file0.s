@@ -6,7 +6,7 @@
         .file 0 "root.cpp"
         .file 1 "header.h"
         .file 2 "root.cpp"
-# CHECK-5:     include_directories[ 0] = ""
+# CHECK-5:     include_directories[ 0] = "{{.+}}"
 # CHECK-4-NOT: include_directories
 # CHECK-4-NOT: file_names[ 0]
 # CHECK-5:     file_names[ 0]:

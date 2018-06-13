@@ -101,18 +101,11 @@ define float @fsub_negzero_nsz(float %x) {
   ret float %r
 }
 
-; TODO: handle x*0 for fast flags the same as unsafe
 define float @fmul_zero(float %x) {
-; STRICT-LABEL: fmul_zero:
-; STRICT:       # %bb.0:
-; STRICT-NEXT:    xorps %xmm1, %xmm1
-; STRICT-NEXT:    mulss %xmm1, %xmm0
-; STRICT-NEXT:    retq
-;
-; UNSAFE-LABEL: fmul_zero:
-; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    xorps %xmm0, %xmm0
-; UNSAFE-NEXT:    retq
+; ANY-LABEL: fmul_zero:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorps %xmm0, %xmm0
+; ANY-NEXT:    retq
   %r = fmul nnan nsz float %x, 0.0
   ret float %r
 }
@@ -122,5 +115,15 @@ define float @fmul_one(float %x) {
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    retq
   %r = fmul float %x, 1.0
+  ret float %r
+}
+
+define float @fmul_x_const_const(float %x) {
+; ANY-LABEL: fmul_x_const_const:
+; ANY:       # %bb.0:
+; ANY-NEXT:    mulss {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
+  %mul = fmul reassoc float %x, 9.0
+  %r = fmul reassoc float %mul, 4.0
   ret float %r
 }

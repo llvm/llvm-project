@@ -840,6 +840,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
 
   Conf.MAttrs = MAttrs;
   Conf.RelocModel = RelocationModel;
+  Conf.CodeModel = getCodeModel();
   Conf.CGOptLevel = getCGOptLevel();
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;

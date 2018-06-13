@@ -81,6 +81,10 @@ set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
     RTSanitizerCommon
     RTSanitizerCommonLibc)
 
+if (CLANG_DEFAULT_CXX_STDLIB STREQUAL "libc++" AND (TARGET cxx OR HAVE_LIBCXX))
+  set(XRAY_DEPS cxx)
+endif()
+
 if (APPLE)
   set(XRAY_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
   add_asm_sources(XRAY_ASM_SOURCES xray_trampoline_x86_64.S)
@@ -93,25 +97,29 @@ if (APPLE)
     ARCHS ${XRAY_SUPPORTED_ARCH}
     SOURCES ${x86_64_SOURCES}
     CFLAGS ${XRAY_CFLAGS}
-    DEFS ${XRAY_COMMON_DEFINITIONS})
+    DEFS ${XRAY_COMMON_DEFINITIONS}
+    DEPS ${XRAY_DEPS})
   add_compiler_rt_object_libraries(RTXrayFDR
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
     SOURCES ${XRAY_FDR_MODE_SOURCES}
     CFLAGS ${XRAY_CFLAGS}
-    DEFS ${XRAY_COMMON_DEFINITIONS})
+    DEFS ${XRAY_COMMON_DEFINITIONS}
+    DEPS ${XRAY_DEPS})
   add_compiler_rt_object_libraries(RTXrayBASIC
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
     SOURCES ${XRAY_BASIC_MODE_SOURCES}
     CFLAGS ${XRAY_CFLAGS}
-    DEFS ${XRAY_COMMON_DEFINITIONS})
+    DEFS ${XRAY_COMMON_DEFINITIONS}
+    DEPS ${XRAY_DEPS})
   add_compiler_rt_object_libraries(RTXrayPROFILING
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
     SOURCES ${XRAY_PROFILING_MODE_SOURCES}
     CFLAGS ${XRAY_CFLAGS}
-    DEFS ${XRAY_COMMON_DEFINITIONS})
+    DEFS ${XRAY_COMMON_DEFINITIONS}
+    DEPS ${XRAY_DEPS})
 
   # We only support running on osx for now.
   add_compiler_rt_runtime(clang_rt.xray
@@ -164,19 +172,23 @@ else() # not Apple
     add_compiler_rt_object_libraries(RTXray
       ARCHS ${arch}
       SOURCES ${XRAY_SOURCES} ${${arch}_SOURCES} CFLAGS ${XRAY_CFLAGS}
-      DEFS ${XRAY_COMMON_DEFINITIONS})
+      DEFS ${XRAY_COMMON_DEFINITIONS}
+      DEPS ${XRAY_DEPS})
     add_compiler_rt_object_libraries(RTXrayFDR
       ARCHS ${arch}
       SOURCES ${XRAY_FDR_MODE_SOURCES} CFLAGS ${XRAY_CFLAGS}
-      DEFS ${XRAY_COMMON_DEFINITIONS})
+      DEFS ${XRAY_COMMON_DEFINITIONS}
+      DEPS ${XRAY_DEPS})
     add_compiler_rt_object_libraries(RTXrayBASIC
       ARCHS ${arch}
       SOURCES ${XRAY_BASIC_MODE_SOURCES} CFLAGS ${XRAY_CFLAGS}
-      DEFS ${XRAY_COMMON_DEFINITIONS})
+      DEFS ${XRAY_COMMON_DEFINITIONS}
+      DEPS ${XRAY_DEPS})
     add_compiler_rt_object_libraries(RTXrayPROFILING
       ARCHS ${arch}
       SOURCES ${XRAY_PROFILING_MODE_SOURCES} CFLAGS ${XRAY_CFLAGS}
-      DEFS ${XRAY_COMMON_DEFINITIONS})
+      DEFS ${XRAY_COMMON_DEFINITIONS}
+      DEPS ${XRAY_DEPS})
 
     # Common XRay archive for instrumented binaries.
     add_compiler_rt_runtime(clang_rt.xray

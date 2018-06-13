@@ -100,7 +100,9 @@ private:
 
   // Various ClangdServer parameters go here. It's important they're created
   // before ClangdServer.
-  DirectoryBasedGlobalCompilationDatabase CDB;
+  DirectoryBasedGlobalCompilationDatabase NonCachedCDB;
+  CachingCompilationDb CDB;
+
   RealFileSystemProvider FSProvider;
   /// Options used for code completion
   clangd::CodeCompleteOptions CCOpts;
