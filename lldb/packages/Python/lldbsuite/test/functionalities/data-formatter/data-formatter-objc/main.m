@@ -169,7 +169,11 @@ int main (int argc, const char * argv[])
 	    NSNumber* num_at3 = @12.5;
 	    NSNumber* num_at4 = @-12.5;
 
-		NSDecimalNumber* decimal_one = [NSDecimalNumber one];
+	    NSDecimalNumber* decimal_number = [NSDecimalNumber decimalNumberWithMantissa:123456 exponent:-10 isNegative:NO];
+	    NSDecimalNumber* decimal_number_neg = [NSDecimalNumber decimalNumberWithMantissa:123456 exponent:10 isNegative:YES];
+	    NSDecimalNumber* decimal_one = [NSDecimalNumber one];
+	    NSDecimalNumber* decimal_zero = [NSDecimalNumber zero];
+	    NSDecimalNumber* decimal_nan = [NSDecimalNumber notANumber];
 
 	    NSString *str0 = [num6 stringValue];
 
