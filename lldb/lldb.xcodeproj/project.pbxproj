@@ -2944,6 +2944,7 @@
 		945261C71B9A14D300BF138D /* CXXFunctionPointer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CXXFunctionPointer.cpp; path = source/DataFormatters/CXXFunctionPointer.cpp; sourceTree = "<group>"; };
 		945261C91B9A14E000BF138D /* CXXFunctionPointer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CXXFunctionPointer.h; path = include/lldb/DataFormatters/CXXFunctionPointer.h; sourceTree = "<group>"; };
 		9455630A1BEAD0570073F75F /* PlatformAppleSimulator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleSimulator.cpp; sourceTree = "<group>"; };
+		9455630B1BEAD0570073F75F /* PlatformAppleSimulator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PlatformAppleSimulator.h; sourceTree = "<group>"; };
 		945759651534941F005A9070 /* PlatformPOSIX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PlatformPOSIX.cpp; path = POSIX/PlatformPOSIX.cpp; sourceTree = "<group>"; };
 		945759661534941F005A9070 /* PlatformPOSIX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PlatformPOSIX.h; path = POSIX/PlatformPOSIX.h; sourceTree = "<group>"; };
 		9461568614E355F2003A195C /* SBTypeFilter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SBTypeFilter.h; path = include/lldb/API/SBTypeFilter.h; sourceTree = "<group>"; };
@@ -3320,6 +3321,7 @@
 		AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxTuple.cpp; path = Language/CPlusPlus/LibCxxTuple.cpp; sourceTree = "<group>"; };
 		AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxQueue.cpp; path = Language/CPlusPlus/LibCxxQueue.cpp; sourceTree = "<group>"; };
 		AFAFD8091E57E1B90017A14F /* ModuleCacheTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ModuleCacheTest.cpp; path = Target/ModuleCacheTest.cpp; sourceTree = "<group>"; };
+		AFB1682620D1D4CC00A74F25 /* PlatformiOSSimulatorCoreSimulatorSupport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PlatformiOSSimulatorCoreSimulatorSupport.h; path = objcxx/PlatformiOSSimulatorCoreSimulatorSupport.h; sourceTree = "<group>"; };
 		AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MICmdCmdGdbShow.cpp; path = "tools/lldb-mi/MICmdCmdGdbShow.cpp"; sourceTree = SOURCE_ROOT; };
 		AFB3D27F1AC262AB003B4B30 /* MICmdCmdGdbShow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MICmdCmdGdbShow.h; path = "tools/lldb-mi/MICmdCmdGdbShow.h"; sourceTree = SOURCE_ROOT; };
 		AFC234061AF85CE000CDE8B6 /* CommandObjectLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectLanguage.cpp; path = source/Commands/CommandObjectLanguage.cpp; sourceTree = "<group>"; };
@@ -5805,6 +5807,7 @@
 				AF254E2F170CCC33007AE5C9 /* PlatformDarwinKernel.cpp */,
 				AF254E30170CCC33007AE5C9 /* PlatformDarwinKernel.h */,
 				26B7564C14F89356008D9CB3 /* PlatformiOSSimulator.cpp */,
+				26B7564D14F89356008D9CB3 /* PlatformiOSSimulator.h */,
 				26C5577B132575AD008FD8FE /* PlatformMacOSX.cpp */,
 				AF3A4AD11EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h */,
 				AF8AD6331BEC28C400150209 /* PlatformRemoteAppleTV.cpp */,
@@ -7015,6 +7018,7 @@
 			isa = PBXGroup;
 			children = (
 				AFF81FB220D1CC910010F95E /* PlatformiOSSimulatorCoreSimulatorSupport.mm */,
+				AFB1682620D1D4CC00A74F25 /* PlatformiOSSimulatorCoreSimulatorSupport.h */,
 			);
 			name = objcxx;
 			sourceTree = "<group>";

@@ -112,13 +112,15 @@ FileSpec HostInfoMacOSX::GetProgramFileSpec() {
     uint32_t len = sizeof(program_fullpath);
     int err = _NSGetExecutablePath(program_fullpath, &len);
     if (err == 0)
-      g_program_filespec.SetFile(program_fullpath, false);
+      g_program_filespec.SetFile(program_fullpath, false,
+                                 FileSpec::Style::native);
     else if (err == -1) {
       char *large_program_fullpath = (char *)::malloc(len + 1);
 
       err = _NSGetExecutablePath(large_program_fullpath, &len);
       if (err == 0)
-        g_program_filespec.SetFile(large_program_fullpath, false);
+        g_program_filespec.SetFile(large_program_fullpath, false,
+                                   FileSpec::Style::native);
 
       ::free(large_program_fullpath);
     }
@@ -340,6 +342,6 @@ bool HostInfoMacOSX::ComputeSwiftDirectory(FileSpec &file_spec) {
     raw_path.resize(framework_pos);
     raw_path.append("/Resources/Swift");
   }
-  file_spec.SetFile(raw_path.c_str(), true);
+  file_spec.SetFile(raw_path.c_str(), true, FileSpec::Style::native);
   return true;
 }

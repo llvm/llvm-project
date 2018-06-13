@@ -187,7 +187,7 @@ FileSpec HostInfoLinux::GetProgramFileSpec() {
     ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
     if (len > 0) {
       exe_path[len] = 0;
-      g_program_filespec.SetFile(exe_path, false);
+      g_program_filespec.SetFile(exe_path, false, FileSpec::Style::native);
     }
   }
 

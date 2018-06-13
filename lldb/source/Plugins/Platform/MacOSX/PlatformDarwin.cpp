@@ -1167,7 +1167,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
       if (xcode_select_prefix_dir)
         xcode_dir_path.append(xcode_select_prefix_dir);
       xcode_dir_path.append("/usr/share/xcode-select/xcode_dir_path");
-      temp_file_spec.SetFile(xcode_dir_path, false);
+      temp_file_spec.SetFile(xcode_dir_path, false, FileSpec::Style::native);
       auto dir_buffer =
           DataBufferLLVM::CreateFromPath(temp_file_spec.GetPath());
       if (dir_buffer && dir_buffer->GetByteSize() > 0) {
@@ -1215,7 +1215,8 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
     }
 
     if (developer_dir_path_valid) {
-      temp_file_spec.SetFile(developer_dir_path, false);
+      temp_file_spec.SetFile(developer_dir_path, false,
+                             FileSpec::Style::native);
       if (temp_file_spec.Exists()) {
         m_developer_directory.assign(developer_dir_path);
         return m_developer_directory.c_str();

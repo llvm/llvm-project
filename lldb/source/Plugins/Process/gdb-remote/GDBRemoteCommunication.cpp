@@ -997,7 +997,8 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
   // debugserver to use and use it if we do.
   const char *env_debugserver_path = getenv("LLDB_DEBUGSERVER_PATH");
   if (env_debugserver_path) {
-    debugserver_file_spec.SetFile(env_debugserver_path, false);
+    debugserver_file_spec.SetFile(env_debugserver_path, false,
+                                  FileSpec::Style::native);
     if (log)
       log->Printf("GDBRemoteCommunication::%s() gdb-remote stub exe path set "
                   "from environment variable: %s",

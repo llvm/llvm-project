@@ -2160,7 +2160,7 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
     sdk_path.Printf(
         "%sDeveloper/Platforms/MacOSX.platform/Developer/SDKs/MacOSX%u.%u.sdk",
         xcode_contents_path.c_str(), major, minor);
-    fspec.SetFile(sdk_path.GetString(), false);
+    fspec.SetFile(sdk_path.GetString(), false, FileSpec::Style::native);
     if (fspec.Exists()) {
       ConstString path(sdk_path.GetString());
       // Cache results
@@ -2172,7 +2172,7 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
       sdk_path.Printf("%sDeveloper/Platforms/MacOSX.platform/Developer/SDKs/"
                       "MacOSX%u.%u.sdk",
                       xcode_contents_path.c_str(), least_major, least_minor);
-      fspec.SetFile(sdk_path.GetString(), false);
+      fspec.SetFile(sdk_path.GetString(), false, FileSpec::Style::native);
       if (fspec.Exists()) {
         ConstString path(sdk_path.GetString());
         // Cache results
@@ -3506,7 +3506,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
         framework_path.append(library_name);
         framework_path.append(".framework/");
         framework_path.append(library_name);
-        framework_spec.SetFile(framework_path.c_str(), false);
+        framework_spec.SetFile(framework_path.c_str(), false, FileSpec::Style::native);
 
         if (LoadOneImage(process, framework_spec, load_image_error)) {
           if (log)
@@ -3529,7 +3529,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       system_path.append(library_name);
       system_path.append(".framework/");
       system_path.append(library_name);
-      framework_spec.SetFile(system_path.c_str(), true);
+      framework_spec.SetFile(system_path.c_str(), true, FileSpec::Style::native);
       if (LoadOneImage(process, framework_spec, load_image_error))
         return;
       else
@@ -3644,7 +3644,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
     library_path = library_search_dir;
     library_path.append("/");
     library_path.append(library_fullname);
-    library_spec.SetFile(library_path.c_str(), false);
+    library_spec.SetFile(library_path.c_str(), false, FileSpec::Style::native);
     if (LoadOneImage(process, library_spec, load_image_error)) {
       if (log)
         log->Printf("Found library at: %s.", library_path.c_str());

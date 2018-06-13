@@ -105,7 +105,7 @@ bool Host::GetBundleDirectory(const FileSpec &file,
     if (file.GetPath(path, sizeof(path))) {
       CFCBundle bundle(path);
       if (bundle.GetPath(path, sizeof(path))) {
-        bundle_directory.SetFile(path, false);
+        bundle_directory.SetFile(path, false, FileSpec::Style::native);
         return true;
       }
     }
@@ -125,7 +125,7 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) {
       if (url.get()) {
         if (::CFURLGetFileSystemRepresentation(url.get(), YES, (UInt8 *)path,
                                                sizeof(path))) {
-          file.SetFile(path, false);
+          file.SetFile(path, false, FileSpec::Style::native);
           return true;
         }
       }
@@ -542,7 +542,8 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
            triple_arch == llvm::Triple::x86_64);
       const char *cstr = data.GetCStr(&offset);
       if (cstr) {
-        process_info.GetExecutableFile().SetFile(cstr, false);
+        process_info.GetExecutableFile().SetFile(cstr, false,
+                                                 FileSpec::Style::native);
 
         if (match_info_ptr == NULL ||
             NameMatches(

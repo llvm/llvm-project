@@ -490,8 +490,7 @@ public:
   ///     If \b true, then we will try to resolve links the path using
   ///     the static FileSpec::Resolve.
   //------------------------------------------------------------------
-  void SetFile(llvm::StringRef path, bool resolve_path,
-               Style style = Style::native);
+  void SetFile(llvm::StringRef path, bool resolve_path, Style style);
 
   void SetFile(llvm::StringRef path, bool resolve_path,
                const llvm::Triple &Triple);
@@ -565,6 +564,11 @@ public:
       DirectoryCallback;
 
 protected:
+  //------------------------------------------------------------------
+  // Convenience method for setting the file without changing the style.
+  //------------------------------------------------------------------
+  void SetFile(llvm::StringRef path, bool resolve_path);
+
   //------------------------------------------------------------------
   // Member variables
   //------------------------------------------------------------------

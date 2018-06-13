@@ -4650,7 +4650,7 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_outfile.SetFile(option_arg, true);
+        m_outfile.SetFile(option_arg, true, FileSpec::Style::native);
         if (m_outfile.Exists()) {
           m_outfile.Clear();
           err.SetErrorStringWithFormat("file already exists: '%s'",

@@ -72,7 +72,8 @@ GetOpenBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
 
       cstr = data.GetCStr(&offset);
       if (cstr) {
-        process_info.GetExecutableFile().SetFile(cstr, false);
+        process_info.GetExecutableFile().SetFile(cstr, false,
+                                                 FileSpec::Style::native);
 
         if (!(match_info_ptr == NULL ||
               NameMatches(

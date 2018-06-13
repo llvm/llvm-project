@@ -1939,7 +1939,8 @@ bool GDBRemoteCommunicationClient::DecodeProcessInfoResponse(
         // characters in a process name
         std::string name;
         extractor.GetHexByteString(name);
-        process_info.GetExecutableFile().SetFile(name, false);
+        process_info.GetExecutableFile().SetFile(name, false,
+                                                 FileSpec::Style::native);
       } else if (name.equals("cputype")) {
         value.getAsInteger(0, cpu);
       } else if (name.equals("cpusubtype")) {

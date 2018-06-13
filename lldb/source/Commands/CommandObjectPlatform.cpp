@@ -1342,32 +1342,32 @@ protected:
       } break;
 
       case 'n':
-        match_info.GetProcessInfo().GetExecutableFile().SetFile(option_arg,
-                                                                false);
+        match_info.GetProcessInfo().GetExecutableFile().SetFile(
+            option_arg, false, FileSpec::Style::native);
         match_info.SetNameMatchType(NameMatch::Equals);
         break;
 
       case 'e':
-        match_info.GetProcessInfo().GetExecutableFile().SetFile(option_arg,
-                                                                false);
+        match_info.GetProcessInfo().GetExecutableFile().SetFile(
+            option_arg, false, FileSpec::Style::native);
         match_info.SetNameMatchType(NameMatch::EndsWith);
         break;
 
       case 's':
-        match_info.GetProcessInfo().GetExecutableFile().SetFile(option_arg,
-                                                                false);
+        match_info.GetProcessInfo().GetExecutableFile().SetFile(
+            option_arg, false, FileSpec::Style::native);
         match_info.SetNameMatchType(NameMatch::StartsWith);
         break;
 
       case 'c':
-        match_info.GetProcessInfo().GetExecutableFile().SetFile(option_arg,
-                                                                false);
+        match_info.GetProcessInfo().GetExecutableFile().SetFile(
+            option_arg, false, FileSpec::Style::native);
         match_info.SetNameMatchType(NameMatch::Contains);
         break;
 
       case 'r':
-        match_info.GetProcessInfo().GetExecutableFile().SetFile(option_arg,
-                                                                false);
+        match_info.GetProcessInfo().GetExecutableFile().SetFile(
+            option_arg, false, FileSpec::Style::native);
         match_info.SetNameMatchType(NameMatch::RegularExpression);
         break;
 
@@ -1536,7 +1536,8 @@ public:
         break;
 
       case 'n':
-        attach_info.GetExecutableFile().SetFile(option_arg, false);
+        attach_info.GetExecutableFile().SetFile(option_arg, false,
+                                                FileSpec::Style::native);
         break;
 
       case 'w':
@@ -1585,7 +1586,7 @@ public:
           ProcessInstanceInfoMatch match_info;
           if (partial_name) {
             match_info.GetProcessInfo().GetExecutableFile().SetFile(
-                partial_name, false);
+                partial_name, false, FileSpec::Style::native);
             match_info.SetNameMatchType(NameMatch::StartsWith);
           }
           platform_sp->FindProcesses(match_info, process_infos);
