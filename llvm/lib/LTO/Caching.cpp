@@ -40,7 +40,14 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
       return AddStreamFn();
     }
 
-    if (MBOrErr.getError() != errc::no_such_file_or_directory)
+    // On Windows we can fail to open a cache file with a permission denied
+    // error. This generally means that another process has requested to delete
+    // the file while it is still open, but it could also mean that another
+    // process has opened the file without the sharing permissions we need.
+    // Since the file is probably being deleted we handle it in the same way as
+    // if the file did not exist at all.
+    if (MBOrErr.getError() != errc::no_such_file_or_directory &&
+        MBOrErr.getError() != errc::permission_denied)
       report_fatal_error(Twine("Failed to open cache file ") + EntryPath +
                          ": " + MBOrErr.getError().message() + "\n");
 

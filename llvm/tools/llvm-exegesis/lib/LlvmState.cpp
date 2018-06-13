@@ -20,9 +20,8 @@
 
 namespace exegesis {
 
-LLVMState::LLVMState()
-    : TheTriple(llvm::sys::getProcessTriple()),
-      CpuName(llvm::sys::getHostCPUName().str()) {
+LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName)
+    : TheTriple(Triple), CpuName(CpuName) {
   std::string Error;
   TheTarget = llvm::TargetRegistry::lookupTarget(TheTriple, Error);
   assert(TheTarget && "unknown target for host");
@@ -32,6 +31,10 @@ LLVMState::LLVMState()
   RegInfo.reset(TheTarget->createMCRegInfo(TheTriple));
   AsmInfo.reset(TheTarget->createMCAsmInfo(*RegInfo, TheTriple));
 }
+
+LLVMState::LLVMState()
+    : LLVMState(llvm::sys::getProcessTriple(),
+                llvm::sys::getHostCPUName().str()) {}
 
 std::unique_ptr<llvm::LLVMTargetMachine>
 LLVMState::createTargetMachine() const {

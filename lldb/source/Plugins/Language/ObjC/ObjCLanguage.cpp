@@ -107,7 +107,7 @@ bool ObjCLanguage::MethodName::SetName(llvm::StringRef name, bool strict) {
 
   if (valid_prefix) {
     int name_len = name.size();
-    // Objective C methods must have at least:
+    // Objective-C methods must have at least:
     //      "-[" or "+[" prefix
     //      One character for a class name
     //      One character for the space between the class name
@@ -763,6 +763,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider,
       "NSNumber summary provider", ConstString("NSCFNumber"), appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSNumberSummaryProvider,
+                "NSDecimalNumber summary provider",
+                ConstString("NSDecimalNumber"), appkit_flags);
 
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSURLSummaryProvider,

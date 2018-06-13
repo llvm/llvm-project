@@ -416,7 +416,7 @@ def : InstRW<[THX2T99Write_1Cyc_I2],
 // Address generation
 def : WriteRes<WriteI,       [THX2T99I012]> {
   let Latency = 1;
-  let ResourceCycles = [1, 3];
+  let ResourceCycles = [1];
   let NumMicroOps = 2;
 }
 
@@ -438,7 +438,7 @@ def : InstRW<[WriteI], (instrs COPY)>;
 // ALU, extend and/or shift
 def : WriteRes<WriteISReg,   [THX2T99I012]> {
   let Latency = 2;
-  let ResourceCycles = [2, 3];
+  let ResourceCycles = [2];
   let NumMicroOps = 2;
 }
 
@@ -457,7 +457,7 @@ def : InstRW<[WriteISReg],
 
 def : WriteRes<WriteIEReg,   [THX2T99I012]> {
   let Latency = 1;
-  let ResourceCycles = [1, 3];
+  let ResourceCycles = [1];
   let NumMicroOps = 2;
 }
 
@@ -500,14 +500,14 @@ def : WriteRes<WriteIS,      [THX2T99I012]> {
 // Latency range of 13-23/13-39.
 def : WriteRes<WriteID32,    [THX2T99I1]> {
   let Latency = 39;
-  let ResourceCycles = [13, 39];
+  let ResourceCycles = [39];
   let NumMicroOps = 4;
 }
 
 // Divide, X-form
 def : WriteRes<WriteID64,    [THX2T99I1]> {
   let Latency = 23;
-  let ResourceCycles = [13, 23];
+  let ResourceCycles = [23];
   let NumMicroOps = 4;
 }
 
@@ -1252,7 +1252,7 @@ def : InstRW<[THX2T99Write_5Cyc_F01], (instrs FMOVXDHighr, FMOVDXHighr)>;
 def : WriteRes<WriteV, [THX2T99F01]> {
   let Latency = 7;
   let NumMicroOps = 4;
-  let ResourceCycles = [4, 23];
+  let ResourceCycles = [4];
 }
 
 // ASIMD arith, reduce, 4H/4S

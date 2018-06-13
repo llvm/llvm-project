@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 \
-// RUN: -triple powerpc64le-unknown-linux-gnu -target-cpu pwr8 \
+// RUN: -triple powerpc64le-unknown-linux-gnu -target-cpu pwr9 \
 // RUN: -target-feature +float128 %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -triple x86_64-unknown-linux-gnu -Wno-unused-value -Wno-parentheses %s
 

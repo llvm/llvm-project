@@ -87,18 +87,18 @@ struct RegisterAliasingTrackerCache {
   const llvm::MCRegisterInfo &regInfo() const { return RegInfo; }
 
   // Retrieves the RegisterAliasingTracker for this particular register.
-  const RegisterAliasingTracker &getRegister(llvm::MCPhysReg Reg);
+  const RegisterAliasingTracker &getRegister(llvm::MCPhysReg Reg) const;
 
   // Retrieves the RegisterAliasingTracker for this particular register class.
-  const RegisterAliasingTracker &getRegisterClass(unsigned RegClassIndex);
+  const RegisterAliasingTracker &getRegisterClass(unsigned RegClassIndex) const;
 
 private:
   const llvm::MCRegisterInfo &RegInfo;
   const llvm::BitVector ReservedReg;
   const llvm::BitVector EmptyRegisters;
-  std::unordered_map<unsigned, std::unique_ptr<RegisterAliasingTracker>>
+  mutable std::unordered_map<unsigned, std::unique_ptr<RegisterAliasingTracker>>
       Registers;
-  std::unordered_map<unsigned, std::unique_ptr<RegisterAliasingTracker>>
+  mutable std::unordered_map<unsigned, std::unique_ptr<RegisterAliasingTracker>>
       RegisterClasses;
 };
 

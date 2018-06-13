@@ -634,8 +634,7 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 
 mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
                                        uint64_t offset, std::error_code &ec)
-    : Size(length), Mapping(), FD(fd), Mode(mode) {
-  (void)FD;
+    : Size(length), Mapping(), Mode(mode) {
   (void)Mode;
   ec = init(fd, offset, mode);
   if (ec)

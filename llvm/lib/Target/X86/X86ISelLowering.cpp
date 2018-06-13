@@ -32373,14 +32373,14 @@ static SDValue combineVSelectToShrunkBlend(SDNode *N, SelectionDAG &DAG,
                                            TargetLowering::DAGCombinerInfo &DCI,
                                            const X86Subtarget &Subtarget) {
   SDValue Cond = N->getOperand(0);
-  if (N->getOpcode() != ISD::VSELECT || !DCI.isBeforeLegalizeOps() ||
-      DCI.isBeforeLegalize() ||
+  if (N->getOpcode() != ISD::VSELECT ||
       ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()))
     return SDValue();
 
-  // Don't optimize vector selects that map to mask-registers.
+  // Don't optimize before the condition has been transformed to a legal type
+  // and don't ever optimize vector selects that map to AVX512 mask-registers.
   unsigned BitWidth = Cond.getScalarValueSizeInBits();
-  if (BitWidth == 1)
+  if (BitWidth < 8 || BitWidth > 64)
     return SDValue();
 
   // We can only handle the cases where VSELECT is directly legal on the
@@ -32418,7 +32418,6 @@ static SDValue combineVSelectToShrunkBlend(SDNode *N, SelectionDAG &DAG,
     if (UI->getOpcode() != ISD::VSELECT || UI.getOperandNo() != 0)
       return SDValue();
 
-  assert(BitWidth >= 8 && BitWidth <= 64 && "Invalid mask size");
   APInt DemandedMask(APInt::getSignMask(BitWidth));
   KnownBits Known;
   TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),

@@ -196,11 +196,11 @@ public:
     LiveInAttrs.push_back(std::make_pair(VReg, Flags));
   }
 
-  /// This function returns true if the spesified vreg is
+  /// This function returns true if the specified vreg is
   /// a live-in register and sign-extended.
   bool isLiveInSExt(unsigned VReg) const;
 
-  /// This function returns true if the spesified vreg is
+  /// This function returns true if the specified vreg is
   /// a live-in register and zero-extended.
   bool isLiveInZExt(unsigned VReg) const;
 

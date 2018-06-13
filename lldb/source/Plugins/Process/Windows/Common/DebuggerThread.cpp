@@ -181,13 +181,19 @@ Status DebuggerThread::StopDebugging(bool terminate) {
   lldb::process_t handle = m_process.GetNativeProcess().GetSystemHandle();
 
   if (terminate) {
-    // Initiate the termination before continuing the exception, so that the
-    // next debug event we get is the exit process event, and not some other
-    // event.
-    BOOL terminate_suceeded = TerminateProcess(handle, 0);
-    LLDB_LOG(log,
-             "calling TerminateProcess({0}, 0) (inferior={1}), success={2}",
-             handle, pid, terminate_suceeded);
+    if (handle != nullptr && handle != LLDB_INVALID_PROCESS) {
+      // Initiate the termination before continuing the exception, so that the
+      // next debug event we get is the exit process event, and not some other
+      // event.
+      BOOL terminate_suceeded = TerminateProcess(handle, 0);
+      LLDB_LOG(log,
+               "calling TerminateProcess({0}, 0) (inferior={1}), success={2}",
+               handle, pid, terminate_suceeded);
+    } else {
+      LLDB_LOG(log,
+               "NOT calling TerminateProcess because the inferior is not valid ({0}, 0) (inferior={1})",
+               handle, pid);
+    }
   }
 
   // If we're stuck waiting for an exception to continue (e.g. the user is at a

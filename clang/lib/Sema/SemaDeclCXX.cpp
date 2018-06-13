@@ -6125,6 +6125,12 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
     Record->setParamDestroyedInCallee(true);
   else if (Record->hasNonTrivialDestructor())
     Record->setParamDestroyedInCallee(CanPass);
+
+  if (getLangOpts().ForceEmitVTables) {
+    // If we want to emit all the vtables, we need to mark it as used.  This
+    // is especially required for cases like vtable assumption loads.
+    MarkVTableUsed(Record->getInnerLocStart(), Record);
+  }
 }
 
 /// Look up the special member function that would be called by a special

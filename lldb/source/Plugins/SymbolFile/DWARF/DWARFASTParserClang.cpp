@@ -474,7 +474,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                 if (log)
                   dwarf->GetObjectFile()->GetModule()->LogMessage(
                       log, "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
-                           "is Objective C 'id' built-in type.",
+                           "is Objective-C 'id' built-in type.",
                       die.GetOffset(), die.GetTagAsCString(), die.GetName());
                 clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
                 encoding_data_type = Type::eEncodingIsUID;
@@ -485,7 +485,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                 if (log)
                   dwarf->GetObjectFile()->GetModule()->LogMessage(
                       log, "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
-                           "is Objective C 'Class' built-in type.",
+                           "is Objective-C 'Class' built-in type.",
                       die.GetOffset(), die.GetTagAsCString(), die.GetName());
                 clang_type = m_ast.GetBasicType(eBasicTypeObjCClass);
                 encoding_data_type = Type::eEncodingIsUID;
@@ -495,7 +495,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                 if (log)
                   dwarf->GetObjectFile()->GetModule()->LogMessage(
                       log, "SymbolFileDWARF::ParseType (die = 0x%8.8x) %s '%s' "
-                           "is Objective C 'selector' built-in type.",
+                           "is Objective-C 'selector' built-in type.",
                       die.GetOffset(), die.GetTagAsCString(), die.GetName());
                 clang_type = m_ast.GetBasicType(eBasicTypeObjCSel);
                 encoding_data_type = Type::eEncodingIsUID;
@@ -3515,7 +3515,7 @@ size_t DWARFASTParserClang::ParseChildParameters(
             skip = true;
           } else {
 
-            // HACK: Objective C formal parameters "self" and "_cmd"
+            // HACK: Objective-C formal parameters "self" and "_cmd"
             // are not marked as artificial in the DWARF...
             CompileUnit *comp_unit = die.GetLLDBCompileUnit();
             if (comp_unit) {

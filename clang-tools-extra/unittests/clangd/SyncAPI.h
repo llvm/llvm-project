@@ -20,8 +20,7 @@ namespace clangd {
 
 // Calls addDocument and then blockUntilIdleForTest.
 void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents,
-                    WantDiagnostics WantDiags = WantDiagnostics::Auto,
-                    bool SkipCache = false);
+                    WantDiagnostics WantDiags = WantDiagnostics::Auto);
 
 llvm::Expected<CompletionList>
 runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,

@@ -941,8 +941,7 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
 void SubtargetEmitter::ExpandProcResources(RecVec &PRVec,
                                            std::vector<int64_t> &Cycles,
                                            const CodeGenProcModel &PM) {
-  // Default to 1 resource cycle.
-  Cycles.resize(PRVec.size(), 1);
+  assert(PRVec.size() == Cycles.size() && "failed precondition");
   for (unsigned i = 0, e = PRVec.size(); i != e; ++i) {
     Record *PRDef = PRVec[i];
     RecVec SubResources;
@@ -1110,6 +1109,21 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         RecVec PRVec = WriteRes->getValueAsListOfDefs("ProcResources");
         std::vector<int64_t> Cycles =
           WriteRes->getValueAsListOfInts("ResourceCycles");
+
+        if (Cycles.empty()) {
+          // If ResourceCycles is not provided, default to one cycle per
+          // resource.
+          Cycles.resize(PRVec.size(), 1);
+        } else if (Cycles.size() != PRVec.size()) {
+          // If ResourceCycles is provided, check consistency.
+          PrintFatalError(
+              WriteRes->getLoc(),
+              Twine("Inconsistent resource cycles: !size(ResourceCycles) != "
+                    "!size(ProcResources): ")
+                  .concat(Twine(PRVec.size()))
+                  .concat(" vs ")
+                  .concat(Twine(Cycles.size())));
+        }
 
         ExpandProcResources(PRVec, Cycles, ProcModel);
 

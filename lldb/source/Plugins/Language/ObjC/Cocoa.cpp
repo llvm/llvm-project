@@ -67,12 +67,12 @@ bool lldb_private::formatters::NSBundleSummaryProvider(
   if (!valobj_addr)
     return false;
 
-  const char *class_name = descriptor->GetClassName().GetCString();
+  llvm::StringRef class_name(descriptor->GetClassName().GetCString());
 
-  if (!class_name || !*class_name)
+  if (class_name.empty())
     return false;
 
-  if (!strcmp(class_name, "NSBundle")) {
+  if (class_name == "NSBundle") {
     uint64_t offset = 5 * ptr_size;
     ValueObjectSP text(valobj.GetSyntheticChildAtOffset(
         offset,
@@ -117,12 +117,12 @@ bool lldb_private::formatters::NSTimeZoneSummaryProvider(
   if (!valobj_addr)
     return false;
 
-  const char *class_name = descriptor->GetClassName().GetCString();
+  llvm::StringRef class_name(descriptor->GetClassName().GetCString());
 
-  if (!class_name || !*class_name)
+  if (class_name.empty())
     return false;
 
-  if (!strcmp(class_name, "__NSTimeZone")) {
+  if (class_name == "__NSTimeZone") {
     uint64_t offset = ptr_size;
     ValueObjectSP text(valobj.GetSyntheticChildAtOffset(
         offset, valobj.GetCompilerType(), true));
@@ -164,12 +164,12 @@ bool lldb_private::formatters::NSNotificationSummaryProvider(
   if (!valobj_addr)
     return false;
 
-  const char *class_name = descriptor->GetClassName().GetCString();
+  llvm::StringRef class_name(descriptor->GetClassName().GetCString());
 
-  if (!class_name || !*class_name)
+  if (class_name.empty())
     return false;
 
-  if (!strcmp(class_name, "NSConcreteNotification")) {
+  if (class_name == "NSConcreteNotification") {
     uint64_t offset = ptr_size;
     ValueObjectSP text(valobj.GetSyntheticChildAtOffset(
         offset, valobj.GetCompilerType(), true));
@@ -211,14 +211,14 @@ bool lldb_private::formatters::NSMachPortSummaryProvider(
   if (!valobj_addr)
     return false;
 
-  const char *class_name = descriptor->GetClassName().GetCString();
+  llvm::StringRef class_name(descriptor->GetClassName().GetCString());
 
-  if (!class_name || !*class_name)
+  if (class_name.empty())
     return false;
 
   uint64_t port_number = 0;
 
-  if (!strcmp(class_name, "NSMachPort")) {
+  if (class_name == "NSMachPort") {
     uint64_t offset = (ptr_size == 4 ? 12 : 20);
     Status error;
     port_number = process_sp->ReadUnsignedIntegerFromMemory(
@@ -259,16 +259,15 @@ bool lldb_private::formatters::NSIndexSetSummaryProvider(
   if (!valobj_addr)
     return false;
 
-  const char *class_name = descriptor->GetClassName().GetCString();
+  llvm::StringRef class_name(descriptor->GetClassName().GetCString());
 
-  if (!class_name || !*class_name)
+  if (class_name.empty())
     return false;
 
   uint64_t count = 0;
 
   do {
-    if (!strcmp(class_name, "NSIndexSet") ||
-        !strcmp(class_name, "NSMutableIndexSet")) {
+    if (class_name == "NSIndexSet" || class_name == "NSMutableIndexSet") {
       Status error;
       uint32_t mode = process_sp->ReadUnsignedIntegerFromMemory(
           valobj_addr + ptr_size, 4, 0, error);
@@ -451,15 +450,18 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
   if (!valobj_addr)
     return false;
 
-  const char *class_name = descriptor->GetClassName().GetCString();
+  llvm::StringRef class_name(descriptor->GetClassName().GetCString());
 
-  if (!class_name || !*class_name)
+  if (class_name.empty())
     return false;
 
-  if (!strcmp(class_name, "__NSCFBoolean"))
+  if (class_name == "__NSCFBoolean")
     return ObjCBooleanSummaryProvider(valobj, stream, options);
 
-  if (!strcmp(class_name, "NSNumber") || !strcmp(class_name, "__NSCFNumber")) {
+  if (class_name == "NSDecimalNumber")
+    return NSDecimalNumberSummaryProvider(valobj, stream, options);
+
+  if (class_name == "NSNumber" || class_name == "__NSCFNumber") {
     uint64_t value = 0;
     uint64_t i_bits = 0;
     if (descriptor->GetTaggedPointerInfo(&i_bits, &value)) {
@@ -624,6 +626,55 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
   }
 
   return false;
+}
+
+bool lldb_private::formatters::NSDecimalNumberSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ProcessSP process_sp = valobj.GetProcessSP();
+  if (!process_sp)
+    return false;
+
+  lldb::addr_t valobj_addr = valobj.GetValueAsUnsigned(0);
+  uint32_t ptr_size = process_sp->GetAddressByteSize();
+
+  Status error;
+  int8_t exponent = process_sp->ReadUnsignedIntegerFromMemory(
+      valobj_addr + ptr_size, 1, 0, error);
+  if (error.Fail())
+    return false;
+
+  uint8_t length_and_negative = process_sp->ReadUnsignedIntegerFromMemory(
+      valobj_addr + ptr_size + 1, 1, 0, error);
+  if (error.Fail())
+    return false;
+
+  // Fifth bit marks negativity.
+  const bool is_negative = (length_and_negative >> 4) & 1;
+
+  // Zero length and negative means NaN.
+  uint8_t length = length_and_negative & 0xf;
+  const bool is_nan = is_negative && (length == 0);
+
+  if (is_nan) {
+    stream.Printf("NaN");
+    return true;
+  }
+
+  if (length == 0) {
+    stream.Printf("0");
+    return true;
+  }
+
+  uint64_t mantissa = process_sp->ReadUnsignedIntegerFromMemory(
+      valobj_addr + ptr_size + 4, 8, 0, error);
+  if (error.Fail())
+    return false;
+
+  if (is_negative)
+    stream.Printf("-");
+
+  stream.Printf("%" PRIu64 " x 10^%" PRIi8, mantissa, exponent);
+  return true;
 }
 
 bool lldb_private::formatters::NSURLSummaryProvider(

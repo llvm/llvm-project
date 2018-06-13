@@ -390,16 +390,7 @@ struct bar { T x; };
 
   // Now switch to C++ mode.
   CDB.ExtraClangFlags = {"-xc++"};
-  // By default addDocument does not check if CompileCommand has changed, so we
-  // expect to see the errors.
-  runAddDocument(Server, FooCpp, SourceContents1);
-  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  runAddDocument(Server, FooCpp, SourceContents2);
-  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  // Passing SkipCache=true will force addDocument to reparse the file with
-  // proper flags.
-  runAddDocument(Server, FooCpp, SourceContents2, WantDiagnostics::Auto,
-                 /*SkipCache=*/true);
+  runAddDocument(Server, FooCpp, SourceContents2, WantDiagnostics::Auto);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
   // Subsequent addDocument calls should finish without errors too.
   runAddDocument(Server, FooCpp, SourceContents1);
@@ -431,14 +422,7 @@ int main() { return 0; }
 
   // Parse without the define, no errors should be produced.
   CDB.ExtraClangFlags = {};
-  // By default addDocument does not check if CompileCommand has changed, so we
-  // expect to see the errors.
-  runAddDocument(Server, FooCpp, SourceContents);
-  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  // Passing SkipCache=true will force addDocument to reparse the file with
-  // proper flags.
-  runAddDocument(Server, FooCpp, SourceContents, WantDiagnostics::Auto,
-                 /*SkipCache=*/true);
+  runAddDocument(Server, FooCpp, SourceContents, WantDiagnostics::Auto);
   ASSERT_TRUE(Server.blockUntilIdleForTest());
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
   // Subsequent addDocument call should finish without errors too.
@@ -500,10 +484,8 @@ int hello;
   CDB.ExtraClangFlags.clear();
   DiagConsumer.clear();
   Server.removeDocument(BazCpp);
-  Server.addDocument(FooCpp, FooSource.code(), WantDiagnostics::Auto,
-                     /*SkipCache=*/true);
-  Server.addDocument(BarCpp, BarSource.code(), WantDiagnostics::Auto,
-                     /*SkipCache=*/true);
+  Server.addDocument(FooCpp, FooSource.code(), WantDiagnostics::Auto);
+  Server.addDocument(BarCpp, BarSource.code(), WantDiagnostics::Auto);
   ASSERT_TRUE(Server.blockUntilIdleForTest());
 
   EXPECT_THAT(DiagConsumer.filesWithDiags(),
@@ -708,7 +690,7 @@ int d;
       Server.addDocument(FilePaths[FileIndex],
                          ShouldHaveErrors ? SourceContentsWithErrors
                                           : SourceContentsWithoutErrors,
-                         WantDiagnostics::Auto, SkipCache);
+                         WantDiagnostics::Auto);
       UpdateStatsOnAddDocument(FileIndex, ShouldHaveErrors);
     };
 

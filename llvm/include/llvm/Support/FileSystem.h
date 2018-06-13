@@ -1043,7 +1043,9 @@ private:
   /// Platform-specific mapping state.
   size_t Size;
   void *Mapping;
-  int FD;
+#ifdef _WIN32
+  void *FileHandle;
+#endif
   mapmode Mode;
 
   std::error_code init(int FD, uint64_t Offset, mapmode Mode);
