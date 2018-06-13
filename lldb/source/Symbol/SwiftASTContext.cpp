@@ -3819,20 +3819,15 @@ ConstString SwiftASTContext::GetMangledTypeName(swift::TypeBase *type_base) {
 
   swift::Type swift_type(type_base);
 
-  bool has_archetypes = swift_type->hasArchetype();
+  assert(!swift_type->hasArchetype() && "type has not been mapped out of context");
+  swift::Mangle::ASTMangler mangler(true);
+  std::string s = mangler.mangleTypeForDebugger(swift_type, nullptr, nullptr);
+  if (s.empty())
+    return ConstString();
 
-  if (!has_archetypes) {
-    swift::Mangle::ASTMangler mangler(true);
-    std::string s = mangler.mangleTypeForDebugger(swift_type, nullptr, nullptr);
-
-    if (!s.empty()) {
-      ConstString mangled_cs(s.c_str());
-      CacheDemangledType(mangled_cs.AsCString(), type_base);
-      return mangled_cs;
-    }
-  }
-
-  return ConstString();
+  ConstString mangled_cs(s.c_str());
+  CacheDemangledType(mangled_cs.AsCString(), type_base);
+  return mangled_cs;
 }
 
 void SwiftASTContext::CacheDemangledType(const char *name,
@@ -5062,7 +5057,8 @@ bool SwiftASTContext::IsPossibleDynamicType(void *type,
     // FIXME: use the dynamic_pointee_type
     Flags type_flags(GetTypeInfo(type, nullptr));
 
-    if (type_flags.AnySet(eTypeIsArchetype | eTypeIsClass | eTypeIsProtocol))
+    if (type_flags.AnySet(eTypeIsGenericTypeParam | eTypeIsClass |
+                          eTypeIsProtocol))
       return true;
 
     if (type_flags.AnySet(eTypeIsStructUnion | eTypeIsEnumeration |
@@ -5109,13 +5105,13 @@ bool SwiftASTContext::IsVoidType(void *type) {
   return type == GetASTContext()->TheEmptyTupleType.getPointer();
 }
 
-bool SwiftASTContext::IsArchetypeType(const CompilerType &compiler_type) {
+bool SwiftASTContext::IsGenericType(const CompilerType &compiler_type) {
   if (!compiler_type.IsValid())
     return false;
 
   if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
     swift::Type swift_type(GetSwiftType(compiler_type));
-    return swift_type->is<swift::ArchetypeType>();
+    return swift_type->hasTypeParameter();//is<swift::ArchetypeType>();
   }
   return false;
 }
@@ -5125,10 +5121,10 @@ bool SwiftASTContext::IsSelfArchetypeType(const CompilerType &compiler_type) {
     return false;
 
   if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
-    if (swift::isa<swift::ArchetypeType>(
+    if (swift::isa<swift::GenericTypeParamType>(
         (swift::TypeBase *)compiler_type.GetOpaqueQualType())) {
-      // Hack: Just assume if we have an archetype as the type of 'self',
-      // it's going to be a protocol 'Self' type.
+      // Hack: Just assume if we have an generic parameter as the type of
+      // 'self', it's going to be a protocol 'Self' type.
       return true;
     }
   }
@@ -5364,9 +5360,8 @@ SwiftASTContext::GetTypeInfo(void *type,
   const swift::TypeKind type_kind = swift_can_type->getKind();
   uint32_t swift_flags = eTypeIsSwift;
   switch (type_kind) {
-  case swift::TypeKind::DependentMember:
+  case swift::TypeKind::Archetype:
   case swift::TypeKind::Error:
-  case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::Module:
   case swift::TypeKind::TypeVariable:
     break;
@@ -5459,9 +5454,10 @@ SwiftASTContext::GetTypeInfo(void *type,
     swift_flags |= eTypeIsMetatype | eTypeHasValue;
     break;
 
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::DependentMember:
+  case swift::TypeKind::GenericTypeParam:
     swift_flags |=
-        eTypeHasValue | eTypeIsScalar | eTypeIsPointer | eTypeIsArchetype;
+      eTypeHasValue | eTypeIsScalar | eTypeIsPointer | eTypeIsGenericTypeParam;
     break;
 
   case swift::TypeKind::LValue:
@@ -5871,6 +5867,39 @@ SwiftASTContext::GetUnboundType(lldb::opaque_compiler_type_t type) {
   return CompilerType(GetASTContext(), GetSwiftType(type));
 }
 
+CompilerType SwiftASTContext::MapIntoContext(lldb::StackFrameSP &frame_sp,
+                                             lldb::opaque_compiler_type_t type) {
+  VALID_OR_RETURN(CompilerType());
+  if (!type)
+    return CompilerType(GetASTContext(), nullptr);
+  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+  const SymbolContext &sc(frame_sp->GetSymbolContext(eSymbolContextFunction));
+  if (!sc.function || (swift_can_type && !swift_can_type->hasTypeParameter()))
+    return CompilerType(GetASTContext(), GetSwiftType(type));
+  auto *ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
+       sc.function->GetCompilerType().GetTypeSystem());
+  if (!ctx)
+    return CompilerType(GetASTContext(), GetSwiftType(type));
+
+  // FIXME: we need the innermost non-inlined function.
+  auto function_name = sc.GetFunctionName(Mangled::ePreferMangled);
+  std::string error;
+  swift::Decl *func_decl =
+  swift::ide::getDeclFromMangledSymbolName(*ctx->GetASTContext(),
+                                           function_name.GetStringRef(),
+                                           error);
+  if (!error.empty()) {
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+    if (log)
+      log->Printf("Failed to getDeclFromMangledSymbolName(\"%s\"): %s\n",
+                  function_name.AsCString(), error.c_str());
+  }
+  
+  if (auto *dc = llvm::dyn_cast_or_null<swift::DeclContext>(func_decl))
+    return {GetASTContext(), dc->mapTypeIntoContext(swift_can_type)};
+  return CompilerType(GetASTContext(), GetSwiftType(type));
+}
+
 //----------------------------------------------------------------------
 // Create related types using the current type's AST
 //----------------------------------------------------------------------
@@ -5940,9 +5969,12 @@ uint64_t SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
                                      ExecutionContextScope *exe_scope) {
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+    // FIXME: Query remote mirrors for this.
+    if (swift_can_type->hasTypeParameter())
+      return GetPointerByteSize() * 8;
+
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind) {
-    case swift::TypeKind::Archetype:
     case swift::TypeKind::LValue:
     case swift::TypeKind::UnboundGeneric:
     case swift::TypeKind::GenericFunction:
@@ -6005,6 +6037,8 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
   case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::Class: // Classes are pointers in swift...
   case swift::TypeKind::BoundGenericClass:
+  case swift::TypeKind::GenericTypeParam:
+  case swift::TypeKind::DependentMember:
     return lldb::eEncodingUint;
 
   case swift::TypeKind::BuiltinVector:
@@ -6017,8 +6051,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
     return CompilerType(GetASTContext(),
                         swift_can_type->getReferenceStorageReferent())
         .GetEncoding(count);
-  case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::DependentMember:
     break;
 
   case swift::TypeKind::ExistentialMetatype:
@@ -6086,6 +6118,8 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
   case swift::TypeKind::Archetype:
+  case swift::TypeKind::GenericTypeParam:
+  case swift::TypeKind::DependentMember:
     return eFormatAddressInfo;
 
   // Classes are always pointers in swift...
@@ -6103,8 +6137,6 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
     return CompilerType(GetASTContext(),
                         swift_can_type->getReferenceStorageReferent())
         .GetFormat();
-  case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::DependentMember:
     break;
 
   case swift::TypeKind::Enum:
@@ -6873,7 +6905,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   language_flags = 0;
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::Error:
@@ -7489,12 +7520,14 @@ LazyBool SwiftASTContext::ShouldPrintAsOneLiner(void *type,
 }
 
 bool SwiftASTContext::IsMeaninglessWithoutDynamicResolution(void *type) {
+  //  ((swift::TypeBase*)type)->dump();
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+    return swift_can_type->hasTypeParameter();
 
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind) {
-    case swift::TypeKind::Archetype:
+    case swift::TypeKind::GenericTypeParam:
       return true;
     default:
       return false;
@@ -7550,6 +7583,8 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::Archetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
+  case swift::TypeKind::GenericTypeParam:
+  case swift::TypeKind::DependentMember:
   case swift::TypeKind::LValue: {
     uint32_t item_count = 1;
     // A few formats, we might need to modify our size and count for depending
@@ -7650,8 +7685,6 @@ bool SwiftASTContext::DumpTypeValue(
 
   case swift::TypeKind::Struct:
   case swift::TypeKind::Protocol:
-  case swift::TypeKind::GenericTypeParam:
-  case swift::TypeKind::DependentMember:
     return false;
 
   case swift::TypeKind::ExistentialMetatype:

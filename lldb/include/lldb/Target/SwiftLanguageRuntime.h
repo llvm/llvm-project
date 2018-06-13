@@ -294,7 +294,7 @@ public:
 
   virtual CompilerType DoArchetypeBindingForType(StackFrame &stack_frame,
                                                  CompilerType base_type);
-
+  
   virtual CompilerType GetConcreteType(ExecutionContextScope *exe_scope,
                                        ConstString abstract_type_name) override;
 
@@ -304,6 +304,9 @@ public:
   GetMetadataPromise(lldb::addr_t addr,
                      SwiftASTContext *swift_ast_ctx = nullptr);
 
+  /// Build the artificial type metadata variable name for \p swift_type.
+  static bool GetAbstractTypeName(StreamString &name, swift::Type swift_type);
+  
   /// Retrieve the remote AST context for the given Swift AST context.
   swift::remoteAST::RemoteASTContext &
   GetRemoteASTContext(SwiftASTContext &swift_ast_ctx);
@@ -376,7 +379,7 @@ protected:
       ValueObject &in_value, lldb::DynamicValueType use_dynamic,
       TypeAndOrName &class_type_or_name, Address &address);
 
-  virtual bool GetDynamicTypeAndAddress_Archetype(
+  virtual bool GetDynamicTypeAndAddress_GenericTypeParam(
       ValueObject &in_value, lldb::DynamicValueType use_dynamic,
       TypeAndOrName &class_type_or_name, Address &address);
 

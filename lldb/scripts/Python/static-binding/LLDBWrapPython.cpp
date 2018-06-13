@@ -80029,7 +80029,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eTypeIsSigned",SWIG_From_int(static_cast< int >(lldb::eTypeIsSigned)));
   SWIG_Python_SetConstant(d, "eTypeInstanceIsPointer",SWIG_From_int(static_cast< int >(lldb::eTypeInstanceIsPointer)));
   SWIG_Python_SetConstant(d, "eTypeIsSwift",SWIG_From_int(static_cast< int >(lldb::eTypeIsSwift)));
-  SWIG_Python_SetConstant(d, "eTypeIsArchetype",SWIG_From_int(static_cast< int >(lldb::eTypeIsArchetype)));
+  SWIG_Python_SetConstant(d, "eTypeIsGenericTypeParam",SWIG_From_int(static_cast< int >(lldb::eTypeIsGenericTypeParam)));
   SWIG_Python_SetConstant(d, "eTypeIsProtocol",SWIG_From_int(static_cast< int >(lldb::eTypeIsProtocol)));
   SWIG_Python_SetConstant(d, "eTypeIsTuple",SWIG_From_int(static_cast< int >(lldb::eTypeIsTuple)));
   SWIG_Python_SetConstant(d, "eTypeIsMetatype",SWIG_From_int(static_cast< int >(lldb::eTypeIsMetatype)));
