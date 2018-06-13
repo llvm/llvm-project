@@ -1833,7 +1833,7 @@ class TestBase(Base):
 
     # Maximum allowed attempts when launching the inferior process.
     # Can be overridden by the LLDB_MAX_LAUNCH_COUNT environment variable.
-    maxLaunchCount = 3
+    maxLaunchCount = 1
 
     # Time to wait before the next launching attempt in second(s).
     # Can be overridden by the LLDB_TIME_WAIT_NEXT_LAUNCH environment variable.

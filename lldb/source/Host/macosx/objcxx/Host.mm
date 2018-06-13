@@ -74,11 +74,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Errno.h"
 
-#include "cfcpp/CFCBundle.h"
-#include "cfcpp/CFCMutableArray.h"
-#include "cfcpp/CFCMutableDictionary.h"
-#include "cfcpp/CFCReleaser.h"
-#include "cfcpp/CFCString.h"
+#include "../cfcpp/CFCBundle.h"
+#include "../cfcpp/CFCMutableArray.h"
+#include "../cfcpp/CFCMutableDictionary.h"
+#include "../cfcpp/CFCReleaser.h"
+#include "../cfcpp/CFCString.h"
 
 #include <objc/objc-auto.h>
 

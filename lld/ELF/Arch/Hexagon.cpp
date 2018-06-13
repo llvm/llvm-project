@@ -26,7 +26,6 @@ namespace {
 class Hexagon final : public TargetInfo {
 public:
   uint32_t calcEFlags() const override;
-  uint32_t applyMask(uint32_t Mask, uint32_t Data) const;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
@@ -34,11 +33,9 @@ public:
 } // namespace
 
 // Support V60 only at the moment.
-uint32_t Hexagon::calcEFlags() const {
-  return 0x60;
-}
+uint32_t Hexagon::calcEFlags() const { return 0x60; }
 
-uint32_t Hexagon::applyMask(uint32_t Mask, uint32_t Data) const {
+static uint32_t applyMask(uint32_t Mask, uint32_t Data) {
   uint32_t Result = 0;
   size_t Off = 0;
 
@@ -54,7 +51,7 @@ uint32_t Hexagon::applyMask(uint32_t Mask, uint32_t Data) const {
 }
 
 RelExpr Hexagon::getRelExpr(RelType Type, const Symbol &S,
-                                 const uint8_t *Loc) const {
+                            const uint8_t *Loc) const {
   switch (Type) {
   case R_HEX_B22_PCREL:
     return R_PC;
@@ -70,7 +67,7 @@ void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_HEX_NONE:
     break;
   case R_HEX_B22_PCREL:
-    or32le(Loc, applyMask(0x01ff3ffe, ((Val >> 2) & 0x3fffff)));
+    or32le(Loc, applyMask(0x1ff3ffe, Val >> 2));
     break;
   default:
     error(getErrorLocation(Loc) + "unrecognized reloc " + toString(Type));
