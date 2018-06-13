@@ -769,7 +769,7 @@ public:
 
 void AppleObjCRuntimeV2::Initialize() {
   PluginManager::RegisterPlugin(
-      GetPluginNameStatic(), "Apple Objective C Language Runtime - Version 2",
+      GetPluginNameStatic(), "Apple Objective-C Language Runtime - Version 2",
       CreateInstance,
       [](CommandInterpreter &interpreter) -> lldb::CommandObjectSP {
         return CommandObjectSP(new CommandObjectMultiwordObjC(interpreter));
@@ -1785,7 +1785,7 @@ void AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded() {
     DescriptorMapUpdateResult dynamic_update_result =
         UpdateISAToDescriptorMapDynamic(hash_table);
 
-    // Now get the objc classes that are baked into the Objective C runtime in
+    // Now get the objc classes that are baked into the Objective-C runtime in
     // the shared cache, but only once per process as this data never changes
     if (!m_loaded_objc_opt) {
       // it is legitimately possible for the shared cache to be empty - in that

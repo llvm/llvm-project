@@ -605,8 +605,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
                    const FileSpec &file_spec) {
   Status error;
 
-  static ConstString g_dylibext("dylib");
-  static ConstString g_solibext("so");
+  static ConstString g_dylibext(".dylib");
+  static ConstString g_solibext(".so");
 
   if (!baton)
     return FileSpec::eEnumerateDirectoryResultQuit;

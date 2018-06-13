@@ -147,6 +147,25 @@ TEST_F(ThreadPoolTest, GetFuture) {
   ASSERT_EQ(2, i.load());
 }
 
+TEST_F(ThreadPoolTest, TaskWithResult) {
+  CHECK_UNSUPPORTED();
+  // By making only 1 thread in the pool the two tasks are serialized with
+  // respect to each other, which means that the second one must return 2.
+  ThreadPool Pool{1};
+  std::atomic_int i{0};
+  Pool.async([this, &i] {
+    waitForMainThread();
+    ++i;
+  });
+  // Force the future using get()
+  std::shared_future<int> Future = Pool.async([&i] { return ++i; });
+  ASSERT_EQ(0, i.load());
+  setMainThreadReady();
+  int Result = Future.get();
+  ASSERT_EQ(2, i.load());
+  ASSERT_EQ(2, Result);
+}
+
 TEST_F(ThreadPoolTest, PoolDestruction) {
   CHECK_UNSUPPORTED();
   // Test that we are waiting on destruction

@@ -17,14 +17,8 @@
 
 namespace exegesis {
 
-static void tie(const Operand *FromOperand, llvm::Optional<Variable> &Var) {
-  if (!Var)
-    Var.emplace();
-  Var->TiedOperands.push_back(FromOperand);
-}
-
 Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
-                         RegisterAliasingTrackerCache &RATC)
+                         const RegisterAliasingTrackerCache &RATC)
     : Description(MCInstrDesc) {
   unsigned OpIndex = 0;
   for (; OpIndex < MCInstrDesc.getNumOperands(); ++OpIndex) {
@@ -36,6 +30,8 @@ Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
     // TODO(gchatelet): Handle isLookupPtrRegClass.
     if (OpInfo.RegClass >= 0)
       Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);
+    Operand.TiedToIndex =
+        MCInstrDesc.getOperandConstraint(OpIndex, llvm::MCOI::TIED_TO);
     Operand.Info = &OpInfo;
     Operands.push_back(Operand);
   }
@@ -59,24 +55,23 @@ Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
     Operand.ImplicitReg = MCPhysReg;
     Operands.push_back(Operand);
   }
-  // Set TiedTo for operands.
-  for (auto &Op : Operands) {
-    if (Op.IsExplicit) {
-      const int TiedTo =
-          MCInstrDesc.getOperandConstraint(Op.Index, llvm::MCOI::TIED_TO);
-      if (TiedTo >= 0) {
-        Op.TiedTo = &Operands[TiedTo];
-        tie(&Op, Operands[TiedTo].Var);
-      } else {
-        tie(&Op, Op.Var);
-      }
+  // Assigning Variables to non tied explicit operands.
+  Variables.reserve(Operands.size()); // Variables.size() <= Operands.size()
+  for (auto &Op : Operands)
+    if (Op.IsExplicit && Op.TiedToIndex < 0) {
+      const size_t VariableIndex = Variables.size();
+      Op.VariableIndex = VariableIndex;
+      Variables.emplace_back();
+      Variables.back().Index = VariableIndex;
     }
-  }
-  for (auto &Op : Operands) {
-    if (Op.Var) {
-      Variables.push_back(&*Op.Var);
-    }
-  }
+  // Assigning Variables to tied operands.
+  for (auto &Op : Operands)
+    if (Op.TiedToIndex >= 0)
+      Op.VariableIndex = Operands[Op.TiedToIndex].VariableIndex;
+  // Assigning Operands to Variables.
+  for (auto &Op : Operands)
+    if (Op.VariableIndex >= 0)
+      Variables[Op.VariableIndex].TiedOperands.push_back(&Op);
   // Processing Aliasing.
   DefRegisters = RATC.emptyRegisters();
   UseRegisters = RATC.emptyRegisters();
@@ -86,6 +81,35 @@ Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
       Registers |= Op.Tracker->aliasedBits();
     }
   }
+}
+
+InstructionInstance::InstructionInstance(const Instruction &Instr)
+    : Instr(Instr), VariableValues(Instr.Variables.size()) {}
+
+llvm::MCOperand &InstructionInstance::getValueFor(const Variable &Var) {
+  return VariableValues[Var.Index];
+}
+
+llvm::MCOperand &InstructionInstance::getValueFor(const Operand &Op) {
+  assert(Op.VariableIndex >= 0);
+  return getValueFor(Instr.Variables[Op.VariableIndex]);
+}
+
+// forward declaration.
+static void randomize(const Variable &Var, llvm::MCOperand &AssignedValue);
+
+llvm::MCInst InstructionInstance::randomizeUnsetVariablesAndBuild() {
+  for (const Variable &Var : Instr.Variables) {
+    llvm::MCOperand &AssignedValue = getValueFor(Var);
+    if (!AssignedValue.isValid())
+      randomize(Var, AssignedValue);
+  }
+  llvm::MCInst Result;
+  Result.setOpcode(Instr.Description.Opcode);
+  for (const auto &Op : Instr.Operands)
+    if (Op.IsExplicit)
+      Result.addOperand(getValueFor(Op));
+  return Result;
 }
 
 bool RegisterOperandAssignment::
@@ -159,7 +183,7 @@ static auto randomElement(const C &Container) -> decltype(Container[0]) {
   return Container[randomIndex(Container.size())];
 }
 
-static void randomize(Variable &Var) {
+static void randomize(const Variable &Var, llvm::MCOperand &AssignedValue) {
   assert(!Var.TiedOperands.empty());
   assert(Var.TiedOperands.front() != nullptr);
   const Operand &Op = *Var.TiedOperands.front();
@@ -168,12 +192,12 @@ static void randomize(Variable &Var) {
   switch (OpInfo.OperandType) {
   case llvm::MCOI::OperandType::OPERAND_IMMEDIATE:
     // FIXME: explore immediate values too.
-    Var.AssignedValue = llvm::MCOperand::createImm(1);
+    AssignedValue = llvm::MCOperand::createImm(1);
     break;
   case llvm::MCOI::OperandType::OPERAND_REGISTER: {
     assert(Op.Tracker);
     const auto &Registers = Op.Tracker->sourceBits();
-    Var.AssignedValue = llvm::MCOperand::createReg(randomBit(Registers));
+    AssignedValue = llvm::MCOperand::createReg(randomBit(Registers));
     break;
   }
   default:
@@ -181,15 +205,20 @@ static void randomize(Variable &Var) {
   }
 }
 
-static void setRegisterOperandValue(const RegisterOperandAssignment &ROV) {
-  const Operand *Op = ROV.Op->TiedTo ? ROV.Op->TiedTo : ROV.Op;
-  assert(Op->Var);
-  auto &AssignedValue = Op->Var->AssignedValue;
-  if (AssignedValue.isValid()) {
-    assert(AssignedValue.isReg() && AssignedValue.getReg() == ROV.Reg);
-    return;
+static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
+                                    InstructionInstance &II) {
+  assert(ROV.Op);
+  if (ROV.Op->IsExplicit) {
+    auto &AssignedValue = II.getValueFor(*ROV.Op);
+    if (AssignedValue.isValid()) {
+      assert(AssignedValue.isReg() && AssignedValue.getReg() == ROV.Reg);
+      return;
+    }
+    AssignedValue = llvm::MCOperand::createReg(ROV.Reg);
+  } else {
+    assert(ROV.Op->ImplicitReg != nullptr);
+    assert(ROV.Reg == *ROV.Op->ImplicitReg);
   }
-  Op->Var->AssignedValue = llvm::MCOperand::createReg(ROV.Reg);
 }
 
 size_t randomBit(const llvm::BitVector &Vector) {
@@ -200,41 +229,13 @@ size_t randomBit(const llvm::BitVector &Vector) {
   return *Itr;
 }
 
-void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations) {
+void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
+                       InstructionInstance &DefII, InstructionInstance &UseII) {
   assert(!AliasingConfigurations.empty());
   assert(!AliasingConfigurations.hasImplicitAliasing());
   const auto &RandomConf = randomElement(AliasingConfigurations.Configurations);
-  setRegisterOperandValue(randomElement(RandomConf.Defs));
-  setRegisterOperandValue(randomElement(RandomConf.Uses));
-}
-
-void randomizeUnsetVariable(const Instruction &Instruction) {
-  for (auto *Var : Instruction.Variables)
-    if (!Var->AssignedValue.isValid())
-      randomize(*Var);
-}
-
-void clearVariableAssignments(const Instruction &Instruction) {
-  for (auto *Var : Instruction.Variables)
-    Var->AssignedValue = llvm::MCOperand();
-}
-
-llvm::MCInst build(const Instruction &Instruction) {
-  llvm::MCInst Result;
-  Result.setOpcode(Instruction.Description.Opcode);
-  for (const auto &Op : Instruction.Operands) {
-    if (Op.IsExplicit) {
-      auto &Var = Op.TiedTo ? Op.TiedTo->Var : Op.Var;
-      assert(Var);
-      Result.addOperand(Var->AssignedValue);
-    }
-  }
-  return Result;
-}
-
-llvm::MCInst randomizeUnsetVariablesAndBuild(const Instruction &Instruction) {
-  randomizeUnsetVariable(Instruction);
-  return build(Instruction);
+  setRegisterOperandValue(randomElement(RandomConf.Defs), DefII);
+  setRegisterOperandValue(randomElement(RandomConf.Uses), UseII);
 }
 
 void DumpMCOperand(const llvm::MCRegisterInfo &MCRegisterInfo,

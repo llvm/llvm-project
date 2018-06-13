@@ -43,7 +43,7 @@ endfunction()
 # link for.
 function(darwin_get_toolchain_supported_archs output_var)
   execute_process(
-    COMMAND ld -v
+    COMMAND "${CMAKE_LINKER}" -v
     ERROR_VARIABLE LINKER_VERSION)
 
   string(REGEX MATCH "configured to support archs: ([^\n]+)"

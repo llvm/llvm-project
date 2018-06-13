@@ -78,18 +78,16 @@ bool LSUnit::isReady(const InstRef &IR) const {
   bool IsAStore = StoreQueue.count(Index) != 0;
   assert((IsALoad || IsAStore) && "Instruction is not in queue!");
 
-  unsigned LoadBarrierIndex = LoadBarriers.empty() ? 0 : *LoadBarriers.begin();
-  unsigned StoreBarrierIndex =
-      StoreBarriers.empty() ? 0 : *StoreBarriers.begin();
-
-  if (IsALoad && LoadBarrierIndex) {
+  if (IsALoad && !LoadBarriers.empty()) {
+    unsigned LoadBarrierIndex = *LoadBarriers.begin();
     if (Index > LoadBarrierIndex)
       return false;
     if (Index == LoadBarrierIndex && Index != *LoadQueue.begin())
       return false;
   }
 
-  if (IsAStore && StoreBarrierIndex) {
+  if (IsAStore && !StoreBarriers.empty()) {
+    unsigned StoreBarrierIndex = *StoreBarriers.begin();
     if (Index > StoreBarrierIndex)
       return false;
     if (Index == StoreBarrierIndex && Index != *StoreQueue.begin())
@@ -135,9 +133,15 @@ void LSUnit::onInstructionExecuted(const InstRef &IR) {
     StoreQueue.erase(it);
   }
 
-  if (!StoreBarriers.empty() && Index == *StoreBarriers.begin())
+  if (!StoreBarriers.empty() && Index == *StoreBarriers.begin()) {
+    LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
+                      << " has been removed from the set of store barriers.\n");
     StoreBarriers.erase(StoreBarriers.begin());
-  if (!LoadBarriers.empty() && Index == *LoadBarriers.begin())
+  }
+  if (!LoadBarriers.empty() && Index == *LoadBarriers.begin()) {
+    LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
+                      << " has been removed from the set of load barriers.\n");
     LoadBarriers.erase(LoadBarriers.begin());
+  }
 }
 } // namespace mca

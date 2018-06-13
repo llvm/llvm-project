@@ -89,28 +89,24 @@ static bool hasMemoryOperand(const llvm::MCOperandInfo &OpInfo) {
   return OpInfo.OperandType == llvm::MCOI::OPERAND_MEMORY;
 }
 
-static bool isInfeasible(const Instruction &Instruction, std::string &Error) {
-  const auto &MCInstrDesc = Instruction.Description;
-  if (MCInstrDesc.isPseudo()) {
-    Error = "is pseudo";
-    return true;
-  }
-  if (llvm::any_of(MCInstrDesc.operands(), hasUnknownOperand)) {
-    Error = "has unknown operands";
-    return true;
-  }
-  if (llvm::any_of(MCInstrDesc.operands(), hasMemoryOperand)) {
-    Error = "has memory operands";
-    return true;
-  }
-  return false;
+llvm::Error
+UopsBenchmarkRunner::isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const {
+  if (MCInstrDesc.isPseudo())
+    return llvm::make_error<BenchmarkFailure>("Infeasible : is pseudo");
+  if (llvm::any_of(MCInstrDesc.operands(), hasUnknownOperand))
+    return llvm::make_error<BenchmarkFailure>(
+        "Infeasible : has unknown operands");
+  if (llvm::any_of(MCInstrDesc.operands(), hasMemoryOperand))
+    return llvm::make_error<BenchmarkFailure>(
+        "Infeasible : has memory operands");
+  return llvm::Error::success();
 }
 
 // Returns whether this Variable ties Use and Def operands together.
-static bool hasTiedOperands(const Variable *Var) {
+static bool hasTiedOperands(const Variable &Var) {
   bool HasUse = false;
   bool HasDef = false;
-  for (const Operand *Op : Var->TiedOperands) {
+  for (const Operand *Op : Var.TiedOperands) {
     if (Op->IsDef)
       HasDef = true;
     else
@@ -119,12 +115,12 @@ static bool hasTiedOperands(const Variable *Var) {
   return HasUse && HasDef;
 }
 
-static llvm::SmallVector<Variable *, 8>
-getTiedVariables(const Instruction &Instruction) {
-  llvm::SmallVector<Variable *, 8> Result;
-  for (auto *Var : Instruction.Variables)
+static llvm::SmallVector<const Variable *, 8>
+getTiedVariables(const Instruction &Instr) {
+  llvm::SmallVector<const Variable *, 8> Result;
+  for (const auto &Var : Instr.Variables)
     if (hasTiedOperands(Var))
-      Result.push_back(Var);
+      Result.push_back(&Var);
   return Result;
 }
 
@@ -140,79 +136,85 @@ InstructionBenchmark::ModeE UopsBenchmarkRunner::getMode() const {
   return InstructionBenchmark::Uops;
 }
 
-llvm::Expected<std::vector<BenchmarkConfiguration>>
-UopsBenchmarkRunner::createConfigurations(RegisterAliasingTrackerCache &RATC,
-                                          unsigned Opcode) const {
-  const llvm::MCInstrDesc &MCInstrDesc = MCInstrInfo.get(Opcode);
-  const Instruction Instruction(MCInstrDesc, RATC);
-
-  std::string Error;
-  if (isInfeasible(Instruction, Error))
-    return llvm::make_error<llvm::StringError>(
-        llvm::Twine("Infeasible : ").concat(Error),
-        llvm::inconvertibleErrorCode());
-
-  BenchmarkConfiguration Conf;
-  const AliasingConfigurations SelfAliasing(Instruction, Instruction);
+llvm::Expected<BenchmarkConfiguration>
+UopsBenchmarkRunner::generateConfiguration(unsigned Opcode) const {
+  const auto &InstrDesc = MCInstrInfo.get(Opcode);
+  if (auto E = isInfeasible(InstrDesc))
+    return std::move(E);
+  const Instruction Instr(InstrDesc, RATC);
+  const AliasingConfigurations SelfAliasing(Instr, Instr);
   if (SelfAliasing.empty()) {
+    InstructionInstance II(Instr);
+    BenchmarkConfiguration Conf;
     Conf.Info = "instruction is parallel, repeating a random one.";
-    Conf.Snippet = {randomizeUnsetVariablesAndBuild(Instruction)};
-    return std::vector<BenchmarkConfiguration>{Conf};
+    Conf.Snippet = {II.randomizeUnsetVariablesAndBuild()};
+    return Conf;
   }
   if (SelfAliasing.hasImplicitAliasing()) {
+    InstructionInstance II(Instr);
+    BenchmarkConfiguration Conf;
     Conf.Info = "instruction is serial, repeating a random one.";
-    Conf.Snippet = {randomizeUnsetVariablesAndBuild(Instruction)};
-    return std::vector<BenchmarkConfiguration>{Conf};
+    Conf.Snippet = {II.randomizeUnsetVariablesAndBuild()};
+    return Conf;
   }
-  const auto TiedVariables = getTiedVariables(Instruction);
+  const auto TiedVariables = getTiedVariables(Instr);
   if (!TiedVariables.empty()) {
     if (TiedVariables.size() > 1)
       return llvm::make_error<llvm::StringError>(
           "Infeasible : don't know how to handle several tied variables",
           llvm::inconvertibleErrorCode());
+    BenchmarkConfiguration Conf;
     Conf.Info = "instruction has tied variables using static renaming.";
-    Variable *Var = TiedVariables.front();
+    const Variable *Var = TiedVariables.front();
     assert(Var);
     assert(!Var->TiedOperands.empty());
     const Operand &Operand = *Var->TiedOperands.front();
     assert(Operand.Tracker);
     for (const llvm::MCPhysReg Reg : Operand.Tracker->sourceBits().set_bits()) {
-      clearVariableAssignments(Instruction);
-      Var->AssignedValue = llvm::MCOperand::createReg(Reg);
-      Conf.Snippet.push_back(randomizeUnsetVariablesAndBuild(Instruction));
+      InstructionInstance II(Instr);
+      II.getValueFor(*Var) = llvm::MCOperand::createReg(Reg);
+      Conf.Snippet.push_back(II.randomizeUnsetVariablesAndBuild());
     }
-    return std::vector<BenchmarkConfiguration>{Conf};
+    return Conf;
   }
+  InstructionInstance II(Instr);
   // No tied variables, we pick random values for defs.
   llvm::BitVector Defs(MCRegisterInfo.getNumRegs());
-  for (const auto &Op : Instruction.Operands) {
+  for (const auto &Op : Instr.Operands) {
     if (Op.Tracker && Op.IsExplicit && Op.IsDef) {
-      assert(Op.Var);
       auto PossibleRegisters = Op.Tracker->sourceBits();
       remove(PossibleRegisters, RATC.reservedRegisters());
       assert(PossibleRegisters.any() && "No register left to choose from");
       const auto RandomReg = randomBit(PossibleRegisters);
       Defs.set(RandomReg);
-      Op.Var->AssignedValue = llvm::MCOperand::createReg(RandomReg);
+      II.getValueFor(Op) = llvm::MCOperand::createReg(RandomReg);
     }
   }
   // And pick random use values that are not reserved and don't alias with defs.
   const auto DefAliases = getAliasedBits(MCRegisterInfo, Defs);
-  for (const auto &Op : Instruction.Operands) {
+  for (const auto &Op : Instr.Operands) {
     if (Op.Tracker && Op.IsExplicit && !Op.IsDef) {
-      assert(Op.Var);
       auto PossibleRegisters = Op.Tracker->sourceBits();
       remove(PossibleRegisters, RATC.reservedRegisters());
       remove(PossibleRegisters, DefAliases);
       assert(PossibleRegisters.any() && "No register left to choose from");
       const auto RandomReg = randomBit(PossibleRegisters);
-      Op.Var->AssignedValue = llvm::MCOperand::createReg(RandomReg);
+      II.getValueFor(Op) = llvm::MCOperand::createReg(RandomReg);
     }
   }
+  BenchmarkConfiguration Conf;
   Conf.Info =
       "instruction has no tied variables picking Uses different from defs";
-  Conf.Snippet = {randomizeUnsetVariablesAndBuild(Instruction)};
-  return std::vector<BenchmarkConfiguration>{Conf};
+  Conf.Snippet = {II.randomizeUnsetVariablesAndBuild()};
+  return Conf;
+}
+
+llvm::Expected<std::vector<BenchmarkConfiguration>>
+UopsBenchmarkRunner::createConfigurations(unsigned Opcode) const {
+  if (auto E = generateConfiguration(Opcode))
+    return std::vector<BenchmarkConfiguration>{E.get()};
+  else
+    return E.takeError();
 }
 
 std::vector<BenchmarkMeasure>
@@ -232,7 +234,7 @@ UopsBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
     int64_t CounterValue = 0;
     llvm::SmallVector<llvm::StringRef, 2> CounterNames;
     llvm::StringRef(PfmCounters).split(CounterNames, ',');
-    for (const auto& CounterName : CounterNames) {
+    for (const auto &CounterName : CounterNames) {
       pfm::PerfEvent UopPerfEvent(CounterName);
       if (!UopPerfEvent.valid())
         llvm::report_fatal_error(

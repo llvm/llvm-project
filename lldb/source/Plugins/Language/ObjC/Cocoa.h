@@ -32,6 +32,9 @@ bool NSDataSummaryProvider(ValueObject &valobj, Stream &stream,
 bool NSNumberSummaryProvider(ValueObject &valobj, Stream &stream,
                              const TypeSummaryOptions &options);
 
+bool NSDecimalNumberSummaryProvider(ValueObject &valobj, Stream &stream,
+                                    const TypeSummaryOptions &options);
+
 bool NSNotificationSummaryProvider(ValueObject &valobj, Stream &stream,
                                    const TypeSummaryOptions &options);
 

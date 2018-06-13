@@ -84,7 +84,7 @@ AppleObjCRuntimeV1::CreateInstance(Process *process,
 
 void AppleObjCRuntimeV1::Initialize() {
   PluginManager::RegisterPlugin(
-      GetPluginNameStatic(), "Apple Objective C Language Runtime - Version 1",
+      GetPluginNameStatic(), "Apple Objective-C Language Runtime - Version 1",
       CreateInstance);
 }
 

@@ -9,6 +9,7 @@ declare <4 x i32> @llvm.x86.avx512.mask.cvttps2udq.128(<4 x float>, <4 x i32>, i
 declare <8 x i32> @llvm.x86.avx512.mask.cvttps2udq.256(<8 x float>, <8 x i32>, i8)
 declare <16 x i32> @llvm.x86.avx512.mask.cvttps2udq.512(<16 x float>, <16 x i32>, i16, i32)
 declare <4 x i32> @llvm.x86.avx512.mask.cvttpd2udq.256(<4 x double>, <4 x i32>, i8)
+declare <8 x i32> @llvm.x86.avx512.mask.cvttpd2dq.512(<8 x double>, <8 x i32>, i8, i32)
 declare <8 x i32> @llvm.x86.avx512.mask.cvttpd2udq.512(<8 x double>, <8 x i32>, i8, i32)
 declare <4 x i64> @llvm.x86.avx512.mask.cvttps2qq.256(<4 x float>, <4 x i64>, i8)
 declare <8 x i64> @llvm.x86.avx512.mask.cvttps2qq.512(<8 x float>, <8 x i64>, i8, i32)
@@ -124,6 +125,27 @@ define <4 x double> @double_to_uint_to_double_reg_v4f64(<4 x double> %x) {
   %fptoui = tail call <4 x i32> @llvm.x86.avx512.mask.cvttpd2udq.256(<4 x double> %x, <4 x i32> undef, i8 -1)
   %uitofp = uitofp <4 x i32> %fptoui to <4 x double>
   ret <4 x double> %uitofp
+}
+
+define <8 x double> @double_to_sint_to_double_mem_v8f64(<8 x double>* %p) {
+; CHECK-LABEL: double_to_sint_to_double_mem_v8f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscalepd $11, (%rdi), %zmm0
+; CHECK-NEXT:    retq
+  %x = load <8 x double>, <8 x double>* %p
+  %fptosi = tail call <8 x i32> @llvm.x86.avx512.mask.cvttpd2dq.512(<8 x double> %x, <8 x i32> undef, i8 -1, i32 4)
+  %sitofp = sitofp <8 x i32> %fptosi to <8 x double>
+  ret <8 x double> %sitofp
+}
+
+define <8 x double> @double_to_sint_to_double_reg_v8f64(<8 x double> %x) {
+; CHECK-LABEL: double_to_sint_to_double_reg_v8f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrndscalepd $11, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %fptosi = tail call <8 x i32> @llvm.x86.avx512.mask.cvttpd2dq.512(<8 x double> %x, <8 x i32> undef, i8 -1, i32 4)
+  %sitofp = sitofp <8 x i32> %fptosi to <8 x double>
+  ret <8 x double> %sitofp
 }
 
 define <8 x double> @double_to_uint_to_double_mem_v8f64(<8 x double>* %p) {

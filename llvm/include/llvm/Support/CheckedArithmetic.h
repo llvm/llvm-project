@@ -16,66 +16,87 @@
 #define LLVM_SUPPORT_CHECKEDARITHMETIC_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Optional.h"
 
 #include <type_traits>
 
 namespace {
 
 /// Utility function to apply a given method of \c APInt \p F to \p LHS and
-/// \p RHS, and write the output into \p Res.
-/// \return Whether the operation overflows.
+/// \p RHS.
+/// \return Empty optional if the operation overflows, or result otherwise.
 template <typename T, typename F>
 typename std::enable_if<std::is_integral<T>::value && sizeof(T) * 8 <= 64,
-                        bool>::type
-checkedOp(T LHS, T RHS, F Op, T *Res = nullptr, bool Signed = true) {
+                        llvm::Optional<T>>::type
+checkedOp(T LHS, T RHS, F Op, bool Signed = true) {
   llvm::APInt ALHS(/*BitSize=*/sizeof(T) * 8, LHS, Signed);
   llvm::APInt ARHS(/*BitSize=*/sizeof(T) * 8, RHS, Signed);
   bool Overflow;
   llvm::APInt Out = (ALHS.*Op)(ARHS, Overflow);
-  if (Res)
-    *Res = Signed ? Out.getSExtValue() : Out.getZExtValue();
-  return Overflow;
+  if (Overflow)
+    return llvm::None;
+  return Signed ? Out.getSExtValue() : Out.getZExtValue();
 }
 }
 
 namespace llvm {
 
-/// Add two signed integers \p LHS and \p RHS, write into \p Res if non-null.
-/// Does not guarantee saturating arithmetic.
-/// \return Whether the result overflows.
+/// Add two signed integers \p LHS and \p RHS.
+/// \return Optional of sum if no signed overflow occurred,
+/// \c None otherwise.
 template <typename T>
-typename std::enable_if<std::is_signed<T>::value, bool>::type
-checkedAdd(T LHS, T RHS, T *Res = nullptr) {
-  return checkedOp(LHS, RHS, &llvm::APInt::sadd_ov, Res);
+typename std::enable_if<std::is_signed<T>::value, llvm::Optional<T>>::type
+checkedAdd(T LHS, T RHS) {
+  return checkedOp(LHS, RHS, &llvm::APInt::sadd_ov);
 }
 
-/// Multiply two signed integers \p LHS and \p RHS, write into \p Res if
-/// non-null.
-/// Does not guarantee saturating arithmetic.
-/// \return Whether the result overflows.
+/// Multiply two signed integers \p LHS and \p RHS.
+/// \return Optional of product if no signed overflow occurred,
+/// \c None otherwise.
 template <typename T>
-typename std::enable_if<std::is_signed<T>::value, bool>::type
-checkedMul(T LHS, T RHS, T *Res = nullptr) {
-  return checkedOp(LHS, RHS, &llvm::APInt::smul_ov, Res);
+typename std::enable_if<std::is_signed<T>::value, llvm::Optional<T>>::type
+checkedMul(T LHS, T RHS) {
+  return checkedOp(LHS, RHS, &llvm::APInt::smul_ov);
 }
 
-/// Add two unsigned integers \p LHS and \p RHS, write into \p Res if non-null.
-/// Does not guarantee saturating arithmetic.
-/// \return Whether the result overflows.
+/// Multiply A and B, and add C to the resulting product.
+/// \return Optional of result if no signed overflow occurred,
+/// \c None otherwise.
 template <typename T>
-typename std::enable_if<std::is_unsigned<T>::value, bool>::type
-checkedAddUnsigned(T LHS, T RHS, T *Res = nullptr) {
-  return checkedOp(LHS, RHS, &llvm::APInt::uadd_ov, Res, /*Signed=*/false);
+typename std::enable_if<std::is_signed<T>::value, llvm::Optional<T>>::type
+checkedMulAdd(T A, T B, T C) {
+  if (auto Product = checkedMul(A, B))
+    return checkedAdd(*Product, C);
+  return llvm::None;
 }
 
-/// Multiply two unsigned integers \p LHS and \p RHS, write into \p Res if
-/// non-null.
-/// Does not guarantee saturating arithmetic.
-/// \return Whether the result overflows.
+/// Add two unsigned integers \p LHS and \p RHS.
+/// \return Optional of sum if no unsigned overflow occurred,
+/// \c None otherwise.
 template <typename T>
-typename std::enable_if<std::is_unsigned<T>::value, bool>::type
-checkedMulUnsigned(T LHS, T RHS, T *Res = nullptr) {
-  return checkedOp(LHS, RHS, &llvm::APInt::umul_ov, Res, /*Signed=*/false);
+typename std::enable_if<std::is_unsigned<T>::value, llvm::Optional<T>>::type
+checkedAddUnsigned(T LHS, T RHS) {
+  return checkedOp(LHS, RHS, &llvm::APInt::uadd_ov, /*Signed=*/false);
+}
+
+/// Multiply two unsigned integers \p LHS and \p RHS.
+/// \return Optional of product if no unsigned overflow occurred,
+/// \c None otherwise.
+template <typename T>
+typename std::enable_if<std::is_unsigned<T>::value, llvm::Optional<T>>::type
+checkedMulUnsigned(T LHS, T RHS) {
+  return checkedOp(LHS, RHS, &llvm::APInt::umul_ov, /*Signed=*/false);
+}
+
+/// Multiply unsigned integers A and B, and add C to the resulting product.
+/// \return Optional of result if no unsigned overflow occurred,
+/// \c None otherwise.
+template <typename T>
+typename std::enable_if<std::is_unsigned<T>::value, llvm::Optional<T>>::type
+checkedMulAddUnsigned(T A, T B, T C) {
+  if (auto Product = checkedMulUnsigned(A, B))
+    return checkedAddUnsigned(*Product, C);
+  return llvm::None;
 }
 
 } // End llvm namespace

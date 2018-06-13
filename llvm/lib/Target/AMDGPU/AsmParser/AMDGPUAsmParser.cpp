@@ -443,7 +443,7 @@ public:
   }
 
   bool isVSrcB32() const {
-    return isVCSrcF32() || isLiteralImm(MVT::i32);
+    return isVCSrcF32() || isLiteralImm(MVT::i32) || isExpr();
   }
 
   bool isVSrcB64() const {
@@ -460,7 +460,7 @@ public:
   }
 
   bool isVSrcF32() const {
-    return isVCSrcF32() || isLiteralImm(MVT::f32);
+    return isVCSrcF32() || isLiteralImm(MVT::f32) || isExpr();
   }
 
   bool isVSrcF64() const {
