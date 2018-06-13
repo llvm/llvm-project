@@ -725,7 +725,12 @@ namespace llvm {
     /// \returns The split substrings.
     LLVM_NODISCARD
     std::pair<StringRef, StringRef> split(char Separator) const {
-      return split(StringRef(&Separator, 1));
+      // FIXME: temporary workaround for LLVM r334283 (rdar://problem/41029268)
+      // return split(StringRef(&Separator, 1));
+      size_t Idx = find(Separator);
+      if (Idx == npos)
+        return std::make_pair(*this, StringRef());
+      return std::make_pair(slice(0, Idx), slice(Idx+1, npos));
     }
 
     /// Split into two substrings around the first occurrence of a separator
@@ -811,7 +816,12 @@ namespace llvm {
     /// \return - The split substrings.
     LLVM_NODISCARD
     std::pair<StringRef, StringRef> rsplit(char Separator) const {
-      return rsplit(StringRef(&Separator, 1));
+      // FIXME: temporary workaround for LLVM r334283 (rdar://problem/41029268)
+      // return rsplit(StringRef(&Separator, 1));
+      size_t Idx = rfind(Separator);
+      if (Idx == npos)
+        return std::make_pair(*this, StringRef());
+      return std::make_pair(slice(0, Idx), slice(Idx+1, npos));
     }
 
     /// Return string with consecutive \p Char characters starting from the
