@@ -119,8 +119,11 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   if (!compiler_type && name) {
-    if (name.GetStringRef().startswith("$swift.") ||
-        name.GetStringRef().startswith(SwiftLanguageRuntime::GetCurrentMangledName("_TtBp").c_str())) {  // This is the RawPointerType, need to figure out its name from the AST.
+    if (name.GetStringRef().startswith("$") ||
+        name.GetStringRef().startswith(
+            SwiftLanguageRuntime::GetCurrentMangledName("_TtBp")
+                .c_str())) { // This is the RawPointerType, need to figure out
+                             // its name from the AST.
       swift::ASTContext *swift_ast_ctx = m_ast.GetASTContext();
       if (swift_ast_ctx)
         compiler_type =

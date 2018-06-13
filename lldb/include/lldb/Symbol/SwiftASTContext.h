@@ -485,7 +485,7 @@ public:
 
   bool IsVoidType(void *type) override;
 
-  static bool IsArchetypeType(const CompilerType &compiler_type);
+  static bool IsGenericType(const CompilerType &compiler_type);
 
   static bool IsSelfArchetypeType(const CompilerType &compiler_type);
 
@@ -740,6 +740,9 @@ public:
   CompilerType GetTypedefedType(void *type) override;
 
   CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) override;
+  CompilerType MapIntoContext(lldb::StackFrameSP &frame_sp,
+                              lldb::opaque_compiler_type_t type) override;
+
 
   bool IsVectorType(void *type, CompilerType *element_type,
                     uint64_t *size) override;

@@ -693,8 +693,9 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   if (SwiftASTContext::IsSelfArchetypeType(imported_self_type)) {
     SwiftLanguageRuntime *swift_runtime =
         stack_frame_sp->GetThread()->GetProcess()->GetSwiftLanguageRuntime();
+    // Assume self is always the first type parameter.
     if (CompilerType concrete_self_type = swift_runtime->GetConcreteType(
-            stack_frame_sp.get(), ConstString("Self"))) {
+            stack_frame_sp.get(), ConstString(u8"\u03C4_0_0"))) {
       if (SwiftASTContext *concrete_self_type_ast_ctx =
               llvm::dyn_cast_or_null<SwiftASTContext>(
                   concrete_self_type.GetTypeSystem())) {
@@ -765,7 +766,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   }
 
   imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
-  if (imported_self_type_flags.AllClear(lldb::eTypeIsArchetype)) {
+  if (imported_self_type_flags.AllClear(lldb::eTypeIsGenericTypeParam)) {
     swift::ValueDecl *type_alias_decl = nullptr;
 
     type_alias_decl = manipulator.MakeGlobalTypealias(
@@ -900,9 +901,15 @@ static void CountLocals(
 
       // Make sure to resolve all archetypes in the variable type.
 
-      if (language_runtime && stack_frame_sp)
-        target_type = language_runtime->DoArchetypeBindingForType(
-            *stack_frame_sp, target_type);
+      if (stack_frame_sp) {
+        if (language_runtime)
+          target_type = language_runtime->DoArchetypeBindingForType(
+              *stack_frame_sp, target_type);
+
+        target_type =
+            ast_context.MapIntoContext(stack_frame_sp,
+                                       target_type.GetOpaqueQualType());
+      }
 
       // If we couldn't fully realize the type, then we aren't going to get very
       // far making a local out of it,
@@ -1206,17 +1213,21 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       }
     } else {
       CompilerType actual_type(variable.GetType());
-      if (Flags(actual_type.GetTypeInfo())
-              .AllSet(lldb::eTypeIsSwift | lldb::eTypeIsArchetype)) {
-        lldb::StackFrameSP stack_frame_sp = stack_frame_wp.lock();
+      auto *orig_swift_type = (swift::TypeBase *)actual_type.GetOpaqueQualType();
+      auto *swift_type = orig_swift_type->mapTypeOutOfContext().getPointer();
+      actual_type.SetCompilerType(actual_type.GetTypeSystem(), swift_type);
+      lldb::StackFrameSP stack_frame_sp = stack_frame_wp.lock();
+      if (swift_type->hasTypeParameter()) {
         if (stack_frame_sp && stack_frame_sp->GetThread() &&
             stack_frame_sp->GetThread()->GetProcess()) {
           SwiftLanguageRuntime *swift_runtime = stack_frame_sp->GetThread()
                                                     ->GetProcess()
                                                     ->GetSwiftLanguageRuntime();
           if (swift_runtime) {
-            actual_type = swift_runtime->GetConcreteType(
-                stack_frame_sp.get(), actual_type.GetTypeName());
+            StreamString type_name;
+            if (SwiftLanguageRuntime::GetAbstractTypeName(type_name, swift_type))
+              actual_type = swift_runtime->GetConcreteType(
+                  stack_frame_sp.get(), ConstString(type_name.GetString()));
             if (actual_type.IsValid())
               variable.SetType(actual_type);
             else
@@ -1224,8 +1235,16 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           }
         }
       }
+
+      if (stack_frame_sp) {
+        auto *ctx = llvm::cast<SwiftASTContext>(actual_type.GetTypeSystem());
+        actual_type = ctx->MapIntoContext(stack_frame_sp,
+                                          actual_type.GetOpaqueQualType());
+      }
       swift::Type actual_swift_type =
-          swift::Type((swift::TypeBase *)actual_type.GetOpaqueQualType());
+        (swift::TypeBase *)actual_type.GetOpaqueQualType();
+      if (actual_swift_type->hasTypeParameter())
+        actual_swift_type = orig_swift_type;
 
       swift::Type fixed_type = manipulator.FixupResultType(
           actual_swift_type, user_expression.GetLanguageFlags());
@@ -1262,6 +1281,9 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     VariableMetadataVariable *variable_metadata =
         static_cast<VariableMetadataVariable *>(variable.m_metadata.get());
 
+    // FIXME: It would be nice if we could do something like
+    // variable_metadata->m_variable_sp->SetType(variable.GetType())
+    // here.
     offset = materializer.AddVariable(variable_metadata->m_variable_sp, error);
 
     if (!error.Success()) {

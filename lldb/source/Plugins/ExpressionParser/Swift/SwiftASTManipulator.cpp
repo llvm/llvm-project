@@ -1288,8 +1288,10 @@ bool SwiftASTManipulator::AddExternalVariables(
       swift::VarDecl *redirected_var_decl = new (ast_context) swift::VarDecl(
           is_static, specifier, is_capture_list, loc, name, var_type,
           containing_function);
-      redirected_var_decl->setInterfaceType(
-          var_type->mapTypeOutOfContext());
+      auto interface_type = var_type;
+      if (interface_type->hasArchetype())
+        interface_type = interface_type->mapTypeOutOfContext();
+      redirected_var_decl->setInterfaceType(interface_type);
       redirected_var_decl->setDebuggerVar(true);
       redirected_var_decl->setImplicit(true);
 
