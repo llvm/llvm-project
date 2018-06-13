@@ -72,7 +72,7 @@ TEST_F(ObjectFileELFTest, SectionsResolveConsistently) {
   ASSERT_GT(size, 0u);
 
   ModuleSpec spec{FileSpec(obj, false)};
-  spec.GetSymbolFileSpec().SetFile(obj, false);
+  spec.GetSymbolFileSpec().SetFile(obj, false, FileSpec::Style::native);
   auto module_sp = std::make_shared<Module>(spec);
   SectionList *list = module_sp->GetSectionList();
   ASSERT_NE(nullptr, list);
