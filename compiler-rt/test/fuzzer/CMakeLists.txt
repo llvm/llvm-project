@@ -10,6 +10,8 @@ endif()
 set(EXCLUDE_FROM_ALL ON)
 
 add_custom_target(check-fuzzer)
+set(LIBFUZZER_TEST_IOS "0")
+pythonize_bool(LIBFUZZER_TEST_IOS)
 
 if(COMPILER_RT_INCLUDE_TESTS)
   # libFuzzer unit tests.
@@ -70,4 +72,28 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   if(TARGET cxx_static)
     test_fuzzer("static-libc++" DEPS cxx_static)
   endif()
+endif()
+
+if (APPLE)
+  set(EXCLUDE_FROM_ALL ON)
+
+  foreach(arch ${DARWIN_ios_ARCHS})
+    set(LIBFUZZER_TEST_IOS "1")
+    pythonize_bool(LIBFUZZER_TEST_IOS)
+    set(LIBFUZZER_TEST_TARGET_ARCH ${arch})
+    set(LIBFUZZER_TEST_FLAGS "-arch ${arch} -isysroot ${DARWIN_ios_SYSROOT} ${COMPILER_RT_TEST_COMPILER_CFLAGS}")
+    set(LIBFUZZER_TEST_CONFIG_SUFFIX "-${arch}-ios")
+    string(TOUPPER ${arch} ARCH_UPPER_CASE)
+    set(CONFIG_NAME "IOS${ARCH_UPPER_CASE}Config")
+    configure_lit_site_cfg(
+      ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
+      ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg
+      )
+    add_lit_testsuite(check-fuzzer-ios-${arch} "libFuzzer iOS ${arch} tests"
+      ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/
+      DEPENDS ${LIBFUZZER_TEST_DEPS})
+
+  endforeach()
+
+  set(EXCLUDE_FROM_ALL OFF)
 endif()
