@@ -332,6 +332,10 @@ CODEGENOPT(NoPLT, 1, 0)
 /// Whether to embed source in DWARF debug line section.
 CODEGENOPT(EmbedSource, 1, 0)
 
+/// Whether to emit all vtables
+CODEGENOPT(ForceEmitVTables, 1, 0)
+
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT

@@ -41,6 +41,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1181,38 +1182,8 @@ const SymbolicRegion *MemRegion::getSymbolicBase() const {
   return nullptr;
 }
 
-/// Perform a given operation on two integers, return whether it overflows.
-/// Optionally write the resulting output into \p Res.
-static bool checkedOp(
-    int64_t LHS,
-    int64_t RHS,
-    std::function<llvm::APInt(llvm::APInt *, const llvm::APInt &, bool &)> Op,
-    int64_t *Res = nullptr) {
-  llvm::APInt ALHS(/*BitSize=*/64, LHS, /*Signed=*/true);
-  llvm::APInt ARHS(/*BitSize=*/64, RHS, /*Signed=*/true);
-  bool Overflow;
-  llvm::APInt Out = Op(&ALHS, ARHS, Overflow);
-  if (!Overflow && Res)
-    *Res = Out.getSExtValue();
-  return Overflow;
-}
-
-static bool checkedAdd(
-    int64_t LHS,
-    int64_t RHS,
-    int64_t *Res=nullptr) {
-  return checkedOp(LHS, RHS, &llvm::APInt::sadd_ov, Res);
-}
-
-static bool checkedMul(
-    int64_t LHS,
-    int64_t RHS,
-    int64_t *Res=nullptr) {
-  return checkedOp(LHS, RHS, &llvm::APInt::smul_ov, Res);
-}
-
 RegionRawOffset ElementRegion::getAsArrayOffset() const {
-  CharUnits offset = CharUnits::Zero();
+  int64_t offset = 0;
   const ElementRegion *ER = this;
   const MemRegion *superR = nullptr;
   ASTContext &C = getContext();
@@ -1224,7 +1195,7 @@ RegionRawOffset ElementRegion::getAsArrayOffset() const {
 
     // FIXME: generalize to symbolic offsets.
     SVal index = ER->getIndex();
-    if (Optional<nonloc::ConcreteInt> CI = index.getAs<nonloc::ConcreteInt>()) {
+    if (auto CI = index.getAs<nonloc::ConcreteInt>()) {
       // Update the offset.
       int64_t i = CI->getValue().getSExtValue();
 
@@ -1237,20 +1208,15 @@ RegionRawOffset ElementRegion::getAsArrayOffset() const {
           break;
         }
 
-        CharUnits size = C.getTypeSizeInChars(elemType);
-
-        int64_t Mult;
-        bool Overflow = checkedAdd(i, size.getQuantity(), &Mult);
-        if (!Overflow)
-          Overflow = checkedMul(Mult, offset.getQuantity());
-        if (Overflow) {
+        int64_t size = C.getTypeSizeInChars(elemType).getQuantity();
+        if (auto NewOffset = llvm::checkedMulAdd(i, size, offset)) {
+          offset = *NewOffset;
+        } else {
           LLVM_DEBUG(llvm::dbgs() << "MemRegion::getAsArrayOffset: "
                                   << "offset overflowing, returning unknown\n");
 
           return nullptr;
         }
-
-        offset += (i * size);
       }
 
       // Go to the next ElementRegion (if any).
@@ -1262,7 +1228,7 @@ RegionRawOffset ElementRegion::getAsArrayOffset() const {
   }
 
   assert(superR && "super region cannot be NULL");
-  return RegionRawOffset(superR, offset);
+  return RegionRawOffset(superR, CharUnits::fromQuantity(offset));
 }
 
 /// Returns true if \p Base is an immediate base class of \p Child

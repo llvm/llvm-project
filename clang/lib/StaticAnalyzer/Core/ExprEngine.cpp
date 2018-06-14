@@ -109,7 +109,75 @@ STATISTIC(NumTimesRetriedWithoutInlining,
 // to the object's location, so that on every such statement the location
 // could have been retrieved.
 
-typedef std::pair<const Stmt *, const LocationContext *> ConstructedObjectKey;
+/// ConstructedObjectKey is used for being able to find the path-sensitive
+/// memory region of a freshly constructed object while modeling the AST node
+/// that syntactically represents the object that is being constructed.
+/// Semantics of such nodes may sometimes require access to the region that's
+/// not otherwise present in the program state, or to the very fact that
+/// the construction context was present and contained references to these
+/// AST nodes.
+class ConstructedObjectKey {
+  typedef std::pair<
+      llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *>,
+      const LocationContext *> ConstructedObjectKeyImpl;
+
+  ConstructedObjectKeyImpl Impl;
+
+  const void *getAnyASTNodePtr() const {
+    if (const Stmt *S = getStmt())
+      return S;
+    else
+      return getCXXCtorInitializer();
+  }
+
+public:
+  ConstructedObjectKey(
+      llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
+      const LocationContext *LC)
+      : Impl(P, LC) {
+    // This is the full list of statements that require additional actions when
+    // encountered. This list may be expanded when new actions are implemented.
+    assert(getCXXCtorInitializer() || isa<DeclStmt>(getStmt()) ||
+           isa<CXXNewExpr>(getStmt()) || isa<CXXBindTemporaryExpr>(getStmt()) ||
+           isa<MaterializeTemporaryExpr>(getStmt()));
+  }
+
+  const Stmt *getStmt() const {
+    return Impl.first.dyn_cast<const Stmt *>();
+  }
+
+  const CXXCtorInitializer *getCXXCtorInitializer() const {
+    return Impl.first.dyn_cast<const CXXCtorInitializer *>();
+  }
+
+  const LocationContext *getLocationContext() const {
+    return Impl.second;
+  }
+
+  void print(llvm::raw_ostream &OS, PrinterHelper *Helper, PrintingPolicy &PP) {
+    OS << '(' << getLocationContext() << ',' << getAnyASTNodePtr() << ") ";
+    if (const Stmt *S = getStmt()) {
+      S->printPretty(OS, Helper, PP);
+    } else {
+      const CXXCtorInitializer *I = getCXXCtorInitializer();
+      OS << I->getAnyMember()->getNameAsString();
+    }
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    ID.AddPointer(Impl.first.getOpaqueValue());
+    ID.AddPointer(Impl.second);
+  }
+
+  bool operator==(const ConstructedObjectKey &RHS) const {
+    return Impl == RHS.Impl;
+  }
+
+  bool operator<(const ConstructedObjectKey &RHS) const {
+    return Impl < RHS.Impl;
+  }
+};
+
 typedef llvm::ImmutableMap<ConstructedObjectKey, SVal>
     ObjectsUnderConstructionMap;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(ObjectsUnderConstruction,
@@ -378,26 +446,31 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
   return State;
 }
 
-ProgramStateRef
-ExprEngine::addObjectUnderConstruction(ProgramStateRef State, const Stmt *S,
-                                       const LocationContext *LC, SVal V) {
-  ConstructedObjectKey Key(S, LC->getCurrentStackFrame());
+ProgramStateRef ExprEngine::addObjectUnderConstruction(
+    ProgramStateRef State,
+    llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
+    const LocationContext *LC, SVal V) {
+  ConstructedObjectKey Key(P, LC->getCurrentStackFrame());
   // FIXME: Currently the state might already contain the marker due to
   // incorrect handling of temporaries bound to default parameters.
   assert(!State->get<ObjectsUnderConstruction>(Key) ||
-         isa<CXXBindTemporaryExpr>(S));
+         isa<CXXBindTemporaryExpr>(Key.getStmt()));
   return State->set<ObjectsUnderConstruction>(Key, V);
 }
 
-Optional<SVal> ExprEngine::getObjectUnderConstruction(ProgramStateRef State,
-    const Stmt *S, const LocationContext *LC) {
-  ConstructedObjectKey Key(S, LC->getCurrentStackFrame());
+Optional<SVal> ExprEngine::getObjectUnderConstruction(
+    ProgramStateRef State,
+    llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
+    const LocationContext *LC) {
+  ConstructedObjectKey Key(P, LC->getCurrentStackFrame());
   return Optional<SVal>::create(State->get<ObjectsUnderConstruction>(Key));
 }
 
-ProgramStateRef ExprEngine::finishObjectConstruction(ProgramStateRef State,
-    const Stmt *S, const LocationContext *LC) {
-  ConstructedObjectKey Key(S, LC->getCurrentStackFrame());
+ProgramStateRef ExprEngine::finishObjectConstruction(
+    ProgramStateRef State,
+    llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
+    const LocationContext *LC) {
+  ConstructedObjectKey Key(P, LC->getCurrentStackFrame());
   assert(State->contains<ObjectsUnderConstruction>(Key));
   return State->remove<ObjectsUnderConstruction>(Key);
 }
@@ -409,87 +482,12 @@ bool ExprEngine::areAllObjectsFullyConstructed(ProgramStateRef State,
   while (LC != ToLC) {
     assert(LC && "ToLC must be a parent of FromLC!");
     for (auto I : State->get<ObjectsUnderConstruction>())
-      if (I.first.second == LC)
+      if (I.first.getLocationContext() == LC)
         return false;
 
     LC = LC->getParent();
   }
   return true;
-}
-
-ProgramStateRef ExprEngine::markStatementsCorrespondingToConstructedObject(
-    ProgramStateRef State, const ConstructionContext *CC,
-    const LocationContext *LC, SVal V) {
-  if (CC) {
-    // If the temporary is being returned from the function, it will be
-    // destroyed or lifetime-extended in the caller stack frame.
-    if (isa<ReturnedValueConstructionContext>(CC)) {
-      const StackFrameContext *SFC = LC->getCurrentStackFrame();
-      assert(SFC);
-      LC = SFC->getParent();
-      if (!LC) {
-        // We are on the top frame. We won't ever need any info
-        // for this temporary, so don't set anything.
-        return State;
-      }
-      const CFGElement &CallElem =
-          (*SFC->getCallSiteBlock())[SFC->getIndex()];
-      auto RTCElem = CallElem.getAs<CFGCXXRecordTypedCall>();
-      if (!RTCElem) {
-        // We have a parent stack frame, but no construction context for the
-        // return value. Give up until we provide the construction context
-        // at the call site.
-        return State;
-      }
-      // We use the ReturnedValueConstructionContext as an indication that we
-      // need to look for the actual construction context on the parent stack
-      // frame. This purpose has been fulfilled, so now we replace CC with the
-      // actual construction context.
-      CC = RTCElem->getConstructionContext();
-      if (!isa<TemporaryObjectConstructionContext>(CC)) {
-        // TODO: We are not returning an object into a temporary. There must
-        // be copy elision happening at the call site. We still need to
-        // explicitly support the situation when the return value is put
-        // into another return statement, i.e.
-        // ReturnedValueConstructionContexts are chained through multiple
-        // stack frames before finally settling in a temporary.
-        // We don't seem to need to explicitly support construction into
-        // a variable after a return.
-        return State;
-      }
-      // Proceed to deal with the temporary we've found on the parent
-      // stack frame.
-    }
-    // In case of temporary object construction, extract data necessary for
-    // destruction and lifetime extension.
-    if (const auto *TCC = dyn_cast<TemporaryObjectConstructionContext>(CC)) {
-      if (AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG()) {
-        const CXXBindTemporaryExpr *BTE =
-            TCC->getCXXBindTemporaryExpr();
-        const MaterializeTemporaryExpr *MTE =
-            TCC->getMaterializedTemporaryExpr();
-        if (!BTE) {
-          // FIXME: Lifetime extension for temporaries without destructors
-          // is not implemented yet.
-          MTE = nullptr;
-        }
-        if (MTE && MTE->getStorageDuration() != SD_FullExpression) {
-          // If the temporary is lifetime-extended, don't save the BTE,
-          // because we don't need a temporary destructor, but an automatic
-          // destructor.
-          BTE = nullptr;
-        }
-
-        if (BTE)
-          State = addObjectUnderConstruction(State, BTE, LC, V);
-
-        if (MTE)
-          State = addObjectUnderConstruction(State, MTE, LC, V);
-      }
-    }
-  }
-
-  return State;
 }
 
 
@@ -526,10 +524,9 @@ static void printObjectsUnderConstructionForContext(raw_ostream &Out,
   for (auto I : State->get<ObjectsUnderConstruction>()) {
     ConstructedObjectKey Key = I.first;
     SVal Value = I.second;
-    if (Key.second != LC)
+    if (Key.getLocationContext() != LC)
       continue;
-    Out << '(' << Key.second << ',' << Key.first << ") ";
-    Key.first->printPretty(Out, nullptr, PP);
+    Key.print(Out, nullptr, PP);
     Out << " : " << Value << NL;
   }
 }
@@ -752,9 +749,11 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
   Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
 
-void ExprEngine::ProcessInitializer(const CFGInitializer Init,
+void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
                                     ExplodedNode *Pred) {
-  const CXXCtorInitializer *BMI = Init.getInitializer();
+  const CXXCtorInitializer *BMI = CFGInit.getInitializer();
+  const Expr *Init = BMI->getInit()->IgnoreImplicit();
+  const LocationContext *LC = Pred->getLocationContext();
 
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 BMI->getSourceLocation(),
@@ -767,19 +766,21 @@ void ExprEngine::ProcessInitializer(const CFGInitializer Init,
   ProgramStateRef State = Pred->getState();
   SVal thisVal = State->getSVal(svalBuilder.getCXXThis(decl, stackFrame));
 
-  ExplodedNodeSet Tmp(Pred);
+  ExplodedNodeSet Tmp;
   SVal FieldLoc;
 
   // Evaluate the initializer, if necessary
   if (BMI->isAnyMemberInitializer()) {
     // Constructors build the object directly in the field,
     // but non-objects must be copied in from the initializer.
-    if (const auto *CtorExpr = findDirectConstructorForCurrentCFGElement()) {
-      assert(BMI->getInit()->IgnoreImplicit() == CtorExpr);
-      (void)CtorExpr;
+    if (getObjectUnderConstruction(State, BMI, LC)) {
       // The field was directly constructed, so there is no need to bind.
+      // But we still need to stop tracking the object under construction.
+      State = finishObjectConstruction(State, BMI, LC);
+      NodeBuilder Bldr(Pred, Tmp, *currBldrCtx);
+      PostStore PS(Init, LC, /*Loc*/ nullptr, /*tag*/ nullptr);
+      Bldr.generateNode(PS, State, Pred);
     } else {
-      const Expr *Init = BMI->getInit()->IgnoreImplicit();
       const ValueDecl *Field;
       if (BMI->isIndirectMemberInitializer()) {
         Field = BMI->getIndirectMember();
@@ -813,15 +814,12 @@ void ExprEngine::ProcessInitializer(const CFGInitializer Init,
         InitVal = State->getSVal(BMI->getInit(), stackFrame);
       }
 
-      assert(Tmp.size() == 1 && "have not generated any new nodes yet");
-      assert(*Tmp.begin() == Pred && "have not generated any new nodes yet");
-      Tmp.clear();
-
       PostInitializer PP(BMI, FieldLoc.getAsRegion(), stackFrame);
       evalBind(Tmp, Init, Pred, FieldLoc, InitVal, /*isInit=*/true, &PP);
     }
   } else {
     assert(BMI->isBaseInitializer() || BMI->isDelegatingInitializer());
+    Tmp.insert(Pred);
     // We already did all the work when visiting the CXXConstructExpr.
   }
 
@@ -830,8 +828,10 @@ void ExprEngine::ProcessInitializer(const CFGInitializer Init,
   PostInitializer PP(BMI, FieldLoc.getAsRegion(), stackFrame);
   ExplodedNodeSet Dst;
   NodeBuilder Bldr(Tmp, Dst, *currBldrCtx);
-  for (const auto I : Tmp)
-    Bldr.generateNode(PP, I->getState(), I);
+  for (const auto I : Tmp) {
+    ProgramStateRef State = I->getState();
+    Bldr.generateNode(PP, State, I);
+  }
 
   // Enqueue the new nodes onto the work list.
   Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
@@ -2194,11 +2194,11 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
     while (LC != ToLC) {
       assert(LC && "ToLC must be a parent of FromLC!");
       for (auto I : State->get<ObjectsUnderConstruction>())
-        if (I.first.second == LC) {
+        if (I.first.getLocationContext() == LC) {
           // The comment above only pardons us for not cleaning up a
           // CXXBindTemporaryExpr. If any other statements are found here,
           // it must be a separate problem.
-          assert(isa<CXXBindTemporaryExpr>(I.first.first));
+          assert(isa<CXXBindTemporaryExpr>(I.first.getStmt()));
           State = State->remove<ObjectsUnderConstruction>(I.first);
         }
 
