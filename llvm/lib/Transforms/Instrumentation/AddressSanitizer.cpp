@@ -1710,13 +1710,17 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
       return false;
     }
 
-    // Callbacks put into the CRT initializer/terminator sections
-    // should not be instrumented.
+    // On COFF, if the section name contains '$', it is highly likely that the
+    // user is using section sorting to create an array of globals similar to
+    // the way initialization callbacks are registered in .init_array and
+    // .CRT$XCU. The ATL also registers things in .ATL$__[azm]. Adding redzones
+    // to such globals is counterproductive, because the intent is that they
+    // will form an array, and out-of-bounds accesses are expected.
     // See https://github.com/google/sanitizers/issues/305
     // and http://msdn.microsoft.com/en-US/en-en/library/bb918180(v=vs.120).aspx
-    if (Section.startswith(".CRT")) {
-      LLVM_DEBUG(dbgs() << "Ignoring a global initializer callback: " << *G
-                        << "\n");
+    if (TargetTriple.isOSBinFormatCOFF() && Section.contains('$')) {
+      LLVM_DEBUG(dbgs() << "Ignoring global in sorted section (contains '$'): "
+                        << *G << "\n");
       return false;
     }
 

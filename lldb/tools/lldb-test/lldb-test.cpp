@@ -562,7 +562,7 @@ int opts::symbols::dumpSymbols(Debugger &Dbg) {
   for (const auto &File : InputFilenames) {
     outs() << "Module: " << File << "\n";
     ModuleSpec Spec{FileSpec(File, false)};
-    Spec.GetSymbolFileSpec().SetFile(File, false);
+    Spec.GetSymbolFileSpec().SetFile(File, false, FileSpec::Style::native);
 
     auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
     SymbolVendor *Vendor = ModulePtr->GetSymbolVendor();

@@ -351,7 +351,7 @@ void SymbolFileDWARFDebugMap::InitOSO() {
             so_symbol->GetType() == eSymbolTypeSourceFile &&
             oso_symbol->GetType() == eSymbolTypeObjectFile) {
           m_compile_unit_infos[i].so_file.SetFile(
-              so_symbol->GetName().AsCString(), false);
+              so_symbol->GetName().AsCString(), false, FileSpec::Style::native);
           m_compile_unit_infos[i].oso_path = oso_symbol->GetName();
           m_compile_unit_infos[i].oso_mod_time =
               llvm::sys::toTimePoint(oso_symbol->GetIntegerValue(0));

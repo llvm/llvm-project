@@ -41,16 +41,18 @@ checkedOp(T LHS, T RHS, F Op, bool Signed = true) {
 
 namespace llvm {
 
-/// Add two signed integers \p LHS and \p RHS, return wrapped result if
-/// available.
+/// Add two signed integers \p LHS and \p RHS.
+/// \return Optional of sum if no signed overflow occurred,
+/// \c None otherwise.
 template <typename T>
 typename std::enable_if<std::is_signed<T>::value, llvm::Optional<T>>::type
 checkedAdd(T LHS, T RHS) {
   return checkedOp(LHS, RHS, &llvm::APInt::sadd_ov);
 }
 
-/// Multiply two signed integers \p LHS and \p RHS, return wrapped result
-/// if available.
+/// Multiply two signed integers \p LHS and \p RHS.
+/// \return Optional of product if no signed overflow occurred,
+/// \c None otherwise.
 template <typename T>
 typename std::enable_if<std::is_signed<T>::value, llvm::Optional<T>>::type
 checkedMul(T LHS, T RHS) {
@@ -58,7 +60,8 @@ checkedMul(T LHS, T RHS) {
 }
 
 /// Multiply A and B, and add C to the resulting product.
-/// Return the value if available, None if overflowing.
+/// \return Optional of result if no signed overflow occurred,
+/// \c None otherwise.
 template <typename T>
 typename std::enable_if<std::is_signed<T>::value, llvm::Optional<T>>::type
 checkedMulAdd(T A, T B, T C) {
@@ -67,24 +70,27 @@ checkedMulAdd(T A, T B, T C) {
   return llvm::None;
 }
 
-/// Add two unsigned integers \p LHS and \p RHS, return wrapped result
-/// if available.
+/// Add two unsigned integers \p LHS and \p RHS.
+/// \return Optional of sum if no unsigned overflow occurred,
+/// \c None otherwise.
 template <typename T>
 typename std::enable_if<std::is_unsigned<T>::value, llvm::Optional<T>>::type
 checkedAddUnsigned(T LHS, T RHS) {
   return checkedOp(LHS, RHS, &llvm::APInt::uadd_ov, /*Signed=*/false);
 }
 
-/// Multiply two unsigned integers \p LHS and \p RHS, return wrapped result
-/// if available.
+/// Multiply two unsigned integers \p LHS and \p RHS.
+/// \return Optional of product if no unsigned overflow occurred,
+/// \c None otherwise.
 template <typename T>
 typename std::enable_if<std::is_unsigned<T>::value, llvm::Optional<T>>::type
 checkedMulUnsigned(T LHS, T RHS) {
   return checkedOp(LHS, RHS, &llvm::APInt::umul_ov, /*Signed=*/false);
 }
 
-/// Multiply unsigned A and B, and add C to the resulting product.
-/// Return the value if available, None if overflowing.
+/// Multiply unsigned integers A and B, and add C to the resulting product.
+/// \return Optional of result if no unsigned overflow occurred,
+/// \c None otherwise.
 template <typename T>
 typename std::enable_if<std::is_unsigned<T>::value, llvm::Optional<T>>::type
 checkedMulAddUnsigned(T A, T B, T C) {

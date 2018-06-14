@@ -120,7 +120,8 @@ Status TargetList::CreateTargetInternal(
   if (!user_exe_path.empty()) {
     ModuleSpecList module_specs;
     ModuleSpec module_spec;
-    module_spec.GetFileSpec().SetFile(user_exe_path, true);
+    module_spec.GetFileSpec().SetFile(user_exe_path, true,
+                                      FileSpec::Style::native);
 
     // Resolve the executable in case we are given a path to a application
     // bundle like a .app bundle on MacOSX

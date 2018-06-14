@@ -230,6 +230,10 @@ const FileSpec &FileSpec::operator=(const FileSpec &rhs) {
   return *this;
 }
 
+void FileSpec::SetFile(llvm::StringRef pathname, bool resolve) {
+  SetFile(pathname, resolve, m_style);
+}
+
 //------------------------------------------------------------------
 // Update the contents of this object with a new path. The path will be split
 // up into a directory and filename and stored as uniqued string values for
@@ -502,7 +506,7 @@ bool FileSpec::ResolvePath() {
     return true; // We have already resolved this path
 
   // SetFile(...) will set m_is_resolved correctly if it can resolve the path
-  SetFile(GetPath(false), true, m_style);
+  SetFile(GetPath(false), true);
   return m_is_resolved;
 }
 
@@ -719,14 +723,14 @@ void FileSpec::PrependPathComponent(llvm::StringRef component) {
 
   const bool resolve = false;
   if (m_filename.IsEmpty() && m_directory.IsEmpty()) {
-    SetFile(component, resolve, m_style);
+    SetFile(component, resolve);
     return;
   }
 
   std::string result =
       join_path_components(m_style, {component, m_directory.GetStringRef(),
                                      m_filename.GetStringRef()});
-  SetFile(result, resolve, m_style);
+  SetFile(result, resolve);
 }
 
 void FileSpec::PrependPathComponent(const FileSpec &new_path) {
@@ -744,7 +748,7 @@ void FileSpec::AppendPathComponent(llvm::StringRef component) {
       join_path_components(m_style, {m_directory.GetStringRef(),
                                      m_filename.GetStringRef(), component});
 
-  SetFile(result, false, m_style);
+  SetFile(result, false);
 }
 
 void FileSpec::AppendPathComponent(const FileSpec &new_path) {
@@ -755,8 +759,7 @@ bool FileSpec::RemoveLastPathComponent() {
   llvm::SmallString<64> current_path;
   GetPath(current_path, false);
   if (llvm::sys::path::has_parent_path(current_path, m_style)) {
-    SetFile(llvm::sys::path::parent_path(current_path, m_style), false,
-            m_style);
+    SetFile(llvm::sys::path::parent_path(current_path, m_style), false);
     return true;
   }
   return false;

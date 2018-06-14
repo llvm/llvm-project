@@ -4005,8 +4005,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                     // that looks like "/tmp/src//tmp/src/"
                     FileSpec so_dir(so_path, false);
                     if (!so_dir.Exists()) {
-                      so_dir.SetFile(&full_so_path[double_slash_pos + 1],
-                                     false);
+                      so_dir.SetFile(&full_so_path[double_slash_pos + 1], false,
+                                     FileSpec::Style::native);
                       if (so_dir.Exists()) {
                         // Trim off the incorrect path
                         full_so_path.erase(0, double_slash_pos + 1);
