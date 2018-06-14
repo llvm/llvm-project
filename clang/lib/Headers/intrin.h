@@ -170,12 +170,6 @@ void __cdecl _enable(void);
 long _InterlockedAddLargeStatistic(__int64 volatile *_Addend, long _Value);
 unsigned char _interlockedbittestandreset(long volatile *, long);
 unsigned char _interlockedbittestandset(long volatile *, long);
-long _InterlockedCompareExchange_HLEAcquire(long volatile *, long, long);
-long _InterlockedCompareExchange_HLERelease(long volatile *, long, long);
-__int64 _InterlockedcompareExchange64_HLEAcquire(__int64 volatile *, __int64,
-                                                 __int64);
-__int64 _InterlockedCompareExchange64_HLERelease(__int64 volatile *, __int64,
-                                                 __int64);
 void *_InterlockedCompareExchangePointer_HLEAcquire(void *volatile *, void *,
                                                     void *);
 void *_InterlockedCompareExchangePointer_HLERelease(void *volatile *, void *,
@@ -278,10 +272,6 @@ unsigned char _InterlockedCompareExchange128_np(__int64 volatile *_Destination,
                                                 __int64 *_ComparandResult);
 short _InterlockedCompareExchange16_np(short volatile *_Destination,
                                        short _Exchange, short _Comparand);
-__int64 _InterlockedCompareExchange64_HLEAcquire(__int64 volatile *, __int64,
-                                                 __int64);
-__int64 _InterlockedCompareExchange64_HLERelease(__int64 volatile *, __int64,
-                                                 __int64);
 __int64 _InterlockedCompareExchange64_np(__int64 volatile *_Destination,
                                          __int64 _Exchange, __int64 _Comparand);
 void *_InterlockedCompareExchangePointer_np(void *volatile *_Destination,

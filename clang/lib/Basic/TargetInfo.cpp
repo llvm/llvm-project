@@ -43,6 +43,9 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   ShortAccumWidth = ShortAccumAlign = 16;
   AccumWidth = AccumAlign = 32;
   LongAccumWidth = LongAccumAlign = 64;
+  ShortFractWidth = ShortFractAlign = 16;
+  FractWidth = FractAlign = 32;
+  LongFractWidth = LongFractAlign = 64;
   SuitableAlign = 64;
   DefaultAlignForAttributeAligned = 128;
   MinGlobalAlign = 0;

@@ -15,7 +15,7 @@
 
 # RUN: mkdir -p %t.dir
 # RUN: cp %t.archive.lib %t.dir/foo.lib
-# RUN: lld-link -dll -out:%t.dll -entry:main %t.main.obj %t.dir/./foo.lib -wholearchive:%t.dir/foo.lib -implib:%t.lib
+# RUN: lld-link -dll -out:%t.dll -entry:main -libpath:%t.dir %t.main.obj %t.dir/./foo.lib -wholearchive:foo.lib -implib:%t.lib
 # RUN: llvm-readobj %t.lib | FileCheck %s -check-prefix CHECK-IMPLIB
 
 # CHECK-IMPLIB: Symbol: __imp_exportfn3

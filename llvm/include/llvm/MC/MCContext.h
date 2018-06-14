@@ -550,6 +550,11 @@ namespace llvm {
                                             Source);
     }
 
+    /// Reports whether MD5 checksum usage is consistent (all-or-none).
+    bool isDwarfMD5UsageConsistent(unsigned CUID) const {
+      return getMCDwarfLineTable(CUID).isMD5UsageConsistent();
+    }
+
     /// Saves the information from the currently parsed dwarf .loc directive
     /// and sets DwarfLocSeen.  When the next instruction is assembled an entry
     /// in the line number table with this information and the address of the

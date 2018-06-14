@@ -58,6 +58,10 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
   EXPECT_FALSE(Quality.ReservedName);
   EXPECT_EQ(Quality.References, SymbolQualitySignals().References);
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Function);
+
+  Quality = {};
+  Quality.merge(CodeCompletionResult("if"));
+  EXPECT_EQ(Quality.Category, SymbolQualitySignals::Keyword);
 }
 
 TEST(QualityTests, SymbolRelevanceSignalExtraction) {
@@ -125,10 +129,12 @@ TEST(QualityTests, SymbolQualitySignalsSanity) {
   EXPECT_GT(WithReferences.evaluate(), Default.evaluate());
   EXPECT_GT(ManyReferences.evaluate(), WithReferences.evaluate());
 
-  SymbolQualitySignals Variable, Macro;
+  SymbolQualitySignals Keyword, Variable, Macro;
+  Keyword.Category = SymbolQualitySignals::Keyword;
   Variable.Category = SymbolQualitySignals::Variable;
   Macro.Category = SymbolQualitySignals::Macro;
   EXPECT_GT(Variable.evaluate(), Default.evaluate());
+  EXPECT_GT(Keyword.evaluate(), Variable.evaluate());
   EXPECT_LT(Macro.evaluate(), Default.evaluate());
 }
 

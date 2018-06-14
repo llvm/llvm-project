@@ -840,24 +840,24 @@ struct FormatStyle {
   enum BreakConstructorInitializersStyle {
     /// Break constructor initializers before the colon and after the commas.
     /// \code
-    /// Constructor()
-    ///     : initializer1(),
-    ///       initializer2()
+    ///    Constructor()
+    ///        : initializer1(),
+    ///          initializer2()
     /// \endcode
     BCIS_BeforeColon,
     /// Break constructor initializers before the colon and commas, and align
     /// the commas with the colon.
     /// \code
-    /// Constructor()
-    ///     : initializer1()
-    ///     , initializer2()
+    ///    Constructor()
+    ///        : initializer1()
+    ///        , initializer2()
     /// \endcode
     BCIS_BeforeComma,
     /// Break constructor initializers after the colon and commas.
     /// \code
-    /// Constructor() :
-    ///     initializer1(),
-    ///     initializer2()
+    ///    Constructor() :
+    ///        initializer1(),
+    ///        initializer2()
     /// \endcode
     BCIS_AfterColon
   };
@@ -897,25 +897,27 @@ struct FormatStyle {
   enum BreakInheritanceListStyle {
     /// Break inheritance list before the colon and after the commas.
     /// \code
-    /// class Foo
-    ///     : Base1,
-    ///       Base2
-    /// {};
+    ///    class Foo
+    ///        : Base1,
+    ///          Base2
+    ///    {};
     /// \endcode
     BILS_BeforeColon,
     /// Break inheritance list before the colon and commas, and align
     /// the commas with the colon.
     /// \code
-    /// Constructor()
-    ///     : initializer1()
-    ///     , initializer2()
+    ///    class Foo
+    ///        : Base1
+    ///        , Base2
+    ///    {};
     /// \endcode
     BILS_BeforeComma,
     /// Break inheritance list after the colon and commas.
     /// \code
-    /// Constructor() :
-    ///     initializer1(),
-    ///     initializer2()
+    ///    class Foo :
+    ///        Base1,
+    ///        Base2
+    ///    {};
     /// \endcode
     BILS_AfterColon
   };
