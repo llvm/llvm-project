@@ -59,11 +59,11 @@ class DispatchStage : public Stage {
   unsigned DispatchWidth;
   unsigned AvailableEntries;
   unsigned CarryOver;
-  Scheduler *SC;
   Backend *Owner;
   const llvm::MCSubtargetInfo &STI;
   RetireControlUnit &RCU;
   RegisterFile &PRF;
+  Scheduler &SC;
 
   bool checkRCU(const InstRef &IR);
   bool checkPRF(const InstRef &IR);
@@ -93,9 +93,9 @@ public:
   DispatchStage(Backend *B, const llvm::MCSubtargetInfo &Subtarget,
                 const llvm::MCRegisterInfo &MRI, unsigned RegisterFileSize,
                 unsigned MaxDispatchWidth, RetireControlUnit &R,
-                RegisterFile &F, Scheduler *Sched)
+                RegisterFile &F, Scheduler &Sched)
       : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
-        CarryOver(0U), SC(Sched), Owner(B), STI(Subtarget), RCU(R), PRF(F) {}
+        CarryOver(0U), Owner(B), STI(Subtarget), RCU(R), PRF(F), SC(Sched) {}
 
   virtual bool isReady() const override final { return isRCUEmpty(); }
   virtual void preExecute(const InstRef &IR) override final;

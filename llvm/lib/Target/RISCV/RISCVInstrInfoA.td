@@ -75,3 +75,23 @@ defm AMOMAX_D   : AMO_rr_aq_rl<0b10100, 0b011, "amomax.d">;
 defm AMOMINU_D  : AMO_rr_aq_rl<0b11000, 0b011, "amominu.d">;
 defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">;
 } // Predicates = [HasStedExtA, IsRV64]
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtA] in {
+
+/// Atomic loads and stores
+
+// Fences will be inserted for atomic load/stores according to the logic in
+// RISCVTargetLowering::{emitLeadingFence,emitTrailingFence}.
+
+defm : LdPat<atomic_load_8,  LB>;
+defm : LdPat<atomic_load_16, LH>;
+defm : LdPat<atomic_load_32, LW>;
+
+defm : StPat<atomic_store_8,  SB, GPR>;
+defm : StPat<atomic_store_16,  SH, GPR>;
+defm : StPat<atomic_store_32, SW, GPR>;
+} // Predicates = [HasStdExtF]

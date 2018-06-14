@@ -798,6 +798,22 @@ defm BUFFER_LOAD_DWORDX3 : MUBUF_Pseudo_Loads <
 defm BUFFER_LOAD_DWORDX4 : MUBUF_Pseudo_Loads <
   "buffer_load_dwordx4", VReg_128, v4i32, mubuf_load
 >;
+
+// This is not described in AMD documentation,
+// but 'lds' versions of these opcodes are available
+// in at least GFX8+ chips. See Bug 37653.
+let SubtargetPredicate = isVI in {
+defm BUFFER_LOAD_DWORDX2_LDS : MUBUF_Pseudo_Loads <
+  "buffer_load_dwordx2", VReg_64, v2i32, null_frag, 0, 1
+>;
+defm BUFFER_LOAD_DWORDX3_LDS : MUBUF_Pseudo_Loads <
+  "buffer_load_dwordx3", VReg_96, untyped, null_frag, 0, 1
+>;
+defm BUFFER_LOAD_DWORDX4_LDS : MUBUF_Pseudo_Loads <
+  "buffer_load_dwordx4", VReg_128, v4i32, null_frag, 0, 1
+>;
+}
+
 defm BUFFER_STORE_BYTE : MUBUF_Pseudo_Stores <
   "buffer_store_byte", VGPR_32, i32, truncstorei8_global
 >;
@@ -1934,9 +1950,9 @@ defm BUFFER_LOAD_SBYTE          : MUBUF_Real_AllAddr_Lds_vi <0x11>;
 defm BUFFER_LOAD_USHORT         : MUBUF_Real_AllAddr_Lds_vi <0x12>;
 defm BUFFER_LOAD_SSHORT         : MUBUF_Real_AllAddr_Lds_vi <0x13>;
 defm BUFFER_LOAD_DWORD          : MUBUF_Real_AllAddr_Lds_vi <0x14>;
-defm BUFFER_LOAD_DWORDX2        : MUBUF_Real_AllAddr_vi <0x15>;
-defm BUFFER_LOAD_DWORDX3        : MUBUF_Real_AllAddr_vi <0x16>;
-defm BUFFER_LOAD_DWORDX4        : MUBUF_Real_AllAddr_vi <0x17>;
+defm BUFFER_LOAD_DWORDX2        : MUBUF_Real_AllAddr_Lds_vi <0x15>;
+defm BUFFER_LOAD_DWORDX3        : MUBUF_Real_AllAddr_Lds_vi <0x16>;
+defm BUFFER_LOAD_DWORDX4        : MUBUF_Real_AllAddr_Lds_vi <0x17>;
 defm BUFFER_STORE_BYTE          : MUBUF_Real_AllAddr_vi <0x18>;
 defm BUFFER_STORE_BYTE_D16_HI   : MUBUF_Real_AllAddr_vi <0x19>;
 defm BUFFER_STORE_SHORT         : MUBUF_Real_AllAddr_vi <0x1a>;

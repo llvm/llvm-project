@@ -16,8 +16,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "PlatformDarwin.h"
-#include "PlatformiOSSimulatorCoreSimulatorSupport.h"
+#include "Plugins/Platform/MacOSX/PlatformDarwin.h"
+#include "Plugins/Platform/MacOSX/objcxx/PlatformiOSSimulatorCoreSimulatorSupport.h"
 #include "lldb/Utility/FileSpec.h"
 
 #include "llvm/ADT/Optional.h"

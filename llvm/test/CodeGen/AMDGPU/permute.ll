@@ -196,4 +196,26 @@ bb:
   ret void
 }
 
+; GCN-LABEL: {{^}}known_ffff8004:
+; GCN-DAG: v_mov_b32_e32 [[MASK:v[0-9]+]], 0xffff0500
+; GCN-DAG: v_mov_b32_e32 [[RES:v[0-9]+]], 0xffff8004
+; GCN: v_perm_b32 v{{[0-9]+}}, {{[vs][0-9]+}}, {{[vs][0-9]+}}, [[MASK]]
+; GCN: store_dword v[{{[0-9:]+}}], [[RES]]{{$}}
+define amdgpu_kernel void @known_ffff8004(i32 addrspace(1)* nocapture %arg, i32 %arg1) {
+bb:
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr i32, i32 addrspace(1)* %arg, i32 %id
+  %load = load i32, i32 addrspace(1)* %gep, align 4
+  %mask1 = or i32 %arg1, 4
+  %mask2 = or i32 %load, 32768 ; 0x8000
+  %and = and i32 %mask1, 16711935     ; 0x00ff00ff
+  %tmp1 = and i32 %mask2, 4294967040 ; 0xffffff00
+  %tmp2 = or i32 %tmp1, 4294901760   ; 0xffff0000
+  %tmp3 = or i32 %tmp2, %and
+  store i32 %tmp3, i32 addrspace(1)* %gep, align 4
+  %v = and i32 %tmp3, 4294934532 ; 0xffff8004
+  store i32 %v, i32 addrspace(1)* %arg, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()

@@ -64,7 +64,7 @@ RegisterAliasingTrackerCache::RegisterAliasingTrackerCache(
       EmptyRegisters(RegInfo.getNumRegs()) {}
 
 const RegisterAliasingTracker &
-RegisterAliasingTrackerCache::getRegister(llvm::MCPhysReg PhysReg) {
+RegisterAliasingTrackerCache::getRegister(llvm::MCPhysReg PhysReg) const {
   auto &Found = Registers[PhysReg];
   if (!Found)
     Found.reset(new RegisterAliasingTracker(RegInfo, PhysReg));
@@ -72,7 +72,7 @@ RegisterAliasingTrackerCache::getRegister(llvm::MCPhysReg PhysReg) {
 }
 
 const RegisterAliasingTracker &
-RegisterAliasingTrackerCache::getRegisterClass(unsigned RegClassIndex) {
+RegisterAliasingTrackerCache::getRegisterClass(unsigned RegClassIndex) const {
   auto &Found = RegisterClasses[RegClassIndex];
   const auto &RegClass = RegInfo.getRegClass(RegClassIndex);
   if (!Found)

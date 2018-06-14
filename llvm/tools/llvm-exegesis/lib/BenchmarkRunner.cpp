@@ -23,6 +23,9 @@
 
 namespace exegesis {
 
+BenchmarkFailure::BenchmarkFailure(const llvm::Twine &S)
+    : llvm::StringError(S, llvm::inconvertibleErrorCode()) {}
+
 BenchmarkRunner::InstructionFilter::~InstructionFilter() = default;
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State)
@@ -38,14 +41,13 @@ BenchmarkRunner::run(unsigned Opcode, const InstructionFilter &Filter,
                      unsigned NumRepetitions) {
   // Ignore instructions that we cannot run.
   if (State.getInstrInfo().get(Opcode).isPseudo())
-    return llvm::make_error<llvm::StringError>("Unsupported opcode: isPseudo",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::make_error<BenchmarkFailure>("Unsupported opcode: isPseudo");
 
   if (llvm::Error E = Filter.shouldRun(State, Opcode))
     return std::move(E);
 
   llvm::Expected<std::vector<BenchmarkConfiguration>> ConfigurationOrError =
-      createConfigurations(RATC, Opcode);
+      createConfigurations(Opcode);
 
   if (llvm::Error E = ConfigurationOrError.takeError())
     return std::move(E);
@@ -60,7 +62,6 @@ InstructionBenchmark
 BenchmarkRunner::runOne(const BenchmarkConfiguration &Configuration,
                         unsigned Opcode, unsigned NumRepetitions) const {
   InstructionBenchmark InstrBenchmark;
-  InstrBenchmark.Key.OpcodeName = State.getInstrInfo().getName(Opcode);
   InstrBenchmark.Mode = getMode();
   InstrBenchmark.CpuName = State.getCpuName();
   InstrBenchmark.LLVMTriple = State.getTriple();

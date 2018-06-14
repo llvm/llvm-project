@@ -784,75 +784,6 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode * N) const {
   }
 }
 
-bool AMDGPUTargetLowering::isSDNodeSourceOfDivergence(const SDNode * N,
-  FunctionLoweringInfo * FLI, DivergenceAnalysis * DA) const
-{
-  switch (N->getOpcode()) {
-    case ISD::Register:
-    case ISD::CopyFromReg:
-    {
-      const RegisterSDNode *R = nullptr;
-      if (N->getOpcode() == ISD::Register) {
-        R = dyn_cast<RegisterSDNode>(N);
-      }
-      else {
-        R = dyn_cast<RegisterSDNode>(N->getOperand(1));
-      }
-      if (R)
-      {
-        const MachineFunction * MF = FLI->MF;
-        const SISubtarget &ST = MF->getSubtarget<SISubtarget>();
-        const MachineRegisterInfo &MRI = MF->getRegInfo();
-        const SIRegisterInfo &TRI = ST.getInstrInfo()->getRegisterInfo();
-        unsigned Reg = R->getReg();
-        if (TRI.isPhysicalRegister(Reg))
-          return TRI.isVGPR(MRI, Reg);
-
-        if (MRI.isLiveIn(Reg)) {
-          // workitem.id.x workitem.id.y workitem.id.z
-          // Any VGPR formal argument is also considered divergent
-          if ((MRI.getLiveInPhysReg(Reg) == AMDGPU::T0_X) ||
-              (MRI.getLiveInPhysReg(Reg) == AMDGPU::T0_Y) ||
-              (MRI.getLiveInPhysReg(Reg) == AMDGPU::T0_Z) ||
-              (TRI.isVGPR(MRI, Reg)))
-              return true;
-          // Formal arguments of non-entry functions
-          // are conservatively considered divergent
-          else if (!AMDGPU::isEntryFunctionCC(FLI->Fn->getCallingConv()))
-            return true;
-        }
-        return !DA || DA->isDivergent(FLI->getValueFromVirtualReg(Reg));
-      }
-    }
-    break;
-    case ISD::LOAD: {
-      const LoadSDNode *L = dyn_cast<LoadSDNode>(N);
-      if (L->getMemOperand()->getAddrSpace() ==
-          Subtarget->getAMDGPUAS().PRIVATE_ADDRESS)
-        return true;
-    } break;
-    case ISD::CALLSEQ_END:
-    return true;
-    break;
-    case ISD::INTRINSIC_WO_CHAIN:
-    {
-
-    }
-      return AMDGPU::isIntrinsicSourceOfDivergence(
-      cast<ConstantSDNode>(N->getOperand(0))->getZExtValue());
-    case ISD::INTRINSIC_W_CHAIN:
-      return AMDGPU::isIntrinsicSourceOfDivergence(
-      cast<ConstantSDNode>(N->getOperand(1))->getZExtValue());
-    // In some cases intrinsics that are a source of divergence have been
-    // lowered to AMDGPUISD so we also need to check those too.
-    case AMDGPUISD::INTERP_MOV:
-    case AMDGPUISD::INTERP_P1:
-    case AMDGPUISD::INTERP_P2:
-      return true;
-  }
-  return false;
-}
-
 //===---------------------------------------------------------------------===//
 // Target Properties
 //===---------------------------------------------------------------------===//
@@ -4386,18 +4317,19 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     unsigned Sel = CMask->getZExtValue();
 
     for (unsigned I = 0; I < 32; I += 8) {
-      unsigned ByteMask = 0xff << I;
       unsigned SelBits = Sel & 0xff;
       if (SelBits < 4) {
-        Known.One |= RHSKnown.One & ByteMask;
-        Known.Zero |= RHSKnown.Zero & ByteMask;
+        SelBits *= 8;
+        Known.One |= ((RHSKnown.One.getZExtValue() >> SelBits) & 0xff) << I;
+        Known.Zero |= ((RHSKnown.Zero.getZExtValue() >> SelBits) & 0xff) << I;
       } else if (SelBits < 7) {
-        Known.One |= LHSKnown.One & ByteMask;
-        Known.Zero |= LHSKnown.Zero & ByteMask;
+        SelBits = (SelBits & 3) * 8;
+        Known.One |= ((LHSKnown.One.getZExtValue() >> SelBits) & 0xff) << I;
+        Known.Zero |= ((LHSKnown.Zero.getZExtValue() >> SelBits) & 0xff) << I;
       } else if (SelBits == 0x0c) {
-        Known.Zero |= ByteMask;
+        Known.Zero |= 0xff << I;
       } else if (SelBits > 0x0c) {
-        Known.One |= ByteMask;
+        Known.One |= 0xff << I;
       }
       Sel >>= 8;
     }

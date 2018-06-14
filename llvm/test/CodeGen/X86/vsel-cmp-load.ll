@@ -118,9 +118,6 @@ define <8 x i32> @slt_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
 ; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm3
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
 ; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm2
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpcmpgtd %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -128,8 +125,6 @@ define <8 x i32> @slt_zero(<8 x i8>* %p, <8 x i32> %x, <8 x i32> %y) {
 ; AVX2-LABEL: slt_zero:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovsxbd (%rdi), %ymm2
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
@@ -251,8 +246,6 @@ define <4 x double> @sgt_zero_fp_select(<4 x i8>* %p, <4 x double> %x, <4 x doub
   ret <4 x double> %sel
 }
 
-; FIXME: The compare with 0 for AVX2 should be eliminated.
-
 define <8 x float> @slt_zero_fp_select(<8 x i16>* %p, <8 x float> %x, <8 x float> %y) {
 ; AVX1-LABEL: slt_zero_fp_select:
 ; AVX1:       # %bb.0:
@@ -265,8 +258,6 @@ define <8 x float> @slt_zero_fp_select(<8 x i16>* %p, <8 x float> %x, <8 x float
 ; AVX2-LABEL: slt_zero_fp_select:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovsxwd (%rdi), %ymm2
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;

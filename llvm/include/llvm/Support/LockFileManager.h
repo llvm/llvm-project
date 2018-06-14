@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/FileSystem.h"
 #include <system_error>
 #include <utility> // for std::pair
 
@@ -54,7 +53,7 @@ public:
 private:
   SmallString<128> FileName;
   SmallString<128> LockFileName;
-  Optional<sys::fs::TempFile> UniqueLockFile;
+  SmallString<128> UniqueLockFileName;
 
   Optional<std::pair<std::string, int> > Owner;
   std::error_code ErrorCode;

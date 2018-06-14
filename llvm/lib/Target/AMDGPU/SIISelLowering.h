@@ -297,6 +297,9 @@ public:
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
+
+  bool isSDNodeSourceOfDivergence(const SDNode *N,
+    FunctionLoweringInfo *FLI, DivergenceAnalysis *DA) const override;
 };
 
 } // End namespace llvm

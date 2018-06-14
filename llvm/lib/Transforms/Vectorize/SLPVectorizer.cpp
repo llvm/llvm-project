@@ -423,7 +423,6 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL) {
   unsigned Opcode = Res.Opcode;
   if (!Res.HasAltOpcodes)
     return InstructionsState(VL[0], Opcode, false);
-  auto *OpInst = cast<Instruction>(VL[0]);
   unsigned AltOpcode = getAltOpcode(Opcode);
   // Examine each element in the list instructions VL to determine
   // if some operations there could be considered as an alternative
@@ -431,13 +430,10 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL) {
   for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
     auto *I = cast<Instruction>(VL[Cnt]);
     unsigned InstOpcode = I->getOpcode();
-    if ((Res.HasAltOpcodes &&
-         InstOpcode != (isOdd(Cnt) ? AltOpcode : Opcode)) ||
-        (!Res.HasAltOpcodes && InstOpcode != Opcode)) {
-      return InstructionsState(OpInst, 0, false);
-    }
+    if (InstOpcode != (isOdd(Cnt) ? AltOpcode : Opcode))
+      return InstructionsState(VL[0], 0, false);
   }
-  return InstructionsState(OpInst, Opcode, Res.HasAltOpcodes);
+  return InstructionsState(VL[0], Opcode, Res.HasAltOpcodes);
 }
 
 /// \returns true if all of the values in \p VL have the same type or false

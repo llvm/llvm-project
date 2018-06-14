@@ -631,31 +631,47 @@ int TargetTransformInfo::getInstructionLatency(const Instruction *I) const {
 }
 
 static bool isReverseVectorMask(ArrayRef<int> Mask) {
-  for (unsigned i = 0, MaskSize = Mask.size(); i < MaskSize; ++i)
-    if (Mask[i] >= 0 && Mask[i] != (int)(MaskSize - 1 - i))
-      return false;
-  return true;
+  bool ReverseLHS = true;
+  bool ReverseRHS = true;
+  unsigned MaskSize = Mask.size();
+
+  for (unsigned i = 0; i < MaskSize && (ReverseLHS || ReverseRHS); ++i) {
+    if (Mask[i] < 0)
+      continue;
+    ReverseLHS &= (Mask[i] == (int)(MaskSize - 1 - i));
+    ReverseRHS &= (Mask[i] == (int)(MaskSize + MaskSize - 1 - i));
+  }
+  return ReverseLHS || ReverseRHS;
 }
 
 static bool isSingleSourceVectorMask(ArrayRef<int> Mask) {
-  bool Vec0 = false;
-  bool Vec1 = false;
-  for (unsigned i = 0, NumVecElts = Mask.size(); i < NumVecElts; ++i) {
-    if (Mask[i] >= 0) {
-      if ((unsigned)Mask[i] >= NumVecElts)
-        Vec1 = true;
-      else
-        Vec0 = true;
-    }
+  bool ShuffleLHS = false;
+  bool ShuffleRHS = false;
+  unsigned MaskSize = Mask.size();
+
+  for (unsigned i = 0; i < MaskSize && !(ShuffleLHS && ShuffleRHS); ++i) {
+    if (Mask[i] < 0)
+      continue;
+    if ((unsigned)Mask[i] >= MaskSize)
+      ShuffleRHS = true;
+    else
+      ShuffleLHS = true;
   }
-  return !(Vec0 && Vec1);
+  return !(ShuffleLHS && ShuffleRHS);
 }
 
 static bool isZeroEltBroadcastVectorMask(ArrayRef<int> Mask) {
-  for (unsigned i = 0; i < Mask.size(); ++i)
-    if (Mask[i] > 0)
-      return false;
-  return true;
+  bool BroadcastLHS = true;
+  bool BroadcastRHS = true;
+  unsigned MaskSize = Mask.size();
+
+  for (unsigned i = 0; i < MaskSize && (BroadcastLHS || BroadcastRHS); ++i) {
+    if (Mask[i] < 0)
+      continue;
+    BroadcastLHS &= (Mask[i] == 0);
+    BroadcastRHS &= (Mask[i] == (int)MaskSize);
+  }
+  return BroadcastLHS || BroadcastRHS;
 }
 
 static bool isIdentityVectorMask(ArrayRef<int> Mask) {

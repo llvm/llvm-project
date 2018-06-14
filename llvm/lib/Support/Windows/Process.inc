@@ -209,55 +209,65 @@ static std::error_code WildcardExpand(const wchar_t *Arg,
   return ec;
 }
 
-static std::error_code ExpandShortFileName(const wchar_t *Arg,
-                                           SmallVectorImpl<const char *> &Args,
-                                           BumpPtrAllocator &Alloc) {
-  SmallVector<wchar_t, MAX_PATH> LongPath;
-  DWORD Length = GetLongPathNameW(Arg, LongPath.data(), LongPath.capacity());
+static std::error_code GetExecutableName(SmallVectorImpl<char> &Filename) {
+  // The first argument may contain just the name of the executable (e.g.,
+  // "clang") rather than the full path, so swap it with the full path.
+  wchar_t ModuleName[MAX_PATH];
+  size_t Length = ::GetModuleFileNameW(NULL, ModuleName, MAX_PATH);
+  if (Length == 0 || Length == MAX_PATH) {
+    return mapWindowsError(GetLastError());
+  }
+
+  // If the first argument is a shortened (8.3) name (which is possible even
+  // if we got the module name), the driver will have trouble distinguishing it
+  // (e.g., clang.exe v. clang++.exe), so expand it now.
+  Length = GetLongPathNameW(ModuleName, ModuleName, MAX_PATH);
   if (Length == 0)
     return mapWindowsError(GetLastError());
-  if (Length > LongPath.capacity()) {
+  if (Length > MAX_PATH) {
     // We're not going to try to deal with paths longer than MAX_PATH, so we'll
     // treat this as an error.  GetLastError() returns ERROR_SUCCESS, which
     // isn't useful, so we'll hardcode an appropriate error value.
     return mapWindowsError(ERROR_INSUFFICIENT_BUFFER);
   }
-  LongPath.set_size(Length);
-  return ConvertAndPushArg(LongPath.data(), Args, Alloc);
+
+  std::error_code EC = windows::UTF16ToUTF8(ModuleName, Length, Filename);
+  if (EC)
+    return EC;
+
+  StringRef Base = sys::path::filename(Filename.data());
+  Filename.assign(Base.begin(), Base.end());
+  return std::error_code();
 }
 
 std::error_code
 windows::GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
                                  BumpPtrAllocator &Alloc) {
   int ArgCount;
-  wchar_t **UnicodeCommandLine =
-      CommandLineToArgvW(GetCommandLineW(), &ArgCount);
+  std::unique_ptr<wchar_t *[], decltype(&LocalFree)> UnicodeCommandLine{
+    CommandLineToArgvW(GetCommandLineW(), &ArgCount), &LocalFree};
   if (!UnicodeCommandLine)
     return mapWindowsError(::GetLastError());
 
+  std::error_code EC;
+
   Args.reserve(ArgCount);
-  std::error_code ec;
 
-  // The first argument may contain just the name of the executable (e.g.,
-  // "clang") rather than the full path, so swap it with the full path.
-  wchar_t ModuleName[MAX_PATH];
-  int Length = ::GetModuleFileNameW(NULL, ModuleName, MAX_PATH);
-  if (0 < Length && Length < MAX_PATH)
-    UnicodeCommandLine[0] = ModuleName;
-
-  // If the first argument is a shortened (8.3) name (which is possible even
-  // if we got the module name), the driver will have trouble distinguishing it
-  // (e.g., clang.exe v. clang++.exe), so expand it now.
-  ec = ExpandShortFileName(UnicodeCommandLine[0], Args, Alloc);
-
-  for (int i = 1; i < ArgCount && !ec; ++i) {
-    ec = WildcardExpand(UnicodeCommandLine[i], Args, Alloc);
-    if (ec)
-      break;
+  for (int I = 0; I < ArgCount; ++I) {
+    EC = WildcardExpand(UnicodeCommandLine[I], Args, Alloc);
+    if (EC)
+      return EC;
   }
 
-  LocalFree(UnicodeCommandLine);
-  return ec;
+  SmallVector<char, MAX_PATH> Arg0(Args[0], Args[0] + strlen(Args[0]));
+  SmallVector<char, MAX_PATH> Filename;
+  sys::path::remove_filename(Arg0);
+  EC = GetExecutableName(Filename);
+  if (EC)
+    return EC;
+  sys::path::append(Arg0, Filename);
+  Args[0] = AllocateString(Arg0, Alloc);
+  return std::error_code();
 }
 
 std::error_code Process::FixupStandardFileDescriptors() {

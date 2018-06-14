@@ -814,7 +814,7 @@ public:
   unsigned getNumTrees() const { return Trees.size(); }
   const TreePatternNodePtr &getTree(unsigned i) const { return Trees[i]; }
   void setTree(unsigned i, TreePatternNodePtr Tree) { Trees[i] = Tree; }
-  TreePatternNodePtr getOnlyTree() const {
+  const TreePatternNodePtr &getOnlyTree() const {
     assert(Trees.size() == 1 && "Doesn't have exactly one pattern!");
     return Trees[0];
   }

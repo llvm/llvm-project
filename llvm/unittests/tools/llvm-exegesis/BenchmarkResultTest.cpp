@@ -63,7 +63,6 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
 
   InstructionBenchmark ToDisk;
 
-  ToDisk.Key.OpcodeName = "name";
   ToDisk.Key.Instructions.push_back(llvm::MCInstBuilder(kInstrId)
                                         .addReg(kReg1Id)
                                         .addReg(kReg2Id)
@@ -91,7 +90,6 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
     const auto FromDisk =
         ExitOnErr(InstructionBenchmark::readYaml(Ctx, Filename));
 
-    EXPECT_EQ(FromDisk.Key.OpcodeName, ToDisk.Key.OpcodeName);
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
     EXPECT_EQ(FromDisk.Key.Config, ToDisk.Key.Config);
@@ -109,7 +107,6 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
         ExitOnErr(InstructionBenchmark::readYamls(Ctx, Filename));
     ASSERT_EQ(FromDiskVector.size(), size_t{1});
     const auto FromDisk = FromDiskVector[0];
-    EXPECT_EQ(FromDisk.Key.OpcodeName, ToDisk.Key.OpcodeName);
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
     EXPECT_EQ(FromDisk.Key.Config, ToDisk.Key.Config);
