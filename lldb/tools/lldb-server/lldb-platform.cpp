@@ -193,7 +193,7 @@ int main_platform(int argc, char *argv[]) {
 
     case 'f': // Socket file
       if (optarg && optarg[0])
-        socket_file.SetFile(optarg, false);
+        socket_file.SetFile(optarg, false, FileSpec::Style::native);
       break;
 
     case 'p': {

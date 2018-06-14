@@ -1649,7 +1649,7 @@ bool ClangASTContext::RecordHasFields(const RecordDecl *record_decl) {
   return false;
 }
 
-#pragma mark Objective C Classes
+#pragma mark Objective-C Classes
 
 CompilerType ClangASTContext::CreateObjCClass(const char *name,
                                               DeclContext *decl_ctx,

@@ -19,7 +19,7 @@
 // Project includes
 #include "lldb/Utility/ConstString.h"
 
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -490,8 +490,7 @@ public:
   ///     If \b true, then we will try to resolve links the path using
   ///     the static FileSpec::Resolve.
   //------------------------------------------------------------------
-  void SetFile(llvm::StringRef path, bool resolve_path,
-               Style style = Style::native);
+  void SetFile(llvm::StringRef path, bool resolve_path, Style style);
 
   void SetFile(llvm::StringRef path, bool resolve_path,
                const llvm::Triple &Triple);
@@ -566,6 +565,11 @@ public:
 
 protected:
   //------------------------------------------------------------------
+  // Convenience method for setting the file without changing the style.
+  //------------------------------------------------------------------
+  void SetFile(llvm::StringRef path, bool resolve_path);
+
+  //------------------------------------------------------------------
   // Member variables
   //------------------------------------------------------------------
   ConstString m_directory;            ///< The uniqued directory path
@@ -605,6 +609,6 @@ template <> struct format_provider<lldb_private::FileSpec> {
   static void format(const lldb_private::FileSpec &F, llvm::raw_ostream &Stream,
                      StringRef Style);
 };
-}
+} // namespace llvm
 
 #endif // liblldb_FileSpec_h_

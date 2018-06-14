@@ -215,6 +215,14 @@ class ObjCDataFormatterTestCase(TestBase):
                              '(NSNumber *) num_at3 = ', ' (double)12.5',
                              '(NSNumber *) num_at4 = ', ' (double)-12.5'])
 
+    def nsdecimalnumber_data_formatter_commands(self):
+        self.expect('frame variable decimal_number decimal_neg_number decimal_one decimal_zero decimal_nan',
+                    substrs=['(NSDecimalNumber *) decimal_number = ', '123456 x 10^-10',
+                             '(NSDecimalNumber *) decimal_neg_number = ', '-123456 x 10^10',
+                             '(NSDecimalNumber *) decimal_one = ', '1 x 10^0',
+                             '(NSDecimalNumber *) decimal_zero = ', '0',
+                             '(NSDecimalNumber *) decimal_nan = ', 'NaN'])
+
     def nscontainers_data_formatter_commands(self):
         self.expect(
             'frame variable newArray newDictionary newMutableDictionary cfarray_ref mutable_array_ref',

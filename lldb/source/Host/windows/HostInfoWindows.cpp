@@ -97,7 +97,7 @@ FileSpec HostInfoWindows::GetProgramFileSpec() {
     ::GetModuleFileNameW(NULL, buffer.data(), buffer.size());
     std::string path;
     llvm::convertWideToUTF8(buffer.data(), path);
-    m_program_filespec.SetFile(path, false);
+    m_program_filespec.SetFile(path, false, FileSpec::Style::native);
   });
   return m_program_filespec;
 }

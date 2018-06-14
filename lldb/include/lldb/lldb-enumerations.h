@@ -626,7 +626,7 @@ enum SectionType {
   eSectionTypeDebug,
   eSectionTypeZeroFill,
   eSectionTypeDataObjCMessageRefs, // Pointer to function pointer + selector
-  eSectionTypeDataObjCCFStrings, // Objective C const CFString/NSString objects
+  eSectionTypeDataObjCCFStrings, // Objective-C const CFString/NSString objects
   eSectionTypeDWARFDebugAbbrev,
   eSectionTypeDWARFDebugAddr,
   eSectionTypeDWARFDebugAranges,

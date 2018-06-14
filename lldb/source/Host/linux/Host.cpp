@@ -190,7 +190,8 @@ static bool GetProcessAndStatInfo(::pid_t pid,
     return false;
 
   process_info.SetProcessID(pid);
-  process_info.GetExecutableFile().SetFile(PathRef, false);
+  process_info.GetExecutableFile().SetFile(PathRef, false,
+                                           FileSpec::Style::native);
 
   llvm::StringRef Rest = Environ->getBuffer();
   while (!Rest.empty()) {

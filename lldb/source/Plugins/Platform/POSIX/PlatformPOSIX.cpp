@@ -130,7 +130,8 @@ PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
     // on the current path variables
     if (!resolved_module_spec.GetFileSpec().Exists()) {
       resolved_module_spec.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
-      resolved_module_spec.GetFileSpec().SetFile(exe_path, true);
+      resolved_module_spec.GetFileSpec().SetFile(exe_path, true,
+                                                 FileSpec::Style::native);
     }
 
     if (!resolved_module_spec.GetFileSpec().Exists())

@@ -409,7 +409,7 @@ bool PlatformRemoteDarwinDevice::GetFileInSDK(const char *platform_file_path,
 
       const char *paths_to_try[] = {"Symbols", "", "Symbols.Internal", nullptr};
       for (size_t i = 0; paths_to_try[i] != nullptr; i++) {
-        local_file.SetFile(sdkroot_path, false);
+        local_file.SetFile(sdkroot_path, false, FileSpec::Style::native);
         if (paths_to_try[i][0] != '\0')
           local_file.AppendPathComponent(paths_to_try[i]);
         local_file.AppendPathComponent(platform_file_path);
@@ -442,7 +442,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       ::snprintf(resolved_path, sizeof(resolved_path), "%s/%s", os_version_dir,
                  platform_file_path);
 
-      local_file.SetFile(resolved_path, true);
+      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
       if (local_file.Exists()) {
         if (log) {
           log->Printf("Found a copy of %s in the DeviceSupport dir %s",
@@ -454,7 +454,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       ::snprintf(resolved_path, sizeof(resolved_path), "%s/Symbols.Internal/%s",
                  os_version_dir, platform_file_path);
 
-      local_file.SetFile(resolved_path, true);
+      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
       if (local_file.Exists()) {
         if (log) {
           log->Printf(
@@ -466,7 +466,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       ::snprintf(resolved_path, sizeof(resolved_path), "%s/Symbols/%s",
                  os_version_dir, platform_file_path);
 
-      local_file.SetFile(resolved_path, true);
+      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
       if (local_file.Exists()) {
         if (log) {
           log->Printf("Found a copy of %s in the DeviceSupport dir %s/Symbols",

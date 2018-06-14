@@ -12,6 +12,7 @@ add_lld_library(lldELF
   Arch/AMDGPU.cpp
   Arch/ARM.cpp
   Arch/AVR.cpp
+  Arch/Hexagon.cpp
   Arch/Mips.cpp
   Arch/MipsArchTree.cpp
   Arch/PPC.cpp
