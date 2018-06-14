@@ -16,6 +16,7 @@
 #define LLVM_TOOLS_LLVM_MCA_BACKEND_H
 
 #include "DispatchStage.h"
+#include "ExecuteStage.h"
 #include "FetchStage.h"
 #include "InstrBuilder.h"
 #include "RegisterFile.h"
@@ -57,12 +58,13 @@ class Backend {
   // The following are the simulated hardware components of the backend.
   RetireControlUnit RCU;
   RegisterFile PRF;
+  Scheduler HWS;
 
   /// TODO: Eventually this will become a list of unique Stage* that this
   /// backend pipeline executes.
   std::unique_ptr<FetchStage> Fetch;
-  std::unique_ptr<Scheduler> HWS;
   std::unique_ptr<DispatchStage> Dispatch;
+  std::unique_ptr<ExecuteStage> Execute;
   std::unique_ptr<RetireStage> Retire;
 
   std::set<HWEventListener *> Listeners;
@@ -78,13 +80,13 @@ public:
           unsigned StoreQueueSize = 0, bool AssumeNoAlias = false)
       : RCU(Subtarget.getSchedModel()),
         PRF(Subtarget.getSchedModel(), MRI, RegisterFileSize),
+        HWS(Subtarget.getSchedModel(), LoadQueueSize, StoreQueueSize,
+            AssumeNoAlias),
         Fetch(std::move(InitialStage)),
-        HWS(llvm::make_unique<Scheduler>(this, Subtarget.getSchedModel(), RCU,
-                                         LoadQueueSize, StoreQueueSize,
-                                         AssumeNoAlias)),
         Dispatch(llvm::make_unique<DispatchStage>(
             this, Subtarget, MRI, RegisterFileSize, DispatchWidth, RCU, PRF,
-            HWS.get())),
+            HWS)),
+        Execute(llvm::make_unique<ExecuteStage>(this, RCU, HWS)),
         Retire(llvm::make_unique<RetireStage>(this, RCU, PRF)), Cycles(0) {}
 
   void run();

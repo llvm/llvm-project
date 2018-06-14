@@ -62,7 +62,6 @@ InstructionBenchmark
 BenchmarkRunner::runOne(const BenchmarkConfiguration &Configuration,
                         unsigned Opcode, unsigned NumRepetitions) const {
   InstructionBenchmark InstrBenchmark;
-  InstrBenchmark.Key.OpcodeName = State.getInstrInfo().getName(Opcode);
   InstrBenchmark.Mode = getMode();
   InstrBenchmark.CpuName = State.getCpuName();
   InstrBenchmark.LLVMTriple = State.getTriple();

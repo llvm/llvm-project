@@ -1398,7 +1398,7 @@ const std::map<std::string, std::string> IntrinsicToLibdeviceFunc = {
     {"llvm.powi.f64", "powi"},
     {"llvm.powi.f32", "powif"}};
 
-/// Return the corresponding CUDA libdevice function name for @p F.
+/// Return the corresponding CUDA libdevice function name @p Name.
 /// Note that this function will try to convert instrinsics in the list
 /// IntrinsicToLibdeviceFunc into libdevice functions.
 /// This is because some intrinsics such as `exp`
@@ -1407,17 +1407,13 @@ const std::map<std::string, std::string> IntrinsicToLibdeviceFunc = {
 /// so that we use intrinsics whenever possible.
 ///
 /// Return "" if we are not compiling for CUDA.
-std::string getCUDALibDeviceFuntion(Function *F) {
-  auto FnName = [&]() -> const std::string {
-    auto It = IntrinsicToLibdeviceFunc.find(F->getName());
-    if (It != IntrinsicToLibdeviceFunc.end())
-      return It->second;
+std::string getCUDALibDeviceFuntion(StringRef Name) {
+  auto It = IntrinsicToLibdeviceFunc.find(Name);
+  if (It != IntrinsicToLibdeviceFunc.end())
+    return getCUDALibDeviceFuntion(It->second);
 
-    return std::string(F->getName());
-  }();
-
-  if (CUDALibDeviceFunctions.count(FnName))
-    return "__nv_" + FnName;
+  if (CUDALibDeviceFunctions.count(Name))
+    return ("__nv_" + Name).str();
 
   return "";
 }
@@ -1430,7 +1426,7 @@ static bool isValidFunctionInKernel(llvm::Function *F, bool AllowLibDevice) {
   // "llvm.copysign".
   const StringRef Name = F->getName();
 
-  if (AllowLibDevice && getCUDALibDeviceFuntion(F).length() > 0)
+  if (AllowLibDevice && getCUDALibDeviceFuntion(Name).length() > 0)
     return true;
 
   return F->isIntrinsic() &&
@@ -2389,7 +2385,7 @@ bool GPUNodeBuilder::requiresCUDALibDevice() {
     if (!F.isDeclaration())
       continue;
 
-    const std::string CUDALibDeviceFunc = getCUDALibDeviceFuntion(&F);
+    const std::string CUDALibDeviceFunc = getCUDALibDeviceFuntion(F.getName());
     if (CUDALibDeviceFunc.length() != 0) {
       // We need to handle the case where a module looks like this:
       // @expf(..)

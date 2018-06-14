@@ -14,17 +14,17 @@
 // template<class Compare, class Container>
 // priority_queue(Compare, Container)
 //     -> priority_queue<typename Container::value_type, Container, Compare>;
-// 
+//
 // template<class InputIterator,
 //          class Compare = less<typename iterator_traits<InputIterator>::value_type>,
 //          class Container = vector<typename iterator_traits<InputIterator>::value_type>>
 // priority_queue(InputIterator, InputIterator, Compare = Compare(), Container = Container())
 //     -> priority_queue<typename iterator_traits<InputIterator>::value_type, Container, Compare>;
-// 
+//
 // template<class Compare, class Container, class Allocator>
 // priority_queue(Compare, Container, Allocator)
 //     -> priority_queue<typename Container::value_type, Container, Compare>;
-    
+
 
 #include <queue>
 #include <vector>
@@ -41,7 +41,7 @@ struct A {};
 
 int main()
 {
-  
+
 //  Test the explicit deduction guides
     {
     std::vector<int> v{0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
@@ -56,7 +56,7 @@ int main()
     std::vector<long, test_allocator<long>> v{10, 11, 12, 13, 14, 15, 16, 17, 18, 19 };
     std::priority_queue pri(std::greater<long>(), v, test_allocator<long>(2)); // priority_queue(Compare, Container, Allocator)
 
-    static_assert(std::is_same_v<decltype(pri), 
+    static_assert(std::is_same_v<decltype(pri),
                                  std::priority_queue<long, std::vector<long, test_allocator<long>>, std::greater<long>>>, "");
     assert(pri.size() == v.size());
     assert(pri.top() == 10);

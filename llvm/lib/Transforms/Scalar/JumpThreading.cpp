@@ -167,7 +167,7 @@ JumpThreadingPass::JumpThreadingPass(int T) {
 }
 
 // Update branch probability information according to conditional
-// branch probablity. This is usually made possible for cloned branches
+// branch probability. This is usually made possible for cloned branches
 // in inline instances by the context specific profile in the caller.
 // For instance,
 //
@@ -1353,7 +1353,7 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LoadI) {
         DefMaxInstsToScan, AA, &IsLoadCSE, &NumScanedInst);
 
     // If PredBB has a single predecessor, continue scanning through the
-    // single precessor.
+    // single predecessor.
     BasicBlock *SinglePredBB = PredBB;
     while (!PredAvailable && SinglePredBB && BBIt == SinglePredBB->begin() &&
            NumScanedInst < DefMaxInstsToScan) {
@@ -2524,7 +2524,7 @@ bool JumpThreadingPass::TryToUnfoldSelectInCurrBB(BasicBlock *BB) {
               break;
             }
       } else if (SelectInst *SelectI = dyn_cast<SelectInst>(U.getUser())) {
-        // Look for a Select in BB that uses PN as condtion.
+        // Look for a Select in BB that uses PN as condition.
         if (isUnfoldCandidate(SelectI, U.get())) {
           SI = SelectI;
           break;

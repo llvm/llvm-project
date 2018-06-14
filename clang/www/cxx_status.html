@@ -844,10 +844,14 @@ as the draft C++2a standard evolves.
       <td class="full" align="center">Clang 6</td>
     </tr>
     <tr>
-      <td><tt>__VA_OPT__</tt> for preprocessor comma elision</td>
+      <td rowspan="2"><tt>__VA_OPT__</tt> for preprocessor comma elision</td>
       <td><a href="http://wg21.link/p0306r4">P0306R4</a></td>
       <td class="full" align="center">Clang 6</td>
     </tr>
+      <tr> <!-- from Rapperswil -->
+        <td><a href="http://wg21.link/p1042r1">P1042R1</a></td>
+        <td class="partial" align="center">Partial</td>
+      </tr>
     <tr>
       <td>Designated initializers</td>
       <td><a href="http://wg21.link/p0329r4">P0329R4</a></td>
@@ -883,12 +887,15 @@ as the draft C++2a standard evolves.
       <td class="none" align="center">No</td>
     </tr>
     <tr>
-      <td rowspan="2">Consistent comparison (<tt>operator&lt;=&gt;</tt>)</td>
+      <td rowspan="3">Consistent comparison (<tt>operator&lt;=&gt;</tt>)</td>
       <td><a href="http://wg21.link/p0515r3">P0515R3</a></td>
-      <td rowspan="2" class="partial" align="center">Partial</td>
+      <td rowspan="3" class="partial" align="center">Partial</td>
     </tr>
       <tr> <!-- from Jacksonville -->
         <td><a href="http://wg21.link/p0905r1">P0905R1</a></td>
+      </tr>
+      <tr> <!-- from Rapperswil -->
+        <td><a href="http://wg21.link/p1120r0">P1120R0</a></td>
       </tr>
     <tr>
       <td>Access checking on specializations</td>
@@ -926,6 +933,42 @@ as the draft C++2a standard evolves.
       <td><a href="http://wg21.link/p0780r2">P0780R2</a></td>
       <td class="none" align="center">No</td>
     </tr>
+    <!-- Rapperswil papers -->
+    <tr>
+      <td>Class types as non-type template parameters</td>
+      <td><a href="http://wg21.link/p0732r2">P0732R2</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Destroying operator delete</td>
+      <td><a href="http://wg21.link/p0722r3">P0722R3</a></td>
+      <td class="full" align="center">Clang 6</td>
+    </tr>
+    <tr>
+      <td>Virtual function calls in constant expressions</td>
+      <td><a href="http://wg21.link/p1064r0">P1064R0</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Prohibit aggregates with user-declared constructors</td>
+      <td><a href="http://wg21.link/p1008r1">P1008R1</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Contracts</td>
+      <td><a href="http://wg21.link/p0542r5">P0542R5</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Feature test macros</td>
+      <td><a href="http://wg21.link/p0941r2">P0941R2</a></td>
+      <td class="full" align="center"><a href="#sd6">(see below)</a></td>
+    </tr>
+    <tr>
+      <td><tt>explicit(bool)</tt></td>
+      <td><a href="http://wg21.link/p0892r2">P0892R2</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
 </table>
 </details>
 
@@ -958,10 +1001,10 @@ and library features that are not part of standard C++.</p>
     <th>Compiler flag</th>
     <th>Available in Clang?</th>
  </tr>
-    <tr>
-      <td rowspan="4">SD-6: SG10 feature test recommendations</td>
-      <td rowspan="4"><a href="http://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations">SD-6</a></td>
-      <td rowspan="4">N/A</td>
+    <tr id="sd6">
+      <td rowspan="5">SD-6: SG10 feature test recommendations</td>
+      <td rowspan="5"><a href="http://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations">SD-6</a></td>
+      <td rowspan="5">N/A</td>
       <td class="full" align="center">
         Clang 3.4 (<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3745">N3745</a>)</br>
       </td>
@@ -981,6 +1024,11 @@ and library features that are not part of standard C++.</p>
         Clang 5 (<a href="http://wg21.link/p0096r4">P0096R4</a>)</a>
       </td>
     </tr>
+    <tr>
+      <td class="svn" align="center">
+        SVN (<a href="http://wg21.link/p0096r5">P0096R5</a>)</a>
+      </td>
+    </tr>
     <!-- FIXME: Implement latest recommendations.
     <tr>
       <td class="svn" align="center">
@@ -990,7 +1038,7 @@ and library features that are not part of standard C++.</p>
     -->
     <!-- No compiler support is known to be needed for:
            * Concurrency TS
-           * Parallelism TS
+           * Parallelism TS (v1, v2)
            * Ranges TS
            * Networking TS
            * File System TS
@@ -1015,20 +1063,20 @@ and library features that are not part of standard C++.</p>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
-      <td>[DRAFT TS] Library Fundamentals, Version 2 (<tt>source_location</tt>)</td>
-     <td><a href="http://wg21.link/n4600">N4600</a></td>
+      <td>[TS] Library Fundamentals, Version 2 (<tt>source_location</tt>)</td>
+     <td><a href="http://wg21.link/n4617">N4617</a></td>
       <td>N/A</td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
-      <td>[DRAFT TS] Modules</td>
-      <td><a href="http://wg21.link/n4667">N4667</a></td>
+      <td>[TS] Modules</td>
+      <td><a href="http://wg21.link/n4720">N4720</a></td>
       <td><tt>-fmodules-ts</tt></td>
       <td class="none" align="center">WIP</td>
     </tr>
     <tr>
       <td>[DRAFT TS] Reflection</td>
-      <td><a href="http://wg21.link/p0194r6">P0194R6</a></td>
+      <td><a href="http://wg21.link/n4746">N4746</a></td>
       <td></td>
       <td class="none" align="center">No</td>
     </tr>

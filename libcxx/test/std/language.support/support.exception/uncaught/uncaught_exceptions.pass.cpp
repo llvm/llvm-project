@@ -47,7 +47,7 @@ int main () {
     {
     Outer o(0);
     }
-    
+
     assert(std::uncaught_exceptions() == 0);
     {
     try {
@@ -56,7 +56,7 @@ int main () {
         }
     catch (int) {
         assert(std::uncaught_exceptions() == 0);
-        }   
+        }
     }
     assert(std::uncaught_exceptions() == 0);
 }

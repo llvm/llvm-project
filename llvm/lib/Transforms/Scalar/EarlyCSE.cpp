@@ -349,8 +349,8 @@ public:
   /// that dominated values can succeed in their lookup.
   ScopedHTType AvailableValues;
 
-  /// A scoped hash table of the current values of previously encounted memory
-  /// locations.
+  /// A scoped hash table of the current values of previously encountered
+  /// memory locations.
   ///
   /// This allows us to get efficient access to dominating loads or stores when
   /// we have a fully redundant load.  In addition to the most recent load, we

@@ -523,7 +523,7 @@ static bool unswitchAllTrivialConditions(Loop &L, DominatorTree &DT,
         return Changed;
 
       if (!unswitchTrivialSwitch(L, *SI, DT, LI))
-        // Coludn't unswitch this one so we're done.
+        // Couldn't unswitch this one so we're done.
         return Changed;
 
       // Mark that we managed to unswitch something.
@@ -1783,7 +1783,7 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
   // irreducible control flow into reducible control flow and introduce new
   // loops "out of thin air". If we ever discover important use cases for doing
   // this, we can add support to loop unswitch, but it is a lot of complexity
-  // for what seems little or no real world benifit.
+  // for what seems little or no real world benefit.
   LoopBlocksRPO RPOT(&L);
   RPOT.perform(&LI);
   if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
