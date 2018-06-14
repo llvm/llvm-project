@@ -1791,6 +1791,18 @@ the configuration (without a prefix: ``Auto``).
      int a = 5;                     vs.     int a=5;
      a += 42                                a+=42;
 
+**SpaceBeforeCpp11BracedList** (``bool``)
+  If ``true``, a space will be inserted before a C++11 braced list
+  used to initialize an object (after the preceding identifier or type).
+
+  .. code-block:: c++
+
+     true:                                  false:
+     Foo foo { bar };               vs.     Foo foo{ bar };
+     Foo {};                                Foo{};
+     vector<int> { 1, 2, 3 };               vector<int>{ 1, 2, 3 };
+     new int[3] { 1, 2, 3 };                new int[3]{ 1, 2, 3 };
+
 **SpaceBeforeCtorInitializerColon** (``bool``)
   If ``false``, spaces will be removed before constructor initializer
   colon.

@@ -160,12 +160,14 @@ define double @float_to_int_to_float_reg_f64_i64(<2 x double> %x) {
 define <4 x float> @float_to_int_to_float_mem_v4f32(<4 x float>* %p) {
 ; SSE-LABEL: float_to_int_to_float_mem_v4f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    roundps $11, (%rdi), %xmm0
+; SSE-NEXT:    cvttps2dq (%rdi), %xmm0
+; SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: float_to_int_to_float_mem_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vroundps $11, (%rdi), %xmm0
+; AVX-NEXT:    vcvttps2dq (%rdi), %xmm0
+; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x = load <4 x float>, <4 x float>* %p, align 16
   %fptosi = tail call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> %x)
@@ -176,12 +178,14 @@ define <4 x float> @float_to_int_to_float_mem_v4f32(<4 x float>* %p) {
 define <4 x float> @float_to_int_to_float_reg_v4f32(<4 x float> %x) {
 ; SSE-LABEL: float_to_int_to_float_reg_v4f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    roundps $11, %xmm0, %xmm0
+; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: float_to_int_to_float_reg_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vroundps $11, %xmm0, %xmm0
+; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %fptosi = tail call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> %x)
   %sitofp = sitofp <4 x i32> %fptosi to <4 x float>

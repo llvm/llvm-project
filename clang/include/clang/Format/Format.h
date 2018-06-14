@@ -1495,6 +1495,17 @@ struct FormatStyle {
   /// \endcode
   bool SpaceBeforeAssignmentOperators;
 
+  /// If ``true``, a space will be inserted before a C++11 braced list
+  /// used to initialize an object (after the preceding identifier or type).
+  /// \code
+  ///    true:                                  false:
+  ///    Foo foo { bar };               vs.     Foo foo{ bar };
+  ///    Foo {};                                Foo{};
+  ///    vector<int> { 1, 2, 3 };               vector<int>{ 1, 2, 3 };
+  ///    new int[3] { 1, 2, 3 };                new int[3]{ 1, 2, 3 };
+  /// \endcode
+  bool SpaceBeforeCpp11BracedList;
+
   /// If ``false``, spaces will be removed before constructor initializer
   /// colon.
   /// \code
@@ -1738,6 +1749,7 @@ struct FormatStyle {
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
            SpaceAfterTemplateKeyword == R.SpaceAfterTemplateKeyword &&
            SpaceBeforeAssignmentOperators == R.SpaceBeforeAssignmentOperators &&
+           SpaceBeforeCpp11BracedList == R.SpaceBeforeCpp11BracedList &&
            SpaceBeforeCtorInitializerColon ==
                R.SpaceBeforeCtorInitializerColon &&
            SpaceBeforeInheritanceColon == R.SpaceBeforeInheritanceColon &&

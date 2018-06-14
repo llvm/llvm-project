@@ -140,8 +140,7 @@ struct ScalarEnumerationTraits<exegesis::InstructionBenchmark::ModeE> {
 
 template <> struct MappingTraits<exegesis::InstructionBenchmarkKey> {
   static void mapping(IO &Io, exegesis::InstructionBenchmarkKey &Obj) {
-    Io.mapRequired("opcode_name", Obj.OpcodeName);
-    Io.mapOptional("instructions", Obj.Instructions);
+    Io.mapRequired("instructions", Obj.Instructions);
     Io.mapOptional("config", Obj.Config);
   }
 };

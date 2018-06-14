@@ -603,6 +603,9 @@ def : Pat<(x86mmx (MMX_X86movdq2q
                    (bc_v2i64 (v4i32 (X86cvtp2Int (v4f32 VR128:$src)))))),
           (MMX_CVTPS2PIirr VR128:$src)>;
 def : Pat<(x86mmx (MMX_X86movdq2q
+                   (bc_v2i64 (v4i32 (X86cvttp2si (v4f32 VR128:$src)))))),
+          (MMX_CVTTPS2PIirr VR128:$src)>;
+def : Pat<(x86mmx (MMX_X86movdq2q
                    (bc_v2i64 (v4i32 (fp_to_sint (v4f32 VR128:$src)))))),
           (MMX_CVTTPS2PIirr VR128:$src)>;
 def : Pat<(x86mmx (MMX_X86movdq2q
