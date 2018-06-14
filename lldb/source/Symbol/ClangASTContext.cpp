@@ -5024,7 +5024,6 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::UAccum:
     case clang::BuiltinType::ULongAccum:
     case clang::BuiltinType::ShortFract:
-    case clang::BuiltinType::ShortFract:
     case clang::BuiltinType::Fract:
     case clang::BuiltinType::LongFract:
     case clang::BuiltinType::UShortFract:
