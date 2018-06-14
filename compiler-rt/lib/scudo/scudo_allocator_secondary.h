@@ -69,11 +69,7 @@ namespace LargeChunk {
 class ScudoLargeMmapAllocator {
  public:
   void Init() {
-    NumberOfAllocs = 0;
-    NumberOfFrees = 0;
-    AllocatedBytes = 0;
-    FreedBytes = 0;
-    LargestSize = 0;
+    internal_memset(this, 0, sizeof(*this));
   }
 
   void *Allocate(AllocatorStats *Stats, uptr Size, uptr Alignment) {
@@ -186,7 +182,7 @@ class ScudoLargeMmapAllocator {
   static constexpr uptr HeadersSize =
       LargeChunk::getHeaderSize() + Chunk::getHeaderSize();
 
-  SpinMutex StatsMutex;
+  StaticSpinMutex StatsMutex;
   u32 NumberOfAllocs;
   u32 NumberOfFrees;
   uptr AllocatedBytes;
