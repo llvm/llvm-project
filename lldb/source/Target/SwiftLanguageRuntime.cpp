@@ -2542,25 +2542,20 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
 }
 
 bool SwiftLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {
-  static llvm::StringRef g_dollar_swift_type("$swift.type.");
-  ConstString valobj_name(valobj.GetName());
-  llvm::StringRef valobj_name_sr(valobj_name.GetStringRef());
-  if (valobj_name_sr.startswith(g_dollar_swift_type))
+  llvm::StringRef g_dollar_tau(u8"$\u03C4_");
+  auto valobj_name = valobj.GetName().GetStringRef();
+  if (valobj_name.startswith(g_dollar_tau))
     return true;
-  static llvm::StringRef g_globalinit("globalinit_");
-  static ConstString g_builtin_word("Builtin.Word");
-  static ConstString g__argc("_argc");
-  static ConstString g__unsafeArgv("_unsafeArgv");
-  static ConstString g_dollar_error("$error");
-  static ConstString g_tmp_closure("$tmpClosure");
 
-  ConstString valobj_type_name(valobj.GetTypeName());
-  if (valobj_name_sr.startswith(g_globalinit) &&
-      valobj_type_name == g_builtin_word)
+  auto valobj_type_name = valobj.GetTypeName().GetStringRef();
+  if (valobj_name.startswith("globalinit_") &&
+      valobj_type_name == "Builtin.Word")
     return true;
-  if (valobj_name == g__argc || valobj_name == g__unsafeArgv ||
-      valobj_name == g_dollar_error || valobj_name == g_tmp_closure)
+
+  if (valobj_name == "_argc" || valobj_name == "_unsafeArgv" ||
+      valobj_name == "$error" || valobj_name == "$tmpClosure")
     return true;
+
   return false;
 }
 

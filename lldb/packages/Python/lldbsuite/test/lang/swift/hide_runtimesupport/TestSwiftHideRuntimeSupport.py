@@ -78,7 +78,7 @@ class TestSwiftHideRuntimeSupport(TestBase):
 
         self.expect(
             'frame variable -d run',
-            substrs=['$swift.type.T'],
+            substrs=['_0_0'],
             matching=False)
         self.expect('frame variable -d run', substrs=['193627'], matching=True)
 
@@ -93,7 +93,7 @@ class TestSwiftHideRuntimeSupport(TestBase):
         values = self.frame.GetVariables(var_opts)
         found = False
         for value in values:
-            if value.name == "$swift.type.T":
+            if '_0_0' in value.name:
                 found = True
         self.assertFalse(found, "found the thing I was not expecting")
 
@@ -101,20 +101,20 @@ class TestSwiftHideRuntimeSupport(TestBase):
         values = self.frame.GetVariables(var_opts)
         found = False
         for value in values:
-            if value.name == "$swift.type.T":
+            if '_0_0' in value.name:
                 found = True
         self.assertTrue(found, "not found the thing I was expecting")
 
         self.runCmd("settings set target.display-runtime-support-values true")
         self.expect(
             'frame variable -d run',
-            substrs=['$swift.type.T'],
+            substrs=['_0_0'],
             matching=True)
 
         self.runCmd("settings set target.display-runtime-support-values false")
         self.expect(
             'frame variable -d run',
-            substrs=['$swift.type.T'],
+            substrs=['_0_0'],
             matching=False)
 
 
