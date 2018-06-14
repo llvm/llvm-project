@@ -17,7 +17,6 @@ class MTCSwiftPropertyTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
-    @expectedFailureAll(bugnumber="rdar://problem/36557167")
     def test(self):
         self.mtc_dylib_path = findMainThreadCheckerDylib()
         if self.mtc_dylib_path == "":
