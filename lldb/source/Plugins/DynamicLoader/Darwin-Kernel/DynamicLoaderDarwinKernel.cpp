@@ -637,7 +637,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
     return false;
 
   FileSpec file_spec;
-  file_spec.SetFile(m_name.c_str(), false);
+  file_spec.SetFile(m_name.c_str(), false, FileSpec::Style::native);
 
   ModuleSP memory_module_sp =
       process->ReadModuleFromMemory(file_spec, m_load_address);

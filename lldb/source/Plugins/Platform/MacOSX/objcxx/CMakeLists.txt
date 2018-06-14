@@ -1,5 +1,5 @@
 remove_module_flags()
-include_directories(..)
+include_directories(.)
 
 add_lldb_library(lldbPluginPlatformMacOSXObjCXX
   PlatformiOSSimulatorCoreSimulatorSupport.mm

@@ -196,7 +196,7 @@ bool PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) co
   for (const auto &it : m_pairs) {
     if (!path_ref.consume_front(it.second.GetStringRef()))
       continue;
-    fixed.SetFile(it.first.GetStringRef(), false);
+    fixed.SetFile(it.first.GetStringRef(), false, FileSpec::Style::native);
     fixed.AppendPathComponent(path_ref);
     return true;
   }
@@ -216,7 +216,8 @@ bool PathMappingList::FindFile(const FileSpec &orig_spec,
 
         if (orig_path_len >= prefix_len) {
           if (::strncmp(pos->first.GetCString(), orig_path, prefix_len) == 0) {
-            new_spec.SetFile(pos->second.GetCString(), false);
+            new_spec.SetFile(pos->second.GetCString(), false,
+                             FileSpec::Style::native);
             new_spec.AppendPathComponent(orig_path + prefix_len);
             if (new_spec.Exists())
               return true;

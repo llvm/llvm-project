@@ -420,7 +420,7 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   Dl_info info;
   if (::dladdr(host_addr, &info)) {
     if (info.dli_fname)
-      module_filespec.SetFile(info.dli_fname, true);
+      module_filespec.SetFile(info.dli_fname, true, FileSpec::Style::native);
   }
 #endif
   return module_filespec;

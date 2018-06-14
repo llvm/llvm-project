@@ -32,7 +32,7 @@ struct A {};
 
 int main()
 {
-  
+
 //  Test the explicit deduction guides
     {
     const int arr[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
@@ -52,7 +52,7 @@ int main()
     assert(*it++ == 1L);
     assert(*it++ == 2L);
     }
-    
+
 //  Test the implicit deduction guides
 
     {

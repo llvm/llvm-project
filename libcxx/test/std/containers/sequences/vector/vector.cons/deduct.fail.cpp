@@ -25,7 +25,7 @@
 
 
 int main()
-{  
+{
 //  Test the explicit deduction guides
 
 //  Test the implicit deduction guides

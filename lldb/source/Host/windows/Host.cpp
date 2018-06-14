@@ -122,7 +122,7 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   std::string path;
   if (!llvm::convertWideToUTF8(buffer.data(), path))
     return module_filespec;
-  module_filespec.SetFile(path, false);
+  module_filespec.SetFile(path, false, FileSpec::Style::native);
   return module_filespec;
 }
 

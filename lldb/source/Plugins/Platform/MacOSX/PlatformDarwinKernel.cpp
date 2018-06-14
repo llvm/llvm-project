@@ -623,7 +623,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
       kext_bundle_filepath.GetPath() + "/Contents/MacOS/";
   deep_bundle_str += executable_name.AsCString();
   deep_bundle_str += ".dSYM";
-  dsym_fspec.SetFile(deep_bundle_str, true);
+  dsym_fspec.SetFile(deep_bundle_str, true, FileSpec::Style::native);
   if (llvm::sys::fs::is_directory(dsym_fspec.GetPath())) {
     return true;
   }
@@ -633,7 +633,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   std::string shallow_bundle_str = kext_bundle_filepath.GetPath() + "/";
   shallow_bundle_str += executable_name.AsCString();
   shallow_bundle_str += ".dSYM";
-  dsym_fspec.SetFile(shallow_bundle_str, true);
+  dsym_fspec.SetFile(shallow_bundle_str, true, FileSpec::Style::native);
   if (llvm::sys::fs::is_directory(dsym_fspec.GetPath())) {
     return true;
   }

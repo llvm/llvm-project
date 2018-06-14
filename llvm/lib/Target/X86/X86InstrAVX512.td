@@ -7561,8 +7561,7 @@ multiclass avx512_cvtps2dq<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
 // Convert Double to Signed/Unsigned Doubleword with truncation
 multiclass avx512_cvttpd2dq<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                            SDNode OpNode128, SDNode OpNodeRnd,
-                            X86SchedWriteWidths sched> {
+                            SDNode OpNodeRnd, X86SchedWriteWidths sched> {
   let Predicates = [HasAVX512] in {
     defm Z : avx512_vcvt_fp<opc, OpcodeStr, v8i32x_info, v8f64_info, OpNode,
                             sched.ZMM>,
@@ -7575,7 +7574,7 @@ multiclass avx512_cvttpd2dq<bits<8> opc, string OpcodeStr, SDNode OpNode,
     // dest type - 'v4i32x_info'. We also specify the broadcast string explicitly
     // due to the same reason.
     defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v2f64x_info,
-                               OpNode128, sched.XMM, "{1to2}", "{x}">, EVEX_V128;
+                               OpNode, sched.XMM, "{1to2}", "{x}">, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v4f64x_info, OpNode,
                                sched.YMM, "{1to4}", "{y}">, EVEX_V256;
 
@@ -7692,8 +7691,7 @@ multiclass avx512_cvtps2qq<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
 // Convert Float to Signed/Unsigned Quardword with truncation
 multiclass avx512_cvttps2qq<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                            SDNode OpNode128, SDNode OpNodeRnd,
-                            X86SchedWriteWidths sched> {
+                            SDNode OpNodeRnd, X86SchedWriteWidths sched> {
   let Predicates = [HasDQI] in {
     defm Z : avx512_vcvt_fp<opc, OpcodeStr, v8i64_info, v8f32x_info, OpNode, sched.ZMM>,
              avx512_vcvt_fp_sae<opc, OpcodeStr, v8i64_info, v8f32x_info,
@@ -7702,7 +7700,7 @@ multiclass avx512_cvttps2qq<bits<8> opc, string OpcodeStr, SDNode OpNode,
   let Predicates = [HasDQI, HasVLX] in {
     // Explicitly specified broadcast string, since we take only 2 elements
     // from v4f32x_info source
-    defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v2i64x_info, v4f32x_info, OpNode128,
+    defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v2i64x_info, v4f32x_info, OpNode,
                                sched.XMM, "{1to2}", "", f64mem>, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4i64x_info, v4f32x_info, OpNode,
                                sched.YMM>, EVEX_V256;
@@ -7747,20 +7745,20 @@ defm VCVTDQ2PS : avx512_cvtdq2ps<0x5B, "vcvtdq2ps", sint_to_fp,
                                 X86VSintToFpRnd, SchedWriteCvtDQ2PS>,
                                 PS, EVEX_CD8<32, CD8VF>;
 
-defm VCVTTPS2DQ : avx512_cvttps2dq<0x5B, "vcvttps2dq", fp_to_sint,
+defm VCVTTPS2DQ : avx512_cvttps2dq<0x5B, "vcvttps2dq", X86cvttp2si,
                                 X86cvttp2siRnd, SchedWriteCvtPS2DQ>,
                                 XS, EVEX_CD8<32, CD8VF>;
 
-defm VCVTTPD2DQ : avx512_cvttpd2dq<0xE6, "vcvttpd2dq", fp_to_sint, X86cvttp2si,
+defm VCVTTPD2DQ : avx512_cvttpd2dq<0xE6, "vcvttpd2dq", X86cvttp2si,
                                  X86cvttp2siRnd, SchedWriteCvtPD2DQ>,
                                  PD, VEX_W, EVEX_CD8<64, CD8VF>;
 
-defm VCVTTPS2UDQ : avx512_cvttps2dq<0x78, "vcvttps2udq", fp_to_uint,
+defm VCVTTPS2UDQ : avx512_cvttps2dq<0x78, "vcvttps2udq", X86cvttp2ui,
                                  X86cvttp2uiRnd, SchedWriteCvtPS2DQ>, PS,
                                  EVEX_CD8<32, CD8VF>;
 
-defm VCVTTPD2UDQ : avx512_cvttpd2dq<0x78, "vcvttpd2udq", fp_to_uint,
-                                 X86cvttp2ui, X86cvttp2uiRnd, SchedWriteCvtPD2DQ>,
+defm VCVTTPD2UDQ : avx512_cvttpd2dq<0x78, "vcvttpd2udq", X86cvttp2ui,
+                                 X86cvttp2uiRnd, SchedWriteCvtPD2DQ>,
                                  PS, VEX_W, EVEX_CD8<64, CD8VF>;
 
 defm VCVTUDQ2PD : avx512_cvtdq2pd<0x7A, "vcvtudq2pd", uint_to_fp,
@@ -7803,19 +7801,19 @@ defm VCVTPS2UQQ : avx512_cvtps2qq<0x79, "vcvtps2uqq", X86cvtp2UInt,
                                  X86cvtp2UIntRnd, SchedWriteCvtPS2DQ>, PD,
                                  EVEX_CD8<32, CD8VH>;
 
-defm VCVTTPD2QQ : avx512_cvttpd2qq<0x7A, "vcvttpd2qq", fp_to_sint,
+defm VCVTTPD2QQ : avx512_cvttpd2qq<0x7A, "vcvttpd2qq", X86cvttp2si,
                                  X86cvttp2siRnd, SchedWriteCvtPD2DQ>, VEX_W,
                                  PD, EVEX_CD8<64, CD8VF>;
 
-defm VCVTTPS2QQ : avx512_cvttps2qq<0x7A, "vcvttps2qq", fp_to_sint, X86cvttp2si,
+defm VCVTTPS2QQ : avx512_cvttps2qq<0x7A, "vcvttps2qq", X86cvttp2si,
                                  X86cvttp2siRnd, SchedWriteCvtPS2DQ>, PD,
                                  EVEX_CD8<32, CD8VH>;
 
-defm VCVTTPD2UQQ : avx512_cvttpd2qq<0x78, "vcvttpd2uqq", fp_to_uint,
+defm VCVTTPD2UQQ : avx512_cvttpd2qq<0x78, "vcvttpd2uqq", X86cvttp2ui,
                                  X86cvttp2uiRnd, SchedWriteCvtPD2DQ>, VEX_W,
                                  PD, EVEX_CD8<64, CD8VF>;
 
-defm VCVTTPS2UQQ : avx512_cvttps2qq<0x78, "vcvttps2uqq", fp_to_uint, X86cvttp2ui,
+defm VCVTTPS2UQQ : avx512_cvttps2qq<0x78, "vcvttps2uqq", X86cvttp2ui,
                                  X86cvttp2uiRnd, SchedWriteCvtPS2DQ>, PD,
                                  EVEX_CD8<32, CD8VH>;
 
@@ -7834,6 +7832,114 @@ defm VCVTQQ2PS : avx512_cvtqq2ps<0x5B, "vcvtqq2ps", sint_to_fp, X86VSintToFP,
 defm VCVTUQQ2PS : avx512_cvtqq2ps<0x7A, "vcvtuqq2ps", uint_to_fp, X86VUintToFP,
                             X86VUintToFpRnd, SchedWriteCvtDQ2PS>, VEX_W, XD,
                             EVEX_CD8<64, CD8VF>;
+
+let Predicates = [HasAVX512] in  {
+  def : Pat<(v16i32 (fp_to_sint (v16f32 VR512:$src))),
+            (VCVTTPS2DQZrr VR512:$src)>;
+  def : Pat<(v16i32 (fp_to_sint (loadv16f32 addr:$src))),
+            (VCVTTPS2DQZrm addr:$src)>;
+
+  def : Pat<(v16i32 (fp_to_uint (v16f32 VR512:$src))),
+            (VCVTTPS2UDQZrr VR512:$src)>;
+  def : Pat<(v16i32 (fp_to_uint (loadv16f32 addr:$src))),
+            (VCVTTPS2UDQZrm addr:$src)>;
+
+  def : Pat<(v8i32 (fp_to_sint (v8f64 VR512:$src))),
+            (VCVTTPD2DQZrr VR512:$src)>;
+  def : Pat<(v8i32 (fp_to_sint (loadv8f64 addr:$src))),
+            (VCVTTPD2DQZrm addr:$src)>;
+
+  def : Pat<(v8i32 (fp_to_uint (v8f64 VR512:$src))),
+            (VCVTTPD2UDQZrr VR512:$src)>;
+  def : Pat<(v8i32 (fp_to_uint (loadv8f64 addr:$src))),
+            (VCVTTPD2UDQZrm addr:$src)>;
+}
+
+let Predicates = [HasVLX] in {
+  def : Pat<(v4i32 (fp_to_sint (v4f32 VR128X:$src))),
+            (VCVTTPS2DQZ128rr VR128X:$src)>;
+  def : Pat<(v4i32 (fp_to_sint (loadv4f32 addr:$src))),
+            (VCVTTPS2DQZ128rm addr:$src)>;
+
+  def : Pat<(v4i32 (fp_to_uint (v4f32 VR128X:$src))),
+            (VCVTTPS2UDQZ128rr VR128X:$src)>;
+  def : Pat<(v4i32 (fp_to_uint (loadv4f32 addr:$src))),
+            (VCVTTPS2UDQZ128rm addr:$src)>;
+
+  def : Pat<(v8i32 (fp_to_sint (v8f32 VR256X:$src))),
+            (VCVTTPS2DQZ256rr VR256X:$src)>;
+  def : Pat<(v8i32 (fp_to_sint (loadv8f32 addr:$src))),
+            (VCVTTPS2DQZ256rm addr:$src)>;
+
+  def : Pat<(v8i32 (fp_to_uint (v8f32 VR256X:$src))),
+            (VCVTTPS2UDQZ256rr VR256X:$src)>;
+  def : Pat<(v8i32 (fp_to_uint (loadv8f32 addr:$src))),
+            (VCVTTPS2UDQZ256rm addr:$src)>;
+
+  def : Pat<(v4i32 (fp_to_sint (v4f64 VR256X:$src))),
+            (VCVTTPD2DQZ256rr VR256X:$src)>;
+  def : Pat<(v4i32 (fp_to_sint (loadv4f64 addr:$src))),
+            (VCVTTPD2DQZ256rm addr:$src)>;
+
+  def : Pat<(v4i32 (fp_to_uint (v4f64 VR256X:$src))),
+            (VCVTTPD2UDQZ256rr VR256X:$src)>;
+  def : Pat<(v4i32 (fp_to_uint (loadv4f64 addr:$src))),
+            (VCVTTPD2UDQZ256rm addr:$src)>;
+}
+
+let Predicates = [HasDQI] in {
+  def : Pat<(v8i64 (fp_to_sint (v8f32 VR256X:$src))),
+            (VCVTTPS2QQZrr VR256X:$src)>;
+  def : Pat<(v8i64 (fp_to_sint (loadv8f32 addr:$src))),
+            (VCVTTPS2QQZrm addr:$src)>;
+
+  def : Pat<(v8i64 (fp_to_uint (v8f32 VR256X:$src))),
+            (VCVTTPS2UQQZrr VR256X:$src)>;
+  def : Pat<(v8i64 (fp_to_uint (loadv8f32 addr:$src))),
+            (VCVTTPS2UQQZrm addr:$src)>;
+
+  def : Pat<(v8i64 (fp_to_sint (v8f64 VR512:$src))),
+            (VCVTTPD2QQZrr VR512:$src)>;
+  def : Pat<(v8i64 (fp_to_sint (loadv8f64 addr:$src))),
+            (VCVTTPD2QQZrm addr:$src)>;
+
+  def : Pat<(v8i64 (fp_to_uint (v8f64 VR512:$src))),
+            (VCVTTPD2UQQZrr VR512:$src)>;
+  def : Pat<(v8i64 (fp_to_uint (loadv8f64 addr:$src))),
+            (VCVTTPD2UQQZrm addr:$src)>;
+}
+
+let Predicates = [HasDQI, HasVLX] in {
+  def : Pat<(v4i64 (fp_to_sint (v4f32 VR128X:$src))),
+            (VCVTTPS2QQZ256rr VR128X:$src)>;
+  def : Pat<(v4i64 (fp_to_sint (loadv4f32 addr:$src))),
+            (VCVTTPS2QQZ256rm addr:$src)>;
+
+  def : Pat<(v4i64 (fp_to_uint (v4f32 VR128X:$src))),
+            (VCVTTPS2UQQZ256rr VR128X:$src)>;
+  def : Pat<(v4i64 (fp_to_uint (loadv4f32 addr:$src))),
+            (VCVTTPS2UQQZ256rm addr:$src)>;
+
+  def : Pat<(v2i64 (fp_to_sint (v2f64 VR128X:$src))),
+            (VCVTTPD2QQZ128rr VR128X:$src)>;
+  def : Pat<(v2i64 (fp_to_sint (loadv2f64 addr:$src))),
+            (VCVTTPD2QQZ128rm addr:$src)>;
+
+  def : Pat<(v2i64 (fp_to_uint (v2f64 VR128X:$src))),
+            (VCVTTPD2UQQZ128rr VR128X:$src)>;
+  def : Pat<(v2i64 (fp_to_uint (loadv2f64 addr:$src))),
+            (VCVTTPD2UQQZ128rm addr:$src)>;
+
+  def : Pat<(v4i64 (fp_to_sint (v4f64 VR256X:$src))),
+            (VCVTTPD2QQZ256rr VR256X:$src)>;
+  def : Pat<(v4i64 (fp_to_sint (loadv4f64 addr:$src))),
+            (VCVTTPD2QQZ256rm addr:$src)>;
+
+  def : Pat<(v4i64 (fp_to_uint (v4f64 VR256X:$src))),
+            (VCVTTPD2UQQZ256rr VR256X:$src)>;
+  def : Pat<(v4i64 (fp_to_uint (loadv4f64 addr:$src))),
+            (VCVTTPD2UQQZ256rm addr:$src)>;
+}
 
 let Predicates = [HasAVX512, NoVLX] in {
 def : Pat<(v8i32 (fp_to_uint (v8f32 VR256X:$src1))),

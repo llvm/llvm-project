@@ -501,7 +501,8 @@ lldb::SBProcess SBTarget::AttachToProcessWithName(
 
   if (name && target_sp) {
     ProcessAttachInfo attach_info;
-    attach_info.GetExecutableFile().SetFile(name, false);
+    attach_info.GetExecutableFile().SetFile(name, false,
+                                            FileSpec::Style::native);
     attach_info.SetWaitForLaunch(wait_for);
     if (listener.IsValid())
       attach_info.SetListener(listener.GetSP());
@@ -1468,7 +1469,7 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
   if (target_sp) {
     ModuleSpec module_spec;
     if (path)
-      module_spec.GetFileSpec().SetFile(path, false);
+      module_spec.GetFileSpec().SetFile(path, false, FileSpec::Style::native);
 
     if (uuid_cstr)
       module_spec.GetUUID().SetFromCString(uuid_cstr);
@@ -1480,7 +1481,8 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
       module_spec.GetArchitecture() = target_sp->GetArchitecture();
 
     if (symfile)
-      module_spec.GetSymbolFileSpec().SetFile(symfile, false);
+      module_spec.GetSymbolFileSpec().SetFile(symfile, false,
+                                              FileSpec::Style::native);
 
     sb_module.SetSP(target_sp->GetSharedModule(module_spec));
   }

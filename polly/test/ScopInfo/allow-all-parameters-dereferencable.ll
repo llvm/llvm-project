@@ -22,7 +22,7 @@
 ; SCOP-NEXT:         Execution Context: [tmp, tmp17, tmp28] -> {  :  }
 ; SCOP-NEXT: }
 
-; Check that without the option `-pollt-allow-dereference-of-all-function-parameters`
+; Check that without the option `-polly-allow-dereference-of-all-function-parameters`
 ; we do generate the runtime check.
 ; CODE-RTC: polly.preload.cond:                               ; preds = %polly.preload.begin
 ; CODE-RTC-NEXT: br i1 %{{[a-zA-Z0-9]*}}, label %polly.preload.exec, label %polly.preload.merge
@@ -79,7 +79,7 @@ bb29:                                             ; preds = %bb35, %bb27
   br label %bb31
 
 bb31:                                             ; preds = %bb31, %bb29
-  %tmp32 = phi i32 [ undef, %bb31 ], [ 1, %bb29 ]
+  %tmp32 = phi i32 [ 1, %bb31 ], [ 1, %bb29 ]
   store float 42.0, float* %A
   %tmp33 = icmp eq i32 %tmp32, %tmp30
   br i1 %tmp33, label %bb34, label %bb31

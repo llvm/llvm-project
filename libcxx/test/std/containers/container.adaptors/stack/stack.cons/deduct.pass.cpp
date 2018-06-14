@@ -17,8 +17,8 @@
 
 // template<class Container>
 //   stack(Container) -> stack<typename Container::value_type, Container>;
-//   
-// template<class Container, class Allocator> 
+//
+// template<class Container, class Allocator>
 //   stack(Container, Allocator) -> stack<typename Container::value_type, Container>;
 
 
@@ -38,7 +38,7 @@ struct A {};
 
 int main()
 {
-  
+
 //  Test the explicit deduction guides
     {
     std::vector<int> v{0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
@@ -59,7 +59,7 @@ int main()
 //  I'd like to assert that we've gotten the right allocator in the stack, but
 //  I don't know how to get at the underlying container.
     }
-    
+
 //  Test the implicit deduction guides
 
     {
