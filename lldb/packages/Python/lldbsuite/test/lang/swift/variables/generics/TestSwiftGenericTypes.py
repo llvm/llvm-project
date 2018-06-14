@@ -61,7 +61,7 @@ class TestSwiftGenericTypes(TestBase):
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
 
-        self.expect("frame variable object",
+        self.expect("frame variable -d no-dynamic-values object",
                     substrs=['(JustSomeType) object = 0x'])
         self.expect(
             "frame variable -d run-target -- object",
