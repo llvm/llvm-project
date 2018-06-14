@@ -1376,7 +1376,7 @@ public:
 
     assert(OldI != NewI && "Disallowed at construction?!");
     assert((!IsDeoptimize || !New) &&
-           "Deoptimize instrinsics are not replaced!");
+           "Deoptimize intrinsics are not replaced!");
 
     Old = nullptr;
     New = nullptr;
@@ -1386,7 +1386,7 @@ public:
 
     if (IsDeoptimize) {
       // Note: we've inserted instructions, so the call to llvm.deoptimize may
-      // not necessarilly be followed by the matching return.
+      // not necessarily be followed by the matching return.
       auto *RI = cast<ReturnInst>(OldI->getParent()->getTerminator());
       new UnreachableInst(RI->getContext(), RI);
       RI->eraseFromParent();
@@ -1984,7 +1984,7 @@ chainToBasePointerCost(SmallVectorImpl<Instruction*> &Chain,
         Cost += 2;
 
     } else {
-      llvm_unreachable("unsupported instruciton type during rematerialization");
+      llvm_unreachable("unsupported instruction type during rematerialization");
     }
   }
 

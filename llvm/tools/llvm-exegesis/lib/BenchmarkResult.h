@@ -32,7 +32,6 @@ struct BenchmarkResultContext; // Forward declaration.
 
 struct InstructionBenchmarkKey {
   // The LLVM opcode name.
-  std::string OpcodeName; // FIXME: Deprecated, use Instructions below.
   std::vector<llvm::MCInst> Instructions;
   // An opaque configuration, that can be used to separate several benchmarks of
   // the same instruction under different configurations.

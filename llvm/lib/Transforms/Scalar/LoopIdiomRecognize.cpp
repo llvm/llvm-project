@@ -1040,7 +1040,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 
   CallInst *NewCall = nullptr;
   // Check whether to generate an unordered atomic memcpy:
-  //  If the load or store are atomic, then they must neccessarily be unordered
+  //  If the load or store are atomic, then they must necessarily be unordered
   //  by previous checks.
   if (!SI->isAtomic() && !LI->isAtomic())
     NewCall = Builder.CreateMemCpy(StoreBasePtr, SI->getAlignment(),
@@ -1470,7 +1470,7 @@ bool LoopIdiomRecognize::recognizePopcount() {
   if (!EntryBI || EntryBI->isConditional())
     return false;
 
-  // It should have a precondition block where the generated popcount instrinsic
+  // It should have a precondition block where the generated popcount intrinsic
   // function can be inserted.
   auto *PreCondBB = PH->getSinglePredecessor();
   if (!PreCondBB)

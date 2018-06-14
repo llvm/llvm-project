@@ -7019,6 +7019,11 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
                "  { \"ccccccccccccccccccccc\", 2 }\n"
                "};",
                ExtraSpaces);
+
+  FormatStyle SpaceBeforeBrace = getLLVMStyle();
+  SpaceBeforeBrace.SpaceBeforeCpp11BracedList = true;
+  verifyFormat("vector<int> x {1, 2, 3, 4};", SpaceBeforeBrace);
+  verifyFormat("f({}, {{}, {}}, MyMap[{k, v}]);", SpaceBeforeBrace);
 }
 
 TEST_F(FormatTest, FormatsBracedListsInColumnLayout) {
@@ -10622,6 +10627,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpaceAfterCStyleCast);
   CHECK_PARSE_BOOL(SpaceAfterTemplateKeyword);
   CHECK_PARSE_BOOL(SpaceBeforeAssignmentOperators);
+  CHECK_PARSE_BOOL(SpaceBeforeCpp11BracedList);
   CHECK_PARSE_BOOL(SpaceBeforeCtorInitializerColon);
   CHECK_PARSE_BOOL(SpaceBeforeInheritanceColon);
   CHECK_PARSE_BOOL(SpaceBeforeRangeBasedForLoopColon);

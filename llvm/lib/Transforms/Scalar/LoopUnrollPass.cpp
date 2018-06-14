@@ -765,7 +765,7 @@ static bool computeUnrollCount(
   // compute the former when the latter is zero.
   unsigned ExactTripCount = TripCount;
   assert((ExactTripCount == 0 || MaxTripCount == 0) &&
-         "ExtractTripCound and MaxTripCount cannot both be non zero.");
+         "ExtractTripCount and MaxTripCount cannot both be non zero.");
   unsigned FullUnrollTripCount = ExactTripCount ? ExactTripCount : MaxTripCount;
   UP.Count = FullUnrollTripCount;
   if (FullUnrollTripCount && FullUnrollTripCount <= UP.FullUnrollMaxCount) {
@@ -804,7 +804,7 @@ static bool computeUnrollCount(
   }
 
   // 5th priority is partial unrolling.
-  // Try partial unroll only when TripCount could be staticaly calculated.
+  // Try partial unroll only when TripCount could be statically calculated.
   if (TripCount) {
     UP.Partial |= ExplicitUnroll;
     if (!UP.Partial) {
@@ -1041,7 +1041,7 @@ static LoopUnrollResult tryToUnrollLoop(
     // loop tests remains the same compared to the non-unrolled version, whereas
     // the generic upper bound unrolling keeps all but the last loop test so the
     // number of loop tests goes up which may end up being worse on targets with
-    // constriained branch predictor resources so is controlled by an option.)
+    // constrained branch predictor resources so is controlled by an option.)
     // In addition we only unroll small upper bounds.
     if (!(UP.UpperBound || MaxOrZero) || MaxTripCount > UnrollMaxUpperBound) {
       MaxTripCount = 0;

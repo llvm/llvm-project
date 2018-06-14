@@ -266,7 +266,7 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
       // Assume we will commute the constant to the RHS to be canonical.
       Idx = 1;
 
-    // Get the intrinsic ID if this user is an instrinsic.
+    // Get the intrinsic ID if this user is an intrinsic.
     Intrinsic::ID IID = Intrinsic::not_intrinsic;
     if (auto *UserII = dyn_cast<IntrinsicInst>(UserI))
       IID = UserII->getIntrinsicID();
@@ -609,7 +609,7 @@ static void speculatePHIs(ArrayRef<PHINode *> SpecPNs,
 
   // Each predecessor is numbered by its index in `SpecPreds`, so for each
   // instruction we speculate, the speculated instruction is stored in that
-  // index of the vector asosciated with the original instruction. We also
+  // index of the vector associated with the original instruction. We also
   // store the incoming values for each predecessor from any PHIs used.
   SmallDenseMap<Instruction *, SmallVector<Value *, 2>, 16> SpeculatedValueMap;
 

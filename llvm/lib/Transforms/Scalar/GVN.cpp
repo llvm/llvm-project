@@ -1064,7 +1064,7 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // It is illegal to move the array access to any point above the guard,
   // because if the index is out of bounds we should deoptimize rather than
   // access the array.
-  // Check that there is no guard in this block above our intruction.
+  // Check that there is no guard in this block above our instruction.
   if (!IsSafeToSpeculativelyExecute) {
     auto It = FirstImplicitControlFlowInsts.find(TmpBB);
     if (It != FirstImplicitControlFlowInsts.end()) {
