@@ -9982,6 +9982,35 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pternlogq256_maskz:
     return EmitX86Ternlog(*this, /*ZeroMask*/true, Ops);
 
+  case X86::BI__builtin_ia32_divss_round_mask:
+  case X86::BI__builtin_ia32_divsd_round_mask: {
+    Intrinsic::ID ID;
+    switch (BuiltinID) {
+    default: llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_divss_round_mask:
+      ID = Intrinsic::x86_avx512_mask_div_ss_round; break;
+    case X86::BI__builtin_ia32_divsd_round_mask:
+      ID = Intrinsic::x86_avx512_mask_div_sd_round; break;
+    }
+    Function *Intr = CGM.getIntrinsic(ID);
+
+    // If round parameter is not _MM_FROUND_CUR_DIRECTION, don't lower.
+    if (cast<llvm::ConstantInt>(Ops[4])->getZExtValue() != (uint64_t)4)
+      return Builder.CreateCall(Intr, Ops);
+
+    Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
+    Value *B = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
+    Value *C = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
+    Value *Mask = Ops[3];
+    Value *Div = Builder.CreateFDiv(A, B);
+    llvm::VectorType *MaskTy = llvm::VectorType::get(Builder.getInt1Ty(),
+                             cast<IntegerType>(Mask->getType())->getBitWidth());
+    Mask = Builder.CreateBitCast(Mask, MaskTy);
+    Mask = Builder.CreateExtractElement(Mask, (uint64_t)0);
+    Value *Select = Builder.CreateSelect(Mask, Div, C);
+    return Builder.CreateInsertElement(Ops[0], Select, (uint64_t)0);
+  }
+
   // 3DNow!
   case X86::BI__builtin_ia32_pswapdsf:
   case X86::BI__builtin_ia32_pswapdsi: {

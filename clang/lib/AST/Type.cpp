@@ -2668,6 +2668,42 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "unsigned _Accum";
   case ULongAccum:
     return "unsigned long _Accum";
+  case BuiltinType::ShortFract:
+    return "short _Fract";
+  case BuiltinType::Fract:
+    return "_Fract";
+  case BuiltinType::LongFract:
+    return "long _Fract";
+  case BuiltinType::UShortFract:
+    return "unsigned short _Fract";
+  case BuiltinType::UFract:
+    return "unsigned _Fract";
+  case BuiltinType::ULongFract:
+    return "unsigned long _Fract";
+  case BuiltinType::SatShortAccum:
+    return "_Sat short _Accum";
+  case BuiltinType::SatAccum:
+    return "_Sat _Accum";
+  case BuiltinType::SatLongAccum:
+    return "_Sat long _Accum";
+  case BuiltinType::SatUShortAccum:
+    return "_Sat unsigned short _Accum";
+  case BuiltinType::SatUAccum:
+    return "_Sat unsigned _Accum";
+  case BuiltinType::SatULongAccum:
+    return "_Sat unsigned long _Accum";
+  case BuiltinType::SatShortFract:
+    return "_Sat short _Fract";
+  case BuiltinType::SatFract:
+    return "_Sat _Fract";
+  case BuiltinType::SatLongFract:
+    return "_Sat long _Fract";
+  case BuiltinType::SatUShortFract:
+    return "_Sat unsigned short _Fract";
+  case BuiltinType::SatUFract:
+    return "_Sat unsigned _Fract";
+  case BuiltinType::SatULongFract:
+    return "_Sat unsigned long _Fract";
   case Float16:
     return "_Float16";
   case Float128:

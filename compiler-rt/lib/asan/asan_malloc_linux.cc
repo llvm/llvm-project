@@ -50,8 +50,8 @@ static void *AllocateFromLocalPool(uptr size_in_bytes) {
 }
 
 static void DeallocateFromLocalPool(const void *ptr) {
-  // Hack: since glibc 2.27, dlsym longer use stack-allocated memory to store
-  // error messages and instead use malloc followed by free. To avoid pool
+  // Hack: since glibc 2.27 dlsym no longer uses stack-allocated memory to store
+  // error messages and instead uses malloc followed by free. To avoid pool
   // exhaustion due to long object filenames, handle that special case here.
   uptr prev_offset = allocated_for_dlsym - last_dlsym_alloc_size_in_words;
   void *prev_mem = (void*)&alloc_memory_for_dlsym[prev_offset];

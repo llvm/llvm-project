@@ -109,6 +109,60 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::ULongAccum:
     ID = PREDEF_TYPE_ULONG_ACCUM_ID;
     break;
+  case BuiltinType::ShortFract:
+    ID = PREDEF_TYPE_SHORT_FRACT_ID;
+    break;
+  case BuiltinType::Fract:
+    ID = PREDEF_TYPE_FRACT_ID;
+    break;
+  case BuiltinType::LongFract:
+    ID = PREDEF_TYPE_LONG_FRACT_ID;
+    break;
+  case BuiltinType::UShortFract:
+    ID = PREDEF_TYPE_USHORT_FRACT_ID;
+    break;
+  case BuiltinType::UFract:
+    ID = PREDEF_TYPE_UFRACT_ID;
+    break;
+  case BuiltinType::ULongFract:
+    ID = PREDEF_TYPE_ULONG_FRACT_ID;
+    break;
+  case BuiltinType::SatShortAccum:
+    ID = PREDEF_TYPE_SAT_SHORT_ACCUM_ID;
+    break;
+  case BuiltinType::SatAccum:
+    ID = PREDEF_TYPE_SAT_ACCUM_ID;
+    break;
+  case BuiltinType::SatLongAccum:
+    ID = PREDEF_TYPE_SAT_LONG_ACCUM_ID;
+    break;
+  case BuiltinType::SatUShortAccum:
+    ID = PREDEF_TYPE_SAT_USHORT_ACCUM_ID;
+    break;
+  case BuiltinType::SatUAccum:
+    ID = PREDEF_TYPE_SAT_UACCUM_ID;
+    break;
+  case BuiltinType::SatULongAccum:
+    ID = PREDEF_TYPE_SAT_ULONG_ACCUM_ID;
+    break;
+  case BuiltinType::SatShortFract:
+    ID = PREDEF_TYPE_SAT_SHORT_FRACT_ID;
+    break;
+  case BuiltinType::SatFract:
+    ID = PREDEF_TYPE_SAT_FRACT_ID;
+    break;
+  case BuiltinType::SatLongFract:
+    ID = PREDEF_TYPE_SAT_LONG_FRACT_ID;
+    break;
+  case BuiltinType::SatUShortFract:
+    ID = PREDEF_TYPE_SAT_USHORT_FRACT_ID;
+    break;
+  case BuiltinType::SatUFract:
+    ID = PREDEF_TYPE_SAT_UFRACT_ID;
+    break;
+  case BuiltinType::SatULongFract:
+    ID = PREDEF_TYPE_SAT_ULONG_FRACT_ID;
+    break;
   case BuiltinType::Float16:
     ID = PREDEF_TYPE_FLOAT16_ID;
     break;

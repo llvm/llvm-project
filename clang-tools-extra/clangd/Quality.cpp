@@ -59,6 +59,29 @@ static SymbolQualitySignals::SymbolCategory categorize(const NamedDecl &ND) {
   return Switch().Visit(&ND);
 }
 
+static SymbolQualitySignals::SymbolCategory categorize(const CodeCompletionResult &R) {
+  if (R.Declaration)
+    return categorize(*R.Declaration);
+  if (R.Kind == CodeCompletionResult::RK_Macro)
+    return SymbolQualitySignals::Macro;
+  // Everything else is a keyword or a pattern. Patterns are mostly keywords
+  // too, except a few which we recognize by cursor kind.
+  switch (R.CursorKind) {
+    case CXCursor_CXXMethod:
+      return SymbolQualitySignals::Function;
+    case CXCursor_ModuleImportDecl:
+      return SymbolQualitySignals::Namespace;
+    case CXCursor_MacroDefinition:
+      return SymbolQualitySignals::Macro;
+    case CXCursor_TypeRef:
+      return SymbolQualitySignals::Type;
+    case CXCursor_MemberRef:
+      return SymbolQualitySignals::Variable;
+    default:
+      return SymbolQualitySignals::Keyword;
+  }
+}
+
 static SymbolQualitySignals::SymbolCategory
 categorize(const index::SymbolInfo &D) {
   switch (D.Kind) {
@@ -103,10 +126,7 @@ void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
   if (SemaCCResult.Availability == CXAvailability_Deprecated)
     Deprecated = true;
 
-  if (SemaCCResult.Declaration)
-    Category = categorize(*SemaCCResult.Declaration);
-  else if (SemaCCResult.Kind == CodeCompletionResult::RK_Macro)
-    Category = Macro;
+  Category = categorize(SemaCCResult);
 
   if (SemaCCResult.Declaration) {
     if (auto *ID = SemaCCResult.Declaration->getIdentifier())
@@ -135,6 +155,9 @@ float SymbolQualitySignals::evaluate() const {
     Score *= 0.1f;
 
   switch (Category) {
+    case Keyword:  // Usually relevant, but misses most signals.
+      Score *= 10;
+      break;
     case Type:
     case Function:
     case Variable:

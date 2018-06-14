@@ -191,9 +191,6 @@ void MCWasmStreamer::EmitInstToData(const MCInst &Inst,
 void MCWasmStreamer::FinishImpl() {
   EmitFrames(nullptr);
 
-  // Set fragment atoms so we can map from code fragment to defining symbol
-  addFragmentAtoms();
-
   this->MCObjectStreamer::FinishImpl();
 }
 

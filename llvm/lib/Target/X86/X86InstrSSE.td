@@ -1240,13 +1240,13 @@ let hasSideEffects = 0, Predicates = [UseAVX] in {
 def VCVTSD2SSrr  : VSDI<0x5A, MRMSrcReg, (outs FR32:$dst),
                         (ins FR32:$src1, FR64:$src2),
                         "cvtsd2ss\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
-                        VEX_4V, VEX_LIG, VEX_WIG, NotMemoryFoldable,
+                        VEX_4V, VEX_LIG, VEX_WIG,
                         Sched<[WriteCvtSD2SS]>;
 let mayLoad = 1 in
 def VCVTSD2SSrm  : I<0x5A, MRMSrcMem, (outs FR32:$dst),
                      (ins FR32:$src1, f64mem:$src2),
                      "vcvtsd2ss\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
-                     XD, VEX_4V, VEX_LIG, VEX_WIG, NotMemoryFoldable,
+                     XD, VEX_4V, VEX_LIG, VEX_WIG,
                      Sched<[WriteCvtSD2SS.Folded, ReadAfterLd]>;
 }
 
@@ -1302,13 +1302,13 @@ let hasSideEffects = 0 in {
 def VCVTSS2SDrr : I<0x5A, MRMSrcReg, (outs FR64:$dst),
                     (ins FR64:$src1, FR32:$src2),
                     "vcvtss2sd\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
-                    XS, VEX_4V, VEX_LIG, VEX_WIG, NotMemoryFoldable,
+                    XS, VEX_4V, VEX_LIG, VEX_WIG,
                     Sched<[WriteCvtSS2SD]>, Requires<[UseAVX]>;
 let mayLoad = 1 in
 def VCVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst),
                     (ins FR64:$src1, f32mem:$src2),
                     "vcvtss2sd\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
-                    XS, VEX_4V, VEX_LIG, VEX_WIG, NotMemoryFoldable,
+                    XS, VEX_4V, VEX_LIG, VEX_WIG,
                     Sched<[WriteCvtSS2SD.Folded, ReadAfterLd]>,
                     Requires<[UseAVX, OptForSize]>;
 }
@@ -2945,7 +2945,7 @@ multiclass sse1_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
                       f32mem, ssmem, sse_load_f32,
                       !cast<Intrinsic>("int_x86_sse_"##OpcodeStr##_ss), OpNode,
                       SSEPackedSingle, sched.Scl, AVXTarget>, XS, VEX_4V,
-                      VEX_LIG, VEX_WIG, NotMemoryFoldable;
+                      VEX_LIG, VEX_WIG;
 }
 
 multiclass sse2_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -2958,7 +2958,7 @@ multiclass sse2_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
                          f64mem, sdmem, sse_load_f64,
                          !cast<Intrinsic>("int_x86_sse2_"##OpcodeStr##_sd),
                          OpNode, SSEPackedDouble, sched.Scl, AVXTarget>,
-                         XD, VEX_4V, VEX_LIG, VEX_WIG, NotMemoryFoldable;
+                         XD, VEX_4V, VEX_LIG, VEX_WIG;
 }
 
 // Square root.

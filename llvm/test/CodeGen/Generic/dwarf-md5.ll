@@ -5,21 +5,21 @@
 ; XFAIL: darwin
 
 ; REQUIRES: object-emission
-; RUN: %llc_dwarf -dwarf-version 4 -filetype=asm -o - %s | FileCheck %s --check-prefixes=ASM,ASM-4
-; RUN: %llc_dwarf -dwarf-version 5 -filetype=asm -o - %s | FileCheck %s --check-prefixes=ASM,ASM-5
+; RUN: %llc_dwarf -dwarf-version 4 -filetype=asm -o - %s | FileCheck %s --check-prefix=ASM-4
+; RUN: %llc_dwarf -dwarf-version 5 -filetype=asm -o - %s | FileCheck %s --check-prefix=ASM-5
 ; RUN: %llc_dwarf -dwarf-version 4 -filetype=obj -o %t4.o %s
 ; RUN: llvm-dwarfdump -debug-line %t4.o | FileCheck %s --check-prefix=OBJ
 ; RUN: %llc_dwarf -dwarf-version 5 -filetype=obj -o %t5.o %s
 ; RUN: llvm-dwarfdump -debug-line %t5.o | FileCheck %s --check-prefixes=OBJ,OBJ-5
 
 ; ASM-4-NOT: .file 0
+; ASM-4: .file 1 "/scratch{{.*[/\\]}}t1.h"
+; ASM-4-NOT:  md5
+; ASM-4: .file 2 "/scratch{{.*[/\\]}}t2.h"
+; ASM-4-NOT:  md5
 ; ASM-5: .file 0 "/scratch{{.*[/\\]}}t.c" md5 0x00000000000000000000000000000000
-; ASM: .file 1 "/scratch{{.*[/\\]}}t1.h"
-; ASM-4-NOT:  md5
-; ASM-5-SAME: md5 0x11111111111111111111111111111111
-; ASM: .file 2 "/scratch{{.*[/\\]}}t2.h"
-; ASM-4-NOT:  md5
-; ASM-5-SAME: md5 0x22222222222222222222222222222222
+; ASM-5: .file 1 "t1.h" md5 0x11111111111111111111111111111111
+; ASM-5: .file 2 "t2.h" md5 0x22222222222222222222222222222222
 
 ; OBJ-5: file_names[ 0]:
 ; OBJ-5-NEXT: name: "t.c"

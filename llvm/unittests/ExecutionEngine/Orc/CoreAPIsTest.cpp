@@ -301,9 +301,16 @@ TEST(CoreAPIsTest, TestCircularDependenceInOneVSO) {
     EXPECT_TRUE(Unresolved.empty()) << "Failed to resolve \"Baz\"";
   }
 
+  // Add a circular dependency: Foo -> Bar, Bar -> Baz, Baz -> Foo.
   FooR->addDependencies({{&V, SymbolNameSet({Bar})}});
   BarR->addDependencies({{&V, SymbolNameSet({Baz})}});
   BazR->addDependencies({{&V, SymbolNameSet({Foo})}});
+
+  // Add self-dependencies for good measure. This tests that the implementation
+  // of addDependencies filters these out.
+  FooR->addDependencies({{&V, SymbolNameSet({Foo})}});
+  BarR->addDependencies({{&V, SymbolNameSet({Bar})}});
+  BazR->addDependencies({{&V, SymbolNameSet({Baz})}});
 
   EXPECT_FALSE(FooResolved) << "\"Foo\" should not be resolved yet";
   EXPECT_FALSE(BarResolved) << "\"Bar\" should not be resolved yet";

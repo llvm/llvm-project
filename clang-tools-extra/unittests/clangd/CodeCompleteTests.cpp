@@ -193,27 +193,22 @@ int main() { ClassWithMembers().^ }
 
 TEST(CompletionTest, Filter) {
   std::string Body = R"cpp(
-    #define FooBarMacro
-    int Abracadabra;
-    int Alakazam;
+    #define MotorCar
+    int Car;
     struct S {
       int FooBar;
       int FooBaz;
       int Qux;
     };
   )cpp";
+
+  // Only items matching the fuzzy query are returned.
   EXPECT_THAT(completions(Body + "int main() { S().Foba^ }").items,
-              AllOf(Has("FooBar"), Has("FooBaz"), Not(Has("FooBarMacro")),
-                    Not(Has("Qux"))));
+              AllOf(Has("FooBar"), Has("FooBaz"), Not(Has("Qux"))));
 
-  EXPECT_THAT(completions(Body + "int main() { S().FR^ }").items,
-              AllOf(Has("FooBar"), Not(Has("FooBaz")), Not(Has("Qux"))));
-
-  EXPECT_THAT(completions(Body + "int main() { aaa^ }").items,
-              AllOf(Has("Abracadabra"), Has("Alakazam")));
-
-  EXPECT_THAT(completions(Body + "int main() { _a^ }").items,
-              AllOf(Has("static_cast"), Not(Has("Abracadabra"))));
+  // Macros require  prefix match.
+  EXPECT_THAT(completions(Body + "int main() { C^ }").items,
+              AllOf(Has("Car"), Not(Has("MotorCar"))));
 }
 
 void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
@@ -461,21 +456,21 @@ TEST(CompletionTest, NoDuplicates) {
 TEST(CompletionTest, ScopedNoIndex) {
   auto Results = completions(
       R"cpp(
-          namespace fake { int BigBang, Babble, Ball; };
-          int main() { fake::bb^ }
+          namespace fake { int BigBang, Babble, Box; };
+          int main() { fake::ba^ }
       ")cpp");
-  // BigBang is a better match than Babble. Ball doesn't match at all.
-  EXPECT_THAT(Results.items, ElementsAre(Named("BigBang"), Named("Babble")));
+  // Babble is a better match than BigBang. Box doesn't match at all.
+  EXPECT_THAT(Results.items, ElementsAre(Named("Babble"), Named("BigBang")));
 }
 
 TEST(CompletionTest, Scoped) {
   auto Results = completions(
       R"cpp(
-          namespace fake { int Babble, Ball; };
-          int main() { fake::bb^ }
+          namespace fake { int Babble, Box; };
+          int main() { fake::ba^ }
       ")cpp",
       {var("fake::BigBang")});
-  EXPECT_THAT(Results.items, ElementsAre(Named("BigBang"), Named("Babble")));
+  EXPECT_THAT(Results.items, ElementsAre(Named("Babble"), Named("BigBang")));
 }
 
 TEST(CompletionTest, ScopedWithFilter) {

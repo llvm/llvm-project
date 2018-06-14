@@ -9,7 +9,7 @@
 
 ; Check that the backedge taken count was actually computed:
 ; CHECK: Determining loop execution counts for: @f0
-; CHECK-NEXT: Loop %b2: backedge-taken count is (-1 * (trunc i32 (1 + %a1) to i2))
+; CHECK-NEXT: Loop %b2: backedge-taken count is (-1 + (-1 * (trunc i32 %a1 to i2)))
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64"
 

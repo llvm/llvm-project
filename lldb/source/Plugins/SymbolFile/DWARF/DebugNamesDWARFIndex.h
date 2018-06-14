@@ -53,6 +53,7 @@ private:
                        DWARFDataExtractor debug_str_data,
                        DWARFDebugInfo &debug_info)
       : DWARFIndex(module), m_debug_info(debug_info),
+        m_debug_names_data(debug_names_data), m_debug_str_data(debug_str_data),
         m_debug_names_up(std::move(debug_names_up)),
         m_fallback(module, &debug_info, GetUnits(*m_debug_names_up)) {}
 

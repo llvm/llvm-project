@@ -6,6 +6,10 @@ set(LIBFUZZER_UNITTEST_CFLAGS
   -Werror
   -O2)
 
+if (APPLE)
+  set(FUZZER_SUPPORTED_OS osx)
+endif()
+
 add_custom_target(FuzzerUnitTests)
 set_target_properties(FuzzerUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 

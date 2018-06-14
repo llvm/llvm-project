@@ -27,8 +27,8 @@ JITSymbolResolverAdapter::lookup(const LookupSet &Symbols) {
     return R.lookup(std::move(Q), std::move(Unresolved));
   };
 
-  auto InternedResult =
-      blockingLookup(ES, std::move(LookupFn), std::move(InternedSymbols), MR);
+  auto InternedResult = blockingLookup(ES, std::move(LookupFn),
+                                       std::move(InternedSymbols), false, MR);
 
   if (!InternedResult)
     return InternedResult.takeError();

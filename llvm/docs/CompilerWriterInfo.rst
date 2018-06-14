@@ -40,7 +40,7 @@ Lanai
 MIPS
 ----
 
-* `MIPS Processor Architecture <https://imgtec.com/mips/architectures/>`_
+* `MIPS Processor Architecture <https://www.mips.com/products/>`_
 
 * `MIPS 64-bit ELF Object File Specification <http://techpubs.sgi.com/library/manuals/4000/007-4658-001/pdf/007-4658-001.pdf>`_
 

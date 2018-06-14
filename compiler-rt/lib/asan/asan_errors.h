@@ -414,6 +414,7 @@ struct ErrorDescription {
   };
 
   ErrorDescription() { internal_memset(this, 0, sizeof(*this)); }
+  explicit ErrorDescription(LinkerInitialized) {}
   ASAN_FOR_EACH_ERROR_KIND(ASAN_ERROR_DESCRIPTION_CONSTRUCTOR)
 
   bool IsValid() { return kind != kErrorKindInvalid; }

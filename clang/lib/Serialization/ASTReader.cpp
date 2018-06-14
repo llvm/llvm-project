@@ -6837,6 +6837,60 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_ULONG_ACCUM_ID:
       T = Context.UnsignedLongAccumTy;
       break;
+    case PREDEF_TYPE_SHORT_FRACT_ID:
+      T = Context.ShortFractTy;
+      break;
+    case PREDEF_TYPE_FRACT_ID:
+      T = Context.FractTy;
+      break;
+    case PREDEF_TYPE_LONG_FRACT_ID:
+      T = Context.LongFractTy;
+      break;
+    case PREDEF_TYPE_USHORT_FRACT_ID:
+      T = Context.UnsignedShortFractTy;
+      break;
+    case PREDEF_TYPE_UFRACT_ID:
+      T = Context.UnsignedFractTy;
+      break;
+    case PREDEF_TYPE_ULONG_FRACT_ID:
+      T = Context.UnsignedLongFractTy;
+      break;
+    case PREDEF_TYPE_SAT_SHORT_ACCUM_ID:
+      T = Context.SatShortAccumTy;
+      break;
+    case PREDEF_TYPE_SAT_ACCUM_ID:
+      T = Context.SatAccumTy;
+      break;
+    case PREDEF_TYPE_SAT_LONG_ACCUM_ID:
+      T = Context.SatLongAccumTy;
+      break;
+    case PREDEF_TYPE_SAT_USHORT_ACCUM_ID:
+      T = Context.SatUnsignedShortAccumTy;
+      break;
+    case PREDEF_TYPE_SAT_UACCUM_ID:
+      T = Context.SatUnsignedAccumTy;
+      break;
+    case PREDEF_TYPE_SAT_ULONG_ACCUM_ID:
+      T = Context.SatUnsignedLongAccumTy;
+      break;
+    case PREDEF_TYPE_SAT_SHORT_FRACT_ID:
+      T = Context.SatShortFractTy;
+      break;
+    case PREDEF_TYPE_SAT_FRACT_ID:
+      T = Context.SatFractTy;
+      break;
+    case PREDEF_TYPE_SAT_LONG_FRACT_ID:
+      T = Context.SatLongFractTy;
+      break;
+    case PREDEF_TYPE_SAT_USHORT_FRACT_ID:
+      T = Context.SatUnsignedShortFractTy;
+      break;
+    case PREDEF_TYPE_SAT_UFRACT_ID:
+      T = Context.SatUnsignedFractTy;
+      break;
+    case PREDEF_TYPE_SAT_ULONG_FRACT_ID:
+      T = Context.SatUnsignedLongFractTy;
+      break;
     case PREDEF_TYPE_FLOAT16_ID:
       T = Context.Float16Ty;
       break;

@@ -1171,6 +1171,9 @@ void MCAsmStreamer::emitDwarfFile0Directive(StringRef Directory,
   // .file 0 is new for DWARF v5.
   if (getContext().getDwarfVersion() < 5)
     return;
+  // Inform MCDwarf about the root file.
+  getContext().setMCLineTableRootFile(CUID, Directory, Filename, Checksum,
+                                      Source);
 
   SmallString<128> Str;
   raw_svector_ostream OS1(Str);
