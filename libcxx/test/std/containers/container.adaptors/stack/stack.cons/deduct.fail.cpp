@@ -26,7 +26,7 @@
 
 
 int main()
-{  
+{
 //  Test the explicit deduction guides
     {
 //  stack(const Container&, const Alloc&);
