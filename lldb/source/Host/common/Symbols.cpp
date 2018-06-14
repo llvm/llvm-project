@@ -91,7 +91,7 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
         ::strncat(path, exec_fspec->GetFilename().AsCString(),
                   sizeof(path) - strlen(path) - 1);
 
-        dsym_fspec.SetFile(path, false);
+        dsym_fspec.SetFile(path, false, FileSpec::Style::native);
 
         ModuleSpecList module_specs;
         ModuleSpec matched_module_spec;

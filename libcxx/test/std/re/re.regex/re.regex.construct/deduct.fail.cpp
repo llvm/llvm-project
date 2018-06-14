@@ -26,7 +26,7 @@
 
 
 int main()
-{  
+{
 //  Test the explicit deduction guides
     {
 //	basic_regex(ForwardIterator, ForwardIterator)

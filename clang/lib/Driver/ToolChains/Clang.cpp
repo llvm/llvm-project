@@ -3501,8 +3501,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       Args.hasArg(options::OPT_dA))
     CmdArgs.push_back("-masm-verbose");
 
-  if (!Args.hasFlag(options::OPT_fintegrated_as, options::OPT_fno_integrated_as,
-                    IsIntegratedAssemblerDefault))
+  if (!getToolChain().useIntegratedAs())
     CmdArgs.push_back("-no-integrated-as");
 
   if (Args.hasArg(options::OPT_fdebug_pass_structure)) {

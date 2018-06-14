@@ -508,6 +508,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
   switch (I.getOpcode()) {
   default:
     break;
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FADD:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_OR:
     return selectImpl(I, CoverageInfo);
@@ -545,5 +547,13 @@ AMDGPUInstructionSelector::selectVOP3Mods0(MachineOperand &Root) const {
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }, // src0_mods
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }, // clamp
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }  // omod
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3Mods(MachineOperand &Root) const {
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }  // src_mods
   }};
 }

@@ -19,7 +19,7 @@
 
 
 int main()
-{  
+{
 //  Test the explicit deduction guides
     {
 //  queue(const Container&, const Alloc&);

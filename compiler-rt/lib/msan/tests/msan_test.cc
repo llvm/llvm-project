@@ -3024,7 +3024,7 @@ TEST(MemorySanitizer, LongStruct) {
   EXPECT_POISONED(s2.a8);
 }
 
-#if defined(__NetBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 #define MSAN_TEST_PRLIMIT 0
 #elif defined(__GLIBC__)
 #define MSAN_TEST_PRLIMIT __GLIBC_PREREQ(2, 13)

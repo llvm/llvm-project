@@ -249,7 +249,8 @@ Status ProcessElfCore::DoLoadCore() {
       ModuleSpec exe_module_spec;
       exe_module_spec.GetArchitecture() = arch;
       exe_module_spec.GetFileSpec().SetFile(
-          m_nt_file_entries[0].path.GetCString(), false);
+          m_nt_file_entries[0].path.GetCString(), false,
+          FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
         exe_module_sp = GetTarget().GetSharedModule(exe_module_spec);
         if (exe_module_sp)

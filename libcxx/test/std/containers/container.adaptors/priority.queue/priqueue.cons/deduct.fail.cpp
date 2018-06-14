@@ -19,7 +19,7 @@
 
 
 int main()
-{  
+{
 //  Test the explicit deduction guides
     {
 //  queue(Compare, Container, const Alloc);
@@ -35,7 +35,7 @@ int main()
     }
 
     {
-//  priority_queue(Iter, Iter, Comp)  
+//  priority_queue(Iter, Iter, Comp)
 //  int is not an iterator
     std::priority_queue pri(15, 17, std::greater<double>());  // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'priority_queue'}}
     }

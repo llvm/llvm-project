@@ -84,7 +84,7 @@ bool lldb_private::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
                             "Developer/Toolchains/XcodeDefault.xctoolchain",
                             swift_clang_resource_dir);
     if (!verify || VerifyClangPath(clang_path)) {
-      file_spec.SetFile(clang_path.c_str(), true);
+      file_spec.SetFile(clang_path.c_str(), true, FileSpec::Style::native);
       return true;
     }
   } else if (parent != r_end && *parent == "PrivateFrameworks" &&
@@ -98,7 +98,7 @@ bool lldb_private::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
       raw_path.resize(parent - r_end);
       llvm::sys::path::append(clang_path, raw_path, swift_clang_resource_dir);
       if (!verify || VerifyClangPath(clang_path)) {
-        file_spec.SetFile(clang_path.c_str(), true);
+        file_spec.SetFile(clang_path.c_str(), true, FileSpec::Style::native);
         return true;
       }
       raw_path = lldb_shlib_spec.GetPath();
@@ -110,7 +110,7 @@ bool lldb_private::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
 
   // Fall back to the Clang resource directory inside the framework.
   raw_path.append("LLDB.framework/Resources/Clang");
-  file_spec.SetFile(raw_path.c_str(), true);
+  file_spec.SetFile(raw_path.c_str(), true, FileSpec::Style::native);
   return true;
 }
 

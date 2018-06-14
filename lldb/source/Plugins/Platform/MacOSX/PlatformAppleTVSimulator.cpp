@@ -315,12 +315,12 @@ Status PlatformAppleTVSimulator::GetSymbolFile(const FileSpec &platform_file,
                  platform_file_path);
 
       // First try in the SDK and see if the file is in there
-      local_file.SetFile(resolved_path, true);
+      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
       if (local_file.Exists())
         return error;
 
       // Else fall back to the actual path itself
-      local_file.SetFile(platform_file_path, true);
+      local_file.SetFile(platform_file_path, true, FileSpec::Style::native);
       if (local_file.Exists())
         return error;
     }
