@@ -15,16 +15,17 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_SCHEDULER_H
 #define LLVM_TOOLS_LLVM_MCA_SCHEDULER_H
 
+#include "HWEventListener.h"
 #include "Instruction.h"
 #include "LSUnit.h"
 #include "RetireControlUnit.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include <map>
 
 namespace mca {
-
-class Backend;
 
 /// Used to notify the internal state of a processor resource.
 ///
@@ -402,68 +403,52 @@ public:
 /// An Instruction leaves the IssuedQueue when it reaches the write-back stage.
 class Scheduler {
   const llvm::MCSchedModel &SM;
-  RetireControlUnit &RCU;
 
   // Hardware resources that are managed by this scheduler.
   std::unique_ptr<ResourceManager> Resources;
   std::unique_ptr<LSUnit> LSU;
-
-  // The Backend gets notified when instructions are ready/issued/executed.
-  Backend *const Owner;
 
   using QueueEntryTy = std::pair<unsigned, Instruction *>;
   std::map<unsigned, Instruction *> WaitQueue;
   std::map<unsigned, Instruction *> ReadyQueue;
   std::map<unsigned, Instruction *> IssuedQueue;
 
-  void
-  notifyInstructionIssued(const InstRef &IR,
-                          llvm::ArrayRef<std::pair<ResourceRef, double>> Used);
-  void notifyInstructionExecuted(const InstRef &IR);
-  void notifyInstructionReady(const InstRef &IR);
-  void notifyResourceAvailable(const ResourceRef &RR);
-
-  // Notify the Backend that buffered resources were consumed.
-  void notifyReservedBuffers(llvm::ArrayRef<uint64_t> Buffers);
-  // Notify the Backend that buffered resources were freed.
-  void notifyReleasedBuffers(llvm::ArrayRef<uint64_t> Buffers);
-
-  /// Select the next instruction to issue from the ReadyQueue.
-  /// This method gives priority to older instructions.
-  InstRef select();
-
-  /// Move instructions from the WaitQueue to the ReadyQueue if input operands
-  /// are all available.
-  void promoteToReadyQueue(llvm::SmallVectorImpl<InstRef> &Ready);
-
   /// Issue an instruction without updating the ready queue.
   void issueInstructionImpl(
       InstRef &IR,
       llvm::SmallVectorImpl<std::pair<ResourceRef, double>> &Pipes);
 
-  void updatePendingQueue(llvm::SmallVectorImpl<InstRef> &Ready);
-  void updateIssuedQueue(llvm::SmallVectorImpl<InstRef> &Executed);
-
 public:
-  Scheduler(Backend *B, const llvm::MCSchedModel &Model, RetireControlUnit &R,
-            unsigned LoadQueueSize, unsigned StoreQueueSize, bool AssumeNoAlias)
-      : SM(Model), RCU(R), Resources(llvm::make_unique<ResourceManager>(SM)),
+  Scheduler(const llvm::MCSchedModel &Model, unsigned LoadQueueSize,
+            unsigned StoreQueueSize, bool AssumeNoAlias)
+      : SM(Model), Resources(llvm::make_unique<ResourceManager>(SM)),
         LSU(llvm::make_unique<LSUnit>(LoadQueueSize, StoreQueueSize,
-                                      AssumeNoAlias)),
-        Owner(B) {}
+                                      AssumeNoAlias)) {}
 
   /// Check if the instruction in 'IR' can be dispatched.
   ///
   /// The DispatchStage is responsible for querying the Scheduler before
-  /// dispatching new instructions. Queries are performed through method
-  /// `Scheduler::canBeDispatched`. If scheduling resources are available,
-  /// and the instruction can be dispatched, then this method returns true.
-  /// Otherwise, a generic HWStallEvent is notified to the listeners.
-  bool canBeDispatched(const InstRef &IR) const;
-  void scheduleInstruction(InstRef &IR);
+  /// dispatching new instructions. This routine is used for performing such
+  /// a query.  If the instruction 'IR' can be dispatched, then true is
+  /// returned, otherwise false is returned with Event set to the stall type.
+  bool canBeDispatched(const InstRef &IR,
+                       HWStallEvent::GenericEventType &Event) const;
 
-  /// Issue an instruction.
-  void issueInstruction(InstRef &IR);
+  /// Returns true if there is availibility for IR in the LSU.
+  bool isReady(const InstRef &IR) const { return LSU->isReady(IR); }
+
+  /// Issue an instruction.  The Used container is populated with
+  /// the resource objects consumed on behalf of issuing this instruction.
+  void
+  issueInstruction(InstRef &IR,
+                   llvm::SmallVectorImpl<std::pair<ResourceRef, double>> &Used);
+
+  /// This routine will attempt to issue an instruction immediately (for
+  /// zero-latency instructions).
+  ///
+  /// Returns true if the instruction is issued immediately.  If this does not
+  /// occur, then the instruction will be added to the Scheduler's ReadyQueue.
+  bool issueImmediately(InstRef &IR);
 
   /// Reserve one entry in each buffered resource.
   void reserveBuffers(llvm::ArrayRef<uint64_t> Buffers) {
@@ -475,12 +460,55 @@ public:
     Resources->releaseBuffers(Buffers);
   }
 
-  void cycleEvent();
+  /// Update the resources managed by the scheduler.
+  /// This routine is to be called at the start of a new cycle, and is
+  /// responsible for updating scheduler resources.  Resources are released
+  /// once they have been fully consumed.
+  void reclaimSimulatedResources(llvm::SmallVectorImpl<ResourceRef> &Freed);
+
+  /// Move instructions from the WaitQueue to the ReadyQueue if input operands
+  /// are all available.
+  void promoteToReadyQueue(llvm::SmallVectorImpl<InstRef> &Ready);
+
+  /// Update the ready queue.
+  void updatePendingQueue(llvm::SmallVectorImpl<InstRef> &Ready);
+
+  /// Update the issued queue.
+  void updateIssuedQueue(llvm::SmallVectorImpl<InstRef> &Executed);
+
+  /// Updates the Scheduler's resources to reflect that an instruction has just
+  /// been executed.
+  void onInstructionExecuted(const InstRef &IR);
+
+  /// Obtain the processor's resource identifier for the given
+  /// resource mask.
+  unsigned getResourceID(uint64_t Mask) {
+    return Resources->resolveResourceMask(Mask);
+  }
+
+  /// Reserve resources necessary to issue the instruction.
+  /// Returns true if the resources are ready and the (LSU) can
+  /// execute the given instruction immediately.
+  bool reserveResources(InstRef &IR);
+
+  /// Select the next instruction to issue from the ReadyQueue.
+  /// This method gives priority to older instructions.
+  InstRef select();
 
 #ifndef NDEBUG
+  // Update the ready queues.
   void dump() const;
-#endif
-};
-} // Namespace mca
 
-#endif
+  // This routine performs a sanity check.  This routine should only be called
+  // when we know that 'IR' is not in the scheduler's instruction queues.
+  void sanityCheck(const InstRef &IR) const {
+    const unsigned Idx = IR.getSourceIndex();
+    assert(WaitQueue.find(Idx) == WaitQueue.end());
+    assert(ReadyQueue.find(Idx) == ReadyQueue.end());
+    assert(IssuedQueue.find(Idx) == IssuedQueue.end());
+  }
+#endif // !NDEBUG
+};
+} // namespace mca
+
+#endif // LLVM_TOOLS_LLVM_MCA_SCHEDULER_H

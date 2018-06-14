@@ -15,6 +15,7 @@ add_llvm_tool(llvm-mca
   CodeRegion.cpp
   DispatchStage.cpp
   DispatchStatistics.cpp
+  ExecuteStage.cpp
   FetchStage.cpp
   HWEventListener.cpp
   InstrBuilder.cpp

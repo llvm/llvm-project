@@ -60,7 +60,11 @@ bool DispatchStage::checkRCU(const InstRef &IR) {
 }
 
 bool DispatchStage::checkScheduler(const InstRef &IR) {
-  return SC->canBeDispatched(IR);
+  HWStallEvent::GenericEventType Event;
+  const bool Ready = SC.canBeDispatched(IR, Event);
+  if (!Ready)
+    Owner->notifyStallEvent(HWStallEvent(Event, IR));
+  return Ready;
 }
 
 void DispatchStage::updateRAWDependencies(ReadState &RS,
@@ -129,11 +133,6 @@ void DispatchStage::dispatch(InstRef IR) {
 
   // Notify listeners of the "instruction dispatched" event.
   notifyInstructionDispatched(IR, RegisterFiles);
-
-  // Now move the instruction into the scheduler's queue.
-  // The scheduler is responsible for checking if this is a zero-latency
-  // instruction that doesn't consume pipeline/scheduler resources.
-  SC->scheduleInstruction(IR);
 }
 
 void DispatchStage::preExecute(const InstRef &IR) {

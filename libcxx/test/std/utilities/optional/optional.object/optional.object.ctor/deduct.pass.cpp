@@ -25,7 +25,7 @@
 struct A {};
 
 int main()
-{  
+{
 //  Test the explicit deduction guides
     {
 //  optional(T)

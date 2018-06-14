@@ -358,7 +358,8 @@ public:
         break;
 
       case 'n':
-        attach_info.GetExecutableFile().SetFile(option_arg, false);
+        attach_info.GetExecutableFile().SetFile(option_arg, false,
+                                                FileSpec::Style::native);
         break;
 
       case 'w':
@@ -411,7 +412,7 @@ public:
           ProcessInstanceInfoMatch match_info;
           if (partial_name) {
             match_info.GetProcessInfo().GetExecutableFile().SetFile(
-                partial_name, false);
+                partial_name, false, FileSpec::Style::native);
             match_info.SetNameMatchType(NameMatch::StartsWith);
           }
           platform_sp->FindProcesses(match_info, process_infos);
@@ -983,7 +984,7 @@ public:
       case 'i':
         do_install = true;
         if (!option_arg.empty())
-          install_path.SetFile(option_arg, false);
+          install_path.SetFile(option_arg, false, FileSpec::Style::native);
         break;
       default:
         error.SetErrorStringWithFormat("invalid short option character '%c'",

@@ -2102,7 +2102,7 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
           return;
         }
       } else if (should_load == eLoadCWDlldbinitTrue) {
-        init_file.SetFile("./.lldbinit", true);
+        init_file.SetFile("./.lldbinit", true, FileSpec::Style::native);
       }
     }
   } else {
@@ -2126,14 +2126,15 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
         char program_init_file_name[PATH_MAX];
         ::snprintf(program_init_file_name, sizeof(program_init_file_name),
                    "%s-%s", init_file_path.c_str(), program_name);
-        init_file.SetFile(program_init_file_name, true);
+        init_file.SetFile(program_init_file_name, true,
+                          FileSpec::Style::native);
         if (!init_file.Exists())
           init_file.Clear();
       }
     }
 
     if (!init_file && !m_skip_lldbinit_files)
-      init_file.SetFile(init_file_path, false);
+      init_file.SetFile(init_file_path, false, FileSpec::Style::native);
   }
 
   // If the file exists, tell HandleCommand to 'source' it; this will do the

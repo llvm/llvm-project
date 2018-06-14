@@ -47,7 +47,7 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
     error.SetErrorToErrno();
   else {
     buf[count] = '\0'; // Success
-    dst.SetFile(buf, false);
+    dst.SetFile(buf, false, FileSpec::Style::native);
   }
   return error;
 }

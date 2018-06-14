@@ -6,15 +6,9 @@
 
 // SECTION: .got PROGBITS 0000000000003070 003070 000000
 
-// 0x3070 (.got end) - 0x1007 = 8297
-// CHECK: gotpc32:
-// CHECK-NEXT: 1000: {{.*}} leaq 8297(%rip), %r15
-.global gotpc32
-gotpc32:
-  leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
-
+// 0x3070 (.got end) - 0x1000 = 8304
 // CHECK: gotpc64:
-// CHECK-NEXT: 1007: {{.*}} movabsq $8297, %r11
+// CHECK-NEXT: 1000: {{.*}} movabsq $8304, %r11
 .global gotpc64
 gotpc64:
   movabsq $_GLOBAL_OFFSET_TABLE_-., %r11
