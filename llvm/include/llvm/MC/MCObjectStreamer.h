@@ -87,8 +87,6 @@ protected:
   /// will be used as a symbol offset within the fragment.
   void flushPendingLabels(MCFragment *F, uint64_t FOffset = 0);
 
-  void addFragmentAtoms();
-
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
 

@@ -1019,9 +1019,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-    Constructor()
-        : initializer1(),
-          initializer2()
+       Constructor()
+           : initializer1(),
+             initializer2()
 
   * ``BCIS_BeforeComma`` (in configuration: ``BeforeComma``)
     Break constructor initializers before the colon and commas, and align
@@ -1029,18 +1029,18 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-    Constructor()
-        : initializer1()
-        , initializer2()
+       Constructor()
+           : initializer1()
+           , initializer2()
 
   * ``BCIS_AfterColon`` (in configuration: ``AfterColon``)
     Break constructor initializers after the colon and commas.
 
     .. code-block:: c++
 
-    Constructor() :
-        initializer1(),
-        initializer2()
+       Constructor() :
+           initializer1(),
+           initializer2()
 
 
 
@@ -1054,10 +1054,10 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-    class Foo
-        : Base1,
-          Base2
-    {};
+       class Foo
+           : Base1,
+             Base2
+       {};
 
   * ``BILS_BeforeComma`` (in configuration: ``BeforeComma``)
     Break inheritance list before the colon and commas, and align
@@ -1065,18 +1065,20 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-    Constructor()
-        : initializer1()
-        , initializer2()
+       class Foo
+           : Base1
+           , Base2
+       {};
 
   * ``BILS_AfterColon`` (in configuration: ``AfterColon``)
     Break inheritance list after the colon and commas.
 
     .. code-block:: c++
 
-    Constructor() :
-        initializer1(),
-        initializer2()
+       class Foo :
+           Base1,
+           Base2
+       {};
 
 
 

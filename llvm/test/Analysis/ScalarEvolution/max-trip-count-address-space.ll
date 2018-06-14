@@ -4,7 +4,7 @@
 
 target datalayout = "e-p:32:32:32-p1:16:16:16-p2:8:8:8-p4:64:64:64-n16:32:64"
 
-; CHECK:  {%d,+,4}<%bb>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: ((4 * (trunc i32 (-1 + %n) to i16)) + %d)
+; CHECK:  {%d,+,4}<%bb>{{ U: [^ ]+ S: [^ ]+}}{{ *}} Exits: (-4 + (4 * (trunc i32 %n to i16)) + %d)
 
 
 define void @foo(i32 addrspace(1)* nocapture %d, i32 %n) nounwind {

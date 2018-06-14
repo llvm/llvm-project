@@ -50,9 +50,7 @@ if(NOT HAS_THREAD_LOCAL)
   list(APPEND LIBFUZZER_CFLAGS -Dthread_local=__thread)
 endif()
 
-if(APPLE)
-  set(FUZZER_SUPPORTED_OS osx)
-endif()
+set(FUZZER_SUPPORTED_OS ${SANITIZER_COMMON_SUPPORTED_OS})
 
 add_compiler_rt_object_libraries(RTfuzzer
   OS ${FUZZER_SUPPORTED_OS}

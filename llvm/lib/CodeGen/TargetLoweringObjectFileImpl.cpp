@@ -1408,6 +1408,12 @@ static SectionKind getWasmKindForNamedSection(StringRef Name, SectionKind K) {
 
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  // We don't support explict section names for functions in the wasm object
+  // format.  Each function has to be in its own unique section.
+  if (isa<Function>(GO)) {
+    return SelectSectionForGlobal(GO, Kind, TM);
+  }
+
   StringRef Name = GO->getSection();
 
   Kind = getWasmKindForNamedSection(Name, Kind);

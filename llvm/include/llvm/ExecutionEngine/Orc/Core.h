@@ -639,7 +639,7 @@ using AsynchronousLookupFunction = std::function<SymbolNameSet(
 /// Perform a blocking lookup on the given symbols.
 Expected<SymbolMap> blockingLookup(ExecutionSessionBase &ES,
                                    AsynchronousLookupFunction AsyncLookup,
-                                   SymbolNameSet Names,
+                                   SymbolNameSet Names, bool WaiUntilReady,
                                    MaterializationResponsibility *MR = nullptr);
 
 /// Look up the given names in the given VSOs.

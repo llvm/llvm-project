@@ -79,7 +79,7 @@ TEST(FuzzyMatch, Matches) {
   EXPECT_THAT("", matches("unique_ptr"));
   EXPECT_THAT("u_p", matches("[u]nique[_p]tr"));
   EXPECT_THAT("up", matches("[u]nique_[p]tr"));
-  EXPECT_THAT("uq", matches("[u]ni[q]ue_ptr"));
+  EXPECT_THAT("uq", Not(matches("unique_ptr")));
   EXPECT_THAT("qp", Not(matches("unique_ptr")));
   EXPECT_THAT("log", Not(matches("SVGFEMorphologyElement")));
 
@@ -99,7 +99,7 @@ TEST(FuzzyMatch, Matches) {
   EXPECT_THAT("moza", matches("-[moz]-[a]nimation"));
 
   EXPECT_THAT("ab", matches("[ab]A"));
-  EXPECT_THAT("ccm", matches("[c]a[cm]elCase"));
+  EXPECT_THAT("ccm", Not(matches("cacmelCase")));
   EXPECT_THAT("bti", Not(matches("the_black_knight")));
   EXPECT_THAT("ccm", Not(matches("camelCase")));
   EXPECT_THAT("cmcm", Not(matches("camelCase")));
@@ -110,17 +110,17 @@ TEST(FuzzyMatch, Matches) {
   EXPECT_THAT("LLLL", Not(matches("SVisualLoggerLogsList")));
   EXPECT_THAT("TEdit", matches("[T]ext[Edit]"));
   EXPECT_THAT("TEdit", matches("[T]ext[Edit]or"));
-  EXPECT_THAT("TEdit", matches("[Te]xte[dit]"));
+  EXPECT_THAT("TEdit", Not(matches("[T]ext[edit]")));
   EXPECT_THAT("TEdit", matches("[t]ext_[edit]"));
-  EXPECT_THAT("TEditDit", matches("[T]ext[Edit]or[D]ecorat[i]on[T]ype"));
+  EXPECT_THAT("TEditDt", matches("[T]ext[Edit]or[D]ecoration[T]ype"));
   EXPECT_THAT("TEdit", matches("[T]ext[Edit]orDecorationType"));
   EXPECT_THAT("Tedit", matches("[T]ext[Edit]"));
   EXPECT_THAT("ba", Not(matches("?AB?")));
   EXPECT_THAT("bkn", matches("the_[b]lack_[kn]ight"));
-  EXPECT_THAT("bt", matches("the_[b]lack_knigh[t]"));
-  EXPECT_THAT("ccm", matches("[c]amelCase[cm]"));
-  EXPECT_THAT("fdm", matches("[f]in[dM]odel"));
-  EXPECT_THAT("fob", matches("[fo]o[b]ar"));
+  EXPECT_THAT("bt", Not(matches("the_[b]lack_knigh[t]")));
+  EXPECT_THAT("ccm", Not(matches("[c]amelCase[cm]")));
+  EXPECT_THAT("fdm", Not(matches("[f]in[dM]odel")));
+  EXPECT_THAT("fob", Not(matches("[fo]o[b]ar")));
   EXPECT_THAT("fobz", Not(matches("foobar")));
   EXPECT_THAT("foobar", matches("[foobar]"));
   EXPECT_THAT("form", matches("editor.[form]atOnSave"));
@@ -132,14 +132,14 @@ TEST(FuzzyMatch, Matches) {
   EXPECT_THAT("gp", matches("[G]it_Git_[P]ull"));
   EXPECT_THAT("is", matches("[I]mport[S]tatement"));
   EXPECT_THAT("is", matches("[is]Valid"));
-  EXPECT_THAT("lowrd", matches("[low]Wo[rd]"));
-  EXPECT_THAT("myvable", matches("[myva]ria[ble]"));
+  EXPECT_THAT("lowrd", Not(matches("[low]Wo[rd]")));
+  EXPECT_THAT("myvable", Not(matches("[myva]ria[ble]")));
   EXPECT_THAT("no", Not(matches("")));
   EXPECT_THAT("no", Not(matches("match")));
   EXPECT_THAT("ob", Not(matches("foobar")));
   EXPECT_THAT("sl", matches("[S]Visual[L]oggerLogsList"));
-  EXPECT_THAT("sllll", matches("[S]Visua[lL]ogger[L]ogs[L]ist"));
-  EXPECT_THAT("Three", matches("H[T]ML[HRE]l[e]ment"));
+  EXPECT_THAT("sllll", matches("[S]Visua[L]ogger[Ll]ama[L]ist"));
+  EXPECT_THAT("THRE", matches("H[T]ML[HRE]lement"));
   EXPECT_THAT("b", Not(matches("NDEBUG")));
   EXPECT_THAT("Three", matches("[Three]"));
   EXPECT_THAT("fo", Not(matches("barfoo")));
@@ -173,6 +173,9 @@ TEST(FuzzyMatch, Matches) {
   // These would ideally match, but would need special segmentation rules.
   EXPECT_THAT("printf", Not(matches("s[printf]")));
   EXPECT_THAT("str", Not(matches("o[str]eam")));
+  EXPECT_THAT("strcpy", Not(matches("strncpy")));
+  EXPECT_THAT("std", Not(matches("PTHREAD_MUTEX_STALLED")));
+  EXPECT_THAT("std", Not(matches("pthread_condattr_setpshared")));
 }
 
 struct RankMatcher : public testing::MatcherInterface<StringRef> {
@@ -236,12 +239,11 @@ template <typename... T> testing::Matcher<StringRef> ranks(T... RankedStrings) {
 }
 
 TEST(FuzzyMatch, Ranking) {
-  EXPECT_THAT("eb", ranks("[e]mplace_[b]ack", "[e]m[b]ed"));
   EXPECT_THAT("cons",
               ranks("[cons]ole", "[Cons]ole", "ArrayBuffer[Cons]tructor"));
   EXPECT_THAT("foo", ranks("[foo]", "[Foo]"));
-  EXPECT_THAT("onMess",
-              ranks("[onMess]age", "[onmess]age", "[on]This[M]ega[Es]cape[s]"));
+  EXPECT_THAT("onMes",
+              ranks("[onMes]sage", "[onmes]sage", "[on]This[M]ega[Es]capes"));
   EXPECT_THAT("CC", ranks("[C]amel[C]ase", "[c]amel[C]ase"));
   EXPECT_THAT("cC", ranks("[c]amel[C]ase", "[C]amel[C]ase"));
   EXPECT_THAT("p", ranks("[p]", "[p]arse", "[p]osix", "[p]afdsa", "[p]ath"));
@@ -259,18 +261,13 @@ TEST(FuzzyMatch, Ranking) {
               ranks("[convertModelPosition]ToViewPosition",
                     "[convert]ViewTo[ModelPosition]"));
   EXPECT_THAT("is", ranks("[is]ValidViewletId", "[i]mport [s]tatement"));
-  EXPECT_THAT("title", ranks("window.[title]",
-                             "files.[t]r[i]m[T]rai[l]ingWhit[e]space"));
-  EXPECT_THAT("strcpy", ranks("[strcpy]", "[strcpy]_s", "[str]n[cpy]"));
-  EXPECT_THAT("close", ranks("workbench.quickOpen.[close]OnFocusOut",
-                             "[c]ss.[l]int.imp[o]rt[S]tat[e]ment",
-                             "[c]ss.co[lo]rDecorator[s].[e]nable"));
+  EXPECT_THAT("strcpy", ranks("[strcpy]", "[strcpy]_s"));
 }
 
 // Verify some bounds so we know scores fall in the right range.
 // Testing exact scores is fragile, so we prefer Ranking tests.
 TEST(FuzzyMatch, Scoring) {
-  EXPECT_THAT("abs", matches("[a]x[b]y[s]z", 0.f));
+  EXPECT_THAT("abs", matches("[a]w[B]xYz[S]", 0.f));
   EXPECT_THAT("abs", matches("[abs]l", 1.f));
   EXPECT_THAT("abs", matches("[abs]", 2.f));
   EXPECT_THAT("Abs", matches("[abs]", 2.f));

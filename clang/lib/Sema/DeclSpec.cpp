@@ -340,6 +340,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_decimal64:
     case TST_double:
     case TST_Accum:
+    case TST_Fract:
     case TST_Float16:
     case TST_float128:
     case TST_enum:
@@ -512,6 +513,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_float:       return "float";
   case DeclSpec::TST_double:      return "double";
   case DeclSpec::TST_accum:       return "_Accum";
+  case DeclSpec::TST_fract:       return "_Fract";
   case DeclSpec::TST_float16:     return "_Float16";
   case DeclSpec::TST_float128:    return "__float128";
   case DeclSpec::TST_bool:        return Policy.Bool ? "bool" : "_Bool";
@@ -764,6 +766,19 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation Loc,
   }
   TypeSpecType = T;
   TypeSpecOwned = false;
+  return false;
+}
+
+bool DeclSpec::SetTypeSpecSat(SourceLocation Loc, const char *&PrevSpec,
+                              unsigned &DiagID) {
+  // Cannot set twice
+  if (TypeSpecSat) {
+    DiagID = diag::warn_duplicate_declspec;
+    PrevSpec = "_Sat";
+    return true;
+  }
+  TypeSpecSat = true;
+  TSSatLoc = Loc;
   return false;
 }
 
@@ -1102,13 +1117,16 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     }
   }
 
+  bool IsFixedPointType =
+      TypeSpecType == TST_accum || TypeSpecType == TST_fract;
+
   // signed/unsigned are only valid with int/char/wchar_t/_Accum.
   if (TypeSpecSign != TSS_unspecified) {
     if (TypeSpecType == TST_unspecified)
       TypeSpecType = TST_int; // unsigned -> unsigned int, signed -> signed int.
     else if (TypeSpecType != TST_int && TypeSpecType != TST_int128 &&
              TypeSpecType != TST_char && TypeSpecType != TST_wchar &&
-             TypeSpecType != TST_accum) {
+             !IsFixedPointType) {
       S.Diag(TSSLoc, diag::err_invalid_sign_spec)
         << getSpecifierName((TST)TypeSpecType, Policy);
       // signed double -> double.
@@ -1124,10 +1142,11 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     if (TypeSpecType == TST_unspecified)
       TypeSpecType = TST_int; // short -> short int, long long -> long long int.
     else if (!(TypeSpecType == TST_int ||
-               (TypeSpecType == TST_accum && TypeSpecWidth != TSW_longlong))) {
+               (IsFixedPointType && TypeSpecWidth != TSW_longlong))) {
       S.Diag(TSWRange.getBegin(), diag::err_invalid_width_spec)
           << (int)TypeSpecWidth << getSpecifierName((TST)TypeSpecType, Policy);
       TypeSpecType = TST_int;
+      TypeSpecSat = false;
       TypeSpecOwned = false;
     }
     break;
@@ -1135,10 +1154,11 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     if (TypeSpecType == TST_unspecified)
       TypeSpecType = TST_int;  // long -> long int.
     else if (TypeSpecType != TST_int && TypeSpecType != TST_double &&
-             TypeSpecType != TST_accum) {
+             !IsFixedPointType) {
       S.Diag(TSWRange.getBegin(), diag::err_invalid_width_spec)
           << (int)TypeSpecWidth << getSpecifierName((TST)TypeSpecType, Policy);
       TypeSpecType = TST_int;
+      TypeSpecSat = false;
       TypeSpecOwned = false;
     }
     break;

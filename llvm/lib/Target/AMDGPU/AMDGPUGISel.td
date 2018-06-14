@@ -46,5 +46,38 @@ class GISelVop2Pat <
   (inst src0_vt:$src0, src1_vt:$src1)
 >;
 
+class GISelVop2CommutePat <
+  SDPatternOperator node,
+  Instruction inst,
+  ValueType dst_vt,
+  ValueType src0_vt = dst_vt, ValueType src1_vt = src0_vt>   : GCNPat <
+
+  (dst_vt (node (src1_vt VGPR_32:$src1), (src0_vt (sd_vsrc0 src0_vt:$src0)))),
+  (inst src0_vt:$src0, src1_vt:$src1)
+>;
+
+multiclass GISelVop2IntrPat <
+  SDPatternOperator node, Instruction inst,
+  ValueType dst_vt, ValueType src_vt = dst_vt> {
+
+  def : GISelVop2Pat <node, inst, dst_vt, src_vt>;
+
+  // FIXME: Intrinsics aren't marked as commutable, so we need to add an explcit
+  // pattern to handle commuting.  This is another reason why legalizing to a
+  // generic machine instruction may be better that matching the intrinsic
+  // directly.
+  def : GISelVop2CommutePat <node, inst, dst_vt, src_vt>;
+}
+
 def : GISelSop2Pat <or, S_OR_B32, i32>;
 def : GISelVop2Pat <or, V_OR_B32_e32, i32>;
+
+// FIXME: Select directly to _e32 so we don't need to deal with modifiers.
+// FIXME: We can't re-use SelectionDAG patterns here because they match
+// against a custom SDNode and we would need to create a generic machine
+// instruction that is equivalent to the custom SDNode.  This would also require
+// us to custom legalize the intrinsic to the new generic machine instruction,
+// but I can't get custom legalizing of intrinsic to work and I'm not sure if
+// this is even supported yet.
+defm : GISelVop2IntrPat <
+  int_amdgcn_cvt_pkrtz, V_CVT_PKRTZ_F16_F32_e32, v2f16, f32>;

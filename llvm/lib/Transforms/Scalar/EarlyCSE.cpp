@@ -719,20 +719,16 @@ bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
   auto *TorF = (BI->getSuccessor(0) == BB)
                    ? ConstantInt::getTrue(BB->getContext())
                    : ConstantInt::getFalse(BB->getContext());
-  auto IsAnd = [](Instruction *I) {
+  auto MatchBinOp = [](Instruction *I, unsigned Opcode) {
     if (BinaryOperator *BOp = dyn_cast<BinaryOperator>(I))
-      return BOp->getOpcode() == Instruction::And;
-    return false;
-  };
-  auto IsOr = [](Instruction *I) {
-    if (BinaryOperator *BOp = dyn_cast<BinaryOperator>(I))
-      return BOp->getOpcode() == Instruction::Or;
+      return BOp->getOpcode() == Opcode;
     return false;
   };
   // If the condition is AND operation, we can propagate its operands into the
   // true branch. If it is OR operation, we can propagate them into the false
   // branch.
-  auto CanPropagateOperands = (BI->getSuccessor(0) == BB) ? IsAnd : IsOr;
+  unsigned PropagateOpcode =
+      (BI->getSuccessor(0) == BB) ? Instruction::And : Instruction::Or;
 
   bool MadeChanges = false;
   SmallVector<Instruction *, 4> WorkList;
@@ -756,7 +752,7 @@ bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
       }
     }
 
-    if (CanPropagateOperands(Curr))
+    if (MatchBinOp(Curr, PropagateOpcode))
       for (auto &Op : cast<BinaryOperator>(Curr)->operands())
         if (Instruction *OPI = dyn_cast<Instruction>(Op))
           if (SimpleValue::canHandle(OPI) && Visited.insert(OPI).second)

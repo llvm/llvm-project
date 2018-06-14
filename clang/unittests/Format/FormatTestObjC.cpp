@@ -1218,6 +1218,17 @@ TEST_F(FormatTestObjC, BreaksCallStatementWhereSemiJustOverTheLimit) {
                "}");
 }
 
+TEST_F(FormatTestObjC, AlwaysBreakBeforeMultilineStrings) {
+  Style = getGoogleStyle(FormatStyle::LK_ObjC);
+  Style.ColumnLimit = 40;
+  verifyFormat("aaaa = @\"bbbb\"\n"
+               "       @\"cccc\";");
+  verifyFormat("aaaa(@\"bbbb\"\n"
+               "     @\"cccc\");");
+  verifyFormat("aaaa(qqq, @\"bbbb\"\n"
+               "          @\"cccc\");");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
