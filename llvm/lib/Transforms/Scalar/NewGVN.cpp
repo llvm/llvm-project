@@ -1259,7 +1259,7 @@ bool NewGVN::someEquivalentDominates(const Instruction *Inst,
    // This must be an instruction because we are only called from phi nodes
   // in the case that the value it needs to check against is an instruction.
 
-  // The most likely candiates for dominance are the leader and the next leader.
+  // The most likely candidates for dominance are the leader and the next leader.
   // The leader or nextleader will dominate in all cases where there is an
   // equivalent that is higher up in the dom tree.
   // We can't *only* check them, however, because the
@@ -1624,7 +1624,7 @@ NewGVN::performSymbolicPredicateInfoEvaluation(Instruction *I) const {
 const Expression *NewGVN::performSymbolicCallEvaluation(Instruction *I) const {
   auto *CI = cast<CallInst>(I);
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    // Instrinsics with the returned attribute are copies of arguments.
+    // Intrinsics with the returned attribute are copies of arguments.
     if (auto *ReturnedValue = II->getReturnedArgOperand()) {
       if (II->getIntrinsicID() == Intrinsic::ssa_copy)
         if (const auto *Result = performSymbolicPredicateInfoEvaluation(I))
@@ -2217,7 +2217,7 @@ void NewGVN::moveMemoryToNewCongruenceClass(Instruction *I,
                                             MemoryAccess *InstMA,
                                             CongruenceClass *OldClass,
                                             CongruenceClass *NewClass) {
-  // If the leader is I, and we had a represenative MemoryAccess, it should
+  // If the leader is I, and we had a representative MemoryAccess, it should
   // be the MemoryAccess of OldClass.
   assert((!InstMA || !OldClass->getMemoryLeader() ||
           OldClass->getLeader() != I ||
@@ -4124,7 +4124,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
           // It's about to be alive again.
           if (LeaderUseCount == 0 && isa<Instruction>(DominatingLeader))
             ProbablyDead.erase(cast<Instruction>(DominatingLeader));
-          // Copy instructions, however, are still dead beacuse we use their
+          // Copy instructions, however, are still dead because we use their
           // operand as the leader.
           if (LeaderUseCount == 0 && isSSACopy)
             ProbablyDead.insert(II);

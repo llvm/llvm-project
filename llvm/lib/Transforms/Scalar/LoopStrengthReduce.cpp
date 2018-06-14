@@ -123,7 +123,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-reduce"
 
-/// MaxIVUsers is an arbitrary threshold that provides an early opportunitiy for
+/// MaxIVUsers is an arbitrary threshold that provides an early opportunity for
 /// bail out. This threshold is far beyond the number of users that LSR can
 /// conceivably solve, so it should not affect generated code, but catches the
 /// worst cases before LSR burns too much compile time and stack space.
@@ -331,7 +331,7 @@ struct Formula {
   /// #2 enforces that 1 * reg is reg.
   /// #3 ensures invariant regs with respect to current loop can be combined
   /// together in LSR codegen.
-  /// This invariant can be temporarly broken while building a formula.
+  /// This invariant can be temporarily broken while building a formula.
   /// However, every formula inserted into the LSRInstance must be in canonical
   /// form.
   SmallVector<const SCEV *, 4> BaseRegs;
@@ -2700,7 +2700,7 @@ findIVOperand(User::op_iterator OI, User::op_iterator OE,
   return OI;
 }
 
-/// IVChain logic must consistenctly peek base TruncInst operands, so wrap it in
+/// IVChain logic must consistently peek base TruncInst operands, so wrap it in
 /// a convenient helper.
 static Value *getWideOperand(Value *Oper) {
   if (TruncInst *Trunc = dyn_cast<TruncInst>(Oper))
@@ -4454,7 +4454,7 @@ void LSRInstance::NarrowSearchSpaceByRefilteringUndesirableDedicatedRegisters(){
 /// The benefit is that it is more likely to find out a better solution
 /// from a formulae set with more Scale and ScaledReg variations than
 /// a formulae set with the same Scale and ScaledReg. The picking winner
-/// reg heurstic will often keep the formulae with the same Scale and
+/// reg heuristic will often keep the formulae with the same Scale and
 /// ScaledReg and filter others, and we want to avoid that if possible.
 void LSRInstance::NarrowSearchSpaceByFilterFormulaWithSameScaledReg() {
   if (EstimateSearchSpaceComplexity() < ComplexityLimit)

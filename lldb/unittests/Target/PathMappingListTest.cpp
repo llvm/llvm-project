@@ -29,9 +29,12 @@ static void TestPathMappings(const PathMappingList &map,
                              llvm::ArrayRef<ConstString> fails) {
   ConstString actual_remapped;
   for (const auto &fail : fails) {
-    EXPECT_FALSE(map.RemapPath(fail, actual_remapped));
+    SCOPED_TRACE(fail.GetCString());
+    EXPECT_FALSE(map.RemapPath(fail, actual_remapped))
+        << "actual_remapped: " << actual_remapped.GetCString();
   }
   for (const auto &match : matches) {
+    SCOPED_TRACE(match.original.GetPath() + " -> " + match.remapped.GetPath());
     std::string orig_normalized = match.original.GetPath();
     EXPECT_TRUE(
         map.RemapPath(ConstString(match.original.GetPath()), actual_remapped));
@@ -54,8 +57,13 @@ TEST(PathMappingListTest, RelativeTests) {
     {"bar/foo.c", "/tmp/bar/foo.c"},
   };
   ConstString fails[] = {
-    ConstString("/a"),
-    ConstString("/"),
+#ifdef _WIN32
+      ConstString("C:\\"),
+      ConstString("C:\\a"),
+#else
+      ConstString("/a"),
+      ConstString("/"),
+#endif
   };
   PathMappingList map;
   map.Append(ConstString("."), ConstString("/tmp"), false);

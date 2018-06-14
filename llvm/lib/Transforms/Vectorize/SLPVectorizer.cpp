@@ -363,40 +363,6 @@ static Value *isOneOf(Value *OpValue, Value *Op) {
 
 namespace {
 
-/// Contains data for the instructions going to be vectorized.
-struct RawInstructionsData {
-  /// Main Opcode of the instructions going to be vectorized.
-  unsigned Opcode = 0;
-
-  /// The list of instructions have some instructions with alternate opcodes.
-  bool HasAltOpcodes = false;
-};
-
-} // end anonymous namespace
-
-/// Checks the list of the vectorized instructions \p VL and returns info about
-/// this list.
-static RawInstructionsData getMainOpcode(ArrayRef<Value *> VL) {
-  auto *I0 = dyn_cast<Instruction>(VL[0]);
-  if (!I0)
-    return {};
-  RawInstructionsData Res;
-  unsigned Opcode = I0->getOpcode();
-  // Walk through the list of the vectorized instructions
-  // in order to check its structure described by RawInstructionsData.
-  for (unsigned Cnt = 0, E = VL.size(); Cnt != E; ++Cnt) {
-    auto *I = dyn_cast<Instruction>(VL[Cnt]);
-    if (!I)
-      return {};
-    if (Opcode != I->getOpcode())
-      Res.HasAltOpcodes = true;
-  }
-  Res.Opcode = Opcode;
-  return Res;
-}
-
-namespace {
-
 /// Main data required for vectorization of instructions.
 struct InstructionsState {
   /// The very first instruction in the list with the main opcode.
@@ -419,21 +385,26 @@ struct InstructionsState {
 /// InstructionsState, the Opcode that we suppose the whole list 
 /// could be vectorized even if its structure is diverse.
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL) {
-  auto Res = getMainOpcode(VL);
-  unsigned Opcode = Res.Opcode;
-  if (!Res.HasAltOpcodes)
-    return InstructionsState(VL[0], Opcode, false);
-  unsigned AltOpcode = getAltOpcode(Opcode);
-  // Examine each element in the list instructions VL to determine
-  // if some operations there could be considered as an alternative
-  // (for example as subtraction relates to addition operation).
-  for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
-    auto *I = cast<Instruction>(VL[Cnt]);
-    unsigned InstOpcode = I->getOpcode();
-    if (InstOpcode != (isOdd(Cnt) ? AltOpcode : Opcode))
-      return InstructionsState(VL[0], 0, false);
+  // Make sure these are all Instructions.
+  if (llvm::any_of(VL, [](Value *V) { return !isa<Instruction>(V); }))
+    return InstructionsState(VL[0], 0, false);
+
+  unsigned Opcode = cast<Instruction>(VL[0])->getOpcode();
+  bool HasAltOpcodes = llvm::any_of(VL, [Opcode](Value *V) {
+    return Opcode != cast<Instruction>(V)->getOpcode();
+  });
+
+  // Check for an alternate opcode pattern.
+  if (HasAltOpcodes) {
+    unsigned AltOpcode = getAltOpcode(Opcode);
+    for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
+      unsigned InstOpcode = cast<Instruction>(VL[Cnt])->getOpcode();
+      if (InstOpcode != (isOdd(Cnt) ? AltOpcode : Opcode))
+        return InstructionsState(VL[0], 0, false);
+    }
   }
-  return InstructionsState(VL[0], Opcode, Res.HasAltOpcodes);
+
+  return InstructionsState(VL[0], Opcode, HasAltOpcodes);
 }
 
 /// \returns true if all of the values in \p VL have the same type or false
