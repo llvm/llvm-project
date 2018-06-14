@@ -578,7 +578,7 @@ bool ObjectFile::SplitArchivePathWithObject(const char *path_with_object,
     std::string obj;
     if (regex_match.GetMatchAtIndex(path_with_object, 1, path) &&
         regex_match.GetMatchAtIndex(path_with_object, 2, obj)) {
-      archive_file.SetFile(path, false);
+      archive_file.SetFile(path, false, FileSpec::Style::native);
       archive_object.SetCString(obj.c_str());
       if (must_exist && !archive_file.Exists())
         return false;

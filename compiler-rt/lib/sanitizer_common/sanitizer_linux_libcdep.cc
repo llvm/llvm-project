@@ -522,7 +522,7 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
     return 0;
   LoadedModule cur_module;
   cur_module.set(module_name.data(), info->dlpi_addr);
-  for (int i = 0; i < info->dlpi_phnum; i++) {
+  for (int i = 0; i < (int)info->dlpi_phnum; i++) {
     const Elf_Phdr *phdr = &info->dlpi_phdr[i];
     if (phdr->p_type == PT_LOAD) {
       uptr cur_beg = info->dlpi_addr + phdr->p_vaddr;

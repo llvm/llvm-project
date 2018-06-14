@@ -1465,7 +1465,7 @@ void Process::UpdateThreadListIfNeeded() {
             old_thread_list.GetThreadAtIndex(i, false)->ClearBackingThread();
 
           // Turn off dynamic types to ensure we don't run any expressions.
-          // Objective C can run an expression to determine if a SBValue is a
+          // Objective-C can run an expression to determine if a SBValue is a
           // dynamic type or not and we need to avoid this. OperatingSystem
           // plug-ins can't run expressions that require running code...
 

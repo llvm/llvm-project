@@ -463,7 +463,7 @@ bool DWARFDebugLine::ParseSupportFiles(
   for (uint32_t file_idx = 1;
        prologue.GetFile(file_idx, cu_comp_dir, file_spec); ++file_idx) {
     if (module_sp->RemapSourceFile(file_spec.GetPath(), remapped_file))
-      file_spec.SetFile(remapped_file, false);
+      file_spec.SetFile(remapped_file, false, FileSpec::Style::native);
     support_files.Append(file_spec);
   }
   return true;
@@ -866,7 +866,7 @@ bool DWARFDebugLine::Prologue::GetFile(uint32_t file_idx,
     const lldb_private::FileSpec &comp_dir, FileSpec &file) const {
   uint32_t idx = file_idx - 1; // File indexes are 1 based...
   if (idx < file_names.size()) {
-    file.SetFile(file_names[idx].name, false);
+    file.SetFile(file_names[idx].name, false, FileSpec::Style::native);
     if (file.IsRelative()) {
       if (file_names[idx].dir_idx > 0) {
         const uint32_t dir_idx = file_names[idx].dir_idx - 1;

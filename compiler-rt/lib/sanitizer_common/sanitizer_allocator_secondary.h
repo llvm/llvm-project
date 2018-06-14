@@ -314,6 +314,6 @@ class LargeMmapAllocator {
   struct Stats {
     uptr n_allocs, n_frees, currently_allocated, max_allocated, by_size_log[64];
   } stats;
-  SpinMutex mutex_;
+  StaticSpinMutex mutex_;
 };
 

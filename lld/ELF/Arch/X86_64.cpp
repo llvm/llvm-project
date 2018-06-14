@@ -106,7 +106,7 @@ RelExpr X86_64<ELFT>::getRelExpr(RelType Type, const Symbol &S,
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_GOTOFF64:
-    return R_GOTREL;
+    return R_GOTREL_FROM_END;
   case R_X86_64_GOTPC32:
   case R_X86_64_GOTPC64:
     return R_GOTONLY_PC_FROM_END;

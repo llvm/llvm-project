@@ -315,7 +315,7 @@ Status File::GetFileSpec(FileSpec &file_spec) const {
     if (::fcntl(GetDescriptor(), F_GETPATH, path) == -1)
       error.SetErrorToErrno();
     else
-      file_spec.SetFile(path, false);
+      file_spec.SetFile(path, false, FileSpec::Style::native);
   } else {
     error.SetErrorString("invalid file handle");
   }
@@ -330,7 +330,7 @@ Status File::GetFileSpec(FileSpec &file_spec) const {
       error.SetErrorToErrno();
     else {
       path[len] = '\0';
-      file_spec.SetFile(path, false);
+      file_spec.SetFile(path, false, FileSpec::Style::native);
     }
   }
 #else

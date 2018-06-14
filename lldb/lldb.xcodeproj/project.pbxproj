@@ -604,7 +604,6 @@
 		26A7A035135E6E4200FB369E /* OptionValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26A7A034135E6E4200FB369E /* OptionValue.cpp */; };
 		26AB92121819D74600E63F3E /* DWARFDataExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26AB92101819D74600E63F3E /* DWARFDataExtractor.cpp */; };
 		26B1EFAE154638AF00E2DAC7 /* DWARFDeclContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26B1EFAC154638AF00E2DAC7 /* DWARFDeclContext.cpp */; };
-		26B1FCC21338115F002886E2 /* Host.mm in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7EE810F1B88F00F91463 /* Host.mm */; };
 		26B42C4D1187ABA50079C8C8 /* LLDB.h in Headers */ = {isa = PBXBuildFile; fileRef = 26B42C4C1187ABA50079C8C8 /* LLDB.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		26B7564E14F89356008D9CB3 /* PlatformiOSSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26B7564C14F89356008D9CB3 /* PlatformiOSSimulator.cpp */; };
 		26B75B441AD6E29A001F7A57 /* MipsLinuxSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26B75B421AD6E29A001F7A57 /* MipsLinuxSignals.cpp */; };
@@ -686,12 +685,10 @@
 		3FDFDDBD199C3A06009756A7 /* FileAction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFDDBC199C3A06009756A7 /* FileAction.cpp */; };
 		3FDFDDBF199D345E009756A7 /* FileCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFDDBE199D345E009756A7 /* FileCache.cpp */; };
 		3FDFDDC6199D37ED009756A7 /* FileSystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFDDC5199D37ED009756A7 /* FileSystem.cpp */; };
-		3FDFE52C19A2917A009756A7 /* HostInfoMacOSX.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFE52B19A2917A009756A7 /* HostInfoMacOSX.mm */; };
 		3FDFE53119A292F0009756A7 /* HostInfoPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFE53019A292F0009756A7 /* HostInfoPosix.cpp */; };
 		3FDFE53519A29327009756A7 /* HostInfoBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFE53419A29327009756A7 /* HostInfoBase.cpp */; };
 		3FDFE56C19AF9C44009756A7 /* HostProcessPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFE56A19AF9C44009756A7 /* HostProcessPosix.cpp */; };
 		3FDFE56D19AF9C44009756A7 /* HostThreadPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFE56B19AF9C44009756A7 /* HostThreadPosix.cpp */; };
-		3FDFED0B19B7C8DE009756A7 /* HostThreadMacOSX.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFED0519B7C898009756A7 /* HostThreadMacOSX.mm */; };
 		3FDFED2719BA6D96009756A7 /* HostNativeThreadBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFED2419BA6D96009756A7 /* HostNativeThreadBase.cpp */; };
 		3FDFED2819BA6D96009756A7 /* HostThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFED2519BA6D96009756A7 /* HostThread.cpp */; };
 		3FDFED2919BA6D96009756A7 /* ThreadLauncher.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFED2619BA6D96009756A7 /* ThreadLauncher.cpp */; };
@@ -842,7 +839,6 @@
 		945261C61B9A11FC00BF138D /* LibStdcpp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945261BC1B9A11E800BF138D /* LibStdcpp.cpp */; };
 		945261C81B9A14D300BF138D /* CXXFunctionPointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945261C71B9A14D300BF138D /* CXXFunctionPointer.cpp */; };
 		9455630F1BEAD0600073F75F /* PlatformAppleSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9455630A1BEAD0570073F75F /* PlatformAppleSimulator.cpp */; };
-		945563101BEAD0650073F75F /* PlatformiOSSimulatorCoreSimulatorSupport.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9455630D1BEAD0570073F75F /* PlatformiOSSimulatorCoreSimulatorSupport.mm */; };
 		945759671534941F005A9070 /* PlatformPOSIX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945759651534941F005A9070 /* PlatformPOSIX.cpp */; };
 		9461569A14E358A6003A195C /* SBTypeFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9461568A14E35621003A195C /* SBTypeFilter.cpp */; };
 		9461569B14E358A6003A195C /* SBTypeFormat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9461568B14E35621003A195C /* SBTypeFormat.cpp */; };
@@ -1045,6 +1041,10 @@
 		AFE228832060699D0042D0C8 /* DWARFUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7F2AAA5920601BE000A422D8 /* DWARFUnit.cpp */; };
 		AFEC3362194A8ABA00FF05C6 /* StructuredData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */; };
 		AFEC5FD81D94F9380076A480 /* Testx86AssemblyInspectionEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEC5FD51D94F9380076A480 /* Testx86AssemblyInspectionEngine.cpp */; };
+		AFF81FAE20D1CC400010F95E /* HostInfoMacOSX.mm in Sources */ = {isa = PBXBuildFile; fileRef = AFF81FAB20D1CC400010F95E /* HostInfoMacOSX.mm */; };
+		AFF81FAF20D1CC400010F95E /* HostThreadMacOSX.mm in Sources */ = {isa = PBXBuildFile; fileRef = AFF81FAC20D1CC400010F95E /* HostThreadMacOSX.mm */; };
+		AFF81FB020D1CC400010F95E /* Host.mm in Sources */ = {isa = PBXBuildFile; fileRef = AFF81FAD20D1CC400010F95E /* Host.mm */; };
+		AFF81FB320D1CC910010F95E /* PlatformiOSSimulatorCoreSimulatorSupport.mm in Sources */ = {isa = PBXBuildFile; fileRef = AFF81FB220D1CC910010F95E /* PlatformiOSSimulatorCoreSimulatorSupport.mm */; };
 		AFF87C87150FF669000E1742 /* com.apple.debugserver.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = AFF87C86150FF669000E1742 /* com.apple.debugserver.plist */; };
 		AFF87C8F150FF688000E1742 /* com.apple.debugserver.applist.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = AFF87C8E150FF688000E1742 /* com.apple.debugserver.applist.plist */; };
 		AFF8FF0C1E779D4B003830EF /* TildeExpressionResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFF8FF0B1E779D4B003830EF /* TildeExpressionResolver.cpp */; };
@@ -2237,7 +2237,6 @@
 		26BC7E9D10F1B85900F91463 /* ValueObjectVariable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ValueObjectVariable.cpp; path = source/Core/ValueObjectVariable.cpp; sourceTree = "<group>"; };
 		26BC7ED510F1B86700F91463 /* ClangUserExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangUserExpression.cpp; path = ExpressionParser/Clang/ClangUserExpression.cpp; sourceTree = "<group>"; };
 		26BC7ED810F1B86700F91463 /* DWARFExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DWARFExpression.cpp; path = source/Expression/DWARFExpression.cpp; sourceTree = "<group>"; };
-		26BC7EE810F1B88F00F91463 /* Host.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = Host.mm; path = source/Host/macosx/Host.mm; sourceTree = "<group>"; };
 		26BC7EED10F1B8AD00F91463 /* CFCBundle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CFCBundle.cpp; path = source/Host/macosx/cfcpp/CFCBundle.cpp; sourceTree = "<group>"; };
 		26BC7EEE10F1B8AD00F91463 /* CFCBundle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CFCBundle.h; path = source/Host/macosx/cfcpp/CFCBundle.h; sourceTree = "<group>"; };
 		26BC7EEF10F1B8AD00F91463 /* CFCData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CFCData.cpp; path = source/Host/macosx/cfcpp/CFCData.cpp; sourceTree = "<group>"; };
@@ -2431,7 +2430,6 @@
 		3FDFDDC0199D34E2009756A7 /* FileCache.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FileCache.h; path = include/lldb/Host/FileCache.h; sourceTree = "<group>"; };
 		3FDFDDC1199D34E2009756A7 /* FileSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FileSystem.h; path = include/lldb/Host/FileSystem.h; sourceTree = "<group>"; };
 		3FDFDDC5199D37ED009756A7 /* FileSystem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileSystem.cpp; sourceTree = "<group>"; };
-		3FDFE52B19A2917A009756A7 /* HostInfoMacOSX.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = HostInfoMacOSX.mm; path = source/Host/macosx/HostInfoMacOSX.mm; sourceTree = "<group>"; };
 		3FDFE52D19A291AF009756A7 /* HostInfoMacOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HostInfoMacOSX.h; path = include/lldb/Host/macosx/HostInfoMacOSX.h; sourceTree = "<group>"; };
 		3FDFE53019A292F0009756A7 /* HostInfoPosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HostInfoPosix.cpp; sourceTree = "<group>"; };
 		3FDFE53219A29304009756A7 /* HostInfoPosix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HostInfoPosix.h; path = ../../../include/lldb/Host/posix/HostInfoPosix.h; sourceTree = "<group>"; };
@@ -2471,7 +2469,6 @@
 		3FDFE57319AF9CD3009756A7 /* HostThreadWindows.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = HostThreadWindows.h; path = include/lldb/Host/windows/HostThreadWindows.h; sourceTree = "<group>"; };
 		3FDFE57419AFABFD009756A7 /* HostProcess.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = HostProcess.h; path = include/lldb/Host/HostProcess.h; sourceTree = "<group>"; };
 		3FDFE57519AFABFD009756A7 /* HostThread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = HostThread.h; path = include/lldb/Host/HostThread.h; sourceTree = "<group>"; };
-		3FDFED0519B7C898009756A7 /* HostThreadMacOSX.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = HostThreadMacOSX.mm; path = source/Host/macosx/HostThreadMacOSX.mm; sourceTree = "<group>"; };
 		3FDFED1E19BA6D55009756A7 /* Debug.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Debug.h; path = include/lldb/Host/Debug.h; sourceTree = "<group>"; };
 		3FDFED1F19BA6D55009756A7 /* HostGetOpt.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = HostGetOpt.h; path = include/lldb/Host/HostGetOpt.h; sourceTree = "<group>"; };
 		3FDFED2019BA6D55009756A7 /* HostNativeThread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = HostNativeThread.h; path = include/lldb/Host/HostNativeThread.h; sourceTree = "<group>"; };
@@ -2816,8 +2813,6 @@
 		945261C91B9A14E000BF138D /* CXXFunctionPointer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CXXFunctionPointer.h; path = include/lldb/DataFormatters/CXXFunctionPointer.h; sourceTree = "<group>"; };
 		9455630A1BEAD0570073F75F /* PlatformAppleSimulator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleSimulator.cpp; sourceTree = "<group>"; };
 		9455630B1BEAD0570073F75F /* PlatformAppleSimulator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PlatformAppleSimulator.h; sourceTree = "<group>"; };
-		9455630C1BEAD0570073F75F /* PlatformiOSSimulatorCoreSimulatorSupport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PlatformiOSSimulatorCoreSimulatorSupport.h; sourceTree = "<group>"; };
-		9455630D1BEAD0570073F75F /* PlatformiOSSimulatorCoreSimulatorSupport.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = PlatformiOSSimulatorCoreSimulatorSupport.mm; sourceTree = "<group>"; };
 		945759651534941F005A9070 /* PlatformPOSIX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PlatformPOSIX.cpp; path = POSIX/PlatformPOSIX.cpp; sourceTree = "<group>"; };
 		945759661534941F005A9070 /* PlatformPOSIX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PlatformPOSIX.h; path = POSIX/PlatformPOSIX.h; sourceTree = "<group>"; };
 		9461568614E355F2003A195C /* SBTypeFilter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SBTypeFilter.h; path = include/lldb/API/SBTypeFilter.h; sourceTree = "<group>"; };
@@ -3177,6 +3172,7 @@
 		AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxTuple.cpp; path = Language/CPlusPlus/LibCxxTuple.cpp; sourceTree = "<group>"; };
 		AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxQueue.cpp; path = Language/CPlusPlus/LibCxxQueue.cpp; sourceTree = "<group>"; };
 		AFAFD8091E57E1B90017A14F /* ModuleCacheTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ModuleCacheTest.cpp; path = Target/ModuleCacheTest.cpp; sourceTree = "<group>"; };
+		AFB1682620D1D4CC00A74F25 /* PlatformiOSSimulatorCoreSimulatorSupport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PlatformiOSSimulatorCoreSimulatorSupport.h; path = objcxx/PlatformiOSSimulatorCoreSimulatorSupport.h; sourceTree = "<group>"; };
 		AFB3D27E1AC262AB003B4B30 /* MICmdCmdGdbShow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MICmdCmdGdbShow.cpp; path = "tools/lldb-mi/MICmdCmdGdbShow.cpp"; sourceTree = SOURCE_ROOT; };
 		AFB3D27F1AC262AB003B4B30 /* MICmdCmdGdbShow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MICmdCmdGdbShow.h; path = "tools/lldb-mi/MICmdCmdGdbShow.h"; sourceTree = SOURCE_ROOT; };
 		AFC234061AF85CE000CDE8B6 /* CommandObjectLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectLanguage.cpp; path = source/Commands/CommandObjectLanguage.cpp; sourceTree = "<group>"; };
@@ -3207,6 +3203,10 @@
 		AFEC5FD51D94F9380076A480 /* Testx86AssemblyInspectionEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Testx86AssemblyInspectionEngine.cpp; path = UnwindAssembly/x86/Testx86AssemblyInspectionEngine.cpp; sourceTree = "<group>"; };
 		AFF62FDC2006D4D4003644F9 /* test-dwarf.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "test-dwarf.cpp"; path = "DWARF/Inputs/test-dwarf.cpp"; sourceTree = "<group>"; };
 		AFF62FDD2006D4D4003644F9 /* test-dwarf.exe */ = {isa = PBXFileReference; lastKnownFileType = file; name = "test-dwarf.exe"; path = "DWARF/Inputs/test-dwarf.exe"; sourceTree = "<group>"; };
+		AFF81FAB20D1CC400010F95E /* HostInfoMacOSX.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = HostInfoMacOSX.mm; path = source/Host/macosx/objcxx/HostInfoMacOSX.mm; sourceTree = "<group>"; };
+		AFF81FAC20D1CC400010F95E /* HostThreadMacOSX.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = HostThreadMacOSX.mm; path = source/Host/macosx/objcxx/HostThreadMacOSX.mm; sourceTree = "<group>"; };
+		AFF81FAD20D1CC400010F95E /* Host.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = Host.mm; path = source/Host/macosx/objcxx/Host.mm; sourceTree = "<group>"; };
+		AFF81FB220D1CC910010F95E /* PlatformiOSSimulatorCoreSimulatorSupport.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = PlatformiOSSimulatorCoreSimulatorSupport.mm; path = source/Plugins/Platform/MacOSX/objcxx/PlatformiOSSimulatorCoreSimulatorSupport.mm; sourceTree = SOURCE_ROOT; };
 		AFF87C86150FF669000E1742 /* com.apple.debugserver.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.plist; path = tools/debugserver/source/com.apple.debugserver.plist; sourceTree = "<group>"; };
 		AFF87C8A150FF677000E1742 /* com.apple.debugserver.applist.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.applist.plist; path = tools/debugserver/source/com.apple.debugserver.applist.plist; sourceTree = "<group>"; };
 		AFF87C8C150FF680000E1742 /* com.apple.debugserver.applist.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.applist.plist; path = tools/debugserver/source/com.apple.debugserver.applist.plist; sourceTree = "<group>"; };
@@ -5602,6 +5602,7 @@
 		26BC7EE510F1B88100F91463 /* MacOSX */ = {
 			isa = PBXGroup;
 			children = (
+				AFF81FAA20D1CC210010F95E /* objcxx */,
 				26BC7EED10F1B8AD00F91463 /* CFCBundle.cpp */,
 				26BC7EEE10F1B8AD00F91463 /* CFCBundle.h */,
 				26BC7EEF10F1B8AD00F91463 /* CFCData.cpp */,
@@ -5615,10 +5616,7 @@
 				26BC7EF710F1B8AD00F91463 /* CFCReleaser.h */,
 				26BC7EF810F1B8AD00F91463 /* CFCString.cpp */,
 				26BC7EF910F1B8AD00F91463 /* CFCString.h */,
-				26BC7EE810F1B88F00F91463 /* Host.mm */,
-				3FDFE52B19A2917A009756A7 /* HostInfoMacOSX.mm */,
 				3FDFE52D19A291AF009756A7 /* HostInfoMacOSX.h */,
-				3FDFED0519B7C898009756A7 /* HostThreadMacOSX.mm */,
 				3FDFE56719AF9BB2009756A7 /* HostThreadMacOSX.h */,
 				2689B0B5113EE47E00A4AEDB /* Symbols.cpp */,
 			);
@@ -5663,6 +5661,7 @@
 		26C5577F132575C8008FD8FE /* MacOSX */ = {
 			isa = PBXGroup;
 			children = (
+				AFF81FB120D1CC820010F95E /* objcxx */,
 				9455630A1BEAD0570073F75F /* PlatformAppleSimulator.cpp */,
 				9455630B1BEAD0570073F75F /* PlatformAppleSimulator.h */,
 				AF8AD62A1BEC28A400150209 /* PlatformAppleTVSimulator.cpp */,
@@ -5675,8 +5674,6 @@
 				2697A54C133A6305004E4240 /* PlatformDarwin.h */,
 				26B7564C14F89356008D9CB3 /* PlatformiOSSimulator.cpp */,
 				26B7564D14F89356008D9CB3 /* PlatformiOSSimulator.h */,
-				9455630C1BEAD0570073F75F /* PlatformiOSSimulatorCoreSimulatorSupport.h */,
-				9455630D1BEAD0570073F75F /* PlatformiOSSimulatorCoreSimulatorSupport.mm */,
 				26C5577B132575AD008FD8FE /* PlatformMacOSX.cpp */,
 				26C5577C132575AD008FD8FE /* PlatformMacOSX.h */,
 				AF3A4AD01EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp */,
@@ -6777,6 +6774,25 @@
 			name = x86;
 			sourceTree = "<group>";
 		};
+		AFF81FAA20D1CC210010F95E /* objcxx */ = {
+			isa = PBXGroup;
+			children = (
+				AFF81FAD20D1CC400010F95E /* Host.mm */,
+				AFF81FAB20D1CC400010F95E /* HostInfoMacOSX.mm */,
+				AFF81FAC20D1CC400010F95E /* HostThreadMacOSX.mm */,
+			);
+			name = objcxx;
+			sourceTree = "<group>";
+		};
+		AFF81FB120D1CC820010F95E /* objcxx */ = {
+			isa = PBXGroup;
+			children = (
+				AFF81FB220D1CC910010F95E /* PlatformiOSSimulatorCoreSimulatorSupport.mm */,
+				AFB1682620D1D4CC00A74F25 /* PlatformiOSSimulatorCoreSimulatorSupport.h */,
+			);
+			name = objcxx;
+			sourceTree = "<group>";
+		};
 		E769331B1A94D10E00C73337 /* lldb-server */ = {
 			isa = PBXGroup;
 			children = (
@@ -7659,12 +7675,14 @@
 				2689004613353E0400698AC0 /* ModuleList.cpp in Sources */,
 				2689004713353E0400698AC0 /* PluginManager.cpp in Sources */,
 				AE44FB3E1BB485960033EB62 /* GoLanguageRuntime.cpp in Sources */,
+				AFF81FAF20D1CC400010F95E /* HostThreadMacOSX.mm in Sources */,
 				AF0C112818580CD800C4C45B /* QueueItem.cpp in Sources */,
 				AF254E31170CCC33007AE5C9 /* PlatformDarwinKernel.cpp in Sources */,
 				2689004913353E0400698AC0 /* Scalar.cpp in Sources */,
 				263FDE601A79A01500E68013 /* FormatEntity.cpp in Sources */,
 				AF8AD62E1BEC28A400150209 /* PlatformAppleTVSimulator.cpp in Sources */,
 				2689004A13353E0400698AC0 /* SearchFilter.cpp in Sources */,
+				AFF81FAE20D1CC400010F95E /* HostInfoMacOSX.mm in Sources */,
 				2689004B13353E0400698AC0 /* Section.cpp in Sources */,
 				4984BA161B979973008658D4 /* ExpressionVariable.cpp in Sources */,
 				2689004C13353E0400698AC0 /* SourceManager.cpp in Sources */,
@@ -7698,6 +7716,7 @@
 				264A58EE1A7DBCAD00A6B1B0 /* OptionValueFormatEntity.cpp in Sources */,
 				8C2D6A53197A1EAF006989C9 /* MemoryHistory.cpp in Sources */,
 				6D95DC021B9DC057000E318A /* SymbolFileDWARFDwo.cpp in Sources */,
+				AFF81FB320D1CC910010F95E /* PlatformiOSSimulatorCoreSimulatorSupport.mm in Sources */,
 				942612F71B95000000EF842E /* LanguageCategory.cpp in Sources */,
 				AF116BEF20CF234B0071093F /* DebugNamesDWARFIndex.cpp in Sources */,
 				2689005E13353E0E00698AC0 /* ClangASTSource.cpp in Sources */,
@@ -7832,12 +7851,10 @@
 				238F2BA81D2C85FA001FF92A /* StructuredDataDarwinLog.cpp in Sources */,
 				94380B8219940B0A00BFE4A8 /* StringLexer.cpp in Sources */,
 				268900C413353E5F00698AC0 /* DWARFDefines.cpp in Sources */,
-				945563101BEAD0650073F75F /* PlatformiOSSimulatorCoreSimulatorSupport.mm in Sources */,
 				268900C513353E5F00698AC0 /* DWARFDIECollection.cpp in Sources */,
 				268900C613353E5F00698AC0 /* DWARFFormValue.cpp in Sources */,
 				3FDFE53119A292F0009756A7 /* HostInfoPosix.cpp in Sources */,
 				233B007D1960C9F90090E598 /* ProcessInfo.cpp in Sources */,
-				3FDFE52C19A2917A009756A7 /* HostInfoMacOSX.mm in Sources */,
 				26BC17B118C7F4CB00D2196D /* ThreadElfCore.cpp in Sources */,
 				947CF7771DC7B20D00EF980B /* ThreadMinidump.cpp in Sources */,
 				268900C913353E5F00698AC0 /* NameToDIE.cpp in Sources */,
@@ -7972,7 +7989,6 @@
 				E7723D4C1AC4A944002BA082 /* RegisterContextPOSIX_arm64.cpp in Sources */,
 				26BC17AB18C7F4CB00D2196D /* ProcessElfCore.cpp in Sources */,
 				AF1F7B07189C904B0087DB9C /* AppleGetPendingItemsHandler.cpp in Sources */,
-				26B1FCC21338115F002886E2 /* Host.mm in Sources */,
 				E778E9A21B062D1700247609 /* EmulateInstructionMIPS.cpp in Sources */,
 				3FDFDDC6199D37ED009756A7 /* FileSystem.cpp in Sources */,
 				26744EF11338317700EF765A /* GDBRemoteCommunicationClient.cpp in Sources */,
@@ -7985,7 +8001,6 @@
 				23D065911D4A7BEE0008EDE6 /* RenderScriptx86ABIFixups.cpp in Sources */,
 				4CE4EFAA1E8999B900A80C06 /* PlatformOpenBSD.cpp in Sources */,
 				26651A18133BF9E0005B64B7 /* Opcode.cpp in Sources */,
-				3FDFED0B19B7C8DE009756A7 /* HostThreadMacOSX.mm in Sources */,
 				4CABA9E0134A8BCD00539BDD /* ValueObjectMemory.cpp in Sources */,
 				4CD0BD0F134BFADF00CB44D4 /* ValueObjectDynamicValue.cpp in Sources */,
 				946216C21A97C080006E19CC /* OptionValueLanguage.cpp in Sources */,
@@ -8067,6 +8082,7 @@
 				265205AA13D3E3F700132FE2 /* RegisterContextKDP_i386.cpp in Sources */,
 				6DEC6F391BD66D750091ABA6 /* TaskPool.cpp in Sources */,
 				265205AC13D3E3F700132FE2 /* RegisterContextKDP_x86_64.cpp in Sources */,
+				AFF81FB020D1CC400010F95E /* Host.mm in Sources */,
 				2628A4D513D4977900F5487A /* ThreadKDP.cpp in Sources */,
 				26D7E45D13D5E30A007FD12B /* SocketAddress.cpp in Sources */,
 				94CD7D0C19A3FBCE00908B7C /* AppleObjCTypeEncodingParser.cpp in Sources */,

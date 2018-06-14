@@ -431,8 +431,8 @@ void PlatformDarwinKernel::AddSDKSubdirsToSearchPaths(const std::string &dir) {
 FileSpec::EnumerateDirectoryResult
 PlatformDarwinKernel::FindKDKandSDKDirectoriesInDirectory(
     void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
-  static ConstString g_sdk_suffix = ConstString("sdk");
-  static ConstString g_kdk_suffix = ConstString("kdk");
+  static ConstString g_sdk_suffix = ConstString(".sdk");
+  static ConstString g_kdk_suffix = ConstString(".kdk");
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
   if (ft == llvm::sys::fs::file_type::directory_file &&
@@ -492,8 +492,8 @@ FileSpec::EnumerateDirectoryResult
 PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
     void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec,
     bool recurse) {
-  static ConstString g_kext_suffix = ConstString("kext");
-  static ConstString g_dsym_suffix = ConstString("dSYM");
+  static ConstString g_kext_suffix = ConstString(".kext");
+  static ConstString g_dsym_suffix = ConstString(".dSYM");
   static ConstString g_bundle_suffix = ConstString("Bundle");
   ConstString file_spec_extension = file_spec.GetFileNameExtension();
 
@@ -623,7 +623,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
       kext_bundle_filepath.GetPath() + "/Contents/MacOS/";
   deep_bundle_str += executable_name.AsCString();
   deep_bundle_str += ".dSYM";
-  dsym_fspec.SetFile(deep_bundle_str, true);
+  dsym_fspec.SetFile(deep_bundle_str, true, FileSpec::Style::native);
   if (llvm::sys::fs::is_directory(dsym_fspec.GetPath())) {
     return true;
   }
@@ -633,7 +633,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   std::string shallow_bundle_str = kext_bundle_filepath.GetPath() + "/";
   shallow_bundle_str += executable_name.AsCString();
   shallow_bundle_str += ".dSYM";
-  dsym_fspec.SetFile(shallow_bundle_str, true);
+  dsym_fspec.SetFile(shallow_bundle_str, true, FileSpec::Style::native);
   if (llvm::sys::fs::is_directory(dsym_fspec.GetPath())) {
     return true;
   }

@@ -258,7 +258,7 @@ protected:
       FileSpec file_spec;
 
       if (file_path)
-        file_spec.SetFile(file_path, true);
+        file_spec.SetFile(file_path, true, FileSpec::Style::native);
 
       bool must_set_platform_path = false;
 
@@ -3581,7 +3581,7 @@ public:
         break;
 
       case 'f':
-        m_file.SetFile(option_arg, false);
+        m_file.SetFile(option_arg, false, FileSpec::Style::native);
         m_type = eLookupTypeFileLine;
         break;
 
@@ -4319,7 +4319,8 @@ protected:
 
         for (auto &entry : args.entries()) {
           if (!entry.ref.empty()) {
-            module_spec.GetSymbolFileSpec().SetFile(entry.ref, true);
+            module_spec.GetSymbolFileSpec().SetFile(entry.ref, true,
+                                                    FileSpec::Style::native);
             if (file_option_set) {
               module_spec.GetFileSpec() =
                   m_file_option.GetOptionValue().GetCurrentValue();

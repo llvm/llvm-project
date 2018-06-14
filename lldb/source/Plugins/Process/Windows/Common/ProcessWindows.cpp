@@ -234,6 +234,16 @@ Status ProcessWindows::DoLaunch(Module *exe_module,
 
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   Status result;
+
+  FileSpec working_dir = launch_info.GetWorkingDirectory();
+  namespace fs = llvm::sys::fs;
+  if (working_dir && (!working_dir.ResolvePath() ||
+                      !fs::is_directory(working_dir.GetPath()))) {
+    result.SetErrorStringWithFormat("No such file or directory: %s",
+                                   working_dir.GetCString());
+    return result;
+  }
+
   if (!launch_info.GetFlags().Test(eLaunchFlagDebug)) {
     StreamString stream;
     stream.Printf("ProcessWindows unable to launch '%s'.  ProcessWindows can "
