@@ -120,7 +120,7 @@ typedef CombinedAllocator<PrimaryAllocator, AllocatorCache,
 
 static Allocator allocator;
 static AllocatorCache fallback_allocator_cache;
-static SpinMutex fallback_mutex;
+static StaticSpinMutex fallback_mutex;
 
 void MsanAllocatorInit() {
   SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);

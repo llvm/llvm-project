@@ -719,22 +719,47 @@ bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
   auto *TorF = (BI->getSuccessor(0) == BB)
                    ? ConstantInt::getTrue(BB->getContext())
                    : ConstantInt::getFalse(BB->getContext());
-  AvailableValues.insert(CondInst, TorF);
-  LLVM_DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
-                    << CondInst->getName() << "' as " << *TorF << " in "
-                    << BB->getName() << "\n");
-  if (!DebugCounter::shouldExecute(CSECounter)) {
-    LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
-  } else {
-    // Replace all dominated uses with the known value.
-    if (unsigned Count = replaceDominatedUsesWith(CondInst, TorF, DT,
-                                                  BasicBlockEdge(Pred, BB))) {
+  auto MatchBinOp = [](Instruction *I, unsigned Opcode) {
+    if (BinaryOperator *BOp = dyn_cast<BinaryOperator>(I))
+      return BOp->getOpcode() == Opcode;
+    return false;
+  };
+  // If the condition is AND operation, we can propagate its operands into the
+  // true branch. If it is OR operation, we can propagate them into the false
+  // branch.
+  unsigned PropagateOpcode =
+      (BI->getSuccessor(0) == BB) ? Instruction::And : Instruction::Or;
 
-      NumCSECVP += Count;
-      return true;
+  bool MadeChanges = false;
+  SmallVector<Instruction *, 4> WorkList;
+  SmallPtrSet<Instruction *, 4> Visited;
+  WorkList.push_back(CondInst);
+  while (!WorkList.empty()) {
+    Instruction *Curr = WorkList.pop_back_val();
+
+    AvailableValues.insert(Curr, TorF);
+    LLVM_DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
+                      << Curr->getName() << "' as " << *TorF << " in "
+                      << BB->getName() << "\n");
+    if (!DebugCounter::shouldExecute(CSECounter)) {
+      LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
+    } else {
+      // Replace all dominated uses with the known value.
+      if (unsigned Count = replaceDominatedUsesWith(Curr, TorF, DT,
+                                                    BasicBlockEdge(Pred, BB))) {
+        NumCSECVP += Count;
+        MadeChanges = true;
+      }
     }
+
+    if (MatchBinOp(Curr, PropagateOpcode))
+      for (auto &Op : cast<BinaryOperator>(Curr)->operands())
+        if (Instruction *OPI = dyn_cast<Instruction>(Op))
+          if (SimpleValue::canHandle(OPI) && Visited.insert(OPI).second)
+            WorkList.push_back(OPI);
   }
-  return false;
+
+  return MadeChanges;
 }
 
 bool EarlyCSE::processNode(DomTreeNode *Node) {

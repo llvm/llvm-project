@@ -50,12 +50,13 @@ struct SymbolQualitySignals {
   unsigned References = 0;
 
   enum SymbolCategory {
+    Unknown = 0,
     Variable,
     Macro,
     Type,
     Function,
     Namespace,
-    Unknown,
+    Keyword,
   } Category = Unknown;
 
   void merge(const CodeCompletionResult &SemaCCResult);

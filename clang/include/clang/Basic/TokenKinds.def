@@ -391,6 +391,8 @@ KEYWORD(_Float16                    , KEYALL)
 
 // ISO/IEC JTC1 SC22 WG14 N1169 Extension
 KEYWORD(_Accum                      , KEYNOCXX)
+KEYWORD(_Fract                      , KEYNOCXX)
+KEYWORD(_Sat                        , KEYNOCXX)
 
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)

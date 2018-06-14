@@ -350,7 +350,7 @@ void MCDwarfLineTableHeader::emitV2FileDirTables(MCStreamer *MCOS) const {
 }
 
 static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
-                               bool HasMD5, bool HasSource,
+                               bool EmitMD5, bool HasSource,
                                Optional<MCDwarfLineStr> &LineStr) {
   assert(!DwarfFile.Name.empty());
   if (LineStr)
@@ -360,7 +360,7 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
     MCOS->EmitBytes(StringRef("\0", 1)); // its null terminator.
   }
   MCOS->EmitULEB128IntValue(DwarfFile.DirIndex); // Directory number.
-  if (HasMD5) {
+  if (EmitMD5) {
     MD5::MD5Result *Cksum = DwarfFile.Checksum;
     MCOS->EmitBinaryData(
         StringRef(reinterpret_cast<const char *>(Cksum->Bytes.data()),
@@ -410,7 +410,7 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
   // directory index.  We don't track file size/timestamp so don't emit them
   // in the v5 table.  Emit MD5 checksums and source if we have them.
   uint64_t Entries = 2;
-  if (HasMD5)
+  if (HasAllMD5)
     Entries += 1;
   if (HasSource)
     Entries += 1;
@@ -420,7 +420,7 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
                                     : dwarf::DW_FORM_string);
   MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_directory_index);
   MCOS->EmitULEB128IntValue(dwarf::DW_FORM_udata);
-  if (HasMD5) {
+  if (HasAllMD5) {
     MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_MD5);
     MCOS->EmitULEB128IntValue(dwarf::DW_FORM_data16);
   }
@@ -435,9 +435,9 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
   // explicitly, replicate file #1.
   MCOS->EmitULEB128IntValue(MCDwarfFiles.size());
   emitOneV5FileEntry(MCOS, RootFile.Name.empty() ? MCDwarfFiles[1] : RootFile,
-                     HasMD5, HasSource, LineStr);
+                     HasAllMD5, HasSource, LineStr);
   for (unsigned i = 1; i < MCDwarfFiles.size(); ++i)
-    emitOneV5FileEntry(MCOS, MCDwarfFiles[i], HasMD5, HasSource, LineStr);
+    emitOneV5FileEntry(MCOS, MCDwarfFiles[i], HasAllMD5, HasSource, LineStr);
 }
 
 std::pair<MCSymbol *, MCSymbol *>
@@ -554,9 +554,10 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
     Directory = "";
   }
   assert(!FileName.empty());
-  // If any files have an MD5 checksum or embedded source, they all must.
+  // Keep track of whether any or all files have an MD5 checksum.
+  // If any files have embedded source, they all must.
   if (MCDwarfFiles.empty()) {
-    HasMD5 = (Checksum != nullptr);
+    trackMD5Usage(Checksum);
     HasSource = (Source != None);
   }
   if (FileNumber == 0) {
@@ -582,10 +583,6 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
     return make_error<StringError>("file number already allocated",
                                    inconvertibleErrorCode());
 
-  // If any files have an MD5 checksum, they all must.
-  if (HasMD5 != (Checksum != nullptr))
-    return make_error<StringError>("inconsistent use of MD5 checksums",
-                                   inconvertibleErrorCode());
   // If any files have embedded source, they all must.
   if (HasSource != (Source != None))
     return make_error<StringError>("inconsistent use of embedded source",
@@ -625,8 +622,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
   File.Name = FileName;
   File.DirIndex = DirIndex;
   File.Checksum = Checksum;
-  if (Checksum)
-    HasMD5 = true;
+  trackMD5Usage(Checksum);
   File.Source = Source;
   if (Source)
     HasSource = true;

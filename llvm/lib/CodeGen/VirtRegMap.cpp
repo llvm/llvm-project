@@ -406,6 +406,8 @@ void VirtRegRewriter::expandCopyBundle(MachineInstr &MI) const {
     return;
 
   if (MI.isBundledWithPred() && !MI.isBundledWithSucc()) {
+    SmallVector<MachineInstr *, 2> MIs({&MI});
+
     // Only do this when the complete bundle is made out of COPYs.
     MachineBasicBlock &MBB = *MI.getParent();
     for (MachineBasicBlock::reverse_instr_iterator I =
@@ -413,16 +415,53 @@ void VirtRegRewriter::expandCopyBundle(MachineInstr &MI) const {
          I != E && I->isBundledWithSucc(); ++I) {
       if (!I->isCopy())
         return;
+      MIs.push_back(&*I);
+    }
+    MachineInstr *FirstMI = MIs.back();
+
+    auto anyRegsAlias = [](const MachineInstr *Dst,
+                           ArrayRef<MachineInstr *> Srcs,
+                           const TargetRegisterInfo *TRI) {
+      for (const MachineInstr *Src : Srcs)
+        if (Src != Dst)
+          if (TRI->regsOverlap(Dst->getOperand(0).getReg(),
+                               Src->getOperand(1).getReg()))
+            return true;
+      return false;
+    };
+
+    // If any of the destination registers in the bundle of copies alias any of
+    // the source registers, try to schedule the instructions to avoid any
+    // clobbering.
+    for (int E = MIs.size(), PrevE = E; E > 1; PrevE = E) {
+      for (int I = E; I--; )
+        if (!anyRegsAlias(MIs[I], makeArrayRef(MIs).take_front(E), TRI)) {
+          if (I + 1 != E)
+            std::swap(MIs[I], MIs[E - 1]);
+          --E;
+        }
+      if (PrevE == E) {
+        MF->getFunction().getContext().emitError(
+            "register rewriting failed: cycle in copy bundle");
+        break;
+      }
     }
 
-    for (MachineBasicBlock::reverse_instr_iterator I = MI.getReverseIterator();
-         I->isBundledWithPred(); ) {
-      MachineInstr &MI = *I;
-      ++I;
+    MachineInstr *BundleStart = FirstMI;
+    for (MachineInstr *BundledMI : llvm::reverse(MIs)) {
+      // If instruction is in the middle of the bundle, move it before the
+      // bundle starts, otherwise, just unbundle it. When we get to the last
+      // instruction, the bundle will have been completely undone.
+      if (BundledMI != BundleStart) {
+        BundledMI->removeFromBundle();
+        MBB.insert(FirstMI, BundledMI);
+      } else if (BundledMI->isBundledWithSucc()) {
+        BundledMI->unbundleFromSucc();
+        BundleStart = &*std::next(BundledMI->getIterator());
+      }
 
-      MI.unbundleFromPred();
-      if (Indexes)
-        Indexes->insertMachineInstrInMaps(MI);
+      if (Indexes && BundledMI != FirstMI)
+        Indexes->insertMachineInstrInMaps(*BundledMI);
     }
   }
 }

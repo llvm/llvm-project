@@ -142,6 +142,60 @@ UNSIGNED_TYPE(UAccum, UnsignedAccumTy)
 // 'unsigned long _Accum'
 UNSIGNED_TYPE(ULongAccum, UnsignedLongAccumTy)
 
+// 'short _Fract'
+SIGNED_TYPE(ShortFract, ShortFractTy)
+
+// '_Fract'
+SIGNED_TYPE(Fract, FractTy)
+
+// 'long _Fract'
+SIGNED_TYPE(LongFract, LongFractTy)
+
+// 'unsigned short _Fract'
+UNSIGNED_TYPE(UShortFract, UnsignedShortFractTy)
+
+// 'unsigned _Fract'
+UNSIGNED_TYPE(UFract, UnsignedFractTy)
+
+// 'unsigned long _Fract'
+UNSIGNED_TYPE(ULongFract, UnsignedLongFractTy)
+
+// '_Sat short _Accum'
+SIGNED_TYPE(SatShortAccum, SatShortAccumTy)
+
+// '_Sat _Accum'
+SIGNED_TYPE(SatAccum, SatAccumTy)
+
+// '_Sat long _Accum'
+SIGNED_TYPE(SatLongAccum, SatLongAccumTy)
+
+// '_Sat unsigned short _Accum'
+UNSIGNED_TYPE(SatUShortAccum, SatUnsignedShortAccumTy)
+
+// '_Sat unsigned _Accum'
+UNSIGNED_TYPE(SatUAccum, SatUnsignedAccumTy)
+
+// '_Sat unsigned long _Accum'
+UNSIGNED_TYPE(SatULongAccum, SatUnsignedLongAccumTy)
+
+// '_Sat short _Fract'
+SIGNED_TYPE(SatShortFract, SatShortFractTy)
+
+// '_Sat _Fract'
+SIGNED_TYPE(SatFract, SatFractTy)
+
+// '_Sat long _Fract'
+SIGNED_TYPE(SatLongFract, SatLongFractTy)
+
+// '_Sat unsigned short _Fract'
+UNSIGNED_TYPE(SatUShortFract, SatUnsignedShortFractTy)
+
+// '_Sat unsigned _Fract'
+UNSIGNED_TYPE(SatUFract, SatUnsignedFractTy)
+
+// '_Sat unsigned long _Fract'
+UNSIGNED_TYPE(SatULongFract, SatUnsignedLongFractTy)
+
 //===- Floating point types -----------------------------------------------===//
 
 // 'half' in OpenCL, '__fp16' in ARM NEON.

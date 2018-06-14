@@ -447,6 +447,24 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
   case BuiltinType::UShortAccum:
   case BuiltinType::UAccum:
   case BuiltinType::ULongAccum:
+  case BuiltinType::ShortFract:
+  case BuiltinType::Fract:
+  case BuiltinType::LongFract:
+  case BuiltinType::UShortFract:
+  case BuiltinType::UFract:
+  case BuiltinType::ULongFract:
+  case BuiltinType::SatShortAccum:
+  case BuiltinType::SatAccum:
+  case BuiltinType::SatLongAccum:
+  case BuiltinType::SatUShortAccum:
+  case BuiltinType::SatUAccum:
+  case BuiltinType::SatULongAccum:
+  case BuiltinType::SatShortFract:
+  case BuiltinType::SatFract:
+  case BuiltinType::SatLongFract:
+  case BuiltinType::SatUShortFract:
+  case BuiltinType::SatUFract:
+  case BuiltinType::SatULongFract:
   case BuiltinType::UInt128:
   case BuiltinType::Float16:
   case BuiltinType::Float128:

@@ -215,9 +215,12 @@ struct MCDwarfLineTableHeader {
   StringMap<unsigned> SourceIdMap;
   StringRef CompilationDir;
   MCDwarfFile RootFile;
-  bool HasMD5 = false;
   bool HasSource = false;
+private:
+  bool HasAllMD5 = true;
+  bool HasAnyMD5 = false;
 
+public:
   MCDwarfLineTableHeader() = default;
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
@@ -231,6 +234,17 @@ struct MCDwarfLineTableHeader {
   Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
        ArrayRef<char> SpecialOpcodeLengths,
        Optional<MCDwarfLineStr> &LineStr) const;
+  void resetMD5Usage() {
+    HasAllMD5 = true;
+    HasAnyMD5 = false;
+  }
+  void trackMD5Usage(bool MD5Used) {
+    HasAllMD5 &= MD5Used;
+    HasAnyMD5 |= MD5Used;
+  }
+  bool isMD5UsageConsistent() const {
+    return MCDwarfFiles.empty() || (HasAllMD5 == HasAnyMD5);
+  }
 
 private:
   void emitV2FileDirTables(MCStreamer *MCOS) const;
@@ -251,7 +265,7 @@ public:
     Header.RootFile.DirIndex = 0;
     Header.RootFile.Checksum = Checksum;
     Header.RootFile.Source = Source;
-    Header.HasMD5 = (Checksum != nullptr);
+    Header.trackMD5Usage(Checksum);
     Header.HasSource = Source.hasValue();
   }
 
@@ -294,9 +308,18 @@ public:
     Header.RootFile.DirIndex = 0;
     Header.RootFile.Checksum = Checksum;
     Header.RootFile.Source = Source;
-    Header.HasMD5 = (Checksum != nullptr);
+    Header.trackMD5Usage(Checksum);
     Header.HasSource = Source.hasValue();
   }
+
+  void resetRootFile() {
+    assert(Header.MCDwarfFiles.empty());
+    Header.resetMD5Usage();
+    Header.HasSource = false;
+  }
+
+  // Report whether MD5 usage has been consistent (all-or-none).
+  bool isMD5UsageConsistent() const { return Header.isMD5UsageConsistent(); }
 
   MCSymbol *getLabel() const {
     return Header.Label;
