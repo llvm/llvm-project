@@ -91,6 +91,9 @@ enum AliasResult : uint8_t {
   MustAlias,
 };
 
+/// << operator for AliasResult.
+raw_ostream &operator<<(raw_ostream &OS, AliasResult AR);
+
 /// Flags indicating whether a memory access modifies or references memory.
 ///
 /// This is no access at all, a modification, a reference, or both

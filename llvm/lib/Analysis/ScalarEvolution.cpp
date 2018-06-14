@@ -1256,42 +1256,32 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op,
   if (const SCEVZeroExtendExpr *SZ = dyn_cast<SCEVZeroExtendExpr>(Op))
     return getTruncateOrZeroExtend(SZ->getOperand(), Ty);
 
-  // trunc(x1+x2+...+xN) --> trunc(x1)+trunc(x2)+...+trunc(xN) if we can
-  // eliminate all the truncates, or we replace other casts with truncates.
-  if (const SCEVAddExpr *SA = dyn_cast<SCEVAddExpr>(Op)) {
+  // trunc(x1 + ... + xN) --> trunc(x1) + ... + trunc(xN) and
+  // trunc(x1 * ... * xN) --> trunc(x1) * ... * trunc(xN),
+  // if after transforming we have at most one truncate, not counting truncates
+  // that replace other casts.
+  if (isa<SCEVAddExpr>(Op) || isa<SCEVMulExpr>(Op)) {
+    auto *CommOp = cast<SCEVCommutativeExpr>(Op);
     SmallVector<const SCEV *, 4> Operands;
-    bool hasTrunc = false;
-    for (unsigned i = 0, e = SA->getNumOperands(); i != e && !hasTrunc; ++i) {
-      const SCEV *S = getTruncateExpr(SA->getOperand(i), Ty);
-      if (!isa<SCEVCastExpr>(SA->getOperand(i)))
-        hasTrunc = isa<SCEVTruncateExpr>(S);
+    unsigned numTruncs = 0;
+    for (unsigned i = 0, e = CommOp->getNumOperands(); i != e && numTruncs < 2;
+         ++i) {
+      const SCEV *S = getTruncateExpr(CommOp->getOperand(i), Ty);
+      if (!isa<SCEVCastExpr>(CommOp->getOperand(i)) && isa<SCEVTruncateExpr>(S))
+        numTruncs++;
       Operands.push_back(S);
     }
-    if (!hasTrunc)
-      return getAddExpr(Operands);
-    // In spite we checked in the beginning that ID is not in the cache,
-    // it is possible that during recursion and different modification
-    // ID came to cache, so if we found it, just return it.
-    if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP))
-      return S;
-  }
-
-  // trunc(x1*x2*...*xN) --> trunc(x1)*trunc(x2)*...*trunc(xN) if we can
-  // eliminate all the truncates, or we replace other casts with truncates.
-  if (const SCEVMulExpr *SM = dyn_cast<SCEVMulExpr>(Op)) {
-    SmallVector<const SCEV *, 4> Operands;
-    bool hasTrunc = false;
-    for (unsigned i = 0, e = SM->getNumOperands(); i != e && !hasTrunc; ++i) {
-      const SCEV *S = getTruncateExpr(SM->getOperand(i), Ty);
-      if (!isa<SCEVCastExpr>(SM->getOperand(i)))
-        hasTrunc = isa<SCEVTruncateExpr>(S);
-      Operands.push_back(S);
+    if (numTruncs < 2) {
+      if (isa<SCEVAddExpr>(Op))
+        return getAddExpr(Operands);
+      else if (isa<SCEVMulExpr>(Op))
+        return getMulExpr(Operands);
+      else
+        llvm_unreachable("Unexpected SCEV type for Op.");
     }
-    if (!hasTrunc)
-      return getMulExpr(Operands);
-    // In spite we checked in the beginning that ID is not in the cache,
-    // it is possible that during recursion and different modification
-    // ID came to cache, so if we found it, just return it.
+    // Although we checked in the beginning that ID is not in the cache, it is
+    // possible that during recursion and different modification ID was inserted
+    // into the cache. So if we find it, just return it.
     if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP))
       return S;
   }
@@ -1778,16 +1768,42 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
     }
   }
 
-  if (auto *SA = dyn_cast<SCEVMulExpr>(Op)) {
+  if (auto *SM = dyn_cast<SCEVMulExpr>(Op)) {
     // zext((A * B * ...)<nuw>) --> (zext(A) * zext(B) * ...)<nuw>
-    if (SA->hasNoUnsignedWrap()) {
+    if (SM->hasNoUnsignedWrap()) {
       // If the multiply does not unsign overflow then we can, by definition,
       // commute the zero extension with the multiply operation.
       SmallVector<const SCEV *, 4> Ops;
-      for (const auto *Op : SA->operands())
+      for (const auto *Op : SM->operands())
         Ops.push_back(getZeroExtendExpr(Op, Ty, Depth + 1));
       return getMulExpr(Ops, SCEV::FlagNUW, Depth + 1);
     }
+
+    // zext(2^K * (trunc X to iN)) to iM ->
+    // 2^K * (zext(trunc X to i{N-K}) to iM)<nuw>
+    //
+    // Proof:
+    //
+    //     zext(2^K * (trunc X to iN)) to iM
+    //   = zext((trunc X to iN) << K) to iM
+    //   = zext((trunc X to i{N-K}) << K)<nuw> to iM
+    //     (because shl removes the top K bits)
+    //   = zext((2^K * (trunc X to i{N-K}))<nuw>) to iM
+    //   = (2^K * (zext(trunc X to i{N-K}) to iM))<nuw>.
+    //
+    if (SM->getNumOperands() == 2)
+      if (auto *MulLHS = dyn_cast<SCEVConstant>(SM->getOperand(0)))
+        if (MulLHS->getAPInt().isPowerOf2())
+          if (auto *TruncRHS = dyn_cast<SCEVTruncateExpr>(SM->getOperand(1))) {
+            int NewTruncBits = getTypeSizeInBits(TruncRHS->getType()) -
+                               MulLHS->getAPInt().logBase2();
+            Type *NewTruncTy = IntegerType::get(getContext(), NewTruncBits);
+            return getMulExpr(
+                getZeroExtendExpr(MulLHS, Ty),
+                getZeroExtendExpr(
+                    getTruncateExpr(TruncRHS->getOperand(), NewTruncTy), Ty),
+                SCEV::FlagNUW, Depth + 1);
+          }
   }
 
   // The cast wasn't folded; create an explicit cast node.
@@ -2764,22 +2780,21 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
   unsigned Idx = 0;
   if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(Ops[0])) {
 
-    // C1*(C2+V) -> C1*C2 + C1*V
     if (Ops.size() == 2)
-        if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(Ops[1]))
-          // If any of Add's ops are Adds or Muls with a constant,
-          // apply this transformation as well.
-          if (Add->getNumOperands() == 2)
-            // TODO: There are some cases where this transformation is not
-            // profitable, for example:
-            // Add = (C0 + X) * Y + Z.
-            // Maybe the scope of this transformation should be narrowed down.
-            if (containsConstantInAddMulChain(Add))
-              return getAddExpr(getMulExpr(LHSC, Add->getOperand(0),
-                                           SCEV::FlagAnyWrap, Depth + 1),
-                                getMulExpr(LHSC, Add->getOperand(1),
-                                           SCEV::FlagAnyWrap, Depth + 1),
-                                SCEV::FlagAnyWrap, Depth + 1);
+      // C1*(C2+V) -> C1*C2 + C1*V
+      if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(Ops[1]))
+        // If any of Add's ops are Adds or Muls with a constant, apply this
+        // transformation as well.
+        //
+        // TODO: There are some cases where this transformation is not
+        // profitable; for example, Add = (C0 + X) * Y + Z.  Maybe the scope of
+        // this transformation should be narrowed down.
+        if (Add->getNumOperands() == 2 && containsConstantInAddMulChain(Add))
+          return getAddExpr(getMulExpr(LHSC, Add->getOperand(0),
+                                       SCEV::FlagAnyWrap, Depth + 1),
+                            getMulExpr(LHSC, Add->getOperand(1),
+                                       SCEV::FlagAnyWrap, Depth + 1),
+                            SCEV::FlagAnyWrap, Depth + 1);
 
     ++Idx;
     while (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(Ops[Idx])) {

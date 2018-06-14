@@ -452,7 +452,7 @@ void VSO::addDependencies(const SymbolFlagsMap &Dependants,
 
           if (OtherMI.IsFinalized)
             transferFinalizedNodeDependencies(MI, Name, OtherMI);
-          else {
+          else if (&OtherVSO != this || OtherSymbol != Name) {
             OtherMI.Dependants[this].insert(Name);
             DepsOnOtherVSO.insert(OtherSymbol);
           }
@@ -562,8 +562,9 @@ void VSO::finalize(const SymbolFlagsMap &Finalized) {
             // MaterializingInfo and update its materializing state.
             assert(DependantVSO.Symbols.count(DependantName) &&
                    "Dependant has no entry in the Symbols table");
-            DependantVSO.Symbols[DependantName].getFlags() &=
-                JITSymbolFlags::Materializing;
+            auto &DependantSym = DependantVSO.Symbols[DependantName];
+            DependantSym.setFlags(static_cast<JITSymbolFlags::FlagNames>(
+                DependantSym.getFlags() & ~JITSymbolFlags::Materializing));
             DependantVSO.MaterializingInfos.erase(DependantMII);
           }
         }
@@ -580,7 +581,9 @@ void VSO::finalize(const SymbolFlagsMap &Finalized) {
         }
         assert(Symbols.count(Name) &&
                "Symbol has no entry in the Symbols table");
-        Symbols[Name].getFlags() &= ~JITSymbolFlags::Materializing;
+        auto &Sym = Symbols[Name];
+        Sym.setFlags(static_cast<JITSymbolFlags::FlagNames>(
+            Sym.getFlags() & ~JITSymbolFlags::Materializing));
         MaterializingInfos.erase(MII);
       }
     }
@@ -676,6 +679,8 @@ SymbolNameSet VSO::lookupFlagsImpl(SymbolFlagsMap &Flags,
 
 SymbolNameSet VSO::lookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
                           SymbolNameSet Names) {
+  assert(Q && "Query can not be null");
+
   std::vector<std::unique_ptr<MaterializationUnit>> MUs;
 
   SymbolNameSet Unresolved = std::move(Names);
@@ -934,7 +939,7 @@ VSO &ExecutionSession::createVSO(std::string Name) {
 
 Expected<SymbolMap> blockingLookup(ExecutionSessionBase &ES,
                                    AsynchronousLookupFunction AsyncLookup,
-                                   SymbolNameSet Names,
+                                   SymbolNameSet Names, bool WaitUntilReady,
                                    MaterializationResponsibility *MR) {
 
 #if LLVM_ENABLE_THREADS
@@ -960,14 +965,23 @@ Expected<SymbolMap> blockingLookup(ExecutionSessionBase &ES,
         }
       };
 
-  auto OnReady = [&](Error Err) {
-    if (Err) {
-      ErrorAsOutParameter _(&ReadyError);
-      std::lock_guard<std::mutex> Lock(ErrMutex);
-      ReadyError = std::move(Err);
-    }
-    PromisedReady.set_value();
-  };
+  std::function<void(Error)> OnReady;
+  if (WaitUntilReady) {
+    OnReady = [&](Error Err) {
+      if (Err) {
+        ErrorAsOutParameter _(&ReadyError);
+        std::lock_guard<std::mutex> Lock(ErrMutex);
+        ReadyError = std::move(Err);
+      }
+      PromisedReady.set_value();
+    };
+  } else {
+    OnReady = [&](Error Err) {
+      if (Err)
+        ES.reportError(std::move(Err));
+    };
+  }
+
 #else
   SymbolMap Result;
   Error ResolutionError = Error::success();
@@ -983,11 +997,19 @@ Expected<SymbolMap> blockingLookup(ExecutionSessionBase &ES,
       ResolutionError = R.takeError();
   };
 
-  auto OnReady = [&](Error Err) {
-    ErrorAsOutParameter _(&ReadyError);
-    if (Err)
-      ReadyError = std::move(Err);
-  };
+  std::function<void(Error)> OnReady;
+  if (WaitUntilReady) {
+    OnReady = [&](Error Err) {
+      ErrorAsOutParameter _(&ReadyError);
+      if (Err)
+        ReadyError = std::move(Err);
+    };
+  } else {
+    OnReady = [&](Error Err) {
+      if (Err)
+        ES.reportError(std::move(Err));
+    };
+  }
 #endif
 
   auto Query = std::make_shared<AsynchronousSymbolQuery>(
@@ -1014,14 +1036,17 @@ Expected<SymbolMap> blockingLookup(ExecutionSessionBase &ES,
     }
   }
 
-  auto ReadyFuture = PromisedReady.get_future();
-  ReadyFuture.get();
+  if (WaitUntilReady) {
+    auto ReadyFuture = PromisedReady.get_future();
+    ReadyFuture.get();
 
-  {
-    std::lock_guard<std::mutex> Lock(ErrMutex);
-    if (ReadyError)
-      return std::move(ReadyError);
-  }
+    {
+      std::lock_guard<std::mutex> Lock(ErrMutex);
+      if (ReadyError)
+        return std::move(ReadyError);
+    }
+  } else
+    cantFail(std::move(ReadyError));
 
   return std::move(Result);
 
@@ -1057,7 +1082,7 @@ Expected<SymbolMap> lookup(const VSO::VSOList &VSOs, SymbolNameSet Names) {
     return Unresolved;
   };
 
-  return blockingLookup(ES, std::move(LookupFn), Names);
+  return blockingLookup(ES, std::move(LookupFn), Names, true);
 }
 
 /// Look up a symbol by searching a list of VSOs.

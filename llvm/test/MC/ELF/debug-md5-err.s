@@ -22,5 +22,5 @@
         .file "baz" md5 0xffeeddccbbaa99887766554433221100
 
 # Inconsistent use of MD5 option. Note: .file 1 did not supply one.
-# CHECK: [[@LINE+1]]:{{[0-9]+}}: error: inconsistent use of MD5 checksums
+# CHECK: [[@LINE+1]]:{{[0-9]+}}: warning: inconsistent use of MD5 checksums
         .file 5 "bax" md5 0xffeeddccbbaa99887766554433221100

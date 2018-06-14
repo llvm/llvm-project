@@ -26245,6 +26245,12 @@ bool X86TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
 bool
 X86TargetLowering::isVectorClearMaskLegal(const SmallVectorImpl<int> &Mask,
                                           EVT VT) const {
+  // Don't convert an 'and' into a shuffle that we don't directly support.
+  // vpblendw and vpshufb for 256-bit vectors are not available on AVX1.
+  if (!Subtarget.hasAVX2())
+    if (VT == MVT::v32i8 || VT == MVT::v16i16)
+      return false;
+
   // Just delegate to the generic legality, clear masks aren't special.
   return isShuffleMaskLegal(Mask, VT);
 }

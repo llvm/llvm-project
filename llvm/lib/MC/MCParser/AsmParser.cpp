@@ -177,6 +177,9 @@ private:
   /// Are we parsing ms-style inline assembly?
   bool ParsingInlineAsm = false;
 
+  /// Did we already inform the user about inconsistent MD5 usage?
+  bool ReportedInconsistentMD5 = false;
+
 public:
   AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
             const MCAsmInfo &MAI, unsigned CB);
@@ -3337,7 +3340,11 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
 
   // In case there is a -g option as well as debug info from directive .file,
   // we turn off the -g option, directly use the existing debug info instead.
-  getContext().setGenDwarfForAssembly(false);
+  // Also reset any implicit ".file 0" for the assembler source.
+  if (Ctx.getGenDwarfForAssembly()) {
+    Ctx.getMCDwarfLineTable(0).resetRootFile();
+    Ctx.setGenDwarfForAssembly(false);
+  }
 
   if (FileNumber == -1)
     getStreamer().EmitFileDirective(Filename);
@@ -3363,6 +3370,12 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
       if (!FileNumOrErr)
         return Error(DirectiveLoc, toString(FileNumOrErr.takeError()));
       FileNumber = FileNumOrErr.get();
+    }
+    // Alert the user if there are some .file directives with MD5 and some not.
+    // But only do that once.
+    if (!ReportedInconsistentMD5 && !Ctx.isDwarfMD5UsageConsistent(0)) {
+      ReportedInconsistentMD5 = true;
+      return Warning(DirectiveLoc, "inconsistent use of MD5 checksums");
     }
   }
 

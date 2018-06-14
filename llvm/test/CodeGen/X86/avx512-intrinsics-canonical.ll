@@ -3156,6 +3156,398 @@ entry:
   ret <2 x double> %0
 }
 
+define <4 x float> @test_mm_mask_add_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
+; X86-LABEL: test_mm_mask_add_ss:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vaddss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x58,0xc2]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_add_ss:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vaddss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x58,0xc2]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <4 x float> %__B, i32 0
+  %vecext1.i.i = extractelement <4 x float> %__A, i32 0
+  %add.i.i = fadd float %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %vecext1.i = extractelement <4 x float> %__W, i32 0
+  %cond.i = select i1 %tobool.i, float %vecext1.i, float %add.i.i
+  %vecins.i = insertelement <4 x float> %__A, float %cond.i, i32 0
+  ret <4 x float> %vecins.i
+}
+
+define <4 x float> @test_mm_maskz_add_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
+; X86-LABEL: test_mm_maskz_add_ss:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vaddss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x58,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_add_ss:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vaddss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x58,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <4 x float> %__B, i32 0
+  %vecext1.i.i = extractelement <4 x float> %__A, i32 0
+  %add.i.i = fadd float %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %cond.i = select i1 %tobool.i, float 0.000000e+00, float %add.i.i
+  %vecins.i = insertelement <4 x float> %__A, float %cond.i, i32 0
+  ret <4 x float> %vecins.i
+}
+
+define <2 x double> @test_mm_mask_add_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
+; X86-LABEL: test_mm_mask_add_sd:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vaddsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x58,0xc2]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_add_sd:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vaddsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x58,0xc2]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <2 x double> %__B, i32 0
+  %vecext1.i.i = extractelement <2 x double> %__A, i32 0
+  %add.i.i = fadd double %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %vecext1.i = extractelement <2 x double> %__W, i32 0
+  %cond.i = select i1 %tobool.i, double %vecext1.i, double %add.i.i
+  %vecins.i = insertelement <2 x double> %__A, double %cond.i, i32 0
+  ret <2 x double> %vecins.i
+}
+
+define <2 x double> @test_mm_maskz_add_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
+; X86-LABEL: test_mm_maskz_add_sd:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x58,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_add_sd:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x58,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <2 x double> %__B, i32 0
+  %vecext1.i.i = extractelement <2 x double> %__A, i32 0
+  %add.i.i = fadd double %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %cond.i = select i1 %tobool.i, double 0.000000e+00, double %add.i.i
+  %vecins.i = insertelement <2 x double> %__A, double %cond.i, i32 0
+  ret <2 x double> %vecins.i
+}
+
+define <4 x float> @test_mm_mask_sub_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
+; X86-LABEL: test_mm_mask_sub_ss:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vsubss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x5c,0xc2]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_sub_ss:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsubss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x5c,0xc2]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <4 x float> %__B, i32 0
+  %vecext1.i.i = extractelement <4 x float> %__A, i32 0
+  %sub.i.i = fsub float %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %vecext1.i = extractelement <4 x float> %__W, i32 0
+  %cond.i = select i1 %tobool.i, float %vecext1.i, float %sub.i.i
+  %vecins.i = insertelement <4 x float> %__A, float %cond.i, i32 0
+  ret <4 x float> %vecins.i
+}
+
+define <4 x float> @test_mm_maskz_sub_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
+; X86-LABEL: test_mm_maskz_sub_ss:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vsubss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x5c,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_sub_ss:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsubss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x5c,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <4 x float> %__B, i32 0
+  %vecext1.i.i = extractelement <4 x float> %__A, i32 0
+  %sub.i.i = fsub float %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %cond.i = select i1 %tobool.i, float 0.000000e+00, float %sub.i.i
+  %vecins.i = insertelement <4 x float> %__A, float %cond.i, i32 0
+  ret <4 x float> %vecins.i
+}
+
+define <2 x double> @test_mm_mask_sub_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
+; X86-LABEL: test_mm_mask_sub_sd:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vsubsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x5c,0xc2]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_sub_sd:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsubsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x5c,0xc2]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <2 x double> %__B, i32 0
+  %vecext1.i.i = extractelement <2 x double> %__A, i32 0
+  %sub.i.i = fsub double %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %vecext1.i = extractelement <2 x double> %__W, i32 0
+  %cond.i = select i1 %tobool.i, double %vecext1.i, double %sub.i.i
+  %vecins.i = insertelement <2 x double> %__A, double %cond.i, i32 0
+  ret <2 x double> %vecins.i
+}
+
+define <2 x double> @test_mm_maskz_sub_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
+; X86-LABEL: test_mm_maskz_sub_sd:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vsubsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x5c,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_sub_sd:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsubsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x5c,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <2 x double> %__B, i32 0
+  %vecext1.i.i = extractelement <2 x double> %__A, i32 0
+  %sub.i.i = fsub double %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %cond.i = select i1 %tobool.i, double 0.000000e+00, double %sub.i.i
+  %vecins.i = insertelement <2 x double> %__A, double %cond.i, i32 0
+  ret <2 x double> %vecins.i
+}
+
+define <4 x float> @test_mm_mask_mul_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
+; X86-LABEL: test_mm_mask_mul_ss:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vmulss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x59,0xc2]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_mul_ss:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vmulss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x59,0xc2]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <4 x float> %__B, i32 0
+  %vecext1.i.i = extractelement <4 x float> %__A, i32 0
+  %mul.i.i = fmul float %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %vecext1.i = extractelement <4 x float> %__W, i32 0
+  %cond.i = select i1 %tobool.i, float %vecext1.i, float %mul.i.i
+  %vecins.i = insertelement <4 x float> %__A, float %cond.i, i32 0
+  ret <4 x float> %vecins.i
+}
+
+define <4 x float> @test_mm_maskz_mul_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
+; X86-LABEL: test_mm_maskz_mul_ss:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vmulss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x59,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_mul_ss:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vmulss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x59,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <4 x float> %__B, i32 0
+  %vecext1.i.i = extractelement <4 x float> %__A, i32 0
+  %mul.i.i = fmul float %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %cond.i = select i1 %tobool.i, float 0.000000e+00, float %mul.i.i
+  %vecins.i = insertelement <4 x float> %__A, float %cond.i, i32 0
+  ret <4 x float> %vecins.i
+}
+
+define <2 x double> @test_mm_mask_mul_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
+; X86-LABEL: test_mm_mask_mul_sd:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vmulsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x59,0xc2]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_mul_sd:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vmulsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x59,0xc2]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <2 x double> %__B, i32 0
+  %vecext1.i.i = extractelement <2 x double> %__A, i32 0
+  %mul.i.i = fmul double %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %vecext1.i = extractelement <2 x double> %__W, i32 0
+  %cond.i = select i1 %tobool.i, double %vecext1.i, double %mul.i.i
+  %vecins.i = insertelement <2 x double> %__A, double %cond.i, i32 0
+  ret <2 x double> %vecins.i
+}
+
+define <2 x double> @test_mm_maskz_mul_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
+; X86-LABEL: test_mm_maskz_mul_sd:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vmulsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x59,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_mul_sd:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vmulsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x59,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %vecext.i.i = extractelement <2 x double> %__B, i32 0
+  %vecext1.i.i = extractelement <2 x double> %__A, i32 0
+  %mul.i.i = fmul double %vecext1.i.i, %vecext.i.i
+  %0 = and i8 %__U, 1
+  %tobool.i = icmp eq i8 %0, 0
+  %cond.i = select i1 %tobool.i, double 0.000000e+00, double %mul.i.i
+  %vecins.i = insertelement <2 x double> %__A, double %cond.i, i32 0
+  ret <2 x double> %vecins.i
+}
+
+define <4 x float> @test_mm_mask_div_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
+; X86-LABEL: test_mm_mask_div_ss:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vdivss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x5e,0xc2]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_div_ss:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vdivss %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0x76,0x09,0x5e,0xc2]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %0 = extractelement <4 x float> %__A, i64 0
+  %1 = extractelement <4 x float> %__B, i64 0
+  %2 = extractelement <4 x float> %__W, i64 0
+  %3 = fdiv float %0, %1
+  %4 = bitcast i8 %__U to <8 x i1>
+  %5 = extractelement <8 x i1> %4, i64 0
+  %6 = select i1 %5, float %3, float %2
+  %7 = insertelement <4 x float> %__A, float %6, i64 0
+  ret <4 x float> %7
+}
+
+define <4 x float> @test_mm_maskz_div_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
+; X86-LABEL: test_mm_maskz_div_ss:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vdivss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x5e,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_div_ss:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vdivss %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7e,0x89,0x5e,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %0 = extractelement <4 x float> %__A, i64 0
+  %1 = extractelement <4 x float> %__B, i64 0
+  %2 = fdiv float %0, %1
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = extractelement <8 x i1> %3, i64 0
+  %5 = select i1 %4, float %2, float 0.000000e+00
+  %6 = insertelement <4 x float> %__A, float %5, i64 0
+  ret <4 x float> %6
+}
+
+define <2 x double> @test_mm_mask_div_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
+; X86-LABEL: test_mm_mask_div_sd:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vdivsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x5e,0xc2]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_mask_div_sd:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vdivsd %xmm2, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf7,0x09,0x5e,0xc2]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %0 = extractelement <2 x double> %__A, i64 0
+  %1 = extractelement <2 x double> %__B, i64 0
+  %2 = extractelement <2 x double> %__W, i64 0
+  %3 = fdiv double %0, %1
+  %4 = bitcast i8 %__U to <8 x i1>
+  %5 = extractelement <8 x i1> %4, i64 0
+  %6 = select i1 %5, double %3, double %2
+  %7 = insertelement <2 x double> %__A, double %6, i64 0
+  ret <2 x double> %7
+}
+
+define <2 x double> @test_mm_maskz_div_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
+; X86-LABEL: test_mm_maskz_div_sd:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vdivsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x5e,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mm_maskz_div_sd:
+; X64:       ## %bb.0: ## %entry
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vdivsd %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xff,0x89,0x5e,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %0 = extractelement <2 x double> %__A, i64 0
+  %1 = extractelement <2 x double> %__B, i64 0
+  %2 = fdiv double %0, %1
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = extractelement <8 x i1> %3, i64 0
+  %5 = select i1 %4, double %2, double 0.000000e+00
+  %6 = insertelement <2 x double> %__A, double %5, i64 0
+  ret <2 x double> %6
+}
+
 declare <8 x double> @llvm.fma.v8f64(<8 x double>, <8 x double>, <8 x double>) #9
 declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float>) #9
 declare float @llvm.fma.f32(float, float, float) #9

@@ -465,26 +465,4 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   }
   OS << ">";
 }
-
-LLVM_DUMP_METHOD void MCAssembler::dump() const{
-  raw_ostream &OS = errs();
-
-  OS << "<MCAssembler\n";
-  OS << "  Sections:[\n    ";
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if (it != begin()) OS << ",\n    ";
-    it->dump();
-  }
-  OS << "],\n";
-  OS << "  Symbols:[";
-
-  for (const_symbol_iterator it = symbol_begin(), ie = symbol_end(); it != ie; ++it) {
-    if (it != symbol_begin()) OS << ",\n           ";
-    OS << "(";
-    it->dump();
-    OS << ", Index:" << it->getIndex() << ", ";
-    OS << ")";
-  }
-  OS << "]>\n";
-}
 #endif

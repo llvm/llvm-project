@@ -62,6 +62,17 @@ define float @fsub_self(float %x) {
   ret float %r
 }
 
+define float @fsub_neg_x_y(float %x, float %y) {
+; ANY-LABEL: fsub_neg_x_y:
+; ANY:       # %bb.0:
+; ANY-NEXT:    subss %xmm0, %xmm1
+; ANY-NEXT:    movaps %xmm1, %xmm0
+; ANY-NEXT:    retq
+  %neg = fsub nsz float 0.0, %x
+  %r = fadd nsz float %neg, %y
+  ret float %r
+}
+
 define float @fsub_negzero(float %x) {
 ; STRICT-LABEL: fsub_negzero:
 ; STRICT:       # %bb.0:

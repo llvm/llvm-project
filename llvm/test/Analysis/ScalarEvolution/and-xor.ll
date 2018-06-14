@@ -25,3 +25,17 @@ define i64 @test2(i64 %x) {
   %z = xor i64 %t, 8
   ret i64 %z
 }
+
+; Check that we transform the naive lowering of the sequence below,
+;   (4 * (zext i5 (2 * (trunc i32 %x to i5)) to i32)),
+; to
+;   (8 * (zext i4 (trunc i32 %x to i4) to i32))
+;
+; CHECK-LABEL: @test3
+define i32 @test3(i32 %x) {
+  %a = mul i32 %x, 8
+; CHECK: %b
+; CHECK-NEXT: --> (8 * (zext i4 (trunc i32 %x to i4) to i32))
+  %b = and i32 %a, 124
+  ret i32 %b
+}
