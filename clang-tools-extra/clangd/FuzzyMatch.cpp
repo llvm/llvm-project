@@ -261,33 +261,37 @@ void FuzzyMatcher::buildGraph() {
                         ? ScoreInfo{MatchMissScore, Match}
                         : ScoreInfo{MissMissScore, Miss};
 
-      if (!allowMatch(P, W)) {
-        Score[Match] = {AwfulScore, Miss};
-      } else {
-        auto &PreMatch = Scores[P][W];
-        auto MatchMatchScore = PreMatch[Match].Score + matchBonus(P, W, Match);
-        auto MissMatchScore = PreMatch[Miss].Score + matchBonus(P, W, Miss);
-        Score[Match] = (MatchMatchScore > MissMatchScore)
-                           ? ScoreInfo{MatchMatchScore, Match}
-                           : ScoreInfo{MissMatchScore, Miss};
-      }
+      auto &PreMatch = Scores[P][W];
+      auto MatchMatchScore =
+          allowMatch(P, W, Match)
+              ? PreMatch[Match].Score + matchBonus(P, W, Match)
+              : AwfulScore;
+      auto MissMatchScore = allowMatch(P, W, Miss)
+                                ? PreMatch[Miss].Score + matchBonus(P, W, Miss)
+                                : AwfulScore;
+      Score[Match] = (MatchMatchScore > MissMatchScore)
+                         ? ScoreInfo{MatchMatchScore, Match}
+                         : ScoreInfo{MissMatchScore, Miss};
     }
   }
 }
 
-bool FuzzyMatcher::allowMatch(int P, int W) const {
+bool FuzzyMatcher::allowMatch(int P, int W, Action Last) const {
   if (LowPat[P] != LowWord[W])
     return false;
-  // We require a "strong" match for the first pattern character only.
-  if (P > 0)
-    return true;
-  // Obvious "strong match" for first char: match against a word head.
-  // We're banning matches outright, so conservatively accept some other cases
-  // where our segmentation might be wrong:
-  //  - allow matching B in ABCDef (but not in NDEBUG)
-  //  - we'd like to accept print in sprintf, but too many false positives
-  return WordRole[W] != Tail ||
-         (Word[W] != LowWord[W] && WordTypeSet & 1 << Lower);
+  // We require a "strong" match:
+  // - for the first pattern character.  [foo] !~ "barefoot"
+  // - after a gap.                      [pat] !~ "patnther"
+  if (Last == Miss) {
+    // We're banning matches outright, so conservatively accept some other cases
+    // where our segmentation might be wrong:
+    //  - allow matching B in ABCDef (but not in NDEBUG)
+    //  - we'd like to accept print in sprintf, but too many false positives
+    if (WordRole[W] == Tail &&
+        (Word[W] == LowWord[W] || !(WordTypeSet & 1 << Lower)))
+      return false;
+  }
+  return true;
 }
 
 int FuzzyMatcher::skipPenalty(int W, Action Last) const {

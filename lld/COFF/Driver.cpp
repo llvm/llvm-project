@@ -1247,8 +1247,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   std::set<sys::fs::UniqueID> WholeArchives;
   for (auto *Arg : Args.filtered(OPT_wholearchive_file))
-    if (Optional<sys::fs::UniqueID> ID = getUniqueID(Arg->getValue()))
-      WholeArchives.insert(*ID);
+    if (Optional<StringRef> Path = doFindFile(Arg->getValue()))
+      if (Optional<sys::fs::UniqueID> ID = getUniqueID(*Path))
+        WholeArchives.insert(*ID);
 
   // A predicate returning true if a given path is an argument for
   // /wholearchive:, or /wholearchive is enabled globally.
@@ -1266,7 +1267,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // for /defaultlib option.
   for (auto *Arg : Args.filtered(OPT_INPUT, OPT_wholearchive_file))
     if (Optional<StringRef> Path = findFile(Arg->getValue()))
-      enqueuePath(*Path, IsWholeArchive(Arg->getValue()));
+      enqueuePath(*Path, IsWholeArchive(*Path));
 
   for (auto *Arg : Args.filtered(OPT_defaultlib))
     if (Optional<StringRef> Path = findLib(Arg->getValue()))

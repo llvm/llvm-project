@@ -957,6 +957,60 @@ namespace serialization {
       /// \brief The 'unsigned long _Accum' type
       PREDEF_TYPE_ULONG_ACCUM_ID    = 51,
 
+      /// \brief The 'short _Fract' type
+      PREDEF_TYPE_SHORT_FRACT_ID = 52,
+
+      /// \brief The '_Fract' type
+      PREDEF_TYPE_FRACT_ID = 53,
+
+      /// \brief The 'long _Fract' type
+      PREDEF_TYPE_LONG_FRACT_ID = 54,
+
+      /// \brief The 'unsigned short _Fract' type
+      PREDEF_TYPE_USHORT_FRACT_ID = 55,
+
+      /// \brief The 'unsigned _Fract' type
+      PREDEF_TYPE_UFRACT_ID = 56,
+
+      /// \brief The 'unsigned long _Fract' type
+      PREDEF_TYPE_ULONG_FRACT_ID = 57,
+
+      /// \brief The '_Sat short _Accum' type
+      PREDEF_TYPE_SAT_SHORT_ACCUM_ID = 58,
+
+      /// \brief The '_Sat _Accum' type
+      PREDEF_TYPE_SAT_ACCUM_ID = 59,
+
+      /// \brief The '_Sat long _Accum' type
+      PREDEF_TYPE_SAT_LONG_ACCUM_ID = 60,
+
+      /// \brief The '_Sat unsigned short _Accum' type
+      PREDEF_TYPE_SAT_USHORT_ACCUM_ID = 61,
+
+      /// \brief The '_Sat unsigned _Accum' type
+      PREDEF_TYPE_SAT_UACCUM_ID = 62,
+
+      /// \brief The '_Sat unsigned long _Accum' type
+      PREDEF_TYPE_SAT_ULONG_ACCUM_ID = 63,
+
+      /// \brief The '_Sat short _Fract' type
+      PREDEF_TYPE_SAT_SHORT_FRACT_ID = 64,
+
+      /// \brief The '_Sat _Fract' type
+      PREDEF_TYPE_SAT_FRACT_ID = 65,
+
+      /// \brief The '_Sat long _Fract' type
+      PREDEF_TYPE_SAT_LONG_FRACT_ID = 66,
+
+      /// \brief The '_Sat unsigned short _Fract' type
+      PREDEF_TYPE_SAT_USHORT_FRACT_ID = 67,
+
+      /// \brief The '_Sat unsigned _Fract' type
+      PREDEF_TYPE_SAT_UFRACT_ID = 68,
+
+      /// \brief The '_Sat unsigned long _Fract' type
+      PREDEF_TYPE_SAT_ULONG_FRACT_ID = 69,
+
       /// OpenCL image types with auto numeration
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
       PREDEF_TYPE_##Id##_ID,
@@ -968,7 +1022,7 @@ namespace serialization {
     ///
     /// Type IDs for non-predefined types will start at
     /// NUM_PREDEF_TYPE_IDs.
-    const unsigned NUM_PREDEF_TYPE_IDS = 100;
+    const unsigned NUM_PREDEF_TYPE_IDS = 200;
 
     /// Record codes for each kind of type.
     ///

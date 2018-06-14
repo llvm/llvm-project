@@ -728,22 +728,22 @@ uint64_t MipsGotSection::getSymEntryOffset(const InputFile *F, const Symbol &S,
   const FileGot &G = Gots[*F->MipsGotIndex];
   Symbol *Sym = const_cast<Symbol *>(&S);
   if (Sym->isTls())
-    return G.Tls.find(Sym)->second * Config->Wordsize;
+    return G.Tls.lookup(Sym) * Config->Wordsize;
   if (Sym->IsPreemptible)
-    return G.Global.find(Sym)->second * Config->Wordsize;
-  return G.Local16.find({Sym, Addend})->second * Config->Wordsize;
+    return G.Global.lookup(Sym) * Config->Wordsize;
+  return G.Local16.lookup({Sym, Addend}) * Config->Wordsize;
 }
 
 uint64_t MipsGotSection::getTlsIndexOffset(const InputFile *F) const {
   const FileGot &G = Gots[*F->MipsGotIndex];
-  return G.DynTlsSymbols.find(nullptr)->second * Config->Wordsize;
+  return G.DynTlsSymbols.lookup(nullptr) * Config->Wordsize;
 }
 
 uint64_t MipsGotSection::getGlobalDynOffset(const InputFile *F,
                                             const Symbol &S) const {
   const FileGot &G = Gots[*F->MipsGotIndex];
   Symbol *Sym = const_cast<Symbol *>(&S);
-  return G.DynTlsSymbols.find(Sym)->second * Config->Wordsize;
+  return G.DynTlsSymbols.lookup(Sym) * Config->Wordsize;
 }
 
 const Symbol *MipsGotSection::getFirstGlobalEntry() const {

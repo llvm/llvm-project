@@ -259,8 +259,12 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     // C++ [class.virtual]p1:
     //   A class that declares or inherits a virtual function is called a 
     //   polymorphic class.
-    if (BaseClassDecl->isPolymorphic())
+    if (BaseClassDecl->isPolymorphic()) {
       data().Polymorphic = true;
+
+      //   An aggregate is a class with [...] no virtual functions.
+      data().Aggregate = false;
+    }
 
     // C++0x [class]p7:
     //   A standard-layout class is a class that: [...]

@@ -823,6 +823,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     // has been implemented.
     GoogleStyle.BreakStringLiterals = false;
   } else if (Language == FormatStyle::LK_ObjC) {
+    GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.ColumnLimit = 100;
   }
 
