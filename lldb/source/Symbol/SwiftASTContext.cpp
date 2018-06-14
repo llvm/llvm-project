@@ -1758,8 +1758,12 @@ Status SwiftASTContext::GetFatalErrors() {
   Status error;
   if (HasFatalErrors()) {
     error = m_fatal_errors;
-    if (error.Success())
-      error.SetErrorString("unknown fatal error in swift AST context");
+    if (error.Success()) {
+      // Retrieve the error message from the DiagnosticConsumer.
+      DiagnosticManager diagnostic_manager;
+      PrintDiagnostics(diagnostic_manager);
+      error.SetErrorString(diagnostic_manager.GetString());
+    }
   }
   return error;
 }
