@@ -22,8 +22,9 @@ else()
   list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -lstdc++ -lpthread)
 endif()
 
-# libFuzzer unit tests are only run on the host machine.
-set(arch "x86_64")
+if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
+  # libFuzzer unit tests are only run on the host machine.
+  set(arch ${COMPILER_RT_DEFAULT_TARGET_ARCH})
 
 set(LIBFUZZER_TEST_RUNTIME RTFuzzerTest.${arch})
 if(APPLE)
@@ -49,3 +50,4 @@ generate_compiler_rt_tests(FuzzerTestObjects
   LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS})
 set_target_properties(FuzzerUnitTests PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+endif()
