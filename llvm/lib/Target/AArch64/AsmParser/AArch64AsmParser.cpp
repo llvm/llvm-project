@@ -88,7 +88,7 @@ private:
   bool parseRegister(OperandVector &Operands);
   bool parseSymbolicImmVal(const MCExpr *&ImmVal);
   bool parseNeonVectorList(OperandVector &Operands);
-  bool parseOptionalMulVl(OperandVector &Operands);
+  bool parseOptionalMulOperand(OperandVector &Operands);
   bool parseOperand(OperandVector &Operands, bool isCondCode,
                     bool invertCondCode);
 
@@ -3199,27 +3199,45 @@ AArch64AsmParser::tryParseGPROperand(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-bool AArch64AsmParser::parseOptionalMulVl(OperandVector &Operands) {
+bool AArch64AsmParser::parseOptionalMulOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
 
   // Some SVE instructions have a decoration after the immediate, i.e.
   // "mul vl". We parse them here and add tokens, which must be present in the
   // asm string in the tablegen instruction.
+  bool NextIsVL = Parser.getLexer().peekTok().getString().equals_lower("vl");
+  bool NextIsHash = Parser.getLexer().peekTok().is(AsmToken::Hash);
   if (!Parser.getTok().getString().equals_lower("mul") ||
-      !Parser.getLexer().peekTok().getString().equals_lower("vl"))
+      !(NextIsVL || NextIsHash))
     return true;
 
-  SMLoc S = getLoc();
   Operands.push_back(
-    AArch64Operand::CreateToken("mul", false, S, getContext()));
+    AArch64Operand::CreateToken("mul", false, getLoc(), getContext()));
   Parser.Lex(); // Eat the "mul"
 
-  S = getLoc();
-  Operands.push_back(
-    AArch64Operand::CreateToken("vl", false, S, getContext()));
-  Parser.Lex(); // Eat the "vl"
+  if (NextIsVL) {
+    Operands.push_back(
+        AArch64Operand::CreateToken("vl", false, getLoc(), getContext()));
+    Parser.Lex(); // Eat the "vl"
+    return false;
+  }
 
-  return false;
+  if (NextIsHash) {
+    Parser.Lex(); // Eat the #
+    SMLoc S = getLoc();
+
+    // Parse immediate operand.
+    const MCExpr *ImmVal;
+    if (!Parser.parseExpression(ImmVal))
+      if (const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(ImmVal)) {
+        Operands.push_back(AArch64Operand::CreateImm(
+            MCConstantExpr::create(MCE->getValue(), getContext()), S, getLoc(),
+            getContext()));
+        return MatchOperand_Success;
+      }
+  }
+
+  return Error(getLoc(), "expected 'vl' or '#<imm>'");
 }
 
 /// parseOperand - Parse a arm instruction operand.  For now this parses the
@@ -3275,8 +3293,9 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     if (!parseRegister(Operands))
       return false;
 
-    // See if this is a "mul vl" decoration used by SVE instructions.
-    if (!parseOptionalMulVl(Operands))
+    // See if this is a "mul vl" decoration or "mul #<int>" operand used
+    // by SVE instructions.
+    if (!parseOptionalMulOperand(Operands))
       return false;
 
     // This could be an optional "shift" or "extend" operand.
@@ -4011,6 +4030,12 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidSVEPredicate3bSReg:
   case Match_InvalidSVEPredicate3bDReg:
     return Error(Loc, "restricted predicate has range [0, 7].");
+  case Match_InvalidSVEExactFPImmOperandHalfOne:
+    return Error(Loc, "Invalid floating point constant, expected 0.5 or 1.0.");
+  case Match_InvalidSVEExactFPImmOperandHalfTwo:
+    return Error(Loc, "Invalid floating point constant, expected 0.5 or 2.0.");
+  case Match_InvalidSVEExactFPImmOperandZeroOne:
+    return Error(Loc, "Invalid floating point constant, expected 0.0 or 1.0.");
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -4509,6 +4534,9 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEPredicate3bHReg:
   case Match_InvalidSVEPredicate3bSReg:
   case Match_InvalidSVEPredicate3bDReg:
+  case Match_InvalidSVEExactFPImmOperandHalfOne:
+  case Match_InvalidSVEExactFPImmOperandHalfTwo:
+  case Match_InvalidSVEExactFPImmOperandZeroOne:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())

@@ -32,7 +32,7 @@
 # CHECK-NEXT:      "insertText": "func_with_args(${1:int a}, ${2:int b})",
 # CHECK-NEXT:      "insertTextFormat": 2,
 # CHECK-NEXT:      "kind": 3,
-# CHECK-NEXT:      "label": "func_with_args(int a, int b)",
+# CHECK-NEXT:      "label": " func_with_args(int a, int b)",
 # CHECK-NEXT:      "sortText": "{{.*}}func_with_args"
 # CHECK-NEXT:    }
 # CHECK-NEXT:    ]

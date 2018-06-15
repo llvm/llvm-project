@@ -71,9 +71,11 @@ entry:
 ; NOLOWER-NOT: alloca
 ; NOLOWER-NOT: store
 ; NOLOWER-NOT: call void @llvm.dbg.declare
-; NOLOWER: call void @llvm.dbg.value(metadata i64 %o.coerce0, {{.*}})
+; Here we want to find:  call void @llvm.dbg.value(metadata i64 %o.coerce0, metadata [[VARIABLE_O]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
+; NOLOWER: call void @llvm.dbg.value(metadata i64 undef, {{.*}})
 ; NOLOWER-NOT: store
-; NOLOWER: call void @llvm.dbg.value(metadata i64 %o.coerce1, {{.*}})
+; Here we want to find:  call void @llvm.dbg.value(metadata i64 %o.coerce1, metadata [[VARIABLE_O]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
+; NOLOWER: call void @llvm.dbg.value(metadata i64 undef, {{.*}})
 ; NOLOWER-NOT: store
 ; NOLOWER: call void @tworegs_callee(i64 %o.coerce0, i64 %o.coerce1)
 

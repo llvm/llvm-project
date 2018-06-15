@@ -199,4 +199,78 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v8i8(i8 addrspace(1)* %out
   ret void
 }
 
+; GCN-LABEL: {{^}}reduce_load_vector_v8i8_extract_0123:
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_load_dword s
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
+; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 24
+define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0123() #0 {
+  %load = load <8 x i8>, <8 x i8> addrspace(4)* null
+  %elt0 = extractelement <8 x i8> %load, i32 0
+  %elt1 = extractelement <8 x i8> %load, i32 1
+  %elt2 = extractelement <8 x i8> %load, i32 2
+  %elt3 = extractelement <8 x i8> %load, i32 3
+  store volatile i8 %elt0, i8 addrspace(1)* undef, align 1
+  store volatile i8 %elt1, i8 addrspace(1)* undef, align 1
+  store volatile i8 %elt2, i8 addrspace(1)* undef, align 1
+  store volatile i8 %elt3, i8 addrspace(1)* undef, align 1
+  ret void
+}
+
+; GCN-LABEL: {{^}}reduce_load_vector_v8i8_extract_0145:
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_load_dwordx2
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
+; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
+define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0145() #0 {
+  %load = load <8 x i8>, <8 x i8> addrspace(4)* null
+  %elt0 = extractelement <8 x i8> %load, i32 0
+  %elt1 = extractelement <8 x i8> %load, i32 1
+  %elt4 = extractelement <8 x i8> %load, i32 4
+  %elt5 = extractelement <8 x i8> %load, i32 5
+  store volatile i8 %elt0, i8 addrspace(1)* undef, align 1
+  store volatile i8 %elt1, i8 addrspace(1)* undef, align 1
+  store volatile i8 %elt4, i8 addrspace(1)* undef, align 1
+  store volatile i8 %elt5, i8 addrspace(1)* undef, align 1
+  ret void
+}
+
+; GCN-LABEL: {{^}}reduce_load_vector_v8i8_extract_45:
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_mov_b64 [[PTR:s\[[0-9]+:[0-9]+\]]], 4{{$}}
+; GCN: s_load_dword s{{[0-9]+}}, [[PTR]], 0x0{{$}}
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
+define amdgpu_kernel void @reduce_load_vector_v8i8_extract_45() #0 {
+  %load = load <8 x i8>, <8 x i8> addrspace(4)* null
+  %elt4 = extractelement <8 x i8> %load, i32 4
+  %elt5 = extractelement <8 x i8> %load, i32 5
+  store volatile i8 %elt4, i8 addrspace(1)* undef, align 1
+  store volatile i8 %elt5, i8 addrspace(1)* undef, align 1
+  ret void
+}
+
+; FIXME: ought to be able to eliminate high half of load
+; GCN-LABEL: {{^}}reduce_load_vector_v16i8_extract_0145:
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_load_dwordx4
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
+; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 8
+define amdgpu_kernel void @reduce_load_vector_v16i8_extract_0145() #0 {
+  %load = load <16 x i8>, <16 x i8> addrspace(4)* null
+  %elt0 = extractelement <16 x i8> %load, i32 0
+  %elt1 = extractelement <16 x i8> %load, i32 1
+  %elt4 = extractelement <16 x i8> %load, i32 4
+  %elt5 = extractelement <16 x i8> %load, i32 5
+  store volatile i8 %elt0, i8 addrspace(1)* undef, align 1
+  store volatile i8 %elt1, i8 addrspace(1)* undef, align 1
+  store volatile i8 %elt4, i8 addrspace(1)* undef, align 1
+  store volatile i8 %elt5, i8 addrspace(1)* undef, align 1
+  ret void
+}
+
 attributes #0 = { nounwind }

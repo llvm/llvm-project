@@ -226,8 +226,11 @@ entry:
 ; EG-DAG: VTX_READ_16 T{{[0-9]}}.X, T{{[0-9]}}.X, 46
 ; EG-DAG: VTX_READ_16 T{{[0-9]}}.X, T{{[0-9]}}.X, 48
 
-; GCN: s_load_dword s
-; GCN: s_load_dword s
+; SI: s_load_dword s
+; SI: s_load_dword s
+
+; VI-HSA: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x8
+; VI-MESA: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x2c
 define amdgpu_kernel void @v3i16_arg(<3 x i16> addrspace(1)* nocapture %out, <3 x i16> %in) nounwind {
 entry:
   store <3 x i16> %in, <3 x i16> addrspace(1)* %out, align 4
@@ -291,11 +294,8 @@ entry:
 ; SI-DAG: s_load_dword s{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0xc
 ; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x9
 
-; MESA-VI-DAG: s_load_dword s{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; MESA-VI-DAG: s_load_dword s{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0x30
-
-; HSA-VI-DAG: s_load_dword s{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0x8
-; HSA-VI-DAG: s_load_dword s{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0xc
+; MESA-VI: s_load_dwordx2 s{{\[[0-9]:[0-9]+\]}}, s[0:1], 0x2c
+; HSA-VI: s_load_dwordx2 s[{{[0-9]+:[0-9]+}}], s[4:5], 0x8
 define amdgpu_kernel void @v4i16_arg(<4 x i16> addrspace(1)* %out, <4 x i16> %in) {
 entry:
   store <4 x i16> %in, <4 x i16> addrspace(1)* %out
@@ -391,11 +391,11 @@ entry:
 ; SI-NOT: {{buffer|flat|global}}_load
 
 
-; VI: s_load_dwordx2
-; VI: s_load_dword s
-; VI: s_load_dword s
-; VI: s_load_dword s
-; VI: s_load_dword s
+; MESA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x34
+; MESA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x3c
+
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x10
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x18
 define amdgpu_kernel void @v8i16_arg(<8 x i16> addrspace(1)* %out, <8 x i16> %in) {
 entry:
   store <8 x i16> %in, <8 x i16> addrspace(1)* %out
@@ -528,14 +528,15 @@ entry:
 ; SI-NOT: {{buffer|flat|global}}_load
 
 
-; VI: s_load_dword s
-; VI: s_load_dword s
-; VI: s_load_dword s
-; VI: s_load_dword s
-; VI: s_load_dword s
-; VI: s_load_dword s
-; VI: s_load_dword s
-; VI: s_load_dword s
+; MESA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x44
+; MESA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x4c
+; MESA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x54
+; MESA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[0:1], 0x5c
+
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x20
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x28
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x30
+; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x38
 define amdgpu_kernel void @v16i16_arg(<16 x i16> addrspace(1)* %out, <16 x i16> %in) {
 entry:
   store <16 x i16> %in, <16 x i16> addrspace(1)* %out

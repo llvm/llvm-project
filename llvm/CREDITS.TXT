@@ -36,6 +36,13 @@ E: dberlin@dberlin.org
 D: ET-Forest implementation.
 D: Sparse bitmap
 
+N: Geoff Berry
+E: gberry@codeaurora.org
+E: gcb@acm.org
+D: AArch64 backend improvements
+D: Added EarlyCSE MemorySSA support
+D: CodeGen improvements
+
 N: David Blaikie
 E: dblaikie@gmail.com
 D: General bug fixing/fit & finish, mostly in Clang

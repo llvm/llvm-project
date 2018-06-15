@@ -1,3 +1,16 @@
+//===--- MicroMipsInstrFormats.td - microMIPS Inst Defs -*- tablegen -*----===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This files describes the defintions of the microMIPSr3 instructions.
+//
+//===----------------------------------------------------------------------===//
+
 def addrimm11 : ComplexPattern<iPTR, 2, "selectIntAddr11MM", [frameindex]>;
 def addrimm12 : ComplexPattern<iPTR, 2, "selectIntAddr12MM", [frameindex]>;
 def addrimm16 : ComplexPattern<iPTR, 2, "selectIntAddr16MM", [frameindex]>;

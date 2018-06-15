@@ -2761,12 +2761,9 @@ defm : scalar_math_patterns<fdiv, "DIVSD", X86Movsd, v2f64, f64, FR64, UseSSE2>;
 /// For the non-AVX defs, we need $src1 to be tied to $dst because
 /// the HW instructions are 2 operand / destructive.
 multiclass sse_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
-                          ValueType vt, ValueType ScalarVT,
-                          X86MemOperand x86memop,
-                          Operand intmemop, ComplexPattern int_cpat,
-                          Intrinsic Intr, SDNode OpNode, Domain d,
-                          X86FoldableSchedWrite sched,
-                          Predicate target> {
+                          ValueType ScalarVT, X86MemOperand x86memop,
+                          Operand intmemop, SDNode OpNode, Domain d,
+                          X86FoldableSchedWrite sched, Predicate target> {
   let hasSideEffects = 0 in {
   def r : I<opc, MRMSrcReg, (outs RC:$dst), (ins RC:$src1),
               !strconcat(OpcodeStr, "\t{$src1, $dst|$dst, $src1}"),
@@ -2790,6 +2787,11 @@ multiclass sse_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
   }
   }
 
+}
+
+multiclass sse_fp_unop_s_intr<RegisterClass RC, ValueType vt,
+                              ComplexPattern int_cpat, Intrinsic Intr,
+                              Predicate target, string Suffix> {
   let Predicates = [target] in {
   // These are unary operations, but they are modeled as having 2 source operands
   // because the high elements of the destination are unchanged in SSE.
@@ -2810,11 +2812,23 @@ multiclass sse_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
   }
 }
 
+multiclass avx_fp_unop_s_intr<RegisterClass RC, ValueType vt, ComplexPattern int_cpat,
+                              Intrinsic Intr, Predicate target> {
+  let Predicates = [target] in {
+   def : Pat<(Intr VR128:$src),
+             (!cast<Instruction>(NAME#r_Int) VR128:$src,
+                                 VR128:$src)>;
+  }
+  let Predicates = [target, OptForSize] in {
+    def : Pat<(Intr int_cpat:$src2),
+              (!cast<Instruction>(NAME#m_Int)
+                    (vt (IMPLICIT_DEF)), addr:$src2)>;
+  }
+}
+
 multiclass avx_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
-                          ValueType vt, ValueType ScalarVT,
-                          X86MemOperand x86memop,
-                          Operand intmemop, ComplexPattern int_cpat,
-                          Intrinsic Intr, SDNode OpNode, Domain d,
+                          ValueType ScalarVT, X86MemOperand x86memop,
+                          Operand intmemop, SDNode OpNode, Domain d,
                           X86FoldableSchedWrite sched, Predicate target> {
   let hasSideEffects = 0 in {
   def r : I<opc, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
@@ -2849,14 +2863,8 @@ multiclass avx_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
   let Predicates = [target] in {
    def : Pat<(OpNode RC:$src),  (!cast<Instruction>(NAME#r)
                                 (ScalarVT (IMPLICIT_DEF)), RC:$src)>;
-   def : Pat<(Intr VR128:$src),
-             (!cast<Instruction>(NAME#r_Int) VR128:$src,
-                                 VR128:$src)>;
   }
   let Predicates = [target, OptForSize] in {
-    def : Pat<(Intr int_cpat:$src2),
-              (!cast<Instruction>(NAME#m_Int)
-                    (vt (IMPLICIT_DEF)), addr:$src2)>;
     def : Pat<(ScalarVT (OpNode (load addr:$src))),
               (!cast<Instruction>(NAME#m) (ScalarVT (IMPLICIT_DEF)),
             addr:$src)>;
@@ -2935,29 +2943,32 @@ let Predicates = [HasAVX, NoVLX] in {
                 Sched<[sched.XMM.Folded]>;
 }
 
+multiclass sse1_fp_unop_s_intr<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                          X86SchedWriteWidths sched, Predicate AVXTarget> {
+  defm SS        :  sse_fp_unop_s_intr<FR32, v4f32, sse_load_f32,
+                      !cast<Intrinsic>("int_x86_sse_"##OpcodeStr##_ss),
+                      UseSSE1, "SS">, XS;
+  defm V#NAME#SS  : avx_fp_unop_s_intr<FR32, v4f32, sse_load_f32,
+                      !cast<Intrinsic>("int_x86_sse_"##OpcodeStr##_ss),
+                      AVXTarget>,
+                      XS, VEX_4V, VEX_LIG, VEX_WIG, NotMemoryFoldable;
+}
+
 multiclass sse1_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
                           X86SchedWriteWidths sched, Predicate AVXTarget> {
-  defm SS        :  sse_fp_unop_s<opc, OpcodeStr##ss, FR32, v4f32, f32, f32mem,
-                      ssmem, sse_load_f32,
-                      !cast<Intrinsic>("int_x86_sse_"##OpcodeStr##_ss), OpNode,
-                      SSEPackedSingle, sched.Scl, UseSSE1>, XS;
-  defm V#NAME#SS  : avx_fp_unop_s<opc, "v"#OpcodeStr##ss, FR32, v4f32, f32,
-                      f32mem, ssmem, sse_load_f32,
-                      !cast<Intrinsic>("int_x86_sse_"##OpcodeStr##_ss), OpNode,
-                      SSEPackedSingle, sched.Scl, AVXTarget>, XS, VEX_4V,
-                      VEX_LIG, VEX_WIG;
+  defm SS        :  sse_fp_unop_s<opc, OpcodeStr##ss, FR32, f32, f32mem,
+                      ssmem, OpNode, SSEPackedSingle, sched.Scl, UseSSE1>, XS;
+  defm V#NAME#SS  : avx_fp_unop_s<opc, "v"#OpcodeStr##ss, FR32, f32,
+                      f32mem, ssmem, OpNode, SSEPackedSingle, sched.Scl, AVXTarget>,
+                       XS, VEX_4V, VEX_LIG, VEX_WIG;
 }
 
 multiclass sse2_fp_unop_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
                           X86SchedWriteWidths sched, Predicate AVXTarget> {
-  defm SD         : sse_fp_unop_s<opc, OpcodeStr##sd, FR64, v2f64, f64, f64mem,
-                         sdmem, sse_load_f64,
-                         !cast<Intrinsic>("int_x86_sse2_"##OpcodeStr##_sd),
-                         OpNode, SSEPackedDouble, sched.Scl, UseSSE2>, XD;
-  defm V#NAME#SD  : avx_fp_unop_s<opc, "v"#OpcodeStr##sd, FR64, v2f64, f64,
-                         f64mem, sdmem, sse_load_f64,
-                         !cast<Intrinsic>("int_x86_sse2_"##OpcodeStr##_sd),
-                         OpNode, SSEPackedDouble, sched.Scl, AVXTarget>,
+  defm SD         : sse_fp_unop_s<opc, OpcodeStr##sd, FR64, f64, f64mem,
+                         sdmem, OpNode, SSEPackedDouble, sched.Scl, UseSSE2>, XD;
+  defm V#NAME#SD  : avx_fp_unop_s<opc, "v"#OpcodeStr##sd, FR64, f64,
+                         f64mem, sdmem, OpNode, SSEPackedDouble, sched.Scl, AVXTarget>,
                          XD, VEX_4V, VEX_LIG, VEX_WIG;
 }
 
@@ -2970,8 +2981,10 @@ defm SQRT  : sse1_fp_unop_s<0x51, "sqrt", fsqrt, SchedWriteFSqrt, UseAVX>,
 // Reciprocal approximations. Note that these typically require refinement
 // in order to obtain suitable precision.
 defm RSQRT : sse1_fp_unop_s<0x52, "rsqrt", X86frsqrt, SchedWriteFRsqrt, HasAVX>,
+             sse1_fp_unop_s_intr<0x52, "rsqrt", X86frsqrt, SchedWriteFRsqrt, HasAVX>,
              sse1_fp_unop_p<0x52, "rsqrt", X86frsqrt, SchedWriteFRsqrt, [HasAVX]>;
 defm RCP   : sse1_fp_unop_s<0x53, "rcp", X86frcp, SchedWriteFRcp, HasAVX>,
+             sse1_fp_unop_s_intr<0x53, "rcp", X86frcp, SchedWriteFRcp, HasAVX>,
              sse1_fp_unop_p<0x53, "rcp", X86frcp, SchedWriteFRcp, [HasAVX]>;
 
 // There is no f64 version of the reciprocal approximation instructions.
@@ -3009,6 +3022,9 @@ multiclass scalar_unary_math_imm_patterns<SDNode OpNode, string OpcPrefix, SDNod
   }
 }
 
+defm : scalar_unary_math_patterns<fsqrt, "SQRTSS", X86Movss, v4f32, UseSSE1>;
+defm : scalar_unary_math_patterns<fsqrt, "SQRTSD", X86Movsd, v2f64, UseSSE2>;
+
 multiclass scalar_unary_math_intr_patterns<Intrinsic Intr, string OpcPrefix,
                                            SDNode Move, ValueType VT,
                                            Predicate BasePredicate> {
@@ -3028,10 +3044,6 @@ defm : scalar_unary_math_intr_patterns<int_x86_sse_rcp_ss, "RCPSS", X86Movss,
                                        v4f32, UseSSE1>;
 defm : scalar_unary_math_intr_patterns<int_x86_sse_rsqrt_ss, "RSQRTSS", X86Movss,
                                        v4f32, UseSSE1>;
-defm : scalar_unary_math_intr_patterns<int_x86_sse_sqrt_ss, "SQRTSS", X86Movss,
-                                       v4f32, UseSSE1>;
-defm : scalar_unary_math_intr_patterns<int_x86_sse2_sqrt_sd, "SQRTSD", X86Movsd,
-                                       v2f64, UseSSE2>;
 
 
 //===----------------------------------------------------------------------===//

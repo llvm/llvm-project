@@ -149,6 +149,7 @@ public:
   void printDynamicTable() override;
   void printNeededLibraries() override;
   void printProgramHeaders() override;
+  void printSectionAsString(StringRef StringName) override;
   void printHashTable() override;
   void printGnuHashTable() override;
   void printLoadName() override;
@@ -324,6 +325,8 @@ public:
                            const Elf_Sym *FirstSym, StringRef StrTable,
                            bool IsDynamic) = 0;
   virtual void printProgramHeaders(const ELFFile<ELFT> *Obj) = 0;
+  virtual void printSectionAsString(const ELFFile<ELFT> *Obj,
+                                   StringRef SectionName) = 0;
   virtual void printHashHistogram(const ELFFile<ELFT> *Obj) = 0;
   virtual void printCGProfile(const ELFFile<ELFT> *Obj) = 0;
   virtual void printNotes(const ELFFile<ELFT> *Obj) = 0;
@@ -355,6 +358,7 @@ public:
   void printSymtabMessage(const ELFO *Obj, StringRef Name,
                           size_t Offset) override;
   void printProgramHeaders(const ELFO *Obj) override;
+  void printSectionAsString(const ELFO *Obj, StringRef SectionName) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
   void printCGProfile(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
@@ -417,6 +421,7 @@ public:
   void printDynamicSymbols(const ELFO *Obj) override;
   void printDynamicRelocations(const ELFO *Obj) override;
   void printProgramHeaders(const ELFO *Obj) override;
+  void printSectionAsString(const ELFO *Obj, StringRef SectionName) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
   void printCGProfile(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
@@ -1537,6 +1542,11 @@ void ELFDumper<ELFT>::printRelocations() {
 
 template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
   ELFDumperStyle->printProgramHeaders(Obj);
+}
+
+template <class ELFT>
+void ELFDumper<ELFT>::printSectionAsString(StringRef SectionName) {
+  ELFDumperStyle->printSectionAsString(Obj, SectionName);
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocations() {
@@ -3211,6 +3221,36 @@ void GNUStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
 }
 
 template <class ELFT>
+void GNUStyle<ELFT>::printSectionAsString(const ELFO *Obj,
+                                         StringRef SectionName) {
+  char *StrPtr;
+  long SectionIndex = strtol(SectionName.data(), &StrPtr, 10);
+  const Elf_Shdr *Sec;
+  if (*StrPtr)
+    Sec = unwrapOrError(Obj->getSection(SectionName));
+  else
+    Sec = unwrapOrError(Obj->getSection((unsigned int)SectionIndex));
+
+  StringRef SecName = unwrapOrError(Obj->getSectionName(Sec));
+  OS << "String dump of section '" << SecName << "':\n";
+  const char *SecContent =
+      reinterpret_cast<const char *>(Obj->base() + Sec->sh_offset);
+  const char *CurrentWord = SecContent;
+  const char *SecEnd = SecContent + Sec->sh_size;
+  while (CurrentWord <= SecEnd) {
+    size_t WordSize = strnlen(CurrentWord, SecEnd - CurrentWord);
+    if (!WordSize) {
+      CurrentWord++;
+      continue;
+    }
+    OS << format("[%6tx]", CurrentWord - SecContent);
+    OS << format(" %.*s\n", WordSize, CurrentWord);
+    CurrentWord += WordSize + 1;
+  }
+  OS.flush();
+}
+
+template <class ELFT>
 void GNUStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela R,
                                             bool IsRela) {
   SmallString<32> RelocName;
@@ -4201,6 +4241,38 @@ void LLVMStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
     W.printNumber("MemSize", Phdr.p_memsz);
     W.printFlags("Flags", Phdr.p_flags, makeArrayRef(ElfSegmentFlags));
     W.printNumber("Alignment", Phdr.p_align);
+  }
+}
+
+template <class ELFT>
+void LLVMStyle<ELFT>::printSectionAsString(const ELFO *Obj,
+                                          StringRef SectionName) {
+  char *StrPtr;
+  long SectionIndex = strtol(SectionName.data(), &StrPtr, 10);
+  const Elf_Shdr *Sec;
+  if (*StrPtr)
+    Sec = unwrapOrError(Obj->getSection(SectionName));
+  else
+    Sec = unwrapOrError(Obj->getSection((unsigned int)SectionIndex));
+
+  StringRef SecName = unwrapOrError(Obj->getSectionName(Sec));
+  W.startLine() << "String dump of section '" << SecName << "':\n";
+  const char *SecContent =
+      reinterpret_cast<const char *>(Obj->base() + Sec->sh_offset);
+  const char *CurrentWord = SecContent;
+  const char *SecEnd = SecContent + Sec->sh_size;
+  while (CurrentWord <= SecEnd) {
+    size_t WordSize = strnlen(CurrentWord, SecEnd - CurrentWord);
+    if (!WordSize) {
+      CurrentWord++;
+      continue;
+    }
+    W.startLine() << "["
+                  << to_string(
+                         format_hex_no_prefix((CurrentWord - SecContent), 6))
+                  << "]";
+    W.startLine() << format(" %.*s\n", WordSize, CurrentWord);
+    CurrentWord += WordSize + 1;
   }
 }
 

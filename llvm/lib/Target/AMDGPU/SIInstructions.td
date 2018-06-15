@@ -795,6 +795,27 @@ foreach Index = 0-15 in {
   >;
 }
 
+
+def : Pat <
+  (extract_subvector v4i16:$vec, (i32 0)),
+  (v2i16 (EXTRACT_SUBREG v4i16:$vec, sub0))
+>;
+
+def : Pat <
+  (extract_subvector v4i16:$vec, (i32 2)),
+  (v2i16 (EXTRACT_SUBREG v4i16:$vec, sub1))
+>;
+
+def : Pat <
+  (extract_subvector v4f16:$vec, (i32 0)),
+  (v2f16 (EXTRACT_SUBREG v4f16:$vec, sub0))
+>;
+
+def : Pat <
+  (extract_subvector v4f16:$vec, (i32 2)),
+  (v2f16 (EXTRACT_SUBREG v4f16:$vec, sub1))
+>;
+
 let SubtargetPredicate = isGCN in {
 
 // FIXME: Why do only some of these type combinations for SReg and
@@ -834,6 +855,26 @@ def : BitConvert <f64, v2f32, VReg_64>;
 def : BitConvert <v2f32, f64, VReg_64>;
 def : BitConvert <f64, v2i32, VReg_64>;
 def : BitConvert <v2i32, f64, VReg_64>;
+
+// FIXME: Make SGPR
+def : BitConvert <v2i32, v4f16, VReg_64>;
+def : BitConvert <v4f16, v2i32, VReg_64>;
+def : BitConvert <v2i32, v4f16, VReg_64>;
+def : BitConvert <v2i32, v4i16, VReg_64>;
+def : BitConvert <v4i16, v2i32, VReg_64>;
+def : BitConvert <v2f32, v4f16, VReg_64>;
+def : BitConvert <v4f16, v2f32, VReg_64>;
+def : BitConvert <v2f32, v4i16, VReg_64>;
+def : BitConvert <v4i16, v2f32, VReg_64>;
+def : BitConvert <v4i16, f64, VReg_64>;
+def : BitConvert <v4f16, f64, VReg_64>;
+def : BitConvert <f64, v4i16, VReg_64>;
+def : BitConvert <f64, v4f16, VReg_64>;
+def : BitConvert <v4i16, i64, VReg_64>;
+def : BitConvert <v4f16, i64, VReg_64>;
+def : BitConvert <i64, v4i16, VReg_64>;
+def : BitConvert <i64, v4f16, VReg_64>;
+
 def : BitConvert <v4i32, v4f32, VReg_128>;
 def : BitConvert <v4f32, v4i32, VReg_128>;
 

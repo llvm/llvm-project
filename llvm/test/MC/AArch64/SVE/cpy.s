@@ -7,6 +7,102 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
 // RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
+cpy     z0.b, p0/m, w0
+// CHECK-INST: mov     z0.b, p0/m, w0
+// CHECK-ENCODING: [0x00,0xa0,0x28,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 a0 28 05 <unknown>
+
+cpy     z0.h, p0/m, w0
+// CHECK-INST: mov     z0.h, p0/m, w0
+// CHECK-ENCODING: [0x00,0xa0,0x68,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 a0 68 05 <unknown>
+
+cpy     z0.s, p0/m, w0
+// CHECK-INST: mov     z0.s, p0/m, w0
+// CHECK-ENCODING: [0x00,0xa0,0xa8,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 a0 a8 05 <unknown>
+
+cpy     z0.d, p0/m, x0
+// CHECK-INST: mov     z0.d, p0/m, x0
+// CHECK-ENCODING: [0x00,0xa0,0xe8,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 a0 e8 05 <unknown>
+
+cpy     z31.b, p7/m, wsp
+// CHECK-INST: mov     z31.b, p7/m, wsp
+// CHECK-ENCODING: [0xff,0xbf,0x28,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff bf 28 05 <unknown>
+
+cpy     z31.h, p7/m, wsp
+// CHECK-INST: mov     z31.h, p7/m, wsp
+// CHECK-ENCODING: [0xff,0xbf,0x68,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff bf 68 05 <unknown>
+
+cpy     z31.s, p7/m, wsp
+// CHECK-INST: mov     z31.s, p7/m, wsp
+// CHECK-ENCODING: [0xff,0xbf,0xa8,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff bf a8 05 <unknown>
+
+cpy     z31.d, p7/m, sp
+// CHECK-INST: mov     z31.d, p7/m, sp
+// CHECK-ENCODING: [0xff,0xbf,0xe8,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff bf e8 05 <unknown>
+
+cpy     z0.b, p0/m, b0
+// CHECK-INST: mov     z0.b, p0/m, b0
+// CHECK-ENCODING: [0x00,0x80,0x20,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 20 05 <unknown>
+
+cpy     z31.b, p7/m, b31
+// CHECK-INST: mov     z31.b, p7/m, b31
+// CHECK-ENCODING: [0xff,0x9f,0x20,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 9f 20 05 <unknown>
+
+cpy     z0.h, p0/m, h0
+// CHECK-INST: mov     z0.h, p0/m, h0
+// CHECK-ENCODING: [0x00,0x80,0x60,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 60 05 <unknown>
+
+cpy     z31.h, p7/m, h31
+// CHECK-INST: mov     z31.h, p7/m, h31
+// CHECK-ENCODING: [0xff,0x9f,0x60,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 9f 60 05 <unknown>
+
+cpy     z0.s, p0/m, s0
+// CHECK-INST: mov     z0.s, p0/m, s0
+// CHECK-ENCODING: [0x00,0x80,0xa0,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 a0 05 <unknown>
+
+cpy     z31.s, p7/m, s31
+// CHECK-INST: mov     z31.s, p7/m, s31
+// CHECK-ENCODING: [0xff,0x9f,0xa0,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 9f a0 05 <unknown>
+
+cpy     z0.d, p0/m, d0
+// CHECK-INST: mov     z0.d, p0/m, d0
+// CHECK-ENCODING: [0x00,0x80,0xe0,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 e0 05 <unknown>
+
+cpy     z31.d, p7/m, d31
+// CHECK-INST: mov     z31.d, p7/m, d31
+// CHECK-ENCODING: [0xff,0x9f,0xe0,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 9f e0 05 <unknown>
+
 cpy     z5.b, p0/z, #-128
 // CHECK-INST: mov     z5.b, p0/z, #-128
 // CHECK-ENCODING: [0x05,0x10,0x10,0x05]

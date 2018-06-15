@@ -1,3 +1,16 @@
+//===-- MicroMipsInstrFormats.td - microMIPS Inst Formats -*- tablegen -*--===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This files descributes the formats of the microMIPS instruction set.
+//
+//===----------------------------------------------------------------------===//
+
 //===----------------------------------------------------------------------===//
 // MicroMIPS Base Classes
 //===----------------------------------------------------------------------===//

@@ -58,8 +58,14 @@ define amdgpu_kernel void @extract_vector_elt_v2f16_dynamic_vgpr(half addrspace(
 }
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v3f16:
-; GCN: s_load_dword s
-; GCN: s_load_dword s
+; SI: s_load_dword s
+; SI: s_load_dword s
+
+; GFX89: s_load_dwordx2
+; GFX89: s_load_dwordx2
+
+; GCN: buffer_store_short
+; GCN: buffer_store_short
 define amdgpu_kernel void @extract_vector_elt_v3f16(half addrspace(1)* %out, <3 x half> %foo) #0 {
   %p0 = extractelement <3 x half> %foo, i32 0
   %p1 = extractelement <3 x half> %foo, i32 2
@@ -71,12 +77,14 @@ define amdgpu_kernel void @extract_vector_elt_v3f16(half addrspace(1)* %out, <3 
 
 ; FIXME: Why sometimes vector shift?
 ; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v3f16:
-; GCN: s_load_dword s
-; GCN: s_load_dword s
-; GCN: s_load_dword s
+; SI: s_load_dword s
+; SI: s_load_dword s
+; SI: s_load_dword s
 
-; GFX9-DAG: global_load_short_d16_hi v
-; GFX9-DAG: global_load_short_d16 v
+; GFX89: s_load_dwordx2 s
+; GFX89: s_load_dwordx2 s
+; GFX89: s_load_dword s
+
 
 ; GCN-DAG: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 4
 ; GFX89: v_lshrrev_b64 v{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}, v
@@ -130,6 +138,36 @@ define amdgpu_kernel void @v_insertelement_v4f16_dynamic_vgpr(half addrspace(1)*
   %vec = load <4 x half>, <4 x half> addrspace(1)* %in.gep
   %vec.extract = extractelement <4 x half> %vec, i32 %idx.val
   store half %vec.extract, half addrspace(1)* %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}reduce_load_vector_v8f16_extract_01:
+; GCN: s_load_dwordx2 [[PTR:s\[[0-9]+:[0-9]+\]]],
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_load_dword s{{[0-9]+}}, [[PTR]], 0x0
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+define amdgpu_kernel void @reduce_load_vector_v8f16_extract_01(<16 x half> addrspace(4)* %ptr) #0 {
+  %load = load <16 x half>, <16 x half> addrspace(4)* %ptr
+  %elt0 = extractelement <16 x half> %load, i32 0
+  %elt1 = extractelement <16 x half> %load, i32 1
+  store volatile half %elt0, half addrspace(1)* undef, align 2
+  store volatile half %elt1, half addrspace(1)* undef, align 2
+  ret void
+}
+
+; GCN-LABEL: {{^}}reduce_load_vector_v8f16_extract_23:
+; GCN: s_load_dwordx2 [[PTR:s\[[0-9]+:[0-9]+\]]],
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_load_dword s{{[0-9]+}}, [[PTR]], {{0x1|0x4}}
+; GCN-NOT: {{s|buffer|flat|global}}_load_
+; GCN: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+define amdgpu_kernel void @reduce_load_vector_v8f16_extract_23(<16 x half> addrspace(4)* %ptr) #0 {
+  %load = load <16 x half>, <16 x half> addrspace(4)* %ptr
+  %elt2 = extractelement <16 x half> %load, i32 2
+  %elt3 = extractelement <16 x half> %load, i32 3
+  store volatile half %elt2, half addrspace(1)* undef, align 2
+  store volatile half %elt3, half addrspace(1)* undef, align 2
   ret void
 }
 

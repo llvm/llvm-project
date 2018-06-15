@@ -1,6 +1,7 @@
 // RUN: %clangxx_scudo -std=c++1z -faligned-allocation %s -o %t
-// RUN:                                             %run %t valid   2>&1
-// RUN: %env_scudo_opts=allocator_may_return_null=1 %run %t invalid 2>&1
+// RUN:                                                 %run %t valid   2>&1
+// RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t invalid 2>&1
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t invalid 2>&1 | FileCheck %s
 
 // Tests that the C++17 aligned new/delete operators are working as expected.
 // Currently we do not check the consistency of the alignment on deallocation,
@@ -77,6 +78,7 @@ int main(int argc, char **argv) {
     const size_t alignment = (1U << 8) - 1;
     void *p = operator new(1, static_cast<std::align_val_t>(alignment),
                            std::nothrow);
+    // CHECK: Scudo ERROR: invalid allocation alignment
     assert(!p);
   }
 

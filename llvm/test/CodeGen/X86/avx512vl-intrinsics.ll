@@ -999,43 +999,6 @@ define <4 x float> @test_mm512_min_ps_128(<4 x float> %a0, <4 x float> %a1, i8 %
 }
 declare <4 x float> @llvm.x86.sse.min.ps(<4 x float>, <4 x float>)
 
-define <4 x double> @test_sqrt_pd_256(<4 x double> %a0, i8 %mask) {
-; X86-LABEL: test_sqrt_pd_256:
-; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
-; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vsqrtpd %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf1,0xfd,0xa9,0x51,0xc0]
-; X86-NEXT:    retl # encoding: [0xc3]
-;
-; X64-LABEL: test_sqrt_pd_256:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vsqrtpd %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf1,0xfd,0xa9,0x51,0xc0]
-; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x double> @llvm.x86.avx512.mask.sqrt.pd.256(<4 x double> %a0,  <4 x double> zeroinitializer, i8 %mask)
-  ret <4 x double> %res
-}
-declare <4 x double> @llvm.x86.avx512.mask.sqrt.pd.256(<4 x double>, <4 x double>, i8) nounwind readnone
-
-define <8 x float> @test_sqrt_ps_256(<8 x float> %a0, i8 %mask) {
-; X86-LABEL: test_sqrt_ps_256:
-; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
-; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vsqrtps %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf1,0x7c,0xa9,0x51,0xc0]
-; X86-NEXT:    retl # encoding: [0xc3]
-;
-; X64-LABEL: test_sqrt_ps_256:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vsqrtps %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf1,0x7c,0xa9,0x51,0xc0]
-; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx512.mask.sqrt.ps.256(<8 x float> %a0, <8 x float> zeroinitializer, i8 %mask)
-  ret <8 x float> %res
-}
-
-declare <8 x float> @llvm.x86.avx512.mask.sqrt.ps.256(<8 x float>, <8 x float>, i8) nounwind readnone
-
 define <4 x double> @test_getexp_pd_256(<4 x double> %a0) {
 ; CHECK-LABEL: test_getexp_pd_256:
 ; CHECK:       # %bb.0:
