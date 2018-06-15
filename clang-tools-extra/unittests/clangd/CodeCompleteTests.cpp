@@ -32,6 +32,7 @@ using ::testing::Contains;
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Field;
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
@@ -1058,6 +1059,57 @@ TEST(CompletionTest, NoIndexCompletionsInsideDependentCode) {
     EXPECT_THAT(Completions.items,
                 Not(Contains(Labeled("SomeNameInTheIndex"))));
   }
+}
+
+TEST(CompletionTest, OverloadBundling) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.BundleOverloads = true;
+
+  std::string Context = R"cpp(
+    struct X {
+      // Overload with int
+      int a(int);
+      // Overload with bool
+      int a(bool);
+      int b(float);
+    };
+    int GFuncC(int);
+    int GFuncD(int);
+  )cpp";
+
+  // Member completions are bundled.
+  EXPECT_THAT(completions(Context + "int y = X().^", {}, Opts).items,
+              UnorderedElementsAre(Labeled("a(…)"), Labeled("b(float)")));
+
+  // Non-member completions are bundled, including index+sema.
+  Symbol NoArgsGFunc = func("GFuncC");
+  EXPECT_THAT(
+      completions(Context + "int y = GFunc^", {NoArgsGFunc}, Opts).items,
+      UnorderedElementsAre(Labeled("GFuncC(…)"), Labeled("GFuncD(int)")));
+
+  // Differences in header-to-insert suppress bundling.
+  Symbol::Details Detail;
+  std::string DeclFile = URI::createFile(testPath("foo")).toString();
+  NoArgsGFunc.CanonicalDeclaration.FileURI = DeclFile;
+  Detail.IncludeHeader = "<foo>";
+  NoArgsGFunc.Detail = &Detail;
+  EXPECT_THAT(
+      completions(Context + "int y = GFunc^", {NoArgsGFunc}, Opts).items,
+      UnorderedElementsAre(AllOf(Named("GFuncC"), InsertInclude("<foo>")),
+                           Labeled("GFuncC(int)"), Labeled("GFuncD(int)")));
+
+  // Examine a bundled completion in detail.
+  auto A = completions(Context + "int y = X().a^", {}, Opts).items.front();
+  EXPECT_EQ(A.label, "a(…)");
+  EXPECT_EQ(A.detail, "[2 overloads]");
+  EXPECT_EQ(A.insertText, "a");
+  EXPECT_EQ(A.kind, CompletionItemKind::Method);
+  // For now we just return one of the doc strings arbitrarily.
+  EXPECT_THAT(A.documentation, AnyOf(HasSubstr("Overload with int"),
+                                     HasSubstr("Overload with bool")));
+  Opts.EnableSnippets = true;
+  A = completions(Context + "int y = X().a^", {}, Opts).items.front();
+  EXPECT_EQ(A.insertText, "a(${0})");
 }
 
 TEST(CompletionTest, DocumentationFromChangedFileCrash) {

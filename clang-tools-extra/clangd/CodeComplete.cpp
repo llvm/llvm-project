@@ -7,10 +7,14 @@
 //
 //===---------------------------------------------------------------------===//
 //
-// AST-based completions are provided using the completion hooks in Sema.
+// Code completion has several moving parts:
+//  - AST-based completions are provided using the completion hooks in Sema.
+//  - external completions are retrieved from the index (using hints from Sema)
+//  - the two sources overlap, and must be merged and overloads bundled
+//  - results must be scored and ranked (see Quality.h) before rendering
 //
-// Signature help works in a similar way as code completion, but it is simpler
-// as there are typically fewer candidates.
+// Signature help works in a similar way as code completion, but it is simpler:
+// it's purely AST-based, and there are few candidates.
 //
 //===---------------------------------------------------------------------===//
 
@@ -184,6 +188,54 @@ struct CompletionCandidate {
   const CodeCompletionResult *SemaResult = nullptr;
   const Symbol *IndexResult = nullptr;
 
+  // Returns a token identifying the overload set this is part of.
+  // 0 indicates it's not part of any overload set.
+  size_t overloadSet() const {
+    SmallString<256> Scratch;
+    if (IndexResult) {
+      switch (IndexResult->SymInfo.Kind) {
+      case index::SymbolKind::ClassMethod:
+      case index::SymbolKind::InstanceMethod:
+      case index::SymbolKind::StaticMethod:
+        assert(false && "Don't expect members from index in code completion");
+        // fall through
+      case index::SymbolKind::Function:
+        // We can't group overloads together that need different #includes.
+        // This could break #include insertion.
+        return hash_combine(
+            (IndexResult->Scope + IndexResult->Name).toStringRef(Scratch),
+            headerToInsertIfNotPresent().getValueOr(""));
+      default:
+        return 0;
+      }
+    }
+    assert(SemaResult);
+    // We need to make sure we're consistent with the IndexResult case!
+    const NamedDecl *D = SemaResult->Declaration;
+    if (!D || !D->isFunctionOrFunctionTemplate())
+      return 0;
+    {
+      llvm::raw_svector_ostream OS(Scratch);
+      D->printQualifiedName(OS);
+    }
+    return hash_combine(Scratch, headerToInsertIfNotPresent().getValueOr(""));
+  }
+
+  llvm::Optional<llvm::StringRef> headerToInsertIfNotPresent() const {
+    if (!IndexResult || !IndexResult->Detail ||
+        IndexResult->Detail->IncludeHeader.empty())
+      return llvm::None;
+    if (SemaResult && SemaResult->Declaration) {
+      // Avoid inserting new #include if the declaration is found in the current
+      // file e.g. the symbol is forward declared.
+      auto &SM = SemaResult->Declaration->getASTContext().getSourceManager();
+      for (const Decl *RD : SemaResult->Declaration->redecls())
+        if (SM.isInMainFile(SM.getExpansionLoc(RD->getLocStart())))
+          return llvm::None;
+    }
+    return IndexResult->Detail->IncludeHeader;
+  }
+
   // Builds an LSP completion item.
   CompletionItem build(StringRef FileName, const CompletionItemScores &Scores,
                        const CodeCompleteOptions &Opts,
@@ -192,7 +244,6 @@ struct CompletionCandidate {
                        llvm::StringRef SemaDocComment) const {
     assert(bool(SemaResult) == bool(SemaCCS));
     CompletionItem I;
-    bool ShouldInsertInclude = true;
     if (SemaResult) {
       I.kind = toCompletionItemKind(SemaResult->Kind, SemaResult->Declaration);
       getLabelAndInsertText(*SemaCCS, &I.label, &I.insertText,
@@ -200,20 +251,6 @@ struct CompletionCandidate {
       I.filterText = getFilterText(*SemaCCS);
       I.documentation = formatDocumentation(*SemaCCS, SemaDocComment);
       I.detail = getDetail(*SemaCCS);
-      // Avoid inserting new #include if the declaration is found in the current
-      // file e.g. the symbol is forward declared.
-      if (SemaResult->Kind == CodeCompletionResult::RK_Declaration) {
-        if (const auto *D = SemaResult->getDeclaration()) {
-          const auto &SM = D->getASTContext().getSourceManager();
-          ShouldInsertInclude =
-              ShouldInsertInclude &&
-              std::none_of(D->redecls_begin(), D->redecls_end(),
-                           [&SM](const Decl *RD) {
-                             return SM.isInMainFile(
-                                 SM.getExpansionLoc(RD->getLocStart()));
-                           });
-        }
-      }
     }
     if (IndexResult) {
       if (I.kind == CompletionItemKind::Missing)
@@ -235,13 +272,13 @@ struct CompletionCandidate {
           I.documentation = D->Documentation;
         if (I.detail.empty())
           I.detail = D->CompletionDetail;
-        if (ShouldInsertInclude && Includes && !D->IncludeHeader.empty()) {
+        if (auto Inserted = headerToInsertIfNotPresent()) {
           auto Edit = [&]() -> Expected<Optional<TextEdit>> {
             auto ResolvedDeclaring = toHeaderFile(
                 IndexResult->CanonicalDeclaration.FileURI, FileName);
             if (!ResolvedDeclaring)
               return ResolvedDeclaring.takeError();
-            auto ResolvedInserted = toHeaderFile(D->IncludeHeader, FileName);
+            auto ResolvedInserted = toHeaderFile(*Inserted, FileName);
             if (!ResolvedInserted)
               return ResolvedInserted.takeError();
             return Includes->insert(*ResolvedDeclaring, *ResolvedInserted);
@@ -267,8 +304,35 @@ struct CompletionCandidate {
                                              : InsertTextFormat::PlainText;
     return I;
   }
+
+  using Bundle = llvm::SmallVector<CompletionCandidate, 4>;
+
+  static CompletionItem build(const Bundle &Bundle, CompletionItem First,
+                              const clangd::CodeCompleteOptions &Opts) {
+    if (Bundle.size() == 1)
+      return First;
+    // Patch up the completion item to make it look like a bundle.
+    // This is a bit of a hack but most things are the same.
+
+    // Need to erase the signature. All bundles are function calls.
+    llvm::StringRef Name = Bundle.front().Name;
+    First.insertText =
+        Opts.EnableSnippets ? (Name + "(${0})").str() : Name.str();
+    First.label = (Name + "(…)").str();
+    First.detail = llvm::formatv("[{0} overloads]", Bundle.size());
+    return First;
+  }
 };
-using ScoredCandidate = std::pair<CompletionCandidate, CompletionItemScores>;
+using ScoredBundle =
+    std::pair<CompletionCandidate::Bundle, CompletionItemScores>;
+struct ScoredBundleGreater {
+  bool operator()(const ScoredBundle &L, const ScoredBundle &R) {
+    if (L.second.finalScore != R.second.finalScore)
+      return L.second.finalScore > R.second.finalScore;
+    return L.first.front().Name <
+           R.first.front().Name; // Earlier name is better.
+  }
+};
 
 // Determine the symbol ID for a Sema code completion result, if possible.
 llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R) {
@@ -542,14 +606,6 @@ private:
   std::shared_ptr<GlobalCodeCompletionAllocator> CCAllocator;
   CodeCompletionTUInfo CCTUInfo;
   UniqueFunction<void()> ResultsCallback;
-};
-
-struct ScoredCandidateGreater {
-  bool operator()(const ScoredCandidate &L, const ScoredCandidate &R) {
-    if (L.second.finalScore != R.second.finalScore)
-      return L.second.finalScore > R.second.finalScore;
-    return L.first.Name < R.first.Name; // Earlier name is better.
-  }
 };
 
 class SignatureHelpCollector final : public CodeCompleteConsumer {
@@ -945,15 +1001,31 @@ private:
     return std::move(ResultsBuilder).build();
   }
 
-  // Merges the Sema and Index results where possible, scores them, and
-  // returns the top results from best to worst.
-  std::vector<std::pair<CompletionCandidate, CompletionItemScores>>
+  // Merges Sema and Index results where possible, to form CompletionCandidates.
+  // Groups overloads if desired, to form CompletionCandidate::Bundles.
+  // The bundles are scored and top results are returned, best to worst.
+  std::vector<ScoredBundle>
   mergeResults(const std::vector<CodeCompletionResult> &SemaResults,
                const SymbolSlab &IndexResults) {
     trace::Span Tracer("Merge and score results");
-    // We only keep the best N results at any time, in "native" format.
-    TopN<ScoredCandidate, ScoredCandidateGreater> Top(
-        Opts.Limit == 0 ? std::numeric_limits<size_t>::max() : Opts.Limit);
+    std::vector<CompletionCandidate::Bundle> Bundles;
+    llvm::DenseMap<size_t, size_t> BundleLookup;
+    auto AddToBundles = [&](const CodeCompletionResult *SemaResult,
+                            const Symbol *IndexResult) {
+      CompletionCandidate C;
+      C.SemaResult = SemaResult;
+      C.IndexResult = IndexResult;
+      C.Name = IndexResult ? IndexResult->Name : Recorder->getName(*SemaResult);
+      if (auto OverloadSet = Opts.BundleOverloads ? C.overloadSet() : 0) {
+        auto Ret = BundleLookup.try_emplace(OverloadSet, Bundles.size());
+        if (Ret.second)
+          Bundles.emplace_back();
+        Bundles[Ret.first->second].push_back(std::move(C));
+      } else {
+        Bundles.emplace_back();
+        Bundles.back().push_back(std::move(C));
+      }
+    };
     llvm::DenseSet<const Symbol *> UsedIndexResults;
     auto CorrespondingIndexResult =
         [&](const CodeCompletionResult &SemaResult) -> const Symbol * {
@@ -968,13 +1040,18 @@ private:
     };
     // Emit all Sema results, merging them with Index results if possible.
     for (auto &SemaResult : Recorder->Results)
-      addCandidate(Top, &SemaResult, CorrespondingIndexResult(SemaResult));
+      AddToBundles(&SemaResult, CorrespondingIndexResult(SemaResult));
     // Now emit any Index-only results.
     for (const auto &IndexResult : IndexResults) {
       if (UsedIndexResults.count(&IndexResult))
         continue;
-      addCandidate(Top, /*SemaResult=*/nullptr, &IndexResult);
+      AddToBundles(/*SemaResult=*/nullptr, &IndexResult);
     }
+    // We only keep the best N results at any time, in "native" format.
+    TopN<ScoredBundle, ScoredBundleGreater> Top(
+        Opts.Limit == 0 ? std::numeric_limits<size_t>::max() : Opts.Limit);
+    for (auto &Bundle : Bundles)
+      addCandidate(Top, std::move(Bundle));
     return std::move(Top).items();
   }
 
@@ -988,29 +1065,29 @@ private:
   }
 
   // Scores a candidate and adds it to the TopN structure.
-  void addCandidate(TopN<ScoredCandidate, ScoredCandidateGreater> &Candidates,
-                    const CodeCompletionResult *SemaResult,
-                    const Symbol *IndexResult) {
-    CompletionCandidate C;
-    C.SemaResult = SemaResult;
-    C.IndexResult = IndexResult;
-    C.Name = IndexResult ? IndexResult->Name : Recorder->getName(*SemaResult);
-
+  void addCandidate(TopN<ScoredBundle, ScoredBundleGreater> &Candidates,
+                    CompletionCandidate::Bundle Bundle) {
     SymbolQualitySignals Quality;
     SymbolRelevanceSignals Relevance;
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
     Relevance.FileProximityMatch = &FileProximityMatch;
-    if (auto FuzzyScore = fuzzyScore(C))
+    auto &First = Bundle.front();
+    if (auto FuzzyScore = fuzzyScore(First))
       Relevance.NameMatch = *FuzzyScore;
     else
       return;
-    if (IndexResult) {
-      Quality.merge(*IndexResult);
-      Relevance.merge(*IndexResult);
-    }
-    if (SemaResult) {
-      Quality.merge(*SemaResult);
-      Relevance.merge(*SemaResult);
+    unsigned SemaResult = 0, IndexResult = 0;
+    for (const auto &Candidate : Bundle) {
+      if (Candidate.IndexResult) {
+        Quality.merge(*Candidate.IndexResult);
+        Relevance.merge(*Candidate.IndexResult);
+        ++IndexResult;
+      }
+      if (Candidate.SemaResult) {
+        Quality.merge(*Candidate.SemaResult);
+        Relevance.merge(*Candidate.SemaResult);
+        ++SemaResult;
+      }
     }
 
     float QualScore = Quality.evaluate(), RelScore = Relevance.evaluate();
@@ -1023,33 +1100,36 @@ private:
     Scores.symbolScore =
         Scores.filterScore ? Scores.finalScore / Scores.filterScore : QualScore;
 
-    LLVM_DEBUG(llvm::dbgs()
-               << "CodeComplete: " << C.Name << (IndexResult ? " (index)" : "")
-               << (SemaResult ? " (sema)" : "") << " = " << Scores.finalScore
-               << "\n"
-               << Quality << Relevance << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "CodeComplete: " << First.Name << "("
+                            << IndexResult << " index) "
+                            << "(" << SemaResult << " sema)"
+                            << " = " << Scores.finalScore << "\n"
+                            << Quality << Relevance << "\n");
 
     NSema += bool(SemaResult);
     NIndex += bool(IndexResult);
     NBoth += SemaResult && IndexResult;
-    if (Candidates.push({C, Scores}))
+    if (Candidates.push({std::move(Bundle), Scores}))
       Incomplete = true;
   }
 
-  CompletionItem toCompletionItem(const CompletionCandidate &Candidate,
+  CompletionItem toCompletionItem(const CompletionCandidate::Bundle &Bundle,
                                   const CompletionItemScores &Scores) {
     CodeCompletionString *SemaCCS = nullptr;
-    std::string DocComment;
-    if (auto *SR = Candidate.SemaResult) {
+    std::string FrontDocComment;
+    if (auto *SR = Bundle.front().SemaResult) {
       SemaCCS = Recorder->codeCompletionString(*SR);
       if (Opts.IncludeComments) {
         assert(Recorder->CCSema);
-        DocComment = getDocComment(Recorder->CCSema->getASTContext(), *SR,
-                                   /*CommentsFromHeader=*/false);
+        FrontDocComment = getDocComment(Recorder->CCSema->getASTContext(), *SR,
+                                        /*CommentsFromHeader=*/false);
       }
     }
-    return Candidate.build(FileName, Scores, Opts, SemaCCS, Includes.get(),
-                           DocComment);
+    return CompletionCandidate::build(
+        Bundle,
+        Bundle.front().build(FileName, Scores, Opts, SemaCCS, Includes.get(),
+                             FrontDocComment),
+        Opts);
   }
 };
 

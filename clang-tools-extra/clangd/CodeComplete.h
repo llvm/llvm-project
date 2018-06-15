@@ -53,6 +53,9 @@ struct CodeCompleteOptions {
   /// For example, private members are usually inaccessible.
   bool IncludeIneligibleResults = false;
 
+  /// Combine overloads into a single completion item where possible.
+  bool BundleOverloads = false;
+
   /// Limit the number of results returned (0 means no limit).
   /// If more results are available, we set CompletionList.isIncomplete.
   size_t Limit = 0;
