@@ -240,10 +240,11 @@ struct CompletionCandidate {
   CompletionItem build(StringRef FileName, const CompletionItemScores &Scores,
                        const CodeCompleteOptions &Opts,
                        CodeCompletionString *SemaCCS,
-                       const IncludeInserter *Includes,
+                       const IncludeInserter &Includes,
                        llvm::StringRef SemaDocComment) const {
     assert(bool(SemaResult) == bool(SemaCCS));
     CompletionItem I;
+    bool InsertingInclude = false; // Whether a new #include will be added.
     if (SemaResult) {
       I.kind = toCompletionItemKind(SemaResult->Kind, SemaResult->Declaration);
       getLabelAndInsertText(*SemaCCS, &I.label, &I.insertText,
@@ -273,7 +274,7 @@ struct CompletionCandidate {
         if (I.detail.empty())
           I.detail = D->CompletionDetail;
         if (auto Inserted = headerToInsertIfNotPresent()) {
-          auto Edit = [&]() -> Expected<Optional<TextEdit>> {
+          auto IncludePath = [&]() -> Expected<std::string> {
             auto ResolvedDeclaring = toHeaderFile(
                 IndexResult->CanonicalDeclaration.FileURI, FileName);
             if (!ResolvedDeclaring)
@@ -281,9 +282,13 @@ struct CompletionCandidate {
             auto ResolvedInserted = toHeaderFile(*Inserted, FileName);
             if (!ResolvedInserted)
               return ResolvedInserted.takeError();
-            return Includes->insert(*ResolvedDeclaring, *ResolvedInserted);
+            if (!Includes.shouldInsertInclude(*ResolvedDeclaring,
+                                              *ResolvedInserted))
+              return "";
+            return Includes.calculateIncludePath(*ResolvedDeclaring,
+                                                 *ResolvedInserted);
           }();
-          if (!Edit) {
+          if (!IncludePath) {
             std::string ErrMsg =
                 ("Failed to generate include insertion edits for adding header "
                  "(FileURI=\"" +
@@ -291,13 +296,22 @@ struct CompletionCandidate {
                  "\", IncludeHeader=\"" + D->IncludeHeader + "\") into " +
                  FileName)
                     .str();
-            log(ErrMsg + ":" + llvm::toString(Edit.takeError()));
-          } else if (*Edit) {
-            I.additionalTextEdits = {std::move(**Edit)};
+            log(ErrMsg + ":" + llvm::toString(IncludePath.takeError()));
+          } else if (!IncludePath->empty()) {
+            // FIXME: consider what to show when there is no #include insertion,
+            // and for sema results, for consistency.
+            if (auto Edit = Includes.insert(*IncludePath)) {
+              I.detail += ("\n" + StringRef(*IncludePath).trim('"')).str();
+              I.additionalTextEdits = {std::move(*Edit)};
+              InsertingInclude = true;
+            }
           }
         }
       }
     }
+    I.label = (InsertingInclude ? Opts.IncludeIndicator.Insert
+                                : Opts.IncludeIndicator.NoInsert) +
+              I.label;
     I.scoreInfo = Scores;
     I.sortText = sortText(Scores.finalScore, Name);
     I.insertTextFormat = Opts.EnableSnippets ? InsertTextFormat::Snippet
@@ -318,7 +332,13 @@ struct CompletionCandidate {
     llvm::StringRef Name = Bundle.front().Name;
     First.insertText =
         Opts.EnableSnippets ? (Name + "(${0})").str() : Name.str();
-    First.label = (Name + "(…)").str();
+    // Keep the visual indicator of the original label.
+    bool InsertingInclude =
+        StringRef(First.label).startswith(Opts.IncludeIndicator.Insert);
+    First.label = (Twine(InsertingInclude ? Opts.IncludeIndicator.Insert
+                                          : Opts.IncludeIndicator.NoInsert) +
+                   Name + "(…)")
+                      .str();
     First.detail = llvm::formatv("[{0} overloads]", Bundle.size());
     return First;
   }
@@ -964,7 +984,9 @@ private:
     //        explicitly request symbols corresponding to Sema results.
     //        We can use their signals even if the index can't suggest them.
     // We must copy index results to preserve them, but there are at most Limit.
-    auto IndexResults = queryIndex();
+    auto IndexResults = (Opts.Index && allowIndex(Recorder->CCContext))
+                            ? queryIndex()
+                            : SymbolSlab();
     // Merge Sema and Index results, score them, and pick the winners.
     auto Top = mergeResults(Recorder->Results, IndexResults);
     // Convert the results to the desired LSP structs.
@@ -976,8 +998,6 @@ private:
   }
 
   SymbolSlab queryIndex() {
-    if (!Opts.Index || !allowIndex(Recorder->CCContext))
-      return SymbolSlab();
     trace::Span Tracer("Query index");
     SPAN_ATTACH(Tracer, "limit", Opts.Limit);
 
@@ -1127,7 +1147,7 @@ private:
     }
     return CompletionCandidate::build(
         Bundle,
-        Bundle.front().build(FileName, Scores, Opts, SemaCCS, Includes.get(),
+        Bundle.front().build(FileName, Scores, Opts, SemaCCS, *Includes,
                              FrontDocComment),
         Opts);
   }

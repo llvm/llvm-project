@@ -50,25 +50,6 @@ std::unique_ptr<PPCallbacks>
 collectInclusionsInMainFileCallback(const SourceManager &SM,
                                     std::function<void(Inclusion)> Callback);
 
-/// Determines the preferred way to #include a file, taking into account the
-/// search path. Usually this will prefer a shorter representation like
-/// 'Foo/Bar.h' over a longer one like 'Baz/include/Foo/Bar.h'.
-///
-/// \param File is an absolute file path.
-/// \param Inclusions Existing inclusions in the main file.
-/// \param DeclaringHeader is the original header corresponding to \p
-/// InsertedHeader e.g. the header that declares a symbol.
-/// \param InsertedHeader The preferred header to be inserted. This could be the
-/// same as DeclaringHeader but must be provided.
-//  \return A quoted "path" or <path>. This returns an empty string if:
-///   - Either \p DeclaringHeader or \p InsertedHeader is already (directly)
-///   in \p Inclusions (including those included via different paths).
-///   - \p DeclaringHeader or \p InsertedHeader is the same as \p File.
-llvm::Expected<std::string> calculateIncludePath(
-    PathRef File, StringRef BuildDir, HeaderSearch &HeaderSearchInfo,
-    const std::vector<Inclusion> &Inclusions, const HeaderFile &DeclaringHeader,
-    const HeaderFile &InsertedHeader);
-
 // Calculates insertion edit for including a new header in a file.
 class IncludeInserter {
 public:
@@ -81,16 +62,36 @@ public:
 
   void addExisting(Inclusion Inc) { Inclusions.push_back(std::move(Inc)); }
 
-  /// Returns a TextEdit that inserts a new header; if the header is not
-  /// inserted e.g. it's an existing header, this returns None. If any header is
-  /// invalid, this returns error.
+  /// Checks whether to add an #include of the header into \p File.
+  /// An #include will not be added if:
+  ///   - Either \p DeclaringHeader or \p InsertedHeader is already (directly)
+  ///   in \p Inclusions (including those included via different paths).
+  ///   - \p DeclaringHeader or \p InsertedHeader is the same as \p File.
+  ///
+  /// \param DeclaringHeader is the original header corresponding to \p
+  /// InsertedHeader e.g. the header that declares a symbol.
+  /// \param InsertedHeader The preferred header to be inserted. This could be
+  /// the same as DeclaringHeader but must be provided. \param Inclusions
+  /// Existing includes in the main file.
+  bool shouldInsertInclude(const HeaderFile &DeclaringHeader,
+                           const HeaderFile &InsertedHeader) const;
+
+  /// Determines the preferred way to #include a file, taking into account the
+  /// search path. Usually this will prefer a shorter representation like
+  /// 'Foo/Bar.h' over a longer one like 'Baz/include/Foo/Bar.h'.
   ///
   /// \param DeclaringHeader is the original header corresponding to \p
   /// InsertedHeader e.g. the header that declares a symbol.
   /// \param InsertedHeader The preferred header to be inserted. This could be
   /// the same as DeclaringHeader but must be provided.
-  Expected<Optional<TextEdit>> insert(const HeaderFile &DeclaringHeader,
-                                      const HeaderFile &InsertedHeader) const;
+  ///
+  /// \return A quoted "path" or <path> to be included.
+  std::string calculateIncludePath(const HeaderFile &DeclaringHeader,
+                                   const HeaderFile &InsertedHeader) const;
+
+  /// Calculates an edit that inserts \p VerbatimHeader into code. If the header
+  /// is already included, this returns None.
+  llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader) const;
 
 private:
   StringRef FileName;

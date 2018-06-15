@@ -44,7 +44,19 @@ class IgnoreDiagnostics : public DiagnosticsConsumer {
 
 // GMock helpers for matching completion items.
 MATCHER_P(Named, Name, "") { return arg.insertText == Name; }
-MATCHER_P(Labeled, Label, "") { return arg.label == Label; }
+MATCHER_P(Labeled, Label, "") {
+  std::string Indented;
+  if (!StringRef(Label).startswith(
+          CodeCompleteOptions().IncludeIndicator.Insert) &&
+      !StringRef(Label).startswith(
+          CodeCompleteOptions().IncludeIndicator.NoInsert))
+    Indented =
+        (Twine(CodeCompleteOptions().IncludeIndicator.NoInsert) + Label).str();
+  else
+    Indented = Label;
+  return arg.label == Indented;
+}
+MATCHER_P(SigHelpLabeled, Label, "") { return arg.label == Label; }
 MATCHER_P(Kind, K, "") { return arg.kind == K; }
 MATCHER_P(Filter, F, "") { return arg.filterText == F; }
 MATCHER_P(Doc, D, "") { return arg.documentation == D; }
@@ -563,7 +575,10 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
       )cpp",
                              {Sym});
   EXPECT_THAT(Results.items,
-              ElementsAre(AllOf(Named("X"), InsertInclude("\"bar.h\""))));
+              ElementsAre(AllOf(
+                  Named("X"),
+                  Labeled(CodeCompleteOptions().IncludeIndicator.Insert + "X"),
+                  InsertInclude("\"bar.h\""))));
   // Duplicate based on inclusions in preamble.
   Results = completions(Server,
                         R"cpp(
@@ -571,8 +586,8 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
           int main() { ns::^ }
       )cpp",
                         {Sym});
-  EXPECT_THAT(Results.items,
-              ElementsAre(AllOf(Named("X"), Not(HasAdditionalEdits()))));
+  EXPECT_THAT(Results.items, ElementsAre(AllOf(Named("X"), Labeled("X"),
+                                               Not(HasAdditionalEdits()))));
 }
 
 TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
@@ -830,7 +845,7 @@ MATCHER_P(ParamsAre, P, "") {
 
 Matcher<SignatureInformation> Sig(std::string Label,
                                   std::vector<std::string> Params) {
-  return AllOf(Labeled(Label), ParamsAre(Params));
+  return AllOf(SigHelpLabeled(Label), ParamsAre(Params));
 }
 
 TEST(SignatureHelpTest, Overloads) {
@@ -1095,12 +1110,16 @@ TEST(CompletionTest, OverloadBundling) {
   NoArgsGFunc.Detail = &Detail;
   EXPECT_THAT(
       completions(Context + "int y = GFunc^", {NoArgsGFunc}, Opts).items,
-      UnorderedElementsAre(AllOf(Named("GFuncC"), InsertInclude("<foo>")),
-                           Labeled("GFuncC(int)"), Labeled("GFuncD(int)")));
+      UnorderedElementsAre(
+          AllOf(
+              Named("GFuncC"),
+              Labeled(CodeCompleteOptions().IncludeIndicator.Insert + "GFuncC"),
+              InsertInclude("<foo>")),
+          Labeled("GFuncC(int)"), Labeled("GFuncD(int)")));
 
   // Examine a bundled completion in detail.
   auto A = completions(Context + "int y = X().a^", {}, Opts).items.front();
-  EXPECT_EQ(A.label, "a(…)");
+  EXPECT_EQ(A.label, " a(…)");
   EXPECT_EQ(A.detail, "[2 overloads]");
   EXPECT_EQ(A.insertText, "a");
   EXPECT_EQ(A.kind, CompletionItemKind::Method);
