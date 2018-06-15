@@ -434,13 +434,24 @@ llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
 bool llvm::sys::commandLineFitsWithinSystemLimits(StringRef Program,
                                                   ArrayRef<const char *> Args) {
   static long ArgMax = sysconf(_SC_ARG_MAX);
+  // POSIX requires that _POSIX_ARG_MAX is 4096, which is the lowest possible
+  // value for ARG_MAX on a POSIX compliant system.
+  static long ArgMin = _POSIX_ARG_MAX;
+
+  // This the same baseline used by xargs.
+  long EffectiveArgMax = 128 * 1024;
+
+  if (EffectiveArgMax > ArgMax)
+    EffectiveArgMax = ArgMax;
+  else if (EffectiveArgMax < ArgMin)
+    EffectiveArgMax = ArgMin;
 
   // System says no practical limit.
   if (ArgMax == -1)
     return true;
 
   // Conservatively account for space required by environment variables.
-  long HalfArgMax = ArgMax / 2;
+  long HalfArgMax = EffectiveArgMax / 2;
 
   size_t ArgLength = Program.size() + 1;
   for (const char* Arg : Args) {
