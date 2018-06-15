@@ -848,11 +848,17 @@ class CodeCompleteFlow {
   bool Incomplete = false; // Would more be available with a higher limit?
   llvm::Optional<FuzzyMatcher> Filter;       // Initialized once Sema runs.
   std::unique_ptr<IncludeInserter> Includes; // Initialized once compiler runs.
+  FileProximityMatcher FileProximityMatch;
 
 public:
   // A CodeCompleteFlow object is only useful for calling run() exactly once.
   CodeCompleteFlow(PathRef FileName, const CodeCompleteOptions &Opts)
-      : FileName(FileName), Opts(Opts) {}
+      : FileName(FileName), Opts(Opts),
+        // FIXME: also use path of the main header corresponding to FileName to
+        // calculate the file proximity, which would capture include/ and src/
+        // project setup where headers and implementations are not in the same
+        // directory.
+        FileProximityMatch({FileName}) {}
 
   CompletionList run(const SemaCompleteInput &SemaCCInput) && {
     trace::Span Tracer("CodeCompleteFlow");
@@ -993,6 +999,7 @@ private:
     SymbolQualitySignals Quality;
     SymbolRelevanceSignals Relevance;
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
+    Relevance.FileProximityMatch = &FileProximityMatch;
     if (auto FuzzyScore = fuzzyScore(C))
       Relevance.NameMatch = *FuzzyScore;
     else
