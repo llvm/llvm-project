@@ -96,6 +96,20 @@ void update(FileIndex &M, llvm::StringRef Basename, llvm::StringRef Code) {
   M.update(File.Filename, &AST.getASTContext(), AST.getPreprocessorPtr());
 }
 
+TEST(FileIndexTest, CustomizedURIScheme) {
+  FileIndex M({"unittest"});
+  update(M, "f", "class string {};");
+
+  FuzzyFindRequest Req;
+  Req.Query = "";
+  bool SeenSymbol = false;
+  M.fuzzyFind(Req, [&](const Symbol &Sym) {
+    EXPECT_EQ(Sym.CanonicalDeclaration.FileURI, "unittest:///f.h");
+    SeenSymbol = true;
+  });
+  EXPECT_TRUE(SeenSymbol);
+}
+
 TEST(FileIndexTest, IndexAST) {
   FileIndex M;
   update(M, "f1", "namespace ns { void f() {} class X {}; }");
