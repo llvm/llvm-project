@@ -468,6 +468,8 @@ void VSO::resolve(const SymbolMap &Resolved) {
     for (const auto &KV : Resolved) {
       auto &Name = KV.first;
       auto Sym = KV.second;
+      JITSymbolFlags ResolvedFlags = Sym.getFlags();
+      ResolvedFlags &= ~JITSymbolFlags::Weak;
 
       assert(!Sym.getFlags().isLazy() && !Sym.getFlags().isMaterializing() &&
              "Materializing flags should be managed internally");
@@ -480,13 +482,11 @@ void VSO::resolve(const SymbolMap &Resolved) {
              "Symbol should be materializing");
       assert(I->second.getAddress() == 0 && "Symbol has already been resolved");
 
-      assert(Sym.getFlags() ==
+      assert(ResolvedFlags ==
                  JITSymbolFlags::stripTransientFlags(I->second.getFlags()) &&
              "Resolved flags should match the declared flags");
 
       // Once resolved, symbols can never be weak.
-      JITSymbolFlags ResolvedFlags = Sym.getFlags();
-      ResolvedFlags &= ~JITSymbolFlags::Weak;
       ResolvedFlags |= JITSymbolFlags::Materializing;
       I->second = JITEvaluatedSymbol(Sym.getAddress(), ResolvedFlags);
 
@@ -748,6 +748,7 @@ void VSO::lookupImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
       for (auto &KV : MU->getSymbols()) {
         auto SymK = Symbols.find(KV.first);
         auto Flags = SymK->second.getFlags();
+        Flags &= ~JITSymbolFlags::Weak;
         Flags &= ~JITSymbolFlags::Lazy;
         Flags |= JITSymbolFlags::Materializing;
         SymK->second.setFlags(Flags);

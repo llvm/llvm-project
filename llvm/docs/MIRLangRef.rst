@@ -397,7 +397,7 @@ Registers
 ---------
 
 Registers are one of the key primitives in the machine instructions
-serialization language. They are primarly used in the
+serialization language. They are primarily used in the
 :ref:`register machine operands <register-operands>`,
 but they can also be used in a number of other places, like the
 :ref:`basic block's live in list <bb-liveins>`.

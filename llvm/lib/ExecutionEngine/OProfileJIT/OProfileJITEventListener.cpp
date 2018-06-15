@@ -15,6 +15,7 @@
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Config/config.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/OProfileWrapper.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
@@ -86,6 +87,7 @@ void OProfileJITEventListener::NotifyObjectEmitted(
 
   OwningBinary<ObjectFile> DebugObjOwner = L.getObjectForDebug(Obj);
   const ObjectFile &DebugObj = *DebugObjOwner.getBinary();
+  std::unique_ptr<DIContext> Context = DWARFContext::create(DebugObj);
 
   // Use symbol info to iterate functions in the object.
   for (const std::pair<SymbolRef, uint64_t> &P : computeSymbolSizes(DebugObj)) {
@@ -110,7 +112,29 @@ void OProfileJITEventListener::NotifyObjectEmitted(
                         << ((char *)Addr + Size) << "]\n");
       continue;
     }
-    // TODO: support line number info (similar to IntelJITEventListener.cpp)
+
+    DILineInfoTable Lines = Context->getLineInfoForAddressRange(Addr, Size);
+    size_t i = 0;
+    size_t num_entries = Lines.size();
+    struct debug_line_info *debug_line;
+    debug_line = (struct debug_line_info *)calloc(
+        num_entries, sizeof(struct debug_line_info));
+
+    for (auto& It : Lines) {
+      debug_line[i].vma = (unsigned long)It.first;
+      debug_line[i].lineno = It.second.Line;
+      debug_line[i].filename =
+          const_cast<char *>(Lines.front().second.FileName.c_str());
+      ++i;
+    }
+
+    if (Wrapper->op_write_debug_line_info((void *)Addr, num_entries,
+                                          debug_line) == -1) {
+      LLVM_DEBUG(dbgs() << "Failed to tell OProfiler about debug object at ["
+                        << (void *)Addr << "-" << ((char *)Addr + Size)
+                        << "]\n");
+      continue;
+    }
   }
 
   DebugObjects[Obj.getData().data()] = std::move(DebugObjOwner);

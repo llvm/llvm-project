@@ -1010,12 +1010,12 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPSRLWZri,        X86::VPSRLWZmi,          0 },
     { X86::VRCP14PDZr,       X86::VRCP14PDZm,         0 },
     { X86::VRCP14PSZr,       X86::VRCP14PSZm,         0 },
-    { X86::VRCP28PDr,        X86::VRCP28PDm,          0 },
-    { X86::VRCP28PSr,        X86::VRCP28PSm,          0 },
+    { X86::VRCP28PDZr,       X86::VRCP28PDZm,         0 },
+    { X86::VRCP28PSZr,       X86::VRCP28PSZm,         0 },
     { X86::VRSQRT14PDZr,     X86::VRSQRT14PDZm,       0 },
     { X86::VRSQRT14PSZr,     X86::VRSQRT14PSZm,       0 },
-    { X86::VRSQRT28PDr,      X86::VRSQRT28PDm,        0 },
-    { X86::VRSQRT28PSr,      X86::VRSQRT28PSm,        0 },
+    { X86::VRSQRT28PDZr,     X86::VRSQRT28PDZm,       0 },
+    { X86::VRSQRT28PSZr,     X86::VRSQRT28PSZm,       0 },
     { X86::VSQRTPDZr,        X86::VSQRTPDZm,          0 },
     { X86::VSQRTPSZr,        X86::VSQRTPSZm,          0 },
     { X86::VUCOMISDZrr,      X86::VUCOMISDZrm,        0 },
@@ -2189,20 +2189,20 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VRANGEPSZrri,      X86::VRANGEPSZrmi,        0 },
     { X86::VRANGESDZrri,      X86::VRANGESDZrmi,        TB_NO_REVERSE },
     { X86::VRANGESSZrri,      X86::VRANGESSZrmi,        TB_NO_REVERSE },
-    { X86::VRCP14SDrr,        X86::VRCP14SDrm,          TB_NO_REVERSE },
-    { X86::VRCP14SSrr,        X86::VRCP14SSrm,          TB_NO_REVERSE },
-    { X86::VRCP28SDr,         X86::VRCP28SDm,           TB_NO_REVERSE },
-    { X86::VRCP28SSr,         X86::VRCP28SSm,           TB_NO_REVERSE },
+    { X86::VRCP14SDZrr,       X86::VRCP14SDZrm,         TB_NO_REVERSE },
+    { X86::VRCP14SSZrr,       X86::VRCP14SSZrm,         TB_NO_REVERSE },
+    { X86::VRCP28SDZr,        X86::VRCP28SDZm,          TB_NO_REVERSE },
+    { X86::VRCP28SSZr,        X86::VRCP28SSZm,          TB_NO_REVERSE },
     { X86::VREDUCESDZrri,     X86::VREDUCESDZrmi,       TB_NO_REVERSE },
     { X86::VREDUCESSZrri,     X86::VREDUCESSZrmi,       TB_NO_REVERSE },
-    { X86::VRNDSCALESDr,      X86::VRNDSCALESDm,        0 },
-    { X86::VRNDSCALESDr_Int,  X86::VRNDSCALESDm_Int,    TB_NO_REVERSE },
-    { X86::VRNDSCALESSr,      X86::VRNDSCALESSm,        0 },
-    { X86::VRNDSCALESSr_Int,  X86::VRNDSCALESSm_Int,    TB_NO_REVERSE },
-    { X86::VRSQRT14SDrr,      X86::VRSQRT14SDrm,        TB_NO_REVERSE },
-    { X86::VRSQRT14SSrr,      X86::VRSQRT14SSrm,        TB_NO_REVERSE },
-    { X86::VRSQRT28SDr,       X86::VRSQRT28SDm,         TB_NO_REVERSE },
-    { X86::VRSQRT28SSr,       X86::VRSQRT28SSm,         TB_NO_REVERSE },
+    { X86::VRNDSCALESDZr,     X86::VRNDSCALESDZm,       0 },
+    { X86::VRNDSCALESDZr_Int, X86::VRNDSCALESDZm_Int,   TB_NO_REVERSE },
+    { X86::VRNDSCALESSZr,     X86::VRNDSCALESSZm,       0 },
+    { X86::VRNDSCALESSZr_Int, X86::VRNDSCALESSZm_Int,   TB_NO_REVERSE },
+    { X86::VRSQRT14SDZrr,     X86::VRSQRT14SDZrm,       TB_NO_REVERSE },
+    { X86::VRSQRT14SSZrr,     X86::VRSQRT14SSZrm,       TB_NO_REVERSE },
+    { X86::VRSQRT28SDZr,      X86::VRSQRT28SDZm,        TB_NO_REVERSE },
+    { X86::VRSQRT28SSZr,      X86::VRSQRT28SSZm,        TB_NO_REVERSE },
     { X86::VSCALEFPDZrr,      X86::VSCALEFPDZrm,        0 },
     { X86::VSCALEFPSZrr,      X86::VSCALEFPSZrm,        0 },
     { X86::VSCALEFSDZrr,      X86::VSCALEFSDZrm,        TB_NO_REVERSE },
@@ -2817,8 +2817,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     // AVX-512 instructions with 3 source operands.
     { X86::VFIXUPIMMPDZrri,       X86::VFIXUPIMMPDZrmi,       0 },
     { X86::VFIXUPIMMPSZrri,       X86::VFIXUPIMMPSZrmi,       0 },
-    { X86::VFIXUPIMMSDrri,        X86::VFIXUPIMMSDrmi,        TB_NO_REVERSE },
-    { X86::VFIXUPIMMSSrri,        X86::VFIXUPIMMSSrmi,        TB_NO_REVERSE },
+    { X86::VFIXUPIMMSDZrri,       X86::VFIXUPIMMSDZrmi,       TB_NO_REVERSE },
+    { X86::VFIXUPIMMSSZrri,       X86::VFIXUPIMMSSZrmi,       TB_NO_REVERSE },
     { X86::VPDPBUSDSZr,           X86::VPDPBUSDSZm,           0 },
     { X86::VPDPBUSDZr,            X86::VPDPBUSDZm,            0 },
     { X86::VPDPWSSDSZr,           X86::VPDPWSSDSZm,           0 },
@@ -8444,20 +8444,20 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
   case X86::VCVTSS2SDZrrb_Int:
   case X86::VCVTSS2SDZrm:
   case X86::VCVTSS2SDZrm_Int:
-  case X86::VRNDSCALESDr:
-  case X86::VRNDSCALESDr_Int:
-  case X86::VRNDSCALESDrb_Int:
-  case X86::VRNDSCALESDm:
-  case X86::VRNDSCALESDm_Int:
-  case X86::VRNDSCALESSr:
-  case X86::VRNDSCALESSr_Int:
-  case X86::VRNDSCALESSrb_Int:
-  case X86::VRNDSCALESSm:
-  case X86::VRNDSCALESSm_Int:
-  case X86::VRCP14SSrr:
-  case X86::VRCP14SSrm:
-  case X86::VRSQRT14SSrr:
-  case X86::VRSQRT14SSrm:
+  case X86::VRNDSCALESDZr:
+  case X86::VRNDSCALESDZr_Int:
+  case X86::VRNDSCALESDZrb_Int:
+  case X86::VRNDSCALESDZm:
+  case X86::VRNDSCALESDZm_Int:
+  case X86::VRNDSCALESSZr:
+  case X86::VRNDSCALESSZr_Int:
+  case X86::VRNDSCALESSZrb_Int:
+  case X86::VRNDSCALESSZm:
+  case X86::VRNDSCALESSZm_Int:
+  case X86::VRCP14SSZrr:
+  case X86::VRCP14SSZrm:
+  case X86::VRSQRT14SSZrr:
+  case X86::VRSQRT14SSZrm:
   case X86::VSQRTSSZr:
   case X86::VSQRTSSZr_Int:
   case X86::VSQRTSSZrb_Int:
