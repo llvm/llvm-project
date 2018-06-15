@@ -216,14 +216,13 @@ endif()
 set(entitlements_xml ${CMAKE_CURRENT_SOURCE_DIR}/debugserver-macosx-entitlements.plist)
 if(IOS)
   set(entitlements_xml ${CMAKE_CURRENT_SOURCE_DIR}/debugserver-entitlements.plist)
+else()
+  set(entitlements_xml ${CMAKE_CURRENT_SOURCE_DIR}/../../../resources/debugserver-macosx-entitlements.plist)
 endif()
 
 set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
   CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
 set(LLDB_USE_ENTITLEMENTS_Default On)
-if("${LLDB_CODESIGN_IDENTITY}" STREQUAL "lldb_codesign")
-  set(LLDB_USE_ENTITLEMENTS_Default Off)
-endif()
 option(LLDB_USE_ENTITLEMENTS "Use entitlements when codesigning (Defaults Off when using lldb_codesign identity, otherwise On)" ${LLDB_USE_ENTITLEMENTS_Default})
 
 if (SKIP_DEBUGSERVER)
