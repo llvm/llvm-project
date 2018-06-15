@@ -203,6 +203,18 @@ def addsub_imm8_opt_lsl_i64 : imm8_opt_lsl<64, "uint64_t", SVEAddSubImmOperand64
   return AArch64_AM::isSVEAddSubImm<int64_t>(Imm);
 }]>;
 
+class SVEExactFPImm<string Suffix, string ValA, string ValB> : AsmOperandClass {
+  let Name = "SVEExactFPImmOperand" # Suffix;
+  let DiagnosticType = "Invalid" # Name;
+  let ParserMethod = "tryParseFPImm<false>";
+  let PredicateMethod = "isExactFPImm<" # ValA # ", " # ValB # ">";
+  let RenderMethod = "addExactFPImmOperands<" # ValA # ", " # ValB # ">";
+}
+
+class SVEExactFPImmOperand<string Suffix, string ValA, string ValB> : Operand<i32> {
+  let PrintMethod = "printExactFPImm<" # ValA # ", " # ValB # ">";
+  let ParserMatchClass = SVEExactFPImm<Suffix, ValA, ValB>;
+}
 
 //===----------------------------------------------------------------------===//
 // SVE PTrue - These are used extensively throughout the pattern matching so

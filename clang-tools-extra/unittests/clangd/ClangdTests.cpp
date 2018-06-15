@@ -152,28 +152,6 @@ protected:
   }
 };
 
-constexpr const char* ClangdTestScheme = "ClangdTests";
-class TestURIScheme : public URIScheme {
-public:
-  llvm::Expected<std::string>
-  getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
-                  llvm::StringRef /*HintPath*/) const override {
-    llvm_unreachable("ClangdTests never makes absolute path.");
-  }
-
-  llvm::Expected<URI>
-  uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
-    llvm_unreachable("ClangdTest never creates a test URI.");
-  }
-
-  llvm::Expected<std::string> getIncludeSpelling(const URI &U) const override {
-    return ("\"" + U.body().trim("/") + "\"").str();
-  }
-};
-
-static URISchemeRegistry::Add<TestURIScheme>
-    X(ClangdTestScheme, "Test scheme for ClangdTests.");
-
 TEST_F(ClangdVFSTest, Parse) {
   // FIXME: figure out a stable format for AST dumps, so that we can check the
   // output of the dump itself is equal to the expected one, not just that it's

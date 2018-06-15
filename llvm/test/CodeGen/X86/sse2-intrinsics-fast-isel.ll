@@ -1405,8 +1405,7 @@ define <4 x float> @test_mm_cvtsd_ss_load(<4 x float> %a0, <2 x double>* %p1) {
 ; X86-AVX-LABEL: test_mm_cvtsd_ss_load:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovaps (%eax), %xmm1
-; X86-AVX-NEXT:    vcvtsd2ss %xmm1, %xmm0, %xmm0
+; X86-AVX-NEXT:    vcvtsd2ss (%eax), %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test_mm_cvtsd_ss_load:
@@ -1416,8 +1415,7 @@ define <4 x float> @test_mm_cvtsd_ss_load(<4 x float> %a0, <2 x double>* %p1) {
 ;
 ; X64-AVX-LABEL: test_mm_cvtsd_ss_load:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps (%rdi), %xmm1
-; X64-AVX-NEXT:    vcvtsd2ss %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %a1 = load <2 x double>, <2 x double>* %p1
   %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1)
@@ -1445,16 +1443,10 @@ define <2 x double> @test_mm_cvtsi32_sd(<2 x double> %a0, i32 %a1) nounwind {
 ; X86-SSE-NEXT:    cvtsi2sdl {{[0-9]+}}(%esp), %xmm0
 ; X86-SSE-NEXT:    retl
 ;
-; X86-AVX1-LABEL: test_mm_cvtsi32_sd:
-; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vcvtsi2sdl {{[0-9]+}}(%esp), %xmm0, %xmm0
-; X86-AVX1-NEXT:    retl
-;
-; X86-AVX512-LABEL: test_mm_cvtsi32_sd:
-; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    vcvtsi2sdl %eax, %xmm0, %xmm0
-; X86-AVX512-NEXT:    retl
+; X86-AVX-LABEL: test_mm_cvtsi32_sd:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vcvtsi2sdl {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test_mm_cvtsi32_sd:
 ; X64-SSE:       # %bb.0:

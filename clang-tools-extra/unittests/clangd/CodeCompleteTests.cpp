@@ -32,6 +32,7 @@ using ::testing::Contains;
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Field;
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
@@ -1060,6 +1061,57 @@ TEST(CompletionTest, NoIndexCompletionsInsideDependentCode) {
   }
 }
 
+TEST(CompletionTest, OverloadBundling) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.BundleOverloads = true;
+
+  std::string Context = R"cpp(
+    struct X {
+      // Overload with int
+      int a(int);
+      // Overload with bool
+      int a(bool);
+      int b(float);
+    };
+    int GFuncC(int);
+    int GFuncD(int);
+  )cpp";
+
+  // Member completions are bundled.
+  EXPECT_THAT(completions(Context + "int y = X().^", {}, Opts).items,
+              UnorderedElementsAre(Labeled("a(…)"), Labeled("b(float)")));
+
+  // Non-member completions are bundled, including index+sema.
+  Symbol NoArgsGFunc = func("GFuncC");
+  EXPECT_THAT(
+      completions(Context + "int y = GFunc^", {NoArgsGFunc}, Opts).items,
+      UnorderedElementsAre(Labeled("GFuncC(…)"), Labeled("GFuncD(int)")));
+
+  // Differences in header-to-insert suppress bundling.
+  Symbol::Details Detail;
+  std::string DeclFile = URI::createFile(testPath("foo")).toString();
+  NoArgsGFunc.CanonicalDeclaration.FileURI = DeclFile;
+  Detail.IncludeHeader = "<foo>";
+  NoArgsGFunc.Detail = &Detail;
+  EXPECT_THAT(
+      completions(Context + "int y = GFunc^", {NoArgsGFunc}, Opts).items,
+      UnorderedElementsAre(AllOf(Named("GFuncC"), InsertInclude("<foo>")),
+                           Labeled("GFuncC(int)"), Labeled("GFuncD(int)")));
+
+  // Examine a bundled completion in detail.
+  auto A = completions(Context + "int y = X().a^", {}, Opts).items.front();
+  EXPECT_EQ(A.label, "a(…)");
+  EXPECT_EQ(A.detail, "[2 overloads]");
+  EXPECT_EQ(A.insertText, "a");
+  EXPECT_EQ(A.kind, CompletionItemKind::Method);
+  // For now we just return one of the doc strings arbitrarily.
+  EXPECT_THAT(A.documentation, AnyOf(HasSubstr("Overload with int"),
+                                     HasSubstr("Overload with bool")));
+  Opts.EnableSnippets = true;
+  A = completions(Context + "int y = X().a^", {}, Opts).items.front();
+  EXPECT_EQ(A.insertText, "a(${0})");
+}
+
 TEST(CompletionTest, DocumentationFromChangedFileCrash) {
   MockFSProvider FS;
   auto FooH = testPath("foo.h");
@@ -1098,6 +1150,65 @@ TEST(CompletionTest, DocumentationFromChangedFileCrash) {
   // comments for symbols from headers.
   EXPECT_THAT(Completions.items,
               Contains(AllOf(Not(IsDocumented()), Named("func"))));
+}
+
+TEST(CompletionTest, NonDocComments) {
+  MockFSProvider FS;
+  auto FooCpp = testPath("foo.cpp");
+  FS.Files[FooCpp] = "";
+
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  Annotations Source(R"cpp(
+    // ------------------
+    int comments_foo();
+
+    // A comment and a decl are separated by newlines.
+    // Therefore, the comment shouldn't show up as doc comment.
+
+    int comments_bar();
+
+    // this comment should be in the results.
+    int comments_baz();
+
+
+    template <class T>
+    struct Struct {
+      int comments_qux();
+      int comments_quux();
+    };
+
+
+    // This comment should not be there.
+
+    template <class T>
+    int Struct<T>::comments_qux() {
+    }
+
+    // This comment **should** be in results.
+    template <class T>
+    int Struct<T>::comments_quux() {
+      int a = comments^;
+    }
+  )cpp");
+  Server.addDocument(FooCpp, Source.code(), WantDiagnostics::Yes);
+  CompletionList Completions = cantFail(runCodeComplete(
+      Server, FooCpp, Source.point(), clangd::CodeCompleteOptions()));
+
+  // We should not get any of those comments in completion.
+  EXPECT_THAT(
+      Completions.items,
+      UnorderedElementsAre(AllOf(Not(IsDocumented()), Named("comments_foo")),
+                           AllOf(IsDocumented(), Named("comments_baz")),
+                           AllOf(IsDocumented(), Named("comments_quux")),
+                           // FIXME(ibiryukov): the following items should have
+                           // empty documentation, since they are separated from
+                           // a comment with an empty line. Unfortunately, I
+                           // couldn't make Sema tests pass if we ignore those.
+                           AllOf(IsDocumented(), Named("comments_bar")),
+                           AllOf(IsDocumented(), Named("comments_qux"))));
 }
 
 TEST(CompletionTest, CompleteOnInvalidLine) {

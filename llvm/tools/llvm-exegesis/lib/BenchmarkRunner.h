@@ -91,6 +91,8 @@ private:
 
   llvm::Expected<std::string>
   writeObjectFile(llvm::ArrayRef<llvm::MCInst> Code) const;
+  llvm::Expected<ExecutableFunction>
+  createExecutableFunction(llvm::ArrayRef<llvm::MCInst> Code) const;
 };
 
 } // namespace exegesis

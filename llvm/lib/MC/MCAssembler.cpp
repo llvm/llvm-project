@@ -426,17 +426,18 @@ void MCAsmLayout::layoutFragment(MCFragment *F) {
   if (Assembler.isBundlingEnabled() && F->hasInstructions()) {
     assert(isa<MCEncodedFragment>(F) &&
            "Only MCEncodedFragment implementations have instructions");
-    uint64_t FSize = Assembler.computeFragmentSize(*this, *F);
+    MCEncodedFragment *EF = cast<MCEncodedFragment>(F);
+    uint64_t FSize = Assembler.computeFragmentSize(*this, *EF);
 
     if (!Assembler.getRelaxAll() && FSize > Assembler.getBundleAlignSize())
       report_fatal_error("Fragment can't be larger than a bundle size");
 
-    uint64_t RequiredBundlePadding = computeBundlePadding(Assembler, F,
-                                                          F->Offset, FSize);
+    uint64_t RequiredBundlePadding =
+        computeBundlePadding(Assembler, EF, EF->Offset, FSize);
     if (RequiredBundlePadding > UINT8_MAX)
       report_fatal_error("Padding cannot exceed 255 bytes");
-    F->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
-    F->Offset += RequiredBundlePadding;
+    EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
+    EF->Offset += RequiredBundlePadding;
   }
 }
 
@@ -450,19 +451,20 @@ void MCAssembler::registerSymbol(const MCSymbol &Symbol, bool *Created) {
   }
 }
 
-void MCAssembler::writeFragmentPadding(raw_ostream &OS, const MCFragment &F,
+void MCAssembler::writeFragmentPadding(raw_ostream &OS,
+                                       const MCEncodedFragment &EF,
                                        uint64_t FSize) const {
   assert(getBackendPtr() && "Expected assembler backend");
   // Should NOP padding be written out before this fragment?
-  unsigned BundlePadding = F.getBundlePadding();
+  unsigned BundlePadding = EF.getBundlePadding();
   if (BundlePadding > 0) {
     assert(isBundlingEnabled() &&
            "Writing bundle padding with disabled bundling");
-    assert(F.hasInstructions() &&
+    assert(EF.hasInstructions() &&
            "Writing bundle padding for a fragment without instructions");
 
     unsigned TotalLength = BundlePadding + static_cast<unsigned>(FSize);
-    if (F.alignToBundleEnd() && TotalLength > getBundleAlignSize()) {
+    if (EF.alignToBundleEnd() && TotalLength > getBundleAlignSize()) {
       // If the padding itself crosses a bundle boundary, it must be emitted
       // in 2 pieces, since even nop instructions must not cross boundaries.
       //             v--------------v   <- BundleAlignSize
@@ -473,8 +475,8 @@ void MCAssembler::writeFragmentPadding(raw_ostream &OS, const MCFragment &F,
       //        ^-------------------^   <- TotalLength
       unsigned DistanceToBoundary = TotalLength - getBundleAlignSize();
       if (!getBackend().writeNopData(OS, DistanceToBoundary))
-          report_fatal_error("unable to write NOP sequence of " +
-                             Twine(DistanceToBoundary) + " bytes");
+        report_fatal_error("unable to write NOP sequence of " +
+                           Twine(DistanceToBoundary) + " bytes");
       BundlePadding -= DistanceToBoundary;
     }
     if (!getBackend().writeNopData(OS, BundlePadding))
@@ -491,7 +493,8 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
 
   support::endianness Endian = Asm.getBackend().Endian;
 
-  Asm.writeFragmentPadding(OS, F, FragmentSize);
+  if (const MCEncodedFragment *EF = dyn_cast<MCEncodedFragment>(&F))
+    Asm.writeFragmentPadding(OS, *EF, FragmentSize);
 
   // This variable (and its dummy usage) is to participate in the assert at
   // the end of the function.

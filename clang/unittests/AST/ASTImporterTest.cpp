@@ -98,6 +98,9 @@ testImport(const std::string &FromCode, const ArgVector &FromArgs,
   ASTContext &FromCtx = FromAST->getASTContext(),
       &ToCtx = ToAST->getASTContext();
 
+  FromAST->enableSourceFileDiagnostics();
+  ToAST->enableSourceFileDiagnostics();
+
   ASTImporter Importer(ToCtx, ToAST->getFileManager(),
                        FromCtx, FromAST->getFileManager(), false);
 
@@ -172,7 +175,9 @@ class ASTImporterTestBase : public ::testing::TestWithParam<ArgVector> {
         : Code(Code), FileName(FileName),
           Unit(tooling::buildASTFromCodeWithArgs(this->Code, Args,
                                                  this->FileName)),
-          TUDecl(Unit->getASTContext().getTranslationUnitDecl()) {}
+          TUDecl(Unit->getASTContext().getTranslationUnitDecl()) {
+      Unit->enableSourceFileDiagnostics();
+    }
   };
 
   // We may have several From contexts and related translation units. In each
@@ -214,6 +219,7 @@ public:
     ToCode = ToSrcCode;
     assert(!ToAST);
     ToAST = tooling::buildASTFromCodeWithArgs(ToCode, ToArgs, OutputFileName);
+    ToAST->enableSourceFileDiagnostics();
 
     ASTContext &FromCtx = FromTU.Unit->getASTContext(),
                &ToCtx = ToAST->getASTContext();
@@ -261,6 +267,7 @@ public:
     ToCode = ToSrcCode;
     assert(!ToAST);
     ToAST = tooling::buildASTFromCodeWithArgs(ToCode, ToArgs, OutputFileName);
+    ToAST->enableSourceFileDiagnostics();
 
     return ToAST->getASTContext().getTranslationUnitDecl();
   }
@@ -274,6 +281,7 @@ public:
       // Build the AST from an empty file.
       ToAST =
           tooling::buildASTFromCodeWithArgs(/*Code=*/"", ToArgs, "empty.cc");
+      ToAST->enableSourceFileDiagnostics();
     }
 
     // Create a virtual file in the To Ctx which corresponds to the file from

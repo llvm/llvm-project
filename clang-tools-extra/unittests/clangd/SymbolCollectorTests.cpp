@@ -372,17 +372,15 @@ TEST_F(SymbolCollectorTest, SymbolRelativeWithFallback) {
               UnorderedElementsAre(AllOf(QName("Foo"), DeclURI(TestHeaderURI))));
 }
 
-#ifndef _WIN32
 TEST_F(SymbolCollectorTest, CustomURIScheme) {
   // Use test URI scheme from URITests.cpp
   CollectorOpts.URISchemes.insert(CollectorOpts.URISchemes.begin(), "unittest");
-  TestHeaderName = testPath("test-root/x.h");
-  TestFileName = testPath("test-root/x.cpp");
+  TestHeaderName = testPath("x.h");
+  TestFileName = testPath("x.cpp");
   runSymbolCollector("class Foo {};", /*Main=*/"");
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(AllOf(QName("Foo"), DeclURI("unittest:x.h"))));
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           AllOf(QName("Foo"), DeclURI("unittest:///x.h"))));
 }
-#endif
 
 TEST_F(SymbolCollectorTest, InvalidURIScheme) {
   // Use test URI scheme from URITests.cpp

@@ -56,11 +56,6 @@ protected:
   bool HasInstructions;
 
 private:
-  /// Should this fragment be aligned to the end of a bundle?
-  bool AlignToBundleEnd;
-
-  uint8_t BundlePadding;
-
   /// LayoutOrder - The layout order of this fragment.
   unsigned LayoutOrder;
 
@@ -84,7 +79,7 @@ private:
 
 protected:
   MCFragment(FragmentType Kind, bool HasInstructions,
-             uint8_t BundlePadding, MCSection *Parent = nullptr);
+             MCSection *Parent = nullptr);
 
   ~MCFragment();
 
@@ -114,6 +109,50 @@ public:
   /// this is false, but specific fragment types may set it to true.
   bool hasInstructions() const { return HasInstructions; }
 
+  /// Return true if given frgment has FT_Dummy type.
+  bool isDummy() const { return Kind == FT_Dummy; }
+
+  void dump() const;
+};
+
+class MCDummyFragment : public MCFragment {
+public:
+  explicit MCDummyFragment(MCSection *Sec) : MCFragment(FT_Dummy, false, Sec) {}
+
+  static bool classof(const MCFragment *F) { return F->getKind() == FT_Dummy; }
+};
+
+/// Interface implemented by fragments that contain encoded instructions and/or
+/// data.
+///
+class MCEncodedFragment : public MCFragment {
+  /// Should this fragment be aligned to the end of a bundle?
+  bool AlignToBundleEnd = false;
+
+  uint8_t BundlePadding = 0;
+
+protected:
+  MCEncodedFragment(MCFragment::FragmentType FType, bool HasInstructions,
+                    MCSection *Sec)
+      : MCFragment(FType, HasInstructions, Sec) {}
+
+  /// STI - The MCSubtargetInfo in effect when the instruction was encoded.
+  /// must be non-null for instructions.
+  const MCSubtargetInfo *STI = nullptr;
+
+public:
+  static bool classof(const MCFragment *F) {
+    MCFragment::FragmentType Kind = F->getKind();
+    switch (Kind) {
+    default:
+      return false;
+    case MCFragment::FT_Relaxable:
+    case MCFragment::FT_CompactEncodedInst:
+    case MCFragment::FT_Data:
+      return true;
+    }
+  }
+
   /// Should this fragment be placed at the end of an aligned bundle?
   bool alignToBundleEnd() const { return AlignToBundleEnd; }
   void setAlignToBundleEnd(bool V) { AlignToBundleEnd = V; }
@@ -129,40 +168,15 @@ public:
   /// and only some fragments have a meaningful implementation.
   void setBundlePadding(uint8_t N) { BundlePadding = N; }
 
-  /// Return true if given frgment has FT_Dummy type.
-  bool isDummy() const { return Kind == FT_Dummy; }
+  /// Retrieve the MCSubTargetInfo in effect when the instruction was encoded.
+  /// Guaranteed to be non-null if hasInstructions() == true
+  const MCSubtargetInfo *getSubtargetInfo() const { return STI; }
 
-  void dump() const;
-};
-
-class MCDummyFragment : public MCFragment {
-public:
-  explicit MCDummyFragment(MCSection *Sec)
-      : MCFragment(FT_Dummy, false, 0, Sec) {}
-
-  static bool classof(const MCFragment *F) { return F->getKind() == FT_Dummy; }
-};
-
-/// Interface implemented by fragments that contain encoded instructions and/or
-/// data.
-///
-class MCEncodedFragment : public MCFragment {
-protected:
-  MCEncodedFragment(MCFragment::FragmentType FType, bool HasInstructions,
-                    MCSection *Sec)
-      : MCFragment(FType, HasInstructions, 0, Sec) {}
-
-public:
-  static bool classof(const MCFragment *F) {
-    MCFragment::FragmentType Kind = F->getKind();
-    switch (Kind) {
-    default:
-      return false;
-    case MCFragment::FT_Relaxable:
-    case MCFragment::FT_CompactEncodedInst:
-    case MCFragment::FT_Data:
-      return true;
-    }
+  /// Record that the fragment contains instructions with the MCSubtargetInfo in
+  /// effect when the instruction was encoded.
+  void setHasInstructions(const MCSubtargetInfo &STI) {
+    HasInstructions = true;
+    this->STI = &STI;
   }
 };
 
@@ -201,15 +215,7 @@ protected:
       : MCEncodedFragmentWithContents<ContentsSize>(FType, HasInstructions,
                                                     Sec) {}
 
-  /// STI - The MCSubtargetInfo in effect when the instruction was encoded.
-  /// must be non-null for instructions.
-  const MCSubtargetInfo *STI = nullptr;
-
 public:
-
-  /// Retrieve the MCSubTargetInfo in effect when the instruction was encoded.
-  /// Guaranteed to be non-null if hasInstructions() == true
-  const MCSubtargetInfo *getSubtargetInfo() const { return STI; }
 
   using const_fixup_iterator = SmallVectorImpl<MCFixup>::const_iterator;
   using fixup_iterator = SmallVectorImpl<MCFixup>::iterator;
@@ -236,13 +242,6 @@ class MCDataFragment : public MCEncodedFragmentWithFixups<32, 4> {
 public:
   MCDataFragment(MCSection *Sec = nullptr)
       : MCEncodedFragmentWithFixups<32, 4>(FT_Data, false, Sec) {}
-
-  /// Record that the fragment contains instructions with the MCSubtargetInfo in
-  /// effect when the instruction was encoded.
-  void setHasInstructions(const MCSubtargetInfo &STI) {
-    HasInstructions = true;
-    this->STI = &STI;
-  }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Data;
@@ -309,9 +308,8 @@ class MCAlignFragment : public MCFragment {
 public:
   MCAlignFragment(unsigned Alignment, int64_t Value, unsigned ValueSize,
                   unsigned MaxBytesToEmit, MCSection *Sec = nullptr)
-      : MCFragment(FT_Align, false, 0, Sec), Alignment(Alignment),
-        EmitNops(false), Value(Value),
-        ValueSize(ValueSize), MaxBytesToEmit(MaxBytesToEmit) {}
+      : MCFragment(FT_Align, false, Sec), Alignment(Alignment), EmitNops(false),
+        Value(Value), ValueSize(ValueSize), MaxBytesToEmit(MaxBytesToEmit) {}
 
   /// \name Accessors
   /// @{
@@ -379,7 +377,7 @@ public:
   };
 
   MCPaddingFragment(MCSection *Sec = nullptr)
-      : MCFragment(FT_Padding, false, 0, Sec), PaddingPoliciesMask(PFK_None),
+      : MCFragment(FT_Padding, false, Sec), PaddingPoliciesMask(PFK_None),
         IsInsertionPoint(false), Size(UINT64_C(0)),
         InstInfo({false, MCInst(), false, {0}}) {}
 
@@ -439,7 +437,7 @@ class MCFillFragment : public MCFragment {
 public:
   MCFillFragment(uint64_t Value, uint8_t VSize, const MCExpr &NumValues,
                  SMLoc Loc, MCSection *Sec = nullptr)
-      : MCFragment(FT_Fill, false, 0, Sec), Value(Value), ValueSize(VSize),
+      : MCFragment(FT_Fill, false, Sec), Value(Value), ValueSize(VSize),
         NumValues(NumValues), Loc(Loc) {}
 
   uint64_t getValue() const { return Value; }
@@ -466,7 +464,7 @@ class MCOrgFragment : public MCFragment {
 public:
   MCOrgFragment(const MCExpr &Offset, int8_t Value, SMLoc Loc,
                 MCSection *Sec = nullptr)
-      : MCFragment(FT_Org, false, 0, Sec), Offset(&Offset), Value(Value), Loc(Loc) {}
+      : MCFragment(FT_Org, false, Sec), Offset(&Offset), Value(Value), Loc(Loc) {}
 
   /// \name Accessors
   /// @{
@@ -495,7 +493,7 @@ class MCLEBFragment : public MCFragment {
 
 public:
   MCLEBFragment(const MCExpr &Value_, bool IsSigned_, MCSection *Sec = nullptr)
-      : MCFragment(FT_LEB, false, 0, Sec), Value(&Value_), IsSigned(IsSigned_) {
+      : MCFragment(FT_LEB, false, Sec), Value(&Value_), IsSigned(IsSigned_) {
     Contents.push_back(0);
   }
 
@@ -530,7 +528,7 @@ class MCDwarfLineAddrFragment : public MCFragment {
 public:
   MCDwarfLineAddrFragment(int64_t LineDelta, const MCExpr &AddrDelta,
                           MCSection *Sec = nullptr)
-      : MCFragment(FT_Dwarf, false, 0, Sec), LineDelta(LineDelta),
+      : MCFragment(FT_Dwarf, false, Sec), LineDelta(LineDelta),
         AddrDelta(&AddrDelta) {
     Contents.push_back(0);
   }
@@ -561,7 +559,7 @@ class MCDwarfCallFrameFragment : public MCFragment {
 
 public:
   MCDwarfCallFrameFragment(const MCExpr &AddrDelta, MCSection *Sec = nullptr)
-      : MCFragment(FT_DwarfFrame, false, 0, Sec), AddrDelta(&AddrDelta) {
+      : MCFragment(FT_DwarfFrame, false, Sec), AddrDelta(&AddrDelta) {
     Contents.push_back(0);
   }
 
@@ -586,7 +584,7 @@ class MCSymbolIdFragment : public MCFragment {
 
 public:
   MCSymbolIdFragment(const MCSymbol *Sym, MCSection *Sec = nullptr)
-      : MCFragment(FT_SymbolId, false, 0, Sec), Sym(Sym) {}
+      : MCFragment(FT_SymbolId, false, Sec), Sym(Sym) {}
 
   /// \name Accessors
   /// @{
@@ -620,7 +618,7 @@ public:
                               unsigned StartLineNum, const MCSymbol *FnStartSym,
                               const MCSymbol *FnEndSym,
                               MCSection *Sec = nullptr)
-      : MCFragment(FT_CVInlineLines, false, 0, Sec), SiteFuncId(SiteFuncId),
+      : MCFragment(FT_CVInlineLines, false, Sec), SiteFuncId(SiteFuncId),
         StartFileId(StartFileId), StartLineNum(StartLineNum),
         FnStartSym(FnStartSym), FnEndSym(FnEndSym) {}
 

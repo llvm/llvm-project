@@ -1517,3 +1517,13 @@ void AArch64InstPrinter::printZPRasFPR(const MCInst *MI, unsigned OpNum,
   unsigned Reg = MI->getOperand(OpNum).getReg();
   O << getRegisterName(Reg - AArch64::Z0 + Base);
 }
+
+template <unsigned ImmIs0, unsigned ImmIs1>
+void AArch64InstPrinter::printExactFPImm(const MCInst *MI, unsigned OpNum,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream  &O) {
+  auto *Imm0Desc = AArch64ExactFPImm::lookupExactFPImmByEnum(ImmIs0);
+  auto *Imm1Desc = AArch64ExactFPImm::lookupExactFPImmByEnum(ImmIs1);
+  unsigned Val = MI->getOperand(OpNum).getImm();
+  O << "#" << (Val ? Imm1Desc->Repr : Imm0Desc->Repr);
+}

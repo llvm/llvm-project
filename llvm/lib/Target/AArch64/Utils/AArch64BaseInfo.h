@@ -352,6 +352,16 @@ namespace AArch64SVEPredPattern {
 #include "AArch64GenSystemOperands.inc"
 }
 
+namespace AArch64ExactFPImm {
+  struct ExactFPImm {
+    const char *Name;
+    int Enum;
+    const char *Repr;
+  };
+#define GET_EXACTFPIMM_DECL
+#include "AArch64GenSystemOperands.inc"
+}
+
 namespace AArch64PState {
   struct PState : SysAlias{
     using SysAlias::SysAlias;

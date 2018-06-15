@@ -59,6 +59,23 @@ static llvm::cl::opt<unsigned>
                        llvm::cl::desc("Number of async workers used by clangd"),
                        llvm::cl::init(getDefaultAsyncThreadsCount()));
 
+// FIXME: also support "plain" style where signatures are always omitted.
+enum CompletionStyleFlag {
+  Detailed,
+  Bundled,
+};
+static llvm::cl::opt<CompletionStyleFlag> CompletionStyle(
+    "completion-style",
+    llvm::cl::desc("Granularity of code completion suggestions"),
+    llvm::cl::values(
+        clEnumValN(Detailed, "detailed",
+                   "One completion item for each semantically distinct "
+                   "completion, with full type information."),
+        clEnumValN(Bundled, "bundled",
+                   "Similar completion items (e.g. function overloads) are "
+                   "combined. Type information shown where possible.")),
+    llvm::cl::init(Detailed));
+
 // FIXME: Flags are the wrong mechanism for user preferences.
 // We should probably read a dotfile or similar.
 static llvm::cl::opt<bool> IncludeIneligibleResults(
@@ -233,6 +250,7 @@ int main(int argc, char *argv[]) {
   clangd::CodeCompleteOptions CCOpts;
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
   CCOpts.Limit = LimitResults;
+  CCOpts.BundleOverloads = CompletionStyle != Detailed;
 
   // Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(Out, CCOpts, CompileCommandsDirPath, Opts);
