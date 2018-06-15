@@ -557,6 +557,7 @@ void MCELFStreamer::EmitInstToData(const MCInst &Inst,
       MCCompactEncodedInstFragment *CEIF = new MCCompactEncodedInstFragment();
       insert(CEIF);
       CEIF->getContents().append(Code.begin(), Code.end());
+      CEIF->setHasInstructions(STI);
       return;
     } else {
       DF = new MCDataFragment();

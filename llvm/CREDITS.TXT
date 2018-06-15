@@ -491,3 +491,7 @@ D: Bunches of stuff
 N: Bob Wilson
 E: bob.wilson@acm.org
 D: Advanced SIMD (NEON) support in the ARM backend.
+
+N: QingShan Zhang
+E: qshanz@cn.ibm.com
+D: PowerPC Backend Developer

@@ -151,6 +151,16 @@ bool canRequestComment(const ASTContext &Ctx, const NamedDecl &D,
   const ObjCPropertyDecl *PDecl = M ? M->findPropertyDecl() : nullptr;
   return !PDecl || canRequestForDecl(*PDecl);
 }
+
+bool LooksLikeDocComment(llvm::StringRef CommentText) {
+  // We don't report comments that only contain "special" chars.
+  // This avoids reporting various delimiters, like:
+  //   =================
+  //   -----------------
+  //   *****************
+  return CommentText.find_first_not_of("/*-= \t\r\n") != llvm::StringRef::npos;
+}
+
 } // namespace
 
 std::string getDocComment(const ASTContext &Ctx,
@@ -167,7 +177,10 @@ std::string getDocComment(const ASTContext &Ctx,
   const RawComment *RC = getCompletionComment(Ctx, Decl);
   if (!RC)
     return "";
-  return RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+  std::string Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+  if (!LooksLikeDocComment(Doc))
+    return "";
+  return Doc;
 }
 
 std::string
@@ -180,7 +193,10 @@ getParameterDocComment(const ASTContext &Ctx,
   const RawComment *RC = getParameterComment(Ctx, Result, ArgIndex);
   if (!RC)
     return "";
-  return RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+  std::string Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+  if (!LooksLikeDocComment(Doc))
+    return "";
+  return Doc;
 }
 
 void getLabelAndInsertText(const CodeCompletionString &CCS, std::string *Label,

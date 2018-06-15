@@ -15485,9 +15485,12 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
         unsigned NumElts = N->getNumOperands() * SrcVT.getVectorNumElements();
         EVT NewVT = EVT::getVectorVT(*DAG.getContext(),
                                      SrcVT.getVectorElementType(), NumElts);
-        SmallVector<SDValue, 8> Ops(N->getNumOperands(), Splat);
-        SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), NewVT, Ops);
-        return DAG.getBitcast(VT, Concat);
+        if (!LegalTypes || TLI.isTypeLegal(NewVT)) {
+          SmallVector<SDValue, 8> Ops(N->getNumOperands(), Splat);
+          SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N),
+                                       NewVT, Ops);
+          return DAG.getBitcast(VT, Concat);
+        }
       }
     }
   }

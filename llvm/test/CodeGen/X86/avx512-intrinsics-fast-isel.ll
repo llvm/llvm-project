@@ -1798,8 +1798,7 @@ entry:
 define <2 x double> @test_mm_cvtu32_sd(<2 x double> %__A, i32 %__B) {
 ; X86-LABEL: test_mm_cvtu32_sd:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtusi2sdl %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtusi2sdl {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtu32_sd:
@@ -1836,8 +1835,7 @@ entry:
 define <4 x float> @test_mm_cvtu32_ss(<4 x float> %__A, i32 %__B) {
 ; X86-LABEL: test_mm_cvtu32_ss:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtusi2ssl %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtusi2ssl {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtu32_ss:

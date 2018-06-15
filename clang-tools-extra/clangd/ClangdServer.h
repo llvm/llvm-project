@@ -79,6 +79,10 @@ public:
     /// opened files and uses the index to augment code completion results.
     bool BuildDynamicSymbolIndex = false;
 
+    /// URI schemes to use when building the dynamic index.
+    /// If empty, the default schemes in SymbolCollector will be used.
+    std::vector<std::string> URISchemes;
+
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;
 

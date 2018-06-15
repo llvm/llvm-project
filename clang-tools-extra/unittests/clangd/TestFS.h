@@ -56,6 +56,11 @@ const char *testRoot();
 // Returns a suitable absolute path for this OS.
 std::string testPath(PathRef File);
 
+// unittest: is a scheme that refers to files relative to testRoot()
+// This anchor is used to force the linker to link in the generated object file
+// and thus register unittest: URI scheme plugin.
+extern volatile int UnittestSchemeAnchorSource;
+
 } // namespace clangd
 } // namespace clang
 #endif

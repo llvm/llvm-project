@@ -75,6 +75,13 @@ namespace llvm {
 }
 
 namespace llvm {
+  namespace AArch64ExactFPImm {
+#define GET_EXACTFPIMM_IMPL
+#include "AArch64GenSystemOperands.inc"
+  }
+}
+
+namespace llvm {
   namespace AArch64PState {
 #define GET_PSTATE_IMPL
 #include "AArch64GenSystemOperands.inc"
