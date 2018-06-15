@@ -110,13 +110,9 @@ define amdgpu_kernel void @v_select_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16
 ; SI: cndmask
 ; SI-NOT: cndmask
 
-; GFX9: v_cndmask_b32_e32
-; GFX9: cndmask
-; GFX9-NOT: cndmask
-
-; VI: v_cndmask_b32
-; VI: v_cndmask_b32
-; VI: v_cndmask_b32
+; GFX89: v_cndmask_b32_e32
+; GFX89: cndmask
+; GFX89-NOT: cndmask
 define amdgpu_kernel void @v_select_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> addrspace(1)* %a.ptr, <3 x i16> addrspace(1)* %b.ptr, i32 %c) #0 {
   %a = load <3 x i16>, <3 x i16> addrspace(1)* %a.ptr
   %b = load <3 x i16>, <3 x i16> addrspace(1)* %b.ptr

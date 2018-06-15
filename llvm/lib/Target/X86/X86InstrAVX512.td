@@ -8534,7 +8534,7 @@ multiclass avx512_sqrt_packed_all_round<bits<8> opc, string OpcodeStr,
 }
 
 multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr, X86FoldableSchedWrite sched,
-                              X86VectorVTInfo _, string Name, Intrinsic Intr> {
+                              X86VectorVTInfo _, string Name> {
   let ExeDomain = _.ExeDomain in {
     defm r_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
                          (ins _.RC:$src1, _.RC:$src2), OpcodeStr,
@@ -8575,30 +8575,20 @@ multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr, X86FoldableSchedWri
     def : Pat<(_.EltVT (fsqrt _.FRC:$src)),
               (!cast<Instruction>(Name#Zr)
                   (_.EltVT (IMPLICIT_DEF)), _.FRC:$src)>;
-
-     def : Pat<(Intr VR128X:$src),
-               (!cast<Instruction>(Name#Zr_Int) VR128X:$src,
-                                 VR128X:$src)>;
   }
 
   let Predicates = [HasAVX512, OptForSize] in {
     def : Pat<(_.EltVT (fsqrt (load addr:$src))),
               (!cast<Instruction>(Name#Zm)
                   (_.EltVT (IMPLICIT_DEF)), addr:$src)>;
-
-    def : Pat<(Intr _.ScalarIntMemCPat:$src2),
-              (!cast<Instruction>(Name#Zm_Int)
-                    (_.VT (IMPLICIT_DEF)), addr:$src2)>;
   }
 }
 
 multiclass avx512_sqrt_scalar_all<bits<8> opc, string OpcodeStr,
                                   X86SchedWriteSizes sched> {
-  defm SSZ : avx512_sqrt_scalar<opc, OpcodeStr#"ss", sched.PS.Scl, f32x_info, NAME#"SS",
-                        int_x86_sse_sqrt_ss>,
+  defm SSZ : avx512_sqrt_scalar<opc, OpcodeStr#"ss", sched.PS.Scl, f32x_info, NAME#"SS">,
                         EVEX_CD8<32, CD8VT1>, EVEX_4V, XS;
-  defm SDZ : avx512_sqrt_scalar<opc, OpcodeStr#"sd", sched.PD.Scl, f64x_info, NAME#"SD",
-                        int_x86_sse2_sqrt_sd>,
+  defm SDZ : avx512_sqrt_scalar<opc, OpcodeStr#"sd", sched.PD.Scl, f64x_info, NAME#"SD">,
                         EVEX_CD8<64, CD8VT1>, EVEX_4V, XD, VEX_W;
 }
 
@@ -8710,6 +8700,13 @@ multiclass avx512_masked_scalar<SDNode OpNode, string OpcPrefix, SDNode Move,
                OutMask, _.VT:$src2, _.VT:$src1)>;
   }
 }
+
+defm : avx512_masked_scalar<fsqrt, "SQRTSSZ", X86Movss,
+                            (v1i1 (scalar_to_vector (i8 (trunc (i32 GR32:$mask))))), v4f32x_info,
+                            fp32imm0, (COPY_TO_REGCLASS  $mask, VK1WM), HasAVX512>;
+defm : avx512_masked_scalar<fsqrt, "SQRTSDZ", X86Movsd,
+                            (v1i1 (scalar_to_vector (i8 (trunc (i32 GR32:$mask))))), v2f64x_info,
+                            fp64imm0, (COPY_TO_REGCLASS  $mask, VK1WM), HasAVX512>;
 
 multiclass avx512_masked_scalar_imm<SDNode OpNode, string OpcPrefix, SDNode Move,
                                     dag Mask, X86VectorVTInfo _, PatLeaf ZeroFP,

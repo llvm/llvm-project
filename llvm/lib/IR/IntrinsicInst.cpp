@@ -24,6 +24,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -46,6 +47,12 @@ Value *DbgInfoIntrinsic::getVariableLocation(bool AllowNullOp) const {
   // When the value goes to null, it gets replaced by an empty MDNode.
   assert(!cast<MDNode>(MD)->getNumOperands() && "Expected an empty MDNode");
   return nullptr;
+}
+
+Optional<uint64_t> DbgInfoIntrinsic::getFragmentSizeInBits() const {
+  if (auto Fragment = getExpression()->getFragmentInfo())
+    return Fragment->SizeInBits;
+  return getVariable()->getSizeInBits();
 }
 
 int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,

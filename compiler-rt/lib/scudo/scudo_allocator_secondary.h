@@ -87,7 +87,7 @@ class ScudoLargeMmapAllocator {
     ReservedAddressRange AddressRange;
     uptr ReservedBeg = AddressRange.Init(ReservedSize, SecondaryAllocatorName);
     if (UNLIKELY(ReservedBeg == ~static_cast<uptr>(0)))
-      return ReturnNullOrDieOnFailure::OnOOM();
+      return nullptr;
     // A page-aligned pointer is assumed after that, so check it now.
     DCHECK(IsAligned(ReservedBeg, PageSize));
     uptr ReservedEnd = ReservedBeg + ReservedSize;

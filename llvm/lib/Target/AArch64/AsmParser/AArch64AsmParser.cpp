@@ -88,7 +88,7 @@ private:
   bool parseRegister(OperandVector &Operands);
   bool parseSymbolicImmVal(const MCExpr *&ImmVal);
   bool parseNeonVectorList(OperandVector &Operands);
-  bool parseOptionalMulVl(OperandVector &Operands);
+  bool parseOptionalMulOperand(OperandVector &Operands);
   bool parseOperand(OperandVector &Operands, bool isCondCode,
                     bool invertCondCode);
 
@@ -132,6 +132,7 @@ private:
   OperandMatchResultTy tryParsePSBHint(OperandVector &Operands);
   OperandMatchResultTy tryParseAdrpLabel(OperandVector &Operands);
   OperandMatchResultTy tryParseAdrLabel(OperandVector &Operands);
+  template<bool AddFPZeroAsLiteral>
   OperandMatchResultTy tryParseFPImm(OperandVector &Operands);
   OperandMatchResultTy tryParseImmWithOptionalShift(OperandVector &Operands);
   OperandMatchResultTy tryParseGPR64sp0Operand(OperandVector &Operands);
@@ -273,7 +274,8 @@ private:
   };
 
   struct FPImmOp {
-    unsigned Val; // Encoded 8-bit representation.
+    uint64_t Val; // APFloat value bitcasted to uint64_t.
+    bool IsExact; // describes whether parsed value was exact.
   };
 
   struct BarrierOp {
@@ -419,9 +421,14 @@ public:
     return CondCode.Code;
   }
 
-  unsigned getFPImm() const {
-    assert(Kind == k_FPImm && "Invalid access!");
-    return FPImm.Val;
+  APFloat getFPImm() const {
+    assert (Kind == k_FPImm && "Invalid access!");
+    return APFloat(APFloat::IEEEdouble(), APInt(64, FPImm.Val, true));
+  }
+
+  bool getFPImmIsExact() const {
+    assert (Kind == k_FPImm && "Invalid access!");
+    return FPImm.IsExact;
   }
 
   unsigned getBarrier() const {
@@ -872,7 +879,11 @@ public:
     return AArch64_AM::isMOVNMovAlias(Value, Shift, RegWidth);
   }
 
-  bool isFPImm() const { return Kind == k_FPImm; }
+  bool isFPImm() const {
+    return Kind == k_FPImm &&
+           AArch64_AM::getFP64Imm(getFPImm().bitcastToAPInt()) != -1;
+  }
+
   bool isBarrier() const { return Kind == k_Barrier; }
   bool isSysReg() const { return Kind == k_SysReg; }
 
@@ -1080,6 +1091,39 @@ public:
             ST == AArch64_AM::ASR || ST == AArch64_AM::ROR ||
             ST == AArch64_AM::MSL);
   }
+
+  template <unsigned ImmEnum> DiagnosticPredicate isExactFPImm() const {
+    if (Kind != k_FPImm)
+      return DiagnosticPredicateTy::NoMatch;
+
+    if (getFPImmIsExact()) {
+      // Lookup the immediate from table of supported immediates.
+      auto *Desc = AArch64ExactFPImm::lookupExactFPImmByEnum(ImmEnum);
+      assert(Desc && "Unknown enum value");
+
+      // Calculate its FP value.
+      APFloat RealVal(APFloat::IEEEdouble());
+      if (RealVal.convertFromString(Desc->Repr, APFloat::rmTowardZero) !=
+          APFloat::opOK)
+        llvm_unreachable("FP immediate is not exact");
+
+      if (getFPImm().bitwiseIsEqual(RealVal))
+        return DiagnosticPredicateTy::Match;
+    }
+
+    return DiagnosticPredicateTy::NearMatch;
+  }
+
+  template <unsigned ImmA, unsigned ImmB>
+  DiagnosticPredicate isExactFPImm() const {
+    DiagnosticPredicate Res = DiagnosticPredicateTy::NoMatch;
+    if ((Res = isExactFPImm<ImmA>()))
+      return DiagnosticPredicateTy::Match;
+    if ((Res = isExactFPImm<ImmB>()))
+      return DiagnosticPredicateTy::Match;
+    return Res;
+  }
+
   bool isExtend() const {
     if (!isShiftExtend())
       return false;
@@ -1342,6 +1386,13 @@ public:
     Inst.addOperand(MCOperand::createImm(getVectorIndex()));
   }
 
+  template <unsigned ImmIs0, unsigned ImmIs1>
+  void addExactFPImmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    assert(bool(isExactFPImm<ImmIs0, ImmIs1>()) && "Invalid operand");
+    Inst.addOperand(MCOperand::createImm(bool(isExactFPImm<ImmIs1>())));
+  }
+
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // If this is a pageoff symrefexpr with an addend, adjust the addend
@@ -1481,7 +1532,8 @@ public:
 
   void addFPImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getFPImm()));
+    Inst.addOperand(MCOperand::createImm(
+        AArch64_AM::getFP64Imm(getFPImm().bitcastToAPInt())));
   }
 
   void addBarrierOperands(MCInst &Inst, unsigned N) const {
@@ -1700,10 +1752,11 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<AArch64Operand> CreateFPImm(unsigned Val, SMLoc S,
-                                                     MCContext &Ctx) {
+  static std::unique_ptr<AArch64Operand>
+  CreateFPImm(APFloat Val, bool IsExact, SMLoc S, MCContext &Ctx) {
     auto Op = make_unique<AArch64Operand>(k_FPImm, Ctx);
-    Op->FPImm.Val = Val;
+    Op->FPImm.Val = Val.bitcastToAPInt().getSExtValue();
+    Op->FPImm.IsExact = IsExact;
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -1791,8 +1844,10 @@ public:
 void AArch64Operand::print(raw_ostream &OS) const {
   switch (Kind) {
   case k_FPImm:
-    OS << "<fpimm " << getFPImm() << "("
-       << AArch64_AM::getFPImmFloat(getFPImm()) << ") >";
+    OS << "<fpimm " << getFPImm().bitcastToAPInt().getZExtValue();
+    if (!getFPImmIsExact())
+      OS << " (inexact)";
+    OS << ">";
     break;
   case k_Barrier: {
     StringRef Name = getBarrierName();
@@ -2285,6 +2340,7 @@ AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
 }
 
 /// tryParseFPImm - A floating point immediate expression operand.
+template<bool AddFPZeroAsLiteral>
 OperandMatchResultTy
 AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
@@ -2296,45 +2352,44 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
   bool isNegative = parseOptionalToken(AsmToken::Minus);
 
   const AsmToken &Tok = Parser.getTok();
-  if (Tok.is(AsmToken::Real) || Tok.is(AsmToken::Integer)) {
-    int64_t Val;
-    if (Tok.is(AsmToken::Integer) && Tok.getString().startswith("0x")) {
-      Val = Tok.getIntVal();
-      if (Val > 255 || isNegative) {
-        TokError("encoded floating point value out of range");
-        return MatchOperand_ParseFail;
-      }
-    } else {
-      APFloat RealVal(APFloat::IEEEdouble(), Tok.getString());
-      if (isNegative)
-        RealVal.changeSign();
-
-      uint64_t IntVal = RealVal.bitcastToAPInt().getZExtValue();
-      Val = AArch64_AM::getFP64Imm(APInt(64, IntVal));
-
-      // Check for out of range values. As an exception we let Zero through,
-      // but as tokens instead of an FPImm so that it can be matched by the
-      // appropriate alias if one exists.
-      if (RealVal.isPosZero()) {
-        Parser.Lex(); // Eat the token.
-        Operands.push_back(AArch64Operand::CreateToken("#0", false, S, getContext()));
-        Operands.push_back(AArch64Operand::CreateToken(".0", false, S, getContext()));
-        return MatchOperand_Success;
-      } else if (Val == -1) {
-        TokError("expected compatible register or floating-point constant");
-        return MatchOperand_ParseFail;
-      }
-    }
-    Parser.Lex(); // Eat the token.
-    Operands.push_back(AArch64Operand::CreateFPImm(Val, S, getContext()));
-    return MatchOperand_Success;
+  if (!Tok.is(AsmToken::Real) && !Tok.is(AsmToken::Integer)) {
+    if (!Hash)
+      return MatchOperand_NoMatch;
+    TokError("invalid floating point immediate");
+    return MatchOperand_ParseFail;
   }
 
-  if (!Hash)
-    return MatchOperand_NoMatch;
+  // Parse hexadecimal representation.
+  if (Tok.is(AsmToken::Integer) && Tok.getString().startswith("0x")) {
+    if (Tok.getIntVal() > 255 || isNegative) {
+      TokError("encoded floating point value out of range");
+      return MatchOperand_ParseFail;
+    }
 
-  TokError("invalid floating point immediate");
-  return MatchOperand_ParseFail;
+    APFloat F((double)AArch64_AM::getFPImmFloat(Tok.getIntVal()));
+    Operands.push_back(
+        AArch64Operand::CreateFPImm(F, true, S, getContext()));
+  } else {
+    // Parse FP representation.
+    APFloat RealVal(APFloat::IEEEdouble());
+    auto Status =
+        RealVal.convertFromString(Tok.getString(), APFloat::rmTowardZero);
+    if (isNegative)
+      RealVal.changeSign();
+
+    if (AddFPZeroAsLiteral && RealVal.isPosZero()) {
+      Operands.push_back(
+          AArch64Operand::CreateToken("#0", false, S, getContext()));
+      Operands.push_back(
+          AArch64Operand::CreateToken(".0", false, S, getContext()));
+    } else
+      Operands.push_back(AArch64Operand::CreateFPImm(
+          RealVal, Status == APFloat::opOK, S, getContext()));
+  }
+
+  Parser.Lex(); // Eat the token.
+
+  return MatchOperand_Success;
 }
 
 /// tryParseImmWithOptionalShift - Parse immediate operand, optionally with
@@ -3144,27 +3199,45 @@ AArch64AsmParser::tryParseGPROperand(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-bool AArch64AsmParser::parseOptionalMulVl(OperandVector &Operands) {
+bool AArch64AsmParser::parseOptionalMulOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
 
   // Some SVE instructions have a decoration after the immediate, i.e.
   // "mul vl". We parse them here and add tokens, which must be present in the
   // asm string in the tablegen instruction.
+  bool NextIsVL = Parser.getLexer().peekTok().getString().equals_lower("vl");
+  bool NextIsHash = Parser.getLexer().peekTok().is(AsmToken::Hash);
   if (!Parser.getTok().getString().equals_lower("mul") ||
-      !Parser.getLexer().peekTok().getString().equals_lower("vl"))
+      !(NextIsVL || NextIsHash))
     return true;
 
-  SMLoc S = getLoc();
   Operands.push_back(
-    AArch64Operand::CreateToken("mul", false, S, getContext()));
+    AArch64Operand::CreateToken("mul", false, getLoc(), getContext()));
   Parser.Lex(); // Eat the "mul"
 
-  S = getLoc();
-  Operands.push_back(
-    AArch64Operand::CreateToken("vl", false, S, getContext()));
-  Parser.Lex(); // Eat the "vl"
+  if (NextIsVL) {
+    Operands.push_back(
+        AArch64Operand::CreateToken("vl", false, getLoc(), getContext()));
+    Parser.Lex(); // Eat the "vl"
+    return false;
+  }
 
-  return false;
+  if (NextIsHash) {
+    Parser.Lex(); // Eat the #
+    SMLoc S = getLoc();
+
+    // Parse immediate operand.
+    const MCExpr *ImmVal;
+    if (!Parser.parseExpression(ImmVal))
+      if (const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(ImmVal)) {
+        Operands.push_back(AArch64Operand::CreateImm(
+            MCConstantExpr::create(MCE->getValue(), getContext()), S, getLoc(),
+            getContext()));
+        return MatchOperand_Success;
+      }
+  }
+
+  return Error(getLoc(), "expected 'vl' or '#<imm>'");
 }
 
 /// parseOperand - Parse a arm instruction operand.  For now this parses the
@@ -3220,8 +3293,9 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     if (!parseRegister(Operands))
       return false;
 
-    // See if this is a "mul vl" decoration used by SVE instructions.
-    if (!parseOptionalMulVl(Operands))
+    // See if this is a "mul vl" decoration or "mul #<int>" operand used
+    // by SVE instructions.
+    if (!parseOptionalMulOperand(Operands))
       return false;
 
     // This could be an optional "shift" or "extend" operand.
@@ -3956,6 +4030,12 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidSVEPredicate3bSReg:
   case Match_InvalidSVEPredicate3bDReg:
     return Error(Loc, "restricted predicate has range [0, 7].");
+  case Match_InvalidSVEExactFPImmOperandHalfOne:
+    return Error(Loc, "Invalid floating point constant, expected 0.5 or 1.0.");
+  case Match_InvalidSVEExactFPImmOperandHalfTwo:
+    return Error(Loc, "Invalid floating point constant, expected 0.5 or 2.0.");
+  case Match_InvalidSVEExactFPImmOperandZeroOne:
+    return Error(Loc, "Invalid floating point constant, expected 0.0 or 1.0.");
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -4454,6 +4534,9 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEPredicate3bHReg:
   case Match_InvalidSVEPredicate3bSReg:
   case Match_InvalidSVEPredicate3bDReg:
+  case Match_InvalidSVEExactFPImmOperandHalfOne:
+  case Match_InvalidSVEExactFPImmOperandHalfTwo:
+  case Match_InvalidSVEExactFPImmOperandZeroOne:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())

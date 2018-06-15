@@ -1403,6 +1403,13 @@ namespace clang {
     void parseConflict();
     void parseInferredModuleDecl(bool Framework, bool Explicit);
 
+    /// Private modules are canonicalized as Foo_Private. Clang provides extra
+    /// module map search logic to find the appropriate private module when PCH
+    /// is used with implicit module maps. Warn when private modules are written
+    /// in other ways (FooPrivate and Foo.Private), providing notes and fixits.
+    void diagnosePrivateModules(SourceLocation ExplicitLoc,
+                                SourceLocation FrameworkLoc);
+
     using Attributes = ModuleMap::Attributes;
 
     bool parseOptionalAttributes(Attributes &Attrs);
@@ -1672,11 +1679,8 @@ namespace {
 /// module map search logic to find the appropriate private module when PCH
 /// is used with implicit module maps. Warn when private modules are written
 /// in other ways (FooPrivate and Foo.Private), providing notes and fixits.
-static void diagnosePrivateModules(const ModuleMap &Map,
-                                   DiagnosticsEngine &Diags,
-                                   const Module *ActiveModule,
-                                   SourceLocation InlineParent) {
-
+void ModuleMapParser::diagnosePrivateModules(SourceLocation ExplicitLoc,
+                                             SourceLocation FrameworkLoc) {
   auto GenNoteAndFixIt = [&](StringRef BadName, StringRef Canonical,
                              const Module *M, SourceRange ReplLoc) {
     auto D = Diags.Report(ActiveModule->DefinitionLoc,
@@ -1693,6 +1697,7 @@ static void diagnosePrivateModules(const ModuleMap &Map,
     SmallString<128> FullName(ActiveModule->getFullModuleName());
     if (!FullName.startswith(M->Name) && !FullName.endswith("Private"))
       continue;
+    SmallString<128> FixedPrivModDecl;
     SmallString<128> Canonical(M->Name);
     Canonical.append("_Private");
 
@@ -1702,8 +1707,20 @@ static void diagnosePrivateModules(const ModuleMap &Map,
       Diags.Report(ActiveModule->DefinitionLoc,
                    diag::warn_mmap_mismatched_private_submodule)
           << FullName;
-      GenNoteAndFixIt(FullName, Canonical, M,
-                      SourceRange(InlineParent, ActiveModule->DefinitionLoc));
+
+      SourceLocation FixItInitBegin = CurrModuleDeclLoc;
+      if (FrameworkLoc.isValid())
+        FixItInitBegin = FrameworkLoc;
+      if (ExplicitLoc.isValid())
+        FixItInitBegin = ExplicitLoc;
+
+      if (FrameworkLoc.isValid() || ActiveModule->Parent->IsFramework)
+        FixedPrivModDecl.append("framework ");
+      FixedPrivModDecl.append("module ");
+      FixedPrivModDecl.append(Canonical);
+
+      GenNoteAndFixIt(FullName, FixedPrivModDecl, M,
+                      SourceRange(FixItInitBegin, ActiveModule->DefinitionLoc));
       continue;
     }
 
@@ -1747,6 +1764,7 @@ void ModuleMapParser::parseModuleDecl() {
 
   // Parse 'explicit' or 'framework' keyword, if present.
   SourceLocation ExplicitLoc;
+  SourceLocation FrameworkLoc;
   bool Explicit = false;
   bool Framework = false;
 
@@ -1758,7 +1776,7 @@ void ModuleMapParser::parseModuleDecl() {
 
   // Parse 'framework' keyword, if present.
   if (Tok.is(MMToken::FrameworkKeyword)) {
-    consumeToken();
+    FrameworkLoc = consumeToken();
     Framework = true;
   } 
   
@@ -1800,7 +1818,6 @@ void ModuleMapParser::parseModuleDecl() {
   }
   
   Module *PreviousActiveModule = ActiveModule;  
-  SourceLocation LastInlineParentLoc = SourceLocation();
   if (Id.size() > 1) {
     // This module map defines a submodule. Go find the module of which it
     // is a submodule.
@@ -1811,7 +1828,6 @@ void ModuleMapParser::parseModuleDecl() {
         if (I == 0)
           TopLevelModule = Next;
         ActiveModule = Next;
-        LastInlineParentLoc = Id[I].second;
         continue;
       }
       
@@ -1934,7 +1950,7 @@ void ModuleMapParser::parseModuleDecl() {
       !Diags.isIgnored(diag::warn_mmap_mismatched_private_module_name,
                        StartLoc) &&
       ActiveModule->ModuleMapIsPrivate)
-    diagnosePrivateModules(Map, Diags, ActiveModule, LastInlineParentLoc);
+    diagnosePrivateModules(ExplicitLoc, FrameworkLoc);
 
   bool Done = false;
   do {

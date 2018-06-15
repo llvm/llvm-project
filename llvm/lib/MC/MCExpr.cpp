@@ -239,6 +239,8 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_PPC_LO: return "l";
   case VK_PPC_HI: return "h";
   case VK_PPC_HA: return "ha";
+  case VK_PPC_HIGH: return "high";
+  case VK_PPC_HIGHA: return "higha";
   case VK_PPC_HIGHER: return "higher";
   case VK_PPC_HIGHERA: return "highera";
   case VK_PPC_HIGHEST: return "highest";
@@ -255,6 +257,8 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_PPC_TPREL_LO: return "tprel@l";
   case VK_PPC_TPREL_HI: return "tprel@h";
   case VK_PPC_TPREL_HA: return "tprel@ha";
+  case VK_PPC_TPREL_HIGH: return "tprel@high";
+  case VK_PPC_TPREL_HIGHA: return "tprel@higha";
   case VK_PPC_TPREL_HIGHER: return "tprel@higher";
   case VK_PPC_TPREL_HIGHERA: return "tprel@highera";
   case VK_PPC_TPREL_HIGHEST: return "tprel@highest";
@@ -262,6 +266,8 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_PPC_DTPREL_LO: return "dtprel@l";
   case VK_PPC_DTPREL_HI: return "dtprel@h";
   case VK_PPC_DTPREL_HA: return "dtprel@ha";
+  case VK_PPC_DTPREL_HIGH: return "dtprel@high";
+  case VK_PPC_DTPREL_HIGHA: return "dtprel@higha";
   case VK_PPC_DTPREL_HIGHER: return "dtprel@higher";
   case VK_PPC_DTPREL_HIGHERA: return "dtprel@highera";
   case VK_PPC_DTPREL_HIGHEST: return "dtprel@highest";
@@ -343,6 +349,8 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("l", VK_PPC_LO)
     .Case("h", VK_PPC_HI)
     .Case("ha", VK_PPC_HA)
+    .Case("high", VK_PPC_HIGH)
+    .Case("higha", VK_PPC_HIGHA)
     .Case("higher", VK_PPC_HIGHER)
     .Case("highera", VK_PPC_HIGHERA)
     .Case("highest", VK_PPC_HIGHEST)
@@ -361,6 +369,8 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("tprel@l", VK_PPC_TPREL_LO)
     .Case("tprel@h", VK_PPC_TPREL_HI)
     .Case("tprel@ha", VK_PPC_TPREL_HA)
+    .Case("tprel@high", VK_PPC_TPREL_HIGH)
+    .Case("tprel@higha", VK_PPC_TPREL_HIGHA)
     .Case("tprel@higher", VK_PPC_TPREL_HIGHER)
     .Case("tprel@highera", VK_PPC_TPREL_HIGHERA)
     .Case("tprel@highest", VK_PPC_TPREL_HIGHEST)
@@ -368,6 +378,8 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("dtprel@l", VK_PPC_DTPREL_LO)
     .Case("dtprel@h", VK_PPC_DTPREL_HI)
     .Case("dtprel@ha", VK_PPC_DTPREL_HA)
+    .Case("dtprel@high", VK_PPC_DTPREL_HIGH)
+    .Case("dtprel@higha", VK_PPC_DTPREL_HIGHA)
     .Case("dtprel@higher", VK_PPC_DTPREL_HIGHER)
     .Case("dtprel@highera", VK_PPC_DTPREL_HIGHERA)
     .Case("dtprel@highest", VK_PPC_DTPREL_HIGHEST)

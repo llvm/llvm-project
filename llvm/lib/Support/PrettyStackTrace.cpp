@@ -118,9 +118,9 @@ static void CrashHandler(void *) {
   if (!TmpStr.empty()) {
 #ifdef HAVE_CRASHREPORTERCLIENT_H
     // Cast to void to avoid warning.
-    (void)CRSetCrashLogMessage(std::string(TmpStr.str()).c_str());
+    (void)CRSetCrashLogMessage(TmpStr.c_str());
 #elif HAVE_CRASHREPORTER_INFO 
-    __crashreporter_info__ = strdup(std::string(TmpStr.str()).c_str());
+    __crashreporter_info__ = strdup(TmpStr.c_str());
 #endif
     errs() << TmpStr.str();
   }

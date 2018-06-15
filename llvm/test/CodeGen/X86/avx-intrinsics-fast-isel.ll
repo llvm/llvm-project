@@ -3018,10 +3018,12 @@ define <4 x double> @test_mm256_sqrt_pd(<4 x double> %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vsqrtpd %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %res = call <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double> %a0)
-  ret <4 x double> %res
+entry:
+  %0 = tail call <4 x double> @llvm.sqrt.v4f64(<4 x double> %a0) #2
+  ret <4 x double> %0
 }
-declare <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double>) nounwind readnone
+
+declare <4 x double> @llvm.sqrt.v4f64(<4 x double>) #1
 
 define <8 x float> @test_mm256_sqrt_ps(<8 x float> %a0) nounwind {
 ; X32-LABEL: test_mm256_sqrt_ps:
@@ -3033,10 +3035,12 @@ define <8 x float> @test_mm256_sqrt_ps(<8 x float> %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vsqrtps %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %res = call <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float> %a0)
-  ret <8 x float> %res
+entry:
+  %0 = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %a0) #2
+  ret <8 x float> %0
 }
-declare <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float>) nounwind readnone
+
+declare <8 x float> @llvm.sqrt.v8f32(<8 x float>) #1
 
 define void @test_mm256_store_pd(double* %a0, <4 x double> %a1) nounwind {
 ; X32-LABEL: test_mm256_store_pd:

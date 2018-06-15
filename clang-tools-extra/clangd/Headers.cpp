@@ -72,13 +72,11 @@ collectInclusionsInMainFileCallback(const SourceManager &SM,
 
 /// FIXME(ioeric): we might not want to insert an absolute include path if the
 /// path is not shortened.
-llvm::Expected<std::string> calculateIncludePath(
-    PathRef File, StringRef BuildDir, HeaderSearch &HeaderSearchInfo,
-    const std::vector<Inclusion> &Inclusions, const HeaderFile &DeclaringHeader,
-    const HeaderFile &InsertedHeader) {
+bool IncludeInserter::shouldInsertInclude(
+    const HeaderFile &DeclaringHeader, const HeaderFile &InsertedHeader) const {
   assert(DeclaringHeader.valid() && InsertedHeader.valid());
-  if (File == DeclaringHeader.File || File == InsertedHeader.File)
-    return "";
+  if (FileName == DeclaringHeader.File || FileName == InsertedHeader.File)
+    return false;
   llvm::StringSet<> IncludedHeaders;
   for (const auto &Inc : Inclusions) {
     IncludedHeaders.insert(Inc.Written);
@@ -88,53 +86,31 @@ llvm::Expected<std::string> calculateIncludePath(
   auto Included = [&](llvm::StringRef Header) {
     return IncludedHeaders.find(Header) != IncludedHeaders.end();
   };
-  if (Included(DeclaringHeader.File) || Included(InsertedHeader.File))
-    return "";
+  return !Included(DeclaringHeader.File) && !Included(InsertedHeader.File);
+}
 
-  bool IsSystem = false;
-
+std::string
+IncludeInserter::calculateIncludePath(const HeaderFile &DeclaringHeader,
+                                      const HeaderFile &InsertedHeader) const {
+  assert(DeclaringHeader.valid() && InsertedHeader.valid());
   if (InsertedHeader.Verbatim)
     return InsertedHeader.File;
-
+  bool IsSystem = false;
   std::string Suggested = HeaderSearchInfo.suggestPathToFileForDiagnostics(
       InsertedHeader.File, BuildDir, &IsSystem);
   if (IsSystem)
     Suggested = "<" + Suggested + ">";
   else
     Suggested = "\"" + Suggested + "\"";
-
-  log("Suggested #include for " + InsertedHeader.File + " is: " + Suggested);
   return Suggested;
 }
 
-Expected<Optional<TextEdit>>
-IncludeInserter::insert(const HeaderFile &DeclaringHeader,
-                        const HeaderFile &InsertedHeader) const {
-  auto Validate = [](const HeaderFile &Header) {
-    return Header.valid()
-               ? llvm::Error::success()
-               : llvm::make_error<llvm::StringError>(
-                     "Invalid HeaderFile: " + Header.File +
-                         " (verbatim=" + std::to_string(Header.Verbatim) + ").",
-                     llvm::inconvertibleErrorCode());
-  };
-  if (auto Err = Validate(DeclaringHeader))
-    return std::move(Err);
-  if (auto Err = Validate(InsertedHeader))
-    return std::move(Err);
-  auto Include =
-      calculateIncludePath(FileName, BuildDir, HeaderSearchInfo, Inclusions,
-                           DeclaringHeader, InsertedHeader);
-  if (!Include)
-    return Include.takeError();
-  if (Include->empty())
-    return llvm::None;
-  StringRef IncludeRef = *Include;
-  auto Insertion =
-      Inserter.insert(IncludeRef.trim("\"<>"), IncludeRef.startswith("<"));
-  if (!Insertion)
-    return llvm::None;
-  return replacementToEdit(Code, *Insertion);
+Optional<TextEdit> IncludeInserter::insert(StringRef VerbatimHeader) const {
+  Optional<TextEdit> Edit = None;
+  if (auto Insertion = Inserter.insert(VerbatimHeader.trim("\"<>"),
+                                       VerbatimHeader.startswith("<")))
+    Edit = replacementToEdit(Code, *Insertion);
+  return Edit;
 }
 
 } // namespace clangd

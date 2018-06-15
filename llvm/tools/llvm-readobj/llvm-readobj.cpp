@@ -146,6 +146,12 @@ namespace opts {
   cl::alias ProgramHeadersShort("l", cl::desc("Alias for --program-headers"),
                                 cl::aliasopt(ProgramHeaders));
 
+  // -string-dump
+  cl::list<std::string> StringDump("string-dump", cl::desc("<number|name>"),
+                                   cl::ZeroOrMore);
+  cl::alias StringDumpShort("p", cl::desc("Alias for --string-dump"),
+                            cl::aliasopt(StringDump));
+
   // -hash-table
   cl::opt<bool> HashTable("hash-table",
     cl::desc("Display ELF hash table"));
@@ -417,6 +423,10 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
     Dumper->printNeededLibraries();
   if (opts::ProgramHeaders)
     Dumper->printProgramHeaders();
+  if (!opts::StringDump.empty())
+    llvm::for_each(opts::StringDump, [&Dumper](StringRef SectionName) {
+      Dumper->printSectionAsString(SectionName);
+    });
   if (opts::HashTable)
     Dumper->printHashTable();
   if (opts::GnuHashTable)

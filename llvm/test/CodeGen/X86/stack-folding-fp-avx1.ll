@@ -573,7 +573,8 @@ define i64 @stack_fold_cvtsd2si64_int(<2 x double> %a0) {
 }
 declare i64 @llvm.x86.sse2.cvtsd2si64(<2 x double>) nounwind readnone
 
-define double @stack_fold_cvtsi2sd(i32 %a0) {
+; TODO: This fold shouldn't require optsize. Not folding doesn't prevent reading an undef register since the registers are a mix of XMM and GPR.
+define double @stack_fold_cvtsi2sd(i32 %a0) optsize {
   ;CHECK-LABEL: stack_fold_cvtsi2sd
   ;CHECK:  vcvtsi2sdl {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -581,7 +582,8 @@ define double @stack_fold_cvtsi2sd(i32 %a0) {
   ret double %2
 }
 
-define <2 x double> @stack_fold_cvtsi2sd_int(i32 %a0) {
+; TODO: This fold shouldn't require optsize. Not folding doesn't prevent reading an undef register since the registers are a mix of XMM and GPR.
+define <2 x double> @stack_fold_cvtsi2sd_int(i32 %a0) optsize {
   ;CHECK-LABEL: stack_fold_cvtsi2sd_int
   ;CHECK:  vcvtsi2sdl {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -590,7 +592,8 @@ define <2 x double> @stack_fold_cvtsi2sd_int(i32 %a0) {
 }
 declare <2 x double> @llvm.x86.sse2.cvtsi2sd(<2 x double>, i32) nounwind readnone
 
-define double @stack_fold_cvtsi642sd(i64 %a0) {
+; TODO: This fold shouldn't require optsize. Not folding doesn't prevent reading an undef register since the registers are a mix of XMM and GPR.
+define double @stack_fold_cvtsi642sd(i64 %a0) optsize {
   ;CHECK-LABEL: stack_fold_cvtsi642sd
   ;CHECK:  vcvtsi2sdq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 8-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -598,7 +601,8 @@ define double @stack_fold_cvtsi642sd(i64 %a0) {
   ret double %2
 }
 
-define <2 x double> @stack_fold_cvtsi642sd_int(i64 %a0) {
+; TODO: This fold shouldn't require optsize. Not folding doesn't prevent reading an undef register since the registers are a mix of XMM and GPR.
+define <2 x double> @stack_fold_cvtsi642sd_int(i64 %a0) optsize {
   ;CHECK-LABEL: stack_fold_cvtsi642sd_int
   ;CHECK:  vcvtsi2sdq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 8-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -607,7 +611,8 @@ define <2 x double> @stack_fold_cvtsi642sd_int(i64 %a0) {
 }
 declare <2 x double> @llvm.x86.sse2.cvtsi642sd(<2 x double>, i64) nounwind readnone
 
-define float @stack_fold_cvtsi2ss(i32 %a0) {
+; TODO: This fold shouldn't require optsize. Not folding doesn't prevent reading an undef register since the registers are a mix of XMM and GPR.
+define float @stack_fold_cvtsi2ss(i32 %a0) optsize {
   ;CHECK-LABEL: stack_fold_cvtsi2ss
   ;CHECK:  vcvtsi2ssl {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -615,7 +620,8 @@ define float @stack_fold_cvtsi2ss(i32 %a0) {
   ret float %2
 }
 
-define <4 x float> @stack_fold_cvtsi2ss_int(i32 %a0) {
+; TODO: This fold shouldn't require optsize. Not folding doesn't prevent reading an undef register since the registers are a mix of XMM and GPR.
+define <4 x float> @stack_fold_cvtsi2ss_int(i32 %a0) optsize {
   ;CHECK-LABEL: stack_fold_cvtsi2ss_int
   ;CHECK:  vcvtsi2ssl {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -624,7 +630,8 @@ define <4 x float> @stack_fold_cvtsi2ss_int(i32 %a0) {
 }
 declare <4 x float> @llvm.x86.sse.cvtsi2ss(<4 x float>, i32) nounwind readnone
 
-define float @stack_fold_cvtsi642ss(i64 %a0) {
+; TODO: This fold shouldn't require optsize. Not folding doesn't prevent reading an undef register since the registers are a mix of XMM and GPR.
+define float @stack_fold_cvtsi642ss(i64 %a0) optsize {
   ;CHECK-LABEL: stack_fold_cvtsi642ss
   ;CHECK:  vcvtsi2ssq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 8-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -632,7 +639,8 @@ define float @stack_fold_cvtsi642ss(i64 %a0) {
   ret float %2
 }
 
-define <4 x float> @stack_fold_cvtsi642ss_int(i64 %a0) {
+; TODO: This fold shouldn't require optsize. Not folding doesn't prevent reading an undef register since the registers are a mix of XMM and GPR.
+define <4 x float> @stack_fold_cvtsi642ss_int(i64 %a0) optsize {
   ;CHECK-LABEL: stack_fold_cvtsi642ss_int
   ;CHECK:  vcvtsi2ssq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 8-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -1653,7 +1661,7 @@ define <8 x float> @stack_fold_sqrtps_ymm(<8 x float> %a0) {
 }
 declare <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float>) nounwind readnone
 
-define double @stack_fold_sqrtsd(double %a0) {
+define double @stack_fold_sqrtsd(double %a0) optsize {
   ;CHECK-LABEL: stack_fold_sqrtsd
   ;CHECK:       vsqrtsd {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 8-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
@@ -1664,7 +1672,7 @@ declare double @llvm.sqrt.f64(double) nounwind readnone
 
 ; TODO stack_fold_sqrtsd_int
 
-define float @stack_fold_sqrtss(float %a0) {
+define float @stack_fold_sqrtss(float %a0) optsize {
   ;CHECK-LABEL: stack_fold_sqrtss
   ;CHECK:       vsqrtss {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()

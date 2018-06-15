@@ -3849,7 +3849,8 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
   // mul.with.overflow and adjust properly mask/size.
   if (MulVal->hasNUsesOrMore(2)) {
     Value *Mul = Builder.CreateExtractValue(Call, 0, "umul.value");
-    for (User *U : MulVal->users()) {
+    for (auto UI = MulVal->user_begin(), UE = MulVal->user_end(); UI != UE;) {
+      User *U = *UI++;
       if (U == &I || U == OtherVal)
         continue;
       if (TruncInst *TI = dyn_cast<TruncInst>(U)) {

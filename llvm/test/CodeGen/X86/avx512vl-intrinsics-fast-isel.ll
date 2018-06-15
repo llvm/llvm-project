@@ -6375,6 +6375,182 @@ declare <4 x double> @llvm.fma.v4f64(<4 x double>, <4 x double>, <4 x double>) #
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) #8
 declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #8
 
+define <2 x double> @test_mm_mask_sqrt_pd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A) {
+; X32-LABEL: test_mm_mask_sqrt_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vsqrtpd %xmm1, %xmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_mask_sqrt_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vsqrtpd %xmm1, %xmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <2 x double> @llvm.sqrt.v2f64(<2 x double> %__A) #2
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %2 = select <2 x i1> %extract.i, <2 x double> %0, <2 x double> %__W
+  ret <2 x double> %2
+}
+
+declare <2 x double> @llvm.sqrt.v2f64(<2 x double>)
+
+define <2 x double> @test_mm_maskz_sqrt_pd(i8 zeroext %__U, <2 x double> %__A) {
+; X32-LABEL: test_mm_maskz_sqrt_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vsqrtpd %xmm0, %xmm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_maskz_sqrt_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vsqrtpd %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <2 x double> @llvm.sqrt.v2f64(<2 x double> %__A) #2
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %2 = select <2 x i1> %extract.i, <2 x double> %0, <2 x double> zeroinitializer
+  ret <2 x double> %2
+}
+
+define <4 x double> @test_mm256_mask_sqrt_pd(<4 x double> %__W, i8 zeroext %__U, <4 x double> %__A) {
+; X32-LABEL: test_mm256_mask_sqrt_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vsqrtpd %ymm1, %ymm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_sqrt_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vsqrtpd %ymm1, %ymm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <4 x double> @llvm.sqrt.v4f64(<4 x double> %__A) #2
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract.i, <4 x double> %0, <4 x double> %__W
+  ret <4 x double> %2
+}
+
+declare <4 x double> @llvm.sqrt.v4f64(<4 x double>)
+
+define <4 x double> @test_mm256_maskz_sqrt_pd(i8 zeroext %__U, <4 x double> %__A) {
+; X32-LABEL: test_mm256_maskz_sqrt_pd:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vsqrtpd %ymm0, %ymm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_sqrt_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vsqrtpd %ymm0, %ymm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <4 x double> @llvm.sqrt.v4f64(<4 x double> %__A) #2
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract.i, <4 x double> %0, <4 x double> zeroinitializer
+  ret <4 x double> %2
+}
+
+define <4 x float> @test_mm_mask_sqrt_ps(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A) {
+; X32-LABEL: test_mm_mask_sqrt_ps:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vsqrtps %xmm1, %xmm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_mask_sqrt_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vsqrtps %xmm1, %xmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %__A) #2
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract.i, <4 x float> %0, <4 x float> %__W
+  ret <4 x float> %2
+}
+
+declare <4 x float> @llvm.sqrt.v4f32(<4 x float>)
+
+define <4 x float> @test_mm_maskz_sqrt_ps(i8 zeroext %__U, <4 x float> %__A) {
+; X32-LABEL: test_mm_maskz_sqrt_ps:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vsqrtps %xmm0, %xmm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_maskz_sqrt_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vsqrtps %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %__A) #2
+  %1 = bitcast i8 %__U to <8 x i1>
+  %extract.i = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = select <4 x i1> %extract.i, <4 x float> %0, <4 x float> zeroinitializer
+  ret <4 x float> %2
+}
+
+define <8 x float> @test_mm256_mask_sqrt_ps(<8 x float> %__W, i8 zeroext %__U, <8 x float> %__A) {
+; X32-LABEL: test_mm256_mask_sqrt_ps:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vsqrtps %ymm1, %ymm0 {%k1}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_sqrt_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vsqrtps %ymm1, %ymm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %__A) #2
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x float> %0, <8 x float> %__W
+  ret <8 x float> %2
+}
+
+define <8 x float> @test_mm256_maskz_sqrt_ps(i8 zeroext %__U, <8 x float> %__A) {
+; X32-LABEL: test_mm256_maskz_sqrt_ps:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vsqrtps %ymm0, %ymm0 {%k1} {z}
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_sqrt_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vsqrtps %ymm0, %ymm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %__A) #2
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x float> %0, <8 x float> zeroinitializer
+  ret <8 x float> %2
+}
+
+declare <8 x float> @llvm.sqrt.v8f32(<8 x float>)
+
+declare <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32>)
+declare <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32>)
 declare <4 x i32> @llvm.x86.avx512.mask.cvtpd2dq.128(<2 x double>, <4 x i32>, i8)
 declare <4 x i32> @llvm.x86.avx.cvt.pd2dq.256(<4 x double>)
 declare <4 x float> @llvm.x86.avx512.mask.cvtpd2ps(<2 x double>, <4 x float>, i8)

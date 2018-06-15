@@ -235,6 +235,27 @@ def : SVEPREDPAT<"mul3",  0x1e>;
 def : SVEPREDPAT<"all",   0x1f>;
 
 //===----------------------------------------------------------------------===//
+// Exact FP Immediates.
+//
+// These definitions are used to create a lookup table with FP Immediates that
+// is used for a few instructions that only accept a limited set of exact FP
+// immediates values.
+//===----------------------------------------------------------------------===//
+class ExactFPImm<string name, string repr, bits<4> enum > : SearchableTable {
+  let SearchableFields = ["Enum", "Repr"];
+  let EnumValueField = "Enum";
+
+  string Name = name;
+  bits<4> Enum = enum;
+  string Repr = repr;
+}
+
+def : ExactFPImm<"zero", "0.0", 0x0>;
+def : ExactFPImm<"half", "0.5", 0x1>;
+def : ExactFPImm<"one",  "1.0", 0x2>;
+def : ExactFPImm<"two",  "2.0", 0x3>;
+
+//===----------------------------------------------------------------------===//
 // PState instruction options.
 //===----------------------------------------------------------------------===//
 
