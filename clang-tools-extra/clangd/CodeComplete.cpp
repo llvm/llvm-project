@@ -858,7 +858,7 @@ public:
         // calculate the file proximity, which would capture include/ and src/
         // project setup where headers and implementations are not in the same
         // directory.
-        FileProximityMatch({FileName}) {}
+        FileProximityMatch(ArrayRef<StringRef>({FileName})) {}
 
   CompletionList run(const SemaCompleteInput &SemaCCInput) && {
     trace::Span Tracer("CodeCompleteFlow");
