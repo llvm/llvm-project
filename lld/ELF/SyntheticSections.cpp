@@ -1703,10 +1703,12 @@ SymbolTableBaseSection::SymbolTableBaseSection(StringTableSection &StrTabSec)
 static bool sortMipsSymbols(const SymbolTableEntry &L,
                             const SymbolTableEntry &R) {
   // Sort entries related to non-local preemptible symbols by GOT indexes.
-  // All other entries go to the first part of GOT in arbitrary order.
-  if (!L.Sym->isInGot() || !R.Sym->isInGot())
-    return !L.Sym->isInGot();
-  return L.Sym->GotIndex < R.Sym->GotIndex;
+  // All other entries go to the beginning of a dynsym in arbitrary order.
+  if (L.Sym->isInGot() && R.Sym->isInGot())
+    return L.Sym->GotIndex < R.Sym->GotIndex;
+  if (!L.Sym->isInGot() && !R.Sym->isInGot())
+    return false;
+  return !L.Sym->isInGot();
 }
 
 void SymbolTableBaseSection::finalizeContents() {
