@@ -729,8 +729,6 @@ static char isNegatibleForFree(SDValue Op, bool LegalOperations,
 
   case ISD::FMUL:
   case ISD::FDIV:
-    if (Options->HonorSignDependentRoundingFPMath()) return 0;
-
     // fold (fneg (fmul X, Y)) -> (fmul (fneg X), Y) or (fmul X, (fneg Y))
     if (char V = isNegatibleForFree(Op.getOperand(0), LegalOperations, TLI,
                                     Options, Depth + 1))
@@ -792,8 +790,6 @@ static SDValue GetNegatedExpression(SDValue Op, SelectionDAG &DAG,
 
   case ISD::FMUL:
   case ISD::FDIV:
-    assert(!Options.HonorSignDependentRoundingFPMath());
-
     // fold (fneg (fmul X, Y)) -> (fmul (fneg X), Y)
     if (isNegatibleForFree(Op.getOperand(0), LegalOperations,
                            DAG.getTargetLoweringInfo(), &Options, Depth+1))

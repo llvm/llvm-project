@@ -22,8 +22,10 @@ llvm_map_components_to_libnames(libs
   ExecutionEngine
   GlobalISel
   MC
+  MCDisassembler
   MCJIT
   Object
+  ObjectYAML
   Support
   )
 

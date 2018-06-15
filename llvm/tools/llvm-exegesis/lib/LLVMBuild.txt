@@ -19,4 +19,4 @@
 type = Library
 name = Exegesis
 parent = Libraries
-required_libraries = CodeGen ExecutionEngine MC MCJIT Object Support
+required_libraries = CodeGen ExecutionEngine MC MCDisassembler MCJIT Object ObjectYAML Support

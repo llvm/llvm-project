@@ -1,5 +1,4 @@
-//===--------------------- RetireControlUnitStatistics.h ------------------*-
-//C++ -*-===//
+//===--------------------- RetireControlUnitStatistics.h --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

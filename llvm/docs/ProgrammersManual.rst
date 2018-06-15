@@ -3721,7 +3721,7 @@ Important Subclasses of the ``Instruction`` class
 
 * ``CmpInst``
 
-  This subclass respresents the two comparison instructions,
+  This subclass represents the two comparison instructions,
   `ICmpInst <LangRef.html#i_icmp>`_ (integer opreands), and
   `FCmpInst <LangRef.html#i_fcmp>`_ (floating point operands).
 
