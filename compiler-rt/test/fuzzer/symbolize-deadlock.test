@@ -1,2 +1,2 @@
 RUN: %cpp_compiler %S/SymbolizeDeadlock.cpp -o %t
-RUN: not %t -rss_limit_mb=20 2>&1
+RUN: not %run %t -rss_limit_mb=20 2>&1

@@ -147,7 +147,20 @@ function(add_llvm_symbol_exports target_name export_file)
   set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)
 endfunction(add_llvm_symbol_exports)
 
-if(NOT WIN32 AND NOT APPLE)
+if(APPLE)
+  execute_process(
+    COMMAND "${CMAKE_LINKER}" -v
+    ERROR_VARIABLE stderr
+    )
+  set(LLVM_LINKER_DETECTED ON)
+  if("${stderr}" MATCHES "PROJECT:ld64")
+    set(LLVM_LINKER_IS_LD64 ON)
+    message(STATUS "Linker detection: ld64")
+  else()
+    set(LLVM_LINKER_DETECTED OFF)
+    message(STATUS "Linker detection: unknown")
+  endif()
+elseif(NOT WIN32)
   # Detect what linker we have here
   if( LLVM_USE_LINKER )
     set(command ${CMAKE_C_COMPILER} -fuse-ld=${LLVM_USE_LINKER} -Wl,--version)

@@ -4013,8 +4013,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   }
 
   // Default to writing to stdout?
-  if (AtTopLevel && !CCGenDiagnostics &&
-      (isa<PreprocessJobAction>(JA) || JA.getType() == types::TY_ModuleFile))
+  if (AtTopLevel && !CCGenDiagnostics && isa<PreprocessJobAction>(JA))
     return "-";
 
   // Is this the assembly listing for /FA?

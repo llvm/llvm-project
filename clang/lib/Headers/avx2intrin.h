@@ -515,10 +515,10 @@ _mm256_sign_epi32(__m256i __a, __m256i __b)
 }
 
 #define _mm256_slli_si256(a, imm) \
-  (__m256i)__builtin_ia32_pslldqi256((__v4di)(__m256i)(a), (int)(imm) * 8)
+  (__m256i)__builtin_ia32_pslldqi256_byteshift((__v4di)(__m256i)(a), (int)(imm))
 
 #define _mm256_bslli_epi128(a, imm) \
-  (__m256i)__builtin_ia32_pslldqi256((__v4di)(__m256i)(a), (int)(imm) * 8)
+  (__m256i)__builtin_ia32_pslldqi256_byteshift((__v4di)(__m256i)(a), (int)(imm))
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_slli_epi16(__m256i __a, int __count)
@@ -581,10 +581,10 @@ _mm256_sra_epi32(__m256i __a, __m128i __count)
 }
 
 #define _mm256_srli_si256(a, imm) \
-  (__m256i)__builtin_ia32_psrldqi256((__m256i)(a), (int)(imm) * 8)
+  (__m256i)__builtin_ia32_psrldqi256_byteshift((__m256i)(a), (int)(imm))
 
 #define _mm256_bsrli_epi128(a, imm) \
-  (__m256i)__builtin_ia32_psrldqi256((__m256i)(a), (int)(imm) * 8)
+  (__m256i)__builtin_ia32_psrldqi256_byteshift((__m256i)(a), (int)(imm))
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_srli_epi16(__m256i __a, int __count)

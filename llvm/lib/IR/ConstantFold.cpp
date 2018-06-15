@@ -682,13 +682,8 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
       const APInt &api = CI->getValue();
       APFloat apf(DestTy->getFltSemantics(),
                   APInt::getNullValue(DestTy->getPrimitiveSizeInBits()));
-      if (APFloat::opOverflow &
-          apf.convertFromAPInt(api, opc==Instruction::SIToFP,
-                              APFloat::rmNearestTiesToEven)) {
-        // Undefined behavior invoked - the destination type can't represent
-        // the input constant.
-        return UndefValue::get(DestTy);
-      }
+      apf.convertFromAPInt(api, opc==Instruction::SIToFP,
+                           APFloat::rmNearestTiesToEven);
       return ConstantFP::get(V->getContext(), apf);
     }
     return nullptr;
