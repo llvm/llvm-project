@@ -771,6 +771,10 @@ public:
     unsigned EqOpc;
     switch (Op) {
       default: llvm_unreachable("Unexpected FP pseudo-opcode");
+      case ISD::STRICT_FADD: EqOpc = ISD::FADD; break;
+      case ISD::STRICT_FSUB: EqOpc = ISD::FSUB; break;
+      case ISD::STRICT_FMUL: EqOpc = ISD::FMUL; break;
+      case ISD::STRICT_FDIV: EqOpc = ISD::FDIV; break;
       case ISD::STRICT_FSQRT: EqOpc = ISD::FSQRT; break;
       case ISD::STRICT_FPOW: EqOpc = ISD::FPOW; break;
       case ISD::STRICT_FPOWI: EqOpc = ISD::FPOWI; break;

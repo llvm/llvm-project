@@ -293,6 +293,10 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   switch (Op.getOpcode()) {
   default:
     return TranslateLegalizeResults(Op, Result);
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
   case ISD::STRICT_FSQRT:
   case ISD::STRICT_FMA:
   case ISD::STRICT_FPOW:
@@ -725,9 +729,14 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
     return ExpandCTLZ(Op);
   case ISD::CTTZ_ZERO_UNDEF:
     return ExpandCTTZ_ZERO_UNDEF(Op);
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB: 
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
   case ISD::STRICT_FSQRT:
   case ISD::STRICT_FMA:
   case ISD::STRICT_FPOW:
+  case ISD::STRICT_FPOWI:
   case ISD::STRICT_FSIN:
   case ISD::STRICT_FCOS:
   case ISD::STRICT_FEXP:
@@ -1134,8 +1143,8 @@ SDValue VectorLegalizer::ExpandStrictFPOp(SDValue Op) {
   SDValue Chain = Op.getOperand(0);
   SDLoc dl(Op);
 
-  SmallVector<SDValue, 8> OpValues;
-  SmallVector<SDValue, 8> OpChains;
+  SmallVector<SDValue, 32> OpValues;
+  SmallVector<SDValue, 32> OpChains;
   for (unsigned i = 0; i < NumElems; ++i) {
     SmallVector<SDValue, 4> Opers;
     SDValue Idx = DAG.getConstant(i, dl, 
@@ -1146,8 +1155,13 @@ SDValue VectorLegalizer::ExpandStrictFPOp(SDValue Op) {
 
     // Now process the remaining operands. 
     for (unsigned j = 1; j < NumOpers; ++j) {
-      SDValue Oper = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, 
-                                 EltVT, Op.getOperand(j), Idx);
+      SDValue Oper = Op.getOperand(j);
+      EVT OperVT = Oper.getValueType();
+
+      if (OperVT.isVector())
+        Oper = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, 
+                           EltVT, Oper, Idx);
+
       Opers.push_back(Oper);
     }
  

@@ -1116,13 +1116,13 @@ __m256 test_mm256_shuffle_ps(__m256 A, __m256 B) {
 
 __m256d test_mm256_sqrt_pd(__m256d A) {
   // CHECK-LABEL: test_mm256_sqrt_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double> %{{.*}})
+  // CHECK: call <4 x double> @llvm.sqrt.v4f64(<4 x double> %{{.*}})
   return _mm256_sqrt_pd(A);
 }
 
 __m256 test_mm256_sqrt_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_sqrt_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float> %{{.*}})
+  // CHECK: call <8 x float> @llvm.sqrt.v8f32(<8 x float> %{{.*}})
   return _mm256_sqrt_ps(A);
 }
 

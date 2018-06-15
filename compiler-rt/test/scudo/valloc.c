@@ -1,6 +1,6 @@
 // RUN: %clang_scudo %s -o %t
 // RUN:                                                 %run %t valid   2>&1
-// RUN:                                             not %run %t invalid 2>&1
+// RUN:                                             not %run %t invalid 2>&1 | FileCheck %s
 // RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t invalid 2>&1
 // UNSUPPORTED: android
 
@@ -54,6 +54,7 @@ int main(int argc, char **argv)
   if (!strcmp(argv[1], "invalid")) {
     // Size passed to pvalloc overflows when rounded up.
     p = pvalloc((size_t)-1);
+    // CHECK: Scudo ERROR: pvalloc parameters overflow
     assert(!p);
     assert(errno == ENOMEM);
     errno = 0;

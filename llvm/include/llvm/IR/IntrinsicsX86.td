@@ -180,12 +180,6 @@ let TargetPrefix = "x86" in {
 
 // Arithmetic ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_sse_sqrt_ss : GCCBuiltin<"__builtin_ia32_sqrtss">,
-              Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty],
-                        [IntrNoMem]>;
-  def int_x86_sse_sqrt_ps : GCCBuiltin<"__builtin_ia32_sqrtps">,
-              Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty],
-                        [IntrNoMem]>;
   def int_x86_sse_rcp_ss : GCCBuiltin<"__builtin_ia32_rcpss">,
               Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty],
                         [IntrNoMem]>;
@@ -304,12 +298,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // FP arithmetic ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_sse2_sqrt_sd : GCCBuiltin<"__builtin_ia32_sqrtsd">,
-              Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty],
-                        [IntrNoMem]>;
-  def int_x86_sse2_sqrt_pd : GCCBuiltin<"__builtin_ia32_sqrtpd">,
-              Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty],
-                        [IntrNoMem]>;
   def int_x86_sse2_min_sd : GCCBuiltin<"__builtin_ia32_minsd">,
               Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty,
                          llvm_v2f64_ty], [IntrNoMem]>;
@@ -960,11 +948,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx_min_ps_256 : GCCBuiltin<"__builtin_ia32_minps256">,
         Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty,
                   llvm_v8f32_ty], [IntrNoMem]>;
-
-  def int_x86_avx_sqrt_pd_256 : GCCBuiltin<"__builtin_ia32_sqrtpd256">,
-        Intrinsic<[llvm_v4f64_ty], [llvm_v4f64_ty], [IntrNoMem]>;
-  def int_x86_avx_sqrt_ps_256 : GCCBuiltin<"__builtin_ia32_sqrtps256">,
-        Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty], [IntrNoMem]>;
 
   def int_x86_avx_rsqrt_ps_256 : GCCBuiltin<"__builtin_ia32_rsqrtps256">,
         Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty], [IntrNoMem]>;
@@ -3868,29 +3851,17 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           Intrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_v16f32_ty,
                     llvm_v16f32_ty, llvm_i16_ty, llvm_i32_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_sqrt_ss : GCCBuiltin<"__builtin_ia32_sqrtss_round_mask">,
+  def int_x86_avx512_mask_sqrt_ss :
         Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty,
                                     llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_sqrt_sd : GCCBuiltin<"__builtin_ia32_sqrtsd_round_mask">,
+  def int_x86_avx512_mask_sqrt_sd :
         Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v2f64_ty,
                                     llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_sqrt_pd_128 : GCCBuiltin<"__builtin_ia32_sqrtpd128_mask">,
-        Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
-                                    llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_sqrt_pd_256 : GCCBuiltin<"__builtin_ia32_sqrtpd256_mask">,
-        Intrinsic<[llvm_v4f64_ty], [llvm_v4f64_ty, llvm_v4f64_ty,
-                                    llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_sqrt_pd_512 : GCCBuiltin<"__builtin_ia32_sqrtpd512_mask">,
+  def int_x86_avx512_mask_sqrt_pd_512 :
         Intrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_v8f64_ty,
                                     llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_sqrt_ps_128 : GCCBuiltin<"__builtin_ia32_sqrtps128_mask">,
-        Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty,
-                                     llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_sqrt_ps_256 : GCCBuiltin<"__builtin_ia32_sqrtps256_mask">,
-        Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_v8f32_ty,
-                                     llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_sqrt_ps_512 : GCCBuiltin<"__builtin_ia32_sqrtps512_mask">,
+  def int_x86_avx512_mask_sqrt_ps_512 :
         Intrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_v16f32_ty,
                                      llvm_i16_ty, llvm_i32_ty], [IntrNoMem]>;
   def int_x86_avx512_mask_fixupimm_pd_128 :

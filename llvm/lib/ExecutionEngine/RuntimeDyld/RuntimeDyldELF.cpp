@@ -723,9 +723,11 @@ void RuntimeDyldELF::resolvePPC64Relocation(const SectionEntry &Section,
     writeInt16BE(LocalAddress, applyPPClo(Value + Addend) & ~3);
     break;
   case ELF::R_PPC64_ADDR16_HI:
+  case ELF::R_PPC64_ADDR16_HIGH:
     writeInt16BE(LocalAddress, applyPPChi(Value + Addend));
     break;
   case ELF::R_PPC64_ADDR16_HA:
+  case ELF::R_PPC64_ADDR16_HIGHA:
     writeInt16BE(LocalAddress, applyPPCha(Value + Addend));
     break;
   case ELF::R_PPC64_ADDR16_HIGHER:

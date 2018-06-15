@@ -66,15 +66,10 @@ define <2 x i16> @v_mul_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; VI: v_mul_lo_u16
 ; VI: v_mul_lo_u16
 
-; GFX9: v_and_b32
-; GFX9: v_and_b32
-; GFX9: v_lshl_or_b32
-; GFX9: v_lshl_or_b32
-; GFX9: v_lshl_or_b32
-
-; GFX9: v_pk_mul_lo_u16
-; GFX9: v_pk_mul_lo_u16
-; GFX9: s_setpc_b64
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_pk_mul_lo_u16
+; GFX9-NEXT: v_pk_mul_lo_u16
+; GFX9-NEXT: s_setpc_b64
 define <3 x i16> @v_mul_v3i16(<3 x i16> %a, <3 x i16> %b) {
   %r.val = mul <3 x i16> %a, %b
   ret <3 x i16> %r.val
@@ -94,8 +89,8 @@ define <3 x i16> @v_mul_v3i16(<3 x i16> %a, <3 x i16> %b) {
 ; VI: v_or_b32_e32
 
 ; GFX9: s_waitcnt
-; GFX9-NEXT: v_pk_mul_lo_u16 v0, v0, v2
 ; GFX9-NEXT: v_pk_mul_lo_u16 v1, v1, v3
+; GFX9-NEXT: v_pk_mul_lo_u16 v0, v0, v2
 ; GFX9-NEXT: s_setpc_b64
 define <4 x i16> @v_mul_v4i16(<4 x i16> %a, <4 x i16> %b) {
   %r.val = mul <4 x i16> %a, %b

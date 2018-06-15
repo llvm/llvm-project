@@ -1394,6 +1394,12 @@ ExtractModifierFromExpr(const MCExpr *E,
     case MCSymbolRefExpr::VK_PPC_HA:
       Variant = PPCMCExpr::VK_PPC_HA;
       break;
+    case MCSymbolRefExpr::VK_PPC_HIGH:
+      Variant = PPCMCExpr::VK_PPC_HIGH;
+      break;
+    case MCSymbolRefExpr::VK_PPC_HIGHA:
+      Variant = PPCMCExpr::VK_PPC_HIGHA;
+      break;
     case MCSymbolRefExpr::VK_PPC_HIGHER:
       Variant = PPCMCExpr::VK_PPC_HIGHER;
       break;
@@ -1973,6 +1979,10 @@ PPCAsmParser::applyModifierToExpr(const MCExpr *E,
     return PPCMCExpr::create(PPCMCExpr::VK_PPC_HI, E, false, Ctx);
   case MCSymbolRefExpr::VK_PPC_HA:
     return PPCMCExpr::create(PPCMCExpr::VK_PPC_HA, E, false, Ctx);
+  case MCSymbolRefExpr::VK_PPC_HIGH:
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGH, E, false, Ctx);
+  case MCSymbolRefExpr::VK_PPC_HIGHA:
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHA, E, false, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHER:
     return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHER, E, false, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHERA:

@@ -93,6 +93,10 @@ namespace llvm {
       return cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
     }
 
+    /// Get the size (in bits) of the variable, or fragment of the variable that
+    /// is described.
+    Optional<uint64_t> getFragmentSizeInBits() const;
+
     /// \name Casting methods
     /// @{
     static bool classof(const IntrinsicInst *I) {

@@ -1,6 +1,6 @@
 // RUN: %clang_scudo %s -o %t
 // RUN:                                                 %run %t valid       2>&1
-// RUN:                                             not %run %t invalid     2>&1
+// RUN:                                             not %run %t invalid     2>&1 | FileCheck --check-prefix=CHECK-align %s
 // RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t invalid     2>&1
 // RUN:                                             not %run %t double-free 2>&1 | FileCheck --check-prefix=CHECK-double-free %s
 // RUN: %env_scudo_opts=DeallocationTypeMismatch=1  not %run %t realloc     2>&1 | FileCheck --check-prefix=CHECK-realloc %s
@@ -66,6 +66,7 @@ int main(int argc, char **argv)
   if (!strcmp(argv[1], "invalid")) {
     // Alignment is not a power of 2.
     p = memalign(alignment - 1, size);
+    // CHECK-align: Scudo ERROR: invalid allocation alignment
     assert(!p);
     // Size is not a multiple of alignment.
     p = aligned_alloc(alignment, size >> 1);

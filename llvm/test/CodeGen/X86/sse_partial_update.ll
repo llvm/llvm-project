@@ -54,9 +54,10 @@ declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
 define void @sqrtss(<4 x float> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: sqrtss:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    sqrtss %xmm0, %xmm0
-; CHECK-NEXT:    cvtss2sd %xmm0, %xmm2
+; CHECK-NEXT:    sqrtss %xmm0, %xmm1
+; CHECK-NEXT:    cvtss2sd %xmm1, %xmm2
 ; CHECK-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    cvtss2sd %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm2, %xmm0
 ; CHECK-NEXT:    jmp _callee ## TAILCALL
@@ -75,9 +76,10 @@ declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
 define void @sqrtsd(<2 x double> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: sqrtsd:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    sqrtsd %xmm0, %xmm0
-; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm2
+; CHECK-NEXT:    sqrtsd %xmm0, %xmm1
+; CHECK-NEXT:    cvtsd2ss %xmm1, %xmm2
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm2, %xmm0
 ; CHECK-NEXT:    jmp _callee2 ## TAILCALL

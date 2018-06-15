@@ -292,9 +292,8 @@ define <2 x i16> @v2i16_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v3i16_func_void:
 ; GFX9: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off
-; GFX9: s_waitcnt vmcnt(0)
-; GFX9: v_lshrrev_b32
-; GFX9: s_setpc_b64
+; GFX9-NEXT: s_waitcnt vmcnt(0)
+; GFX9-NEXT: s_setpc_b64
 define <3 x i16> @v3i16_func_void() #0 {
   %val = load <3 x i16>, <3 x i16> addrspace(1)* undef
   ret <3 x i16> %val

@@ -8916,12 +8916,18 @@ static bool shouldPreventUndefRegUpdateMemFold(MachineFunction &MF, MachineInstr
   if (MF.getFunction().optForSize() || !hasUndefRegUpdate(MI.getOpcode()) ||
       !MI.getOperand(1).isReg())
     return false;
- 
+
+  // The are two cases we need to handle depending on where in the pipeline
+  // the folding attempt is being made.
+  // -Register has the undef flag set.
+  // -Register is produced by the IMPLICIT_DEF instruction.
+
+  if (MI.getOperand(1).isUndef())
+    return true;
+
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   MachineInstr *VRegDef = RegInfo.getUniqueVRegDef(MI.getOperand(1).getReg());
-  if (VRegDef == nullptr)
-    return false;
-  return VRegDef->isImplicitDef();
+  return VRegDef && VRegDef->isImplicitDef();
 }
 
 

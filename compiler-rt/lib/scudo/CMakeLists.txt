@@ -36,6 +36,7 @@ endif()
 set(SCUDO_SOURCES
   scudo_allocator.cpp
   scudo_crc32.cpp
+  scudo_errors.cpp
   scudo_flags.cpp
   scudo_malloc.cpp
   scudo_termination.cpp

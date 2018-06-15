@@ -210,6 +210,8 @@ static DecodeStatus DecodeSImm(llvm::MCInst &Inst, uint64_t Imm,
 template <int ElementWidth>
 static DecodeStatus DecodeImm8OptLsl(MCInst &Inst, unsigned Imm,
                                      uint64_t Addr, const void *Decoder);
+static DecodeStatus DecodeSVEIncDecImm(MCInst &Inst, unsigned Imm,
+                                       uint64_t Addr, const void *Decoder);
 
 static bool Check(DecodeStatus &Out, DecodeStatus In) {
   switch (In) {
@@ -1789,5 +1791,12 @@ static DecodeStatus DecodeImm8OptLsl(MCInst &Inst, unsigned Imm,
     return Fail;
   Inst.addOperand(MCOperand::createImm(Val));
   Inst.addOperand(MCOperand::createImm(Shift));
+  return Success;
+}
+
+// Decode uimm4 ranged from 1-16.
+static DecodeStatus DecodeSVEIncDecImm(MCInst &Inst, unsigned Imm,
+                                       uint64_t Addr, const void *Decoder) {
+  Inst.addOperand(MCOperand::createImm(Imm + 1));
   return Success;
 }
