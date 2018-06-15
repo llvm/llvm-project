@@ -21,4 +21,4 @@
 type = OptionalLibrary
 name = OProfileJIT
 parent = ExecutionEngine
-required_libraries = Support Object ExecutionEngine
+required_libraries = DebugInfoDWARF Support Object ExecutionEngine

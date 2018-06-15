@@ -180,6 +180,7 @@ static void analysisMain() {
 
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
+  llvm::InitializeNativeTargetDisassembler();
   // Read benchmarks.
   const LLVMState State;
   const std::vector<InstructionBenchmark> Points =

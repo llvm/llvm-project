@@ -56,6 +56,10 @@ private:
 /// \brief This manages symbls from files and an in-memory index on all symbols.
 class FileIndex : public SymbolIndex {
 public:
+  /// If URISchemes is empty, the default schemes in SymbolCollector will be
+  /// used.
+  FileIndex(std::vector<std::string> URISchemes = {});
+
   /// \brief Update symbols in \p Path with symbols in \p AST. If \p AST is
   /// nullptr, this removes all symbols in the file.
   /// If \p AST is not null, \p PP cannot be null and it should be the
@@ -72,11 +76,14 @@ public:
 private:
   FileSymbols FSymbols;
   MemIndex Index;
+  std::vector<std::string> URISchemes;
 };
 
 /// Retrieves namespace and class level symbols in \p AST.
 /// Exposed to assist in unit tests.
-SymbolSlab indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP);
+/// If URISchemes is empty, the default schemes in SymbolCollector will be used.
+SymbolSlab indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
+                    llvm::ArrayRef<std::string> URISchemes = {});
 
 } // namespace clangd
 } // namespace clang

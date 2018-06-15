@@ -275,6 +275,12 @@ void ASTUnit::setPreprocessor(std::shared_ptr<Preprocessor> PP) {
   this->PP = std::move(PP);
 }
 
+void ASTUnit::enableSourceFileDiagnostics() {
+  assert(getDiagnostics().getClient() && Ctx &&
+      "Bad context for source file");
+  getDiagnostics().getClient()->BeginSourceFile(Ctx->getLangOpts(), PP.get());
+}
+
 /// Determine the set of code-completion contexts in which this
 /// declaration should be shown.
 static unsigned getDeclShowContexts(const NamedDecl *ND,

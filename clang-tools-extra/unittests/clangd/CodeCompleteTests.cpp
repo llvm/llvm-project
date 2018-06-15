@@ -1100,6 +1100,65 @@ TEST(CompletionTest, DocumentationFromChangedFileCrash) {
               Contains(AllOf(Not(IsDocumented()), Named("func"))));
 }
 
+TEST(CompletionTest, NonDocComments) {
+  MockFSProvider FS;
+  auto FooCpp = testPath("foo.cpp");
+  FS.Files[FooCpp] = "";
+
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  Annotations Source(R"cpp(
+    // ------------------
+    int comments_foo();
+
+    // A comment and a decl are separated by newlines.
+    // Therefore, the comment shouldn't show up as doc comment.
+
+    int comments_bar();
+
+    // this comment should be in the results.
+    int comments_baz();
+
+
+    template <class T>
+    struct Struct {
+      int comments_qux();
+      int comments_quux();
+    };
+
+
+    // This comment should not be there.
+
+    template <class T>
+    int Struct<T>::comments_qux() {
+    }
+
+    // This comment **should** be in results.
+    template <class T>
+    int Struct<T>::comments_quux() {
+      int a = comments^;
+    }
+  )cpp");
+  Server.addDocument(FooCpp, Source.code(), WantDiagnostics::Yes);
+  CompletionList Completions = cantFail(runCodeComplete(
+      Server, FooCpp, Source.point(), clangd::CodeCompleteOptions()));
+
+  // We should not get any of those comments in completion.
+  EXPECT_THAT(
+      Completions.items,
+      UnorderedElementsAre(AllOf(Not(IsDocumented()), Named("comments_foo")),
+                           AllOf(IsDocumented(), Named("comments_baz")),
+                           AllOf(IsDocumented(), Named("comments_quux")),
+                           // FIXME(ibiryukov): the following items should have
+                           // empty documentation, since they are separated from
+                           // a comment with an empty line. Unfortunately, I
+                           // couldn't make Sema tests pass if we ignore those.
+                           AllOf(IsDocumented(), Named("comments_bar")),
+                           AllOf(IsDocumented(), Named("comments_qux"))));
+}
+
 TEST(CompletionTest, CompleteOnInvalidLine) {
   auto FooCpp = testPath("foo.cpp");
 

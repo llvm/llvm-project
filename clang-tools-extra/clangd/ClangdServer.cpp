@@ -87,7 +87,8 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
       ResourceDir(Opts.ResourceDir ? Opts.ResourceDir->str()
                                    : getStandardResourceDir()),
-      FileIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
+      FileIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex(Opts.URISchemes)
+                                           : nullptr),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST

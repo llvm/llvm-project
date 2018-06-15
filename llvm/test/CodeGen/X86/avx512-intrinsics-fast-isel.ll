@@ -1798,8 +1798,7 @@ entry:
 define <2 x double> @test_mm_cvtu32_sd(<2 x double> %__A, i32 %__B) {
 ; X86-LABEL: test_mm_cvtu32_sd:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtusi2sdl %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtusi2sdl {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtu32_sd:
@@ -1836,8 +1835,7 @@ entry:
 define <4 x float> @test_mm_cvtu32_ss(<4 x float> %__A, i32 %__B) {
 ; X86-LABEL: test_mm_cvtu32_ss:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtusi2ssl %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtusi2ssl {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtu32_ss:
@@ -2563,12 +2561,12 @@ entry:
   ret <8 x i64> %2
 }
 define <4 x float> @test_mm_mask_add_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
-; X32-LABEL: test_mm_mask_add_ss:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vaddss %xmm2, %xmm1, %xmm0 {%k1}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_mask_add_ss:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vaddss %xmm2, %xmm1, %xmm0 {%k1}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_add_ss:
 ; X64:       # %bb.0: # %entry
@@ -2588,12 +2586,12 @@ entry:
 }
 
 define <4 x float> @test_mm_maskz_add_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
-; X32-LABEL: test_mm_maskz_add_ss:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vaddss %xmm1, %xmm0, %xmm0 {%k1} {z}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_maskz_add_ss:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vaddss %xmm1, %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_add_ss:
 ; X64:       # %bb.0: # %entry
@@ -2612,12 +2610,12 @@ entry:
 }
 
 define <2 x double> @test_mm_mask_add_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
-; X32-LABEL: test_mm_mask_add_sd:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vaddsd %xmm2, %xmm1, %xmm0 {%k1}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_mask_add_sd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vaddsd %xmm2, %xmm1, %xmm0 {%k1}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_add_sd:
 ; X64:       # %bb.0: # %entry
@@ -2637,12 +2635,12 @@ entry:
 }
 
 define <2 x double> @test_mm_maskz_add_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
-; X32-LABEL: test_mm_maskz_add_sd:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 {%k1} {z}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_maskz_add_sd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_add_sd:
 ; X64:       # %bb.0: # %entry
@@ -2661,12 +2659,12 @@ entry:
 }
 
 define <4 x float> @test_mm_mask_sub_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
-; X32-LABEL: test_mm_mask_sub_ss:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vsubss %xmm2, %xmm1, %xmm0 {%k1}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_mask_sub_ss:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vsubss %xmm2, %xmm1, %xmm0 {%k1}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_sub_ss:
 ; X64:       # %bb.0: # %entry
@@ -2686,12 +2684,12 @@ entry:
 }
 
 define <4 x float> @test_mm_maskz_sub_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
-; X32-LABEL: test_mm_maskz_sub_ss:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vsubss %xmm1, %xmm0, %xmm0 {%k1} {z}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_maskz_sub_ss:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vsubss %xmm1, %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_sub_ss:
 ; X64:       # %bb.0: # %entry
@@ -2710,12 +2708,12 @@ entry:
 }
 
 define <2 x double> @test_mm_mask_sub_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
-; X32-LABEL: test_mm_mask_sub_sd:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vsubsd %xmm2, %xmm1, %xmm0 {%k1}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_mask_sub_sd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vsubsd %xmm2, %xmm1, %xmm0 {%k1}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_sub_sd:
 ; X64:       # %bb.0: # %entry
@@ -2735,12 +2733,12 @@ entry:
 }
 
 define <2 x double> @test_mm_maskz_sub_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
-; X32-LABEL: test_mm_maskz_sub_sd:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vsubsd %xmm1, %xmm0, %xmm0 {%k1} {z}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_maskz_sub_sd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vsubsd %xmm1, %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_sub_sd:
 ; X64:       # %bb.0: # %entry
@@ -2759,12 +2757,12 @@ entry:
 }
 
 define <4 x float> @test_mm_mask_mul_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
-; X32-LABEL: test_mm_mask_mul_ss:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vmulss %xmm2, %xmm1, %xmm0 {%k1}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_mask_mul_ss:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vmulss %xmm2, %xmm1, %xmm0 {%k1}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_mul_ss:
 ; X64:       # %bb.0: # %entry
@@ -2784,12 +2782,12 @@ entry:
 }
 
 define <4 x float> @test_mm_maskz_mul_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
-; X32-LABEL: test_mm_maskz_mul_ss:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vmulss %xmm1, %xmm0, %xmm0 {%k1} {z}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_maskz_mul_ss:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vmulss %xmm1, %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_mul_ss:
 ; X64:       # %bb.0: # %entry
@@ -2808,12 +2806,12 @@ entry:
 }
 
 define <2 x double> @test_mm_mask_mul_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
-; X32-LABEL: test_mm_mask_mul_sd:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vmulsd %xmm2, %xmm1, %xmm0 {%k1}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_mask_mul_sd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vmulsd %xmm2, %xmm1, %xmm0 {%k1}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_mul_sd:
 ; X64:       # %bb.0: # %entry
@@ -2833,12 +2831,12 @@ entry:
 }
 
 define <2 x double> @test_mm_maskz_mul_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
-; X32-LABEL: test_mm_maskz_mul_sd:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vmulsd %xmm1, %xmm0, %xmm0 {%k1} {z}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_maskz_mul_sd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vmulsd %xmm1, %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_mul_sd:
 ; X64:       # %bb.0: # %entry
@@ -2857,12 +2855,12 @@ entry:
 }
 
 define <4 x float> @test_mm_mask_div_ss(<4 x float> %__W, i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
-; X32-LABEL: test_mm_mask_div_ss:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vdivss %xmm2, %xmm1, %xmm0 {%k1}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_mask_div_ss:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vdivss %xmm2, %xmm1, %xmm0 {%k1}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_div_ss:
 ; X64:       # %bb.0: # %entry
@@ -2882,12 +2880,12 @@ entry:
 }
 
 define <4 x float> @test_mm_maskz_div_ss(i8 zeroext %__U, <4 x float> %__A, <4 x float> %__B) {
-; X32-LABEL: test_mm_maskz_div_ss:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vdivss %xmm1, %xmm0, %xmm0 {%k1} {z}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_maskz_div_ss:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vdivss %xmm1, %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_div_ss:
 ; X64:       # %bb.0: # %entry
@@ -2906,12 +2904,12 @@ entry:
 }
 
 define <2 x double> @test_mm_mask_div_sd(<2 x double> %__W, i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
-; X32-LABEL: test_mm_mask_div_sd:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vdivsd %xmm2, %xmm1, %xmm0 {%k1}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_mask_div_sd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vdivsd %xmm2, %xmm1, %xmm0 {%k1}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_div_sd:
 ; X64:       # %bb.0: # %entry
@@ -2931,12 +2929,12 @@ entry:
 }
 
 define <2 x double> @test_mm_maskz_div_sd(i8 zeroext %__U, <2 x double> %__A, <2 x double> %__B) {
-; X32-LABEL: test_mm_maskz_div_sd:
-; X32:       # %bb.0: # %entry
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vdivsd %xmm1, %xmm0, %xmm0 {%k1} {z}
-; X32-NEXT:    retl
+; X86-LABEL: test_mm_maskz_div_sd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vdivsd %xmm1, %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_div_sd:
 ; X64:       # %bb.0: # %entry

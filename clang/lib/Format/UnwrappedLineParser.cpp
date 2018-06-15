@@ -83,6 +83,8 @@ public:
       : Line(Line), TokenSource(TokenSource), ResetToken(ResetToken),
         PreviousLineLevel(Line.Level), PreviousTokenSource(TokenSource),
         Token(nullptr), PreviousToken(nullptr) {
+    FakeEOF.Tok.startToken();
+    FakeEOF.Tok.setKind(tok::eof);
     TokenSource = this;
     Line.Level = 0;
     Line.InPPDirective = true;
@@ -102,7 +104,7 @@ public:
     PreviousToken = Token;
     Token = PreviousTokenSource->getNextToken();
     if (eof())
-      return getFakeEOF();
+      return &FakeEOF;
     return Token;
   }
 
@@ -121,17 +123,7 @@ private:
                                  /*MinColumnToken=*/PreviousToken);
   }
 
-  FormatToken *getFakeEOF() {
-    static bool EOFInitialized = false;
-    static FormatToken FormatTok;
-    if (!EOFInitialized) {
-      FormatTok.Tok.startToken();
-      FormatTok.Tok.setKind(tok::eof);
-      EOFInitialized = true;
-    }
-    return &FormatTok;
-  }
-
+  FormatToken FakeEOF;
   UnwrappedLine &Line;
   FormatTokenSource *&TokenSource;
   FormatToken *&ResetToken;

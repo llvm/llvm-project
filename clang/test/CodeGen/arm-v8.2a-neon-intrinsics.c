@@ -164,6 +164,13 @@ int16x4_t test_vcvta_s16_f16 (float16x4_t a) {
   return vcvta_s16_f16(a);
 }
 
+// CHECK-LABEL: test_vcvta_u16_f16
+// CHECK:  [[VCVT:%.*]] = call <4 x i16> @llvm.arm.neon.vcvtau.v4i16.v4f16(<4 x half> %a)
+// CHECK:  ret <4 x i16> [[VCVT]]
+int16x4_t test_vcvta_u16_f16 (float16x4_t a) {
+   return vcvta_u16_f16(a);
+}
+
 // CHECK-LABEL: test_vcvtaq_s16_f16
 // CHECK:  [[VCVT:%.*]] = call <8 x i16> @llvm.arm.neon.vcvtas.v8i16.v8f16(<8 x half> %a)
 // CHECK:  ret <8 x i16> [[VCVT]]

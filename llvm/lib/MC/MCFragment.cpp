@@ -189,7 +189,7 @@ uint64_t MCAsmLayout::getSectionFileSize(const MCSection *Sec) const {
 }
 
 uint64_t llvm::computeBundlePadding(const MCAssembler &Assembler,
-                                    const MCFragment *F,
+                                    const MCEncodedFragment *F,
                                     uint64_t FOffset, uint64_t FSize) {
   uint64_t BundleSize = Assembler.getBundleAlignSize();
   assert(BundleSize > 0 &&
@@ -236,10 +236,9 @@ void ilist_alloc_traits<MCFragment>::deleteNode(MCFragment *V) { V->destroy(); }
 MCFragment::~MCFragment() = default;
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
-                       uint8_t BundlePadding, MCSection *Parent)
-    : Kind(Kind), HasInstructions(HasInstructions), AlignToBundleEnd(false),
-      BundlePadding(BundlePadding), Parent(Parent), Atom(nullptr),
-      Offset(~UINT64_C(0)) {
+                       MCSection *Parent)
+    : Kind(Kind), HasInstructions(HasInstructions), Parent(Parent),
+      Atom(nullptr), Offset(~UINT64_C(0)) {
   if (Parent && !isDummy())
     Parent->getFragmentList().push_back(this);
 }
@@ -333,10 +332,11 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_Dummy: OS << "MCDummyFragment"; break;
   }
 
-  OS << "<MCFragment " << (const void*) this << " LayoutOrder:" << LayoutOrder
-     << " Offset:" << Offset
-     << " HasInstructions:" << hasInstructions()
-     << " BundlePadding:" << static_cast<unsigned>(getBundlePadding()) << ">";
+  OS << "<MCFragment " << (const void *)this << " LayoutOrder:" << LayoutOrder
+     << " Offset:" << Offset << " HasInstructions:" << hasInstructions();
+  if (const MCEncodedFragment *EF = cast<MCEncodedFragment>(this))
+    OS << " BundlePadding:" << static_cast<unsigned>(EF->getBundlePadding());
+  OS << ">";
 
   switch (getKind()) {
   case MCFragment::FT_Align: {

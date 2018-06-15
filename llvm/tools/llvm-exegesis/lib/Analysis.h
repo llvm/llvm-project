@@ -16,11 +16,16 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_ANALYSIS_H
 
 #include "Clustering.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -48,7 +53,7 @@ private:
     SchedClass(const llvm::MCSchedClassDesc &SD,
                const llvm::MCSubtargetInfo &STI);
 
-    const llvm::MCSchedClassDesc &SCDesc;
+    const llvm::MCSchedClassDesc *const SCDesc;
     const llvm::SmallVector<llvm::MCWriteProcResEntry, 8>
         NonRedundantWriteProcRes;
     const std::vector<std::pair<uint16_t, float>> IdealizedProcResPressure;
@@ -97,10 +102,19 @@ private:
   std::unordered_map<unsigned, std::vector<size_t>>
   makePointsPerSchedClass() const;
 
+  template <typename EscapeTag, EscapeTag Tag>
+  void writeSnippet(llvm::raw_ostream &OS, llvm::ArrayRef<uint8_t> Bytes,
+                    const char *Separator) const;
+
   const InstructionBenchmarkClustering &Clustering_;
+  llvm::MCObjectFileInfo ObjectFileInfo_;
+  std::unique_ptr<llvm::MCContext> Context_;
   std::unique_ptr<llvm::MCSubtargetInfo> SubtargetInfo_;
   std::unique_ptr<llvm::MCInstrInfo> InstrInfo_;
-  std::unordered_map<std::string, unsigned> MnemonicToOpcode_;
+  std::unique_ptr<llvm::MCRegisterInfo> RegInfo_;
+  std::unique_ptr<llvm::MCAsmInfo> AsmInfo_;
+  std::unique_ptr<llvm::MCInstPrinter> InstPrinter_;
+  std::unique_ptr<llvm::MCDisassembler> Disasm_;
 };
 
 // Computes the idealized ProcRes Unit pressure. This is the expected

@@ -811,6 +811,15 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
       return &I;
     }
   }
+
+  // Transform  (x << y) >> y  to  x & (-1 >> y)
+  Value *X;
+  if (match(Op0, m_OneUse(m_Shl(m_Value(X), m_Specific(Op1))))) {
+    Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
+    Value *Mask = Builder.CreateLShr(AllOnes, Op1);
+    return BinaryOperator::CreateAnd(Mask, X);
+  }
+
   return nullptr;
 }
 

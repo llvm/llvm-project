@@ -205,14 +205,14 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   case X86::VRNDSCALEPDZ256rmi:
   case X86::VRNDSCALEPSZ256rri:
   case X86::VRNDSCALEPSZ256rmi:
-  case X86::VRNDSCALESDr:
-  case X86::VRNDSCALESDm:
-  case X86::VRNDSCALESSr:
-  case X86::VRNDSCALESSm:
-  case X86::VRNDSCALESDr_Int:
-  case X86::VRNDSCALESDm_Int:
-  case X86::VRNDSCALESSr_Int:
-  case X86::VRNDSCALESSm_Int:
+  case X86::VRNDSCALESDZr:
+  case X86::VRNDSCALESDZm:
+  case X86::VRNDSCALESSZr:
+  case X86::VRNDSCALESSZm:
+  case X86::VRNDSCALESDZr_Int:
+  case X86::VRNDSCALESDZm_Int:
+  case X86::VRNDSCALESSZr_Int:
+  case X86::VRNDSCALESSZm_Int:
     const MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands()-1);
     int64_t ImmVal = Imm.getImm();
     // Ensure that only bits 3:0 of the immediate are used.

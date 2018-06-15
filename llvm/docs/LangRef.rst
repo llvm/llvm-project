@@ -1703,10 +1703,10 @@ example:
     the ELF x86-64 abi, but it can be disabled for some compilation
     units.
 ``nocf_check``
-    This attribute indicates that no control-flow check will be perfomed on
+    This attribute indicates that no control-flow check will be performed on
     the attributed entity. It disables -fcf-protection=<> for a specific
     entity to fine grain the HW control flow protection mechanism. The flag
-    is target independant and currently appertains to a function or function
+    is target independent and currently appertains to a function or function
     pointer.
 ``shadowcallstack``
     This attribute indicates that the ShadowCallStack checks are enabled for
