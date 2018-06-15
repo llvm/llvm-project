@@ -7713,7 +7713,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration ]\nthen\n    if [ \"${DEBUGSERVER_USE_FROM_SYSTEM}\" == \"\" ]\n    then\n        if [ \"${DEBUGSERVER_DISABLE_CODESIGN}\" == \"\" ]\n        then\n            codesign -f -s lldb_codesign \"${TARGET_BUILD_DIR}/${TARGET_NAME}\"\n        fi\n    fi\nfi\n";
+			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration ]\nthen\n    if [ \"${DEBUGSERVER_USE_FROM_SYSTEM}\" == \"\" ]\n    then\n        if [ \"${DEBUGSERVER_DISABLE_CODESIGN}\" == \"\" ]\n        then\n            codesign -f -s lldb_codesign --entitlements ${SRCROOT}/resources/debugserver-macosx-entitlements.plist \"${TARGET_BUILD_DIR}/${TARGET_NAME}\"\n        fi\n    fi\nfi\n";
 		};
 		4C848E0918D289FD00EC6DD0 /* Install Clang compiler headers */ = {
 			isa = PBXShellScriptBuildPhase;
