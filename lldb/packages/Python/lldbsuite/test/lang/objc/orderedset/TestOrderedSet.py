@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 class TestOrderedSet(TestBase):
   mydir = TestBase.compute_mydir(__file__)
 
+  @skipUnlessDarwin
   def test_ordered_set(self):
     self.build()
     src_file = "main.m"
