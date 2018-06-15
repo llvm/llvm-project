@@ -19,6 +19,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include <string>
+#include <tuple>
 
 namespace clang {
 namespace format {
@@ -158,11 +159,16 @@ public:
     const Change *StartOfBlockComment;
     int IndentationOffset;
 
-    // A combination of indent level and nesting level, which are used in
-    // tandem to compute lexical scope, for the purposes of deciding
+    // Depth of conditionals. Computed from tracking fake parenthesis, except
+    // it does not increase the indent for "chained" conditionals.
+    int ConditionalsLevel;
+
+    // A combination of indent, nesting and conditionals levels, which are used
+    // in tandem to compute lexical scope, for the purposes of deciding
     // when to stop consecutive alignment runs.
-    std::pair<unsigned, unsigned> indentAndNestingLevel() const {
-      return std::make_pair(Tok->IndentLevel, Tok->NestingLevel);
+    std::tuple<unsigned, unsigned, unsigned> indentAndNestingLevel() const {
+      return std::make_tuple(Tok->IndentLevel, Tok->NestingLevel,
+                             ConditionalsLevel);
     }
   };
 
@@ -180,6 +186,9 @@ private:
 
   /// Align consecutive declarations over all \c Changes.
   void alignConsecutiveDeclarations();
+
+  /// Align consecutive declarations over all \c Changes.
+  void alignChainedConditionals();
 
   /// Align trailing comments over all \c Changes.
   void alignTrailingComments();
