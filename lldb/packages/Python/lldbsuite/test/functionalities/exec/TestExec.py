@@ -41,29 +41,20 @@ class ExecTestCase(TestBase):
         self.do_test(True)
 
     def do_test(self, skip_exec):
+        self.build()
         exe = self.getBuildArtifact("a.out")
-        if self.getArchitecture() == 'x86_64':
-            source = self.getSourcePath("main.cpp")
-            o_file = self.getBuildArtifact("main.o")
-            execute_command(
-                "'%s' -g -O0 -arch i386 -arch x86_64 '%s' -c -o '%s'" %
-                (os.environ["CC"], source, o_file))
-            execute_command(
-                "'%s' -g -O0 -arch i386 -arch x86_64 '%s' -o '%s'" %
-                (os.environ["CC"], o_file, exe))
-            if self.getDebugInfo() != "dsym":
-                dsym_path = self.getBuildArtifact("a.out.dSYM")
-                execute_command("rm -rf '%s'" % (dsym_path))
-        else:
-            self.build()
+        secondprog = self.getBuildArtifact("secondprog")
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
 
         # Create any breakpoints we need
-        breakpoint = target.BreakpointCreateBySourceRegex(
+        breakpoint1 = target.BreakpointCreateBySourceRegex(
             'Set breakpoint 1 here', lldb.SBFileSpec("main.cpp", False))
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
+        self.assertTrue(breakpoint1, VALID_BREAKPOINT)
+        breakpoint2 = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint 2 here', lldb.SBFileSpec("secondprog.cpp", False))
+        self.assertTrue(breakpoint2, VALID_BREAKPOINT)
 
         # Launch the process
         process = target.LaunchSimple(
@@ -79,50 +70,48 @@ class ExecTestCase(TestBase):
             # Execute the cleanup function during test case tear down.
             self.addTearDownHook(cleanup)
 
-            
-        for i in range(6):
-            # The stop reason of the thread should be breakpoint.
+        # The stop reason of the thread should be breakpoint.
+        self.assertTrue(process.GetState() == lldb.eStateStopped,
+                        STOPPED_DUE_TO_BREAKPOINT)
+
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+        process, breakpoint1)
+        self.assertTrue(len(threads) == 1)
+
+        # We had a deadlock tearing down the TypeSystemMap on exec, but only if some
+        # expression had been evaluated.  So make sure we do that here so the teardown
+        # is not trivial.
+
+        thread = threads[0]
+        value = thread.frames[0].EvaluateExpression("1 + 2")
+        self.assertTrue(
+            value.IsValid(),
+            "Expression evaluated successfully")
+        int_value = value.GetValueAsSigned()
+        self.assertTrue(int_value == 3, "Expression got the right result.")
+
+        # Run and we should stop due to exec
+        process.Continue()
+
+        if not skip_exec:
             self.assertTrue(process.GetState() == lldb.eStateStopped,
-                            STOPPED_DUE_TO_BREAKPOINT)
-
-            threads = lldbutil.get_threads_stopped_at_breakpoint(
-                process, breakpoint)
-            self.assertTrue(len(threads) == 1)
-
-            # We had a deadlock tearing down the TypeSystemMap on exec, but only if some
-            # expression had been evaluated.  So make sure we do that here so the teardown
-            # is not trivial.
-
-            thread = threads[0]
-            value = thread.frames[0].EvaluateExpression("1 + 2")
+                            "Process should be stopped at __dyld_start")
+            
+            threads = lldbutil.get_stopped_threads(
+                process, lldb.eStopReasonExec)
             self.assertTrue(
-                value.IsValid(),
-                "Expression evaluated successfully")
-            int_value = value.GetValueAsSigned()
-            self.assertTrue(int_value == 3, "Expression got the right result.")
+                len(threads) == 1,
+                "We got a thread stopped for exec.")
 
-            # Run and we should stop due to exec
+            # Run and we should stop at breakpoint in main after exec
             process.Continue()
 
-            if not skip_exec:
-                self.assertTrue(process.GetState() == lldb.eStateStopped,
-                                "Process should be stopped at __dyld_start")
-                
-                threads = lldbutil.get_stopped_threads(
-                    process, lldb.eStopReasonExec)
-                self.assertTrue(
-                    len(threads) == 1,
-                    "We got a thread stopped for exec.")
-
-                # Run and we should stop at breakpoint in main after exec
-                process.Continue()
-
-            threads = lldbutil.get_threads_stopped_at_breakpoint(
-                process, breakpoint)
-            if self.TraceOn():
-                for t in process.threads:
-                    print(t)
-                    if t.GetStopReason() != lldb.eStopReasonBreakpoint:
-                        self.runCmd("bt")
-            self.assertTrue(len(threads) == 1,
-                            "Stopped at breakpoint in exec'ed process.")
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint2)
+        if self.TraceOn():
+            for t in process.threads:
+                print(t)
+                if t.GetStopReason() != lldb.eStopReasonBreakpoint:
+                    self.runCmd("bt")
+        self.assertTrue(len(threads) == 1,
+                        "Stopped at breakpoint in exec'ed process.")

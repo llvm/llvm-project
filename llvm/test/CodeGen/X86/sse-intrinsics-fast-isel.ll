@@ -690,16 +690,10 @@ define <4 x float> @test_mm_cvtsi32_ss(<4 x float> %a0, i32 %a1) nounwind {
 ; X86-SSE-NEXT:    cvtsi2ssl {{[0-9]+}}(%esp), %xmm0
 ; X86-SSE-NEXT:    retl
 ;
-; X86-AVX1-LABEL: test_mm_cvtsi32_ss:
-; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vcvtsi2ssl {{[0-9]+}}(%esp), %xmm0, %xmm0
-; X86-AVX1-NEXT:    retl
-;
-; X86-AVX512-LABEL: test_mm_cvtsi32_ss:
-; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    vcvtsi2ssl %eax, %xmm0, %xmm0
-; X86-AVX512-NEXT:    retl
+; X86-AVX-LABEL: test_mm_cvtsi32_ss:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vcvtsi2ssl {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test_mm_cvtsi32_ss:
 ; X64-SSE:       # %bb.0:
@@ -2081,10 +2075,10 @@ define <4 x float> @test_mm_sqrt_ps(<4 x float> %a0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtps %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
-  %res = call <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float> %a0)
+  %res = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %a0)
   ret <4 x float> %res
 }
-declare <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float>) nounwind readnone
+declare <4 x float> @llvm.sqrt.v4f32(<4 x float>) nounwind readnone
 
 define <4 x float> @test_mm_sqrt_ss(<4 x float> %a0) {
 ; SSE-LABEL: test_mm_sqrt_ss:
@@ -2096,10 +2090,12 @@ define <4 x float> @test_mm_sqrt_ss(<4 x float> %a0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
-  %sqrt = call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %a0)
-  ret <4 x float> %sqrt
+  %ext = extractelement <4 x float> %a0, i32 0
+  %sqrt = call float @llvm.sqrt.f32(float %ext)
+  %ins = insertelement <4 x float> %a0, float %sqrt, i32 0
+  ret <4 x float> %ins
 }
-declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
+declare float @llvm.sqrt.f32(float) nounwind readnone
 
 define void @test_mm_store_ps(float *%a0, <4 x float> %a1) {
 ; X86-SSE-LABEL: test_mm_store_ps:

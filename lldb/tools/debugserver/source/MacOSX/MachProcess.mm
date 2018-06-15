@@ -607,6 +607,11 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
     }
   }
 #if defined (LC_BUILD_VERSION)
+#ifndef PLATFORM_IOSSIMULATOR
+#define PLATFORM_IOSSIMULATOR 7
+#define PLATFORM_TVOSSIMULATOR 8
+#define PLATFORM_WATCHOSSIMULATOR 9
+#endif
   if (cmd == LC_BUILD_VERSION) {
     struct build_version_command build_vers;
     if (ReadMemory(load_command_address, sizeof(struct build_version_command),
@@ -621,10 +626,13 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
     case PLATFORM_MACOS:
       return "macosx";
     case PLATFORM_IOS:
+    case PLATFORM_IOSSIMULATOR:
       return "ios";
     case PLATFORM_TVOS:
+    case PLATFORM_TVOSSIMULATOR:
       return "tvos";
     case PLATFORM_WATCHOS:
+    case PLATFORM_WATCHOSSIMULATOR:
       return "watchos";
     case PLATFORM_BRIDGEOS:
       return "bridgeos";

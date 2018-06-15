@@ -43,7 +43,7 @@ public:
   static_assert(!std::is_reference<Type>::value,
                 "Reference arguments to Key<> are not allowed");
 
-  Key() = default;
+  constexpr Key() = default;
 
   Key(Key const &) = delete;
   Key &operator=(Key const &) = delete;

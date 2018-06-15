@@ -10,6 +10,7 @@
 #include "BenchmarkResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -146,6 +147,23 @@ template <> struct MappingTraits<exegesis::InstructionBenchmarkKey> {
 };
 
 template <> struct MappingTraits<exegesis::InstructionBenchmark> {
+  class NormalizedBinary {
+  public:
+    NormalizedBinary(IO &io) {}
+    NormalizedBinary(IO &, std::vector<uint8_t> &Data) : Binary(Data) {}
+    std::vector<uint8_t> denormalize(IO &) {
+      std::vector<uint8_t> Data;
+      std::string Str;
+      raw_string_ostream OSS(Str);
+      Binary.writeAsBinary(OSS);
+      OSS.flush();
+      Data.assign(Str.begin(), Str.end());
+      return Data;
+    }
+
+    BinaryRef Binary;
+  };
+
   static void mapping(IO &Io, exegesis::InstructionBenchmark &Obj) {
     Io.mapRequired("mode", Obj.Mode);
     Io.mapRequired("key", Obj.Key);
@@ -155,6 +173,10 @@ template <> struct MappingTraits<exegesis::InstructionBenchmark> {
     Io.mapRequired("measurements", Obj.Measurements);
     Io.mapRequired("error", Obj.Error);
     Io.mapOptional("info", Obj.Info);
+    // AssembledSnippet
+    MappingNormalization<NormalizedBinary, std::vector<uint8_t>> BinaryString(
+        Io, Obj.AssembledSnippet);
+    Io.mapOptional("assembled_snippet", BinaryString->Binary);
   }
 };
 

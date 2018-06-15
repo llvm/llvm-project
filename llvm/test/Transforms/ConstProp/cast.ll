@@ -24,7 +24,7 @@ define i8 @overflow_fptoui() {
 
 define float @overflow_uitofp() {
 ; CHECK-LABEL: @overflow_uitofp(
-; CHECK-NEXT:    ret float undef
+; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
   %i = uitofp i130 400000000000000000000000000000000000000 to float
   ret float %i
@@ -32,7 +32,7 @@ define float @overflow_uitofp() {
 
 define float @overflow_sitofp() {
 ; CHECK-LABEL: @overflow_sitofp(
-; CHECK-NEXT:    ret float undef
+; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
   %i = sitofp i130 400000000000000000000000000000000000000 to float
   ret float %i

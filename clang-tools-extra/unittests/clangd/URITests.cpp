@@ -14,6 +14,11 @@
 
 namespace clang {
 namespace clangd {
+
+// Force the unittest URI scheme to be linked,
+static int LLVM_ATTRIBUTE_UNUSED UnittestSchemeAnchorDest =
+    UnittestSchemeAnchorSource;
+
 namespace {
 
 using ::testing::AllOf;
@@ -21,38 +26,6 @@ using ::testing::AllOf;
 MATCHER_P(Scheme, S, "") { return arg.scheme() == S; }
 MATCHER_P(Authority, A, "") { return arg.authority() == A; }
 MATCHER_P(Body, B, "") { return arg.body() == B; }
-
-// Assume all files in the schema have a "test-root/" root directory, and the
-// schema path is the relative path to the root directory.
-// So the schema of "/some-dir/test-root/x/y/z" is "test:x/y/z".
-class TestScheme : public URIScheme {
-public:
-  static const char *Scheme;
-
-  static const char *TestRoot;
-
-  llvm::Expected<std::string>
-  getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
-                  llvm::StringRef HintPath) const override {
-    auto Pos = HintPath.find(TestRoot);
-    assert(Pos != llvm::StringRef::npos);
-    return (HintPath.substr(0, Pos + llvm::StringRef(TestRoot).size()) + Body)
-        .str();
-  }
-
-  llvm::Expected<URI>
-  uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
-    auto Pos = AbsolutePath.find(TestRoot);
-    assert(Pos != llvm::StringRef::npos);
-    return URI(Scheme, /*Authority=*/"",
-               AbsolutePath.substr(Pos + llvm::StringRef(TestRoot).size()));
-  }
-};
-
-const char *TestScheme::Scheme = "unittest";
-const char *TestScheme::TestRoot = "/test-root/";
-
-static URISchemeRegistry::Add<TestScheme> X(TestScheme::Scheme, "Test schema");
 
 std::string createOrDie(llvm::StringRef AbsolutePath,
                         llvm::StringRef Scheme = "file") {
@@ -167,12 +140,12 @@ TEST(URITest, Resolve) {
 #else
   EXPECT_EQ(resolveOrDie(parseOrDie("file:/a/b/c")), "/a/b/c");
   EXPECT_EQ(resolveOrDie(parseOrDie("file://auth/a/b/c")), "/a/b/c");
-  EXPECT_EQ(resolveOrDie(parseOrDie("unittest:a/b/c"), "/dir/test-root/x/y/z"),
-            "/dir/test-root/a/b/c");
   EXPECT_THAT(resolveOrDie(parseOrDie("file://au%3dth/%28x%29/y/%20z")),
               "/(x)/y/ z");
   EXPECT_THAT(resolveOrDie(parseOrDie("file:///c:/x/y/z")), "c:/x/y/z");
 #endif
+  EXPECT_EQ(resolveOrDie(parseOrDie("unittest:a"), testPath("x")),
+            testPath("a"));
 }
 
 TEST(URITest, Platform) {

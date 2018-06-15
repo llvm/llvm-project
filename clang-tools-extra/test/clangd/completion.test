@@ -16,7 +16,7 @@
 # CHECK-NEXT:      "insertText": "a",
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 5,
-# CHECK-NEXT:      "label": "a",
+# CHECK-NEXT:      "label": " a",
 # CHECK-NEXT:      "sortText": "{{.*}}a"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
@@ -36,7 +36,7 @@
 # CHECK-NEXT:      "insertText": "b",
 # CHECK-NEXT:      "insertTextFormat": 1,
 # CHECK-NEXT:      "kind": 5,
-# CHECK-NEXT:      "label": "b",
+# CHECK-NEXT:      "label": " b",
 # CHECK-NEXT:      "sortText": "{{.*}}b"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]

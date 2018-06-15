@@ -16,6 +16,7 @@
 
 #include "scudo_allocator.h"
 #include "scudo_crc32.h"
+#include "scudo_errors.h"
 #include "scudo_flags.h"
 #include "scudo_interface_internal.h"
 #include "scudo_tsd.h"
@@ -224,8 +225,6 @@ struct ScudoAllocator {
   static const uptr MaxAllowedMallocSize =
       FIRST_32_SECOND_64(2UL << 30, 1ULL << 40);
 
-  typedef ReturnNullOrDieOnFailure FailureHandler;
-
   ScudoBackendAllocator BackendAllocator;
   ScudoQuarantine AllocatorQuarantine;
 
@@ -360,24 +359,30 @@ struct ScudoAllocator {
   void *allocate(uptr Size, uptr Alignment, AllocType Type,
                  bool ForceZeroContents = false) {
     initThreadMaybe();
-    if (UNLIKELY(Alignment > MaxAlignment))
-      return FailureHandler::OnBadRequest();
+    if (UNLIKELY(Alignment > MaxAlignment)) {
+      if (AllocatorMayReturnNull())
+        return nullptr;
+      reportAllocationAlignmentTooBig(Alignment, MaxAlignment);
+    }
     if (UNLIKELY(Alignment < MinAlignment))
       Alignment = MinAlignment;
-    if (UNLIKELY(Size >= MaxAllowedMallocSize))
-      return FailureHandler::OnBadRequest();
-    if (UNLIKELY(Size == 0))
-      Size = 1;
 
-    const uptr NeededSize = RoundUpTo(Size, MinAlignment) +
+    const uptr NeededSize = RoundUpTo(Size ? Size : 1, MinAlignment) +
         Chunk::getHeaderSize();
     const uptr AlignedSize = (Alignment > MinAlignment) ?
         NeededSize + (Alignment - Chunk::getHeaderSize()) : NeededSize;
-    if (UNLIKELY(AlignedSize >= MaxAllowedMallocSize))
-      return FailureHandler::OnBadRequest();
+    if (UNLIKELY(Size >= MaxAllowedMallocSize) ||
+        UNLIKELY(AlignedSize >= MaxAllowedMallocSize)) {
+      if (AllocatorMayReturnNull())
+        return nullptr;
+      reportAllocationSizeTooBig(Size, AlignedSize, MaxAllowedMallocSize);
+    }
 
-    if (CheckRssLimit && UNLIKELY(isRssLimitExceeded()))
-      return FailureHandler::OnOOM();
+    if (CheckRssLimit && UNLIKELY(isRssLimitExceeded())) {
+      if (AllocatorMayReturnNull())
+        return nullptr;
+      reportRssLimitExceeded();
+    }
 
     // Primary and Secondary backed allocations have a different treatment. We
     // deal with alignment requirements of Primary serviced allocations here,
@@ -398,8 +403,12 @@ struct ScudoAllocator {
       ClassId = 0;
       BackendPtr = BackendAllocator.allocateSecondary(BackendSize, Alignment);
     }
-    if (UNLIKELY(!BackendPtr))
-      return FailureHandler::OnOOM();
+    if (UNLIKELY(!BackendPtr)) {
+      SetAllocatorOutOfMemory();
+      if (AllocatorMayReturnNull())
+        return nullptr;
+      reportOutOfMemory(Size);
+    }
 
     // If requested, we will zero out the entire contents of the returned chunk.
     if ((ForceZeroContents || ZeroContents) && ClassId)
@@ -573,8 +582,11 @@ struct ScudoAllocator {
 
   void *calloc(uptr NMemB, uptr Size) {
     initThreadMaybe();
-    if (UNLIKELY(CheckForCallocOverflow(NMemB, Size)))
-      return FailureHandler::OnBadRequest();
+    if (UNLIKELY(CheckForCallocOverflow(NMemB, Size))) {
+      if (AllocatorMayReturnNull())
+        return nullptr;
+      reportCallocOverflow(NMemB, Size);
+    }
     return allocate(NMemB * Size, MinAlignment, FromMalloc, true);
   }
 
@@ -591,9 +603,9 @@ struct ScudoAllocator {
     return stats[StatType];
   }
 
-  void *handleBadRequest() {
+  bool canReturnNull() {
     initThreadMaybe();
-    return FailureHandler::OnBadRequest();
+    return AllocatorMayReturnNull();
   }
 
   void setRssLimit(uptr LimitMb, bool HardLimit) {
@@ -632,7 +644,9 @@ void ScudoTSD::commitBack() {
 void *scudoAllocate(uptr Size, uptr Alignment, AllocType Type) {
   if (Alignment && UNLIKELY(!IsPowerOfTwo(Alignment))) {
     errno = EINVAL;
-    return Instance.handleBadRequest();
+    if (Instance.canReturnNull())
+      return nullptr;
+    reportAllocationAlignmentNotPowerOfTwo(Alignment);
   }
   return SetErrnoOnNull(Instance.allocate(Size, Alignment, Type));
 }
@@ -664,7 +678,9 @@ void *scudoPvalloc(uptr Size) {
   uptr PageSize = GetPageSizeCached();
   if (UNLIKELY(CheckForPvallocOverflow(Size, PageSize))) {
     errno = ENOMEM;
-    return Instance.handleBadRequest();
+    if (Instance.canReturnNull())
+      return nullptr;
+    reportPvallocOverflow(Size);
   }
   // pvalloc(0) should allocate one page.
   Size = Size ? RoundUpTo(Size, PageSize) : PageSize;
@@ -673,7 +689,8 @@ void *scudoPvalloc(uptr Size) {
 
 int scudoPosixMemalign(void **MemPtr, uptr Alignment, uptr Size) {
   if (UNLIKELY(!CheckPosixMemalignAlignment(Alignment))) {
-    Instance.handleBadRequest();
+    if (!Instance.canReturnNull())
+      reportInvalidPosixMemalignAlignment(Alignment);
     return EINVAL;
   }
   void *Ptr = Instance.allocate(Size, Alignment, FromMemalign);
@@ -686,7 +703,9 @@ int scudoPosixMemalign(void **MemPtr, uptr Alignment, uptr Size) {
 void *scudoAlignedAlloc(uptr Alignment, uptr Size) {
   if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(Alignment, Size))) {
     errno = EINVAL;
-    return Instance.handleBadRequest();
+    if (Instance.canReturnNull())
+      return nullptr;
+    reportInvalidAlignedAllocAlignment(Size, Alignment);
   }
   return SetErrnoOnNull(Instance.allocate(Size, Alignment, FromMalloc));
 }

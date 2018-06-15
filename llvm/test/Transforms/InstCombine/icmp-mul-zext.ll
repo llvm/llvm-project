@@ -80,3 +80,41 @@ if.then9:
   ret void
 }
 
+; Repro case for bug involving mutating a list while
+; iterating it.
+
+declare i16 @aux(i8)
+
+define i16 @iter_breaker(i16 %a, i16 %b) {
+; CHECK-LABEL: @iter_breaker(
+; CHECK-NEXT:    [[UMUL:%.*]] = call { i16, i1 } @llvm.umul.with.overflow.i16(i16 [[A:%.*]], i16 [[B:%.*]])
+; CHECK-NEXT:    [[UMUL_VALUE:%.*]] = extractvalue { i16, i1 } [[UMUL]], 0
+; CHECK-NEXT:    [[DID_OVF:%.*]] = extractvalue { i16, i1 } [[UMUL]], 1
+; CHECK-NEXT:    br i1 [[DID_OVF]], label [[RET1:%.*]], label [[RET2:%.*]]
+; CHECK:       ret1:
+; CHECK-NEXT:    [[TRUNC_REMAIN:%.*]] = trunc i16 [[UMUL_VALUE]] to i8
+; CHECK-NEXT:    [[VAL:%.*]] = call i16 @aux(i8 [[TRUNC_REMAIN]])
+; CHECK-NEXT:    ret i16 [[VAL]]
+; CHECK:       ret2:
+; CHECK-NEXT:    ret i16 [[UMUL_VALUE]]
+;
+  %a_wide = zext i16 %a to i32
+  %b_wide = zext i16 %b to i32
+  %mul_wide = mul i32 %a_wide, %b_wide              ; uses of %mul_wide will be iterated
+
+  %trunc_remain = trunc i32 %mul_wide to i8         ; this use will be replaced w/ new value
+                                                    ; when iteration visits it, switching
+                                                    ; iteration to the uses of new value
+
+  %trunc_unnecessary = trunc i32 %mul_wide to i16   ; uses of %trunc_unnecessary will have
+                                                    ; been updated to uses of new value
+  %did_ovf = icmp ugt i32 %mul_wide, 65535
+  br i1 %did_ovf, label %ret1, label %ret2
+
+ret1:
+  %val = call i16 @aux(i8 %trunc_remain)
+  ret i16 %val
+
+ret2:
+  ret i16 %trunc_unnecessary              ; crash visiting this use after corrupting iterator
+}

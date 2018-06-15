@@ -566,7 +566,7 @@ MI bundle support does not change the physical representations of
 MachineBasicBlock and MachineInstr. All the MIs (including top level and nested
 ones) are stored as sequential list of MIs. The "bundled" MIs are marked with
 the 'InsideBundle' flag. A top level MI with the special BUNDLE opcode is used
-to represent the start of a bundle. It's legal to mix BUNDLE MIs with indiviual
+to represent the start of a bundle. It's legal to mix BUNDLE MIs with individual
 MIs that are not inside bundles nor represent bundles.
 
 MachineInstr passes should operate on a MI bundle as a single unit. Member

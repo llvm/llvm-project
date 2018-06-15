@@ -1405,8 +1405,7 @@ define <4 x float> @test_mm_cvtsd_ss_load(<4 x float> %a0, <2 x double>* %p1) {
 ; X86-AVX-LABEL: test_mm_cvtsd_ss_load:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovaps (%eax), %xmm1
-; X86-AVX-NEXT:    vcvtsd2ss %xmm1, %xmm0, %xmm0
+; X86-AVX-NEXT:    vcvtsd2ss (%eax), %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test_mm_cvtsd_ss_load:
@@ -1416,8 +1415,7 @@ define <4 x float> @test_mm_cvtsd_ss_load(<4 x float> %a0, <2 x double>* %p1) {
 ;
 ; X64-AVX-LABEL: test_mm_cvtsd_ss_load:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps (%rdi), %xmm1
-; X64-AVX-NEXT:    vcvtsd2ss %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
   %a1 = load <2 x double>, <2 x double>* %p1
   %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1)
@@ -1445,16 +1443,10 @@ define <2 x double> @test_mm_cvtsi32_sd(<2 x double> %a0, i32 %a1) nounwind {
 ; X86-SSE-NEXT:    cvtsi2sdl {{[0-9]+}}(%esp), %xmm0
 ; X86-SSE-NEXT:    retl
 ;
-; X86-AVX1-LABEL: test_mm_cvtsi32_sd:
-; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vcvtsi2sdl {{[0-9]+}}(%esp), %xmm0, %xmm0
-; X86-AVX1-NEXT:    retl
-;
-; X86-AVX512-LABEL: test_mm_cvtsi32_sd:
-; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    vcvtsi2sdl %eax, %xmm0, %xmm0
-; X86-AVX512-NEXT:    retl
+; X86-AVX-LABEL: test_mm_cvtsi32_sd:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vcvtsi2sdl {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test_mm_cvtsi32_sd:
 ; X64-SSE:       # %bb.0:
@@ -3728,10 +3720,10 @@ define <2 x double> @test_mm_sqrt_pd(<2 x double> %a0) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtpd %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
-  %res = call <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double> %a0)
+  %res = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %a0)
   ret <2 x double> %res
 }
-declare <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double>) nounwind readnone
+declare <2 x double> @llvm.sqrt.v2f64(<2 x double>) nounwind readnone
 
 define <2 x double> @test_mm_sqrt_sd(<2 x double> %a0, <2 x double> %a1) nounwind {
 ; SSE-LABEL: test_mm_sqrt_sd:
@@ -3744,14 +3736,12 @@ define <2 x double> @test_mm_sqrt_sd(<2 x double> %a0, <2 x double> %a1) nounwin
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
-  %call = call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %a0)
-  %ext0 = extractelement <2 x double> %call, i32 0
-  %ins0 = insertelement <2 x double> undef, double %ext0, i32 0
-  %ext1 = extractelement <2 x double> %a1, i32 1
-  %ins1 = insertelement <2 x double> %ins0, double %ext1, i32 1
-  ret <2 x double> %ins1
+  %ext = extractelement <2 x double> %a0, i32 0
+  %sqrt = call double @llvm.sqrt.f64(double %ext)
+  %ins = insertelement <2 x double> %a1, double %sqrt, i32 0
+  ret <2 x double> %ins
 }
-declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
+declare double @llvm.sqrt.f64(double) nounwind readnone
 
 define <2 x i64> @test_mm_sra_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test_mm_sra_epi16:

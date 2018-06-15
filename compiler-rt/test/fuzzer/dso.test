@@ -1,6 +1,6 @@
-RUN: %cpp_compiler %S/DSO1.cpp -fPIC -shared -o %t-DSO1.so
-RUN: %cpp_compiler %S/DSO2.cpp -fPIC -shared -o %t-DSO2.so
-RUN: %cpp_compiler %S/DSOTestMain.cpp %S/DSOTestExtra.cpp -L. %t-DSO1.so %t-DSO2.so -o %t-DSOTest
+RUN: %cpp_compiler %S/DSO1.cpp -fPIC %ld_flags_rpath_so1 -shared -o %dynamiclib1
+RUN: %cpp_compiler %S/DSO2.cpp -fPIC %ld_flags_rpath_so2 -shared -o %dynamiclib2
+RUN: %cpp_compiler %S/DSOTestMain.cpp %S/DSOTestExtra.cpp %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t-DSOTest
 
 RUN: not %run %t-DSOTest 2>&1 | FileCheck %s --check-prefix=DSO
 DSO: INFO: Loaded 3 modules

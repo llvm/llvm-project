@@ -78,10 +78,10 @@ protected:
     return Inclusions;
   }
 
-  // Calculates the include path, or returns "" on error.
+  // Calculates the include path, or returns "" on error or header should not be
+  // inserted.
   std::string calculate(PathRef Original, PathRef Preferred = "",
-                        const std::vector<Inclusion> &Inclusions = {},
-                        bool ExpectError = false) {
+                        const std::vector<Inclusion> &Inclusions = {}) {
     auto Clang = setupClang();
     PreprocessOnlyAction Action;
     EXPECT_TRUE(
@@ -94,24 +94,21 @@ protected:
                         /*Verbatim=*/!llvm::sys::path::is_absolute(Header)};
     };
 
-    auto Path = calculateIncludePath(
-        MainFile, CDB.getCompileCommand(MainFile)->Directory,
-        Clang->getPreprocessor().getHeaderSearchInfo(), Inclusions,
-        ToHeaderFile(Original), ToHeaderFile(Preferred));
+    IncludeInserter Inserter(MainFile, /*Code=*/"", format::getLLVMStyle(),
+                             CDB.getCompileCommand(MainFile)->Directory,
+                             Clang->getPreprocessor().getHeaderSearchInfo());
+    for (const auto &Inc : Inclusions)
+      Inserter.addExisting(Inc);
+    auto Declaring = ToHeaderFile(Original);
+    auto Inserted = ToHeaderFile(Preferred);
+    if (!Inserter.shouldInsertInclude(Declaring, Inserted))
+      return "";
+    std::string Path = Inserter.calculateIncludePath(Declaring, Inserted);
     Action.EndSourceFile();
-    if (!Path) {
-      llvm::consumeError(Path.takeError());
-      EXPECT_TRUE(ExpectError);
-      return std::string();
-    } else {
-      EXPECT_FALSE(ExpectError);
-    }
-    return std::move(*Path);
+    return Path;
   }
 
-  Expected<Optional<TextEdit>>
-  insert(const HeaderFile &DeclaringHeader, const HeaderFile &InsertedHeader,
-         const std::vector<Inclusion> &ExistingInclusions = {}) {
+  Optional<TextEdit> insert(StringRef VerbatimHeader) {
     auto Clang = setupClang();
     PreprocessOnlyAction Action;
     EXPECT_TRUE(
@@ -120,10 +117,7 @@ protected:
     IncludeInserter Inserter(MainFile, /*Code=*/"", format::getLLVMStyle(),
                              CDB.getCompileCommand(MainFile)->Directory,
                              Clang->getPreprocessor().getHeaderSearchInfo());
-    for (const auto &Inc : ExistingInclusions)
-      Inserter.addExisting(Inc);
-
-    auto Edit = Inserter.insert(DeclaringHeader, InsertedHeader);
+    auto Edit = Inserter.insert(VerbatimHeader);
     Action.EndSourceFile();
     return Edit;
   }
@@ -220,31 +214,10 @@ TEST_F(HeadersTest, DontInsertDuplicateResolved) {
   EXPECT_EQ(calculate(BarHeader, "\"BAR.h\"", Inclusions), "");
 }
 
-HeaderFile literal(StringRef Include) {
-  HeaderFile H{Include, /*Verbatim=*/true};
-  assert(H.valid());
-  return H;
-}
-
 TEST_F(HeadersTest, PreferInserted) {
-  auto Edit = insert(literal("<x>"), literal("<y>"));
-  EXPECT_TRUE(static_cast<bool>(Edit));
-  EXPECT_TRUE(llvm::StringRef((*Edit)->newText).contains("<y>"));
-}
-
-TEST_F(HeadersTest, ExistingInclusion) {
-  Inclusion Existing{Range(), /*Written=*/"<c.h>", /*Resolved=*/""};
-  auto Edit = insert(literal("<c.h>"), literal("<c.h>"), {Existing});
-  EXPECT_TRUE(static_cast<bool>(Edit));
-  EXPECT_FALSE(static_cast<bool>(*Edit));
-}
-
-TEST_F(HeadersTest, ValidateHeaders) {
-  HeaderFile InvalidHeader{"a.h", /*Verbatim=*/true};
-  assert(!InvalidHeader.valid());
-  auto Edit = insert(InvalidHeader, literal("\"c.h\""));
-  EXPECT_FALSE(static_cast<bool>(Edit));
-  llvm::consumeError(Edit.takeError());
+  auto Edit = insert("<y>");
+  EXPECT_TRUE(Edit.hasValue());
+  EXPECT_TRUE(llvm::StringRef(Edit->newText).contains("<y>"));
 }
 
 } // namespace

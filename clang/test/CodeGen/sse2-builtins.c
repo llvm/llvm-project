@@ -1188,17 +1188,15 @@ __m128i test_mm_slli_si128_2(__m128i A) {
 
 __m128d test_mm_sqrt_pd(__m128d A) {
   // CHECK-LABEL: test_mm_sqrt_pd
-  // CHECK: call <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double> %{{.*}})
+  // CHECK: call <2 x double> @llvm.sqrt.v2f64(<2 x double> %{{.*}})
   return _mm_sqrt_pd(A);
 }
 
 __m128d test_mm_sqrt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_sqrt_sd
-  // CHECK: call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %{{.*}})
-  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
-  // CHECK: extractelement <2 x double> %{{.*}}, i32 1
-  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
+  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
+  // CHECK: call double @llvm.sqrt.f64(double {{.*}})
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i64 0
   return _mm_sqrt_sd(A, B);
 }
 

@@ -109,6 +109,11 @@ static cl::opt<bool> PrintDispatchStats("dispatch-stats",
                                         cl::desc("Print dispatch statistics"),
                                         cl::cat(ViewOptions), cl::init(false));
 
+static cl::opt<bool>
+    PrintSummaryView("summary-view", cl::Hidden,
+                     cl::desc("Print summary view (enabled by default)"),
+                     cl::cat(ViewOptions), cl::init(true));
+
 static cl::opt<bool> PrintSchedulerStats("scheduler-stats",
                                          cl::desc("Print scheduler statistics"),
                                          cl::cat(ViewOptions), cl::init(false));
@@ -302,6 +307,7 @@ static void processViewOptions() {
     return;
 
   if (EnableAllViews.getNumOccurrences()) {
+    processOptionImpl(PrintSummaryView, EnableAllViews);
     processOptionImpl(PrintResourcePressureView, EnableAllViews);
     processOptionImpl(PrintTimelineView, EnableAllViews);
     processOptionImpl(PrintInstructionInfoView, EnableAllViews);
@@ -311,6 +317,7 @@ static void processViewOptions() {
       EnableAllViews.getPosition() < EnableAllStats.getPosition()
           ? EnableAllStats
           : EnableAllViews;
+  processOptionImpl(PrintSummaryView, Default);
   processOptionImpl(PrintRegisterFileStats, Default);
   processOptionImpl(PrintDispatchStats, Default);
   processOptionImpl(PrintSchedulerStats, Default);
@@ -495,7 +502,9 @@ int main(int argc, char **argv) {
                    LoadQueueSize, StoreQueueSize, AssumeNoAlias);
     mca::BackendPrinter Printer(B);
 
-    Printer.addView(llvm::make_unique<mca::SummaryView>(SM, S, Width));
+    if (PrintSummaryView)
+      Printer.addView(llvm::make_unique<mca::SummaryView>(SM, S, Width));
+
     if (PrintInstructionInfoView)
       Printer.addView(
           llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, S, *IP));

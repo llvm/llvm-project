@@ -1,11 +1,11 @@
 // RUN: %clangxx_scudo %s -lstdc++ -o %t
-// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t malloc 2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t malloc 2>&1      | FileCheck %s --check-prefix=CHECK-max
 // RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t malloc 2>&1
-// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t calloc 2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t calloc 2>&1      | FileCheck %s --check-prefix=CHECK-calloc
 // RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t calloc 2>&1
-// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t new 2>&1 | FileCheck %s
-// RUN: %env_scudo_opts=allocator_may_return_null=1 not %run %t new 2>&1 | FileCheck %s
-// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t new-nothrow 2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t new 2>&1         | FileCheck %s --check-prefix=CHECK-max
+// RUN: %env_scudo_opts=allocator_may_return_null=1 not %run %t new 2>&1         | FileCheck %s --check-prefix=CHECK-oom
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t new-nothrow 2>&1 | FileCheck %s --check-prefix=CHECK-max
 // RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t new-nothrow 2>&1
 // RUN:                                                 %run %t usable 2>&1
 
@@ -70,4 +70,6 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-// CHECK: allocator is terminating the process
+// CHECK-max: {{Scudo ERROR: requested allocation size .* exceeds maximum supported size}}
+// CHECK-oom: Scudo ERROR: allocator is out of memory
+// CHECK-calloc: Scudo ERROR: calloc parameters overflow

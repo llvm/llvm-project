@@ -38,7 +38,7 @@ Content-Length: 146
 # CHECK-NEXT:        "insertText": "a",
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 5,
-# CHECK-NEXT:        "label": "a",
+# CHECK-NEXT:        "label": " a",
 # CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }
@@ -67,7 +67,7 @@ Content-Length: 146
 # CHECK-NEXT:        "insertText": "a",
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 5,
-# CHECK-NEXT:        "label": "a",
+# CHECK-NEXT:        "label": " a",
 # CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }
@@ -96,7 +96,7 @@ Content-Length: 146
 # CHECK-NEXT:        "insertText": "a",
 # CHECK-NEXT:        "insertTextFormat": 1,
 # CHECK-NEXT:        "kind": 5,
-# CHECK-NEXT:        "label": "a",
+# CHECK-NEXT:        "label": " a",
 # CHECK-NEXT:        "sortText": "{{.*}}"
 #      CHECK:    ]
 # CHECK-NEXT:  }

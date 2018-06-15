@@ -4,10 +4,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define double @test_sqrt_sd_0(double %a) {
 ; CHECK-LABEL: @test_sqrt_sd_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double %a, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
-; CHECK-NEXT:    ret double [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.sqrt.f64(double %a)
+; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %1 = insertelement <2 x double> undef, double %a, i32 0
   %2 = insertelement <2 x double> %1, double 1.000000e+00, i32 1

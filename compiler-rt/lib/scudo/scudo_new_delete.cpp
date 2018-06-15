@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "scudo_allocator.h"
+#include "scudo_errors.h"
 
 #include "interception/interception.h"
 
@@ -30,7 +31,7 @@ enum class align_val_t: size_t {};
 // TODO(alekseys): throw std::bad_alloc instead of dying on OOM.
 #define OPERATOR_NEW_BODY_ALIGN(Type, Align, NoThrow)              \
   void *Ptr = scudoAllocate(size, static_cast<uptr>(Align), Type); \
-  if (!NoThrow && UNLIKELY(!Ptr)) DieOnFailure::OnOOM();           \
+  if (!NoThrow && UNLIKELY(!Ptr)) reportOutOfMemory(size);         \
   return Ptr;
 #define OPERATOR_NEW_BODY(Type, NoThrow) \
   OPERATOR_NEW_BODY_ALIGN(Type, 0, NoThrow)
