@@ -50,7 +50,7 @@ public:
 private:
   void copyLocalSymbols();
   void addSectionSymbols();
-  void forEachRelSec(std::function<void(InputSectionBase &)> Fn);
+  void forEachRelSec(llvm::function_ref<void(InputSectionBase &)> Fn);
   void sortSections();
   void resolveShfLinkOrder();
   void sortInputSections();
@@ -83,8 +83,6 @@ private:
 
   uint64_t FileSize;
   uint64_t SectionHeaderOff;
-
-  bool HasGotBaseSym = false;
 };
 } // anonymous namespace
 
@@ -889,7 +887,8 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
 }
 
 template <class ELFT>
-void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
+void Writer<ELFT>::forEachRelSec(
+    llvm::function_ref<void(InputSectionBase &)> Fn) {
   // Scan all relocations. Each relocation goes through a series
   // of tests to determine if it needs special treatment, such as
   // creating GOT, PLT, copy relocations, etc.
@@ -1474,7 +1473,7 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
 }
 
 static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
-                           std::function<void(SyntheticSection *)> Fn) {
+                           llvm::function_ref<void(SyntheticSection *)> Fn) {
   for (SyntheticSection *SS : Sections)
     if (SS && SS->getParent() && !SS->empty())
       Fn(SS);

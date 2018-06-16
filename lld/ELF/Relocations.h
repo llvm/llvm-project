@@ -153,7 +153,7 @@ private:
 
   void forEachInputSectionDescription(
       ArrayRef<OutputSection *> OutputSections,
-      std::function<void(OutputSection *, InputSectionDescription *)> Fn);
+      llvm::function_ref<void(OutputSection *, InputSectionDescription *)> Fn);
 
   std::pair<Thunk *, bool> getThunk(Symbol &Sym, RelType Type, uint64_t Src);
 
