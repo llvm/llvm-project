@@ -131,7 +131,6 @@
 ; CHECK-NEXT:         Lazy Value Information Analysis
 ; CHECK-NEXT:         Jump Threading
 ; CHECK-NEXT:         Value Propagation
-; CHECK-NEXT:         Dominator Tree Construction
 ; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
 ; CHECK-NEXT:         Memory Dependence Analysis
