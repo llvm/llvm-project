@@ -1,9 +1,7 @@
 // RUN: %clangxx_asan -g %s -o %t
-// RUN: echo data > %t-testdata
-// RUN: not %run %t 1 %t-testdata 2>&1 | FileCheck %s --check-prefix=CHECK-FGETS
+// RUN: not %run %t 1 2>&1 | FileCheck %s --check-prefix=CHECK-FGETS
 // RUN: not %run %t 2 2>&1 | FileCheck %s --check-prefix=CHECK-FPUTS
 // RUN: not %run %t 3 2>&1 | FileCheck %s --check-prefix=CHECK-PUTS
-// XFAIL: android
 
 #include <assert.h>
 #include <stdio.h>
@@ -39,8 +37,7 @@ int main(int argc, char *argv[]) {
   assert(argc >= 2);
   int testno = argv[1][0] - '0';
   if (testno == 1) {
-    assert(argc == 3);
-    return test_fgets(argv[2]);
+    return test_fgets(argv[0]);
   }
   if (testno == 2)
     return test_fputs();

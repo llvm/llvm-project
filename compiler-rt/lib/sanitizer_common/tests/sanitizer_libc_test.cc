@@ -108,12 +108,14 @@ TEST(SanitizerCommon, FileOps) {
   temp_file_name(tmpfile, sizeof(tmpfile), "sanitizer_common.fileops.tmp.");
   fd_t fd = OpenFile(tmpfile, WrOnly);
   ASSERT_NE(fd, kInvalidFd);
-  ASSERT_FALSE(internal_iserror(internal_write(fd, "A", 1)));
+  ASSERT_TRUE(WriteToFile(fd, "A", 1));
   CloseFile(fd);
 
   fd = OpenFile(tmpfile, WrOnly);
   ASSERT_NE(fd, kInvalidFd);
+#if SANITIZER_POSIX
   EXPECT_EQ(internal_lseek(fd, 0, SEEK_END), 0u);
+#endif
   uptr bytes_written = 0;
   EXPECT_TRUE(WriteToFile(fd, str1, len1, &bytes_written));
   EXPECT_EQ(len1, bytes_written);
