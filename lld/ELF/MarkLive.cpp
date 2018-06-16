@@ -60,8 +60,9 @@ static typename ELFT::uint getAddend(InputSectionBase &Sec,
 static DenseMap<StringRef, std::vector<InputSectionBase *>> CNamedSections;
 
 template <class ELFT, class RelT>
-static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
-                         std::function<void(InputSectionBase *, uint64_t)> Fn) {
+static void
+resolveReloc(InputSectionBase &Sec, RelT &Rel,
+             llvm::function_ref<void(InputSectionBase *, uint64_t)> Fn) {
   Symbol &B = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
 
   // If a symbol is referenced in a live section, it is used.
@@ -90,7 +91,7 @@ static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
 template <class ELFT>
 static void
 forEachSuccessor(InputSection &Sec,
-                 std::function<void(InputSectionBase *, uint64_t)> Fn) {
+                 llvm::function_ref<void(InputSectionBase *, uint64_t)> Fn) {
   if (Sec.AreRelocsRela) {
     for (const typename ELFT::Rela &Rel : Sec.template relas<ELFT>())
       resolveReloc<ELFT>(Sec, Rel, Fn);
@@ -120,7 +121,7 @@ forEachSuccessor(InputSection &Sec,
 template <class ELFT, class RelTy>
 static void
 scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
-                   std::function<void(InputSectionBase *, uint64_t)> Fn) {
+                   llvm::function_ref<void(InputSectionBase *, uint64_t)> Fn) {
   const endianness E = ELFT::TargetEndianness;
 
   for (unsigned I = 0, N = EH.Pieces.size(); I < N; ++I) {
@@ -155,7 +156,7 @@ scanEhFrameSection(EhInputSection &EH, ArrayRef<RelTy> Rels,
 template <class ELFT>
 static void
 scanEhFrameSection(EhInputSection &EH,
-                   std::function<void(InputSectionBase *, uint64_t)> Fn) {
+                   llvm::function_ref<void(InputSectionBase *, uint64_t)> Fn) {
   if (!EH.NumRelocations)
     return;
 

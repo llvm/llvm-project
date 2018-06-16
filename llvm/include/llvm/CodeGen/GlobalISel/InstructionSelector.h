@@ -147,6 +147,10 @@ enum {
   GIM_CheckMemorySizeEqualToLLT,
   GIM_CheckMemorySizeLessThanLLT,
   GIM_CheckMemorySizeGreaterThanLLT,
+  /// Check a generic C++ instruction predicate
+  /// - InsnID - Instruction ID
+  /// - PredicateID - The ID of the predicate function to call
+  GIM_CheckCxxInsnPredicate,
 
   /// Check the type for the specified operand
   /// - InsnID - Instruction ID
@@ -413,13 +417,20 @@ protected:
   }
 
   virtual bool testImmPredicate_I64(unsigned, int64_t) const {
-    llvm_unreachable("Subclasses must override this to use tablegen");
+    llvm_unreachable(
+        "Subclasses must override this with a tablegen-erated function");
   }
   virtual bool testImmPredicate_APInt(unsigned, const APInt &) const {
-    llvm_unreachable("Subclasses must override this to use tablegen");
+    llvm_unreachable(
+        "Subclasses must override this with a tablegen-erated function");
   }
   virtual bool testImmPredicate_APFloat(unsigned, const APFloat &) const {
-    llvm_unreachable("Subclasses must override this to use tablegen");
+    llvm_unreachable(
+        "Subclasses must override this with a tablegen-erated function");
+  }
+  virtual bool testMIPredicate_MI(unsigned, const MachineInstr &) const {
+    llvm_unreachable(
+        "Subclasses must override this with a tablegen-erated function");
   }
 
   /// Constrain a register operand of an instruction \p I to a specified

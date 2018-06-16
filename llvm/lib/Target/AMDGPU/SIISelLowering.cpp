@@ -7490,23 +7490,49 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     }
   }
 
-  if (CRHS && VT == MVT::i32 && LHS.getOpcode() == ISD::SIGN_EXTEND &&
-      isBoolSGPR(LHS.getOperand(0))) {
-    // setcc (sext from i1 cc), -1, ne|sgt|ult) => not cc => xor cc, -1
-    // setcc (sext from i1 cc), -1, eq|sle|uge) => cc
-    // setcc (sext from i1 cc),  0, eq|sge|ule) => not cc => xor cc, -1
-    // setcc (sext from i1 cc),  0, ne|ugt|slt) => cc
-    if ((CRHS->isAllOnesValue() &&
-         (CC == ISD::SETNE || CC == ISD::SETGT || CC == ISD::SETULT)) ||
-        (CRHS->isNullValue() &&
-         (CC == ISD::SETEQ || CC == ISD::SETGE || CC == ISD::SETULE)))
-      return DAG.getNode(ISD::XOR, SL, MVT::i1, LHS.getOperand(0),
-                         DAG.getConstant(-1, SL, MVT::i1));
-    if ((CRHS->isAllOnesValue() &&
-         (CC == ISD::SETEQ || CC == ISD::SETLE || CC == ISD::SETUGE)) ||
-        (CRHS->isNullValue() &&
-         (CC == ISD::SETNE || CC == ISD::SETUGT || CC == ISD::SETLT)))
-      return LHS.getOperand(0);
+  if (CRHS) {
+    if (VT == MVT::i32 && LHS.getOpcode() == ISD::SIGN_EXTEND &&
+        isBoolSGPR(LHS.getOperand(0))) {
+      // setcc (sext from i1 cc), -1, ne|sgt|ult) => not cc => xor cc, -1
+      // setcc (sext from i1 cc), -1, eq|sle|uge) => cc
+      // setcc (sext from i1 cc),  0, eq|sge|ule) => not cc => xor cc, -1
+      // setcc (sext from i1 cc),  0, ne|ugt|slt) => cc
+      if ((CRHS->isAllOnesValue() &&
+           (CC == ISD::SETNE || CC == ISD::SETGT || CC == ISD::SETULT)) ||
+          (CRHS->isNullValue() &&
+           (CC == ISD::SETEQ || CC == ISD::SETGE || CC == ISD::SETULE)))
+        return DAG.getNode(ISD::XOR, SL, MVT::i1, LHS.getOperand(0),
+                           DAG.getConstant(-1, SL, MVT::i1));
+      if ((CRHS->isAllOnesValue() &&
+           (CC == ISD::SETEQ || CC == ISD::SETLE || CC == ISD::SETUGE)) ||
+          (CRHS->isNullValue() &&
+           (CC == ISD::SETNE || CC == ISD::SETUGT || CC == ISD::SETLT)))
+        return LHS.getOperand(0);
+    }
+
+    uint64_t CRHSVal = CRHS->getZExtValue();
+    if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
+        LHS.getOpcode() == ISD::SELECT &&
+        isa<ConstantSDNode>(LHS.getOperand(1)) &&
+        isa<ConstantSDNode>(LHS.getOperand(2)) &&
+        LHS.getConstantOperandVal(1) != LHS.getConstantOperandVal(2) &&
+        isBoolSGPR(LHS.getOperand(0))) {
+      // Given CT != FT:
+      // setcc (select cc, CT, CF), CF, eq => xor cc, -1
+      // setcc (select cc, CT, CF), CF, ne => cc
+      // setcc (select cc, CT, CF), CT, ne => xor cc, -1
+      // setcc (select cc, CT, CF), CT, eq => cc
+      uint64_t CT = LHS.getConstantOperandVal(1);
+      uint64_t CF = LHS.getConstantOperandVal(2);
+
+      if ((CF == CRHSVal && CC == ISD::SETEQ) ||
+          (CT == CRHSVal && CC == ISD::SETNE))
+        return DAG.getNode(ISD::XOR, SL, MVT::i1, LHS.getOperand(0),
+                           DAG.getConstant(-1, SL, MVT::i1));
+      if ((CF == CRHSVal && CC == ISD::SETNE) ||
+          (CT == CRHSVal && CC == ISD::SETEQ))
+        return LHS.getOperand(0);
+    }
   }
 
   if (VT != MVT::f32 && VT != MVT::f64 && (Subtarget->has16BitInsts() &&
