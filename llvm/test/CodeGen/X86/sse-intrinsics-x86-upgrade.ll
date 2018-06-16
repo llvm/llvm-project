@@ -6,6 +6,44 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx -show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X64,AVX,X64-AVX,AVX1,X64-AVX1
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx512f,+avx512bw,+avx512dq,+avx512vl -show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X64,AVX,X64-AVX,AVX512,X64-AVX512
 
+
+define <4 x float> @test_x86_sse_sqrt_ps(<4 x float> %a0) {
+; SSE-LABEL: test_x86_sse_sqrt_ps:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    sqrtps %xmm0, %xmm0 ## encoding: [0x0f,0x51,0xc0]
+; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX1-LABEL: test_x86_sse_sqrt_ps:
+; AVX1:       ## %bb.0:
+; AVX1-NEXT:    vsqrtps %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x51,0xc0]
+; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX512-LABEL: test_x86_sse_sqrt_ps:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vsqrtps %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x51,0xc0]
+; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float> %a0) ; <<4 x float>> [#uses=1]
+  ret <4 x float> %res
+}
+declare <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float>) nounwind readnone
+
+
+define <4 x float> @test_x86_sse_sqrt_ss(<4 x float> %a0) {
+; SSE-LABEL: test_x86_sse_sqrt_ss:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    sqrtss %xmm0, %xmm0 ## encoding: [0xf3,0x0f,0x51,0xc0]
+; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX-LABEL: test_x86_sse_sqrt_ss:
+; AVX:       ## %bb.0:
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x51,0xc0]
+; AVX-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %a0) ; <<4 x float>> [#uses=1]
+  ret <4 x float> %res
+}
+declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
+
+
 define void @test_x86_sse_storeu_ps(i8* %a0, <4 x float> %a1) {
 ; X86-SSE-LABEL: test_x86_sse_storeu_ps:
 ; X86-SSE:       ## %bb.0:

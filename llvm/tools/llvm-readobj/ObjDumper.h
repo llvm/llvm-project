@@ -13,6 +13,8 @@
 #include <memory>
 #include <system_error>
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 namespace object {
 class COFFImportFile;
@@ -41,6 +43,7 @@ public:
   virtual void printDynamicTable() { }
   virtual void printNeededLibraries() { }
   virtual void printProgramHeaders() { }
+  virtual void printSectionAsString(StringRef SectionName) {}
   virtual void printHashTable() { }
   virtual void printGnuHashTable() { }
   virtual void printLoadName() {}

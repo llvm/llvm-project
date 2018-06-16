@@ -3720,10 +3720,10 @@ define <2 x double> @test_mm_sqrt_pd(<2 x double> %a0) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtpd %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
-  %res = call <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double> %a0)
+  %res = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %a0)
   ret <2 x double> %res
 }
-declare <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double>) nounwind readnone
+declare <2 x double> @llvm.sqrt.v2f64(<2 x double>) nounwind readnone
 
 define <2 x double> @test_mm_sqrt_sd(<2 x double> %a0, <2 x double> %a1) nounwind {
 ; SSE-LABEL: test_mm_sqrt_sd:
@@ -3736,14 +3736,12 @@ define <2 x double> @test_mm_sqrt_sd(<2 x double> %a0, <2 x double> %a1) nounwin
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
-  %call = call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %a0)
-  %ext0 = extractelement <2 x double> %call, i32 0
-  %ins0 = insertelement <2 x double> undef, double %ext0, i32 0
-  %ext1 = extractelement <2 x double> %a1, i32 1
-  %ins1 = insertelement <2 x double> %ins0, double %ext1, i32 1
-  ret <2 x double> %ins1
+  %ext = extractelement <2 x double> %a0, i32 0
+  %sqrt = call double @llvm.sqrt.f64(double %ext)
+  %ins = insertelement <2 x double> %a1, double %sqrt, i32 0
+  ret <2 x double> %ins
 }
-declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
+declare double @llvm.sqrt.f64(double) nounwind readnone
 
 define <2 x i64> @test_mm_sra_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test_mm_sra_epi16:

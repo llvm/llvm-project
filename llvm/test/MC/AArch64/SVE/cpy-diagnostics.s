@@ -1,6 +1,90 @@
 // RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sve  2>&1 < %s| FileCheck %s
 
 // --------------------------------------------------------------------------//
+// Invalid scalar operand for result element width.
+
+cpy z0.b, p0/m, x0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.b, p0/m, x0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.h, p0/m, x0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.h, p0/m, x0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.s, p0/m, x0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.s, p0/m, x0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.d, p0/m, w0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.d, p0/m, w0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.b, p0/m, h0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.b, p0/m, h0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.b, p0/m, s0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.b, p0/m, s0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.b, p0/m, d0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.b, p0/m, d0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.h, p0/m, b0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.h, p0/m, b0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.h, p0/m, s0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.h, p0/m, s0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.h, p0/m, d0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.h, p0/m, d0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.s, p0/m, b0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.s, p0/m, b0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.s, p0/m, h0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.s, p0/m, h0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.s, p0/m, d0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.s, p0/m, d0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.d, p0/m, b0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.d, p0/m, b0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.d, p0/m, h0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.d, p0/m, h0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cpy z0.d, p0/m, s0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: cpy z0.d, p0/m, s0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
 // Invalid immediates
 
 cpy z0.b, p0/z, #0, lsl #8      // #0, lsl #8 is not valid for .b

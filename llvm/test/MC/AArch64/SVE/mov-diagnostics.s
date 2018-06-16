@@ -38,6 +38,94 @@ mov z0.s, z1.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
+// Invalid scalar operand for result element width.
+
+mov z0.d, w0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.d, w0
+// CHECK-NOT: [[@LINE-3]]:{{[0-9]+}}:
+
+mov z0.b, p0/m, x0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.b, p0/m, x0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.h, p0/m, x0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.h, p0/m, x0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.s, p0/m, x0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.s, p0/m, x0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.d, p0/m, w0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.d, p0/m, w0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.b, p0/m, h0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.b, p0/m, h0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.b, p0/m, s0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.b, p0/m, s0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.b, p0/m, d0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.b, p0/m, d0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.h, p0/m, b0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.h, p0/m, b0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.h, p0/m, s0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.h, p0/m, s0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.h, p0/m, d0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.h, p0/m, d0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.s, p0/m, b0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.s, p0/m, b0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.s, p0/m, h0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.s, p0/m, h0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.s, p0/m, d0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.s, p0/m, d0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.d, p0/m, b0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.d, p0/m, b0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.d, p0/m, h0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.d, p0/m, h0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+mov z0.d, p0/m, s0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: mov z0.d, p0/m, s0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
 // Invalid immediates
 
 mov z0.b, #0, lsl #8      // #0, lsl #8 is not valid for .b

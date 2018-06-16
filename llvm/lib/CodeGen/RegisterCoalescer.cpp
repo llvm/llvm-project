@@ -1231,6 +1231,11 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     // Update machine operands and add flags.
     updateRegDefsUses(DstReg, DstReg, DstIdx);
     NewMI.getOperand(0).setSubReg(NewIdx);
+    // updateRegDefUses can add an "undef" flag to the definition, since
+    // it will replace DstReg with DstReg.DstIdx. If NewIdx is 0, make
+    // sure that "undef" is not set.
+    if (NewIdx == 0)
+      NewMI.getOperand(0).setIsUndef(false);
     // Add dead subregister definitions if we are defining the whole register
     // but only part of it is live.
     // This could happen if the rematerialization instruction is rematerializing

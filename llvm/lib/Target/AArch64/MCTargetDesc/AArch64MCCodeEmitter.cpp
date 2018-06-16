@@ -166,6 +166,9 @@ public:
   uint32_t getImm8OptLsl(const MCInst &MI, unsigned OpIdx,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
+  uint32_t getSVEIncDecImm(const MCInst &MI, unsigned OpIdx,
+                           SmallVectorImpl<MCFixup> &Fixups,
+                           const MCSubtargetInfo &STI) const;
 
   unsigned fixMOVZ(const MCInst &MI, unsigned EncodedValue,
                    const MCSubtargetInfo &STI) const;
@@ -529,6 +532,16 @@ AArch64MCCodeEmitter::getImm8OptLsl(const MCInst &MI, unsigned OpIdx,
   // Test immediate
   auto Immediate = MI.getOperand(OpIdx).getImm();
   return (Immediate & 0xff) | (ShiftVal == 0 ? 0 : (1 << ShiftVal));
+}
+
+uint32_t
+AArch64MCCodeEmitter::getSVEIncDecImm(const MCInst &MI, unsigned OpIdx,
+                                           SmallVectorImpl<MCFixup> &Fixups,
+                                           const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpIdx);
+  assert(MO.isImm() && "Expected an immediate value!");
+  // Normalize 1-16 range to 0-15.
+  return MO.getImm() - 1;
 }
 
 /// getMoveVecShifterOpValue - Return the encoded value for the vector move

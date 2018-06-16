@@ -1134,6 +1134,14 @@ Record *TreePredicateFn::getScalarMemoryVT() const {
     return nullptr;
   return R->getValueAsDef("ScalarMemoryVT");
 }
+bool TreePredicateFn::hasGISelPredicateCode() const {
+  return !PatFragRec->getRecord()
+              ->getValueAsString("GISelPredicateCode")
+              .empty();
+}
+std::string TreePredicateFn::getGISelPredicateCode() const {
+  return PatFragRec->getRecord()->getValueAsString("GISelPredicateCode");
+}
 
 StringRef TreePredicateFn::getImmType() const {
   if (immCodeUsesAPInt())

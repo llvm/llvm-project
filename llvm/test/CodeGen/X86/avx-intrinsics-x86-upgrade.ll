@@ -6,6 +6,36 @@
 
 ; We don't check any vinsertf128 variant with immediate 0 because that's just a blend.
 
+define <4 x double> @test_x86_avx_sqrt_pd_256(<4 x double> %a0) {
+; AVX-LABEL: test_x86_avx_sqrt_pd_256:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtpd %ymm0, %ymm0 # encoding: [0xc5,0xfd,0x51,0xc0]
+; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_x86_avx_sqrt_pd_256:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vsqrtpd %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x51,0xc0]
+; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double> %a0) ; <<4 x double>> [#uses=1]
+  ret <4 x double> %res
+}
+declare <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double>) nounwind readnone
+
+define <8 x float> @test_x86_avx_sqrt_ps_256(<8 x float> %a0) {
+; AVX-LABEL: test_x86_avx_sqrt_ps_256:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtps %ymm0, %ymm0 # encoding: [0xc5,0xfc,0x51,0xc0]
+; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+;
+; AVX512VL-LABEL: test_x86_avx_sqrt_ps_256:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vsqrtps %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x51,0xc0]
+; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float> %a0) ; <<8 x float>> [#uses=1]
+  ret <8 x float> %res
+}
+declare <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float>) nounwind readnone
+
 define <4 x double> @test_x86_avx_vinsertf128_pd_256_1(<4 x double> %a0, <2 x double> %a1) {
 ; AVX-LABEL: test_x86_avx_vinsertf128_pd_256_1:
 ; AVX:       # %bb.0:

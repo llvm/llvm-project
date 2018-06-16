@@ -883,6 +883,16 @@ def bf_inv_mask_imm : Operand<i32>,
   let PrintMethod = "printBitfieldInvMaskImmOperand";
   let DecoderMethod = "DecodeBitfieldMaskOperand";
   let ParserMatchClass = BitfieldAsmOperand;
+  let GISelPredicateCode = [{
+    // There's better methods of implementing this check. IntImmLeaf<> would be
+    // equivalent and have less boilerplate but we need a test for C++
+    // predicates and this one causes new rules to be imported into GlobalISel
+    // without requiring additional features first.
+    const auto &MO = MI.getOperand(1);
+    if (!MO.isCImm())
+      return false;
+    return ARM::isBitFieldInvertedMask(MO.getCImm()->getZExtValue());
+  }];
 }
 
 def imm1_32_XFORM: SDNodeXForm<imm, [{

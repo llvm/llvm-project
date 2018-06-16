@@ -217,7 +217,6 @@ top:
 
 ; Make sure we are making a smart choice regarding undef registers and
 ; hiding the false dependency behind a true dependency
-; TODO: We shouldn't be folding the load here.
 define double @truedeps(float %arg) {
 top:
   tail call void asm sideeffect "", "~{xmm6},~{dirflag},~{fpsr},~{flags}"()
@@ -228,8 +227,8 @@ top:
   %tmp1 = fpext float %arg to double
   ret double %tmp1
 ;AVX-LABEL:@truedeps
-;AVX: vxorps  [[XMM6:%xmm6]], [[XMM6]], [[XMM6]]
-;AVX: vcvtss2sd {{.*}}, [[XMM6]], {{%xmm[0-9]+}}
+;AVX-NOT: vxorps
+;AVX: vcvtss2sd [[XMM0:%xmm[0-9]+]], [[XMM0]], {{%xmm[0-9]+}}
 }
 
 ; Make sure we are making a smart choice regarding undef registers and
