@@ -911,6 +911,8 @@ public:
 
   ConditionTruthVal isModelFeasible() override;
 
+  LLVM_DUMP_METHOD void dump() const override;
+
   //===------------------------------------------------------------------===//
   // Implementation for interface from ConstraintManager.
   //===------------------------------------------------------------------===//
@@ -1297,6 +1299,11 @@ clang::ento::ConditionTruthVal Z3ConstraintManager::isModelFeasible() {
     return false;
 
   return ConditionTruthVal();
+}
+
+LLVM_DUMP_METHOD void Z3ConstraintManager::dump() const
+{
+  Solver.dump();
 }
 
 //===------------------------------------------------------------------===//

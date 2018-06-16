@@ -1295,7 +1295,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(Symbol &Sym, RelType Type,
 // InputSectionDescription::Sections.
 void ThunkCreator::forEachInputSectionDescription(
     ArrayRef<OutputSection *> OutputSections,
-    std::function<void(OutputSection *, InputSectionDescription *)> Fn) {
+    llvm::function_ref<void(OutputSection *, InputSectionDescription *)> Fn) {
   for (OutputSection *OS : OutputSections) {
     if (!(OS->Flags & SHF_ALLOC) || !(OS->Flags & SHF_EXECINSTR))
       continue;
