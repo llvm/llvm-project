@@ -1090,6 +1090,10 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       return;
     }
     break;
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FDIV:
   case ISD::STRICT_FSQRT:
   case ISD::STRICT_FMA:
   case ISD::STRICT_FPOW:

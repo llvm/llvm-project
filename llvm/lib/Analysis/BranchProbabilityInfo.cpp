@@ -500,13 +500,13 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
   PHINode *CmpPHI = dyn_cast<PHINode>(CmpLHS);
   Constant *CmpConst = dyn_cast<Constant>(CI->getOperand(1));
   // Collect the instructions until we hit a PHI
-  std::list<BinaryOperator*> InstChain;
+  SmallVector<BinaryOperator *, 1> InstChain;
   while (!CmpPHI && CmpLHS && isa<BinaryOperator>(CmpLHS) &&
          isa<Constant>(CmpLHS->getOperand(1))) {
     // Stop if the chain extends outside of the loop
     if (!L->contains(CmpLHS))
       return;
-    InstChain.push_front(dyn_cast<BinaryOperator>(CmpLHS));
+    InstChain.push_back(cast<BinaryOperator>(CmpLHS));
     CmpLHS = dyn_cast<Instruction>(CmpLHS->getOperand(0));
     if (CmpLHS)
       CmpPHI = dyn_cast<PHINode>(CmpLHS);
@@ -542,10 +542,9 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
           std::find(succ_begin(BB), succ_end(BB), B) == succ_end(BB))
         continue;
       // First collapse InstChain
-      for (Instruction *I : InstChain) {
+      for (Instruction *I : llvm::reverse(InstChain)) {
         CmpLHSConst = ConstantExpr::get(I->getOpcode(), CmpLHSConst,
-                                        dyn_cast<Constant>(I->getOperand(1)),
-                                        true);
+                                        cast<Constant>(I->getOperand(1)), true);
         if (!CmpLHSConst)
           break;
       }

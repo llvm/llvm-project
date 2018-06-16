@@ -12,8 +12,6 @@
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
-#include "lldb/API/SBError.h"
-
 // Project includes
 #include "MICmdArgSet.h"
 #include "MICmdData.h"
@@ -82,7 +80,6 @@ public:
   // Methods:
 protected:
   void SetError(const CMIUtilString &rErrMsg);
-  void SetError(const lldb::SBError &error);
   template <class T> T *GetOption(const CMIUtilString &vStrOptionName);
   bool ParseValidateCmdOptions();
 

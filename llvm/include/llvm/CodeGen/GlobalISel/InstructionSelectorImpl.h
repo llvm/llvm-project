@@ -41,6 +41,7 @@ enum {
   GIPFP_I64_Invalid = 0,
   GIPFP_APInt_Invalid = 0,
   GIPFP_APFloat_Invalid = 0,
+  GIPFP_MI_Invalid = 0,
 };
 
 template <class TgtInstructionSelector, class PredicateBitset,
@@ -298,6 +299,21 @@ bool InstructionSelector::executeMatchTable(
       APFloat Value = State.MIs[InsnID]->getOperand(1).getFPImm()->getValueAPF();
 
       if (!testImmPredicate_APFloat(Predicate, Value))
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      break;
+    }
+    case GIM_CheckCxxInsnPredicate: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t Predicate = MatchTable[CurrentIdx++];
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs()
+                          << CurrentIdx << ": GIM_CheckCxxPredicate(MIs["
+                          << InsnID << "], Predicate=" << Predicate << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      assert(Predicate > GIPFP_MI_Invalid && "Expected a valid predicate");
+
+      if (!testMIPredicate_MI(Predicate, *State.MIs[InsnID]))
         if (handleReject() == RejectAndGiveUp)
           return false;
       break;

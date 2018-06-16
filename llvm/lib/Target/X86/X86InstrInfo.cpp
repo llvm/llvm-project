@@ -8663,6 +8663,18 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
   case X86::VCVTSS2SDZrrb_Int:
   case X86::VCVTSS2SDZrm:
   case X86::VCVTSS2SDZrm_Int:
+  case X86::VGETEXPSDZr:
+  case X86::VGETEXPSDZrb:
+  case X86::VGETEXPSDZm:
+  case X86::VGETEXPSSZr:
+  case X86::VGETEXPSSZrb:
+  case X86::VGETEXPSSZm:
+  case X86::VGETMANTSDZrri:
+  case X86::VGETMANTSDZrrib:
+  case X86::VGETMANTSDZrmi:
+  case X86::VGETMANTSSZrri:
+  case X86::VGETMANTSSZrrib:
+  case X86::VGETMANTSSZrmi:
   case X86::VRNDSCALESDZr:
   case X86::VRNDSCALESDZr_Int:
   case X86::VRNDSCALESDZrb_Int:
@@ -8673,10 +8685,29 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
   case X86::VRNDSCALESSZrb_Int:
   case X86::VRNDSCALESSZm:
   case X86::VRNDSCALESSZm_Int:
+  case X86::VRCP14SDZrr:
+  case X86::VRCP14SDZrm:
   case X86::VRCP14SSZrr:
   case X86::VRCP14SSZrm:
+  case X86::VRCP28SDZr:
+  case X86::VRCP28SDZrb:
+  case X86::VRCP28SDZm:
+  case X86::VRCP28SSZr:
+  case X86::VRCP28SSZrb:
+  case X86::VRCP28SSZm:
+  case X86::VREDUCESSZrmi:
+  case X86::VREDUCESSZrri:
+  case X86::VREDUCESSZrrib:
+  case X86::VRSQRT14SDZrr:
+  case X86::VRSQRT14SDZrm:
   case X86::VRSQRT14SSZrr:
   case X86::VRSQRT14SSZrm:
+  case X86::VRSQRT28SDZr:
+  case X86::VRSQRT28SDZrb:
+  case X86::VRSQRT28SDZm:
+  case X86::VRSQRT28SSZr:
+  case X86::VRSQRT28SSZrb:
+  case X86::VRSQRT28SSZm:
   case X86::VSQRTSSZr:
   case X86::VSQRTSSZr_Int:
   case X86::VSQRTSSZrb_Int:
