@@ -84,10 +84,11 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
       SDValue Res(&Node, i);
       EVT VT = Res.getValueType();
       bool Failed = false;
-      auto ResId = getTableId(Res);
+      // Don't create a value in map.
+      auto ResId = (ValueToIdMap.count(Res)) ? ValueToIdMap[Res] : 0;
 
       unsigned Mapped = 0;
-      if (ReplacedValues.find(ResId) != ReplacedValues.end()) {
+      if (ResId && (ReplacedValues.find(ResId) != ReplacedValues.end())) {
         Mapped |= 1;
         // Check that remapped values are only used by nodes marked NewNode.
         for (SDNode::use_iterator UI = Node.use_begin(), UE = Node.use_end();
@@ -109,21 +110,21 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
         assert(NewVal.getNode()->getNodeId() != NewNode &&
                "ReplacedValues maps to a new node!");
       }
-      if (PromotedIntegers.find(ResId) != PromotedIntegers.end())
+      if (ResId && PromotedIntegers.find(ResId) != PromotedIntegers.end())
         Mapped |= 2;
-      if (SoftenedFloats.find(ResId) != SoftenedFloats.end())
+      if (ResId && SoftenedFloats.find(ResId) != SoftenedFloats.end())
         Mapped |= 4;
-      if (ScalarizedVectors.find(ResId) != ScalarizedVectors.end())
+      if (ResId && ScalarizedVectors.find(ResId) != ScalarizedVectors.end())
         Mapped |= 8;
-      if (ExpandedIntegers.find(ResId) != ExpandedIntegers.end())
+      if (ResId && ExpandedIntegers.find(ResId) != ExpandedIntegers.end())
         Mapped |= 16;
-      if (ExpandedFloats.find(ResId) != ExpandedFloats.end())
+      if (ResId && ExpandedFloats.find(ResId) != ExpandedFloats.end())
         Mapped |= 32;
-      if (SplitVectors.find(ResId) != SplitVectors.end())
+      if (ResId && SplitVectors.find(ResId) != SplitVectors.end())
         Mapped |= 64;
-      if (WidenedVectors.find(ResId) != WidenedVectors.end())
+      if (ResId && WidenedVectors.find(ResId) != WidenedVectors.end())
         Mapped |= 128;
-      if (PromotedFloats.find(ResId) != PromotedFloats.end())
+      if (ResId && PromotedFloats.find(ResId) != PromotedFloats.end())
         Mapped |= 256;
 
       if (Node.getNodeId() != Processed) {

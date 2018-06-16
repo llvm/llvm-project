@@ -543,6 +543,10 @@ public:
   /// ValueType record for the memory VT.
   Record *getScalarMemoryVT() const;
 
+  // If true, indicates that GlobalISel-based C++ code was supplied.
+  bool hasGISelPredicateCode() const;
+  std::string getGISelPredicateCode() const;
+
 private:
   bool hasPredCode() const;
   bool hasImmCode() const;

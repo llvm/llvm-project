@@ -623,6 +623,7 @@ class PatFrag<dag ops, dag frag, code pred = [{}],
   dag Operands = ops;
   dag Fragment = frag;
   code PredicateCode = pred;
+  code GISelPredicateCode = [{}];
   code ImmediateCode = [{}];
   SDNodeXForm OperandTransform = xform;
 

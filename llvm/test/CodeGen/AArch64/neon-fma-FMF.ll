@@ -12,8 +12,7 @@ define <2 x float> @fma_1(<2 x float> %A, <2 x float> %B, <2 x float> %C) {
 ; the contract on the fadd
 define <2 x float> @fma_2(<2 x float> %A, <2 x float> %B, <2 x float> %C) {
 ; CHECK-LABEL: fma_2:
-; CHECK: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
-; CHECK: fadd {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
+; CHECK: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
 	%tmp1 = fmul <2 x float> %A, %B;
 	%tmp2 = fadd contract <2 x float> %C, %tmp1;
 	ret <2 x float> %tmp2
@@ -40,8 +39,7 @@ define <2 x float> @fma_sub_1(<2 x float> %A, <2 x float> %B, <2 x float> %C) {
 ; the contract on the fsub
 define <2 x float> @fma_sub_2(<2 x float> %A, <2 x float> %B, <2 x float> %C) {
 ; CHECK-LABEL: fma_sub_2:
-; CHECK: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
-; CHECK: fsub {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
+; CHECK: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
 	%tmp1 = fmul <2 x float> %A, %B;
 	%tmp2 = fsub contract <2 x float> %C, %tmp1;
 	ret <2 x float> %tmp2
