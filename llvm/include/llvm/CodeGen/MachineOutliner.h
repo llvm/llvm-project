@@ -18,9 +18,8 @@
 
 #include "llvm/CodeGen/MachineFunction.h"
 
+namespace llvm {
 namespace outliner {
-
-using namespace llvm;
 
 /// Represents how an instruction should be mapped by the outliner.
 /// \p Legal instructions are those which are safe to outline.
@@ -190,5 +189,6 @@ public:
         TCI(TCI) {}
 };
 } // namespace outliner
+} // namespace llvm
 
 #endif

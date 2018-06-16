@@ -35,6 +35,8 @@ public:
   /// Checks if the added constraints are satisfiable
   virtual clang::ento::ConditionTruthVal isModelFeasible() = 0;
 
+  /// Dumps SMT formula
+  LLVM_DUMP_METHOD virtual void dump() const = 0;
 }; // end class SMTConstraintManager
 
 } // namespace ento
