@@ -351,7 +351,7 @@ protected:
   /// block.  This is the same as using operator[] on this class.  The result
   /// may (but is not required to) be null for a forward (backwards)
   /// statically unreachable block.
-  DomTreeNodeBase<NodeT> *getNode(NodeT *BB) const {
+  DomTreeNodeBase<NodeT> *getNode(const NodeT *BB) const {
     auto I = DomTreeNodes.find(BB);
     if (I != DomTreeNodes.end())
       return I->second.get();
@@ -359,7 +359,9 @@ protected:
   }
 
   /// See getNode.
-  DomTreeNodeBase<NodeT> *operator[](NodeT *BB) const { return getNode(BB); }
+  DomTreeNodeBase<NodeT> *operator[](const NodeT *BB) const {
+    return getNode(BB);
+  }
 
   /// getRootNode - This returns the entry node for the CFG of the function.  If
   /// this tree represents the post-dominance relations for a function, however,
