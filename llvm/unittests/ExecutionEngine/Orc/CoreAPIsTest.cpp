@@ -163,6 +163,60 @@ TEST(CoreAPIsTest, SimpleAsynchronousSymbolQueryAgainstVSO) {
   EXPECT_TRUE(OnReadyRun) << "OnReady was not run";
 }
 
+TEST(CoreAPIsTest, EmptyVSOAndQueryLookup) {
+  ExecutionSession ES;
+  auto &V = ES.createVSO("V");
+
+  bool OnResolvedRun = false;
+  bool OnReadyRun = false;
+
+  auto Q = std::make_shared<AsynchronousSymbolQuery>(
+      SymbolNameSet(),
+      [&](Expected<AsynchronousSymbolQuery::ResolutionResult> RR) {
+        cantFail(std::move(RR));
+        OnResolvedRun = true;
+      },
+      [&](Error Err) {
+        cantFail(std::move(Err));
+        OnReadyRun = true;
+      });
+
+  V.lookup(std::move(Q), {});
+
+  EXPECT_TRUE(OnResolvedRun) << "OnResolved was not run for empty query";
+  EXPECT_TRUE(OnReadyRun) << "OnReady was not run for empty query";
+}
+
+TEST(CoreAPIsTest, ChainedVSOLookup) {
+  ExecutionSession ES;
+  auto Foo = ES.getSymbolStringPool().intern("foo");
+  auto FooSym = JITEvaluatedSymbol(1U, JITSymbolFlags::Exported);
+
+  auto &V1 = ES.createVSO("V1");
+  cantFail(V1.define(absoluteSymbols({{Foo, FooSym}})));
+
+  auto &V2 = ES.createVSO("V2");
+
+  bool OnResolvedRun = false;
+  bool OnReadyRun = false;
+
+  auto Q = std::make_shared<AsynchronousSymbolQuery>(
+      SymbolNameSet({Foo}),
+      [&](Expected<AsynchronousSymbolQuery::ResolutionResult> RR) {
+        cantFail(std::move(RR));
+        OnResolvedRun = true;
+      },
+      [&](Error Err) {
+        cantFail(std::move(Err));
+        OnReadyRun = true;
+      });
+
+  V2.lookup(Q, V1.lookup(Q, {Foo}));
+
+  EXPECT_TRUE(OnResolvedRun) << "OnResolved was not run for empty query";
+  EXPECT_TRUE(OnReadyRun) << "OnReady was not run for empty query";
+}
+
 TEST(CoreAPIsTest, LookupFlagsTest) {
 
   // Test that lookupFlags works on a predefined symbol, and does not trigger
@@ -203,6 +257,44 @@ TEST(CoreAPIsTest, LookupFlagsTest) {
   EXPECT_EQ(SymbolFlags.count(Bar), 1U)
       << "Missing  lookupFlags result for Bar";
   EXPECT_EQ(SymbolFlags[Bar], BarFlags) << "Incorrect flags returned for Bar";
+}
+
+TEST(CoreAPIsTest, TestTrivialCircularDependency) {
+  ExecutionSession ES;
+
+  auto &V = ES.createVSO("V");
+
+  auto Foo = ES.getSymbolStringPool().intern("foo");
+  auto FooFlags = JITSymbolFlags::Exported;
+  auto FooSym = JITEvaluatedSymbol(1U, FooFlags);
+
+  Optional<MaterializationResponsibility> FooR;
+  auto FooMU = llvm::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooFlags}}),
+      [&](MaterializationResponsibility R) { FooR.emplace(std::move(R)); });
+
+  cantFail(V.define(FooMU));
+
+  bool FooReady = false;
+  auto Q =
+    std::make_shared<AsynchronousSymbolQuery>(
+      SymbolNameSet({ Foo }),
+      [](Expected<AsynchronousSymbolQuery::ResolutionResult> R) {
+        cantFail(std::move(R));
+      },
+      [&](Error Err) {
+        cantFail(std::move(Err));
+        FooReady = true;
+      });
+
+  V.lookup(std::move(Q), { Foo });
+
+  FooR->addDependencies({{&V, {Foo}}});
+  FooR->resolve({{Foo, FooSym}});
+  FooR->finalize();
+
+  EXPECT_TRUE(FooReady)
+    << "Self-dependency prevented symbol from being marked ready";
 }
 
 TEST(CoreAPIsTest, TestCircularDependenceInOneVSO) {

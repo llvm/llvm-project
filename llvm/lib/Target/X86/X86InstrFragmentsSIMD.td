@@ -651,10 +651,10 @@ def X86GF2P8mulb        : SDNode<"X86ISD::GF2P8MULB", SDTIntBinOp>;
 // forms.
 def sse_load_f32 : ComplexPattern<v4f32, 5, "selectScalarSSELoad", [],
                                   [SDNPHasChain, SDNPMayLoad, SDNPMemOperand,
-                                   SDNPWantRoot]>;
+                                   SDNPWantRoot, SDNPWantParent]>;
 def sse_load_f64 : ComplexPattern<v2f64, 5, "selectScalarSSELoad", [],
                                   [SDNPHasChain, SDNPMayLoad, SDNPMemOperand,
-                                   SDNPWantRoot]>;
+                                   SDNPWantRoot, SDNPWantParent]>;
 
 def ssmem : Operand<v4f32> {
   let PrintMethod = "printf32mem";
