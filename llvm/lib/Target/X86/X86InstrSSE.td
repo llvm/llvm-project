@@ -876,7 +876,8 @@ let AddedComplexity = 20, Predicates = [UseAVX] in {
                       "movhlps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set VR128:$dst,
                         (v4f32 (X86Movhlps VR128:$src1, VR128:$src2)))]>,
-                      VEX_4V, Sched<[SchedWriteFShuffle.XMM]>, VEX_WIG;
+                      VEX_4V, Sched<[SchedWriteFShuffle.XMM]>, VEX_WIG,
+                      NotMemoryFoldable;
 }
 let Constraints = "$src1 = $dst", AddedComplexity = 20 in {
   def MOVLHPSrr : PSI<0x16, MRMSrcReg, (outs VR128:$dst),
@@ -891,7 +892,7 @@ let Constraints = "$src1 = $dst", AddedComplexity = 20 in {
                       "movhlps\t{$src2, $dst|$dst, $src2}",
                       [(set VR128:$dst,
                         (v4f32 (X86Movhlps VR128:$src1, VR128:$src2)))]>,
-                      Sched<[SchedWriteFShuffle.XMM]>;
+                      Sched<[SchedWriteFShuffle.XMM]>, NotMemoryFoldable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1901,11 +1902,11 @@ multiclass sse12_cmp_scalar<RegisterClass RC, X86MemOperand x86memop,
   let isAsmParserOnly = 1, hasSideEffects = 0 in {
     def rr_alt : SIi8<0xC2, MRMSrcReg, (outs RC:$dst),
                       (ins RC:$src1, RC:$src2, u8imm:$cc), asm_alt, []>,
-                      Sched<[sched]>;
+                      Sched<[sched]>, NotMemoryFoldable;
     let mayLoad = 1 in
     def rm_alt : SIi8<0xC2, MRMSrcMem, (outs RC:$dst),
                       (ins RC:$src1, x86memop:$src2, u8imm:$cc), asm_alt, []>,
-                      Sched<[sched.Folded, ReadAfterLd]>;
+                      Sched<[sched.Folded, ReadAfterLd]>, NotMemoryFoldable;
   }
 }
 
@@ -2078,11 +2079,12 @@ multiclass sse12_cmp_packed<RegisterClass RC, X86MemOperand x86memop,
   let isAsmParserOnly = 1, hasSideEffects = 0 in {
     def rri_alt : PIi8<0xC2, MRMSrcReg,
                (outs RC:$dst), (ins RC:$src1, RC:$src2, u8imm:$cc),
-               asm_alt, [], d>, Sched<[sched]>;
+               asm_alt, [], d>, Sched<[sched]>, NotMemoryFoldable;
     let mayLoad = 1 in
     def rmi_alt : PIi8<0xC2, MRMSrcMem,
                (outs RC:$dst), (ins RC:$src1, x86memop:$src2, u8imm:$cc),
-               asm_alt, [], d>, Sched<[sched.Folded, ReadAfterLd]>;
+               asm_alt, [], d>, Sched<[sched.Folded, ReadAfterLd]>,
+               NotMemoryFoldable;
   }
 }
 

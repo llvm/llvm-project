@@ -268,13 +268,14 @@ multiclass xopvpcom<bits<8> opc, string Suffix, SDNode OpNode, ValueType vt128,
                    (ins VR128:$src1, VR128:$src2, u8imm:$src3),
                    !strconcat("vpcom", Suffix,
                    "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-                   []>, XOP_4V, Sched<[sched]>;
+                   []>, XOP_4V, Sched<[sched]>, NotMemoryFoldable;
       let mayLoad = 1 in
       def mi_alt : IXOPi8<opc, MRMSrcMem, (outs VR128:$dst),
                    (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
                    !strconcat("vpcom", Suffix,
                    "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
-                   []>, XOP_4V, Sched<[sched.Folded, ReadAfterLd]>;
+                   []>, XOP_4V, Sched<[sched.Folded, ReadAfterLd]>,
+                   NotMemoryFoldable;
     }
   }
 
