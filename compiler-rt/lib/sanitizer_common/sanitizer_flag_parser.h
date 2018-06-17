@@ -81,7 +81,7 @@ inline bool FlagHandler<const char *>::Parse(const char *value) {
 
 template <>
 inline bool FlagHandler<int>::Parse(const char *value) {
-  char *value_end;
+  const char *value_end;
   *t_ = internal_simple_strtoll(value, &value_end, 10);
   bool ok = *value_end == 0;
   if (!ok) Printf("ERROR: Invalid value for int option: '%s'\n", value);
@@ -90,7 +90,7 @@ inline bool FlagHandler<int>::Parse(const char *value) {
 
 template <>
 inline bool FlagHandler<uptr>::Parse(const char *value) {
-  char *value_end;
+  const char *value_end;
   *t_ = internal_simple_strtoll(value, &value_end, 10);
   bool ok = *value_end == 0;
   if (!ok) Printf("ERROR: Invalid value for uptr option: '%s'\n", value);
