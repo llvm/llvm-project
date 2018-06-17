@@ -47,7 +47,9 @@ const char *ExplicitAlign[] = {"MOVDQA",  "MOVAPS",  "MOVAPD",  "MOVNTPS",
                                "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
 
 // List of instructions NOT requiring explicit memory alignment.
-const char *ExplicitUnalign[] = {"MOVDQU", "MOVUPS", "MOVUPD"};
+const char *ExplicitUnalign[] = {"MOVDQU", "MOVUPS", "MOVUPD",
+                                 "PCMPESTRM", "PCMPESTRI",
+                                 "PCMPISTRM", "PCMPISTRI" };
 
 // For manually mapping instructions that do not match by their encoding.
 const ManualMapEntry ManualMapSet[] = {
@@ -63,9 +65,9 @@ const ManualMapEntry ManualMapSet[] = {
     { "ADD16rr_DB",       "ADD16rm",         NO_UNFOLD  },
     { "ADD32rr_DB",       "ADD32rm",         NO_UNFOLD  },
     { "ADD64rr_DB",       "ADD64rm",         NO_UNFOLD  },
-    { "PUSH16r",          "PUSH16rmm",       NO_UNFOLD  },
-    { "PUSH32r",          "PUSH32rmm",       NO_UNFOLD  },
-    { "PUSH64r",          "PUSH64rmm",       NO_UNFOLD  },
+    { "PUSH16r",          "PUSH16rmm",       UNFOLD },
+    { "PUSH32r",          "PUSH32rmm",       UNFOLD },
+    { "PUSH64r",          "PUSH64rmm",       UNFOLD },
     { "TAILJMPr",         "TAILJMPm",        UNFOLD },
     { "TAILJMPr64",       "TAILJMPm64",      UNFOLD },
     { "TAILJMPr64_REX",   "TAILJMPm64_REX",  UNFOLD },

@@ -1959,7 +1959,7 @@ multiclass WriteFVarBlendask<bits<8> opc, string OpcodeStr,
              (ins _.KRCWM:$mask, _.RC:$src1, _.RC:$src2),
              !strconcat(OpcodeStr,
              "\t{$src2, $src1, ${dst} {${mask}} {z}|${dst} {${mask}} {z}, $src1, $src2}"),
-             []>, EVEX_4V, EVEX_KZ, Sched<[sched]>;
+             []>, EVEX_4V, EVEX_KZ, Sched<[sched]>, NotMemoryFoldable;
   let mayLoad = 1 in {
   def rm  : AVX5128I<opc, MRMSrcMem, (outs _.RC:$dst),
              (ins _.RC:$src1, _.MemOp:$src2),
@@ -1978,7 +1978,7 @@ multiclass WriteFVarBlendask<bits<8> opc, string OpcodeStr,
              !strconcat(OpcodeStr,
              "\t{$src2, $src1, ${dst} {${mask}} {z}|${dst} {${mask}} {z}, $src1, $src2}"),
              []>, EVEX_4V, EVEX_KZ, EVEX_CD8<_.EltSize, CD8VF>,
-             Sched<[sched.Folded, ReadAfterLd]>;
+             Sched<[sched.Folded, ReadAfterLd]>, NotMemoryFoldable;
   }
   }
 }
@@ -1999,7 +1999,7 @@ multiclass WriteFVarBlendask_rmb<bits<8> opc, string OpcodeStr,
             "\t{${src2}", _.BroadcastStr, ", $src1, $dst {${mask}} {z}|",
             "$dst {${mask}} {z}, $src1, ${src2}", _.BroadcastStr, "}"), []>,
       EVEX_4V, EVEX_KZ, EVEX_B, EVEX_CD8<_.EltSize, CD8VF>,
-      Sched<[sched.Folded, ReadAfterLd]>;
+      Sched<[sched.Folded, ReadAfterLd]>, NotMemoryFoldable;
 
   def rmb : AVX5128I<opc, MRMSrcMem, (outs _.RC:$dst),
       (ins _.RC:$src1, _.ScalarMemOp:$src2),
@@ -2097,7 +2097,7 @@ multiclass avx512_cmp_scalar<X86VectorVTInfo _, SDNode OpNode, SDNode OpNodeRnd,
                         (ins _.RC:$src1, _.RC:$src2, u8imm:$cc),
                         "vcmp"#_.Suffix,
                         "$cc, $src2, $src1", "$src1, $src2, $cc">, EVEX_4V,
-                        Sched<[sched]>;
+                        Sched<[sched]>, NotMemoryFoldable;
   let mayLoad = 1 in
     defm  rmi_alt  : AVX512_maskable_cmp_alt<0xC2, MRMSrcMem, _,
                         (outs _.KRC:$dst),
@@ -2105,14 +2105,14 @@ multiclass avx512_cmp_scalar<X86VectorVTInfo _, SDNode OpNode, SDNode OpNodeRnd,
                         "vcmp"#_.Suffix,
                         "$cc, $src2, $src1", "$src1, $src2, $cc">,
                         EVEX_4V, EVEX_CD8<_.EltSize, CD8VT1>,
-                        Sched<[sched.Folded, ReadAfterLd]>;
+                        Sched<[sched.Folded, ReadAfterLd]>, NotMemoryFoldable;
 
     defm  rrb_alt  : AVX512_maskable_cmp_alt<0xC2, MRMSrcReg, _,
                        (outs _.KRC:$dst),
                        (ins _.RC:$src1, _.RC:$src2, u8imm:$cc),
                        "vcmp"#_.Suffix,
                        "$cc, {sae}, $src2, $src1","$src1, $src2, {sae}, $cc">,
-                       EVEX_4V, EVEX_B, Sched<[sched]>;
+                       EVEX_4V, EVEX_B, Sched<[sched]>, NotMemoryFoldable;
   }// let isAsmParserOnly = 1, hasSideEffects = 0
 
   let isCodeGenOnly = 1 in {
@@ -2334,20 +2334,20 @@ multiclass avx512_icmp_cc<bits<8> opc, string Suffix, SDNode OpNode,
                (outs _.KRC:$dst), (ins _.RC:$src1, _.RC:$src2, u8imm:$cc),
                !strconcat("vpcmp", Suffix, "\t{$cc, $src2, $src1, $dst|",
                           "$dst, $src1, $src2, $cc}"), []>,
-               EVEX_4V, Sched<[sched]>;
+               EVEX_4V, Sched<[sched]>, NotMemoryFoldable;
     let mayLoad = 1 in
     def rmi_alt : AVX512AIi8<opc, MRMSrcMem,
                (outs _.KRC:$dst), (ins _.RC:$src1, _.MemOp:$src2, u8imm:$cc),
                !strconcat("vpcmp", Suffix, "\t{$cc, $src2, $src1, $dst|",
                           "$dst, $src1, $src2, $cc}"), []>,
-               EVEX_4V, Sched<[sched.Folded, ReadAfterLd]>;
+               EVEX_4V, Sched<[sched.Folded, ReadAfterLd]>, NotMemoryFoldable;
     def rrik_alt : AVX512AIi8<opc, MRMSrcReg,
                (outs _.KRC:$dst), (ins _.KRCWM:$mask, _.RC:$src1, _.RC:$src2,
                                        u8imm:$cc),
                !strconcat("vpcmp", Suffix,
                           "\t{$cc, $src2, $src1, $dst {${mask}}|",
                           "$dst {${mask}}, $src1, $src2, $cc}"), []>,
-               EVEX_4V, EVEX_K, Sched<[sched]>;
+               EVEX_4V, EVEX_K, Sched<[sched]>, NotMemoryFoldable;
     let mayLoad = 1 in
     def rmik_alt : AVX512AIi8<opc, MRMSrcMem,
                (outs _.KRC:$dst), (ins _.KRCWM:$mask, _.RC:$src1, _.MemOp:$src2,
@@ -2355,7 +2355,8 @@ multiclass avx512_icmp_cc<bits<8> opc, string Suffix, SDNode OpNode,
                !strconcat("vpcmp", Suffix,
                           "\t{$cc, $src2, $src1, $dst {${mask}}|",
                           "$dst {${mask}}, $src1, $src2, $cc}"), []>,
-               EVEX_4V, EVEX_K, Sched<[sched.Folded, ReadAfterLd]>;
+               EVEX_4V, EVEX_K, Sched<[sched.Folded, ReadAfterLd]>,
+               NotMemoryFoldable;
   }
 
   def : Pat<(OpNode (bitconvert (_.LdFrag addr:$src2)),
@@ -2404,14 +2405,16 @@ multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, SDNode OpNode,
                !strconcat("vpcmp", Suffix,
                    "\t{$cc, ${src2}", _.BroadcastStr, ", $src1, $dst|",
                    "$dst, $src1, ${src2}", _.BroadcastStr, ", $cc}"), []>,
-               EVEX_4V, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+               EVEX_4V, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>,
+               NotMemoryFoldable;
     def rmibk_alt : AVX512AIi8<opc, MRMSrcMem,
                (outs _.KRC:$dst), (ins _.KRCWM:$mask, _.RC:$src1,
                                        _.ScalarMemOp:$src2, u8imm:$cc),
                !strconcat("vpcmp", Suffix,
                   "\t{$cc, ${src2}", _.BroadcastStr, ", $src1, $dst {${mask}}|",
                   "$dst {${mask}}, $src1, ${src2}", _.BroadcastStr, ", $cc}"), []>,
-               EVEX_4V, EVEX_K, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+               EVEX_4V, EVEX_K, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>,
+               NotMemoryFoldable;
   }
 
   def : Pat<(OpNode (X86VBroadcast (_.ScalarLdFrag addr:$src2)),
@@ -2523,7 +2526,7 @@ multiclass avx512_vcmp_common<X86FoldableSchedWrite sched, X86VectorVTInfo _,
                          (ins _.RC:$src1, _.RC:$src2, u8imm:$cc),
                          "vcmp"#_.Suffix,
                          "$cc, $src2, $src1", "$src1, $src2, $cc">,
-                         Sched<[sched]>;
+                         Sched<[sched]>, NotMemoryFoldable;
 
     let mayLoad = 1 in {
       defm rmi_alt : AVX512_maskable_cmp_alt<0xC2, MRMSrcMem, _,
@@ -2531,7 +2534,8 @@ multiclass avx512_vcmp_common<X86FoldableSchedWrite sched, X86VectorVTInfo _,
                              (ins _.RC:$src1, _.MemOp:$src2, u8imm:$cc),
                              "vcmp"#_.Suffix,
                              "$cc, $src2, $src1", "$src1, $src2, $cc">,
-                             Sched<[sched.Folded, ReadAfterLd]>;
+                             Sched<[sched.Folded, ReadAfterLd]>,
+                             NotMemoryFoldable;
 
       defm  rmbi_alt : AVX512_maskable_cmp_alt<0xC2, MRMSrcMem, _,
                          (outs _.KRC:$dst),
@@ -2539,7 +2543,8 @@ multiclass avx512_vcmp_common<X86FoldableSchedWrite sched, X86VectorVTInfo _,
                          "vcmp"#_.Suffix,
                          "$cc, ${src2}"##_.BroadcastStr##", $src1",
                          "$src1, ${src2}"##_.BroadcastStr##", $cc">,
-                         EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+                         EVEX_B, Sched<[sched.Folded, ReadAfterLd]>,
+                         NotMemoryFoldable;
     }
   }
 
@@ -2589,7 +2594,7 @@ multiclass avx512_vcmp_sae<X86FoldableSchedWrite sched, X86VectorVTInfo _> {
                          "vcmp"#_.Suffix,
                          "$cc, {sae}, $src2, $src1",
                          "$src1, $src2, {sae}, $cc">,
-                         EVEX_B, Sched<[sched]>;
+                         EVEX_B, Sched<[sched]>, NotMemoryFoldable;
    }
 }
 
@@ -3781,7 +3786,7 @@ def VMOVPQIto64Zrr : I<0x7E, MRMDestReg, (outs GR64:$dst), (ins VR128X:$src),
                       [(set GR64:$dst, (extractelt (v2i64 VR128X:$src),
                                                    (iPTR 0)))]>,
                       PD, EVEX, VEX_W, Sched<[WriteVecMoveToGpr]>,
-                      Requires<[HasAVX512, In64BitMode]>;
+                      Requires<[HasAVX512]>;
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
 def VMOVPQIto64Zmr : I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128X:$src),
@@ -3795,7 +3800,7 @@ def VMOVPQI2QIZmr : I<0xD6, MRMDestMem, (outs),
                       [(store (extractelt (v2i64 VR128X:$src), (iPTR 0)),
                               addr:$dst)]>,
                       EVEX, PD, VEX_W, EVEX_CD8<64, CD8VT1>,
-                      Sched<[WriteVecStore]>, Requires<[HasAVX512, In64BitMode]>;
+                      Sched<[WriteVecStore]>, Requires<[HasAVX512]>;
 
 let hasSideEffects = 0 in
 def VMOVPQI2QIZrr : AVX512BI<0xD6, MRMDestReg, (outs VR128X:$dst),
@@ -6289,7 +6294,7 @@ def VMOVHLPSZrr : AVX512PSI<0x12, MRMSrcReg, (outs VR128X:$dst),
           (ins VR128X:$src1, VR128X:$src2),
           "vmovhlps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
           [(set VR128X:$dst, (v4f32 (X86Movhlps VR128X:$src1, VR128X:$src2)))]>,
-          Sched<[SchedWriteFShuffle.XMM]>, EVEX_4V;
+          Sched<[SchedWriteFShuffle.XMM]>, EVEX_4V, NotMemoryFoldable;
 
 //===----------------------------------------------------------------------===//
 // VMOVHPS/PD VMOVLPS Instructions
