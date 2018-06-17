@@ -395,7 +395,6 @@ void __msan_init() {
   SanitizerToolName = "MemorySanitizer";
 
   AvoidCVE_2016_2143();
-  InitTlsSize();
 
   CacheBinaryName();
   CheckASLR();
@@ -407,6 +406,7 @@ void __msan_init() {
   __sanitizer_set_report_path(common_flags()->log_path);
 
   InitializeInterceptors();
+  InitTlsSize();
   InstallDeadlySignalHandlers(MsanOnDeadlySignal);
   InstallAtExitHandler(); // Needs __cxa_atexit interceptor.
 
