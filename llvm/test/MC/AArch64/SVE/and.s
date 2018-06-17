@@ -90,3 +90,21 @@ and     z31.d, p7/m, z31.d, z31.d
 // CHECK-ENCODING: [0xff,0x1f,0xda,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 1f da 04 <unknown>
+
+and     p0.b, p0/z, p0.b, p1.b
+// CHECK-INST: and     p0.b, p0/z, p0.b, p1.b
+// CHECK-ENCODING: [0x00,0x40,0x01,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 40 01 25 <unknown>
+
+and     p0.b, p0/z, p0.b, p0.b
+// CHECK-INST: mov     p0.b, p0/z, p0.b
+// CHECK-ENCODING: [0x00,0x40,0x00,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 40 00 25 <unknown>
+
+and     p15.b, p15/z, p15.b, p15.b
+// CHECK-INST: mov     p15.b, p15/z, p15.b
+// CHECK-ENCODING: [0xef,0x7d,0x0f,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ef 7d 0f 25 <unknown>

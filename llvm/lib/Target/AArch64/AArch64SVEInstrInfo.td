@@ -57,6 +57,25 @@ let Predicates = [HasSVE] in {
   defm CPY_ZPmR : sve_int_perm_cpy_r<"cpy">;
   defm CPY_ZPmV : sve_int_perm_cpy_v<"cpy">;
 
+  // Select elements from either vector (predicated)
+  defm SEL_ZPZZ    : sve_int_sel_vvv<"sel">;
+
+  def AND_PPzPP   : sve_int_pred_log<0b0000, "and">;
+  def BIC_PPzPP   : sve_int_pred_log<0b0001, "bic">;
+  def EOR_PPzPP   : sve_int_pred_log<0b0010, "eor">;
+  def SEL_PPPP    : sve_int_pred_log<0b0011, "sel">;
+  def ANDS_PPzPP  : sve_int_pred_log<0b0100, "ands">;
+  def BICS_PPzPP  : sve_int_pred_log<0b0101, "bics">;
+  def EORS_PPzPP  : sve_int_pred_log<0b0110, "eors">;
+  def ORR_PPzPP   : sve_int_pred_log<0b1000, "orr">;
+  def ORN_PPzPP   : sve_int_pred_log<0b1001, "orn">;
+  def NOR_PPzPP   : sve_int_pred_log<0b1010, "nor">;
+  def NAND_PPzPP  : sve_int_pred_log<0b1011, "nand">;
+  def ORRS_PPzPP  : sve_int_pred_log<0b1100, "orrs">;
+  def ORNS_PPzPP  : sve_int_pred_log<0b1101, "orns">;
+  def NORS_PPzPP  : sve_int_pred_log<0b1110, "nors">;
+  def NANDS_PPzPP : sve_int_pred_log<0b1111, "nands">;
+
   // continuous load with reg+immediate
   defm LD1B_IMM    : sve_mem_cld_si<0b0000, "ld1b",  Z_b, ZPR8>;
   defm LD1B_H_IMM  : sve_mem_cld_si<0b0001, "ld1b",  Z_h, ZPR16>;
@@ -504,4 +523,21 @@ let Predicates = [HasSVE] in {
   // InstAliases
   def : InstAlias<"mov $Zd, $Zn",
                   (ORR_ZZZ ZPR64:$Zd, ZPR64:$Zn, ZPR64:$Zn), 1>;
+  def : InstAlias<"mov $Pd, $Pg/m, $Pn",
+                  (SEL_PPPP PPR8:$Pd, PPRAny:$Pg, PPR8:$Pn, PPR8:$Pd), 1>;
+  def : InstAlias<"mov $Pd, $Pn",
+                  (ORR_PPzPP PPR8:$Pd, PPR8:$Pn, PPR8:$Pn, PPR8:$Pn), 1>;
+  def : InstAlias<"mov $Pd, $Pg/z, $Pn",
+                  (AND_PPzPP PPR8:$Pd, PPRAny:$Pg, PPR8:$Pn, PPR8:$Pn), 1>;
+
+  def : InstAlias<"movs $Pd, $Pn",
+                  (ORRS_PPzPP PPR8:$Pd, PPR8:$Pn, PPR8:$Pn, PPR8:$Pn), 1>;
+  def : InstAlias<"movs $Pd, $Pg/z, $Pn",
+                  (ANDS_PPzPP PPR8:$Pd, PPRAny:$Pg, PPR8:$Pn, PPR8:$Pn), 1>;
+
+  def : InstAlias<"not $Pd, $Pg/z, $Pn",
+                  (EOR_PPzPP PPR8:$Pd, PPRAny:$Pg, PPR8:$Pn, PPRAny:$Pg), 1>;
+
+  def : InstAlias<"nots $Pd, $Pg/z, $Pn",
+                  (EORS_PPzPP PPR8:$Pd, PPRAny:$Pg, PPR8:$Pn, PPRAny:$Pg), 1>;
 }

@@ -82,7 +82,7 @@ bool readValueFromFile(const char *Filename,
   if (!Success)
     return false;
   close(Fd);
-  char *End = nullptr;
+  const char *End = nullptr;
   long long Tmp = internal_simple_strtoll(Line, &End, 10);
   bool Result = false;
   if (Line[0] != '\0' && (*End == '\n' || *End == '\0')) {

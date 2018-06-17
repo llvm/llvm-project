@@ -123,6 +123,13 @@ endif()
 # List of all architectures we can target.
 set(COMPILER_RT_SUPPORTED_ARCH)
 
+# Try to compile a very simple source file to ensure we can target the given
+# platform. We use the results of these tests to build only the various target
+# runtime libraries supported by our current compilers cross-compiling
+# abilities.
+set(SIMPLE_SOURCE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/simple.cc)
+file(WRITE ${SIMPLE_SOURCE} "#include <stdlib.h>\n#include <stdio.h>\nint main() { printf(\"hello, world\"); }\n")
+
 # Detect whether the current target platform is 32-bit or 64-bit, and setup
 # the correct commandline flags needed to attempt to target 32-bit and 64-bit.
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND

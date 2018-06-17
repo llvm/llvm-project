@@ -29,12 +29,12 @@ import shutil
 tmpdir = ""
 
 def cleanup(d):
-  print "removing: ", d
+  print("removing: %s" % d)
   shutil.rmtree(d)
 
 def collect_dataflow_for_corpus(self, exe, corpus_dir, output_dir):
-  print "Collecting dataflow for corpus:", corpus_dir, \
-    "output_dir:", output_dir
+  print("Collecting dataflow for corpus: %s output_dir: %s" % (corpus_dir,
+                                                               output_dir))
   assert not os.path.exists(output_dir)
   os.mkdir(output_dir)
   for root, dirs, files in os.walk(corpus_dir):
