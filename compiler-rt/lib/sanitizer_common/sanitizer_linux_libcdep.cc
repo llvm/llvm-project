@@ -236,7 +236,7 @@ uptr ThreadDescriptorSize() {
   char buf[64];
   uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
   if (len < sizeof(buf) && internal_strncmp(buf, "glibc 2.", 8) == 0) {
-    char *end;
+    const char *end;
     int minor = internal_simple_strtoll(buf + 8, &end, 10);
     if (end != buf + 8 && (*end == '\0' || *end == '.' || *end == '-')) {
       int patch = 0;

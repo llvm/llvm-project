@@ -411,6 +411,80 @@ multiclass sve_int_perm_dup_i<string asm> {
                   (!cast<Instruction>(NAME # _Q) ZPR128:$Zd, FPR128asZPR:$Qn, 0), 2>;
 }
 
+
+//===----------------------------------------------------------------------===//
+// SVE Vector Select Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_sel_vvv<bits<2> sz8_64, string asm, ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins PPRAny:$Pg, zprty:$Zn, zprty:$Zm),
+  asm, "\t$Zd, $Pg, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pg;
+  bits<5> Zd;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-14} = 0b11;
+  let Inst{13-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_sel_vvv<string asm> {
+  def _B : sve_int_sel_vvv<0b00, asm, ZPR8>;
+  def _H : sve_int_sel_vvv<0b01, asm, ZPR16>;
+  def _S : sve_int_sel_vvv<0b10, asm, ZPR32>;
+  def _D : sve_int_sel_vvv<0b11, asm, ZPR64>;
+
+  def : InstAlias<"mov $Zd, $Pg/m, $Zn",
+                  (!cast<Instruction>(NAME # _B) ZPR8:$Zd, PPRAny:$Pg, ZPR8:$Zn, ZPR8:$Zd), 1>;
+  def : InstAlias<"mov $Zd, $Pg/m, $Zn",
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, PPRAny:$Pg, ZPR16:$Zn, ZPR16:$Zd), 1>;
+  def : InstAlias<"mov $Zd, $Pg/m, $Zn",
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, ZPR32:$Zn, ZPR32:$Zd), 1>;
+  def : InstAlias<"mov $Zd, $Pg/m, $Zn",
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, ZPR64:$Zn, ZPR64:$Zd), 1>;
+}
+
+
+//===----------------------------------------------------------------------===//
+// SVE Predicate Logical Operations Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_pred_log<bits<4> opc, string asm>
+: I<(outs PPR8:$Pd), (ins PPRAny:$Pg, PPR8:$Pn, PPR8:$Pm),
+  asm, "\t$Pd, $Pg/z, $Pn, $Pm",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pd;
+  bits<4> Pg;
+  bits<4> Pm;
+  bits<4> Pn;
+  let Inst{31-24} = 0b00100101;
+  let Inst{23-22} = opc{3-2};
+  let Inst{21-20} = 0b00;
+  let Inst{19-16} = Pm;
+  let Inst{15-14} = 0b01;
+  let Inst{13-10} = Pg;
+  let Inst{9}     = opc{1};
+  let Inst{8-5}   = Pn;
+  let Inst{4}     = opc{0};
+  let Inst{3-0}   = Pd;
+
+  // SEL has no predication qualifier.
+  let AsmString = !if(!eq(opc, 0b0011),
+                      !strconcat(asm, "\t$Pd, $Pg, $Pn, $Pm"),
+                      !strconcat(asm, "\t$Pd, $Pg/z, $Pn, $Pm"));
+
+  let Defs = !if(!eq (opc{2}, 1), [NZCV], []);
+}
+
+
 //===----------------------------------------------------------------------===//
 // SVE Logical Mask Immediate Group
 //===----------------------------------------------------------------------===//

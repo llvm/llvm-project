@@ -61,6 +61,14 @@ public:
   unsigned getRegisterBitWidth(bool Vector) const { return 32; }
   unsigned getMinVectorRegisterBitWidth() const { return 32; }
 
+  // We don't want to prevent inlining because of target-cpu and -features
+  // attributes that were added to newer versions of LLVM/Clang: There are
+  // no incompatible functions in PTX, ptxas will throw errors in such cases.
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const {
+    return true;
+  }
+
   // Increase the inlining cost threshold by a factor of 5, reflecting that
   // calls are particularly expensive in NVPTX.
   unsigned getInliningThresholdMultiplier() { return 5; }

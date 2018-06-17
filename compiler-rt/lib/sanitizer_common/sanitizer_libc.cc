@@ -215,7 +215,7 @@ char *internal_strstr(const char *haystack, const char *needle) {
   return nullptr;
 }
 
-s64 internal_simple_strtoll(const char *nptr, char **endptr, int base) {
+s64 internal_simple_strtoll(const char *nptr, const char **endptr, int base) {
   CHECK_EQ(base, 10);
   while (IsSpace(*nptr)) nptr++;
   int sgn = 1;

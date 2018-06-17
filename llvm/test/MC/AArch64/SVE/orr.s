@@ -92,3 +92,21 @@ orr     z31.d, p7/m, z31.d, z31.d
 // CHECK-ENCODING: [0xff,0x1f,0xd8,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 1f d8 04 <unknown>
+
+orr     p0.b, p0/z, p0.b, p1.b
+// CHECK-INST: orr     p0.b, p0/z, p0.b, p1.b
+// CHECK-ENCODING: [0x00,0x40,0x81,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 40 81 25 <unknown>
+
+orr     p0.b, p0/z, p0.b, p0.b
+// CHECK-INST: mov     p0.b, p0.b
+// CHECK-ENCODING: [0x00,0x40,0x80,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 40 80 25 <unknown>
+
+orr     p15.b, p15/z, p15.b, p15.b
+// CHECK-INST: mov     p15.b, p15.b
+// CHECK-ENCODING: [0xef,0x7d,0x8f,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ef 7d 8f 25 <unknown>
