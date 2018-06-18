@@ -19,7 +19,7 @@
 ; IR:      polly.stmt.for.body:
 ; IR-NEXT:   %p_tmp = ptrtoint i64* %scevgep to i64
 ; IR-NEXT:   %p_add = add nsw i64 %p_tmp, 1
-; IR-NEXT:   %p_tmp1 = inttoptr i64 %10 to i64*
+; IR-NEXT:   %p_tmp1 = inttoptr i64 %14 to i64*
 ; IR-NEXT:   %p_add.ptr2 = getelementptr inbounds i64, i64* %p_tmp1, i64 1
 ; IR-NEXT:   %p_tmp2 = ptrtoint i64* %p_add.ptr2 to i64
 ; IR-NEXT:   %p_arrayidx = getelementptr inbounds i64, i64* %A, i64 %p_tmp2
@@ -31,7 +31,7 @@
 ;
 ; IR:      polly.loop_preheader:
 ; IR-NEXT:   %scevgep = getelementptr i64, i64* %ptr, i32 1
-; IR-NEXT:   %10 = add i64 %val, 1
+; IR-NEXT:   %14 = add i64 %val, 1
 ; IR-NEXT:   br label %polly.loop_header
 ;
 target datalayout = "e-p:32:32:32-m:e-i64:64-f80:128-n8:16:32:64-S128"
