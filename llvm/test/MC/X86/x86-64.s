@@ -1635,6 +1635,126 @@ enclu
 // CHECK: encoding: [0x0f,0x01,0xc0]
 enclv
 
+// CHECK: movq %rax, %rbx
+// CHECK: encoding: [0x48,0x8b,0xd8]
+movq.s %rax, %rbx
+
+// CHECK: movq %rax, %rbx
+// CHECK: encoding: [0x48,0x8b,0xd8]
+mov.s %rax, %rbx
+
+// CHECK: movl %eax, %ebx
+// CHECK: encoding: [0x8b,0xd8]
+movl.s %eax, %ebx
+
+// CHECK: movl %eax, %ebx
+// CHECK: encoding: [0x8b,0xd8]
+mov.s %eax, %ebx
+
+// CHECK: movw %ax, %bx
+// CHECK: encoding: [0x66,0x8b,0xd8]
+movw.s %ax, %bx
+
+// CHECK: movw %ax, %bx
+// CHECK: encoding: [0x66,0x8b,0xd8]
+mov.s %ax, %bx
+
+// CHECK: movb %al, %bl
+// CHECK: encoding: [0x8a,0xd8]
+movb.s %al, %bl
+
+// CHECK: movb %al, %bl
+// CHECK: encoding: [0x8a,0xd8]
+mov.s %al, %bl
+
+// CHECK: movq %mm0, %mm1
+// CHECK: encoding: [0x0f,0x7f,0xc1]
+movq.s %mm0, %mm1
+
+// CHECK: movq %xmm0, %xmm1
+// CHECK: encoding: [0x66,0x0f,0xd6,0xc1]
+movq.s %xmm0, %xmm1
+
+// CHECK: movdqa %xmm0, %xmm1
+// CHECK: encoding: [0x66,0x0f,0x7f,0xc1]
+movdqa.s %xmm0, %xmm1
+
+// CHECK: movdqu %xmm0, %xmm1
+// CHECK: encoding: [0xf3,0x0f,0x7f,0xc1]
+movdqu.s %xmm0, %xmm1
+
+// CHECK: movaps %xmm0, %xmm1
+// CHECK: encoding: [0x0f,0x29,0xc1]
+movaps.s %xmm0, %xmm1
+
+// CHECK: movups %xmm0, %xmm1
+// CHECK: encoding: [0x0f,0x11,0xc1]
+movups.s %xmm0, %xmm1
+
+// CHECK: movapd %xmm0, %xmm1
+// CHECK: encoding: [0x66,0x0f,0x29,0xc1]
+movapd.s %xmm0, %xmm1
+
+// CHECK: movupd %xmm0, %xmm1
+// CHECK: encoding: [0x66,0x0f,0x11,0xc1]
+movupd.s %xmm0, %xmm1
+
+// CHECK: vmovq %xmm0, %xmm8
+// CHECK: encoding: [0xc4,0xc1,0x79,0xd6,0xc0]
+vmovq.s %xmm0, %xmm8
+
+// CHECK: vmovq %xmm8, %xmm0
+// CHECK: encoding: [0xc5,0x79,0xd6,0xc0]
+vmovq.s %xmm8, %xmm0
+
+// CHECK: vmovdqa %xmm0, %xmm8
+// CHECK: encoding: [0xc4,0xc1,0x79,0x7f,0xc0]
+vmovdqa.s %xmm0, %xmm8
+
+// CHECK: vmovdqa %xmm8, %xmm0
+// CHECK: encoding: [0xc5,0x79,0x7f,0xc0]
+vmovdqa.s %xmm8, %xmm0
+
+// CHECK: vmovdqu %xmm0, %xmm8
+// CHECK: encoding: [0xc4,0xc1,0x7a,0x7f,0xc0]
+vmovdqu.s %xmm0, %xmm8
+
+// CHECK: vmovdqu %xmm8, %xmm0
+// CHECK: encoding: [0xc5,0x7a,0x7f,0xc0]
+vmovdqu.s %xmm8, %xmm0
+
+// CHECK: vmovaps %xmm0, %xmm8
+// CHECK: encoding: [0xc4,0xc1,0x78,0x29,0xc0]
+vmovaps.s %xmm0, %xmm8
+
+// CHECK: vmovaps %xmm8, %xmm0
+// CHECK: encoding: [0xc5,0x78,0x29,0xc0]
+vmovaps.s %xmm8, %xmm0
+
+// CHECK: vmovups %xmm0, %xmm8
+// CHECK: encoding: [0xc4,0xc1,0x78,0x11,0xc0]
+vmovups.s %xmm0, %xmm8
+
+// CHECK: vmovups %xmm8, %xmm0
+// CHECK: encoding: [0xc5,0x78,0x11,0xc0]
+vmovups.s %xmm8, %xmm0
+
+// CHECK: vmovapd %xmm0, %xmm8
+// CHECK: encoding: [0xc4,0xc1,0x79,0x29,0xc0]
+vmovapd.s %xmm0, %xmm8
+
+// CHECK: vmovapd %xmm8, %xmm0
+// CHECK: encoding: [0xc5,0x79,0x29,0xc0]
+vmovapd.s %xmm8, %xmm0
+
+// CHECK: vmovupd %xmm0, %xmm8
+// CHECK: encoding: [0xc4,0xc1,0x79,0x11,0xc0]
+vmovupd.s %xmm0, %xmm8
+
+// CHECK: vmovupd %xmm8, %xmm0
+// CHECK: encoding: [0xc5,0x79,0x11,0xc0]
+vmovupd.s %xmm8, %xmm0
+
 //  __asm __volatile(
 //    "pushf        \n\t"
 //    "popf       \n\t"

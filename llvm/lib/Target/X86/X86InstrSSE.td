@@ -212,6 +212,13 @@ multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                      [(store RC:$src, addr:$dst)], d>,
                      Sched<[WriteFStore]>;
+
+  def : InstAlias<"v"#OpcodeStr#".s\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                  (!cast<Instruction>("V"#NAME#"rr_REV")
+                   VR128:$dst, VR128:$src1, VR128:$src2), 0>;
+  def : InstAlias<OpcodeStr#".s\t{$src2, $dst|$dst, $src2}",
+                  (!cast<Instruction>(NAME#"rr_REV")
+                   VR128:$dst, VR128:$src2), 0>;
 }
 
 // Loading from memory automatically zeroing upper bits.
@@ -565,6 +572,24 @@ def : InstAlias<"vmovups\t{$src, $dst|$dst, $src}",
 def : InstAlias<"vmovupd\t{$src, $dst|$dst, $src}",
                 (VMOVUPDYrr_REV VR256L:$dst, VR256H:$src), 0>;
 
+// Reversed version with ".s" suffix for GAS compatibility.
+def : InstAlias<"vmovaps.s\t{$src, $dst|$dst, $src}",
+                (VMOVAPSrr_REV VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"vmovapd.s\t{$src, $dst|$dst, $src}",
+                (VMOVAPDrr_REV VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"vmovups.s\t{$src, $dst|$dst, $src}",
+                (VMOVUPSrr_REV VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"vmovupd.s\t{$src, $dst|$dst, $src}",
+                (VMOVUPDrr_REV VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"vmovaps.s\t{$src, $dst|$dst, $src}",
+                (VMOVAPSYrr_REV VR256:$dst, VR256:$src), 0>;
+def : InstAlias<"vmovapd.s\t{$src, $dst|$dst, $src}",
+                (VMOVAPDYrr_REV VR256:$dst, VR256:$src), 0>;
+def : InstAlias<"vmovups.s\t{$src, $dst|$dst, $src}",
+                (VMOVUPSYrr_REV VR256:$dst, VR256:$src), 0>;
+def : InstAlias<"vmovupd.s\t{$src, $dst|$dst, $src}",
+                (VMOVUPDYrr_REV VR256:$dst, VR256:$src), 0>;
+
 let SchedRW = [SchedWriteFMoveLS.XMM.MR] in {
 def MOVAPSmr : PSI<0x29, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
                    "movaps\t{$src, $dst|$dst, $src}",
@@ -596,6 +621,16 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0,
                          "movupd\t{$src, $dst|$dst, $src}", []>,
                          FoldGenData<"MOVUPDrr">;
 }
+
+// Reversed version with ".s" suffix for GAS compatibility.
+def : InstAlias<"movaps.s\t{$src, $dst|$dst, $src}",
+                (MOVAPSrr_REV VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"movapd.s\t{$src, $dst|$dst, $src}",
+                (MOVAPDrr_REV VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"movups.s\t{$src, $dst|$dst, $src}",
+                (MOVUPSrr_REV VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"movupd.s\t{$src, $dst|$dst, $src}",
+                (MOVUPDrr_REV VR128:$dst, VR128:$src), 0>;
 
 let Predicates = [HasAVX, NoVLX] in {
   // 256-bit load/store need to use floating point load/store in case we don't
@@ -3350,6 +3385,22 @@ def : InstAlias<"vmovdqu\t{$src, $dst|$dst, $src}",
 def : InstAlias<"vmovdqu\t{$src, $dst|$dst, $src}",
                 (VMOVDQUYrr_REV VR256L:$dst, VR256H:$src), 0>;
 
+// Reversed version with ".s" suffix for GAS compatibility.
+def : InstAlias<"vmovdqa.s\t{$src, $dst|$dst, $src}",
+                (VMOVDQArr_REV VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"vmovdqa.s\t{$src, $dst|$dst, $src}",
+                (VMOVDQAYrr_REV VR256:$dst, VR256:$src), 0>;
+def : InstAlias<"vmovdqu.s\t{$src, $dst|$dst, $src}",
+                (VMOVDQUrr_REV VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"vmovdqu.s\t{$src, $dst|$dst, $src}",
+                (VMOVDQUYrr_REV VR256:$dst, VR256:$src), 0>;
+
+// Reversed version with ".s" suffix for GAS compatibility.
+def : InstAlias<"movdqa.s\t{$src, $dst|$dst, $src}",
+                (MOVDQArr_REV VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"movdqu.s\t{$src, $dst|$dst, $src}",
+                (MOVDQUrr_REV VR128:$dst, VR128:$src), 0>;
+
 let Predicates = [HasAVX, NoVLX] in {
   // Additional patterns for other integer sizes.
   def : Pat<(alignedstore (v4i32 VR128:$src), addr:$dst),
@@ -4306,6 +4357,11 @@ def MOVPQI2QIrr : S2I<0xD6, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
 // operands relative to the normal instructions to use VEX.R instead of VEX.B.
 def : InstAlias<"vmovq\t{$src, $dst|$dst, $src}",
                 (VMOVPQI2QIrr VR128L:$dst, VR128H:$src), 0>;
+
+def : InstAlias<"vmovq.s\t{$src, $dst|$dst, $src}",
+                (VMOVPQI2QIrr VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"movq.s\t{$src, $dst|$dst, $src}",
+                (MOVPQI2QIrr VR128:$dst, VR128:$src), 0>;
 
 let Predicates = [UseAVX], AddedComplexity = 20 in {
   def : Pat<(v2i64 (X86vzmovl (v2i64 (scalar_to_vector (loadi64 addr:$src))))),

@@ -883,7 +883,7 @@ Error VSO::defineImpl(MaterializationUnit &MU) {
   if (!Duplicates.empty()) {
     // We need to remove the symbols we added.
     for (auto &KV : MU.getSymbols()) {
-      if (Duplicates.count(KV.first) || Duplicates.count(KV.first))
+      if (Duplicates.count(KV.first))
         continue;
 
       bool Found = false;

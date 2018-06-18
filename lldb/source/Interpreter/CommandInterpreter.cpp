@@ -543,7 +543,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       // sure to increase the size of this buffer.
       char buffer[1024];
       int num_printed =
-          snprintf(buffer, 1024, "%s %s", break_regexes[i][1], "-o");
+          snprintf(buffer, 1024, "%s %s", break_regexes[i][1], "-o 1");
       lldbassert(num_printed < 1024);
       UNUSED_IF_ASSERT_DISABLED(num_printed);
       success =
