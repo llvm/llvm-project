@@ -9631,195 +9631,195 @@
 // CHECK:  encoding: [0x62,0x62,0x7d,0xac,0x7b,0xe0]
           vpbroadcastw %eax, %ymm28 {%k4} {z}
 
-// CHECK: vmovdqu16.s %xmm27, %xmm23
+// CHECK: vmovdqu16   %xmm27, %xmm23
 // CHECK:  encoding: [0x62,0x21,0xff,0x08,0x7f,0xdf]
           vmovdqu16.s %xmm27, %xmm23
 
-// CHECK: vmovdqu16.s %xmm27, %xmm23 {%k2}
+// CHECK: vmovdqu16   %xmm27, %xmm23 {%k2}
 // CHECK:  encoding: [0x62,0x21,0xff,0x0a,0x7f,0xdf]
           vmovdqu16.s %xmm27, %xmm23 {%k2}
 
-// CHECK: vmovdqu16.s %xmm27, %xmm23 {%k2} {z}
+// CHECK: vmovdqu16 %xmm27, %xmm23 {%k2} {z}
 // CHECK:  encoding: [0x62,0x21,0xff,0x8a,0x7f,0xdf]
           vmovdqu16.s %xmm27, %xmm23 {%k2} {z}
 
-// CHECK: vmovdqu16.s %xmm17, %xmm27
+// CHECK: vmovdqu16 %xmm17, %xmm27
 // CHECK:  encoding: [0x62,0x81,0xff,0x08,0x7f,0xcb]
           vmovdqu16.s %xmm17, %xmm27
 
-// CHECK: vmovdqu16.s %xmm17, %xmm27 {%k2}
+// CHECK: vmovdqu16 %xmm17, %xmm27 {%k2}
 // CHECK:  encoding: [0x62,0x81,0xff,0x0a,0x7f,0xcb]
           vmovdqu16.s %xmm17, %xmm27 {%k2}
 
-// CHECK: vmovdqu16.s %xmm17, %xmm27 {%k2} {z}
+// CHECK: vmovdqu16 %xmm17, %xmm27 {%k2} {z}
 // CHECK:  encoding: [0x62,0x81,0xff,0x8a,0x7f,0xcb]
           vmovdqu16.s %xmm17, %xmm27 {%k2} {z}
 
-// CHECK: vmovdqu16.s %ymm29, %ymm27
+// CHECK: vmovdqu16 %ymm29, %ymm27
 // CHECK:  encoding: [0x62,0x01,0xff,0x28,0x7f,0xeb]
           vmovdqu16.s %ymm29, %ymm27
 
-// CHECK: vmovdqu16.s %ymm29, %ymm27 {%k6}
+// CHECK: vmovdqu16 %ymm29, %ymm27 {%k6}
 // CHECK:  encoding: [0x62,0x01,0xff,0x2e,0x7f,0xeb]
           vmovdqu16.s %ymm29, %ymm27 {%k6}
 
-// CHECK: vmovdqu16.s %ymm29, %ymm27 {%k6} {z}
+// CHECK: vmovdqu16 %ymm29, %ymm27 {%k6} {z}
 // CHECK:  encoding: [0x62,0x01,0xff,0xae,0x7f,0xeb]
           vmovdqu16.s %ymm29, %ymm27 {%k6} {z}
 
-// CHECK: vmovdqu16.s %ymm29, %ymm29
+// CHECK: vmovdqu16 %ymm29, %ymm29
 // CHECK:  encoding: [0x62,0x01,0xff,0x28,0x7f,0xed]
           vmovdqu16.s %ymm29, %ymm29
 
-// CHECK: vmovdqu16.s %ymm29, %ymm29 {%k1}
+// CHECK: vmovdqu16 %ymm29, %ymm29 {%k1}
 // CHECK:  encoding: [0x62,0x01,0xff,0x29,0x7f,0xed]
           vmovdqu16.s %ymm29, %ymm29 {%k1}
 
-// CHECK: vmovdqu16.s %ymm29, %ymm29 {%k1} {z}
+// CHECK: vmovdqu16 %ymm29, %ymm29 {%k1} {z}
 // CHECK:  encoding: [0x62,0x01,0xff,0xa9,0x7f,0xed]
           vmovdqu16.s %ymm29, %ymm29 {%k1} {z}
 
-// CHECK: vmovdqu16.s %xmm26, %xmm24
+// CHECK: vmovdqu16 %xmm26, %xmm24
 // CHECK:  encoding: [0x62,0x01,0xff,0x08,0x7f,0xd0]
           vmovdqu16.s %xmm26, %xmm24
 
-// CHECK: vmovdqu16.s %xmm26, %xmm24 {%k5}
+// CHECK: vmovdqu16 %xmm26, %xmm24 {%k5}
 // CHECK:  encoding: [0x62,0x01,0xff,0x0d,0x7f,0xd0]
           vmovdqu16.s %xmm26, %xmm24 {%k5}
 
-// CHECK: vmovdqu16.s %xmm26, %xmm24 {%k5} {z}
+// CHECK: vmovdqu16 %xmm26, %xmm24 {%k5} {z}
 // CHECK:  encoding: [0x62,0x01,0xff,0x8d,0x7f,0xd0]
           vmovdqu16.s %xmm26, %xmm24 {%k5} {z}
 
-// CHECK: vmovdqu16.s %xmm20, %xmm23
+// CHECK: vmovdqu16 %xmm20, %xmm23
 // CHECK:  encoding: [0x62,0xa1,0xff,0x08,0x7f,0xe7]
           vmovdqu16.s %xmm20, %xmm23
 
-// CHECK: vmovdqu16.s %xmm20, %xmm23 {%k1}
+// CHECK: vmovdqu16 %xmm20, %xmm23 {%k1}
 // CHECK:  encoding: [0x62,0xa1,0xff,0x09,0x7f,0xe7]
           vmovdqu16.s %xmm20, %xmm23 {%k1}
 
-// CHECK: vmovdqu16.s %xmm20, %xmm23 {%k1} {z}
+// CHECK: vmovdqu16 %xmm20, %xmm23 {%k1} {z}
 // CHECK:  encoding: [0x62,0xa1,0xff,0x89,0x7f,0xe7]
           vmovdqu16.s %xmm20, %xmm23 {%k1} {z}
 
-// CHECK: vmovdqu16.s %ymm23, %ymm28
+// CHECK: vmovdqu16 %ymm23, %ymm28
 // CHECK:  encoding: [0x62,0x81,0xff,0x28,0x7f,0xfc]
           vmovdqu16.s %ymm23, %ymm28
 
-// CHECK: vmovdqu16.s %ymm23, %ymm28 {%k4}
+// CHECK: vmovdqu16 %ymm23, %ymm28 {%k4}
 // CHECK:  encoding: [0x62,0x81,0xff,0x2c,0x7f,0xfc]
           vmovdqu16.s %ymm23, %ymm28 {%k4}
 
-// CHECK: vmovdqu16.s %ymm23, %ymm28 {%k4} {z}
+// CHECK: vmovdqu16 %ymm23, %ymm28 {%k4} {z}
 // CHECK:  encoding: [0x62,0x81,0xff,0xac,0x7f,0xfc]
           vmovdqu16.s %ymm23, %ymm28 {%k4} {z}
 
-// CHECK: vmovdqu16.s %ymm24, %ymm26
+// CHECK: vmovdqu16 %ymm24, %ymm26
 // CHECK:  encoding: [0x62,0x01,0xff,0x28,0x7f,0xc2]
           vmovdqu16.s %ymm24, %ymm26
 
-// CHECK: vmovdqu16.s %ymm24, %ymm26 {%k2}
+// CHECK: vmovdqu16 %ymm24, %ymm26 {%k2}
 // CHECK:  encoding: [0x62,0x01,0xff,0x2a,0x7f,0xc2]
           vmovdqu16.s %ymm24, %ymm26 {%k2}
 
-// CHECK: vmovdqu16.s %ymm24, %ymm26 {%k2} {z}
+// CHECK: vmovdqu16 %ymm24, %ymm26 {%k2} {z}
 // CHECK:  encoding: [0x62,0x01,0xff,0xaa,0x7f,0xc2]
           vmovdqu16.s %ymm24, %ymm26 {%k2} {z}
 
-// CHECK: vmovdqu8.s %xmm22, %xmm18
+// CHECK: vmovdqu8 %xmm22, %xmm18
 // CHECK:  encoding: [0x62,0xa1,0x7f,0x08,0x7f,0xf2]
           vmovdqu8.s %xmm22, %xmm18
 
-// CHECK: vmovdqu8.s %xmm22, %xmm18 {%k1}
+// CHECK: vmovdqu8 %xmm22, %xmm18 {%k1}
 // CHECK:  encoding: [0x62,0xa1,0x7f,0x09,0x7f,0xf2]
           vmovdqu8.s %xmm22, %xmm18 {%k1}
 
-// CHECK: vmovdqu8.s %xmm22, %xmm18 {%k1} {z}
+// CHECK: vmovdqu8 %xmm22, %xmm18 {%k1} {z}
 // CHECK:  encoding: [0x62,0xa1,0x7f,0x89,0x7f,0xf2]
           vmovdqu8.s %xmm22, %xmm18 {%k1} {z}
 
-// CHECK: vmovdqu8.s %xmm19, %xmm28
+// CHECK: vmovdqu8 %xmm19, %xmm28
 // CHECK:  encoding: [0x62,0x81,0x7f,0x08,0x7f,0xdc]
           vmovdqu8.s %xmm19, %xmm28
 
-// CHECK: vmovdqu8.s %xmm19, %xmm28 {%k1}
+// CHECK: vmovdqu8 %xmm19, %xmm28 {%k1}
 // CHECK:  encoding: [0x62,0x81,0x7f,0x09,0x7f,0xdc]
           vmovdqu8.s %xmm19, %xmm28 {%k1}
 
-// CHECK: vmovdqu8.s %xmm19, %xmm28 {%k1} {z}
+// CHECK: vmovdqu8 %xmm19, %xmm28 {%k1} {z}
 // CHECK:  encoding: [0x62,0x81,0x7f,0x89,0x7f,0xdc]
           vmovdqu8.s %xmm19, %xmm28 {%k1} {z}
 
-// CHECK: vmovdqu8.s %ymm19, %ymm28
+// CHECK: vmovdqu8 %ymm19, %ymm28
 // CHECK:  encoding: [0x62,0x81,0x7f,0x28,0x7f,0xdc]
           vmovdqu8.s %ymm19, %ymm28
 
-// CHECK: vmovdqu8.s %ymm19, %ymm28 {%k3}
+// CHECK: vmovdqu8 %ymm19, %ymm28 {%k3}
 // CHECK:  encoding: [0x62,0x81,0x7f,0x2b,0x7f,0xdc]
           vmovdqu8.s %ymm19, %ymm28 {%k3}
 
-// CHECK: vmovdqu8.s %ymm19, %ymm28 {%k3} {z}
+// CHECK: vmovdqu8 %ymm19, %ymm28 {%k3} {z}
 // CHECK:  encoding: [0x62,0x81,0x7f,0xab,0x7f,0xdc]
           vmovdqu8.s %ymm19, %ymm28 {%k3} {z}
 
-// CHECK: vmovdqu8.s %ymm17, %ymm19
+// CHECK: vmovdqu8 %ymm17, %ymm19
 // CHECK:  encoding: [0x62,0xa1,0x7f,0x28,0x7f,0xcb]
           vmovdqu8.s %ymm17, %ymm19
 
-// CHECK: vmovdqu8.s %ymm17, %ymm19 {%k2}
+// CHECK: vmovdqu8 %ymm17, %ymm19 {%k2}
 // CHECK:  encoding: [0x62,0xa1,0x7f,0x2a,0x7f,0xcb]
           vmovdqu8.s %ymm17, %ymm19 {%k2}
 
-// CHECK: vmovdqu8.s %ymm17, %ymm19 {%k2} {z}
+// CHECK: vmovdqu8 %ymm17, %ymm19 {%k2} {z}
 // CHECK:  encoding: [0x62,0xa1,0x7f,0xaa,0x7f,0xcb]
           vmovdqu8.s %ymm17, %ymm19 {%k2} {z}
 
-// CHECK: vmovdqu8.s %xmm17, %xmm24
+// CHECK: vmovdqu8 %xmm17, %xmm24
 // CHECK:  encoding: [0x62,0x81,0x7f,0x08,0x7f,0xc8]
           vmovdqu8.s %xmm17, %xmm24
 
-// CHECK: vmovdqu8.s %xmm17, %xmm24 {%k3}
+// CHECK: vmovdqu8 %xmm17, %xmm24 {%k3}
 // CHECK:  encoding: [0x62,0x81,0x7f,0x0b,0x7f,0xc8]
           vmovdqu8.s %xmm17, %xmm24 {%k3}
 
-// CHECK: vmovdqu8.s %xmm17, %xmm24 {%k3} {z}
+// CHECK: vmovdqu8 %xmm17, %xmm24 {%k3} {z}
 // CHECK:  encoding: [0x62,0x81,0x7f,0x8b,0x7f,0xc8]
           vmovdqu8.s %xmm17, %xmm24 {%k3} {z}
 
-// CHECK: vmovdqu8.s %xmm27, %xmm23
+// CHECK: vmovdqu8 %xmm27, %xmm23
 // CHECK:  encoding: [0x62,0x21,0x7f,0x08,0x7f,0xdf]
           vmovdqu8.s %xmm27, %xmm23
 
-// CHECK: vmovdqu8.s %xmm27, %xmm23 {%k2}
+// CHECK: vmovdqu8 %xmm27, %xmm23 {%k2}
 // CHECK:  encoding: [0x62,0x21,0x7f,0x0a,0x7f,0xdf]
           vmovdqu8.s %xmm27, %xmm23 {%k2}
 
-// CHECK: vmovdqu8.s %xmm27, %xmm23 {%k2} {z}
+// CHECK: vmovdqu8 %xmm27, %xmm23 {%k2} {z}
 // CHECK:  encoding: [0x62,0x21,0x7f,0x8a,0x7f,0xdf]
           vmovdqu8.s %xmm27, %xmm23 {%k2} {z}
 
-// CHECK: vmovdqu8.s %ymm21, %ymm17
+// CHECK: vmovdqu8 %ymm21, %ymm17
 // CHECK:  encoding: [0x62,0xa1,0x7f,0x28,0x7f,0xe9]
           vmovdqu8.s %ymm21, %ymm17
 
-// CHECK: vmovdqu8.s %ymm21, %ymm17 {%k1}
+// CHECK: vmovdqu8 %ymm21, %ymm17 {%k1}
 // CHECK:  encoding: [0x62,0xa1,0x7f,0x29,0x7f,0xe9]
           vmovdqu8.s %ymm21, %ymm17 {%k1}
 
-// CHECK: vmovdqu8.s %ymm21, %ymm17 {%k1} {z}
+// CHECK: vmovdqu8 %ymm21, %ymm17 {%k1} {z}
 // CHECK:  encoding: [0x62,0xa1,0x7f,0xa9,0x7f,0xe9]
           vmovdqu8.s %ymm21, %ymm17 {%k1} {z}
 
-// CHECK: vmovdqu8.s %ymm19, %ymm17
+// CHECK: vmovdqu8 %ymm19, %ymm17
 // CHECK:  encoding: [0x62,0xa1,0x7f,0x28,0x7f,0xd9]
           vmovdqu8.s %ymm19, %ymm17
 
-// CHECK: vmovdqu8.s %ymm19, %ymm17 {%k6}
+// CHECK: vmovdqu8 %ymm19, %ymm17 {%k6}
 // CHECK:  encoding: [0x62,0xa1,0x7f,0x2e,0x7f,0xd9]
           vmovdqu8.s %ymm19, %ymm17 {%k6}
 
-// CHECK: vmovdqu8.s %ymm19, %ymm17 {%k6} {z}
+// CHECK: vmovdqu8 %ymm19, %ymm17 {%k6} {z}
 // CHECK:  encoding: [0x62,0xa1,0x7f,0xae,0x7f,0xd9]
           vmovdqu8.s %ymm19, %ymm17 {%k6} {z}
 

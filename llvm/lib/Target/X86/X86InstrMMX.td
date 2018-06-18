@@ -206,9 +206,6 @@ def MMX_MOVD64to64rm : MMXRI<0x6E, MRMSrcMem, (outs VR64:$dst),
                              (ins i64mem:$src), "movq\t{$src, $dst|$dst, $src}",
                              []>, Sched<[SchedWriteVecMoveLS.MMX.RM]>;
 
-// These are 64 bit moves, but since the OS X assembler doesn't
-// recognize a register-register movq, we write them as
-// movd.
 let isBitcast = 1 in {
 def MMX_MOVD64from64rr : MMXRI<0x7E, MRMDestReg,
                                (outs GR64:$dst), (ins VR64:$src),
@@ -224,6 +221,9 @@ def MMX_MOVQ64rr_REV : MMXI<0x7F, MRMDestReg, (outs VR64:$dst), (ins VR64:$src),
                             FoldGenData<"MMX_MOVQ64rr">;
 } // SchedRW, hasSideEffects, isMoveReg
 } // isBitcast
+
+def : InstAlias<"movq.s\t{$src, $dst|$dst, $src}",
+                (MMX_MOVQ64rr_REV VR64:$dst, VR64:$src), 0>;
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
 def MMX_MOVD64from64rm : MMXRI<0x7E, MRMDestMem,

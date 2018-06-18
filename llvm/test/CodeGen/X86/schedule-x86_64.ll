@@ -8363,13 +8363,13 @@ define void @test_nop(i16 %a0, i32 %a1, i64 %a2, i16 *%p0, i32 *%p1, i64 *%p2) o
 ; SKYLAKE-LABEL: test_nop:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    nop # sched: [1:0.25]
-; SKYLAKE-NEXT:    nopw %di # sched: [1:0.25]
-; SKYLAKE-NEXT:    nopw (%rcx) # sched: [1:0.25]
-; SKYLAKE-NEXT:    nopl %esi # sched: [1:0.25]
-; SKYLAKE-NEXT:    nopl (%r8) # sched: [1:0.25]
-; SKYLAKE-NEXT:    nopq %rdx # sched: [1:0.25]
-; SKYLAKE-NEXT:    nopq (%r9) # sched: [1:0.25]
+; SKYLAKE-NEXT:    nop # sched: [1:0.17]
+; SKYLAKE-NEXT:    nopw %di # sched: [1:0.17]
+; SKYLAKE-NEXT:    nopw (%rcx) # sched: [1:0.17]
+; SKYLAKE-NEXT:    nopl %esi # sched: [1:0.17]
+; SKYLAKE-NEXT:    nopl (%r8) # sched: [1:0.17]
+; SKYLAKE-NEXT:    nopq %rdx # sched: [1:0.17]
+; SKYLAKE-NEXT:    nopq (%r9) # sched: [1:0.17]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;

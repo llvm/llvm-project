@@ -630,8 +630,7 @@ def SKLWriteResGroup10 : SchedWriteRes<[SKLPort0156]> {
 def: InstRW<[SKLWriteResGroup10], (instrs CBW, CWDE, CDQE,
                                           CMC, STC)>;
 def: InstRW<[SKLWriteResGroup10], (instrs LAHF, SAHF)>; // TODO: This doesn't match Agner's data
-def: InstRW<[SKLWriteResGroup10], (instregex "NOOP",
-                                             "SGDT64m",
+def: InstRW<[SKLWriteResGroup10], (instregex "SGDT64m",
                                              "SIDT64m",
                                              "SMSW16m",
                                              "STRm",

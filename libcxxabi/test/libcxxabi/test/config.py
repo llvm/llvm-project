@@ -10,6 +10,7 @@ import os
 import sys
 
 from libcxx.test.config import Configuration as LibcxxConfiguration
+from libcxx.test.config import intMacroValue
 
 
 class Configuration(LibcxxConfiguration):
@@ -34,7 +35,7 @@ class Configuration(LibcxxConfiguration):
         super(Configuration, self).configure_obj_root()
 
     def has_cpp_feature(self, feature, required_value):
-        return int(self.cxx.dumpMacros().get('__cpp_' + feature, 0)) >= required_value
+        return intMacroValue(self.cxx.dumpMacros().get('__cpp_' + feature, '0')) >= required_value
 
     def configure_features(self):
         super(Configuration, self).configure_features()

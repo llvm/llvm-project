@@ -590,12 +590,10 @@ unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
   return MIOpInfo->getNumArgs();
 }
 
-CodeGenInstAlias::CodeGenInstAlias(Record *R, unsigned Variant,
-                                   CodeGenTarget &T)
+CodeGenInstAlias::CodeGenInstAlias(Record *R, CodeGenTarget &T)
     : TheDef(R) {
   Result = R->getValueAsDag("ResultInst");
   AsmString = R->getValueAsString("AsmString");
-  AsmString = CodeGenInstruction::FlattenAsmStringVariants(AsmString, Variant);
 
 
   // Verify that the root of the result is an instruction.
