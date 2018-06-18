@@ -516,20 +516,6 @@ struct MatchableInfo {
   /// removed.
   SmallVector<AsmOperand, 8> AsmOperands;
 
-  /// AsmOperandEqualityConstraints - an array of pairs holding operand
-  /// constraints.
-  /// Each constraint is represented as a pair holding position of the token of
-  /// the operand asm name.
-  /// For example, an "AsmString" "add $Vd.s, $Vn.s, $Xn" would be
-  /// split in the following list of tokens:
-  ///
-  ///    ['add', '$Vd', '.s', '$Vn', '.s', '$Xn']
-  ///
-  /// A constraint "$Vd = $Vn" (e.g. for a destructive operation) is rendered
-  /// as the pair {1,3} into this set (note that tokens are numbered starting
-  /// from 0).
-  SmallVector<std::pair<unsigned,unsigned>, 1> AsmOperandTiedConstraints;
-
   /// Predicates - The required subtarget features to match this instruction.
   SmallVector<const SubtargetFeatureInfo *, 4> RequiredFeatures;
 
@@ -1855,8 +1841,22 @@ void MatchableInfo::buildAliasResultOperands(bool AliasConstraintsAreChecked) {
         SrcOp2 = (SrcOp2 == (unsigned)-1) ? SrcOp1 : SrcOp2;
       }
 
-      ResOperands.push_back(ResOperand::getTiedOp(TiedOp, SrcOp1, SrcOp2));
-      continue;
+      // If the alias operand is of a different operand class, we only want
+      // to benefit from the tied-operands check and just match the operand
+      // as a normal, but not copy the original (TiedOp) to the result
+      // instruction. We do this by passing -1 as the tied operand to copy.
+      if (ResultInst->Operands[i].Rec->getName() !=
+          ResultInst->Operands[TiedOp].Rec->getName()) {
+        SrcOp1 = ResOperands[TiedOp].AsmOperandNum;
+        int SubIdx = CGA.ResultInstOperandIndex[AliasOpNo].second;
+        StringRef Name = CGA.ResultOperands[AliasOpNo].getName();
+        SrcOp2 = findAsmOperand(Name, SubIdx);
+        ResOperands.push_back(
+            ResOperand::getTiedOp((unsigned)-1, SrcOp1, SrcOp2));
+      } else {
+        ResOperands.push_back(ResOperand::getTiedOp(TiedOp, SrcOp1, SrcOp2));
+        continue;
+      }
     }
 
     // Handle all the suboperands for this operand.
@@ -1986,7 +1986,8 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   CvtOS << "                          std::begin(TiedAsmOperandTable)) &&\n";
   CvtOS << "             \"Tied operand not found\");\n";
   CvtOS << "      unsigned TiedResOpnd = TiedAsmOperandTable[OpIdx][0];\n";
-  CvtOS << "      Inst.addOperand(Inst.getOperand(TiedResOpnd));\n";
+  CvtOS << "      if (TiedResOpnd != (uint8_t) -1)\n";
+  CvtOS << "        Inst.addOperand(Inst.getOperand(TiedResOpnd));\n";
   CvtOS << "      break;\n";
   CvtOS << "    }\n";
 
@@ -2020,7 +2021,7 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   enum { CVT_Done, CVT_Reg, CVT_Tied };
 
   // Map of e.g. <0, 2, 3> -> "Tie_0_2_3" enum label.
-  std::map<std::tuple<unsigned, unsigned, unsigned>, std::string>
+  std::map<std::tuple<uint8_t, uint8_t, uint8_t>, std::string>
   TiedOperandsEnumMap;
 
   for (auto &II : Infos) {
@@ -2143,10 +2144,13 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         // If this operand is tied to a previous one, just copy the MCInst
         // operand from the earlier one.We can only tie single MCOperand values.
         assert(OpInfo.MINumOperands == 1 && "Not a singular MCOperand");
-        unsigned TiedOp = OpInfo.TiedOperands.ResOpnd;
-        unsigned SrcOp1 = OpInfo.TiedOperands.SrcOpnd1Idx + HasMnemonicFirst;
-        unsigned SrcOp2 = OpInfo.TiedOperands.SrcOpnd2Idx + HasMnemonicFirst;
-        assert(i > TiedOp && "Tied operand precedes its target!");
+        uint8_t TiedOp = OpInfo.TiedOperands.ResOpnd;
+        uint8_t SrcOp1 =
+            OpInfo.TiedOperands.SrcOpnd1Idx + HasMnemonicFirst;
+        uint8_t SrcOp2 =
+            OpInfo.TiedOperands.SrcOpnd2Idx + HasMnemonicFirst;
+        assert((i > TiedOp || TiedOp == (uint8_t)-1) &&
+               "Tied operand precedes its target!");
         auto TiedTupleName = std::string("Tie") + utostr(TiedOp) + '_' +
                              utostr(SrcOp1) + '_' + utostr(SrcOp2);
         Signature += "__" + TiedTupleName;
@@ -2246,9 +2250,10 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   if (TiedOperandsEnumMap.size()) {
     // The number of tied operand combinations will be small in practice,
     // but just add the assert to be sure.
-    assert(TiedOperandsEnumMap.size() <= 255 &&
+    assert(TiedOperandsEnumMap.size() <= 254 &&
            "Too many tied-operand combinations to reference with "
-           "an 8bit offset from the conversion table");
+           "an 8bit offset from the conversion table, where index "
+           "'255' is reserved as operand not to be copied.");
 
     OS << "enum {\n";
     for (auto &KV : TiedOperandsEnumMap) {
@@ -2256,15 +2261,17 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
     }
     OS << "};\n\n";
 
-    OS << "const char TiedAsmOperandTable[][3] = {\n";
+    OS << "static const uint8_t TiedAsmOperandTable[][3] = {\n";
     for (auto &KV : TiedOperandsEnumMap) {
-      OS << "  /* " << KV.second << " */ { " << std::get<0>(KV.first) << ", "
-         << std::get<1>(KV.first) << ", " << std::get<2>(KV.first) << " },\n";
+      OS << "  /* " << KV.second << " */ { "
+         << utostr(std::get<0>(KV.first)) << ", "
+         << utostr(std::get<1>(KV.first)) << ", "
+         << utostr(std::get<2>(KV.first)) << " },\n";
     }
     OS << "};\n\n";
   } else
-    OS << "const char TiedAsmOperandTable[][3] = { /* empty  */ {0, 0, 0} "
-          "};\n\n";
+    OS << "static const uint8_t TiedAsmOperandTable[][3] = "
+          "{ /* empty  */ {0, 0, 0} };\n\n";
 
   OS << "namespace {\n";
 
@@ -2303,9 +2310,9 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
       // For a tied operand, emit a reference to the TiedAsmOperandTable
       // that contains the operand to copy, and the parsed operands to
       // check for their tied constraints.
-      auto Key = std::make_tuple((unsigned)ConversionTable[Row][i + 1],
-                                 (unsigned)ConversionTable[Row][i + 2],
-                                 (unsigned)ConversionTable[Row][i + 3]);
+      auto Key = std::make_tuple((uint8_t)ConversionTable[Row][i + 1],
+                                 (uint8_t)ConversionTable[Row][i + 2],
+                                 (uint8_t)ConversionTable[Row][i + 3]);
       auto TiedOpndEnum = TiedOperandsEnumMap.find(Key);
       assert(TiedOpndEnum != TiedOperandsEnumMap.end() &&
              "No record for tied operand pair");
@@ -2978,8 +2985,12 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
                                           AsmMatcherInfo &Info,
                                           raw_ostream &OS) {
+  std::string AsmParserName =
+      Info.AsmParser->getValueAsString("AsmParserClassName");
   OS << "static bool ";
-  OS << "checkAsmTiedOperandConstraints(unsigned Kind,\n";
+  OS << "checkAsmTiedOperandConstraints(const " << Target.getName()
+     << AsmParserName << "&AsmParser,\n";
+  OS << "                               unsigned Kind,\n";
   OS << "                               const OperandVector &Operands,\n";
   OS << "                               uint64_t &ErrorInfo) {\n";
   OS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
@@ -2996,10 +3007,11 @@ static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
   OS << "      if (OpndNum1 != OpndNum2) {\n";
   OS << "        auto &SrcOp1 = Operands[OpndNum1];\n";
   OS << "        auto &SrcOp2 = Operands[OpndNum2];\n";
-  OS << "        if (SrcOp1->isReg() && SrcOp2->isReg() &&\n";
-  OS << "            SrcOp1->getReg() != SrcOp2->getReg()) {\n";
-  OS << "          ErrorInfo = OpndNum2;\n";
-  OS << "          return false;\n";
+  OS << "        if (SrcOp1->isReg() && SrcOp2->isReg()) {\n";
+  OS << "          if (!AsmParser.regsEqual(*SrcOp1, *SrcOp2)) {\n";
+  OS << "            ErrorInfo = OpndNum2;\n";
+  OS << "            return false;\n";
+  OS << "          }\n";
   OS << "        }\n";
   OS << "      }\n";
   OS << "      break;\n";
@@ -3686,7 +3698,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    if (matchingInlineAsm) {\n";
   OS << "      convertToMapAndConstraints(it->ConvertFn, Operands);\n";
   if (!ReportMultipleNearMisses) {
-    OS << "      if (!checkAsmTiedOperandConstraints(it->ConvertFn, Operands, ErrorInfo))\n";
+    OS << "      if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
+          "Operands, ErrorInfo))\n";
     OS << "        return Match_InvalidTiedOperand;\n";
     OS << "\n";
   }
@@ -3765,7 +3778,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
 
   if (!ReportMultipleNearMisses) {
-    OS << "    if (!checkAsmTiedOperandConstraints(it->ConvertFn, Operands, ErrorInfo))\n";
+    OS << "    if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
+          "Operands, ErrorInfo))\n";
     OS << "      return Match_InvalidTiedOperand;\n";
     OS << "\n";
   }

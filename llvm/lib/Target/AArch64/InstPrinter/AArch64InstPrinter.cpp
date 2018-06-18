@@ -1527,3 +1527,10 @@ void AArch64InstPrinter::printExactFPImm(const MCInst *MI, unsigned OpNum,
   unsigned Val = MI->getOperand(OpNum).getImm();
   O << "#" << (Val ? Imm1Desc->Repr : Imm0Desc->Repr);
 }
+
+void AArch64InstPrinter::printGPR64as32(const MCInst *MI, unsigned OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  unsigned Reg = MI->getOperand(OpNum).getReg();
+  O << getRegisterName(getWRegFromXReg(Reg));
+}

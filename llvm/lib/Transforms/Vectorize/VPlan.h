@@ -552,6 +552,15 @@ public:
 
   /// Each recipe prints itself.
   virtual void print(raw_ostream &O, const Twine &Indent) const = 0;
+
+  /// Insert an unlinked recipe into a basic block immediately before
+  /// the specified recipe.
+  void insertBefore(VPRecipeBase *InsertPos);
+
+  /// This method unlinks 'this' from the containing basic block and deletes it.
+  ///
+  /// \returns an iterator pointing to the element after the erased one
+  iplist<VPRecipeBase>::iterator eraseFromParent();
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.
@@ -559,6 +568,8 @@ public:
 /// executed, these instructions would always form a single-def expression as
 /// the VPInstruction is also a single def-use vertex.
 class VPInstruction : public VPUser, public VPRecipeBase {
+  friend class VPlanHCFGTransforms;
+
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
   enum { Not = Instruction::OtherOpsEnd + 1 };
@@ -922,6 +933,9 @@ public:
   inline VPRecipeBase &front() { return Recipes.front(); }
   inline const VPRecipeBase &back() const { return Recipes.back(); }
   inline VPRecipeBase &back() { return Recipes.back(); }
+
+  /// Returns a reference to the list of recipes.
+  RecipeListTy &getRecipeList() { return Recipes; }
 
   /// Returns a pointer to a member of the recipe list.
   static RecipeListTy VPBasicBlock::*getSublistAccess(VPRecipeBase *) {

@@ -149,7 +149,7 @@ OPTIONS
  Specify the number of repetitions of the asm snippet.
  Higher values lead to more accurate measurements but lengthen the benchmark.
 
- .. option:: -benchmarks-file=</path/to/file>
+.. option:: -benchmarks-file=</path/to/file>
 
  File to read (`analysis` mode) or write (`latency`/`uops` modes) benchmark
  results. "-" uses stdin/stdout.
@@ -173,6 +173,10 @@ OPTIONS
 
  Specify the numPoints parameters to be used for DBSCAN clustering
  (`analysis` mode).
+
+.. option:: -ignore-invalid-sched-class=false
+
+ If set, ignore instructions that do not have a sched class (class idx = 0).
 
 
 EXIT STATUS

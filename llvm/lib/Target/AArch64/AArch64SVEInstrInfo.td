@@ -509,6 +509,60 @@ let Predicates = [HasSVE] in {
   defm INCD_XPiI : sve_int_pred_pattern_a<0b110, "incd">;
   defm DECD_XPiI : sve_int_pred_pattern_a<0b111, "decd">;
 
+  defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs">;
+  defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi">;
+  defm CMPGE_PPzZZ : sve_int_cmp_0<0b100, "cmpge">;
+  defm CMPGT_PPzZZ : sve_int_cmp_0<0b101, "cmpgt">;
+  defm CMPEQ_PPzZZ : sve_int_cmp_0<0b110, "cmpeq">;
+  defm CMPNE_PPzZZ : sve_int_cmp_0<0b111, "cmpne">;
+
+  defm CMPEQ_WIDE_PPzZZ : sve_int_cmp_0_wide<0b010, "cmpeq">;
+  defm CMPNE_WIDE_PPzZZ : sve_int_cmp_0_wide<0b011, "cmpne">;
+  defm CMPGE_WIDE_PPzZZ : sve_int_cmp_1_wide<0b000, "cmpge">;
+  defm CMPGT_WIDE_PPzZZ : sve_int_cmp_1_wide<0b001, "cmpgt">;
+  defm CMPLT_WIDE_PPzZZ : sve_int_cmp_1_wide<0b010, "cmplt">;
+  defm CMPLE_WIDE_PPzZZ : sve_int_cmp_1_wide<0b011, "cmple">;
+  defm CMPHS_WIDE_PPzZZ : sve_int_cmp_1_wide<0b100, "cmphs">;
+  defm CMPHI_WIDE_PPzZZ : sve_int_cmp_1_wide<0b101, "cmphi">;
+  defm CMPLO_WIDE_PPzZZ : sve_int_cmp_1_wide<0b110, "cmplo">;
+  defm CMPLS_WIDE_PPzZZ : sve_int_cmp_1_wide<0b111, "cmpls">;
+
+  defm SQINCB_XPiWdI : sve_int_pred_pattern_b_s32<0b00000, "sqincb">;
+  defm UQINCB_WPiI   : sve_int_pred_pattern_b_u32<0b00001, "uqincb">;
+  defm SQDECB_XPiWdI : sve_int_pred_pattern_b_s32<0b00010, "sqdecb">;
+  defm UQDECB_WPiI   : sve_int_pred_pattern_b_u32<0b00011, "uqdecb">;
+  defm SQINCB_XPiI   : sve_int_pred_pattern_b_x64<0b00100, "sqincb">;
+  defm UQINCB_XPiI   : sve_int_pred_pattern_b_x64<0b00101, "uqincb">;
+  defm SQDECB_XPiI   : sve_int_pred_pattern_b_x64<0b00110, "sqdecb">;
+  defm UQDECB_XPiI   : sve_int_pred_pattern_b_x64<0b00111, "uqdecb">;
+
+  defm SQINCH_XPiWdI : sve_int_pred_pattern_b_s32<0b01000, "sqinch">;
+  defm UQINCH_WPiI   : sve_int_pred_pattern_b_u32<0b01001, "uqinch">;
+  defm SQDECH_XPiWdI : sve_int_pred_pattern_b_s32<0b01010, "sqdech">;
+  defm UQDECH_WPiI   : sve_int_pred_pattern_b_u32<0b01011, "uqdech">;
+  defm SQINCH_XPiI   : sve_int_pred_pattern_b_x64<0b01100, "sqinch">;
+  defm UQINCH_XPiI   : sve_int_pred_pattern_b_x64<0b01101, "uqinch">;
+  defm SQDECH_XPiI   : sve_int_pred_pattern_b_x64<0b01110, "sqdech">;
+  defm UQDECH_XPiI   : sve_int_pred_pattern_b_x64<0b01111, "uqdech">;
+
+  defm SQINCW_XPiWdI : sve_int_pred_pattern_b_s32<0b10000, "sqincw">;
+  defm UQINCW_WPiI   : sve_int_pred_pattern_b_u32<0b10001, "uqincw">;
+  defm SQDECW_XPiWdI : sve_int_pred_pattern_b_s32<0b10010, "sqdecw">;
+  defm UQDECW_WPiI   : sve_int_pred_pattern_b_u32<0b10011, "uqdecw">;
+  defm SQINCW_XPiI   : sve_int_pred_pattern_b_x64<0b10100, "sqincw">;
+  defm UQINCW_XPiI   : sve_int_pred_pattern_b_x64<0b10101, "uqincw">;
+  defm SQDECW_XPiI   : sve_int_pred_pattern_b_x64<0b10110, "sqdecw">;
+  defm UQDECW_XPiI   : sve_int_pred_pattern_b_x64<0b10111, "uqdecw">;
+
+  defm SQINCD_XPiWdI : sve_int_pred_pattern_b_s32<0b11000, "sqincd">;
+  defm UQINCD_WPiI   : sve_int_pred_pattern_b_u32<0b11001, "uqincd">;
+  defm SQDECD_XPiWdI : sve_int_pred_pattern_b_s32<0b11010, "sqdecd">;
+  defm UQDECD_WPiI   : sve_int_pred_pattern_b_u32<0b11011, "uqdecd">;
+  defm SQINCD_XPiI   : sve_int_pred_pattern_b_x64<0b11100, "sqincd">;
+  defm UQINCD_XPiI   : sve_int_pred_pattern_b_x64<0b11101, "uqincd">;
+  defm SQDECD_XPiI   : sve_int_pred_pattern_b_x64<0b11110, "sqdecd">;
+  defm UQDECD_XPiI   : sve_int_pred_pattern_b_x64<0b11111, "uqdecd">;
+
   defm INDEX_RR : sve_int_index_rr<"index">;
   defm INDEX_IR : sve_int_index_ir<"index">;
   defm INDEX_RI : sve_int_index_ri<"index">;
@@ -540,4 +594,40 @@ let Predicates = [HasSVE] in {
 
   def : InstAlias<"nots $Pd, $Pg/z, $Pn",
                   (EORS_PPzPP PPR8:$Pd, PPRAny:$Pg, PPR8:$Pn, PPRAny:$Pg), 1>;
+
+  def : InstAlias<"cmple $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGE_PPzZZ_B PPR8:$Zd, PPR3bAny:$Pg, ZPR8:$Zn, ZPR8:$Zm), 0>;
+  def : InstAlias<"cmple $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGE_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"cmple $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGE_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"cmple $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGE_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
+
+  def : InstAlias<"cmplo $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHI_PPzZZ_B PPR8:$Zd, PPR3bAny:$Pg, ZPR8:$Zn, ZPR8:$Zm), 0>;
+  def : InstAlias<"cmplo $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHI_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"cmplo $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHI_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"cmplo $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHI_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
+
+  def : InstAlias<"cmpls $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHS_PPzZZ_B PPR8:$Zd, PPR3bAny:$Pg, ZPR8:$Zn, ZPR8:$Zm), 0>;
+  def : InstAlias<"cmpls $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHS_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"cmpls $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHS_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"cmpls $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHS_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
+
+  def : InstAlias<"cmplt $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGT_PPzZZ_B PPR8:$Zd, PPR3bAny:$Pg, ZPR8:$Zn, ZPR8:$Zm), 0>;
+  def : InstAlias<"cmplt $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGT_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"cmplt $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGT_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"cmplt $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGT_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
 }

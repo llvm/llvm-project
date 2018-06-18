@@ -246,13 +246,15 @@ static bool isSplat(ArrayRef<Value *> VL) {
 /// %ins4 = insertelement <4 x i8> %ins3, i8 %9, i32 3
 /// ret <4 x i8> %ins4
 /// InstCombiner transforms this into a shuffle and vector mul
+/// TODO: Can we split off and reuse the shuffle mask detection from
+/// TargetTransformInfo::getInstructionThroughput?
 static Optional<TargetTransformInfo::ShuffleKind>
 isShuffle(ArrayRef<Value *> VL) {
   auto *EI0 = cast<ExtractElementInst>(VL[0]);
   unsigned Size = EI0->getVectorOperandType()->getVectorNumElements();
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
-  enum ShuffleMode {Unknown, FirstAlternate, SecondAlternate, Permute};
+  enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
     auto *EI = cast<ExtractElementInst>(VL[I]);
@@ -272,7 +274,11 @@ isShuffle(ArrayRef<Value *> VL) {
       continue;
     // For correct shuffling we have to have at most 2 different vector operands
     // in all extractelement instructions.
-    if (Vec1 && Vec2 && Vec != Vec1 && Vec != Vec2)
+    if (!Vec1 || Vec1 == Vec)
+      Vec1 = Vec;
+    else if (!Vec2 || Vec2 == Vec)
+      Vec2 = Vec;
+    else
       return None;
     if (CommonShuffleMode == Permute)
       continue;
@@ -282,37 +288,10 @@ isShuffle(ArrayRef<Value *> VL) {
       CommonShuffleMode = Permute;
       continue;
     }
-    // Check the shuffle mode for the current operation.
-    if (!Vec1)
-      Vec1 = Vec;
-    else if (Vec != Vec1)
-      Vec2 = Vec;
-    // Example: shufflevector A, B, <0,5,2,7>
-    // I is odd and IntIdx for A == I - FirstAlternate shuffle.
-    // I is even and IntIdx for B == I - FirstAlternate shuffle.
-    // Example: shufflevector A, B, <4,1,6,3>
-    // I is even and IntIdx for A == I - SecondAlternate shuffle.
-    // I is odd and IntIdx for B == I - SecondAlternate shuffle.
-    const bool IIsEven = I & 1;
-    const bool CurrVecIsA = Vec == Vec1;
-    const bool IIsOdd = !IIsEven;
-    const bool CurrVecIsB = !CurrVecIsA;
-    ShuffleMode CurrentShuffleMode =
-        ((IIsOdd && CurrVecIsA) || (IIsEven && CurrVecIsB)) ? FirstAlternate
-                                                            : SecondAlternate;
-    // Common mode is not set or the same as the shuffle mode of the current
-    // operation - alternate.
-    if (CommonShuffleMode == Unknown)
-      CommonShuffleMode = CurrentShuffleMode;
-    // Common shuffle mode is not the same as the shuffle mode of the current
-    // operation - permutation.
-    if (CommonShuffleMode != CurrentShuffleMode)
-      CommonShuffleMode = Permute;
+    CommonShuffleMode = Select;
   }
   // If we're not crossing lanes in different vectors, consider it as blending.
-  if ((CommonShuffleMode == FirstAlternate ||
-       CommonShuffleMode == SecondAlternate) &&
-      Vec2)
+  if (CommonShuffleMode == Select && Vec2)
     return TargetTransformInfo::SK_Select;
   // If Vec2 was never used, we have a permutation of a single vector, otherwise
   // we have permutation of 2 vectors.
@@ -2859,7 +2838,7 @@ void BoUpSLP::reorderInputsAccordingToOpcode(unsigned Opcode,
   // add a[1],c[2]  load b[1]
   // b[2]           load b[2]
   // add a[3],c[3]  load b[3]
-  for (unsigned j = 0; j < VL.size() - 1; ++j) {
+  for (unsigned j = 0, e = VL.size() - 1; j < e; ++j) {
     if (LoadInst *L = dyn_cast<LoadInst>(Left[j])) {
       if (LoadInst *L1 = dyn_cast<LoadInst>(Right[j + 1])) {
         if (isConsecutiveAccess(L, L1, *DL, *SE)) {

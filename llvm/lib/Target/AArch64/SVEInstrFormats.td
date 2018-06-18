@@ -314,6 +314,60 @@ multiclass sve_int_pred_pattern_a<bits<3> opc, string asm> {
                   (!cast<Instruction>(NAME) GPR64:$Rdn, 0b11111, 1), 2>;
 }
 
+class sve_int_pred_pattern_b<bits<5> opc, string asm, RegisterOperand dt,
+                             RegisterOperand st>
+: I<(outs dt:$Rdn), (ins st:$_Rdn, sve_pred_enum:$pattern, sve_incdec_imm:$imm4),
+  asm, "\t$Rdn, $pattern, mul $imm4",
+  "",
+  []>, Sched<[]> {
+  bits<5> Rdn;
+  bits<5> pattern;
+  bits<4> imm4;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = opc{4-3};
+  let Inst{21}    = 0b1;
+  let Inst{20}    = opc{2};
+  let Inst{19-16} = imm4;
+  let Inst{15-12} = 0b1111;
+  let Inst{11-10} = opc{1-0};
+  let Inst{9-5}   = pattern;
+  let Inst{4-0}   = Rdn;
+
+  // Signed 32bit forms require their GPR operand printed.
+  let AsmString = !if(!eq(opc{2,0}, 0b00),
+                      !strconcat(asm, "\t$Rdn, $_Rdn, $pattern, mul $imm4"),
+                      !strconcat(asm, "\t$Rdn, $pattern, mul $imm4"));
+
+  let Constraints = "$Rdn = $_Rdn";
+}
+
+multiclass sve_int_pred_pattern_b_s32<bits<5> opc, string asm> {
+  def NAME : sve_int_pred_pattern_b<opc, asm, GPR64z, GPR64as32>;
+
+  def : InstAlias<asm # "\t$Rd, $Rn, $pattern",
+                  (!cast<Instruction>(NAME) GPR64z:$Rd, GPR64as32:$Rn, sve_pred_enum:$pattern, 1), 1>;
+  def : InstAlias<asm # "\t$Rd, $Rn",
+                  (!cast<Instruction>(NAME) GPR64z:$Rd, GPR64as32:$Rn, 0b11111, 1), 2>;
+}
+
+multiclass sve_int_pred_pattern_b_u32<bits<5> opc, string asm> {
+  def NAME : sve_int_pred_pattern_b<opc, asm, GPR32z, GPR32z>;
+
+  def : InstAlias<asm # "\t$Rdn, $pattern",
+                  (!cast<Instruction>(NAME) GPR32z:$Rdn, sve_pred_enum:$pattern, 1), 1>;
+  def : InstAlias<asm # "\t$Rdn",
+                  (!cast<Instruction>(NAME) GPR32z:$Rdn, 0b11111, 1), 2>;
+}
+
+multiclass sve_int_pred_pattern_b_x64<bits<5> opc, string asm> {
+  def NAME : sve_int_pred_pattern_b<opc, asm, GPR64z, GPR64z>;
+
+  def : InstAlias<asm # "\t$Rdn, $pattern",
+                  (!cast<Instruction>(NAME) GPR64z:$Rdn, sve_pred_enum:$pattern, 1), 1>;
+  def : InstAlias<asm # "\t$Rdn",
+                  (!cast<Instruction>(NAME) GPR64z:$Rdn, 0b11111, 1), 2>;
+}
+
 
 //===----------------------------------------------------------------------===//
 // SVE Permute - Cross Lane Group
@@ -947,6 +1001,54 @@ multiclass sve_int_dup_imm_pred_zero<string asm> {
                   (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i32:$imm), 1>;
   def : InstAlias<"mov $Zd, $Pg/z, $imm",
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, cpy_imm8_opt_lsl_i64:$imm), 1>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE Integer Compare - Vectors Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_cmp<bit cmp_1, bits<2> sz8_64, bits<3> opc, string asm,
+                  PPRRegOp pprty, ZPRRegOp zprty1, ZPRRegOp zprty2>
+: I<(outs pprty:$Pd), (ins PPR3bAny:$Pg, zprty1:$Zn, zprty2:$Zm),
+  asm, "\t$Pd, $Pg/z, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pd;
+  bits<3> Pg;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00100100;
+  let Inst{23-22} = sz8_64;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = opc{2};
+  let Inst{14}    = cmp_1;
+  let Inst{13}    = opc{1};
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4}     = opc{0};
+  let Inst{3-0}   = Pd;
+
+  let Defs = [NZCV];
+}
+
+multiclass sve_int_cmp_0<bits<3> opc, string asm> {
+  def _B : sve_int_cmp<0b0, 0b00, opc, asm, PPR8, ZPR8, ZPR8>;
+  def _H : sve_int_cmp<0b0, 0b01, opc, asm, PPR16, ZPR16, ZPR16>;
+  def _S : sve_int_cmp<0b0, 0b10, opc, asm, PPR32, ZPR32, ZPR32>;
+  def _D : sve_int_cmp<0b0, 0b11, opc, asm, PPR64, ZPR64, ZPR64>;
+}
+
+multiclass sve_int_cmp_0_wide<bits<3> opc, string asm> {
+  def _B : sve_int_cmp<0b0, 0b00, opc, asm, PPR8, ZPR8, ZPR64>;
+  def _H : sve_int_cmp<0b0, 0b01, opc, asm, PPR16, ZPR16, ZPR64>;
+  def _S : sve_int_cmp<0b0, 0b10, opc, asm, PPR32, ZPR32, ZPR64>;
+}
+
+multiclass sve_int_cmp_1_wide<bits<3> opc, string asm> {
+  def _B : sve_int_cmp<0b1, 0b00, opc, asm, PPR8, ZPR8, ZPR64>;
+  def _H : sve_int_cmp<0b1, 0b01, opc, asm, PPR16, ZPR16, ZPR64>;
+  def _S : sve_int_cmp<0b1, 0b10, opc, asm, PPR32, ZPR32, ZPR64>;
 }
 
 //===----------------------------------------------------------------------===//

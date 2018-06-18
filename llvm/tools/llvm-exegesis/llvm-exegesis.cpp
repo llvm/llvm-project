@@ -60,6 +60,11 @@ static llvm::cl::opt<unsigned>
                    llvm::cl::desc("number of time to repeat the asm snippet"),
                    llvm::cl::init(10000));
 
+static llvm::cl::opt<bool> IgnoreInvalidSchedClass(
+    "ignore-invalid-sched-class",
+    llvm::cl::desc("ignore instructions that do not define a sched class"),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<unsigned> AnalysisNumPoints(
     "analysis-numpoints",
     llvm::cl::desc("minimum number of points in an analysis cluster"),
@@ -120,6 +125,15 @@ void benchmarkMain() {
   X86Filter Filter;
 
   const LLVMState State;
+  const auto Opcode = GetOpcodeOrDie(State.getInstrInfo());
+
+  // Ignore instructions without a sched class if -ignore-invalid-sched-class is
+  // passed.
+  if (IgnoreInvalidSchedClass &&
+      State.getInstrInfo().get(Opcode).getSchedClass() == 0) {
+    llvm::errs() << "ignoring instruction without sched class\n";
+    return;
+  }
 
   // FIXME: Do not require SchedModel for latency.
   if (!State.getSubtargetInfo().getSchedModel().hasExtraProcessorInfo())
@@ -145,8 +159,8 @@ void benchmarkMain() {
     BenchmarkFile = "-";
 
   const BenchmarkResultContext Context = getBenchmarkResultContext(State);
-  std::vector<InstructionBenchmark> Results = ExitOnErr(Runner->run(
-      GetOpcodeOrDie(State.getInstrInfo()), Filter, NumRepetitions));
+  std::vector<InstructionBenchmark> Results =
+      ExitOnErr(Runner->run(Opcode, Filter, NumRepetitions));
   for (InstructionBenchmark &Result : Results)
     ExitOnErr(Result.writeYaml(Context, BenchmarkFile));
 

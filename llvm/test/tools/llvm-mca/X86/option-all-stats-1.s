@@ -35,8 +35,8 @@ add %eax, %eax
 # FULLREPORT:      Dispatch Logic - number of cycles where we saw N instructions dispatched:
 # FULLREPORT-NEXT: [# dispatched], [# cycles]
 # FULLREPORT-NEXT:  0,              22  (21.4%)
-# FULLREPORT-NEXT:  2,              19  (18.4%)
 # FULLREPORT-NEXT:  1,              62  (60.2%)
+# FULLREPORT-NEXT:  2,              19  (18.4%)
 
 # FULLREPORT:      Schedulers - number of cycles where we saw N instructions issued:
 # FULLREPORT-NEXT: [# issued], [# cycles]
