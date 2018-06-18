@@ -3693,6 +3693,9 @@ static void emitConstructorDestructorAlias(CodeGenModule &CGM,
   // Create the alias with no name.
   auto *Alias = llvm::GlobalAlias::create(Linkage, "", Aliasee);
 
+  // Constructors and destructors are always unnamed_addr.
+  Alias->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
   // Switch any previous uses to the alias.
   if (Entry) {
     assert(Entry->getType() == Aliasee->getType() &&

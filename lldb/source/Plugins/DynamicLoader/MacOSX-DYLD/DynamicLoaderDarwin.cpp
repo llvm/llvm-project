@@ -1122,34 +1122,29 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
 
 bool DynamicLoaderDarwin::UseDYLDSPI(Process *process) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
-  uint32_t major, minor, update;
-
   bool use_new_spi_interface = false;
 
-  if (process->GetHostOSVersion(major, minor, update)) {
+  llvm::VersionTuple version = process->GetHostOSVersion();
+  if (!version.empty()) {
     const llvm::Triple::OSType os_type =
         process->GetTarget().GetArchitecture().GetTriple().getOS();
 
     // macOS 10.12 and newer
     if (os_type == llvm::Triple::MacOSX &&
-        (major > 10 || (major == 10 && minor >= 12))) {
+        version >= llvm::VersionTuple(10, 12))
       use_new_spi_interface = true;
-    }
 
     // iOS 10 and newer
-    if (os_type == llvm::Triple::IOS && major >= 10) {
+    if (os_type == llvm::Triple::IOS && version >= llvm::VersionTuple(10))
       use_new_spi_interface = true;
-    }
 
     // tvOS 10 and newer
-    if (os_type == llvm::Triple::TvOS && major >= 10) {
+    if (os_type == llvm::Triple::TvOS && version >= llvm::VersionTuple(10))
       use_new_spi_interface = true;
-    }
 
     // watchOS 3 and newer
-    if (os_type == llvm::Triple::WatchOS && major >= 3) {
+    if (os_type == llvm::Triple::WatchOS && version >= llvm::VersionTuple(3))
       use_new_spi_interface = true;
-    }
   }
 
   if (log) {

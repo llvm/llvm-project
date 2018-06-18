@@ -113,7 +113,7 @@ TEST(SanitizerCommon, FileOps) {
 
   fd = OpenFile(tmpfile, WrOnly);
   ASSERT_NE(fd, kInvalidFd);
-#if SANITIZER_POSIX
+#if SANITIZER_POSIX && !SANITIZER_MAC
   EXPECT_EQ(internal_lseek(fd, 0, SEEK_END), 0u);
 #endif
   uptr bytes_written = 0;

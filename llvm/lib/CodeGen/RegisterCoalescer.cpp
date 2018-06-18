@@ -1050,6 +1050,8 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
     BValNo->markUnused();
     LIS->extendToIndices(SR, EndPoints);
   }
+  // If any dead defs were extended, truncate them.
+  shrinkToUses(&IntB);
 
   // Finally, update the live-range of IntA.
   shrinkToUses(&IntA);

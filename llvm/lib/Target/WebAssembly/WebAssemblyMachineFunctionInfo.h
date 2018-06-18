@@ -83,25 +83,29 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
 
   void stackifyVReg(unsigned VReg) {
     assert(MF.getRegInfo().getUniqueVRegDef(VReg));
-    if (TargetRegisterInfo::virtReg2Index(VReg) >= VRegStackified.size())
-      VRegStackified.resize(TargetRegisterInfo::virtReg2Index(VReg) + 1);
-    VRegStackified.set(TargetRegisterInfo::virtReg2Index(VReg));
+    auto I = TargetRegisterInfo::virtReg2Index(VReg);
+    if (I >= VRegStackified.size())
+      VRegStackified.resize(I + 1);
+    VRegStackified.set(I);
   }
   bool isVRegStackified(unsigned VReg) const {
-    if (TargetRegisterInfo::virtReg2Index(VReg) >= VRegStackified.size())
+    auto I = TargetRegisterInfo::virtReg2Index(VReg);
+    if (I >= VRegStackified.size())
       return false;
-    return VRegStackified.test(TargetRegisterInfo::virtReg2Index(VReg));
+    return VRegStackified.test(I);
   }
 
   void initWARegs();
   void setWAReg(unsigned VReg, unsigned WAReg) {
     assert(WAReg != UnusedReg);
-    assert(TargetRegisterInfo::virtReg2Index(VReg) < WARegs.size());
-    WARegs[TargetRegisterInfo::virtReg2Index(VReg)] = WAReg;
+    auto I = TargetRegisterInfo::virtReg2Index(VReg);
+    assert(I < WARegs.size());
+    WARegs[I] = WAReg;
   }
-  unsigned getWAReg(unsigned Reg) const {
-    assert(TargetRegisterInfo::virtReg2Index(Reg) < WARegs.size());
-    return WARegs[TargetRegisterInfo::virtReg2Index(Reg)];
+  unsigned getWAReg(unsigned VReg) const {
+    auto I = TargetRegisterInfo::virtReg2Index(VReg);
+    assert(I < WARegs.size());
+    return WARegs[I];
   }
 
   // For a given stackified WAReg, return the id number to print with push/pop.
