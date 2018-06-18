@@ -334,7 +334,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
 
   OS << "<MCFragment " << (const void *)this << " LayoutOrder:" << LayoutOrder
      << " Offset:" << Offset << " HasInstructions:" << hasInstructions();
-  if (const MCEncodedFragment *EF = cast<MCEncodedFragment>(this))
+  if (const MCEncodedFragment *EF = dyn_cast<MCEncodedFragment>(this))
     OS << " BundlePadding:" << static_cast<unsigned>(EF->getBundlePadding());
   OS << ">";
 

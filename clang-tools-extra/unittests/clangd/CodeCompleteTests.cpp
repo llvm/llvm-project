@@ -1212,6 +1212,9 @@ TEST(CompletionTest, NonDocComments) {
       int a = comments^;
     }
   )cpp");
+  // FIXME: Auto-completion in a template requires disabling delayed template
+  // parsing.
+  CDB.ExtraClangFlags.push_back("-fno-delayed-template-parsing");
   Server.addDocument(FooCpp, Source.code(), WantDiagnostics::Yes);
   CompletionList Completions = cantFail(runCodeComplete(
       Server, FooCpp, Source.point(), clangd::CodeCompleteOptions()));

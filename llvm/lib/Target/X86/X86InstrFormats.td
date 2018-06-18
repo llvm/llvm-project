@@ -241,6 +241,9 @@ class FoldGenData<string _RegisterForm> {
 // Mark the instruction as "illegal to memory fold/unfold"
 class NotMemoryFoldable { bit isMemoryFoldable = 0; }
 
+// Prevent EVEX->VEX conversion from considering this instruction.
+class NotEVEX2VEXConvertible { bit notEVEX2VEXConvertible = 1; }
+
 class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
               string AsmStr, Domain d = GenericDomain>
   : Instruction {
@@ -321,6 +324,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   string FoldGenRegForm = ?;
 
   bit isMemoryFoldable = 1;     // Is it allowed to memory fold/unfold this instruction?
+  bit notEVEX2VEXConvertible = 0; // Prevent EVEX->VEX conversion.
 
   // TSFlags layout should be kept in sync with X86BaseInfo.h.
   let TSFlags{6-0}   = FormBits;

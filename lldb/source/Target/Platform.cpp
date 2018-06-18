@@ -369,13 +369,11 @@ ArchSpec Platform::GetAugmentedArchSpec(Platform *platform, llvm::StringRef trip
 Platform::Platform(bool is_host)
     : m_is_host(is_host), m_os_version_set_while_connected(false),
       m_system_arch_set_while_connected(false), m_sdk_sysroot(), m_sdk_build(),
-      m_working_dir(), m_remote_url(), m_name(), m_major_os_version(UINT32_MAX),
-      m_minor_os_version(UINT32_MAX), m_update_os_version(UINT32_MAX),
-      m_system_arch(), m_mutex(), m_uid_map(), m_gid_map(),
-      m_max_uid_name_len(0), m_max_gid_name_len(0), m_supports_rsync(false),
-      m_rsync_opts(), m_rsync_prefix(), m_supports_ssh(false), m_ssh_opts(),
-      m_ignores_remote_hostname(false), m_trap_handlers(),
-      m_calculated_trap_handlers(false),
+      m_working_dir(), m_remote_url(), m_name(), m_system_arch(), m_mutex(),
+      m_uid_map(), m_gid_map(), m_max_uid_name_len(0), m_max_gid_name_len(0),
+      m_supports_rsync(false), m_rsync_opts(), m_rsync_prefix(),
+      m_supports_ssh(false), m_ssh_opts(), m_ignores_remote_hostname(false),
+      m_trap_handlers(), m_calculated_trap_handlers(false),
       m_module_cache(llvm::make_unique<ModuleCache>()) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
   if (log)
@@ -395,9 +393,6 @@ Platform::~Platform() {
 }
 
 void Platform::GetStatus(Stream &strm) {
-  uint32_t major = UINT32_MAX;
-  uint32_t minor = UINT32_MAX;
-  uint32_t update = UINT32_MAX;
   std::string s;
   strm.Printf("  Platform: %s\n", GetPluginName().GetCString());
 
@@ -410,12 +405,9 @@ void Platform::GetStatus(Stream &strm) {
     }
   }
 
-  if (GetOSVersion(major, minor, update)) {
-    strm.Printf("OS Version: %u", major);
-    if (minor != UINT32_MAX)
-      strm.Printf(".%u", minor);
-    if (update != UINT32_MAX)
-      strm.Printf(".%u", update);
+  llvm::VersionTuple os_version = GetOSVersion();
+  if (!os_version.empty()) {
+    strm.Format("OS Version: {0}", os_version.getAsString());
 
     if (GetOSBuildString(s))
       strm.Printf(" (%s)", s.c_str());
@@ -447,17 +439,14 @@ void Platform::GetStatus(Stream &strm) {
     strm.Printf("Platform-specific connection: %s\n", specific_info.c_str());
 }
 
-bool Platform::GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update,
-                            Process *process) {
+llvm::VersionTuple Platform::GetOSVersion(Process *process) {
   std::lock_guard<std::mutex> guard(m_mutex);
 
-  bool success = m_major_os_version != UINT32_MAX;
   if (IsHost()) {
-    if (!success) {
+    if (m_os_version.empty()) {
       // We have a local host platform
-      success = HostInfo::GetOSVersion(m_major_os_version, m_minor_os_version,
-                                       m_update_os_version);
-      m_os_version_set_while_connected = success;
+      m_os_version = HostInfo::GetOSVersion();
+      m_os_version_set_while_connected = !m_os_version.empty();
     }
   } else {
     // We have a remote platform. We can only fetch the remote
@@ -467,7 +456,7 @@ bool Platform::GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update,
     const bool is_connected = IsConnected();
 
     bool fetch = false;
-    if (success) {
+    if (!m_os_version.empty()) {
       // We have valid OS version info, check to make sure it wasn't manually
       // set prior to connecting. If it was manually set prior to connecting,
       // then lets fetch the actual OS version info if we are now connected.
@@ -478,22 +467,18 @@ bool Platform::GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update,
       fetch = is_connected;
     }
 
-    if (fetch) {
-      success = GetRemoteOSVersion();
-      m_os_version_set_while_connected = success;
-    }
+    if (fetch)
+      m_os_version_set_while_connected = GetRemoteOSVersion();
   }
 
-  if (success) {
-    major = m_major_os_version;
-    minor = m_minor_os_version;
-    update = m_update_os_version;
-  } else if (process) {
+  if (!m_os_version.empty())
+    return m_os_version;
+  if (process) {
     // Check with the process in case it can answer the question if a process
     // was provided
-    return process->GetHostOSVersion(major, minor, update);
+    return process->GetHostOSVersion();
   }
-  return success;
+  return llvm::VersionTuple();
 }
 
 bool Platform::GetOSBuildString(std::string &s) {
@@ -859,7 +844,7 @@ const char *Platform::GetGroupName(uint32_t gid) {
   return nullptr;
 }
 
-bool Platform::SetOSVersion(uint32_t major, uint32_t minor, uint32_t update) {
+bool Platform::SetOSVersion(llvm::VersionTuple version) {
   if (IsHost()) {
     // We don't need anyone setting the OS version for the host platform, we
     // should be able to figure it out by calling HostInfo::GetOSVersion(...).
@@ -874,9 +859,7 @@ bool Platform::SetOSVersion(uint32_t major, uint32_t minor, uint32_t update) {
       // We aren't connected and we might want to set the OS version ahead of
       // time before we connect so we can peruse files and use a local SDK or
       // PDK cache of support files to disassemble or do other things.
-      m_major_os_version = major;
-      m_minor_os_version = minor;
-      m_update_os_version = update;
+      m_os_version = version;
       return true;
     }
   }
