@@ -3163,6 +3163,12 @@ void CGOpenMPRuntimeNVPTX::emitReduction(
   assert((TeamsReduction || ParallelReduction || SimdReduction) &&
          "Invalid reduction selection in emitReduction.");
 
+  if (Options.SimpleReduction) {
+    CGOpenMPRuntime::emitReduction(CGF, Loc, Privates, LHSExprs, RHSExprs,
+                                   ReductionOps, Options);
+    return;
+  }
+
   ASTContext &C = CGM.getContext();
 
   // 1. Build a list of reduction variables.

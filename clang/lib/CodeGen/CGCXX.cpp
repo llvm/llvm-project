@@ -109,17 +109,8 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
       D->getType()->getAs<FunctionType>()->getCallConv())
     return true;
 
-  return TryEmitDefinitionAsAlias(GlobalDecl(D, Dtor_Base),
-                                  GlobalDecl(BaseD, Dtor_Base));
-}
-
-/// Try to emit a definition as a global alias for another definition.
-/// If \p InEveryTU is true, we know that an equivalent alias can be produced
-/// in every translation unit.
-bool CodeGenModule::TryEmitDefinitionAsAlias(GlobalDecl AliasDecl,
-                                             GlobalDecl TargetDecl) {
-  if (!getCodeGenOpts().CXXCtorDtorAliases)
-    return true;
+  GlobalDecl AliasDecl(D, Dtor_Base);
+  GlobalDecl TargetDecl(BaseD, Dtor_Base);
 
   // The alias will use the linkage of the referent.  If we can't
   // support aliases with that linkage, fail.
@@ -192,6 +183,9 @@ bool CodeGenModule::TryEmitDefinitionAsAlias(GlobalDecl AliasDecl,
   // Create the alias with no name.
   auto *Alias = llvm::GlobalAlias::create(AliasValueType, 0, Linkage, "",
                                           Aliasee, &getModule());
+
+  // Destructors are always unnamed_addr.
+  Alias->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   // Switch any previous uses to the alias.
   if (Entry) {
