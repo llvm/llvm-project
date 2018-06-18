@@ -950,6 +950,54 @@ multiclass sve_int_dup_imm_pred_zero<string asm> {
 }
 
 //===----------------------------------------------------------------------===//
+// SVE Integer Compare - Vectors Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_cmp<bit cmp_1, bits<2> sz8_64, bits<3> opc, string asm,
+                  PPRRegOp pprty, ZPRRegOp zprty1, ZPRRegOp zprty2>
+: I<(outs pprty:$Pd), (ins PPR3bAny:$Pg, zprty1:$Zn, zprty2:$Zm),
+  asm, "\t$Pd, $Pg/z, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pd;
+  bits<3> Pg;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00100100;
+  let Inst{23-22} = sz8_64;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = opc{2};
+  let Inst{14}    = cmp_1;
+  let Inst{13}    = opc{1};
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4}     = opc{0};
+  let Inst{3-0}   = Pd;
+
+  let Defs = [NZCV];
+}
+
+multiclass sve_int_cmp_0<bits<3> opc, string asm> {
+  def _B : sve_int_cmp<0b0, 0b00, opc, asm, PPR8, ZPR8, ZPR8>;
+  def _H : sve_int_cmp<0b0, 0b01, opc, asm, PPR16, ZPR16, ZPR16>;
+  def _S : sve_int_cmp<0b0, 0b10, opc, asm, PPR32, ZPR32, ZPR32>;
+  def _D : sve_int_cmp<0b0, 0b11, opc, asm, PPR64, ZPR64, ZPR64>;
+}
+
+multiclass sve_int_cmp_0_wide<bits<3> opc, string asm> {
+  def _B : sve_int_cmp<0b0, 0b00, opc, asm, PPR8, ZPR8, ZPR64>;
+  def _H : sve_int_cmp<0b0, 0b01, opc, asm, PPR16, ZPR16, ZPR64>;
+  def _S : sve_int_cmp<0b0, 0b10, opc, asm, PPR32, ZPR32, ZPR64>;
+}
+
+multiclass sve_int_cmp_1_wide<bits<3> opc, string asm> {
+  def _B : sve_int_cmp<0b1, 0b00, opc, asm, PPR8, ZPR8, ZPR64>;
+  def _H : sve_int_cmp<0b1, 0b01, opc, asm, PPR16, ZPR16, ZPR64>;
+  def _S : sve_int_cmp<0b1, 0b10, opc, asm, PPR32, ZPR32, ZPR64>;
+}
+
+//===----------------------------------------------------------------------===//
 //SVE Index Generation Group
 //===----------------------------------------------------------------------===//
 

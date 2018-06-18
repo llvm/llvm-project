@@ -220,6 +220,11 @@ void VPRegionBlock::execute(VPTransformState *State) {
   State->Instance.reset();
 }
 
+void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
+  InsertPos->getParent()->getRecipeList().insert(InsertPos->getIterator(),
+                                                 this);
+}
+
 void VPInstruction::generateInstruction(VPTransformState &State,
                                         unsigned Part) {
   IRBuilder<> &Builder = State.Builder;
