@@ -509,6 +509,24 @@ let Predicates = [HasSVE] in {
   defm INCD_XPiI : sve_int_pred_pattern_a<0b110, "incd">;
   defm DECD_XPiI : sve_int_pred_pattern_a<0b111, "decd">;
 
+  defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs">;
+  defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi">;
+  defm CMPGE_PPzZZ : sve_int_cmp_0<0b100, "cmpge">;
+  defm CMPGT_PPzZZ : sve_int_cmp_0<0b101, "cmpgt">;
+  defm CMPEQ_PPzZZ : sve_int_cmp_0<0b110, "cmpeq">;
+  defm CMPNE_PPzZZ : sve_int_cmp_0<0b111, "cmpne">;
+
+  defm CMPEQ_WIDE_PPzZZ : sve_int_cmp_0_wide<0b010, "cmpeq">;
+  defm CMPNE_WIDE_PPzZZ : sve_int_cmp_0_wide<0b011, "cmpne">;
+  defm CMPGE_WIDE_PPzZZ : sve_int_cmp_1_wide<0b000, "cmpge">;
+  defm CMPGT_WIDE_PPzZZ : sve_int_cmp_1_wide<0b001, "cmpgt">;
+  defm CMPLT_WIDE_PPzZZ : sve_int_cmp_1_wide<0b010, "cmplt">;
+  defm CMPLE_WIDE_PPzZZ : sve_int_cmp_1_wide<0b011, "cmple">;
+  defm CMPHS_WIDE_PPzZZ : sve_int_cmp_1_wide<0b100, "cmphs">;
+  defm CMPHI_WIDE_PPzZZ : sve_int_cmp_1_wide<0b101, "cmphi">;
+  defm CMPLO_WIDE_PPzZZ : sve_int_cmp_1_wide<0b110, "cmplo">;
+  defm CMPLS_WIDE_PPzZZ : sve_int_cmp_1_wide<0b111, "cmpls">;
+
   defm INDEX_RR : sve_int_index_rr<"index">;
   defm INDEX_IR : sve_int_index_ir<"index">;
   defm INDEX_RI : sve_int_index_ri<"index">;
@@ -540,4 +558,40 @@ let Predicates = [HasSVE] in {
 
   def : InstAlias<"nots $Pd, $Pg/z, $Pn",
                   (EORS_PPzPP PPR8:$Pd, PPRAny:$Pg, PPR8:$Pn, PPRAny:$Pg), 1>;
+
+  def : InstAlias<"cmple $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGE_PPzZZ_B PPR8:$Zd, PPR3bAny:$Pg, ZPR8:$Zn, ZPR8:$Zm), 0>;
+  def : InstAlias<"cmple $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGE_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"cmple $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGE_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"cmple $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGE_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
+
+  def : InstAlias<"cmplo $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHI_PPzZZ_B PPR8:$Zd, PPR3bAny:$Pg, ZPR8:$Zn, ZPR8:$Zm), 0>;
+  def : InstAlias<"cmplo $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHI_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"cmplo $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHI_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"cmplo $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHI_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
+
+  def : InstAlias<"cmpls $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHS_PPzZZ_B PPR8:$Zd, PPR3bAny:$Pg, ZPR8:$Zn, ZPR8:$Zm), 0>;
+  def : InstAlias<"cmpls $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHS_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"cmpls $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHS_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"cmpls $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPHS_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
+
+  def : InstAlias<"cmplt $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGT_PPzZZ_B PPR8:$Zd, PPR3bAny:$Pg, ZPR8:$Zn, ZPR8:$Zm), 0>;
+  def : InstAlias<"cmplt $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGT_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"cmplt $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGT_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"cmplt $Zd, $Pg/z, $Zm, $Zn",
+                  (CMPGT_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
 }

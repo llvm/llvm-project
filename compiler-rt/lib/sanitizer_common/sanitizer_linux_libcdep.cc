@@ -157,7 +157,8 @@ bool SetEnv(const char *name, const char *value) {
 }
 #endif
 
-static bool GetLibcVersion(int *major, int *minor, int *patch) {
+__attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
+                                                   int *patch) {
 #ifdef _CS_GNU_LIBC_VERSION
   char buf[64];
   uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
