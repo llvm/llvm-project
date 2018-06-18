@@ -2860,13 +2860,17 @@ AST_MATCHER_P_OVERLOAD(CallExpr, callee, internal::Matcher<Decl>, InnerMatcher,
 /// Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
 ///             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
 ///             and U (matcher = typedefDecl(hasType(asString("int")))
+///             and friend class X (matcher = friendDecl(hasType("X"))
 /// \code
 ///  class X {};
 ///  void y(X &x) { x; X z; }
 ///  typedef int U;
+///  class Y { friend class X; };
 /// \endcode
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
-    hasType, AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, TypedefNameDecl, ValueDecl),
+    hasType,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, FriendDecl, TypedefNameDecl,
+                                    ValueDecl),
     internal::Matcher<QualType>, InnerMatcher, 0) {
   QualType QT = internal::getUnderlyingType(Node);
   if (!QT.isNull())
@@ -2885,18 +2889,21 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 ///
 /// Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
 ///             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
+///             and friend class X (matcher = friendDecl(hasType("X"))
 /// \code
 ///  class X {};
 ///  void y(X &x) { x; X z; }
+///  class Y { friend class X; };
 /// \endcode
 ///
 /// Usable as: Matcher<Expr>, Matcher<ValueDecl>
-AST_POLYMORPHIC_MATCHER_P_OVERLOAD(hasType,
-                                   AST_POLYMORPHIC_SUPPORTED_TYPES(Expr,
-                                                                   ValueDecl),
-                                   internal::Matcher<Decl>, InnerMatcher, 1) {
-  return qualType(hasDeclaration(InnerMatcher))
-      .matches(Node.getType(), Finder, Builder);
+AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
+    hasType, AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, FriendDecl, ValueDecl),
+    internal::Matcher<Decl>, InnerMatcher, 1) {
+  QualType QT = internal::getUnderlyingType(Node);
+  if (!QT.isNull())
+    return qualType(hasDeclaration(InnerMatcher)).matches(QT, Finder, Builder);
+  return false;
 }
 
 /// Matches if the type location of the declarator decl's type matches
@@ -5536,7 +5543,8 @@ AST_MATCHER_P(NestedNameSpecifier, specifiesType,
 ///   matches "A::"
 AST_MATCHER_P(NestedNameSpecifierLoc, specifiesTypeLoc,
               internal::Matcher<TypeLoc>, InnerMatcher) {
-  return Node && InnerMatcher.matches(Node.getTypeLoc(), Finder, Builder);
+  return Node && Node.getNestedNameSpecifier()->getAsType() &&
+         InnerMatcher.matches(Node.getTypeLoc(), Finder, Builder);
 }
 
 /// Matches on the prefix of a \c NestedNameSpecifier.

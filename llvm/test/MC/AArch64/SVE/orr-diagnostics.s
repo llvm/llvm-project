@@ -65,3 +65,30 @@ orr z0.d, p8/z, z0.d, z1.d
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
 // CHECK-NEXT: orr z0.d, p8/z, z0.d, z1.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Predicate register must have .b suffix
+
+orr p0.h, p0/z, p0.h, p1.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register.
+// CHECK-NEXT: orr p0.h, p0/z, p0.h, p1.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+orr p0.s, p0/z, p0.s, p1.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register.
+// CHECK-NEXT: orr p0.s, p0/z, p0.s, p1.s
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+orr p0.d, p0/z, p0.d, p1.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register.
+// CHECK-NEXT: orr p0.d, p0/z, p0.d, p1.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
+// Operation only has zeroing predicate behaviour (p0/z).
+
+orr p0.b, p0/m, p1.b, p2.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: orr p0.b, p0/m, p1.b, p2.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

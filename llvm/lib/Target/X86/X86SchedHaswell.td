@@ -913,8 +913,7 @@ def HWWriteResGroup10 : SchedWriteRes<[HWPort0156]> {
 def: InstRW<[HWWriteResGroup10], (instrs CBW, CWDE, CDQE,
                                          CMC, STC)>;
 def: InstRW<[HWWriteResGroup10], (instrs LAHF, SAHF)>; // TODO: This doesn't match Agner's data
-def: InstRW<[HWWriteResGroup10], (instregex "NOOP",
-                                            "SGDT64m",
+def: InstRW<[HWWriteResGroup10], (instregex "SGDT64m",
                                             "SIDT64m",
                                             "SMSW16m",
                                             "STRm",

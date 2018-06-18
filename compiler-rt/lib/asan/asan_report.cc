@@ -84,7 +84,7 @@ static void PrintZoneForPointer(uptr ptr, uptr zone_ptr,
 bool ParseFrameDescription(const char *frame_descr,
                            InternalMmapVector<StackVarDescr> *vars) {
   CHECK(frame_descr);
-  char *p;
+  const char *p;
   // This string is created by the compiler and has the following form:
   // "n alloc_1 alloc_2 ... alloc_n"
   // where alloc_i looks like "offset size len ObjectName"

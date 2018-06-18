@@ -14868,15 +14868,15 @@ vmovapd (%edx), %zmm2 {%k2}
 // CHECK: encoding: [0x62,0xf1,0xfd,0xca,0x28,0x12]     
 vmovapd (%edx), %zmm2 {%k2} {z} 
 
-// CHECK: vmovapd.s %zmm2, %zmm2 
+// CHECK: vmovapd %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf1,0xfd,0x48,0x29,0xd2]       
 vmovapd.s %zmm2, %zmm2 
 
-// CHECK: vmovapd.s %zmm2, %zmm2 {%k2} 
+// CHECK: vmovapd %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf1,0xfd,0x4a,0x29,0xd2]      
 vmovapd.s %zmm2, %zmm2 {%k2} 
 
-// CHECK: vmovapd.s %zmm2, %zmm2 {%k2} {z} 
+// CHECK: vmovapd %zmm2, %zmm2 {%k2} {z} 
 // CHECK: encoding: [0x62,0xf1,0xfd,0xca,0x29,0xd2]     
 vmovapd.s %zmm2, %zmm2 {%k2} {z} 
 
@@ -15012,15 +15012,15 @@ vmovaps (%edx), %zmm2 {%k2}
 // CHECK: encoding: [0x62,0xf1,0x7c,0xca,0x28,0x12]     
 vmovaps (%edx), %zmm2 {%k2} {z} 
 
-// CHECK: vmovaps.s %zmm2, %zmm2 
+// CHECK: vmovaps %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf1,0x7c,0x48,0x29,0xd2]       
 vmovaps.s %zmm2, %zmm2 
 
-// CHECK: vmovaps.s %zmm2, %zmm2 {%k2} 
+// CHECK: vmovaps %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf1,0x7c,0x4a,0x29,0xd2]      
 vmovaps.s %zmm2, %zmm2 {%k2} 
 
-// CHECK: vmovaps.s %zmm2, %zmm2 {%k2} {z} 
+// CHECK: vmovaps %zmm2, %zmm2 {%k2} {z} 
 // CHECK: encoding: [0x62,0xf1,0x7c,0xca,0x29,0xd2]     
 vmovaps.s %zmm2, %zmm2 {%k2} {z} 
 
@@ -15240,15 +15240,15 @@ vmovdqa32 (%edx), %zmm2 {%k2}
 // CHECK: encoding: [0x62,0xf1,0x7d,0xca,0x6f,0x12]     
 vmovdqa32 (%edx), %zmm2 {%k2} {z} 
 
-// CHECK: vmovdqa32.s %zmm2, %zmm2 
+// CHECK: vmovdqa32 %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf1,0x7d,0x48,0x7f,0xd2]       
 vmovdqa32.s %zmm2, %zmm2 
 
-// CHECK: vmovdqa32.s %zmm2, %zmm2 {%k2} 
+// CHECK: vmovdqa32 %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf1,0x7d,0x4a,0x7f,0xd2]      
 vmovdqa32.s %zmm2, %zmm2 {%k2} 
 
-// CHECK: vmovdqa32.s %zmm2, %zmm2 {%k2} {z} 
+// CHECK: vmovdqa32 %zmm2, %zmm2 {%k2} {z} 
 // CHECK: encoding: [0x62,0xf1,0x7d,0xca,0x7f,0xd2]     
 vmovdqa32.s %zmm2, %zmm2 {%k2} {z} 
 
@@ -15384,15 +15384,15 @@ vmovdqu32 (%edx), %zmm2 {%k2}
 // CHECK: encoding: [0x62,0xf1,0x7e,0xca,0x6f,0x12]     
 vmovdqu32 (%edx), %zmm2 {%k2} {z} 
 
-// CHECK: vmovdqu32.s %zmm2, %zmm2 
+// CHECK: vmovdqu32 %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf1,0x7e,0x48,0x7f,0xd2]       
 vmovdqu32.s %zmm2, %zmm2 
 
-// CHECK: vmovdqu32.s %zmm2, %zmm2 {%k2} 
+// CHECK: vmovdqu32 %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf1,0x7e,0x4a,0x7f,0xd2]      
 vmovdqu32.s %zmm2, %zmm2 {%k2} 
 
-// CHECK: vmovdqu32.s %zmm2, %zmm2 {%k2} {z} 
+// CHECK: vmovdqu32 %zmm2, %zmm2 {%k2} {z} 
 // CHECK: encoding: [0x62,0xf1,0x7e,0xca,0x7f,0xd2]     
 vmovdqu32.s %zmm2, %zmm2 {%k2} {z} 
 
@@ -15792,15 +15792,15 @@ vmovupd (%edx), %zmm2 {%k2}
 // CHECK: encoding: [0x62,0xf1,0xfd,0xca,0x10,0x12]     
 vmovupd (%edx), %zmm2 {%k2} {z} 
 
-// CHECK: vmovupd.s %zmm2, %zmm2 
+// CHECK: vmovupd %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf1,0xfd,0x48,0x11,0xd2]       
 vmovupd.s %zmm2, %zmm2 
 
-// CHECK: vmovupd.s %zmm2, %zmm2 {%k2} 
+// CHECK: vmovupd %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf1,0xfd,0x4a,0x11,0xd2]      
 vmovupd.s %zmm2, %zmm2 {%k2} 
 
-// CHECK: vmovupd.s %zmm2, %zmm2 {%k2} {z} 
+// CHECK: vmovupd %zmm2, %zmm2 {%k2} {z} 
 // CHECK: encoding: [0x62,0xf1,0xfd,0xca,0x11,0xd2]     
 vmovupd.s %zmm2, %zmm2 {%k2} {z} 
 
@@ -15936,15 +15936,15 @@ vmovups (%edx), %zmm2 {%k2}
 // CHECK: encoding: [0x62,0xf1,0x7c,0xca,0x10,0x12]     
 vmovups (%edx), %zmm2 {%k2} {z} 
 
-// CHECK: vmovups.s %zmm2, %zmm2 
+// CHECK: vmovups %zmm2, %zmm2 
 // CHECK: encoding: [0x62,0xf1,0x7c,0x48,0x11,0xd2]       
 vmovups.s %zmm2, %zmm2 
 
-// CHECK: vmovups.s %zmm2, %zmm2 {%k2} 
+// CHECK: vmovups %zmm2, %zmm2 {%k2} 
 // CHECK: encoding: [0x62,0xf1,0x7c,0x4a,0x11,0xd2]      
 vmovups.s %zmm2, %zmm2 {%k2} 
 
-// CHECK: vmovups.s %zmm2, %zmm2 {%k2} {z} 
+// CHECK: vmovups %zmm2, %zmm2 {%k2} {z} 
 // CHECK: encoding: [0x62,0xf1,0x7c,0xca,0x11,0xd2]     
 vmovups.s %zmm2, %zmm2 {%k2} {z} 
 

@@ -1191,10 +1191,13 @@ def POP16r  : I<0x58, AddRegFrm, (outs GR16:$reg), (ins), "pop{w}\t$reg", []>,
                 OpSize16;
 def POP32r  : I<0x58, AddRegFrm, (outs GR32:$reg), (ins), "pop{l}\t$reg", []>, 
                 OpSize32, Requires<[Not64BitMode]>;
+// Long form for the disassembler.
+let isCodeGenOnly = 1, ForceDisassemble = 1 in {
 def POP16rmr: I<0x8F, MRM0r, (outs GR16:$reg), (ins), "pop{w}\t$reg", []>,
                 OpSize16, NotMemoryFoldable;
 def POP32rmr: I<0x8F, MRM0r, (outs GR32:$reg), (ins), "pop{l}\t$reg", []>,
                 OpSize32, Requires<[Not64BitMode]>, NotMemoryFoldable;
+} // isCodeGenOnly = 1, ForceDisassemble = 1
 } // mayLoad, SchedRW
 let mayStore = 1, mayLoad = 1, SchedRW = [WriteRMW] in {
 def POP16rmm: I<0x8F, MRM0m, (outs), (ins i16mem:$dst), "pop{w}\t$dst", []>,
@@ -1208,10 +1211,13 @@ def PUSH16r  : I<0x50, AddRegFrm, (outs), (ins GR16:$reg), "push{w}\t$reg",[]>,
                  OpSize16;
 def PUSH32r  : I<0x50, AddRegFrm, (outs), (ins GR32:$reg), "push{l}\t$reg",[]>,
                  OpSize32, Requires<[Not64BitMode]>;
+// Long form for the disassembler.
+let isCodeGenOnly = 1, ForceDisassemble = 1 in {
 def PUSH16rmr: I<0xFF, MRM6r, (outs), (ins GR16:$reg), "push{w}\t$reg",[]>,
                  OpSize16, NotMemoryFoldable;
 def PUSH32rmr: I<0xFF, MRM6r, (outs), (ins GR32:$reg), "push{l}\t$reg",[]>,
                  OpSize32, Requires<[Not64BitMode]>, NotMemoryFoldable;
+} // isCodeGenOnly = 1, ForceDisassemble = 1
 
 def PUSH16i8 : Ii8<0x6a, RawFrm, (outs), (ins i16i8imm:$imm),
                    "push{w}\t$imm", []>, OpSize16;
@@ -1279,8 +1285,11 @@ let Defs = [RSP], Uses = [RSP], hasSideEffects=0 in {
 let mayLoad = 1, SchedRW = [WriteLoad] in {
 def POP64r   : I<0x58, AddRegFrm, (outs GR64:$reg), (ins), "pop{q}\t$reg", []>,
                  OpSize32, Requires<[In64BitMode]>;
+// Long form for the disassembler.
+let isCodeGenOnly = 1, ForceDisassemble = 1 in {
 def POP64rmr: I<0x8F, MRM0r, (outs GR64:$reg), (ins), "pop{q}\t$reg", []>,
                 OpSize32, Requires<[In64BitMode]>, NotMemoryFoldable;
+} // isCodeGenOnly = 1, ForceDisassemble = 1
 } // mayLoad, SchedRW
 let mayLoad = 1, mayStore = 1, SchedRW = [WriteRMW] in
 def POP64rmm: I<0x8F, MRM0m, (outs), (ins i64mem:$dst), "pop{q}\t$dst", []>,
@@ -1288,8 +1297,11 @@ def POP64rmm: I<0x8F, MRM0m, (outs), (ins i64mem:$dst), "pop{q}\t$dst", []>,
 let mayStore = 1, SchedRW = [WriteStore] in {
 def PUSH64r  : I<0x50, AddRegFrm, (outs), (ins GR64:$reg), "push{q}\t$reg", []>,
                  OpSize32, Requires<[In64BitMode]>;
+// Long form for the disassembler.
+let isCodeGenOnly = 1, ForceDisassemble = 1 in {
 def PUSH64rmr: I<0xFF, MRM6r, (outs), (ins GR64:$reg), "push{q}\t$reg", []>,
                  OpSize32, Requires<[In64BitMode]>, NotMemoryFoldable;
+} // isCodeGenOnly = 1, ForceDisassemble = 1
 } // mayStore, SchedRW
 let mayLoad = 1, mayStore = 1, SchedRW = [WriteRMW] in {
 def PUSH64rmm: I<0xFF, MRM6m, (outs), (ins i64mem:$src), "push{q}\t$src", []>,
@@ -1639,6 +1651,24 @@ def MOV64rr_REV : RI<0x8B, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
                      "mov{q}\t{$src, $dst|$dst, $src}", []>,
                      FoldGenData<"MOV64rr">;
 }
+
+// Reversed version with ".s" suffix for GAS compatibility.
+def : InstAlias<"mov{b}.s\t{$src, $dst|$dst, $src}",
+                (MOV8rr_REV GR8:$dst, GR8:$src), 0>;
+def : InstAlias<"mov{w}.s\t{$src, $dst|$dst, $src}",
+                (MOV16rr_REV GR16:$dst, GR16:$src), 0>;
+def : InstAlias<"mov{l}.s\t{$src, $dst|$dst, $src}",
+                (MOV32rr_REV GR32:$dst, GR32:$src), 0>;
+def : InstAlias<"mov{q}.s\t{$src, $dst|$dst, $src}",
+                (MOV64rr_REV GR64:$dst, GR64:$src), 0>;
+def : InstAlias<"mov.s\t{$src, $dst|$dst, $src}",
+                (MOV8rr_REV GR8:$dst, GR8:$src), 0, "att">;
+def : InstAlias<"mov.s\t{$src, $dst|$dst, $src}",
+                (MOV16rr_REV GR16:$dst, GR16:$src), 0, "att">;
+def : InstAlias<"mov.s\t{$src, $dst|$dst, $src}",
+                (MOV32rr_REV GR32:$dst, GR32:$src), 0, "att">;
+def : InstAlias<"mov.s\t{$src, $dst|$dst, $src}",
+                (MOV64rr_REV GR64:$dst, GR64:$src), 0, "att">;
 
 let canFoldAsLoad = 1, isReMaterializable = 1, SchedRW = [WriteLoad] in {
 def MOV8rm  : I<0x8A, MRMSrcMem, (outs GR8 :$dst), (ins i8mem :$src),

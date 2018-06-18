@@ -2859,7 +2859,7 @@ void BoUpSLP::reorderInputsAccordingToOpcode(unsigned Opcode,
   // add a[1],c[2]  load b[1]
   // b[2]           load b[2]
   // add a[3],c[3]  load b[3]
-  for (unsigned j = 0; j < VL.size() - 1; ++j) {
+  for (unsigned j = 0, e = VL.size() - 1; j < e; ++j) {
     if (LoadInst *L = dyn_cast<LoadInst>(Left[j])) {
       if (LoadInst *L1 = dyn_cast<LoadInst>(Right[j + 1])) {
         if (isConsecutiveAccess(L, L1, *DL, *SE)) {

@@ -157,6 +157,27 @@ bool SetEnv(const char *name, const char *value) {
 }
 #endif
 
+__attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
+                                                   int *patch) {
+#ifdef _CS_GNU_LIBC_VERSION
+  char buf[64];
+  uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
+  if (len >= sizeof(buf))
+    return false;
+  buf[len] = 0;
+  static const char kGLibC[] = "glibc ";
+  if (internal_strncmp(buf, kGLibC, sizeof(kGLibC) - 1) != 0)
+    return false;
+  const char *p = buf + sizeof(kGLibC) - 1;
+  *major = internal_simple_strtoll(p, &p, 10);
+  *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
+  *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
+  return true;
+#else
+  return false;
+#endif
+}
+
 #if !SANITIZER_FREEBSD && !SANITIZER_ANDROID && !SANITIZER_GO &&               \
     !SANITIZER_NETBSD && !SANITIZER_OPENBSD && !SANITIZER_SOLARIS
 static uptr g_tls_size;
@@ -193,6 +214,24 @@ void CallGetTls(void* ptr, size_t* size, size_t* align) {
   CHECK_NE(get_tls, 0);
   get_tls(size, align);
 }
+
+bool CmpLibcVersion(int major, int minor, int patch) {
+  int ma;
+  int mi;
+  int pa;
+  if (!GetLibcVersion(&ma, &mi, &pa))
+    return false;
+  if (ma > major)
+    return true;
+  if (ma < major)
+    return false;
+  if (mi > minor)
+    return true;
+  if (mi < minor)
+    return false;
+  return pa >= patch;
+}
+
 }  // namespace
 
 void InitTlsSize() {
@@ -204,8 +243,7 @@ void InitTlsSize() {
   // On i?86, _dl_get_tls_static_info used to be internal_function, i.e.
   // __attribute__((regparm(3), stdcall)) before glibc 2.27 and is normal
   // function in 2.27 and later.
-  if (CHECK_GET_TLS_STATIC_INFO_VERSION &&
-      !dlvsym(RTLD_NEXT, "glob", "GLIBC_2.27"))
+  if (CHECK_GET_TLS_STATIC_INFO_VERSION && !CmpLibcVersion(2, 27, 0))
     CallGetTls<GetTlsStaticInfoRegparmCall>(get_tls_static_info_ptr,
                                             &tls_size, &tls_align);
   else
@@ -232,43 +270,33 @@ uptr ThreadDescriptorSize() {
   if (val)
     return val;
 #if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
-#ifdef _CS_GNU_LIBC_VERSION
-  char buf[64];
-  uptr len = confstr(_CS_GNU_LIBC_VERSION, buf, sizeof(buf));
-  if (len < sizeof(buf) && internal_strncmp(buf, "glibc 2.", 8) == 0) {
-    char *end;
-    int minor = internal_simple_strtoll(buf + 8, &end, 10);
-    if (end != buf + 8 && (*end == '\0' || *end == '.' || *end == '-')) {
-      int patch = 0;
-      if (*end == '.')
-        // strtoll will return 0 if no valid conversion could be performed
-        patch = internal_simple_strtoll(end + 1, nullptr, 10);
-
-      /* sizeof(struct pthread) values from various glibc versions.  */
-      if (SANITIZER_X32)
-        val = 1728;  // Assume only one particular version for x32.
-      // For ARM sizeof(struct pthread) changed in Glibc 2.23.
-      else if (SANITIZER_ARM)
-        val = minor <= 22 ? 1120 : 1216;
-      else if (minor <= 3)
-        val = FIRST_32_SECOND_64(1104, 1696);
-      else if (minor == 4)
-        val = FIRST_32_SECOND_64(1120, 1728);
-      else if (minor == 5)
-        val = FIRST_32_SECOND_64(1136, 1728);
-      else if (minor <= 9)
-        val = FIRST_32_SECOND_64(1136, 1712);
-      else if (minor == 10)
-        val = FIRST_32_SECOND_64(1168, 1776);
-      else if (minor == 11 || (minor == 12 && patch == 1))
-        val = FIRST_32_SECOND_64(1168, 2288);
-      else if (minor <= 13)
-        val = FIRST_32_SECOND_64(1168, 2304);
-      else
-        val = FIRST_32_SECOND_64(1216, 2304);
-    }
+  int major;
+  int minor;
+  int patch;
+  if (GetLibcVersion(&major, &minor, &patch) && major == 2) {
+    /* sizeof(struct pthread) values from various glibc versions.  */
+    if (SANITIZER_X32)
+      val = 1728; // Assume only one particular version for x32.
+    // For ARM sizeof(struct pthread) changed in Glibc 2.23.
+    else if (SANITIZER_ARM)
+      val = minor <= 22 ? 1120 : 1216;
+    else if (minor <= 3)
+      val = FIRST_32_SECOND_64(1104, 1696);
+    else if (minor == 4)
+      val = FIRST_32_SECOND_64(1120, 1728);
+    else if (minor == 5)
+      val = FIRST_32_SECOND_64(1136, 1728);
+    else if (minor <= 9)
+      val = FIRST_32_SECOND_64(1136, 1712);
+    else if (minor == 10)
+      val = FIRST_32_SECOND_64(1168, 1776);
+    else if (minor == 11 || (minor == 12 && patch == 1))
+      val = FIRST_32_SECOND_64(1168, 2288);
+    else if (minor <= 13)
+      val = FIRST_32_SECOND_64(1168, 2304);
+    else
+      val = FIRST_32_SECOND_64(1216, 2304);
   }
-#endif
 #elif defined(__mips__)
   // TODO(sagarthakur): add more values as per different glibc versions.
   val = FIRST_32_SECOND_64(1152, 1776);

@@ -625,8 +625,7 @@ def BWWriteResGroup9 : SchedWriteRes<[BWPort0156]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[BWWriteResGroup9], (instrs LAHF, SAHF)>; // TODO: This doesnt match Agner's data
-def: InstRW<[BWWriteResGroup9], (instregex "NOOP",
-                                           "SGDT64m",
+def: InstRW<[BWWriteResGroup9], (instregex "SGDT64m",
                                            "SIDT64m",
                                            "SMSW16m",
                                            "STRm",

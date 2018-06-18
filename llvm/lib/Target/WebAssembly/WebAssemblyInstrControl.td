@@ -153,7 +153,7 @@ def CATCH_ALL : I<(outs), (ins), [], "catch_all", 0x05>;
 
 // Pseudo instructions: cleanupret / catchret
 // They are not return instructions in wasm, but setting 'isReturn' to true as
-// in X86 is necessary for computing funclet membership.
+// in X86 is necessary for computing EH scope membership.
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isCodeGenOnly = 1, isReturn = 1 in {
   def CLEANUPRET : I<(outs), (ins), [(cleanupret)], "", 0>;

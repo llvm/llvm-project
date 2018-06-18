@@ -90,3 +90,21 @@ eor     z31.b, p7/m, z31.b, z31.b
 // CHECK-ENCODING: [0xff,0x1f,0x19,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 1f 19 04 <unknown>
+
+eor     p0.b, p0/z, p0.b, p1.b
+// CHECK-INST: eor     p0.b, p0/z, p0.b, p1.b
+// CHECK-ENCODING: [0x00,0x42,0x01,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 42 01 25 <unknown>
+
+eor     p0.b, p0/z, p0.b, p0.b
+// CHECK-INST: not     p0.b, p0/z, p0.b
+// CHECK-ENCODING: [0x00,0x42,0x00,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 42 00 25 <unknown>
+
+eor     p15.b, p15/z, p15.b, p15.b
+// CHECK-INST: not     p15.b, p15/z, p15.b
+// CHECK-ENCODING: [0xef,0x7f,0x0f,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ef 7f 0f 25 <unknown>
