@@ -1652,6 +1652,24 @@ def MOV64rr_REV : RI<0x8B, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
                      FoldGenData<"MOV64rr">;
 }
 
+// Reversed version with ".s" suffix for GAS compatibility.
+def : InstAlias<"mov{b}.s\t{$src, $dst|$dst, $src}",
+                (MOV8rr_REV GR8:$dst, GR8:$src), 0>;
+def : InstAlias<"mov{w}.s\t{$src, $dst|$dst, $src}",
+                (MOV16rr_REV GR16:$dst, GR16:$src), 0>;
+def : InstAlias<"mov{l}.s\t{$src, $dst|$dst, $src}",
+                (MOV32rr_REV GR32:$dst, GR32:$src), 0>;
+def : InstAlias<"mov{q}.s\t{$src, $dst|$dst, $src}",
+                (MOV64rr_REV GR64:$dst, GR64:$src), 0>;
+def : InstAlias<"mov.s\t{$src, $dst|$dst, $src}",
+                (MOV8rr_REV GR8:$dst, GR8:$src), 0, "att">;
+def : InstAlias<"mov.s\t{$src, $dst|$dst, $src}",
+                (MOV16rr_REV GR16:$dst, GR16:$src), 0, "att">;
+def : InstAlias<"mov.s\t{$src, $dst|$dst, $src}",
+                (MOV32rr_REV GR32:$dst, GR32:$src), 0, "att">;
+def : InstAlias<"mov.s\t{$src, $dst|$dst, $src}",
+                (MOV64rr_REV GR64:$dst, GR64:$src), 0, "att">;
+
 let canFoldAsLoad = 1, isReMaterializable = 1, SchedRW = [WriteLoad] in {
 def MOV8rm  : I<0x8A, MRMSrcMem, (outs GR8 :$dst), (ins i8mem :$src),
                 "mov{b}\t{$src, $dst|$dst, $src}",

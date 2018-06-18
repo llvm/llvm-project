@@ -50,6 +50,11 @@ def loadSiteConfig(lit_config, config, param_name, env_name):
         ld_fn(config, site_cfg)
         lit_config.load_config = ld_fn
 
+# Extract the value of a numeric macro such as __cplusplus or a feature-test
+# macro.
+def intMacroValue(token):
+    return int(token.rstrip('LlUu'))
+
 class Configuration(object):
     # pylint: disable=redefined-outer-name
     def __init__(self, lit_config, config):
@@ -464,7 +469,7 @@ class Configuration(object):
             self.config.available_features.add('libcpp-no-structured-bindings')
 
         if '__cpp_deduction_guides' not in macros or \
-                int(macros['__cpp_deduction_guides']) < 201611:
+                intMacroValue(macros['__cpp_deduction_guides']) < 201611:
             self.config.available_features.add('libcpp-no-deduction-guides')
 
         if self.is_windows:
@@ -1012,8 +1017,7 @@ class Configuration(object):
                     '__cpp_coroutines is not defined')
             # Consider coroutines supported only when the feature test macro
             # reflects a recent value.
-            val = macros['__cpp_coroutines'].replace('L', '')
-            if int(val) >= 201703:
+            if intMacroValue(macros['__cpp_coroutines']) >= 201703:
                 self.config.available_features.add('fcoroutines-ts')
 
     def configure_modules(self):

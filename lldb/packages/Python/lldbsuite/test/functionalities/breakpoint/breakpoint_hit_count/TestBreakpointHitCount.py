@@ -22,6 +22,31 @@ class BreakpointHitCountTestCase(TestBase):
         self.build()
         self.do_test_breakpoint_location_hit_count()
 
+    def test_breakpoint_one_shot(self):
+        """Check that one-shot breakpoints trigger only once."""
+        self.build()
+
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        self.runCmd("tb a")
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        from lldbsuite.test.lldbutil import get_stopped_thread
+        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint")
+
+        frame0 = thread.GetFrameAtIndex(0)
+        self.assertEqual(frame0.GetFunctionName(), "a(int)");
+
+        process.Continue()
+        self.assertEqual(process.GetState(), lldb.eStateExited)
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

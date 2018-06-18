@@ -727,10 +727,6 @@ public:
 } // end anonymous namespace
 
 static unsigned CountNumOperands(StringRef AsmString, unsigned Variant) {
-  std::string FlatAsmString =
-      CodeGenInstruction::FlattenAsmStringVariants(AsmString, Variant);
-  AsmString = FlatAsmString;
-
   return AsmString.count(' ') + AsmString.count('\t');
 }
 
@@ -782,7 +778,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
     const DagInit *DI = R->getValueAsDag("ResultInst");
     const DefInit *Op = cast<DefInit>(DI->getOperator());
     AliasMap[getQualifiedName(Op->getDef())].insert(
-        std::make_pair(CodeGenInstAlias(R, Variant, Target), Priority));
+        std::make_pair(CodeGenInstAlias(R, Target), Priority));
   }
 
   // A map of which conditions need to be met for each instruction operand
@@ -799,14 +795,20 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
     for (auto &Alias : Aliases.second) {
       const CodeGenInstAlias &CGA = Alias.first;
       unsigned LastOpNo = CGA.ResultInstOperandIndex.size();
-      unsigned NumResultOps =
-          CountNumOperands(CGA.ResultInst->AsmString, Variant);
+      std::string FlatInstAsmString =
+         CodeGenInstruction::FlattenAsmStringVariants(CGA.ResultInst->AsmString,
+                                                      Variant);
+      unsigned NumResultOps = CountNumOperands(FlatInstAsmString, Variant);
+
+      std::string FlatAliasAsmString =
+        CodeGenInstruction::FlattenAsmStringVariants(CGA.AsmString,
+                                                      Variant);
 
       // Don't emit the alias if it has more operands than what it's aliasing.
-      if (NumResultOps < CountNumOperands(CGA.AsmString, Variant))
+      if (NumResultOps < CountNumOperands(FlatAliasAsmString, Variant))
         continue;
 
-      IAPrinter IAP(CGA.Result->getAsString(), CGA.AsmString);
+      IAPrinter IAP(CGA.Result->getAsString(), FlatAliasAsmString);
 
       StringRef Namespace = Target.getName();
       std::vector<Record *> ReqFeatures;
