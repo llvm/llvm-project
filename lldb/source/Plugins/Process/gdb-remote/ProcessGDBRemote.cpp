@@ -4241,13 +4241,8 @@ void ProcessGDBRemote::PrefetchModuleSpecs(
   }
 }
 
-bool ProcessGDBRemote::GetHostOSVersion(uint32_t &major, uint32_t &minor,
-                                        uint32_t &update) {
-  if (m_gdb_comm.GetOSVersion(major, minor, update))
-    return true;
-  // We failed to get the host OS version, defer to the base implementation to
-  // correctly invalidate the arguments.
-  return Process::GetHostOSVersion(major, minor, update);
+llvm::VersionTuple ProcessGDBRemote::GetHostOSVersion() {
+  return m_gdb_comm.GetOSVersion();
 }
 
 namespace {

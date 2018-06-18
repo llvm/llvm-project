@@ -650,6 +650,10 @@ void ObtainCurrentStack(ThreadState *thr, uptr toppc, StackTraceTy *stack,
   ExtractTagFromStack(stack, tag);
 }
 
+#define GET_STACK_TRACE_FATAL(thr, pc) \
+  VarSizeStackTrace stack; \
+  ObtainCurrentStack(thr, pc, &stack); \
+  stack.ReverseOrder();
 
 #if TSAN_COLLECT_STATS
 void StatAggregate(u64 *dst, u64 *src);
