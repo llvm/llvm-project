@@ -78,9 +78,8 @@ int bar(int n){
 // CHECK: call void @__kmpc_kernel_init(i32 %{{.+}}, i16 1)
 // CHECK-NOT: call void @__kmpc_for_static_init
 // CHECK-NOT: call void @__kmpc_for_static_fini
-// CHECK: [[RES:%.+]] = call i32 @__kmpc_nvptx_simd_reduce_nowait(i32 %{{.+}}, i32 1, i{{64|32}} {{8|4}}, i8* %{{.+}}, void (i8*, i16, i16, i16)* @{{.+}}, void (i8*, i32)* @{{.+}})
-// CHECK: switch i32 [[RES]]
-// CHECK: call void @__kmpc_nvptx_end_reduce_nowait(i32 %{{.+}})
+// CHECK-NOT: call i32 @__kmpc_nvptx_simd_reduce_nowait(
+// CHECK-NOT: call void @__kmpc_nvptx_end_reduce_nowait(
 // CHECK: call void @__kmpc_kernel_deinit(i16 1)
 // CHECK: ret void
 

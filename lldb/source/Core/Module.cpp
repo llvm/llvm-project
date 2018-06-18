@@ -1640,16 +1640,10 @@ bool Module::RemapSourceFile(llvm::StringRef path,
   return m_source_mappings.RemapPath(path, new_path);
 }
 
-uint32_t Module::GetVersion(uint32_t *versions, uint32_t num_versions) {
-  ObjectFile *obj_file = GetObjectFile();
-  if (obj_file)
-    return obj_file->GetVersion(versions, num_versions);
-
-  if (versions != nullptr && num_versions != 0) {
-    for (uint32_t i = 0; i < num_versions; ++i)
-      versions[i] = LLDB_INVALID_MODULE_VERSION;
-  }
-  return 0;
+llvm::VersionTuple Module::GetVersion() {
+  if (ObjectFile *obj_file = GetObjectFile())
+    return obj_file->GetVersion();
+  return llvm::VersionTuple();
 }
 
 bool Module::GetIsDynamicLinkEditor() {

@@ -16,6 +16,7 @@
 // Project includes
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/ConstString.h"
+#include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
 
@@ -28,8 +29,6 @@ class OptionGroupPlatform : public OptionGroup {
 public:
   OptionGroupPlatform(bool include_platform_option)
       : OptionGroup(), m_platform_name(), m_sdk_sysroot(),
-        m_os_version_major(UINT32_MAX), m_os_version_minor(UINT32_MAX),
-        m_os_version_update(UINT32_MAX),
         m_include_platform_option(include_platform_option) {}
 
   ~OptionGroupPlatform() override = default;
@@ -72,9 +71,7 @@ protected:
   std::string m_platform_name;
   ConstString m_sdk_sysroot;
   ConstString m_sdk_build;
-  uint32_t m_os_version_major;
-  uint32_t m_os_version_minor;
-  uint32_t m_os_version_update;
+  llvm::VersionTuple m_os_version;
   bool m_include_platform_option;
 };
 

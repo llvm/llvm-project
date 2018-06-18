@@ -21,30 +21,26 @@
 
 using namespace lldb_private;
 
-bool HostInfoNetBSD::GetOSVersion(uint32_t &major, uint32_t &minor,
-                                  uint32_t &update) {
+llvm::VersionTuple HostInfoNetBSD::GetOSVersion() {
   struct utsname un;
 
   ::memset(&un, 0, sizeof(un));
   if (::uname(&un) < 0)
-    return false;
+    return llvm::VersionTuple();
 
   /* Accept versions like 7.99.21 and 6.1_STABLE */
+  uint32_t major, minor, update;
   int status = ::sscanf(un.release, "%" PRIu32 ".%" PRIu32 ".%" PRIu32, &major,
                         &minor, &update);
   switch (status) {
-  case 0:
-    return false;
   case 1:
-    minor = 0;
-  /* FALLTHROUGH */
+    return llvm::VersionTuple(major);
   case 2:
-    update = 0;
-  /* FALLTHROUGH */
+    return llvm::VersionTuple(major, minor);
   case 3:
-  default:
-    return true;
+    return llvm::VersionTuple(major, minor, update);
   }
+  return llvm::VersionTuple();
 }
 
 bool HostInfoNetBSD::GetOSBuildString(std::string &s) {

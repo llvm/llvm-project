@@ -9907,7 +9907,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                           Intrinsic::x86_avx512_mask_sqrt_ss;
       return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
     }
-    Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
+    Value *A = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
     Function *F = CGM.getIntrinsic(Intrinsic::sqrt, A->getType());
     Value *Src = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
     int MaskSize = Ops[3]->getType()->getScalarSizeInBits();
@@ -9915,7 +9915,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Value *Mask = Builder.CreateBitCast(Ops[3], MaskTy);
     Mask = Builder.CreateExtractElement(Mask, (uint64_t)0);
     A = Builder.CreateSelect(Mask, Builder.CreateCall(F, {A}), Src);
-    return Builder.CreateInsertElement(Ops[1], A, (uint64_t)0);
+    return Builder.CreateInsertElement(Ops[0], A, (uint64_t)0);
   }
   case X86::BI__builtin_ia32_sqrtpd256:
   case X86::BI__builtin_ia32_sqrtpd:

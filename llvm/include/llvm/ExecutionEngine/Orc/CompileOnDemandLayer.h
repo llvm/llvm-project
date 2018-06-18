@@ -20,9 +20,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
+#include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/Attributes.h"
@@ -56,6 +56,66 @@ namespace llvm {
 class Value;
 
 namespace orc {
+
+class ExtractingIRMaterializationUnit;
+
+class CompileOnDemandLayer2 : public IRLayer {
+  friend class ExtractingIRMaterializationUnit;
+
+public:
+  /// Builder for IndirectStubsManagers.
+  using IndirectStubsManagerBuilder =
+      std::function<std::unique_ptr<IndirectStubsManager>()>;
+
+  /// Retrieve symbol resolver for the given VModuleKey.
+  using GetSymbolResolverFunction =
+      std::function<std::shared_ptr<SymbolResolver>(VModuleKey K)>;
+
+  /// Set the symbol resolver for the given VModuleKey.
+  using SetSymbolResolverFunction =
+      std::function<void(VModuleKey K, std::shared_ptr<SymbolResolver> R)>;
+
+  using GetAvailableContextFunction = std::function<LLVMContext &()>;
+
+  CompileOnDemandLayer2(ExecutionSession &ES, IRLayer &BaseLayer,
+                        JITCompileCallbackManager &CCMgr,
+                        IndirectStubsManagerBuilder BuildIndirectStubsManager,
+                        GetSymbolResolverFunction GetSymbolResolver,
+                        SetSymbolResolverFunction SetSymbolResolver,
+                        GetAvailableContextFunction GetAvailableContext);
+
+  Error add(VSO &V, VModuleKey K, std::unique_ptr<Module> M) override;
+
+  void emit(MaterializationResponsibility R, VModuleKey K,
+            std::unique_ptr<Module> M) override;
+
+private:
+  using StubManagersMap =
+      std::map<const VSO *, std::unique_ptr<IndirectStubsManager>>;
+
+  using SymbolNameToDefinitionMap =
+      IRMaterializationUnit::SymbolNameToDefinitionMap;
+
+  IndirectStubsManager &getStubsManager(const VSO &V);
+
+  std::unique_ptr<Module>
+  extractFunctions(Module &M, const SymbolNameSet &SymbolNames,
+                   const SymbolNameToDefinitionMap &SymbolToDefiniton);
+
+  void emitExtractedFunctionsModule(MaterializationResponsibility R,
+                                    std::unique_ptr<Module> M,
+                                    std::shared_ptr<SymbolResolver> Resolver);
+
+  mutable std::mutex CODLayerMutex;
+
+  IRLayer &BaseLayer;
+  JITCompileCallbackManager &CCMgr;
+  IndirectStubsManagerBuilder BuildIndirectStubsManager;
+  StubManagersMap StubsMgrs;
+  GetSymbolResolverFunction GetSymbolResolver;
+  SetSymbolResolverFunction SetSymbolResolver;
+  GetAvailableContextFunction GetAvailableContext;
+};
 
 /// Compile-on-demand layer.
 ///

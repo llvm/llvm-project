@@ -409,29 +409,6 @@ const char *Args::StripSpaces(std::string &s, bool leading, bool trailing,
   return s.c_str();
 }
 
-bool Args::StringToVersion(llvm::StringRef string, uint32_t &major,
-                           uint32_t &minor, uint32_t &update) {
-  major = UINT32_MAX;
-  minor = UINT32_MAX;
-  update = UINT32_MAX;
-
-  if (string.empty())
-    return false;
-
-  llvm::StringRef major_str, minor_str, update_str;
-
-  std::tie(major_str, minor_str) = string.split('.');
-  std::tie(minor_str, update_str) = minor_str.split('.');
-  if (major_str.getAsInteger(10, major))
-    return false;
-  if (!minor_str.empty() && minor_str.getAsInteger(10, minor))
-    return false;
-  if (!update_str.empty() && update_str.getAsInteger(10, update))
-    return false;
-
-  return true;
-}
-
 const char *Args::GetShellSafeArgument(const FileSpec &shell,
                                        const char *unsafe_arg,
                                        std::string &safe_arg) {

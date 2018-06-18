@@ -189,7 +189,7 @@ public:
   }
 
   /// Return the MI flags bitvector.
-  uint8_t getFlags() const {
+  uint16_t getFlags() const {
     return Flags;
   }
 
@@ -1354,7 +1354,7 @@ public:
   /// Return the MIFlags which represent both MachineInstrs. This
   /// should be used when merging two MachineInstrs into one. This routine does
   /// not modify the MIFlags of this MachineInstr.
-  uint8_t mergeFlagsWith(const MachineInstr& Other) const;
+  uint16_t mergeFlagsWith(const MachineInstr& Other) const;
 
   /// Clear this MachineInstr's memory reference descriptor list.  This resets
   /// the memrefs to their most conservative state.  This should be used only
