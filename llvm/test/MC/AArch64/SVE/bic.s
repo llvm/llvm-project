@@ -90,3 +90,15 @@ bic     z31.d, p7/m, z31.d, z31.d
 // CHECK-ENCODING: [0xff,0x1f,0xdb,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 1f db 04 <unknown>
+
+bic     p15.b, p15/z, p15.b, p15.b
+// CHECK-INST: bic     p15.b, p15/z, p15.b, p15.b
+// CHECK-ENCODING: [0xff,0x7d,0x0f,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 7d 0f 25 <unknown>
+
+bic     p0.b, p0/z, p0.b, p0.b
+// CHECK-INST: bic     p0.b, p0/z, p0.b, p0.b
+// CHECK-ENCODING: [0x10,0x40,0x00,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 40 00 25 <unknown>

@@ -6194,7 +6194,7 @@ define <4 x float> @test_fnop() nounwind {
 ; SKYLAKE-SSE-LABEL: test_fnop:
 ; SKYLAKE-SSE:       # %bb.0:
 ; SKYLAKE-SSE-NEXT:    #APP
-; SKYLAKE-SSE-NEXT:    nop # sched: [1:0.25]
+; SKYLAKE-SSE-NEXT:    nop # sched: [1:0.17]
 ; SKYLAKE-SSE-NEXT:    #NO_APP
 ; SKYLAKE-SSE-NEXT:    xorps %xmm0, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-SSE-NEXT:    retq # sched: [7:1.00]
@@ -6202,7 +6202,7 @@ define <4 x float> @test_fnop() nounwind {
 ; SKYLAKE-LABEL: test_fnop:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    nop # sched: [1:0.25]
+; SKYLAKE-NEXT:    nop # sched: [1:0.17]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]

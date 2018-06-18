@@ -174,6 +174,10 @@ OPTIONS
  Specify the numPoints parameters to be used for DBSCAN clustering
  (`analysis` mode).
 
+ .. option:: -ignore-invalid-sched-class=false
+
+  If set, ignore instructions that do not have a sched class (class idx = 0).
+
 
 EXIT STATUS
 -----------

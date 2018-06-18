@@ -776,7 +776,9 @@ TEST(DominatorTree, InsertFromUnreachable) {
   PDT.insertEdge(From, To);
   EXPECT_TRUE(PDT.verify());
   EXPECT_TRUE(PDT.getRoots().size() == 2);
-  EXPECT_NE(PDT.getNode(B.getOrAddBlock("5")), nullptr);
+  // Make sure we can use a const pointer with getNode.
+  const BasicBlock *BB5 = B.getOrAddBlock("5");
+  EXPECT_NE(PDT.getNode(BB5), nullptr);
 }
 
 TEST(DominatorTree, InsertMixed) {

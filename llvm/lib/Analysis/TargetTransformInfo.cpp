@@ -771,7 +771,7 @@ static bool isTransposeVectorMask(ArrayRef<int> Mask) {
   return true;
 }
 
-TargetTransformInfo::OperandValueKind
+static TargetTransformInfo::OperandValueKind
 getOperandInfo(Value *V, TargetTransformInfo::OperandValueProperties &OpProps) {
   TargetTransformInfo::OperandValueKind OpInfo =
       TargetTransformInfo::OK_AnyValue;

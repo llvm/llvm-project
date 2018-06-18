@@ -319,6 +319,10 @@ def MisusedMovedObjectChecker: Checker<"MisusedMovedObject">,
               "object will be reported">,
      DescFile<"MisusedMovedObjectChecker.cpp">;
 
+def UninitializedObjectChecker: Checker<"UninitializedObject">,
+     HelpText<"Reports uninitialized fields after object construction">,
+     DescFile<"UninitializedObjectChecker.cpp">;
+
 } // end: "alpha.cplusplus"
 
 

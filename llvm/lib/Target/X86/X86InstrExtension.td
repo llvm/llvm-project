@@ -95,17 +95,17 @@ def MOVZX32rm16: I<0xB7, MRMSrcMem, (outs GR32:$dst), (ins i16mem:$src),
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
 def MOVSX16rr16: I<0xBF, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
                    "movs{ww|x}\t{$src, $dst|$dst, $src}",
-                   []>, TB, OpSize16, Sched<[WriteALU]>;
+                   []>, TB, OpSize16, Sched<[WriteALU]>, NotMemoryFoldable;
 def MOVZX16rr16: I<0xB7, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
                    "movz{ww|x}\t{$src, $dst|$dst, $src}",
-                   []>, TB, OpSize16, Sched<[WriteALU]>;
+                   []>, TB, OpSize16, Sched<[WriteALU]>, NotMemoryFoldable;
 let mayLoad = 1 in {
 def MOVSX16rm16: I<0xBF, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
                    "movs{ww|x}\t{$src, $dst|$dst, $src}",
-                   []>, OpSize16, TB, Sched<[WriteALULd]>;
+                   []>, OpSize16, TB, Sched<[WriteALULd]>, NotMemoryFoldable;
 def MOVZX16rm16: I<0xB7, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
                    "movz{ww|x}\t{$src, $dst|$dst, $src}",
-                   []>, TB, OpSize16, Sched<[WriteALULd]>;
+                   []>, TB, OpSize16, Sched<[WriteALULd]>, NotMemoryFoldable;
 } // mayLoad = 1
 } // isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0
 

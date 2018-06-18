@@ -552,6 +552,10 @@ public:
 
   /// Each recipe prints itself.
   virtual void print(raw_ostream &O, const Twine &Indent) const = 0;
+
+  /// Insert an unlinked recipe into a basic block immediately before
+  /// the specified recipe.
+  void insertBefore(VPRecipeBase *InsertPos);
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.
@@ -922,6 +926,9 @@ public:
   inline VPRecipeBase &front() { return Recipes.front(); }
   inline const VPRecipeBase &back() const { return Recipes.back(); }
   inline VPRecipeBase &back() { return Recipes.back(); }
+
+  /// Returns a reference to the list of recipes.
+  RecipeListTy &getRecipeList() { return Recipes; }
 
   /// Returns a pointer to a member of the recipe list.
   static RecipeListTy VPBasicBlock::*getSublistAccess(VPRecipeBase *) {

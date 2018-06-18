@@ -125,19 +125,6 @@ endfunction()
 #   2) simple file can be successfully built.
 # If successful, saves target flags for this architecture.
 macro(test_target_arch arch def)
-  string(RANDOM TARGET_${arch}_NAME)
-  set(TARGET_${arch}_NAME "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/cmTC_${TARGET_${arch}_NAME}.dir")
-  file(MAKE_DIRECTORY ${TARGET_${arch}_NAME})
-  if(SANITIZER_CXX_ABI_INTREE)
-    # We're using in tree C++ ABI, only test the C compiler for now.
-    set(TARGET_${arch}_FILENAME "${TARGET_${arch}_NAME}/CheckTarget.c")
-    file(WRITE "${TARGET_${arch}_FILENAME}" "#include <stdlib.h>\nint main() { (void)malloc(sizeof(int)); return 0; }\n")
-  else()
-    # We're using the system C++ ABI, test that we can build C++ programs.
-    set(TARGET_${arch}_FILENAME "${TARGET_${arch}_NAME}/CheckTarget.cpp")
-    file(WRITE "${TARGET_${arch}_FILENAME}" "#include <new>\nint main() { (void) new int; return 0; }\n")
-  endif()
-
   set(TARGET_${arch}_CFLAGS ${ARGN})
   set(TARGET_${arch}_LINK_FLAGS ${ARGN})
   set(argstring "")
@@ -157,7 +144,7 @@ macro(test_target_arch arch def)
       endif()
       set(SAVED_CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${argstring}")
-      try_compile(CAN_TARGET_${arch} ${CMAKE_BINARY_DIR} ${TARGET_${arch}_FILENAME}
+      try_compile(CAN_TARGET_${arch} ${CMAKE_BINARY_DIR} ${SIMPLE_SOURCE}
                   COMPILE_DEFINITIONS "${TARGET_${arch}_CFLAGS} ${FLAG_NO_EXCEPTIONS}"
                   OUTPUT_VARIABLE TARGET_${arch}_OUTPUT)
       set(CMAKE_EXE_LINKER_FLAGS ${SAVED_CMAKE_EXE_LINKER_FLAGS})
@@ -170,8 +157,6 @@ macro(test_target_arch arch def)
     # Bail out if we cannot target the architecture we plan to test.
     message(FATAL_ERROR "Cannot compile for ${arch}:\n${TARGET_${arch}_OUTPUT}")
   endif()
-
-  file(REMOVE_RECURSE ${TARGET_${arch}_NAME})
 endmacro()
 
 macro(detect_target_arch)

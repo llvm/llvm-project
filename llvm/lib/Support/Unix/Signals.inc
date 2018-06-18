@@ -86,6 +86,7 @@ using InterruptFunctionType = void (*)();
 static std::atomic<InterruptFunctionType> InterruptFunction =
     ATOMIC_VAR_INIT(nullptr);
 
+namespace {
 /// Signal-safe removal of files.
 /// Inserting and erasing from the list isn't signal-safe, but removal of files
 /// themselves is signal-safe. Memory is freed when the head is freed, deletion
@@ -194,6 +195,7 @@ struct FilesToRemoveCleanup {
       delete Head;
   }
 };
+} // namespace
 
 static StringRef Argv0;
 

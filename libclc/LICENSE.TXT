@@ -11,7 +11,7 @@ Full text of the relevant licenses is included below.
 
 ==============================================================================
 
-Copyright (c) 2011-2016 by the contributors listed in CREDITS.TXT
+Copyright (c) 2011-2018 by the contributors listed in CREDITS.TXT
 
 All rights reserved.
 

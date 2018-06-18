@@ -54,3 +54,15 @@ orn     z0.d, z0.d, #0x6
 // CHECK-ENCODING: [0xa0,0xef,0x03,0x05]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: a0 ef 03 05 <unknown>
+
+orn     p0.b, p0/z, p0.b, p0.b
+// CHECK-INST: orn     p0.b, p0/z, p0.b, p0.b
+// CHECK-ENCODING: [0x10,0x40,0x80,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 40 80 25 <unknown>
+
+orn     p15.b, p15/z, p15.b, p15.b
+// CHECK-INST: orn     p15.b, p15/z, p15.b, p15.b
+// CHECK-ENCODING: [0xff,0x7d,0x8f,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 7d 8f 25 <unknown>
