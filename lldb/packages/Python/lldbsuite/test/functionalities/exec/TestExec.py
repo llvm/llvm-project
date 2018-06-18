@@ -41,6 +41,7 @@ class ExecTestCase(TestBase):
         self.do_test(False)
 
     def do_test(self, skip_exec):
+        self.build()
         exe = self.getBuildArtifact("a.out")
         secondprog = self.getBuildArtifact("secondprog")
 
