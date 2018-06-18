@@ -221,8 +221,8 @@ void VPRegionBlock::execute(VPTransformState *State) {
 }
 
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
-  InsertPos->getParent()->getRecipeList().insert(InsertPos->getIterator(),
-                                                 this);
+  Parent = InsertPos->getParent();
+  Parent->getRecipeList().insert(InsertPos->getIterator(), this);
 }
 
 void VPInstruction::generateInstruction(VPTransformState &State,
