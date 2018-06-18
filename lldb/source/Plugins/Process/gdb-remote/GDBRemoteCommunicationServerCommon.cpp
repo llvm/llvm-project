@@ -269,19 +269,10 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
     break;
   }
 
-  uint32_t major = UINT32_MAX;
-  uint32_t minor = UINT32_MAX;
-  uint32_t update = UINT32_MAX;
-  if (HostInfo::GetOSVersion(major, minor, update)) {
-    if (major != UINT32_MAX) {
-      response.Printf("os_version:%u", major);
-      if (minor != UINT32_MAX) {
-        response.Printf(".%u", minor);
-        if (update != UINT32_MAX)
-          response.Printf(".%u", update);
-      }
-      response.PutChar(';');
-    }
+  llvm::VersionTuple version = HostInfo::GetOSVersion();
+  if (!version.empty()) {
+    response.Format("os_version:{0}", version.getAsString());
+    response.PutChar(';');
   }
 
   std::string s;

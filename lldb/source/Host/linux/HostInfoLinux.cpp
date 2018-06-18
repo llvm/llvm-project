@@ -26,12 +26,8 @@ using namespace lldb_private;
 
 namespace {
 struct HostInfoLinuxFields {
-  HostInfoLinuxFields() : m_os_major(0), m_os_minor(0), m_os_update(0) {}
-
   std::string m_distribution_id;
-  uint32_t m_os_major;
-  uint32_t m_os_minor;
-  uint32_t m_os_update;
+  llvm::VersionTuple m_os_version;
 };
 
 HostInfoLinuxFields *g_fields = nullptr;
@@ -43,34 +39,21 @@ void HostInfoLinux::Initialize() {
   g_fields = new HostInfoLinuxFields();
 }
 
-bool HostInfoLinux::GetOSVersion(uint32_t &major, uint32_t &minor,
-                                 uint32_t &update) {
-  static bool success = false;
+llvm::VersionTuple HostInfoLinux::GetOSVersion() {
   static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
-
     struct utsname un;
-    if (uname(&un) == 0) {
-      int status = sscanf(un.release, "%u.%u.%u", &g_fields->m_os_major,
-                          &g_fields->m_os_minor, &g_fields->m_os_update);
-      if (status == 3)
-        success = true;
-      else {
-        // Some kernels omit the update version, so try looking for just "X.Y"
-        // and set update to 0.
-        g_fields->m_os_update = 0;
-        status = sscanf(un.release, "%u.%u", &g_fields->m_os_major,
-                        &g_fields->m_os_minor);
-        if (status == 2)
-          success = true;
-      }
-    }
+    if (uname(&un) != 0)
+      return;
+
+    llvm::StringRef release = un.release;
+    // The kernel release string can include a lot of stuff (e.g.
+    // 4.9.0-6-amd64). We're only interested in the numbered prefix.
+    release = release.substr(0, release.find_first_not_of("0123456789."));
+    g_fields->m_os_version.tryParse(release);
   });
 
-  major = g_fields->m_os_major;
-  minor = g_fields->m_os_minor;
-  update = g_fields->m_os_update;
-  return success;
+  return g_fields->m_os_version;
 }
 
 bool HostInfoLinux::GetOSBuildString(std::string &s) {
