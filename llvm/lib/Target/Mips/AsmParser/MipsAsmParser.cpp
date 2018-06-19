@@ -521,6 +521,9 @@ public:
 
     if (getSTI().getCPU() == "mips64r6" && inMicroMipsMode())
       report_fatal_error("microMIPS64R6 is not supported", false);
+
+    if (!isABI_O32() && inMicroMipsMode())
+      report_fatal_error("microMIPS64 is not supported", false);
   }
 
   /// True if all of $fcc0 - $fcc7 exist for the current ISA.

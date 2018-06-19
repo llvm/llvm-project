@@ -173,7 +173,8 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
       FileSpec fspec;
       uint32_t versions[2];
       if (objfile->GetSDKVersion(versions, sizeof(versions))) {
-        if (HostInfo::GetLLDBPath(ePathTypeLLDBShlibDir, fspec)) {
+        fspec = HostInfo::GetShlibDir();
+        if (fspec) {
           std::string path;
           xcode_contents_path = fspec.GetPath();
           size_t pos = xcode_contents_path.find("/Xcode.app/Contents/");

@@ -152,6 +152,7 @@ if (LLDB_BUILD_FRAMEWORK)
   include(LLDBFramework)
   add_dependencies(lldb-suite lldb-framework)
 endif()
+add_dependencies(lldb-suite liblldb)
 
 if (NOT LLDB_DISABLE_PYTHON)
     # Add a Post-Build Event to copy over Python files and create the symlink

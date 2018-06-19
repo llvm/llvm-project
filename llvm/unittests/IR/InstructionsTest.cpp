@@ -747,5 +747,87 @@ TEST(InstructionsTest, CommuteShuffleMask) {
   EXPECT_THAT(Indices, testing::ContainerEq(ArrayRef<int>({-1, 4, 3})));
 }
 
+TEST(InstructionsTest, ShuffleMaskQueries) {
+  // Create the elements for various constant vectors.
+  LLVMContext Ctx;
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Constant *CU = UndefValue::get(Int32Ty);
+  Constant *C0 = ConstantInt::get(Int32Ty, 0);
+  Constant *C1 = ConstantInt::get(Int32Ty, 1);
+  Constant *C2 = ConstantInt::get(Int32Ty, 2);
+  Constant *C3 = ConstantInt::get(Int32Ty, 3);
+  Constant *C4 = ConstantInt::get(Int32Ty, 4);
+  Constant *C5 = ConstantInt::get(Int32Ty, 5);
+  Constant *C6 = ConstantInt::get(Int32Ty, 6);
+  Constant *C7 = ConstantInt::get(Int32Ty, 7);
+
+  Constant *Identity = ConstantVector::get({C0, CU, C2, C3, C4});
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(Identity));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Identity)); // identity is distinguished from select
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Identity));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(Identity)); // identity is always single source
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Identity));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Identity));
+
+  Constant *Select = ConstantVector::get({CU, C1, C5});
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Select));
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(Select));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Select));
+  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(Select));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Select));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Select));
+  
+  Constant *Reverse = ConstantVector::get({C3, C2, C1, CU});
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Reverse));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Reverse));
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(Reverse));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(Reverse)); // reverse is always single source
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Reverse));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Reverse));
+
+  Constant *SingleSource = ConstantVector::get({C2, C2, C0, CU});
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(SingleSource));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(SingleSource));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(SingleSource));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(SingleSource));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(SingleSource));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(SingleSource));
+
+  Constant *ZeroEltSplat = ConstantVector::get({C0, C0, CU, C0});
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(ZeroEltSplat));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(ZeroEltSplat));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(ZeroEltSplat));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ZeroEltSplat)); // 0-splat is always single source
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ZeroEltSplat));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(ZeroEltSplat));
+
+  Constant *Transpose = ConstantVector::get({C0, C4, C2, C6});
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Transpose));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Transpose));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Transpose));
+  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(Transpose));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Transpose));
+  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(Transpose));
+
+  // More tests to make sure the logic is/stays correct...
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(ConstantVector::get({CU, C1, CU, C3})));
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(ConstantVector::get({C4, CU, C6, CU})));
+
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(ConstantVector::get({C4, C1, C6, CU})));
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(ConstantVector::get({CU, C1, C6, C3})));
+
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(ConstantVector::get({C7, C6, CU, C4})));
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(ConstantVector::get({C3, CU, C1, CU})));
+
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ConstantVector::get({C7, C5, CU, C7})));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ConstantVector::get({C3, C0, CU, C3})));
+
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ConstantVector::get({C4, CU, CU, C4})));
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ConstantVector::get({CU, C0, CU, C0})));
+
+  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C5, C3, C7})));
+  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3})));
+}
+
 } // end anonymous namespace
 } // end namespace llvm

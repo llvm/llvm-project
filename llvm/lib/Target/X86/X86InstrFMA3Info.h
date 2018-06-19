@@ -151,31 +151,18 @@ private:
   /// from the group.
   DenseMap<unsigned, const X86InstrFMA3Group *> OpcodeToGroup;
 
-  /// Creates groups of FMA opcodes and initializes Opcode-to-Group map.
-  /// This method can be called many times, but the actual initialization is
-  /// called only once.
-  static void initGroupsOnce();
-
-  /// Creates groups of FMA opcodes and initializes Opcode-to-Group map.
-  /// This method must be called ONLY from initGroupsOnce(). Otherwise, such
-  /// call is not thread safe.
-  void initGroupsOnceImpl();
-
 public:
   /// Returns the reference to an object of this class. It is assumed that
   /// only one object may exist.
   static X86InstrFMA3Info *getX86InstrFMA3Info();
 
   /// Constructor. Just creates an object of the class.
-  X86InstrFMA3Info() = default;
+  X86InstrFMA3Info();
 
   /// Returns a reference to a group of FMA3 opcodes to where the given
   /// \p Opcode is included. If the given \p Opcode is not recognized as FMA3
   /// and not included into any FMA3 group, then nullptr is returned.
   static const X86InstrFMA3Group *getFMA3Group(unsigned Opcode) {
-    // Ensure that the groups of opcodes are initialized.
-    initGroupsOnce();
-
     // Find the group including the given opcode.
     const X86InstrFMA3Info *FMA3Info = getX86InstrFMA3Info();
     auto I = FMA3Info->OpcodeToGroup.find(Opcode);
@@ -189,9 +176,6 @@ public:
   static bool isFMA3(unsigned Opcode) {
     return getFMA3Group(Opcode) != nullptr;
   }
-
-  /// Iterator that is used to walk on FMA register opcodes having memory
-  /// form equivalents.
 };
 
 } // end namespace llvm

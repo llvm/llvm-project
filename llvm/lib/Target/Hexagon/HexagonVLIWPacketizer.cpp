@@ -1115,6 +1115,10 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
   case Hexagon::S4_stored_locked:
   case Hexagon::L2_loadw_locked:
   case Hexagon::L4_loadd_locked:
+  case Hexagon::Y2_dccleana:
+  case Hexagon::Y2_dccleaninva:
+  case Hexagon::Y2_dcinva:
+  case Hexagon::Y2_dczeroa:
   case Hexagon::Y4_l2fetch:
   case Hexagon::Y5_l2fetch: {
     // These instructions can only be grouped with ALU32 or non-floating-point

@@ -21,10 +21,6 @@
 
 using namespace llvm;
 
-/// This flag is used in the method llvm::call_once() used below to make the
-/// initialization of the map 'OpcodeToGroup' thread safe.
-static llvm::once_flag InitGroupsOnceFlag;
-
 static ManagedStatic<X86InstrFMA3Info> X86InstrFMA3InfoObj;
 X86InstrFMA3Info *X86InstrFMA3Info::getX86InstrFMA3Info() {
   return &*X86InstrFMA3InfoObj;
@@ -233,7 +229,7 @@ static const X86InstrFMA3Group Groups[] = {
   FMA3_AVX512_VECTOR_GROUP(VFMSUBADD)
 };
 
-void X86InstrFMA3Info::initGroupsOnceImpl() {
+X86InstrFMA3Info::X86InstrFMA3Info() {
   for (const X86InstrFMA3Group &G : Groups) {
     if (G.RegOpcodes[0])
       OpcodeToGroup[G.RegOpcodes[0]] = &G;
@@ -248,9 +244,4 @@ void X86InstrFMA3Info::initGroupsOnceImpl() {
     if (G.MemOpcodes[2])
       OpcodeToGroup[G.MemOpcodes[2]] = &G;
   }
-}
-
-void X86InstrFMA3Info::initGroupsOnce() {
-  llvm::call_once(InitGroupsOnceFlag,
-                  []() { getX86InstrFMA3Info()->initGroupsOnceImpl(); });
 }

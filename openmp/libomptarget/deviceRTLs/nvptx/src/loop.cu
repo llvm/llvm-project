@@ -334,11 +334,11 @@ public:
       else
         __kmpc_barrier(loc, threadId);
       // save sched state
+      int teamId = GetOmpTeamId();
       omptarget_nvptx_threadPrivateContext->ScheduleType(tid) = schedule;
       if (GetThreadIdInBlock() == 0) {
         if (chunk < 1)
           chunk = 1;
-        int teamId = GetOmpTeamId();
         omptarget_nvptx_threadPrivateContext->Chunk(teamId) = chunk;
         omptarget_nvptx_threadPrivateContext->LoopUpperBound(teamId) = ub;
         omptarget_nvptx_threadPrivateContext->NextLowerBound(teamId) = lb;
