@@ -929,7 +929,7 @@ bool MIParser::verifyImplicitOperands(ArrayRef<ParsedMachineOperand> Operands,
       continue;
     return error(Operands.empty() ? Token.location() : Operands.back().End,
                  Twine("missing implicit register operand '") +
-                     printImplicitRegisterFlag(I) + " %" +
+                     printImplicitRegisterFlag(I) + " $" +
                      getRegisterName(TRI, I.getReg()) + "'");
   }
   return false;

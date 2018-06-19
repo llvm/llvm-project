@@ -390,7 +390,9 @@
   and $3, 5                # CHECK: andi $3, $3, 5         # encoding: [0xd0,0x63,0x00,0x05]
   and $3, $4, 5            # CHECK: andi $3, $4, 5         # encoding: [0xd0,0x64,0x00,0x05]
   not $3, $4               # CHECK: not $3, $4             # encoding: [0x00,0x04,0x1a,0xd0]
+                           # CHECK-NEXT:                   # <MCInst #{{.*}} NOR_MMR6
   not $3                   # CHECK: not $3, $3             # encoding: [0x00,0x03,0x1a,0xd0]
+                           # CHECK-NEXT:                   # <MCInst #{{.*}} NOR_MMR6
   or $3, 5                 # CHECK: ori $3, $3, 5          # encoding: [0x50,0x63,0x00,0x05]
   or $3, $4, 5             # CHECK: ori $3, $4, 5          # encoding: [0x50,0x64,0x00,0x05]
   xor $3, 5                # CHECK: xori $3, $3, 5         # encoding: [0x70,0x63,0x00,0x05]

@@ -118,8 +118,8 @@ FileSpec HostInfoMacOSX::GetProgramFileSpec() {
 }
 
 bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();
@@ -171,8 +171,8 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!HostInfo::GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();
@@ -190,8 +190,8 @@ bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
 
 bool HostInfoMacOSX::ComputePythonDirectory(FileSpec &file_spec) {
 #ifndef LLDB_DISABLE_PYTHON
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();
@@ -219,8 +219,8 @@ bool HostInfoMacOSX::ComputePythonDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();

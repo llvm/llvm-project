@@ -630,147 +630,6 @@ int TargetTransformInfo::getInstructionLatency(const Instruction *I) const {
   return TTIImpl->getInstructionLatency(I);
 }
 
-static bool isReverseVectorMask(ArrayRef<int> Mask) {
-  bool ReverseLHS = true;
-  bool ReverseRHS = true;
-  unsigned MaskSize = Mask.size();
-
-  for (unsigned i = 0; i < MaskSize && (ReverseLHS || ReverseRHS); ++i) {
-    if (Mask[i] < 0)
-      continue;
-    ReverseLHS &= (Mask[i] == (int)(MaskSize - 1 - i));
-    ReverseRHS &= (Mask[i] == (int)(MaskSize + MaskSize - 1 - i));
-  }
-  return ReverseLHS || ReverseRHS;
-}
-
-static bool isSingleSourceVectorMask(ArrayRef<int> Mask) {
-  bool ShuffleLHS = false;
-  bool ShuffleRHS = false;
-  unsigned MaskSize = Mask.size();
-
-  for (unsigned i = 0; i < MaskSize && !(ShuffleLHS && ShuffleRHS); ++i) {
-    if (Mask[i] < 0)
-      continue;
-    if ((unsigned)Mask[i] >= MaskSize)
-      ShuffleRHS = true;
-    else
-      ShuffleLHS = true;
-  }
-  return !(ShuffleLHS && ShuffleRHS);
-}
-
-static bool isZeroEltBroadcastVectorMask(ArrayRef<int> Mask) {
-  bool BroadcastLHS = true;
-  bool BroadcastRHS = true;
-  unsigned MaskSize = Mask.size();
-
-  for (unsigned i = 0; i < MaskSize && (BroadcastLHS || BroadcastRHS); ++i) {
-    if (Mask[i] < 0)
-      continue;
-    BroadcastLHS &= (Mask[i] == 0);
-    BroadcastRHS &= (Mask[i] == (int)MaskSize);
-  }
-  return BroadcastLHS || BroadcastRHS;
-}
-
-static bool isIdentityVectorMask(ArrayRef<int> Mask) {
-  bool IdentityLHS = true;
-  bool IdentityRHS = true;
-  unsigned MaskSize = Mask.size();
-
-  // Example: shufflevector A, B, <0,1,u,3>
-  // Example: shufflevector A, B, <4,u,6,u>
-  for (unsigned i = 0; i < MaskSize && (IdentityLHS || IdentityRHS); ++i) {
-    if (Mask[i] < 0)
-      continue;
-    IdentityLHS &= (Mask[i] == (int)i);
-    IdentityRHS &= (Mask[i] == (int)(i + MaskSize));
-  }
-  return IdentityLHS || IdentityRHS;
-}
-
-static bool isSelectVectorMask(ArrayRef<int> Mask) {
-  bool IsSelect = true;
-  bool FoundLHS = false;
-  bool FoundRHS = false;
-  unsigned MaskSize = Mask.size();
-
-  // Example: shufflevector A, B, <0,1,6,3>
-  // Example: shufflevector A, B, <4,1,6,3>
-  for (unsigned i = 0; i < MaskSize && IsSelect; ++i) {
-    if (Mask[i] < 0)
-      continue;
-    bool IsLHS = (Mask[i] == (int)i);
-    bool IsRHS = (Mask[i] == (int)(i + MaskSize));
-    FoundLHS |= IsLHS;
-    FoundRHS |= IsRHS;
-    IsSelect = IsLHS || IsRHS;
-  }
-  // If we don't use both vectors this is really an Identity mask.
-  return IsSelect && FoundLHS && FoundRHS;
-}
-
-static bool isTransposeVectorMask(ArrayRef<int> Mask) {
-  // Transpose vector masks transpose a 2xn matrix. They read corresponding
-  // even- or odd-numbered vector elements from two n-dimensional source
-  // vectors and write each result into consecutive elements of an
-  // n-dimensional destination vector. Two shuffles are necessary to complete
-  // the transpose, one for the even elements and another for the odd elements.
-  // This description closely follows how the TRN1 and TRN2 AArch64
-  // instructions operate.
-  //
-  // For example, a simple 2x2 matrix can be transposed with:
-  //
-  //   ; Original matrix
-  //   m0 = <a, b>
-  //   m1 = <c, d>
-  //
-  //   ; Transposed matrix
-  //   t0 = <a, c> = shufflevector m0, m1, <0, 2>
-  //   t1 = <b, d> = shufflevector m0, m1, <1, 3>
-  //
-  // For matrices having greater than n columns, the resulting nx2 transposed
-  // matrix is stored in two result vectors such that one vector contains
-  // interleaved elements from all the even-numbered rows and the other vector
-  // contains interleaved elements from all the odd-numbered rows. For example,
-  // a 2x4 matrix can be transposed with:
-  //
-  //   ; Original matrix
-  //   m0 = <a, b, c, d>
-  //   m1 = <e, f, g, h>
-  //
-  //   ; Transposed matrix
-  //   t0 = <a, e, c, g> = shufflevector m0, m1 <0, 4, 2, 6>
-  //   t1 = <b, f, d, h> = shufflevector m0, m1 <1, 5, 3, 7>
-  //
-  // The above explanation places limitations on what valid transpose masks can
-  // look like. These limitations are defined by the checks below.
-  //
-  // 1. The number of elements in the mask must be a power of two.
-  if (!isPowerOf2_32(Mask.size()))
-    return false;
-
-  // 2. The first element of the mask must be either a zero (for the
-  // even-numbered vector elements) or a one (for the odd-numbered vector
-  // elements).
-  if (Mask[0] != 0 && Mask[0] != 1)
-    return false;
-
-  // 3. The difference between the first two elements must be equal to the
-  // number of elements in the mask.
-  if (Mask[1] - Mask[0] != (int)Mask.size())
-    return false;
-
-  // 4. The difference between consecutive even-numbered and odd-numbered
-  // elements must be equal to two.
-  for (int I = 2; I < (int)Mask.size(); ++I)
-    if (Mask[I] - Mask[I - 2] != 2)
-      return false;
-
-  return true;
-}
-
 static TargetTransformInfo::OperandValueKind
 getOperandInfo(Value *V, TargetTransformInfo::OperandValueProperties &OpProps) {
   TargetTransformInfo::OperandValueKind OpInfo =
@@ -1236,39 +1095,30 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   }
   case Instruction::ShuffleVector: {
     const ShuffleVectorInst *Shuffle = cast<ShuffleVectorInst>(I);
-    Type *VecTypOp0 = Shuffle->getOperand(0)->getType();
-    unsigned NumVecElems = VecTypOp0->getVectorNumElements();
-    SmallVector<int, 16> Mask = Shuffle->getShuffleMask();
+    // TODO: Identify and add costs for insert/extract subvector, etc.
+    if (Shuffle->changesLength())
+      return -1;
+    
+    if (Shuffle->isIdentity())
+      return 0;
 
-    if (NumVecElems == Mask.size()) {
-      if (isIdentityVectorMask(Mask))
-        return 0;
+    Type *Ty = Shuffle->getType();
+    if (Shuffle->isReverse())
+      return TTIImpl->getShuffleCost(SK_Reverse, Ty, 0, nullptr);
 
-      if (isReverseVectorMask(Mask))
-        return TTIImpl->getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                       VecTypOp0, 0, nullptr);
+    if (Shuffle->isSelect())
+      return TTIImpl->getShuffleCost(SK_Select, Ty, 0, nullptr);
 
-      if (isSelectVectorMask(Mask))
-        return TTIImpl->getShuffleCost(TargetTransformInfo::SK_Select,
-                                       VecTypOp0, 0, nullptr);
+    if (Shuffle->isTranspose())
+      return TTIImpl->getShuffleCost(SK_Transpose, Ty, 0, nullptr);
 
-      if (isTransposeVectorMask(Mask))
-        return TTIImpl->getShuffleCost(TargetTransformInfo::SK_Transpose,
-                                       VecTypOp0, 0, nullptr);
+    if (Shuffle->isZeroEltSplat())
+      return TTIImpl->getShuffleCost(SK_Broadcast, Ty, 0, nullptr);
 
-      if (isZeroEltBroadcastVectorMask(Mask))
-        return TTIImpl->getShuffleCost(TargetTransformInfo::SK_Broadcast,
-                                       VecTypOp0, 0, nullptr);
+    if (Shuffle->isSingleSource())
+      return TTIImpl->getShuffleCost(SK_PermuteSingleSrc, Ty, 0, nullptr);
 
-      if (isSingleSourceVectorMask(Mask))
-        return TTIImpl->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
-                                       VecTypOp0, 0, nullptr);
-
-      return TTIImpl->getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
-                                     VecTypOp0, 0, nullptr);
-    }
-
-    return -1;
+    return TTIImpl->getShuffleCost(SK_PermuteTwoSrc, Ty, 0, nullptr);
   }
   case Instruction::Call:
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {

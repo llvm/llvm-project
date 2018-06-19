@@ -1658,7 +1658,7 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   return false;
 }
 
-int ShuffleVectorInst::getMaskValue(Constant *Mask, unsigned i) {
+int ShuffleVectorInst::getMaskValue(const Constant *Mask, unsigned i) {
   assert(i < Mask->getType()->getVectorNumElements() && "Index out of range");
   if (auto *CDS = dyn_cast<ConstantDataSequential>(Mask))
     return CDS->getElementAsInteger(i);
@@ -1668,7 +1668,7 @@ int ShuffleVectorInst::getMaskValue(Constant *Mask, unsigned i) {
   return cast<ConstantInt>(C)->getZExtValue();
 }
 
-void ShuffleVectorInst::getShuffleMask(Constant *Mask,
+void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
                                        SmallVectorImpl<int> &Result) {
   unsigned NumElts = Mask->getType()->getVectorNumElements();
   
@@ -1683,6 +1683,108 @@ void ShuffleVectorInst::getShuffleMask(Constant *Mask,
                      cast<ConstantInt>(C)->getZExtValue());
   }
 }
+
+bool ShuffleVectorInst::isSingleSourceMask(ArrayRef<int> Mask) {
+  assert(!Mask.empty() && "Shuffle mask must contain elements");
+  bool UsesLHS = false;
+  bool UsesRHS = false;
+  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+    if (Mask[i] == -1)
+      continue;
+    assert(Mask[i] >= 0 && Mask[i] < (NumElts * 2) &&
+           "Out-of-bounds shuffle mask element");
+    UsesLHS |= (Mask[i] < NumElts);
+    UsesRHS |= (Mask[i] >= NumElts);
+    if (UsesLHS && UsesRHS)
+      return false;
+  }
+  assert((UsesLHS ^ UsesRHS) && "Should have selected from exactly 1 source");
+  return true;
+}
+
+bool ShuffleVectorInst::isIdentityMask(ArrayRef<int> Mask) {
+  if (!isSingleSourceMask(Mask))
+    return false;
+  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+    if (Mask[i] == -1)
+      continue;
+    if (Mask[i] != i && Mask[i] != (NumElts + i))
+      return false;
+  }
+  return true;
+}
+
+bool ShuffleVectorInst::isReverseMask(ArrayRef<int> Mask) {
+  if (!isSingleSourceMask(Mask))
+    return false;
+  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+    if (Mask[i] == -1)
+      continue;
+    if (Mask[i] != (NumElts - 1 - i) && Mask[i] != (NumElts + NumElts - 1 - i))
+      return false;
+  }
+  return true;
+}
+
+bool ShuffleVectorInst::isZeroEltSplatMask(ArrayRef<int> Mask) {
+  if (!isSingleSourceMask(Mask))
+    return false;
+  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+    if (Mask[i] == -1)
+      continue;
+    if (Mask[i] != 0 && Mask[i] != NumElts)
+      return false;
+  }
+  return true;
+}
+
+bool ShuffleVectorInst::isSelectMask(ArrayRef<int> Mask) {
+  // Select is differentiated from identity. It requires using both sources.
+  if (isSingleSourceMask(Mask))
+    return false;
+  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
+    if (Mask[i] == -1)
+      continue;
+    if (Mask[i] != i && Mask[i] != (NumElts + i))
+      return false;
+  }
+  return true;
+}
+
+bool ShuffleVectorInst::isTransposeMask(ArrayRef<int> Mask) {
+  // Example masks that will return true:
+  // v1 = <a, b, c, d>
+  // v2 = <e, f, g, h>
+  // trn1 = shufflevector v1, v2 <0, 4, 2, 6> = <a, e, c, g>
+  // trn2 = shufflevector v1, v2 <1, 5, 3, 7> = <b, f, d, h>
+
+  // 1. The number of elements in the mask must be a power-of-2 and at least 2.
+  int NumElts = Mask.size();
+  if (NumElts < 2 || !isPowerOf2_32(NumElts))
+    return false;
+
+  // 2. The first element of the mask must be either a 0 or a 1.
+  if (Mask[0] != 0 && Mask[0] != 1)
+    return false;
+
+  // 3. The difference between the first 2 elements must be equal to the
+  // number of elements in the mask.
+  if ((Mask[1] - Mask[0]) != NumElts)
+    return false;
+
+  // 4. The difference between consecutive even-numbered and odd-numbered
+  // elements must be equal to 2.
+  for (int i = 2; i < NumElts; ++i) {
+    int MaskEltVal = Mask[i];
+    if (MaskEltVal == -1)
+      return false;
+    int MaskEltPrevVal = Mask[i - 2];
+    if (MaskEltVal - MaskEltPrevVal != 2)
+      return false;
+  }
+  return true;
+}
+
 
 //===----------------------------------------------------------------------===//
 //                             InsertValueInst Class

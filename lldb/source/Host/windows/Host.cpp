@@ -182,9 +182,8 @@ HostThread Host::StartMonitoringChildProcess(
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
-    FileSpec expand_tool_spec;
-    if (!HostInfo::GetLLDBPath(lldb::ePathTypeSupportExecutableDir,
-                               expand_tool_spec)) {
+    FileSpec expand_tool_spec = HostInfo::GetSupportExeDir();
+    if (!expand_tool_spec) {
       error.SetErrorString("could not find support executable directory for "
                            "the lldb-argdumper tool");
       return error;

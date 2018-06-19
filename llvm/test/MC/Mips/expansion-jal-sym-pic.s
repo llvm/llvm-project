@@ -10,12 +10,6 @@
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=micromips -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MM,O32-MM
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 -mattr=micromips -show-encoding |\
-# RUN:   FileCheck %s -check-prefixes=ALL,MM,N32-MM
-
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -mattr=micromips -show-encoding |\
-# RUN:   FileCheck %s -check-prefixes=ALL,MM,N64-MM
-
 # Repeat the tests but using ELF output. An initial version of this patch did
 # this as the output different depending on whether it went through
 # MCAsmStreamer or MCELFStreamer. This ensures that the assembly expansion and
@@ -68,12 +62,6 @@ local_label:
 # O32-MM: addiu $25, $25, %lo(local_label)       # encoding: [0x33,0x39,A,A]
 # O32-MM:                                        #   fixup A - offset: 0, value: %lo(local_label), kind:   fixup_MICROMIPS_LO16
 
-# N32-MM: lw    $25, %got_disp(local_label)($gp) # encoding: [0xff,0x3c,A,A]
-# N32-MM:                                        #   fixup A - offset: 0, value: %got_disp(local_label), kind: fixup_MICROMIPS_GOT_DISP
-
-# N64-MM: ld    $25, %got_disp(local_label)($gp) # encoding: [0xdf,0x99,A,A]
-# N64-MM:                                        #   fixup A - offset: 0, value: %got_disp(local_label), kind: fixup_MICROMIPS_GOT_DISP
-
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
 # ALL:  nop           # encoding: [0x00,0x00,0x00,0x00]
@@ -103,12 +91,6 @@ local_label:
 # O32-MM: lw  $25, %call16(weak_label)($gp) # encoding: [0xff,0x3c,A,A]
 # O32-MM:                                   #   fixup A - offset: 0, value: %call16(weak_label), kind:   fixup_MICROMIPS_CALL16
 
-# N32-MM: lw  $25, %call16(weak_label)($gp) # encoding: [0xff,0x3c,A,A]
-# N32-MM:                                   #   fixup A - offset: 0, value: %call16(weak_label), kind: fixup_MICROMIPS_CALL16
-
-# N64-MM: ld  $25, %call16(weak_label)($gp) # encoding: [0xdf,0x99,A,A]
-# N64-MM:                                   #   fixup A - offset: 0, value: %call16(weak_label), kind: fixup_MICROMIPS_CALL16
-
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
 # ALL:  nop           # encoding: [0x00,0x00,0x00,0x00]
@@ -137,12 +119,6 @@ local_label:
 
 # O32-MM: lw  $25, %call16(global_label)($gp) # encoding: [0xff,0x3c,A,A]
 # O32-MM:                                     #   fixup A - offset: 0, value: %call16(global_label), kind: fixup_MICROMIPS_CALL16
-
-# N32-MM: lw  $25, %call16(global_label)($gp) # encoding: [0xff,0x3c,A,A]
-# N32-MM:                                     #   fixup A - offset: 0, value: %call16(global_label), kind: fixup_MICROMIPS_CALL16
-
-# N64-MM: ld  $25, %call16(global_label)($gp) # encoding: [0xdf,0x99,A,A]
-# N64-MM:                                     #   fixup A - offset: 0, value: %call16(global_label), kind: fixup_MICROMIPS_CALL16
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
@@ -174,12 +150,6 @@ local_label:
 # O32-MM-NEXT:                                  #   fixup A - offset: 0, value: %got(.text), kind: fixup_MICROMIPS_GOT16
 # O32-MM-NEXT: addiu $25, $25, %lo(.text)       # encoding: [0x33,0x39,A,A]
 # O32-MM-NEXT:                                  #   fixup A - offset: 0, value: %lo(.text), kind: fixup_MICROMIPS_LO16
-
-# N32-MM: lw    $25, %got_disp(.text)($gp) # encoding: [0xff,0x3c,A,A]
-# N32-MM-NEXT:                                  #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_MICROMIPS_GOT_DISP
-
-# N64-MM: ld    $25, %got_disp(.text)($gp) # encoding: [0xdf,0x99,A,A]
-# N64-MM-NEXT:                                  #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_MICROMIPS_GOT_DISP
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
@@ -217,12 +187,6 @@ local_label:
 # O32-MM: addiu $25, $25, %lo($tmp0)     # encoding: [0x33,0x39,A,A]
 # O32-MM:                                #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_MICROMIPS_LO16
 
-# N32-MM: lw  $25, %got_disp(.Ltmp0)($gp) # encoding: [0xff,0x3c,A,A]
-# N32-MM:                                 #   fixup A - offset: 0, value: %got_disp(.Ltmp0), kind: fixup_MICROMIPS_GOT_DISP
-
-# N64-MM: ld  $25, %got_disp(.Ltmp0)($gp) # encoding: [0xdf,0x99,A,A]
-# N64-MM:                                 #   fixup A - offset: 0, value: %got_disp(.Ltmp0), kind: fixup_MICROMIPS_GOT_DISP
-
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]
 # ALL:  nop           # encoding: [0x00,0x00,0x00,0x00]
@@ -258,12 +222,6 @@ local_label:
 # O32-MM-FIXME:                                                #   fixup A - offset: 0, value: %got(forward_local), kind:   fixup_MICROMIPS_GOT16
 # O32-MM-FIXME: addiu $25, $25, %lo(forward_local)             # encoding: [0x33,0x39,A,A]
 # O32-MM-FIXME:                                                #   fixup A - offset: 0, value: %lo(forward_local), kind:   fixup_MICROMIPS_LO16
-
-# N32-MM-FIXME: lw    $25, %got_disp(forward_local)($gp) # encoding: [0xff,0x3c,A,A]
-# N32-MM-FIXME:                                          #   fixup A - offset: 0, value: %got_disp(forward_local), kind: fixup_MICROMIPS_GOT_DISP
-
-# N64-MM-FIXME: ld    $25, %got_disp(forward_local)($gp) # encoding: [0xdf,0x99,A,A]
-# N64-MM-FIXME:                                          #   fixup A - offset: 0, value: %got_disp(forward_local), kind: fixup_MICROMIPS_GOT_DISP
 
 # MIPS: jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MM:   jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]

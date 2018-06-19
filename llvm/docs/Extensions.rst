@@ -329,6 +329,73 @@ symbol is undefined, then that symbol is defined as if ``.weak symbol`` has been
 written at the end of the file.  This forces the symbol to show up in the symbol
 table.
 
+CodeView-Dependent
+------------------
+
+``.cv_file`` Directive
+^^^^^^^^^^^^^^^^^^^^^^
+Syntax:
+  ``.cv_file`` *FileNumber FileName* [ *checksum* ] [ *checksumkind* ]
+
+``.cv_func_id`` Directive
+^^^^^^^^^^^^^^^^^^^^^^^^^
+Introduces a function ID that can be used with ``.cv_loc``.
+
+Syntax:
+  ``.cv_func_id`` *FunctionId*
+
+``.cv_inline_site_id`` Directive
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Introduces a function ID that can be used with ``.cv_loc``. Includes
+``inlined at`` source location information for use in the line table of the
+caller, whether the caller is a real function or another inlined call site.
+
+Syntax:
+  ``.cv_inline_site_id`` *FunctionId* ``within`` *Function* ``inlined_at`` *FileNumber Line* [ *Colomn* ]
+
+``.cv_loc`` Directive
+^^^^^^^^^^^^^^^^^^^^^
+The first number is a file number, must have been previously assigned with a
+``.file`` directive, the second number is the line number and optionally the
+third number is a column position (zero if not specified).  The remaining
+optional items are ``.loc`` sub-directives.
+
+Syntax:
+  ``.cv_loc`` *FunctionId FileNumber* [ *Line* ] [ *Column* ] [ *prologue_end* ] [ ``is_stmt`` *value* ]
+
+``.cv_linetable`` Directive
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Syntax:
+  ``.cv_linetable`` *FunctionId* ``,`` *FunctionStart* ``,`` *FunctionEnd*
+
+``.cv_inline_linetable`` Directive
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Syntax:
+  ``.cv_inline_linetable`` *PrimaryFunctionId* ``,`` *FileNumber Line FunctionStart FunctionEnd*
+
+``.cv_def_range`` Directive
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The *GapStart* and *GapEnd* options may be repeated as needed.
+
+Syntax:
+  ``.cv_def_range`` *RangeStart RangeEnd* [ *GapStart GapEnd* ] ``,`` *bytes*
+
+``.cv_stringtable`` Directive
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``.cv_filechecksums`` Directive
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``.cv_filechecksumoffset`` Directive
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Syntax:
+  ``.cv_filechecksumoffset`` *FileNumber*
+
+``.cv_fpo_data`` Directive
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Syntax:
+  ``.cv_fpo_data`` *procsym*
+
 Target Specific Behaviour
 =========================
 

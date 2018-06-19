@@ -49,10 +49,7 @@
       </li>
       <li>
         the library that supports offload to target devices (in
-        "offload")
-      </li>
-      <li>
-        the OpenUH test-suite used to validate the OpenMP runtime
+        "libomptarget")
       </li>
     </ul>
   </p>
@@ -60,12 +57,7 @@
   <p>Support for the parts of the OpenMP 4.0 (and later) language that are not
   associated with the "target" constructs are contained in the
   "runtime" directory. Support for offloading computation via the
-  "target" directive is in the separate "offload" directory. That
-  builds a library that provides the interfaces for transferring code
-  and data to attached computational devices such as
-  the Intel&reg Xeon Phi&#0153 coprocessor or GPUs.
-  The README.txt in the "offload"
-  directory describes how to build the offload library.
+  "target" directive is in the separate "libomptarget" directory.
   </p>
 
   <p>All of the code here is <a

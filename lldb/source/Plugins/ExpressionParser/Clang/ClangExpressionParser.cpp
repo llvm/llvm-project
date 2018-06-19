@@ -561,9 +561,7 @@ unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager) {
       codegenoptions::FullDebugInfo) {
     int temp_fd = -1;
     llvm::SmallString<PATH_MAX> result_path;
-    FileSpec tmpdir_file_spec;
-    if (HostInfo::GetLLDBPath(lldb::ePathTypeLLDBTempSystemDir,
-                              tmpdir_file_spec)) {
+    if (FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir()) {
       tmpdir_file_spec.AppendPathComponent("lldb-%%%%%%.expr");
       std::string temp_source_path = tmpdir_file_spec.GetPath();
       llvm::sys::fs::createUniqueFile(temp_source_path, temp_fd, result_path);

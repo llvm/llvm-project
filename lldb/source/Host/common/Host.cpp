@@ -500,8 +500,7 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     // Create a temporary file to get the stdout/stderr and redirect the output
     // of the command into this file. We will later read this file if all goes
     // well and fill the data into "command_output_ptr"
-    FileSpec tmpdir_file_spec;
-    if (HostInfo::GetLLDBPath(ePathTypeLLDBTempSystemDir, tmpdir_file_spec)) {
+    if (FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir()) {
       tmpdir_file_spec.AppendPathComponent("lldb-shell-output.%%%%%%");
       llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath(),
                                       output_file_path);
