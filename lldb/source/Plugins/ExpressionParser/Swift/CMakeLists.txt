@@ -1,3 +1,7 @@
+if(NOT LLDB_BUILT_STANDALONE)
+  set(tablegen_deps intrinsics_gen)
+endif()
+
 add_lldb_library(lldbPluginExpressionParserSwift PLUGIN
   SwiftASTManipulator.cpp
   SwiftExpressionParser.cpp
@@ -7,6 +11,9 @@ add_lldb_library(lldbPluginExpressionParserSwift PLUGIN
   SwiftREPLMaterializer.cpp
   SwiftUserExpression.cpp
   SwiftSILManipulator.cpp
+
+  DEPENDS
+  ${tablegen_deps}
 
   LINK_LIBS
     lldbCore
