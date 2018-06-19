@@ -87,3 +87,24 @@ true:
 false:
   ret i32 2
 }
+
+; CHECK-LABEL: i16_cmpz:
+; T1:      movs    r2, #127
+; T1-NEXT: lsls    r2, r2, #9
+; T1-NEXT: ands    r2, r0
+; T1-NEXT: lsrs    r0, r2, #9
+; T2:      and     r0, r0, #65024
+; T2-NEXT: movs    r2, #0
+; T2-NEXT: cmp.w   r2, r0, lsr #9
+define void @i16_cmpz(i16 %x, void (i32)* %foo) {
+entry:
+  %cmp = icmp ult i16 %x, 512
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  tail call void %foo(i32 0) #1
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  ret void
+}

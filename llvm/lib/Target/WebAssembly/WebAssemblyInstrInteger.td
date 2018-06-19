@@ -56,12 +56,12 @@ defm CLZ : UnaryInt<ctlz, "clz ", 0x67, 0x79>;
 defm CTZ : UnaryInt<cttz, "ctz ", 0x68, 0x7a>;
 defm POPCNT : UnaryInt<ctpop, "popcnt", 0x69, 0x7b>;
 
-def EQZ_I32 : I<(outs I32:$dst), (ins I32:$src),
-                [(set I32:$dst, (setcc I32:$src, 0, SETEQ))],
-                "i32.eqz \t$dst, $src", 0x45>;
-def EQZ_I64 : I<(outs I32:$dst), (ins I64:$src),
-                [(set I32:$dst, (setcc I64:$src, 0, SETEQ))],
-                "i64.eqz \t$dst, $src", 0x50>;
+defm EQZ_I32 : I<(outs I32:$dst), (ins I32:$src), (outs), (ins),
+                 [(set I32:$dst, (setcc I32:$src, 0, SETEQ))],
+                 "i32.eqz \t$dst, $src", "i32.eqz", 0x45>;
+defm EQZ_I64 : I<(outs I32:$dst), (ins I64:$src), (outs), (ins),
+                 [(set I32:$dst, (setcc I64:$src, 0, SETEQ))],
+                 "i64.eqz \t$dst, $src", "i64.eqz", 0x50>;
 
 } // Defs = [ARGUMENTS]
 
@@ -73,12 +73,14 @@ def : Pat<(rotr I64:$lhs, (and I64:$rhs, 63)), (ROTR_I64 I64:$lhs, I64:$rhs)>;
 
 let Defs = [ARGUMENTS] in {
 
-def SELECT_I32 : I<(outs I32:$dst), (ins I32:$lhs, I32:$rhs, I32:$cond),
-                   [(set I32:$dst, (select I32:$cond, I32:$lhs, I32:$rhs))],
-                   "i32.select\t$dst, $lhs, $rhs, $cond", 0x1b>;
-def SELECT_I64 : I<(outs I64:$dst), (ins I64:$lhs, I64:$rhs, I32:$cond),
-                   [(set I64:$dst, (select I32:$cond, I64:$lhs, I64:$rhs))],
-                   "i64.select\t$dst, $lhs, $rhs, $cond", 0x1b>;
+defm SELECT_I32 : I<(outs I32:$dst), (ins I32:$lhs, I32:$rhs, I32:$cond),
+                    (outs), (ins),
+                    [(set I32:$dst, (select I32:$cond, I32:$lhs, I32:$rhs))],
+                    "i32.select\t$dst, $lhs, $rhs, $cond", "i32.select", 0x1b>;
+defm SELECT_I64 : I<(outs I64:$dst), (ins I64:$lhs, I64:$rhs, I32:$cond),
+                    (outs), (ins),
+                    [(set I64:$dst, (select I32:$cond, I64:$lhs, I64:$rhs))],
+                    "i64.select\t$dst, $lhs, $rhs, $cond", "i64.select", 0x1b>;
 
 } // Defs = [ARGUMENTS]
 

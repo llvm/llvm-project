@@ -1,7 +1,7 @@
 ; RUN: opt < %s -analyze -scalar-evolution | FileCheck %s
 
 ; CHECK: %tmp9 = shl i64 %tmp8, 33
-; CHECK-NEXT: --> {{.*}} Exits: (-8589934592 + (8589934592 * (zext i32 %arg2 to i64))<nuw>)
+; CHECK-NEXT: --> {{.*}} Exits: (-8589934592 + (8589934592 * (zext i32 %arg2 to i64)))
 ; CHECK: %tmp10 = ashr exact i64 %tmp9, 32
 ; CHECK-NEXT: --> {{.*}} Exits: (sext i32 (-2 + (2 * %arg2)) to i64)
 ; CHECK: %tmp11 = getelementptr inbounds i32, i32* %arg, i64 %tmp10
@@ -48,9 +48,9 @@ bb7:                                              ; preds = %bb7, %bb3
 }
 
 ; CHECK: %t10 = ashr exact i128 %t9, 1
-; CHECK-NEXT: --> {{.*}} Exits: (sext i127 (-633825300114114700748351602688 + (633825300114114700748351602688 * (zext i32 %arg5 to i127))<nuw>) to i128)
+; CHECK-NEXT: --> {{.*}} Exits: (sext i127 (-633825300114114700748351602688 + (633825300114114700748351602688 * (zext i32 %arg5 to i127))) to i128)
 ; CHECK: %t14 = or i128 %t10, 1
-; CHECK-NEXT: --> {{.*}} Exits: (1 + (sext i127 (-633825300114114700748351602688 + (633825300114114700748351602688 * (zext i32 %arg5 to i127))<nuw>) to i128))<nsw>
+; CHECK-NEXT: --> {{.*}} Exits: (1 + (sext i127 (-633825300114114700748351602688 + (633825300114114700748351602688 * (zext i32 %arg5 to i127))) to i128))<nsw>
 ; CHECK: Loop %bb7: backedge-taken count is (-1 + (zext i32 %arg5 to i128))<nsw>
 ; CHECK-NEXT: Loop %bb7: max backedge-taken count is -1
 ; CHECK-NEXT: Loop %bb7: Predicated backedge-taken count is (-1 + (zext i32 %arg5 to i128))<nsw>

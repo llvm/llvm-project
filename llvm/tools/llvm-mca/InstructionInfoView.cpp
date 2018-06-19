@@ -1,5 +1,4 @@
-//===--------------------- InstructionInfoView.cpp -------------------*- C++
-//-*-===//
+//===--------------------- InstructionInfoView.cpp --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements the InstructionView API.
+/// This file implements the InstructionInfoView API.
 ///
 //===----------------------------------------------------------------------===//
 

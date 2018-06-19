@@ -22,7 +22,7 @@ for.body153:                                      ; preds = %for.body153, %for.b
 ; CHECK: add nuw nsw i64 %indvars.iv, 1
 ; CHECK: sub nsw i64 %indvars.iv, 2
 ; CHECK: sub nsw i64 4, %indvars.iv
-; CHECK: mul nuw nsw i64 %indvars.iv, 8
+; CHECK: mul nsw i64 %indvars.iv, 8
 for.body170:                                      ; preds = %for.body170, %for.body153
   %i2.19 = phi i32 [ %add249, %for.body170 ], [ 0, %for.body153 ]
 
