@@ -1,5 +1,5 @@
 RUN: %cpp_compiler %S/CustomMutatorTest.cpp -o %t-CustomMutatorTest
-RUN: not %t-CustomMutatorTest 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomMutator
+RUN: not %run %t-CustomMutatorTest 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomMutator
 LLVMFuzzerCustomMutator: In LLVMFuzzerCustomMutator
 LLVMFuzzerCustomMutator: BINGO
 
