@@ -49,6 +49,13 @@ if(LLDB_BUILD_FRAMEWORK)
   if (NOT APPLE)
     message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
   endif()
+
+  # These are used to fill out LLDB-Info.plist. These are relevant when building
+  # the framework, and must be defined before building liblldb.
+  set(PRODUCT_NAME "LLDB")
+  set(EXECUTABLE_NAME "LLDB")
+  set(CURRENT_PROJECT_VERSION "360.99.0")
+
   set(LLDB_FRAMEWORK_DIR
     ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR})
 endif()
