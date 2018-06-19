@@ -645,7 +645,8 @@ private:
 
   /// \reorder commutative operands in alt shuffle if they result in
   ///  vectorized code.
-  void reorderAltShuffleOperands(unsigned Opcode, ArrayRef<Value *> VL,
+  void reorderAltShuffleOperands(unsigned Opcode, unsigned AltOpcode,
+                                 ArrayRef<Value *> VL,
                                  SmallVectorImpl<Value *> &Left,
                                  SmallVectorImpl<Value *> &Right);
 
@@ -1917,7 +1918,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // Reorder operands if reordering would enable vectorization.
       if (isa<BinaryOperator>(VL0)) {
         ValueList Left, Right;
-        reorderAltShuffleOperands(S.Opcode, VL, Left, Right);
+        unsigned AltOpcode = getAltOpcode(S.Opcode);
+        reorderAltShuffleOperands(S.Opcode, AltOpcode, VL, Left, Right);
         buildTree_rec(Left, Depth + 1, UserTreeIdx);
         buildTree_rec(Right, Depth + 1, UserTreeIdx);
         return;
@@ -2370,25 +2372,21 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       return ReuseShuffleCost + VecCallCost - ScalarCallCost;
     }
     case Instruction::ShuffleVector: {
-      TargetTransformInfo::OperandValueKind Op1VK =
-          TargetTransformInfo::OK_AnyValue;
-      TargetTransformInfo::OperandValueKind Op2VK =
-          TargetTransformInfo::OK_AnyValue;
       int ScalarCost = 0;
       if (NeedToShuffleReuses) {
         for (unsigned Idx : E->ReuseShuffleIndices) {
           Instruction *I = cast<Instruction>(VL[Idx]);
           if (!I)
             continue;
-          ReuseShuffleCost -= TTI->getArithmeticInstrCost(
-              I->getOpcode(), ScalarTy, Op1VK, Op2VK);
+          ReuseShuffleCost -=
+              TTI->getArithmeticInstrCost(I->getOpcode(), ScalarTy);
         }
         for (Value *V : VL) {
           Instruction *I = cast<Instruction>(V);
           if (!I)
             continue;
-          ReuseShuffleCost += TTI->getArithmeticInstrCost(
-              I->getOpcode(), ScalarTy, Op1VK, Op2VK);
+          ReuseShuffleCost +=
+              TTI->getArithmeticInstrCost(I->getOpcode(), ScalarTy);
         }
       }
       int VecCost = 0;
@@ -2396,17 +2394,14 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
         Instruction *I = cast<Instruction>(i);
         if (!I)
           break;
-        ScalarCost +=
-            TTI->getArithmeticInstrCost(I->getOpcode(), ScalarTy, Op1VK, Op2VK);
+        ScalarCost += TTI->getArithmeticInstrCost(I->getOpcode(), ScalarTy);
       }
       // VecCost is equal to sum of the cost of creating 2 vectors
       // and the cost of creating shuffle.
       Instruction *I0 = cast<Instruction>(VL[0]);
-      VecCost =
-          TTI->getArithmeticInstrCost(I0->getOpcode(), VecTy, Op1VK, Op2VK);
+      VecCost = TTI->getArithmeticInstrCost(I0->getOpcode(), VecTy);
       Instruction *I1 = cast<Instruction>(VL[1]);
-      VecCost +=
-          TTI->getArithmeticInstrCost(I1->getOpcode(), VecTy, Op1VK, Op2VK);
+      VecCost += TTI->getArithmeticInstrCost(I1->getOpcode(), VecTy);
       VecCost += TTI->getShuffleCost(TargetTransformInfo::SK_Select, VecTy, 0);
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
@@ -2649,11 +2644,11 @@ int BoUpSLP::getGatherCost(ArrayRef<Value *> VL) {
 // load a[3] + load b[3]
 // Reordering the second load b[1]  load a[1] would allow us to vectorize this
 // code.
-void BoUpSLP::reorderAltShuffleOperands(unsigned Opcode, ArrayRef<Value *> VL,
+void BoUpSLP::reorderAltShuffleOperands(unsigned Opcode, unsigned AltOpcode,
+                                        ArrayRef<Value *> VL,
                                         SmallVectorImpl<Value *> &Left,
                                         SmallVectorImpl<Value *> &Right) {
   // Push left and right operands of binary operation into Left and Right
-  unsigned AltOpcode = getAltOpcode(Opcode);
   (void)AltOpcode;
   for (Value *V : VL) {
     auto *I = cast<Instruction>(V);
@@ -3492,7 +3487,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       ValueList LHSVL, RHSVL;
       assert(Instruction::isBinaryOp(S.Opcode) &&
              "Invalid Shuffle Vector Operand");
-      reorderAltShuffleOperands(S.Opcode, E->Scalars, LHSVL, RHSVL);
+      unsigned AltOpcode = getAltOpcode(S.Opcode);
+      reorderAltShuffleOperands(S.Opcode, AltOpcode, E->Scalars, LHSVL, RHSVL);
       setInsertPointAfterBundle(E->Scalars, VL0);
 
       Value *LHS = vectorizeTree(LHSVL);
@@ -3507,7 +3503,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *V0 = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(S.Opcode), LHS, RHS);
 
-      unsigned AltOpcode = getAltOpcode(S.Opcode);
       // Create a vector of LHS op2 RHS
       Value *V1 = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(AltOpcode), LHS, RHS);

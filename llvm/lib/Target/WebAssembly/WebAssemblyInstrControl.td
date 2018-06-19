@@ -152,8 +152,11 @@ defm THROW_I64 : I<(outs), (ins i32imm:$tag, I64:$val),
                    [(int_wasm_throw imm:$tag, I64:$val)],
                    "throw   \t$tag, $val", "throw   \t$tag",
                    0x08>;
-defm RETHROW : NRI<(outs), (ins i32imm:$rel_depth), [], "rethrow \t$rel_depth",
-                   0x09>;
+defm RETHROW : NRI<(outs), (ins bb_op:$dst), [], "rethrow \t$dst", 0x09>;
+let isCodeGenOnly = 1 in
+// This is used when the destination for rethrow is the caller function. This
+// will be converted to a rethrow in CFGStackify.
+defm RETHROW_TO_CALLER : NRI<(outs), (ins), [], "rethrow">;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
 // Region within which an exception is caught: try / end_try

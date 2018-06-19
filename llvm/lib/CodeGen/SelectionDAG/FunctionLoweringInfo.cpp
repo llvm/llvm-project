@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -117,6 +118,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           H.CatchObj.FrameIndex = INT_MAX;
       }
     }
+  }
+  if (Personality == EHPersonality::Wasm_CXX) {
+    WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
+    calculateWasmEHInfo(&fn, EHInfo);
   }
 
   // Initialize the mapping of values to registers.  This is only set up for
@@ -282,28 +287,46 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     }
   }
 
-  if (!isFuncletEHPersonality(Personality))
-    return;
+  if (isFuncletEHPersonality(Personality)) {
+    WinEHFuncInfo &EHInfo = *MF->getWinEHFuncInfo();
 
-  WinEHFuncInfo &EHInfo = *MF->getWinEHFuncInfo();
-
-  // Map all BB references in the WinEH data to MBBs.
-  for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
-    for (WinEHHandlerType &H : TBME.HandlerArray) {
-      if (H.Handler)
-        H.Handler = MBBMap[H.Handler.get<const BasicBlock *>()];
+    // Map all BB references in the WinEH data to MBBs.
+    for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
+      for (WinEHHandlerType &H : TBME.HandlerArray) {
+        if (H.Handler)
+          H.Handler = MBBMap[H.Handler.get<const BasicBlock *>()];
+      }
+    }
+    for (CxxUnwindMapEntry &UME : EHInfo.CxxUnwindMap)
+      if (UME.Cleanup)
+        UME.Cleanup = MBBMap[UME.Cleanup.get<const BasicBlock *>()];
+    for (SEHUnwindMapEntry &UME : EHInfo.SEHUnwindMap) {
+      const auto *BB = UME.Handler.get<const BasicBlock *>();
+      UME.Handler = MBBMap[BB];
+    }
+    for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap) {
+      const auto *BB = CME.Handler.get<const BasicBlock *>();
+      CME.Handler = MBBMap[BB];
     }
   }
-  for (CxxUnwindMapEntry &UME : EHInfo.CxxUnwindMap)
-    if (UME.Cleanup)
-      UME.Cleanup = MBBMap[UME.Cleanup.get<const BasicBlock *>()];
-  for (SEHUnwindMapEntry &UME : EHInfo.SEHUnwindMap) {
-    const BasicBlock *BB = UME.Handler.get<const BasicBlock *>();
-    UME.Handler = MBBMap[BB];
-  }
-  for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap) {
-    const BasicBlock *BB = CME.Handler.get<const BasicBlock *>();
-    CME.Handler = MBBMap[BB];
+
+  else if (Personality == EHPersonality::Wasm_CXX) {
+    WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
+    // Map all BB references in the WinEH data to MBBs.
+    DenseMap<BBOrMBB, BBOrMBB> NewMap;
+    for (auto &KV : EHInfo.EHPadUnwindMap) {
+      const auto *Src = KV.first.get<const BasicBlock *>();
+      const auto *Dst = KV.second.get<const BasicBlock *>();
+      NewMap[MBBMap[Src]] = MBBMap[Dst];
+    }
+    EHInfo.EHPadUnwindMap = std::move(NewMap);
+    NewMap.clear();
+    for (auto &KV : EHInfo.ThrowUnwindMap) {
+      const auto *Src = KV.first.get<const BasicBlock *>();
+      const auto *Dst = KV.second.get<const BasicBlock *>();
+      NewMap[MBBMap[Src]] = MBBMap[Dst];
+    }
+    EHInfo.ThrowUnwindMap = std::move(NewMap);
   }
 }
 

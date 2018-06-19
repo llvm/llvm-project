@@ -95,8 +95,8 @@ struct ScoredSymbolGreater {
 } // namespace
 
 llvm::Expected<std::vector<SymbolInformation>>
-getWorkspaceSymbols(StringRef Query, int Limit,
-                    const SymbolIndex *const Index) {
+getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
+                    StringRef HintPath) {
   std::vector<SymbolInformation> Result;
   if (Query.empty() || !Index)
     return Result;
@@ -116,7 +116,7 @@ getWorkspaceSymbols(StringRef Query, int Limit,
     Req.MaxCandidateCount = Limit;
   TopN<ScoredSymbolInfo, ScoredSymbolGreater> Top(Req.MaxCandidateCount);
   FuzzyMatcher Filter(Req.Query);
-  Index->fuzzyFind(Req, [&Top, &Filter](const Symbol &Sym) {
+  Index->fuzzyFind(Req, [HintPath, &Top, &Filter](const Symbol &Sym) {
     // Prefer the definition over e.g. a function declaration in a header
     auto &CD = Sym.Definition ? Sym.Definition : Sym.CanonicalDeclaration;
     auto Uri = URI::parse(CD.FileURI);
@@ -126,9 +126,7 @@ getWorkspaceSymbols(StringRef Query, int Limit,
           CD.FileURI, Sym.Name));
       return;
     }
-    // FIXME: Passing no HintPath here will work for "file" and "test" schemes
-    // because they don't use it but this might not work for other custom ones.
-    auto Path = URI::resolve(*Uri);
+    auto Path = URI::resolve(*Uri, HintPath);
     if (!Path) {
       log(llvm::formatv("Workspace symbol: Could not resolve path for URI "
                         "'{0}' for symbol '{1}'.",

@@ -1132,11 +1132,11 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
   if (m_developer_directory.empty()) {
     bool developer_dir_path_valid = false;
     char developer_dir_path[PATH_MAX];
-    FileSpec temp_file_spec;
 
     // Get the lldb framework's file path, and if it exists, truncate some
     // components to only the developer directory path.
-    if (HostInfo::GetLLDBPath(ePathTypeLLDBShlibDir, temp_file_spec)) {
+    FileSpec temp_file_spec = HostInfo::GetShlibDir();
+    if (temp_file_spec) {
       if (temp_file_spec.GetPath(developer_dir_path,
                                  sizeof(developer_dir_path))) {
         // e.g.

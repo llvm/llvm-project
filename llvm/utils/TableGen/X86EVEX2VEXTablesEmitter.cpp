@@ -21,6 +21,7 @@ using namespace llvm;
 namespace {
 
 class X86EVEX2VEXTablesEmitter {
+  RecordKeeper &Records;
   CodeGenTarget Target;
 
   // Hold all non-masked & non-broadcasted EVEX encoded instructions
@@ -35,15 +36,8 @@ class X86EVEX2VEXTablesEmitter {
   std::vector<Entry> EVEX2VEX128;
   std::vector<Entry> EVEX2VEX256;
 
-  // Represents a manually added entry to the tables
-  struct ManualEntry {
-    const char *EVEXInstStr;
-    const char *VEXInstStr;
-    bool Is128Bit;
-  };
-
 public:
-  X86EVEX2VEXTablesEmitter(RecordKeeper &R) : Target(R) {}
+  X86EVEX2VEXTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
 
   // run - Output X86 EVEX2VEX tables.
   void run(raw_ostream &OS);
@@ -69,102 +63,6 @@ void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
   for (auto Pair : Table) {
     OS << "  { X86::" << Pair.first->TheDef->getName()
        << ", X86::" << Pair.second->TheDef->getName() << " },\n";
-  }
-
-  // Some VEX instructions were duplicated to multiple EVEX versions due the
-  // introduction of mask variants, and thus some of the EVEX versions have
-  // different encoding than the VEX instruction. In order to maximize the
-  // compression we add these entries manually.
-  static constexpr ManualEntry ManuallyAddedEntries[] = {
-      // EVEX-Inst            VEX-Inst           Is128-bit
-      {"VMOVDQU8Z128mr",      "VMOVDQUmr",       true},
-      {"VMOVDQU8Z128rm",      "VMOVDQUrm",       true},
-      {"VMOVDQU8Z128rr",      "VMOVDQUrr",       true},
-      {"VMOVDQU8Z128rr_REV",  "VMOVDQUrr_REV",   true},
-      {"VMOVDQU16Z128mr",     "VMOVDQUmr",       true},
-      {"VMOVDQU16Z128rm",     "VMOVDQUrm",       true},
-      {"VMOVDQU16Z128rr",     "VMOVDQUrr",       true},
-      {"VMOVDQU16Z128rr_REV", "VMOVDQUrr_REV",   true},
-      {"VMOVDQU8Z256mr",      "VMOVDQUYmr",      false},
-      {"VMOVDQU8Z256rm",      "VMOVDQUYrm",      false},
-      {"VMOVDQU8Z256rr",      "VMOVDQUYrr",      false},
-      {"VMOVDQU8Z256rr_REV",  "VMOVDQUYrr_REV",  false},
-      {"VMOVDQU16Z256mr",     "VMOVDQUYmr",      false},
-      {"VMOVDQU16Z256rm",     "VMOVDQUYrm",      false},
-      {"VMOVDQU16Z256rr",     "VMOVDQUYrr",      false},
-      {"VMOVDQU16Z256rr_REV", "VMOVDQUYrr_REV",  false},
-
-      {"VPERMILPDZ128mi",     "VPERMILPDmi",     true},
-      {"VPERMILPDZ128ri",     "VPERMILPDri",     true},
-      {"VPERMILPDZ128rm",     "VPERMILPDrm",     true},
-      {"VPERMILPDZ128rr",     "VPERMILPDrr",     true},
-      {"VPERMILPDZ256mi",     "VPERMILPDYmi",    false},
-      {"VPERMILPDZ256ri",     "VPERMILPDYri",    false},
-      {"VPERMILPDZ256rm",     "VPERMILPDYrm",    false},
-      {"VPERMILPDZ256rr",     "VPERMILPDYrr",    false},
-
-      {"VPBROADCASTQZ128m",   "VPBROADCASTQrm",  true},
-      {"VPBROADCASTQZ128r",   "VPBROADCASTQrr",  true},
-      {"VPBROADCASTQZ256m",   "VPBROADCASTQYrm", false},
-      {"VPBROADCASTQZ256r",   "VPBROADCASTQYrr", false},
-
-      {"VBROADCASTSDZ256m",   "VBROADCASTSDYrm", false},
-      {"VBROADCASTSDZ256r",   "VBROADCASTSDYrr", false},
-
-      {"VBROADCASTF64X2Z128rm", "VBROADCASTF128", false},
-      {"VBROADCASTI64X2Z128rm", "VBROADCASTI128", false},
-
-      {"VEXTRACTF64x2Z256mr", "VEXTRACTF128mr",  false},
-      {"VEXTRACTF64x2Z256rr", "VEXTRACTF128rr",  false},
-      {"VEXTRACTI64x2Z256mr", "VEXTRACTI128mr",  false},
-      {"VEXTRACTI64x2Z256rr", "VEXTRACTI128rr",  false},
-
-      {"VINSERTF64x2Z256rm",  "VINSERTF128rm",   false},
-      {"VINSERTF64x2Z256rr",  "VINSERTF128rr",   false},
-      {"VINSERTI64x2Z256rm",  "VINSERTI128rm",   false},
-      {"VINSERTI64x2Z256rr",  "VINSERTI128rr",   false},
-
-      // These will require some custom adjustment in the conversion pass.
-      {"VALIGNDZ128rri",      "VPALIGNRrri",     true},
-      {"VALIGNQZ128rri",      "VPALIGNRrri",     true},
-      {"VALIGNDZ128rmi",      "VPALIGNRrmi",     true},
-      {"VALIGNQZ128rmi",      "VPALIGNRrmi",     true},
-      {"VSHUFF32X4Z256rmi",   "VPERM2F128rm",    false},
-      {"VSHUFF32X4Z256rri",   "VPERM2F128rr",    false},
-      {"VSHUFF64X2Z256rmi",   "VPERM2F128rm",    false},
-      {"VSHUFF64X2Z256rri",   "VPERM2F128rr",    false},
-      {"VSHUFI32X4Z256rmi",   "VPERM2I128rm",    false},
-      {"VSHUFI32X4Z256rri",   "VPERM2I128rr",    false},
-      {"VSHUFI64X2Z256rmi",   "VPERM2I128rm",    false},
-      {"VSHUFI64X2Z256rri",   "VPERM2I128rr",    false},
-
-      // These can be replaced if we verify the scale part of the immediate is
-      // zero.
-      {"VRNDSCALEPDZ128rri",  "VROUNDPDr",       true},
-      {"VRNDSCALEPDZ128rmi",  "VROUNDPDm",       true},
-      {"VRNDSCALEPSZ128rri",  "VROUNDPSr",       true},
-      {"VRNDSCALEPSZ128rmi",  "VROUNDPSm",       true},
-      {"VRNDSCALEPDZ256rri",  "VROUNDPDYr",      false},
-      {"VRNDSCALEPDZ256rmi",  "VROUNDPDYm",      false},
-      {"VRNDSCALEPSZ256rri",  "VROUNDPSYr",      false},
-      {"VRNDSCALEPSZ256rmi",  "VROUNDPSYm",      false},
-      {"VRNDSCALESDZr",       "VROUNDSDr",       true},
-      {"VRNDSCALESDZm",       "VROUNDSDm",       true},
-      {"VRNDSCALESSZr",       "VROUNDSSr",       true},
-      {"VRNDSCALESSZm",       "VROUNDSSm",       true},
-      {"VRNDSCALESDZr_Int",   "VROUNDSDr_Int",   true},
-      {"VRNDSCALESDZm_Int",   "VROUNDSDm_Int",   true},
-      {"VRNDSCALESSZr_Int",   "VROUNDSSr_Int",   true},
-      {"VRNDSCALESSZm_Int",   "VROUNDSSm_Int",   true},
-  };
-
-  // Print the manually added entries
-  for (const ManualEntry &Entry : ManuallyAddedEntries) {
-    if ((Table == EVEX2VEX128 && Entry.Is128Bit) ||
-        (Table == EVEX2VEX256 && !Entry.Is128Bit)) {
-      OS << "  { X86::" << Entry.EVEXInstStr << ", X86::" << Entry.VEXInstStr
-         << " },\n";
-    }
   }
 
   OS << "};\n\n";
@@ -203,31 +101,34 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
 // Function object - Operator() returns true if the given VEX instruction
 // matches the EVEX instruction of this object.
 class IsMatch {
-  const CodeGenInstruction *Inst;
+  const CodeGenInstruction *EVEXInst;
 
 public:
-  IsMatch(const CodeGenInstruction *Inst) : Inst(Inst) {}
+  IsMatch(const CodeGenInstruction *EVEXInst) : EVEXInst(EVEXInst) {}
 
-  bool operator()(const CodeGenInstruction *Inst2) {
-    Record *Rec1 = Inst->TheDef;
-    Record *Rec2 = Inst2->TheDef;
-    uint64_t Rec1WVEX =
-        getValueFromBitsInit(Rec1->getValueAsBitsInit("VEX_WPrefix"));
-    uint64_t Rec2WVEX =
-        getValueFromBitsInit(Rec2->getValueAsBitsInit("VEX_WPrefix"));
+  bool operator()(const CodeGenInstruction *VEXInst) {
+    Record *RecE = EVEXInst->TheDef;
+    Record *RecV = VEXInst->TheDef;
+    uint64_t EVEX_W =
+        getValueFromBitsInit(RecE->getValueAsBitsInit("VEX_WPrefix"));
+    uint64_t VEX_W =
+        getValueFromBitsInit(RecV->getValueAsBitsInit("VEX_WPrefix"));
 
-    if (Rec2->getValueAsDef("OpEnc")->getName().str() != "EncVEX" ||
+    if (RecV->getValueAsDef("OpEnc")->getName().str() != "EncVEX" ||
         // VEX/EVEX fields
-        Rec2->getValueAsDef("OpPrefix") != Rec1->getValueAsDef("OpPrefix") ||
-        Rec2->getValueAsDef("OpMap") != Rec1->getValueAsDef("OpMap") ||
-        Rec2->getValueAsBit("hasVEX_4V") != Rec1->getValueAsBit("hasVEX_4V") ||
-        !equalBitsInits(Rec2->getValueAsBitsInit("EVEX_LL"),
-                        Rec1->getValueAsBitsInit("EVEX_LL")) ||
-        (Rec1WVEX != 2 && Rec2WVEX != 2 && Rec1WVEX != Rec2WVEX) ||
+        RecV->getValueAsDef("OpPrefix") != RecE->getValueAsDef("OpPrefix") ||
+        RecV->getValueAsDef("OpMap") != RecE->getValueAsDef("OpMap") ||
+        RecV->getValueAsBit("hasVEX_4V") != RecE->getValueAsBit("hasVEX_4V") ||
+        !equalBitsInits(RecV->getValueAsBitsInit("EVEX_LL"),
+                        RecE->getValueAsBitsInit("EVEX_LL")) ||
+        // Match is allowed if either is VEX_WIG, or they match, or EVEX
+        // is VEX_W1X and VEX is VEX_W0.
+        (!(EVEX_W == 2 || VEX_W == 2 || EVEX_W == VEX_W ||
+           (EVEX_W == 3 && VEX_W == 0))) ||
         // Instruction's format
-        Rec2->getValueAsDef("Form") != Rec1->getValueAsDef("Form") ||
-        Rec2->getValueAsBit("isAsmParserOnly") !=
-            Rec1->getValueAsBit("isAsmParserOnly"))
+        RecV->getValueAsDef("Form") != RecE->getValueAsDef("Form") ||
+        RecV->getValueAsBit("isAsmParserOnly") !=
+            RecE->getValueAsBit("isAsmParserOnly"))
       return false;
 
     // This is needed for instructions with intrinsic version (_Int).
@@ -236,9 +137,9 @@ public:
     // Also for instructions that their EVEX version was upgraded to work with
     // k-registers. For example VPCMPEQBrm (xmm output register) and
     // VPCMPEQBZ128rm (k register output register).
-    for (unsigned i = 0, e = Inst->Operands.size(); i < e; i++) {
-      Record *OpRec1 = Inst->Operands[i].Rec;
-      Record *OpRec2 = Inst2->Operands[i].Rec;
+    for (unsigned i = 0, e = EVEXInst->Operands.size(); i < e; i++) {
+      Record *OpRec1 = EVEXInst->Operands[i].Rec;
+      Record *OpRec2 = VEXInst->Operands[i].Rec;
 
       if (OpRec1 == OpRec2)
         continue;
@@ -317,22 +218,34 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
                                            getValueAsBitsInit("Opcode"));
     // For each EVEX instruction look for a VEX match in the appropriate vector
     // (instructions with the same opcode) using function object IsMatch.
-    auto Match = llvm::find_if(VEXInsts[Opcode], IsMatch(EVEXInst));
-    if (Match != VEXInsts[Opcode].end()) {
-      const CodeGenInstruction *VEXInst = *Match;
+    // Allow EVEX2VEXOverride to explicitly specify a match.
+    const CodeGenInstruction *VEXInst = nullptr;
+    if (!EVEXInst->TheDef->isValueUnset("EVEX2VEXOverride")) {
+      StringRef AltInstStr =
+        EVEXInst->TheDef->getValueAsString("EVEX2VEXOverride");
+      Record *AltInstRec = Records.getDef(AltInstStr);
+      assert(AltInstRec && "EVEX2VEXOverride instruction not found!");
+      VEXInst = &Target.getInstruction(AltInstRec);
+    } else {
+      auto Match = llvm::find_if(VEXInsts[Opcode], IsMatch(EVEXInst));
+      if (Match != VEXInsts[Opcode].end())
+        VEXInst = *Match;
+    }
 
-      // In case a match is found add new entry to the appropriate table
-      switch (getValueFromBitsInit(
-          EVEXInst->TheDef->getValueAsBitsInit("EVEX_LL"))) {
-      case 0:
-        EVEX2VEX128.push_back(std::make_pair(EVEXInst, VEXInst)); // {0,0}
-        break;
-      case 1:
-        EVEX2VEX256.push_back(std::make_pair(EVEXInst, VEXInst)); // {0,1}
-        break;
-      default:
-        llvm_unreachable("Instruction's size not fit for the mapping!");
-      }
+    if (!VEXInst)
+      continue;
+
+    // In case a match is found add new entry to the appropriate table
+    switch (getValueFromBitsInit(
+        EVEXInst->TheDef->getValueAsBitsInit("EVEX_LL"))) {
+    case 0:
+      EVEX2VEX128.push_back(std::make_pair(EVEXInst, VEXInst)); // {0,0}
+      break;
+    case 1:
+      EVEX2VEX256.push_back(std::make_pair(EVEXInst, VEXInst)); // {0,1}
+      break;
+    default:
+      llvm_unreachable("Instruction's size not fit for the mapping!");
     }
   }
 

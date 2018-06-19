@@ -13,6 +13,28 @@ define <2 x double> @test_round_sd(<2 x double> %a, <2 x double> %b) {
   ret <2 x double> %3
 }
 
+define <2 x double> @test_round_sd_floor(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @test_round_sd_floor(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.floor.f64(double [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[A:%.*]], double [[TMP2]], i64 0
+; CHECK-NEXT:    ret <2 x double> [[TMP3]]
+;
+  %1 = tail call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a, <2 x double> %b, i32 1)
+  ret <2 x double> %1
+}
+
+define <2 x double> @test_round_sd_ceil(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @test_round_sd_ceil(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.ceil.f64(double [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[A:%.*]], double [[TMP2]], i64 0
+; CHECK-NEXT:    ret <2 x double> [[TMP3]]
+;
+  %1 = tail call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a, <2 x double> %b, i32 2)
+  ret <2 x double> %1
+}
+
 define double @test_round_sd_0(double %a, double %b) {
 ; CHECK-LABEL: @test_round_sd_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[B:%.*]], i32 0
@@ -55,6 +77,28 @@ define <4 x float> @test_round_ss(<4 x float> %a, <4 x float> %b) {
   %6 = insertelement <4 x float> %5, float 3.000000e+00, i32 3
   %7 = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %3, <4 x float> %6, i32 10)
   ret <4 x float> %7
+}
+
+define <4 x float> @test_round_ss_floor(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @test_round_ss_floor(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.floor.f32(float [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[A:%.*]], float [[TMP2]], i64 0
+; CHECK-NEXT:    ret <4 x float> [[TMP3]]
+;
+  %1 = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a, <4 x float> %b, i32 1)
+  ret <4 x float> %1
+}
+
+define <4 x float> @test_round_ss_ceil(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @test_round_ss_ceil(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.ceil.f32(float [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[A:%.*]], float [[TMP2]], i64 0
+; CHECK-NEXT:    ret <4 x float> [[TMP3]]
+;
+  %1 = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a, <4 x float> %b, i32 2)
+  ret <4 x float> %1
 }
 
 define float @test_round_ss_0(float %a, float %b) {

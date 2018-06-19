@@ -40,13 +40,18 @@ MATCHER_P(WithKind, Kind, "") { return arg.kind == Kind; }
 ClangdServer::Options optsForTests() {
   auto ServerOpts = ClangdServer::optsForTest();
   ServerOpts.BuildDynamicSymbolIndex = true;
+  ServerOpts.URISchemes = {"unittest", "file"};
   return ServerOpts;
 }
 
 class WorkspaceSymbolsTest : public ::testing::Test {
 public:
   WorkspaceSymbolsTest()
-      : Server(CDB, FSProvider, DiagConsumer, optsForTests()) {}
+      : Server(CDB, FSProvider, DiagConsumer, optsForTests()) {
+    // Make sure the test root directory is created.
+    FSProvider.Files[testPath("unused")] = "";
+    Server.setRootPath(testRoot());
+  }
 
 protected:
   MockFSProvider FSProvider;

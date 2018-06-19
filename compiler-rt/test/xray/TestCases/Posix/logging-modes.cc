@@ -1,6 +1,6 @@
 // Check that we can install an implementation associated with a mode.
 //
-// RUN: rm xray-log.logging-modes* || true
+// RUN: rm -f xray-log.logging-modes*
 // RUN: %clangxx_xray -std=c++11 %s -o %t -fxray-modes=none
 // RUN: %run %t | FileCheck %s
 //

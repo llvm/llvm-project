@@ -534,7 +534,7 @@ const FileSpec &GDBRemoteCommunicationServerPlatform::GetDomainSocketDir() {
     if (domainsocket_dir_env != nullptr)
       g_domainsocket_dir = FileSpec(domainsocket_dir_env, false);
     else
-      HostInfo::GetLLDBPath(ePathTypeLLDBTempSystemDir, g_domainsocket_dir);
+      g_domainsocket_dir = HostInfo::GetProcessTempDir();
   });
 
   return g_domainsocket_dir;

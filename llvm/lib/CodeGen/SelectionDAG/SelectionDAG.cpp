@@ -4442,24 +4442,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FREM:
-    if (getTarget().Options.UnsafeFPMath) {
-      if (Opcode == ISD::FADD) {
-        // x+0 --> x
-        if (N2CFP && N2CFP->getValueAPF().isZero())
-          return N1;
-      } else if (Opcode == ISD::FSUB) {
-        // x-0 --> x
-        if (N2CFP && N2CFP->getValueAPF().isZero())
-          return N1;
-      } else if (Opcode == ISD::FMUL) {
-        // x*0 --> 0
-        if (N2CFP && N2CFP->isZero())
-          return N2;
-        // x*1 --> x
-        if (N2CFP && N2CFP->isExactlyValue(1.0))
-          return N1;
-      }
-    }
     assert(VT.isFloatingPoint() && "This operator only applies to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");

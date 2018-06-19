@@ -1313,9 +1313,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
   if (LdStHasDebugValue(DIVar, DIExpr, LI))
     return;
 
-  assert(valueCoversEntireFragment(LI->getType(), DII) &&
-         "Load is not loading the full variable fragment.");
-
   // We are now tracking the loaded value instead of the address. In the
   // future if multi-location support is added to the IR, it might be
   // preferable to keep tracking both the loaded value and the original
@@ -1335,9 +1332,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
 
   if (PhiHasDebugValue(DIVar, DIExpr, APN))
     return;
-
-  assert(valueCoversEntireFragment(APN->getType(), DII) &&
-         "PHI node is not describing the full variable.");
 
   BasicBlock *BB = APN->getParent();
   auto InsertionPt = BB->getFirstInsertionPt();

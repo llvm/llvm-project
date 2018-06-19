@@ -1677,6 +1677,9 @@ def : MipsInstAlias<"xor $rs, $imm",
 def : MipsInstAlias<"not $rt, $rs",
                     (NOR_MMR6 GPR32Opnd:$rt, GPR32Opnd:$rs, ZERO), 0>,
                     ISA_MICROMIPS32R6;
+def : MipsInstAlias<"not $rt",
+                    (NOR_MMR6 GPR32Opnd:$rt, GPR32Opnd:$rt, ZERO), 0>,
+                    ISA_MICROMIPS32R6;
 def : MipsInstAlias<"lapc $rd, $imm",
                     (ADDIUPC_MMR6 GPR32Opnd:$rd, simm19_lsl2:$imm)>,
                     ISA_MICROMIPS32R6;

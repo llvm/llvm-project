@@ -32,24 +32,43 @@ SBFileSpec SBHostOS::GetProgramFileSpec() {
 }
 
 SBFileSpec SBHostOS::GetLLDBPythonPath() {
-  SBFileSpec sb_lldb_python_filespec;
-  FileSpec lldb_python_spec;
-  if (HostInfo::GetLLDBPath(ePathTypePythonDir, lldb_python_spec)) {
-    sb_lldb_python_filespec.SetFileSpec(lldb_python_spec);
-  }
-  return sb_lldb_python_filespec;
+  return GetLLDBPath(ePathTypePythonDir);
 }
 
 SBFileSpec SBHostOS::GetLLDBPath(lldb::PathType path_type) {
-  SBFileSpec sb_fspec;
   FileSpec fspec;
-  bool Success = true;
-  if (path_type == ePathTypeClangDir)
+  switch (path_type) {
+  case ePathTypeLLDBShlibDir:
+    fspec = HostInfo::GetShlibDir();
+    break;
+  case ePathTypeSupportExecutableDir:
+    fspec = HostInfo::GetSupportExeDir();
+    break;
+  case ePathTypeHeaderDir:
+    fspec = HostInfo::GetHeaderDir();
+    break;
+  case ePathTypePythonDir:
+    fspec = HostInfo::GetPythonDir();
+    break;
+  case ePathTypeLLDBSystemPlugins:
+    fspec = HostInfo::GetSystemPluginDir();
+    break;
+  case ePathTypeLLDBUserPlugins:
+    fspec = HostInfo::GetUserPluginDir();
+    break;
+  case ePathTypeLLDBTempSystemDir:
+    fspec = HostInfo::GetProcessTempDir();
+    break;
+  case ePathTypeGlobalLLDBTempSystemDir:
+    fspec = HostInfo::GetGlobalTempDir();
+    break;
+  case ePathTypeClangDir:
     fspec = GetClangResourceDir();
-  else
-    Success = HostInfo::GetLLDBPath(path_type, fspec);
-  if (Success)
-    sb_fspec.SetFileSpec(fspec);
+    break;
+  }
+
+  SBFileSpec sb_fspec;
+  sb_fspec.SetFileSpec(fspec);
   return sb_fspec;
 }
 

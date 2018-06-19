@@ -2581,10 +2581,11 @@ SDValue PPCTargetLowering::LowerBlockAddress(SDValue Op,
 
   // 64-bit SVR4 ABI code is always position-independent.
   // The actual BlockAddress is stored in the TOC.
-  if (Subtarget.isSVR4ABI() && Subtarget.isPPC64()) {
-    setUsesTOCBasePtr(DAG);
+  if (Subtarget.isSVR4ABI() && isPositionIndependent()) {
+    if (Subtarget.isPPC64())
+      setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetBlockAddress(BA, PtrVT, BASDN->getOffset());
-    return getTOCEntry(DAG, SDLoc(BASDN), true, GA);
+    return getTOCEntry(DAG, SDLoc(BASDN), Subtarget.isPPC64(), GA);
   }
 
   unsigned MOHiFlag, MOLoFlag;
