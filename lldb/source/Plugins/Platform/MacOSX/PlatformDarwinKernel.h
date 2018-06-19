@@ -128,7 +128,7 @@ protected:
                                       bool recurse);
 
   static std::vector<lldb_private::FileSpec>
-  SearchForExecutablesRecursively(const lldb_private::ConstString &dir);
+  SearchForExecutablesRecursively(const std::string &dir);
 
   static void AddKextToMap(PlatformDarwinKernel *thisp,
                            const lldb_private::FileSpec &file_spec);
