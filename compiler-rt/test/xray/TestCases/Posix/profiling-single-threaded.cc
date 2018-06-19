@@ -3,13 +3,13 @@
 //
 // FIXME: Make -fxray-modes=xray-profiling part of the default?
 // RUN: %clangxx_xray -std=c++11 %s -o %t -fxray-modes=xray-profiling
-// RUN: rm xray-log.profiling-single-* || true
+// RUN: rm -f xray-log.profiling-single-*
 // RUN: XRAY_OPTIONS=verbosity=1 \
 // RUN:     XRAY_PROFILING_OPTIONS=no_flush=true %run %t
 // RUN: XRAY_OPTIONS=verbosity=1 %run %t
 // RUN: PROFILES=`ls xray-log.profiling-single-* | wc -l`
 // RUN: [ $PROFILES -eq 2 ]
-// RUN: rm xray-log.profiling-single-* || true
+// RUN: rm -f xray-log.profiling-single-*
 //
 // UNSUPPORTED: target-is-mips64,target-is-mips64el
 

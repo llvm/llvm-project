@@ -698,9 +698,8 @@ public:
   template <typename ElementTy>
   static Constant *get(LLVMContext &Context, ArrayRef<ElementTy> Elts) {
     const char *Data = reinterpret_cast<const char *>(Elts.data());
-    Type *Ty =
-        ArrayType::get(Type::getScalarTy<ElementTy>(Context), Elts.size());
-    return getImpl(StringRef(Data, Elts.size() * sizeof(ElementTy)), Ty);
+    return getRaw(StringRef(Data, Elts.size() * sizeof(ElementTy)), Elts.size(),
+                  Type::getScalarTy<ElementTy>(Context));
   }
 
   /// get() constructor - ArrayTy needs to be compatible with
@@ -708,6 +707,17 @@ public:
   template <typename ArrayTy>
   static Constant *get(LLVMContext &Context, ArrayTy &Elts) {
     return ConstantDataArray::get(Context, makeArrayRef(Elts));
+  }
+
+  /// get() constructor - Return a constant with array type with an element
+  /// count and element type matching the NumElements and ElementTy parameters
+  /// passed in. Note that this can return a ConstantAggregateZero object.
+  /// ElementTy needs to be one of i8/i16/i32/i64/float/double. Data is the
+  /// buffer containing the elements. Be careful to make sure Data uses the
+  /// right endianness, the buffer will be used as-is.
+  static Constant *getRaw(StringRef Data, uint64_t NumElements, Type *ElementTy) {
+    Type *Ty = ArrayType::get(ElementTy, NumElements);
+    return getImpl(Data, Ty);
   }
 
   /// getFP() constructors - Return a constant with array type with an element

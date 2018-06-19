@@ -5944,6 +5944,15 @@ let Predicates = [UseSSE41] in {
             (ROUNDPDm addr:$src, (i32 0xB))>;
 }
 
+defm : scalar_unary_math_imm_patterns<ffloor, "ROUNDSS", X86Movss,
+                                      v4f32, 0x01, UseSSE41>;
+defm : scalar_unary_math_imm_patterns<fceil, "ROUNDSS", X86Movss,
+                                      v4f32, 0x02, UseSSE41>;
+defm : scalar_unary_math_imm_patterns<ffloor, "ROUNDSD", X86Movsd,
+                                      v2f64, 0x01, UseSSE41>;
+defm : scalar_unary_math_imm_patterns<fceil, "ROUNDSD", X86Movsd,
+                                      v2f64, 0x02, UseSSE41>;
+
 //===----------------------------------------------------------------------===//
 // SSE4.1 - Packed Bit Test
 //===----------------------------------------------------------------------===//

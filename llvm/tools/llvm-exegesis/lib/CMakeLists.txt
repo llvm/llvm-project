@@ -1,3 +1,7 @@
+if (LLVM_TARGETS_TO_BUILD MATCHES "X86")
+  add_subdirectory(X86)
+endif()
+
 add_library(LLVMExegesis
   STATIC
   Analysis.cpp
@@ -10,6 +14,7 @@ add_library(LLVMExegesis
   MCInstrDescView.cpp
   PerfHelper.cpp
   RegisterAliasing.cpp
+  Target.cpp
   Uops.cpp
   X86.cpp
   )

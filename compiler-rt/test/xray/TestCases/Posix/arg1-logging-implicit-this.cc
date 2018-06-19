@@ -1,7 +1,7 @@
 // Intercept the implicit 'this' argument of class member functions.
 //
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t
-// RUN: rm log-args-this-* || true
+// RUN: rm -f log-args-this-*
 // RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_logfile_base=log-args-this-" %run %t
 //
 // XFAIL: FreeBSD || arm || aarch64 || mips
