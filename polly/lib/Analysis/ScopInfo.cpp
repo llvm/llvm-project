@@ -927,8 +927,7 @@ void MemoryAccess::foldAccessRelation() {
   // disjuncts in the memory access, which can possibly complicate the generated
   // run-time checks and can lead to costly compilation.
   if (!PollyPreciseFoldAccesses &&
-      isl_map_n_basic_map(NewAccessRelation.get()) >
-          isl_map_n_basic_map(AccessRelation.get())) {
+      NewAccessRelation.n_basic_map() > AccessRelation.n_basic_map()) {
   } else {
     AccessRelation = NewAccessRelation;
   }

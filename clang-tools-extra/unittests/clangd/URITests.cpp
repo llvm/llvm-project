@@ -144,7 +144,7 @@ TEST(URITest, Resolve) {
               "/(x)/y/ z");
   EXPECT_THAT(resolveOrDie(parseOrDie("file:///c:/x/y/z")), "c:/x/y/z");
 #endif
-  EXPECT_EQ(resolveOrDie(parseOrDie("unittest:a"), testPath("x")),
+  EXPECT_EQ(resolveOrDie(parseOrDie("unittest:///a"), testPath("x")),
             testPath("a"));
 }
 

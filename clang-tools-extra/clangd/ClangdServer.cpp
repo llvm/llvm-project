@@ -115,10 +115,15 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
 }
 
 void ClangdServer::setRootPath(PathRef RootPath) {
-  std::string NewRootPath = llvm::sys::path::convert_to_slash(
-      RootPath, llvm::sys::path::Style::posix);
-  if (llvm::sys::fs::is_directory(NewRootPath))
-    this->RootPath = NewRootPath;
+  auto FS = FSProvider.getFileSystem();
+  auto Status = FS->status(RootPath);
+  if (!Status)
+    log("Failed to get status for RootPath " + RootPath + ": " +
+        Status.getError().message());
+  else if (Status->isDirectory())
+    this->RootPath = RootPath;
+  else
+    log("The provided RootPath " + RootPath + " is not a directory.");
 }
 
 void ClangdServer::addDocument(PathRef File, StringRef Contents,
@@ -446,7 +451,8 @@ void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
 
 void ClangdServer::workspaceSymbols(
     StringRef Query, int Limit, Callback<std::vector<SymbolInformation>> CB) {
-  CB(clangd::getWorkspaceSymbols(Query, Limit, Index));
+  CB(clangd::getWorkspaceSymbols(Query, Limit, Index,
+                                 RootPath ? *RootPath : ""));
 }
 
 std::vector<std::pair<Path, std::size_t>>
