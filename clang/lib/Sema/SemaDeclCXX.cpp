@@ -6018,6 +6018,10 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
     }
   }
 
+  // See if trivial_abi has to be dropped.
+  if (Record->hasAttr<TrivialABIAttr>())
+    checkIllFormedTrivialABIStruct(*Record);
+
   // Set HasTrivialSpecialMemberForCall if the record has attribute
   // "trivial_abi".
   bool HasTrivialABI = Record->hasAttr<TrivialABIAttr>();
@@ -7810,17 +7814,12 @@ void Sema::ActOnFinishCXXMemberSpecification(Scope* S, SourceLocation RLoc,
       l->getName();
   }
 
-  // See if trivial_abi has to be dropped.
-  auto *RD = dyn_cast<CXXRecordDecl>(TagDecl);
-  if (RD && RD->hasAttr<TrivialABIAttr>())
-    checkIllFormedTrivialABIStruct(*RD);
-
   ActOnFields(S, RLoc, TagDecl, llvm::makeArrayRef(
               // strict aliasing violation!
               reinterpret_cast<Decl**>(FieldCollector->getCurFields()),
               FieldCollector->getCurNumFields()), LBrac, RBrac, AttrList);
 
-  CheckCompletedCXXClass(RD);
+  CheckCompletedCXXClass(dyn_cast_or_null<CXXRecordDecl>(TagDecl));
 }
 
 /// AddImplicitlyDeclaredMembersToClass - Adds any implicitly-declared
