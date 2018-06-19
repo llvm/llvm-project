@@ -918,7 +918,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   if (!isa<ParmVarDecl>(D)) {
     Record.push_back(D->isThisDeclarationADemotedDefinition());
     Record.push_back(D->isExceptionVariable());
-    Record.push_back(D->isNRVOVariable());
+    Record.push_back(D->getNRVOMode());
     Record.push_back(D->isCXXForRangeDecl());
     Record.push_back(D->isObjCForDecl());
     Record.push_back(D->isARCPseudoStrong());
@@ -2031,7 +2031,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // InitStyle
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsThisDeclarationADemotedDefinition
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isExceptionVariable
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isNRVOVariable
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // NRVOMode
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isCXXForRangeDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isObjCForDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isARCPseudoStrong

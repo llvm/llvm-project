@@ -201,10 +201,6 @@ private:
   /// Used to determine if errors occurred in this scope.
   DiagnosticErrorTrap ErrorTrap;
 
-  /// A lattice consisting of undefined, a single NRVO candidate variable in
-  /// this scope, or over-defined. The bit is true when over-defined.
-  llvm::PointerIntPair<VarDecl *, 1, bool> NRVO;
-
   void setFlags(Scope *Parent, unsigned F);
 
 public:
@@ -466,23 +462,7 @@ public:
                                   UsingDirectives.end());
   }
 
-  void addNRVOCandidate(VarDecl *VD) {
-    if (NRVO.getInt())
-      return;
-    if (NRVO.getPointer() == nullptr) {
-      NRVO.setPointer(VD);
-      return;
-    }
-    if (NRVO.getPointer() != VD)
-      setNoNRVO();
-  }
-
-  void setNoNRVO() {
-    NRVO.setInt(true);
-    NRVO.setPointer(nullptr);
-  }
-
-  void mergeNRVOIntoParent();
+  void setNRVOCandidate(VarDecl *Candidate);
 
   /// Init - This is used by the parser to implement scope caching.
   void Init(Scope *parent, unsigned flags);

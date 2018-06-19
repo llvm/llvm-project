@@ -740,12 +740,13 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   SemaRef.BuildVariableInstantiation(Var, D, TemplateArgs, LateAttrs, Owner,
                                      StartingScope, InstantiatingVarTemplate);
 
+  bool NRVO = false;
   if (D->isNRVOVariable()) {
     QualType ReturnType = cast<FunctionDecl>(DC)->getReturnType();
     if (SemaRef.isCopyElisionCandidate(ReturnType, Var, Sema::CES_Strict))
-      Var->setNRVOVariable(true);
+      NRVO = true;
   }
-
+  Var->setNRVOVariable(NRVO);
   Var->setImplicit(D->isImplicit());
 
   return Var;

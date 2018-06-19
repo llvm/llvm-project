@@ -17,15 +17,30 @@ define float @fadd_zero(float %x) {
 }
 
 define float @fadd_negzero(float %x) {
-; STRICT-LABEL: fadd_negzero:
-; STRICT:       # %bb.0:
-; STRICT-NEXT:    addss {{.*}}(%rip), %xmm0
-; STRICT-NEXT:    retq
-;
-; UNSAFE-LABEL: fadd_negzero:
-; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    retq
+; ANY-LABEL: fadd_negzero:
+; ANY:       # %bb.0:
+; ANY-NEXT:    retq
   %r = fadd float %x, -0.0
+  ret float %r
+}
+
+define float @fadd_produce_zero(float %x) {
+; ANY-LABEL: fadd_produce_zero:
+; ANY:       # %bb.0:
+; ANY-NEXT:    xorps %xmm0, %xmm0
+; ANY-NEXT:    retq
+  %neg = fsub nsz float 0.0, %x
+  %r = fadd nnan float %neg, %x
+  ret float %r
+}
+
+define float @fadd_reassociate(float %x) {
+; ANY-LABEL: fadd_reassociate:
+; ANY:       # %bb.0:
+; ANY-NEXT:    addss {{.*}}(%rip), %xmm0
+; ANY-NEXT:    retq
+  %sum = fadd float %x, 8.0
+  %r = fadd reassoc nsz float %sum, 12.0
   ret float %r
 }
 

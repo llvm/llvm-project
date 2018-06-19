@@ -100,11 +100,12 @@ define float @fadd_const_multiuse_fmf(float %x) {
 ; CHECK-LABEL: fadd_const_multiuse_fmf:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI7_0
+; CHECK-NEXT:    adrp x9, .LCPI7_1
 ; CHECK-NEXT:    ldr s1, [x8, :lo12:.LCPI7_0]
-; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    fmov s1, #17.00000000
+; CHECK-NEXT:    ldr s2, [x9, :lo12:.LCPI7_1]
 ; CHECK-NEXT:    fadd s1, s0, s1
-; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s0, s1, s0
 ; CHECK-NEXT:    ret
   %a1 = fadd float %x, 42.0
   %a2 = fadd nsz reassoc float %a1, 17.0

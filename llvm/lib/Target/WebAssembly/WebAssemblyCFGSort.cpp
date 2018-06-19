@@ -253,7 +253,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
       assert(OnStack.count(MLI.getLoopFor(&MBB)) &&
              "Blocks must be nested in their loops");
     }
-    while (OnStack.size() > 1 && &MBB == LoopBottom(OnStack.back()))
+    while (OnStack.size() > 1 && &MBB == WebAssembly::getBottom(OnStack.back()))
       OnStack.pop_back();
   }
   assert(OnStack.pop_back_val() == nullptr &&
