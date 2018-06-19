@@ -27637,7 +27637,7 @@ void X86TargetLowering::emitSetJmpShadowStackFix(MachineInstr &MI,
   MachineRegisterInfo &MRI = MF->getRegInfo();
   MachineInstrBuilder MIB;
 
-  // Memory Reference
+  // Memory Reference.
   MachineInstr::mmo_iterator MMOBegin = MI.memoperands_begin();
   MachineInstr::mmo_iterator MMOEnd = MI.memoperands_end();
 

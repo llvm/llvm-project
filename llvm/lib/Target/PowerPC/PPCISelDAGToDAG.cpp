@@ -6044,28 +6044,37 @@ void PPCDAGToDAGISel::PeepholePPC64() {
 
     unsigned FirstOp;
     unsigned StorageOpcode = N->getMachineOpcode();
+    bool RequiresMod4Offset = false;
 
     switch (StorageOpcode) {
     default: continue;
 
+    case PPC::LWA:
+    case PPC::LD:
+    case PPC::DFLOADf64:
+    case PPC::DFLOADf32:
+      RequiresMod4Offset = true;
+      LLVM_FALLTHROUGH;
     case PPC::LBZ:
     case PPC::LBZ8:
-    case PPC::LD:
     case PPC::LFD:
     case PPC::LFS:
     case PPC::LHA:
     case PPC::LHA8:
     case PPC::LHZ:
     case PPC::LHZ8:
-    case PPC::LWA:
     case PPC::LWZ:
     case PPC::LWZ8:
       FirstOp = 0;
       break;
 
+    case PPC::STD:
+    case PPC::DFSTOREf64:
+    case PPC::DFSTOREf32:
+      RequiresMod4Offset = true;
+      LLVM_FALLTHROUGH;
     case PPC::STB:
     case PPC::STB8:
-    case PPC::STD:
     case PPC::STFD:
     case PPC::STFS:
     case PPC::STH:
@@ -6112,9 +6121,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       // For these cases, the immediate may not be divisible by 4, in
       // which case the fold is illegal for DS-form instructions.  (The
       // other cases provide aligned addresses and are always safe.)
-      if ((StorageOpcode == PPC::LWA ||
-           StorageOpcode == PPC::LD  ||
-           StorageOpcode == PPC::STD) &&
+      if (RequiresMod4Offset &&
           (!isa<ConstantSDNode>(Base.getOperand(1)) ||
            Base.getConstantOperandVal(1) % 4 != 0))
         continue;
@@ -6176,8 +6183,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       if (auto *C = dyn_cast<ConstantSDNode>(ImmOpnd)) {
         Offset += C->getSExtValue();
 
-        if ((StorageOpcode == PPC::LWA || StorageOpcode == PPC::LD ||
-             StorageOpcode == PPC::STD) && (Offset % 4) != 0)
+        if (RequiresMod4Offset && (Offset % 4) != 0)
           continue;
 
         if (!isInt<16>(Offset))
@@ -6209,8 +6215,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         // We can't perform this optimization for data whose alignment
         // is insufficient for the instruction encoding.
         if (GV->getAlignment() < 4 &&
-            (StorageOpcode == PPC::LD || StorageOpcode == PPC::STD ||
-             StorageOpcode == PPC::LWA || (Offset % 4) != 0)) {
+            (RequiresMod4Offset || (Offset % 4) != 0)) {
           LLVM_DEBUG(dbgs() << "Rejected this candidate for alignment.\n\n");
           continue;
         }

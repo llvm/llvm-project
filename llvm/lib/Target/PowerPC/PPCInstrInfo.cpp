@@ -2065,6 +2065,12 @@ bool PPCInstrInfo::expandVSXMemPseudo(MachineInstr &MI) const {
     return true;
 }
 
+#ifndef NDEBUG
+static bool isAnImmediateOperand(const MachineOperand &MO) {
+  return MO.isCPI() || MO.isGlobal() || MO.isImm();
+}
+#endif
+
 bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   auto &MBB = *MI.getParent();
   auto DL = MI.getDebugLoc();
@@ -2087,7 +2093,8 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case PPC::DFSTOREf64: {
     assert(Subtarget.hasP9Vector() &&
            "Invalid D-Form Pseudo-ops on Pre-P9 target.");
-    assert(MI.getOperand(2).isReg() && MI.getOperand(1).isImm() &&
+    assert(MI.getOperand(2).isReg() &&
+           isAnImmediateOperand(MI.getOperand(1)) &&
            "D-form op must have register and immediate operands");
     return expandVSXMemPseudo(MI);
   }

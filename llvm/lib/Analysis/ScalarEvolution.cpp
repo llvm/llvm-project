@@ -2233,32 +2233,19 @@ StrengthenNoWrapFlags(ScalarEvolution *SE, SCEVTypes Type,
 
   SignOrUnsignWrap = ScalarEvolution::maskFlags(Flags, SignOrUnsignMask);
 
-  if (SignOrUnsignWrap != SignOrUnsignMask &&
-      (Type == scAddExpr || Type == scMulExpr) && Ops.size() == 2 &&
-      isa<SCEVConstant>(Ops[0])) {
+  if (SignOrUnsignWrap != SignOrUnsignMask && Type == scAddExpr &&
+      Ops.size() == 2 && isa<SCEVConstant>(Ops[0])) {
 
-    auto Opcode = [&] {
-      switch (Type) {
-      case scAddExpr:
-        return Instruction::Add;
-      case scMulExpr:
-        return Instruction::Mul;
-      default:
-        llvm_unreachable("Unexpected SCEV op.");
-      }
-    }();
+    // (A + C) --> (A + C)<nsw> if the addition does not sign overflow
+    // (A + C) --> (A + C)<nuw> if the addition does not unsign overflow
 
     const APInt &C = cast<SCEVConstant>(Ops[0])->getAPInt();
-
-    // (A <opcode> C) --> (A <opcode> C)<nsw> if the op doesn't sign overflow.
     if (!(SignOrUnsignWrap & SCEV::FlagNSW)) {
       auto NSWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
-          Opcode, C, OBO::NoSignedWrap);
+          Instruction::Add, C, OBO::NoSignedWrap);
       if (NSWRegion.contains(SE->getSignedRange(Ops[1])))
         Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
     }
-
-    // (A <opcode> C) --> (A <opcode> C)<nuw> if the op doesn't unsign overflow.
     if (!(SignOrUnsignWrap & SCEV::FlagNUW)) {
       auto NUWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
           Instruction::Add, C, OBO::NoUnsignedWrap);

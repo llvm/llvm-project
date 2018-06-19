@@ -142,7 +142,7 @@ namespace X86Local {
   };
 
   enum {
-    VEX_W0 = 0, VEX_W1 = 1, VEX_WIG = 2
+    VEX_W0 = 0, VEX_W1 = 1, VEX_WIG = 2, VEX_W1X = 3
   };
 }
 

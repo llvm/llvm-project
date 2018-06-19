@@ -400,6 +400,33 @@ define i8 @sel_constants_sub_constant(i1 %cond) {
   ret i8 %bo
 }
 
+define i8 @sel_constants_sub_constant_sel_constants(i1 %cond) {
+; ISEL-LABEL: sel_constants_sub_constant_sel_constants:
+; ISEL:       # %bb.0:
+; ISEL-NEXT:    andi. 3, 3, 1
+; ISEL-NEXT:    li 4, -4
+; ISEL-NEXT:    li 3, 3
+; ISEL-NEXT:    isel 3, 4, 3, 1
+; ISEL-NEXT:    subfic 3, 3, 5
+; ISEL-NEXT:    blr
+;
+; NO_ISEL-LABEL: sel_constants_sub_constant_sel_constants:
+; NO_ISEL:       # %bb.0:
+; NO_ISEL-NEXT:    andi. 3, 3, 1
+; NO_ISEL-NEXT:    li 4, -4
+; NO_ISEL-NEXT:    li 3, 3
+; NO_ISEL-NEXT:    bc 12, 1, .LBB23_1
+; NO_ISEL-NEXT:    b .LBB23_2
+; NO_ISEL-NEXT:  .LBB23_1:
+; NO_ISEL-NEXT:    addi 3, 4, 0
+; NO_ISEL-NEXT:  .LBB23_2:
+; NO_ISEL-NEXT:    subfic 3, 3, 5
+; NO_ISEL-NEXT:    blr
+  %sel = select i1 %cond, i8 -4, i8 3
+  %bo = sub i8 5, %sel
+  ret i8 %bo
+}
+
 define i8 @sel_constants_mul_constant(i1 %cond) {
 ; ISEL-LABEL: sel_constants_mul_constant:
 ; ISEL:       # %bb.0:
@@ -439,13 +466,42 @@ define i8 @sel_constants_sdiv_constant(i1 %cond) {
 ; NO_ISEL:       # %bb.0:
 ; NO_ISEL-NEXT:    andi. 3, 3, 1
 ; NO_ISEL-NEXT:    li 3, 4
-; NO_ISEL-NEXT:    bc 12, 1, .LBB24_1
+; NO_ISEL-NEXT:    bc 12, 1, .LBB25_1
 ; NO_ISEL-NEXT:    blr
-; NO_ISEL-NEXT:  .LBB24_1:
+; NO_ISEL-NEXT:  .LBB25_1:
 ; NO_ISEL-NEXT:    addi 3, 0, 0
 ; NO_ISEL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = sdiv i8 %sel, 5
+  ret i8 %bo
+}
+
+define i8 @sdiv_constant_sel_constants(i1 %cond) {
+; ISEL-LABEL: sdiv_constant_sel_constants:
+; ISEL:       # %bb.0:
+; ISEL-NEXT:    andi. 3, 3, 1
+; ISEL-NEXT:    li 4, 121
+; ISEL-NEXT:    li 12, 120
+; ISEL-NEXT:    li 3, 23
+; ISEL-NEXT:    isel 3, 4, 3, 1
+; ISEL-NEXT:    divwu 3, 12, 3
+; ISEL-NEXT:    blr
+;
+; NO_ISEL-LABEL: sdiv_constant_sel_constants:
+; NO_ISEL:       # %bb.0:
+; NO_ISEL-NEXT:    andi. 3, 3, 1
+; NO_ISEL-NEXT:    li 4, 121
+; NO_ISEL-NEXT:    li 12, 120
+; NO_ISEL-NEXT:    li 3, 23
+; NO_ISEL-NEXT:    bc 12, 1, .LBB26_1
+; NO_ISEL-NEXT:    b .LBB26_2
+; NO_ISEL-NEXT:  .LBB26_1:
+; NO_ISEL-NEXT:    addi 3, 4, 0
+; NO_ISEL-NEXT:  .LBB26_2:
+; NO_ISEL-NEXT:    divwu 3, 12, 3
+; NO_ISEL-NEXT:    blr
+  %sel = select i1 %cond, i8 121, i8 23
+  %bo = sdiv i8 120, %sel
   ret i8 %bo
 }
 
@@ -463,13 +519,42 @@ define i8 @sel_constants_udiv_constant(i1 %cond) {
 ; NO_ISEL-NEXT:    andi. 3, 3, 1
 ; NO_ISEL-NEXT:    li 4, 50
 ; NO_ISEL-NEXT:    li 3, 4
-; NO_ISEL-NEXT:    bc 12, 1, .LBB25_1
+; NO_ISEL-NEXT:    bc 12, 1, .LBB27_1
 ; NO_ISEL-NEXT:    blr
-; NO_ISEL-NEXT:  .LBB25_1:
+; NO_ISEL-NEXT:  .LBB27_1:
 ; NO_ISEL-NEXT:    addi 3, 4, 0
 ; NO_ISEL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = udiv i8 %sel, 5
+  ret i8 %bo
+}
+
+define i8 @udiv_constant_sel_constants(i1 %cond) {
+; ISEL-LABEL: udiv_constant_sel_constants:
+; ISEL:       # %bb.0:
+; ISEL-NEXT:    andi. 3, 3, 1
+; ISEL-NEXT:    li 4, 252
+; ISEL-NEXT:    li 12, 120
+; ISEL-NEXT:    li 3, 23
+; ISEL-NEXT:    isel 3, 4, 3, 1
+; ISEL-NEXT:    divwu 3, 12, 3
+; ISEL-NEXT:    blr
+;
+; NO_ISEL-LABEL: udiv_constant_sel_constants:
+; NO_ISEL:       # %bb.0:
+; NO_ISEL-NEXT:    andi. 3, 3, 1
+; NO_ISEL-NEXT:    li 4, 252
+; NO_ISEL-NEXT:    li 12, 120
+; NO_ISEL-NEXT:    li 3, 23
+; NO_ISEL-NEXT:    bc 12, 1, .LBB28_1
+; NO_ISEL-NEXT:    b .LBB28_2
+; NO_ISEL-NEXT:  .LBB28_1:
+; NO_ISEL-NEXT:    addi 3, 4, 0
+; NO_ISEL-NEXT:  .LBB28_2:
+; NO_ISEL-NEXT:    divwu 3, 12, 3
+; NO_ISEL-NEXT:    blr
+  %sel = select i1 %cond, i8 -4, i8 23
+  %bo = udiv i8 120, %sel
   ret i8 %bo
 }
 
@@ -500,6 +585,39 @@ define i8 @sel_constants_srem_constant(i1 %cond) {
   ret i8 %bo
 }
 
+define i8 @srem_constant_sel_constants(i1 %cond) {
+; ISEL-LABEL: srem_constant_sel_constants:
+; ISEL:       # %bb.0:
+; ISEL-NEXT:    andi. 3, 3, 1
+; ISEL-NEXT:    li 4, 121
+; ISEL-NEXT:    li 12, 120
+; ISEL-NEXT:    li 3, 23
+; ISEL-NEXT:    isel 3, 4, 3, 1
+; ISEL-NEXT:    divwu 4, 12, 3
+; ISEL-NEXT:    mullw 3, 4, 3
+; ISEL-NEXT:    subfic 3, 3, 120
+; ISEL-NEXT:    blr
+;
+; NO_ISEL-LABEL: srem_constant_sel_constants:
+; NO_ISEL:       # %bb.0:
+; NO_ISEL-NEXT:    andi. 3, 3, 1
+; NO_ISEL-NEXT:    li 4, 121
+; NO_ISEL-NEXT:    li 12, 120
+; NO_ISEL-NEXT:    li 3, 23
+; NO_ISEL-NEXT:    bc 12, 1, .LBB30_1
+; NO_ISEL-NEXT:    b .LBB30_2
+; NO_ISEL-NEXT:  .LBB30_1:
+; NO_ISEL-NEXT:    addi 3, 4, 0
+; NO_ISEL-NEXT:  .LBB30_2:
+; NO_ISEL-NEXT:    divwu 4, 12, 3
+; NO_ISEL-NEXT:    mullw 3, 4, 3
+; NO_ISEL-NEXT:    subfic 3, 3, 120
+; NO_ISEL-NEXT:    blr
+  %sel = select i1 %cond, i8 121, i8 23
+  %bo = srem i8 120, %sel
+  ret i8 %bo
+}
+
 define i8 @sel_constants_urem_constant(i1 %cond) {
 ; ALL-LABEL: sel_constants_urem_constant:
 ; ALL:       # %bb.0:
@@ -508,6 +626,39 @@ define i8 @sel_constants_urem_constant(i1 %cond) {
 ; ALL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = urem i8 %sel, 5
+  ret i8 %bo
+}
+
+define i8 @urem_constant_sel_constants(i1 %cond) {
+; ISEL-LABEL: urem_constant_sel_constants:
+; ISEL:       # %bb.0:
+; ISEL-NEXT:    andi. 3, 3, 1
+; ISEL-NEXT:    li 4, 252
+; ISEL-NEXT:    li 12, 120
+; ISEL-NEXT:    li 3, 23
+; ISEL-NEXT:    isel 3, 4, 3, 1
+; ISEL-NEXT:    divwu 4, 12, 3
+; ISEL-NEXT:    mullw 3, 4, 3
+; ISEL-NEXT:    subfic 3, 3, 120
+; ISEL-NEXT:    blr
+;
+; NO_ISEL-LABEL: urem_constant_sel_constants:
+; NO_ISEL:       # %bb.0:
+; NO_ISEL-NEXT:    andi. 3, 3, 1
+; NO_ISEL-NEXT:    li 4, 252
+; NO_ISEL-NEXT:    li 12, 120
+; NO_ISEL-NEXT:    li 3, 23
+; NO_ISEL-NEXT:    bc 12, 1, .LBB32_1
+; NO_ISEL-NEXT:    b .LBB32_2
+; NO_ISEL-NEXT:  .LBB32_1:
+; NO_ISEL-NEXT:    addi 3, 4, 0
+; NO_ISEL-NEXT:  .LBB32_2:
+; NO_ISEL-NEXT:    divwu 4, 12, 3
+; NO_ISEL-NEXT:    mullw 3, 4, 3
+; NO_ISEL-NEXT:    subfic 3, 3, 120
+; NO_ISEL-NEXT:    blr
+  %sel = select i1 %cond, i8 -4, i8 23
+  %bo = urem i8 120, %sel
   ret i8 %bo
 }
 
@@ -598,13 +749,26 @@ define i8 @sel_constants_shl_constant(i1 %cond) {
 ; NO_ISEL-NEXT:    ori 12, 5, 65535
 ; NO_ISEL-NEXT:    sldi 3, 3, 5
 ; NO_ISEL-NEXT:    sldi 4, 12, 7
-; NO_ISEL-NEXT:    bc 12, 1, .LBB31_1
+; NO_ISEL-NEXT:    bc 12, 1, .LBB36_1
 ; NO_ISEL-NEXT:    blr
-; NO_ISEL-NEXT:  .LBB31_1:
+; NO_ISEL-NEXT:  .LBB36_1:
 ; NO_ISEL-NEXT:    addi 3, 4, 0
 ; NO_ISEL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = shl i8 %sel, 5
+  ret i8 %bo
+}
+
+define i8 @shl_constant_sel_constants(i1 %cond) {
+; ALL-LABEL: shl_constant_sel_constants:
+; ALL:       # %bb.0:
+; ALL-NEXT:    rlwinm 3, 3, 0, 31, 31
+; ALL-NEXT:    li 4, 1
+; ALL-NEXT:    subfic 3, 3, 3
+; ALL-NEXT:    slw 3, 4, 3
+; ALL-NEXT:    blr
+  %sel = select i1 %cond, i8 2, i8 3
+  %bo = shl i8 1, %sel
   ret i8 %bo
 }
 
@@ -622,15 +786,29 @@ define i8 @sel_constants_lshr_constant(i1 %cond) {
 ; NO_ISEL-NEXT:    andi. 3, 3, 1
 ; NO_ISEL-NEXT:    li 4, 7
 ; NO_ISEL-NEXT:    li 3, 0
-; NO_ISEL-NEXT:    bc 12, 1, .LBB32_1
+; NO_ISEL-NEXT:    bc 12, 1, .LBB38_1
 ; NO_ISEL-NEXT:    blr
-; NO_ISEL-NEXT:  .LBB32_1:
+; NO_ISEL-NEXT:  .LBB38_1:
 ; NO_ISEL-NEXT:    addi 3, 4, 0
 ; NO_ISEL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = lshr i8 %sel, 5
   ret i8 %bo
 }
+
+define i8 @lshr_constant_sel_constants(i1 %cond) {
+; ALL-LABEL: lshr_constant_sel_constants:
+; ALL:       # %bb.0:
+; ALL-NEXT:    rlwinm 3, 3, 0, 31, 31
+; ALL-NEXT:    li 4, 64
+; ALL-NEXT:    subfic 3, 3, 3
+; ALL-NEXT:    srw 3, 4, 3
+; ALL-NEXT:    blr
+  %sel = select i1 %cond, i8 2, i8 3
+  %bo = lshr i8 64, %sel
+  ret i8 %bo
+}
+
 
 define i8 @sel_constants_ashr_constant(i1 %cond) {
 ; ALL-LABEL: sel_constants_ashr_constant:
@@ -643,14 +821,27 @@ define i8 @sel_constants_ashr_constant(i1 %cond) {
   ret i8 %bo
 }
 
+define i8 @ashr_constant_sel_constants(i1 %cond) {
+; ALL-LABEL: ashr_constant_sel_constants:
+; ALL:       # %bb.0:
+; ALL-NEXT:    rlwinm 3, 3, 0, 31, 31
+; ALL-NEXT:    li 4, -128
+; ALL-NEXT:    subfic 3, 3, 3
+; ALL-NEXT:    sraw 3, 4, 3
+; ALL-NEXT:    blr
+  %sel = select i1 %cond, i8 2, i8 3
+  %bo = ashr i8 128, %sel
+  ret i8 %bo
+}
+
 define double @sel_constants_fadd_constant(i1 %cond) {
 ; ISEL-LABEL: sel_constants_fadd_constant:
 ; ISEL:       # %bb.0:
 ; ISEL-NEXT:    andi. 3, 3, 1
-; ISEL-NEXT:    addis 4, 2, .LCPI34_0@toc@ha
-; ISEL-NEXT:    addis 3, 2, .LCPI34_1@toc@ha
-; ISEL-NEXT:    addi 4, 4, .LCPI34_0@toc@l
-; ISEL-NEXT:    addi 3, 3, .LCPI34_1@toc@l
+; ISEL-NEXT:    addis 4, 2, .LCPI42_0@toc@ha
+; ISEL-NEXT:    addis 3, 2, .LCPI42_1@toc@ha
+; ISEL-NEXT:    addi 4, 4, .LCPI42_0@toc@l
+; ISEL-NEXT:    addi 3, 3, .LCPI42_1@toc@l
 ; ISEL-NEXT:    isel 3, 3, 4, 1
 ; ISEL-NEXT:    lfdx 1, 0, 3
 ; ISEL-NEXT:    blr
@@ -658,15 +849,15 @@ define double @sel_constants_fadd_constant(i1 %cond) {
 ; NO_ISEL-LABEL: sel_constants_fadd_constant:
 ; NO_ISEL:       # %bb.0:
 ; NO_ISEL-NEXT:    andi. 3, 3, 1
-; NO_ISEL-NEXT:    addis 4, 2, .LCPI34_0@toc@ha
-; NO_ISEL-NEXT:    addis 3, 2, .LCPI34_1@toc@ha
-; NO_ISEL-NEXT:    addi 4, 4, .LCPI34_0@toc@l
-; NO_ISEL-NEXT:    addi 3, 3, .LCPI34_1@toc@l
-; NO_ISEL-NEXT:    bc 12, 1, .LBB34_2
+; NO_ISEL-NEXT:    addis 4, 2, .LCPI42_0@toc@ha
+; NO_ISEL-NEXT:    addis 3, 2, .LCPI42_1@toc@ha
+; NO_ISEL-NEXT:    addi 4, 4, .LCPI42_0@toc@l
+; NO_ISEL-NEXT:    addi 3, 3, .LCPI42_1@toc@l
+; NO_ISEL-NEXT:    bc 12, 1, .LBB42_2
 ; NO_ISEL-NEXT:  # %bb.1:
 ; NO_ISEL-NEXT:    ori 3, 4, 0
-; NO_ISEL-NEXT:    b .LBB34_2
-; NO_ISEL-NEXT:  .LBB34_2:
+; NO_ISEL-NEXT:    b .LBB42_2
+; NO_ISEL-NEXT:  .LBB42_2:
 ; NO_ISEL-NEXT:    lfdx 1, 0, 3
 ; NO_ISEL-NEXT:    blr
   %sel = select i1 %cond, double -4.0, double 23.3
@@ -678,10 +869,10 @@ define double @sel_constants_fsub_constant(i1 %cond) {
 ; ISEL-LABEL: sel_constants_fsub_constant:
 ; ISEL:       # %bb.0:
 ; ISEL-NEXT:    andi. 3, 3, 1
-; ISEL-NEXT:    addis 4, 2, .LCPI35_0@toc@ha
-; ISEL-NEXT:    addis 3, 2, .LCPI35_1@toc@ha
-; ISEL-NEXT:    addi 4, 4, .LCPI35_0@toc@l
-; ISEL-NEXT:    addi 3, 3, .LCPI35_1@toc@l
+; ISEL-NEXT:    addis 4, 2, .LCPI43_0@toc@ha
+; ISEL-NEXT:    addis 3, 2, .LCPI43_1@toc@ha
+; ISEL-NEXT:    addi 4, 4, .LCPI43_0@toc@l
+; ISEL-NEXT:    addi 3, 3, .LCPI43_1@toc@l
 ; ISEL-NEXT:    isel 3, 3, 4, 1
 ; ISEL-NEXT:    lfdx 1, 0, 3
 ; ISEL-NEXT:    blr
@@ -689,15 +880,15 @@ define double @sel_constants_fsub_constant(i1 %cond) {
 ; NO_ISEL-LABEL: sel_constants_fsub_constant:
 ; NO_ISEL:       # %bb.0:
 ; NO_ISEL-NEXT:    andi. 3, 3, 1
-; NO_ISEL-NEXT:    addis 4, 2, .LCPI35_0@toc@ha
-; NO_ISEL-NEXT:    addis 3, 2, .LCPI35_1@toc@ha
-; NO_ISEL-NEXT:    addi 4, 4, .LCPI35_0@toc@l
-; NO_ISEL-NEXT:    addi 3, 3, .LCPI35_1@toc@l
-; NO_ISEL-NEXT:    bc 12, 1, .LBB35_2
+; NO_ISEL-NEXT:    addis 4, 2, .LCPI43_0@toc@ha
+; NO_ISEL-NEXT:    addis 3, 2, .LCPI43_1@toc@ha
+; NO_ISEL-NEXT:    addi 4, 4, .LCPI43_0@toc@l
+; NO_ISEL-NEXT:    addi 3, 3, .LCPI43_1@toc@l
+; NO_ISEL-NEXT:    bc 12, 1, .LBB43_2
 ; NO_ISEL-NEXT:  # %bb.1:
 ; NO_ISEL-NEXT:    ori 3, 4, 0
-; NO_ISEL-NEXT:    b .LBB35_2
-; NO_ISEL-NEXT:  .LBB35_2:
+; NO_ISEL-NEXT:    b .LBB43_2
+; NO_ISEL-NEXT:  .LBB43_2:
 ; NO_ISEL-NEXT:    lfdx 1, 0, 3
 ; NO_ISEL-NEXT:    blr
   %sel = select i1 %cond, double -4.0, double 23.3
@@ -705,14 +896,39 @@ define double @sel_constants_fsub_constant(i1 %cond) {
   ret double %bo
 }
 
+define double @fsub_constant_sel_constants(i1 %cond) {
+; ALL-LABEL: fsub_constant_sel_constants:
+; ALL:       # %bb.0:
+; ALL-NEXT:    andi. 3, 3, 1
+; ALL-NEXT:    bc 12, 1, .LBB44_2
+; ALL-NEXT:  # %bb.1:
+; ALL-NEXT:    addis 3, 2, .LCPI44_0@toc@ha
+; ALL-NEXT:    addi 3, 3, .LCPI44_0@toc@l
+; ALL-NEXT:    lfdx 0, 0, 3
+; ALL-NEXT:    b .LBB44_3
+; ALL-NEXT:  .LBB44_2:
+; ALL-NEXT:    addis 3, 2, .LCPI44_1@toc@ha
+; ALL-NEXT:    addi 3, 3, .LCPI44_1@toc@l
+; ALL-NEXT:    lfsx 0, 0, 3
+; ALL-NEXT:  .LBB44_3:
+; ALL-NEXT:    addis 3, 2, .LCPI44_2@toc@ha
+; ALL-NEXT:    addi 3, 3, .LCPI44_2@toc@l
+; ALL-NEXT:    lfdx 1, 0, 3
+; ALL-NEXT:    xssubdp 1, 1, 0
+; ALL-NEXT:    blr
+  %sel = select i1 %cond, double -4.0, double 23.3
+  %bo = fsub double 5.1, %sel
+  ret double %bo
+}
+
 define double @sel_constants_fmul_constant(i1 %cond) {
 ; ISEL-LABEL: sel_constants_fmul_constant:
 ; ISEL:       # %bb.0:
 ; ISEL-NEXT:    andi. 3, 3, 1
-; ISEL-NEXT:    addis 4, 2, .LCPI36_0@toc@ha
-; ISEL-NEXT:    addis 3, 2, .LCPI36_1@toc@ha
-; ISEL-NEXT:    addi 4, 4, .LCPI36_0@toc@l
-; ISEL-NEXT:    addi 3, 3, .LCPI36_1@toc@l
+; ISEL-NEXT:    addis 4, 2, .LCPI45_0@toc@ha
+; ISEL-NEXT:    addis 3, 2, .LCPI45_1@toc@ha
+; ISEL-NEXT:    addi 4, 4, .LCPI45_0@toc@l
+; ISEL-NEXT:    addi 3, 3, .LCPI45_1@toc@l
 ; ISEL-NEXT:    isel 3, 3, 4, 1
 ; ISEL-NEXT:    lfdx 1, 0, 3
 ; ISEL-NEXT:    blr
@@ -720,15 +936,15 @@ define double @sel_constants_fmul_constant(i1 %cond) {
 ; NO_ISEL-LABEL: sel_constants_fmul_constant:
 ; NO_ISEL:       # %bb.0:
 ; NO_ISEL-NEXT:    andi. 3, 3, 1
-; NO_ISEL-NEXT:    addis 4, 2, .LCPI36_0@toc@ha
-; NO_ISEL-NEXT:    addis 3, 2, .LCPI36_1@toc@ha
-; NO_ISEL-NEXT:    addi 4, 4, .LCPI36_0@toc@l
-; NO_ISEL-NEXT:    addi 3, 3, .LCPI36_1@toc@l
-; NO_ISEL-NEXT:    bc 12, 1, .LBB36_2
+; NO_ISEL-NEXT:    addis 4, 2, .LCPI45_0@toc@ha
+; NO_ISEL-NEXT:    addis 3, 2, .LCPI45_1@toc@ha
+; NO_ISEL-NEXT:    addi 4, 4, .LCPI45_0@toc@l
+; NO_ISEL-NEXT:    addi 3, 3, .LCPI45_1@toc@l
+; NO_ISEL-NEXT:    bc 12, 1, .LBB45_2
 ; NO_ISEL-NEXT:  # %bb.1:
 ; NO_ISEL-NEXT:    ori 3, 4, 0
-; NO_ISEL-NEXT:    b .LBB36_2
-; NO_ISEL-NEXT:  .LBB36_2:
+; NO_ISEL-NEXT:    b .LBB45_2
+; NO_ISEL-NEXT:  .LBB45_2:
 ; NO_ISEL-NEXT:    lfdx 1, 0, 3
 ; NO_ISEL-NEXT:    blr
   %sel = select i1 %cond, double -4.0, double 23.3
@@ -740,10 +956,10 @@ define double @sel_constants_fdiv_constant(i1 %cond) {
 ; ISEL-LABEL: sel_constants_fdiv_constant:
 ; ISEL:       # %bb.0:
 ; ISEL-NEXT:    andi. 3, 3, 1
-; ISEL-NEXT:    addis 4, 2, .LCPI37_0@toc@ha
-; ISEL-NEXT:    addis 3, 2, .LCPI37_1@toc@ha
-; ISEL-NEXT:    addi 4, 4, .LCPI37_0@toc@l
-; ISEL-NEXT:    addi 3, 3, .LCPI37_1@toc@l
+; ISEL-NEXT:    addis 4, 2, .LCPI46_0@toc@ha
+; ISEL-NEXT:    addis 3, 2, .LCPI46_1@toc@ha
+; ISEL-NEXT:    addi 4, 4, .LCPI46_0@toc@l
+; ISEL-NEXT:    addi 3, 3, .LCPI46_1@toc@l
 ; ISEL-NEXT:    isel 3, 3, 4, 1
 ; ISEL-NEXT:    lfdx 1, 0, 3
 ; ISEL-NEXT:    blr
@@ -751,15 +967,15 @@ define double @sel_constants_fdiv_constant(i1 %cond) {
 ; NO_ISEL-LABEL: sel_constants_fdiv_constant:
 ; NO_ISEL:       # %bb.0:
 ; NO_ISEL-NEXT:    andi. 3, 3, 1
-; NO_ISEL-NEXT:    addis 4, 2, .LCPI37_0@toc@ha
-; NO_ISEL-NEXT:    addis 3, 2, .LCPI37_1@toc@ha
-; NO_ISEL-NEXT:    addi 4, 4, .LCPI37_0@toc@l
-; NO_ISEL-NEXT:    addi 3, 3, .LCPI37_1@toc@l
-; NO_ISEL-NEXT:    bc 12, 1, .LBB37_2
+; NO_ISEL-NEXT:    addis 4, 2, .LCPI46_0@toc@ha
+; NO_ISEL-NEXT:    addis 3, 2, .LCPI46_1@toc@ha
+; NO_ISEL-NEXT:    addi 4, 4, .LCPI46_0@toc@l
+; NO_ISEL-NEXT:    addi 3, 3, .LCPI46_1@toc@l
+; NO_ISEL-NEXT:    bc 12, 1, .LBB46_2
 ; NO_ISEL-NEXT:  # %bb.1:
 ; NO_ISEL-NEXT:    ori 3, 4, 0
-; NO_ISEL-NEXT:    b .LBB37_2
-; NO_ISEL-NEXT:  .LBB37_2:
+; NO_ISEL-NEXT:    b .LBB46_2
+; NO_ISEL-NEXT:  .LBB46_2:
 ; NO_ISEL-NEXT:    lfdx 1, 0, 3
 ; NO_ISEL-NEXT:    blr
   %sel = select i1 %cond, double -4.0, double 23.3
@@ -767,19 +983,44 @@ define double @sel_constants_fdiv_constant(i1 %cond) {
   ret double %bo
 }
 
+define double @fdiv_constant_sel_constants(i1 %cond) {
+; ALL-LABEL: fdiv_constant_sel_constants:
+; ALL:       # %bb.0:
+; ALL-NEXT:    andi. 3, 3, 1
+; ALL-NEXT:    bc 12, 1, .LBB47_2
+; ALL-NEXT:  # %bb.1:
+; ALL-NEXT:    addis 3, 2, .LCPI47_0@toc@ha
+; ALL-NEXT:    addi 3, 3, .LCPI47_0@toc@l
+; ALL-NEXT:    lfdx 0, 0, 3
+; ALL-NEXT:    b .LBB47_3
+; ALL-NEXT:  .LBB47_2:
+; ALL-NEXT:    addis 3, 2, .LCPI47_1@toc@ha
+; ALL-NEXT:    addi 3, 3, .LCPI47_1@toc@l
+; ALL-NEXT:    lfsx 0, 0, 3
+; ALL-NEXT:  .LBB47_3:
+; ALL-NEXT:    addis 3, 2, .LCPI47_2@toc@ha
+; ALL-NEXT:    addi 3, 3, .LCPI47_2@toc@l
+; ALL-NEXT:    lfdx 1, 0, 3
+; ALL-NEXT:    xsdivdp 1, 1, 0
+; ALL-NEXT:    blr
+  %sel = select i1 %cond, double -4.0, double 23.3
+  %bo = fdiv double 5.1, %sel
+  ret double %bo
+}
+
 define double @sel_constants_frem_constant(i1 %cond) {
 ; ALL-LABEL: sel_constants_frem_constant:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    andi. 3, 3, 1
-; ALL-NEXT:    bc 12, 1, .LBB38_2
+; ALL-NEXT:    bc 12, 1, .LBB48_2
 ; ALL-NEXT:  # %bb.1:
-; ALL-NEXT:    addis 3, 2, .LCPI38_0@toc@ha
-; ALL-NEXT:    addi 3, 3, .LCPI38_0@toc@l
+; ALL-NEXT:    addis 3, 2, .LCPI48_0@toc@ha
+; ALL-NEXT:    addi 3, 3, .LCPI48_0@toc@l
 ; ALL-NEXT:    lfdx 1, 0, 3
 ; ALL-NEXT:    blr
-; ALL-NEXT:  .LBB38_2:
-; ALL-NEXT:    addis 3, 2, .LCPI38_1@toc@ha
-; ALL-NEXT:    addi 3, 3, .LCPI38_1@toc@l
+; ALL-NEXT:  .LBB48_2:
+; ALL-NEXT:    addis 3, 2, .LCPI48_1@toc@ha
+; ALL-NEXT:    addi 3, 3, .LCPI48_1@toc@l
 ; ALL-NEXT:    lfsx 1, 0, 3
 ; ALL-NEXT:    blr
   %sel = select i1 %cond, double -4.0, double 23.3
@@ -787,3 +1028,36 @@ define double @sel_constants_frem_constant(i1 %cond) {
   ret double %bo
 }
 
+define double @frem_constant_sel_constants(i1 %cond) {
+; ALL-LABEL: frem_constant_sel_constants:
+; ALL:       # %bb.0:
+; ALL-NEXT:    mflr 0
+; ALL-NEXT:    std 0, 16(1)
+; ALL-NEXT:    stdu 1, -32(1)
+; ALL-NEXT:    .cfi_def_cfa_offset 32
+; ALL-NEXT:    .cfi_offset lr, 16
+; ALL-NEXT:    andi. 3, 3, 1
+; ALL-NEXT:    bc 12, 1, .LBB49_2
+; ALL-NEXT:  # %bb.1:
+; ALL-NEXT:    addis 3, 2, .LCPI49_0@toc@ha
+; ALL-NEXT:    addi 3, 3, .LCPI49_0@toc@l
+; ALL-NEXT:    lfdx 2, 0, 3
+; ALL-NEXT:    b .LBB49_3
+; ALL-NEXT:  .LBB49_2:
+; ALL-NEXT:    addis 3, 2, .LCPI49_1@toc@ha
+; ALL-NEXT:    addi 3, 3, .LCPI49_1@toc@l
+; ALL-NEXT:    lfsx 2, 0, 3
+; ALL-NEXT:  .LBB49_3:
+; ALL-NEXT:    addis 3, 2, .LCPI49_2@toc@ha
+; ALL-NEXT:    addi 3, 3, .LCPI49_2@toc@l
+; ALL-NEXT:    lfdx 1, 0, 3
+; ALL-NEXT:    bl fmod
+; ALL-NEXT:    nop
+; ALL-NEXT:    addi 1, 1, 32
+; ALL-NEXT:    ld 0, 16(1)
+; ALL-NEXT:    mtlr 0
+; ALL-NEXT:    blr
+  %sel = select i1 %cond, double -4.0, double 23.3
+  %bo = frem double 5.1, %sel
+  ret double %bo
+}

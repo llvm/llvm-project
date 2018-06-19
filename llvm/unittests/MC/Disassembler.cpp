@@ -84,7 +84,7 @@ TEST(Disassembler, WebAssemblyTest) {
   InstSize = LLVMDisasmInstruction(DCR, BytesP, NumBytes, PC, OutString,
                                    OutStringSize);
   EXPECT_EQ(InstSize, 1U);
-  EXPECT_EQ(StringRef(OutString), "\ti32.add \t$0=, $0, $0");
+  EXPECT_EQ(StringRef(OutString), "\ti32.add ");
   PC += InstSize;
   BytesP += InstSize;
   NumBytes -= InstSize;
@@ -92,7 +92,7 @@ TEST(Disassembler, WebAssemblyTest) {
   InstSize = LLVMDisasmInstruction(DCR, BytesP, NumBytes, PC, OutString,
                                    OutStringSize);
   EXPECT_EQ(InstSize, 2U);
-  EXPECT_EQ(StringRef(OutString), "\ti64.const\t$0=, -1");
+  EXPECT_EQ(StringRef(OutString), "\ti64.const\t-1");
 
   PC += InstSize;
   BytesP += InstSize;
@@ -101,7 +101,7 @@ TEST(Disassembler, WebAssemblyTest) {
   InstSize = LLVMDisasmInstruction(DCR, BytesP, NumBytes, PC, OutString,
                                    OutStringSize);
   EXPECT_EQ(InstSize, 3U);
-  EXPECT_EQ(StringRef(OutString), "\ti64.load32_u\t$0=, 16($0):p2align=1");
+  EXPECT_EQ(StringRef(OutString), "\ti64.load32_u\t16, :p2align=1");
 
   LLVMDisasmDispose(DCR);
 }
