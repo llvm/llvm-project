@@ -19,12 +19,15 @@ define void @no_range() {
 }
 
 ; CHECK-LABEL: @range
+;
+; This had to be disabled when r334428 was reverted.  We should enable this test
+; when r334428 is reapplied with a fix.
 define void @range() {
   %a = call i32 @get_int(), !range !0
   %b = mul i32 %a, 4
   %c = zext i32 %b to i64
   ; CHECK: %c
-  ; CHECK-NEXT: --> (4 * (zext i32 %a to i64))<nuw>
+  ; CHECK-NEXT: --> (zext i32 (4 * %a) to i64)
   ret void
 }
 

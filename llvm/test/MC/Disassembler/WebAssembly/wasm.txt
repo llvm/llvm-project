@@ -5,14 +5,14 @@
 # CHECK: nop
 0x01
 
-# CHECK: i32.add $0=, $0, $0
-# NOTE: registers are meaningless, as there is no context for what they are.
+# CHECK: i32.add
 0x6a
 
-# CHECK: i64.const $0=, -1
+# CHECK: i64.const -1
 0x42 0x7F
 
-# CHECK: i64.load32_u $0=, 16($0):p2align=1
+# CHECK: i64.load32_u 16, :p2align=1
+# FIXME: fix p2align output in WebAssemblyInstPrinter
 0x35 0x01 0x10
 
 # CHECK: block
@@ -25,9 +25,9 @@
 # FIXME: WebAssemblyInstPrinter does not print immediates.
 0x11 0x80 0x01 0x00
 
-# CHECK: get_local $0=, 128
+# CHECK: get_local 128
 0x20 0x80 0x01
 
 # Prefix byte example:
-# CHECK: i64.trunc_u:sat/f64 $0=, $0
+# CHECK: i64.trunc_u:sat/f64
 0xFC 0x07

@@ -10327,34 +10327,42 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
     return DAG.getNode(ISD::FSUB, DL, VT, N1IsFMul ? N0 : N1, Add, Flags);
   }
 
-  // FIXME: Auto-upgrade the target/function-level option.
-  if (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros()) {
-    // fold (fadd A, 0) -> A
-    if (ConstantFPSDNode *N1C = isConstOrConstSplatFP(N1))
-      if (N1C->isZero())
-        return N0;
+  ConstantFPSDNode *N1C = isConstOrConstSplatFP(N1);
+  if (N1C && N1C->isZero()) {
+    if (N1C->isNegative() || Options.UnsafeFPMath ||
+        Flags.hasNoSignedZeros()) {
+      // fold (fadd A, 0) -> A
+      return N0;
+    }
   }
 
-  // If 'unsafe math' is enabled, fold lots of things.
-  if (Options.UnsafeFPMath) {
-    // No FP constant should be created after legalization as Instruction
-    // Selection pass has a hard time dealing with FP constants.
-    bool AllowNewConst = (Level < AfterLegalizeDAG);
+  // No FP constant should be created after legalization as Instruction
+  // Selection pass has a hard time dealing with FP constants.
+  bool AllowNewConst = (Level < AfterLegalizeDAG);
 
+  // If 'unsafe math' or nnan is enabled, fold lots of things.
+  if ((Options.UnsafeFPMath || Flags.hasNoNaNs()) && AllowNewConst) {
+    // If allowed, fold (fadd (fneg x), x) -> 0.0
+    if (N0.getOpcode() == ISD::FNEG && N0.getOperand(0) == N1)
+      return DAG.getConstantFP(0.0, DL, VT);
+
+    // If allowed, fold (fadd x, (fneg x)) -> 0.0
+    if (N1.getOpcode() == ISD::FNEG && N1.getOperand(0) == N0)
+      return DAG.getConstantFP(0.0, DL, VT);
+  }
+
+  // If 'unsafe math' or reassoc and nsz, fold lots of things.
+  // TODO: break out portions of the transformations below for which Unsafe is
+  //       considered and which do not require both nsz and reassoc
+  if ((Options.UnsafeFPMath ||
+       (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
+      AllowNewConst) {
     // fadd (fadd x, c1), c2 -> fadd x, c1 + c2
     if (N1CFP && N0.getOpcode() == ISD::FADD &&
         isConstantFPBuildVectorOrConstantFP(N0.getOperand(1))) {
       SDValue NewC = DAG.getNode(ISD::FADD, DL, VT, N0.getOperand(1), N1, Flags);
       return DAG.getNode(ISD::FADD, DL, VT, N0.getOperand(0), NewC, Flags);
     }
-
-    // If allowed, fold (fadd (fneg x), x) -> 0.0
-    if (AllowNewConst && N0.getOpcode() == ISD::FNEG && N0.getOperand(0) == N1)
-      return DAG.getConstantFP(0.0, DL, VT);
-
-    // If allowed, fold (fadd x, (fneg x)) -> 0.0
-    if (AllowNewConst && N1.getOpcode() == ISD::FNEG && N1.getOperand(0) == N0)
-      return DAG.getConstantFP(0.0, DL, VT);
 
     // We can fold chains of FADD's of the same value into multiplications.
     // This transform is not safe in general because we are reducing the number
@@ -10402,7 +10410,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
         }
       }
 
-      if (N0.getOpcode() == ISD::FADD && AllowNewConst) {
+      if (N0.getOpcode() == ISD::FADD) {
         bool CFP00 = isConstantFPBuildVectorOrConstantFP(N0.getOperand(0));
         // (fadd (fadd x, x), x) -> (fmul x, 3.0)
         if (!CFP00 && N0.getOperand(0) == N0.getOperand(1) &&
@@ -10412,7 +10420,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
         }
       }
 
-      if (N1.getOpcode() == ISD::FADD && AllowNewConst) {
+      if (N1.getOpcode() == ISD::FADD) {
         bool CFP10 = isConstantFPBuildVectorOrConstantFP(N1.getOperand(0));
         // (fadd x, (fadd x, x)) -> (fmul x, 3.0)
         if (!CFP10 && N1.getOperand(0) == N1.getOperand(1) &&
@@ -10423,8 +10431,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
       }
 
       // (fadd (fadd x, x), (fadd x, x)) -> (fmul x, 4.0)
-      if (AllowNewConst &&
-          N0.getOpcode() == ISD::FADD && N1.getOpcode() == ISD::FADD &&
+      if (N0.getOpcode() == ISD::FADD && N1.getOpcode() == ISD::FADD &&
           N0.getOperand(0) == N0.getOperand(1) &&
           N1.getOperand(0) == N1.getOperand(1) &&
           N0.getOperand(0) == N1.getOperand(0)) {

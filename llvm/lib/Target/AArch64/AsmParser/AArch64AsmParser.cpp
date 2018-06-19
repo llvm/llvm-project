@@ -573,14 +573,16 @@ public:
     return DiagnosticPredicateTy::NearMatch;
   }
 
-  bool isSVEPattern() const {
+  DiagnosticPredicate isSVEPattern() const {
     if (!isImm())
-      return false;
+      return DiagnosticPredicateTy::NoMatch;
     auto *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
-      return false;
+      return DiagnosticPredicateTy::NoMatch;
     int64_t Val = MCE->getValue();
-    return Val >= 0 && Val < 32;
+    if (Val >= 0 && Val < 32)
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   bool isSymbolicUImm12Offset(const MCExpr *Expr, unsigned Scale) const {

@@ -10,11 +10,16 @@
 ; don't check that phis are "folded together" because that is a job
 ; for loop strength reduction. But indvars must remove sext, zext, and add i8.
 ;
-; CHECK-NOT: {{sext|zext|add i8}}
 
 ; ModuleID = 'ada.bc'
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32"
 target triple = "i686-pc-linux-gnu"
+
+; CHECK-LABEL: @kinds__sbytezero
+; CHECK:         bb.thread:
+; CHECK:         sext
+; CHECK:         bb:
+; CHECK-NOT:     {{sext i8|zext i8|add i8|trunc}}
 
 define void @kinds__sbytezero([256 x i32]* nocapture %a) nounwind {
 bb.thread:
@@ -35,6 +40,8 @@ bb:		; preds = %bb, %bb.thread
 return:		; preds = %bb
 	ret void
 }
+
+; CHECK-LABEL: @kinds__ubytezero
 
 define void @kinds__ubytezero([256 x i32]* nocapture %a) nounwind {
 bb.thread:

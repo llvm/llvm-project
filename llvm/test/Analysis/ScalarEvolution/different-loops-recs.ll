@@ -322,7 +322,7 @@ define void @test_05(i32 %N) {
 ; CHECK:       %SQ = mul i32 %i.0, %i.0
 ; CHECK-NEXT:  -->  {4,+,5,+,2}<%bb3>
 ; CHECK:       %tmp4 = mul i32 %i.0, 2
-; CHECK-NEXT:  -->  {4,+,2}<nuw><%bb3>
+; CHECK-NEXT:  -->  {4,+,2}<%bb3>
 ; CHECK:       %tmp5 = sub i32 %SQ, %tmp4
 ; CHECK-NEXT:  -->  {0,+,3,+,2}<%bb3>
 

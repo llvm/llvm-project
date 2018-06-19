@@ -18,17 +18,17 @@ uqincw sp
 // Operands not matching up (unsigned inc only has one register operand)
 
 uqincw x0, w0
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqincw x0, w0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 uqincw w0, w0
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqincw w0, w0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 uqincw x0, x0
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqincw x0, x0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -56,12 +56,12 @@ uqincw x0, all, mul #17
 // Invalid predicate patterns
 
 uqincw x0, vl512
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqincw x0, vl512
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 uqincw x0, vl9
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqincw x0, vl9
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

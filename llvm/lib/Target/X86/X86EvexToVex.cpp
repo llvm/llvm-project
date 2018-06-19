@@ -248,30 +248,20 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
   if (Desc.TSFlags & (X86II::EVEX_K | X86II::EVEX_B))
     return false;
 
-  // Check for non EVEX_V512 instrs only.
-  // EVEX_V512 instr: bit EVEX_L2 = 1; bit VEX_L = 0.
-  if ((Desc.TSFlags & X86II::EVEX_L2) && !(Desc.TSFlags & X86II::VEX_L))
+  // Check for EVEX instructions with L2 set. These instructions are 512-bits
+  // and can't be converted to VEX.
+  if (Desc.TSFlags & X86II::EVEX_L2)
     return false;
-
-  // EVEX_V128 instr: bit EVEX_L2 = 0, bit VEX_L = 0.
-  bool IsEVEX_V128 =
-      (!(Desc.TSFlags & X86II::EVEX_L2) && !(Desc.TSFlags & X86II::VEX_L));
-
-  // EVEX_V256 instr: bit EVEX_L2 = 0, bit VEX_L = 1.
-  bool IsEVEX_V256 =
-      (!(Desc.TSFlags & X86II::EVEX_L2) && (Desc.TSFlags & X86II::VEX_L));
 
   unsigned NewOpc = 0;
 
-  // Check for EVEX_V256 instructions.
-  if (IsEVEX_V256) {
+  // Use the VEX.L bit to select the 128 or 256-bit table.
+  if (Desc.TSFlags & X86II::VEX_L) {
     // Search for opcode in the EvexToVex256 table.
     auto It = EvexToVex256Table.find(MI.getOpcode());
     if (It != EvexToVex256Table.end())
       NewOpc = It->second;
-  }
-  // Check for EVEX_V128 or Scalar instructions.
-  else if (IsEVEX_V128) {
+  } else {
     // Search for opcode in the EvexToVex128 table.
     auto It = EvexToVex128Table.find(MI.getOpcode());
     if (It != EvexToVex128Table.end())

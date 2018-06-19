@@ -153,13 +153,15 @@ include "WebAssemblyInstrFormats.td"
 
 multiclass ARGUMENT<WebAssemblyRegClass vt> {
   let hasSideEffects = 1, Uses = [ARGUMENTS], isCodeGenOnly = 1 in
-  def ARGUMENT_#vt : I<(outs vt:$res), (ins i32imm:$argno),
-                       [(set vt:$res, (WebAssemblyargument timm:$argno))]>;
+  defm ARGUMENT_#vt : I<(outs vt:$res), (ins i32imm:$argno),
+                        (outs), (ins i32imm:$argno),
+                        [(set vt:$res, (WebAssemblyargument timm:$argno))]>;
 }
 multiclass SIMD_ARGUMENT<ValueType vt> {
   let hasSideEffects = 1, Uses = [ARGUMENTS], isCodeGenOnly = 1 in
-  def ARGUMENT_#vt : SIMD_I<(outs V128:$res), (ins i32imm:$argno),
-                            [(set (vt V128:$res),
+  defm ARGUMENT_#vt : SIMD_I<(outs V128:$res), (ins i32imm:$argno),
+                             (outs), (ins i32imm:$argno),
+                             [(set (vt V128:$res),
                                   (WebAssemblyargument timm:$argno))]>;
 }
 defm "": ARGUMENT<I32>;
@@ -184,47 +186,56 @@ let hasSideEffects = 0 in {
   // and set_local. COPYs are eliminated (and replaced with
   // get_local/set_local) in the ExplicitLocals pass.
   let isAsCheapAsAMove = 1, isCodeGenOnly = 1 in
-  def COPY_#vt : I<(outs vt:$res), (ins vt:$src), [], "copy_local\t$res, $src">;
+  defm COPY_#vt : I<(outs vt:$res), (ins vt:$src), (outs), (ins), [],
+                    "copy_local\t$res, $src", "copy_local">;
 
   // TEE is similar to COPY, but writes two copies of its result. Typically
   // this would be used to stackify one result and write the other result to a
   // local.
   let isAsCheapAsAMove = 1, isCodeGenOnly = 1 in
-  def TEE_#vt : I<(outs vt:$res, vt:$also), (ins vt:$src), [],
-                  "tee_local\t$res, $also, $src">;
+  defm TEE_#vt : I<(outs vt:$res, vt:$also), (ins vt:$src), (outs), (ins), [],
+                   "tee_local\t$res, $also, $src", "tee_local">;
 
   // This is the actual get_local instruction in wasm. These are made explicit
   // by the ExplicitLocals pass. It has mayLoad because it reads from a wasm
   // local, which is a side effect not otherwise modeled in LLVM.
   let mayLoad = 1, isAsCheapAsAMove = 1 in
-  def GET_LOCAL_#vt : I<(outs vt:$res), (ins local_op:$local), [],
-                        "get_local\t$res, $local", 0x20>;
+  defm GET_LOCAL_#vt : I<(outs vt:$res), (ins local_op:$local),
+                         (outs), (ins local_op:$local), [],
+                         "get_local\t$res, $local", "get_local\t$local", 0x20>;
 
   // This is the actual set_local instruction in wasm. These are made explicit
   // by the ExplicitLocals pass. It has mayStore because it writes to a wasm
   // local, which is a side effect not otherwise modeled in LLVM.
   let mayStore = 1, isAsCheapAsAMove = 1 in
-  def SET_LOCAL_#vt : I<(outs), (ins local_op:$local, vt:$src), [],
-                        "set_local\t$local, $src", 0x21>;
+  defm SET_LOCAL_#vt : I<(outs), (ins local_op:$local, vt:$src),
+                         (outs), (ins local_op:$local), [],
+                         "set_local\t$local, $src", "set_local\t$local", 0x21>;
 
   // This is the actual tee_local instruction in wasm. TEEs are turned into
   // TEE_LOCALs by the ExplicitLocals pass. It has mayStore for the same reason
   // as SET_LOCAL.
   let mayStore = 1, isAsCheapAsAMove = 1 in
-  def TEE_LOCAL_#vt : I<(outs vt:$res), (ins local_op:$local, vt:$src), [],
-                         "tee_local\t$res, $local, $src", 0x22>;
+  defm TEE_LOCAL_#vt : I<(outs vt:$res), (ins local_op:$local, vt:$src),
+                         (outs), (ins local_op:$local), [],
+                         "tee_local\t$res, $local, $src", "tee_local\t$local",
+                         0x22>;
 
   // Unused values must be dropped in some contexts.
-  def DROP_#vt : I<(outs), (ins vt:$src), [],
-                   "drop\t$src", 0x1a>;
+  defm DROP_#vt : I<(outs), (ins vt:$src), (outs), (ins), [],
+                    "drop\t$src", "drop", 0x1a>;
 
   let mayLoad = 1 in
-  def GET_GLOBAL_#vt : I<(outs vt:$res), (ins global_op:$local), [],
-                         "get_global\t$res, $local", 0x23>;
+  defm GET_GLOBAL_#vt : I<(outs vt:$res), (ins global_op:$local),
+                          (outs), (ins global_op:$local), [],
+                          "get_global\t$res, $local", "get_global\t$local",
+                          0x23>;
 
   let mayStore = 1 in
-  def SET_GLOBAL_#vt : I<(outs), (ins global_op:$local, vt:$src), [],
-                         "set_global\t$local, $src", 0x24>;
+  defm SET_GLOBAL_#vt : I<(outs), (ins global_op:$local, vt:$src),
+                          (outs), (ins global_op:$local), [],
+                          "set_global\t$local, $src", "set_global\t$local",
+                          0x24>;
 
 } // hasSideEffects = 0
 }
@@ -236,18 +247,22 @@ defm "" : LOCAL<V128>, Requires<[HasSIMD128]>;
 defm "" : LOCAL<EXCEPT_REF>, Requires<[HasExceptionHandling]>;
 
 let isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1 in {
-def CONST_I32 : I<(outs I32:$res), (ins i32imm_op:$imm),
-                  [(set I32:$res, imm:$imm)],
-                  "i32.const\t$res, $imm", 0x41>;
-def CONST_I64 : I<(outs I64:$res), (ins i64imm_op:$imm),
-                  [(set I64:$res, imm:$imm)],
-                  "i64.const\t$res, $imm", 0x42>;
-def CONST_F32 : I<(outs F32:$res), (ins f32imm_op:$imm),
-                  [(set F32:$res, fpimm:$imm)],
-                  "f32.const\t$res, $imm", 0x43>;
-def CONST_F64 : I<(outs F64:$res), (ins f64imm_op:$imm),
-                  [(set F64:$res, fpimm:$imm)],
-                  "f64.const\t$res, $imm", 0x44>;
+defm CONST_I32 : I<(outs I32:$res), (ins i32imm_op:$imm),
+                   (outs), (ins i32imm_op:$imm),
+                   [(set I32:$res, imm:$imm)],
+                   "i32.const\t$res, $imm", "i32.const\t$imm", 0x41>;
+defm CONST_I64 : I<(outs I64:$res), (ins i64imm_op:$imm),
+                   (outs), (ins i64imm_op:$imm),
+                   [(set I64:$res, imm:$imm)],
+                   "i64.const\t$res, $imm", "i64.const\t$imm", 0x42>;
+defm CONST_F32 : I<(outs F32:$res), (ins f32imm_op:$imm),
+                   (outs), (ins f32imm_op:$imm),
+                   [(set F32:$res, fpimm:$imm)],
+                   "f32.const\t$res, $imm", "f32.const\t$imm", 0x43>;
+defm CONST_F64 : I<(outs F64:$res), (ins f64imm_op:$imm),
+                   (outs), (ins f64imm_op:$imm),
+                   [(set F64:$res, fpimm:$imm)],
+                   "f64.const\t$res, $imm", "f64.const\t$imm", 0x44>;
 } // isMoveImm = 1, isAsCheapAsAMove = 1, isReMaterializable = 1
 
 } // Defs = [ARGUMENTS]

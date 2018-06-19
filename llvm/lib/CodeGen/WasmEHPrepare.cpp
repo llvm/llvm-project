@@ -116,6 +116,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
@@ -328,4 +329,46 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, unsigned Index) {
   assert(GetSelectorCI && "wasm.get.ehselector() call does not exist");
   GetSelectorCI->replaceAllUsesWith(Selector);
   GetSelectorCI->eraseFromParent();
+}
+
+void llvm::calculateWasmEHInfo(const Function *F, WasmEHFuncInfo &EHInfo) {
+  for (const auto &BB : *F) {
+    if (!BB.isEHPad())
+      continue;
+    const Instruction *Pad = BB.getFirstNonPHI();
+
+    // If an exception is not caught by a catchpad (i.e., it is a foreign
+    // exception), it will unwind to its parent catchswitch's unwind
+    // destination. We don't record an unwind destination for cleanuppads
+    // because every exception should be caught by it.
+    if (const auto *CatchPad = dyn_cast<CatchPadInst>(Pad)) {
+      const auto *UnwindBB = CatchPad->getCatchSwitch()->getUnwindDest();
+      if (!UnwindBB)
+        continue;
+      const Instruction *UnwindPad = UnwindBB->getFirstNonPHI();
+      if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(UnwindPad))
+        // Currently there should be only one handler per a catchswitch.
+        EHInfo.setEHPadUnwindDest(&BB, *CatchSwitch->handlers().begin());
+      else // cleanuppad
+        EHInfo.setEHPadUnwindDest(&BB, UnwindBB);
+    }
+  }
+
+  // Record the unwind destination for invoke and cleanupret instructions.
+  for (const auto &BB : *F) {
+    const Instruction *TI = BB.getTerminator();
+    BasicBlock *UnwindBB = nullptr;
+    if (const auto *Invoke = dyn_cast<InvokeInst>(TI))
+      UnwindBB = Invoke->getUnwindDest();
+    else if (const auto *CleanupRet = dyn_cast<CleanupReturnInst>(TI))
+      UnwindBB = CleanupRet->getUnwindDest();
+    if (!UnwindBB)
+      continue;
+    const Instruction *UnwindPad = UnwindBB->getFirstNonPHI();
+    if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(UnwindPad))
+      // Currently there should be only one handler per a catchswitch.
+      EHInfo.setThrowUnwindDest(&BB, *CatchSwitch->handlers().begin());
+    else // cleanuppad
+      EHInfo.setThrowUnwindDest(&BB, UnwindBB);
+  }
 }

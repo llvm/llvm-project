@@ -18,17 +18,17 @@ uqdecd sp
 // Operands not matching up (unsigned dec only has one register operand)
 
 uqdecd x0, w0
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqdecd x0, w0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 uqdecd w0, w0
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqdecd w0, w0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 uqdecd x0, x0
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqdecd x0, x0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -56,12 +56,12 @@ uqdecd x0, all, mul #17
 // Invalid predicate patterns
 
 uqdecd x0, vl512
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqdecd x0, vl512
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 uqdecd x0, vl9
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqdecd x0, vl9
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
