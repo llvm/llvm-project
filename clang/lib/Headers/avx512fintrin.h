@@ -9579,293 +9579,186 @@ _mm512_mask_reduce_mul_ps(__mmask16 __M, __m512 __W) {
 #undef _mm512_reduce_operator_32bit
 #undef _mm512_mask_reduce_operator_32bit
 
-/* Used bisection method. At each step, we partition the vector with previous
- * step in half, and the operation is performed on its two halves.
- * This takes log2(n) steps where n is the number of elements in the vector.
- * This macro uses only intrinsics from the AVX512F feature.
-
- * Vec512 - Vector with size of 512.
- * IntrinName - Can be one of following: {max|min}_{epi64|epu64|pd} for example:
- *              __mm512_max_epi64
- * T1 - Can get 'i' for int and 'd' for double.[__m512{i|d}]
- * T2 - Can get 'i' for int and 'f' for float. [__v8d{i|f}]
- */
-
-#define _mm512_reduce_maxMin_64bit(Vec512, IntrinName, T1, T2) __extension__({ \
-        Vec512 = _mm512_##IntrinName(                                          \
-                                (__m512##T1)__builtin_shufflevector(           \
-                                                (__v8d##T2)Vec512,             \
-                                                (__v8d##T2)Vec512,             \
-                                                 0, 1, 2, 3, -1, -1, -1, -1),  \
-                                (__m512##T1)__builtin_shufflevector(           \
-                                                (__v8d##T2)Vec512,             \
-                                                (__v8d##T2)Vec512,             \
-                                                 4, 5, 6, 7, -1, -1, -1, -1)); \
-        Vec512 = _mm512_##IntrinName(                                          \
-                                (__m512##T1)__builtin_shufflevector(           \
-                                                (__v8d##T2)Vec512,             \
-                                                (__v8d##T2)Vec512,             \
-                                                 0, 1, -1, -1, -1, -1, -1, -1),\
-                                (__m512##T1)__builtin_shufflevector(           \
-                                                (__v8d##T2)Vec512,             \
-                                                (__v8d##T2)Vec512,             \
-                                                 2, 3, -1, -1, -1, -1, -1,     \
-                                                 -1));                         \
-        Vec512 = _mm512_##IntrinName(                                          \
-                                (__m512##T1)__builtin_shufflevector(           \
-                                                (__v8d##T2)Vec512,             \
-                                                (__v8d##T2)Vec512,             \
-                                                0, -1, -1, -1, -1, -1, -1, -1),\
-                                (__m512##T1)__builtin_shufflevector(           \
-                                                (__v8d##T2)Vec512,             \
-                                                (__v8d##T2)Vec512,             \
-                                                1, -1, -1, -1, -1, -1, -1, -1))\
-                                                ;                              \
-    return Vec512[0];                                                          \
-  })
+#define _mm512_mask_reduce_operator(op) \
+  __m512i __t1 = (__m512i)__builtin_shufflevector((__v8di)__V, (__v8di)__V, 4, 5, 6, 7, 0, 1, 2, 3); \
+  __m512i __t2 = _mm512_##op(__V, __t1); \
+  __m512i __t3 = (__m512i)__builtin_shufflevector((__v8di)__t2, (__v8di)__t2, 2, 3, 0, 1, 6, 7, 4, 5); \
+  __m512i __t4 = _mm512_##op(__t2, __t3); \
+  __m512i __t5 = (__m512i)__builtin_shufflevector((__v8di)__t4, (__v8di)__t4, 1, 0, 3, 2, 5, 4, 7, 6); \
+  __v8di __t6 = (__v8di)_mm512_##op(__t4, __t5); \
+  return __t6[0];
 
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm512_reduce_max_epi64(__m512i __V) {
-  _mm512_reduce_maxMin_64bit(__V, max_epi64, i, i);
+  _mm512_mask_reduce_operator(max_epi64);
 }
 
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 _mm512_reduce_max_epu64(__m512i __V) {
-  _mm512_reduce_maxMin_64bit(__V, max_epu64, i, i);
+  _mm512_mask_reduce_operator(max_epu64);
 }
 
-static __inline__ double __DEFAULT_FN_ATTRS
-_mm512_reduce_max_pd(__m512d __V) {
-  _mm512_reduce_maxMin_64bit(__V, max_pd, d, f);
-}
-
-static __inline__ long long __DEFAULT_FN_ATTRS _mm512_reduce_min_epi64
-(__m512i __V) {
-  _mm512_reduce_maxMin_64bit(__V, min_epi64, i, i);
+static __inline__ long long __DEFAULT_FN_ATTRS
+_mm512_reduce_min_epi64(__m512i __V) {
+  _mm512_mask_reduce_operator(min_epi64);
 }
 
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 _mm512_reduce_min_epu64(__m512i __V) {
-  _mm512_reduce_maxMin_64bit(__V, min_epu64, i, i);
+  _mm512_mask_reduce_operator(min_epu64);
 }
-
-static __inline__ double __DEFAULT_FN_ATTRS
-_mm512_reduce_min_pd(__m512d __V) {
-  _mm512_reduce_maxMin_64bit(__V, min_pd, d, f);
-}
-
-/* Vec512 - Vector with size 512.
- * Vec512Neutral - A 512 length vector with elements set to the identity element
- * Identity element: {max_epi,0x8000000000000000}
- *                   {max_epu,0x0000000000000000}
- *                   {max_pd, 0xFFF0000000000000}
- *                   {min_epi,0x7FFFFFFFFFFFFFFF}
- *                   {min_epu,0xFFFFFFFFFFFFFFFF}
- *                   {min_pd, 0x7FF0000000000000}
- *
- * IntrinName - Can be one of following: {max|min}_{epi64|epu64|pd} for example:
- *              __mm512_max_epi64
- * T1 - Can get 'i' for int and 'd' for double.[__m512{i|d}]
- * T2 - Can get 'i' for int and 'f' for float. [__v8d{i|f}]
- * T3 - Can get 'q' q word and 'pd' for packed double.
- *      [__builtin_ia32_select{q|pd}_512]
- * Mask - Intrinsic Mask
- */
-
-#define _mm512_mask_reduce_maxMin_64bit(Vec512, Vec512Neutral, IntrinName, T1, \
-                                        T2, T3, Mask)                          \
-  __extension__({                                                              \
-    Vec512 = (__m512##T1)__builtin_ia32_select##T3##_512(                      \
-                             (__mmask8)Mask,                                   \
-                             (__v8d##T2)Vec512,                                \
-                             (__v8d##T2)Vec512Neutral);                        \
-    _mm512_reduce_maxMin_64bit(Vec512, IntrinName, T1, T2);                    \
-  })
 
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_max_epi64(__mmask8 __M, __m512i __V) {
-  _mm512_mask_reduce_maxMin_64bit(__V, _mm512_set1_epi64(0x8000000000000000),
-                                  max_epi64, i, i, q, __M);
+  __V = _mm512_mask_mov_epi64(_mm512_set1_epi64(-__LONG_LONG_MAX__ - 1LL), __M, __V);
+  _mm512_mask_reduce_operator(max_epi64);
 }
 
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_max_epu64(__mmask8 __M, __m512i __V) {
-  _mm512_mask_reduce_maxMin_64bit(__V, _mm512_set1_epi64(0x0000000000000000),
-                                  max_epu64, i, i, q, __M);
-}
-
-static __inline__ double __DEFAULT_FN_ATTRS
-_mm512_mask_reduce_max_pd(__mmask8 __M, __m512d __V) {
-  _mm512_mask_reduce_maxMin_64bit(__V, _mm512_set1_pd(-__builtin_inf()),
-                                  max_pd, d, f, pd, __M);
+  __V = _mm512_maskz_mov_epi64(__M, __V);
+  _mm512_mask_reduce_operator(max_epu64);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_min_epi64(__mmask8 __M, __m512i __V) {
-  _mm512_mask_reduce_maxMin_64bit(__V, _mm512_set1_epi64(0x7FFFFFFFFFFFFFFF),
-                                  min_epi64, i, i, q, __M);
+  __V = _mm512_mask_mov_epi64(_mm512_set1_epi64(__LONG_LONG_MAX__), __M, __V);
+  _mm512_mask_reduce_operator(min_epi64);
 }
 
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_min_epu64(__mmask8 __M, __m512i __V) {
-  _mm512_mask_reduce_maxMin_64bit(__V, _mm512_set1_epi64(0xFFFFFFFFFFFFFFFF),
-                                  min_epu64, i, i, q, __M);
+  __V = _mm512_mask_mov_epi64(_mm512_set1_epi64(~0ULL), __M, __V);
+  _mm512_mask_reduce_operator(min_epu64);
 }
+#undef _mm512_mask_reduce_operator
 
-static __inline__ double __DEFAULT_FN_ATTRS
-_mm512_mask_reduce_min_pd(__mmask8 __M, __m512d __V) {
-  _mm512_mask_reduce_maxMin_64bit(__V, _mm512_set1_pd(__builtin_inf()),
-                                  min_pd, d, f, pd, __M);
-}
-#undef _mm512_reduce_maxMin_64bit
-#undef _mm512_mask_reduce_maxMin_64bit
+#define _mm512_mask_reduce_operator(op) \
+  __m256i __t1 = _mm512_extracti64x4_epi64(__V, 0); \
+  __m256i __t2 = _mm512_extracti64x4_epi64(__V, 1); \
+  __m256i __t3 = _mm256_##op(__t1, __t2); \
+  __m128i __t4 = _mm256_extracti128_si256(__t3, 0); \
+  __m128i __t5 = _mm256_extracti128_si256(__t3, 1); \
+  __m128i __t6 = _mm_##op(__t4, __t5); \
+  __m128i __t7 = (__m128i)__builtin_shufflevector((__v4si)__t6, (__v4si)__t6, 2, 3, 0, 1); \
+  __m128i __t8 = _mm_##op(__t6, __t7); \
+  __m128i __t9 = (__m128i)__builtin_shufflevector((__v4si)__t8, (__v4si)__t8, 1, 0, 3, 2); \
+  __v4si __t10 = (__v4si)_mm_##op(__t8, __t9); \
+  return __t10[0];
 
-/* Vec512 - Vector with size 512.
- * IntrinName - Can be one of following: {max|min}_{epi32|epu32|ps} for example:
- *              __mm512_max_epi32
- * T1 - Can get 'i' for int and ' ' .[__m512{i|}]
- * T2 - Can get 'i' for int and 'f' for float.[__v16s{i|f}]
- */
-
-#define _mm512_reduce_maxMin_32bit(Vec512, IntrinName, T1, T2) __extension__({ \
-    Vec512 = _mm512_##IntrinName(                                              \
-                  (__m512##T1)__builtin_shufflevector(                         \
-                                  (__v16s##T2)Vec512,                          \
-                                  (__v16s##T2)Vec512,                          \
-                                  0, 1, 2, 3, 4, 5, 6, 7,                      \
-                                  -1, -1, -1, -1, -1, -1, -1, -1),             \
-                  (__m512##T1)__builtin_shufflevector(                         \
-                                  (__v16s##T2)Vec512,                          \
-                                  (__v16s##T2)Vec512,                          \
-                                  8, 9, 10, 11, 12, 13, 14, 15,                \
-                                  -1, -1, -1, -1, -1, -1, -1, -1));            \
-    Vec512 = _mm512_##IntrinName(                                              \
-                  (__m512##T1)__builtin_shufflevector(                         \
-                                  (__v16s##T2)Vec512,                          \
-                                  (__v16s##T2)Vec512,                          \
-                                  0, 1, 2, 3, -1, -1, -1, -1,                  \
-                                  -1, -1, -1, -1, -1, -1, -1, -1),             \
-                  (__m512##T1)__builtin_shufflevector(                         \
-                                  (__v16s##T2)Vec512,                          \
-                                  (__v16s##T2)Vec512,                          \
-                                  4, 5, 6, 7, -1, -1, -1, -1,                  \
-                                  -1, -1, -1, -1, -1, -1, -1, -1));            \
-    Vec512 = _mm512_##IntrinName(                                              \
-                  (__m512##T1)__builtin_shufflevector(                         \
-                                  (__v16s##T2)Vec512,                          \
-                                  (__v16s##T2)Vec512,                          \
-                                  0, 1, -1, -1, -1, -1, -1, -1,                \
-                                  -1, -1, -1, -1, -1, -1, -1, -1),             \
-                  (__m512##T1)__builtin_shufflevector(                         \
-                                  (__v16s##T2)Vec512,                          \
-                                  (__v16s##T2)Vec512,                          \
-                                  2, 3, -1, -1, -1, -1, -1, -1,                \
-                                  -1, -1, -1, -1, -1, -1, -1, -1));            \
-    Vec512 = _mm512_##IntrinName(                                              \
-                  (__m512##T1)__builtin_shufflevector(                         \
-                                  (__v16s##T2)Vec512,                          \
-                                  (__v16s##T2)Vec512,                          \
-                                  0,  -1, -1, -1, -1, -1, -1, -1,              \
-                                  -1, -1, -1, -1, -1, -1, -1, -1),             \
-                  (__m512##T1)__builtin_shufflevector(                         \
-                                  (__v16s##T2)Vec512,                          \
-                                  (__v16s##T2)Vec512,                          \
-                                  1, -1, -1, -1, -1, -1, -1, -1,               \
-                                  -1, -1, -1, -1, -1, -1, -1, -1));            \
-    return Vec512[0];                                                          \
-  })
-
-static __inline__ int __DEFAULT_FN_ATTRS _mm512_reduce_max_epi32(__m512i a) {
-  _mm512_reduce_maxMin_32bit(a, max_epi32, i, i);
+static __inline__ int __DEFAULT_FN_ATTRS
+_mm512_reduce_max_epi32(__m512i __V) {
+  _mm512_mask_reduce_operator(max_epi32);
 }
 
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
-_mm512_reduce_max_epu32(__m512i a) {
-  _mm512_reduce_maxMin_32bit(a, max_epu32, i, i);
+_mm512_reduce_max_epu32(__m512i __V) {
+  _mm512_mask_reduce_operator(max_epu32);
 }
 
-static __inline__ float __DEFAULT_FN_ATTRS _mm512_reduce_max_ps(__m512 a) {
-  _mm512_reduce_maxMin_32bit(a, max_ps, , f);
-}
-
-static __inline__ int __DEFAULT_FN_ATTRS _mm512_reduce_min_epi32(__m512i a) {
-  _mm512_reduce_maxMin_32bit(a, min_epi32, i, i);
+static __inline__ int __DEFAULT_FN_ATTRS
+_mm512_reduce_min_epi32(__m512i __V) {
+  _mm512_mask_reduce_operator(min_epi32);
 }
 
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
-_mm512_reduce_min_epu32(__m512i a) {
-  _mm512_reduce_maxMin_32bit(a, min_epu32, i, i);
+_mm512_reduce_min_epu32(__m512i __V) {
+  _mm512_mask_reduce_operator(min_epu32);
 }
-
-static __inline__ float __DEFAULT_FN_ATTRS _mm512_reduce_min_ps(__m512 a) {
-  _mm512_reduce_maxMin_32bit(a, min_ps, , f);
-}
-
-/* Vec512 - Vector with size 512.
- * Vec512Neutral - A 512 length vector with elements set to the identity element
- * Identity element: {max_epi,0x80000000}
- *                   {max_epu,0x00000000}
- *                   {max_ps, 0xFF800000}
- *                   {min_epi,0x7FFFFFFF}
- *                   {min_epu,0xFFFFFFFF}
- *                   {min_ps, 0x7F800000}
- *
- * IntrinName - Can be one of following: {max|min}_{epi32|epu32|ps} for example:
- *              __mm512_max_epi32
- * T1 - Can get 'i' for int and ' ' .[__m512{i|}]
- * T2 - Can get 'i' for int and 'f' for float.[__v16s{i|f}]
- * T3 - Can get 'q' q word and 'pd' for packed double.
- *      [__builtin_ia32_select{q|pd}_512]
- * Mask - Intrinsic Mask
- */
-
-#define _mm512_mask_reduce_maxMin_32bit(Vec512, Vec512Neutral, IntrinName, T1, \
-                                        T2, T3, Mask)                          \
-  __extension__({                                                              \
-    Vec512 = (__m512##T1)__builtin_ia32_select##T3##_512(                      \
-                                        (__mmask16)Mask,                       \
-                                        (__v16s##T2)Vec512,                    \
-                                        (__v16s##T2)Vec512Neutral);            \
-   _mm512_reduce_maxMin_32bit(Vec512, IntrinName, T1, T2);                     \
-   })
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_max_epi32(__mmask16 __M, __m512i __V) {
-  _mm512_mask_reduce_maxMin_32bit(__V, _mm512_set1_epi32(0x80000000), max_epi32,
-                                  i, i, d, __M);
+  __V = _mm512_mask_mov_epi32(_mm512_set1_epi32(-__INT_MAX__ - 1), __M, __V);
+  _mm512_mask_reduce_operator(max_epi32);
 }
 
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_max_epu32(__mmask16 __M, __m512i __V) {
-  _mm512_mask_reduce_maxMin_32bit(__V, _mm512_set1_epi32(0x00000000), max_epu32,
-                                  i, i, d, __M);
-}
-
-static __inline__ float __DEFAULT_FN_ATTRS
-_mm512_mask_reduce_max_ps(__mmask16 __M, __m512 __V) {
-  _mm512_mask_reduce_maxMin_32bit(__V,_mm512_set1_ps(-__builtin_inff()), max_ps, , f,
-                                  ps, __M);
+  __V = _mm512_maskz_mov_epi32(__M, __V);
+  _mm512_mask_reduce_operator(max_epu32);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_min_epi32(__mmask16 __M, __m512i __V) {
-  _mm512_mask_reduce_maxMin_32bit(__V, _mm512_set1_epi32(0x7FFFFFFF), min_epi32,
-                                  i, i, d, __M);
+  __V = _mm512_mask_mov_epi32(_mm512_set1_epi32(__INT_MAX__), __M, __V);
+  _mm512_mask_reduce_operator(min_epi32);
 }
 
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_min_epu32(__mmask16 __M, __m512i __V) {
-  _mm512_mask_reduce_maxMin_32bit(__V, _mm512_set1_epi32(0xFFFFFFFF), min_epu32,
-                                  i, i, d, __M);
+  __V = _mm512_mask_mov_epi32(_mm512_set1_epi32(~0U), __M, __V);
+  _mm512_mask_reduce_operator(min_epu32);
+}
+
+#define _mm512_mask_reduce_operator(op) \
+  __m256d __t1 = _mm512_extractf64x4_pd(__V, 0); \
+  __m256d __t2 = _mm512_extractf64x4_pd(__V, 1); \
+  __m256d __t3 = _mm256_##op(__t1, __t2); \
+  __m128d __t4 = _mm256_extractf128_pd(__t3, 0); \
+  __m128d __t5 = _mm256_extractf128_pd(__t3, 1); \
+  __m128d __t6 = _mm_##op(__t4, __t5); \
+  __m128d __t7 = __builtin_shufflevector(__t6, __t6, 1, 0); \
+  __m128d __t8 = _mm_##op(__t6, __t7); \
+  return __t8[0];
+
+static __inline__ double __DEFAULT_FN_ATTRS
+_mm512_reduce_max_pd(__m512d __V) {
+  _mm512_mask_reduce_operator(max_pd);
+}
+
+static __inline__ double __DEFAULT_FN_ATTRS
+_mm512_reduce_min_pd(__m512d __V) {
+  _mm512_mask_reduce_operator(min_pd);
+}
+
+static __inline__ double __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_max_pd(__mmask8 __M, __m512d __V) {
+  __V = _mm512_mask_mov_pd(_mm512_set1_pd(-__builtin_inf()), __M, __V);
+  _mm512_mask_reduce_operator(max_pd);
+}
+
+static __inline__ double __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_min_pd(__mmask8 __M, __m512d __V) {
+  __V = _mm512_mask_mov_pd(_mm512_set1_pd(__builtin_inf()), __M, __V);
+  _mm512_mask_reduce_operator(min_pd);
+}
+#undef _mm512_mask_reduce_operator
+
+#define _mm512_mask_reduce_operator(op) \
+  __m256 __t1 = (__m256)_mm512_extractf64x4_pd((__m512d)__V, 0); \
+  __m256 __t2 = (__m256)_mm512_extractf64x4_pd((__m512d)__V, 1); \
+  __m256 __t3 = _mm256_##op(__t1, __t2); \
+  __m128 __t4 = _mm256_extractf128_ps(__t3, 0); \
+  __m128 __t5 = _mm256_extractf128_ps(__t3, 1); \
+  __m128 __t6 = _mm_##op(__t4, __t5); \
+  __m128 __t7 = __builtin_shufflevector(__t6, __t6, 2, 3, 0, 1); \
+  __m128 __t8 = _mm_##op(__t6, __t7); \
+  __m128 __t9 = __builtin_shufflevector(__t8, __t8, 1, 0, 3, 2); \
+  __m128 __t10 = _mm_##op(__t8, __t9); \
+  return __t10[0];
+
+static __inline__ float __DEFAULT_FN_ATTRS
+_mm512_reduce_max_ps(__m512 __V) {
+  _mm512_mask_reduce_operator(max_ps);
+}
+
+static __inline__ float __DEFAULT_FN_ATTRS
+_mm512_reduce_min_ps(__m512 __V) {
+  _mm512_mask_reduce_operator(min_ps);
+}
+
+static __inline__ float __DEFAULT_FN_ATTRS
+_mm512_mask_reduce_max_ps(__mmask16 __M, __m512 __V) {
+  __V = _mm512_mask_mov_ps(_mm512_set1_ps(-__builtin_inff()), __M, __V);
+  _mm512_mask_reduce_operator(max_ps);
 }
 
 static __inline__ float __DEFAULT_FN_ATTRS
 _mm512_mask_reduce_min_ps(__mmask16 __M, __m512 __V) {
-  _mm512_mask_reduce_maxMin_32bit(__V, _mm512_set1_ps(__builtin_inff()), min_ps, , f,
-                                  ps, __M);
+  __V = _mm512_mask_mov_ps(_mm512_set1_ps(__builtin_inff()), __M, __V);
+  _mm512_mask_reduce_operator(min_ps);
 }
-#undef _mm512_reduce_maxMin_32bit
-#undef _mm512_mask_reduce_maxMin_32bit
+#undef _mm512_mask_reduce_operator
 
 #undef __DEFAULT_FN_ATTRS
 

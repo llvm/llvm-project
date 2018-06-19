@@ -5910,15 +5910,15 @@ let Predicates = [UseSSE41] in {
   def : Pat<(v4f32 (ftrunc VR128:$src)),
             (ROUNDPSr VR128:$src, (i32 0xB))>;
 
-  def : Pat<(v4f32 (ffloor (loadv4f32 addr:$src))),
+  def : Pat<(v4f32 (ffloor (memopv4f32 addr:$src))),
             (ROUNDPSm addr:$src, (i32 0x9))>;
-  def : Pat<(v4f32 (fnearbyint (loadv4f32 addr:$src))),
+  def : Pat<(v4f32 (fnearbyint (memopv4f32 addr:$src))),
             (ROUNDPSm addr:$src, (i32 0xC))>;
-  def : Pat<(v4f32 (fceil (loadv4f32 addr:$src))),
+  def : Pat<(v4f32 (fceil (memopv4f32 addr:$src))),
             (ROUNDPSm addr:$src, (i32 0xA))>;
-  def : Pat<(v4f32 (frint (loadv4f32 addr:$src))),
+  def : Pat<(v4f32 (frint (memopv4f32 addr:$src))),
             (ROUNDPSm addr:$src, (i32 0x4))>;
-  def : Pat<(v4f32 (ftrunc (loadv4f32 addr:$src))),
+  def : Pat<(v4f32 (ftrunc (memopv4f32 addr:$src))),
             (ROUNDPSm addr:$src, (i32 0xB))>;
 
   def : Pat<(v2f64 (ffloor VR128:$src)),
@@ -5932,17 +5932,26 @@ let Predicates = [UseSSE41] in {
   def : Pat<(v2f64 (ftrunc VR128:$src)),
             (ROUNDPDr VR128:$src, (i32 0xB))>;
 
-  def : Pat<(v2f64 (ffloor (loadv2f64 addr:$src))),
+  def : Pat<(v2f64 (ffloor (memopv2f64 addr:$src))),
             (ROUNDPDm addr:$src, (i32 0x9))>;
-  def : Pat<(v2f64 (fnearbyint (loadv2f64 addr:$src))),
+  def : Pat<(v2f64 (fnearbyint (memopv2f64 addr:$src))),
             (ROUNDPDm addr:$src, (i32 0xC))>;
-  def : Pat<(v2f64 (fceil (loadv2f64 addr:$src))),
+  def : Pat<(v2f64 (fceil (memopv2f64 addr:$src))),
             (ROUNDPDm addr:$src, (i32 0xA))>;
-  def : Pat<(v2f64 (frint (loadv2f64 addr:$src))),
+  def : Pat<(v2f64 (frint (memopv2f64 addr:$src))),
             (ROUNDPDm addr:$src, (i32 0x4))>;
-  def : Pat<(v2f64 (ftrunc (loadv2f64 addr:$src))),
+  def : Pat<(v2f64 (ftrunc (memopv2f64 addr:$src))),
             (ROUNDPDm addr:$src, (i32 0xB))>;
 }
+
+defm : scalar_unary_math_imm_patterns<ffloor, "ROUNDSS", X86Movss,
+                                      v4f32, 0x01, UseSSE41>;
+defm : scalar_unary_math_imm_patterns<fceil, "ROUNDSS", X86Movss,
+                                      v4f32, 0x02, UseSSE41>;
+defm : scalar_unary_math_imm_patterns<ffloor, "ROUNDSD", X86Movsd,
+                                      v2f64, 0x01, UseSSE41>;
+defm : scalar_unary_math_imm_patterns<fceil, "ROUNDSD", X86Movsd,
+                                      v2f64, 0x02, UseSSE41>;
 
 //===----------------------------------------------------------------------===//
 // SSE4.1 - Packed Bit Test

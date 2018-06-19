@@ -3094,14 +3094,13 @@ void ScriptInterpreterPython::InitializePrivate() {
   PyRun_SimpleString("import sys");
   AddToSysPath(AddLocation::End, ".");
 
-  FileSpec file_spec;
   // Don't denormalize paths when calling file_spec.GetPath().  On platforms
   // that use a backslash as the path separator, this will result in executing
   // python code containing paths with unescaped backslashes.  But Python also
   // accepts forward slashes, so to make life easier we just use that.
-  if (HostInfo::GetLLDBPath(ePathTypePythonDir, file_spec))
+  if (FileSpec file_spec = HostInfo::GetPythonDir())
     AddToSysPath(AddLocation::Beginning, file_spec.GetPath(false));
-  if (HostInfo::GetLLDBPath(ePathTypeLLDBShlibDir, file_spec))
+  if (FileSpec file_spec = HostInfo::GetShlibDir())
     AddToSysPath(AddLocation::Beginning, file_spec.GetPath(false));
 
   PyRun_SimpleString("sys.dont_write_bytecode = 1; import "

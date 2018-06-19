@@ -68,8 +68,7 @@ void ModuleCacheTest::SetUpTestCase() {
   HostInfo::Initialize();
   ObjectFileELF::Initialize();
 
-  FileSpec tmpdir_spec;
-  HostInfo::GetLLDBPath(lldb::ePathTypeLLDBTempSystemDir, s_cache_dir);
+  s_cache_dir = HostInfo::GetProcessTempDir();
   s_test_executable = GetInputFilePath(module_name);
 }
 

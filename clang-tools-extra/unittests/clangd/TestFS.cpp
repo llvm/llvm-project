@@ -66,7 +66,9 @@ std::string testPath(PathRef File) {
   return Path.str();
 }
 
-/// unittest: is a scheme that refers to files relative to testRoot()
+/// unittest: is a scheme that refers to files relative to testRoot().
+/// URI body is a path relative to testRoot() e.g. unittest:///x.h for
+/// /clangd-test/x.h.
 class TestScheme : public URIScheme {
 public:
   static const char *Scheme;
@@ -75,6 +77,10 @@ public:
   getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
                   llvm::StringRef HintPath) const override {
     assert(HintPath.startswith(testRoot()));
+    if (!Body.consume_front("/"))
+      return llvm::make_error<llvm::StringError>(
+          "Body of an unittest: URI must start with '/'",
+          llvm::inconvertibleErrorCode());
     llvm::SmallString<16> Path(Body.begin(), Body.end());
     llvm::sys::path::native(Path);
     return testPath(Path);

@@ -104,8 +104,8 @@ FileSpec HostInfoWindows::GetDefaultShell() {
 }
 
 bool HostInfoWindows::ComputePythonDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
   llvm::SmallString<64> path(lldb_file_spec.GetDirectory().AsCString());
   llvm::sys::path::remove_filename(path);
