@@ -1,8 +1,8 @@
 RUN: %cpp_compiler %S/NullDerefTest.cpp -o %t-NullDerefTest
-RUN: env ASAN_OPTIONS=handle_segv=0 not %t-NullDerefTest 2>&1 | FileCheck %s --check-prefix=LIBFUZZER_OWN_SEGV_HANDLER
+RUN: env ASAN_OPTIONS=handle_segv=0 not %run %t-NullDerefTest 2>&1 | FileCheck %s --check-prefix=LIBFUZZER_OWN_SEGV_HANDLER
 LIBFUZZER_OWN_SEGV_HANDLER: == ERROR: libFuzzer: deadly signal
 LIBFUZZER_OWN_SEGV_HANDLER: SUMMARY: libFuzzer: deadly signal
 LIBFUZZER_OWN_SEGV_HANDLER: Test unit written to ./crash-
 
-RUN: env ASAN_OPTIONS=handle_segv=1 not %t-NullDerefTest 2>&1 | FileCheck %s --check-prefix=LIBFUZZER_ASAN_SEGV_HANDLER
+RUN: env ASAN_OPTIONS=handle_segv=1 not %run %t-NullDerefTest 2>&1 | FileCheck %s --check-prefix=LIBFUZZER_ASAN_SEGV_HANDLER
 LIBFUZZER_ASAN_SEGV_HANDLER: ERROR: AddressSanitizer: {{SEGV|access-violation}} on unknown address

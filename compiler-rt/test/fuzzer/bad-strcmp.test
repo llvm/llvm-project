@@ -1,2 +1,2 @@
 RUN: %cpp_compiler %S/BadStrcmpTest.cpp -o %t-BadStrcmpTest
-RUN: %t-BadStrcmpTest -runs=100000
+RUN: %run %t-BadStrcmpTest -runs=100000

@@ -1,4 +1,5 @@
+XFAIL: ios
 CHECK: AddressSanitizer: {{FPE|int-divide-by-zero}}
 RUN: %cpp_compiler %S/DivTest.cpp -fsanitize-coverage=trace-div -o %t-DivTest
-RUN: not %t-DivTest -seed=1 -use_value_profile=1 -runs=10000000 2>&1 | FileCheck %s
+RUN: not %run %t-DivTest -seed=1 -use_value_profile=1 -runs=10000000 2>&1 | FileCheck %s
 

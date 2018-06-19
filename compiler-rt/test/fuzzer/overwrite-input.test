@@ -1,3 +1,3 @@
 RUN: %cpp_compiler %S/OverwriteInputTest.cpp -o %t-OverwriteInputTest
-RUN: not %t-OverwriteInputTest 2>&1 | FileCheck %s
+RUN: not %run %t-OverwriteInputTest 2>&1 | FileCheck %s
 CHECK: ERROR: libFuzzer: fuzz target overwrites it's const input
