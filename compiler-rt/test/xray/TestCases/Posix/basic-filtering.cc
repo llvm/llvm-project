@@ -2,7 +2,7 @@
 // logging implementation.
 
 // RUN: %clangxx_xray -std=c++11 %s -o %t -g
-// RUN: rm basic-filtering-* || true
+// RUN: rm -f basic-filtering-*
 // RUN: XRAY_OPTIONS="patch_premain=true xray_mode=xray-basic verbosity=1 \
 // RUN:     xray_logfile_base=basic-filtering- \
 // RUN:     xray_naive_log_func_duration_threshold_us=1000 \
@@ -11,7 +11,7 @@
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
 // RUN:     "`ls basic-filtering-* | head -1`" | \
 // RUN:     FileCheck %s --check-prefix TRACE
-// RUN: rm basic-filtering-* || true
+// RUN: rm -f basic-filtering-*
 //
 // Now check support for the XRAY_BASIC_OPTIONS environment variable.
 // RUN: XRAY_OPTIONS="patch_premain=true xray_mode=xray-basic verbosity=1 \
@@ -21,7 +21,7 @@
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
 // RUN:     "`ls basic-filtering-* | head -1`" | \
 // RUN:     FileCheck %s --check-prefix TRACE
-// RUN: rm basic-filtering-* || true
+// RUN: rm -f basic-filtering-*
 //
 // REQUIRES: x86_64-target-arch
 // REQUIRES: built-in-llvm-tree

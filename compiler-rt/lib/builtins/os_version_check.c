@@ -57,49 +57,49 @@ static void parseSystemVersionPList(void *Unused) {
     return;
   const CFAllocatorRef kCFAllocatorNull =
       *(const CFAllocatorRef *)NullAllocator;
-  CFDataCreateWithBytesNoCopyFuncTy *CFDataCreateWithBytesNoCopyFunc =
-      (CFDataCreateWithBytesNoCopyFuncTy *)dlsym(RTLD_DEFAULT,
-                                                 "CFDataCreateWithBytesNoCopy");
+  CFDataCreateWithBytesNoCopyFuncTy CFDataCreateWithBytesNoCopyFunc =
+      (CFDataCreateWithBytesNoCopyFuncTy)dlsym(RTLD_DEFAULT,
+                                               "CFDataCreateWithBytesNoCopy");
   if (!CFDataCreateWithBytesNoCopyFunc)
     return;
-  CFPropertyListCreateWithDataFuncTy *CFPropertyListCreateWithDataFunc =
-      (CFPropertyListCreateWithDataFuncTy *)dlsym(
+  CFPropertyListCreateWithDataFuncTy CFPropertyListCreateWithDataFunc =
+      (CFPropertyListCreateWithDataFuncTy)dlsym(
           RTLD_DEFAULT, "CFPropertyListCreateWithData");
 /* CFPropertyListCreateWithData was introduced only in macOS 10.6+, so it
  * will be NULL on earlier OS versions. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  CFPropertyListCreateFromXMLDataFuncTy *CFPropertyListCreateFromXMLDataFunc =
-      (CFPropertyListCreateFromXMLDataFuncTy *)dlsym(
+  CFPropertyListCreateFromXMLDataFuncTy CFPropertyListCreateFromXMLDataFunc =
+      (CFPropertyListCreateFromXMLDataFuncTy)dlsym(
           RTLD_DEFAULT, "CFPropertyListCreateFromXMLData");
 #pragma clang diagnostic pop
   /* CFPropertyListCreateFromXMLDataFunc is deprecated in macOS 10.10, so it
    * might be NULL in future OS versions. */
   if (!CFPropertyListCreateWithDataFunc && !CFPropertyListCreateFromXMLDataFunc)
     return;
-  CFStringCreateWithCStringNoCopyFuncTy *CFStringCreateWithCStringNoCopyFunc =
-      (CFStringCreateWithCStringNoCopyFuncTy *)dlsym(
+  CFStringCreateWithCStringNoCopyFuncTy CFStringCreateWithCStringNoCopyFunc =
+      (CFStringCreateWithCStringNoCopyFuncTy)dlsym(
           RTLD_DEFAULT, "CFStringCreateWithCStringNoCopy");
   if (!CFStringCreateWithCStringNoCopyFunc)
     return;
-  CFDictionaryGetValueFuncTy *CFDictionaryGetValueFunc =
-      (CFDictionaryGetValueFuncTy *)dlsym(RTLD_DEFAULT, "CFDictionaryGetValue");
+  CFDictionaryGetValueFuncTy CFDictionaryGetValueFunc =
+      (CFDictionaryGetValueFuncTy)dlsym(RTLD_DEFAULT, "CFDictionaryGetValue");
   if (!CFDictionaryGetValueFunc)
     return;
-  CFGetTypeIDFuncTy *CFGetTypeIDFunc =
-      (CFGetTypeIDFuncTy *)dlsym(RTLD_DEFAULT, "CFGetTypeID");
+  CFGetTypeIDFuncTy CFGetTypeIDFunc =
+      (CFGetTypeIDFuncTy)dlsym(RTLD_DEFAULT, "CFGetTypeID");
   if (!CFGetTypeIDFunc)
     return;
-  CFStringGetTypeIDFuncTy *CFStringGetTypeIDFunc =
-      (CFStringGetTypeIDFuncTy *)dlsym(RTLD_DEFAULT, "CFStringGetTypeID");
+  CFStringGetTypeIDFuncTy CFStringGetTypeIDFunc =
+      (CFStringGetTypeIDFuncTy)dlsym(RTLD_DEFAULT, "CFStringGetTypeID");
   if (!CFStringGetTypeIDFunc)
     return;
-  CFStringGetCStringFuncTy *CFStringGetCStringFunc =
-      (CFStringGetCStringFuncTy *)dlsym(RTLD_DEFAULT, "CFStringGetCString");
+  CFStringGetCStringFuncTy CFStringGetCStringFunc =
+      (CFStringGetCStringFuncTy)dlsym(RTLD_DEFAULT, "CFStringGetCString");
   if (!CFStringGetCStringFunc)
     return;
-  CFReleaseFuncTy *CFReleaseFunc =
-      (CFReleaseFuncTy *)dlsym(RTLD_DEFAULT, "CFRelease");
+  CFReleaseFuncTy CFReleaseFunc =
+      (CFReleaseFuncTy)dlsym(RTLD_DEFAULT, "CFRelease");
   if (!CFReleaseFunc)
     return;
 

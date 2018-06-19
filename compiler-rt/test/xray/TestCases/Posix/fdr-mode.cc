@@ -1,6 +1,6 @@
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t
-// RUN: rm fdr-logging-test-* || true
-// RUN: rm fdr-unwrite-test-* || true
+// RUN: rm -f fdr-logging-test-*
+// RUN: rm -f fdr-unwrite-test-*
 // RUN: XRAY_OPTIONS="patch_premain=false xray_logfile_base=fdr-logging-test- \
 // RUN:     xray_mode=xray-fdr verbosity=1" \
 // RUN: XRAY_FDR_OPTIONS="func_duration_threshold_us=0" \

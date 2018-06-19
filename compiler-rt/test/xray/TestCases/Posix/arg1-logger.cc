@@ -2,13 +2,13 @@
 // using a custom logging function.
 //
 // RUN: %clangxx_xray -std=c++11 %s -o %t
-// RUN: rm arg1-logger-* || true
+// RUN: rm -f arg1-logger-*
 // RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_naive_log=true \
 // RUN:    xray_logfile_base=arg1-logger-" %run %t 2>&1 | FileCheck %s
 //
 // After all that, clean up the XRay log file.
 //
-// RUN: rm arg1-logger-* || true
+// RUN: rm -f arg1-logger-*
 //
 // At the time of writing, the ARM trampolines weren't written yet.
 // XFAIL: arm || aarch64 || mips

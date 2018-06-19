@@ -66,8 +66,14 @@ static void AsanCheckFailed(const char *file, int line, const char *cond,
                             u64 v1, u64 v2) {
   Report("AddressSanitizer CHECK failed: %s:%d \"%s\" (0x%zx, 0x%zx)\n", file,
          line, cond, (uptr)v1, (uptr)v2);
-  // FIXME: check for infinite recursion without a thread-local counter here.
-  PRINT_CURRENT_STACK_CHECK();
+
+  // Print a stack trace the first time we come here. Otherwise, we probably
+  // failed a CHECK during symbolization.
+  static atomic_uint32_t num_calls;
+  if (atomic_fetch_add(&num_calls, 1, memory_order_relaxed) == 0) {
+    PRINT_CURRENT_STACK_CHECK();
+  }
+
   Die();
 }
 
