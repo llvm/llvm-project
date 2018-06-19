@@ -33,5 +33,4 @@ entry:
 ; CHECK-P9: .quad 4562098671269285104
 ; CHECK-P9-LABEL: test_double_const:
 ; CHECK-P9: addis [[REG1:[0-9]+]], 2, [[VAR]]@toc@ha
-; CHECK-P9: addi [[REG1]], {{[0-9]+}}, [[VAR]]@toc@l
-; CHECK-P9: lfd {{[0-9]+}}, 0([[REG1]])
+; CHECK-P9: lfd {{[0-9]+}}, [[VAR]]@toc@l([[REG1]])

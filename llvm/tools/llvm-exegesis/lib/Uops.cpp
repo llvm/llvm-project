@@ -97,8 +97,7 @@ UopsBenchmarkRunner::isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const {
     return llvm::make_error<BenchmarkFailure>(
         "Infeasible : has unknown operands");
   if (llvm::any_of(MCInstrDesc.operands(), hasMemoryOperand))
-    return llvm::make_error<BenchmarkFailure>(
-        "Infeasible : has memory operands");
+    return llvm::make_error<BenchmarkFailure>("Infeasible : has memory operands");
   return llvm::Error::success();
 }
 

@@ -384,15 +384,17 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
       continue;
     }
 
-    assert(isPrimitiveType(T) && "Non-primitive type! "
-                                 "At this point FR must be primitive!");
+    if (isPrimitiveType(T)) {
+      SVal V = State->getSVal(FieldVal);
 
-    SVal V = State->getSVal(FieldVal);
-
-    if (isPrimitiveUninit(V)) {
-      if (addFieldToUninits({LocalChain, FR}))
-        ContainsUninitField = true;
+      if (isPrimitiveUninit(V)) {
+        if (addFieldToUninits({LocalChain, FR}))
+          ContainsUninitField = true;
+      }
+      continue;
     }
+
+    llvm_unreachable("All cases are handled!");
   }
 
   // Checking bases.
