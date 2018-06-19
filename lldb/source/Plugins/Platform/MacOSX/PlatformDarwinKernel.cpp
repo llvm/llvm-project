@@ -780,10 +780,10 @@ Status PlatformDarwinKernel::GetSharedModule(
 }
 
 std::vector<lldb_private::FileSpec>
-PlatformDarwinKernel::SearchForExecutablesRecursively(const ConstString &dir) {
+PlatformDarwinKernel::SearchForExecutablesRecursively(const std::string &dir) {
   std::vector<FileSpec> executables;
   std::error_code EC;
-  for (llvm::sys::fs::recursive_directory_iterator it(dir.GetStringRef(), EC),
+  for (llvm::sys::fs::recursive_directory_iterator it(dir.c_str(), EC),
        end;
        it != end && !EC; it.increment(EC)) {
     auto status = it->status();
@@ -800,7 +800,7 @@ Status PlatformDarwinKernel::ExamineKextForMatchingUUID(
     const FileSpec &kext_bundle_path, const lldb_private::UUID &uuid,
     const ArchSpec &arch, ModuleSP &exe_module_sp) {
   for (const auto &exe_file :
-       SearchForExecutablesRecursively(kext_bundle_path.GetDirectory())) {
+       SearchForExecutablesRecursively(kext_bundle_path.GetPath())) {
     if (exe_file.Exists()) {
       ModuleSpec exe_spec(exe_file);
       exe_spec.GetUUID() = uuid;
