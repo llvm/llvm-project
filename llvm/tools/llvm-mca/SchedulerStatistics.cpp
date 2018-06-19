@@ -81,8 +81,10 @@ void SchedulerStatistics::printSchedulerUsage(raw_ostream &OS) const {
     if (ProcResource.BufferSize <= 0)
       continue;
 
-    const BufferUsage &BU = BufferedResources.lookup(I);
-    TempStream << ProcResource.Name << ",  " << BU.MaxUsedSlots << '/'
+    const auto It = BufferedResources.find(I);
+    unsigned MaxUsedSlots =
+        It == BufferedResources.end() ? 0 : It->second.MaxUsedSlots;
+    TempStream << ProcResource.Name << ",  " << MaxUsedSlots << '/'
                << ProcResource.BufferSize << '\n';
   }
 

@@ -851,14 +851,11 @@ static short GetPosixspawnFlags(const ProcessLaunchInfo &launch_info) {
   if (g_use_close_on_exec_flag == eLazyBoolCalculate) {
     g_use_close_on_exec_flag = eLazyBoolNo;
 
-    uint32_t major, minor, update;
-    if (HostInfo::GetOSVersion(major, minor, update)) {
+    llvm::VersionTuple version = HostInfo::GetOSVersion();
+    if (version > llvm::VersionTuple(10, 7)) {
       // Kernel panic if we use the POSIX_SPAWN_CLOEXEC_DEFAULT on 10.7 or
       // earlier
-      if (major > 10 || (major == 10 && minor > 7)) {
-        // Only enable for 10.8 and later OS versions
-        g_use_close_on_exec_flag = eLazyBoolYes;
-      }
+      g_use_close_on_exec_flag = eLazyBoolYes;
     }
   }
 #else

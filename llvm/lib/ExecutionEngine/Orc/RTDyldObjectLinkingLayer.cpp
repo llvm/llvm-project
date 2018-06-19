@@ -54,9 +54,24 @@ void RTDyldObjectLinkingLayer2::emit(MaterializationResponsibility R,
   auto Info = RTDyld->loadObject(**ObjFile);
 
   {
+    std::set<StringRef> InternalSymbols;
+    for (auto &Sym : (*ObjFile)->symbols()) {
+      if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Global)) {
+        if (auto SymName = Sym.getName())
+          InternalSymbols.insert(*SymName);
+        else {
+          ES.reportError(SymName.takeError());
+          R.failMaterialization();
+          return;
+        }
+      }
+    }
+
     SymbolMap Symbols;
     for (auto &KV : RTDyld->getSymbolTable())
-      Symbols[ES.getSymbolStringPool().intern(KV.first)] = KV.second;
+      if (!InternalSymbols.count(KV.first))
+        Symbols[ES.getSymbolStringPool().intern(KV.first)] = KV.second;
+
     R.resolve(Symbols);
   }
 
@@ -74,6 +89,7 @@ void RTDyldObjectLinkingLayer2::emit(MaterializationResponsibility R,
     ES.reportError(make_error<StringError>(RTDyld->getErrorString(),
                                            inconvertibleErrorCode()));
     R.failMaterialization();
+    return;
   }
 
   R.finalize();

@@ -69,8 +69,8 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override;
 
-  bool GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update,
-                    lldb_private::Process *process = nullptr) override;
+  llvm::VersionTuple
+  GetOSVersion(lldb_private::Process *process = nullptr) override;
 
   bool SupportsModules() override { return true; }
 
@@ -82,7 +82,7 @@ public:
   lldb_private::Status
   LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
 
-  static std::tuple<uint32_t, uint32_t, uint32_t, llvm::StringRef>
+  static std::tuple<llvm::VersionTuple, llvm::StringRef>
   ParseVersionBuildDir(llvm::StringRef str);
 
 protected:
@@ -101,8 +101,7 @@ protected:
     iPhoneOS,
   };
 
-  static bool SDKSupportsModules(SDKType sdk_type, uint32_t major,
-                                 uint32_t minor, uint32_t micro);
+  static bool SDKSupportsModules(SDKType sdk_type, llvm::VersionTuple version);
 
   static bool SDKSupportsModules(SDKType desired_type,
                                  const lldb_private::FileSpec &sdk_path);

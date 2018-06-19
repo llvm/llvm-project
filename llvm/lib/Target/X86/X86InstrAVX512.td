@@ -4733,7 +4733,8 @@ defm VPMULLD : avx512_binop_rm_vl_d<0x40, "vpmulld", mul,
 defm VPMULLW : avx512_binop_rm_vl_w<0xD5, "vpmullw", mul,
                                     SchedWriteVecIMul, HasBWI, 1>;
 defm VPMULLQ : avx512_binop_rm_vl_q<0x40, "vpmullq", mul,
-                                    SchedWriteVecIMul, HasDQI, 1>, T8PD;
+                                    SchedWriteVecIMul, HasDQI, 1>, T8PD,
+                                    NotEVEX2VEXConvertible;
 defm VPMULHW : avx512_binop_rm_vl_w<0xE5, "vpmulhw", mulhs, SchedWriteVecIMul,
                                     HasBWI, 1>;
 defm VPMULHUW : avx512_binop_rm_vl_w<0xE4, "vpmulhuw", mulhu, SchedWriteVecIMul,
@@ -4875,29 +4876,41 @@ defm VPMAXSB : avx512_binop_rm_vl_b<0x3C, "vpmaxsb", smax,
                                     SchedWriteVecALU, HasBWI, 1>, T8PD;
 defm VPMAXSW : avx512_binop_rm_vl_w<0xEE, "vpmaxsw", smax,
                                     SchedWriteVecALU, HasBWI, 1>;
-defm VPMAXS : avx512_binop_rm_vl_dq<0x3D, 0x3D, "vpmaxs", smax,
+defm VPMAXSD : avx512_binop_rm_vl_d<0x3D, "vpmaxsd", smax,
                                     SchedWriteVecALU, HasAVX512, 1>, T8PD;
+defm VPMAXSQ : avx512_binop_rm_vl_q<0x3D, "vpmaxsq", smax,
+                                    SchedWriteVecALU, HasAVX512, 1>, T8PD,
+                                    NotEVEX2VEXConvertible;
 
 defm VPMAXUB : avx512_binop_rm_vl_b<0xDE, "vpmaxub", umax,
                                     SchedWriteVecALU, HasBWI, 1>;
 defm VPMAXUW : avx512_binop_rm_vl_w<0x3E, "vpmaxuw", umax,
                                     SchedWriteVecALU, HasBWI, 1>, T8PD;
-defm VPMAXU : avx512_binop_rm_vl_dq<0x3F, 0x3F, "vpmaxu", umax,
+defm VPMAXUD : avx512_binop_rm_vl_d<0x3F, "vpmaxud", umax,
                                     SchedWriteVecALU, HasAVX512, 1>, T8PD;
+defm VPMAXUQ : avx512_binop_rm_vl_q<0x3F, "vpmaxuq", umax,
+                                    SchedWriteVecALU, HasAVX512, 1>, T8PD,
+                                    NotEVEX2VEXConvertible;
 
 defm VPMINSB : avx512_binop_rm_vl_b<0x38, "vpminsb", smin,
                                     SchedWriteVecALU, HasBWI, 1>, T8PD;
 defm VPMINSW : avx512_binop_rm_vl_w<0xEA, "vpminsw", smin,
                                     SchedWriteVecALU, HasBWI, 1>;
-defm VPMINS : avx512_binop_rm_vl_dq<0x39, 0x39, "vpmins", smin,
+defm VPMINSD : avx512_binop_rm_vl_d<0x39, "vpminsd", smin,
                                     SchedWriteVecALU, HasAVX512, 1>, T8PD;
+defm VPMINSQ : avx512_binop_rm_vl_q<0x39, "vpminsq", smin,
+                                    SchedWriteVecALU, HasAVX512, 1>, T8PD,
+                                    NotEVEX2VEXConvertible;
 
 defm VPMINUB : avx512_binop_rm_vl_b<0xDA, "vpminub", umin,
                                     SchedWriteVecALU, HasBWI, 1>;
 defm VPMINUW : avx512_binop_rm_vl_w<0x3A, "vpminuw", umin,
                                     SchedWriteVecALU, HasBWI, 1>, T8PD;
-defm VPMINU : avx512_binop_rm_vl_dq<0x3B, 0x3B, "vpminu", umin,
+defm VPMINUD : avx512_binop_rm_vl_d<0x3B, "vpminud", umin,
                                     SchedWriteVecALU, HasAVX512, 1>, T8PD;
+defm VPMINUQ : avx512_binop_rm_vl_q<0x3B, "vpminuq", umin,
+                                    SchedWriteVecALU, HasAVX512, 1>, T8PD,
+                                    NotEVEX2VEXConvertible;
 
 // PMULLQ: Use 512bit version to implement 128/256 bit in case NoVLX.
 let Predicates = [HasDQI, NoVLX] in {
@@ -5523,7 +5536,7 @@ multiclass avx512_fp_scalef_all<bits<8> opc, bits<8> opcScaler, string OpcodeStr
   }
 }
 defm VSCALEF : avx512_fp_scalef_all<0x2C, 0x2D, "vscalef", X86scalef, X86scalefs,
-                                    SchedWriteFAdd>, T8PD;
+                                    SchedWriteFAdd>, T8PD, NotEVEX2VEXConvertible;
 
 //===----------------------------------------------------------------------===//
 // AVX-512  VPTESTM instructions
@@ -5765,9 +5778,11 @@ multiclass avx512_shift_sizes<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
 multiclass avx512_shift_types<bits<8> opcd, bits<8> opcq, bits<8> opcw,
                               string OpcodeStr, SDNode OpNode,
-                              X86SchedWriteWidths sched> {
+                              X86SchedWriteWidths sched,
+                              bit NotEVEX2VEXConvertibleQ = 0> {
   defm D : avx512_shift_sizes<opcd, OpcodeStr#"d", OpNode, sched, v4i32,
                               bc_v4i32, avx512vl_i32_info, HasAVX512>;
+  let notEVEX2VEXConvertible = NotEVEX2VEXConvertibleQ in
   defm Q : avx512_shift_sizes<opcq, OpcodeStr#"q", OpNode, sched, v2i64,
                               bc_v2i64, avx512vl_i64_info, HasAVX512>, VEX_W;
   defm W : avx512_shift_sizes<opcw, OpcodeStr#"w", OpNode, sched, v8i16,
@@ -5812,9 +5827,11 @@ multiclass avx512_shift_rmi_w<bits<8> opcw, Format ImmFormR, Format ImmFormM,
 multiclass avx512_shift_rmi_dq<bits<8> opcd, bits<8> opcq,
                                Format ImmFormR, Format ImmFormM,
                                string OpcodeStr, SDNode OpNode,
-                               X86SchedWriteWidths sched> {
+                               X86SchedWriteWidths sched,
+                               bit NotEVEX2VEXConvertibleQ = 0> {
   defm D: avx512_shift_rmi_sizes<opcd, ImmFormR, ImmFormM, OpcodeStr#"d", OpNode,
                                  sched, avx512vl_i32_info>, EVEX_CD8<32, CD8VF>;
+  let notEVEX2VEXConvertible = NotEVEX2VEXConvertibleQ in
   defm Q: avx512_shift_rmi_sizes<opcq, ImmFormR, ImmFormM, OpcodeStr#"q", OpNode,
                                  sched, avx512vl_i64_info>, EVEX_CD8<64, CD8VF>, VEX_W;
 }
@@ -5830,7 +5847,7 @@ defm VPSLL : avx512_shift_rmi_dq<0x72, 0x73, MRM6r, MRM6m, "vpsll", X86vshli,
                                 SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 
 defm VPSRA : avx512_shift_rmi_dq<0x72, 0x72, MRM4r, MRM4m, "vpsra", X86vsrai,
-                                 SchedWriteVecShiftImm>,
+                                 SchedWriteVecShiftImm, 1>,
              avx512_shift_rmi_w<0x71, MRM4r, MRM4m, "vpsraw", X86vsrai,
                                 SchedWriteVecShiftImm>, AVX512BIi8Base, EVEX_4V;
 
@@ -5842,7 +5859,7 @@ defm VPROL : avx512_shift_rmi_dq<0x72, 0x72, MRM1r, MRM1m, "vprol", X86vrotli,
 defm VPSLL : avx512_shift_types<0xF2, 0xF3, 0xF1, "vpsll", X86vshl,
                                 SchedWriteVecShift>;
 defm VPSRA : avx512_shift_types<0xE2, 0xE2, 0xE1, "vpsra", X86vsra,
-                                SchedWriteVecShift>;
+                                SchedWriteVecShift, 1>;
 defm VPSRL : avx512_shift_types<0xD2, 0xD3, 0xD1, "vpsrl", X86vsrl,
                                 SchedWriteVecShift>;
 
@@ -7701,9 +7718,9 @@ multiclass avx512_cvtqq2pd<bits<8> opc, string OpcodeStr, SDNode OpNode,
   }
   let Predicates = [HasDQI, HasVLX] in {
     defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v2f64x_info, v2i64x_info, OpNode,
-                               sched.XMM>, EVEX_V128;
+                               sched.XMM>, EVEX_V128, NotEVEX2VEXConvertible;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4f64x_info, v4i64x_info, OpNode,
-                               sched.YMM>, EVEX_V256;
+                               sched.YMM>, EVEX_V256, NotEVEX2VEXConvertible;
   }
 }
 
@@ -7760,9 +7777,11 @@ multiclass avx512_cvtqq2ps<bits<8> opc, string OpcodeStr, SDNode OpNode,
     // dest type - 'v4i32x_info'. We also specify the broadcast string explicitly
     // due to the same reason.
     defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4f32x_info, v2i64x_info, OpNode128,
-                               sched.XMM, "{1to2}", "{x}">, EVEX_V128;
+                               sched.XMM, "{1to2}", "{x}">, EVEX_V128,
+                               NotEVEX2VEXConvertible;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4f32x_info, v4i64x_info, OpNode,
-                               sched.YMM, "{1to4}", "{y}">, EVEX_V256;
+                               sched.YMM, "{1to4}", "{y}">, EVEX_V256,
+                               NotEVEX2VEXConvertible;
 
     def : InstAlias<OpcodeStr##"x\t{$src, $dst|$dst, $src}",
                     (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst, VR128X:$src), 0>;
@@ -10263,7 +10282,7 @@ let Predicates = [HasVLX, HasBWI] in {
 
 defm VDBPSADBW: avx512_common_3Op_rm_imm8<0x42, X86dbpsadbw, "vdbpsadbw",
                 SchedWritePSADBW, avx512vl_i16_info, avx512vl_i8_info>,
-                EVEX_CD8<8, CD8VF>;
+                EVEX_CD8<8, CD8VF>, NotEVEX2VEXConvertible;
 
 multiclass avx512_unary_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            X86FoldableSchedWrite sched, X86VectorVTInfo _> {

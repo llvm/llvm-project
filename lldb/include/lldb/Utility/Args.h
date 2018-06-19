@@ -324,9 +324,6 @@ public:
 
   static uint32_t StringToGenericRegister(llvm::StringRef s);
 
-  static bool StringToVersion(llvm::StringRef string, uint32_t &major,
-                              uint32_t &minor, uint32_t &update);
-
   static const char *GetShellSafeArgument(const FileSpec &shell,
                                           const char *unsafe_arg,
                                           std::string &safe_arg);

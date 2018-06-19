@@ -30,6 +30,7 @@
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
+#include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
 
@@ -225,10 +226,9 @@ public:
   /// simulator might be simulating a different OS. The \a process parameter
   /// might be specified to help to determine the OS version.
   //------------------------------------------------------------------
-  virtual bool GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update,
-                            Process *process = nullptr);
+  virtual llvm::VersionTuple GetOSVersion(Process *process = nullptr);
 
-  bool SetOSVersion(uint32_t major, uint32_t minor, uint32_t update);
+  bool SetOSVersion(llvm::VersionTuple os_version);
 
   bool GetOSBuildString(std::string &s);
 
@@ -874,9 +874,7 @@ protected:
                           // modules that have no install path set
   std::string m_remote_url;
   std::string m_name;
-  uint32_t m_major_os_version;
-  uint32_t m_minor_os_version;
-  uint32_t m_update_os_version;
+  llvm::VersionTuple m_os_version;
   ArchSpec
       m_system_arch; // The architecture of the kernel or the remote platform
   typedef std::map<uint32_t, ConstString> IDToNameMap;

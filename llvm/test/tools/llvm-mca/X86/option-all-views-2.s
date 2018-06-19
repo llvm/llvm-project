@@ -36,8 +36,8 @@ add %eax, %eax
 # ALL:             Dispatch Logic - number of cycles where we saw N instructions dispatched:
 # ALL-NEXT:        [# dispatched], [# cycles]
 # ALL-NEXT:         0,              22  (21.4%)
-# ALL-NEXT:         2,              19  (18.4%)
 # ALL-NEXT:         1,              62  (60.2%)
+# ALL-NEXT:         2,              19  (18.4%)
 
 # ALL:             Schedulers - number of cycles where we saw N instructions issued:
 # ALL-NEXT:        [# issued], [# cycles]

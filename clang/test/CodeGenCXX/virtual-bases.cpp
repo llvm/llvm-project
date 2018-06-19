@@ -4,7 +4,7 @@ struct A {
   A();
 };
 
-// CHECK: @_ZN1AC1Ev = alias {{.*}} @_ZN1AC2Ev
+// CHECK: @_ZN1AC1Ev = unnamed_addr alias {{.*}} @_ZN1AC2Ev
 // CHECK-LABEL: define void @_ZN1AC2Ev(%struct.A* %this) unnamed_addr
 A::A() { }
 

@@ -35,9 +35,9 @@
 #define LLVM_TOOLS_LLVM_MCA_DISPATCHVIEW_H
 
 #include "View.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include <map>
 
 namespace mca {
 
@@ -49,7 +49,7 @@ class DispatchStatistics : public View {
   // is one counter for every generic stall kind (see class HWStallEvent).
   llvm::SmallVector<unsigned, 8> HWStalls;
 
-  using Histogram = llvm::DenseMap<unsigned, unsigned>;
+  using Histogram = std::map<unsigned, unsigned>;
   Histogram DispatchGroupSizePerCycle;
 
   void updateHistograms() {

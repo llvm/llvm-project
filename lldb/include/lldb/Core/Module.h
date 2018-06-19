@@ -703,7 +703,7 @@ public:
   //------------------------------------------------------------------
   virtual void SectionFileAddressesChanged();
 
-  uint32_t GetVersion(uint32_t *versions, uint32_t num_versions);
+  llvm::VersionTuple GetVersion();
 
   //------------------------------------------------------------------
   /// Load an object file from memory.

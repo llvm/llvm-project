@@ -382,7 +382,7 @@ MachineInstr::mergeMemRefsWith(const MachineInstr& Other) {
   return std::make_pair(MemBegin, CombinedNumMemRefs);
 }
 
-uint8_t MachineInstr::mergeFlagsWith(const MachineInstr &Other) const {
+uint16_t MachineInstr::mergeFlagsWith(const MachineInstr &Other) const {
   // For now, the just return the union of the flags. If the flags get more
   // complicated over time, we might need more logic here.
   return getFlags() | Other.getFlags();

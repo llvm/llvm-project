@@ -1,8 +1,8 @@
 // Test the behavior of malloc/calloc/realloc/new when the allocation size
 // exceeds the sanitizer's allocator max allowed one.
 // By default (allocator_may_return_null=0) the process should crash. With
-// allocator_may_return_null=1 the allocator should return 0 and set errno to
-// the appropriate error code.
+// allocator_may_return_null=1 the allocator should return nullptr and set errno
+// to the appropriate error code.
 //
 // RUN: %clangxx -O0 %s -o %t
 // RUN: not %run %t malloc 2>&1 | FileCheck %s --check-prefix=CHECK-mCRASH
@@ -36,7 +36,7 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
 
 // TODO(alekseyshl): win32 is disabled due to failing errno tests, fix it there.
-// UNSUPPORTED: tsan, ubsan, win32
+// UNSUPPORTED: ubsan, win32
 
 #include <assert.h>
 #include <errno.h>
@@ -51,12 +51,8 @@ int main(int argc, char **argv) {
   const char *action = argv[1];
   fprintf(stderr, "%s:\n", action);
 
-  // The maximum value of all supported sanitizers:
-  // ASan: asan_allocator.cc, search for kMaxAllowedMallocSize.
-  // LSan: lsan_allocator.cc, search for kMaxAllowedMallocSize.
-  // ASan + LSan: ASan limit is used.
-  // MSan: msan_allocator.cc, search for kMaxAllowedMallocSize.
-  // TSan: tsan_mman.cc, user_alloc_internal function.
+  // The maximum value of all supported sanitizers (search for
+  // kMaxAllowedMallocSize). For ASan + LSan, ASan limit is used.
   static const size_t kMaxAllowedMallocSizePlusOne =
 #if __LP64__ || defined(_WIN64)
       (1ULL << 40) + 1;
@@ -90,11 +86,11 @@ int main(int argc, char **argv) {
     assert(0);
   }
 
-  fprintf(stderr, "errno: %d\n", errno);
+  // The NULL pointer is printed differently on different systems, while (long)0
+  // is always the same.
+  fprintf(stderr, "errno: %d, x: %lx\n", errno, (long)x);
 
-  free(x);
-
-  return x != nullptr;
+  return 0;
 }
 
 // CHECK-mCRASH: malloc:
@@ -115,4 +111,4 @@ int main(int argc, char **argv) {
 // CHECK-nnCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
 
 // CHECK-NULL: {{malloc|calloc|calloc-overflow|realloc|realloc-after-malloc|new-nothrow}}
-// CHECK-NULL: errno: 12
+// CHECK-NULL: errno: 12, x: 0

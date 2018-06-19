@@ -76,32 +76,21 @@ bool HostInfoMacOSX::GetOSKernelDescription(std::string &s) {
   return false;
 }
 
-bool HostInfoMacOSX::GetOSVersion(uint32_t &major, uint32_t &minor,
-                                  uint32_t &update) {
-  static uint32_t g_major = 0;
-  static uint32_t g_minor = 0;
-  static uint32_t g_update = 0;
+llvm::VersionTuple HostInfoMacOSX::GetOSVersion() {
+  static llvm::VersionTuple g_version;
 
-  if (g_major == 0) {
+  if (g_version.empty()) {
     @autoreleasepool {
       NSDictionary *version_info = [NSDictionary
           dictionaryWithContentsOfFile:
               @"/System/Library/CoreServices/SystemVersion.plist"];
       NSString *version_value = [version_info objectForKey:@"ProductVersion"];
       const char *version_str = [version_value UTF8String];
-      if (version_str)
-        Args::StringToVersion(llvm::StringRef(version_str), g_major, g_minor,
-                              g_update);
+      g_version.tryParse(version_str);
     }
   }
 
-  if (g_major != 0) {
-    major = g_major;
-    minor = g_minor;
-    update = g_update;
-    return true;
-  }
-  return false;
+  return g_version;
 }
 
 FileSpec HostInfoMacOSX::GetProgramFileSpec() {

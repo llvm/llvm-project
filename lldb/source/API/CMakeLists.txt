@@ -2,16 +2,6 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   add_definitions( -DEXPORT_LIBLLDB )
 endif()
 
-option(LLDB_BUILD_FRAMEWORK "Build the Darwin LLDB.framework" Off)
-
-if(LLDB_BUILD_FRAMEWORK AND CMAKE_VERSION VERSION_LESS 3.7)
-  message(FATAL_ERROR "LLDB_BUILD_FRAMEWORK is not supported on CMake < 3.7")
-endif()
-
-if (LLDB_BUILD_FRAMEWORK AND NOT APPLE)
-  message(FATAL_ERROR "LLDB.framework cannot be generated unless targeting Apple platforms.")
-endif()
-
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
 add_lldb_library(liblldb SHARED
@@ -159,47 +149,3 @@ endif()
 if (LLDB_WRAP_PYTHON)
   add_dependencies(liblldb swig_wrapper)
 endif()
-
-if(LLDB_BUILD_FRAMEWORK)
-  file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h)
-  file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
-  file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
-  list(REMOVE_ITEM root_public_headers ${root_private_headers})
-
-  foreach(header ${public_headers} ${root_public_headers} ${LLDB_SOURCE_DIR}/include/lldb/Utility/SharingPtr.h)
-    get_filename_component(basename ${header} NAME)
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/${basename}
-                       DEPENDS ${header}
-                       COMMAND ${CMAKE_COMMAND} -E copy ${header} ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/${basename})
-    list(APPEND framework_headers ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/${basename})
-  endforeach()
-
-  add_custom_target(lldb-framework-headers DEPENDS ${framework_headers}
-                    COMMAND ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.sh ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders ${LLDB_VERSION})
-  add_dependencies(liblldb lldb-framework-headers)
-
-  set_target_properties(liblldb PROPERTIES
-    OUTPUT_NAME LLDB
-    FRAMEWORK On
-    FRAMEWORK_VERSION ${LLDB_FRAMEWORK_VERSION}
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}
-    PUBLIC_HEADER "${framework_headers}")
-
-  if(NOT IOS)
-    if (NOT LLDB_BUILT_STANDALONE)
-      add_dependencies(liblldb clang-headers)
-    endif()
-    add_custom_command(TARGET liblldb POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders $<TARGET_FILE_DIR:liblldb>/Headers
-      COMMAND ${CMAKE_COMMAND} -E create_symlink Versions/Current/Headers ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Headers
-      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LLDB_FRAMEWORK_VERSION} ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/Current
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/clang/${LLDB_VERSION} $<TARGET_FILE_DIR:liblldb>/Resources/Clang
-      )
-  else()
-    add_custom_command(TARGET liblldb POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders $<TARGET_FILE_DIR:liblldb>/Headers
-      )
-  endif()
-
-endif()
-

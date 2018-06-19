@@ -641,7 +641,7 @@ namespace UseDtorAlias {
   A::~A() { }
   B::~B() { }
   // Emit a alias definition of B's constructor.
-  // M32-DAG: @"??1B@UseDtorAlias@@QAE@XZ" = dso_local dllexport alias {{.*}} @"??1A@UseDtorAlias@@QAE@XZ"
+  // M32-DAG: @"??1B@UseDtorAlias@@QAE@XZ" = dso_local dllexport unnamed_addr alias {{.*}} @"??1A@UseDtorAlias@@QAE@XZ"
 }
 
 struct __declspec(dllexport) DefaultedCtorsDtors {

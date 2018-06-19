@@ -115,7 +115,7 @@ public:
 
   /// Returns the target VSO that these symbols are being materialized
   ///        into.
-  const VSO &getTargetVSO() const { return V; }
+  VSO &getTargetVSO() const { return V; }
 
   /// Returns the names of any symbols covered by this
   /// MaterializationResponsibility object that have queries pending. This

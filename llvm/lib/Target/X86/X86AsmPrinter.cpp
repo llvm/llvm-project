@@ -608,29 +608,6 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
     OutStreamer->EmitAssemblerFlag(MCAF_Code16);
 }
 
-static void
-emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
-                         MachineModuleInfoImpl::StubValueTy &MCSym) {
-  // L_foo$stub:
-  OutStreamer.EmitLabel(StubLabel);
-  //   .indirect_symbol _foo
-  OutStreamer.EmitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
-
-  if (MCSym.getInt())
-    // External to current translation unit.
-    OutStreamer.EmitIntValue(0, 4/*size*/);
-  else
-    // Internal to current translation unit.
-    //
-    // When we place the LSDA into the TEXT section, the type info
-    // pointers need to be indirect and pc-rel. We accomplish this by
-    // using NLPs; however, sometimes the types are local to the file.
-    // We need to fill in the value for the NLP in those cases.
-    OutStreamer.EmitValue(
-        MCSymbolRefExpr::create(MCSym.getPointer(), OutStreamer.getContext()),
-        4 /*size*/);
-}
-
 MCSymbol *X86AsmPrinter::GetCPISymbol(unsigned CPID) const {
   if (Subtarget->isTargetKnownWindowsMSVC()) {
     const MachineConstantPoolEntry &CPE =
@@ -654,41 +631,71 @@ MCSymbol *X86AsmPrinter::GetCPISymbol(unsigned CPID) const {
   return AsmPrinter::GetCPISymbol(CPID);
 }
 
+static void
+emitNonLazySymbolPointer(MCStreamer &OutStreamer, MCSymbol *StubLabel,
+                         MachineModuleInfoImpl::StubValueTy &MCSym) {
+  // L_foo$stub:
+  OutStreamer.EmitLabel(StubLabel);
+  //   .indirect_symbol _foo
+  OutStreamer.EmitSymbolAttribute(MCSym.getPointer(), MCSA_IndirectSymbol);
+
+  if (MCSym.getInt())
+    // External to current translation unit.
+    OutStreamer.EmitIntValue(0, 4/*size*/);
+  else
+    // Internal to current translation unit.
+    //
+    // When we place the LSDA into the TEXT section, the type info
+    // pointers need to be indirect and pc-rel. We accomplish this by
+    // using NLPs; however, sometimes the types are local to the file.
+    // We need to fill in the value for the NLP in those cases.
+    OutStreamer.EmitValue(
+        MCSymbolRefExpr::create(MCSym.getPointer(), OutStreamer.getContext()),
+        4 /*size*/);
+}
+
+static void emitNonLazyStubs(MachineModuleInfo *MMI, MCStreamer &OutStreamer) {
+
+  MachineModuleInfoMachO &MMIMacho =
+      MMI->getObjFileInfo<MachineModuleInfoMachO>();
+
+  // Output stubs for dynamically-linked functions.
+  MachineModuleInfoMachO::SymbolListTy Stubs;
+
+  // Output stubs for external and common global variables.
+  Stubs = MMIMacho.GetGVStubList();
+  if (!Stubs.empty()) {
+    OutStreamer.SwitchSection(MMI->getContext().getMachOSection(
+        "__IMPORT", "__pointers", MachO::S_NON_LAZY_SYMBOL_POINTERS,
+        SectionKind::getMetadata()));
+
+    for (auto &Stub : Stubs)
+      emitNonLazySymbolPointer(OutStreamer, Stub.first, Stub.second);
+
+    Stubs.clear();
+    OutStreamer.AddBlankLine();
+  }
+}
+
 void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
   if (TT.isOSBinFormatMachO()) {
-    // All darwin targets use mach-o.
-    MachineModuleInfoMachO &MMIMacho =
-        MMI->getObjFileInfo<MachineModuleInfoMachO>();
+    // Mach-O uses non-lazy symbol stubs to encode per-TU information into
+    // global table for symbol lookup.
+    emitNonLazyStubs(MMI, *OutStreamer);
 
-    // Output stubs for dynamically-linked functions.
-    MachineModuleInfoMachO::SymbolListTy Stubs;
-
-    // Output stubs for external and common global variables.
-    Stubs = MMIMacho.GetGVStubList();
-    if (!Stubs.empty()) {
-      MCSection *TheSection = OutContext.getMachOSection(
-          "__IMPORT", "__pointers", MachO::S_NON_LAZY_SYMBOL_POINTERS,
-          SectionKind::getMetadata());
-      OutStreamer->SwitchSection(TheSection);
-
-      for (auto &Stub : Stubs)
-        emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
-
-      Stubs.clear();
-      OutStreamer->AddBlankLine();
-    }
-
+    // Emit stack and fault map information.
     SM.serializeToStackMapSection();
     FM.serializeToFaultMapSection();
 
-    // Funny Darwin hack: This flag tells the linker that no global symbols
-    // contain code that falls through to other global symbols (e.g. the obvious
-    // implementation of multiple entry points).  If this doesn't occur, the
-    // linker can safely perform dead code stripping.  Since LLVM never
-    // generates code that does this, it is always safe to set.
+    // This flag tells the linker that no global symbols contain code that fall
+    // through to other global symbols (e.g. an implementation of multiple entry
+    // points). If this doesn't occur, the linker can safely perform dead code
+    // stripping. Since LLVM never generates code that does this, it is always
+    // safe to set.
     OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    return;
   }
 
   if (TT.isKnownWindowsMSVCEnvironment() && MMI->usesVAFloatArgument()) {
@@ -696,15 +703,18 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
         (TT.getArch() == Triple::x86_64) ? "_fltused" : "__fltused";
     MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
     OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
+    return;
   }
 
   if (TT.isOSBinFormatCOFF()) {
     SM.serializeToStackMapSection();
+    return;
   }
 
   if (TT.isOSBinFormatELF()) {
     SM.serializeToStackMapSection();
     FM.serializeToFaultMapSection();
+    return;
   }
 }
 

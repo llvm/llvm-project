@@ -236,14 +236,8 @@ size_t PlatformRemoteGDBServer::GetSoftwareBreakpointTrapOpcode(
 }
 
 bool PlatformRemoteGDBServer::GetRemoteOSVersion() {
-  uint32_t major, minor, update;
-  if (m_gdb_client.GetOSVersion(major, minor, update)) {
-    m_major_os_version = major;
-    m_minor_os_version = minor;
-    m_update_os_version = update;
-    return true;
-  }
-  return false;
+  m_os_version = m_gdb_client.GetOSVersion();
+  return !m_os_version.empty();
 }
 
 bool PlatformRemoteGDBServer::GetRemoteOSBuildString(std::string &s) {

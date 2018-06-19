@@ -450,44 +450,47 @@ defm : X86WriteRes<WriteVecMoveFromGpr,   [JFPU01, JFPX], 8, [1, 1], 2>;
 
 defm : JWriteResFpuPair<WriteVecALU,      [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecALUX,     [JFPU01, JVALU], 1>;
-defm : JWriteResFpuPair<WriteVecALUY,     [JFPU01, JVALU], 1>;
+defm : X86WriteResPairUnsupported<WriteVecALUY>;
 defm : X86WriteResPairUnsupported<WriteVecALUZ>;
 defm : JWriteResFpuPair<WriteVecShift,    [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecShiftX,   [JFPU01, JVALU], 1>;
-defm : JWriteResFpuPair<WriteVecShiftY,   [JFPU01, JVALU], 1>;
+defm : X86WriteResPairUnsupported<WriteVecShiftY>;
 defm : X86WriteResPairUnsupported<WriteVecShiftZ>;
 defm : JWriteResFpuPair<WriteVecShiftImm, [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecShiftImmX,[JFPU01, JVALU], 1>;
-defm : JWriteResFpuPair<WriteVecShiftImmY,[JFPU01, JVALU], 1>;
+defm : X86WriteResPairUnsupported<WriteVecShiftImmY>;
 defm : X86WriteResPairUnsupported<WriteVecShiftImmZ>;
+defm : X86WriteResPairUnsupported<WriteVarVecShift>;
+defm : X86WriteResPairUnsupported<WriteVarVecShiftY>;
+defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>;
 defm : JWriteResFpuPair<WriteVecIMul,     [JFPU0, JVIMUL], 2>;
 defm : JWriteResFpuPair<WriteVecIMulX,    [JFPU0, JVIMUL], 2>;
-defm : JWriteResFpuPair<WriteVecIMulY,    [JFPU0, JVIMUL], 2>;
+defm : X86WriteResPairUnsupported<WriteVecIMulY>;
 defm : X86WriteResPairUnsupported<WriteVecIMulZ>;
 defm : JWriteResFpuPair<WritePMULLD,      [JFPU0, JFPU01, JVIMUL, JVALU], 4, [2, 1, 2, 1], 3>;
-defm : JWriteResFpuPair<WritePMULLDY,     [JFPU0, JFPU01, JVIMUL, JVALU], 4, [2, 1, 2, 1], 3>;
+defm : X86WriteResPairUnsupported<WritePMULLDY>;
 defm : X86WriteResPairUnsupported<WritePMULLDZ>;
 defm : JWriteResFpuPair<WriteMPSAD,       [JFPU0, JVIMUL], 3, [1, 2]>;
-defm : JWriteResFpuPair<WriteMPSADY,      [JFPU0, JVIMUL], 3, [1, 2]>;
+defm : X86WriteResPairUnsupported<WriteMPSADY>;
 defm : X86WriteResPairUnsupported<WriteMPSADZ>;
 defm : JWriteResFpuPair<WritePSADBW,      [JFPU01, JVALU], 2>;
 defm : JWriteResFpuPair<WritePSADBWX,     [JFPU01, JVALU], 2>;
-defm : JWriteResFpuPair<WritePSADBWY,     [JFPU01, JVALU], 2>;
+defm : X86WriteResPairUnsupported<WritePSADBWY>;
 defm : X86WriteResPairUnsupported<WritePSADBWZ>;
 defm : JWriteResFpuPair<WritePHMINPOS,    [JFPU0,  JVALU], 2>;
 defm : JWriteResFpuPair<WriteShuffle,     [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteShuffleX,    [JFPU01, JVALU], 1>;
-defm : JWriteResFpuPair<WriteShuffleY,    [JFPU01, JVALU], 1>;
+defm : X86WriteResPairUnsupported<WriteShuffleY>;
 defm : X86WriteResPairUnsupported<WriteShuffleZ>;
 defm : JWriteResFpuPair<WriteVarShuffle,  [JFPU01, JVALU], 2, [1, 4], 3>;
 defm : JWriteResFpuPair<WriteVarShuffleX, [JFPU01, JVALU], 2, [1, 4], 3>;
-defm : JWriteResFpuPair<WriteVarShuffleY, [JFPU01, JVALU], 2, [1, 4], 3>;
+defm : X86WriteResPairUnsupported<WriteVarShuffleY>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
 defm : JWriteResFpuPair<WriteBlend,       [JFPU01, JVALU], 1>;
-defm : JWriteResFpuPair<WriteBlendY,      [JFPU01, JVALU], 1>;
+defm : X86WriteResPairUnsupported<WriteBlendY>;
 defm : X86WriteResPairUnsupported<WriteBlendZ>;
 defm : JWriteResFpuPair<WriteVarBlend,    [JFPU01, JVALU], 2, [1, 4], 3>;
-defm : JWriteResFpuPair<WriteVarBlendY,   [JFPU01, JVALU], 2, [1, 4], 3>;
+defm : X86WriteResPairUnsupported<WriteVarBlendY>;
 defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
 defm : JWriteResFpuPair<WriteVecLogic,    [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteVecLogicX,   [JFPU01, JVALU], 1>;
@@ -496,11 +499,8 @@ defm : X86WriteResPairUnsupported<WriteVecLogicZ>;
 defm : JWriteResFpuPair<WriteVecTest,     [JFPU0, JFPA, JALU0], 3>;
 defm : JWriteResYMMPair<WriteVecTestY,    [JFPU01, JFPX, JFPA, JALU0], 4, [2, 2, 2, 1], 3>;
 defm : X86WriteResPairUnsupported<WriteVecTestZ>;
-defm : JWriteResFpuPair<WriteShuffle256,  [JFPU01, JVALU], 1>;
+defm : X86WriteResPairUnsupported<WriteShuffle256>;
 defm : X86WriteResPairUnsupported<WriteVarShuffle256>;
-defm : X86WriteResPairUnsupported<WriteVarVecShift>;
-defm : X86WriteResPairUnsupported<WriteVarVecShiftY>;
-defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vector insert/extract operations.
@@ -524,10 +524,10 @@ defm : JWriteResFpuPair<WritePCmpEStrM, [JFPU1, JSAGU, JLAGU, JVALU, JVALU1, JFP
 // MOVMSK Instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-def : WriteRes<WriteFMOVMSK,    [JFPU0, JFPA, JALU0]> { let Latency = 3; }
-def : WriteRes<WriteVecMOVMSK,  [JFPU0, JFPA, JALU0]> { let Latency = 3; }
-def : WriteRes<WriteVecMOVMSKY, [JFPU0, JFPA, JALU0]> { let Latency = 3; }
-def : WriteRes<WriteMMXMOVMSK,  [JFPU0, JFPA, JALU0]> { let Latency = 3; }
+def  : WriteRes<WriteFMOVMSK,    [JFPU0, JFPA, JALU0]> { let Latency = 3; }
+def  : WriteRes<WriteVecMOVMSK,  [JFPU0, JFPA, JALU0]> { let Latency = 3; }
+defm : X86WriteResUnsupported<WriteVecMOVMSKY>;
+def  : WriteRes<WriteMMXMOVMSK,  [JFPU0, JFPA, JALU0]> { let Latency = 3; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // AES Instructions.
@@ -545,7 +545,7 @@ defm : JWriteResFpuPair<WriteFHAdd,         [JFPU0, JFPA], 3>;
 defm : JWriteResYMMPair<WriteFHAddY,        [JFPU0, JFPA], 3, [2,2], 2>;
 defm : JWriteResFpuPair<WritePHAdd,       [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WritePHAddX,      [JFPU01, JVALU], 1>;
-defm : JWriteResFpuPair<WritePHAddY,      [JFPU01, JVALU], 1>;
+defm : X86WriteResPairUnsupported<WritePHAddY>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Carry-less multiplication instructions.

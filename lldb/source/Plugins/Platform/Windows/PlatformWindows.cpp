@@ -280,9 +280,10 @@ Status PlatformWindows::ResolveExecutable(
 }
 
 bool PlatformWindows::GetRemoteOSVersion() {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetOSVersion(
-        m_major_os_version, m_minor_os_version, m_update_os_version);
+  if (m_remote_platform_sp) {
+    m_os_version = m_remote_platform_sp->GetOSVersion();
+    return !m_os_version.empty();
+  }
   return false;
 }
 
@@ -567,16 +568,8 @@ void PlatformWindows::GetStatus(Stream &strm) {
   Platform::GetStatus(strm);
 
 #ifdef _WIN32
-  uint32_t major;
-  uint32_t minor;
-  uint32_t update;
-  if (!HostInfo::GetOSVersion(major, minor, update)) {
-    strm << "Windows";
-    return;
-  }
-
-  strm << "Host: Windows " << major << '.' << minor << " Build: " << update
-       << '\n';
+  llvm::VersionTuple version = HostInfo::GetOSVersion();
+  strm << "Host: Windows " << version.getAsString() << '\n';
 #endif
 }
 

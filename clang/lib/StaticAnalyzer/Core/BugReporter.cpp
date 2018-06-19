@@ -2548,10 +2548,7 @@ bool GRBugReporter::generatePathDiagnostic(PathDiagnostic& PD,
     // new symbols and regions are interesting, or add other visitors based on
     // the information they find. If they do, we need to regenerate the path
     // based on our new report configuration.
-    int jj=0;
-    do { // TODO: dump statistics on the MAX number of iterations of this loop.
-      jj++;
-      assert(jj<10);
+    do {
       // Get a clean copy of all the visitors.
       for (BugReport::visitor_iterator I = R->visitor_begin(),
                                        E = R->visitor_end(); I != E; ++I)

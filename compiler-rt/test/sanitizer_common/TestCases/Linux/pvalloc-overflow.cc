@@ -6,7 +6,7 @@
 
 // REQUIRES: stable-runtime
 
-// UNSUPPORTED: android, freebsd, netbsd, tsan, ubsan
+// UNSUPPORTED: android, freebsd, netbsd, ubsan
 
 // Checks that pvalloc overflows are caught. If the allocator is allowed to
 // return null, the errno should be set to ENOMEM.
@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <malloc.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
@@ -32,15 +33,15 @@ int main(int argc, char *argv[]) {
   } else {
     assert(0);
   }
+  // CHECK: {{ERROR: .*Sanitizer: pvalloc parameters overflow: size .* rounded up to system page size .* cannot be represented in type size_t}}
+  // CHECK: {{#0 .*pvalloc}}
+  // CHECK: {{#1 .*main .*pvalloc-overflow.cc:}}
+  // CHECK: {{SUMMARY: .*Sanitizer: pvalloc-overflow}}
 
-  fprintf(stderr, "errno: %d\n", errno);
+  // The NULL pointer is printed differently on different systems, while (long)0
+  // is always the same.
+  fprintf(stderr, "errno: %d, p: %lx\n", errno, (long)p);
+  // CHECK-NULL: errno: 12, p: 0
 
-  return p != nullptr;
+  return 0;
 }
-
-// CHECK: {{ERROR: .*Sanitizer: pvalloc parameters overflow: size .* rounded up to system page size .* cannot be represented in type size_t}}
-// CHECK: {{#0 0x.* in .*pvalloc}}
-// CHECK: {{#1 0x.* in main .*pvalloc-overflow.cc:}}
-// CHECK: {{SUMMARY: .*Sanitizer: pvalloc-overflow}}
-
-// CHECK-NULL: errno: 12

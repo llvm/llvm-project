@@ -531,16 +531,29 @@ uint32_t SBModule::GetAddressByteSize() {
 }
 
 uint32_t SBModule::GetVersion(uint32_t *versions, uint32_t num_versions) {
-  ModuleSP module_sp(GetSP());
-  if (module_sp)
-    return module_sp->GetVersion(versions, num_versions);
-  else {
-    if (versions && num_versions) {
-      for (uint32_t i = 0; i < num_versions; ++i)
-        versions[i] = UINT32_MAX;
-    }
-    return 0;
-  }
+  llvm::VersionTuple version;
+  if (ModuleSP module_sp = GetSP())
+    version = module_sp->GetVersion();
+  uint32_t result = 0;
+  if (!version.empty())
+    ++result;
+  if (version.getMinor())
+    ++result;
+  if(version.getSubminor())
+    ++result;
+
+  if (!versions)
+    return result;
+
+  if (num_versions > 0)
+    versions[0] = version.empty() ? UINT32_MAX : version.getMajor();
+  if (num_versions > 1)
+    versions[1] = version.getMinor().getValueOr(UINT32_MAX);
+  if (num_versions > 2)
+    versions[2] = version.getSubminor().getValueOr(UINT32_MAX);
+  for (uint32_t i = 3; i < num_versions; ++i)
+    versions[i] = UINT32_MAX;
+  return result;
 }
 
 lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {

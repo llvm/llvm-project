@@ -52,35 +52,11 @@ private:
   // Prints the given table as a C++ array of type
   // X86EvexToVexCompressTableEntry
   void printTable(const std::vector<Entry> &Table, raw_ostream &OS);
-
-  bool inExceptionList(const CodeGenInstruction *Inst) {
-    // List of EVEX instructions that match VEX instructions by the encoding
-    // but do not perform the same operation.
-    static constexpr const char *ExceptionList[] = {
-        "VCVTQQ2PD",
-        "VCVTQQ2PS",
-        "VPMAXSQ",
-        "VPMAXUQ",
-        "VPMINSQ",
-        "VPMINUQ",
-        "VPMULLQ",
-        "VPSRAQ",
-        "VDBPSADBW",
-        "VSCALEFPS"
-    };
-    // Instruction's name starts with one of the entries in the exception list
-    for (StringRef InstStr : ExceptionList) {
-      if (Inst->TheDef->getName().startswith(InstStr))
-        return true;
-    }
-    return false;
-  }
-
 };
 
 void X86EVEX2VEXTablesEmitter::printTable(const std::vector<Entry> &Table,
                                           raw_ostream &OS) {
-  std::string Size = (Table == EVEX2VEX128) ? "128" : "256";
+  StringRef Size = (Table == EVEX2VEX128) ? "128" : "256";
 
   OS << "// X86 EVEX encoded instructions that have a VEX " << Size
      << " encoding\n"
@@ -332,7 +308,7 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
              !Inst->TheDef->getValueAsBit("hasEVEX_B") &&
              getValueFromBitsInit(Inst->TheDef->
                                         getValueAsBitsInit("EVEX_LL")) != 2 &&
-             !inExceptionList(Inst))
+             !Inst->TheDef->getValueAsBit("notEVEX2VEXConvertible"))
       EVEXInsts.push_back(Inst);
   }
 

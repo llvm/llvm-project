@@ -96,7 +96,7 @@ namespace test0 {
 
 // complete destructor alias tested above
 
-// CHECK2-LABEL: @_ZN5test01AD1Ev = alias {{.*}} @_ZN5test01AD2Ev
+// CHECK2-LABEL: @_ZN5test01AD1Ev = unnamed_addr alias {{.*}} @_ZN5test01AD2Ev
 // CHECK2-LABEL: define void @_ZN5test01AD2Ev(%"struct.test0::A"* %this) unnamed_addr
 // CHECK2: invoke void @_ZN5test06MemberD1Ev
 // CHECK2:   unwind label [[MEM_UNWIND:%[a-zA-Z0-9.]+]]
@@ -104,7 +104,7 @@ namespace test0 {
 // CHECK2:   unwind label [[BASE_UNWIND:%[a-zA-Z0-9.]+]]
 
 // In C++11, the destructors are often known not to throw.
-// CHECK2v11-LABEL: @_ZN5test01AD1Ev = alias {{.*}} @_ZN5test01AD2Ev
+// CHECK2v11-LABEL: @_ZN5test01AD1Ev = unnamed_addr alias {{.*}} @_ZN5test01AD2Ev
 // CHECK2v11-LABEL: define void @_ZN5test01AD2Ev(%"struct.test0::A"* %this) unnamed_addr
 // CHECK2v11: call void @_ZN5test06MemberD1Ev
 // CHECK2v11: call void @_ZN5test04BaseD2Ev
@@ -153,15 +153,15 @@ namespace test1 {
 
   struct M : A { ~M(); };
   M::~M() {}
-  // CHECK3: @_ZN5test11MD2Ev = alias {{.*}} @_ZN5test11AD2Ev
+  // CHECK3: @_ZN5test11MD2Ev = unnamed_addr alias {{.*}} @_ZN5test11AD2Ev
 
   struct N : A, Empty { ~N(); };
   N::~N() {}
-  // CHECK3: @_ZN5test11ND2Ev = alias {{.*}} @_ZN5test11AD2Ev
+  // CHECK3: @_ZN5test11ND2Ev = unnamed_addr alias {{.*}} @_ZN5test11AD2Ev
 
   struct O : Empty, A { ~O(); };
   O::~O() {}
-  // CHECK3: @_ZN5test11OD2Ev = alias {{.*}} @_ZN5test11AD2Ev
+  // CHECK3: @_ZN5test11OD2Ev = unnamed_addr alias {{.*}} @_ZN5test11AD2Ev
 
   struct P : NonEmpty, A { ~P(); };
   P::~P() {} // CHECK3-LABEL: define void @_ZN5test11PD2Ev(%"struct.test1::P"* %this) unnamed_addr
@@ -174,7 +174,7 @@ namespace test1 {
 
   struct S : A { ~S(); int x; };
   S::~S() {}
-  // CHECK4: @_ZN5test11SD2Ev = alias {{.*}}, bitcast {{.*}} @_ZN5test11AD2Ev
+  // CHECK4: @_ZN5test11SD2Ev = unnamed_addr alias {{.*}}, bitcast {{.*}} @_ZN5test11AD2Ev
 
   struct T : A { ~T(); B x; };
   T::~T() {} // CHECK4-LABEL: define void @_ZN5test11TD2Ev(%"struct.test1::T"* %this) unnamed_addr

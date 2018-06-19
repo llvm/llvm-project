@@ -123,10 +123,9 @@ public:
 
   ObjectFile::Strata CalculateStrata() override;
 
-  uint32_t GetVersion(uint32_t *versions, uint32_t num_versions) override;
+  llvm::VersionTuple GetVersion() override;
 
-  uint32_t GetMinimumOSVersion(uint32_t *versions,
-                               uint32_t num_versions) override;
+  llvm::VersionTuple GetMinimumOSVersion() override;
 
   uint32_t GetSDKVersion(uint32_t *versions, uint32_t num_versions) override;
 
@@ -209,7 +208,7 @@ protected:
   llvm::MachO::dysymtab_command m_dysymtab;
   std::vector<llvm::MachO::segment_command_64> m_mach_segments;
   std::vector<llvm::MachO::section_64> m_mach_sections;
-  std::vector<uint32_t> m_min_os_versions;
+  llvm::Optional<llvm::VersionTuple> m_min_os_version;
   std::vector<uint32_t> m_sdk_versions;
   typedef lldb_private::RangeVector<uint32_t, uint32_t> FileRangeArray;
   lldb_private::Address m_entry_point_address;
