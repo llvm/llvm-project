@@ -7875,7 +7875,7 @@ entry:
   ret i64 %vecext.i
 }
 
-define i64 @test_mm512_mask_reduce_max_pd(i8 zeroext %__M, <8 x double> %__W) {
+define double @test_mm512_mask_reduce_max_pd(i8 zeroext %__M, <8 x double> %__W) {
 ; X86-LABEL: test_mm512_mask_reduce_max_pd:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
@@ -7884,7 +7884,7 @@ define i64 @test_mm512_mask_reduce_max_pd(i8 zeroext %__M, <8 x double> %__W) {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movb 8(%ebp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vbroadcastsd {{.*#+}} zmm1 = [-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf]
@@ -7895,11 +7895,8 @@ define i64 @test_mm512_mask_reduce_max_pd(i8 zeroext %__M, <8 x double> %__W) {
 ; X86-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X86-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vmovlpd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fisttpll (%esp)
-; X86-NEXT:    movl (%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    vmovlpd %xmm0, (%esp)
+; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -7917,7 +7914,6 @@ define i64 @test_mm512_mask_reduce_max_pd(i8 zeroext %__M, <8 x double> %__W) {
 ; X64-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X64-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vcvttsd2si %xmm0, %rax
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -7932,8 +7928,7 @@ entry:
   %shuffle.i = shufflevector <2 x double> %3, <2 x double> undef, <2 x i32> <i32 1, i32 0>
   %4 = tail call <2 x double> @llvm.x86.sse2.max.pd(<2 x double> %3, <2 x double> %shuffle.i) #3
   %vecext.i = extractelement <2 x double> %4, i32 0
-  %conv = fptosi double %vecext.i to i64
-  ret i64 %conv
+  ret double %vecext.i
 }
 
 define i64 @test_mm512_mask_reduce_min_epi64(i8 zeroext %__M, <8 x i64> %__W) {

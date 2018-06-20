@@ -37,12 +37,12 @@ decb x0, all, mul #17
 // Invalid predicate patterns
 
 decb x0, vl512
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
 // CHECK-NEXT: decb x0, vl512
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 decb x0, vl9
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
 // CHECK-NEXT: decb x0, vl9
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

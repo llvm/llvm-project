@@ -37,47 +37,6 @@ uqinch  x0, all, mul #16
 
 
 // ---------------------------------------------------------------------------//
-// Test 32-bit form (w0) and its aliases
-// ---------------------------------------------------------------------------//
-
-uqinch  w0
-// CHECK-INST: uqinch  w0
-// CHECK-ENCODING: [0xe0,0xf7,0x60,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 60 04 <unknown>
-
-uqinch  w0, all
-// CHECK-INST: uqinch  w0
-// CHECK-ENCODING: [0xe0,0xf7,0x60,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 60 04 <unknown>
-
-uqinch  w0, all, mul #1
-// CHECK-INST: uqinch  w0
-// CHECK-ENCODING: [0xe0,0xf7,0x60,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 60 04 <unknown>
-
-uqinch  w0, all, mul #16
-// CHECK-INST: uqinch  w0, all, mul #16
-// CHECK-ENCODING: [0xe0,0xf7,0x6f,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 f7 6f 04 <unknown>
-
-uqinch  w0, pow2
-// CHECK-INST: uqinch  w0, pow2
-// CHECK-ENCODING: [0x00,0xf4,0x60,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 f4 60 04 <unknown>
-
-uqinch  w0, pow2, mul #16
-// CHECK-INST: uqinch  w0, pow2, mul #16
-// CHECK-ENCODING: [0x00,0xf4,0x6f,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 f4 6f 04 <unknown>
-
-
-// ---------------------------------------------------------------------------//
 // Test all patterns for 64-bit form
 // ---------------------------------------------------------------------------//
 

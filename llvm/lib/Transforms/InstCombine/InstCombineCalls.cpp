@@ -3614,13 +3614,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // happen when variable allocas are DCE'd.
     if (IntrinsicInst *SS = dyn_cast<IntrinsicInst>(II->getArgOperand(0))) {
       if (SS->getIntrinsicID() == Intrinsic::stacksave) {
-        // Skip over debug info instructions.
-        // FIXME: This should be an utility in Instruction.h
-        auto It = SS->getIterator();
-        It++;
-        while (isa<DbgInfoIntrinsic>(*It))
-          It++;
-        if (&*It == II) {
+        // Skip over debug info.
+        if (SS->getNextNonDebugInstruction() == II) {
           return eraseInstFromFunction(CI);
         }
       }
@@ -3804,10 +3799,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 // Fence instruction simplification
 Instruction *InstCombiner::visitFenceInst(FenceInst &FI) {
   // Remove identical consecutive fences.
-  Instruction *Next = FI.getNextNode();
-  while (Next != nullptr && isa<DbgInfoIntrinsic>(Next))
-    Next = Next->getNextNode();
-
+  Instruction *Next = FI.getNextNonDebugInstruction();
   if (auto *NFI = dyn_cast<FenceInst>(Next))
     if (FI.isIdenticalTo(NFI))
       return eraseInstFromFunction(FI);

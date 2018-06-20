@@ -42,6 +42,15 @@ using namespace llvm;
 struct X86EvexToVexCompressTableEntry {
   uint16_t EvexOpcode;
   uint16_t VexOpcode;
+
+  bool operator<(const X86EvexToVexCompressTableEntry &RHS) const {
+    return EvexOpcode < RHS.EvexOpcode;
+  }
+
+  friend bool operator<(const X86EvexToVexCompressTableEntry &TE,
+                        unsigned Opc) {
+    return TE.EvexOpcode < Opc;
+  }
 };
 #include "X86GenEVEX2VEXTables.inc"
 
@@ -54,35 +63,15 @@ namespace {
 
 class EvexToVexInstPass : public MachineFunctionPass {
 
-  /// X86EvexToVexCompressTable - Evex to Vex encoding opcode map.
-  using EvexToVexTableType = DenseMap<unsigned, uint16_t>;
-  EvexToVexTableType EvexToVex128Table;
-  EvexToVexTableType EvexToVex256Table;
-
   /// For EVEX instructions that can be encoded using VEX encoding, replace
   /// them by the VEX encoding in order to reduce size.
   bool CompressEvexToVexImpl(MachineInstr &MI) const;
-
-  /// For initializing the hash map tables of all AVX-512 EVEX
-  /// corresponding to AVX/AVX2 opcodes.
-  void AddTableEntry(EvexToVexTableType &EvexToVexTable, uint16_t EvexOp,
-                     uint16_t VexOp);
 
 public:
   static char ID;
 
   EvexToVexInstPass() : MachineFunctionPass(ID) {
     initializeEvexToVexInstPassPass(*PassRegistry::getPassRegistry());
-
-    // Initialize the EVEX to VEX 128 table map.
-    for (X86EvexToVexCompressTableEntry Entry : X86EvexToVex128CompressTable) {
-      AddTableEntry(EvexToVex128Table, Entry.EvexOpcode, Entry.VexOpcode);
-    }
-
-    // Initialize the EVEX to VEX 256 table map.
-    for (X86EvexToVexCompressTableEntry Entry : X86EvexToVex256CompressTable) {
-      AddTableEntry(EvexToVex256Table, Entry.EvexOpcode, Entry.VexOpcode);
-    }
   }
 
   StringRef getPassName() const override { return EVEX2VEX_DESC; }
@@ -125,11 +114,6 @@ bool EvexToVexInstPass::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Changed;
-}
-
-void EvexToVexInstPass::AddTableEntry(EvexToVexTableType &EvexToVexTable,
-                                      uint16_t EvexOp, uint16_t VexOp) {
-  EvexToVexTable[EvexOp] = VexOp;
 }
 
 static bool usesExtendedRegister(const MachineInstr &MI) {
@@ -253,23 +237,30 @@ bool EvexToVexInstPass::CompressEvexToVexImpl(MachineInstr &MI) const {
   if (Desc.TSFlags & X86II::EVEX_L2)
     return false;
 
-  unsigned NewOpc = 0;
+#ifndef NDEBUG
+  // Make sure the tables are sorted.
+  static bool TableChecked = false;
+  if (!TableChecked) {
+    assert(std::is_sorted(std::begin(X86EvexToVex128CompressTable),
+                          std::end(X86EvexToVex128CompressTable)) &&
+           "X86EvexToVex128CompressTable is not sorted!");
+    assert(std::is_sorted(std::begin(X86EvexToVex256CompressTable),
+                          std::end(X86EvexToVex256CompressTable)) &&
+           "X86EvexToVex256CompressTable is not sorted!");
+    TableChecked = true;
+  }
+#endif
 
   // Use the VEX.L bit to select the 128 or 256-bit table.
-  if (Desc.TSFlags & X86II::VEX_L) {
-    // Search for opcode in the EvexToVex256 table.
-    auto It = EvexToVex256Table.find(MI.getOpcode());
-    if (It != EvexToVex256Table.end())
-      NewOpc = It->second;
-  } else {
-    // Search for opcode in the EvexToVex128 table.
-    auto It = EvexToVex128Table.find(MI.getOpcode());
-    if (It != EvexToVex128Table.end())
-      NewOpc = It->second;
-  }
+  ArrayRef<X86EvexToVexCompressTableEntry> Table =
+    (Desc.TSFlags & X86II::VEX_L) ? makeArrayRef(X86EvexToVex256CompressTable)
+                                  : makeArrayRef(X86EvexToVex128CompressTable);
 
-  if (!NewOpc)
+  auto I = std::lower_bound(Table.begin(), Table.end(), MI.getOpcode());
+  if (I == Table.end() || I->EvexOpcode != MI.getOpcode())
     return false;
+
+  unsigned NewOpc = I->VexOpcode;
 
   if (usesExtendedRegister(MI))
     return false;

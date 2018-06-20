@@ -1649,9 +1649,7 @@ void Parser::stripTypeAttributesOffDeclSpec(ParsedAttributesWithRange &Attrs,
   }
 
   // Find end of type attributes Attrs and add NewTypeAttributes in the same
-  // order they were in originally.  (Remember, in AttributeList things earlier
-  // in source order are later in the list, since new attributes are added to
-  // the front of the list.)
+  // order they were in originally.
   Attrs.addAllAtEnd(TypeAttrHead);
 }
 

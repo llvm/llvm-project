@@ -5302,7 +5302,7 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
   }
 }
 
-void AArch64InstrInfo::insertOutlinerEpilogue(
+void AArch64InstrInfo::buildOutlinedFrame(
     MachineBasicBlock &MBB, MachineFunction &MF,
     const outliner::TargetCostInfo &TCI) const {
   // For thunk outlining, rewrite the last instruction from a call to a
@@ -5398,10 +5398,6 @@ void AArch64InstrInfo::insertOutlinerEpilogue(
   // Walk over the basic block and fix up all the stack accesses.
   fixupPostOutline(MBB);
 }
-
-void AArch64InstrInfo::insertOutlinerPrologue(
-    MachineBasicBlock &MBB, MachineFunction &MF,
-    const outliner::TargetCostInfo &TCI) const {}
 
 MachineBasicBlock::iterator AArch64InstrInfo::insertOutlinedCall(
     Module &M, MachineBasicBlock &MBB, MachineBasicBlock::iterator &It,

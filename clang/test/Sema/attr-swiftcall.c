@@ -9,7 +9,7 @@
 int notAFunction SWIFTCALL; // expected-warning {{'swiftcall' only applies to function types; type here is 'int'}}
 void variadic(int x, ...) SWIFTCALL; // expected-error {{variadic function cannot use swiftcall calling convention}}
 void unprototyped() SWIFTCALL; // expected-error {{function with no prototype cannot use the swiftcall calling convention}}
-void multiple_ccs(int x) SWIFTCALL __attribute__((vectorcall)); // expected-error {{vectorcall and swiftcall attributes are not compatible}}
+void multiple_ccs(int x) SWIFTCALL __attribute__((vectorcall)); // expected-error {{swiftcall and vectorcall attributes are not compatible}}
 void (*functionPointer)(void) SWIFTCALL;
 
 void indirect_result_nonswift(INDIRECT_RESULT void *out); // expected-error {{'swift_indirect_result' parameter can only be used with swiftcall calling convention}}

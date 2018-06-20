@@ -215,6 +215,7 @@ private:
   void eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI);
 
   void markValueUsed(LiveInterval*, VNInfo*);
+  bool canGuaranteeAssignmentAfterRemat(unsigned VReg, MachineInstr &MI);
   bool reMaterializeFor(LiveInterval &, MachineInstr &MI);
   void reMaterializeAll();
 
@@ -514,6 +515,26 @@ void InlineSpiller::markValueUsed(LiveInterval *LI, VNInfo *VNI) {
   } while (!WorkList.empty());
 }
 
+bool InlineSpiller::canGuaranteeAssignmentAfterRemat(unsigned VReg,
+                                                     MachineInstr &MI) {
+  // Here's a quick explanation of the problem we're trying to handle here:
+  // * There are some pseudo instructions with more vreg uses than there are
+  //   physical registers on the machine.
+  // * This is normally handled by spilling the vreg, and folding the reload
+  //   into the user instruction.  (Thus decreasing the number of used vregs
+  //   until the remainder can be assigned to physregs.)
+  // * However, since we may try to spill vregs in any order, we can end up
+  //   trying to spill each operand to the instruction, and then rematting it
+  //   instead.  When that happens, the new live intervals (for the remats) are
+  //   expected to be trivially assignable (i.e. RS_Done).  However, since we
+  //   may have more remats than physregs, we're guaranteed to fail to assign
+  //   one.
+  // At the moment, we only handle this for STATEPOINTs since they're the only
+  // psuedo op where we've seen this.  If we start seeing other instructions
+  // with the same problem, we need to revisit this.
+  return (MI.getOpcode() != TargetOpcode::STATEPOINT);
+}
+
 /// reMaterializeFor - Attempt to rematerialize before MI instead of reloading.
 bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Analyze instruction
@@ -568,6 +589,11 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
     ++NumFoldedLoads;
     return true;
   }
+
+  // If we can't guarantee that we'll be able to actually assign the new vreg,
+  // we can't remat.
+  if (!canGuaranteeAssignmentAfterRemat(VirtReg.reg, MI))
+    return false;
 
   // Allocate a new register for the remat.
   unsigned NewVReg = Edit->createFrom(Original);

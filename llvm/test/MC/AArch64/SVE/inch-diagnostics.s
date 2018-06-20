@@ -37,12 +37,12 @@ inch x0, all, mul #17
 // Invalid predicate patterns
 
 inch x0, vl512
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
 // CHECK-NEXT: inch x0, vl512
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 inch x0, vl9
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
 // CHECK-NEXT: inch x0, vl9
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
