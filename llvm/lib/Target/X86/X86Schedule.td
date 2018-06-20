@@ -137,6 +137,7 @@ defm WriteCMOV2 : X86SchedWritePair; // Conditional (CF + ZF flag) move.
 def  WriteFCMOV : SchedWrite; // X87 conditional move.
 def  WriteSETCC : SchedWrite; // Set register based on condition code.
 def  WriteSETCCStore : SchedWrite;
+def  WriteLAHFSAHF : SchedWrite; // Load/Store flags in AH.
 
 // Integer shifts and rotates.
 defm WriteShift : X86SchedWritePair;

@@ -7301,8 +7301,8 @@ define void @test_lahf_sahf() optsize {
 ; ATOM-LABEL: test_lahf_sahf:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    lahf # sched: [1:0.50]
-; ATOM-NEXT:    sahf # sched: [1:0.50]
+; ATOM-NEXT:    lahf # sched: [2:1.00]
+; ATOM-NEXT:    sahf # sched: [2:1.00]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
@@ -7325,32 +7325,32 @@ define void @test_lahf_sahf() optsize {
 ; HASWELL-LABEL: test_lahf_sahf:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    lahf # sched: [1:0.25]
-; HASWELL-NEXT:    sahf # sched: [1:0.25]
+; HASWELL-NEXT:    lahf # sched: [1:0.50]
+; HASWELL-NEXT:    sahf # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lahf_sahf:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    lahf # sched: [1:0.25]
-; BROADWELL-NEXT:    sahf # sched: [1:0.25]
+; BROADWELL-NEXT:    lahf # sched: [1:0.50]
+; BROADWELL-NEXT:    sahf # sched: [1:0.50]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_lahf_sahf:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    lahf # sched: [1:0.25]
-; SKYLAKE-NEXT:    sahf # sched: [1:0.25]
+; SKYLAKE-NEXT:    lahf # sched: [1:0.50]
+; SKYLAKE-NEXT:    sahf # sched: [1:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_lahf_sahf:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    lahf # sched: [1:0.25]
-; SKX-NEXT:    sahf # sched: [1:0.25]
+; SKX-NEXT:    lahf # sched: [1:0.50]
+; SKX-NEXT:    sahf # sched: [1:0.50]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;

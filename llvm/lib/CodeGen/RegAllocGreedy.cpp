@@ -312,16 +312,16 @@ class RAGreedy : public MachineFunctionPass,
 
     /// Track new eviction.
     /// The Evictor vreg has evicted the Evictee vreg from Physreg.
-    /// \praram PhysReg The phisical register Evictee was evicted from.
-    /// \praram Evictor The evictor Vreg that evicted Evictee.
-    /// \praram Evictee The evictee Vreg.
+    /// \param PhysReg The phisical register Evictee was evicted from.
+    /// \param Evictor The evictor Vreg that evicted Evictee.
+    /// \param Evictee The evictee Vreg.
     void addEviction(unsigned PhysReg, unsigned Evictor, unsigned Evictee) {
       Evictees[Evictee].first = Evictor;
       Evictees[Evictee].second = PhysReg;
     }
 
     /// Return the Evictor Vreg which evicted Evictee Vreg from PhysReg.
-    /// \praram Evictee The evictee vreg.
+    /// \param Evictee The evictee vreg.
     /// \return The Evictor vreg which evicted Evictee vreg from PhysReg. 0 if
     /// nobody has evicted Evictee from PhysReg.
     EvictorInfo getEvictor(unsigned Evictee) {
@@ -989,7 +989,7 @@ bool RAGreedy::canEvictInterferenceInRange(LiveInterval &VirtReg,
   return true;
 }
 
-/// Return tthe physical register that will be best
+/// Return the physical register that will be best
 /// candidate for eviction by a local split interval that will be created
 /// between Start and End.
 ///
@@ -1406,7 +1406,7 @@ BlockFrequency RAGreedy::calcSpillCost() {
 /// Evictee %0 is intended for region splitting with split candidate
 /// physreg0 (the reg %0 was evicted from).
 /// Region splitting creates a local interval because of interference with the
-/// evictor %1 (normally region spliitting creates 2 interval, the "by reg"
+/// evictor %1 (normally region splitting creates 2 interval, the "by reg"
 /// and "by stack" intervals and local interval created when interference
 /// occurs).
 /// One of the split intervals ends up evicting %2 from physreg1.
@@ -1527,8 +1527,8 @@ bool RAGreedy::splitCanCauseLocalSpill(unsigned VirtRegToSplit,
       return false;
   }
 
-  // The local interval is not able to find non interferening assignment and not
-  // able to evict a less worthy interval, therfore, it can cause a spill.
+  // The local interval is not able to find non interferencing assignment and
+  // not able to evict a less worthy interval, therfore, it can cause a spill.
   return true;
 }
 
@@ -2599,7 +2599,7 @@ unsigned RAGreedy::tryLastChanceRecoloring(LiveInterval &VirtReg,
       unsigned ItVirtReg = (*It)->reg;
       enqueue(RecoloringQueue, *It);
       assert(VRM->hasPhys(ItVirtReg) &&
-             "Interferences are supposed to be with allocated vairables");
+             "Interferences are supposed to be with allocated variables");
 
       // Record the current allocation.
       VirtRegToPhysReg[ItVirtReg] = VRM->getPhys(ItVirtReg);

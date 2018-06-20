@@ -39,9 +39,6 @@ public:
 
   static bool GetEnvironmentVar(const std::string &var_name, std::string &var);
 
-protected:
-  static bool ComputePythonDirectory(FileSpec &file_spec);
-
 private:
   static FileSpec m_program_filespec;
 };

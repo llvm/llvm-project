@@ -200,6 +200,61 @@ entry:
   ret void
 }
 
+; Test perfect forwarding of argument registers and stack slots to the
+; deopt bundle uses
+define void @test9(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z) gc "statepoint-example" {
+; CHECK-LABEL: test9:
+; CHECK:      pushq %rax
+; CHECK-NEXT: .cfi_def_cfa_offset 16
+; CHECK-NEXT: callq _bar
+; CHECK-NEXT: Ltmp10:
+; CHECK-NEXT: popq %rax
+; CHECK-NEXT: retq
+
+entry:
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 26, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)
+  ret void
+}
+
+; Test enough folding of argument slots when we have one call which clobbers
+; registers before a second which needs them - i.e. we must do something with
+; arguments originally passed in registers
+define void @test10(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z) gc "statepoint-example" {
+; FIXME (minor): It would be better to just spill (and fold reload) for
+; argument registers then spill and fill all the CSRs.
+; CHECK-LABEL: test10:
+; CHECK:      pushq	%rbp
+; CHECK:      pushq	%r15
+; CHECK:      pushq	%r14
+; CHECK:      pushq	%r13
+; CHECK:      pushq	%r12
+; CHECK:      pushq	%rbx
+; CHECK:      pushq	%rax
+; CHECK:      movl	%r9d, %r15d
+; CHECK-NEXT: movl	%r8d, %r14d
+; CHECK-NEXT: movl	%ecx, %r12d
+; CHECK-NEXT: movl	%edx, %r13d
+; CHECK-NEXT: movl	%esi, %ebx
+; CHECK-NEXT: movl	%edi, %ebp
+; CHECK-NEXT: callq _bar
+; CHECK-NEXT: Ltmp11:
+; CHECK-NEXT: callq _bar
+; CHECK-NEXT: Ltmp12:
+; CHECK-NEXT: addq	$8, %rsp
+; CHECK-NEXT: popq	%rbx
+; CHECK-NEXT: popq	%r12
+; CHECK-NEXT: popq	%r13
+; CHECK-NEXT: popq	%r14
+; CHECK-NEXT: popq	%r15
+; CHECK-NEXT: popq	%rbp
+; CHECK-NEXT: retq
+
+entry:
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 26, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)
+  %statepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i32 0, i32 26, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z)
+  ret void
+}
+
 ; CHECK: Ltmp0-_test1
 ; CHECK:      .byte	1
 ; CHECK-NEXT:   .byte   0

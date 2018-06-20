@@ -200,6 +200,13 @@ def : InstAlias<"fmv.s $rd, $rs",  (FSGNJ_S  FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
 def : InstAlias<"fabs.s $rd, $rs", (FSGNJX_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
 def : InstAlias<"fneg.s $rd, $rs", (FSGNJN_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
 
+// fgt.s/fge.s are recognised by the GNU assembler but the canonical
+// flt.s/fle.s forms will always be printed. Therefore, set a zero weight.
+def : InstAlias<"fgt.s $rd, $rs, $rt",
+                (FLT_S GPR:$rd, FPR32:$rt, FPR32:$rs), 0>;
+def : InstAlias<"fge.s $rd, $rs, $rt",
+                (FLE_S GPR:$rd, FPR32:$rt, FPR32:$rs), 0>;
+
 // The following csr instructions actually alias instructions from the base ISA.
 // However, it only makes sense to support them when the F extension is enabled.
 // CSR Addresses: 0x003 == fcsr, 0x002 == frm, 0x001 == fflags

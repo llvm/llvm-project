@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstrBuilder.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Debug.h"
@@ -158,23 +159,6 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
                            const MCInstrDesc &MCDesc,
                            const MCSchedClassDesc &SCDesc,
                            const MCSubtargetInfo &STI) {
-  // Set if writes through this opcode may update super registers.
-  // TODO: on x86-64, a 4 byte write of a general purpose register always
-  // fully updates the super-register.
-  // More in general, (at least on x86) not all register writes perform
-  // a partial (super-)register update.
-  // For example, an AVX instruction that writes on a XMM register implicitly
-  // zeroes the upper half of every aliasing super-register.
-  //
-  // For now, we pessimistically assume that writes are all potentially
-  // partial register updates. This is a good default for most targets, execept
-  // for those like x86 which implement a special semantic for certain opcodes.
-  // At least on x86, this may lead to an inaccurate prediction of the
-  // instruction level parallelism.
-  bool FullyUpdatesSuperRegisters = false;
-
-  // Now Populate Writes.
-
   // This algorithm currently works under the strong (and potentially incorrect)
   // assumption that information related to register def/uses can be obtained
   // from MCInstrDesc.
@@ -275,7 +259,6 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
       Write.Latency = ID.MaxLatency;
       Write.SClassOrWriteResourceID = 0;
     }
-    Write.FullyUpdatesSuperRegs = FullyUpdatesSuperRegisters;
     Write.IsOptionalDef = false;
     LLVM_DEBUG({
       dbgs() << "\t\tOpIdx=" << Write.OpIndex << ", Latency=" << Write.Latency
@@ -488,16 +471,33 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
     NewIS->getUses().emplace_back(llvm::make_unique<ReadState>(RD, RegID));
   }
 
+  // Early exit if there are no writes.
+  if (D.Writes.empty())
+    return NewIS;
+
+  // Track register writes that implicitly clear the upper portion of the
+  // underlying super-registers using an APInt.
+  APInt WriteMask(D.Writes.size(), 0);
+
+  // Now query the MCInstrAnalysis object to obtain information about which
+  // register writes implicitly clear the upper portion of a super-register.
+  MCIA.clearsSuperRegisters(MRI, MCI, WriteMask);
+
   // Initialize writes.
+  unsigned WriteIndex = 0;
   for (const WriteDescriptor &WD : D.Writes) {
     unsigned RegID =
         WD.OpIndex == -1 ? WD.RegisterID : MCI.getOperand(WD.OpIndex).getReg();
     // Check if this is a optional definition that references NoReg.
-    if (WD.IsOptionalDef && !RegID)
+    if (WD.IsOptionalDef && !RegID) {
+      ++WriteIndex;
       continue;
+    }
 
     assert(RegID && "Expected a valid register ID!");
-    NewIS->getDefs().emplace_back(llvm::make_unique<WriteState>(WD, RegID));
+    NewIS->getDefs().emplace_back(llvm::make_unique<WriteState>(
+        WD, RegID, /* ClearsSuperRegs */ WriteMask[WriteIndex]));
+    ++WriteIndex;
   }
 
   return NewIS;

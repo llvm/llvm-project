@@ -994,6 +994,11 @@ private:
                       BinaryOperator::Opcode Op, const Z3Expr &RHS,
                       QualType RTy, QualType *RetTy) const;
 
+  // Wrapper to generate Z3Expr from a range. If From == To, an equality will
+  // be created instead.
+  Z3Expr getZ3RangeExpr(SymbolRef Sym, const llvm::APSInt &From,
+                        const llvm::APSInt &To, bool InRange);
+
   //===------------------------------------------------------------------===//
   // Helper functions.
   //===------------------------------------------------------------------===//
@@ -1052,35 +1057,7 @@ ProgramStateRef Z3ConstraintManager::assumeSym(ProgramStateRef State,
 ProgramStateRef Z3ConstraintManager::assumeSymInclusiveRange(
     ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
     const llvm::APSInt &To, bool InRange) {
-  QualType RetTy;
-  // The expression may be casted, so we cannot call getZ3DataExpr() directly
-  Z3Expr Exp = getZ3Expr(Sym, &RetTy);
-
-  QualType FromTy;
-  llvm::APSInt NewFromInt;
-  std::tie(NewFromInt, FromTy) = fixAPSInt(From);
-  Z3Expr FromExp = Z3Expr::fromAPSInt(NewFromInt);
-
-  // Construct single (in)equality
-  if (From == To)
-    return assumeZ3Expr(State, Sym,
-                        getZ3BinExpr(Exp, RetTy, InRange ? BO_EQ : BO_NE,
-                                     FromExp, FromTy, nullptr));
-
-  QualType ToTy;
-  llvm::APSInt NewToInt;
-  std::tie(NewToInt, ToTy) = fixAPSInt(To);
-  Z3Expr ToExp = Z3Expr::fromAPSInt(NewToInt);
-  assert(FromTy == ToTy && "Range values have different types!");
-  // Construct two (in)equalities, and a logical and/or
-  Z3Expr LHS = getZ3BinExpr(Exp, RetTy, InRange ? BO_GE : BO_LT, FromExp,
-                            FromTy, nullptr);
-  Z3Expr RHS =
-      getZ3BinExpr(Exp, RetTy, InRange ? BO_LE : BO_GT, ToExp, ToTy, nullptr);
-  return assumeZ3Expr(
-      State, Sym,
-      Z3Expr::fromBinOp(LHS, InRange ? BO_LAnd : BO_LOr, RHS,
-                        RetTy->isSignedIntegerOrEnumerationType()));
+  return assumeZ3Expr(State, Sym, getZ3RangeExpr(Sym, From, To, InRange));
 }
 
 ProgramStateRef Z3ConstraintManager::assumeSymUnsupported(ProgramStateRef State,
@@ -1264,31 +1241,14 @@ void Z3ConstraintManager::addRangeConstraints(ConstraintRangeTy CR) {
     SymbolRef Sym = I.first;
 
     Z3Expr Constraints = Z3Expr::fromBoolean(false);
-
     for (const auto &Range : I.second) {
-      const llvm::APSInt &From = Range.From();
-      const llvm::APSInt &To = Range.To();
+      Z3Expr SymRange =
+          getZ3RangeExpr(Sym, Range.From(), Range.To(), /*InRange=*/true);
 
-      QualType FromTy;
-      llvm::APSInt NewFromInt;
-      std::tie(NewFromInt, FromTy) = fixAPSInt(From);
-      Z3Expr FromExp = Z3Expr::fromAPSInt(NewFromInt);
-      QualType SymTy;
-      Z3Expr Exp = getZ3Expr(Sym, &SymTy);
-      bool IsSignedTy = SymTy->isSignedIntegerOrEnumerationType();
-      QualType ToTy;
-      llvm::APSInt NewToInt;
-      std::tie(NewToInt, ToTy) = fixAPSInt(To);
-      Z3Expr ToExp = Z3Expr::fromAPSInt(NewToInt);
-      assert(FromTy == ToTy && "Range values have different types!");
-
-      Z3Expr LHS =
-          getZ3BinExpr(Exp, SymTy, BO_GE, FromExp, FromTy, /*RetTy=*/nullptr);
-      Z3Expr RHS =
-          getZ3BinExpr(Exp, SymTy, BO_LE, ToExp, FromTy, /*RetTy=*/nullptr);
-      Z3Expr SymRange = Z3Expr::fromBinOp(LHS, BO_LAnd, RHS, IsSignedTy);
+      // FIXME: the last argument (isSigned) is not used when generating the
+      // or expression, as both arguments are booleans
       Constraints =
-          Z3Expr::fromBinOp(Constraints, BO_LOr, SymRange, IsSignedTy);
+          Z3Expr::fromBinOp(Constraints, BO_LOr, SymRange, /*IsSigned=*/true);
     }
     Solver.addConstraint(Constraints);
   }
@@ -1464,6 +1424,41 @@ Z3Expr Z3ConstraintManager::getZ3BinExpr(const Z3Expr &LHS, QualType LTy,
              ? Z3Expr::fromFloatBinOp(NewLHS, Op, NewRHS)
              : Z3Expr::fromBinOp(NewLHS, Op, NewRHS,
                                  LTy->isSignedIntegerOrEnumerationType());
+}
+
+Z3Expr Z3ConstraintManager::getZ3RangeExpr(SymbolRef Sym,
+                                           const llvm::APSInt &From,
+                                           const llvm::APSInt &To,
+                                           bool InRange) {
+  // Convert lower bound
+  QualType FromTy;
+  llvm::APSInt NewFromInt;
+  std::tie(NewFromInt, FromTy) = fixAPSInt(From);
+  Z3Expr FromExp = Z3Expr::fromAPSInt(NewFromInt);
+
+  // Convert symbol
+  QualType SymTy;
+  Z3Expr Exp = getZ3Expr(Sym, &SymTy);
+
+  // Construct single (in)equality
+  if (From == To)
+    return getZ3BinExpr(Exp, SymTy, InRange ? BO_EQ : BO_NE, FromExp, FromTy,
+                        /*RetTy=*/nullptr);
+
+  QualType ToTy;
+  llvm::APSInt NewToInt;
+  std::tie(NewToInt, ToTy) = fixAPSInt(To);
+  Z3Expr ToExp = Z3Expr::fromAPSInt(NewToInt);
+  assert(FromTy == ToTy && "Range values have different types!");
+
+  // Construct two (in)equalities, and a logical and/or
+  Z3Expr LHS = getZ3BinExpr(Exp, SymTy, InRange ? BO_GE : BO_LT, FromExp,
+                            FromTy, /*RetTy=*/nullptr);
+  Z3Expr RHS = getZ3BinExpr(Exp, SymTy, InRange ? BO_LE : BO_GT, ToExp, ToTy,
+                            /*RetTy=*/nullptr);
+
+  return Z3Expr::fromBinOp(LHS, InRange ? BO_LAnd : BO_LOr, RHS,
+                           SymTy->isSignedIntegerOrEnumerationType());
 }
 
 //===------------------------------------------------------------------===//

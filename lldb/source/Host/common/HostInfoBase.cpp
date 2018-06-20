@@ -58,7 +58,6 @@ struct HostInfoBaseFields {
   FileSpec m_lldb_so_dir;
   FileSpec m_lldb_support_exe_dir;
   FileSpec m_lldb_headers_dir;
-  FileSpec m_lldb_python_dir;
   FileSpec m_lldb_clang_resource_dir;
   FileSpec m_lldb_system_plugin_dir;
   FileSpec m_lldb_user_plugin_dir;
@@ -143,17 +142,6 @@ FileSpec HostInfoBase::GetHeaderDir() {
     LLDB_LOG(log, "header dir -> `{0}`", g_fields->m_lldb_headers_dir);
   });
   return success ? g_fields->m_lldb_headers_dir : FileSpec();
-}
-
-FileSpec HostInfoBase::GetPythonDir() {
-  static llvm::once_flag g_once_flag;
-  static bool success = false;
-  llvm::call_once(g_once_flag, []() {
-    success = HostInfo::ComputePythonDirectory(g_fields->m_lldb_python_dir);
-    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
-    LLDB_LOG(log, "python dir -> `{0}`", g_fields->m_lldb_python_dir);
-  });
-  return success ? g_fields->m_lldb_python_dir : FileSpec();
 }
 
 FileSpec HostInfoBase::GetSystemPluginDir() {

@@ -222,6 +222,8 @@ incl (%rax)
 incq %rdi
 incq (%rax)
 
+lahf
+
 mulb %dil
 mulb (%rax)
 mulw %si
@@ -394,6 +396,8 @@ rolq %cl, %rdi
 rorq %cl, %rdi
 rolq %cl, (%rax)
 rorq %cl, (%rax)
+
+sahf
 
 sarb %dil
 shlb %dil
@@ -806,6 +810,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     1.00    *      *            incl	(%rax)
 # CHECK-NEXT:  1      1     0.50                        incq	%rdi
 # CHECK-NEXT:  1      1     1.00    *      *            incq	(%rax)
+# CHECK-NEXT:  1      2     1.00                        lahf
 # CHECK-NEXT:  1      7     3.50                        mulb	%dil
 # CHECK-NEXT:  1      7     3.50    *                   mulb	(%rax)
 # CHECK-NEXT:  1      7     3.50                        mulw	%si
@@ -963,6 +968,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     1.00                        rorq	%cl, %rdi
 # CHECK-NEXT:  1      1     1.00    *      *            rolq	%cl, (%rax)
 # CHECK-NEXT:  1      1     1.00    *      *            rorq	%cl, (%rax)
+# CHECK-NEXT:  1      2     1.00                        sahf
 # CHECK-NEXT:  1      1     1.00                        sarb	%dil
 # CHECK-NEXT:  1      1     1.00                        shlb	%dil
 # CHECK-NEXT:  1      1     1.00                        shrb	%dil
@@ -1156,7 +1162,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 1258.50 963.50
+# CHECK-NEXT: 1260.50 965.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -1357,6 +1363,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 1.00    -     incl	(%rax)
 # CHECK-NEXT: 0.50   0.50   incq	%rdi
 # CHECK-NEXT: 1.00    -     incq	(%rax)
+# CHECK-NEXT: 1.00   1.00   lahf
 # CHECK-NEXT: 3.50   3.50   mulb	%dil
 # CHECK-NEXT: 3.50   3.50   mulb	(%rax)
 # CHECK-NEXT: 3.50   3.50   mulw	%si
@@ -1514,6 +1521,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 1.00    -     rorq	%cl, %rdi
 # CHECK-NEXT: 1.00    -     rolq	%cl, (%rax)
 # CHECK-NEXT: 1.00    -     rorq	%cl, (%rax)
+# CHECK-NEXT: 1.00   1.00   sahf
 # CHECK-NEXT: 1.00    -     sarb	%dil
 # CHECK-NEXT: 1.00    -     shlb	%dil
 # CHECK-NEXT: 1.00    -     shrb	%dil

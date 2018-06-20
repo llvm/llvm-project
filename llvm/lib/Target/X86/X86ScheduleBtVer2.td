@@ -177,6 +177,7 @@ defm : JWriteResIntPair<WriteCMOV2, [JALU01], 1>; // Conditional (CF + ZF flag) 
 defm : X86WriteRes<WriteFCMOV, [JFPU0, JFPA], 3, [1,1], 1>; // x87 conditional move.
 def  : WriteRes<WriteSETCC, [JALU01]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [JALU01,JSAGU]>;
+def  : WriteRes<WriteLAHFSAHF, [JALU01]>;
 
 // This is for simple LEAs with one or two input operands.
 // FIXME: SAGU 3-operand LEA

@@ -6446,13 +6446,7 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
 
   // Find the std::move call and get the argument.
   const CallExpr *CE = dyn_cast<CallExpr>(InitExpr->IgnoreParens());
-  if (!CE || CE->getNumArgs() != 1)
-    return;
-
-  const FunctionDecl *MoveFunction = CE->getDirectCallee();
-  if (!MoveFunction || !MoveFunction->isInStdNamespace() ||
-      !MoveFunction->getIdentifier() ||
-      !MoveFunction->getIdentifier()->isStr("move"))
+  if (!CE || !CE->isCallToStdMove())
     return;
 
   const Expr *Arg = CE->getArg(0)->IgnoreImplicit();

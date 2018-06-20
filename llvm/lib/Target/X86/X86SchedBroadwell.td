@@ -134,6 +134,7 @@ def  : WriteRes<WriteSETCCStore, [BWPort06,BWPort4,BWPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
+def  : WriteRes<WriteLAHFSAHF, [BWPort06]>;
 
 // Bit counts.
 defm : BWWriteResPair<WriteBitScan, [BWPort1], 3>;
@@ -624,7 +625,6 @@ def BWWriteResGroup9 : SchedWriteRes<[BWPort0156]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[BWWriteResGroup9], (instrs LAHF, SAHF)>; // TODO: This doesnt match Agner's data
 def: InstRW<[BWWriteResGroup9], (instregex "SGDT64m",
                                            "SIDT64m",
                                            "SMSW16m",

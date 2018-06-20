@@ -110,7 +110,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   UseHVX64BOps = false;
   UseLongCalls = false;
 
-  UseBSBScheduling = hasV60TOps() && EnableBSBSched;
+  UseBSBScheduling = hasV60Ops() && EnableBSBSched;
 
   ParseSubtargetFeatures(CPUString, FS);
 
@@ -334,7 +334,7 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
     return;
   }
 
-  if (!hasV60TOps())
+  if (!hasV60Ops())
     return;
 
   // Set the latency for a copy to zero since we hope that is will get removed.
@@ -405,7 +405,7 @@ void HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
     return;
   }
 
-  if (!hasV60TOps())
+  if (!hasV60Ops())
     return;
 
   auto &QII = static_cast<const HexagonInstrInfo&>(*getInstrInfo());
@@ -529,13 +529,13 @@ bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
   // Reassign the latency for the previous bests, which requires setting
   // the dependence edge in both directions.
   if (SrcBest != nullptr) {
-    if (!hasV60TOps())
+    if (!hasV60Ops())
       changeLatency(SrcBest, Dst, 1);
     else
       restoreLatency(SrcBest, Dst);
   }
   if (DstBest != nullptr) {
-    if (!hasV60TOps())
+    if (!hasV60Ops())
       changeLatency(Src, DstBest, 1);
     else
       restoreLatency(Src, DstBest);

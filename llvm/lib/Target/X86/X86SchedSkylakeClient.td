@@ -132,6 +132,7 @@ def  : WriteRes<WriteSETCCStore, [SKLPort06,SKLPort4,SKLPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
+def  : WriteRes<WriteLAHFSAHF, [SKLPort06]>;
 
 // Bit counts.
 defm : SKLWriteResPair<WriteBitScan, [SKLPort1], 3>;
@@ -629,7 +630,6 @@ def SKLWriteResGroup10 : SchedWriteRes<[SKLPort0156]> {
 }
 def: InstRW<[SKLWriteResGroup10], (instrs CBW, CWDE, CDQE,
                                           CMC, STC)>;
-def: InstRW<[SKLWriteResGroup10], (instrs LAHF, SAHF)>; // TODO: This doesn't match Agner's data
 def: InstRW<[SKLWriteResGroup10], (instregex "SGDT64m",
                                              "SIDT64m",
                                              "SMSW16m",

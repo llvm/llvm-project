@@ -18,14 +18,19 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_TARGET_H
 
 #include "llvm/ADT/Triple.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/LegacyPassManager.h"
 
 namespace exegesis {
 
 class ExegesisTarget {
 public:
+  // Targets can use this to add target-specific passes in assembleToStream();
+  virtual void addTargetSpecificPasses(llvm::PassManagerBase &PM) const {}
+
   // Returns the ExegesisTarget for the given triple or nullptr if the target
   // does not exist.
-  static const ExegesisTarget* lookup(llvm::StringRef TT);
+  static const ExegesisTarget *lookup(llvm::Triple TT);
   // Registers a target. Not thread safe.
   static void registerTarget(ExegesisTarget *T);
 

@@ -239,7 +239,7 @@ import subprocess
 
 
 def have_ld_plugin_support():
-    if not os.path.exists(os.path.join(config.llvm_shlib_dir, 'LLVMgold.so')):
+    if not os.path.exists(os.path.join(config.llvm_shlib_dir, 'LLVMgold' + config.llvm_shlib_ext)):
         return False
 
     ld_cmd = subprocess.Popen(
