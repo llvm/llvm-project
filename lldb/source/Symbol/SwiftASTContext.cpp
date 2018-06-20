@@ -4304,8 +4304,8 @@ CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
   return CompilerType();
 }
 
-swift::IRGenDebugInfoKind SwiftASTContext::GetGenerateDebugInfo() {
-  return GetIRGenOptions().DebugInfoKind;
+swift::IRGenDebugInfoLevel SwiftASTContext::GetGenerateDebugInfo() {
+  return GetIRGenOptions().DebugInfoLevel;
 }
 
 swift::PrintOptions SwiftASTContext::GetUserVisibleTypePrintingOptions(
@@ -4326,8 +4326,8 @@ swift::PrintOptions SwiftASTContext::GetUserVisibleTypePrintingOptions(
   return print_options;
 }
 
-void SwiftASTContext::SetGenerateDebugInfo(swift::IRGenDebugInfoKind b) {
-  GetIRGenOptions().DebugInfoKind = b;
+void SwiftASTContext::SetGenerateDebugInfo(swift::IRGenDebugInfoLevel b) {
+  GetIRGenOptions().DebugInfoLevel = b;
 }
 
 llvm::TargetOptions *SwiftASTContext::getTargetOptions() {

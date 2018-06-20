@@ -32,7 +32,7 @@
 #include <set>
 
 namespace swift {
-enum class IRGenDebugInfoKind : unsigned;
+enum class IRGenDebugInfoLevel : unsigned;
 class CanType;
 class IRGenOptions;
 class NominalTypeDecl;
@@ -164,12 +164,12 @@ public:
 
   swift::ASTContext *GetASTContext();
 
-  swift::IRGenDebugInfoKind GetGenerateDebugInfo();
+  swift::IRGenDebugInfoLevel GetGenerateDebugInfo();
 
   static swift::PrintOptions
   GetUserVisibleTypePrintingOptions(bool print_help_if_available);
 
-  void SetGenerateDebugInfo(swift::IRGenDebugInfoKind b);
+  void SetGenerateDebugInfo(swift::IRGenDebugInfoLevel b);
 
   bool AddModuleSearchPath(const char *path);
 
