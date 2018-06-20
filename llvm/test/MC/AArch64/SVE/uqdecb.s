@@ -37,47 +37,6 @@ uqdecb  x0, all, mul #16
 
 
 // ---------------------------------------------------------------------------//
-// Test 32-bit form (w0) and its aliases
-// ---------------------------------------------------------------------------//
-
-uqdecb  w0
-// CHECK-INST: uqdecb  w0
-// CHECK-ENCODING: [0xe0,0xff,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 ff 20 04 <unknown>
-
-uqdecb  w0, all
-// CHECK-INST: uqdecb  w0
-// CHECK-ENCODING: [0xe0,0xff,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 ff 20 04 <unknown>
-
-uqdecb  w0, all, mul #1
-// CHECK-INST: uqdecb  w0
-// CHECK-ENCODING: [0xe0,0xff,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 ff 20 04 <unknown>
-
-uqdecb  w0, all, mul #16
-// CHECK-INST: uqdecb  w0, all, mul #16
-// CHECK-ENCODING: [0xe0,0xff,0x2f,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 ff 2f 04 <unknown>
-
-uqdecb  w0, pow2
-// CHECK-INST: uqdecb  w0, pow2
-// CHECK-ENCODING: [0x00,0xfc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 fc 20 04 <unknown>
-
-uqdecb  w0, pow2, mul #16
-// CHECK-INST: uqdecb  w0, pow2, mul #16
-// CHECK-ENCODING: [0x00,0xfc,0x2f,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 fc 2f 04 <unknown>
-
-
-// ---------------------------------------------------------------------------//
 // Test all patterns for 64-bit form
 // ---------------------------------------------------------------------------//
 

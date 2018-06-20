@@ -333,30 +333,7 @@ class sve_int_pred_pattern_b<bits<5> opc, string asm, RegisterOperand dt,
   let Inst{9-5}   = pattern;
   let Inst{4-0}   = Rdn;
 
-  // Signed 32bit forms require their GPR operand printed.
-  let AsmString = !if(!eq(opc{2,0}, 0b00),
-                      !strconcat(asm, "\t$Rdn, $_Rdn, $pattern, mul $imm4"),
-                      !strconcat(asm, "\t$Rdn, $pattern, mul $imm4"));
-
   let Constraints = "$Rdn = $_Rdn";
-}
-
-multiclass sve_int_pred_pattern_b_s32<bits<5> opc, string asm> {
-  def NAME : sve_int_pred_pattern_b<opc, asm, GPR64z, GPR64as32>;
-
-  def : InstAlias<asm # "\t$Rd, $Rn, $pattern",
-                  (!cast<Instruction>(NAME) GPR64z:$Rd, GPR64as32:$Rn, sve_pred_enum:$pattern, 1), 1>;
-  def : InstAlias<asm # "\t$Rd, $Rn",
-                  (!cast<Instruction>(NAME) GPR64z:$Rd, GPR64as32:$Rn, 0b11111, 1), 2>;
-}
-
-multiclass sve_int_pred_pattern_b_u32<bits<5> opc, string asm> {
-  def NAME : sve_int_pred_pattern_b<opc, asm, GPR32z, GPR32z>;
-
-  def : InstAlias<asm # "\t$Rdn, $pattern",
-                  (!cast<Instruction>(NAME) GPR32z:$Rdn, sve_pred_enum:$pattern, 1), 1>;
-  def : InstAlias<asm # "\t$Rdn",
-                  (!cast<Instruction>(NAME) GPR32z:$Rdn, 0b11111, 1), 2>;
 }
 
 multiclass sve_int_pred_pattern_b_x64<bits<5> opc, string asm> {

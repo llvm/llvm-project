@@ -8331,6 +8331,11 @@ void InitializationSequence::dump() const {
   dump(llvm::errs());
 }
 
+static bool NarrowingErrs(const LangOptions &L) {
+  return L.CPlusPlus11 &&
+         (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015));
+}
+
 static void DiagnoseNarrowingInInitList(Sema &S,
                                         const ImplicitConversionSequence &ICS,
                                         QualType PreNarrowingType,
@@ -8364,35 +8369,34 @@ static void DiagnoseNarrowingInInitList(Sema &S,
     // This was a floating-to-integer conversion, which is always considered a
     // narrowing conversion even if the value is a constant and can be
     // represented exactly as an integer.
-    S.Diag(PostInit->getLocStart(),
-           (S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11)
-               ? diag::warn_init_list_type_narrowing
-               : diag::ext_init_list_type_narrowing)
-      << PostInit->getSourceRange()
-      << PreNarrowingType.getLocalUnqualifiedType()
-      << EntityType.getLocalUnqualifiedType();
+    S.Diag(PostInit->getLocStart(), NarrowingErrs(S.getLangOpts())
+                                        ? diag::ext_init_list_type_narrowing
+                                        : diag::warn_init_list_type_narrowing)
+        << PostInit->getSourceRange()
+        << PreNarrowingType.getLocalUnqualifiedType()
+        << EntityType.getLocalUnqualifiedType();
     break;
 
   case NK_Constant_Narrowing:
     // A constant value was narrowed.
     S.Diag(PostInit->getLocStart(),
-           (S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11)
-               ? diag::warn_init_list_constant_narrowing
-               : diag::ext_init_list_constant_narrowing)
-      << PostInit->getSourceRange()
-      << ConstantValue.getAsString(S.getASTContext(), ConstantType)
-      << EntityType.getLocalUnqualifiedType();
+           NarrowingErrs(S.getLangOpts())
+               ? diag::ext_init_list_constant_narrowing
+               : diag::warn_init_list_constant_narrowing)
+        << PostInit->getSourceRange()
+        << ConstantValue.getAsString(S.getASTContext(), ConstantType)
+        << EntityType.getLocalUnqualifiedType();
     break;
 
   case NK_Variable_Narrowing:
     // A variable's value may have been narrowed.
     S.Diag(PostInit->getLocStart(),
-           (S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11)
-               ? diag::warn_init_list_variable_narrowing
-               : diag::ext_init_list_variable_narrowing)
-      << PostInit->getSourceRange()
-      << PreNarrowingType.getLocalUnqualifiedType()
-      << EntityType.getLocalUnqualifiedType();
+           NarrowingErrs(S.getLangOpts())
+               ? diag::ext_init_list_variable_narrowing
+               : diag::warn_init_list_variable_narrowing)
+        << PostInit->getSourceRange()
+        << PreNarrowingType.getLocalUnqualifiedType()
+        << EntityType.getLocalUnqualifiedType();
     break;
   }
 
