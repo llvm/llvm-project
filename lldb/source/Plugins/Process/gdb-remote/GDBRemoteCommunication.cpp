@@ -1008,8 +1008,8 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
   bool debugserver_exists = debugserver_file_spec.Exists();
   if (!debugserver_exists) {
     // The debugserver binary is in the LLDB.framework/Resources directory.
-    if (HostInfo::GetLLDBPath(ePathTypeSupportExecutableDir,
-                              debugserver_file_spec)) {
+    debugserver_file_spec = HostInfo::GetSupportExeDir();
+    if (debugserver_file_spec) {
       debugserver_file_spec.AppendPathComponent(DEBUGSERVER_BASENAME);
       debugserver_exists = debugserver_file_spec.Exists();
       if (debugserver_exists) {

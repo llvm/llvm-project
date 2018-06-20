@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(LLDB_DISABLE_PYTHON)
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
-#endif
-
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/Log.h"
 
@@ -129,8 +125,8 @@ bool HostInfoPosix::ComputePathRelativeToLibrary(FileSpec &file_spec,
                                                  llvm::StringRef dir) {
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();
@@ -170,46 +166,6 @@ bool HostInfoPosix::ComputeHeaderDirectory(FileSpec &file_spec) {
   FileSpec temp_file("/opt/local/include/lldb", false);
   file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
   return true;
-}
-
-bool HostInfoPosix::ComputePythonDirectory(FileSpec &file_spec) {
-#ifndef LLDB_DISABLE_PYTHON
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
-    return false;
-
-  char raw_path[PATH_MAX];
-  lldb_file_spec.GetPath(raw_path, sizeof(raw_path));
-
-#if defined(LLDB_PYTHON_RELATIVE_LIBDIR)
-  // Build the path by backing out of the lib dir, then building with whatever
-  // the real python interpreter uses.  (e.g. lib for most, lib64 on RHEL
-  // x86_64).
-  char python_path[PATH_MAX];
-  ::snprintf(python_path, sizeof(python_path), "%s/../%s", raw_path,
-             LLDB_PYTHON_RELATIVE_LIBDIR);
-
-  char final_path[PATH_MAX];
-  realpath(python_path, final_path);
-  file_spec.GetDirectory().SetCString(final_path);
-
-  return true;
-#else
-  llvm::SmallString<256> python_version_dir;
-  llvm::raw_svector_ostream os(python_version_dir);
-  os << "/python" << PY_MAJOR_VERSION << '.' << PY_MINOR_VERSION
-     << "/site-packages";
-
-  // We may get our string truncated. Should we protect this with an assert?
-  ::strncat(raw_path, python_version_dir.c_str(),
-            sizeof(raw_path) - strlen(raw_path) - 1);
-
-  file_spec.GetDirectory().SetCString(raw_path);
-  return true;
-#endif
-#else
-  return false;
-#endif
 }
 
 bool HostInfoPosix::GetEnvironmentVar(const std::string &var_name,

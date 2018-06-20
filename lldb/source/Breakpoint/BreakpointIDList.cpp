@@ -89,14 +89,13 @@ bool BreakpointIDList::FindBreakpointID(const char *bp_id_str,
   return FindBreakpointID(*bp_id, position);
 }
 
-void BreakpointIDList::InsertStringArray(const char **string_array,
-                                         size_t array_size,
-                                         CommandReturnObject &result) {
-  if (string_array == nullptr)
+void BreakpointIDList::InsertStringArray(
+    llvm::ArrayRef<const char *> string_array, CommandReturnObject &result) {
+  if(string_array.empty())
     return;
 
-  for (uint32_t i = 0; i < array_size; ++i) {
-    auto bp_id = BreakpointID::ParseCanonicalReference(string_array[i]);
+  for (const char *str : string_array) {
+    auto bp_id = BreakpointID::ParseCanonicalReference(str);
     if (bp_id.hasValue())
       m_breakpoint_ids.push_back(*bp_id);
   }
