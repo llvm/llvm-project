@@ -90,7 +90,7 @@ public:
         B(ai, bi),
         m_c_int(ci)
     {
-        printf("Within C::ctor() m_c_int=%d\n", m_c_int); // Set break point at this line.
+      std::printf("Within C::ctor() m_c_int=%d\n", m_c_int); // Set break point at this line.
     }
 
     //virtual

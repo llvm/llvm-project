@@ -154,16 +154,10 @@ public:
 
     switch (type_size) {
     case 1:
-      scalar = (uint8_t)u64value;
-      break;
     case 2:
-      scalar = (uint16_t)u64value;
-      break;
     case 4:
-      scalar = (uint32_t)u64value;
-      break;
     case 8:
-      scalar = (uint64_t)u64value;
+      scalar = llvm::APInt(type_size*8, u64value);
       break;
     default:
       return false;

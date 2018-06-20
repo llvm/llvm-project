@@ -108,7 +108,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_ATOMIC_START)(void) {
 
 void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_ATOMIC_END)(void) {
   int gtid = __kmp_get_gtid();
-  KA_TRACE(20, ("GOMP_atomic_start: T#%d\n", gtid));
+  KA_TRACE(20, ("GOMP_atomic_end: T#%d\n", gtid));
   __kmp_release_atomic_lock(&__kmp_atomic_lock, gtid);
 }
 
