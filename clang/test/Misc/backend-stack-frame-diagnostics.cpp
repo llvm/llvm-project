@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang -target i386-apple-darwin -std=c++11 -fblocks -Wframe-larger-than=70 -Xclang -verify -o /dev/null -c %s
-// RUN: %clang -target i386-apple-darwin -std=c++11 -fblocks -Wframe-larger-than=70 -Xclang -verify -o /dev/null -c %s -DIS_SYSHEADER
+// RUN: %clang -target i386-apple-darwin -std=c++11 -fblocks -Wframe-larger-than=70 -Wno-stdlibcxx-not-found -Xclang -verify -o /dev/null -c %s
+// RUN: %clang -target i386-apple-darwin -std=c++11 -fblocks -Wframe-larger-than=70 -Wno-stdlibcxx-not-found -Xclang -verify -o /dev/null -c %s -DIS_SYSHEADER
 
 // Test that:
 //  * The driver passes the option through to the backend.

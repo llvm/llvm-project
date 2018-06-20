@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-void __attribute__((disable_tail_calls,naked)) foo1(int a) { // expected-error {{'disable_tail_calls' and 'naked' attributes are not compatible}} expected-note {{conflicting attribute is here}}
+void __attribute__((disable_tail_calls,naked)) foo1(int a) { // expected-error {{'naked' and 'disable_tail_calls' attributes are not compatible}} expected-note {{conflicting attribute is here}}
   __asm__("");
 }
 
-void __attribute__((naked,disable_tail_calls)) foo2(int a) { // expected-error {{'naked' and 'disable_tail_calls' attributes are not compatible}} expected-note {{conflicting attribute is here}}
+void __attribute__((naked,disable_tail_calls)) foo2(int a) { // expected-error {{'disable_tail_calls' and 'naked' attributes are not compatible}} expected-note {{conflicting attribute is here}}
   __asm__("");
 }
 

@@ -95,7 +95,7 @@ void __attribute__((target("arch=sandybridge")))  addtl_attrs4(void);
 void __attribute__((used,target("arch=ivybridge")))  addtl_attrs4(void);
 
 int __attribute__((target("sse4.2"))) diff_cc(void);
-// expected-error@+1 {{multiversioned function declaration has a different calling convention}}
+// expected-error@+1 {{attribute 'target' multiversioning cannot be combined with other attributes}}
 __vectorcall int __attribute__((target("arch=sandybridge")))  diff_cc(void);
 
 int __attribute__((target("sse4.2"))) diff_ret(void);

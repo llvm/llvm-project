@@ -14,7 +14,7 @@ void X::doSomething() {
 }
 
 // CHECK: CXXMethod:{ResultType void}{TypedText doSomething}{LeftParen (}{RightParen )} (34)
-// CHECK: FieldDecl:{ResultType int}{TypedText field} (35) ("three", "two", "one")
+// CHECK: FieldDecl:{ResultType int}{TypedText field} (35) ("one", "two", "three")
 // CHECK: CXXMethod:{ResultType void}{TypedText func2}{LeftParen (}{RightParen )} (34) ("some annotation")
 // CHECK: FieldDecl:{ResultType int}{TypedText member2} (35) ("another annotation", "some annotation")
 // CHECK: CXXMethod:{ResultType X &}{TypedText operator=}{LeftParen (}{Placeholder const X &}{RightParen )} (79)

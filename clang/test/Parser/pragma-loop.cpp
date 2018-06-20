@@ -231,51 +231,50 @@ const int VV = 4;
 // of the next three tests rather than the last, and the order of the kinds
 // is also reversed.
 
-/* expected-error {{incompatible directives 'vectorize(disable)' and 'vectorize_width(4)'}} */ #pragma clang loop vectorize_width(4)
-#pragma clang loop vectorize(disable)
-/* expected-error {{incompatible directives 'interleave(disable)' and 'interleave_count(4)'}} */ #pragma clang loop interleave_count(4)
-#pragma clang loop interleave(disable)
-/* expected-error {{incompatible directives 'unroll(disable)' and 'unroll_count(4)'}} */ #pragma clang loop unroll_count(4)
-#pragma clang loop unroll(disable)
+#pragma clang loop vectorize_width(4)
+/* expected-error {{incompatible directives 'vectorize(disable)' and 'vectorize_width(4)'}} */ #pragma clang loop vectorize(disable)
+#pragma clang loop interleave_count(4)
+/* expected-error {{incompatible directives 'interleave(disable)' and 'interleave_count(4)'}} */ #pragma clang loop interleave(disable)
+#pragma clang loop unroll_count(4)
+/* expected-error {{incompatible directives 'unroll(disable)' and 'unroll_count(4)'}} */ #pragma clang loop unroll(disable)
   while (i-8 < Length) {
     List[i] = i;
   }
 
-/* expected-error {{duplicate directives 'vectorize(disable)' and 'vectorize(enable)'}} */ #pragma clang loop vectorize(enable)
-#pragma clang loop vectorize(disable)
-/* expected-error {{duplicate directives 'interleave(disable)' and 'interleave(enable)'}} */ #pragma clang loop interleave(enable)
-#pragma clang loop interleave(disable)
-/* expected-error {{duplicate directives 'unroll(disable)' and 'unroll(full)'}} */ #pragma clang loop unroll(full)
-#pragma clang loop unroll(disable)
-/* expected-error {{duplicate directives 'distribute(disable)' and 'distribute(enable)'}} */ #pragma clang loop distribute(enable)
-#pragma clang loop distribute(disable)
+#pragma clang loop vectorize(enable)
+/* expected-error {{duplicate directives 'vectorize(enable)' and 'vectorize(disable)'}} */ #pragma clang loop vectorize(disable)
+#pragma clang loop interleave(enable)
+/* expected-error {{duplicate directives 'interleave(enable)' and 'interleave(disable)'}} */ #pragma clang loop interleave(disable)
+#pragma clang loop unroll(full)
+/* expected-error {{duplicate directives 'unroll(full)' and 'unroll(disable)'}} */ #pragma clang loop unroll(disable)
+#pragma clang loop distribute(enable)
+/* expected-error {{duplicate directives 'distribute(enable)' and 'distribute(disable)'}} */ #pragma clang loop distribute(disable)
   while (i-9 < Length) {
     List[i] = i;
   }
 
-/* expected-error {{incompatible directives 'vectorize(disable)' and 'vectorize_width(4)'}} */ #pragma clang loop vectorize(disable)
-#pragma clang loop vectorize_width(4)
-/* expected-error {{incompatible directives 'interleave(disable)' and 'interleave_count(4)'}} */ #pragma clang loop interleave(disable)
-#pragma clang loop interleave_count(4)
-/* expected-error {{incompatible directives 'unroll(disable)' and 'unroll_count(4)'}} */ #pragma clang loop unroll(disable)
-#pragma clang loop unroll_count(4)
+#pragma clang loop vectorize(disable)
+/* expected-error {{incompatible directives 'vectorize(disable)' and 'vectorize_width(4)'}} */ #pragma clang loop vectorize_width(4)
+#pragma clang loop interleave(disable)
+/* expected-error {{incompatible directives 'interleave(disable)' and 'interleave_count(4)'}} */ #pragma clang loop interleave_count(4)
+#pragma clang loop unroll(disable)
+/* expected-error {{incompatible directives 'unroll(disable)' and 'unroll_count(4)'}} */ #pragma clang loop unroll_count(4)
   while (i-10 < Length) {
     List[i] = i;
   }
 
-/* expected-error {{duplicate directives 'vectorize_width(4)' and 'vectorize_width(8)'}} */ #pragma clang loop vectorize_width(8)
-#pragma clang loop vectorize_width(4)
-/* expected-error {{duplicate directives 'interleave_count(4)' and 'interleave_count(8)'}} */ #pragma clang loop interleave_count(8)
-#pragma clang loop interleave_count(4)
-/* expected-error {{duplicate directives 'unroll_count(4)' and 'unroll_count(8)'}} */ #pragma clang loop unroll_count(8)
-#pragma clang loop unroll_count(4)
+#pragma clang loop vectorize_width(8)
+/* expected-error {{duplicate directives 'vectorize_width(8)' and 'vectorize_width(4)'}} */ #pragma clang loop vectorize_width(4)
+#pragma clang loop interleave_count(8)
+/* expected-error {{duplicate directives 'interleave_count(8)' and 'interleave_count(4)'}} */ #pragma clang loop interleave_count(4)
+#pragma clang loop unroll_count(8)
+/* expected-error {{duplicate directives 'unroll_count(8)' and 'unroll_count(4)'}} */ #pragma clang loop unroll_count(4)
   while (i-11 < Length) {
     List[i] = i;
   }
 
-
-/* expected-error {{incompatible directives 'unroll(full)' and 'unroll_count(4)'}} */ #pragma clang loop unroll(full)
-#pragma clang loop unroll_count(4)
+#pragma clang loop unroll(full)
+/* expected-error {{incompatible directives 'unroll(full)' and 'unroll_count(4)'}} */ #pragma clang loop unroll_count(4)
   while (i-11 < Length) {
     List[i] = i;
   }
