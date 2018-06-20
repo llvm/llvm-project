@@ -5,7 +5,10 @@ include_directories(..)
 set(TSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 # SANITIZER_COMMON_CFLAGS contains -fPIC, but it's performance-critical for
 # TSan runtime to be built with -fPIE to reduce the number of register spills.
-append_list_if(COMPILER_RT_HAS_FPIE_FLAG -fPIE TSAN_CFLAGS)
+# On FreeBSD however it provokes linkage issue thus we disable it.
+if(NOT CMAKE_SYSTEM MATCHES "FreeBSD")
+  append_list_if(COMPILER_RT_HAS_FPIE_FLAG -fPIE TSAN_CFLAGS)
+endif()
 append_rtti_flag(OFF TSAN_CFLAGS)
 
 if(COMPILER_RT_TSAN_DEBUG_OUTPUT)

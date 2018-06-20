@@ -10,8 +10,6 @@ endif()
 set(EXCLUDE_FROM_ALL ON)
 
 add_custom_target(check-fuzzer)
-set(LIBFUZZER_TEST_IOS "0")
-pythonize_bool(LIBFUZZER_TEST_IOS)
 
 if(COMPILER_RT_INCLUDE_TESTS)
   # libFuzzer unit tests.
@@ -39,6 +37,8 @@ macro(test_fuzzer stdlib)
   foreach(arch ${FUZZER_SUPPORTED_ARCH})
     set(LIBFUZZER_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
     get_test_cc_for_arch(${arch} LIBFUZZER_TEST_COMPILER LIBFUZZER_TEST_FLAGS)
+
+    set(LIBFUZZER_TEST_APPLE_PLATFORM "osx")
 
     set(LIBFUZZER_TEST_STDLIB ${stdlib})
 
@@ -78,11 +78,10 @@ if (APPLE)
   set(EXCLUDE_FROM_ALL ON)
 
   foreach(arch ${DARWIN_ios_ARCHS})
-    set(LIBFUZZER_TEST_IOS "1")
-    pythonize_bool(LIBFUZZER_TEST_IOS)
+    set(LIBFUZZER_TEST_APPLE_PLATFORM "ios")
     set(LIBFUZZER_TEST_TARGET_ARCH ${arch})
     set(LIBFUZZER_TEST_FLAGS "-arch ${arch} -isysroot ${DARWIN_ios_SYSROOT} ${COMPILER_RT_TEST_COMPILER_CFLAGS}")
-    set(LIBFUZZER_TEST_CONFIG_SUFFIX "-${arch}-ios")
+    set(LIBFUZZER_TEST_CONFIG_SUFFIX "-${arch}-${LIBFUZZER_TEST_APPLE_PLATFORM}")
     string(TOUPPER ${arch} ARCH_UPPER_CASE)
     set(CONFIG_NAME "IOS${ARCH_UPPER_CASE}Config")
     configure_lit_site_cfg(

@@ -118,8 +118,12 @@ class SizeClassAllocator64 {
     // Failure to allocate free array space while releasing memory is non
     // recoverable.
     if (UNLIKELY(!EnsureFreeArraySpace(region, region_beg,
-                                       new_num_freed_chunks)))
-      DieOnFailure::OnOOM();
+                                       new_num_freed_chunks))) {
+      Report("FATAL: Internal error: %s's allocator exhausted the free list "
+             "space for size class %zd (%zd bytes).\n", SanitizerToolName,
+             class_id, ClassIdToSize(class_id));
+      Die();
+    }
     for (uptr i = 0; i < n_chunks; i++)
       free_array[old_num_chunks + i] = chunks[i];
     region->num_freed_chunks = new_num_freed_chunks;
