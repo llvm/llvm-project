@@ -2,3 +2,9 @@ framework module A.Private {
   header "aprivate.h"
   export *
 }
+
+explicit module B.Private {
+}
+
+explicit framework module C.Private {
+}

@@ -13,7 +13,16 @@
 
 // expected-warning@Inputs/implicit-private-with-submodule/A.framework/Modules/module.private.modulemap:1{{private submodule 'A.Private' in private module map, expected top-level module}}
 // expected-note@Inputs/implicit-private-with-submodule/A.framework/Modules/module.private.modulemap:1{{rename 'A.Private' to ensure it can be found by name}}
-// CHECK: fix-it:"{{.*}}module.private.modulemap":{1:18-1:27}:"A_Private"
+
+// expected-warning@Inputs/implicit-private-with-submodule/A.framework/Modules/module.private.modulemap:6{{private submodule 'B.Private' in private module map, expected top-level module}}
+// expected-note@Inputs/implicit-private-with-submodule/A.framework/Modules/module.private.modulemap:6{{rename 'B.Private' to ensure it can be found by name}}
+
+// expected-warning@Inputs/implicit-private-with-submodule/A.framework/Modules/module.private.modulemap:9{{private submodule 'C.Private' in private module map, expected top-level module}}
+// expected-note@Inputs/implicit-private-with-submodule/A.framework/Modules/module.private.modulemap:9{{rename 'C.Private' to ensure it can be found by name}}
+
+// CHECK: fix-it:"{{.*}}module.private.modulemap":{1:1-1:27}:"framework module A_Private"
+// CHECK: fix-it:"{{.*}}module.private.modulemap":{6:1-6:26}:"framework module B_Private"
+// CHECK: fix-it:"{{.*}}module.private.modulemap":{9:1-9:36}:"framework module C_Private"
 
 #ifndef HEADER
 #define HEADER
