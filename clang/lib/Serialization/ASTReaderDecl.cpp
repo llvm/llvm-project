@@ -2804,36 +2804,25 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
   // Note that pass_object_size attributes are represented in the function's
   // ExtParameterInfo, so we don't need to check them here.
 
-  SmallVector<const EnableIfAttr *, 4> AEnableIfs;
-  // Since this is an equality check, we can ignore that enable_if attrs show up
-  // in reverse order.
-  for (const auto *EIA : A->specific_attrs<EnableIfAttr>())
-    AEnableIfs.push_back(EIA);
-
-  SmallVector<const EnableIfAttr *, 4> BEnableIfs;
-  for (const auto *EIA : B->specific_attrs<EnableIfAttr>())
-    BEnableIfs.push_back(EIA);
-
-  // Two very common cases: either we have 0 enable_if attrs, or we have an
-  // unequal number of enable_if attrs.
-  if (AEnableIfs.empty() && BEnableIfs.empty())
-    return true;
-
-  if (AEnableIfs.size() != BEnableIfs.size())
-    return false;
-
+  // Return false if any of the enable_if expressions of A and B are different.
   llvm::FoldingSetNodeID Cand1ID, Cand2ID;
-  for (unsigned I = 0, E = AEnableIfs.size(); I != E; ++I) {
+  auto AEnableIfAttrs = A->specific_attrs<EnableIfAttr>();
+  auto BEnableIfAttrs = B->specific_attrs<EnableIfAttr>();
+  auto AEnableIf = AEnableIfAttrs.begin();
+  auto BEnableIf = BEnableIfAttrs.begin();
+  for (; AEnableIf != AEnableIfAttrs.end() && BEnableIf != BEnableIfAttrs.end();
+       ++BEnableIf, ++AEnableIf) {
     Cand1ID.clear();
     Cand2ID.clear();
 
-    AEnableIfs[I]->getCond()->Profile(Cand1ID, A->getASTContext(), true);
-    BEnableIfs[I]->getCond()->Profile(Cand2ID, B->getASTContext(), true);
+    AEnableIf->getCond()->Profile(Cand1ID, A->getASTContext(), true);
+    BEnableIf->getCond()->Profile(Cand2ID, B->getASTContext(), true);
     if (Cand1ID != Cand2ID)
       return false;
   }
 
-  return true;
+  // Return false if the number of enable_if attributes was different.
+  return AEnableIf == AEnableIfAttrs.end() && BEnableIf == BEnableIfAttrs.end();
 }
 
 /// Determine whether the two declarations refer to the same entity.

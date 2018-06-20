@@ -9689,6 +9689,7 @@ _mm512_mask_reduce_min_epu32(__mmask16 __M, __m512i __V) {
   __V = _mm512_mask_mov_epi32(_mm512_set1_epi32(~0U), __M, __V);
   _mm512_mask_reduce_operator(min_epu32);
 }
+#undef _mm512_mask_reduce_operator
 
 #define _mm512_mask_reduce_operator(op) \
   __m256d __t1 = _mm512_extractf64x4_pd(__V, 0); \

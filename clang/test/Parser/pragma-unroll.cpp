@@ -55,56 +55,56 @@ void test(int *List, int Length) {
 #pragma nounroll
 /* expected-error {{expected a for, while, or do-while loop to follow '#pragma nounroll'}} */ int l = Length;
 
-/* expected-error {{incompatible directives 'unroll(disable)' and '#pragma unroll(4)'}} */ #pragma unroll 4
-#pragma clang loop unroll(disable)
+#pragma unroll 4
+/* expected-error {{incompatible directives 'unroll(disable)' and '#pragma unroll(4)'}} */ #pragma clang loop unroll(disable)
   while (i-10 < Length) {
     List[i] = i;
   }
 
-/* expected-error {{incompatible directives 'unroll(full)' and '#pragma unroll(4)'}} */ #pragma unroll(4)
-#pragma clang loop unroll(full)
+#pragma unroll(4)
+/* expected-error {{incompatible directives 'unroll(full)' and '#pragma unroll(4)'}} */ #pragma clang loop unroll(full)
   while (i-11 < Length) {
     List[i] = i;
   }
 
-/* expected-error {{incompatible directives 'unroll(enable)' and '#pragma unroll(4)'}} */ #pragma unroll(4)
-#pragma clang loop unroll(enable)
+#pragma unroll(4)
+/* expected-error {{incompatible directives 'unroll(enable)' and '#pragma unroll(4)'}} */ #pragma clang loop unroll(enable)
   while (i-11 < Length) {
     List[i] = i;
   }
 
-/* expected-error {{incompatible directives '#pragma unroll' and '#pragma unroll(4)'}} */ #pragma unroll(4)
-#pragma unroll
+#pragma unroll(4)
+/* expected-error {{incompatible directives '#pragma unroll' and '#pragma unroll(4)'}} */ #pragma unroll
   while (i-11 < Length) {
     List[i] = i;
   }
 
-/* expected-error {{incompatible directives '#pragma nounroll' and 'unroll_count(4)'}} */ #pragma clang loop unroll_count(4)
-#pragma nounroll
+#pragma clang loop unroll_count(4)
+/* expected-error {{incompatible directives '#pragma nounroll' and 'unroll_count(4)'}} */ #pragma nounroll
   while (i-12 < Length) {
     List[i] = i;
   }
 
-/* expected-error {{duplicate directives '#pragma nounroll' and '#pragma nounroll'}} */ #pragma nounroll
 #pragma nounroll
+/* expected-error {{duplicate directives '#pragma nounroll' and '#pragma nounroll'}} */ #pragma nounroll
   while (i-13 < Length) {
     List[i] = i;
   }
 
-/* expected-error {{duplicate directives '#pragma unroll' and '#pragma unroll'}} */ #pragma unroll
 #pragma unroll
+/* expected-error {{duplicate directives '#pragma unroll' and '#pragma unroll'}} */ #pragma unroll
   while (i-14 < Length) {
     List[i] = i;
   }
 
-/* expected-error {{duplicate directives 'unroll(full)' and '#pragma unroll'}} */ #pragma unroll
-#pragma clang loop unroll(full)
+#pragma unroll
+/* expected-error {{duplicate directives '#pragma unroll' and 'unroll(full)'}} */ #pragma clang loop unroll(full)
   while (i-15 < Length) {
     List[i] = i;
   }
 
-/* expected-error {{duplicate directives '#pragma unroll(4)' and '#pragma unroll(4)'}} */ #pragma unroll 4
-#pragma unroll(4)
+#pragma unroll 4
+/* expected-error {{duplicate directives '#pragma unroll(4)' and '#pragma unroll(4)'}} */ #pragma unroll(4)
   while (i-16 < Length) {
     List[i] = i;
   }

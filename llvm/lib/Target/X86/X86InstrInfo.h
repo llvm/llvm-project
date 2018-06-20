@@ -602,10 +602,7 @@ public:
   outliner::InstrType
   getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
 
-  void insertOutlinerEpilogue(MachineBasicBlock &MBB, MachineFunction &MF,
-                            const outliner::TargetCostInfo &TCI) const override;
-
-  void insertOutlinerPrologue(MachineBasicBlock &MBB, MachineFunction &MF,
+  void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
                             const outliner::TargetCostInfo &TCI) const override;
 
   MachineBasicBlock::iterator

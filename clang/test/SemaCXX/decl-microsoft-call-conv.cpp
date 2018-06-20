@@ -161,7 +161,7 @@ void multi_attribute(int x) { __builtin_unreachable(); }
 // expected-error@+3 {{vectorcall and cdecl attributes are not compatible}}
 // expected-error@+2 {{stdcall and cdecl attributes are not compatible}}
 // expected-error@+1 {{fastcall and cdecl attributes are not compatible}}
-void __cdecl __cdecl __stdcall __cdecl __fastcall __vectorcall multi_cc(int x);
+void __vectorcall __fastcall __cdecl __stdcall __cdecl __cdecl multi_cc(int x);
 
 template <typename T> void __stdcall StdcallTemplate(T) {}
 template <> void StdcallTemplate<int>(int) {}

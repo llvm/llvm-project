@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -21,12 +22,21 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 #include <memory>
 
 namespace llvm {
 namespace {
+
+static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
+  SMDiagnostic Err;
+  std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
+  if (!Mod)
+    Err.print("InstructionsTests", errs());
+  return Mod;
+}
 
 TEST(InstructionsTest, ReturnInst) {
   LLVMContext C;
@@ -827,6 +837,45 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
 
   EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C5, C3, C7})));
   EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3})));
+}
+
+TEST(InstructionsTest, SkipDebug) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+      define void @f() {
+      entry:
+        call void @llvm.dbg.value(metadata i32 0, metadata !11, metadata !DIExpression()), !dbg !13
+        ret void
+      }
+
+      !llvm.dbg.cu = !{!0}
+      !llvm.module.flags = !{!3, !4}
+      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+      !1 = !DIFile(filename: "t2.c", directory: "foo")
+      !2 = !{}
+      !3 = !{i32 2, !"Dwarf Version", i32 4}
+      !4 = !{i32 2, !"Debug Info Version", i32 3}
+      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
+      !9 = !DISubroutineType(types: !10)
+      !10 = !{null}
+      !11 = !DILocalVariable(name: "x", scope: !8, file: !1, line: 2, type: !12)
+      !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+      !13 = !DILocation(line: 2, column: 7, scope: !8)
+  )");
+  ASSERT_TRUE(M);
+  Function *F = cast<Function>(M->getNamedValue("f"));
+  BasicBlock &BB = F->front();
+
+  // The first non-debug instruction is the terminator.
+  auto *Term = BB.getTerminator();
+  EXPECT_EQ(Term, BB.begin()->getNextNonDebugInstruction());
+  EXPECT_EQ(Term->getIterator(), skipDebugInfo(BB.begin()));
+
+  // After the terminator, there are no non-debug instructions.
+  EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());
 }
 
 } // end anonymous namespace

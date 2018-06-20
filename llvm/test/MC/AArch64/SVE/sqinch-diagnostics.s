@@ -20,20 +20,6 @@ sqinch sp
 
 
 // ------------------------------------------------------------------------- //
-// Operands not matching up
-
-sqinch x0, w1
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be 32-bit form of destination register
-// CHECK-NEXT: sqinch x0, w1
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-sqinch x0, x0
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
-// CHECK-NEXT: sqinch x0, x0
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
-
-// ------------------------------------------------------------------------- //
 // Immediate not compatible with encode/decode function.
 
 sqinch x0, all, mul #-1
@@ -56,12 +42,12 @@ sqinch x0, all, mul #17
 // Invalid predicate patterns
 
 sqinch x0, vl512
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
 // CHECK-NEXT: sqinch x0, vl512
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 sqinch x0, vl9
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
 // CHECK-NEXT: sqinch x0, vl9
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
