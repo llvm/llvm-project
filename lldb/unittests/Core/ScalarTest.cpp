@@ -14,8 +14,10 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private;
+using namespace llvm;
 
 TEST(ScalarTest, RightShiftOperator) {
   int a = 0x00001000;
@@ -184,4 +186,35 @@ TEST(ScalarTest, Promotion) {
       EXPECT_EQ(lhs + rhs, x);
     }
   }
+}
+
+TEST(ScalarTest, SetValueFromCString) {
+  Scalar a;
+
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("1234567890123", lldb::eEncodingUint, 8).ToError(),
+      Succeeded());
+  EXPECT_EQ(1234567890123ull, a);
+
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("-1234567890123", lldb::eEncodingSint, 8).ToError(),
+      Succeeded());
+  EXPECT_EQ(-1234567890123ll, a);
+
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("asdf", lldb::eEncodingSint, 8).ToError(),
+      Failed());
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("asdf", lldb::eEncodingUint, 8).ToError(),
+      Failed());
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("1234567890123", lldb::eEncodingUint, 4).ToError(),
+      Failed());
+  EXPECT_THAT_ERROR(a.SetValueFromCString("123456789012345678901234567890",
+                                          lldb::eEncodingUint, 8)
+                        .ToError(),
+                    Failed());
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("-123", lldb::eEncodingUint, 8).ToError(),
+      Failed());
 }

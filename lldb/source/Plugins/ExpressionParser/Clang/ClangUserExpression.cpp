@@ -307,6 +307,21 @@ static void ApplyObjcCastHack(std::string &expr) {
 #undef OBJC_CAST_HACK_FROM
 }
 
+namespace {
+// Utility guard that calls a callback when going out of scope.
+class OnExit {
+public:
+  typedef std::function<void(void)> Callback;
+
+  OnExit(Callback const &callback) : m_callback(callback) {}
+
+  ~OnExit() { m_callback(); }
+
+private:
+  Callback m_callback;
+};
+} // namespace
+
 bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 ExecutionContext &exe_ctx,
                                 lldb_private::ExecutionPolicy execution_policy,
@@ -426,28 +441,12 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   ResetDeclMap(exe_ctx, m_result_delegate, keep_result_in_memory);
 
-  class OnExit {
-  public:
-    typedef std::function<void(void)> Callback;
-
-    OnExit(Callback const &callback) : m_callback(callback) {}
-
-    ~OnExit() { m_callback(); }
-
-  private:
-    Callback m_callback;
-  };
-
   OnExit on_exit([this]() { ResetDeclMap(); });
 
   if (!DeclMap()->WillParse(exe_ctx, m_materializer_ap.get())) {
     diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "current process state is unsuitable for expression parsing");
-
-    ResetDeclMap(); // We are being careful here in the case of breakpoint
-                    // conditions.
-
     return false;
   }
 
@@ -484,10 +483,6 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
               fixed_expression.substr(fixed_start, fixed_end - fixed_start);
       }
     }
-
-    ResetDeclMap(); // We are being careful here in the case of breakpoint
-                    // conditions.
-
     return false;
   }
 
@@ -564,10 +559,6 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       target->GetImages().Append(jit_module_sp);
     }
   }
-
-  ResetDeclMap(); // Make this go away since we don't need any of its state
-                  // after parsing.  This also gets rid of any
-                  // ClangASTImporter::Minions.
 
   if (process && m_jit_start_addr != LLDB_INVALID_ADDRESS)
     m_jit_process_wp = lldb::ProcessWP(process->shared_from_this());

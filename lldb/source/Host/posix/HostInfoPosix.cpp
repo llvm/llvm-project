@@ -129,8 +129,8 @@ bool HostInfoPosix::ComputePathRelativeToLibrary(FileSpec &file_spec,
                                                  llvm::StringRef dir) {
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();
@@ -174,8 +174,8 @@ bool HostInfoPosix::ComputeHeaderDirectory(FileSpec &file_spec) {
 
 bool HostInfoPosix::ComputePythonDirectory(FileSpec &file_spec) {
 #ifndef LLDB_DISABLE_PYTHON
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   char raw_path[PATH_MAX];

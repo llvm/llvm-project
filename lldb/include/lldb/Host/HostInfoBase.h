@@ -63,25 +63,39 @@ public:
 
   static llvm::Optional<ArchitectureKind> ParseArchitectureKind(llvm::StringRef kind);
 
-  //------------------------------------------------------------------
-  /// Find a resource files that are related to LLDB.
-  ///
-  /// Operating systems have different ways of storing shared
-  /// libraries and related resources. This function abstracts the
-  /// access to these paths.
-  ///
-  /// @param[in] path_type
-  ///     The type of LLDB resource path you are looking for. If the
-  ///     enumeration ends with "Dir", then only the \a file_spec's
-  ///     directory member gets filled in.
-  ///
-  /// @param[in] file_spec
-  ///     A file spec that gets filled in with the appropriate path.
-  ///
-  /// @return
-  ///     \b true if \a resource_path was resolved, \a false otherwise.
-  //------------------------------------------------------------------
-  static bool GetLLDBPath(lldb::PathType type, FileSpec &file_spec);
+  /// Returns the directory containing the lldb shared library. Only the
+  /// directory member of the FileSpec is filled in.
+  static FileSpec GetShlibDir();
+
+  /// Returns the directory containing the support executables (debugserver,
+  /// ...). Only the directory member of the FileSpec is filled in.
+  static FileSpec GetSupportExeDir();
+
+  /// Returns the directory containing the lldb headers. Only the directory
+  /// member of the FileSpec is filled in.
+  static FileSpec GetHeaderDir();
+
+  /// Returns the directory containing the python modules. Only the directory
+  /// member of the FileSpec is filled in.
+  static FileSpec GetPythonDir();
+
+  /// Returns the directory containing the system plugins. Only the directory
+  /// member of the FileSpec is filled in.
+  static FileSpec GetSystemPluginDir();
+
+  /// Returns the directory containing the user plugins. Only the directory
+  /// member of the FileSpec is filled in.
+  static FileSpec GetUserPluginDir();
+
+  /// Returns the proces temporary directory. This directory will be cleaned up
+  /// when this process exits. Only the directory member of the FileSpec is
+  /// filled in.
+  static FileSpec GetProcessTempDir();
+
+  /// Returns the global temporary directory. This directory will **not** be
+  /// cleaned up when this process exits. Only the directory member of the
+  /// FileSpec is filled in.
+  static FileSpec GetGlobalTempDir();
 
   //---------------------------------------------------------------------------
   /// If the triple does not specify the vendor, os, and environment parts, we

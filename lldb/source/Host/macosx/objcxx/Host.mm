@@ -217,9 +217,8 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   }
 
   StreamString command;
-  FileSpec darwin_debug_file_spec;
-  if (!HostInfo::GetLLDBPath(ePathTypeSupportExecutableDir,
-                             darwin_debug_file_spec)) {
+  FileSpec darwin_debug_file_spec = HostInfo::GetSupportExeDir();
+  if (!darwin_debug_file_spec) {
     error.SetErrorString("can't locate the 'darwin-debug' executable");
     return error;
   }
@@ -1331,9 +1330,8 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
-    FileSpec expand_tool_spec;
-    if (!HostInfo::GetLLDBPath(lldb::ePathTypeSupportExecutableDir,
-                               expand_tool_spec)) {
+    FileSpec expand_tool_spec = HostInfo::GetSupportExeDir();
+    if (!expand_tool_spec) {
       error.SetErrorString(
           "could not get support executable directory for lldb-argdumper tool");
       return error;
