@@ -2170,7 +2170,12 @@ enum CXCursorKind {
    */
   CXCursor_ObjCAvailabilityCheckExpr     = 148,
 
-  CXCursor_LastExpr                      = CXCursor_ObjCAvailabilityCheckExpr,
+  /**
+   * Fixed point literal
+   */
+  CXCursor_FixedPointLiteral             = 149,
+
+  CXCursor_LastExpr                      = CXCursor_FixedPointLiteral,
 
   /* Statements */
   CXCursor_FirstStmt                     = 200,

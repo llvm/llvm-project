@@ -20,7 +20,8 @@ protected:
 };
 
 TEST_F(X86TargetTest, Lookup) {
-  EXPECT_THAT(ExegesisTarget::lookup("x86_64-unknown-linux"), NotNull());
+  EXPECT_THAT(ExegesisTarget::lookup(llvm::Triple("x86_64-unknown-linux")),
+              NotNull());
 }
 
 } // namespace

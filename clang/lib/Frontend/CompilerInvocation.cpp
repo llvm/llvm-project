@@ -2338,6 +2338,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.FixedPoint =
       Args.hasFlag(OPT_ffixed_point, OPT_fno_fixed_point, /*Default=*/false) &&
       !Opts.CPlusPlus;
+  Opts.SameFBits =
+      Args.hasFlag(OPT_fsame_fbits, OPT_fno_same_fbits,
+                   /*Default=*/false) &&
+      Opts.FixedPoint;
 
   // Handle exception personalities
   Arg *A = Args.getLastArg(options::OPT_fsjlj_exceptions,

@@ -3283,7 +3283,7 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
       return TokError("negative file number");
   }
 
-  std::string Path = getTok().getString();
+  std::string Path;
 
   // Usually the directory and filename together, otherwise just the directory.
   // Allow the strings to have escaped octal character sequence.

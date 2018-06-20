@@ -185,6 +185,13 @@ let Predicates = [HasStdExtD] in {
 def : InstAlias<"fmv.d $rd, $rs",  (FSGNJ_D  FPR64:$rd, FPR64:$rs, FPR64:$rs)>;
 def : InstAlias<"fabs.d $rd, $rs", (FSGNJX_D FPR64:$rd, FPR64:$rs, FPR64:$rs)>;
 def : InstAlias<"fneg.d $rd, $rs", (FSGNJN_D FPR64:$rd, FPR64:$rs, FPR64:$rs)>;
+
+// fgt.d/fge.d are recognised by the GNU assembler but the canonical
+// flt.d/fle.d forms will always be printed. Therefore, set a zero weight.
+def : InstAlias<"fgt.d $rd, $rs, $rt",
+                (FLT_D GPR:$rd, FPR64:$rt, FPR64:$rs), 0>;
+def : InstAlias<"fge.d $rd, $rs, $rt",
+                (FLE_D GPR:$rd, FPR64:$rt, FPR64:$rs), 0>;
 } // Predicates = [HasStdExtD]
 
 //===----------------------------------------------------------------------===//
