@@ -1626,14 +1626,12 @@ public:
     return 0x0;
   }
 
-  /// Insert a custom epilogue for outlined functions.
-  /// This may be empty, in which case no epilogue or return statement will be
-  /// emitted.
-  virtual void insertOutlinerEpilogue(MachineBasicBlock &MBB,
+  /// Insert a custom frame for outlined functions.
+  virtual void buildOutlinedFrame(MachineBasicBlock &MBB,
                                       MachineFunction &MF,
                                     const outliner::TargetCostInfo &TCI) const {
     llvm_unreachable(
-        "Target didn't implement TargetInstrInfo::insertOutlinerEpilogue!");
+        "Target didn't implement TargetInstrInfo::buildOutlinedFrame!");
   }
 
   /// Insert a call to an outlined function into the program.
@@ -1645,15 +1643,6 @@ public:
                      const outliner::TargetCostInfo &TCI) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::insertOutlinedCall!");
-  }
-
-  /// Insert a custom prologue for outlined functions.
-  /// This may be empty, in which case no prologue will be emitted.
-  virtual void insertOutlinerPrologue(MachineBasicBlock &MBB,
-                                      MachineFunction &MF,
-                                    const outliner::TargetCostInfo &TCI) const {
-    llvm_unreachable(
-        "Target didn't implement TargetInstrInfo::insertOutlinerPrologue!");
   }
 
   /// Return true if the function can safely be outlined from.

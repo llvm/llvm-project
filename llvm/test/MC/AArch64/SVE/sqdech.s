@@ -37,47 +37,6 @@ sqdech  x0, all, mul #16
 
 
 // ---------------------------------------------------------------------------//
-// Test 32-bit form (x0, w0) and its aliases
-// ---------------------------------------------------------------------------//
-
-sqdech  x0, w0
-// CHECK-INST: sqdech  x0, w0
-// CHECK-ENCODING: [0xe0,0xfb,0x60,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 fb 60 04 <unknown>
-
-sqdech  x0, w0, all
-// CHECK-INST: sqdech  x0, w0
-// CHECK-ENCODING: [0xe0,0xfb,0x60,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 fb 60 04 <unknown>
-
-sqdech  x0, w0, all, mul #1
-// CHECK-INST: sqdech  x0, w0
-// CHECK-ENCODING: [0xe0,0xfb,0x60,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 fb 60 04 <unknown>
-
-sqdech  x0, w0, all, mul #16
-// CHECK-INST: sqdech  x0, w0, all, mul #16
-// CHECK-ENCODING: [0xe0,0xfb,0x6f,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: e0 fb 6f 04 <unknown>
-
-sqdech  x0, w0, pow2
-// CHECK-INST: sqdech  x0, w0, pow2
-// CHECK-ENCODING: [0x00,0xf8,0x60,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 f8 60 04 <unknown>
-
-sqdech  x0, w0, pow2, mul #16
-// CHECK-INST: sqdech  x0, w0, pow2, mul #16
-// CHECK-ENCODING: [0x00,0xf8,0x6f,0x04]
-// CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: 00 f8 6f 04 <unknown>
-
-
-// ---------------------------------------------------------------------------//
 // Test all patterns for 64-bit form
 // ---------------------------------------------------------------------------//
 

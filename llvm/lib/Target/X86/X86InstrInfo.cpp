@@ -13017,7 +13017,7 @@ X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags
   return outliner::InstrType::Legal;
 }
 
-void X86InstrInfo::insertOutlinerEpilogue(MachineBasicBlock &MBB,
+void X86InstrInfo::buildOutlinedFrame(MachineBasicBlock &MBB,
                                           MachineFunction &MF,
                                           const outliner::TargetCostInfo &TCI)
                                           const {
@@ -13030,11 +13030,6 @@ void X86InstrInfo::insertOutlinerEpilogue(MachineBasicBlock &MBB,
   MachineInstr *retq = BuildMI(MF, DebugLoc(), get(X86::RETQ));
   MBB.insert(MBB.end(), retq);
 }
-
-void X86InstrInfo::insertOutlinerPrologue(MachineBasicBlock &MBB,
-                                          MachineFunction &MF,
-                                          const outliner::TargetCostInfo &TCI)
-                                          const {}
 
 MachineBasicBlock::iterator
 X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,

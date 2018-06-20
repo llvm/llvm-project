@@ -25,10 +25,10 @@ void test(int *List, int Length) {
     List[i] = i;
   }
 
-/* expected-error {{duplicate directives 'vectorize(assume_safety)' and 'vectorize(enable)'}} */ #pragma clang loop vectorize(enable)
-#pragma clang loop vectorize(assume_safety)
-/* expected-error {{duplicate directives 'interleave(assume_safety)' and 'interleave(enable)'}} */ #pragma clang loop interleave(enable)
-#pragma clang loop interleave(assume_safety)
+#pragma clang loop vectorize(enable)
+/* expected-error {{duplicate directives 'vectorize(enable)' and 'vectorize(assume_safety)'}} */ #pragma clang loop vectorize(assume_safety)
+#pragma clang loop interleave(enable)
+/* expected-error {{duplicate directives 'interleave(enable)' and 'interleave(assume_safety)'}} */ #pragma clang loop interleave(assume_safety)
   while (i-9 < Length) {
     List[i] = i;
   }

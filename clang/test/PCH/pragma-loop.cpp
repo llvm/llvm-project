@@ -1,26 +1,23 @@
 // RUN: %clang_cc1 -emit-pch -o %t.a %s
 // RUN: %clang_cc1 -include-pch %t.a %s -ast-print -o - | FileCheck %s
 
-// FIXME: A bug in ParsedAttributes causes the order of the attributes to be
-// reversed. The checks are consequently in the reverse order below.
-
-// CHECK: #pragma clang loop unroll_count(16){{$}}
-// CHECK: #pragma clang loop interleave_count(8)
 // CHECK: #pragma clang loop vectorize_width(4)
-// CHECK: #pragma clang loop distribute(enable)
-// CHECK: #pragma clang loop unroll(disable)
-// CHECK: #pragma clang loop interleave(disable)
+// CHECK: #pragma clang loop interleave_count(8)
+// CHECK: #pragma clang loop unroll_count(16){{$}}
 // CHECK: #pragma clang loop vectorize(enable)
-// CHECK: #pragma clang loop distribute(disable)
-// CHECK: #pragma clang loop unroll(full)
-// CHECK: #pragma clang loop interleave(enable)
+// CHECK: #pragma clang loop interleave(disable)
+// CHECK: #pragma clang loop unroll(disable)
+// CHECK: #pragma clang loop distribute(enable)
 // CHECK: #pragma clang loop vectorize(disable)
+// CHECK: #pragma clang loop interleave(enable)
+// CHECK: #pragma clang loop unroll(full)
+// CHECK: #pragma clang loop distribute(disable)
 // FIXME: "#pragma unroll (enable)" is invalid and is not the input source.
 // CHECK: #pragma unroll (enable){{$}}
 // CHECK: #pragma unroll (32){{$}}
 // CHECK: #pragma nounroll{{$}}
-// CHECK: #pragma clang loop interleave_count(I)
 // CHECK: #pragma clang loop vectorize_width(V)
+// CHECK: #pragma clang loop interleave_count(I)
 
 #ifndef HEADER
 #define HEADER
