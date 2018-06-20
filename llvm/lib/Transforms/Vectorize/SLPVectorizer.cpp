@@ -5691,8 +5691,9 @@ public:
       V.computeMinimumValueSizes();
 
       // Estimate cost.
-      int Cost =
-          V.getTreeCost() + getReductionCost(TTI, ReducedVals[i], ReduxWidth);
+      int TreeCost = V.getTreeCost();
+      int ReductionCost = getReductionCost(TTI, ReducedVals[i], ReduxWidth);
+      int Cost = TreeCost + ReductionCost;
       if (Cost >= -SLPCostThreshold) {
           V.getORE()->emit([&]() {
               return OptimizationRemarkMissed(

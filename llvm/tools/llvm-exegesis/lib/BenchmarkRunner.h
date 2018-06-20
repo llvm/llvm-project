@@ -19,6 +19,7 @@
 #include "Assembler.h"
 #include "BenchmarkResult.h"
 #include "LlvmState.h"
+#include "MCInstrDescView.h"
 #include "RegisterAliasing.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Error.h"
@@ -80,10 +81,15 @@ private:
   InstructionBenchmark runOne(const BenchmarkConfiguration &Configuration,
                               unsigned Opcode, unsigned NumRepetitions) const;
 
+  // Calls generatePrototype and expands the SnippetPrototype into one or more
+  // BenchmarkConfiguration.
+  llvm::Expected<std::vector<BenchmarkConfiguration>>
+  generateConfigurations(unsigned Opcode) const;
+
   virtual InstructionBenchmark::ModeE getMode() const = 0;
 
-  virtual llvm::Expected<std::vector<BenchmarkConfiguration>>
-  createConfigurations(unsigned Opcode) const = 0;
+  virtual llvm::Expected<SnippetPrototype>
+  generatePrototype(unsigned Opcode) const = 0;
 
   virtual std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF,

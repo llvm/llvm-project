@@ -20,7 +20,7 @@ static long WINAPI SEHHandler(EXCEPTION_POINTERS *info) {
   DWORD exception_code = info->ExceptionRecord->ExceptionCode;
   if (exception_code == EXCEPTION_ACCESS_VIOLATION) {
     fprintf(stderr, "in SEHHandler\n");
-    fflush(stdout);
+    fflush(stderr);
     TerminateProcess(GetCurrentProcess(), 0);
   }
   return EXCEPTION_CONTINUE_SEARCH;
@@ -29,6 +29,7 @@ static long WINAPI SEHHandler(EXCEPTION_POINTERS *info) {
 int main() {
   SetUnhandledExceptionFilter(SEHHandler);
   fprintf(stderr, "in main\n");
+  fflush(stderr);
 
   volatile int *p = nullptr;
   *p = 42;

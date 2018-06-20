@@ -21,7 +21,17 @@ xor %eax, %ebx
 # BTVER2-NEXT:        Total number of mappings created: 0
 # BTVER2-NEXT:        Max number of mappings used:      0
 
+# ZNVER1:          *  Register File #1 -- ZnFpuPRF:
+# ZNVER1-NEXT:        Number of physical registers:     160
+# ZNVER1-NEXT:        Total number of mappings created: 0
+# ZNVER1-NEXT:        Max number of mappings used:      0
+
 # BTVER2:          *  Register File #2 -- JIntegerPRF:
 # BTVER2-NEXT:        Number of physical registers:     64
 # BTVER2-NEXT:        Total number of mappings created: 2
 # BTVER2-NEXT:        Max number of mappings used:      2
+
+# ZNVER1:          *  Register File #2 -- ZnIntegerPRF:
+# ZNVER1-NEXT:        Number of physical registers:     168
+# ZNVER1-NEXT:        Total number of mappings created: 2
+# ZNVER1-NEXT:        Max number of mappings used:      2

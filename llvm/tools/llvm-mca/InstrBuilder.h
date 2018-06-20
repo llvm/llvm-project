@@ -17,7 +17,9 @@
 
 #include "Instruction.h"
 #include "Support.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
 namespace mca {
@@ -37,6 +39,8 @@ class DispatchUnit;
 class InstrBuilder {
   const llvm::MCSubtargetInfo &STI;
   const llvm::MCInstrInfo &MCII;
+  const llvm::MCRegisterInfo &MRI;
+  const llvm::MCInstrAnalysis &MCIA;
   llvm::SmallVector<uint64_t, 8> ProcResourceMasks;
 
   llvm::DenseMap<unsigned short, std::unique_ptr<const InstrDesc>> Descriptors;
@@ -48,8 +52,10 @@ class InstrBuilder {
   InstrBuilder &operator=(const InstrBuilder &) = delete;
 
 public:
-  InstrBuilder(const llvm::MCSubtargetInfo &sti, const llvm::MCInstrInfo &mcii)
-      : STI(sti), MCII(mcii),
+  InstrBuilder(const llvm::MCSubtargetInfo &sti, const llvm::MCInstrInfo &mcii,
+               const llvm::MCRegisterInfo &mri,
+               const llvm::MCInstrAnalysis &mcia)
+      : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia),
         ProcResourceMasks(STI.getSchedModel().getNumProcResourceKinds()) {
     computeProcResourceMasks(STI.getSchedModel(), ProcResourceMasks);
   }

@@ -35,7 +35,8 @@ struct Operand; // forward declaration.
 // A variable represents the value associated to an Operand or a set of Operands
 // if they are tied together.
 struct Variable {
-  llvm::SmallVector<const Operand *, 2> TiedOperands;
+  // The indices of the operands tied to this Variable.
+  llvm::SmallVector<unsigned, 2> TiedOperands;
   llvm::MCOperand AssignedValue;
   // The index of this Variable in Instruction.Variables and its associated
   // Value in InstructionInstance.VariableValues.
@@ -71,7 +72,7 @@ struct Instruction {
   Instruction(const llvm::MCInstrDesc &MCInstrDesc,
               const RegisterAliasingTrackerCache &ATC);
 
-  const llvm::MCInstrDesc &Description;
+  const llvm::MCInstrDesc *Description; // Never nullptr.
   llvm::SmallVector<Operand, 8> Operands;
   llvm::SmallVector<Variable, 4> Variables;
   llvm::BitVector DefRegisters; // The union of the aliased def registers.
@@ -82,15 +83,44 @@ struct Instruction {
 struct InstructionInstance {
   InstructionInstance(const Instruction &Instr);
 
+  // No copy.
+  InstructionInstance(const InstructionInstance &) = delete;
+  InstructionInstance &operator=(const InstructionInstance &) = delete;
+
+  // Moving is OK.
+  InstructionInstance(InstructionInstance &&);
+  InstructionInstance &operator=(InstructionInstance &&);
+
+  unsigned getOpcode() const;
   llvm::MCOperand &getValueFor(const Variable &Var);
   llvm::MCOperand &getValueFor(const Operand &Op);
+  bool hasImmediateVariables() const;
 
   // Assigns a Random Value to all Variables that are still Invalid and returns
   // the instance as an llvm::MCInst.
   llvm::MCInst randomizeUnsetVariablesAndBuild();
 
-  const Instruction &Instr;
+  Instruction Instr;
   llvm::SmallVector<llvm::MCOperand, 4> VariableValues;
+};
+
+// A prototype is a set of InstructionInstances with an explanation of how
+// it's been built. The prototype can then be randomized to exercice several
+// immediate values. It is also used to gather the used registers and define
+// their initial values.
+struct SnippetPrototype {
+  SnippetPrototype() = default;
+
+  // No copy.
+  SnippetPrototype(const SnippetPrototype &) = delete;
+  SnippetPrototype &operator=(const SnippetPrototype &) = delete;
+
+  // Moving is OK.
+  SnippetPrototype(SnippetPrototype &&);
+  SnippetPrototype &operator=(SnippetPrototype &&);
+
+  std::string Explanation;
+  std::vector<InstructionInstance> Snippet;
 };
 
 // Represents the assignment of a Register to an Operand.

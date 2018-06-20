@@ -2759,7 +2759,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     TailDupSize = TailDupPlacementAggressiveThreshold;
 
   TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
-  // For agressive optimization, we can adjust some thresholds to be less
+  // For aggressive optimization, we can adjust some thresholds to be less
   // conservative.
   if (PassConfig->getOptLevel() >= CodeGenOpt::Aggressive) {
     // At O3 we should be more willing to copy blocks for tail duplication. This
