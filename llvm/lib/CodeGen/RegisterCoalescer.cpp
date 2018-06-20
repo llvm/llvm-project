@@ -641,7 +641,7 @@ bool RegisterCoalescer::hasOtherReachingDefs(LiveInterval &IntA,
   return false;
 }
 
-/// Copy segements with value number @p SrcValNo from liverange @p Src to live
+/// Copy segments with value number @p SrcValNo from liverange @p Src to live
 /// range @Dst and use value number @p DstValNo there.
 static void addSegmentsWithValNo(LiveRange &Dst, VNInfo *DstValNo,
                                  const LiveRange &Src, const VNInfo *SrcValNo) {
@@ -1187,7 +1187,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
        I != E; ++I) {
     MachineOperand &MO = CopyMI->getOperand(I);
     if (MO.isReg()) {
-      assert(MO.isImplicit() && "No explicit operands after implict operands.");
+      assert(MO.isImplicit() && "No explicit operands after implicit operands.");
       // Discard VReg implicit defs.
       if (TargetRegisterInfo::isPhysicalRegister(MO.getReg()))
         ImplicitOps.push_back(MO);
@@ -1318,7 +1318,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     // %1 = somedef ; %1 GR8
     // dead ECX = remat ; implicit-def CL
     // = somedef %1 ; %1 GR8
-    // %1 will see the inteferences with CL but not with CH since
+    // %1 will see the interferences with CL but not with CH since
     // no live-ranges would have been created for ECX.
     // Fix that!
     SlotIndex NewMIIdx = LIS->getInstructionIndex(NewMI);
@@ -1368,8 +1368,8 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
 }
 
 bool RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
-  // ProcessImpicitDefs may leave some copies of <undef> values, it only removes
-  // local variables. When we have a copy like:
+  // ProcessImplicitDefs may leave some copies of <undef> values, it only
+  // removes local variables. When we have a copy like:
   //
   //   %1 = COPY undef %2
   //

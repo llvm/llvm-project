@@ -135,6 +135,7 @@ def  : WriteRes<WriteSETCCStore, [HWPort06,HWPort4,HWPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
+def  : WriteRes<WriteLAHFSAHF, [HWPort06]>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
@@ -912,7 +913,6 @@ def HWWriteResGroup10 : SchedWriteRes<[HWPort0156]> {
 }
 def: InstRW<[HWWriteResGroup10], (instrs CBW, CWDE, CDQE,
                                          CMC, STC)>;
-def: InstRW<[HWWriteResGroup10], (instrs LAHF, SAHF)>; // TODO: This doesn't match Agner's data
 def: InstRW<[HWWriteResGroup10], (instregex "SGDT64m",
                                             "SIDT64m",
                                             "SMSW16m",

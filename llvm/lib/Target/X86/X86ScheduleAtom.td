@@ -101,6 +101,10 @@ def  : WriteRes<WriteSETCCStore, [AtomPort01]> {
   let Latency = 2;
   let ResourceCycles = [2];
 }
+def  : WriteRes<WriteLAHFSAHF, [AtomPort01]> {
+  let Latency = 2;
+  let ResourceCycles = [2];
+}
 
 defm : X86WriteResUnsupported<WriteIMulH>;
 

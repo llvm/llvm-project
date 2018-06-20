@@ -47,7 +47,7 @@ BenchmarkRunner::run(unsigned Opcode, const InstructionFilter &Filter,
     return std::move(E);
 
   llvm::Expected<std::vector<BenchmarkConfiguration>> ConfigurationOrError =
-      createConfigurations(Opcode);
+      generateConfigurations(Opcode);
 
   if (llvm::Error E = ConfigurationOrError.takeError())
     return std::move(E);
@@ -111,6 +111,20 @@ BenchmarkRunner::runOne(const BenchmarkConfiguration &Configuration,
   InstrBenchmark.Measurements = runMeasurements(*EF, NumRepetitions);
 
   return InstrBenchmark;
+}
+
+llvm::Expected<std::vector<BenchmarkConfiguration>>
+BenchmarkRunner::generateConfigurations(unsigned Opcode) const {
+  if (auto E = generatePrototype(Opcode)) {
+    SnippetPrototype &Prototype = E.get();
+    // TODO: Generate as many configurations as needed here.
+    BenchmarkConfiguration Configuration;
+    Configuration.Info = Prototype.Explanation;
+    for (InstructionInstance &II : Prototype.Snippet)
+      Configuration.Snippet.push_back(II.randomizeUnsetVariablesAndBuild());
+    return std::vector<BenchmarkConfiguration>{Configuration};
+  } else
+    return E.takeError();
 }
 
 llvm::Expected<std::string>

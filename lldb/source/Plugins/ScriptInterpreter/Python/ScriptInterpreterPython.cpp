@@ -347,6 +347,71 @@ const char *ScriptInterpreterPython::GetPluginDescriptionStatic() {
   return "Embedded Python interpreter";
 }
 
+void ScriptInterpreterPython::ComputePythonDirForApple(
+    llvm::SmallVectorImpl<char> &path) {
+  auto style = llvm::sys::path::Style::posix;
+
+  llvm::StringRef path_ref(path.begin(), path.size());
+  auto rbegin = llvm::sys::path::rbegin(path_ref, style);
+  auto rend = llvm::sys::path::rend(path_ref);
+  auto framework = std::find(rbegin, rend, "LLDB.framework");
+  if (framework == rend) {
+    ComputePythonDirForPosix(path);
+    return;
+  }
+  path.resize(framework - rend);
+  llvm::sys::path::append(path, style, "LLDB.framework", "Resources", "Python");
+}
+
+void ScriptInterpreterPython::ComputePythonDirForPosix(
+    llvm::SmallVectorImpl<char> &path) {
+  auto style = llvm::sys::path::Style::posix;
+#if defined(LLDB_PYTHON_RELATIVE_LIBDIR)
+  // Build the path by backing out of the lib dir, then building with whatever
+  // the real python interpreter uses.  (e.g. lib for most, lib64 on RHEL
+  // x86_64).
+  llvm::sys::path::remove_filename(path, style);
+  llvm::sys::path::append(path, style, LLDB_PYTHON_RELATIVE_LIBDIR);
+#else
+  llvm::sys::path::append(path, style,
+                          "python" + llvm::Twine(PY_MAJOR_VERSION) + "." +
+                              llvm::Twine(PY_MINOR_VERSION),
+                          "site-packages");
+#endif
+}
+
+void ScriptInterpreterPython::ComputePythonDirForWindows(
+    llvm::SmallVectorImpl<char> &path) {
+  auto style = llvm::sys::path::Style::windows;
+  llvm::sys::path::remove_filename(path, style);
+  llvm::sys::path::append(path, style, "lib", "site-packages");
+
+  // This will be injected directly through FileSpec.GetDirectory().SetString(),
+  // so we need to normalize manually.
+  std::replace(path.begin(), path.end(), '\\', '/');
+}
+
+FileSpec ScriptInterpreterPython::GetPythonDir() {
+  static FileSpec g_spec = []() {
+    FileSpec spec = HostInfo::GetShlibDir();
+    if (!spec)
+      return FileSpec();
+    llvm::SmallString<64> path;
+    spec.GetPath(path);
+
+#if defined(__APPLE__)
+    ComputePythonDirForApple(path);
+#elif defined(_WIN32)
+    ComputePythonDirForWindows(path);
+#else
+    ComputePythonDirForPosix(path);
+#endif
+    spec.GetDirectory().SetString(path);
+    return spec;
+  }();
+  return g_spec;
+}
+
 lldb_private::ConstString ScriptInterpreterPython::GetPluginName() {
   return GetPluginNameStatic();
 }
@@ -3098,7 +3163,7 @@ void ScriptInterpreterPython::InitializePrivate() {
   // that use a backslash as the path separator, this will result in executing
   // python code containing paths with unescaped backslashes.  But Python also
   // accepts forward slashes, so to make life easier we just use that.
-  if (FileSpec file_spec = HostInfo::GetPythonDir())
+  if (FileSpec file_spec = GetPythonDir())
     AddToSysPath(AddLocation::Beginning, file_spec.GetPath(false));
   if (FileSpec file_spec = HostInfo::GetShlibDir())
     AddToSysPath(AddLocation::Beginning, file_spec.GetPath(false));

@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace exegesis {
 
@@ -47,26 +48,27 @@ llvm::Error LatencyBenchmarkRunner::isInfeasible(
   return llvm::Error::success();
 }
 
-llvm::Expected<BenchmarkConfiguration>
-LatencyBenchmarkRunner::generateSelfAliasingConfiguration(
+llvm::Expected<SnippetPrototype>
+LatencyBenchmarkRunner::generateSelfAliasingPrototype(
     const Instruction &Instr,
     const AliasingConfigurations &SelfAliasing) const {
-  BenchmarkConfiguration Conf;
+  SnippetPrototype Prototype;
   InstructionInstance II(Instr);
   if (SelfAliasing.hasImplicitAliasing()) {
-    Conf.Info = "implicit Self cycles, picking random values.";
+    Prototype.Explanation = "implicit Self cycles, picking random values.";
   } else {
-    Conf.Info = "explicit self cycles, selecting one aliasing Conf.";
+    Prototype.Explanation =
+        "explicit self cycles, selecting one aliasing Conf.";
     // This is a self aliasing instruction so defs and uses are from the same
     // instance, hence twice II in the following call.
     setRandomAliasing(SelfAliasing, II, II);
   }
-  Conf.Snippet = {II.randomizeUnsetVariablesAndBuild()};
-  return Conf;
+  Prototype.Snippet.push_back(std::move(II));
+  return std::move(Prototype);
 }
 
-llvm::Expected<BenchmarkConfiguration>
-LatencyBenchmarkRunner::generateTwoInstructionConfiguration(
+llvm::Expected<SnippetPrototype>
+LatencyBenchmarkRunner::generateTwoInstructionPrototype(
     const Instruction &Instr,
     const AliasingConfigurations &SelfAliasing) const {
   std::vector<unsigned> Opcodes;
@@ -74,7 +76,7 @@ LatencyBenchmarkRunner::generateTwoInstructionConfiguration(
   std::iota(Opcodes.begin(), Opcodes.end(), 0U);
   std::shuffle(Opcodes.begin(), Opcodes.end(), randomGenerator());
   for (const unsigned OtherOpcode : Opcodes) {
-    if (OtherOpcode == Instr.Description.Opcode)
+    if (OtherOpcode == Instr.Description->Opcode)
       continue;
     const auto &OtherInstrDesc = MCInstrInfo.get(OtherOpcode);
     if (auto E = isInfeasible(OtherInstrDesc)) {
@@ -92,21 +94,19 @@ LatencyBenchmarkRunner::generateTwoInstructionConfiguration(
       setRandomAliasing(Forward, ThisII, OtherII);
     if (!Back.hasImplicitAliasing())
       setRandomAliasing(Back, OtherII, ThisII);
-    BenchmarkConfiguration Conf;
-    Conf.Info = llvm::Twine("creating cycle through ")
-                    .concat(MCInstrInfo.getName(OtherOpcode))
-                    .concat(".")
-                    .str();
-    Conf.Snippet.push_back(ThisII.randomizeUnsetVariablesAndBuild());
-    Conf.Snippet.push_back(OtherII.randomizeUnsetVariablesAndBuild());
-    return Conf;
+    SnippetPrototype Prototype;
+    Prototype.Explanation = llvm::formatv("creating cycle through {0}.",
+                                          MCInstrInfo.getName(OtherOpcode));
+    Prototype.Snippet.push_back(std::move(ThisII));
+    Prototype.Snippet.push_back(std::move(OtherII));
+    return std::move(Prototype);
   }
   return llvm::make_error<BenchmarkFailure>(
       "Infeasible : Didn't find any scheme to make the instruction serial");
 }
 
-llvm::Expected<BenchmarkConfiguration>
-LatencyBenchmarkRunner::generateConfiguration(unsigned Opcode) const {
+llvm::Expected<SnippetPrototype>
+LatencyBenchmarkRunner::generatePrototype(unsigned Opcode) const {
   const auto &InstrDesc = MCInstrInfo.get(Opcode);
   if (auto E = isInfeasible(InstrDesc))
     return std::move(E);
@@ -114,18 +114,10 @@ LatencyBenchmarkRunner::generateConfiguration(unsigned Opcode) const {
   const AliasingConfigurations SelfAliasing(Instr, Instr);
   if (SelfAliasing.empty()) {
     // No self aliasing, trying to create a dependency through another opcode.
-    return generateTwoInstructionConfiguration(Instr, SelfAliasing);
+    return generateTwoInstructionPrototype(Instr, SelfAliasing);
   } else {
-    return generateSelfAliasingConfiguration(Instr, SelfAliasing);
+    return generateSelfAliasingPrototype(Instr, SelfAliasing);
   }
-}
-
-llvm::Expected<std::vector<BenchmarkConfiguration>>
-LatencyBenchmarkRunner::createConfigurations(unsigned Opcode) const {
-  if (auto E = generateConfiguration(Opcode))
-    return std::vector<BenchmarkConfiguration>{E.get()};
-  else
-    return E.takeError();
 }
 
 std::vector<BenchmarkMeasure>

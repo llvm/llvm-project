@@ -14,10 +14,10 @@ ExegesisTarget::~ExegesisTarget() {}  // anchor.
 
 static ExegesisTarget* FirstTarget = nullptr;
 
-const ExegesisTarget* ExegesisTarget::lookup(llvm::StringRef TT) {
-  const llvm::Triple::ArchType Arch = llvm::Triple(TT).getArch();
+const ExegesisTarget *ExegesisTarget::lookup(llvm::Triple TT) {
   for (const ExegesisTarget* T = FirstTarget; T != nullptr; T = T->Next) {
-    if (T->matchesArch(Arch)) return T;
+    if (T->matchesArch(TT.getArch()))
+      return T;
   }
   return nullptr;
 }

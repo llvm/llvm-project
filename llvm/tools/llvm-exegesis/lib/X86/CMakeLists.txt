@@ -1,3 +1,8 @@
+include_directories(
+  ${LLVM_MAIN_SRC_DIR}/lib/Target/X86
+  ${LLVM_BINARY_DIR}/lib/Target/X86
+  )
+
 add_library(LLVMExegesisX86
   STATIC
   Target.cpp

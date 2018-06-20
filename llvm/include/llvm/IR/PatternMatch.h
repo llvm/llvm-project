@@ -1193,6 +1193,33 @@ template <typename OpTy> inline LoadClass_match<OpTy> m_Load(const OpTy &Op) {
 }
 
 //===----------------------------------------------------------------------===//
+// Matcher for StoreInst classes
+//
+
+template <typename ValueOp_t, typename PointerOp_t> struct StoreClass_match {
+  ValueOp_t ValueOp;
+  PointerOp_t PointerOp;
+
+  StoreClass_match(const ValueOp_t &ValueOpMatch,
+                   const PointerOp_t &PointerOpMatch) :
+    ValueOp(ValueOpMatch), PointerOp(PointerOpMatch)  {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *LI = dyn_cast<StoreInst>(V))
+      return ValueOp.match(LI->getValueOperand()) &&
+             PointerOp.match(LI->getPointerOperand());
+    return false;
+  }
+};
+
+/// Matches StoreInst.
+template <typename ValueOpTy, typename PointerOpTy>
+inline StoreClass_match<ValueOpTy, PointerOpTy>
+m_Store(const ValueOpTy &ValueOp, const PointerOpTy &PointerOp) {
+  return StoreClass_match<ValueOpTy, PointerOpTy>(ValueOp, PointerOp);
+}
+
+//===----------------------------------------------------------------------===//
 // Matchers for unary operators
 //
 

@@ -109,13 +109,13 @@ define i32 @test10(i32 %p0) {
 ; CHECK-DSP: and.w r0, r1, r0, lsr #7
 ; CHECK-DSP: lsrs  r1, r0, #5
 ; CHECK-DSP: uxtb16  r1, r1
-; CHECk-DSP: orrs r0, r1
+; CHECk-DSP: adds r0, r1
 
 ; CHECK-NO-DSP: mov.w r1, #16253176
 ; CHECK-NO-DSP: and.w r0, r1, r0, lsr #7
 ; CHECK-NO-DSP: mov.w r1, #458759
 ; CHECK-NO-DSP: and.w r1, r1, r0, lsr #5
-; CHECK-NO-DSP: orrs r0, r1
+; CHECK-NO-DSP: add r0, r1
 	%tmp1 = lshr i32 %p0, 7		; <i32> [#uses=1]
 	%tmp2 = and i32 %tmp1, 16253176		; <i32> [#uses=2]
 	%tmp4 = lshr i32 %tmp2, 5		; <i32> [#uses=1]

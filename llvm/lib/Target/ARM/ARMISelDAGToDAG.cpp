@@ -97,6 +97,8 @@ public:
     return SelectImmShifterOperand(N, A, B, false);
   }
 
+  bool SelectAddLikeOr(SDNode *Parent, SDValue N, SDValue &Out);
+
   bool SelectAddrModeImm12(SDValue N, SDValue &Base, SDValue &OffImm);
   bool SelectLdStSOReg(SDValue N, SDValue &Base, SDValue &Offset, SDValue &Opc);
 
@@ -567,6 +569,14 @@ bool ARMDAGToDAGISel::SelectRegShifterOperand(SDValue N,
   Opc = CurDAG->getTargetConstant(ARM_AM::getSORegOpc(ShOpcVal, ShImmVal),
                                   SDLoc(N), MVT::i32);
   return true;
+}
+
+// Determine whether an ISD::OR's operands are suitable to turn the operation
+// into an addition, which often has more compact encodings.
+bool ARMDAGToDAGISel::SelectAddLikeOr(SDNode *Parent, SDValue N, SDValue &Out) {
+  assert(Parent->getOpcode() == ISD::OR && "unexpected parent");
+  Out = N;
+  return CurDAG->haveNoCommonBitsSet(N, Parent->getOperand(1));
 }
 
 

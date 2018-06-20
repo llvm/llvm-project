@@ -138,7 +138,7 @@ void RegisterFile::addRegisterWrite(WriteState &WS,
     allocatePhysRegs(Mapping.second, UsedPhysRegs);
 
   // If this is a partial update, then we are done.
-  if (!WS.fullyUpdatesSuperRegs())
+  if (!WS.clearsSuperRegisters())
     return;
 
   for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I)
@@ -149,7 +149,7 @@ void RegisterFile::removeRegisterWrite(const WriteState &WS,
                                        MutableArrayRef<unsigned> FreedPhysRegs,
                                        bool ShouldFreePhysRegs) {
   unsigned RegID = WS.getRegisterID();
-  bool ShouldInvalidateSuperRegs = WS.fullyUpdatesSuperRegs();
+  bool ShouldInvalidateSuperRegs = WS.clearsSuperRegisters();
 
   assert(RegID != 0 && "Invalidating an already invalid register?");
   assert(WS.getCyclesLeft() != -512 &&
