@@ -478,6 +478,11 @@ def : InstAlias<"snez $rd, $rs", (SLTU  GPR:$rd,      X0, GPR:$rs)>;
 def : InstAlias<"sltz $rd, $rs", (SLT   GPR:$rd, GPR:$rs,      X0)>;
 def : InstAlias<"sgtz $rd, $rs", (SLT   GPR:$rd,      X0, GPR:$rs)>;
 
+// sgt/sgtu are recognised by the GNU assembler but the canonical slt/sltu
+// form will always be printed. Therefore, set a zero weight.
+def : InstAlias<"sgt $rd, $rs, $rt", (SLT GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+def : InstAlias<"sgtu $rd, $rs, $rt", (SLTU GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+
 def : InstAlias<"beqz $rs, $offset",
                 (BEQ GPR:$rs,      X0, simm13_lsb0:$offset)>;
 def : InstAlias<"bnez $rs, $offset",

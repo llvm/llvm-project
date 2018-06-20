@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(LLDB_DISABLE_PYTHON)
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
-#endif
-
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Utility/Args.h"
@@ -186,36 +182,6 @@ bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
   file_spec.GetDirectory().SetString(
       llvm::StringRef(raw_path.c_str(), raw_path.size()));
   return true;
-}
-
-bool HostInfoMacOSX::ComputePythonDirectory(FileSpec &file_spec) {
-#ifndef LLDB_DISABLE_PYTHON
-  FileSpec lldb_file_spec = GetShlibDir();
-  if (!lldb_file_spec)
-    return false;
-
-  std::string raw_path = lldb_file_spec.GetPath();
-
-  size_t framework_pos = raw_path.find("LLDB.framework");
-  if (framework_pos != std::string::npos) {
-    framework_pos += strlen("LLDB.framework");
-    raw_path.resize(framework_pos);
-    raw_path.append("/Resources/Python");
-  } else {
-    llvm::SmallString<256> python_version_dir;
-    llvm::raw_svector_ostream os(python_version_dir);
-    os << "/python" << PY_MAJOR_VERSION << '.' << PY_MINOR_VERSION
-       << "/site-packages";
-
-    // We may get our string truncated. Should we protect this with an assert?
-    raw_path.append(python_version_dir.c_str());
-  }
-  file_spec.GetDirectory().SetString(
-      llvm::StringRef(raw_path.c_str(), raw_path.size()));
-  return true;
-#else
-  return false;
-#endif
 }
 
 bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {

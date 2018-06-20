@@ -9,6 +9,7 @@
 
 #include "Assembler.h"
 
+#include "Target.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -139,6 +140,8 @@ void assembleToStream(std::unique_ptr<llvm::LLVMTargetMachine> TM,
   auto &Properties = MF.getProperties();
   Properties.set(llvm::MachineFunctionProperties::Property::NoVRegs);
   Properties.reset(llvm::MachineFunctionProperties::Property::IsSSA);
+  // FIXME: Remove this when we assign all used registers as config step. This
+  // essentially disables checks that used registers are def'ed somewhere.
   Properties.reset(llvm::MachineFunctionProperties::Property::TracksLiveness);
   // prologue/epilogue pass needs the reserved registers to be frozen, this
   // is usually done by the SelectionDAGISel pass.
@@ -158,6 +161,11 @@ void assembleToStream(std::unique_ptr<llvm::LLVMTargetMachine> TM,
   PM.add(TPC);
   PM.add(MMI.release());
   TPC->printAndVerify("MachineFunctionGenerator::assemble");
+  // Add target-specific passes.
+  if (const auto *ET = ExegesisTarget::lookup(TM->getTargetTriple())) {
+    ET->addTargetSpecificPasses(PM);
+    TPC->printAndVerify("After ExegesisTarget::addTargetSpecificPasses");
+  }
   // Adding the following passes:
   // - machineverifier: checks that the MachineFunction is well formed.
   // - prologepilog: saves and restore callee saved registers.

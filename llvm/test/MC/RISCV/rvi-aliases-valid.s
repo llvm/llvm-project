@@ -54,6 +54,13 @@ sltz x31, x1
 # CHECK-ALIAS: sgtz t6, ra
 sgtz x31, x1
 
+# CHECK-INST: slt ra, gp, sp
+# CHECK-ALIAS: slt ra, gp, sp
+sgt x1, x2, x3
+# CHECK-INST: sltu tp, t1, t0
+# CHECK-ALIAS: sltu tp, t1, t0
+sgtu x4, x5, x6
+
 # CHECK-INST: beq a0, zero, 512
 # CHECK-ALIAS: beqz a0, 512
 beqz x10, 512

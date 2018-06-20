@@ -130,7 +130,7 @@ entry:
 ; CHECK-V6M:        ldrh [[LOW:r[0-9]+]], [r0, #2]
 ; CHECK-V6M:        ldr [[HIGH:r[0-9]+]], [r0, #4]
 ; CHECK-V6M-NEXT:   lsls [[HIGH]], [[HIGH]], #16
-; CHECK-V6M-NEXT:   orrs r0, r1
+; CHECK-V6M-NEXT:   adds r0, r1, r0
 ; CHECK-ALIGN:      ldr [[HIGH:r[0-9]+]], [r0, #4]
 ; CHECK-ALIGN-NEXT: ldrh [[LOW:r[0-9]+]], [r0, #2]
 ; CHECK-ALIGN-NEXT: orr.w r0, [[LOW]], [[HIGH]], lsl #16

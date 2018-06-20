@@ -62,4 +62,6 @@ void func_multiple_addr(void) {
   __private __local int *var2;  // expected-error {{multiple address spaces specified for type}}
   __local private_int_t var3;   // expected-error {{multiple address spaces specified for type}}
   __local private_int_t *var4;  // expected-error {{multiple address spaces specified for type}}
+  __private private_int_t var5; // expected-warning {{multiple identical address spaces specified for type}}
+  __private private_int_t *var6;// expected-warning {{multiple identical address spaces specified for type}}
 }

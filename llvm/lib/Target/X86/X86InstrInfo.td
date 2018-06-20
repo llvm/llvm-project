@@ -199,9 +199,9 @@ def X86call    : SDNode<"X86ISD::CALL",     SDT_X86Call,
                          SDNPVariadic]>;
 
 def X86NoTrackCall : SDNode<"X86ISD::NT_CALL", SDT_X86Call,
-                            [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, 
+                            [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                              SDNPVariadic]>;
-def X86NoTrackBrind : SDNode<"X86ISD::NT_BRIND", SDT_X86NtBrind, 
+def X86NoTrackBrind : SDNode<"X86ISD::NT_BRIND", SDT_X86NtBrind,
                              [SDNPHasChain]>;
 
 def X86rep_stos: SDNode<"X86ISD::REP_STOS", SDTX86RepStr,
@@ -1189,7 +1189,7 @@ let Defs = [ESP], Uses = [ESP], hasSideEffects=0 in {
 let mayLoad = 1, SchedRW = [WriteLoad] in {
 def POP16r  : I<0x58, AddRegFrm, (outs GR16:$reg), (ins), "pop{w}\t$reg", []>,
                 OpSize16;
-def POP32r  : I<0x58, AddRegFrm, (outs GR32:$reg), (ins), "pop{l}\t$reg", []>, 
+def POP32r  : I<0x58, AddRegFrm, (outs GR32:$reg), (ins), "pop{l}\t$reg", []>,
                 OpSize32, Requires<[Not64BitMode]>;
 // Long form for the disassembler.
 let isCodeGenOnly = 1, ForceDisassemble = 1 in {
@@ -1724,7 +1724,7 @@ def MOV8rm_NOREX : I<0x8A, MRMSrcMem,
 
 
 // Condition code ops, incl. set if equal/not equal/...
-let SchedRW = [WriteALU] in {
+let SchedRW = [WriteLAHFSAHF] in {
 let Defs = [EFLAGS], Uses = [AH] in
 def SAHF     : I<0x9E, RawFrm, (outs),  (ins), "sahf",
                  [(set EFLAGS, (X86sahf AH))]>,

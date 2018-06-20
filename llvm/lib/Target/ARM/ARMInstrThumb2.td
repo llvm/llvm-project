@@ -2594,6 +2594,18 @@ def : T2Pat<(or      rGPR:$src, t2_so_imm_not:$imm),
 def : T2Pat<(t2_so_imm_not:$src),
             (t2MVNi t2_so_imm_not:$src)>;
 
+// There are shorter Thumb encodings for ADD than ORR, so to increase
+// Thumb2SizeReduction's chances later on we select a t2ADD for an or where
+// possible.
+def : T2Pat<(or AddLikeOrOp:$Rn, t2_so_imm:$imm),
+            (t2ADDri $Rn, t2_so_imm:$imm)>;
+
+def : T2Pat<(or AddLikeOrOp:$Rn, imm0_4095:$Rm),
+            (t2ADDri12 $Rn, imm0_4095:$Rm)>;
+
+def : T2Pat<(or AddLikeOrOp:$Rn, non_imm32:$Rm),
+            (t2ADDrr $Rn, $Rm)>;
+
 //===----------------------------------------------------------------------===//
 //  Multiply Instructions.
 //
