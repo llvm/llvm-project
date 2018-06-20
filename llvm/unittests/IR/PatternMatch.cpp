@@ -390,6 +390,42 @@ TEST_F(PatternMatchTest, OverflowingBinOps) {
   EXPECT_FALSE(m_NUWShl(m_Value(), m_Value()).match(IRB.CreateNUWAdd(L, R)));
 }
 
+TEST_F(PatternMatchTest, LoadStoreOps) {
+  // Create this load/store sequence:
+  //
+  //  %p = alloca i32*
+  //  %0 = load i32*, i32** %p
+  //  store i32 42, i32* %0
+
+  Value *Alloca = IRB.CreateAlloca(IRB.getInt32Ty());
+  Value *LoadInst = IRB.CreateLoad(Alloca);
+  Value *FourtyTwo = IRB.getInt32(42);
+  Value *StoreInst = IRB.CreateStore(FourtyTwo, Alloca);
+  Value *MatchLoad, *MatchStoreVal, *MatchStorePointer;
+
+  EXPECT_TRUE(m_Load(m_Value(MatchLoad)).match(LoadInst));
+  EXPECT_EQ(Alloca, MatchLoad);
+
+  EXPECT_TRUE(m_Load(m_Specific(Alloca)).match(LoadInst));
+
+  EXPECT_FALSE(m_Load(m_Value(MatchLoad)).match(Alloca));
+
+  EXPECT_TRUE(m_Store(m_Value(MatchStoreVal), m_Value(MatchStorePointer))
+                .match(StoreInst));
+  EXPECT_EQ(FourtyTwo, MatchStoreVal);
+  EXPECT_EQ(Alloca, MatchStorePointer);
+
+  EXPECT_FALSE(m_Store(m_Value(MatchStoreVal), m_Value(MatchStorePointer))
+                .match(Alloca));
+
+  EXPECT_TRUE(m_Store(m_SpecificInt(42), m_Specific(Alloca))
+                .match(StoreInst));
+  EXPECT_FALSE(m_Store(m_SpecificInt(42), m_Specific(FourtyTwo))
+                .match(StoreInst));
+  EXPECT_FALSE(m_Store(m_SpecificInt(43), m_Specific(Alloca))
+                .match(StoreInst));
+}
+
 TEST_F(PatternMatchTest, VectorOps) {
   // Build up small tree of vector operations
   //

@@ -66,12 +66,6 @@ enum class RegKind {
   SVEPredicateVector
 };
 
-enum RegConstraintEqualityTy {
-  EqualsReg,
-  EqualsSuperReg,
-  EqualsSubReg
-};
-
 class AArch64AsmParser : public MCTargetAsmParser {
 private:
   StringRef Mnemonic; ///< Instruction mnemonic.
@@ -98,8 +92,7 @@ private:
   bool parseOperand(OperandVector &Operands, bool isCondCode,
                     bool invertCondCode);
 
-  bool showMatchError(SMLoc Loc, unsigned ErrCode, uint64_t ErrorInfo,
-                      OperandVector &Operands);
+  bool showMatchError(SMLoc Loc, unsigned ErrCode, OperandVector &Operands);
 
   bool parseDirectiveArch(SMLoc L);
   bool parseDirectiveCPU(SMLoc L);
@@ -146,8 +139,7 @@ private:
   bool tryParseNeonVectorRegister(OperandVector &Operands);
   OperandMatchResultTy tryParseVectorIndex(OperandVector &Operands);
   OperandMatchResultTy tryParseGPRSeqPair(OperandVector &Operands);
-  template <bool ParseShiftExtend,
-            RegConstraintEqualityTy EqTy = RegConstraintEqualityTy::EqualsReg>
+  template <bool ParseShiftExtend>
   OperandMatchResultTy tryParseGPROperand(OperandVector &Operands);
   template <bool ParseShiftExtend, bool ParseSuffix>
   OperandMatchResultTy tryParseSVEDataVector(OperandVector &Operands);
@@ -185,8 +177,6 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
   }
 
-  bool regsEqual(const MCParsedAsmOperand &Op1,
-                 const MCParsedAsmOperand &Op2) const override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
@@ -240,10 +230,6 @@ private:
     unsigned RegNum;
     RegKind Kind;
     int ElementWidth;
-
-    // The register may be allowed as a different register class,
-    // e.g. for GPR64as32 or GPR32as64.
-    RegConstraintEqualityTy EqualityTy;
 
     // In some cases the shift/extend needs to be explicitly parsed together
     // with the register, rather than as a separate operand. This is needed
@@ -460,11 +446,6 @@ public:
     return Reg.RegNum;
   }
 
-  RegConstraintEqualityTy getRegEqualityTy() const {
-    assert(Kind == k_Register && "Invalid access!");
-    return Reg.EqualityTy;
-  }
-
   unsigned getVectorListStart() const {
     assert(Kind == k_VectorList && "Invalid access!");
     return VectorList.RegNum;
@@ -573,16 +554,14 @@ public:
     return DiagnosticPredicateTy::NearMatch;
   }
 
-  DiagnosticPredicate isSVEPattern() const {
+  bool isSVEPattern() const {
     if (!isImm())
-      return DiagnosticPredicateTy::NoMatch;
+      return false;
     auto *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
-      return DiagnosticPredicateTy::NoMatch;
+      return false;
     int64_t Val = MCE->getValue();
-    if (Val >= 0 && Val < 32)
-      return DiagnosticPredicateTy::Match;
-    return DiagnosticPredicateTy::NearMatch;
+    return Val >= 0 && Val < 32;
   }
 
   bool isSymbolicUImm12Offset(const MCExpr *Expr, unsigned Scale) const {
@@ -1023,11 +1002,6 @@ public:
       AArch64MCRegisterClasses[AArch64::GPR64RegClassID].contains(Reg.RegNum);
   }
 
-  bool isGPR64as32() const {
-    return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
-      AArch64MCRegisterClasses[AArch64::GPR32RegClassID].contains(Reg.RegNum);
-  }
-
   bool isWSeqPair() const {
     return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
            AArch64MCRegisterClasses[AArch64::WSeqPairsClassRegClassID].contains(
@@ -1339,18 +1313,6 @@ public:
 
     const MCRegisterInfo *RI = Ctx.getRegisterInfo();
     uint32_t Reg = RI->getRegClass(AArch64::GPR32RegClassID).getRegister(
-        RI->getEncodingValue(getReg()));
-
-    Inst.addOperand(MCOperand::createReg(Reg));
-  }
-
-  void addGPR64as32Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    assert(
-        AArch64MCRegisterClasses[AArch64::GPR32RegClassID].contains(getReg()));
-
-    const MCRegisterInfo *RI = Ctx.getRegisterInfo();
-    uint32_t Reg = RI->getRegClass(AArch64::GPR64RegClassID).getRegister(
         RI->getEncodingValue(getReg()));
 
     Inst.addOperand(MCOperand::createReg(Reg));
@@ -1706,7 +1668,6 @@ public:
 
   static std::unique_ptr<AArch64Operand>
   CreateReg(unsigned RegNum, RegKind Kind, SMLoc S, SMLoc E, MCContext &Ctx,
-            RegConstraintEqualityTy EqTy = RegConstraintEqualityTy::EqualsReg,
             AArch64_AM::ShiftExtendType ExtTy = AArch64_AM::LSL,
             unsigned ShiftAmount = 0,
             unsigned HasExplicitAmount = false) {
@@ -1714,7 +1675,6 @@ public:
     Op->Reg.RegNum = RegNum;
     Op->Reg.Kind = Kind;
     Op->Reg.ElementWidth = 0;
-    Op->Reg.EqualityTy = EqTy;
     Op->Reg.ShiftExtend.Type = ExtTy;
     Op->Reg.ShiftExtend.Amount = ShiftAmount;
     Op->Reg.ShiftExtend.HasExplicitAmount = HasExplicitAmount;
@@ -1732,7 +1692,7 @@ public:
     assert((Kind == RegKind::NeonVector || Kind == RegKind::SVEDataVector ||
             Kind == RegKind::SVEPredicateVector) &&
            "Invalid vector kind");
-    auto Op = CreateReg(RegNum, Kind, S, E, Ctx, EqualsReg, ExtTy, ShiftAmount,
+    auto Op = CreateReg(RegNum, Kind, S, E, Ctx, ExtTy, ShiftAmount,
                         HasExplicitAmount);
     Op->Reg.ElementWidth = ElementWidth;
     return Op;
@@ -3204,7 +3164,7 @@ AArch64AsmParser::tryParseGPR64sp0Operand(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-template <bool ParseShiftExtend, RegConstraintEqualityTy EqTy>
+template <bool ParseShiftExtend>
 OperandMatchResultTy
 AArch64AsmParser::tryParseGPROperand(OperandVector &Operands) {
   SMLoc StartLoc = getLoc();
@@ -3217,7 +3177,7 @@ AArch64AsmParser::tryParseGPROperand(OperandVector &Operands) {
   // No shift/extend is the default.
   if (!ParseShiftExtend || getParser().getTok().isNot(AsmToken::Comma)) {
     Operands.push_back(AArch64Operand::CreateReg(
-        RegNum, RegKind::Scalar, StartLoc, getLoc(), getContext(), EqTy));
+        RegNum, RegKind::Scalar, StartLoc, getLoc(), getContext()));
     return MatchOperand_Success;
   }
 
@@ -3231,10 +3191,10 @@ AArch64AsmParser::tryParseGPROperand(OperandVector &Operands) {
     return Res;
 
   auto Ext = static_cast<AArch64Operand*>(ExtOpnd.back().get());
-  Operands.push_back(AArch64Operand::CreateReg(
-      RegNum, RegKind::Scalar, StartLoc, Ext->getEndLoc(), getContext(), EqTy,
-      Ext->getShiftExtendType(), Ext->getShiftExtendAmount(),
-      Ext->hasShiftExtendAmount()));
+  Operands.push_back(AArch64Operand::CreateReg(RegNum, RegKind::Scalar,
+                     StartLoc, Ext->getEndLoc(), getContext(),
+                     Ext->getShiftExtendType(), Ext->getShiftExtendAmount(),
+                     Ext->hasShiftExtendAmount()));
 
   return MatchOperand_Success;
 }
@@ -3450,30 +3410,6 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     return false;
   }
   }
-}
-
-bool AArch64AsmParser::regsEqual(const MCParsedAsmOperand &Op1,
-                                 const MCParsedAsmOperand &Op2) const {
-  auto &AOp1 = static_cast<const AArch64Operand&>(Op1);
-  auto &AOp2 = static_cast<const AArch64Operand&>(Op2);
-  if (AOp1.getRegEqualityTy() == RegConstraintEqualityTy::EqualsReg &&
-      AOp2.getRegEqualityTy() == RegConstraintEqualityTy::EqualsReg)
-    return MCTargetAsmParser::regsEqual(Op1, Op2);
-
-  assert(AOp1.isScalarReg() && AOp2.isScalarReg() &&
-         "Testing equality of non-scalar registers not supported");
-
-  // Check if a registers match their sub/super register classes.
-  if (AOp1.getRegEqualityTy() == EqualsSuperReg)
-    return getXRegFromWReg(Op1.getReg()) == Op2.getReg();
-  if (AOp1.getRegEqualityTy() == EqualsSubReg)
-    return getWRegFromXReg(Op1.getReg()) == Op2.getReg();
-  if (AOp2.getRegEqualityTy() == EqualsSuperReg)
-    return getXRegFromWReg(Op2.getReg()) == Op1.getReg();
-  if (AOp2.getRegEqualityTy() == EqualsSubReg)
-    return getWRegFromXReg(Op2.getReg()) == Op1.getReg();
-
-  return false;
 }
 
 /// ParseInstruction - Parse an AArch64 instruction mnemonic followed by its
@@ -3829,22 +3765,10 @@ static std::string AArch64MnemonicSpellCheck(StringRef S, uint64_t FBS,
                                              unsigned VariantID = 0);
 
 bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
-                                      uint64_t ErrorInfo,
                                       OperandVector &Operands) {
   switch (ErrCode) {
-  case Match_InvalidTiedOperand: {
-    RegConstraintEqualityTy EqTy =
-        static_cast<const AArch64Operand &>(*Operands[ErrorInfo])
-            .getRegEqualityTy();
-    switch (EqTy) {
-    case RegConstraintEqualityTy::EqualsSubReg:
-      return Error(Loc, "operand must be 64-bit form of destination register");
-    case RegConstraintEqualityTy::EqualsSuperReg:
-      return Error(Loc, "operand must be 32-bit form of destination register");
-    case RegConstraintEqualityTy::EqualsReg:
-      return Error(Loc, "operand must match destination register");
-    }
-  }
+  case Match_InvalidTiedOperand:
+    return Error(Loc, "operand must match destination register");
   case Match_MissingFeature:
     return Error(Loc,
                  "instruction requires a CPU feature not currently enabled");
@@ -4465,7 +4389,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(IDLoc, Msg);
   }
   case Match_MnemonicFail:
-    return showMatchError(IDLoc, MatchResult, ErrorInfo, Operands);
+    return showMatchError(IDLoc, MatchResult, Operands);
   case Match_InvalidOperand: {
     SMLoc ErrorLoc = IDLoc;
 
@@ -4484,7 +4408,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         ((AArch64Operand &)*Operands[ErrorInfo]).isTokenSuffix())
       MatchResult = Match_InvalidSuffix;
 
-    return showMatchError(ErrorLoc, MatchResult, ErrorInfo, Operands);
+    return showMatchError(ErrorLoc, MatchResult, Operands);
   }
   case Match_InvalidTiedOperand:
   case Match_InvalidMemoryIndexed1:
@@ -4622,7 +4546,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     SMLoc ErrorLoc = ((AArch64Operand &)*Operands[ErrorInfo]).getStartLoc();
     if (ErrorLoc == SMLoc())
       ErrorLoc = IDLoc;
-    return showMatchError(ErrorLoc, MatchResult, ErrorInfo, Operands);
+    return showMatchError(ErrorLoc, MatchResult, Operands);
   }
   }
 

@@ -103,18 +103,6 @@ FileSpec HostInfoWindows::GetDefaultShell() {
   return FileSpec(shell, false);
 }
 
-bool HostInfoWindows::ComputePythonDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec = GetShlibDir();
-  if (!lldb_file_spec)
-    return false;
-  llvm::SmallString<64> path(lldb_file_spec.GetDirectory().AsCString());
-  llvm::sys::path::remove_filename(path);
-  llvm::sys::path::append(path, "lib", "site-packages");
-  std::replace(path.begin(), path.end(), '\\', '/');
-  file_spec.GetDirectory().SetString(path.c_str());
-  return true;
-}
-
 bool HostInfoWindows::GetEnvironmentVar(const std::string &var_name,
                                         std::string &var) {
   std::wstring wvar_name;

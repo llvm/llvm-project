@@ -622,11 +622,8 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
     }
 
-    // Be careful about hiding shl instructions behind bit masks. They are used
-    // to represent multiplies by a constant, and it is important that simple
-    // arithmetic expressions are still recognizable by scalar evolution.
-    // The inexact versions are deferred to DAGCombine, so we don't hide shl
-    // behind a bit mask.
+    // FIXME: we do not yet transform non-exact shr's. The backend (DAGCombine)
+    // needs a few fixes for the rotate pattern recognition first.
     const APInt *ShOp1;
     if (match(Op0, m_Exact(m_Shr(m_Value(X), m_APInt(ShOp1))))) {
       unsigned ShrAmt = ShOp1->getZExtValue();

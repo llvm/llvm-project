@@ -20,6 +20,13 @@
 namespace exegesis {
 namespace {
 
+using testing::HasSubstr;
+using testing::Not;
+using testing::SizeIs;
+
+MATCHER(IsInvalid, "") { return !arg.isValid(); }
+MATCHER(IsReg, "") { return arg.isReg(); }
+
 class X86SnippetGeneratorTest : public ::testing::Test {
 protected:
   X86SnippetGeneratorTest()
@@ -38,19 +45,25 @@ protected:
   const llvm::MCRegisterInfo &MCRegisterInfo;
 };
 
-class LatencySnippetGeneratorTest : public X86SnippetGeneratorTest {
+template <typename BenchmarkRunner>
+class SnippetGeneratorTest : public X86SnippetGeneratorTest {
 protected:
-  LatencySnippetGeneratorTest() : Runner(State) {}
+  SnippetGeneratorTest() : Runner(State) {}
 
-  BenchmarkConfiguration checkAndGetConfiguration(unsigned Opcode) {
+  SnippetPrototype checkAndGetConfigurations(unsigned Opcode) {
     randomGenerator().seed(0); // Initialize seed.
-    auto ConfOrError = Runner.generateConfiguration(Opcode);
-    EXPECT_FALSE(ConfOrError.takeError()); // Valid configuration.
-    return ConfOrError.get();
+    auto ProtoOrError = Runner.generatePrototype(Opcode);
+    EXPECT_FALSE(ProtoOrError.takeError()); // Valid configuration.
+    return std::move(ProtoOrError.get());
   }
 
-  LatencyBenchmarkRunner Runner;
+  BenchmarkRunner Runner;
 };
+
+using LatencySnippetGeneratorTest =
+    SnippetGeneratorTest<LatencyBenchmarkRunner>;
+
+using UopsSnippetGeneratorTest = SnippetGeneratorTest<UopsBenchmarkRunner>;
 
 TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependency) {
   // ADC16i16 self alias because of implicit use and def.
@@ -61,17 +74,17 @@ TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependency) {
   // implicit use         : AX
   // implicit use         : EFLAGS
   const unsigned Opcode = llvm::X86::ADC16i16;
-  auto Conf = checkAndGetConfiguration(Opcode);
-  EXPECT_THAT(Conf.Info, testing::HasSubstr("implicit"));
-  ASSERT_THAT(Conf.Snippet, testing::SizeIs(1));
-  const llvm::MCInst Instr = Conf.Snippet[0];
-  EXPECT_THAT(Instr.getOpcode(), Opcode);
-  EXPECT_THAT(Instr.getNumOperands(), 1);
-  EXPECT_TRUE(Instr.getOperand(0).isImm()); // Use
   EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitDefs()[0], llvm::X86::AX);
   EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitDefs()[1], llvm::X86::EFLAGS);
   EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitUses()[0], llvm::X86::AX);
   EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitUses()[1], llvm::X86::EFLAGS);
+  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
+  EXPECT_THAT(Proto.Explanation, HasSubstr("implicit"));
+  ASSERT_THAT(Proto.Snippet, SizeIs(1));
+  const InstructionInstance &II = Proto.Snippet[0];
+  EXPECT_THAT(II.getOpcode(), Opcode);
+  ASSERT_THAT(II.VariableValues, SizeIs(1)); // Imm.
+  EXPECT_THAT(II.VariableValues[0], IsInvalid()) << "Immediate is not set";
 }
 
 TEST_F(LatencySnippetGeneratorTest, ExplicitSelfDependency) {
@@ -82,18 +95,15 @@ TEST_F(LatencySnippetGeneratorTest, ExplicitSelfDependency) {
   // explicit use 2       : imm
   // implicit def         : EFLAGS
   const unsigned Opcode = llvm::X86::ADD16ri;
-  auto Conf = checkAndGetConfiguration(Opcode);
-  EXPECT_THAT(Conf.Info, testing::HasSubstr("explicit"));
-  ASSERT_THAT(Conf.Snippet, testing::SizeIs(1));
-  const llvm::MCInst Instr = Conf.Snippet[0];
-  EXPECT_THAT(Instr.getOpcode(), Opcode);
-  EXPECT_THAT(Instr.getNumOperands(), 3);
-  EXPECT_TRUE(Instr.getOperand(0).isReg());
-  EXPECT_TRUE(Instr.getOperand(1).isReg());
-  EXPECT_THAT(Instr.getOperand(0).getReg(), Instr.getOperand(1).getReg())
-      << "Op0 and Op1 should have the same value";
-  EXPECT_TRUE(Instr.getOperand(2).isImm());
   EXPECT_THAT(MCInstrInfo.get(Opcode).getImplicitDefs()[0], llvm::X86::EFLAGS);
+  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
+  EXPECT_THAT(Proto.Explanation, HasSubstr("explicit"));
+  ASSERT_THAT(Proto.Snippet, SizeIs(1));
+  const InstructionInstance &II = Proto.Snippet[0];
+  EXPECT_THAT(II.getOpcode(), Opcode);
+  ASSERT_THAT(II.VariableValues, SizeIs(2));
+  EXPECT_THAT(II.VariableValues[0], IsReg()) << "Operand 0 and 1";
+  EXPECT_THAT(II.VariableValues[1], IsInvalid()) << "Operand 2 is not set";
 }
 
 TEST_F(LatencySnippetGeneratorTest, DependencyThroughOtherOpcode) {
@@ -103,49 +113,43 @@ TEST_F(LatencySnippetGeneratorTest, DependencyThroughOtherOpcode) {
   // implicit def         : EFLAGS
 
   const unsigned Opcode = llvm::X86::CMP64rr;
-  auto Conf = checkAndGetConfiguration(Opcode);
-  EXPECT_THAT(Conf.Info, testing::HasSubstr("cycle through"));
-  ASSERT_THAT(Conf.Snippet, testing::SizeIs(2));
-  const llvm::MCInst Instr = Conf.Snippet[0];
-  EXPECT_THAT(Instr.getOpcode(), Opcode);
+  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
+  EXPECT_THAT(Proto.Explanation, HasSubstr("cycle through"));
+  ASSERT_THAT(Proto.Snippet, SizeIs(2));
+  const InstructionInstance &II = Proto.Snippet[0];
+  EXPECT_THAT(II.getOpcode(), Opcode);
+  ASSERT_THAT(II.VariableValues, SizeIs(2));
+  EXPECT_THAT(II.VariableValues[0], IsReg());
+  EXPECT_THAT(II.VariableValues[1], IsInvalid());
+  EXPECT_THAT(Proto.Snippet[1].getOpcode(), Not(Opcode));
   // TODO: check that the two instructions alias each other.
 }
 
 TEST_F(LatencySnippetGeneratorTest, LAHF) {
   const unsigned Opcode = llvm::X86::LAHF;
-  auto Conf = checkAndGetConfiguration(Opcode);
-  EXPECT_THAT(Conf.Info, testing::HasSubstr("cycle through"));
-  ASSERT_THAT(Conf.Snippet, testing::SizeIs(2));
-  const llvm::MCInst Instr = Conf.Snippet[0];
-  EXPECT_THAT(Instr.getOpcode(), Opcode);
+  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
+  EXPECT_THAT(Proto.Explanation, HasSubstr("cycle through"));
+  ASSERT_THAT(Proto.Snippet, SizeIs(2));
+  const InstructionInstance &II = Proto.Snippet[0];
+  EXPECT_THAT(II.getOpcode(), Opcode);
+  ASSERT_THAT(II.VariableValues, SizeIs(0));
 }
 
-class UopsSnippetGeneratorTest : public X86SnippetGeneratorTest {
-protected:
-  UopsSnippetGeneratorTest() : Runner(State) {}
-
-  BenchmarkConfiguration checkAndGetConfiguration(unsigned Opcode) {
-    randomGenerator().seed(0); // Initialize seed.
-    auto ConfOrError = Runner.generateConfiguration(Opcode);
-    EXPECT_FALSE(ConfOrError.takeError()); // Valid configuration.
-    return ConfOrError.get();
-  }
-
-  UopsBenchmarkRunner Runner;
-};
-
 TEST_F(UopsSnippetGeneratorTest, ParallelInstruction) {
-  // BNDCL32rr is parallelno matter what.
+  // BNDCL32rr is parallel no matter what.
 
   // explicit use 0       : reg RegClass=BNDR
   // explicit use 1       : reg RegClass=GR32
 
   const unsigned Opcode = llvm::X86::BNDCL32rr;
-  auto Conf = checkAndGetConfiguration(Opcode);
-  EXPECT_THAT(Conf.Info, testing::HasSubstr("parallel"));
-  ASSERT_THAT(Conf.Snippet, testing::SizeIs(1));
-  const llvm::MCInst Instr = Conf.Snippet[0];
-  EXPECT_THAT(Instr.getOpcode(), Opcode);
+  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
+  EXPECT_THAT(Proto.Explanation, HasSubstr("parallel"));
+  ASSERT_THAT(Proto.Snippet, SizeIs(1));
+  const InstructionInstance &II = Proto.Snippet[0];
+  EXPECT_THAT(II.getOpcode(), Opcode);
+  ASSERT_THAT(II.VariableValues, SizeIs(2));
+  EXPECT_THAT(II.VariableValues[0], IsInvalid());
+  EXPECT_THAT(II.VariableValues[1], IsInvalid());
 }
 
 TEST_F(UopsSnippetGeneratorTest, SerialInstruction) {
@@ -155,11 +159,12 @@ TEST_F(UopsSnippetGeneratorTest, SerialInstruction) {
   // implicit def         : EDX
   // implicit use         : EAX
   const unsigned Opcode = llvm::X86::CDQ;
-  auto Conf = checkAndGetConfiguration(Opcode);
-  EXPECT_THAT(Conf.Info, testing::HasSubstr("serial"));
-  ASSERT_THAT(Conf.Snippet, testing::SizeIs(1));
-  const llvm::MCInst Instr = Conf.Snippet[0];
-  EXPECT_THAT(Instr.getOpcode(), Opcode);
+  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
+  EXPECT_THAT(Proto.Explanation, HasSubstr("serial"));
+  ASSERT_THAT(Proto.Snippet, SizeIs(1));
+  const InstructionInstance &II = Proto.Snippet[0];
+  EXPECT_THAT(II.getOpcode(), Opcode);
+  ASSERT_THAT(II.VariableValues, SizeIs(0));
 }
 
 TEST_F(UopsSnippetGeneratorTest, StaticRenaming) {
@@ -171,14 +176,16 @@ TEST_F(UopsSnippetGeneratorTest, StaticRenaming) {
   // explicit use 2       : reg RegClass=GR32
   // implicit use         : EFLAGS
   const unsigned Opcode = llvm::X86::CMOVA32rr;
-  auto Conf = checkAndGetConfiguration(Opcode);
-  EXPECT_THAT(Conf.Info, testing::HasSubstr("static renaming"));
+  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
+  EXPECT_THAT(Proto.Explanation, HasSubstr("static renaming"));
   constexpr const unsigned kInstructionCount = 15;
-  ASSERT_THAT(Conf.Snippet, testing::SizeIs(kInstructionCount));
+  ASSERT_THAT(Proto.Snippet, SizeIs(kInstructionCount));
   std::unordered_set<unsigned> AllDefRegisters;
-  for (const auto &Inst : Conf.Snippet)
-    AllDefRegisters.insert(Inst.getOperand(0).getReg());
-  EXPECT_THAT(AllDefRegisters, testing::SizeIs(kInstructionCount))
+  for (const auto &II : Proto.Snippet) {
+    ASSERT_THAT(II.VariableValues, SizeIs(2));
+    AllDefRegisters.insert(II.VariableValues[0].getReg());
+  }
+  EXPECT_THAT(AllDefRegisters, SizeIs(kInstructionCount))
       << "Each instruction writes to a different register";
 }
 
@@ -192,19 +199,17 @@ TEST_F(UopsSnippetGeneratorTest, NoTiedVariables) {
   // explicit use 3       : imm
   // implicit use         : EFLAGS
   const unsigned Opcode = llvm::X86::CMOV_GR32;
-  auto Conf = checkAndGetConfiguration(Opcode);
-  EXPECT_THAT(Conf.Info, testing::HasSubstr("no tied variables"));
-  ASSERT_THAT(Conf.Snippet, testing::SizeIs(1));
-  const llvm::MCInst Instr = Conf.Snippet[0];
-  EXPECT_THAT(Instr.getOpcode(), Opcode);
-  EXPECT_THAT(Instr.getNumOperands(), 4);
-  EXPECT_THAT(Instr.getOperand(0).getReg(),
-              testing::Not(Instr.getOperand(1).getReg()))
+  const SnippetPrototype Proto = checkAndGetConfigurations(Opcode);
+  EXPECT_THAT(Proto.Explanation, HasSubstr("no tied variables"));
+  ASSERT_THAT(Proto.Snippet, SizeIs(1));
+  const InstructionInstance &II = Proto.Snippet[0];
+  EXPECT_THAT(II.getOpcode(), Opcode);
+  ASSERT_THAT(II.VariableValues, SizeIs(4));
+  EXPECT_THAT(II.VariableValues[0].getReg(), Not(II.VariableValues[1].getReg()))
       << "Def is different from first Use";
-  EXPECT_THAT(Instr.getOperand(0).getReg(),
-              testing::Not(Instr.getOperand(2).getReg()))
+  EXPECT_THAT(II.VariableValues[0].getReg(), Not(II.VariableValues[2].getReg()))
       << "Def is different from second Use";
-  EXPECT_THAT(Instr.getOperand(3).getImm(), 1);
+  EXPECT_THAT(II.VariableValues[3], IsInvalid());
 }
 
 } // namespace

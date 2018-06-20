@@ -345,7 +345,7 @@ ScheduleDAGInstrs *PostMachineScheduler::createPostMachineScheduler() {
 /// This design avoids exposing scheduling boundaries to the DAG builder,
 /// simplifying the DAG builder's support for "special" target instructions.
 /// At the same time the design allows target schedulers to operate across
-/// scheduling boundaries, for example to bundle the boudary instructions
+/// scheduling boundaries, for example to bundle the boundary instructions
 /// without reordering them. This creates complexity, because the target
 /// scheduler must update the RegionBegin and RegionEnd positions cached by
 /// ScheduleDAGInstrs whenever adding or removing instructions. A much simpler
@@ -1708,7 +1708,7 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
 
   // If GlobalSegment is killed at the LocalLI->start, the call to find()
   // returned the next global segment. But if GlobalSegment overlaps with
-  // LocalLI->start, then advance to the next segement. If a hole in GlobalLI
+  // LocalLI->start, then advance to the next segment. If a hole in GlobalLI
   // exists in LocalLI's vicinity, GlobalSegment will be the end of the hole.
   if (GlobalSegment->contains(LocalLI->beginIndex()))
     ++GlobalSegment;
@@ -1925,7 +1925,7 @@ getNextResourceCycle(unsigned PIdx, unsigned Cycles) {
 /// The scheduler supports two modes of hazard recognition. The first is the
 /// ScheduleHazardRecognizer API. It is a fully general hazard recognizer that
 /// supports highly complicated in-order reservation tables
-/// (ScoreboardHazardRecognizer) and arbitraty target-specific logic.
+/// (ScoreboardHazardRecognizer) and arbitrary target-specific logic.
 ///
 /// The second is a streamlined mechanism that checks for hazards based on
 /// simple counters that the scheduler itself maintains. It explicitly checks
@@ -2868,7 +2868,7 @@ void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
              << Cand.RPDelta.Excess.getUnitInc() << "\n");
 }
 
-/// Apply a set of heursitics to a new candidate. Heuristics are currently
+/// Apply a set of heuristics to a new candidate. Heuristics are currently
 /// hierarchical. This may be more efficient than a graduated cost model because
 /// we don't need to evaluate all aspects of the model for each node in the
 /// queue. But it's really done to make the heuristics easier to debug and
@@ -3239,7 +3239,7 @@ void PostGenericScheduler::registerRoots() {
   }
 }
 
-/// Apply a set of heursitics to a new candidate for PostRA scheduling.
+/// Apply a set of heuristics to a new candidate for PostRA scheduling.
 ///
 /// \param Cand provides the policy and current best candidate.
 /// \param TryCand refers to the next SUnit candidate, otherwise uninitialized.

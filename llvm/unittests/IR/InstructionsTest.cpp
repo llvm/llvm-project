@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -21,12 +22,21 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 #include <memory>
 
 namespace llvm {
 namespace {
+
+static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
+  SMDiagnostic Err;
+  std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
+  if (!Mod)
+    Err.print("InstructionsTests", errs());
+  return Mod;
+}
 
 TEST(InstructionsTest, ReturnInst) {
   LLVMContext C;
@@ -745,6 +755,127 @@ TEST(InstructionsTest, CommuteShuffleMask) {
   SmallVector<int, 16> Indices({-1, 0, 7});
   ShuffleVectorInst::commuteShuffleMask(Indices, 4);
   EXPECT_THAT(Indices, testing::ContainerEq(ArrayRef<int>({-1, 4, 3})));
+}
+
+TEST(InstructionsTest, ShuffleMaskQueries) {
+  // Create the elements for various constant vectors.
+  LLVMContext Ctx;
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Constant *CU = UndefValue::get(Int32Ty);
+  Constant *C0 = ConstantInt::get(Int32Ty, 0);
+  Constant *C1 = ConstantInt::get(Int32Ty, 1);
+  Constant *C2 = ConstantInt::get(Int32Ty, 2);
+  Constant *C3 = ConstantInt::get(Int32Ty, 3);
+  Constant *C4 = ConstantInt::get(Int32Ty, 4);
+  Constant *C5 = ConstantInt::get(Int32Ty, 5);
+  Constant *C6 = ConstantInt::get(Int32Ty, 6);
+  Constant *C7 = ConstantInt::get(Int32Ty, 7);
+
+  Constant *Identity = ConstantVector::get({C0, CU, C2, C3, C4});
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(Identity));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Identity)); // identity is distinguished from select
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Identity));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(Identity)); // identity is always single source
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Identity));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Identity));
+
+  Constant *Select = ConstantVector::get({CU, C1, C5});
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Select));
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(Select));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Select));
+  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(Select));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Select));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Select));
+  
+  Constant *Reverse = ConstantVector::get({C3, C2, C1, CU});
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Reverse));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Reverse));
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(Reverse));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(Reverse)); // reverse is always single source
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Reverse));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(Reverse));
+
+  Constant *SingleSource = ConstantVector::get({C2, C2, C0, CU});
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(SingleSource));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(SingleSource));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(SingleSource));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(SingleSource));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(SingleSource));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(SingleSource));
+
+  Constant *ZeroEltSplat = ConstantVector::get({C0, C0, CU, C0});
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(ZeroEltSplat));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(ZeroEltSplat));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(ZeroEltSplat));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ZeroEltSplat)); // 0-splat is always single source
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ZeroEltSplat));
+  EXPECT_FALSE(ShuffleVectorInst::isTransposeMask(ZeroEltSplat));
+
+  Constant *Transpose = ConstantVector::get({C0, C4, C2, C6});
+  EXPECT_FALSE(ShuffleVectorInst::isIdentityMask(Transpose));
+  EXPECT_FALSE(ShuffleVectorInst::isSelectMask(Transpose));
+  EXPECT_FALSE(ShuffleVectorInst::isReverseMask(Transpose));
+  EXPECT_FALSE(ShuffleVectorInst::isSingleSourceMask(Transpose));
+  EXPECT_FALSE(ShuffleVectorInst::isZeroEltSplatMask(Transpose));
+  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(Transpose));
+
+  // More tests to make sure the logic is/stays correct...
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(ConstantVector::get({CU, C1, CU, C3})));
+  EXPECT_TRUE(ShuffleVectorInst::isIdentityMask(ConstantVector::get({C4, CU, C6, CU})));
+
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(ConstantVector::get({C4, C1, C6, CU})));
+  EXPECT_TRUE(ShuffleVectorInst::isSelectMask(ConstantVector::get({CU, C1, C6, C3})));
+
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(ConstantVector::get({C7, C6, CU, C4})));
+  EXPECT_TRUE(ShuffleVectorInst::isReverseMask(ConstantVector::get({C3, CU, C1, CU})));
+
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ConstantVector::get({C7, C5, CU, C7})));
+  EXPECT_TRUE(ShuffleVectorInst::isSingleSourceMask(ConstantVector::get({C3, C0, CU, C3})));
+
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ConstantVector::get({C4, CU, CU, C4})));
+  EXPECT_TRUE(ShuffleVectorInst::isZeroEltSplatMask(ConstantVector::get({CU, C0, CU, C0})));
+
+  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C5, C3, C7})));
+  EXPECT_TRUE(ShuffleVectorInst::isTransposeMask(ConstantVector::get({C1, C3})));
+}
+
+TEST(InstructionsTest, SkipDebug) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+      define void @f() {
+      entry:
+        call void @llvm.dbg.value(metadata i32 0, metadata !11, metadata !DIExpression()), !dbg !13
+        ret void
+      }
+
+      !llvm.dbg.cu = !{!0}
+      !llvm.module.flags = !{!3, !4}
+      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+      !1 = !DIFile(filename: "t2.c", directory: "foo")
+      !2 = !{}
+      !3 = !{i32 2, !"Dwarf Version", i32 4}
+      !4 = !{i32 2, !"Debug Info Version", i32 3}
+      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
+      !9 = !DISubroutineType(types: !10)
+      !10 = !{null}
+      !11 = !DILocalVariable(name: "x", scope: !8, file: !1, line: 2, type: !12)
+      !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+      !13 = !DILocation(line: 2, column: 7, scope: !8)
+  )");
+  ASSERT_TRUE(M);
+  Function *F = cast<Function>(M->getNamedValue("f"));
+  BasicBlock &BB = F->front();
+
+  // The first non-debug instruction is the terminator.
+  auto *Term = BB.getTerminator();
+  EXPECT_EQ(Term, BB.begin()->getNextNonDebugInstruction());
+  EXPECT_EQ(Term->getIterator(), skipDebugInfo(BB.begin()));
+
+  // After the terminator, there are no non-debug instructions.
+  EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());
 }
 
 } // end anonymous namespace

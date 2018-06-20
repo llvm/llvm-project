@@ -39121,9 +39121,31 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
   // TODO: SimplifyDemandedBits instead?
   if (VT == MVT::v1i1 && Src.getOpcode() == ISD::AND && Src.hasOneUse())
     if (auto *C = dyn_cast<ConstantSDNode>(Src.getOperand(1)))
-      if (C->getAPIntValue().isOneValue())
-        return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), MVT::v1i1,
-                           Src.getOperand(0));
+      if (C->getAPIntValue().isOneValue()) {
+        SDValue Mask = Src.getOperand(0);
+        if (Mask.getOpcode() == ISD::TRUNCATE &&
+            Mask.getOperand(0).getValueType() != MVT::i16)
+          Mask = Mask.getOperand(0);
+        return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), MVT::v1i1, Mask);
+      }
+
+  // The result of AND may also be truncated. This occurs in code for lowered
+  // masked scalar intrinsics.
+  if (VT == MVT::v1i1 && Src.getOpcode() == ISD::TRUNCATE && Src.hasOneUse() &&
+      Src.getOperand(0).getOpcode() == ISD::AND &&
+      Src.getOperand(0).hasOneUse())
+    if (auto *C = dyn_cast<ConstantSDNode>(Src.getOperand(0).getOperand(1)))
+      if (C->getAPIntValue().isOneValue()) {
+        SDValue Mask = Src.getOperand(0).getOperand(0);
+        if (Mask.getOpcode() == ISD::TRUNCATE &&
+            Mask.getOperand(0).getValueType() != MVT::i16)
+          Mask = Mask.getOperand(0);
+        // Check if the initial value is an i16. scalar_to_vector fails to
+        // select for that type, so the combine should be aborted.
+        if (Mask.getValueType() == MVT::i16)
+          return SDValue();
+        return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), MVT::v1i1, Mask);
+      }
 
   return SDValue();
 }

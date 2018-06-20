@@ -49,3 +49,4 @@ xor %eax, %ebx
 # ZNVER1:          Scheduler's queue usage:
 # ZNVER1-NEXT:     ZnAGU,  0/28
 # ZNVER1-NEXT:     ZnALU,  1/56
+# ZNVER1-NEXT:     ZnFPU,  0/36

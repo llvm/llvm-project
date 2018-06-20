@@ -92,6 +92,7 @@
 
 #include <cstddef>
 #include <string>
+#include <system_error>
 
 // Wrap everything in namespace llvm so that programs can link with llvm and
 // their own version of the unicode libraries.

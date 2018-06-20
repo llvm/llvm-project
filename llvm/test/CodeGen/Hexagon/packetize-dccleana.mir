@@ -1,0 +1,16 @@
+# RUN: llc -march=hexagon -run-pass=hexagon-packetizer -o - %s | FileCheck %s
+
+# Make sure that the load is not packetized together with the dccleana.
+# CHECK-NOT: BUNDLE
+
+---
+name: foo
+tracksRegLiveness: true
+fixedStack:
+- { id: 0, offset: 0, size: 16, alignment: 8, isImmutable: true }
+body: |
+  bb.0:
+    liveins: $r1
+    Y2_dccleana killed renamable $r1
+    $d8 = L2_loadrd_io killed $r29, 8 :: (load 8 from %fixed-stack.0)
+...

@@ -116,6 +116,8 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
   if (hasMips64r6() && InMicroMipsMode)
     report_fatal_error("microMIPS64R6 is not supported", false);
 
+  if (!isABI_O32() && InMicroMipsMode)
+    report_fatal_error("microMIPS64 is not supported.", false);
 
   if (UseIndirectJumpsHazard) {
     if (InMicroMipsMode)

@@ -2573,8 +2573,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(Args &args, Target *target,
   // NOW, convert the list of breakpoint id strings in TEMP_ARGS into an actual
   // BreakpointIDList:
 
-  valid_ids->InsertStringArray(temp_args.GetConstArgumentVector(),
-                               temp_args.GetArgumentCount(), result);
+  valid_ids->InsertStringArray(temp_args.GetArgumentArrayRef(), result);
 
   // At this point,  all of the breakpoint ids that the user passed in have
   // been converted to breakpoint IDs and put into valid_ids.

@@ -25,9 +25,8 @@
 ///
 /// Targets must implement
 ///   * getOutliningCandidateInfo
-///   * insertOutlinerEpilogue
+///   * buildOutlinedFrame
 ///   * insertOutlinedCall
-///   * insertOutlinerPrologue
 ///   * isFunctionSafeToOutlineFrom
 ///
 /// in order to make use of the MachineOutliner.
@@ -1150,8 +1149,6 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);
 
-  TII.insertOutlinerPrologue(MBB, MF, OF.TCI);
-
   // Copy over the instructions for the function using the integer mappings in
   // its sequence.
   for (unsigned Str : OF.Sequence) {
@@ -1164,7 +1161,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
     MBB.insert(MBB.end(), NewMI);
   }
 
-  TII.insertOutlinerEpilogue(MBB, MF, OF.TCI);
+  TII.buildOutlinedFrame(MBB, MF, OF.TCI);
 
   // If there's a DISubprogram associated with this outlined function, then
   // emit debug info for the outlined function.
