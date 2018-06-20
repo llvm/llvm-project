@@ -755,6 +755,36 @@ IntegerLiteral::Create(const ASTContext &C, EmptyShell Empty) {
   return new (C) IntegerLiteral(Empty);
 }
 
+FixedPointLiteral::FixedPointLiteral(const ASTContext &C, const llvm::APInt &V,
+                                     QualType type, SourceLocation l,
+                                     unsigned Scale)
+    : Expr(FixedPointLiteralClass, type, VK_RValue, OK_Ordinary, false, false,
+           false, false),
+      Loc(l), Scale(Scale) {
+  assert(type->isFixedPointType() && "Illegal type in FixedPointLiteral");
+  assert(V.getBitWidth() == C.getTypeInfo(type).Width &&
+         "Fixed point type is not the correct size for constant.");
+  setValue(C, V);
+}
+
+FixedPointLiteral *FixedPointLiteral::CreateFromRawInt(const ASTContext &C,
+                                                       const llvm::APInt &V,
+                                                       QualType type,
+                                                       SourceLocation l,
+                                                       unsigned Scale) {
+  return new (C) FixedPointLiteral(C, V, type, l, Scale);
+}
+
+std::string FixedPointLiteral::getValueAsString(unsigned Radix) const {
+  // Currently the longest decimal number that can be printed is the max for an
+  // unsigned long _Accum: 4294967295.99999999976716935634613037109375
+  // which is 43 characters.
+  SmallString<64> S;
+  FixedPointValueToString(
+      S, llvm::APSInt::getUnsigned(getValue().getZExtValue()), Scale, Radix);
+  return S.str();
+}
+
 FloatingLiteral::FloatingLiteral(const ASTContext &C, const llvm::APFloat &V,
                                  bool isexact, QualType Type, SourceLocation L)
   : Expr(FloatingLiteralClass, Type, VK_RValue, OK_Ordinary, false, false,
@@ -2991,6 +3021,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ObjCIvarRefExprClass:
   case PredefinedExprClass:
   case IntegerLiteralClass:
+  case FixedPointLiteralClass:
   case FloatingLiteralClass:
   case ImaginaryLiteralClass:
   case StringLiteralClass:

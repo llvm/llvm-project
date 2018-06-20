@@ -976,9 +976,9 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     }
 
     SDNode *Rdhwr =
-      CurDAG->getMachineNode(RdhwrOpc, DL,
-                             Node->getValueType(0),
-                             CurDAG->getRegister(Mips::HWR29, MVT::i32));
+        CurDAG->getMachineNode(RdhwrOpc, DL, Node->getValueType(0),
+                               CurDAG->getRegister(Mips::HWR29, MVT::i32),
+                               CurDAG->getTargetConstant(0, DL, MVT::i32));
     SDValue Chain = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL, DestReg,
                                          SDValue(Rdhwr, 0));
     SDValue ResNode = CurDAG->getCopyFromReg(Chain, DL, DestReg, PtrVT);

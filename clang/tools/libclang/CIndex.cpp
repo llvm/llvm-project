@@ -5061,6 +5061,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("VariableRef");
   case CXCursor_IntegerLiteral:
       return cxstring::createRef("IntegerLiteral");
+  case CXCursor_FixedPointLiteral:
+      return cxstring::createRef("FixedPointLiteral");
   case CXCursor_FloatingLiteral:
       return cxstring::createRef("FloatingLiteral");
   case CXCursor_ImaginaryLiteral:

@@ -6,7 +6,7 @@ config.cpp_compiler = "@LIBFUZZER_TEST_COMPILER@"
 config.target_flags = "@LIBFUZZER_TEST_FLAGS@"
 config.c_compiler = "@LIBFUZZER_TEST_COMPILER@"
 config.stdlib = "@LIBFUZZER_TEST_STDLIB@"
-config.ios = @LIBFUZZER_TEST_IOS_PYBOOL@
+config.apple_platform = "@LIBFUZZER_TEST_APPLE_PLATFORM@"
 config.name_suffix = "@LIBFUZZER_TEST_CONFIG_SUFFIX@"
 
 config.osx_sysroot_flag = "@OSX_SYSROOT_FLAG@"

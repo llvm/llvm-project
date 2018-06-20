@@ -200,6 +200,13 @@ def : InstAlias<"fmv.s $rd, $rs",  (FSGNJ_S  FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
 def : InstAlias<"fabs.s $rd, $rs", (FSGNJX_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
 def : InstAlias<"fneg.s $rd, $rs", (FSGNJN_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
 
+// fgt.s/fge.s are recognised by the GNU assembler but the canonical
+// flt.s/fle.s forms will always be printed. Therefore, set a zero weight.
+def : InstAlias<"fgt.s $rd, $rs, $rt",
+                (FLT_S GPR:$rd, FPR32:$rt, FPR32:$rs), 0>;
+def : InstAlias<"fge.s $rd, $rs, $rt",
+                (FLE_S GPR:$rd, FPR32:$rt, FPR32:$rs), 0>;
+
 // The following csr instructions actually alias instructions from the base ISA.
 // However, it only makes sense to support them when the F extension is enabled.
 // CSR Addresses: 0x003 == fcsr, 0x002 == frm, 0x001 == fflags
@@ -219,6 +226,11 @@ def : InstAlias<"fsflags $rd, $rs",   (CSRRW  GPR:$rd, 0x001, GPR:$rs)>;
 def : InstAlias<"fsflags $rs",        (CSRRW       X0, 0x001, GPR:$rs), 2>;
 def : InstAlias<"fsflagsi $rd, $imm", (CSRRWI GPR:$rd, 0x001, uimm5:$imm)>;
 def : InstAlias<"fsflagsi $imm",      (CSRRWI      X0, 0x001, uimm5:$imm), 2>;
+
+// fmv.w.x and fmv.x.w were previously known as fmv.s.x and fmv.x.s. Both
+// spellings should be supported by standard tools.
+def : MnemonicAlias<"fmv.s.x", "fmv.w.x">;
+def : MnemonicAlias<"fmv.x.s", "fmv.x.w">;
 } // Predicates = [HasStdExtF]
 
 //===----------------------------------------------------------------------===//

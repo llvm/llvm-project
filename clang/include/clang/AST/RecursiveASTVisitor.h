@@ -2585,6 +2585,7 @@ DEF_TRAVERSE_STMT(CoyieldExpr, {
 
 // These literals (all of them) do not need any action.
 DEF_TRAVERSE_STMT(IntegerLiteral, {})
+DEF_TRAVERSE_STMT(FixedPointLiteral, {})
 DEF_TRAVERSE_STMT(CharacterLiteral, {})
 DEF_TRAVERSE_STMT(FloatingLiteral, {})
 DEF_TRAVERSE_STMT(ImaginaryLiteral, {})

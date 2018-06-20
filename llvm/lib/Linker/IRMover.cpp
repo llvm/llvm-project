@@ -241,18 +241,27 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   // These are types that LLVM itself will unique.
   bool IsUniqued = !isa<StructType>(Ty) || cast<StructType>(Ty)->isLiteral();
 
-#ifndef NDEBUG
   if (!IsUniqued) {
+    StructType *STy = cast<StructType>(Ty);
+    // This is actually a type from the destination module, this can be reached
+    // when this type is loaded in another module, added to DstStructTypesSet,
+    // and then we reach the same type in another module where it has not been
+    // added to MappedTypes. (PR37684)
+    if (STy->getContext().isODRUniquingDebugTypes() && !STy->isOpaque() &&
+        DstStructTypesSet.hasType(STy))
+      return *Entry = STy;
+
+#ifndef NDEBUG
     for (auto &Pair : MappedTypes) {
       assert(!(Pair.first != Ty && Pair.second == Ty) &&
              "mapping to a source type");
     }
-  }
 #endif
 
-  if (!IsUniqued && !Visited.insert(cast<StructType>(Ty)).second) {
-    StructType *DTy = StructType::create(Ty->getContext());
-    return *Entry = DTy;
+    if (!Visited.insert(STy).second) {
+      StructType *DTy = StructType::create(Ty->getContext());
+      return *Entry = DTy;
+    }
   }
 
   // If this is not a recursive type, then just map all of the elements and

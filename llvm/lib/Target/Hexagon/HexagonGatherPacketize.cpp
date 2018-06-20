@@ -62,7 +62,7 @@ bool HexagonGatherPacketize::runOnMachineFunction(MachineFunction &Fn) {
   if (!EnableGatherPacketize)
     return false;
   auto &ST = Fn.getSubtarget<HexagonSubtarget>();
-  bool HasV65 = ST.hasV65TOps();
+  bool HasV65 = ST.hasV65Ops();
   bool UseHVX = ST.useHVXOps();
   if (!(HasV65 & UseHVX))
     return false;

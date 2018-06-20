@@ -78,6 +78,50 @@ _Sat char c;              // expected-error{{'_Sat' specifier is only valid on '
 _Sat int i;               // expected-error{{'_Sat' specifier is only valid on '_Fract' or '_Accum', not 'int'}}
 _Sat _Sat _Fract fract;   // expected-warning{{duplicate '_Sat' declaration specifier}}
 
+
+/* Literals that cannot fit into types */
+signed short _Accum s_short_accum = 256.0hk;            // expected-error{{this value is too large for this fixed point type}}
+unsigned short _Accum u_short_accum = 256.0uhk;         // expected-error{{this value is too large for this fixed point type}}
+signed _Accum s_accum = 65536.0k;                       // expected-error{{this value is too large for this fixed point type}}
+unsigned _Accum u_accum = 65536.0uk;                    // expected-error{{this value is too large for this fixed point type}}
+signed long _Accum s_long_accum = 4294967296.0lk;       // expected-error{{this value is too large for this fixed point type}}
+unsigned long _Accum u_long_accum = 4294967296.0ulk;    // expected-error{{this value is too large for this fixed point type}}
+
+// Large values from decimal exponents
+short _Accum          short_accum_exp   = 2.56e2hk;           // expected-error{{this value is too large for this fixed point type}}
+_Accum                accum_exp         = 6.5536e4k;          // expected-error{{this value is too large for this fixed point type}}
+long _Accum           long_accum_exp    = 4.294967296e9lk;    // expected-error{{this value is too large for this fixed point type}}
+unsigned short _Accum u_short_accum_exp = 2.56e2uhk;          // expected-error{{this value is too large for this fixed point type}}
+unsigned _Accum       u_accum_exp       = 6.5536e4uk;         // expected-error{{this value is too large for this fixed point type}}
+unsigned long _Accum  u_long_accum_exp  = 4.294967296e9ulk;   // expected-error{{this value is too large for this fixed point type}}
+
+// Large value from hexidecimal exponents
+short _Accum          short_accum_hex_exp   = 0x1p8hk;        // expected-error{{this value is too large for this fixed point type}}
+_Accum                accum_hex_exp         = 0x1p16k;        // expected-error{{this value is too large for this fixed point type}}
+long _Accum           long_accum_hex_exp    = 0x1p32lk;       // expected-error{{this value is too large for this fixed point type}}
+unsigned short _Accum u_short_accum_hex_exp = 0x1p8uhk;       // expected-error{{this value is too large for this fixed point type}}
+unsigned _Accum       u_accum_hex_exp       = 0x1p16uk;       // expected-error{{this value is too large for this fixed point type}}
+unsigned long _Accum  u_long_accum_hex_exp  = 0x1p32ulk;      // expected-error{{this value is too large for this fixed point type}}
+
+// Very large exponent
+_Accum x = 1e1000000000000000000000000000000000k;   // expected-error{{this value is too large for this fixed point type}}
+
+/* Although _Fract's cannot equal 1, _Fract literals written as 1 are allowed
+ * and the underlying value represents the max value for that _Fract type. */
+short _Fract          short_fract_above_1    = 1.1hr;   // expected-error{{this value is too large for this fixed point type}}
+_Fract                fract_above_1          = 1.1r;    // expected-error{{this value is too large for this fixed point type}}
+long _Fract           long_fract_above_1     = 1.1lr;   // expected-error{{this value is too large for this fixed point type}}
+unsigned short _Fract u_short_fract_above_1  = 1.1uhr;  // expected-error{{this value is too large for this fixed point type}}
+unsigned _Fract       u_fract_above_1        = 1.1ur;   // expected-error{{this value is too large for this fixed point type}}
+unsigned long _Fract  u_long_fract_above_1   = 1.1ulr;  // expected-error{{this value is too large for this fixed point type}}
+
+short _Fract          short_fract_hex_exp   = 0x0.fp1hr;      // expected-error{{this value is too large for this fixed point type}}
+_Fract                fract_hex_exp         = 0x0.fp1r;       // expected-error{{this value is too large for this fixed point type}}
+long _Fract           long_fract_hex_exp    = 0x0.fp1lr;      // expected-error{{this value is too large for this fixed point type}}
+unsigned short _Fract u_short_fract_hex_exp = 0x0.fp1uhr;     // expected-error{{this value is too large for this fixed point type}}
+unsigned _Fract       u_fract_hex_exp       = 0x0.fp1ur;      // expected-error{{this value is too large for this fixed point type}}
+unsigned long _Fract  u_long_fract_hex_exp  = 0x0.fp1ulr;     // expected-error{{this value is too large for this fixed point type}}
+
 /* Do not allow typedef to be used with typedef'd types */
 typedef short _Fract shortfract_t;
 typedef short _Accum shortaccum_t;
@@ -91,3 +135,16 @@ _Sat fract_t td_sat_fract;                  // expected-error{{'_Sat' specifier 
 _Sat accum_t td_sat_accum;                  // expected-error{{'_Sat' specifier is only valid on '_Fract' or '_Accum', not 'type-name'}}
 _Sat longfract_t td_sat_long_fract;         // expected-error{{'_Sat' specifier is only valid on '_Fract' or '_Accum', not 'type-name'}}
 _Sat longaccum_t td_sat_long_accum;         // expected-error{{'_Sat' specifier is only valid on '_Fract' or '_Accum', not 'type-name'}}
+
+/* Bad suffixes  */
+_Accum fk = 1.0fk;    // expected-error{{invalid suffix 'fk' on integer constant}}
+_Accum kk = 1.0kk;    // expected-error{{invalid suffix 'kk' on integer constant}}
+_Accum rk = 1.0rk;    // expected-error{{invalid suffix 'rk' on integer constant}}
+_Accum rk = 1.0rr;    // expected-error{{invalid suffix 'rr' on integer constant}}
+_Accum qk = 1.0qr;    // expected-error{{invalid suffix 'qr' on integer constant}}
+
+/* Using wrong exponent notation */
+_Accum dec_with_hex_exp1 = 0.1p10k;    // expected-error{{invalid suffix 'p10k' on integer constant}}
+_Accum dec_with_hex_exp2 = 0.1P10k;    // expected-error{{invalid suffix 'P10k' on integer constant}}
+_Accum hex_with_dex_exp1 = 0x0.1e10k;  // expected-error{{hexadecimal floating constant requires an exponent}}
+_Accum hex_with_dex_exp2 = 0x0.1E10k;  // expected-error{{hexadecimal floating constant requires an exponent}}

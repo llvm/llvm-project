@@ -131,6 +131,7 @@ ori $9, $6, 17767           # CHECK: ori $9, $6, 17767      # encoding: [0x51,0x
 xor $3, $3, $5              # CHECK: xor $3, $3, $5         # encoding: [0x00,0xa3,0x1b,0x10]
 xori $9, $6, 17767          # CHECK: xori $9, $6, 17767     # encoding: [0x71,0x26,0x45,0x67]
 nor $9, $6, $7              # CHECK: nor $9, $6, $7         # encoding: [0x00,0xe6,0x4a,0xd0]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} NOR_MM
 not $7, $8                  # CHECK: not $7, $8             # encoding: [0x00,0x08,0x3a,0xd0]
 not $7                      # CHECK: not $7, $7             # encoding: [0x00,0x07,0x3a,0xd0]
 mul $9, $6, $7              # CHECK: mul $9, $6, $7         # encoding: [0x00,0xe6,0x4a,0x10]
@@ -142,6 +143,12 @@ div $zero, $9, $7           # CHECK: div $zero, $9, $7      # encoding: [0x00,0x
 div.d $f0, $f2, $f4         # CHECK: div.d $f0, $f2, $f4    # encoding: [0x54,0x82,0x01,0xf0]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FDIV_D32_MM
 divu $zero, $9, $7          # CHECK: divu $zero, $9, $7     # encoding: [0x00,0xe9,0xbb,0x3c]
+rdhwr $5, $29, 2            # CHECK: rdhwr $5, $29, 2       # encoding: [0x00,0xbd,0x6b,0x3c]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} RDHWR_MM
+rdhwr $5, $29, 0            # CHECK: rdhwr $5, $29          # encoding: [0x00,0xbd,0x6b,0x3c]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} RDHWR_MM
+rdhwr $5, $29               # CHECK: rdhwr $5, $29          # encoding: [0x00,0xbd,0x6b,0x3c]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} RDHWR_MM
 sll $4, $3, 7               # CHECK: sll $4, $3, 7          # encoding: [0x00,0x83,0x38,0x00]
                             # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SLL_MM
 sllv $2, $3, $5             # CHECK: sllv $2, $3, $5        # encoding: [0x00,0x65,0x10,0x10]
@@ -157,15 +164,25 @@ srlv $2, $3, $5             # CHECK: srlv $2, $3, $5        # encoding: [0x00,0x
 rotr $9, $6, 7              # CHECK: rotr $9, $6, 7         # encoding: [0x01,0x26,0x38,0xc0]
 rotrv $9, $6, $7            # CHECK: rotrv $9, $6, $7       # encoding: [0x00,0xc7,0x48,0xd0]
 lb $5, 8($4)                # CHECK: lb $5, 8($4)           # encoding: [0x1c,0xa4,0x00,0x08]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} LB_MM
 lbu $6, 8($4)               # CHECK: lbu $6, 8($4)          # encoding: [0x14,0xc4,0x00,0x08]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} LBu_MM
 lh $2, 8($4)                # CHECK: lh $2, 8($4)           # encoding: [0x3c,0x44,0x00,0x08]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} LH_MM
 lhu $4, 8($2)               # CHECK: lhu $4, 8($2)          # encoding: [0x34,0x82,0x00,0x08]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} LHu_MM
 lw  $6, 4($5)               # CHECK: lw  $6, 4($5)          # encoding: [0xfc,0xc5,0x00,0x04]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} LW_MM
 lw $6, 123($sp)             # CHECK: lw $6, 123($sp)        # encoding: [0xfc,0xdd,0x00,0x7b]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} LW_MM
 sb $5, 8($4)                # CHECK: sb $5, 8($4)           # encoding: [0x18,0xa4,0x00,0x08]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SB_MM
 sh  $2, 8($4)               # CHECK: sh  $2, 8($4)          # encoding: [0x38,0x44,0x00,0x08]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SH_MM
 sw  $5, 4($6)               # CHECK: sw  $5, 4($6)          # encoding: [0xf8,0xa6,0x00,0x04]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SW_MM
 sw $5, 123($sp)             # CHECK: sw $5, 123($sp)        # encoding: [0xf8,0xbd,0x00,0x7b]
+                            # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SW_MM
 lwu $2, 8($4)               # CHECK: lwu $2, 8($4)          # encoding: [0x60,0x44,0xe0,0x08]
 lwl $4, 16($5)              # CHECK: lwl $4, 16($5)         # encoding: [0x60,0x85,0x00,0x10]
 lwr $4, 16($5)              # CHECK: lwr $4, 16($5)         # encoding: [0x60,0x85,0x10,0x10]

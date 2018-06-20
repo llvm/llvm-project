@@ -348,7 +348,7 @@ def ToI32: OutPatFrag<(ops node:$V), (A2_tfrsi $V)>;
 // --(2) Type cast -------------------------------------------------------
 //
 
-let Predicates = [HasV5T] in {
+let Predicates = [HasV5] in {
   def: OpR_R_pat<F2_conv_sf2df,      pf1<fpextend>,   f64, F32>;
   def: OpR_R_pat<F2_conv_df2sf,      pf1<fpround>,    f32, F64>;
 
@@ -374,7 +374,7 @@ let Predicates = [HasV5T] in {
 }
 
 // Bitcast is different than [fp|sint|uint]_to_[sint|uint|fp].
-let Predicates = [HasV5T] in {
+let Predicates = [HasV5] in {
   def: Pat<(i32 (bitconvert F32:$v)), (I32:$v)>;
   def: Pat<(f32 (bitconvert I32:$v)), (F32:$v)>;
   def: Pat<(i64 (bitconvert F64:$v)), (I64:$v)>;
@@ -582,7 +582,7 @@ def: OpR_RR_pat<A2_vcmpwgtu,  RevCmp<setult>, v2i1, V2I32>;
 def: OpR_RR_pat<A2_vcmpwgtu,  setugt,         i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpwgtu,  setugt,         v2i1, V2I32>;
 
-let Predicates = [HasV5T] in {
+let Predicates = [HasV5] in {
   def: OpR_RR_pat<F2_sfcmpeq,   seteq,          i1, F32>;
   def: OpR_RR_pat<F2_sfcmpgt,   setgt,          i1, F32>;
   def: OpR_RR_pat<F2_sfcmpge,   setge,          i1, F32>;
@@ -729,7 +729,7 @@ class Cmpud<InstHexagon MI>:  T3<C2_or,  F2_dfcmpuo, MI>;
 class Cmpufn<InstHexagon MI>: T3<C2_orn, F2_sfcmpuo, MI>;
 class Cmpudn<InstHexagon MI>: T3<C2_orn, F2_dfcmpuo, MI>;
 
-let Predicates = [HasV5T] in {
+let Predicates = [HasV5] in {
   def: OpmR_RR_pat<Cmpuf<F2_sfcmpeq>,  setueq,         i1, F32>;
   def: OpmR_RR_pat<Cmpuf<F2_sfcmpge>,  setuge,         i1, F32>;
   def: OpmR_RR_pat<Cmpuf<F2_sfcmpgt>,  setugt,         i1, F32>;
@@ -745,7 +745,7 @@ let Predicates = [HasV5T] in {
   def: OpmR_RR_pat<Cmpudn<F2_dfcmpeq>, setune,         i1, F64>;
 }
 
-let Predicates = [HasV5T] in {
+let Predicates = [HasV5] in {
   def: OpmR_RR_pat<Outn<F2_sfcmpeq>, setone, i1, F32>;
   def: OpmR_RR_pat<Outn<F2_sfcmpeq>, setne,  i1, F32>;
 
@@ -784,7 +784,7 @@ def: Pat<(select I1:$Pu, I64:$Rs, I64:$Rt),
          (Combinew (C2_mux I1:$Pu, (HiReg $Rs), (HiReg $Rt)),
                    (C2_mux I1:$Pu, (LoReg $Rs), (LoReg $Rt)))>;
 
-let Predicates = [HasV5T] in {
+let Predicates = [HasV5] in {
   def: Pat<(select I1:$Pu, F32:$Rs, f32ImmPred:$I),
            (C2_muxir I1:$Pu, F32:$Rs, (ftoi $I))>;
   def: Pat<(select I1:$Pu, f32ImmPred:$I, F32:$Rt),
@@ -872,7 +872,7 @@ let AddedComplexity = 200 in {
   defm: SelMinMax_pats<setult, I64, A2_minup, A2_maxup>;
 }
 
-let AddedComplexity = 100, Predicates = [HasV5T] in {
+let AddedComplexity = 100, Predicates = [HasV5] in {
   defm: SelMinMax_pats<setolt, F32, F2_sfmin, F2_sfmax>;
   defm: SelMinMax_pats<setole, F32, F2_sfmin, F2_sfmax>;
   defm: SelMinMax_pats<setogt, F32, F2_sfmax, F2_sfmin>;
@@ -928,7 +928,7 @@ def: Pat<(v2i32 (HexagonVSPLAT I32:$Rs)), (Combinew I32:$Rs, I32:$Rs)>;
 
 let AddedComplexity = 10 in
 def: Pat<(v8i8 (HexagonVSPLAT I32:$Rs)), (S6_vsplatrbp I32:$Rs)>,
-     Requires<[HasV62T]>;
+     Requires<[HasV62]>;
 def: Pat<(v8i8 (HexagonVSPLAT I32:$Rs)),
          (Combinew (S2_vsplatrb I32:$Rs), (S2_vsplatrb I32:$Rs))>;
 
@@ -989,7 +989,7 @@ def: OpR_RR_pat<S2_asr_r_p, Sra, i64, I64, I32>;
 def: OpR_RR_pat<S2_lsr_r_p, Srl, i64, I64, I32>;
 def: OpR_RR_pat<S2_asl_r_p, Shl, i64, I64, I32>;
 
-let Predicates = [HasV60T] in {
+let Predicates = [HasV60] in {
   def: OpR_RI_pat<S6_rol_i_r, Rol, i32, I32, u5_0ImmPred>;
   def: OpR_RI_pat<S6_rol_i_p, Rol, i64, I64, u6_0ImmPred>;
 }
@@ -997,7 +997,7 @@ let Predicates = [HasV60T] in {
 def: Pat<(sra (add (sra I32:$Rs, u5_0ImmPred:$u5), 1), (i32 1)),
          (S2_asr_i_r_rnd I32:$Rs, imm:$u5)>;
 def: Pat<(sra (add (sra I64:$Rs, u6_0ImmPred:$u6), 1), (i32 1)),
-         (S2_asr_i_p_rnd I64:$Rs, imm:$u6)>, Requires<[HasV5T]>;
+         (S2_asr_i_p_rnd I64:$Rs, imm:$u6)>, Requires<[HasV5]>;
 
 // Prefer S2_addasl_rrri over S2_asl_i_r_acc.
 let AddedComplexity = 120 in
@@ -1039,7 +1039,7 @@ let AddedComplexity = 100 in {
   def: AccRRI_pat<S2_asl_i_p_or,    Or,  Su<Shl>, I64, u6_0ImmPred>;
   def: AccRRI_pat<S2_asl_i_p_xacc,  Xor, Su<Shl>, I64, u6_0ImmPred>;
 
-  let Predicates = [HasV60T] in {
+  let Predicates = [HasV60] in {
     def: AccRRI_pat<S6_rol_i_r_acc,   Add, Su<Rol>, I32, u5_0ImmPred>;
     def: AccRRI_pat<S6_rol_i_r_nac,   Sub, Su<Rol>, I32, u5_0ImmPred>;
     def: AccRRI_pat<S6_rol_i_r_and,   And, Su<Rol>, I32, u5_0ImmPred>;
@@ -1182,7 +1182,7 @@ def: Pat<(not  I32:$Rs), (A2_subri -1, I32:$Rs)>;
 def: Pat<(not  I64:$Rs), (A2_notp  I64:$Rs)>;
 def: Pat<(ineg I64:$Rs), (A2_negp  I64:$Rs)>;
 
-let Predicates = [HasV5T] in {
+let Predicates = [HasV5] in {
   def: Pat<(fabs F32:$Rs), (S2_clrbit_i    F32:$Rs, 31)>;
   def: Pat<(fneg F32:$Rs), (S2_togglebit_i F32:$Rs, 31)>;
 
@@ -1258,7 +1258,7 @@ def: OpR_RR_pat<C2_and,       Mul,        v2i1,  V2I1>;
 def: OpR_RR_pat<C2_and,       Mul,        v4i1,  V4I1>;
 def: OpR_RR_pat<C2_and,       Mul,        v8i1,  V8I1>;
 
-let Predicates = [HasV5T] in {
+let Predicates = [HasV5] in {
   def: OpR_RR_pat<F2_sfadd,     pf2<fadd>,    f32, F32>;
   def: OpR_RR_pat<F2_sfsub,     pf2<fsub>,    f32, F32>;
   def: OpR_RR_pat<F2_sfmpy,     pf2<fmul>,    f32, F32>;
@@ -1497,7 +1497,7 @@ def: Pat<(add I32:$Ru, (Su<Mul> I32:$Ry, I32:$Rs)),
          (M4_mpyrr_addr IntRegs:$Ru, IntRegs:$Ry, IntRegs:$Rs)>;
 
 
-let Predicates = [HasV5T] in {
+let Predicates = [HasV5] in {
   def: Pat<(fma F32:$Rs, F32:$Rt, F32:$Rx),
            (F2_sffma F32:$Rx, F32:$Rs, F32:$Rt)>;
   def: Pat<(fma (fneg F32:$Rs), F32:$Rt, F32:$Rx),
@@ -1532,13 +1532,13 @@ def: Pat<(v4i16 (mul V4I16:$Rs, V4I16:$Rt)),
 // Multiplies two v4i8 vectors.
 def: Pat<(v4i8 (mul V4I8:$Rs, V4I8:$Rt)),
          (S2_vtrunehb (M5_vmpybuu V4I8:$Rs, V4I8:$Rt))>,
-     Requires<[HasV5T]>;
+     Requires<[HasV5]>;
 
 // Multiplies two v8i8 vectors.
 def: Pat<(v8i8 (mul V8I8:$Rs, V8I8:$Rt)),
          (Combinew (S2_vtrunehb (M5_vmpybuu (HiReg $Rs), (HiReg $Rt))),
                    (S2_vtrunehb (M5_vmpybuu (LoReg $Rs), (LoReg $Rt))))>,
-     Requires<[HasV5T]>;
+     Requires<[HasV5]>;
 
 
 // --(10) Bit ------------------------------------------------------------

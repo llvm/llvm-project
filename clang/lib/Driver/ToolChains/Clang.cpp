@@ -3766,6 +3766,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    /*Default=*/false))
     Args.AddLastArg(CmdArgs, options::OPT_ffixed_point);
 
+  if (Args.hasFlag(options::OPT_fsame_fbits,
+                   options::OPT_fno_same_fbits,
+                   /*Default=*/false))
+    Args.AddLastArg(CmdArgs, options::OPT_fsame_fbits);
+
   // Handle -{std, ansi, trigraphs} -- take the last of -{std, ansi}
   // (-ansi is equivalent to -std=c89 or -std=c++98).
   //

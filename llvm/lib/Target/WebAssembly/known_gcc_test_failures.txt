@@ -5,18 +5,13 @@
 # they pass. (Known failures that do not run at all will not cause an
 # error). The format is
 # <name> <attributes> # comment
-#
-# The attributes in this case represent the different arguments used to
-# compiler: 'wasm-s' is for compiling to .s files, and 'wasm-o' for compiling
-# to wasm object files (.o).
 
 # Computed gotos are not supported (Cannot select BlockAddress/BRIND)
-20071220-1.c wasm-o
-20071220-2.c wasm-o
+20071220-1.c
+20071220-2.c
 20040302-1.c
 20041214-1.c O0
 20071210-1.c
-20071220-1.c wasm-s,O0
 920501-4.c
 920501-5.c
 comp-goto-1.c

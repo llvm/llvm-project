@@ -50,7 +50,7 @@ class NumericLiteralParser {
 
   unsigned radix;
 
-  bool saw_exponent, saw_period, saw_ud_suffix;
+  bool saw_exponent, saw_period, saw_ud_suffix, saw_fixed_point_suffix;
 
   SmallString<32> UDSuffixBuf;
 
@@ -69,11 +69,16 @@ public:
   bool isFloat128 : 1;      // 1.0q
   uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, or i64.
 
+  bool isFract : 1;         // 1.0hr/r/lr/uhr/ur/ulr
+  bool isAccum : 1;         // 1.0hk/k/lk/uhk/uk/ulk
+
+  bool isFixedPointLiteral() const { return saw_fixed_point_suffix; }
+
   bool isIntegerLiteral() const {
-    return !saw_period && !saw_exponent;
+    return !saw_period && !saw_exponent && !isFixedPointLiteral();
   }
   bool isFloatingLiteral() const {
-    return saw_period || saw_exponent;
+    return (saw_period || saw_exponent) && !isFixedPointLiteral();
   }
 
   bool hasUDSuffix() const {
@@ -104,6 +109,12 @@ public:
   /// set to true if the returned APFloat can represent the number in the
   /// literal exactly, and false otherwise.
   llvm::APFloat::opStatus GetFloatValue(llvm::APFloat &Result);
+
+  /// GetFixedPointValue - Convert this numeric literal value into a
+  /// scaled integer that represents this value. Returns true if an overflow
+  /// occurred when calculating the integral part of the scaled integer or
+  /// calculating the digit sequence of the exponent.
+  bool GetFixedPointValue(llvm::APInt &StoreVal, unsigned Scale);
 
 private:
 

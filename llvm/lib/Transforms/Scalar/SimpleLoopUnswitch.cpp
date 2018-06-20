@@ -19,10 +19,12 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CodeMetrics.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -68,20 +70,65 @@ static cl::opt<int>
     UnswitchThreshold("unswitch-threshold", cl::init(50), cl::Hidden,
                       cl::desc("The cost threshold for unswitching a loop."));
 
-static void replaceLoopUsesWithConstant(Loop &L, Value &LIC,
-                                        Constant &Replacement) {
-  assert(!isa<Constant>(LIC) && "Why are we unswitching on a constant?");
+/// Collect all of the loop invariant input values transitively used by the
+/// homogeneous instruction graph from a given root.
+///
+/// This essentially walks from a root recursively through loop variant operands
+/// which have the exact same opcode and finds all inputs which are loop
+/// invariant. For some operations these can be re-associated and unswitched out
+/// of the loop entirely.
+static SmallVector<Value *, 4>
+collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
+                                         LoopInfo &LI) {
+  SmallVector<Value *, 4> Invariants;
+  assert(!L.isLoopInvariant(&Root) &&
+         "Only need to walk the graph if root itself is not invariant.");
+
+  // Build a worklist and recurse through operators collecting invariants.
+  SmallVector<Instruction *, 4> Worklist;
+  SmallPtrSet<Instruction *, 8> Visited;
+  Worklist.push_back(&Root);
+  Visited.insert(&Root);
+  do {
+    Instruction &I = *Worklist.pop_back_val();
+    for (Value *OpV : I.operand_values()) {
+      // Skip constants as unswitching isn't interesting for them.
+      if (isa<Constant>(OpV))
+        continue;
+
+      // Add it to our result if loop invariant.
+      if (L.isLoopInvariant(OpV)) {
+        Invariants.push_back(OpV);
+        continue;
+      }
+
+      // If not an instruction with the same opcode, nothing we can do.
+      Instruction *OpI = dyn_cast<Instruction>(OpV);
+      if (!OpI || OpI->getOpcode() != Root.getOpcode())
+        continue;
+
+      // Visit this operand.
+      if (Visited.insert(OpI).second)
+        Worklist.push_back(OpI);
+    }
+  } while (!Worklist.empty());
+
+  return Invariants;
+}
+
+static void replaceLoopInvariantUses(Loop &L, Value *Invariant,
+                                     Constant &Replacement) {
+  assert(!isa<Constant>(Invariant) && "Why are we unswitching on a constant?");
 
   // Replace uses of LIC in the loop with the given constant.
-  for (auto UI = LIC.use_begin(), UE = LIC.use_end(); UI != UE;) {
+  for (auto UI = Invariant->use_begin(), UE = Invariant->use_end(); UI != UE;) {
     // Grab the use and walk past it so we can clobber it in the use list.
     Use *U = &*UI++;
     Instruction *UserI = dyn_cast<Instruction>(U->getUser());
-    if (!UserI || !L.contains(UserI))
-      continue;
 
     // Replace this use within the loop body.
-    *U = &Replacement;
+    if (UserI && L.contains(UserI))
+      U->set(&Replacement);
   }
 }
 
@@ -135,7 +182,8 @@ static void rewritePHINodesForUnswitchedExitBlock(BasicBlock &UnswitchedBB,
 static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
                                                       BasicBlock &UnswitchedBB,
                                                       BasicBlock &OldExitingBB,
-                                                      BasicBlock &OldPH) {
+                                                      BasicBlock &OldPH,
+                                                      bool FullUnswitch) {
   assert(&ExitBB != &UnswitchedBB &&
          "Must have different loop exit and unswitched blocks!");
   Instruction *InsertPt = &*UnswitchedBB.begin();
@@ -156,7 +204,11 @@ static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
       if (PN.getIncomingBlock(i) != &OldExitingBB)
         continue;
 
-      Value *Incoming = PN.removeIncomingValue(i);
+      Value *Incoming = PN.getIncomingValue(i);
+      if (FullUnswitch)
+        // No more edge from the old exiting block to the exit block.
+        PN.removeIncomingValue(i);
+
       NewPN->addIncoming(Incoming, &OldPH);
     }
 
@@ -186,22 +238,30 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   assert(BI.isConditional() && "Can only unswitch a conditional branch!");
   LLVM_DEBUG(dbgs() << "  Trying to unswitch branch: " << BI << "\n");
 
-  Value *LoopCond = BI.getCondition();
+  // The loop invariant values that we want to unswitch.
+  SmallVector<Value *, 4> Invariants;
 
-  // Need a trivial loop condition to unswitch.
-  if (!L.isLoopInvariant(LoopCond))
-    return false;
+  // When true, we're fully unswitching the branch rather than just unswitching
+  // some input conditions to the branch.
+  bool FullUnswitch = false;
 
-  // Check to see if a successor of the branch is guaranteed to
-  // exit through a unique exit block without having any
-  // side-effects.  If so, determine the value of Cond that causes
-  // it to do this.
-  ConstantInt *CondVal = ConstantInt::getTrue(BI.getContext());
-  ConstantInt *Replacement = ConstantInt::getFalse(BI.getContext());
+  if (L.isLoopInvariant(BI.getCondition())) {
+    Invariants.push_back(BI.getCondition());
+    FullUnswitch = true;
+  } else {
+    if (auto *CondInst = dyn_cast<Instruction>(BI.getCondition()))
+      Invariants = collectHomogenousInstGraphLoopInvariants(L, *CondInst, LI);
+    if (Invariants.empty())
+      // Couldn't find invariant inputs!
+      return false;
+  }
+
+  // Check that one of the branch's successors exits, and which one.
+  bool ExitDirection = true;
   int LoopExitSuccIdx = 0;
   auto *LoopExitBB = BI.getSuccessor(0);
   if (L.contains(LoopExitBB)) {
-    std::swap(CondVal, Replacement);
+    ExitDirection = false;
     LoopExitSuccIdx = 1;
     LoopExitBB = BI.getSuccessor(1);
     if (L.contains(LoopExitBB))
@@ -212,8 +272,31 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB))
     return false;
 
-  LLVM_DEBUG(dbgs() << "    unswitching trivial branch when: " << CondVal
-                    << " == " << LoopCond << "\n");
+  // When unswitching only part of the branch's condition, we need the exit
+  // block to be reached directly from the partially unswitched input. This can
+  // be done when the exit block is along the true edge and the branch condition
+  // is a graph of `or` operations, or the exit block is along the false edge
+  // and the condition is a graph of `and` operations.
+  if (!FullUnswitch) {
+    if (ExitDirection) {
+      if (cast<Instruction>(BI.getCondition())->getOpcode() != Instruction::Or)
+        return false;
+    } else {
+      if (cast<Instruction>(BI.getCondition())->getOpcode() != Instruction::And)
+        return false;
+    }
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "    unswitching trivial invariant conditions for: " << BI
+           << "\n";
+    for (Value *Invariant : Invariants) {
+      dbgs() << "      " << *Invariant << " == true";
+      if (Invariant != Invariants.back())
+        dbgs() << " ||";
+      dbgs() << "\n";
+    }
+  });
 
   // Split the preheader, so that we know that there is a safe place to insert
   // the conditional branch. We will change the preheader to have a conditional
@@ -226,41 +309,79 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // unswitching. We need to split this if there are other loop predecessors.
   // Because the loop is in simplified form, *any* other predecessor is enough.
   BasicBlock *UnswitchedBB;
-  if (BasicBlock *PredBB = LoopExitBB->getUniquePredecessor()) {
-    (void)PredBB;
-    assert(PredBB == BI.getParent() &&
+  if (FullUnswitch && LoopExitBB->getUniquePredecessor()) {
+    assert(LoopExitBB->getUniquePredecessor() == BI.getParent() &&
            "A branch's parent isn't a predecessor!");
     UnswitchedBB = LoopExitBB;
   } else {
     UnswitchedBB = SplitBlock(LoopExitBB, &LoopExitBB->front(), &DT, &LI);
   }
 
-  // Now splice the branch to gate reaching the new preheader and re-point its
-  // successors.
-  OldPH->getInstList().splice(std::prev(OldPH->end()),
-                              BI.getParent()->getInstList(), BI);
+  // Actually move the invariant uses into the unswitched position. If possible,
+  // we do this by moving the instructions, but when doing partial unswitching
+  // we do it by building a new merge of the values in the unswitched position.
   OldPH->getTerminator()->eraseFromParent();
-  BI.setSuccessor(LoopExitSuccIdx, UnswitchedBB);
-  BI.setSuccessor(1 - LoopExitSuccIdx, NewPH);
+  if (FullUnswitch) {
+    // If fully unswitching, we can use the existing branch instruction.
+    // Splice it into the old PH to gate reaching the new preheader and re-point
+    // its successors.
+    OldPH->getInstList().splice(OldPH->end(), BI.getParent()->getInstList(),
+                                BI);
+    BI.setSuccessor(LoopExitSuccIdx, UnswitchedBB);
+    BI.setSuccessor(1 - LoopExitSuccIdx, NewPH);
 
-  // Create a new unconditional branch that will continue the loop as a new
-  // terminator.
-  BranchInst::Create(ContinueBB, ParentBB);
+    // Create a new unconditional branch that will continue the loop as a new
+    // terminator.
+    BranchInst::Create(ContinueBB, ParentBB);
+  } else {
+    // Only unswitching a subset of inputs to the condition, so we will need to
+    // build a new branch that merges the invariant inputs.
+    IRBuilder<> IRB(OldPH);
+    Value *Cond = Invariants.front();
+    if (ExitDirection)
+      assert(cast<Instruction>(BI.getCondition())->getOpcode() ==
+                 Instruction::Or &&
+             "Must have an `or` of `i1`s for the condition!");
+    else
+      assert(cast<Instruction>(BI.getCondition())->getOpcode() ==
+                 Instruction::And &&
+             "Must have an `and` of `i1`s for the condition!");
+    for (Value *Invariant :
+         make_range(std::next(Invariants.begin()), Invariants.end()))
+      if (ExitDirection)
+        Cond = IRB.CreateOr(Cond, Invariant);
+      else
+        Cond = IRB.CreateAnd(Cond, Invariant);
+
+    BasicBlock *Succs[2];
+    Succs[LoopExitSuccIdx] = UnswitchedBB;
+    Succs[1 - LoopExitSuccIdx] = NewPH;
+    IRB.CreateCondBr(Cond, Succs[0], Succs[1]);
+  }
 
   // Rewrite the relevant PHI nodes.
   if (UnswitchedBB == LoopExitBB)
     rewritePHINodesForUnswitchedExitBlock(*UnswitchedBB, *ParentBB, *OldPH);
   else
     rewritePHINodesForExitAndUnswitchedBlocks(*LoopExitBB, *UnswitchedBB,
-                                              *ParentBB, *OldPH);
+                                              *ParentBB, *OldPH, FullUnswitch);
 
   // Now we need to update the dominator tree.
-  DT.applyUpdates(
-      {{DT.Delete, ParentBB, UnswitchedBB}, {DT.Insert, OldPH, UnswitchedBB}});
+  DT.insertEdge(OldPH, UnswitchedBB);
+  if (FullUnswitch)
+    DT.deleteEdge(ParentBB, UnswitchedBB);
+
+  // The constant we can replace all of our invariants with inside the loop
+  // body. If any of the invariants have a value other than this the loop won't
+  // be entered.
+  ConstantInt *Replacement = ExitDirection
+                                 ? ConstantInt::getFalse(BI.getContext())
+                                 : ConstantInt::getTrue(BI.getContext());
 
   // Since this is an i1 condition we can also trivially replace uses of it
   // within the loop with a constant.
-  replaceLoopUsesWithConstant(L, *LoopCond, *Replacement);
+  for (Value *Invariant : Invariants)
+    replaceLoopInvariantUses(L, Invariant, *Replacement);
 
   ++NumTrivial;
   ++NumBranches;
@@ -393,8 +514,8 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     } else {
       auto *SplitBB =
           SplitBlock(DefaultExitBB, &DefaultExitBB->front(), &DT, &LI);
-      rewritePHINodesForExitAndUnswitchedBlocks(*DefaultExitBB, *SplitBB,
-                                                *ParentBB, *OldPH);
+      rewritePHINodesForExitAndUnswitchedBlocks(
+          *DefaultExitBB, *SplitBB, *ParentBB, *OldPH, /*FullUnswitch*/ true);
       DefaultExitBB = SplitExitBBMap[DefaultExitBB] = SplitBB;
     }
   }
@@ -419,8 +540,8 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     if (!SplitExitBB) {
       // If this is the first time we see this, do the split and remember it.
       SplitExitBB = SplitBlock(ExitBB, &ExitBB->front(), &DT, &LI);
-      rewritePHINodesForExitAndUnswitchedBlocks(*ExitBB, *SplitExitBB,
-                                                *ParentBB, *OldPH);
+      rewritePHINodesForExitAndUnswitchedBlocks(
+          *ExitBB, *SplitExitBB, *ParentBB, *OldPH, /*FullUnswitch*/ true);
     }
     // Update the case pair to point to the split block.
     CasePair.second = SplitExitBB;
@@ -560,11 +681,13 @@ static bool unswitchAllTrivialConditions(Loop &L, DominatorTree &DT,
     // Mark that we managed to unswitch something.
     Changed = true;
 
-    // We unswitched the branch. This should always leave us with an
-    // unconditional branch that we can follow now.
+    // If we only unswitched some of the conditions feeding the branch, we won't
+    // have collapsed it to a single successor.
     BI = cast<BranchInst>(CurrentBB->getTerminator());
-    assert(!BI->isConditional() &&
-           "Cannot form a conditional branch by unswitching1");
+    if (BI->isConditional())
+      return Changed;
+
+    // Follow the newly unconditional branch into its successor.
     CurrentBB = BI->getSuccessor(0);
 
     // When continuing, if we exit the loop or reach a previous visited block,
@@ -956,8 +1079,7 @@ static void buildClonedLoops(Loop &OrigL, ArrayRef<BasicBlock *> ExitBlocks,
   // matter as we're just trying to build up the map from inside-out; we use
   // the map in a more stably ordered way below.
   auto OrderedClonedExitsInLoops = ClonedExitsInLoops;
-  llvm::sort(OrderedClonedExitsInLoops.begin(),
-             OrderedClonedExitsInLoops.end(),
+  llvm::sort(OrderedClonedExitsInLoops.begin(), OrderedClonedExitsInLoops.end(),
              [&](BasicBlock *LHS, BasicBlock *RHS) {
                return ExitLoopMap.lookup(LHS)->getLoopDepth() <
                       ExitLoopMap.lookup(RHS)->getLoopDepth();

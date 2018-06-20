@@ -295,16 +295,15 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 ; FIXME:
 ; PR37726 - https://bugs.llvm.org/show_bug.cgi?id=37726
 ; There's a loophole in eliminating a redundant assumption when
-; we have conflicting assumptions. Verify that debuginfo doesn't 
+; we have conflicting assumptions. Verify that debuginfo doesn't
 ; get in the way of the fold.
- 
+
 define void @debug_interference(i8 %x) {
 ; CHECK-LABEL: @debug_interference(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP1]])
 ; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
-; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
 ; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata !7, metadata !DIExpression()), !dbg !9
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
 ; CHECK-NEXT:    ret void

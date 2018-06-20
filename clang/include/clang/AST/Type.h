@@ -30,6 +30,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/None.h"
@@ -6545,6 +6546,12 @@ QualType DecayedType::getPointeeType() const {
   (void)AttributedType::stripOuterNullability(Decayed);
   return cast<PointerType>(Decayed)->getPointeeType();
 }
+
+// Get the decimal string representation of a fixed point type, represented
+// as a scaled integer.
+void FixedPointValueToString(SmallVectorImpl<char> &Str,
+                             const llvm::APSInt &Val,
+                             unsigned Scale, unsigned Radix);
 
 } // namespace clang
 

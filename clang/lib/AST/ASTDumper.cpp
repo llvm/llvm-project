@@ -525,6 +525,7 @@ namespace  {
     void VisitPredefinedExpr(const PredefinedExpr *Node);
     void VisitCharacterLiteral(const CharacterLiteral *Node);
     void VisitIntegerLiteral(const IntegerLiteral *Node);
+    void VisitFixedPointLiteral(const FixedPointLiteral *Node);
     void VisitFloatingLiteral(const FloatingLiteral *Node);
     void VisitStringLiteral(const StringLiteral *Str);
     void VisitInitListExpr(const InitListExpr *ILE);
@@ -2175,6 +2176,13 @@ void ASTDumper::VisitIntegerLiteral(const IntegerLiteral *Node) {
   bool isSigned = Node->getType()->isSignedIntegerType();
   ColorScope Color(*this, ValueColor);
   OS << " " << Node->getValue().toString(10, isSigned);
+}
+
+void ASTDumper::VisitFixedPointLiteral(const FixedPointLiteral *Node) {
+  VisitExpr(Node);
+
+  ColorScope Color(*this, ValueColor);
+  OS << " " << Node->getValueAsString(/*Radix=*/10);
 }
 
 void ASTDumper::VisitFloatingLiteral(const FloatingLiteral *Node) {
