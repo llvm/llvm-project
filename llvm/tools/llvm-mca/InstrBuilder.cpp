@@ -495,10 +495,8 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
     }
 
     assert(RegID && "Expected a valid register ID!");
-    APInt CurrWriteMask = WriteMask & (1 << WriteIndex);
-    bool UpdatesSuperRegisters = CurrWriteMask.getBoolValue();
-    NewIS->getDefs().emplace_back(
-        llvm::make_unique<WriteState>(WD, RegID, UpdatesSuperRegisters));
+    NewIS->getDefs().emplace_back(llvm::make_unique<WriteState>(
+        WD, RegID, /* ClearsSuperRegs */ WriteMask[WriteIndex]));
     ++WriteIndex;
   }
 

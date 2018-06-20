@@ -182,7 +182,7 @@ void ErrorCallocOverflow::Print() {
       count, size, tid, ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
   Printf("%s", d.Default());
   stack->Print();
-  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  PrintHintAllocatorCannotReturnNull();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
@@ -198,7 +198,7 @@ void ErrorPvallocOverflow::Print() {
       ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
   Printf("%s", d.Default());
   stack->Print();
-  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  PrintHintAllocatorCannotReturnNull();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
@@ -212,7 +212,7 @@ void ErrorInvalidAllocationAlignment::Print() {
       alignment, tid, ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
   Printf("%s", d.Default());
   stack->Print();
-  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  PrintHintAllocatorCannotReturnNull();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
@@ -234,7 +234,7 @@ void ErrorInvalidAlignedAllocAlignment::Print() {
 #endif
   Printf("%s", d.Default());
   stack->Print();
-  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  PrintHintAllocatorCannotReturnNull();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
@@ -250,7 +250,7 @@ void ErrorInvalidPosixMemalignAlignment::Print() {
       ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
   Printf("%s", d.Default());
   stack->Print();
-  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  PrintHintAllocatorCannotReturnNull();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
@@ -266,7 +266,7 @@ void ErrorAllocationSizeTooBig::Print() {
       ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
   Printf("%s", d.Default());
   stack->Print();
-  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  PrintHintAllocatorCannotReturnNull();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
@@ -278,7 +278,7 @@ void ErrorRssLimitExceeded::Print() {
       "soft_rss_limit_mb=%zd\n", common_flags()->soft_rss_limit_mb);
   Printf("%s", d.Default());
   stack->Print();
-  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  PrintHintAllocatorCannotReturnNull();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
@@ -290,7 +290,7 @@ void ErrorOutOfMemory::Print() {
       "0x%zx bytes\n", requested_size);
   Printf("%s", d.Default());
   stack->Print();
-  PrintHintAllocatorCannotReturnNull("ASAN_OPTIONS");
+  PrintHintAllocatorCannotReturnNull();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 

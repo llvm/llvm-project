@@ -305,6 +305,10 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_IntegerLiteral;
     break;
 
+  case Stmt::FixedPointLiteralClass:
+    K = CXCursor_FixedPointLiteral;
+    break;
+
   case Stmt::FloatingLiteralClass:
     K = CXCursor_FloatingLiteral;
     break;

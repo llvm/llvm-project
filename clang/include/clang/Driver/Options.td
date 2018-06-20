@@ -893,6 +893,10 @@ def ffixed_point : Flag<["-"], "ffixed-point">, Group<f_Group>,
                    Flags<[CC1Option]>, HelpText<"Enable fixed point types">;
 def fno_fixed_point : Flag<["-"], "fno-fixed-point">, Group<f_Group>,
                       HelpText<"Disable fixed point types">;
+def fsame_fbits : Flag<["-"], "fsame-fbits">, Group<f_Group>,
+                  Flags<[CC1Option]>,
+		  HelpText<"Force each unsigned fixed point type to have the same number of fractional bits as its corresponding signed type">;
+def fno_same_fbits : Flag<["-"], "fno-same-fbits">, Group<f_Group>;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.

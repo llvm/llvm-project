@@ -444,6 +444,13 @@ void ASTStmtWriter::VisitIntegerLiteral(IntegerLiteral *E) {
   Code = serialization::EXPR_INTEGER_LITERAL;
 }
 
+void ASTStmtWriter::VisitFixedPointLiteral(FixedPointLiteral *E) {
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getLocation());
+  Record.AddAPInt(E->getValue());
+  Code = serialization::EXPR_INTEGER_LITERAL;
+}
+
 void ASTStmtWriter::VisitFloatingLiteral(FloatingLiteral *E) {
   VisitExpr(E);
   Record.push_back(E->getRawSemantics());

@@ -10162,3 +10162,92 @@ clang::LazyGenerationalUpdatePtr<
 clang::LazyGenerationalUpdatePtr<
     const Decl *, Decl *, &ExternalASTSource::CompleteRedeclChain>::makeValue(
         const clang::ASTContext &Ctx, Decl *Value);
+
+unsigned char ASTContext::getFixedPointScale(QualType Ty) const {
+  assert(Ty->isFixedPointType());
+
+  const auto *BT = Ty->getAs<BuiltinType>();
+  const TargetInfo &Target = getTargetInfo();
+  switch (BT->getKind()) {
+    default:
+      llvm_unreachable("Not a fixed point type!");
+    case BuiltinType::ShortAccum:
+    case BuiltinType::SatShortAccum:
+      return Target.getShortAccumScale();
+    case BuiltinType::Accum:
+    case BuiltinType::SatAccum:
+      return Target.getAccumScale();
+    case BuiltinType::LongAccum:
+    case BuiltinType::SatLongAccum:
+      return Target.getLongAccumScale();
+    case BuiltinType::UShortAccum:
+    case BuiltinType::SatUShortAccum:
+      return Target.getUnsignedShortAccumScale();
+    case BuiltinType::UAccum:
+    case BuiltinType::SatUAccum:
+      return Target.getUnsignedAccumScale();
+    case BuiltinType::ULongAccum:
+    case BuiltinType::SatULongAccum:
+      return Target.getUnsignedLongAccumScale();
+    case BuiltinType::ShortFract:
+    case BuiltinType::SatShortFract:
+      return Target.getShortFractScale();
+    case BuiltinType::Fract:
+    case BuiltinType::SatFract:
+      return Target.getFractScale();
+    case BuiltinType::LongFract:
+    case BuiltinType::SatLongFract:
+      return Target.getLongFractScale();
+    case BuiltinType::UShortFract:
+    case BuiltinType::SatUShortFract:
+      return Target.getUnsignedShortFractScale();
+    case BuiltinType::UFract:
+    case BuiltinType::SatUFract:
+      return Target.getUnsignedFractScale();
+    case BuiltinType::ULongFract:
+    case BuiltinType::SatULongFract:
+      return Target.getUnsignedLongFractScale();
+  }
+}
+
+unsigned char ASTContext::getFixedPointIBits(QualType Ty) const {
+  assert(Ty->isFixedPointType());
+
+  const auto *BT = Ty->getAs<BuiltinType>();
+  const TargetInfo &Target = getTargetInfo();
+  switch (BT->getKind()) {
+    default:
+      llvm_unreachable("Not a fixed point type!");
+    case BuiltinType::ShortAccum:
+    case BuiltinType::SatShortAccum:
+      return Target.getShortAccumIBits();
+    case BuiltinType::Accum:
+    case BuiltinType::SatAccum:
+      return Target.getAccumIBits();
+    case BuiltinType::LongAccum:
+    case BuiltinType::SatLongAccum:
+      return Target.getLongAccumIBits();
+    case BuiltinType::UShortAccum:
+    case BuiltinType::SatUShortAccum:
+      return Target.getUnsignedShortAccumIBits();
+    case BuiltinType::UAccum:
+    case BuiltinType::SatUAccum:
+      return Target.getUnsignedAccumIBits();
+    case BuiltinType::ULongAccum:
+    case BuiltinType::SatULongAccum:
+      return Target.getUnsignedLongAccumIBits();
+    case BuiltinType::ShortFract:
+    case BuiltinType::SatShortFract:
+    case BuiltinType::Fract:
+    case BuiltinType::SatFract:
+    case BuiltinType::LongFract:
+    case BuiltinType::SatLongFract:
+    case BuiltinType::UShortFract:
+    case BuiltinType::SatUShortFract:
+    case BuiltinType::UFract:
+    case BuiltinType::SatUFract:
+    case BuiltinType::ULongFract:
+    case BuiltinType::SatULongFract:
+      return 0;
+  }
+}

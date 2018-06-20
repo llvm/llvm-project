@@ -1423,9 +1423,7 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
       // undefined behavior. All other binop opcodes are always safe to
       // speculate, and therefore, it is fine to include undef elements for
       // unused lanes (and using undefs may help optimization).
-      BinaryOperator::BinaryOps Opcode = Inst.getOpcode();
-      if (Opcode == Instruction::UDiv || Opcode == Instruction::URem ||
-          Opcode == Instruction::SDiv || Opcode == Instruction::SRem) {
+      if (Inst.isIntDivRem()) {
         assert(C->getType()->getScalarType()->isIntegerTy() &&
                "Not expecting FP opcodes/operands/constants here");
         for (unsigned i = 0; i < VWidth; ++i)

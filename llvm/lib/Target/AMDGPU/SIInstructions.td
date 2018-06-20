@@ -1489,6 +1489,16 @@ def : GCNPat <
 //   (COPY $src0)
 // >;
 
+def : GCNPat <
+  (v4i16 (scalar_to_vector i16:$src0)),
+  (INSERT_SUBREG (IMPLICIT_DEF), $src0, sub0)
+>;
+
+def : GCNPat <
+  (v4f16 (scalar_to_vector f16:$src0)),
+  (INSERT_SUBREG (IMPLICIT_DEF), $src0, sub0)
+>;
+
 //===----------------------------------------------------------------------===//
 // Fract Patterns
 //===----------------------------------------------------------------------===//

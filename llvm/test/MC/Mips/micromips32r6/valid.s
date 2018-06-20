@@ -82,7 +82,9 @@
   lapc $7, 1048572         # CHECK: lapc $7, 1048572    # encoding: [0x78,0xe3,0xff,0xff]
   lapc $7, -1048576        # CHECK: lapc $7, -1048576   # encoding: [0x78,0xe4,0x00,0x00]
   lh $2, 8($4)             # CHECK: lh $2, 8($4)        # encoding: [0x3c,0x44,0x00,0x08]
+                           # CHECK-NEXT:                # <MCInst #{{.*}} LH_MM
   lhu $4, 8($2)            # CHECK: lhu $4, 8($2)       # encoding: [0x34,0x82,0x00,0x08]
+                           # CHECK-NEXT:                # <MCInst #{{.*}} LHu_MM
   lsa $2, $3, $4, 3        # CHECK: lsa  $2, $3, $4, 3  # encoding: [0x00,0x43,0x24,0x0f]
   lwpc    $2,268           # CHECK: lwpc $2, 268        # encoding: [0x78,0x48,0x00,0x43]
   lwm $16, $17, $ra, 8($sp)   # CHECK: lwm16 $16, $17, $ra, 8($sp) # encoding: [0x45,0x22]
@@ -124,6 +126,7 @@
   muhu $3, $4, $5          # CHECK: muhu $3, $4, $5      # encoding: [0x00,0xa4,0x18,0xd8]
   nop                      # CHECK: nop                 # encoding: [0x00,0x00,0x00,0x00]
   nor $3, $4, $5           # CHECK: nor $3, $4, $5      # encoding: [0x00,0xa4,0x1a,0xd0]
+                           # CHECK-NEXT:                # <MCInst #{{.*}} NOR_MMR6
   or $3, $4, $5            # CHECK: or $3, $4, $5       # encoding: [0x00,0xa4,0x1a,0x90]
   ori $3, $4, 1234         # CHECK: ori $3, $4, 1234    # encoding: [0x50,0x64,0x04,0xd2]
   pref 1, 8($5)            # CHECK: pref 1, 8($5)       # encoding: [0x60,0x25,0x20,0x08]
@@ -143,6 +146,7 @@
   subu $3, $4, $5          # CHECK: subu $3, $4, $5     # encoding: [0x00,0xa4,0x19,0xd0]
   sw $4, 124($sp)          # CHECK: sw $4, 124($sp)     # encoding: [0xc8,0x9f]
   sw $4, 128($sp)          # CHECK: sw $4, 128($sp)     # encoding: [0xf8,0x9d,0x00,0x80]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} SW_MMR6
   sw16 $4, 4($17)          # CHECK: sw16 $4, 4($17)     # encoding: [0xea,0x11]
   sw16 $0, 4($17)          # CHECK: sw16 $zero, 4($17)  # encoding: [0xe8,0x11]
   swm $16, $17, $ra, 8($sp)   # CHECK: swm16 $16, $17, $ra, 8($sp) # encoding: [0x45,0x2a]
@@ -151,8 +155,11 @@
   wsbh $3, $4              # CHECK: wsbh $3, $4         # encoding: [0x00,0x64,0x7b,0x3c]
   pause                    # CHECK: pause               # encoding: [0x00,0x00,0x28,0x00]
   rdhwr $5, $29, 2         # CHECK: rdhwr $5, $29, 2    # encoding: [0x00,0xbd,0x11,0xc0]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} RDHWR_MMR6
   rdhwr $5, $29, 0         # CHECK: rdhwr $5, $29       # encoding: [0x00,0xbd,0x01,0xc0]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} RDHWR_MMR6
   rdhwr $5, $29            # CHECK: rdhwr $5, $29       # encoding: [0x00,0xbd,0x01,0xc0]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} RDHWR_MMR6
   wait                     # CHECK: wait                # encoding: [0x00,0x00,0x93,0x7c]
   wait 17                  # CHECK: wait 17             # encoding: [0x00,0x11,0x93,0x7c]
   ssnop                    # CHECK: ssnop               # encoding: [0x00,0x00,0x08,0x00]
@@ -276,7 +283,9 @@
   lbu16 $3, 4($17)         # CHECK: lbu16 $3, 4($17)    # encoding: [0x09,0x94]
   lbu16 $3, -1($17)        # CHECK: lbu16 $3, -1($17)   # encoding: [0x09,0x9f]
   sb  $4, 6($5)            # CHECK: sb  $4, 6($5)       # encoding: [0x18,0x85,0x00,0x06]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} SB_MMR6
   sh $4, 6($5)             # CHECK: sh $4, 6($5)        # encoding: [0x38,0x85,0x00,0x06]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} SH_MMR6
   lw $4, 6($5)             # CHECK: lw $4, 6($5)        # encoding: [0xfc,0x85,0x00,0x06]
   lui $6, 17767            # CHECK: lui $6, 17767       # encoding: [0x10,0xc0,0x45,0x67]
   addu16 $6, $17, $4       # CHECK: addu16 $6, $17, $4  # encoding: [0x04,0xcc]
@@ -305,7 +314,9 @@
   subu16 $5, $16, $3       # CHECK: subu16 $5, $16, $3  # encoding: [0x04,0x3b]
   xor16 $17, $5            # CHECK: xor16 $17, $5       # encoding: [0x44,0xd8]
   lb $4, 8($5)             # CHECK: lb $4, 8($5)        # encoding: [0x1c,0x85,0x00,0x08]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} LB_MMR6
   lbu $4, 8($5)            # CHECK: lbu $4, 8($5)       # encoding: [0x14,0x85,0x00,0x08]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} LBU_MMR6
   recip.s $f2, $f4         # CHECK: recip.s $f2, $f4    # encoding: [0x54,0x44,0x12,0x3b]
   recip.d $f2, $f4         # CHECK: recip.d $f2, $f4    # encoding: [0x54,0x44,0x52,0x3b]
   rint.s $f2, $f4          # CHECK: rint.s $f2, $f4     # encoding: [0x54,0x82,0x00,0x20]

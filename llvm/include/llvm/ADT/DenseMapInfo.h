@@ -262,6 +262,13 @@ template <typename T> struct DenseMapInfo<ArrayRef<T>> {
   }
 };
 
+template <> struct DenseMapInfo<hash_code> {
+  static inline hash_code getEmptyKey() { return hash_code(-1); }
+  static inline hash_code getTombstoneKey() { return hash_code(-2); }
+  static unsigned getHashValue(hash_code val) { return val; }
+  static bool isEqual(hash_code LHS, hash_code RHS) { return LHS == RHS; }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_ADT_DENSEMAPINFO_H

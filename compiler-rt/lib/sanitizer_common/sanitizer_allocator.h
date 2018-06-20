@@ -34,25 +34,13 @@ extern const char *SecondaryAllocatorName;
 bool AllocatorMayReturnNull();
 void SetAllocatorMayReturnNull(bool may_return_null);
 
-// Allocator failure handling policies:
-// Implements AllocatorMayReturnNull policy, returns null when the flag is set,
-// dies otherwise.
-struct ReturnNullOrDieOnFailure {
-  static void *OnBadRequest();
-  static void *OnOOM();
-};
-// Always dies on the failure.
-struct DieOnFailure {
-  static void NORETURN *OnBadRequest();
-  static void NORETURN *OnOOM();
-};
-
-void PrintHintAllocatorCannotReturnNull(const char *options_name);
-
 // Returns true if allocator detected OOM condition. Can be used to avoid memory
-// hungry operations. Set when AllocatorReturnNullOrDieOnOOM() is called.
+// hungry operations.
 bool IsAllocatorOutOfMemory();
+// Should be called by a particular allocator when OOM is detected.
 void SetAllocatorOutOfMemory();
+
+void PrintHintAllocatorCannotReturnNull();
 
 // Allocators call these callbacks on mmap/munmap.
 struct NoOpMapUnmapCallback {

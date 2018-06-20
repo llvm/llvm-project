@@ -493,9 +493,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case ISD::BUILD_VECTOR: {
     EVT VT = N->getValueType(0);
     unsigned NumVectorElts = VT.getVectorNumElements();
-
-    if (VT == MVT::v2i16 || VT == MVT::v2f16) {
-      if (Opc == ISD::BUILD_VECTOR) {
+    if (VT.getScalarSizeInBits() == 16) {
+      if (Opc == ISD::BUILD_VECTOR && NumVectorElts == 2) {
         uint32_t LHSVal, RHSVal;
         if (getConstantValue(N->getOperand(0), LHSVal) &&
             getConstantValue(N->getOperand(1), RHSVal)) {

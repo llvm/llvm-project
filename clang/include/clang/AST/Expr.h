@@ -1351,6 +1351,47 @@ public:
   }
 };
 
+class FixedPointLiteral : public Expr, public APIntStorage {
+  SourceLocation Loc;
+  unsigned Scale;
+
+  /// \brief Construct an empty integer literal.
+  explicit FixedPointLiteral(EmptyShell Empty)
+      : Expr(FixedPointLiteralClass, Empty) {}
+
+ public:
+  FixedPointLiteral(const ASTContext &C, const llvm::APInt &V, QualType type,
+                    SourceLocation l, unsigned Scale);
+
+  // Store the int as is without any bit shifting.
+  static FixedPointLiteral *CreateFromRawInt(const ASTContext &C,
+                                             const llvm::APInt &V,
+                                             QualType type, SourceLocation l,
+                                             unsigned Scale);
+
+  SourceLocation getLocStart() const LLVM_READONLY { return Loc; }
+  SourceLocation getLocEnd() const LLVM_READONLY { return Loc; }
+
+  /// \brief Retrieve the location of the literal.
+  SourceLocation getLocation() const { return Loc; }
+
+  void setLocation(SourceLocation Location) { Loc = Location; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == FixedPointLiteralClass;
+  }
+
+  std::string getValueAsString(unsigned Radix) const;
+
+  // Iterators
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
 class CharacterLiteral : public Expr {
 public:
   enum CharacterKind {

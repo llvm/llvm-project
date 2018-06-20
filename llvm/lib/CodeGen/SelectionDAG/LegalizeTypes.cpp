@@ -575,6 +575,7 @@ void DAGTypeLegalizer::RemapValue(SDValue &V) {
 void DAGTypeLegalizer::RemapId(TableId &Id) {
   auto I = ReplacedValues.find(Id);
   if (I != ReplacedValues.end()) {
+    assert(Id != I->second && "Id is mapped to itself.");
     // Use path compression to speed up future lookups if values get multiply
     // replaced with other values.
     RemapId(I->second);
@@ -652,7 +653,8 @@ void DAGTypeLegalizer::ReplaceValueWith(SDValue From, SDValue To) {
     auto FromId = getTableId(From);
     auto ToId = getTableId(To);
 
-    ReplacedValues[FromId] = ToId;
+    if (FromId != ToId)
+      ReplacedValues[FromId] = ToId;
     DAG.ReplaceAllUsesOfValueWith(From, To);
 
     // Process the list of nodes that need to be reanalyzed.
@@ -685,7 +687,8 @@ void DAGTypeLegalizer::ReplaceValueWith(SDValue From, SDValue To) {
           auto OldValId = getTableId(OldVal);
           auto NewValId = getTableId(NewVal);
           DAG.ReplaceAllUsesOfValueWith(OldVal, NewVal);
-          ReplacedValues[OldValId] = NewValId;
+          if (OldValId != NewValId)
+            ReplacedValues[OldValId] = NewValId;
         }
         // The original node continues to exist in the DAG, marked NewNode.
       }

@@ -213,7 +213,7 @@ struct MCDwarfLineTableHeader {
   SmallVector<std::string, 3> MCDwarfDirs;
   SmallVector<MCDwarfFile, 3> MCDwarfFiles;
   StringMap<unsigned> SourceIdMap;
-  StringRef CompilationDir;
+  std::string CompilationDir;
   MCDwarfFile RootFile;
   bool HasSource = false;
 private:

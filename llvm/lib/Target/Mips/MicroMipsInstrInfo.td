@@ -776,7 +776,8 @@ let DecoderNamespace = "MicroMips" in {
                  ADD_FM_MM<0, 0x290>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def XOR_MM   : MMRel, ArithLogicR<"xor", GPR32Opnd, 1, II_XOR, xor>,
                  ADD_FM_MM<0, 0x310>, ISA_MICROMIPS32_NOT_MIPS32R6;
-  def NOR_MM   : MMRel, LogicNOR<"nor", GPR32Opnd>, ADD_FM_MM<0, 0x2d0>;
+  def NOR_MM   : MMRel, LogicNOR<"nor", GPR32Opnd>, ADD_FM_MM<0, 0x2d0>,
+                 ISA_MICROMIPS32_NOT_MIPS32R6;
   def MULT_MM  : MMRel, Mult<"mult", II_MULT, GPR32Opnd, [HI0, LO0]>,
                  MULT_FM_MM<0x22c>, ISA_MICROMIPS32_NOT_MIPS32R6;
   def MULTu_MM : MMRel, Mult<"multu", II_MULTU, GPR32Opnd, [HI0, LO0]>,
@@ -1397,6 +1398,10 @@ let EncodingPredicates = [InMicroMips] in {
   def : MipsInstAlias<"j $rs", (JR_MM GPR32Opnd:$rs), 0>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
 }
+def : MipsInstAlias<"rdhwr $rt, $rs",
+                    (RDHWR_MM GPR32Opnd:$rt, HWRegsOpnd:$rs, 0), 1>,
+      ISA_MICROMIPS32_NOT_MIPS32R6;
+
 def : MipsInstAlias<"hypcall", (HYPCALL_MM 0), 1>,
                     ISA_MICROMIPS32R5, ASE_VIRT;
 def : MipsInstAlias<"mfgc0 $rt, $rs",

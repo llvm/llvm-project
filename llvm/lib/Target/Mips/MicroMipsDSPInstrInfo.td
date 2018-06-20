@@ -417,11 +417,11 @@ class BPOSGE32_MM_DESC : BPOSGE32_DESC_BASE<"bposge32", brtarget_mm,
                                             NoItinerary>;
 
 let DecoderNamespace = "MicroMipsDSP", Arch = "mmdsp",
-    AdditionalPredicates = [HasDSP, InMicroMips] in {
-    def LWDSP_MM : Load<"lw", DSPROpnd, null_frag, II_LW>, DspMMRel,
-                   LW_FM_MM<0x3f>;
-    def SWDSP_MM : Store<"sw", DSPROpnd, null_frag, II_SW>, DspMMRel,
-                   LW_FM_MM<0x3e>;
+    EncodingPredicates = [InMicroMips], ASEPredicate = [HasDSP] in {
+  def LWDSP_MM : Load<"lw", DSPROpnd, null_frag, II_LW>, DspMMRel,
+                 LW_FM_MM<0x3f>;
+  def SWDSP_MM : Store<"sw", DSPROpnd, null_frag, II_SW>, DspMMRel,
+                 LW_FM_MM<0x3e>;
 }
 // Instruction defs.
 // microMIPS DSP Rev 1
@@ -531,7 +531,7 @@ def MODSUB_MM : DspMMRel, MODSUB_MM_ENC, MODSUB_DESC;
 def MULSAQ_S_W_PH_MM : DspMMRel, MULSAQ_S_W_PH_MM_ENC, MULSAQ_S_W_PH_DESC;
 def BITREV_MM : DspMMRel, BITREV_MM_ENC, BITREV_MM_DESC;
 def BPOSGE32_MM : DspMMRel, BPOSGE32_MM_ENC, BPOSGE32_MM_DESC,
-                  ISA_MIPS1_NOT_32R6_64R6;
+                  ISA_MICROMIPS32_NOT_MIPS32R6;
 def CMP_EQ_PH_MM : DspMMRel, CMP_EQ_PH_MM_ENC, CMP_EQ_PH_DESC;
 def CMP_LT_PH_MM : DspMMRel, CMP_LT_PH_MM_ENC, CMP_LT_PH_DESC;
 def CMP_LE_PH_MM : DspMMRel, CMP_LE_PH_MM_ENC, CMP_LE_PH_DESC;

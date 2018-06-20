@@ -374,10 +374,31 @@ define i1 @and_icmp1(i32 %x, i32 %y) {
 
 define i1 @and_icmp2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @and_icmp2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %1 = icmp ugt i32 %x, %y
+  %2 = icmp ne i32 %x, 0
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp3(i32 %x, i32 %y) {
+; CHECK-LABEL: @and_icmp3(
 ; CHECK-NEXT:    ret i1 false
 ;
   %1 = icmp ult i32 %x, %y
   %2 = icmp eq i32 %y, 0
+  %3 = and i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @and_icmp4(i32 %x, i32 %y) {
+; CHECK-LABEL: @and_icmp4(
+; CHECK-NEXT:    ret i1 false
+;
+  %1 = icmp ugt i32 %x, %y
+  %2 = icmp eq i32 %x, 0
   %3 = and i1 %1, %2
   ret i1 %3
 }
@@ -395,6 +416,17 @@ define i1 @or_icmp1(i32 %x, i32 %y) {
 
 define i1 @or_icmp2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @or_icmp2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %1 = icmp ugt i32 %x, %y
+  %2 = icmp ne i32 %x, 0
+  %3 = or i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @or_icmp3(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_icmp3(
 ; CHECK-NEXT:    ret i1 true
 ;
   %1 = icmp uge i32 %x, %y
@@ -403,13 +435,34 @@ define i1 @or_icmp2(i32 %x, i32 %y) {
   ret i1 %3
 }
 
-define i1 @or_icmp3(i32 %x, i32 %y) {
-; CHECK-LABEL: @or_icmp3(
+define i1 @or_icmp4(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_icmp4(
+; CHECK-NEXT:    ret i1 true
+;
+  %1 = icmp ule i32 %x, %y
+  %2 = icmp ne i32 %x, 0
+  %3 = or i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @or_icmp5(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_icmp5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %1 = icmp uge i32 %x, %y
   %2 = icmp eq i32 %y, 0
+  %3 = or i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @or_icmp6(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_icmp6(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %1 = icmp ule i32 %x, %y
+  %2 = icmp eq i32 %x, 0
   %3 = or i1 %1, %2
   ret i1 %3
 }
