@@ -12,6 +12,7 @@ config.target_triple = "@TARGET_TRIPLE@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.cc = "@LLDB_TEST_C_COMPILER@"
 config.cxx = "@LLDB_TEST_CXX_COMPILER@"
+config.swiftc = "@LLDB_SWIFTC@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.have_lld = @LLDB_HAVE_LLD@
 
