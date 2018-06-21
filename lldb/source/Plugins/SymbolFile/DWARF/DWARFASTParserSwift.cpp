@@ -94,16 +94,6 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
       swift::ModuleDecl *swift_module = m_ast.GetModule(decl.GetFile(), error);
       if (swift_module)
         compiler_type = m_ast.FindType(type_name_cstr, swift_module);
-
-      if (!compiler_type) {
-        // Anything from the swift module might be in a DW_TAG_typedef with a
-        // name of "Int"
-        // so we shuld also check the swift module if we fail to find our type
-        // until we get
-        // <rdar://problem/15290346> fixed.
-        compiler_type =
-            m_ast.FindFirstType(type_name_cstr, ConstString("Swift"));
-      }
     }
   }
 
