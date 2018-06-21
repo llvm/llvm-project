@@ -48,5 +48,5 @@ p input
 
 # The {{ }} avoids accidentally matching the input script!
 # CHECK-NOT: undeclared identifier {{'SYNTAX_ERROR'}}
-# This is the static type of 'input'.
-# CHECK: (LibraryProtocol) ${{R0}}
+# This is the dynamic type of 'input'.
+# CHECK: (main.FromMainModule) ${{R0}}{{.*}}(i = 1)
