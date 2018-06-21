@@ -130,51 +130,6 @@ bool isPrivateProtoDecl(const NamedDecl &ND) {
          std::any_of(Name.begin(), Name.end(), islower);
 }
 
-bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
-                      const SymbolCollector::Options &Opts) {
-  using namespace clang::ast_matchers;
-  if (ND->isImplicit())
-    return true;
-  // Skip anonymous declarations, e.g (anonymous enum/class/struct).
-  if (ND->getDeclName().isEmpty())
-    return true;
-
-  // FIXME: figure out a way to handle internal linkage symbols (e.g. static
-  // variables, function) defined in the .cc files. Also we skip the symbols
-  // in anonymous namespace as the qualifier names of these symbols are like
-  // `foo::<anonymous>::bar`, which need a special handling.
-  // In real world projects, we have a relatively large set of header files
-  // that define static variables (like "static const int A = 1;"), we still
-  // want to collect these symbols, although they cause potential ODR
-  // violations.
-  if (ND->isInAnonymousNamespace())
-    return true;
-
-  // We want most things but not "local" symbols such as symbols inside
-  // FunctionDecl, BlockDecl, ObjCMethodDecl and OMPDeclareReductionDecl.
-  // FIXME: Need a matcher for ExportDecl in order to include symbols declared
-  // within an export.
-  auto InNonLocalContext = hasDeclContext(anyOf(
-      translationUnitDecl(), namespaceDecl(), linkageSpecDecl(), recordDecl(),
-      enumDecl(), objcProtocolDecl(), objcInterfaceDecl(), objcCategoryDecl(),
-      objcCategoryImplDecl(), objcImplementationDecl()));
-  // Don't index template specializations and expansions in main files.
-  auto IsSpecialization =
-      anyOf(functionDecl(isExplicitTemplateSpecialization()),
-            cxxRecordDecl(isExplicitTemplateSpecialization()),
-            varDecl(isExplicitTemplateSpecialization()));
-  if (match(decl(allOf(unless(isExpansionInMainFile()), InNonLocalContext,
-                       unless(IsSpecialization))),
-            *ND, *ASTCtx)
-          .empty())
-    return true;
-
-  // Avoid indexing internal symbols in protobuf generated headers.
-  if (isPrivateProtoDecl(*ND))
-    return true;
-  return false;
-}
-
 // We only collect #include paths for symbols that are suitable for global code
 // completion, except for namespaces since #include path for a namespace is hard
 // to define.
@@ -283,6 +238,52 @@ void SymbolCollector::initialize(ASTContext &Ctx) {
       llvm::make_unique<CodeCompletionTUInfo>(CompletionAllocator);
 }
 
+bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
+                                          ASTContext &ASTCtx,
+                                          const Options &Opts) {
+  using namespace clang::ast_matchers;
+  if (ND.isImplicit())
+    return false;
+  // Skip anonymous declarations, e.g (anonymous enum/class/struct).
+  if (ND.getDeclName().isEmpty())
+    return false;
+
+  // FIXME: figure out a way to handle internal linkage symbols (e.g. static
+  // variables, function) defined in the .cc files. Also we skip the symbols
+  // in anonymous namespace as the qualifier names of these symbols are like
+  // `foo::<anonymous>::bar`, which need a special handling.
+  // In real world projects, we have a relatively large set of header files
+  // that define static variables (like "static const int A = 1;"), we still
+  // want to collect these symbols, although they cause potential ODR
+  // violations.
+  if (ND.isInAnonymousNamespace())
+    return false;
+
+  // We want most things but not "local" symbols such as symbols inside
+  // FunctionDecl, BlockDecl, ObjCMethodDecl and OMPDeclareReductionDecl.
+  // FIXME: Need a matcher for ExportDecl in order to include symbols declared
+  // within an export.
+  auto InNonLocalContext = hasDeclContext(anyOf(
+      translationUnitDecl(), namespaceDecl(), linkageSpecDecl(), recordDecl(),
+      enumDecl(), objcProtocolDecl(), objcInterfaceDecl(), objcCategoryDecl(),
+      objcCategoryImplDecl(), objcImplementationDecl()));
+  // Don't index template specializations and expansions in main files.
+  auto IsSpecialization =
+      anyOf(functionDecl(isExplicitTemplateSpecialization()),
+            cxxRecordDecl(isExplicitTemplateSpecialization()),
+            varDecl(isExplicitTemplateSpecialization()));
+  if (match(decl(allOf(unless(isExpansionInMainFile()), InNonLocalContext,
+                       unless(IsSpecialization))),
+            ND, ASTCtx)
+          .empty())
+    return false;
+
+  // Avoid indexing internal symbols in protobuf generated headers.
+  if (isPrivateProtoDecl(ND))
+    return false;
+  return true;
+}
+
 // Always return true to continue indexing.
 bool SymbolCollector::handleDeclOccurence(
     const Decl *D, index::SymbolRoleSet Roles,
@@ -319,7 +320,7 @@ bool SymbolCollector::handleDeclOccurence(
   if (!(Roles & static_cast<unsigned>(index::SymbolRole::Declaration) ||
         Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
     return true;
-  if (shouldFilterDecl(ND, ASTCtx, Opts))
+  if (!shouldCollectSymbol(*ND, *ASTCtx, Opts))
     return true;
 
   llvm::SmallString<128> USR;
