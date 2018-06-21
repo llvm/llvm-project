@@ -484,7 +484,7 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
       std::string uuid_str =
           info_dict->GetValueForKey("shared_cache_uuid")->GetStringValue();
       if (!uuid_str.empty())
-        uuid.SetFromCString(uuid_str.c_str());
+        uuid.SetFromStringRef(uuid_str);
       if (info_dict->GetValueForKey("no_shared_cache")->GetBooleanValue() ==
           false)
         using_shared_cache = eLazyBoolYes;

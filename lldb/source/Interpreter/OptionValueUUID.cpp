@@ -43,7 +43,7 @@ Status OptionValueUUID::SetValueFromString(llvm::StringRef value,
 
   case eVarSetOperationReplace:
   case eVarSetOperationAssign: {
-    if (m_uuid.SetFromCString(value.str().c_str()) == 0)
+    if (m_uuid.SetFromStringRef(value) == 0)
       error.SetErrorStringWithFormat("invalid uuid string value '%s'",
                                      value.str().c_str());
     else {
@@ -86,17 +86,12 @@ size_t OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
         if (module_sp) {
           const UUID &module_uuid = module_sp->GetUUID();
           if (module_uuid.IsValid()) {
-            bool add_uuid = false;
-            if (num_bytes_decoded == 0)
-              add_uuid = true;
-            else
-              add_uuid = ::memcmp(module_uuid.GetBytes(), uuid_bytes,
-                                  num_bytes_decoded) == 0;
-            if (add_uuid) {
-              std::string uuid_str;
-              uuid_str = module_uuid.GetAsString();
-              if (!uuid_str.empty())
-                matches.AppendString(uuid_str.c_str());
+            llvm::ArrayRef<uint8_t> decoded_bytes(uuid_bytes,
+                                                  num_bytes_decoded);
+            llvm::ArrayRef<uint8_t> module_bytes = module_uuid.GetBytes();
+            if (module_bytes.size() >= num_bytes_decoded &&
+                module_bytes.take_front(num_bytes_decoded) == decoded_bytes) {
+              matches.AppendString(module_uuid.GetAsString());
             }
           }
         }

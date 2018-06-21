@@ -15,6 +15,7 @@ add_lldb_unittest(UtilityTests
   TimeoutTest.cpp
   TimerTest.cpp
   UriParserTest.cpp
+  UUIDTest.cpp
   VASprintfTest.cpp
 
   LINK_LIBS

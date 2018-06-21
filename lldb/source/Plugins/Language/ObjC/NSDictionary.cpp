@@ -397,6 +397,7 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
   static const ConstString g_DictionaryMImmutable("__NSDictionaryM_Immutable");
   static const ConstString g_Dictionary1("__NSSingleEntryDictionaryI");
   static const ConstString g_Dictionary0("__NSDictionary0");
+  static const ConstString g_DictionaryCF("__NSCFDictionary");
 
   if (class_name.IsEmpty())
     return false;
@@ -408,7 +409,8 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
     if (error.Fail())
       return false;
     value &= (is_64bit ? ~0xFC00000000000000UL : ~0xFC000000U);
-  } else if (class_name == g_DictionaryM || class_name == g_DictionaryMLegacy) {
+  } else if (class_name == g_DictionaryM || class_name == g_DictionaryMLegacy ||
+             class_name == g_DictionaryCF) {
     AppleObjCRuntime *apple_runtime =
     llvm::dyn_cast_or_null<AppleObjCRuntime>(runtime);
     Status error;

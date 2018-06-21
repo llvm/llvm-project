@@ -1,4 +1,4 @@
-if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows" AND NOT LLDB_DISABLE_PYTHON)
+if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   # Call a python script to gather the arch-specific libdir for
   # modules like the lldb module.
   execute_process(
